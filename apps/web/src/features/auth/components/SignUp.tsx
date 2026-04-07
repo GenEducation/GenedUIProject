@@ -22,7 +22,7 @@ interface SignUpProps {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onSwitchToSignin: () => void;
   isSubmitting: boolean;
-  error?: string;
+  errors: Record<string, string>;
 }
 
 export function SignUp({
@@ -31,7 +31,7 @@ export function SignUp({
   onSubmit,
   onSwitchToSignin,
   isSubmitting,
-  error,
+  errors,
 }: SignUpProps) {
   return (
     <form
@@ -49,8 +49,9 @@ export function SignUp({
             onChange={onChange}
             type="text"
             placeholder="Your name"
-            className="w-full rounded-2xl border border-[#2D5540]/15 bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10"
+            className={`w-full rounded-2xl border ${errors.username ? 'border-rose-500' : 'border-[#2D5540]/15'} bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10`}
           />
+          {errors.username && <p className="text-rose-500 text-[10px] font-bold mt-1.5 ml-1 animate-in fade-in slide-in-from-top-1">{errors.username}</p>}
         </div>
 
         <div>
@@ -83,8 +84,9 @@ export function SignUp({
                   onChange={onChange}
                   type="number"
                   placeholder="e.g. 14"
-                  className="w-full rounded-2xl border border-[#2D5540]/15 bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10"
+                  className={`w-full rounded-2xl border ${errors.age ? 'border-rose-500' : 'border-[#2D5540]/15'} bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10`}
                 />
+                {errors.age && <p className="text-rose-500 text-[10px] font-bold mt-1.5 ml-1 animate-in fade-in slide-in-from-top-1">{errors.age}</p>}
               </div>
 
               <div>
@@ -97,8 +99,9 @@ export function SignUp({
                   onChange={onChange}
                   type="text"
                   placeholder="e.g. 8th"
-                  className="w-full rounded-2xl border border-[#2D5540]/15 bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10"
+                  className={`w-full rounded-2xl border ${errors.grade ? 'border-rose-500' : 'border-[#2D5540]/15'} bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10`}
                 />
+                {errors.grade && <p className="text-rose-500 text-[10px] font-bold mt-1.5 ml-1 animate-in fade-in slide-in-from-top-1">{errors.grade}</p>}
               </div>
             </div>
 
@@ -112,8 +115,9 @@ export function SignUp({
                 onChange={onChange}
                 type="text"
                 placeholder="e.g. CBSE, State Board"
-                className="w-full rounded-2xl border border-[#2D5540]/15 bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10"
+                className={`w-full rounded-2xl border ${errors.school_board ? 'border-rose-500' : 'border-[#2D5540]/15'} bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10`}
               />
+              {errors.school_board && <p className="text-rose-500 text-[10px] font-bold mt-1.5 ml-1 animate-in fade-in slide-in-from-top-1">{errors.school_board}</p>}
             </div>
 
             <div>
@@ -143,8 +147,9 @@ export function SignUp({
               onChange={onChange}
               type="tel"
               placeholder="e.g. +1 234 567 8900"
-              className="w-full rounded-2xl border border-[#2D5540]/15 bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10"
+              className={`w-full rounded-2xl border ${errors.phone ? 'border-rose-500' : 'border-[#2D5540]/15'} bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10`}
             />
+            {errors.phone && <p className="text-rose-500 text-[10px] font-bold mt-1.5 ml-1 animate-in fade-in slide-in-from-top-1">{errors.phone}</p>}
           </div>
         )}
 
@@ -160,8 +165,9 @@ export function SignUp({
                 onChange={onChange}
                 type="text"
                 placeholder="e.g. ABC School"
-                className="w-full rounded-2xl border border-[#2D5540]/15 bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10"
+                className={`w-full rounded-2xl border ${errors.organization ? 'border-rose-500' : 'border-[#2D5540]/15'} bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10`}
               />
+              {errors.organization && <p className="text-rose-500 text-[10px] font-bold mt-1.5 ml-1 animate-in fade-in slide-in-from-top-1">{errors.organization}</p>}
             </div>
 
             <div>
@@ -190,8 +196,9 @@ export function SignUp({
             onChange={onChange}
             type="email"
             placeholder="scholar@gened.edu"
-            className="w-full rounded-2xl border border-[#2D5540]/15 bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10"
+            className={`w-full rounded-2xl border ${errors.email ? 'border-rose-500' : 'border-[#2D5540]/15'} bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10`}
           />
+          {errors.email && <p className="text-rose-500 text-[10px] font-bold mt-1.5 ml-1 animate-in fade-in slide-in-from-top-1">{errors.email}</p>}
         </div>
 
         <div>
@@ -204,14 +211,15 @@ export function SignUp({
             onChange={onChange}
             type="password"
             placeholder="••••••••"
-            className="w-full rounded-2xl border border-[#2D5540]/15 bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10 font-mono tracking-widest"
+            className={`w-full rounded-2xl border ${errors.password ? 'border-rose-500' : 'border-[#2D5540]/15'} bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10 font-mono tracking-widest`}
           />
+          {errors.password && <p className="text-rose-500 text-[10px] font-bold mt-1.5 ml-1 animate-in fade-in slide-in-from-top-1">{errors.password}</p>}
         </div>
       </div>
 
-      {error ? (
+      {errors.root ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-700 animate-in fade-in slide-in-from-top-2">
-          {error}
+          {errors.root}
         </div>
       ) : null}
 
@@ -219,7 +227,7 @@ export function SignUp({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-2xl bg-[#2D5540] py-4 text-sm font-bold text-white shadow-lg shadow-[#2D5540]/20 transition-all hover:bg-[#1f3b2d] hover:shadow-xl hover:shadow-[#2D5540]/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100"
+          className="w-full rounded-2xl bg-[#042e5c] py-4 text-sm font-bold text-white shadow-lg shadow-[#042e5c]/20 transition-all hover:bg-[#0a4a8f] hover:shadow-xl hover:shadow-[#042e5c]/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100"
         >
           {isSubmitting ? "Forging credentials..." : "Create account"}
         </button>
@@ -229,7 +237,7 @@ export function SignUp({
           <button
             type="button"
             onClick={onSwitchToSignin}
-            className="font-bold text-[#2D5540] hover:text-[#1f3b2d] hover:underline transition-colors"
+            className="font-bold text-[#042e5c] hover:text-[#0a4a8f] hover:underline transition-colors"
           >
             Log in
           </button>

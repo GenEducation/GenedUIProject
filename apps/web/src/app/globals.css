@@ -32,3 +32,35 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-serif);
   font-weight: 700;
 }
+
+/* Custom Scrollbar for Chrome, Safari, and Edge */
+::-webkit-scrollbar {
+  /* Thin width for an elegant, non-intrusive look */
+  width: 6px; 
+}
+
+/* The track (background) */
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
+/* The thumb (the part you drag) */
+::-webkit-scrollbar-thumb {
+  /* Using a very light shade of blue to match the "sanctuary" aesthetic */
+  background-color: #E0F2FE; 
+  border-radius: 20px;
+  /* Smooth transition for hover states */
+  transition: background-color 0.2s ease;
+}
+
+/* Thumb hover state */
+::-webkit-scrollbar-thumb:hover {
+  /* Slightly deeper blue on hover for better visibility */
+  background-color: #BAE6FD; 
+}
+
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #E0F2FE transparent;
+}
