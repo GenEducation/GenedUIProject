@@ -9,11 +9,16 @@ interface SideBarProps {
   onViewChange: (view: "subjects" | "analytics") => void;
 }
 
+import { usePartnerStore } from "../store/usePartnerStore";
+
 export function SideBar({ activeView, onViewChange }: SideBarProps) {
-  const navItems = [
+  const numberOfPendingRequests = usePartnerStore((state) => state.numberOfPendingRequests);
+  const logoutPartner = usePartnerStore((state) => state.logoutPartner);
+
+  const navItems: { id: "subjects" | "analytics"; label: string; icon: any; badge?: number | null }[] = [
     { id: "subjects", label: "Subjects", icon: BookOpen },
-    { id: "analytics", label: "Analytics", icon: BarChart2 },
-  ] as const;
+    { id: "analytics", label: "Analytics", icon: BarChart2, badge: numberOfPendingRequests > 0 ? numberOfPendingRequests : null },
+  ];
 
   return (
     <aside className="w-20 lg:w-64 h-screen bg-[#F8F9F8] flex flex-col p-4 lg:p-6 border-r border-gray-100 transition-all duration-300 overflow-hidden">
@@ -48,7 +53,7 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
               key={item.id}
               onClick={() => onViewChange(item.id)}
               className={`
-                flex items-center gap-4 p-2 lg:px-4 lg:py-3 rounded-2xl transition-all duration-300 group justify-center lg:justify-start
+                flex items-center gap-4 p-2 lg:px-4 lg:py-3 rounded-2xl transition-all duration-300 group justify-center lg:justify-start relative
                 ${isActive 
                   ? "bg-white text-[#1A3D2C] shadow-[0_4px_20px_rgba(0,0,0,0.04)]" 
                   : "text-[#1A3D2C]/40 hover:text-[#1A3D2C] hover:bg-white/50"}
@@ -60,16 +65,24 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
               `}>
                 <Icon size={18} />
               </div>
-              <span className="hidden lg:block text-xs font-bold uppercase tracking-widest truncate">
+              <span className="hidden lg:block text-xs font-bold uppercase tracking-widest truncate flex-1">
                 {item.label}
               </span>
+              {item.badge && (
+                <span className="absolute top-2 right-2 lg:static bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                  {item.badge}
+                </span>
+              )}
             </button>
           );
         })}
       </nav>
 
       {/* Logout */}
-      <button className="flex items-center gap-4 p-2 lg:px-4 lg:py-3 text-[#1A3D2C]/40 hover:text-red-500 transition-colors mt-auto group justify-center lg:justify-start">
+      <button 
+        onClick={logoutPartner}
+        className="flex items-center gap-4 p-2 lg:px-4 lg:py-3 text-[#1A3D2C]/40 hover:text-red-500 transition-colors mt-auto group justify-center lg:justify-start"
+      >
         <div className="p-2 rounded-xl group-hover:bg-red-50/50 shrink-0">
           <LogOut size={18} />
         </div>

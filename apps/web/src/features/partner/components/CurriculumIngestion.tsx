@@ -12,6 +12,16 @@ interface CurriculumIngestionProps {
   onExtractionComplete: (data: any) => void;
 }
 
+import { usePartnerStore } from "../store/usePartnerStore";
+
+interface CurriculumIngestionProps {
+  onClose: () => void;
+  activeAgentId: string | null;
+  agents: any[];
+  onAddAgent: () => void;
+  onExtractionComplete: (data: any) => void;
+}
+
 export function CurriculumIngestion({
   onClose,
   activeAgentId,
@@ -19,8 +29,28 @@ export function CurriculumIngestion({
   onAddAgent,
   onExtractionComplete,
 }: CurriculumIngestionProps) {
-  const [isUploading, setIsUploading] = useState(true); // Mocking upload state for visual
+  const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(65);
+  const [subjectName, setSubjectName] = useState("");
+  const [grade, setGrade] = useState("");
+  const [board, setBoard] = useState("");
+  
+  const addSubject = usePartnerStore((state) => state.addSubject);
+
+  const handleProcess = () => {
+    if (!subjectName || !grade) return;
+    
+    setIsProcessing(true);
+    
+    // Mock processing delay
+    setTimeout(() => {
+      addSubject({
+        name: subjectName,
+        grade: `${grade}th Grade`
+      });
+      onClose();
+    }, 1500);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-[#1A3D2C]/20 backdrop-blur-sm">
@@ -65,6 +95,8 @@ export function CurriculumIngestion({
             <div className="space-y-2">
               <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Subject</label>
               <input 
+                value={subjectName}
+                onChange={(e) => setSubjectName(e.target.value)}
                 placeholder="e.g. Botany"
                 className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/50 transition-all"
               />
@@ -72,13 +104,17 @@ export function CurriculumIngestion({
             <div className="space-y-2">
               <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Grade</label>
               <input 
-                placeholder="e.g. 12th"
+                value={grade}
+                onChange={(e) => setGrade(e.target.value)}
+                placeholder="e.g. 12"
                 className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/20 transition-all"
               />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Board</label>
               <input 
+                value={board}
+                onChange={(e) => setBoard(e.target.value)}
                 placeholder="e.g. IGCSE"
                 className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/20 transition-all"
               />
@@ -94,23 +130,20 @@ export function CurriculumIngestion({
                 </div>
                 <div className="space-y-0.5">
                   <p className="text-xs font-bold text-[#1A3D2C]">Semester_Core_Module_2024.pdf</p>
-                  <p className="text-[10px] font-bold text-[#1A3D2C]/30 italic">Uploading...</p>
+                  <p className="text-[10px] font-bold text-[#1A3D2C]/30 italic">{isProcessing ? "Processing..." : "Ready to process"}</p>
                 </div>
               </div>
-              <span className="text-xs font-black text-[#1A3D2C] opacity-60">{progress}%</span>
+              <span className="text-xs font-black text-[#1A3D2C] opacity-60">{isProcessing ? "100" : progress}%</span>
             </div>
             
             <div className="space-y-2 md:space-y-3">
               <div className="h-1.5 w-full bg-[#D1E6D9]/30 rounded-full overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
+                  animate={{ width: `${isProcessing ? 100 : progress}%` }}
                   className="h-full bg-[#1A3D2C] rounded-full"
                 />
               </div>
-              <p className="text-[9px] font-bold text-[#1A3D2C]/30 italic leading-none">
-                Estimated time remaining: 12 seconds
-              </p>
             </div>
           </div>
         </div>
@@ -118,13 +151,18 @@ export function CurriculumIngestion({
         {/* Footer */}
         <div className="p-4 md:p-8 lg:px-10 bg-white border-t border-gray-50 flex flex-col sm:flex-row justify-end gap-2 md:gap-4 items-center">
           <button 
+            disabled={isProcessing}
             onClick={onClose}
-            className="w-full sm:w-auto px-8 py-2 md:py-3 text-sm font-black text-[#1A3D2C] hover:bg-gray-50 rounded-2xl transition-all"
+            className="w-full sm:w-auto px-8 py-2 md:py-3 text-sm font-black text-[#1A3D2C] hover:bg-gray-50 rounded-2xl transition-all disabled:opacity-50"
           >
             Cancel
           </button>
-          <button className="w-full sm:w-auto px-8 py-2 md:py-3 bg-[#D1E6D9] text-[#1A3D2C]/40 text-sm font-black rounded-2xl hover:bg-[#1A3D2C] hover:text-white transition-all shadow-sm">
-            Process
+          <button 
+            onClick={handleProcess}
+            disabled={isProcessing || !subjectName || !grade}
+            className="w-full sm:w-auto px-8 py-2 md:py-3 bg-[#D1E6D9] text-[#1A3D2C] text-sm font-black rounded-2xl hover:bg-[#1A3D2C] hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isProcessing ? "Processing..." : "Process"}
           </button>
         </div>
       </motion.div>
