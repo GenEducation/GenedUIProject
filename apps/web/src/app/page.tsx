@@ -51,44 +51,6 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-white text-navy font-sans">
       {/* Navigation / Header */}
-      <header className="border-b border-navy/5 px-8 py-4 flex justify-between items-center sticky top-0 bg-white/80 backdrop-blur-md z-50">
-        <div className="flex items-center gap-2">
-          <img src="/Logo.svg" alt="GenEd" className="h-8 w-auto" />
-        </div>
-        <nav className="flex gap-8 text-sm font-medium text-navy/60">
-          {userRole === "student" && (
-            <button
-              onClick={() => setView("dashboard")}
-              className={`flex items-center gap-2 transition-colors ${view === "dashboard" ? "text-navy" : "hover:text-navy"}`}
-            >
-              <LayoutDashboard size={16} /> Scholarly Dashboard
-            </button>
-          )}
-
-          {userRole === "parent" && (
-            <button
-              onClick={() => setView("parent")}
-              className={`flex items-center gap-2 transition-colors ${view === "parent" ? "text-navy" : "hover:text-navy"}`}
-            >
-              <Eye size={16} /> Parent Insights
-            </button>
-          )}
-
-          {userRole === "partner" && (
-            <div
-              onClick={() => setView("partner")}
-              className={`flex items-center gap-2 transition-colors text-base font-semibold ${view === "partner" ? "text-navy" : "hover:text-navy"}`}
-            >
-              <Building2 size={16} /> Partner Ops
-            </div>
-          )}
-        </nav>
-        <div className="flex gap-4">
-          <div className="w-8 h-8 bg-academic-grey rounded-full border border-navy/10 flex items-center justify-center text-[10px] font-bold">
-            A
-          </div>
-        </div>
-      </header>
 
       <div className="max-w-7xl mx-auto p-8 space-y-12">
         <AnimatePresence mode="wait">
@@ -167,23 +129,7 @@ export default function HomePage() {
               </div>
             </motion.div>
           ) : view === "partner" ? (
-            <motion.div
-              key="view-partner"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              className="space-y-8"
-            >
-              <div className="space-y-2">
-                <h1 className="text-4xl font-bold text-navy">
-                  District Ecosystem Oversight
-                </h1>
-                <p className="text-navy/40 font-sans">
-                  Multi-student mastery tracking and curriculum ingestion.
-                </p>
-              </div>
               <PartnerAdmin />
-            </motion.div>
           ) : (
             <motion.div
               key="view-dashboard"

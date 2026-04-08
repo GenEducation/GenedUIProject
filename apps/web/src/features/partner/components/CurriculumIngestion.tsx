@@ -1,12 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Upload, Plus, BrainCircuit, FolderOpen } from "lucide-react";
-import { useState, useRef } from "react";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+import { Upload, X, FileText, Check } from "lucide-react";
+import { useState } from "react";
 
 interface CurriculumIngestionProps {
+  onClose: () => void;
   activeAgentId: string | null;
   agents: any[];
   onAddAgent: () => void;
@@ -14,149 +13,121 @@ interface CurriculumIngestionProps {
 }
 
 export function CurriculumIngestion({
+  onClose,
   activeAgentId,
   agents,
   onAddAgent,
   onExtractionComplete,
 }: CurriculumIngestionProps) {
-  const [isUploading, setIsUploading] = useState(false);
-  const [selectedAgentId, setSelectedAgentId] = useState(activeAgentId || "");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-
-  // Sync internal select with parent activeAgentId
-  if (activeAgentId && selectedAgentId !== activeAgentId) {
-    setSelectedAgentId(activeAgentId);
-  }
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setSelectedFiles(files);
-    }
-  };
-
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleUpload = async () => {
-    if (!selectedAgentId) return;
-    setIsUploading(true);
-
-    const formData = new FormData();
-    formData.append("agent_id", selectedAgentId);
-    const mockFile = new File(["mock content"], "curriculum_docs.pdf", {
-      type: "application/pdf",
-    });
-    formData.append("file", mockFile);
-
-    try {
-      const resp = await fetch(`${API_BASE_URL}/district/ingestion/upload`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await resp.json();
-      onExtractionComplete(data);
-    } catch (err) {
-      console.error("Upload failed", err);
-    } finally {
-      setIsUploading(false);
-    }
-  };
+  const [isUploading, setIsUploading] = useState(true); // Mocking upload state for visual
+  const [progress, setProgress] = useState(65);
 
   return (
-    <section className="bg-white border border-navy/5 rounded-[2.5rem] p-8 shadow-sm flex flex-col h-[600px] space-y-0">
-      <div className="space-y-1 pb-4">
-        <h3 className="text-lg font-bold text-navy">Curriculum Ingestion</h3>
-        <p className="text-xs text-navy/40">
-          Map uploaded content to agents for registry.
-        </p>
-      </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-[#1A3D2C]/20 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="relative w-full max-w-2xl bg-white rounded-[2.5rem] shadow-[0_20px_70px_rgba(26,61,44,0.15)] overflow-hidden flex flex-col"
+      >
+        {/* Close Button */}
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 md:top-8 md:right-8 p-2 text-gray-300 hover:text-[#1A3D2C] hover:bg-gray-50 rounded-xl transition-all z-10"
+        >
+          <X size={20} />
+        </button>
 
-      {/* 80% Drag and Drop Area */}
-      <div className="flex-1 min-h-0 flex items-stretch">
-        <div className="w-full border-2 border-dashed border-navy/10 rounded-3xl p-8 flex flex-col items-center justify-center text-center space-y-4 hover:border-emerald/30 transition-all group bg-academic-grey/30">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center text-navy/10 group-hover:text-emerald group-hover:scale-110 transition-all shadow-sm"
-          >
-            <Upload size={32} />
-          </motion.div>
-          <div className="space-y-2">
-            <p className="text-sm font-bold text-navy">Drag and Drop</p>
-            <p className="text-[11px] text-navy/40 uppercase tracking-widest leading-tight">
-              Drag and drop your files
-              <br />
-              here
-            </p>
+        <div className="p-4 md:p-10 space-y-4 md:space-y-8">
+          {/* Header */}
+          <div>
+            <h3 className="text-lg md:text-xl font-black text-[#1A3D2C]">Curriculum Upload</h3>
           </div>
-          <div className="flex items-center gap-3 pt-2">
-            <div className="h-px bg-navy/10 flex-1" />
-            <span className="text-[10px] text-navy/30 uppercase tracking-widest">
-              or
-            </span>
-            <div className="h-px bg-navy/10 flex-1" />
+
+          {/* Drag & Drop Area */}
+          <div className="relative group">
+            <div className="border-2 border-dashed border-[#D1E6D9] rounded-[1.5rem] md:rounded-[2rem] p-4 sm:p-6 md:p-12 flex flex-col items-center justify-center text-center space-y-2 md:space-y-4 bg-[#F8FBF9] group-hover:bg-[#F0F7F2] group-hover:border-[#1A3D2C]/20 transition-all cursor-pointer">
+              <div className="w-10 h-10 md:w-16 md:h-16 bg-[#D1E6D9] rounded-xl md:rounded-2xl flex items-center justify-center text-[#1A3D2C] shadow-sm group-hover:scale-110 transition-transform">
+                <Upload size={20} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-base md:text-lg font-bold text-[#1A3D2C]">Drag and Drop Curriculum</p>
+                <p className="text-[10px] md:text-[11px] font-black text-[#1A3D2C]/30 uppercase tracking-widest leading-relaxed">
+                  Supported formats: PDF, DOCX, or<br className="hidden md:block" />
+                  Markdown files. Max file size: 50MB.
+                </p>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={triggerFileInput}
-            className="flex items-center gap-2 px-5 py-2.5 bg-emerald/10 border border-emerald/30 text-emerald rounded-xl text-sm font-semibold hover:bg-emerald/20 transition-all"
+
+          {/* Form Fields */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Subject</label>
+              <input 
+                placeholder="e.g. Botany"
+                className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/50 transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Grade</label>
+              <input 
+                placeholder="e.g. 12th"
+                className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/20 transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Board</label>
+              <input 
+                placeholder="e.g. IGCSE"
+                className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/20 transition-all"
+              />
+            </div>
+          </div>
+
+          {/* Upload Progress */}
+          <div className="p-3 md:p-5 bg-[#F8F9F8] rounded-[1.5rem] border border-[#1A3D2C]/5 space-y-2 md:space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-[#D1E6D9]/50 rounded-lg md:rounded-xl flex items-center justify-center text-[#1A3D2C]/40">
+                  <FileText size={16} />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-[#1A3D2C]">Semester_Core_Module_2024.pdf</p>
+                  <p className="text-[10px] font-bold text-[#1A3D2C]/30 italic">Uploading...</p>
+                </div>
+              </div>
+              <span className="text-xs font-black text-[#1A3D2C] opacity-60">{progress}%</span>
+            </div>
+            
+            <div className="space-y-2 md:space-y-3">
+              <div className="h-1.5 w-full bg-[#D1E6D9]/30 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  className="h-full bg-[#1A3D2C] rounded-full"
+                />
+              </div>
+              <p className="text-[9px] font-bold text-[#1A3D2C]/30 italic leading-none">
+                Estimated time remaining: 12 seconds
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 md:p-8 lg:px-10 bg-white border-t border-gray-50 flex flex-col sm:flex-row justify-end gap-2 md:gap-4 items-center">
+          <button 
+            onClick={onClose}
+            className="w-full sm:w-auto px-8 py-2 md:py-3 text-sm font-black text-[#1A3D2C] hover:bg-gray-50 rounded-2xl transition-all"
           >
-            <FolderOpen size={16} />
-            Select Folder
+            Cancel
+          </button>
+          <button className="w-full sm:w-auto px-8 py-2 md:py-3 bg-[#D1E6D9] text-[#1A3D2C]/40 text-sm font-black rounded-2xl hover:bg-[#1A3D2C] hover:text-white transition-all shadow-sm">
+            Process
           </button>
         </div>
-      </div>
-
-      {/* 20% Associate Agent and Create Button */}
-      <div className="pt-4 flex items-center gap-4">
-        <div className="flex-1 space-y-2">
-          <label className="text-[10px] font-bold text-navy/40 uppercase tracking-widest">
-            Associate Agent
-          </label>
-          <select
-            value={selectedAgentId}
-            onChange={(e) => setSelectedAgentId(e.target.value)}
-            className="w-full px-4 py-3 bg-white border border-navy/5 rounded-xl text-sm font-semibold text-navy outline-none focus:ring-2 focus:ring-emerald/20 appearance-none shadow-sm hover:border-navy/10 transition-colors"
-          >
-            <option value="">Select an agent...</option>
-            {agents.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button
-          onClick={handleUpload}
-          disabled={isUploading || !selectedAgentId}
-          className={`self-end px-6 py-3 bg-navy text-white rounded-xl text-sm font-bold shadow-lg transition-all whitespace-nowrap ${
-            isUploading
-              ? "opacity-50 cursor-not-allowed"
-              : "hover:bg-emerald hover:shadow-emerald/20 active:scale-95"
-          }`}
-        >
-          {isUploading ? (
-            <span className="flex items-center gap-2">
-              <BrainCircuit size={16} className="animate-spin" />
-              Ingesting...
-            </span>
-          ) : (
-            "Create Agent"
-          )}
-        </button>
-      </div>
-
-      {/* Hidden File Input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        onChange={handleFileSelect}
-        className="hidden"
-        accept="*"
-      />
-    </section>
+      </motion.div>
+    </div>
   );
 }
