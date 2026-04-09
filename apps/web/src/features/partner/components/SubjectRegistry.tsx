@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Plus, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { usePartnerStore } from "../store/usePartnerStore";
@@ -11,6 +11,11 @@ interface SubjectRegistryProps {
 
 export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const subjects = usePartnerStore((state) => state.subjects);
+  const fetchSubjects = usePartnerStore((state) => state.fetchSubjects);
+
+  useEffect(() => {
+    fetchSubjects();
+  }, [fetchSubjects]);
 
   return (
     <div className="flex-1 px-4 md:px-12 pt-8 md:pt-12 pb-8 bg-white flex flex-col h-full overflow-hidden">
@@ -62,26 +67,37 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                   
                   {/* Subject Details */}
                   <div className="flex-1 flex flex-col">
-                    <div className="flex items-center justify-between pr-4">
-                      <div>
-                        <h3 className="text-base md:text-lg font-bold text-[#1A3D2C] tracking-tight group-hover:translate-x-1 transition-transform">
-                          {subject.name}
+                    <div className="flex items-center justify-between pr-4 w-full">
+                      {/* Left: Agent Name & Grade */}
+                      <div className="flex flex-col gap-0.5 group-hover:translate-x-1 transition-transform min-w-[140px]">
+                        <h3 className="text-base md:text-lg font-bold text-[#1A3D2C] tracking-tight flex items-center gap-2">
+                          <span className="text-lg opacity-80">🤖</span> 
+                          {subject.agent}
                         </h3>
-                        <p className="text-[11px] font-bold text-[#1A3D2C]/40 flex items-center gap-2 mt-0.5 group-hover:translate-x-1 transition-transform">
-                          <span>Grade {subject.grade}</span>
-                          <span className="w-1 h-1 rounded-full bg-[#1A3D2C]/10" />
-                          <span>{subject.chapters ?? 0} Chapters</span>
+                        <p className="text-[11px] font-bold text-[#1A3D2C]/50 ml-[28px] uppercase tracking-wider">
+                          Grade {subject.grade}
                         </p>
                       </div>
-                      <span 
-                        className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors ${
-                          isActive ? "bg-[#D1E6D9]/30 text-[#1A3D2C] border-[#1A3D2C]/5" :
-                          isProcessing ? "bg-amber-50 text-amber-600 border-amber-200" :
-                          "bg-red-50 text-red-600 border-red-200"
-                        }`}
-                      >
-                        {subject.status}
-                      </span>
+
+                      {/* Middle: Subject */}
+                      <div className="hidden sm:flex flex-1 justify-center">
+                        <span className="text-sm font-bold text-[#1A3D2C]/70 bg-[#1A3D2C]/5 px-4 py-1.5 rounded-xl border border-[#1A3D2C]/10">
+                          {subject.subject}
+                        </span>
+                      </div>
+
+                      {/* Right: Status */}
+                      <div className="flex shrink-0 justify-end ml-4">
+                        <span 
+                          className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors ${
+                            isActive ? "bg-[#D1E6D9]/30 text-[#1A3D2C] border-[#1A3D2C]/5" :
+                            isProcessing ? "bg-amber-50 text-amber-600 border-amber-200" :
+                            "bg-red-50 text-red-600 border-red-200"
+                          }`}
+                        >
+                          {subject.status}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>

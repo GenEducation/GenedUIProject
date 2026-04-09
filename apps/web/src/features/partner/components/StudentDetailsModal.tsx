@@ -27,7 +27,7 @@ interface StudentDetailsModalProps {
 }
 
 const getBaseUrl = () =>
-  (process.env.NEXT_PUBLIC_PARTNER_API_URL || "http://192.168.1.4:8000").replace(/\/$/, "");
+  (process.env.NEXT_PUBLIC_API_URL || "http://192.168.1.4:8000").replace(/\/$/, "");
 
 const formatDate = (iso: string) => {
   try {
@@ -62,7 +62,8 @@ export function StudentDetailsModal({
 
   // Fetch full student profile on mount
   useEffect(() => {
-    const partnerId = localStorage.getItem("gened_partner_id");
+    const rawPartnerId = localStorage.getItem("gened_partner_id");
+    const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) {
       setFetchError("Partner ID not found. Please sign in again.");
       setIsFetching(false);

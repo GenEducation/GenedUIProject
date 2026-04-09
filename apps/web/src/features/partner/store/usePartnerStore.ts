@@ -9,9 +9,10 @@ export interface Student {
 }
 
 export interface Subject {
-  id: string;
-  name: string;
-  grade: string;
+  id: string;        // Mapped from backend 'agent_id'
+  subject: string;   // Mapped from backend 'subject'
+  agent: string;     // Mapped from backend 'name'
+  grade: string | number;
   board?: string;
   status: "active" | "in-progress" | "failed";
   chapters?: number;
@@ -39,6 +40,7 @@ interface PartnerState {
   rejectRequest: (studentId: string) => Promise<void>;
 
   // Subject Actions
+  fetchSubjects: () => Promise<void>;
   addSubject: (subject: Subject) => void;
   uploadCurriculum: (file: File, subjectName: string, grade: string, board: string) => Promise<void>;
 
@@ -46,19 +48,13 @@ interface PartnerState {
   logoutPartner: () => void;
 }
 
-const INITIAL_SUBJECTS: Subject[] = [
-  { id: "s1", name: "Advanced Mathematics", grade: "12", status: "active", chapters: 14, board: "CBSE" },
-  { id: "s2", name: "Molecular Biology", grade: "12", status: "active", chapters: 18, board: "ICSE" },
-  { id: "s3", name: "Classical History", grade: "11", status: "active", chapters: 22, board: "IGCSE" },
-  { id: "s4", name: "Computer Science Fundamentals", grade: "12", status: "active", chapters: 15, board: "State" },
-  { id: "s5", name: "Art Theory & Criticism", grade: "11", status: "active", chapters: 10, board: "Oxford" },
-];
+
 
 const getInitials = (name: string) =>
   name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
 const getBaseUrl = () =>
-  (process.env.NEXT_PUBLIC_PARTNER_API_URL || "http://192.168.1.4:8000").replace(/\/$/, "");
+  (process.env.NEXT_PUBLIC_API_URL || "http://192.168.1.4:8000").replace(/\/$/, "");
 
 export const usePartnerStore = create<PartnerState>((set, get) => ({
   students: [],
@@ -66,14 +62,15 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   numberOfPendingRequests: 0,
   totalEnrollments: 0,
   selectedStudent: null,
-  subjects: INITIAL_SUBJECTS,
+  subjects: [],
   isLoading: false,
 
   setSelectedStudent: (student) => set({ selectedStudent: student }),
 
   // ── Fetch students from backend ─────────────────────────────────────────
   fetchStudents: async () => {
-    const partnerId = localStorage.getItem("gened_partner_id");
+    const rawPartnerId = localStorage.getItem("gened_partner_id");
+    const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) return;
 
     set({ isLoading: true });
@@ -86,11 +83,12 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
       const raw: any[] = await res.json();
 
-      // Extract the trailing { count: N } object
-      const countObj = raw.find((item) => "count" in item && !("id" in item));
-      const totalEnrollments = countObj?.count ?? 0;
+      // Extract the trailing metadata object (which contains *_count)
+      const metaObj = raw.find((item) => "pending_count" in item);
+      const totalEnrollments = metaObj?.approved_count ?? 0;
+      const pendingCount = metaObj?.pending_count ?? 0;
 
-      // Filter out the count trailer and any non-student objects
+      // Filter out the metadata trailer to parse strictly students
       const studentItems = raw.filter((item) => "id" in item && "username" in item);
 
       const approved: Student[] = [];
@@ -114,7 +112,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       set({
         students: approved,
         pendingRequests: pending,
-        numberOfPendingRequests: pending.length,
+        numberOfPendingRequests: pendingCount,
         totalEnrollments,
         isLoading: false,
       });
@@ -126,7 +124,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
   // ── Approve request (backend-first) ────────────────────────────────────
   approveRequest: async (studentId) => {
-    const partnerId = localStorage.getItem("gened_partner_id");
+    const rawPartnerId = localStorage.getItem("gened_partner_id");
+    const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) throw new Error("No partner ID found");
 
     const res = await fetch(
@@ -161,7 +160,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
   // ── Reject request (backend-first) ─────────────────────────────────────
   rejectRequest: async (studentId) => {
-    const partnerId = localStorage.getItem("gened_partner_id");
+    const rawPartnerId = localStorage.getItem("gened_partner_id");
+    const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) throw new Error("No partner ID found");
 
     const res = await fetch(
@@ -183,6 +183,32 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   },
 
   // ── Subject actions ────────────────────────────────────────────────────
+  fetchSubjects: async () => {
+    const rawPartnerId = localStorage.getItem("gened_partner_id");
+    const partnerId = rawPartnerId?.replace(/['"]+/g, "");
+    if (!partnerId) return;
+
+    try {
+      const res = await fetch(`${getBaseUrl()}/api/partners/${partnerId}/agents`);
+      if (!res.ok) throw new Error("Failed to fetch subjects/agents");
+
+      const raw: any[] = await res.json();
+      console.log("FETCHED FROM BACKEND:", raw); // Added for debugging
+      
+      const mappedSubjects: Subject[] = raw.map((item) => ({
+        id: item.agent_id,
+        subject: item.subject,
+        agent: item.name,
+        grade: item.grade,
+        status: "active", // Fallback, assume fetched subjects are ready
+        chapters: 0,
+      }));
+
+      set({ subjects: mappedSubjects });
+    } catch (error) {
+      console.error("fetchSubjects error:", error);
+    }
+  },
   addSubject: (subject) =>
     set((state) => ({ subjects: [subject, ...state.subjects] })),
 
@@ -191,7 +217,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
     const optimisticSubject: Subject = {
       id: tempId,
-      name: subjectName,
+      subject: subjectName,
+      agent: "Unknown", // Temporarily assigned until backend completes
       grade,
       board,
       status: "in-progress",

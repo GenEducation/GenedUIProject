@@ -8,6 +8,7 @@ import { AuthHero } from "./AuthHero";
 import { AuthFeatures } from "./AuthFeatures";
 import { AuthFooter } from "./AuthFooter";
 import { signIn, signUp, SignUpFields } from "../authService";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
 
 interface LoginViewProps {
   onLogin: (role: "student" | "parent" | "partner") => void;
@@ -80,7 +81,7 @@ export function LoginView({ onLogin }: LoginViewProps) {
 
     try {
       const token = await signIn(loginData);
-      // Persist user_id as partner_id for all subsequent partner API calls
+      // Persist user_id for partner API calls
       if (token.user_id) {
         localStorage.setItem("gened_partner_id", token.user_id);
       }
@@ -91,6 +92,18 @@ export function LoginView({ onLogin }: LoginViewProps) {
         normalizedRole === "parent"
           ? normalizedRole
           : ("student" as const);
+
+      // Persist student profile into the student store
+      if (role === "student") {
+        useStudentStore.getState().setStudentProfile({
+          user_id: token.user_id,
+          username: token.username,
+          email: token.email,
+          role: token.role,
+          grade: token.grade,
+        });
+      }
+
       onLogin(role);
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Unable to complete signin.";
@@ -124,7 +137,7 @@ export function LoginView({ onLogin }: LoginViewProps) {
 
     try {
       const token = await signUp(signupData);
-      // Persist user_id as partner_id for all subsequent partner API calls
+      // Persist user_id for partner API calls
       if (token.user_id) {
         localStorage.setItem("gened_partner_id", token.user_id);
       }
@@ -135,6 +148,18 @@ export function LoginView({ onLogin }: LoginViewProps) {
         normalizedRole === "partner"
           ? normalizedRole
           : signupData.role;
+
+      // Persist student profile into the student store
+      if (role === "student") {
+        useStudentStore.getState().setStudentProfile({
+          user_id: token.user_id,
+          username: token.username,
+          email: token.email,
+          role: token.role,
+          grade: token.grade,
+        });
+      }
+
       onLogin(role);
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Unable to complete signup.";

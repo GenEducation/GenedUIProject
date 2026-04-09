@@ -26,6 +26,7 @@ export interface AuthTokenResponse {
   email?: string;
   status: string;
   role: string;
+  grade?: number;
   organization?: string;
   website?: string | null;
 }
