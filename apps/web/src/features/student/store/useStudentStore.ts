@@ -39,6 +39,13 @@ export interface SubjectItem {
   chaptersCount: number;
 }
 
+export interface AgentItem {
+  agent_id: string;
+  name: string;
+  subject: string;
+  grade: number;
+}
+
 export const AVAILABLE_SUBJECTS: SubjectItem[] = [
   { id: "sub-1", name: "Quantum Physics", grade: "Grade 12", icon: "⚛", chaptersCount: 12 },
   { id: "sub-2", name: "Medieval History", grade: "Grade 10", icon: "🏰", chaptersCount: 8 },
@@ -64,10 +71,13 @@ interface StudentState {
   isAITyping: boolean;
   isSessionsLoading: boolean;
   isHistoryLoading: boolean;
+  availableAgents: AgentItem[];
+  isAgentsLoading: boolean;
 
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
   fetchSessions: () => Promise<void>;
+  fetchAvailableAgents: () => Promise<void>;
   fetchChatHistory: (sessionId: string) => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
   openNewChat: (subject: SubjectItem) => void;
@@ -91,6 +101,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   isAITyping: false,
   isSessionsLoading: false,
   isHistoryLoading: false,
+  availableAgents: [],
+  isAgentsLoading: false,
 
   setStudentProfile: (profile) => set({ studentProfile: profile }),
 
@@ -126,6 +138,24 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     } catch (error) {
       console.error("Fetch Sessions Error:", error);
       set({ isSessionsLoading: false });
+    }
+  },
+
+  fetchAvailableAgents: async () => {
+    const { studentProfile } = get();
+    if (!studentProfile) return;
+
+    set({ isAgentsLoading: true });
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/students/${studentProfile.user_id}/available-agents`);
+
+      if (!response.ok) throw new Error("Failed to fetch available agents");
+
+      const data: AgentItem[] = await response.json();
+      set({ availableAgents: data, isAgentsLoading: false });
+    } catch (error) {
+      console.error("Fetch Agents Error:", error);
+      set({ isAgentsLoading: false });
     }
   },
 

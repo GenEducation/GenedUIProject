@@ -33,15 +33,15 @@ export function StudentRegistryTable() {
                 onClick={() => setSelectedStudent(student)}
                 className="group hover:bg-white transition-all cursor-pointer"
               >
-                <td className="py-3 md:py-5">
-                  <div className="flex items-center gap-3 md:gap-4">
-                    <div className="w-8 h-8 md:w-10 md:h-10 bg-[#D1E6D9]/50 rounded-lg md:rounded-xl flex items-center justify-center text-[#1A3D2C] text-[10px] md:text-xs font-bold shadow-sm">
+                <td className="py-2.5 md:py-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#D1E6D9]/50 text-[#1A3D2C] text-[10px] font-bold shadow-sm">
                       {student.initials}
                     </div>
-                    <span className="text-xs md:text-sm font-bold text-[#1A3D2C]">{student.name}</span>
+                    <span className="text-sm font-bold text-[#1A3D2C]">{student.name}</span>
                   </div>
                 </td>
-                <td className="py-3 md:py-5">
+                <td className="py-2.5 md:py-3.5">
                   <span className="px-2 md:px-3 py-1 bg-white text-[#1A3D2C]/80 text-[8px] md:text-[9px] font-black uppercase tracking-widest rounded-full border border-[#1A3D2C]/5 shadow-sm">
                     {student.grade}
                   </span>
@@ -52,20 +52,7 @@ export function StudentRegistryTable() {
         </table>
       </div>
 
-      {/* Pagination Mockup */}
-      <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-[#1A3D2C]/5 flex items-center justify-between">
-        <p className="text-[8px] md:text-[10px] font-bold text-[#1A3D2C]/30 uppercase tracking-widest leading-tight">
-          Showing {students.length} students
-        </p>
-        <div className="flex gap-2">
-          <button className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-gray-50 text-gray-300 hover:text-[#1A3D2C] hover:bg-gray-100 transition-all">
-            <ChevronLeft size={16} />
-          </button>
-          <button className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-gray-50 text-gray-300 hover:text-[#1A3D2C] hover:bg-gray-100 transition-all">
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
+
     </div>
   );
 }

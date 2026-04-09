@@ -20,17 +20,14 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   return (
     <div className="flex-1 px-4 md:px-12 pt-8 md:pt-12 pb-8 bg-white flex flex-col h-full overflow-hidden">
       {/* Header Section */}
-      <header className="flex flex-col md:flex-row justify-between items-start gap-6 md:gap-0 mb-8 md:mb-12">
-        <div className="space-y-3 md:space-y-4 max-w-2xl">
+      <header className="flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0 mb-4 md:mb-6">
+        <div className="space-y-1.5 md:space-y-2 max-w-2xl">
           <p className="text-[10px] font-black text-[#1A3D2C]/40 uppercase tracking-[0.2em]">
             Academic Registry
           </p>
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-[#1A3D2C] tracking-tight">
             Subject Registry List
           </h2>
-          <p className="text-[#1A3D2C]/60 text-xs md:text-sm leading-relaxed font-medium">
-            Your comprehensive index of active curricula. Review academic subjects and their assigned grade levels.
-          </p>
         </div>
         
         <button 
@@ -59,9 +56,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="group relative flex items-center justify-between p-4 md:p-6 bg-white rounded-2xl md:rounded-3xl border border-transparent hover:border-[#1A3D2C]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all cursor-pointer overflow-hidden"
+                className="group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-transparent hover:border-[#1A3D2C]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all cursor-pointer overflow-hidden"
               >
-                <div className="flex-1 flex items-center gap-4 md:gap-6">
+                <div className="flex-1 flex items-center gap-3 md:gap-4">
                   {/* Left Side Highlight bar */}
                   <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-[#1A3D2C] opacity-0 group-hover:opacity-100 transition-opacity rounded-r-full" />
                   
@@ -71,7 +68,6 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                       {/* Left: Agent Name & Grade */}
                       <div className="flex flex-col gap-0.5 group-hover:translate-x-1 transition-transform min-w-[140px]">
                         <h3 className="text-base md:text-lg font-bold text-[#1A3D2C] tracking-tight flex items-center gap-2">
-                          <span className="text-lg opacity-80">🤖</span> 
                           {subject.agent}
                         </h3>
                         <p className="text-[11px] font-bold text-[#1A3D2C]/50 ml-[28px] uppercase tracking-wider">
@@ -113,10 +109,6 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                   </div>
                 )}
 
-                {/* Action Icon */}
-                <div className="ml-4 w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-300 group-hover:bg-[#1A3D2C]/5 group-hover:text-[#1A3D2C] transition-all shrink-0">
-                  <ChevronRight size={16} />
-                </div>
               </motion.div>
             );
           })}

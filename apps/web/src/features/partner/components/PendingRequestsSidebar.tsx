@@ -10,8 +10,8 @@ export function PendingRequestsSidebar() {
   const setSelectedStudent = usePartnerStore((state) => state.setSelectedStudent);
 
   return (
-    <div className="flex-1 bg-[#F8F9F8] rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-10 border border-gray-100/50 shadow-xl flex flex-col min-h-[300px] lg:min-h-0 overflow-hidden">
-      <div className="flex justify-between items-center mb-6 md:mb-8">
+    <div className="flex-1 bg-[#F8F9F8] rounded-[1.5rem] p-5 md:p-6 border border-gray-100/50 shadow-xl flex flex-col min-h-[300px] lg:min-h-0 overflow-hidden">
+      <div className="flex justify-between items-center mb-4 md:mb-5">
         <h4 className="text-[9px] md:text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest">
           Pending Requests
         </h4>

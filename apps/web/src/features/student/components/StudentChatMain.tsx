@@ -5,6 +5,7 @@ import { ArrowLeft, Send, Mic, Zap, Loader2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useStudentStore, ChatMessage, ChatSession } from "../store/useStudentStore";
 import { ChatMessageBubble } from "./ChatMessageBubble";
+import { StudentChatInput } from "./StudentChatInput";
 
 interface StudentChatMainProps {
   activeChat: ChatSession;
@@ -13,27 +14,12 @@ interface StudentChatMainProps {
 }
 
 export function StudentChatMain({ activeChat, messages, isAITyping }: StudentChatMainProps) {
-  const { closeChat, sendMessage, isHistoryLoading } = useStudentStore();
-  const [input, setInput] = useState("");
+  const { closeChat, isHistoryLoading } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isAITyping]);
-
-  const handleSend = () => {
-    const trimmed = input.trim();
-    if (!trimmed) return;
-    sendMessage(trimmed);
-    setInput("");
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -132,33 +118,7 @@ export function StudentChatMain({ activeChat, messages, isAITyping }: StudentCha
       </div>
 
       {/* Input bar */}
-      <div className="px-8 py-5 border-t border-[#1a3a2a]/8 bg-white flex-shrink-0">
-        <div className="flex items-center gap-4 bg-[#F4F3EE] rounded-2xl px-5 py-3 focus-within:ring-2 focus-within:ring-[#1a3a2a]/15 focus-within:bg-white transition-all">
-          <Mic
-            size={20}
-            className="text-[#1a3a2a]/30 flex-shrink-0 cursor-pointer hover:text-[#1a3a2a] transition-colors"
-          />
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={`Ask anything about ${activeChat.title}...`}
-            className="flex-1 bg-transparent text-sm text-[#1a3a2a] placeholder:text-[#1a3a2a]/30 focus:outline-none"
-          />
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleSend}
-            disabled={!input.trim() || isAITyping}
-            className="w-9 h-9 rounded-xl bg-[#1a3a2a] text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#2d6a4a] transition-colors flex-shrink-0"
-          >
-            <Send size={15} />
-          </motion.button>
-        </div>
-        <p className="text-[10px] text-[#1a3a2a]/25 text-center mt-3">
-          Press Enter to send &bull; Shift+Enter for new line
-        </p>
-      </div>
+      <StudentChatInput chatTitle={activeChat.title} />
     </div>
   );
 }

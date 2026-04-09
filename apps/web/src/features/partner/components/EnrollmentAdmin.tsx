@@ -22,12 +22,9 @@ export function EnrollmentAdmin() {
   return (
     <div className="flex-1 px-4 md:px-12 pt-8 md:pt-12 pb-8 bg-white flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <header className="flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0 mb-8 md:mb-12">
-        <div className="space-y-2 md:space-y-4 max-w-2xl">
+      <header className="flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0 mb-4 md:mb-6">
+        <div className="space-y-2 max-w-2xl">
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-[#1A3D2C] tracking-tight">Analytics</h2>
-          <p className="text-[#1A3D2C]/60 text-xs md:text-sm leading-relaxed font-medium">
-            Detailed insight into student performance and enrollment.
-          </p>
         </div>
         <div className="flex items-center gap-3 px-3 py-1.5 md:px-4 md:py-2 bg-[#F8F9F8] rounded-full border border-[#1A3D2C]/5">
           <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-[#1A3D2C] rounded-full animate-pulse" />

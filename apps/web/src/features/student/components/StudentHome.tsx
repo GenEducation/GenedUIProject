@@ -6,8 +6,8 @@ import { ArrowRight, Plus, BookOpen, PenLine, Search, LogOut, User, Loader2 } fr
 import {
   useStudentStore,
   ChatSession,
-  AVAILABLE_SUBJECTS,
   SubjectItem,
+  AgentItem,
 } from "../store/useStudentStore";
 import { AgentPickerModal } from "@/features/student/components/AgentPickerModal";
 
@@ -17,18 +17,22 @@ export function StudentHome() {
     recentChats, 
     fetchSessions, 
     isSessionsLoading,
-    openExistingChat, 
+    openExistingChat,
     openNewChat, 
     setAgentPickerOpen, 
     isAgentPickerOpen, 
-    logoutStudent 
+    logoutStudent,
+    fetchAvailableAgents,
+    availableAgents,
+    isAgentsLoading
   } = useStudentStore();
 
   useEffect(() => {
     if (studentProfile) {
       fetchSessions();
+      fetchAvailableAgents();
     }
-  }, [studentProfile, fetchSessions]);
+  }, [studentProfile, fetchSessions, fetchAvailableAgents]);
 
   const username = studentProfile?.username ?? "Scholar";
 
@@ -125,35 +129,51 @@ export function StudentHome() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-[#1a3a2a]">Start New Chat</h2>
             <motion.button
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setAgentPickerOpen(true)}
-              className="w-10 h-10 rounded-full bg-[#1a3a2a] text-white flex items-center justify-center shadow-lg shadow-[#1a3a2a]/20 hover:bg-[#2d6a4a] transition-colors"
+              className="px-4 py-2 rounded-full bg-[#1a3a2a]/5 text-[#1a3a2a] hover:bg-[#1a3a2a]/10 flex items-center justify-center gap-2 transition-colors border border-[#1a3a2a]/10 font-bold text-xs"
             >
-              <Plus size={18} />
+              Show all agents
             </motion.button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {AVAILABLE_SUBJECTS.slice(0, 3).map((subject: SubjectItem, i: number) => (
-              <motion.div
-                key={subject.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 + i * 0.07 }}
-                onClick={() => openNewChat(subject)}
-                className="bg-white rounded-2xl p-6 space-y-3 border border-[#1a3a2a]/8 shadow-sm hover:shadow-lg hover:shadow-[#1a3a2a]/5 transition-all cursor-pointer group"
-              >
-                <div className="space-y-1">
-                  <h3 className="font-bold text-[#1a3a2a] text-base group-hover:text-[#2d6a4a] transition-colors">{subject.name}</h3>
-                  <div className="flex items-center gap-2 text-xs text-[#1a3a2a]/45">
-                    <span>{subject.grade}</span>
-                    <span>&bull;</span>
-                    <span>{subject.chaptersCount} Chapters</span>
+            {isAgentsLoading ? (
+              [1, 2, 3].map((n) => (
+                <div key={n} className="bg-white/50 animate-pulse rounded-2xl h-24 border border-[#1a3a2a]/4" />
+              ))
+            ) : availableAgents.length > 0 ? (
+              availableAgents.slice(0, 3).map((agent: AgentItem, i: number) => (
+                <motion.div
+                  key={agent.agent_id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 + i * 0.07 }}
+                  onClick={() => openNewChat({
+                    id: agent.agent_id,
+                    name: agent.name,
+                    grade: `Grade ${agent.grade}`,
+                    icon: "🤖",
+                    chaptersCount: 0
+                  })}
+                  className="bg-white rounded-2xl p-5 space-y-3 border border-[#1a3a2a]/8 shadow-sm hover:shadow-lg hover:shadow-[#1a3a2a]/5 transition-all cursor-pointer group flex flex-col justify-center"
+                >
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-[#1a3a2a] text-base group-hover:text-[#2d6a4a] transition-colors">{agent.name}</h3>
+                    <div className="flex items-center gap-2 text-xs text-[#1a3a2a]/60 font-semibold tracking-wide">
+                      <span>{agent.subject}</span>
+                      <span>&bull;</span>
+                      <span>Grade {agent.grade}</span>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))
+            ) : (
+              <div className="col-span-1 md:col-span-3 py-10 text-center border-2 border-dashed border-[#1a3a2a]/8 rounded-2xl">
+                <p className="text-[#1a3a2a]/40 text-sm">No available agents found.</p>
+              </div>
+            )}
           </div>
         </motion.section>
       </div>
