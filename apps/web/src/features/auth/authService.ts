@@ -21,10 +21,13 @@ export interface SignUpFields {
 }
 
 export interface AuthTokenResponse {
-  access_token: string;
-  token_type: string;
+  user_id: string;
+  username: string;
+  email?: string;
+  status: string;
   role: string;
-  partner_id?: string;
+  organization?: string;
+  website?: string | null;
 }
 
 export interface SignInFields {

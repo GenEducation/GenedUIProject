@@ -44,9 +44,13 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         <div className="flex-1 overflow-y-auto scrollbar-hide pr-1 md:pr-2">
           <div className="space-y-2 md:space-y-3">
           {subjects.map((subject, i) => {
+            const isActive = subject.status === "active";
+            const isProcessing = subject.status === "in-progress";
+            const isFailed = subject.status === "failed";
+
             return (
               <motion.div
-                key={subject.name}
+                key={subject.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
@@ -57,15 +61,41 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                   <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-[#1A3D2C] opacity-0 group-hover:opacity-100 transition-opacity rounded-r-full" />
                   
                   {/* Subject Details */}
-                  <div className="flex-1 flex items-center justify-between">
-                    <h3 className="text-base md:text-lg font-bold text-[#1A3D2C] tracking-tight group-hover:translate-x-1 transition-transform">
-                      {subject.name}
-                    </h3>
-                    <span className="px-3 py-1 bg-[#D1E6D9]/30 text-[#1A3D2C] text-[9px] font-black uppercase tracking-widest rounded-full border border-[#1A3D2C]/5 mr-4">
-                      {subject.grade}
-                    </span>
+                  <div className="flex-1 flex flex-col">
+                    <div className="flex items-center justify-between pr-4">
+                      <div>
+                        <h3 className="text-base md:text-lg font-bold text-[#1A3D2C] tracking-tight group-hover:translate-x-1 transition-transform">
+                          {subject.name}
+                        </h3>
+                        <p className="text-[11px] font-bold text-[#1A3D2C]/40 flex items-center gap-2 mt-0.5 group-hover:translate-x-1 transition-transform">
+                          <span>Grade {subject.grade}</span>
+                          <span className="w-1 h-1 rounded-full bg-[#1A3D2C]/10" />
+                          <span>{subject.chapters ?? 0} Chapters</span>
+                        </p>
+                      </div>
+                      <span 
+                        className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors ${
+                          isActive ? "bg-[#D1E6D9]/30 text-[#1A3D2C] border-[#1A3D2C]/5" :
+                          isProcessing ? "bg-amber-50 text-amber-600 border-amber-200" :
+                          "bg-red-50 text-red-600 border-red-200"
+                        }`}
+                      >
+                        {subject.status}
+                      </span>
+                    </div>
                   </div>
                 </div>
+
+                {/* Progress bar for in-progress */}
+                {isProcessing && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#D1E6D9]/20 overflow-hidden">
+                    <motion.div 
+                      animate={{ x: ["-100%", "100%"] }}
+                      transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                      className="h-full w-1/2 bg-[#1A3D2C]"
+                    />
+                  </div>
+                )}
 
                 {/* Action Icon */}
                 <div className="ml-4 w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-300 group-hover:bg-[#1A3D2C]/5 group-hover:text-[#1A3D2C] transition-all shrink-0">

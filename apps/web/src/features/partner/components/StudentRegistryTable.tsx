@@ -6,6 +6,7 @@ import { usePartnerStore } from "../store/usePartnerStore";
 
 export function StudentRegistryTable() {
   const students = usePartnerStore((state) => state.students);
+  const setSelectedStudent = usePartnerStore((state) => state.setSelectedStudent);
 
   return (
     <div className="lg:col-span-8 flex flex-col bg-[#FBFCFB] rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 border border-gray-100 shadow-xl min-h-[400px] lg:min-h-0 overflow-hidden">
@@ -27,7 +28,11 @@ export function StudentRegistryTable() {
           </thead>
           <tbody className="divide-y divide-[#1A3D2C]/5">
             {students.map((student) => (
-              <tr key={student.id} className="group hover:bg-white transition-all cursor-pointer">
+              <tr
+                key={student.id}
+                onClick={() => setSelectedStudent(student)}
+                className="group hover:bg-white transition-all cursor-pointer"
+              >
                 <td className="py-3 md:py-5">
                   <div className="flex items-center gap-3 md:gap-4">
                     <div className="w-8 h-8 md:w-10 md:h-10 bg-[#D1E6D9]/50 rounded-lg md:rounded-xl flex items-center justify-center text-[#1A3D2C] text-[10px] md:text-xs font-bold shadow-sm">
@@ -50,7 +55,7 @@ export function StudentRegistryTable() {
       {/* Pagination Mockup */}
       <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-[#1A3D2C]/5 flex items-center justify-between">
         <p className="text-[8px] md:text-[10px] font-bold text-[#1A3D2C]/30 uppercase tracking-widest leading-tight">
-          Showing {students.length} of 12,482 students
+          Showing {students.length} students
         </p>
         <div className="flex gap-2">
           <button className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-gray-50 text-gray-300 hover:text-[#1A3D2C] hover:bg-gray-100 transition-all">

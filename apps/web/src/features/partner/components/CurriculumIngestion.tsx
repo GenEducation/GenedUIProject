@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Upload, X, FileText, Check } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 interface CurriculumIngestionProps {
   onClose: () => void;
@@ -35,21 +35,29 @@ export function CurriculumIngestion({
   const [grade, setGrade] = useState("");
   const [board, setBoard] = useState("");
   
-  const addSubject = usePartnerStore((state) => state.addSubject);
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const uploadCurriculum = usePartnerStore((state) => state.uploadCurriculum);
 
-  const handleProcess = () => {
-    if (!subjectName || !grade) return;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleProcess = async () => {
+    if (!subjectName || !grade || !file) return;
     
     setIsProcessing(true);
-    
-    // Mock processing delay
-    setTimeout(() => {
-      addSubject({
-        name: subjectName,
-        grade: `${grade}th Grade`
-      });
+    try {
+      await uploadCurriculum(file, subjectName, grade, board);
       onClose();
-    }, 1500);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -76,12 +84,31 @@ export function CurriculumIngestion({
 
           {/* Drag & Drop Area */}
           <div className="relative group">
-            <div className="border-2 border-dashed border-[#D1E6D9] rounded-[1.5rem] md:rounded-[2rem] p-4 sm:p-6 md:p-12 flex flex-col items-center justify-center text-center space-y-2 md:space-y-4 bg-[#F8FBF9] group-hover:bg-[#F0F7F2] group-hover:border-[#1A3D2C]/20 transition-all cursor-pointer">
+            <input 
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+              accept=".pdf,.docx,.md"
+            />
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                  setFile(e.dataTransfer.files[0]);
+                }
+              }}
+              className="border-2 border-dashed border-[#D1E6D9] rounded-[1.5rem] md:rounded-[2rem] p-4 sm:p-6 md:p-12 flex flex-col items-center justify-center text-center space-y-2 md:space-y-4 bg-[#F8FBF9] group-hover:bg-[#F0F7F2] group-hover:border-[#1A3D2C]/20 transition-all cursor-pointer"
+            >
               <div className="w-10 h-10 md:w-16 md:h-16 bg-[#D1E6D9] rounded-xl md:rounded-2xl flex items-center justify-center text-[#1A3D2C] shadow-sm group-hover:scale-110 transition-transform">
                 <Upload size={20} />
               </div>
               <div className="space-y-1">
-                <p className="text-base md:text-lg font-bold text-[#1A3D2C]">Drag and Drop Curriculum</p>
+                <p className="text-base md:text-lg font-bold text-[#1A3D2C]">
+                  {file ? file.name : "Drag and Drop Curriculum"}
+                </p>
                 <p className="text-[10px] md:text-[11px] font-black text-[#1A3D2C]/30 uppercase tracking-widest leading-relaxed">
                   Supported formats: PDF, DOCX, or<br className="hidden md:block" />
                   Markdown files. Max file size: 50MB.
@@ -129,18 +156,18 @@ export function CurriculumIngestion({
                   <FileText size={16} />
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-[#1A3D2C]">Semester_Core_Module_2024.pdf</p>
-                  <p className="text-[10px] font-bold text-[#1A3D2C]/30 italic">{isProcessing ? "Processing..." : "Ready to process"}</p>
+                  <p className="text-xs font-bold text-[#1A3D2C] truncate max-w-[150px] md:max-w-xs">{file ? file.name : "No file selected"}</p>
+                  <p className="text-[10px] font-bold text-[#1A3D2C]/30 italic">{isProcessing ? "Processing..." : file ? "Ready to process" : "Please upload a file"}</p>
                 </div>
               </div>
-              <span className="text-xs font-black text-[#1A3D2C] opacity-60">{isProcessing ? "100" : progress}%</span>
+              <span className="text-xs font-black text-[#1A3D2C] opacity-60">{isProcessing ? "100" : file ? "100" : "0"}%</span>
             </div>
             
             <div className="space-y-2 md:space-y-3">
               <div className="h-1.5 w-full bg-[#D1E6D9]/30 rounded-full overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }}
-                  animate={{ width: `${isProcessing ? 100 : progress}%` }}
+                  animate={{ width: `${isProcessing || file ? 100 : 0}%` }}
                   className="h-full bg-[#1A3D2C] rounded-full"
                 />
               </div>
@@ -159,10 +186,10 @@ export function CurriculumIngestion({
           </button>
           <button 
             onClick={handleProcess}
-            disabled={isProcessing || !subjectName || !grade}
+            disabled={isProcessing || !subjectName || !grade || !file}
             className="w-full sm:w-auto px-8 py-2 md:py-3 bg-[#D1E6D9] text-[#1A3D2C] text-sm font-black rounded-2xl hover:bg-[#1A3D2C] hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isProcessing ? "Processing..." : "Process"}
+            {isProcessing ? "Processing..." : "Process Artifact"}
           </button>
         </div>
       </motion.div>

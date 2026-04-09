@@ -80,6 +80,10 @@ export function LoginView({ onLogin }: LoginViewProps) {
 
     try {
       const token = await signIn(loginData);
+      // Persist user_id as partner_id for all subsequent partner API calls
+      if (token.user_id) {
+        localStorage.setItem("gened_partner_id", token.user_id);
+      }
       const normalizedRole = token.role?.toLowerCase() ?? "student";
       const role =
         normalizedRole === "student" ||
@@ -120,6 +124,10 @@ export function LoginView({ onLogin }: LoginViewProps) {
 
     try {
       const token = await signUp(signupData);
+      // Persist user_id as partner_id for all subsequent partner API calls
+      if (token.user_id) {
+        localStorage.setItem("gened_partner_id", token.user_id);
+      }
       const normalizedRole = token.role?.toLowerCase() ?? signupData.role;
       const role =
         normalizedRole === "student" ||

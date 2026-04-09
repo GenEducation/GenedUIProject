@@ -2,14 +2,19 @@ import { create } from "zustand";
 
 export interface Student {
   id: string;
-  name: string;
+  name: string;       // mapped from API `username`
   grade: string;
   initials?: string;
+  status: "APPROVED" | "PENDING";
 }
 
 export interface Subject {
+  id: string;
   name: string;
   grade: string;
+  board?: string;
+  status: "active" | "in-progress" | "failed";
+  chapters?: number;
 }
 
 interface PartnerState {
@@ -29,97 +34,219 @@ interface PartnerState {
   // --- Actions ---
   // Analytics Actions
   setSelectedStudent: (student: Student | null) => void;
-  approveRequest: (studentId: string) => void;
-  rejectRequest: (studentId: string) => void;
+  fetchStudents: () => Promise<void>;
+  approveRequest: (studentId: string) => Promise<void>;
+  rejectRequest: (studentId: string) => Promise<void>;
 
   // Subject Actions
   addSubject: (subject: Subject) => void;
+  uploadCurriculum: (file: File, subjectName: string, grade: string, board: string) => Promise<void>;
 
   // Auth/Logout Action
   logoutPartner: () => void;
 }
 
-// Mock Data
-const INITIAL_STUDENTS: Student[] = [
-  { id: "1", name: "Aliza Bennet", grade: "Grade 12", initials: "AB" },
-  { id: "2", name: "Darius Knight", grade: "Grade 11", initials: "DK" },
-  { id: "3", name: "Fiona Hayes", grade: "Grade 12", initials: "FH" },
-  { id: "4", name: "Gabriel Russo", grade: "Grade 10", initials: "GR" },
-  { id: "5", name: "Hannah Miller", grade: "Grade 12", initials: "HM" },
-  { id: "6", name: "Isaac Watts", grade: "Grade 11", initials: "IW" },
-  { id: "7", name: "Jade Morales", grade: "Grade 12", initials: "JM" },
-  { id: "8", name: "Kaelen Smith", grade: "Grade 10", initials: "KS" },
-];
-
-const INITIAL_PENDING: Student[] = [
-  { id: "p1", name: "Julianne Sterling", grade: "Grade 12" },
-  { id: "p2", name: "Marcus Holloway", grade: "Grade 11" },
-  { id: "p3", name: "Elena Rodriguez", grade: "Grade 12" },
-  { id: "p4", name: "Samuel Thorne", grade: "Grade 10" },
-  { id: "p5", name: "Beatrice Vance", grade: "Grade 12" },
-  { id: "p6", name: "Oliver Chen", grade: "Grade 11" },
-];
-
 const INITIAL_SUBJECTS: Subject[] = [
-  { name: "Advanced Mathematics", grade: "12th Grade" },
-  { name: "Molecular Biology", grade: "12th Grade" },
-  { name: "Classical History", grade: "11th Grade" },
-  { name: "Computer Science Fundamentals", grade: "12th Grade" },
-  { name: "Art Theory & Criticism", grade: "11th Grade" },
+  { id: "s1", name: "Advanced Mathematics", grade: "12", status: "active", chapters: 14, board: "CBSE" },
+  { id: "s2", name: "Molecular Biology", grade: "12", status: "active", chapters: 18, board: "ICSE" },
+  { id: "s3", name: "Classical History", grade: "11", status: "active", chapters: 22, board: "IGCSE" },
+  { id: "s4", name: "Computer Science Fundamentals", grade: "12", status: "active", chapters: 15, board: "State" },
+  { id: "s5", name: "Art Theory & Criticism", grade: "11", status: "active", chapters: 10, board: "Oxford" },
 ];
 
-export const usePartnerStore = create<PartnerState>((set) => ({
-  students: INITIAL_STUDENTS,
-  pendingRequests: INITIAL_PENDING,
-  numberOfPendingRequests: INITIAL_PENDING.length,
-  totalEnrollments: 12482,
+const getInitials = (name: string) =>
+  name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+
+const getBaseUrl = () =>
+  (process.env.NEXT_PUBLIC_PARTNER_API_URL || "http://192.168.1.4:8000").replace(/\/$/, "");
+
+export const usePartnerStore = create<PartnerState>((set, get) => ({
+  students: [],
+  pendingRequests: [],
+  numberOfPendingRequests: 0,
+  totalEnrollments: 0,
   selectedStudent: null,
   subjects: INITIAL_SUBJECTS,
   isLoading: false,
 
   setSelectedStudent: (student) => set({ selectedStudent: student }),
 
-  approveRequest: (studentId) => set((state) => {
-    const request = state.pendingRequests.find(r => r.id === studentId);
-    if (!request) return state;
+  // ── Fetch students from backend ─────────────────────────────────────────
+  fetchStudents: async () => {
+    const partnerId = localStorage.getItem("gened_partner_id");
+    if (!partnerId) return;
 
-    const initials = request.name.split(' ').map(n => n[0]).join('').toUpperCase();
-    const newStudent = { ...request, initials };
+    set({ isLoading: true });
 
-    const newPending = state.pendingRequests.filter(r => r.id !== studentId);
+    try {
+      const res = await fetch(
+        `${getBaseUrl()}/partner/students?partner_id=${partnerId}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch students");
 
-    return {
-      pendingRequests: newPending,
-      numberOfPendingRequests: newPending.length,
-      students: [newStudent, ...state.students],
-      totalEnrollments: state.totalEnrollments + 1,
-      selectedStudent: null
+      const raw: any[] = await res.json();
+
+      // Extract the trailing { count: N } object
+      const countObj = raw.find((item) => "count" in item && !("id" in item));
+      const totalEnrollments = countObj?.count ?? 0;
+
+      // Filter out the count trailer and any non-student objects
+      const studentItems = raw.filter((item) => "id" in item && "username" in item);
+
+      const approved: Student[] = [];
+      const pending: Student[] = [];
+
+      for (const item of studentItems) {
+        const student: Student = {
+          id: item.id,
+          name: item.username,
+          grade: String(item.grade),
+          initials: getInitials(item.username),
+          status: item.status,
+        };
+        if (item.status === "APPROVED") {
+          approved.push(student);
+        } else {
+          pending.push(student);
+        }
+      }
+
+      set({
+        students: approved,
+        pendingRequests: pending,
+        numberOfPendingRequests: pending.length,
+        totalEnrollments,
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error("fetchStudents error:", error);
+      set({ isLoading: false });
+    }
+  },
+
+  // ── Approve request (backend-first) ────────────────────────────────────
+  approveRequest: async (studentId) => {
+    const partnerId = localStorage.getItem("gened_partner_id");
+    if (!partnerId) throw new Error("No partner ID found");
+
+    const res = await fetch(
+      `${getBaseUrl()}/partner/students/${studentId}/status?partner_id=${partnerId}&status=APPROVED`,
+      { method: "PATCH" }
+    );
+
+    if (!res.ok) throw new Error("Failed to approve student");
+
+    // Backend confirmed — update local state
+    set((state) => {
+      const request = state.pendingRequests.find((r) => r.id === studentId);
+      if (!request) return state;
+
+      const approvedStudent: Student = {
+        ...request,
+        status: "APPROVED",
+        initials: getInitials(request.name),
+      };
+
+      const newPending = state.pendingRequests.filter((r) => r.id !== studentId);
+
+      return {
+        pendingRequests: newPending,
+        numberOfPendingRequests: newPending.length,
+        students: [approvedStudent, ...state.students],
+        totalEnrollments: state.totalEnrollments + 1,
+        selectedStudent: null,
+      };
+    });
+  },
+
+  // ── Reject request (backend-first) ─────────────────────────────────────
+  rejectRequest: async (studentId) => {
+    const partnerId = localStorage.getItem("gened_partner_id");
+    if (!partnerId) throw new Error("No partner ID found");
+
+    const res = await fetch(
+      `${getBaseUrl()}/partner/students/${studentId}/status?partner_id=${partnerId}&status=REJECTED`,
+      { method: "PATCH" }
+    );
+
+    if (!res.ok) throw new Error("Failed to reject student");
+
+    // Backend confirmed — remove from pending
+    set((state) => {
+      const newPending = state.pendingRequests.filter((r) => r.id !== studentId);
+      return {
+        pendingRequests: newPending,
+        numberOfPendingRequests: newPending.length,
+        selectedStudent: null,
+      };
+    });
+  },
+
+  // ── Subject actions ────────────────────────────────────────────────────
+  addSubject: (subject) =>
+    set((state) => ({ subjects: [subject, ...state.subjects] })),
+
+  uploadCurriculum: async (file, subjectName, grade, board) => {
+    const tempId = Math.random().toString(36).substring(2, 9);
+
+    const optimisticSubject: Subject = {
+      id: tempId,
+      name: subjectName,
+      grade,
+      board,
+      status: "in-progress",
+      chapters: 0,
     };
-  }),
 
-  rejectRequest: (studentId) => set((state) => {
-    const newPending = state.pendingRequests.filter(r => r.id !== studentId);
-    return {
-      pendingRequests: newPending,
-      numberOfPendingRequests: newPending.length,
-      selectedStudent: null
-    };
-  }),
+    set((state) => ({ subjects: [optimisticSubject, ...state.subjects] }));
 
-  addSubject: (subject) => set((state) => ({
-    subjects: [subject, ...state.subjects]
-  })),
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("subject", subjectName);
+      formData.append("grade", grade);
+      formData.append("board", board);
 
+      const apiUrl = `${getBaseUrl()}/admin/ingest/ncert`;
+
+      const response = await fetch(apiUrl, { method: "POST", body: formData });
+      if (!response.ok) throw new Error("Upload failed");
+
+      const data = await response.json();
+
+      set((state) => ({
+        subjects: state.subjects.map((s) =>
+          s.id === tempId
+            ? {
+                ...s,
+                status: data.status === "completed" ? "active" : "failed",
+                chapters: data.chapters_detected,
+              }
+            : s
+        ),
+      }));
+    } catch (error) {
+      console.error("Ingestion error:", error);
+      set((state) => ({
+        subjects: state.subjects.map((s) =>
+          s.id === tempId ? { ...s, status: "failed" } : s
+        ),
+      }));
+    }
+  },
+
+  // ── Logout ─────────────────────────────────────────────────────────────
   logoutPartner: () => {
     localStorage.removeItem("gened_user_role");
-    set({ 
-      students: [], 
-      pendingRequests: [], 
+    localStorage.removeItem("gened_partner_id");
+    set({
+      students: [],
+      pendingRequests: [],
       numberOfPendingRequests: 0,
-      subjects: [], 
-      selectedStudent: null, 
-      totalEnrollments: 0 
+      subjects: [],
+      selectedStudent: null,
+      totalEnrollments: 0,
     });
     window.location.href = "/";
-  }
+  },
 }));

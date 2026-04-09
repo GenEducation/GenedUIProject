@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { usePartnerStore } from "../store/usePartnerStore";
 import { StudentDetailsModal } from "./StudentDetailsModal";
@@ -12,6 +13,11 @@ export function EnrollmentAdmin() {
   const setSelectedStudent = usePartnerStore((state) => state.setSelectedStudent);
   const approveRequest = usePartnerStore((state) => state.approveRequest);
   const rejectRequest = usePartnerStore((state) => state.rejectRequest);
+  const fetchStudents = usePartnerStore((state) => state.fetchStudents);
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
 
   return (
     <div className="flex-1 px-4 md:px-12 pt-8 md:pt-12 pb-8 bg-white flex flex-col h-full overflow-hidden">
@@ -44,12 +50,14 @@ export function EnrollmentAdmin() {
       {/* Student Details Modal */}
       <AnimatePresence>
         {selectedStudent && (
-          <StudentDetailsModal 
+          <StudentDetailsModal
+            studentId={selectedStudent.id}
             studentName={selectedStudent.name}
             grade={selectedStudent.grade}
+            status={selectedStudent.status}
             onClose={() => setSelectedStudent(null)}
-            onAccept={() => approveRequest(selectedStudent.id)}
-            onReject={() => rejectRequest(selectedStudent.id)}
+            onAccept={approveRequest}
+            onReject={rejectRequest}
           />
         )}
       </AnimatePresence>
