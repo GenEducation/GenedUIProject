@@ -13,7 +13,7 @@ export function AuthHero() {
             style={{ animation: "faviconRotate 3s ease-in-out infinite" }}
           >
             <img
-              src="/favicon1.jpg"
+              src="/Favicon1.jpg"
               alt="GenEd favicon"
               className="h-28 w-28 rounded-full object-cover"
             />
