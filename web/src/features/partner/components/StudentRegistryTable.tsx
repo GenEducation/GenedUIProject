@@ -1,12 +1,23 @@
 "use client";
 
 import React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { usePartnerStore } from "../store/usePartnerStore";
+import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
 export function StudentRegistryTable() {
   const students = usePartnerStore((state) => state.students);
   const setSelectedStudent = usePartnerStore((state) => state.setSelectedStudent);
+  const removeStudent = usePartnerStore((state) => state.removeStudent);
+
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
+
+  const handleDelete = async () => {
+    if (deleteId) {
+      await removeStudent(deleteId);
+      setDeleteId(null);
+    }
+  };
 
   return (
     <div className="lg:col-span-8 flex flex-col bg-[#FBFCFB] rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 border border-gray-100 shadow-xl min-h-[400px] lg:min-h-0 overflow-hidden">
@@ -23,6 +34,9 @@ export function StudentRegistryTable() {
               </th>
               <th className="pb-4 md:pb-6 text-[9px] md:text-[10px] font-black text-[#1A3D2C]/90 uppercase tracking-widest">
                 Grade
+              </th>
+              <th className="pb-4 md:pb-6 text-[9px] md:text-[10px] font-black text-[#1A3D2C]/90 uppercase tracking-widest text-right">
+                Actions
               </th>
             </tr>
           </thead>
@@ -46,13 +60,30 @@ export function StudentRegistryTable() {
                     {student.grade}
                   </span>
                 </td>
+                <td className="py-2.5 md:py-3.5 text-right">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteId(student.id);
+                    }}
+                    className="p-2 text-[#1A3D2C]/20 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all inline-flex items-center justify-center translate-x-2"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-
+      <DeleteConfirmationModal
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Remove Student?"
+        message="This will permanently revoke this student's access to your partner portal agents."
+      />
     </div>
   );
 }

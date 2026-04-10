@@ -172,14 +172,16 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     set({ isAgentsLoading: true });
     try {
       const response = await fetch(`${API_BASE_URL}/api/students/${studentProfile.user_id}/available-agents`);
-
       if (!response.ok) throw new Error("Failed to fetch available agents");
 
-      const data: AgentItem[] = await response.json();
-      set({ availableAgents: data, isAgentsLoading: false });
+      const data = await response.json();
+      
+      // Defensively handle different possible response formats
+      const agents = Array.isArray(data) ? data : (data.agents || []);
+      set({ availableAgents: agents, isAgentsLoading: false });
     } catch (error) {
       console.error("Fetch Agents Error:", error);
-      set({ isAgentsLoading: false });
+      set({ availableAgents: [], isAgentsLoading: false });
     }
   },
 

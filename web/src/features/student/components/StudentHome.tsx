@@ -12,6 +12,30 @@ import {
 import { AgentPickerModal } from "@/features/student/components/AgentPickerModal";
 
 export function StudentHome() {
+  // Styles for the animated gradient text
+  const animateGradientStyle = `
+    @keyframes shiftGradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .animate-gradient-text {
+      background: linear-gradient(
+        to right, 
+        #1a3a2a,
+        #03b1ed, 
+        #00a866,
+        #430163,
+        #1a3a2a
+      );
+      background-size: 300% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shiftGradient 8s ease-in-out infinite;
+      display: inline-block;
+    }
+  `;
+
   const { 
     studentProfile, 
     recentChats, 
@@ -77,7 +101,8 @@ export function StudentHome() {
           transition={{ delay: 0.05 }}
           className="space-y-2"
         >
-          <h1 className="text-5xl font-extrabold text-[#1a3a2a] tracking-tight leading-tight">
+          <style>{animateGradientStyle}</style>
+          <h1 className="text-5xl font-extrabold tracking-tight leading-tight animate-gradient-text">
             Hi {username}
           </h1>
           <p className="text-3xl font-bold text-[#2d6a4a] tracking-tight">
@@ -175,7 +200,7 @@ export function StudentHome() {
               ))
             ) : (
               <div className="col-span-1 md:col-span-3 py-10 text-center border-2 border-dashed border-[#1a3a2a]/8 rounded-2xl">
-                <p className="text-[#1a3a2a]/40 text-sm">No available agents found.</p>
+                <p className="text-[#1a3a2a]/40 text-sm">Add partners from your profile to start chat</p>
               </div>
             )}
           </div>

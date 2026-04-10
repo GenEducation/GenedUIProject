@@ -5,6 +5,7 @@ import { useStudentStore } from "../store/useStudentStore";
 import { StudentHome } from "./StudentHome";
 import { StudentChatView } from "./StudentChatView";
 import { StudentProfile } from "./StudentProfile";
+import { PartnerRequestModal } from "./PartnerRequestModal";
 
 /**
  * Top-level entry point for the student portal.
@@ -52,6 +53,9 @@ export function StudentPortal() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Enrollment Status Modal */}
+      <PartnerRequestModal />
     </div>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { Plus, ChevronRight } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { usePartnerStore } from "../store/usePartnerStore";
+import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
 interface SubjectRegistryProps {
   onUploadClick: () => void;
@@ -12,10 +13,20 @@ interface SubjectRegistryProps {
 export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const subjects = usePartnerStore((state) => state.subjects);
   const fetchSubjects = usePartnerStore((state) => state.fetchSubjects);
+  const removeSubject = usePartnerStore((state) => state.removeSubject);
+
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
 
   useEffect(() => {
     fetchSubjects();
   }, [fetchSubjects]);
+
+  const handleDelete = async () => {
+    if (deleteId) {
+      await removeSubject(deleteId);
+      setDeleteId(null);
+    }
+  };
 
   return (
     <div className="flex-1 px-4 md:px-12 pt-8 md:pt-12 pb-8 bg-white flex flex-col h-full overflow-hidden">
@@ -70,9 +81,14 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                         <h3 className="text-base md:text-lg font-bold text-[#1A3D2C] tracking-tight flex items-center gap-2">
                           {subject.agent}
                         </h3>
-                        <p className="text-[11px] font-bold text-[#1A3D2C]/50 ml-[28px] uppercase tracking-wider">
+                        <p className="text-[11px] font-bold text-[#1A3D2C]/50 ml-[2px] uppercase tracking-wider">
                           Grade {subject.grade}
                         </p>
+                        {subject.chapters !== undefined && subject.chapters > 0 && (
+                          <p className="text-[10px] font-bold text-[#2d6a4a]/80 ml-[2px] mt-0.5">
+                            {subject.chapters} Chapters Detected
+                          </p>
+                        )}
                       </div>
 
                       {/* Middle: Subject */}
@@ -82,8 +98,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                         </span>
                       </div>
 
-                      {/* Right: Status */}
-                      <div className="flex shrink-0 justify-end ml-4">
+                      {/* Right: Status & Actions */}
+                      <div className="flex shrink-0 items-center gap-4 ml-4">
                         <span 
                           className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors ${
                             isActive ? "bg-[#D1E6D9]/30 text-[#1A3D2C] border-[#1A3D2C]/5" :
@@ -93,6 +109,16 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                         >
                           {subject.status}
                         </span>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteId(subject.id);
+                          }}
+                          className="p-2 text-[#1A3D2C]/20 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -115,6 +141,15 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Delete Curriculum?"
+        message="This will permanently remove this subject and all associated learning materials from your registry."
+      />
     </div>
   );
 }

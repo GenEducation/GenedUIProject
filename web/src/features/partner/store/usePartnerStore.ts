@@ -43,6 +43,8 @@ interface PartnerState {
   fetchSubjects: () => Promise<void>;
   addSubject: (subject: Subject) => void;
   uploadCurriculum: (file: File, subjectName: string, grade: string, board: string) => Promise<void>;
+  removeSubject: (agentId: string) => Promise<void>;
+  removeStudent: (studentId: string) => Promise<void>;
 
   // Auth/Logout Action
   logoutPartner: () => void;
@@ -203,8 +205,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         subject: item.subject,
         agent: item.name,
         grade: item.grade,
-        status: "active", // Fallback, assume fetched subjects are ready
-        chapters: 0,
+        status: "active",
+        chapters: item.chapters_count || 0,
       }));
 
       set({ subjects: mappedSubjects });
@@ -221,7 +223,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const optimisticSubject: Subject = {
       id: tempId,
       subject: subjectName,
-      agent: "Unknown", // Temporarily assigned until backend completes
+      agent: subjectName, // Use user-provided name immediately
       grade,
       board,
       status: "in-progress",
@@ -263,6 +265,39 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         ),
       }));
     }
+  },
+
+  removeSubject: async (agentId) => {
+    const rawPartnerId = localStorage.getItem("gened_partner_id");
+    const partnerId = rawPartnerId?.replace(/['"]+/g, "");
+    if (!partnerId) throw new Error("No partner ID found");
+
+    const res = await fetch(`${getBaseUrl()}/api/partners/${partnerId}/agents/${agentId}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) throw new Error("Failed to delete subject");
+
+    set((state) => ({
+      subjects: state.subjects.filter((s) => s.id !== agentId),
+    }));
+  },
+
+  removeStudent: async (studentId) => {
+    const rawPartnerId = localStorage.getItem("gened_partner_id");
+    const partnerId = rawPartnerId?.replace(/['"]+/g, "");
+    if (!partnerId) throw new Error("No partner ID found");
+
+    const res = await fetch(`${getBaseUrl()}/partner/students/${studentId}?partner_id=${partnerId}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) throw new Error("Failed to delete student");
+
+    set((state) => ({
+      students: state.students.filter((s) => s.id !== studentId),
+      totalEnrollments: state.totalEnrollments - 1,
+    }));
   },
 
   // ── Logout ─────────────────────────────────────────────────────────────

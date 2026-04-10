@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, LogOut, ShieldCheck } from "lucide-react";
+import { ArrowLeft, LogOut, ShieldCheck, Loader2 } from "lucide-react";
 import { useStudentStore } from "../store/useStudentStore";
 import { useEffect, useState } from "react";
 
@@ -21,7 +21,11 @@ export function StudentProfile() {
     fetchAvailablePartners();
     fetchEnrolledPartners();
   }, [fetchAvailablePartners, fetchEnrolledPartners]);
+
   const [parentEmail, setParentEmail] = useState("");
+  const [selectedPartnerId, setSelectedPartnerId] = useState("");
+
+  const isLoading = partnerRequestStatus === "loading";
 
   const username = studentProfile?.username ?? "Julian Thorne";
   const grade = studentProfile?.grade ? `Grade ${studentProfile.grade}` : "PhD Year 2";
@@ -148,8 +152,10 @@ export function StudentProfile() {
               <div className="space-y-4">
                 <div className="relative">
                   <select 
-                    defaultValue=""
-                    className="w-full bg-white rounded-2xl px-5 py-3.5 text-[14px] font-semibold text-[#1a3a2a]/80 outline-none focus:border-[#2d6a4a] appearance-none cursor-pointer shadow-sm border border-transparent"
+                    value={selectedPartnerId}
+                    onChange={(e) => setSelectedPartnerId(e.target.value)}
+                    className="w-full bg-white rounded-2xl px-5 py-3.5 text-[14px] font-semibold text-[#1a3a2a]/80 outline-none focus:border-[#2d6a4a] appearance-none cursor-pointer shadow-sm border border-transparent disabled:opacity-50"
+                    disabled={isLoading}
                   >
                     <option value="" disabled>Select Institution...</option>
                     {availablePartners.map(p => (
@@ -161,8 +167,19 @@ export function StudentProfile() {
                   </div>
                 </div>
                 
-                <button className="w-full bg-[#2d6a4a] hover:bg-[#1a3a2a] text-white rounded-2xl py-3.5 font-bold text-[14px] transition-colors shadow-lg shadow-[#2d6a4a]/20">
-                  Send Request
+                <button 
+                  onClick={() => selectedPartnerId && sendPartnerRequest(selectedPartnerId)}
+                  disabled={!selectedPartnerId || isLoading}
+                  className="w-full bg-[#2d6a4a] hover:bg-[#1a3a2a] text-white rounded-2xl py-3.5 font-bold text-[14px] transition-colors shadow-lg shadow-[#2d6a4a]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Request"
+                  )}
                 </button>
               </div>
             </div>

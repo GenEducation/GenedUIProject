@@ -3,22 +3,29 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Search } from "lucide-react";
 import { useState } from "react";
-import { useStudentStore, AVAILABLE_SUBJECTS, SubjectItem } from "../store/useStudentStore";
+import { useStudentStore, AgentItem } from "../store/useStudentStore";
 
 export function AgentPickerModal() {
-  const { setAgentPickerOpen, openNewChat } = useStudentStore();
+  const { setAgentPickerOpen, openNewChat, availableAgents } = useStudentStore();
   const [query, setQuery] = useState("");
 
   const filtered = query.trim()
-    ? AVAILABLE_SUBJECTS.filter(
-        (s) =>
-          s.name.toLowerCase().includes(query.toLowerCase()) ||
-          s.grade.toLowerCase().includes(query.toLowerCase())
-      )
-    : AVAILABLE_SUBJECTS;
+    ? (Array.isArray(availableAgents) ? availableAgents.filter(
+        (a) =>
+          a.name.toLowerCase().includes(query.toLowerCase()) ||
+          a.subject.toLowerCase().includes(query.toLowerCase()) ||
+          `grade ${a.grade}`.toLowerCase().includes(query.toLowerCase())
+      ) : [])
+    : (Array.isArray(availableAgents) ? availableAgents : []);
 
-  const handleSelect = (subject: SubjectItem) => {
-    openNewChat(subject);
+  const handleSelect = (agent: AgentItem) => {
+    openNewChat({
+      id: agent.agent_id,
+      name: agent.name,
+      grade: `Grade ${agent.grade}`,
+      icon: "🤖",
+      chaptersCount: 0
+    });
   };
 
   return (
@@ -72,26 +79,28 @@ export function AgentPickerModal() {
 
         {/* Subject list */}
         <div className="overflow-y-auto max-h-[360px] p-4 space-y-2">
-          {filtered.length === 0 ? (
-            <div className="py-10 text-center text-sm text-[#1a3a2a]/40">
-              No subjects match your search.
+          {(!Array.isArray(filtered) || filtered.length === 0) ? (
+            <div className="py-10 text-center text-sm text-[#1a3a2a]/40 px-8 leading-relaxed">
+              {query 
+                ? "No agents match your search." 
+                : "Add partners from your profile to start chat"}
             </div>
           ) : (
-            filtered.map((subject, i) => (
+            filtered.map((agent, i) => (
               <motion.button
-                key={subject.id}
+                key={agent.agent_id}
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.035 }}
-                onClick={() => handleSelect(subject)}
+                onClick={() => handleSelect(agent)}
                 className="w-full flex items-center gap-4 p-4 rounded-2xl text-left hover:bg-[#F4F3EE] hover:shadow-sm transition-all group"
               >
                 <div className="w-11 h-11 rounded-xl bg-[#F4F3EE] group-hover:bg-white flex items-center justify-center text-xl flex-shrink-0 transition-colors">
-                  {subject.icon}
+                  🤖
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-[#1a3a2a] text-sm">{subject.name}</p>
-                  <p className="text-xs text-[#1a3a2a]/45 mt-0.5">{subject.grade}</p>
+                  <p className="font-bold text-[#1a3a2a] text-sm">{agent.name}</p>
+                  <p className="text-xs text-[#1a3a2a]/45 mt-0.5">{agent.subject} &bull; Grade {agent.grade}</p>
                 </div>
                 <div className="w-8 h-8 rounded-xl bg-[#1a3a2a]/5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <span className="text-[#1a3a2a] text-xs font-bold">→</span>
@@ -104,7 +113,7 @@ export function AgentPickerModal() {
         {/* Footer */}
         <div className="px-7 py-5 border-t border-[#1a3a2a]/8 bg-[#F4F3EE]/50">
           <p className="text-xs text-[#1a3a2a]/40 text-center">
-            {filtered.length} subject{filtered.length !== 1 ? "s" : ""} available
+            {filtered.length} agent{filtered.length !== 1 ? "s" : ""} available
           </p>
         </div>
       </motion.div>
