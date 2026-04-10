@@ -84,11 +84,6 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                         <p className="text-[11px] font-bold text-[#1A3D2C]/50 ml-[2px] uppercase tracking-wider">
                           Grade {subject.grade}
                         </p>
-                        {subject.chapters !== undefined && subject.chapters > 0 && (
-                          <p className="text-[10px] font-bold text-[#2d6a4a]/80 ml-[2px] mt-0.5">
-                            {subject.chapters} Chapters Detected
-                          </p>
-                        )}
                       </div>
 
                       {/* Middle: Subject */}
@@ -110,15 +105,17 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           {subject.status}
                         </span>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteId(subject.id);
-                          }}
-                          className="p-2 text-[#1A3D2C]/20 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        {isActive && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteId(subject.id);
+                            }}
+                            className="p-2 text-[#1A3D2C]/20 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

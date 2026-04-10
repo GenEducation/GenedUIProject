@@ -49,7 +49,12 @@ export const StudentChatSidebar = React.memo(({ activeChatId }: { activeChatId: 
                   : "hover:bg-[#1a3a2a]/8 text-[#1a3a2a]/70"
               }`}
             >
-              <span className="text-xs font-semibold truncate">{chat.title}</span>
+              <span 
+                className="text-xs font-semibold truncate flex-1 min-w-0" 
+                title={chat.title}
+              >
+                {chat.title}
+              </span>
             </button>
           ))
         ) : (
@@ -63,7 +68,12 @@ export const StudentChatSidebar = React.memo(({ activeChatId }: { activeChatId: 
         {/* If current chat is brand-new (not in recent list) show it as active */}
         {activeChat && !recentChats.find((c) => c.id === activeChatId) && (
           <div className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#1a3a2a] text-white">
-            <span className="text-xs font-semibold truncate">{activeChat.title}</span>
+            <span 
+              className="text-xs font-semibold truncate flex-1 min-w-0" 
+              title={activeChat.title}
+            >
+              {activeChat.title}
+            </span>
           </div>
         )}
       </div>

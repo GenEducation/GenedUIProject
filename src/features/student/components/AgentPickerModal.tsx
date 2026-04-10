@@ -25,7 +25,7 @@ export function AgentPickerModal() {
       grade: `Grade ${agent.grade}`,
       icon: "🤖",
       chaptersCount: 0
-    });
+    }, agent.agent_id);
   };
 
   return (

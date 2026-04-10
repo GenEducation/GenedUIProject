@@ -32,6 +32,7 @@ export function CurriculumIngestion({
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(65);
   const [subjectName, setSubjectName] = useState("");
+  const [chapterTitle, setChapterTitle] = useState("");
   const [grade, setGrade] = useState("");
   const [board, setBoard] = useState("");
   
@@ -46,12 +47,12 @@ export function CurriculumIngestion({
     }
   };
 
-  const handleProcess = async () => {
-    if (!subjectName || !grade || !file) return;
+   const handleProcess = async () => {
+    if (!subjectName || !chapterTitle || !grade || !file) return;
     
     setIsProcessing(true);
     try {
-      await uploadCurriculum(file, subjectName, grade, board);
+      await uploadCurriculum(file, subjectName, chapterTitle, grade, board);
       onClose();
     } catch (error) {
       console.error(error);
@@ -66,7 +67,7 @@ export function CurriculumIngestion({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-2xl bg-white rounded-[2.5rem] shadow-[0_20px_70px_rgba(26,61,44,0.15)] overflow-hidden flex flex-col"
+        className="relative w-full max-w-2xl max-h-[90vh] bg-white rounded-[2.5rem] shadow-[0_20px_70px_rgba(26,61,44,0.15)] overflow-hidden flex flex-col"
       >
         {/* Close Button */}
         <button 
@@ -76,7 +77,7 @@ export function CurriculumIngestion({
           <X size={20} />
         </button>
 
-        <div className="p-4 md:p-10 space-y-4 md:space-y-8">
+        <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-4 md:space-y-8 scrollbar-hide">
           {/* Header */}
           <div>
             <h3 className="text-lg md:text-xl font-black text-[#1A3D2C]">Curriculum Upload</h3>
@@ -118,33 +119,50 @@ export function CurriculumIngestion({
           </div>
 
           {/* Form Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Subject</label>
-              <input 
+              <select 
                 value={subjectName}
                 onChange={(e) => setSubjectName(e.target.value)}
-                placeholder="e.g. Botany"
+                className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
+              >
+                <option value="">Select Subject</option>
+                <option value="english">English</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Chapter Title</label>
+              <input 
+                value={chapterTitle}
+                onChange={(e) => setChapterTitle(e.target.value)}
+                placeholder="e.g. Plant Reproduction"
                 className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/50 transition-all"
               />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Grade</label>
-              <input 
+              <select 
                 value={grade}
                 onChange={(e) => setGrade(e.target.value)}
-                placeholder="e.g. 12"
-                className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/20 transition-all"
-              />
+                className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
+              >
+                <option value="">Select Grade</option>
+                <option value="4">Grade 4</option>
+                <option value="5">Grade 5</option>
+                <option value="6">Grade 6</option>
+              </select>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Board</label>
-              <input 
+              <select 
                 value={board}
                 onChange={(e) => setBoard(e.target.value)}
-                placeholder="e.g. IGCSE"
-                className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/20 transition-all"
-              />
+                className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
+              >
+                <option value="">Select Board</option>
+                <option value="CBSE">CBSE</option>
+              </select>
             </div>
           </div>
 
@@ -186,7 +204,7 @@ export function CurriculumIngestion({
           </button>
           <button 
             onClick={handleProcess}
-            disabled={isProcessing || !subjectName || !grade || !file}
+            disabled={isProcessing || !subjectName || !chapterTitle || !grade || !board || !file}
             className="w-full sm:w-auto px-8 py-2 md:py-3 bg-[#D1E6D9] text-[#1A3D2C] text-sm font-black rounded-2xl hover:bg-[#1A3D2C] hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isProcessing ? "Processing..." : "Process Artifact"}

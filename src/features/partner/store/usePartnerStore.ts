@@ -42,7 +42,7 @@ interface PartnerState {
   // Subject Actions
   fetchSubjects: () => Promise<void>;
   addSubject: (subject: Subject) => void;
-  uploadCurriculum: (file: File, subjectName: string, grade: string, board: string) => Promise<void>;
+  uploadCurriculum: (file: File, subjectName: string, chapterTitle: string, grade: string, board: string) => Promise<void>;
   removeSubject: (agentId: string) => Promise<void>;
   removeStudent: (studentId: string) => Promise<void>;
 
@@ -194,19 +194,19 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     if (!partnerId) return;
 
     try {
-      const res = await fetch(`${getBaseUrl()}/api/partners/${partnerId}/agents`);
+      const res = await fetch(`${getRagUrl()}/partner/${partnerId}/ingestions`);
       if (!res.ok) throw new Error("Failed to fetch subjects/agents");
 
       const raw: any[] = await res.json();
       console.log("FETCHED FROM BACKEND:", raw); // Added for debugging
       
       const mappedSubjects: Subject[] = raw.map((item) => ({
-        id: item.agent_id,
+        id: item.ingestion_id, // Map ingestion_id to id for deletion
         subject: item.subject,
-        agent: item.name,
+        agent: item.document_title, // Map document_title to agent display name
         grade: item.grade,
-        status: "active",
-        chapters: item.chapters_count || 0,
+        status: item.status === "completed" ? "active" : item.status, // Map completed to active
+        chapters: 0, // No longer showing chapters detected in the list
       }));
 
       set({ subjects: mappedSubjects });
@@ -217,13 +217,13 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   addSubject: (subject) =>
     set((state) => ({ subjects: [subject, ...state.subjects] })),
 
-  uploadCurriculum: async (file, subjectName, grade, board) => {
+  uploadCurriculum: async (file, subjectName, chapterTitle, grade, board) => {
     const tempId = Math.random().toString(36).substring(2, 9);
 
     const optimisticSubject: Subject = {
       id: tempId,
       subject: subjectName,
-      agent: subjectName, // Use user-provided name immediately
+      agent: chapterTitle, // Show the Chapter Title as the primary name
       grade,
       board,
       status: "in-progress",
@@ -236,12 +236,23 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("subject", subjectName);
+      formData.append("document_title", chapterTitle); // Mapped to chapterTitle (document_title on backend)
       formData.append("grade", grade);
       formData.append("board", board);
 
+      const rawPartnerId = localStorage.getItem("gened_partner_id");
+      const partnerId = rawPartnerId?.replace(/['"]+/g, "");
+      if (partnerId) {
+        formData.append("partner_id", partnerId);
+      }
+
       const apiUrl = `${getRagUrl()}/admin/ingest/ncert`;
 
-      const response = await fetch(apiUrl, { method: "POST", body: formData });
+      const response = await fetch(apiUrl, { 
+        method: "POST", 
+        body: formData,
+        headers: partnerId ? { "partner-id": partnerId } : {}
+      });
       if (!response.ok) throw new Error("Upload failed");
 
       const data = await response.json();

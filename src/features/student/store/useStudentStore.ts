@@ -29,6 +29,7 @@ export interface ChatSession {
   lastActive: string;
   lastTopic: string;
   grade?: string;
+  agent_id?: string;
 }
 
 export interface SubjectItem {
@@ -94,7 +95,7 @@ interface StudentState {
   fetchEnrolledPartners: () => Promise<void>;
   fetchChatHistory: (sessionId: string) => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
-  openNewChat: (subject: SubjectItem) => void;
+  openNewChat: (subject: any, agent_id?: string) => void;
   closeChat: () => void;
   sendMessage: (text: string) => Promise<void>;
   setProfileOpen: (open: boolean) => void;
@@ -142,7 +143,15 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         body: JSON.stringify({ user_id: studentProfile.user_id }),
       });
 
-      if (!response.ok) throw new Error("Failed to fetch sessions");
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error("Detailed Session Fetch Error:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorBody
+        });
+        throw new Error(`Failed to fetch sessions: ${response.status}`);
+      }
 
       const data = await response.json();
       // data: { status, student_id, sessions: [ { session_id, title, created_at } ] }
@@ -150,12 +159,13 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       const mappedChats: ChatSession[] = data.sessions.map((s: any) => ({
         id: s.session_id,
         session_id: s.session_id,
-        title: s.title || "Scholarly Session",
+        title: s.title || s.agent_name || "Scholarly Session",
         agentType: "English Assistant",
         agentIcon: "📖",
-        lastActive: s.created_at ? new Date(s.created_at).toLocaleDateString() : "Recently",
+        lastActive: s.updated_at ? new Date(s.updated_at).toLocaleDateString() : "Recently",
         lastTopic: "Continued Learning",
         grade: "", // Grade is handled via student profile
+        agent_id: s.subject_agent, // Mapping backend agent field
       }));
 
       set({ recentChats: mappedChats, isSessionsLoading: false });
@@ -176,8 +186,20 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
       const data = await response.json();
       
-      // Defensively handle different possible response formats
-      const agents = Array.isArray(data) ? data : (data.agents || []);
+      // Flatten the nested structure: data.partners[].subjects[].agents[]
+      const agents: AgentItem[] = [];
+      if (data.partners && Array.isArray(data.partners)) {
+        data.partners.forEach((partner: any) => {
+          if (partner.subjects && Array.isArray(partner.subjects)) {
+            partner.subjects.forEach((subject: any) => {
+              if (subject.agents && Array.isArray(subject.agents)) {
+                agents.push(...subject.agents);
+              }
+            });
+          }
+        });
+      }
+      
       set({ availableAgents: agents, isAgentsLoading: false });
     } catch (error) {
       console.error("Fetch Agents Error:", error);
@@ -304,7 +326,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     await get().fetchChatHistory(chat.id);
   },
 
-  openNewChat: (subject) => {
+  openNewChat: (subject, agent_id) => {
     const tempId = `new-${Date.now()}`;
     const newSession: ChatSession = {
       id: tempId,
@@ -314,6 +336,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       lastActive: "Just now",
       lastTopic: "New Session",
       grade: subject.grade,
+      agent_id: agent_id || subject.id, // Prefer explicit agent_id, fallback to subject.id
     };
 
     set((state) => ({
@@ -356,6 +379,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           text,
           user_id: studentProfile.user_id,
           session_id: activeChat.session_id || undefined,
+          agent_id: activeChat.agent_id || "eng-grade-4", // Fallback if missing
           subject: "English",
           grade: studentProfile.grade || 10,
         }),
