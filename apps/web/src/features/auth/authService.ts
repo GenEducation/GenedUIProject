@@ -29,6 +29,7 @@ export interface AuthTokenResponse {
   grade?: number;
   organization?: string;
   website?: string | null;
+  school_board?: string;
 }
 
 export interface SignInFields {

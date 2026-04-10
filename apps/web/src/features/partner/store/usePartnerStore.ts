@@ -54,7 +54,10 @@ const getInitials = (name: string) =>
   name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
 const getBaseUrl = () =>
-  (process.env.NEXT_PUBLIC_API_URL || "http://192.168.1.4:8000").replace(/\/$/, "");
+  (process.env.NEXT_PUBLIC_CORE_API_URL || "http://192.168.1.15:8000").replace(/\/$/, "");
+
+const getRagUrl = () =>
+  (process.env.NEXT_PUBLIC_RAG_API_URL || "http://192.168.1.15:8001").replace(/\/$/, "");
 
 export const usePartnerStore = create<PartnerState>((set, get) => ({
   students: [],
@@ -234,7 +237,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       formData.append("grade", grade);
       formData.append("board", board);
 
-      const apiUrl = `${getBaseUrl()}/admin/ingest/ncert`;
+      const apiUrl = `${getRagUrl()}/admin/ingest/ncert`;
 
       const response = await fetch(apiUrl, { method: "POST", body: formData });
       if (!response.ok) throw new Error("Upload failed");

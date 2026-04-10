@@ -40,6 +40,7 @@ export function LoginView({ onLogin }: LoginViewProps) {
   const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
   const [signinErrors, setSigninErrors] = useState<Record<string, string>>({});
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [signupSuccessMessage, setSignupSuccessMessage] = useState("");
 
   const validateSignIn = () => {
     const errors: Record<string, string> = {};
@@ -101,6 +102,7 @@ export function LoginView({ onLogin }: LoginViewProps) {
           email: token.email,
           role: token.role,
           grade: token.grade,
+          school_board: token.school_board,
         });
       }
 
@@ -136,31 +138,13 @@ export function LoginView({ onLogin }: LoginViewProps) {
     setIsSubmitting(true);
 
     try {
-      const token = await signUp(signupData);
-      // Persist user_id for partner API calls
-      if (token.user_id) {
-        localStorage.setItem("gened_partner_id", token.user_id);
-      }
-      const normalizedRole = token.role?.toLowerCase() ?? signupData.role;
-      const role =
-        normalizedRole === "student" ||
-        normalizedRole === "parent" ||
-        normalizedRole === "partner"
-          ? normalizedRole
-          : signupData.role;
-
-      // Persist student profile into the student store
-      if (role === "student") {
-        useStudentStore.getState().setStudentProfile({
-          user_id: token.user_id,
-          username: token.username,
-          email: token.email,
-          role: token.role,
-          grade: token.grade,
-        });
-      }
-
-      onLogin(role);
+      await signUp(signupData);
+      
+      // Force user to sign in manually per requirements
+      setSignupSuccessMessage("Account created successfully! Please sign in to access your dashboard.");
+      setLoginData((prev) => ({ ...prev, username: signupData.username, password: "" }));
+      setSignupData(initialSignUpData);
+      setIsSignUp(false);
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Unable to complete signup.";
       const lowMsg = msg.toLowerCase();
@@ -180,7 +164,8 @@ export function LoginView({ onLogin }: LoginViewProps) {
   };
 
   const toggleSignUp = () => {
-    setIsSignUp((current) => !current);
+      setSignupSuccessMessage("");
+      setIsSignUp((current) => !current);
   };
 
   const handleLoginChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -218,6 +203,13 @@ export function LoginView({ onLogin }: LoginViewProps) {
                     ? "Forge your scholarly identity"
                     : "Please sign in to your archive"}
                 </p>
+                {signupSuccessMessage && !isSignUp && (
+                  <div className="mt-6 p-4 bg-[#bce4cc]/30 border border-[#2d6a4a]/20 rounded-2xl animate-fade-in">
+                    <p className="text-sm font-bold text-[#2d6a4a] text-center tracking-tight">
+                      {signupSuccessMessage}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {isSignUp ? (

@@ -27,7 +27,7 @@ interface StudentDetailsModalProps {
 }
 
 const getBaseUrl = () =>
-  (process.env.NEXT_PUBLIC_API_URL || "http://192.168.1.4:8000").replace(/\/$/, "");
+  (process.env.NEXT_PUBLIC_CORE_API_URL || "http://192.168.1.15:8000").replace(/\/$/, "");
 
 const formatDate = (iso: string) => {
   try {

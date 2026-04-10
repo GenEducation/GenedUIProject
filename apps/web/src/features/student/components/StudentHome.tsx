@@ -22,6 +22,7 @@ export function StudentHome() {
     setAgentPickerOpen, 
     isAgentPickerOpen, 
     logoutStudent,
+    setProfileOpen,
     fetchAvailableAgents,
     availableAgents,
     isAgentsLoading
@@ -58,9 +59,12 @@ export function StudentHome() {
             <LogOut size={14} />
             Sign out
           </button>
-          <div className="w-8 h-8 rounded-full bg-[#1a3a2a]/10 flex items-center justify-center">
-            <User size={16} className="text-[#1a3a2a]/60" />
-          </div>
+          <button
+            onClick={() => setProfileOpen(true)}
+            className="w-10 h-10 rounded-full bg-[#1a3a2a] hover:bg-[#2d6a4a] text-white shadow-md shadow-[#1a3a2a]/20 transition-all flex items-center justify-center transform hover:scale-105"
+          >
+            <User size={18} className="text-white" />
+          </button>
         </div>
       </motion.nav>
 

@@ -46,6 +46,11 @@ export interface AgentItem {
   grade: number;
 }
 
+export interface PartnerItem {
+  id: string;
+  organization: string;
+}
+
 export const AVAILABLE_SUBJECTS: SubjectItem[] = [
   { id: "sub-1", name: "Quantum Physics", grade: "Grade 12", icon: "⚛", chaptersCount: 12 },
   { id: "sub-2", name: "Medieval History", grade: "Grade 10", icon: "🏰", chaptersCount: 8 },
@@ -67,29 +72,41 @@ interface StudentState {
   activeChat: ChatSession | null;
   messages: ChatMessage[];
   isChatOpen: boolean;
+  isProfileOpen: boolean;
   isAgentPickerOpen: boolean;
   isAITyping: boolean;
   isSessionsLoading: boolean;
   isHistoryLoading: boolean;
   availableAgents: AgentItem[];
   isAgentsLoading: boolean;
+  availablePartners: PartnerItem[];
+  enrolledPartners: PartnerItem[];
+  isEnrolledPartnersLoading: boolean;
+  partnerRequestStatus: "idle" | "loading" | "success" | "error";
+  partnerRequestMessage: string;
+  isPartnerModalOpen: boolean;
 
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
   fetchSessions: () => Promise<void>;
   fetchAvailableAgents: () => Promise<void>;
+  fetchAvailablePartners: () => Promise<void>;
+  fetchEnrolledPartners: () => Promise<void>;
   fetchChatHistory: (sessionId: string) => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
   openNewChat: (subject: SubjectItem) => void;
   closeChat: () => void;
   sendMessage: (text: string) => Promise<void>;
+  setProfileOpen: (open: boolean) => void;
   setAgentPickerOpen: (open: boolean) => void;
+  setPartnerModalOpen: (open: boolean) => void;
+  sendPartnerRequest: (partnerId: string) => Promise<void>;
   logoutStudent: () => void;
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://192.168.1.10:8000").replace(/\/$/, "");
+const API_BASE_URL = (process.env.NEXT_PUBLIC_CORE_API_URL || "http://192.168.1.15:8000").replace(/\/$/, "");
 
 export const useStudentStore = create<StudentState>((set, get) => ({
   studentProfile: null,
@@ -97,12 +114,19 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   activeChat: null,
   messages: [],
   isChatOpen: false,
+  isProfileOpen: false,
   isAgentPickerOpen: false,
   isAITyping: false,
   isSessionsLoading: false,
   isHistoryLoading: false,
   availableAgents: [],
   isAgentsLoading: false,
+  availablePartners: [],
+  enrolledPartners: [],
+  isEnrolledPartnersLoading: false,
+  partnerRequestStatus: "idle",
+  partnerRequestMessage: "",
+  isPartnerModalOpen: false,
 
   setStudentProfile: (profile) => set({ studentProfile: profile }),
 
@@ -156,6 +180,77 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     } catch (error) {
       console.error("Fetch Agents Error:", error);
       set({ isAgentsLoading: false });
+    }
+  },
+
+  fetchAvailablePartners: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/partners`);
+      if (!response.ok) throw new Error("Failed to fetch partners");
+      const data: PartnerItem[] = await response.json();
+      set({ availablePartners: data });
+    } catch (error) {
+      console.error("Fetch Partners Error:", error);
+    }
+  },
+
+  fetchEnrolledPartners: async () => {
+    const { studentProfile } = get();
+    if (!studentProfile) return;
+
+    set({ isEnrolledPartnersLoading: true });
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/students/${studentProfile.user_id}/available-agents`);
+      if (!response.ok) throw new Error("Failed to fetch enrolled partners");
+      const data = await response.json();
+      set({ enrolledPartners: data.partners || [], isEnrolledPartnersLoading: false });
+    } catch (error) {
+      console.error("Fetch Enrolled Partners Error:", error);
+      set({ isEnrolledPartnersLoading: false });
+    }
+  },
+
+  sendPartnerRequest: async (partnerId: string) => {
+    const { studentProfile } = get();
+    if (!studentProfile?.user_id) {
+      set({ 
+        isPartnerModalOpen: true, 
+        partnerRequestStatus: "error", 
+        partnerRequestMessage: "Student profile not found." 
+      });
+      return;
+    }
+
+    set({ 
+      isPartnerModalOpen: true, 
+      partnerRequestStatus: "loading",
+      partnerRequestMessage: "Sending request..." 
+    });
+
+    try {
+      const url = `${API_BASE_URL}/student/partner?student_id=${studentProfile.user_id}&partner_id=${partnerId}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "accept": "application/json" }
+      });
+
+      if (!response.ok) {
+        throw new Error("Request failed");
+      }
+
+      const data = await response.json();
+      const message = data.message || data.organization || "Successfully enrolled in partner module.";
+
+      set({ 
+        partnerRequestStatus: "success", 
+        partnerRequestMessage: String(message) 
+      });
+    } catch (error) {
+      console.error("Partner Request Error:", error);
+      set({ 
+        partnerRequestStatus: "error", 
+        partnerRequestMessage: "Failed to send partner request. Please try again." 
+      });
     }
   },
 
@@ -327,6 +422,9 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   },
 
   setAgentPickerOpen: (open) => set({ isAgentPickerOpen: open }),
+  setPartnerModalOpen: (open) => set({ isPartnerModalOpen: open, partnerRequestStatus: open ? get().partnerRequestStatus : "idle" }),
+  
+  setProfileOpen: (open) => set({ isProfileOpen: open }),
 
   logoutStudent: () => {
     localStorage.removeItem("gened_user_role");
@@ -336,7 +434,9 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       activeChat: null,
       messages: [],
       isChatOpen: false,
+      isProfileOpen: false,
       isAgentPickerOpen: false,
+      isPartnerModalOpen: false,
       isAITyping: false,
     });
     window.location.href = "/";

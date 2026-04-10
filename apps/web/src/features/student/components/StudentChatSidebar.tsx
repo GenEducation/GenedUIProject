@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, BarChart2, Loader2 } from "lucide-react";
+import { User, BarChart2, Loader2 } from "lucide-react";
 import { useStudentStore } from "../store/useStudentStore";
 import React from "react";
 
@@ -10,7 +10,7 @@ import React from "react";
  * area updates, and it consumes its own data from the store.
  */
 export const StudentChatSidebar = React.memo(({ activeChatId }: { activeChatId: string }) => {
-  const { openExistingChat, closeChat, recentChats, isSessionsLoading } = useStudentStore();
+  const { openExistingChat, closeChat, recentChats, isSessionsLoading, setProfileOpen } = useStudentStore();
 
   const activeChatFromStore = useStudentStore((state) => state.activeChat);
   const activeChat = recentChats.find((c) => c.id === activeChatId) || 
@@ -70,9 +70,12 @@ export const StudentChatSidebar = React.memo(({ activeChatId }: { activeChatId: 
 
       {/* Sidebar footer — visual placeholders */}
       <div className="p-4 border-t border-[#1a3a2a]/8 space-y-1">
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#1a3a2a]/50 hover:text-[#1a3a2a] hover:bg-[#1a3a2a]/8 transition-all">
-          <Settings size={16} />
-          <span className="text-xs font-semibold">Settings</span>
+        <button 
+          onClick={() => setProfileOpen(true)}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#1a3a2a]/50 hover:text-[#1a3a2a] hover:bg-[#1a3a2a]/8 transition-all"
+        >
+          <User size={16} />
+          <span className="text-xs font-semibold">Profile</span>
         </button>
         <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#1a3a2a]/50 hover:text-[#1a3a2a] hover:bg-[#1a3a2a]/8 transition-all">
           <BarChart2 size={16} />
