@@ -115,11 +115,11 @@ export function StudentProfile() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {isEnrolledPartnersLoading ? (
-                  <div className="col-span-full py-4 text-center text-sm font-semibold text-[#1a3a2a]/40">
+                  <div key="loading-partners" className="col-span-full py-4 text-center text-sm font-semibold text-[#1a3a2a]/40">
                     Loading partners...
                   </div>
                 ) : enrolledPartners.length === 0 ? (
-                  <div className="col-span-full py-4 text-center text-sm font-semibold text-[#1a3a2a]/40 bg-white rounded-3xl border border-[#1a3a2a]/[0.02]">
+                  <div key="no-partners" className="col-span-full py-4 text-center text-sm font-semibold text-[#1a3a2a]/40 bg-white rounded-3xl border border-[#1a3a2a]/[0.02]">
                     No partners enrolled yet.
                   </div>
                 ) : enrolledPartners.map(partner => (

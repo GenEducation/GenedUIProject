@@ -108,16 +108,27 @@ export function LoginView({ onLogin }: LoginViewProps) {
 
       onLogin(role);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : "Unable to complete signin.";
-      const lowMsg = msg.toLowerCase();
+      let msg = error instanceof Error ? error.message : "Unable to complete signin.";
       
+      // Try to parse the error message if it's JSON from the backend
+      try {
+        const parsed = JSON.parse(msg);
+        if (parsed.detail) {
+          msg = typeof parsed.detail === "string" ? parsed.detail : JSON.stringify(parsed.detail);
+        }
+      } catch (e) {
+        // Not a JSON string, keep original message
+      }
+
+      const lowMsg = msg.toLowerCase();
       const mappedErrors: Record<string, string> = {};
+      
       if (lowMsg.includes("password")) {
         mappedErrors.password = msg;
-      } else if (lowMsg.includes("username") || lowMsg.includes("user") || lowMsg.includes("credentials")) {
+      } else if (lowMsg.includes("username") || lowMsg.includes("user") || lowMsg.includes("credentials") || lowMsg.includes("invalid")) {
         mappedErrors.username = msg;
       } else {
-        mappedErrors.root = "Please try again later";
+        mappedErrors.username = msg;
       }
       setSigninErrors(mappedErrors);
     } finally {

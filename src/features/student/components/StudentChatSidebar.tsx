@@ -87,7 +87,12 @@ export const StudentChatSidebar = React.memo(({ activeChatId }: { activeChatId: 
           <User size={16} />
           <span className="text-xs font-semibold">Profile</span>
         </button>
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#1a3a2a]/50 hover:text-[#1a3a2a] hover:bg-[#1a3a2a]/8 transition-all">
+        <button 
+          onClick={() => {
+            useStudentStore.getState().setAnalyticsOpen(true);
+          }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#1a3a2a]/50 hover:text-[#1a3a2a] hover:bg-[#1a3a2a]/8 transition-all"
+        >
           <BarChart2 size={16} />
           <span className="text-xs font-semibold">Analytics</span>
         </button>

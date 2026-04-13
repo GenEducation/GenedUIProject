@@ -11,9 +11,14 @@ interface SideBarProps {
 
 import { usePartnerStore } from "../store/usePartnerStore";
 
+import { NotificationBell } from "@/components/NotificationBell";
+
 export function SideBar({ activeView, onViewChange }: SideBarProps) {
   const numberOfPendingRequests = usePartnerStore((state) => state.numberOfPendingRequests);
   const logoutPartner = usePartnerStore((state) => state.logoutPartner);
+
+  const rawPartnerId = typeof window !== 'undefined' ? localStorage.getItem("gened_partner_id") : null;
+  const partnerId = rawPartnerId?.replace(/['"]+/g, "");
 
   const navItems: { id: "subjects" | "analytics"; label: string; icon: any; badge?: number | null }[] = [
     { id: "subjects", label: "Subjects", icon: BookOpen },
@@ -21,7 +26,7 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
   ];
 
   return (
-    <aside className="w-20 lg:w-64 h-screen bg-[#F8F9F8] flex flex-col p-4 lg:p-6 border-r border-gray-100 transition-all duration-300 overflow-hidden">
+    <aside className="w-20 lg:w-64 h-screen bg-[#F8F9F8] flex flex-col p-4 lg:p-6 border-r border-gray-100 transition-all duration-300">
       {/* Logo & Workspace Info */}
       <div className="mb-12 flex flex-col gap-5">
         <div className="w-full h-12 lg:h-16 flex items-center justify-center lg:justify-start overflow-hidden">
@@ -78,18 +83,27 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
         })}
       </nav>
 
-      {/* Logout */}
-      <button 
-        onClick={logoutPartner}
-        className="flex items-center gap-4 p-2 lg:px-4 lg:py-3 text-[#1A3D2C]/40 hover:text-red-500 transition-colors mt-auto group justify-center lg:justify-start"
-      >
-        <div className="p-2 rounded-xl group-hover:bg-red-50/50 shrink-0">
-          <LogOut size={18} />
-        </div>
-        <span className="hidden lg:block text-xs font-bold uppercase tracking-widest truncate">
-          Logout
-        </span>
-      </button>
+      {/* Notifications & Logout */}
+      <div className="mt-auto flex flex-col gap-2">
+        {partnerId && (
+          <div className="flex items-center gap-4 px-2 lg:px-0 justify-center lg:justify-start">
+             <NotificationBell userId={partnerId} align="left" />
+             <span className="hidden lg:block text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/40">Notifications</span>
+          </div>
+        )}
+
+        <button 
+          onClick={logoutPartner}
+          className="flex items-center gap-4 p-2 lg:px-4 lg:py-3 text-[#1A3D2C]/40 hover:text-red-500 transition-colors group justify-center lg:justify-start"
+        >
+          <div className="p-2 rounded-xl group-hover:bg-red-50/50 shrink-0">
+            <LogOut size={18} />
+          </div>
+          <span className="hidden lg:block text-xs font-bold uppercase tracking-widest truncate">
+            Logout
+          </span>
+        </button>
+      </div>
     </aside>
   );
 }

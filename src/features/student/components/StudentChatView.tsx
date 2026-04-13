@@ -3,6 +3,7 @@
 import { useStudentStore } from "../store/useStudentStore";
 import { StudentChatSidebar } from "./StudentChatSidebar";
 import { StudentChatMain } from "./StudentChatMain";
+import { StudentAnalyticsDashboard } from "./analytics/StudentAnalyticsDashboard";
 
 /**
  * StudentChatView acts as a container for the modular chat layout.
@@ -13,9 +14,13 @@ export function StudentChatView() {
   const {
     activeChat,
     messages,
-    recentChats,
     isAITyping,
+    isAnalyticsOpen,
   } = useStudentStore();
+
+  if (isAnalyticsOpen) {
+    return <StudentAnalyticsDashboard />;
+  }
 
   if (!activeChat) return null;
 

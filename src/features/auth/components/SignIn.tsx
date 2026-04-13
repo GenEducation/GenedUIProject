@@ -1,6 +1,7 @@
 "use client";
 
-import { ChangeEvent, FormEvent } from "react";
+import { useState, ChangeEvent, FormEvent } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 interface SignInProps {
   loginData: {
@@ -22,6 +23,8 @@ export function SignIn({
   isSigningIn,
   errors,
 }: SignInProps) {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <form
       onSubmit={onSubmit}
@@ -55,14 +58,23 @@ export function SignIn({
               Forgot password?
             </a>
           </div>
-          <input
-            name="password"
-            value={loginData.password}
-            onChange={onChange}
-            type="password"
-            placeholder="••••••••"
-            className={`w-full rounded-2xl border ${errors.password ? 'border-rose-500' : 'border-[#2D5540]/15'} bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10 font-mono tracking-widest`}
-          />
+          <div className="relative">
+            <input
+              name="password"
+              value={loginData.password}
+              onChange={onChange}
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              className={`w-full rounded-2xl border ${errors.password ? 'border-rose-500' : 'border-[#2D5540]/15'} bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10 font-mono tracking-widest`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#2D5540]/40 hover:text-[#2D5540] transition-colors"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
           {errors.password && <p className="text-rose-500 text-[10px] font-bold mt-1.5 ml-1 animate-in fade-in slide-in-from-top-1">{errors.password}</p>}
         </div>
 

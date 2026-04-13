@@ -5,20 +5,31 @@ import { useStudentStore } from "../store/useStudentStore";
 import { StudentHome } from "./StudentHome";
 import { StudentChatView } from "./StudentChatView";
 import { StudentProfile } from "./StudentProfile";
+import { StudentAnalyticsDashboard } from "./analytics/StudentAnalyticsDashboard";
 import { PartnerRequestModal } from "./PartnerRequestModal";
 
 /**
  * Top-level entry point for the student portal.
- * Conditionally renders StudentHome or StudentChatView
- * based on `isChatOpen` from the student store.
+ * Conditionally renders StudentHome, StudentChatView, or StudentAnalyticsDashboard.
  */
 export function StudentPortal() {
-  const { isChatOpen, isProfileOpen } = useStudentStore();
+  const { isChatOpen, isProfileOpen, isAnalyticsOpen } = useStudentStore();
 
   return (
     <div className="h-screen overflow-hidden">
       <AnimatePresence mode="wait">
-        {isProfileOpen ? (
+        {isAnalyticsOpen ? (
+          <motion.div
+            key="analytics"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="h-full"
+          >
+            <StudentAnalyticsDashboard />
+          </motion.div>
+        ) : isProfileOpen ? (
           <motion.div
             key="profile"
             initial={{ opacity: 0, y: 20 }}

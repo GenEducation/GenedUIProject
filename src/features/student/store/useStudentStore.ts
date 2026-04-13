@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { studentService } from "../services/studentService";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -86,9 +87,26 @@ interface StudentState {
   partnerRequestStatus: "idle" | "loading" | "success" | "error";
   partnerRequestMessage: string;
   isPartnerModalOpen: boolean;
+  isAnalyticsOpen: boolean;
+  
+  // Analytics State
+  analyticsSubjects: string[];
+  selectedAnalyticsSubject: string;
+  skillSummary: { 
+    overall_score: number; 
+    skill_index: number;
+    session_count?: number;
+  } | null;
+  cgScores: Array<{ cg_id: string; cg_name: string; avg_mastery: number }>;
+  skillTree: any[];
+  analyticsChapterMastery: any[];
+  isAnalyticsLoading: boolean;
 
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
+  setAnalyticsOpen: (open: boolean) => void;
+  setSelectedAnalyticsSubject: (subject: string) => void;
+  fetchAnalyticsData: (subject?: string) => Promise<void>;
   fetchSessions: () => Promise<void>;
   fetchAvailableAgents: () => Promise<void>;
   fetchAvailablePartners: () => Promise<void>;
@@ -106,8 +124,6 @@ interface StudentState {
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
-
-const API_BASE_URL = (process.env.NEXT_PUBLIC_CORE_API_URL || "http://192.168.1.15:8000").replace(/\/$/, "");
 
 export const useStudentStore = create<StudentState>((set, get) => ({
   studentProfile: null,
@@ -128,8 +144,62 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   partnerRequestStatus: "idle",
   partnerRequestMessage: "",
   isPartnerModalOpen: false,
+  isAnalyticsOpen: false,
+  analyticsSubjects: [],
+  selectedAnalyticsSubject: "",
+  skillSummary: null,
+  cgScores: [],
+  skillTree: [],
+  analyticsChapterMastery: [],
+  isAnalyticsLoading: false,
 
   setStudentProfile: (profile) => set({ studentProfile: profile }),
+  setAnalyticsOpen: (open) => set({ isAnalyticsOpen: open }),
+  setSelectedAnalyticsSubject: (subject) => set({ selectedAnalyticsSubject: subject }),
+
+  fetchAnalyticsData: async (subject) => {
+    const { studentProfile, selectedAnalyticsSubject } = get();
+    if (!studentProfile) return;
+
+    const targetSubject = subject || selectedAnalyticsSubject;
+    if (!targetSubject && !subject) {
+      // First, fetch subjects if none selected
+      try {
+        const subData = await studentService.fetchAnalyticsSubjects(studentProfile.user_id);
+        const subjects = subData.subjects || [];
+        set({ analyticsSubjects: subjects });
+        if (subjects.length > 0) {
+          get().fetchAnalyticsData(subjects[0]);
+        }
+      } catch (error) {
+        console.error("Fetch Analytics Subjects Error:", error);
+      }
+      return;
+    }
+
+    if (subject) set({ selectedAnalyticsSubject: subject });
+
+    set({ isAnalyticsLoading: true });
+    try {
+      const [summary, scores, tree, mastery] = await Promise.all([
+        studentService.fetchSkillSummary(studentProfile.user_id, targetSubject),
+        studentService.fetchCGScores(studentProfile.user_id, targetSubject),
+        studentService.fetchSkillTree(studentProfile.user_id, targetSubject),
+        studentService.fetchChapterMastery(studentProfile.user_id, targetSubject),
+      ]);
+
+      set({
+        skillSummary: summary,
+        cgScores: scores,
+        skillTree: tree,
+        analyticsChapterMastery: mastery,
+        isAnalyticsLoading: false
+      });
+    } catch (error) {
+      console.error("Fetch Analytics Data Error:", error);
+      set({ isAnalyticsLoading: false });
+    }
+  },
 
   fetchSessions: async () => {
     const { studentProfile } = get();
@@ -137,25 +207,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
     set({ isSessionsLoading: true });
     try {
-      const response = await fetch(`${API_BASE_URL}/get-session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: studentProfile.user_id }),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        console.error("Detailed Session Fetch Error:", {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorBody
-        });
-        throw new Error(`Failed to fetch sessions: ${response.status}`);
-      }
-
-      const data = await response.json();
-      // data: { status, student_id, sessions: [ { session_id, title, created_at } ] }
-
+      const data = await studentService.fetchSessions(studentProfile.user_id);
+      
       const mappedChats: ChatSession[] = data.sessions.map((s: any) => ({
         id: s.session_id,
         session_id: s.session_id,
@@ -181,10 +234,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
     set({ isAgentsLoading: true });
     try {
-      const response = await fetch(`${API_BASE_URL}/api/students/${studentProfile.user_id}/available-agents`);
-      if (!response.ok) throw new Error("Failed to fetch available agents");
-
-      const data = await response.json();
+      const data = await studentService.fetchAvailableAgents(studentProfile.user_id);
       
       // Flatten the nested structure: data.partners[].subjects[].agents[]
       const agents: AgentItem[] = [];
@@ -209,9 +259,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
   fetchAvailablePartners: async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/partners`);
-      if (!response.ok) throw new Error("Failed to fetch partners");
-      const data: PartnerItem[] = await response.json();
+      const data: PartnerItem[] = await studentService.fetchAvailablePartners();
       set({ availablePartners: data });
     } catch (error) {
       console.error("Fetch Partners Error:", error);
@@ -224,9 +272,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
     set({ isEnrolledPartnersLoading: true });
     try {
-      const response = await fetch(`${API_BASE_URL}/api/students/${studentProfile.user_id}/available-agents`);
-      if (!response.ok) throw new Error("Failed to fetch enrolled partners");
-      const data = await response.json();
+      const data = await studentService.fetchEnrolledPartners(studentProfile.user_id);
       set({ enrolledPartners: data.partners || [], isEnrolledPartnersLoading: false });
     } catch (error) {
       console.error("Fetch Enrolled Partners Error:", error);
@@ -252,17 +298,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     });
 
     try {
-      const url = `${API_BASE_URL}/student/partner?student_id=${studentProfile.user_id}&partner_id=${partnerId}`;
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "accept": "application/json" }
-      });
-
-      if (!response.ok) {
-        throw new Error("Request failed");
-      }
-
-      const data = await response.json();
+      const data = await studentService.sendPartnerRequest(studentProfile.user_id, partnerId);
       const message = data.message || data.organization || "Successfully enrolled in partner module.";
 
       set({ 
@@ -284,20 +320,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
     set({ isHistoryLoading: true });
     try {
-      const response = await fetch(`${API_BASE_URL}/get-history`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: studentProfile.user_id,
-          session_id: sessionId,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch history");
-
-      const data = await response.json();
-      // data: { status, student_id, session_id, history: [ { role, content, created_at } ] }
-
+      const data = await studentService.fetchChatHistory(studentProfile.user_id, sessionId);
+      
       const mappedMessages: ChatMessage[] = data.history.map((h: any, i: number) => ({
         id: `h-${i}-${Date.now()}`,
         text: h.content,
@@ -372,22 +396,14 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     }));
 
     try {
-      const response = await fetch(`${API_BASE_URL}/april-query`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text,
-          user_id: studentProfile.user_id,
-          session_id: activeChat.session_id || undefined,
-          agent_id: activeChat.agent_id || "eng-grade-4", // Fallback if missing
-          subject: "English",
-          grade: studentProfile.grade || 10,
-        }),
+      const data = await studentService.sendChatMessage({
+        text,
+        user_id: studentProfile.user_id,
+        session_id: activeChat.session_id || undefined,
+        agent_id: activeChat.agent_id || "eng-grade-4", // Fallback if missing
+        subject: "English",
+        grade: studentProfile.grade || 10,
       });
-
-      if (!response.ok) throw new Error("API request failed");
-
-      const data = await response.json();
 
       const aiReply: ChatMessage = {
         id: `ai-${Date.now()}`,

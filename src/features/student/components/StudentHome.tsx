@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Plus, BookOpen, PenLine, Search, LogOut, User, Loader2 } from "lucide-react";
+import { ArrowRight, Plus, BookOpen, PenLine, Search, LogOut, User, Loader2, BarChart2 } from "lucide-react";
 import {
   useStudentStore,
   ChatSession,
@@ -10,6 +10,8 @@ import {
   AgentItem,
 } from "../store/useStudentStore";
 import { AgentPickerModal } from "@/features/student/components/AgentPickerModal";
+
+import { NotificationBell } from "@/components/NotificationBell";
 
 export function StudentHome() {
   // Styles for the animated gradient text
@@ -47,6 +49,7 @@ export function StudentHome() {
     isAgentPickerOpen, 
     logoutStudent,
     setProfileOpen,
+    setAnalyticsOpen,
     fetchAvailableAgents,
     availableAgents,
     isAgentsLoading
@@ -60,6 +63,7 @@ export function StudentHome() {
   }, [studentProfile, fetchSessions, fetchAvailableAgents]);
 
   const username = studentProfile?.username ?? "Scholar";
+  const userId = studentProfile?.user_id ?? "";
 
   return (
     <div className="min-h-screen bg-[#F4F3EE] font-sans">
@@ -77,12 +81,22 @@ export function StudentHome() {
         </button>
         <div className="flex items-center gap-3">
           <button
+            onClick={() => setAnalyticsOpen(true)}
+            className="flex items-center gap-2 text-xs font-semibold text-[#1a3a2a]/50 hover:text-[#1a3a2a] transition-colors px-3 py-2 rounded-xl hover:bg-[#1a3a2a]/5"
+          >
+            <BarChart2 size={14} />
+            Analytics
+          </button>
+          <button
             onClick={logoutStudent}
             className="flex items-center gap-2 text-xs font-semibold text-[#1a3a2a]/50 hover:text-[#1a3a2a] transition-colors px-3 py-2 rounded-xl hover:bg-[#1a3a2a]/5"
           >
             <LogOut size={14} />
             Sign out
           </button>
+          
+          {userId && <NotificationBell userId={userId} />}
+
           <button
             onClick={() => setProfileOpen(true)}
             className="w-10 h-10 rounded-full bg-[#1a3a2a] hover:bg-[#2d6a4a] text-white shadow-md shadow-[#1a3a2a]/20 transition-all flex items-center justify-center transform hover:scale-105"
