@@ -15,14 +15,26 @@ const MOCK_PARENTS = [
 ];
 
 export function StudentProfile() {
-  const { studentProfile, setProfileOpen, logoutStudent, availablePartners, fetchAvailablePartners, sendPartnerRequest, partnerRequestStatus, enrolledPartners, fetchEnrolledPartners, isEnrolledPartnersLoading } = useStudentStore();
+  const { 
+    studentProfile, 
+    setProfileOpen, 
+    logoutStudent, 
+    availablePartners, 
+    fetchAvailablePartners, 
+    sendPartnerRequest, 
+    partnerRequestStatus, 
+    enrolledPartners, 
+    fetchEnrolledPartners, 
+    isEnrolledPartnersLoading,
+    linkParent 
+  } = useStudentStore();
   
   useEffect(() => {
     fetchAvailablePartners();
     fetchEnrolledPartners();
   }, [fetchAvailablePartners, fetchEnrolledPartners]);
 
-  const [parentEmail, setParentEmail] = useState("");
+  const [parentId, setParentId] = useState("");
   const [selectedPartnerId, setSelectedPartnerId] = useState("");
 
   const isLoading = partnerRequestStatus === "loading";
@@ -30,6 +42,13 @@ export function StudentProfile() {
   const username = studentProfile?.username ?? "Julian Thorne";
   const grade = studentProfile?.grade ? `Grade ${studentProfile.grade}` : "PhD Year 2";
   const board = studentProfile?.school_board ?? "Advanced Studies";
+
+  const handleLinkParent = async () => {
+    if (parentId.trim()) {
+      await linkParent(parentId.trim());
+      setParentId(""); // Clear input on attempt
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#F4F3EE] font-sans flex flex-col overflow-y-auto">
@@ -122,10 +141,10 @@ export function StudentProfile() {
                   <div key="no-partners" className="col-span-full py-4 text-center text-sm font-semibold text-[#1a3a2a]/40 bg-white rounded-3xl border border-[#1a3a2a]/[0.02]">
                     No partners enrolled yet.
                   </div>
-                ) : enrolledPartners.map(partner => (
-                  <div key={partner.id} className="bg-white rounded-3xl p-5 flex items-center gap-4 shadow-sm border border-[#1a3a2a]/[0.02]">
+                ) : enrolledPartners.map((partner, index) => (
+                  <div key={partner.partner_id || partner.id || `enrolled-${index}`} className="bg-white rounded-3xl p-5 flex items-center gap-4 shadow-sm border border-[#1a3a2a]/[0.02]">
                     <div className="w-11 h-11 rounded-full bg-[#bce4cc]/40 text-[#2d6a4a] flex items-center justify-center font-bold text-[15px]">
-                      {partner.organization.substring(0, 2).toUpperCase()}
+                      {(partner.organization || "PT").substring(0, 2).toUpperCase()}
                     </div>
                     <div>
                       <h3 className="font-bold text-[#1a3a2a] text-[15px] leading-tight mb-0.5">{partner.organization}</h3>
@@ -158,8 +177,8 @@ export function StudentProfile() {
                     disabled={isLoading}
                   >
                     <option value="" disabled>Select Institution...</option>
-                    {availablePartners.map(p => (
-                      <option key={p.id} value={p.id}>{p.organization}</option>
+                    {availablePartners.map((p, index) => (
+                      <option key={p.partner_id || p.id || `avail-${index}`} value={p.partner_id || p.id}>{p.organization}</option>
                     ))}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-5 text-[#1a3a2a]/50">
@@ -192,14 +211,19 @@ export function StudentProfile() {
               
               <div className="flex items-center gap-3">
                 <input 
-                  type="email"
-                  placeholder="Guardian Email Address"
-                  value={parentEmail}
-                  onChange={(e) => setParentEmail(e.target.value)}
-                  className="flex-1 bg-[#f9f9f9] border border-[#1a3a2a]/5 rounded-2xl px-4 py-3 text-[13px] font-semibold outline-none focus:border-[#2d6a4a]"
+                  type="text"
+                  placeholder="Guardian Parent ID"
+                  value={parentId}
+                  onChange={(e) => setParentId(e.target.value)}
+                  className="flex-1 bg-[#f9f9f9] border border-[#1a3a2a]/5 rounded-2xl px-4 py-3 text-[13px] font-semibold outline-none focus:border-[#2d6a4a] disabled:opacity-50"
+                  disabled={isLoading}
                 />
-                <button className="bg-[#bce4cc] text-[#1a3a2a] px-5 py-3 rounded-2xl font-bold text-[14px] hover:opacity-80 transition-opacity">
-                  Add
+                <button 
+                  onClick={handleLinkParent}
+                  disabled={!parentId.trim() || isLoading}
+                  className="bg-[#bce4cc] text-[#1a3a2a] px-5 py-3 rounded-2xl font-bold text-[14px] hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Add"}
                 </button>
               </div>
 

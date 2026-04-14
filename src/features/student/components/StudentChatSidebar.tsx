@@ -2,6 +2,7 @@
 
 import { User, BarChart2, Loader2 } from "lucide-react";
 import { useStudentStore } from "../store/useStudentStore";
+import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import React from "react";
 
 /**
@@ -89,7 +90,7 @@ export const StudentChatSidebar = React.memo(({ activeChatId }: { activeChatId: 
         </button>
         <button 
           onClick={() => {
-            useStudentStore.getState().setAnalyticsOpen(true);
+            useAnalyticsStore.getState().setAnalyticsOpen(true);
           }}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#1a3a2a]/50 hover:text-[#1a3a2a] hover:bg-[#1a3a2a]/8 transition-all"
         >

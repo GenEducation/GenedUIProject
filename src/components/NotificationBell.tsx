@@ -25,14 +25,15 @@ const timeAgo = (date: string | Date) => {
 };
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, align = "right" }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { 
     notifications, 
     unreadCount, 
     fetchNotifications, 
     markAsRead, 
-    initStream 
+    initStream,
+    isDropdownOpen: isOpen,
+    setIsDropdownOpen: setIsOpen
   } = useNotificationStore();
 
   useEffect(() => {

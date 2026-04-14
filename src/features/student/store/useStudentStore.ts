@@ -53,6 +53,7 @@ export interface AgentItem {
 
 export interface PartnerItem {
   id: string;
+  partner_id?: string;
   organization: string;
 }
 
@@ -90,26 +91,9 @@ interface StudentState {
   partnerRequestStatus: "idle" | "loading" | "success" | "error";
   partnerRequestMessage: string;
   isPartnerModalOpen: boolean;
-  isAnalyticsOpen: boolean;
   
-  // Analytics State
-  analyticsSubjects: string[];
-  selectedAnalyticsSubject: string;
-  skillSummary: { 
-    overall_score: number; 
-    skill_index: number;
-    session_count?: number;
-  } | null;
-  cgScores: Array<{ cg_id: string; cg_name: string; avg_mastery: number }>;
-  skillTree: any[];
-  analyticsChapterMastery: any[];
-  isAnalyticsLoading: boolean;
-
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
-  setAnalyticsOpen: (open: boolean) => void;
-  setSelectedAnalyticsSubject: (subject: string) => void;
-  fetchAnalyticsData: (subject?: string, studentIdOverride?: string) => Promise<void>;
   fetchSessions: () => Promise<void>;
   fetchAvailableAgents: () => Promise<void>;
   fetchAvailablePartners: () => Promise<void>;
@@ -117,13 +101,14 @@ interface StudentState {
   fetchChatHistory: (sessionId: string) => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
   openNewChat: (subject: any, agent_id?: string) => void;
-  startFocusedSession: (documentTitle: string) => void;
+  startFocusedSession: (documentTitle: string, subject: string) => void;
   closeChat: () => void;
   sendMessage: (text: string) => Promise<void>;
   setProfileOpen: (open: boolean) => void;
   setAgentPickerOpen: (open: boolean) => void;
   setPartnerModalOpen: (open: boolean) => void;
   sendPartnerRequest: (partnerId: string) => Promise<void>;
+  linkParent: (parentId: string) => Promise<void>;
   logoutStudent: () => void;
 }
 
@@ -148,63 +133,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   partnerRequestStatus: "idle",
   partnerRequestMessage: "",
   isPartnerModalOpen: false,
-  isAnalyticsOpen: false,
-  analyticsSubjects: [],
-  selectedAnalyticsSubject: "",
-  skillSummary: null,
-  cgScores: [],
-  skillTree: [],
-  analyticsChapterMastery: [],
-  isAnalyticsLoading: false,
 
   setStudentProfile: (profile) => set({ studentProfile: profile }),
-  setAnalyticsOpen: (open) => set({ isAnalyticsOpen: open }),
-  setSelectedAnalyticsSubject: (subject) => set({ selectedAnalyticsSubject: subject }),
-
-  fetchAnalyticsData: async (subject, studentIdOverride) => {
-    const { studentProfile, selectedAnalyticsSubject } = get();
-    const effectiveStudentId = studentIdOverride || studentProfile?.user_id;
-    if (!effectiveStudentId) return;
-
-    const targetSubject = subject || selectedAnalyticsSubject;
-    if (!targetSubject && !subject) {
-      // First, fetch subjects if none selected
-      try {
-        const subData = await studentService.fetchAnalyticsSubjects(effectiveStudentId);
-        const subjects = subData.subjects || [];
-        set({ analyticsSubjects: subjects });
-        if (subjects.length > 0) {
-          get().fetchAnalyticsData(subjects[0], studentIdOverride);
-        }
-      } catch (error) {
-        console.error("Fetch Analytics Subjects Error:", error);
-      }
-      return;
-    }
-
-    if (subject) set({ selectedAnalyticsSubject: subject });
-
-    set({ isAnalyticsLoading: true });
-    try {
-      const [summary, scores, tree, mastery] = await Promise.all([
-        studentService.fetchSkillSummary(effectiveStudentId, targetSubject),
-        studentService.fetchCGScores(effectiveStudentId, targetSubject),
-        studentService.fetchSkillTree(effectiveStudentId, targetSubject),
-        studentService.fetchChapterMastery(effectiveStudentId, targetSubject),
-      ]);
-
-      set({
-        skillSummary: summary,
-        cgScores: scores,
-        skillTree: tree,
-        analyticsChapterMastery: mastery,
-        isAnalyticsLoading: false
-      });
-    } catch (error) {
-      console.error("Fetch Analytics Data Error:", error);
-      set({ isAnalyticsLoading: false });
-    }
-  },
 
   fetchSessions: async () => {
     const { studentProfile } = get();
@@ -319,6 +249,42 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     }
   },
 
+  linkParent: async (parentId: string) => {
+    const { studentProfile } = get();
+    if (!studentProfile?.user_id) {
+      set({ 
+        isPartnerModalOpen: true, 
+        partnerRequestStatus: "error", 
+        partnerRequestMessage: "Student profile not found." 
+      });
+      return;
+    }
+
+    set({ 
+      isPartnerModalOpen: true, 
+      partnerRequestStatus: "loading",
+      partnerRequestMessage: "Linking parent profile..." 
+    });
+
+    try {
+      await studentService.linkParent(studentProfile.user_id, parentId);
+      set({ 
+        partnerRequestStatus: "success", 
+        partnerRequestMessage: "Parent successfully linked to your profile." 
+      });
+    } catch (error: any) {
+      console.error("Link Parent Error:", error);
+      const errorMessage = error.status === 409 
+        ? "You are already linked" 
+        : "Failed to link parent. Please check the ID and try again.";
+      
+      set({ 
+        partnerRequestStatus: "error", 
+        partnerRequestMessage: errorMessage 
+      });
+    }
+  },
+
   fetchChatHistory: async (sessionId: string) => {
     const { studentProfile } = get();
     if (!studentProfile) return;
@@ -360,6 +326,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     const newSession: ChatSession = {
       id: tempId,
       title: subject.name,
+      subject: subject.name,
       agentType: "Socratic Tutor",
       agentIcon: subject.icon,
       lastActive: "Just now",
@@ -378,12 +345,12 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     }));
   },
 
-  startFocusedSession: (documentTitle) => {
-    const { selectedAnalyticsSubject, availableAgents, studentProfile } = get();
+  startFocusedSession: (documentTitle, subject) => {
+    const { availableAgents, studentProfile } = get();
     
     // Find matching agent for the subject
     const matchingAgent = availableAgents.find(a => 
-      a.subject.toLowerCase() === selectedAnalyticsSubject.toLowerCase()
+      a.subject.toLowerCase() === subject.toLowerCase()
     );
 
     const tempId = `focused-${Date.now()}`;
@@ -394,18 +361,20 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       agentType: "Focused Tutor",
       agentIcon: "🎯",
       lastActive: "Just now",
-      lastTopic: selectedAnalyticsSubject,
+      lastTopic: subject,
       grade: studentProfile?.grade ? `Grade ${studentProfile.grade}` : "General",
       agent_id: matchingAgent?.agent_id || "eng-grade-4", // Fallback
       isFocused: true,
       document_title: documentTitle,
-      subject: selectedAnalyticsSubject
+      subject: subject
     };
+
+    // Close analytics and update state
+    import("@/store/useAnalyticsStore").then(m => m.useAnalyticsStore.getState().setAnalyticsOpen(false));
 
     set({
       activeChat: newSession,
       isChatOpen: true,
-      isAnalyticsOpen: false, // Close analytics to show chat
       messages: [],
       isAITyping: false
     });
@@ -529,6 +498,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
   logoutStudent: () => {
     localStorage.removeItem("gened_user_role");
+    localStorage.removeItem("gened_auth_token");
+    localStorage.removeItem("gened_user_profile");
     localStorage.removeItem("gened_partner_id");
     set({
       studentProfile: null,

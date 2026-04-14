@@ -1,4 +1,4 @@
-const API_BASE_URL = (process.env.NEXT_PUBLIC_CORE_API_URL || "http://192.168.1.15:8000").replace(/\/$/, "");
+const API_BASE_URL = (process.env.NEXT_PUBLIC_CORE_API_URL || "http://192.168.1.6:8000").replace(/\/$/, "");
 
 export const studentService = {
   fetchSessions: async (userId: string) => {
@@ -146,6 +146,30 @@ export const studentService = {
       headers: { "accept": "application/json" }
     });
     if (!response.ok) throw new Error("Failed to fetch chapter mastery");
+    return response.json();
+  },
+
+  linkParent: async (studentId: string, parentId: string) => {
+    const response = await fetch(`${API_BASE_URL}/parent/link`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "accept": "application/json"
+      },
+      body: JSON.stringify({
+        student_id: studentId,
+        parent_id: parentId,
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 409) {
+        const data = await response.json();
+        throw { status: 409, message: data.detail || "Student is already linked to a parent." };
+      }
+      throw new Error(`Failed to link parent: ${response.status}`);
+    }
+
     return response.json();
   }
 };

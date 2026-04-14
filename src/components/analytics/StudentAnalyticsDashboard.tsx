@@ -5,6 +5,7 @@ import {
   Target, GraduationCap, ChevronDown, LayoutGrid 
 } from "lucide-react";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { MetricCard } from "./MetricCard";
 import { SkillMasteryView } from "./SkillMasteryView";
 import { ChapterMasteryView } from "./ChapterMasteryView";
@@ -19,15 +20,15 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
   studentId 
 }) => {
   const [activeTab, setActiveTab] = useState<"skill" | "chapter">("chapter");
+  const { studentProfile } = useStudentStore();
   const { 
     setAnalyticsOpen, 
-    studentProfile, 
     analyticsSubjects, 
     selectedAnalyticsSubject,
     skillSummary,
     fetchAnalyticsData,
     isAnalyticsLoading
-  } = useStudentStore();
+  } = useAnalyticsStore();
 
   React.useEffect(() => {
     fetchAnalyticsData(undefined, studentId);
@@ -86,31 +87,31 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
               <span className="text-sm font-bold border-b-2 border-transparent group-hover:border-[#1a3a2a]/20">Back</span>
             </button>
             <div className="h-6 w-[1px] bg-[#1a3a2a]/10" />
-          </>
-        )}
-        
-        <div className="flex items-center gap-4 group cursor-pointer relative">
-          <div className="w-11 h-11 rounded-2xl bg-[#E5F2E9] flex items-center justify-center text-[#1a3a2a] shadow-sm group-hover:scale-105 transition-transform">
-            <LayoutGrid size={22} />
-          </div>
-          <div className="relative">
-            <p className="text-[10px] font-black text-[#1a3a2a]/30 uppercase tracking-[0.25em] leading-none mb-1.5">Learning Subject</p>
-            <div className="flex items-center gap-1 group">
-              <select 
-                value={selectedAnalyticsSubject}
-                onChange={(e) => fetchAnalyticsData(e.target.value)}
-                className="text-xl font-black text-[#1a3a2a] bg-transparent border-none focus:ring-0 cursor-pointer appearance-none p-0 pr-8 hover:text-[#059669] transition-colors"
-              >
-                {analyticsSubjects.map(sub => (
-                  <option key={sub} value={sub}>{sub}</option>
-                ))}
-              </select>
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-[#1a3a2a]/30 group-hover:text-[#059669] transition-colors">
-                <ChevronDown size={18} strokeWidth={3} />
+            
+            <div className="flex items-center gap-4 group cursor-pointer relative">
+              <div className="w-11 h-11 rounded-2xl bg-[#E5F2E9] flex items-center justify-center text-[#1a3a2a] shadow-sm group-hover:scale-105 transition-transform">
+                <LayoutGrid size={22} />
+              </div>
+              <div className="relative">
+                <p className="text-[10px] font-black text-[#1a3a2a]/30 uppercase tracking-[0.25em] leading-none mb-1.5">Learning Subject</p>
+                <div className="flex items-center gap-1 group">
+                  <select 
+                    value={selectedAnalyticsSubject}
+                    onChange={(e) => fetchAnalyticsData(e.target.value)}
+                    className="text-xl font-black text-[#1a3a2a] bg-transparent border-none focus:ring-0 cursor-pointer appearance-none p-0 pr-8 hover:text-[#059669] transition-colors"
+                  >
+                    {analyticsSubjects.map(sub => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-[#1a3a2a]/30 group-hover:text-[#059669] transition-colors">
+                    <ChevronDown size={18} strokeWidth={3} />
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
       {/* ── DASHBOARD CONTENT ──────────────────────────────────────────────── */}

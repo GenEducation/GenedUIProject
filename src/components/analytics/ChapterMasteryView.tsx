@@ -110,13 +110,15 @@ export const UnitCard: React.FC<UnitCardProps> = ({
 };
 
 import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 
 interface ChapterMasteryViewProps {
   mode?: "student" | "parent";
 }
 
 export const ChapterMasteryView: React.FC<ChapterMasteryViewProps> = ({ mode = "student" }) => {
-  const { analyticsChapterMastery, startFocusedSession } = useStudentStore();
+  const { startFocusedSession } = useStudentStore();
+  const { analyticsChapterMastery, selectedAnalyticsSubject } = useAnalyticsStore();
 
   const getStatus = (score: number): "PROFICIENT" | "DEVELOPING" | "NEEDS WORK" => {
     if (score >= 0.8) return "PROFICIENT";
@@ -135,7 +137,7 @@ export const ChapterMasteryView: React.FC<ChapterMasteryViewProps> = ({ mode = "
           status={getStatus(item.mastery_score)}
           coverage={item.completion_percentage}
           sessions={item.study_count}
-          onAction={() => startFocusedSession(item.document_title)}
+          onAction={() => startFocusedSession(item.document_title, selectedAnalyticsSubject)}
           hideActions={mode === "parent"}
         />
       ))}

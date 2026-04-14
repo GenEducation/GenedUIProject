@@ -11,6 +11,8 @@ interface NotificationState {
   markAsRead: (notificationId: string) => Promise<void>;
   initStream: (userId: string) => () => void;
   addNotification: (notification: Notification) => void;
+  isDropdownOpen: boolean;
+  setIsDropdownOpen: (open: boolean) => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
@@ -76,5 +78,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     });
     
     return unsub;
-  }
+  },
+
+  isDropdownOpen: false,
+  setIsDropdownOpen: (open) => set({ isDropdownOpen: open }),
 }));

@@ -31,18 +31,7 @@ export function ParentSessionList() {
   };
 
   return (
-    <div className="w-[350px] bg-white border-r border-[#1a3a2a]/5 flex flex-col h-full">
-      <div className="p-6 border-b border-[#1a3a2a]/5">
-        <h3 className="text-lg font-black text-[#1a3a2a] mb-4">Learning Explorations</h3>
-        <div className="relative group">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#1a3a2a]/30 group-focus-within:text-[#1a3a2a] transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search sessions..." 
-            className="w-full pl-11 pr-4 py-3 bg-[#F4F3EE] rounded-xl text-sm font-medium border-none focus:ring-2 focus:ring-[#1a3a2a]/10 transition-all placeholder:text-[#1a3a2a]/20"
-          />
-        </div>
-      </div>
+    <div className="w-full md:w-[350px] bg-white border-r border-[#1a3a2a]/5 flex flex-col h-full">
 
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {isFetchingSessions ? (

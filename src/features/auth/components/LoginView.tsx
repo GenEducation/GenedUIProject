@@ -117,10 +117,11 @@ export function LoginView({ onLogin }: LoginViewProps) {
 
     try {
       const token = await signIn(loginData);
-      // Persist user_id for partner API calls
-      if (token.user_id) {
-        localStorage.setItem("gened_partner_id", token.user_id);
-      }
+      
+      // Persist auth state
+      localStorage.setItem("gened_auth_token", token.access_token);
+      localStorage.setItem("gened_user_profile", JSON.stringify(token));
+      
       const normalizedRole = token.role?.toLowerCase() ?? "student";
       const role =
         normalizedRole === "student" ||
@@ -128,8 +129,15 @@ export function LoginView({ onLogin }: LoginViewProps) {
         normalizedRole === "parent"
           ? normalizedRole
           : ("student" as const);
+      
+      localStorage.setItem("gened_user_role", role);
 
-      // Persist student profile into the student store
+      // Persist user-specific IDs for legacy support if needed
+      if (role === "partner") {
+        localStorage.setItem("gened_partner_id", token.user_id);
+      }
+
+      // Populate stores
       if (role === "student") {
         useStudentStore.getState().setStudentProfile({
           user_id: token.user_id,

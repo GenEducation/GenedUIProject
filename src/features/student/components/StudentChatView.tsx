@@ -1,6 +1,7 @@
 "use client";
 
 import { useStudentStore } from "../store/useStudentStore";
+import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { StudentChatSidebar } from "./StudentChatSidebar";
 import { StudentChatMain } from "./StudentChatMain";
 import { StudentAnalyticsDashboard } from "@/components/analytics/StudentAnalyticsDashboard";
@@ -15,8 +16,8 @@ export function StudentChatView() {
     activeChat,
     messages,
     isAITyping,
-    isAnalyticsOpen,
   } = useStudentStore();
+  const { isAnalyticsOpen } = useAnalyticsStore();
 
   if (isAnalyticsOpen) {
     return <StudentAnalyticsDashboard />;

@@ -9,6 +9,7 @@ import {
   SubjectItem,
   AgentItem,
 } from "../store/useStudentStore";
+import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { AgentPickerModal } from "@/features/student/components/AgentPickerModal";
 
 import { NotificationBell } from "@/components/NotificationBell";
@@ -49,11 +50,12 @@ export function StudentHome() {
     isAgentPickerOpen, 
     logoutStudent,
     setProfileOpen,
-    setAnalyticsOpen,
     fetchAvailableAgents,
     availableAgents,
     isAgentsLoading
   } = useStudentStore();
+
+  const { setAnalyticsOpen } = useAnalyticsStore();
 
   useEffect(() => {
     if (studentProfile) {

@@ -314,6 +314,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   // ── Logout ─────────────────────────────────────────────────────────────
   logoutPartner: () => {
     localStorage.removeItem("gened_user_role");
+    localStorage.removeItem("gened_auth_token");
+    localStorage.removeItem("gened_user_profile");
     localStorage.removeItem("gened_partner_id");
     set({
       students: [],

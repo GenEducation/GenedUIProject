@@ -31,6 +31,7 @@ interface ParentState {
   fetchSessionHistory: (studentId: string, sessionId: string) => Promise<void>;
   linkNewStudent: (studentId: string) => Promise<void>;
   updateStudentStatus: (studentId: string, status: "APPROVED" | "REJECTED") => Promise<void>;
+  logoutParent: () => void;
 }
 
 export const useParentStore = create<ParentState>((set, get) => ({
@@ -140,5 +141,20 @@ export const useParentStore = create<ParentState>((set, get) => ({
       console.error("Update Student Status Error:", error);
       throw error;
     }
+  },
+  
+  logoutParent: () => {
+    localStorage.removeItem("gened_user_role");
+    localStorage.removeItem("gened_auth_token");
+    localStorage.removeItem("gened_user_profile");
+    set({
+      parentProfile: null,
+      linkedStudents: [],
+      selectedStudentId: null,
+      selectedStudentSessions: [],
+      activeSessionId: null,
+      activeSessionHistory: []
+    });
+    window.location.href = "/";
   },
 }));

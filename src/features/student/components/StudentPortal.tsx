@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useStudentStore } from "../store/useStudentStore";
+import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { StudentHome } from "./StudentHome";
 import { StudentChatView } from "./StudentChatView";
 import { StudentProfile } from "./StudentProfile";
@@ -13,7 +14,8 @@ import { PartnerRequestModal } from "./PartnerRequestModal";
  * Conditionally renders StudentHome, StudentChatView, or StudentAnalyticsDashboard.
  */
 export function StudentPortal() {
-  const { isChatOpen, isProfileOpen, isAnalyticsOpen } = useStudentStore();
+  const { isChatOpen, isProfileOpen } = useStudentStore();
+  const { isAnalyticsOpen } = useAnalyticsStore();
 
   return (
     <div className="h-screen overflow-hidden">

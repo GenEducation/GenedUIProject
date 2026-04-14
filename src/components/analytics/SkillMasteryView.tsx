@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { 
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, Tooltip 
@@ -7,7 +7,7 @@ import {
 import { ChevronDown, ChevronUp, Sigma, Info, Lock } from "lucide-react";
 
 export const SkillMasteryView: React.FC = () => {
-  const { cgScores, skillTree } = useStudentStore();
+  const { cgScores, skillTree } = useAnalyticsStore();
   const [expandedCgs, setExpandedCgs] = useState<string[]>([]);
   const [expandedConcepts, setExpandedConcepts] = useState<string[]>([]);
   const [expandedLos, setExpandedLos] = useState<string[]>([]);
