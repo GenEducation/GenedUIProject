@@ -3,7 +3,7 @@
 import { useStudentStore } from "../store/useStudentStore";
 import { StudentChatSidebar } from "./StudentChatSidebar";
 import { StudentChatMain } from "./StudentChatMain";
-import { StudentAnalyticsDashboard } from "./analytics/StudentAnalyticsDashboard";
+import { StudentAnalyticsDashboard } from "@/components/analytics/StudentAnalyticsDashboard";
 
 /**
  * StudentChatView acts as a container for the modular chat layout.

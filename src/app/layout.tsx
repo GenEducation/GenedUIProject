@@ -13,7 +13,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "GenEd Portal | Scholarly Mastery",
+  title: "GenEd",
   description: "A high-trust Socratic learning environment for the next generation.",
 };
 

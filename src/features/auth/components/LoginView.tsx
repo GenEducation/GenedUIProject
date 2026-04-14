@@ -9,6 +9,7 @@ import { AuthFeatures } from "./AuthFeatures";
 import { AuthFooter } from "./AuthFooter";
 import { signIn, signUp, SignUpFields } from "../authService";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { useParentStore } from "@/features/parent/store/useParentStore";
 
 interface LoginViewProps {
   onLogin: (role: "student" | "parent" | "partner") => void;
@@ -45,22 +46,56 @@ export function LoginView({ onLogin }: LoginViewProps) {
   const validateSignIn = () => {
     const errors: Record<string, string> = {};
     if (!loginData.username.trim()) errors.username = "Username is compulsory";
-    if (!loginData.password.trim()) errors.password = "Password is compulsory";
+    if (!loginData.password.trim()) {
+      errors.password = "Password is compulsory";
+    } else if (loginData.password.length < 6) {
+      errors.password = "Password must be at least 6 characters";
+    }
     return errors;
   };
 
   const validateSignUp = () => {
     const errors: Record<string, string> = {};
-    if (!signupData.username.trim()) errors.username = "Username is compulsory";
-    if (!signupData.email.trim()) errors.email = "Email is compulsory";
-    if (!signupData.password.trim()) errors.password = "Password is compulsory";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!signupData.username.trim()) {
+      errors.username = "Username is compulsory";
+    } else if (signupData.username.length < 3) {
+      errors.username = "Username must be at least 3 characters";
+    }
+
+    if (!signupData.email.trim()) {
+      errors.email = "Email is compulsory";
+    } else if (!emailRegex.test(signupData.email)) {
+      errors.email = "Please enter a valid email address";
+    }
+
+    if (!signupData.password.trim()) {
+      errors.password = "Password is compulsory";
+    } else if (signupData.password.length < 6) {
+      errors.password = "Password must be at least 6 characters";
+    }
 
     if (signupData.role === "student") {
-      if (!signupData.age?.trim()) errors.age = "Age is compulsory";
-      if (!signupData.grade?.trim()) errors.grade = "Grade is compulsory";
+      if (!signupData.age?.trim()) {
+        errors.age = "Age is compulsory";
+      } else if (isNaN(Number(signupData.age))) {
+        errors.age = "Age must be a numeric value";
+      }
+
+      if (!signupData.grade?.trim()) {
+        errors.grade = "Grade is compulsory";
+      } else if (isNaN(Number(signupData.grade))) {
+        errors.grade = "Grade must be a numeric value";
+      }
+
       if (!signupData.school_board?.trim()) errors.school_board = "Board is compulsory";
     } else if (signupData.role === "parent") {
-      if (!signupData.phone?.trim()) errors.phone = "Phone is compulsory";
+      if (!signupData.phone?.trim()) {
+        errors.phone = "Phone is compulsory";
+      } else if (!/^\d{10}$/.test(signupData.phone.trim())) {
+        errors.phone = "Phone must be a 10-digit number";
+      }
     } else if (signupData.role === "partner") {
       if (!signupData.organization?.trim()) errors.organization = "Organization is compulsory";
     }
@@ -103,6 +138,13 @@ export function LoginView({ onLogin }: LoginViewProps) {
           role: token.role,
           grade: token.grade,
           school_board: token.school_board,
+        });
+      } else if (role === "parent") {
+        useParentStore.getState().setParentProfile({
+          user_id: token.user_id || "",
+          username: token.username || "",
+          email: token.email || "",
+          role: token.role || "parent",
         });
       }
 

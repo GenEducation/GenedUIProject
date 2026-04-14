@@ -87,6 +87,27 @@ export const studentService = {
     return response.json();
   },
 
+  sendFocusedChatMessage: async (payload: {
+    text: string;
+    user_id: string;
+    session_id: string;
+    agent_id: string;
+    subject: string;
+    intent: string;
+    document_title: string;
+    grade: number;
+  }) => {
+    const response = await fetch(`${API_BASE_URL}/text/focused-april-query`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) throw new Error("Focused API request failed");
+
+    return response.json();
+  },
+
   // Analytics Endpoints
   fetchAnalyticsSubjects: async (studentId: string) => {
     const response = await fetch(`${API_BASE_URL}/students/${studentId}/subjects`, {

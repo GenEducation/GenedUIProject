@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useStudentStore } from "../../store/useStudentStore";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { 
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ResponsiveContainer, Tooltip 

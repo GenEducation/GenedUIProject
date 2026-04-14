@@ -4,12 +4,20 @@ import {
   BarChart2, ArrowLeft, CheckCircle2, 
   Target, GraduationCap, ChevronDown, LayoutGrid 
 } from "lucide-react";
-import { useStudentStore } from "../../store/useStudentStore";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { MetricCard } from "./MetricCard";
 import { SkillMasteryView } from "./SkillMasteryView";
 import { ChapterMasteryView } from "./ChapterMasteryView";
 
-export const StudentAnalyticsDashboard: React.FC = () => {
+interface StudentAnalyticsDashboardProps {
+  mode?: "student" | "parent";
+  studentId?: string;
+}
+
+export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps> = ({ 
+  mode = "student", 
+  studentId 
+}) => {
   const [activeTab, setActiveTab] = useState<"skill" | "chapter">("chapter");
   const { 
     setAnalyticsOpen, 
@@ -22,8 +30,8 @@ export const StudentAnalyticsDashboard: React.FC = () => {
   } = useStudentStore();
 
   React.useEffect(() => {
-    fetchAnalyticsData();
-  }, [fetchAnalyticsData]);
+    fetchAnalyticsData(undefined, studentId);
+  }, [fetchAnalyticsData, studentId]);
 
   const metrics = [
     {
@@ -50,31 +58,36 @@ export const StudentAnalyticsDashboard: React.FC = () => {
 
   return (
     <div className="h-screen overflow-y-auto bg-[#FBFBFA] flex flex-col font-sans">
-      {/* ── TOP NAVIGATION ─────────────────────────────────────────────────── */}
-      <header className="px-8 py-6 flex items-center justify-between bg-white border-b border-[#1a3a2a]/5 sticky top-0 z-20">
-        <img src="/Logo.svg" alt="GenEd Logo" className="h-8 w-auto" />
-        
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-sm font-bold text-[#1a3a2a] leading-tight">
-              {studentProfile?.username || "A. Sterling"}
-            </p>
+      {/* ── TOP NAVIGATION (Student Only) ─────────────────────────────────── */}
+      {mode === "student" && (
+        <header className="px-8 py-6 flex items-center justify-between bg-white border-b border-[#1a3a2a]/5 sticky top-0 z-20">
+          <img src="/Logo.svg" alt="GenEd Logo" className="h-8 w-auto" />
+          
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-sm font-bold text-[#1a3a2a] leading-tight">
+                {studentProfile?.username || "A. Sterling"}
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1a3a2a] to-[#059669] border-2 border-white shadow-md" />
           </div>
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1a3a2a] to-[#059669] border-2 border-white shadow-md" />
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* ── SUB-NAVIGATION CONTROLS ────────────────────────────────────────── */}
-      <div className="px-8 py-4 flex items-center gap-8 bg-transparent border-b border-[#1a3a2a]/5 sticky top-[89px] z-10 backdrop-blur-sm bg-white/30">
-        <button 
-          onClick={() => setAnalyticsOpen(false)}
-          className="flex items-center gap-2 text-[#1a3a2a]/60 hover:text-[#1a3a2a] transition-all group lg:min-w-[80px]"
-        >
-          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="text-sm font-bold border-b-2 border-transparent group-hover:border-[#1a3a2a]/20">Back</span>
-        </button>
-        
-        <div className="h-6 w-[1px] bg-[#1a3a2a]/10" />
+      <div className={`px-8 py-4 flex items-center gap-8 bg-transparent border-b border-[#1a3a2a]/5 sticky ${mode === 'student' ? 'top-[89px]' : 'top-0'} z-10 backdrop-blur-sm bg-white/30`}>
+        {mode === "student" && (
+          <>
+            <button 
+              onClick={() => setAnalyticsOpen(false)}
+              className="flex items-center gap-2 text-[#1a3a2a]/60 hover:text-[#1a3a2a] transition-all group lg:min-w-[80px]"
+            >
+              <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+              <span className="text-sm font-bold border-b-2 border-transparent group-hover:border-[#1a3a2a]/20">Back</span>
+            </button>
+            <div className="h-6 w-[1px] bg-[#1a3a2a]/10" />
+          </>
+        )}
         
         <div className="flex items-center gap-4 group cursor-pointer relative">
           <div className="w-11 h-11 rounded-2xl bg-[#E5F2E9] flex items-center justify-center text-[#1a3a2a] shadow-sm group-hover:scale-105 transition-transform">
@@ -151,7 +164,7 @@ export const StudentAnalyticsDashboard: React.FC = () => {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3 }}
               >
-                {activeTab === "skill" ? <SkillMasteryView /> : <ChapterMasteryView />}
+                {activeTab === "skill" ? <SkillMasteryView /> : <ChapterMasteryView mode={mode} />}
               </motion.div>
             </AnimatePresence>
           </div>

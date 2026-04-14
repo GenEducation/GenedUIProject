@@ -37,13 +37,25 @@ export function CurriculumIngestion({
   const [board, setBoard] = useState("");
   
   const [file, setFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const uploadCurriculum = usePartnerStore((state) => state.uploadCurriculum);
 
+  const validateFile = (selectedFile: File) => {
+    if (selectedFile.type !== "application/pdf" && !selectedFile.name.toLowerCase().endsWith(".pdf")) {
+      setFileError("Invalid document type. Only PDF files are allowed.");
+      setFile(null);
+      return false;
+    }
+    setFileError(null);
+    setFile(selectedFile);
+    return true;
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      validateFile(e.target.files[0]);
     }
   };
 
@@ -90,7 +102,7 @@ export function CurriculumIngestion({
               ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
-              accept=".pdf,.docx,.md"
+              accept=".pdf"
             />
             <div 
               onClick={() => fileInputRef.current?.click()}
@@ -98,22 +110,25 @@ export function CurriculumIngestion({
               onDrop={(e) => {
                 e.preventDefault();
                 if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                  setFile(e.dataTransfer.files[0]);
+                  validateFile(e.dataTransfer.files[0]);
                 }
               }}
-              className="border-2 border-dashed border-[#D1E6D9] rounded-[1.5rem] md:rounded-[2rem] p-4 sm:p-6 md:p-12 flex flex-col items-center justify-center text-center space-y-2 md:space-y-4 bg-[#F8FBF9] group-hover:bg-[#F0F7F2] group-hover:border-[#1A3D2C]/20 transition-all cursor-pointer"
+              className={`border-2 border-dashed ${fileError ? 'border-rose-400 bg-rose-50/30' : 'border-[#D1E6D9] bg-[#F8FBF9]'} rounded-[1.5rem] md:rounded-[2rem] p-4 sm:p-6 md:p-12 flex flex-col items-center justify-center text-center space-y-2 md:space-y-4 group-hover:bg-[#F0F7F2] group-hover:border-[#1A3D2C]/20 transition-all cursor-pointer`}
             >
-              <div className="w-10 h-10 md:w-16 md:h-16 bg-[#D1E6D9] rounded-xl md:rounded-2xl flex items-center justify-center text-[#1A3D2C] shadow-sm group-hover:scale-110 transition-transform">
+              <div className={`w-10 h-10 md:w-16 md:h-16 ${fileError ? 'bg-rose-100 text-rose-500' : 'bg-[#D1E6D9] text-[#1A3D2C]'} rounded-xl md:rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
                 <Upload size={20} />
               </div>
               <div className="space-y-1">
-                <p className="text-base md:text-lg font-bold text-[#1A3D2C]">
-                  {file ? file.name : "Drag and Drop Curriculum"}
+                <p className={`text-base md:text-lg font-bold ${fileError ? 'text-rose-600' : 'text-[#1A3D2C]'}`}>
+                  {file ? file.name : fileError ? "Invalid File" : "Drag and Drop Curriculum"}
                 </p>
                 <p className="text-[10px] md:text-[11px] font-black text-[#1A3D2C]/30 uppercase tracking-widest leading-relaxed">
-                  Supported formats: PDF, DOCX, or<br className="hidden md:block" />
-                  Markdown files. Max file size: 50MB.
+                  Supported formats: PDF only.<br className="hidden md:block" />
+                  Max file size: 50MB.
                 </p>
+                {fileError && (
+                  <p className="text-[10px] font-bold text-rose-500 mt-2 animate-pulse">{fileError}</p>
+                )}
               </div>
             </div>
           </div>

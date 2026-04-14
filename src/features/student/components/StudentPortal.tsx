@@ -5,7 +5,7 @@ import { useStudentStore } from "../store/useStudentStore";
 import { StudentHome } from "./StudentHome";
 import { StudentChatView } from "./StudentChatView";
 import { StudentProfile } from "./StudentProfile";
-import { StudentAnalyticsDashboard } from "./analytics/StudentAnalyticsDashboard";
+import { StudentAnalyticsDashboard } from "@/components/analytics/StudentAnalyticsDashboard";
 import { PartnerRequestModal } from "./PartnerRequestModal";
 
 /**

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PartnerAdmin } from "@/features/partner/components/PartnerAdmin";
 import { StudentPortal } from "@/features/student/components/StudentPortal";
+import { ParentHome } from "@/features/parent/components/ParentHome";
 import { LoginView } from "@/features/auth/components/LoginView";
 
 /**
@@ -57,18 +58,9 @@ export default function HomePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="h-full flex items-center justify-center bg-[#F4F3EE]"
+            className="h-full"
           >
-            <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold tracking-tight text-[#1a3a2a]">Parent Knowledge Insights</h2>
-              <p className="text-[#1a3a2a]/40">The parent portal is currently being refreshed. Check back soon!</p>
-              <button 
-                onClick={() => setIsLoggedIn(false)}
-                className="px-6 py-2 bg-[#1a3a2a] text-white rounded-xl text-sm font-semibold"
-              >
-                Return to Login
-              </button>
-            </div>
+            <ParentHome />
           </motion.div>
         ) : null}
       </AnimatePresence>

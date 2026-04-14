@@ -11,6 +11,7 @@ interface UnitCardProps {
   isLocked?: boolean;
   prerequisite?: string;
   onAction?: () => void;
+  hideActions?: boolean;
 }
 
 const statusColors = {
@@ -28,7 +29,8 @@ export const UnitCard: React.FC<UnitCardProps> = ({
   sessions,
   isLocked,
   prerequisite,
-  onAction
+  onAction,
+  hideActions = false
 }) => {
   const color = statusColors[status];
 
@@ -85,30 +87,36 @@ export const UnitCard: React.FC<UnitCardProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <button 
-          onClick={onAction}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition-all ${
-            status === 'NEEDS WORK' 
-            ? 'bg-[#1a3a2a] text-white shadow-lg hover:shadow-[#1a3a2a]/20 translate-y-0 active:translate-y-0.5' 
-            : 'text-[#1a3a2a] hover:bg-[#F4F3EE]'
-          }`}
-        >
-          {mastery === 0 ? (
-            <>Start Session <ArrowRight size={14} /></>
-          ) : (
-            <>Continue Session <ArrowRight size={14} /></>
-          )}
-        </button>
-      </div>
+      {!hideActions && (
+        <div className="flex items-center justify-between">
+          <button 
+            onClick={onAction}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition-all ${
+              status === 'NEEDS WORK' 
+              ? 'bg-[#1a3a2a] text-white shadow-lg hover:shadow-[#1a3a2a]/20 translate-y-0 active:translate-y-0.5' 
+              : 'text-[#1a3a2a] hover:bg-[#F4F3EE]'
+            }`}
+          >
+            {mastery === 0 ? (
+              <>Start Session <ArrowRight size={14} /></>
+            ) : (
+              <>Continue Session <ArrowRight size={14} /></>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 };
 
-import { useStudentStore } from "../../store/useStudentStore";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
 
-export const ChapterMasteryView: React.FC = () => {
-  const { analyticsChapterMastery } = useStudentStore();
+interface ChapterMasteryViewProps {
+  mode?: "student" | "parent";
+}
+
+export const ChapterMasteryView: React.FC<ChapterMasteryViewProps> = ({ mode = "student" }) => {
+  const { analyticsChapterMastery, startFocusedSession } = useStudentStore();
 
   const getStatus = (score: number): "PROFICIENT" | "DEVELOPING" | "NEEDS WORK" => {
     if (score >= 0.8) return "PROFICIENT";
@@ -127,6 +135,8 @@ export const ChapterMasteryView: React.FC = () => {
           status={getStatus(item.mastery_score)}
           coverage={item.completion_percentage}
           sessions={item.study_count}
+          onAction={() => startFocusedSession(item.document_title)}
+          hideActions={mode === "parent"}
         />
       ))}
       

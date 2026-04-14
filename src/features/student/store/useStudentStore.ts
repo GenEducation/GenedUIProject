@@ -31,6 +31,9 @@ export interface ChatSession {
   lastTopic: string;
   grade?: string;
   agent_id?: string;
+  isFocused?: boolean;
+  document_title?: string;
+  subject?: string;
 }
 
 export interface SubjectItem {
@@ -106,7 +109,7 @@ interface StudentState {
   setStudentProfile: (profile: StudentProfile) => void;
   setAnalyticsOpen: (open: boolean) => void;
   setSelectedAnalyticsSubject: (subject: string) => void;
-  fetchAnalyticsData: (subject?: string) => Promise<void>;
+  fetchAnalyticsData: (subject?: string, studentIdOverride?: string) => Promise<void>;
   fetchSessions: () => Promise<void>;
   fetchAvailableAgents: () => Promise<void>;
   fetchAvailablePartners: () => Promise<void>;
@@ -114,6 +117,7 @@ interface StudentState {
   fetchChatHistory: (sessionId: string) => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
   openNewChat: (subject: any, agent_id?: string) => void;
+  startFocusedSession: (documentTitle: string) => void;
   closeChat: () => void;
   sendMessage: (text: string) => Promise<void>;
   setProfileOpen: (open: boolean) => void;
@@ -157,19 +161,20 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   setAnalyticsOpen: (open) => set({ isAnalyticsOpen: open }),
   setSelectedAnalyticsSubject: (subject) => set({ selectedAnalyticsSubject: subject }),
 
-  fetchAnalyticsData: async (subject) => {
+  fetchAnalyticsData: async (subject, studentIdOverride) => {
     const { studentProfile, selectedAnalyticsSubject } = get();
-    if (!studentProfile) return;
+    const effectiveStudentId = studentIdOverride || studentProfile?.user_id;
+    if (!effectiveStudentId) return;
 
     const targetSubject = subject || selectedAnalyticsSubject;
     if (!targetSubject && !subject) {
       // First, fetch subjects if none selected
       try {
-        const subData = await studentService.fetchAnalyticsSubjects(studentProfile.user_id);
+        const subData = await studentService.fetchAnalyticsSubjects(effectiveStudentId);
         const subjects = subData.subjects || [];
         set({ analyticsSubjects: subjects });
         if (subjects.length > 0) {
-          get().fetchAnalyticsData(subjects[0]);
+          get().fetchAnalyticsData(subjects[0], studentIdOverride);
         }
       } catch (error) {
         console.error("Fetch Analytics Subjects Error:", error);
@@ -182,10 +187,10 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     set({ isAnalyticsLoading: true });
     try {
       const [summary, scores, tree, mastery] = await Promise.all([
-        studentService.fetchSkillSummary(studentProfile.user_id, targetSubject),
-        studentService.fetchCGScores(studentProfile.user_id, targetSubject),
-        studentService.fetchSkillTree(studentProfile.user_id, targetSubject),
-        studentService.fetchChapterMastery(studentProfile.user_id, targetSubject),
+        studentService.fetchSkillSummary(effectiveStudentId, targetSubject),
+        studentService.fetchCGScores(effectiveStudentId, targetSubject),
+        studentService.fetchSkillTree(effectiveStudentId, targetSubject),
+        studentService.fetchChapterMastery(effectiveStudentId, targetSubject),
       ]);
 
       set({
@@ -373,6 +378,46 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     }));
   },
 
+  startFocusedSession: (documentTitle) => {
+    const { selectedAnalyticsSubject, availableAgents, studentProfile } = get();
+    
+    // Find matching agent for the subject
+    const matchingAgent = availableAgents.find(a => 
+      a.subject.toLowerCase() === selectedAnalyticsSubject.toLowerCase()
+    );
+
+    const tempId = `focused-${Date.now()}`;
+    const newSession: ChatSession = {
+      id: tempId,
+      session_id: "", // First message requires empty session_id
+      title: documentTitle,
+      agentType: "Focused Tutor",
+      agentIcon: "🎯",
+      lastActive: "Just now",
+      lastTopic: selectedAnalyticsSubject,
+      grade: studentProfile?.grade ? `Grade ${studentProfile.grade}` : "General",
+      agent_id: matchingAgent?.agent_id || "eng-grade-4", // Fallback
+      isFocused: true,
+      document_title: documentTitle,
+      subject: selectedAnalyticsSubject
+    };
+
+    set({
+      activeChat: newSession,
+      isChatOpen: true,
+      isAnalyticsOpen: false, // Close analytics to show chat
+      messages: [],
+      isAITyping: false
+    });
+
+    // We don't optimistically add to recentChats here? 
+    // Usually focused sessions are temporary experimental ones, 
+    // but the user might want them saved. I'll add it just like openNewChat.
+    set((state) => ({
+      recentChats: [newSession, ...state.recentChats]
+    }));
+  },
+
   closeChat: () =>
     set({ isChatOpen: false, activeChat: null, messages: [], isAITyping: false }),
 
@@ -396,14 +441,28 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     }));
 
     try {
-      const data = await studentService.sendChatMessage({
-        text,
-        user_id: studentProfile.user_id,
-        session_id: activeChat.session_id || undefined,
-        agent_id: activeChat.agent_id || "eng-grade-4", // Fallback if missing
-        subject: "English",
-        grade: studentProfile.grade || 10,
-      });
+      let data;
+      if (activeChat.isFocused) {
+        data = await studentService.sendFocusedChatMessage({
+          text,
+          user_id: studentProfile.user_id,
+          session_id: activeChat.session_id || "",
+          agent_id: activeChat.agent_id || "eng-grade-4",
+          subject: activeChat.subject || "English",
+          intent: "",
+          document_title: activeChat.document_title || "General",
+          grade: studentProfile.grade || 10,
+        });
+      } else {
+        data = await studentService.sendChatMessage({
+          text,
+          user_id: studentProfile.user_id,
+          session_id: activeChat.session_id || undefined,
+          agent_id: activeChat.agent_id || "eng-grade-4",
+          subject: (activeChat as any).name || "English",
+          grade: studentProfile.grade || 10,
+        });
+      }
 
       const aiReply: ChatMessage = {
         id: `ai-${Date.now()}`,

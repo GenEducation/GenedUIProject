@@ -92,7 +92,7 @@ export function StudentHome() {
             className="flex items-center gap-2 text-xs font-semibold text-[#1a3a2a]/50 hover:text-[#1a3a2a] transition-colors px-3 py-2 rounded-xl hover:bg-[#1a3a2a]/5"
           >
             <LogOut size={14} />
-            Sign out
+            Logout
           </button>
           
           {userId && <NotificationBell userId={userId} />}

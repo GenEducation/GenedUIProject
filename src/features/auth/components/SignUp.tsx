@@ -97,8 +97,8 @@ export function SignUp({
                   name="grade"
                   value={signupData.grade || ""}
                   onChange={onChange}
-                  type="text"
-                  placeholder="e.g. 8th"
+                  type="number"
+                  placeholder="e.g. 8"
                   className={`w-full rounded-2xl border ${errors.grade ? 'border-rose-500' : 'border-[#2D5540]/15'} bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10`}
                 />
                 {errors.grade && <p className="text-rose-500 text-[10px] font-bold mt-1.5 ml-1 animate-in fade-in slide-in-from-top-1">{errors.grade}</p>}
