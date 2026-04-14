@@ -12,10 +12,12 @@ interface ParentProfile {
 interface ParentState {
   parentProfile: ParentProfile | null;
   linkedStudents: LinkedStudent[];
+  selectedStudentId: string | null;
   activeDashboardView: "analytics" | "chat";
   selectedStudentSessions: any[];
   activeSessionId: string | null;
   activeSessionHistory: any[];
+  isFetchingStudents: boolean;
   isFetchingSessions: boolean;
   isFetchingHistory: boolean;
   
