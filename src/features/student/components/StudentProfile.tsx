@@ -55,7 +55,7 @@ export function StudentProfile() {
       {/* Top Header Logo */}
       <div className="px-8 py-5">
         <div className="flex items-center">
-          <img src="/logo.svg" alt="Scholarly Logo" className="h-10 w-auto" />
+          <img src="/Logo.svg" alt="Scholarly Logo" className="h-10 w-auto" />
         </div>
       </div>
 
