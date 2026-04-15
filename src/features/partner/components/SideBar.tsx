@@ -10,13 +10,10 @@ interface SideBarProps {
 }
 
 import { usePartnerStore } from "../store/usePartnerStore";
-import { useNotificationStore } from "@/store/useNotificationStore";
-import { NotificationBell } from "@/components/NotificationBell";
 
 export function SideBar({ activeView, onViewChange }: SideBarProps) {
   const numberOfPendingRequests = usePartnerStore((state) => state.numberOfPendingRequests);
   const logoutPartner = usePartnerStore((state) => state.logoutPartner);
-  const { isDropdownOpen, setIsDropdownOpen } = useNotificationStore();
 
   const rawPartnerId = typeof window !== 'undefined' ? localStorage.getItem("gened_partner_id") : null;
   const partnerId = rawPartnerId?.replace(/['"]+/g, "");
@@ -83,19 +80,6 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
           );
         })}
 
-        {partnerId && (
-          <div 
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center gap-4 p-2 lg:px-4 lg:py-3 rounded-2xl transition-all duration-300 group justify-center lg:justify-start relative cursor-pointer hover:bg-white/50"
-          >
-            <div className="shrink-0">
-               <NotificationBell userId={partnerId} align="left" />
-            </div>
-            <span className="hidden lg:block text-xs font-bold uppercase tracking-widest text-[#1A3D2C]/40 group-hover:text-[#1A3D2C] truncate flex-1 leading-none">
-              Notifications
-            </span>
-          </div>
-        )}
       </nav>
 
       {/* Footer / Logout */}
