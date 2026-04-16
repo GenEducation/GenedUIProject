@@ -1,4 +1,6 @@
-const API_BASE_URL = (process.env.NEXT_PUBLIC_CORE_API_URL || "http://192.168.1.15:8000").replace(/\/$/, "");
+const NOTIFICATION_API_URL = (
+  process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://192.168.1.15:8001"
+).replace(/\/$/, "");
 
 export interface Notification {
   id: string;
@@ -11,26 +13,37 @@ export interface Notification {
 }
 
 export const notificationService = {
-  fetchNotifications: async (userId: string, unreadOnly: boolean = false): Promise<Notification[]> => {
-    const url = `${API_BASE_URL}/notifications?user_id=${userId}&unread_only=${unreadOnly}`;
+  fetchNotifications: async (
+    userId: string,
+    unreadOnly: boolean = false,
+  ): Promise<Notification[]> => {
+    const url = `${NOTIFICATION_API_URL}/notifications?user_id=${userId}&unread_only=${unreadOnly}`;
     const response = await fetch(url, {
-      headers: { "accept": "application/json" }
+      headers: { accept: "application/json" },
     });
     if (!response.ok) throw new Error("Failed to fetch notifications");
     return response.json();
   },
 
   markAsRead: async (notificationId: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
-      method: "PATCH",
-      headers: { "accept": "application/json", "Content-Type": "application/json" },
-      body: JSON.stringify({})
-    });
+    const response = await fetch(
+      `${NOTIFICATION_API_URL}/notifications/${notificationId}/read`,
+      {
+        method: "PATCH",
+        headers: {
+          accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      },
+    );
     if (!response.ok) throw new Error("Failed to mark notification as read");
   },
 
   subscribeToStream: (userId: string, onMessage: (data: any) => void) => {
-    const eventSource = new EventSource(`${API_BASE_URL}/stream?user_id=${userId}`);
+    const eventSource = new EventSource(
+      `${NOTIFICATION_API_URL}/stream?user_id=${userId}`,
+    );
 
     eventSource.onmessage = (event) => {
       try {
@@ -49,5 +62,5 @@ export const notificationService = {
     return () => {
       eventSource.close();
     };
-  }
+  },
 };
