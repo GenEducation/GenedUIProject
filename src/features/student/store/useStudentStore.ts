@@ -240,11 +240,12 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         partnerRequestStatus: "success", 
         partnerRequestMessage: String(message) 
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Partner Request Error:", error);
+      const errorMessage = error?.message || "Failed to send partner request. Please try again.";
       set({ 
         partnerRequestStatus: "error", 
-        partnerRequestMessage: "Failed to send partner request. Please try again." 
+        partnerRequestMessage: errorMessage 
       });
     }
   },
@@ -274,9 +275,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       });
     } catch (error: any) {
       console.error("Link Parent Error:", error);
-      const errorMessage = error.status === 409 
-        ? "You are already linked" 
-        : "Failed to link parent. Please check the ID and try again.";
+      const errorMessage = error?.message || "Failed to link parent. Please check the ID and try again.";
       
       set({ 
         partnerRequestStatus: "error", 

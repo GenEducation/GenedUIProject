@@ -201,6 +201,9 @@ export function LoginView({ onLogin }: LoginViewProps) {
     try {
       await signUp(signupData);
       
+      // Clear any previous signin errors when coming from a successful signup
+      setSigninErrors({});
+      
       // Force user to sign in manually per requirements
       setSignupSuccessMessage("Account created successfully! Please sign in to access your dashboard.");
       setLoginData((prev) => ({ ...prev, username: signupData.username, password: "" }));
@@ -226,12 +229,23 @@ export function LoginView({ onLogin }: LoginViewProps) {
 
   const toggleSignUp = () => {
       setSignupSuccessMessage("");
+      setSigninErrors({});
+      setSignupErrors({});
       setIsSignUp((current) => !current);
   };
 
   const handleLoginChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setLoginData((current) => ({ ...current, [name]: value }));
+    
+    // Clear error for this field when user starts typing
+    if (signinErrors[name]) {
+      setSigninErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleSignupChange = (

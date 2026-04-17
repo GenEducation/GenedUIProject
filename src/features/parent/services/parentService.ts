@@ -57,4 +57,15 @@ export const parentService = {
 
     return response.json();
   },
+
+  unlinkStudent: async (parentId: string, studentId: string): Promise<void> => {
+    const response = await fetch(`${BASE_URL}/parent/link/${studentId}?parent_id=${encodeURIComponent(parentId)}`, {
+      method: "DELETE",
+      headers: { "accept": "application/json" }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to unlink student: ${response.status}`);
+    }
+  },
 };

@@ -24,7 +24,8 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { StudentAnalyticsDashboard } from "@/components/analytics/StudentAnalyticsDashboard";
 import { ParentChatExploration } from "./ParentChatExploration";
-import { ParentRequestBell } from "./ParentRequestBell";
+import { ParentProfileView } from "./ParentProfileView";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export function ParentHome() {
   const { 
@@ -35,7 +36,8 @@ export function ParentHome() {
     fetchLinkedStudents,
     isFetchingStudents,
     activeDashboardView,
-    setDashboardView
+    setDashboardView,
+    logoutParent
   } = useParentStore();
 
   const {
@@ -155,7 +157,7 @@ export function ParentHome() {
 
         <div className="p-8 border-t border-[#1a3a2a]/5 space-y-2 mt-auto">
           <button 
-            onClick={() => window.location.reload()}
+            onClick={() => logoutParent()}
             className="w-full p-3 rounded-xl flex items-center gap-3 text-red-500 hover:bg-red-50 transition-all font-bold text-sm"
           >
             <LogOut size={18} />
@@ -218,19 +220,26 @@ export function ParentHome() {
           </div>
 
           <div className="flex items-center gap-3 lg:gap-6">
-            <ParentRequestBell />
+            <NotificationBell userId={parentProfile?.user_id || ""} align="right" />
             <div className="h-8 w-[1px] bg-[#1a3a2a]/10 mx-1 hidden sm:block" />
             
             {/* Right Section: Parent Profile Info */}
-            <div className="flex items-center gap-3">
+            <button 
+              onClick={() => {
+                setSelectedStudentId(null);
+                setDashboardView("profile");
+                if (window.innerWidth < 1024) setIsSidebarOpen(false);
+              }}
+              className="flex items-center gap-3 group"
+            >
               <div className="text-right hidden sm:block">
-                <h2 className="text-sm lg:text-base font-black text-[#1a3a2a] leading-tight">{parentProfile?.username || "Parent Account"}</h2>
+                <h2 className={`text-sm lg:text-base font-black leading-tight transition-colors ${activeDashboardView === 'profile' ? 'text-[#059669]' : 'text-[#1a3a2a] group-hover:text-[#059669]'}`}>{parentProfile?.username || "Parent Account"}</h2>
                 <p className="text-[8px] lg:text-[10px] font-black text-[#1a3a2a]/30 uppercase tracking-[0.2em]">Academic Overseer</p>
               </div>
-              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-gradient-to-br from-[#1a3a2a] to-[#059669] flex items-center justify-center text-white shadow-md border-2 border-white">
+              <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-2xl flex items-center justify-center text-white shadow-md border-2 transition-all ${activeDashboardView === 'profile' ? 'bg-[#059669] border-[#059669] scale-105 shadow-[#059669]/20' : 'bg-gradient-to-br from-[#1a3a2a] to-[#059669] border-white group-hover:scale-105'}`}>
                 <User size={20} />
               </div>
-            </div>
+            </button>
           </div>
         </header>
 
@@ -241,6 +250,8 @@ export function ParentHome() {
               <p className="text-sm font-bold text-[#1a3a2a]/40 tracking-widest uppercase">Fetching Insights...</p>
             </div>
           </div>
+        ) : activeDashboardView === "profile" ? (
+          <ParentProfileView profile={parentProfile} />
         ) : selectedStudent ? (
           <AnimatePresence mode="wait">
             <motion.div

@@ -78,15 +78,14 @@ export function PartnerRequestModal() {
                   <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-2">
                     <XCircle className="w-8 h-8 text-red-600" />
                   </div>
-                  <h3 className="text-xl font-bold text-[#1a3a2a]">Request Failed</h3>
-                  <p className="text-red-500/80 text-sm max-w-[280px] mx-auto leading-relaxed">
+                  <h3 className="text-xl font-bold text-[#1a3a2a] max-w-[280px] mx-auto leading-tight">
                     {partnerRequestMessage}
-                  </p>
+                  </h3>
                   <button 
                     onClick={() => setPartnerModalOpen(false)}
                     className="w-full mt-6 bg-[#f4f3ee] hover:bg-[#e4e3de] text-[#1a3a2a] rounded-2xl py-3 font-bold text-[14px] transition-colors"
                   >
-                    Try Again
+                    Close
                   </button>
                 </div>
               )}
