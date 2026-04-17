@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowRight, Plus, BookOpen, PenLine, Search, LogOut, User, Loader2, BarChart2 } from "lucide-react";
 import {
@@ -9,7 +10,6 @@ import {
   SubjectItem,
   AgentItem,
 } from "../store/useStudentStore";
-import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { AgentPickerModal } from "@/features/student/components/AgentPickerModal";
 
 import { NotificationBell } from "@/components/NotificationBell";
@@ -39,6 +39,8 @@ export function StudentHome() {
     }
   `;
 
+  const router = useRouter();
+
   const { 
     studentProfile, 
     recentChats, 
@@ -49,13 +51,11 @@ export function StudentHome() {
     setAgentPickerOpen, 
     isAgentPickerOpen, 
     logoutStudent,
-    setProfileOpen,
     fetchAvailableAgents,
     availableAgents,
     isAgentsLoading
   } = useStudentStore();
 
-  const { setAnalyticsOpen } = useAnalyticsStore();
 
   useEffect(() => {
     if (studentProfile) {
@@ -83,7 +83,7 @@ export function StudentHome() {
         </button>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setAnalyticsOpen(true)}
+            onClick={() => router.push('/student/analytics')}
             className="flex items-center gap-2 text-xs font-semibold text-[#1a3a2a]/50 hover:text-[#1a3a2a] transition-colors px-3 py-2 rounded-xl hover:bg-[#1a3a2a]/5"
           >
             <BarChart2 size={14} />
@@ -100,7 +100,7 @@ export function StudentHome() {
           {userId && <NotificationBell userId={userId} />}
 
           <button
-            onClick={() => setProfileOpen(true)}
+            onClick={() => router.push('/student/profile')}
             className="w-10 h-10 rounded-full bg-[#1a3a2a] hover:bg-[#2d6a4a] text-white shadow-md shadow-[#1a3a2a]/20 transition-all flex items-center justify-center transform hover:scale-105"
           >
             <User size={18} className="text-white" />
@@ -153,7 +153,10 @@ export function StudentHome() {
                   key={chat.id}
                   chat={chat}
                   delay={i * 0.06}
-                  onContinue={() => openExistingChat(chat)}
+                  onContinue={() => {
+                    openExistingChat(chat);
+                    router.push('/student/chat');
+                  }}
                 />
               ))
             ) : (
@@ -195,13 +198,16 @@ export function StudentHome() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.25 + i * 0.07 }}
-                  onClick={() => openNewChat({
-                    id: agent.agent_id,
-                    name: agent.name,
-                    grade: `Grade ${agent.grade}`,
-                    icon: "🤖",
-                    chaptersCount: 0
-                  })}
+                  onClick={() => {
+                    openNewChat({
+                      id: agent.agent_id,
+                      name: agent.name,
+                      grade: `Grade ${agent.grade}`,
+                      icon: "🤖",
+                      chaptersCount: 0
+                    });
+                    router.push('/student/chat');
+                  }}
                   className="bg-white rounded-2xl p-5 space-y-3 border border-[#1a3a2a]/8 shadow-sm hover:shadow-lg hover:shadow-[#1a3a2a]/5 transition-all cursor-pointer group flex flex-col justify-center"
                 >
                   <div className="space-y-1">

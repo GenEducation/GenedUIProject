@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, LogOut, ShieldCheck, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { useEffect, useState } from "react";
 
@@ -15,9 +16,9 @@ const MOCK_PARENTS = [
 ];
 
 export function StudentProfile() {
+  const router = useRouter();
   const { 
     studentProfile, 
-    setProfileOpen, 
     logoutStudent, 
     availablePartners, 
     fetchAvailablePartners, 
@@ -63,7 +64,7 @@ export function StudentProfile() {
         {/* Top Controls: Back & Logout */}
         <div className="flex items-center justify-between">
           <button 
-            onClick={() => setProfileOpen(false)}
+            onClick={() => router.back()}
             className="flex items-center gap-2 text-sm text-[#1a3a2a]/60 hover:text-[#1a3a2a] font-semibold transition-colors"
           >
             <ArrowLeft size={16} />

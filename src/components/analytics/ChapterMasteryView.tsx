@@ -111,12 +111,14 @@ export const UnitCard: React.FC<UnitCardProps> = ({
 
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
+import { useRouter } from "next/navigation";
 
 interface ChapterMasteryViewProps {
   mode?: "student" | "parent";
 }
 
 export const ChapterMasteryView: React.FC<ChapterMasteryViewProps> = ({ mode = "student" }) => {
+  const router = useRouter();
   const { startFocusedSession } = useStudentStore();
   const { analyticsChapterMastery, selectedAnalyticsSubject } = useAnalyticsStore();
 
@@ -137,7 +139,7 @@ export const ChapterMasteryView: React.FC<ChapterMasteryViewProps> = ({ mode = "
           status={getStatus(item.mastery_score)}
           coverage={item.completion_percentage}
           sessions={item.study_count}
-          onAction={() => startFocusedSession(item.document_title, selectedAnalyticsSubject)}
+          onAction={() => { startFocusedSession(item.document_title, selectedAnalyticsSubject); router.push('/student/chat'); }}
           hideActions={mode === "parent"}
         />
       ))}

@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Send, Mic, Zap, Loader2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useStudentStore, ChatMessage, ChatSession } from "../store/useStudentStore";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { StudentChatInput } from "./StudentChatInput";
@@ -14,6 +15,7 @@ interface StudentChatMainProps {
 }
 
 export function StudentChatMain({ activeChat, messages, isAITyping }: StudentChatMainProps) {
+  const router = useRouter();
   const { closeChat, isHistoryLoading } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -27,7 +29,7 @@ export function StudentChatMain({ activeChat, messages, isAITyping }: StudentCha
       <header className="flex items-center justify-between px-8 py-4 border-b border-[#1a3a2a]/8 bg-white flex-shrink-0">
         <div className="flex items-center gap-4">
           <button
-            onClick={closeChat}
+            onClick={() => { closeChat(); router.push('/student'); }}
             className="w-9 h-9 rounded-xl bg-[#F4F3EE] flex items-center justify-center text-[#1a3a2a]/50 hover:text-[#1a3a2a] hover:bg-[#1a3a2a]/10 transition-all"
           >
             <ArrowLeft size={18} />

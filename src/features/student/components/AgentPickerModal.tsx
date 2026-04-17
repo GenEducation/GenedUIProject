@@ -3,9 +3,11 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Search } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useStudentStore, AgentItem } from "../store/useStudentStore";
 
 export function AgentPickerModal() {
+  const router = useRouter();
   const { setAgentPickerOpen, openNewChat, availableAgents } = useStudentStore();
   const [query, setQuery] = useState("");
 
@@ -26,6 +28,7 @@ export function AgentPickerModal() {
       icon: "🤖",
       chaptersCount: 0
     }, agent.agent_id);
+    router.push('/student/chat');
   };
 
   return (

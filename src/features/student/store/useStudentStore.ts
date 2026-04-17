@@ -368,8 +368,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       subject: subject
     };
 
-    // Close analytics and update state
-    import("@/store/useAnalyticsStore").then(m => m.useAnalyticsStore.getState().setAnalyticsOpen(false));
+    // Navigation to /student/chat is handled by the calling component via router.push
 
     set({
       activeChat: newSession,

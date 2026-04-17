@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Users, 
@@ -28,6 +29,9 @@ import { ParentProfileView } from "./ParentProfileView";
 import { NotificationBell } from "@/components/NotificationBell";
 
 export function ParentHome() {
+  const router = useRouter();
+  const pathname = usePathname();
+
   const { 
     parentProfile, 
     linkedStudents, 
@@ -47,6 +51,22 @@ export function ParentHome() {
   } = useAnalyticsStore();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Sync URL → state on mount / pathname change
+  useEffect(() => {
+    const parts = pathname.split('/').filter(Boolean); // e.g. ['parent','abc123','analytics']
+    if (parts[1] === 'profile') {
+      setDashboardView('profile');
+      setSelectedStudentId(null);
+    } else if (parts.length >= 3 && parts[2] === 'chat') {
+      setSelectedStudentId(parts[1]);
+      setDashboardView('chat');
+    } else if (parts.length >= 3 && parts[2] === 'analytics') {
+      setSelectedStudentId(parts[1]);
+      setDashboardView('analytics');
+    }
+    // /parent alone: leave state as-is (store auto-selects first student)
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchLinkedStudents();
@@ -97,6 +117,7 @@ export function ParentHome() {
                       key={student.student_id}
                       onClick={() => {
                         setSelectedStudentId(student.student_id);
+                        router.push(`/parent/${student.student_id}/analytics`);
                         if (window.innerWidth < 1024) setIsSidebarOpen(false);
                       }}
                       className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-all ${
@@ -122,6 +143,7 @@ export function ParentHome() {
                     <button 
                       onClick={() => {
                         setDashboardView("analytics");
+                        router.push(`/parent/${selectedStudentId}/analytics`);
                         if (window.innerWidth < 1024) setIsSidebarOpen(false);
                       }}
                       className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 group ${
@@ -137,6 +159,7 @@ export function ParentHome() {
                     <button 
                       onClick={() => {
                         setDashboardView("chat");
+                        router.push(`/parent/${selectedStudentId}/chat`);
                         if (window.innerWidth < 1024) setIsSidebarOpen(false);
                       }}
                       className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 group ${
@@ -228,6 +251,7 @@ export function ParentHome() {
               onClick={() => {
                 setSelectedStudentId(null);
                 setDashboardView("profile");
+                router.push('/parent/profile');
                 if (window.innerWidth < 1024) setIsSidebarOpen(false);
               }}
               className="flex items-center gap-3 group"

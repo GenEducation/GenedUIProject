@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, ChangeEvent, FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { SignIn } from "./SignIn";
 import { SignUp } from "./SignUp";
 import { AuthHeader } from "./AuthHeader";
@@ -10,10 +11,6 @@ import { AuthFooter } from "./AuthFooter";
 import { signIn, signUp, SignUpFields } from "../authService";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
-
-interface LoginViewProps {
-  onLogin: (role: "student" | "parent" | "partner") => void;
-}
 
 const initialSignUpData: SignUpFields = {
   username: "",
@@ -29,7 +26,8 @@ const initialSignUpData: SignUpFields = {
   website: "",
 };
 
-export function LoginView({ onLogin }: LoginViewProps) {
+export function LoginView() {
+  const router = useRouter();
   const [isSignUp, setIsSignUp] = useState(false);
   const [loginData, setLoginData] = useState({
     username: "",
@@ -156,7 +154,7 @@ export function LoginView({ onLogin }: LoginViewProps) {
         });
       }
 
-      onLogin(role);
+      router.push(`/${role}`);
     } catch (error) {
       let msg = error instanceof Error ? error.message : "Unable to complete signin.";
       
