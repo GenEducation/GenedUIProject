@@ -1,25 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { PartnerAdmin } from "@/features/partner/components/PartnerAdmin";
-import { StudentPortal } from "@/features/student/components/StudentPortal";
-import { ParentHome } from "@/features/parent/components/ParentHome";
-import { LoginView } from "@/features/auth/components/LoginView";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
-import { usePartnerStore } from "@/features/partner/store/usePartnerStore";
+import { LoginView } from "@/features/auth/components/LoginView";
 
 /**
- * HomePage acts as the root router for the Gened platform.
- * It handles authentication state and directs users to their
- * respective portals (Student, Partner, or Parent) based on
- * the role returned by the backend.
+ * Root page — serves as the Login/Signup entry point.
+ * If the user already has a valid session, they are automatically
+ * redirected to their respective portal.
  */
 export default function HomePage() {
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState<"student" | "parent" | "partner" | null>(null);
+  const router = useRouter();
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("gened_auth_token");
@@ -29,8 +23,8 @@ export default function HomePage() {
     if (token && role && profileStr) {
       try {
         const profile = JSON.parse(profileStr);
-        
-        // Hydrate store based on role
+
+        // Hydrate stores so the destination portal loads instantly
         if (role === "student") {
           useStudentStore.getState().setStudentProfile({
             user_id: profile.user_id,
@@ -48,25 +42,18 @@ export default function HomePage() {
             role: profile.role || "parent",
           });
         }
-        
-        setUserRole(role);
-        setIsLoggedIn(true);
-      } catch (error) {
-        console.error("Failed to restore session:", error);
-        // Clear corrupt data
+
+        router.replace(`/${role}`);
+        return;
+      } catch {
         localStorage.clear();
       }
     }
-    setIsInitializing(false);
-  }, []);
 
-  // When a user successfully authenticates, LoginView calls this with their role.
-  const handleLogin = (role: "student" | "parent" | "partner") => {
-    setUserRole(role);
-    setIsLoggedIn(true);
-  };
+    setIsChecking(false);
+  }, [router]);
 
-  if (isInitializing) {
+  if (isChecking) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#F7F6F1]">
         <div className="flex flex-col items-center gap-4">
@@ -77,47 +64,5 @@ export default function HomePage() {
     );
   }
 
-  // If not logged in, show the Login/Signup view
-  if (!isLoggedIn) {
-    return <LoginView onLogin={handleLogin} />;
-  }
-
-  // Once logged in, render the appropriate portal based on the role.
-  return (
-    <main className="h-screen bg-white text-[#1a3a2a] font-sans flex flex-col overflow-hidden">
-      <AnimatePresence mode="wait">
-        {userRole === "partner" ? (
-          <motion.div
-            key="partner"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="h-full"
-          >
-            <PartnerAdmin />
-          </motion.div>
-        ) : userRole === "student" ? (
-          <motion.div
-            key="student"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="h-full"
-          >
-            <StudentPortal />
-          </motion.div>
-        ) : userRole === "parent" ? (
-          <motion.div
-            key="parent"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="h-full"
-          >
-            <ParentHome />
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </main>
-  );
+  return <LoginView />;
 }

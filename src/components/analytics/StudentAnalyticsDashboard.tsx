@@ -4,6 +4,7 @@ import {
   BarChart2, ArrowLeft, CheckCircle2, 
   Target, GraduationCap, ChevronDown, LayoutGrid 
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { MetricCard } from "./MetricCard";
@@ -19,10 +20,10 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
   mode = "student", 
   studentId 
 }) => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"skill" | "chapter">("chapter");
   const { studentProfile } = useStudentStore();
   const { 
-    setAnalyticsOpen, 
     analyticsSubjects, 
     selectedAnalyticsSubject,
     skillSummary,
@@ -80,7 +81,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
         {mode === "student" && (
           <>
             <button 
-              onClick={() => setAnalyticsOpen(false)}
+              onClick={() => router.back()}
               className="flex items-center gap-2 text-[#1a3a2a]/60 hover:text-[#1a3a2a] transition-all group lg:min-w-[80px]"
             >
               <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />

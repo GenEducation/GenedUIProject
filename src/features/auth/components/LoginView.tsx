@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, ChangeEvent, FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { SignIn } from "./SignIn";
 import { SignUp } from "./SignUp";
 import { AuthHeader } from "./AuthHeader";
@@ -11,14 +12,11 @@ import { signIn, signUp, SignUpFields } from "../authService";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
 
-interface LoginViewProps {
-  onLogin: (role: "student" | "parent" | "partner") => void;
-}
-
 const initialSignUpData: SignUpFields = {
   username: "",
   email: "",
   password: "",
+  confirmPassword: "",
   role: "student",
   age: "",
   grade: "",
@@ -29,7 +27,8 @@ const initialSignUpData: SignUpFields = {
   website: "",
 };
 
-export function LoginView({ onLogin }: LoginViewProps) {
+export function LoginView() {
+  const router = useRouter();
   const [isSignUp, setIsSignUp] = useState(false);
   const [loginData, setLoginData] = useState({
     username: "",
@@ -74,6 +73,12 @@ export function LoginView({ onLogin }: LoginViewProps) {
       errors.password = "Password is compulsory";
     } else if (signupData.password.length < 6) {
       errors.password = "Password must be at least 6 characters";
+    }
+
+    if (!signupData.confirmPassword?.trim()) {
+      errors.confirmPassword = "Confirm Password is compulsory";
+    } else if (signupData.password !== signupData.confirmPassword) {
+      errors.confirmPassword = "Passwords do not match";
     }
 
     if (signupData.role === "student") {
@@ -156,7 +161,7 @@ export function LoginView({ onLogin }: LoginViewProps) {
         });
       }
 
-      onLogin(role);
+      router.push(`/${role}`);
     } catch (error) {
       let msg = error instanceof Error ? error.message : "Unable to complete signin.";
       
@@ -201,6 +206,9 @@ export function LoginView({ onLogin }: LoginViewProps) {
     try {
       await signUp(signupData);
       
+      // Clear any previous signin errors when coming from a successful signup
+      setSigninErrors({});
+      
       // Force user to sign in manually per requirements
       setSignupSuccessMessage("Account created successfully! Please sign in to access your dashboard.");
       setLoginData((prev) => ({ ...prev, username: signupData.username, password: "" }));
@@ -226,12 +234,23 @@ export function LoginView({ onLogin }: LoginViewProps) {
 
   const toggleSignUp = () => {
       setSignupSuccessMessage("");
+      setSigninErrors({});
+      setSignupErrors({});
       setIsSignUp((current) => !current);
   };
 
   const handleLoginChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setLoginData((current) => ({ ...current, [name]: value }));
+    
+    // Clear error for this field when user starts typing
+    if (signinErrors[name]) {
+      setSigninErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleSignupChange = (

@@ -13,7 +13,7 @@ interface ParentState {
   parentProfile: ParentProfile | null;
   linkedStudents: LinkedStudent[];
   selectedStudentId: string | null;
-  activeDashboardView: "analytics" | "chat";
+  activeDashboardView: "analytics" | "chat" | "profile";
   selectedStudentSessions: any[];
   activeSessionId: string | null;
   activeSessionHistory: any[];
@@ -25,12 +25,13 @@ interface ParentState {
   setParentProfile: (profile: ParentProfile) => void;
   fetchLinkedStudents: () => Promise<void>;
   setSelectedStudentId: (id: string | null) => void;
-  setDashboardView: (view: "analytics" | "chat") => void;
+  setDashboardView: (view: "analytics" | "chat" | "profile") => void;
   setActiveSessionId: (id: string | null) => void;
   fetchStudentSessions: (studentId: string) => Promise<void>;
   fetchSessionHistory: (studentId: string, sessionId: string) => Promise<void>;
   linkNewStudent: (studentId: string) => Promise<void>;
   updateStudentStatus: (studentId: string, status: "APPROVED" | "REJECTED") => Promise<void>;
+  unlinkStudent: (studentId: string) => Promise<void>;
   logoutParent: () => void;
 }
 
@@ -71,13 +72,19 @@ export const useParentStore = create<ParentState>((set, get) => ({
     }
   },
 
-  setSelectedStudentId: (id) => set({ 
-    selectedStudentId: id,
-    activeDashboardView: "analytics", // Reset to analytics when switching students
-    selectedStudentSessions: [],
-    activeSessionId: null,
-    activeSessionHistory: []
-  }),
+  setSelectedStudentId: (id) => {
+    set({ 
+      selectedStudentId: id,
+      selectedStudentSessions: [],
+      activeSessionId: null,
+      activeSessionHistory: []
+    });
+    
+    // Only reset to analytics if a specific student is being selected
+    if (id !== null) {
+      set({ activeDashboardView: "analytics" });
+    }
+  },
 
   setDashboardView: (view) => set({ activeDashboardView: view }),
 
@@ -139,6 +146,31 @@ export const useParentStore = create<ParentState>((set, get) => ({
       }
     } catch (error) {
       console.error("Update Student Status Error:", error);
+      throw error;
+    }
+  },
+
+  unlinkStudent: async (studentId: string) => {
+    const { parentProfile, linkedStudents, selectedStudentId } = get();
+    if (!parentProfile) return;
+
+    try {
+      await parentService.unlinkStudent(parentProfile.user_id, studentId);
+      
+      // Update local state
+      const updatedStudents = linkedStudents.filter(s => s.student_id !== studentId);
+      set({ linkedStudents: updatedStudents });
+      
+      // If the unlinked student was the selected one, reset selection
+      if (selectedStudentId === studentId) {
+        const nextApproved = updatedStudents.find(s => s.status === "APPROVED");
+        set({ 
+          selectedStudentId: nextApproved?.student_id || null,
+          activeDashboardView: "analytics"
+        });
+      }
+    } catch (error) {
+      console.error("Unlink Student Error:", error);
       throw error;
     }
   },

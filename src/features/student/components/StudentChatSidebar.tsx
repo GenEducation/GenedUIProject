@@ -1,6 +1,7 @@
 "use client";
 
 import { User, BarChart2, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import React from "react";
@@ -11,7 +12,8 @@ import React from "react";
  * area updates, and it consumes its own data from the store.
  */
 export const StudentChatSidebar = React.memo(({ activeChatId }: { activeChatId: string }) => {
-  const { openExistingChat, closeChat, recentChats, isSessionsLoading, setProfileOpen } = useStudentStore();
+  const router = useRouter();
+  const { openExistingChat, closeChat, recentChats, isSessionsLoading } = useStudentStore();
 
   const activeChatFromStore = useStudentStore((state) => state.activeChat);
   const activeChat = recentChats.find((c) => c.id === activeChatId) || 
@@ -22,7 +24,10 @@ export const StudentChatSidebar = React.memo(({ activeChatId }: { activeChatId: 
       {/* Sidebar header */}
       <div className="px-5 pt-6 pb-5 border-b border-[#1a3a2a]/8">
         <button
-          onClick={closeChat}
+          onClick={() => {
+            closeChat();
+            router.push('/student');
+          }}
           className="hover:opacity-80 transition-opacity"
         >
           <img src="/Logo.svg" alt="Gened Logo" className="h-10 w-auto" />
@@ -43,7 +48,10 @@ export const StudentChatSidebar = React.memo(({ activeChatId }: { activeChatId: 
           recentChats.map((chat) => (
             <button
               key={chat.id}
-              onClick={() => openExistingChat(chat)}
+              onClick={() => {
+                openExistingChat(chat);
+                router.push(`/student/chat/${chat.id}`);
+              }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all group ${
                 activeChatId === chat.id
                   ? "bg-[#1a3a2a] text-white"
@@ -82,16 +90,14 @@ export const StudentChatSidebar = React.memo(({ activeChatId }: { activeChatId: 
       {/* Sidebar footer — visual placeholders */}
       <div className="p-4 border-t border-[#1a3a2a]/8 space-y-1">
         <button 
-          onClick={() => setProfileOpen(true)}
+          onClick={() => router.push('/student/profile')}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#1a3a2a]/50 hover:text-[#1a3a2a] hover:bg-[#1a3a2a]/8 transition-all"
         >
           <User size={16} />
           <span className="text-xs font-semibold">Profile</span>
         </button>
         <button 
-          onClick={() => {
-            useAnalyticsStore.getState().setAnalyticsOpen(true);
-          }}
+          onClick={() => router.push('/student/analytics')}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#1a3a2a]/50 hover:text-[#1a3a2a] hover:bg-[#1a3a2a]/8 transition-all"
         >
           <BarChart2 size={16} />

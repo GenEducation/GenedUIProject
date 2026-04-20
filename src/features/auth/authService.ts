@@ -10,6 +10,7 @@ export interface SignUpFields {
   username: string;
   email: string;
   password: string;
+  confirmPassword?: string;
   role: "student" | "parent" | "partner";
   age?: string;
   grade?: string;

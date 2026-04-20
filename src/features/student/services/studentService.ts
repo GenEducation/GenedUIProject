@@ -47,7 +47,14 @@ export const studentService = {
     });
 
     if (!response.ok) {
-      throw new Error("Request failed");
+      let errorMessage = "Request failed";
+      try {
+        const data = await response.json();
+        errorMessage = data.detail || data.message || errorMessage;
+      } catch (e) {
+        // Fallback to generic message if JSON parsing fails
+      }
+      throw { status: response.status, message: errorMessage };
     }
 
     return response.json();
@@ -163,11 +170,14 @@ export const studentService = {
     });
 
     if (!response.ok) {
-      if (response.status === 409) {
+      let errorMessage = `Failed to link parent: ${response.status}`;
+      try {
         const data = await response.json();
-        throw { status: 409, message: data.detail || "Student is already linked to a parent." };
+        errorMessage = data.detail || data.message || errorMessage;
+      } catch (e) {
+        // Fallback to generic message
       }
-      throw new Error(`Failed to link parent: ${response.status}`);
+      throw { status: response.status, message: errorMessage };
     }
 
     return response.json();

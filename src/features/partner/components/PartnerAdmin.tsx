@@ -1,17 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { SideBar } from "./SideBar";
 import { SubjectRegistry } from "./SubjectRegistry";
 import { EnrollmentAdmin } from "./EnrollmentAdmin";
 import { CurriculumIngestion } from "./CurriculumIngestion";
 import { AnimatePresence, motion } from "framer-motion";
-
 import { NotificationBell } from "@/components/NotificationBell";
 import { User } from "lucide-react";
 
 export function PartnerAdmin() {
-  const [activeView, setActiveView] = useState<"subjects" | "analytics">("subjects");
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Derive active view from URL
+  const activeView: "subjects" | "analytics" = pathname === '/partner/analytics' ? 'analytics' : 'subjects';
+
   const [showUploadModal, setShowUploadModal] = useState(false);
 
   const rawPartnerId = typeof window !== 'undefined' ? localStorage.getItem("gened_partner_id") : null;
@@ -22,7 +27,7 @@ export function PartnerAdmin() {
       {/* Navigation Sidebar */}
       <SideBar 
         activeView={activeView} 
-        onViewChange={(view) => setActiveView(view)} 
+        onViewChange={(view) => router.push(view === 'subjects' ? '/partner' : '/partner/analytics')} 
       />
 
       {/* Main Content Area */}

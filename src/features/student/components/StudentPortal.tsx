@@ -1,8 +1,7 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { useStudentStore } from "../store/useStudentStore";
-import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { StudentHome } from "./StudentHome";
 import { StudentChatView } from "./StudentChatView";
 import { StudentProfile } from "./StudentProfile";
@@ -10,17 +9,20 @@ import { StudentAnalyticsDashboard } from "@/components/analytics/StudentAnalyti
 import { PartnerRequestModal } from "./PartnerRequestModal";
 
 /**
- * Top-level entry point for the student portal.
- * Conditionally renders StudentHome, StudentChatView, or StudentAnalyticsDashboard.
+ * StudentPortal renders the correct sub-view based on the current URL path.
+ * This replaces the old flag-based (isChatOpen, isProfileOpen, isAnalyticsOpen) approach.
  */
 export function StudentPortal() {
-  const { isChatOpen, isProfileOpen } = useStudentStore();
-  const { isAnalyticsOpen } = useAnalyticsStore();
+  const pathname = usePathname();
+
+  const isChatRoute = pathname === "/student/chat";
+  const isProfileRoute = pathname === "/student/profile";
+  const isAnalyticsRoute = pathname === "/student/analytics";
 
   return (
     <div className="h-screen overflow-hidden">
       <AnimatePresence mode="wait">
-        {isAnalyticsOpen ? (
+        {isAnalyticsRoute ? (
           <motion.div
             key="analytics"
             initial={{ opacity: 0, scale: 0.98 }}
@@ -31,7 +33,7 @@ export function StudentPortal() {
           >
             <StudentAnalyticsDashboard />
           </motion.div>
-        ) : isProfileOpen ? (
+        ) : isProfileRoute ? (
           <motion.div
             key="profile"
             initial={{ opacity: 0, y: 20 }}
@@ -42,7 +44,7 @@ export function StudentPortal() {
           >
             <StudentProfile />
           </motion.div>
-        ) : isChatOpen ? (
+        ) : isChatRoute ? (
           <motion.div
             key="chat"
             initial={{ opacity: 0, x: 30 }}

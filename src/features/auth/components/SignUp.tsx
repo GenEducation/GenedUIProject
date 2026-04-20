@@ -6,6 +6,7 @@ interface SignUpData {
   username: string;
   email: string;
   password: string;
+  confirmPassword?: string;
   role: "student" | "parent" | "partner";
   age?: string;
   grade?: string;
@@ -214,6 +215,21 @@ export function SignUp({
             className={`w-full rounded-2xl border ${errors.password ? 'border-rose-500' : 'border-[#2D5540]/15'} bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10 font-mono tracking-widest`}
           />
           {errors.password && <p className="text-rose-500 text-[10px] font-bold mt-1.5 ml-1 animate-in fade-in slide-in-from-top-1">{errors.password}</p>}
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-[#2D3E51]/60 mb-2 pl-1">
+            Confirm Password
+          </label>
+          <input
+            name="confirmPassword"
+            value={signupData.confirmPassword || ""}
+            onChange={onChange}
+            type="password"
+            placeholder="••••••••"
+            className={`w-full rounded-2xl border ${errors.confirmPassword ? 'border-rose-500' : 'border-[#2D5540]/15'} bg-white px-5 py-3.5 text-sm text-[#0E1F2B] transition-all placeholder:text-[#0E1F2B]/30 hover:border-[#2D5540]/30 focus:border-[#2D5540] focus:outline-none focus:ring-4 focus:ring-[#2D5540]/10 font-mono tracking-widest`}
+          />
+          {errors.confirmPassword && <p className="text-rose-500 text-[10px] font-bold mt-1.5 ml-1 animate-in fade-in slide-in-from-top-1">{errors.confirmPassword}</p>}
         </div>
       </div>
 
