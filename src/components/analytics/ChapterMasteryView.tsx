@@ -139,7 +139,10 @@ export const ChapterMasteryView: React.FC<ChapterMasteryViewProps> = ({ mode = "
           status={getStatus(item.mastery_score)}
           coverage={item.completion_percentage}
           sessions={item.study_count}
-          onAction={() => { startFocusedSession(item.document_title, selectedAnalyticsSubject); router.push('/student/chat'); }}
+          onAction={() => { 
+            const newId = startFocusedSession(item.document_title, selectedAnalyticsSubject); 
+            router.push(`/student/chat/${newId}`); 
+          }}
           hideActions={mode === "parent"}
         />
       ))}

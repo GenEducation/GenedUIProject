@@ -284,11 +284,12 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) throw new Error("No partner ID found");
 
-    const res = await fetch(`${getBaseUrl()}/api/partners/${partnerId}/agents/${agentId}`, {
+    // "agentId" here actually holds the ingestion_id due to mapping in fetchSubjects
+    const res = await fetch(`${getRagUrl()}/partner/${partnerId}/ingestions/${agentId}`, {
       method: "DELETE",
     });
 
-    if (!res.ok) throw new Error("Failed to delete subject");
+    if (!res.ok) throw new Error("Failed to delete subject ingestion");
 
     set((state) => ({
       subjects: state.subjects.filter((s) => s.id !== agentId),

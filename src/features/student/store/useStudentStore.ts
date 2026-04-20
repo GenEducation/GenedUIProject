@@ -77,10 +77,12 @@ interface StudentState {
   recentChats: ChatSession[];
   activeChat: ChatSession | null;
   messages: ChatMessage[];
+  chatMessagesCache: Record<string, ChatMessage[]>;
   isChatOpen: boolean;
   isProfileOpen: boolean;
   isAgentPickerOpen: boolean;
   isAITyping: boolean;
+  typingChatIds: string[];
   isSessionsLoading: boolean;
   isHistoryLoading: boolean;
   availableAgents: AgentItem[];
@@ -100,8 +102,9 @@ interface StudentState {
   fetchEnrolledPartners: () => Promise<void>;
   fetchChatHistory: (sessionId: string) => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
-  openNewChat: (subject: any, agent_id?: string) => void;
-  startFocusedSession: (documentTitle: string, subject: string) => void;
+  openChatById: (sessionId: string) => Promise<void>;
+  openNewChat: (subject: any, agent_id?: string) => string;
+  startFocusedSession: (documentTitle: string, subject: string) => string;
   closeChat: () => void;
   sendMessage: (text: string) => Promise<void>;
   setProfileOpen: (open: boolean) => void;
@@ -119,6 +122,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   recentChats: [],
   activeChat: null,
   messages: [],
+  chatMessagesCache: {},
+  typingChatIds: [],
   isChatOpen: false,
   isProfileOpen: false,
   isAgentPickerOpen: false,
@@ -299,7 +304,11 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         timestamp: h.created_at ? new Date(h.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "",
       }));
 
-      set({ messages: mappedMessages, isHistoryLoading: false });
+      set((state) => ({ 
+        messages: state.activeChat?.id === sessionId ? mappedMessages : state.messages,
+        chatMessagesCache: { ...state.chatMessagesCache, [sessionId]: mappedMessages },
+        isHistoryLoading: false 
+      }));
     } catch (error) {
       console.error("Fetch History Error:", error);
       set({ isHistoryLoading: false });
@@ -308,16 +317,49 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
   openExistingChat: async (chat) => {
     // Open UI immediately
-    set({
+    set((state) => ({
       activeChat: chat,
       isChatOpen: true,
       isAgentPickerOpen: false,
-      isAITyping: false, // Reset loading state when switching context
-      messages: [], // Clear old messages first
-    });
+      isAITyping: state.typingChatIds.includes(chat.id),
+      messages: state.chatMessagesCache[chat.id] || [], // Use cached messages if available
+    }));
 
-    // Fetch real history
-    await get().fetchChatHistory(chat.id);
+    // Fetch real history only if we are not currently waiting for an AI response
+    // to prevent overwriting the optimistic latest message
+    if (!get().typingChatIds.includes(chat.id)) {
+      await get().fetchChatHistory(chat.id);
+    }
+  },
+
+  openChatById: async (sessionId) => {
+    const { recentChats, fetchSessions, fetchChatHistory } = get();
+    
+    // 1. Try to find in existing list
+    let chat = recentChats.find(c => c.id === sessionId);
+    
+    // 2. If not found, it might be a refresh - fetch sessions first
+    if (!chat) {
+      await fetchSessions();
+      chat = get().recentChats.find(c => c.id === sessionId);
+    }
+    
+    // 3. If found now, open it
+    if (chat) {
+      set((state) => ({
+        activeChat: chat,
+        isChatOpen: true,
+        isAITyping: state.typingChatIds.includes(sessionId),
+        messages: state.chatMessagesCache[sessionId] || [],
+      }));
+      
+      if (!get().typingChatIds.includes(sessionId)) {
+        await fetchChatHistory(sessionId);
+      }
+    } else {
+      console.error("Chat not found even after fetching sessions:", sessionId);
+      // Fallback: stay on home or clear state
+    }
   },
 
   openNewChat: (subject, agent_id) => {
@@ -338,10 +380,13 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       activeChat: newSession,
       recentChats: [newSession, ...state.recentChats], // Optimistically add to list immediately
       messages: [],
+      chatMessagesCache: { ...state.chatMessagesCache, [tempId]: [] },
       isChatOpen: true,
       isAgentPickerOpen: false,
       isAITyping: false, // Reset loading state
     }));
+
+    return tempId;
   },
 
   startFocusedSession: (documentTitle, subject) => {
@@ -370,12 +415,13 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
     // Navigation to /student/chat is handled by the calling component via router.push
 
-    set({
+    set((state) => ({
       activeChat: newSession,
       isChatOpen: true,
       messages: [],
+      chatMessagesCache: { ...state.chatMessagesCache, [tempId]: [] },
       isAITyping: false
-    });
+    }));
 
     // We don't optimistically add to recentChats here? 
     // Usually focused sessions are temporary experimental ones, 
@@ -383,6 +429,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     set((state) => ({
       recentChats: [newSession, ...state.recentChats]
     }));
+
+    return tempId;
   },
 
   closeChat: () =>
@@ -402,10 +450,17 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
 
-    set((state) => ({
-      messages: [...state.messages, userMsg],
-      isAITyping: true,
-    }));
+    set((state) => {
+      const currentMessages = state.chatMessagesCache[chatSentFromId] || state.messages;
+      const newMessages = [...currentMessages, userMsg];
+      
+      return {
+        messages: state.activeChat?.id === chatSentFromId ? newMessages : state.messages,
+        chatMessagesCache: { ...state.chatMessagesCache, [chatSentFromId]: newMessages },
+        typingChatIds: [...state.typingChatIds, chatSentFromId],
+        isAITyping: state.activeChat?.id === chatSentFromId ? true : state.isAITyping,
+      };
+    });
 
     try {
       let data;
@@ -463,13 +518,19 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           }
         }
 
-        // Only add message and clear typing state if we are still viewing this chat
+        // Only update active messages if we are still viewing this chat
         const isStillViewingChat = state.activeChat?.id === chatSentFromId;
         
+        const cached = state.chatMessagesCache[chatSentFromId] || [];
+        const finishedMessages = [...cached, aiReply];
+        const newTypingIds = state.typingChatIds.filter(id => id !== chatSentFromId);
+
         return {
           activeChat: finalActiveChat,
           recentChats: newRecentChats,
-          messages: isStillViewingChat ? [...state.messages, aiReply] : state.messages,
+          chatMessagesCache: { ...state.chatMessagesCache, [chatSentFromId]: finishedMessages },
+          messages: isStillViewingChat ? finishedMessages : state.messages,
+          typingChatIds: newTypingIds,
           isAITyping: isStillViewingChat ? false : state.isAITyping,
         };
       });
@@ -482,10 +543,18 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
       
-      set((state) => ({
-        messages: state.activeChat?.id === chatSentFromId ? [...state.messages, errorMsg] : state.messages,
-        isAITyping: state.activeChat?.id === chatSentFromId ? false : state.isAITyping,
-      }));
+      set((state) => {
+        const cached = state.chatMessagesCache[chatSentFromId] || [];
+        const finishedMessages = [...cached, errorMsg];
+        const newTypingIds = state.typingChatIds.filter(id => id !== chatSentFromId);
+        
+        return {
+          chatMessagesCache: { ...state.chatMessagesCache, [chatSentFromId]: finishedMessages },
+          messages: state.activeChat?.id === chatSentFromId ? finishedMessages : state.messages,
+          typingChatIds: newTypingIds,
+          isAITyping: state.activeChat?.id === chatSentFromId ? false : state.isAITyping,
+        };
+      });
     }
   },
 
@@ -503,11 +572,13 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       studentProfile: null,
       activeChat: null,
       messages: [],
+      chatMessagesCache: {},
       isChatOpen: false,
       isProfileOpen: false,
       isAgentPickerOpen: false,
       isPartnerModalOpen: false,
       isAITyping: false,
+      typingChatIds: [],
     });
     window.location.href = "/";
   },

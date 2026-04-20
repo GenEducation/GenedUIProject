@@ -16,6 +16,7 @@ const initialSignUpData: SignUpFields = {
   username: "",
   email: "",
   password: "",
+  confirmPassword: "",
   role: "student",
   age: "",
   grade: "",
@@ -72,6 +73,12 @@ export function LoginView() {
       errors.password = "Password is compulsory";
     } else if (signupData.password.length < 6) {
       errors.password = "Password must be at least 6 characters";
+    }
+
+    if (!signupData.confirmPassword?.trim()) {
+      errors.confirmPassword = "Confirm Password is compulsory";
+    } else if (signupData.password !== signupData.confirmPassword) {
+      errors.confirmPassword = "Passwords do not match";
     }
 
     if (signupData.role === "student") {

@@ -48,7 +48,10 @@ export const StudentChatSidebar = React.memo(({ activeChatId }: { activeChatId: 
           recentChats.map((chat) => (
             <button
               key={chat.id}
-              onClick={() => openExistingChat(chat)}
+              onClick={() => {
+                openExistingChat(chat);
+                router.push(`/student/chat/${chat.id}`);
+              }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all group ${
                 activeChatId === chat.id
                   ? "bg-[#1a3a2a] text-white"

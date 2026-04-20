@@ -155,7 +155,7 @@ export function StudentHome() {
                   delay={i * 0.06}
                   onContinue={() => {
                     openExistingChat(chat);
-                    router.push('/student/chat');
+                    router.push(`/student/chat/${chat.id}`);
                   }}
                 />
               ))
@@ -199,14 +199,14 @@ export function StudentHome() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.25 + i * 0.07 }}
                   onClick={() => {
-                    openNewChat({
+                    const newId = openNewChat({
                       id: agent.agent_id,
                       name: agent.name,
                       grade: `Grade ${agent.grade}`,
                       icon: "🤖",
                       chaptersCount: 0
                     });
-                    router.push('/student/chat');
+                    router.push(`/student/chat/${newId}`);
                   }}
                   className="bg-white rounded-2xl p-5 space-y-3 border border-[#1a3a2a]/8 shadow-sm hover:shadow-lg hover:shadow-[#1a3a2a]/5 transition-all cursor-pointer group flex flex-col justify-center"
                 >
