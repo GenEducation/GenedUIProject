@@ -42,7 +42,7 @@ interface PartnerState {
   // Subject Actions
   fetchSubjects: () => Promise<void>;
   addSubject: (subject: Subject) => void;
-  uploadCurriculum: (file: File, subjectName: string, chapterTitle: string, agentName: string, grade: string, board: string) => Promise<void>;
+  uploadCurriculum: (file: File, subjectName: string, documentTitle: string, agentName: string, grade: string, board: string) => Promise<void>;
   removeSubject: (agentId: string) => Promise<void>;
   removeStudent: (studentId: string) => Promise<void>;
 
@@ -217,13 +217,13 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   addSubject: (subject) =>
     set((state) => ({ subjects: [subject, ...state.subjects] })),
 
-  uploadCurriculum: async (file, subjectName, chapterTitle, agentName, grade, board) => {
+  uploadCurriculum: async (file, subjectName, documentTitle, agentName, grade, board) => {
     const tempId = Math.random().toString(36).substring(2, 9);
 
     const optimisticSubject: Subject = {
       id: tempId,
       subject: subjectName,
-      agent: chapterTitle, // Show the Chapter Title as the primary name
+      agent: documentTitle, // Show the Document Title as the primary name
       grade,
       board,
       status: "in-progress",
@@ -236,7 +236,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("subject", subjectName);
-      formData.append("document_title", chapterTitle); // Mapped to chapterTitle (document_title on backend)
+      formData.append("document_title", documentTitle); // Mapped to documentTitle (document_title on backend)
       formData.append("agent_name", agentName);
       formData.append("grade", grade);
       formData.append("board", board);
