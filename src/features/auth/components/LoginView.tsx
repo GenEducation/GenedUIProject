@@ -44,11 +44,11 @@ export function LoginView() {
 
   const validateSignIn = () => {
     const errors: Record<string, string> = {};
-    if (!loginData.username.trim()) errors.username = "Username is compulsory";
+    if (!loginData.username.trim()) errors.username = "A username is required to identify your archive.";
     if (!loginData.password.trim()) {
-      errors.password = "Password is compulsory";
+      errors.password = "A passphrase is required to access the sanctuary.";
     } else if (loginData.password.length < 6) {
-      errors.password = "Password must be at least 6 characters";
+      errors.password = "Your passphrase must contain at least 6 characters.";
     }
     return errors;
   };
@@ -261,7 +261,7 @@ export function LoginView() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-[#F7F6F1] text-[#0E1F2B] font-sans selection:bg-[#2D5540]/20 selection:text-[#0E1F2B]">
+    <div className="min-h-screen w-full flex flex-col bg-white text-[#0E1F2B] font-sans selection:bg-[#059F6D]/15 selection:text-[#0E1F2B]">
       <AuthHeader />
 
       {/* MAIN CONTENT */}
@@ -270,13 +270,13 @@ export function LoginView() {
           <AuthHero />
 
           <section className="p-8 sm:p-10 lg:p-14 flex items-center justify-center bg-white relative">
-            {/* Subtle decorative background element */}
-            <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[#2D5540]/5 rounded-full blur-3xl pointer-events-none" />
+            {/* Emerald ambient glow */}
+            <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[#059F6D]/5 rounded-full blur-3xl pointer-events-none" />
 
             <div className="w-full max-w-md relative z-10">
               <div className="mb-10 text-center lg:text-left">
-                <h2 className="text-3xl lg:text-4xl font-extrabold text-[#042e5c] tracking-tight">
-                  {isSignUp ? "Create account" : "Welcome back"}
+                <h2 className="text-3xl lg:text-4xl font-extrabold text-[#042e5c] tracking-tight font-serif">
+                  {isSignUp ? "Create account" : <><em>Welcome</em> back</>}
                 </h2>
                 <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.25em] text-[#042e5c]/60">
                   {isSignUp
@@ -284,8 +284,8 @@ export function LoginView() {
                     : "Please sign in to your archive"}
                 </p>
                 {signupSuccessMessage && !isSignUp && (
-                  <div className="mt-6 p-4 bg-[#bce4cc]/30 border border-[#2d6a4a]/20 rounded-2xl animate-fade-in">
-                    <p className="text-sm font-bold text-[#2d6a4a] text-center tracking-tight">
+                  <div className="mt-6 p-4 bg-[#059F6D]/8 border border-[#059F6D]/20 rounded-xl animate-fade-in">
+                    <p className="text-sm font-semibold text-[#047a54] text-center tracking-tight">
                       {signupSuccessMessage}
                     </p>
                   </div>

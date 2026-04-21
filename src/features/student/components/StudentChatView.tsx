@@ -15,10 +15,15 @@ export function StudentChatView() {
   const params = useParams();
   const sessionId = params?.sessionId as string;
   
-  const { activeChat, messages, isAITyping, openChatById } = useStudentStore();
+  const { activeChat, messages, isAITyping, openChatById, studentProfile } = useStudentStore();
 
-  // Guard & Hydration: if user lands on /student/chat/[id] but state is empty (refresh)
+  // Guard & Hydration: if user lands on /student/chat/[id] but state is empty (refresh).
+  // We wait for studentProfile to be available first — fetchSessions() needs it to know
+  // which user's sessions to load. Without this guard, fetchSessions returns early (profile
+  // is null) → recentChats stays empty → "Chat not found" error on every refresh.
   useEffect(() => {
+    if (!studentProfile) return; // wait for auth hydration
+
     if (sessionId) {
       if (!activeChat || activeChat.id !== sessionId) {
         // Either fresh landing or switched tabs - try to hydrate from ID
@@ -28,7 +33,25 @@ export function StudentChatView() {
       // No ID in URL - redirect home
       router.replace("/student");
     }
-  }, [sessionId, activeChat, openChatById, router]);
+  }, [sessionId, activeChat, openChatById, router, studentProfile]);
+
+  // URL sync: once the backend returns a real session_id (replacing the temp 'new-...' id),
+  // silently update the browser URL so page refresh works correctly.
+  // IMPORTANT: only trigger when the URL itself still holds a temp ID — NOT on every
+  // activeChat/sessionId mismatch (that would fight with normal sidebar navigation).
+  useEffect(() => {
+    const urlHasTempId =
+      sessionId?.startsWith("new-") || sessionId?.startsWith("focused-");
+
+    if (
+      urlHasTempId &&
+      activeChat &&
+      !activeChat.id.startsWith("new-") &&
+      !activeChat.id.startsWith("focused-")
+    ) {
+      router.replace(`/student/chat/${activeChat.id}`);
+    }
+  }, [activeChat?.id, sessionId, router]);
 
   if (!activeChat) {
     return (

@@ -82,16 +82,16 @@ export const studentService = {
     agent_id: string;
     subject: string;
     grade: number;
-  }) => {
+  }): Promise<Response> => {
     const response = await fetch(`${API_BASE_URL}/text/april-query`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json", "accept": "application/json" },
+      body: JSON.stringify({ ...payload, stream: true }),
     });
 
     if (!response.ok) throw new Error("API request failed");
 
-    return response.json();
+    return response;
   },
 
   sendFocusedChatMessage: async (payload: {
@@ -103,16 +103,16 @@ export const studentService = {
     intent: string;
     document_title: string;
     grade: number;
-  }) => {
+  }): Promise<Response> => {
     const response = await fetch(`${API_BASE_URL}/text/focused-april-query`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json", "accept": "application/json" },
+      body: JSON.stringify({ ...payload, stream: true }),
     });
 
     if (!response.ok) throw new Error("Focused API request failed");
 
-    return response.json();
+    return response;
   },
 
   // Analytics Endpoints

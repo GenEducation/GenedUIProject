@@ -1,8 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Send, Mic, Zap, Loader2 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useStudentStore, ChatMessage, ChatSession } from "../store/useStudentStore";
 import { ChatMessageBubble } from "./ChatMessageBubble";
@@ -16,12 +16,19 @@ interface StudentChatMainProps {
 
 export function StudentChatMain({ activeChat, messages, isAITyping }: StudentChatMainProps) {
   const router = useRouter();
-  const { closeChat, isHistoryLoading } = useStudentStore();
+  const { closeChat, isHistoryLoading, sendMessage, streamingMessageId } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isAITyping]);
+
+  const handleOptionSelect = useCallback(
+    (option: string) => {
+      sendMessage(option);
+    },
+    [sendMessage]
+  );
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -94,27 +101,16 @@ export function StudentChatMain({ activeChat, messages, isAITyping }: StudentCha
               </div>
             </motion.div>
           ) : (
-            messages.map((msg) => <ChatMessageBubble key={msg.id} message={msg} />)
+            messages.map((msg) => (
+              <ChatMessageBubble
+                key={msg.id}
+                message={msg}
+                isStreaming={msg.id === streamingMessageId}
+                onOptionSelect={handleOptionSelect}
+              />
+            ))
           )}
         </AnimatePresence>
-
-        {/* AI typing indicator */}
-        {isAITyping && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-start gap-3"
-          >
-            <div className="w-8 h-8 rounded-2xl bg-[#1a3a2a] flex items-center justify-center flex-shrink-0">
-              <Zap size={14} className="text-white" />
-            </div>
-            <div className="bg-[#F4F3EE] rounded-2xl rounded-tl-none px-5 py-3.5 flex items-center gap-1.5">
-              <span className="w-2 h-2 bg-[#1a3a2a]/40 rounded-full animate-bounce [animation-delay:-0.3s]" />
-              <span className="w-2 h-2 bg-[#1a3a2a]/40 rounded-full animate-bounce [animation-delay:-0.15s]" />
-              <span className="w-2 h-2 bg-[#1a3a2a]/40 rounded-full animate-bounce" />
-            </div>
-          </motion.div>
-        )}
 
         <div ref={messagesEndRef} />
       </div>
@@ -124,3 +120,4 @@ export function StudentChatMain({ activeChat, messages, isAITyping }: StudentCha
     </div>
   );
 }
+
