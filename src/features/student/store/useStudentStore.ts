@@ -18,7 +18,7 @@ export interface ChatMessage {
   text: string;
   sender: "user" | "ai";
   timestamp: string;
-  suggestions?: string[];
+  options?: string[];
 }
 
 export interface ChatSession {
@@ -93,6 +93,7 @@ interface StudentState {
   partnerRequestStatus: "idle" | "loading" | "success" | "error";
   partnerRequestMessage: string;
   isPartnerModalOpen: boolean;
+  streamingMessageId: string | null;
   
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
@@ -138,6 +139,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   partnerRequestStatus: "idle",
   partnerRequestMessage: "",
   isPartnerModalOpen: false,
+  streamingMessageId: null,
 
   setStudentProfile: (profile) => set({ studentProfile: profile }),
 
@@ -450,22 +452,32 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
 
+    // Insert user message + streaming AI placeholder immediately
+    const streamingMsgId = `streaming-${Date.now()}`;
+    const streamingPlaceholder: ChatMessage = {
+      id: streamingMsgId,
+      text: "",
+      sender: "ai",
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
     set((state) => {
       const currentMessages = state.chatMessagesCache[chatSentFromId] || state.messages;
-      const newMessages = [...currentMessages, userMsg];
-      
+      const newMessages = [...currentMessages, userMsg, streamingPlaceholder];
+
       return {
         messages: state.activeChat?.id === chatSentFromId ? newMessages : state.messages,
         chatMessagesCache: { ...state.chatMessagesCache, [chatSentFromId]: newMessages },
         typingChatIds: [...state.typingChatIds, chatSentFromId],
         isAITyping: state.activeChat?.id === chatSentFromId ? true : state.isAITyping,
+        streamingMessageId: streamingMsgId,
       };
     });
 
     try {
-      let data;
+      let response: Response;
       if (activeChat.isFocused) {
-        data = await studentService.sendFocusedChatMessage({
+        response = await studentService.sendFocusedChatMessage({
           text,
           user_id: studentProfile.user_id,
           session_id: activeChat.session_id || "",
@@ -476,62 +488,136 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           grade: studentProfile.grade || 10,
         });
       } else {
-        data = await studentService.sendChatMessage({
+        // Use session_id if set, otherwise fall back to activeChat.id (both are the real
+        // session UUID after the first response — this guarantees continuity on follow-up messages)
+        const sessionIdToSend = activeChat.session_id || activeChat.id || undefined;
+        const isNewSession = !sessionIdToSend || sessionIdToSend.startsWith("new-") || sessionIdToSend.startsWith("focused-");
+        console.debug("[Chat] Sending message", {
+          session_id: isNewSession ? undefined : sessionIdToSend,
+          text,
+        });
+        response = await studentService.sendChatMessage({
           text,
           user_id: studentProfile.user_id,
-          session_id: activeChat.session_id || undefined,
+          session_id: isNewSession ? undefined : sessionIdToSend,
           agent_id: activeChat.agent_id || "eng-grade-4",
-          subject: (activeChat as any).name || "English",
+          subject: (activeChat as any).name || activeChat.subject || "English",
           grade: studentProfile.grade || 10,
         });
       }
 
-      const aiReply: ChatMessage = {
-        id: `ai-${Date.now()}`,
-        text: data.response,
-        sender: "ai",
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        suggestions: ["Explain more", "Give an example"],
-      };
+      if (!response.body) throw new Error("No response body for streaming");
 
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let accumulatedText = "";
+      let finalSessionId: string | undefined;
+      let finalOptions: string[] = [];
+
+      // Stream reading loop
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? ""; // keep incomplete last line in buffer
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+
+          const jsonStr = trimmed.slice(5).trim();
+          if (!jsonStr) continue;
+
+          let event: any;
+          try { event = JSON.parse(jsonStr); } catch { continue; }
+
+          if (event.type === "chunk" && typeof event.text === "string") {
+            accumulatedText += event.text;
+            const snapText = accumulatedText;
+
+            // Patch the streaming placeholder in both messages array and cache
+            set((state) => {
+              const patchMsg = (msgs: ChatMessage[]) =>
+                msgs.map((m) =>
+                  m.id === streamingMsgId ? { ...m, text: snapText } : m
+                );
+
+              const cached = state.chatMessagesCache[chatSentFromId] || [];
+              return {
+                chatMessagesCache: {
+                  ...state.chatMessagesCache,
+                  [chatSentFromId]: patchMsg(cached),
+                },
+                messages:
+                  state.activeChat?.id === chatSentFromId
+                    ? patchMsg(state.messages)
+                    : state.messages,
+              };
+            });
+          } else if (event.type === "done") {
+            finalSessionId = event.session_id;
+            finalOptions = Array.isArray(event.options) ? event.options : [];
+          }
+        }
+      }
+
+      // Finalise: replace streaming placeholder with finished message + options
       set((state) => {
-        // Find if this session is already in recentChats (either as temp ID or real ID)
-        const chatInList = state.recentChats.find(c => c.id === chatSentFromId);
-        
+        const finalisedMsg: ChatMessage = {
+          id: streamingMsgId,
+          text: accumulatedText,
+          sender: "ai",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          options: finalOptions.length > 0 ? finalOptions : undefined,
+        };
+
+        const patchMsg = (msgs: ChatMessage[]) =>
+          msgs.map((m) => (m.id === streamingMsgId ? finalisedMsg : m));
+
+        // Update the session in recentChats
+        const chatInList = state.recentChats.find((c) => c.id === chatSentFromId);
         let newRecentChats = state.recentChats;
         let finalActiveChat = state.activeChat;
+        const realId = finalSessionId || chatSentFromId;
 
         if (chatInList) {
           const updatedChat: ChatSession = {
             ...chatInList,
-            id: data.session_id || chatInList.id,
-            session_id: data.session_id || chatInList.session_id,
+            id: realId,
+            session_id: finalSessionId || chatInList.session_id,
           };
-
-          newRecentChats = state.recentChats.map(c => 
-            c.id === chatSentFromId ? updatedChat : c
-          );
-
-          // Update activeChat if we are still on that same conversation
+          // Replace the temp entry and remove any duplicate with the same realId
+          // (can happen if fetchSessions already loaded this session concurrently)
+          newRecentChats = state.recentChats
+            .map((c) => (c.id === chatSentFromId ? updatedChat : c))
+            .filter((c, idx, arr) => arr.findIndex((x) => x.id === c.id) === idx);
           if (state.activeChat?.id === chatSentFromId) {
             finalActiveChat = updatedChat;
           }
         }
 
-        // Only update active messages if we are still viewing this chat
-        const isStillViewingChat = state.activeChat?.id === chatSentFromId;
-        
-        const cached = state.chatMessagesCache[chatSentFromId] || [];
-        const finishedMessages = [...cached, aiReply];
-        const newTypingIds = state.typingChatIds.filter(id => id !== chatSentFromId);
+        // Migrate cache key from tempId to realId
+        const currentCached = state.chatMessagesCache[chatSentFromId] || [];
+        const finalisedMessages = patchMsg(currentCached);
+        const newCache = { ...state.chatMessagesCache, [realId]: finalisedMessages };
+        if (realId !== chatSentFromId) {
+          delete newCache[chatSentFromId];
+        }
+
+        const newTypingIds = state.typingChatIds.filter((id) => id !== chatSentFromId);
+        const isStillViewing = state.activeChat?.id === chatSentFromId;
 
         return {
           activeChat: finalActiveChat,
           recentChats: newRecentChats,
-          chatMessagesCache: { ...state.chatMessagesCache, [chatSentFromId]: finishedMessages },
-          messages: isStillViewingChat ? finishedMessages : state.messages,
+          chatMessagesCache: newCache,
+          messages: isStillViewing ? finalisedMessages : state.messages,
           typingChatIds: newTypingIds,
-          isAITyping: isStillViewingChat ? false : state.isAITyping,
+          isAITyping: isStillViewing ? false : state.isAITyping,
+          streamingMessageId: null,
         };
       });
     } catch (error) {
@@ -542,17 +628,26 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         sender: "ai",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
-      
+
       set((state) => {
+        // Replace streaming placeholder with error message
+        const replaceOrAppend = (msgs: ChatMessage[]) => {
+          const withoutStreaming = msgs.filter((m) => m.id !== streamingMsgId);
+          return [...withoutStreaming, errorMsg];
+        };
+
         const cached = state.chatMessagesCache[chatSentFromId] || [];
-        const finishedMessages = [...cached, errorMsg];
-        const newTypingIds = state.typingChatIds.filter(id => id !== chatSentFromId);
-        
+        const finishedMessages = replaceOrAppend(cached);
+        const newTypingIds = state.typingChatIds.filter((id) => id !== chatSentFromId);
+
         return {
           chatMessagesCache: { ...state.chatMessagesCache, [chatSentFromId]: finishedMessages },
-          messages: state.activeChat?.id === chatSentFromId ? finishedMessages : state.messages,
+          messages:
+            state.activeChat?.id === chatSentFromId ? finishedMessages : state.messages,
           typingChatIds: newTypingIds,
-          isAITyping: state.activeChat?.id === chatSentFromId ? false : state.isAITyping,
+          isAITyping:
+            state.activeChat?.id === chatSentFromId ? false : state.isAITyping,
+          streamingMessageId: null,
         };
       });
     }

@@ -280,12 +280,17 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   },
 
   removeSubject: async (agentId) => {
+    const subject = get().subjects.find((s) => s.id === agentId);
+    if (!subject) throw new Error("Subject not found");
+
     const rawPartnerId = localStorage.getItem("gened_partner_id");
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) throw new Error("No partner ID found");
 
-    // "agentId" here actually holds the ingestion_id due to mapping in fetchSubjects
-    const res = await fetch(`${getRagUrl()}/partner/${partnerId}/ingestions/${agentId}`, {
+    const documentTitle = subject.agent; // agent property holds the document_title
+    const encodedTitle = encodeURIComponent(documentTitle);
+
+    const res = await fetch(`${getRagUrl()}/partner/${partnerId}/ingestions/${encodedTitle}`, {
       method: "DELETE",
     });
 
