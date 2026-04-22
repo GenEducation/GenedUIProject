@@ -105,6 +105,7 @@ interface StudentState {
   openExistingChat: (chat: ChatSession) => void;
   openChatById: (sessionId: string) => Promise<void>;
   openNewChat: (agent: AgentItem) => string;
+  initNewChat: (agentId: string) => void;
   startFocusedSession: (documentTitle: string, subject: string) => string;
   closeChat: () => void;
   sendMessage: (text: string) => Promise<void>;
@@ -365,9 +366,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   },
 
   openNewChat: (agent: AgentItem) => {
-    const tempId = `new-${Date.now()}`;
     const newSession: ChatSession = {
-      id: tempId,
+      id: "new",
       title: agent.name,
       subject: agent.subject,
       agentType: "Socratic Tutor",
@@ -380,15 +380,36 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
     set((state) => ({
       activeChat: newSession,
-      recentChats: [newSession, ...state.recentChats], // Optimistically add to list immediately
       messages: [],
-      chatMessagesCache: { ...state.chatMessagesCache, [tempId]: [] },
+      chatMessagesCache: { ...state.chatMessagesCache, ["new"]: [] },
       isChatOpen: true,
       isAgentPickerOpen: false,
-      isAITyping: false, // Reset loading state
+      isAITyping: false,
     }));
 
-    return tempId;
+    return "new";
+  },
+
+  initNewChat: (agentId: string) => {
+    const { availableAgents } = get();
+    // If agents aren't loaded yet, we can't fully init, but fetchAvailableAgents 
+    // is called on StudentHome mount. Here we try to find the agent.
+    const agent = availableAgents.find(a => a.agent_id === agentId);
+    
+    if (agent) {
+      const newSession: ChatSession = {
+        id: "new",
+        title: agent.name,
+        subject: agent.subject,
+        agentType: "Socratic Tutor",
+        agentIcon: "🤖",
+        lastActive: "Just now",
+        lastTopic: "New Session",
+        grade: `Grade ${agent.grade}`,
+        agent_id: agent.agent_id,
+      };
+      set({ activeChat: newSession, isChatOpen: true });
+    }
   },
 
   startFocusedSession: (documentTitle, subject) => {
@@ -491,7 +512,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         // Use session_id if set, otherwise fall back to activeChat.id (both are the real
         // session UUID after the first response — this guarantees continuity on follow-up messages)
         const sessionIdToSend = activeChat.session_id || activeChat.id || undefined;
-        const isNewSession = !sessionIdToSend || sessionIdToSend.startsWith("new-") || sessionIdToSend.startsWith("focused-");
+        const isNewSession = !sessionIdToSend || sessionIdToSend === "new" || sessionIdToSend.startsWith("new-") || sessionIdToSend.startsWith("focused-");
         console.debug("[Chat] Sending message", {
           session_id: isNewSession ? undefined : sessionIdToSend,
           text,
@@ -578,19 +599,30 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           msgs.map((m) => (m.id === streamingMsgId ? finalisedMsg : m));
 
         // Update the session in recentChats
+        const isPromotingNewChat = chatSentFromId === "new";
         const chatInList = state.recentChats.find((c) => c.id === chatSentFromId);
         let newRecentChats = state.recentChats;
         let finalActiveChat = state.activeChat;
         const realId = finalSessionId || chatSentFromId;
 
-        if (chatInList) {
+        if (isPromotingNewChat && finalSessionId) {
+          // Promote "new" chat to a real session in the list
+          const updatedChat: ChatSession = {
+            ...state.activeChat!,
+            id: finalSessionId,
+            session_id: finalSessionId,
+          };
+          newRecentChats = [updatedChat, ...state.recentChats];
+          if (state.activeChat?.id === "new") {
+            finalActiveChat = updatedChat;
+          }
+        } else if (chatInList) {
           const updatedChat: ChatSession = {
             ...chatInList,
             id: realId,
             session_id: finalSessionId || chatInList.session_id,
           };
           // Replace the temp entry and remove any duplicate with the same realId
-          // (can happen if fetchSessions already loaded this session concurrently)
           newRecentChats = state.recentChats
             .map((c) => (c.id === chatSentFromId ? updatedChat : c))
             .filter((c, idx, arr) => arr.findIndex((x) => x.id === c.id) === idx);

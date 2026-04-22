@@ -1,6 +1,8 @@
-const NOTIFICATION_API_URL = (
-  process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://192.168.1.15:8001"
-).replace(/\/$/, "");
+const NOTIFICATION_API_URL = process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL?.replace(/\/$/, "") || "";
+
+if (!NOTIFICATION_API_URL) {
+  throw new Error("NEXT_PUBLIC_NOTIFICATION_SERVICE_URL is required. Set it in your .env.local file.");
+}
 
 export interface Notification {
   id: string;
