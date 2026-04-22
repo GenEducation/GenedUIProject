@@ -13,14 +13,12 @@ import { StudentChatMain } from "./StudentChatMain";
 export function StudentChatView() {
   const router = useRouter();
   const params = useParams();
-  const sessionId = params?.sessionId as string;
+  const sessionIdRaw = params?.sessionId;
+  const sessionId = Array.isArray(sessionIdRaw) ? sessionIdRaw[0] : (sessionIdRaw as string | undefined);
   
   const { activeChat, messages, isAITyping, openChatById, studentProfile } = useStudentStore();
 
   // Guard & Hydration: if user lands on /student/chat/[id] but state is empty (refresh).
-  // We wait for studentProfile to be available first — fetchSessions() needs it to know
-  // which user's sessions to load. Without this guard, fetchSessions returns early (profile
-  // is null) → recentChats stays empty → "Chat not found" error on every refresh.
   useEffect(() => {
     if (!studentProfile) return; // wait for auth hydration
 
@@ -29,26 +27,20 @@ export function StudentChatView() {
         // Either fresh landing or switched tabs - try to hydrate from ID
         openChatById(sessionId);
       }
-    } else {
-      // No ID in URL - redirect home
-      router.replace("/student");
     }
+    // Note: base /student/chat is handled by StudentChatBasePage
   }, [sessionId, activeChat, openChatById, router, studentProfile]);
 
-  // URL sync: once the backend returns a real session_id (replacing the temp 'new-...' id),
-  // silently update the browser URL so page refresh works correctly.
-  // IMPORTANT: only trigger when the URL itself still holds a temp ID — NOT on every
-  // activeChat/sessionId mismatch (that would fight with normal sidebar navigation).
+  // URL sync: once the backend returns a real session_id (promoting the 'new' state),
+  // update the browser URL so page refresh works correctly.
   useEffect(() => {
-    const urlHasTempId =
-      sessionId?.startsWith("new-") || sessionId?.startsWith("focused-");
+    // Only upgrade if we are currently on a "new" chat or the base /chat path
+    // AND the activeChat has just received a real UUID from the backend.
+    const isNewPath = !sessionId || sessionId === "new";
+    const hasRealId = activeChat && activeChat.id !== "new";
 
-    if (
-      urlHasTempId &&
-      activeChat &&
-      !activeChat.id.startsWith("new-") &&
-      !activeChat.id.startsWith("focused-")
-    ) {
+    if (isNewPath && hasRealId) {
+      console.debug("[Chat] Upgrading URL to saved session:", activeChat.id);
       router.replace(`/student/chat/${activeChat.id}`);
     }
   }, [activeChat?.id, sessionId, router]);

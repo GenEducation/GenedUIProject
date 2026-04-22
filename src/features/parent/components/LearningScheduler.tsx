@@ -16,7 +16,11 @@ interface Session {
 export function LearningScheduler() {
   const { student } = useAgentStore();
   const [sessions, setSessions] = useState<Session[]>([]);
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+  
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+  if (!API_BASE_URL) {
+    throw new Error("NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.");
+  }
 
   useEffect(() => {
     if (!student) return;

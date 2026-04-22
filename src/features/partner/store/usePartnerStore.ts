@@ -55,11 +55,18 @@ interface PartnerState {
 const getInitials = (name: string) =>
   name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
-const getBaseUrl = () =>
-  (process.env.NEXT_PUBLIC_CORE_API_URL || "http://192.168.1.15:8000").replace(/\/$/, "");
+const CORE_API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
+if (!CORE_API_URL) {
+  throw new Error("NEXT_PUBLIC_CORE_API_URL is required. Set it in your .env.local file.");
+}
 
-const getRagUrl = () =>
-  (process.env.NEXT_PUBLIC_RAG_API_URL || "http://192.168.1.15:8001").replace(/\/$/, "");
+const RAG_API_URL = process.env.NEXT_PUBLIC_RAG_API_URL?.replace(/\/$/, "") || "";
+if (!RAG_API_URL) {
+  throw new Error("NEXT_PUBLIC_RAG_API_URL is required. Set it in your .env.local file.");
+}
+
+const getBaseUrl = () => CORE_API_URL;
+const getRagUrl = () => RAG_API_URL;
 
 export const usePartnerStore = create<PartnerState>((set, get) => ({
   students: [],
@@ -194,7 +201,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     if (!partnerId) return;
 
     try {
-      const res = await fetch(`${getRagUrl()}/partner/${partnerId}/ingestions`);
+      const res = await fetch(`${getRagUrl()}/rag/partner/${partnerId}/ingestions`);
       if (!res.ok) throw new Error("Failed to fetch subjects/agents");
 
       const raw: any[] = await res.json();
@@ -247,7 +254,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         formData.append("partner_id", partnerId);
       }
 
-      const apiUrl = `${getRagUrl()}/admin/ingest/ncert`;
+      const apiUrl = `${getRagUrl()}/rag/admin/ingest/ncert`;
 
       const response = await fetch(apiUrl, { 
         method: "POST", 

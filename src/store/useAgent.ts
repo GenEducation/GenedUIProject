@@ -1,6 +1,10 @@
 import { create } from "zustand";
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_RAG_API_URL || "http://192.168.1.15:8001").replace(/\/$/, "");
+const API_BASE_URL = process.env.NEXT_PUBLIC_RAG_API_URL?.replace(/\/$/, "") || "";
+
+if (!API_BASE_URL) {
+  throw new Error("NEXT_PUBLIC_RAG_API_URL is required. Set it in your .env.local file.");
+}
 
 export interface Agent {
   id: string;

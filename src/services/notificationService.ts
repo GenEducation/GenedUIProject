@@ -1,6 +1,8 @@
-const NOTIFICATION_API_URL = (
-  process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://192.168.1.15:8001"
-).replace(/\/$/, "");
+const NOTIFICATION_API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
+
+if (!NOTIFICATION_API_URL) {
+  throw new Error("NEXT_PUBLIC_NOTIFICATION_SERVICE_URL is required. Set it in your .env.local file.");
+}
 
 export interface Notification {
   id: string;
@@ -17,7 +19,7 @@ export const notificationService = {
     userId: string,
     unreadOnly: boolean = false,
   ): Promise<Notification[]> => {
-    const url = `${NOTIFICATION_API_URL}/notifications?user_id=${userId}&unread_only=${unreadOnly}`;
+    const url = `${NOTIFICATION_API_URL}/notify/notifications?user_id=${userId}&unread_only=${unreadOnly}`;
     const response = await fetch(url, {
       headers: { accept: "application/json" },
     });
@@ -27,7 +29,7 @@ export const notificationService = {
 
   markAsRead: async (notificationId: string): Promise<void> => {
     const response = await fetch(
-      `${NOTIFICATION_API_URL}/notifications/${notificationId}/read`,
+      `${NOTIFICATION_API_URL}/notify/notifications/${notificationId}/read`,
       {
         method: "PATCH",
         headers: {
@@ -42,7 +44,7 @@ export const notificationService = {
 
   subscribeToStream: (userId: string, onMessage: (data: any) => void) => {
     const eventSource = new EventSource(
-      `${NOTIFICATION_API_URL}/stream?user_id=${userId}`,
+      `${NOTIFICATION_API_URL}/notify/stream?user_id=${userId}`,
     );
 
     eventSource.onmessage = (event) => {

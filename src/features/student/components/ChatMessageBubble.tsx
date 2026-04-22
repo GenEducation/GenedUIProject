@@ -1,24 +1,12 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, ThumbsUp, ThumbsDown, Share2 } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Share2 } from "lucide-react";
+import Image from "next/image";
 import { ChatMessage } from "../store/useStudentStore";
 import React from "react";
-
-// ── Markdown-lite: bold **text** renderer ─────────────────────────────────────
-function renderText(text: string) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return (
-        <strong key={i} className="font-bold">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
-}
+import { MarkdownRenderer } from "./MarkdownRenderer";
+import { useSmoothStream } from "@/hooks/useSmoothStream";
 
 interface ChatMessageBubbleProps {
   message: ChatMessage;
@@ -29,6 +17,9 @@ interface ChatMessageBubbleProps {
 export const ChatMessageBubble = React.memo(
   ({ message, isStreaming, onOptionSelect }: ChatMessageBubbleProps) => {
     const isUser = message.sender === "user";
+    
+    // Apply elegant streaming buffer if this is the active streaming message
+    const displayedText = useSmoothStream(message.text, !!isStreaming, 15);
 
     return (
       <motion.div
@@ -37,23 +28,15 @@ export const ChatMessageBubble = React.memo(
         transition={{ type: "spring", stiffness: 400, damping: 30 }}
         className={`flex ${isUser ? "justify-end" : "justify-start"} items-start gap-3`}
       >
-        {/* AI avatar — pulses with a green ring while streaming */}
+        {/* AI avatar */}
         {!isUser && (
           <div className="relative flex-shrink-0 mt-0.5">
+            {/* The Gemini-style spinner ring */}
             {isStreaming && (
-              <span className="absolute inset-0 rounded-2xl animate-ping bg-emerald-400/30" />
+              <div className="absolute -inset-[3px] rounded-full border-[2px] border-transparent border-t-emerald-500 border-r-emerald-500/20 animate-spin" style={{ animationDuration: '1s' }} />
             )}
-            <div
-              className={`w-8 h-8 rounded-2xl flex items-center justify-center transition-all duration-300 ${
-                isStreaming
-                  ? "bg-[#1a3a2a] ring-2 ring-emerald-400/60 ring-offset-1"
-                  : "bg-[#1a3a2a]"
-              }`}
-            >
-              <Zap
-                size={14}
-                className={`text-white ${isStreaming ? "animate-pulse" : ""}`}
-              />
+            <div className="w-8 h-8 rounded-full overflow-hidden relative z-10 bg-white border border-[#1a3a2a]/10">
+              <Image src="/Favicon1.jpg" alt="AI Agent" width={32} height={32} className="object-cover" />
             </div>
           </div>
         )}
@@ -64,37 +47,11 @@ export const ChatMessageBubble = React.memo(
             className={`px-5 py-4 rounded-2xl leading-relaxed text-sm transition-all duration-300 ${
               isUser
                 ? "bg-[#1a3a2a] text-white rounded-tr-sm"
-                : isStreaming
-                ? "bg-[#F4F3EE] text-[#1a3a2a] rounded-tl-sm border border-emerald-400/50 shadow-[0_0_12px_rgba(52,211,153,0.15)]"
                 : "bg-[#F4F3EE] text-[#1a3a2a] rounded-tl-sm border border-[#1a3a2a]/6"
             }`}
           >
-            {renderText(message.text)}
-            {/* Blinking text cursor — true blink (on/off) not just opacity pulse */}
-            {isStreaming && (
-              <span
-                className="inline-block w-[3px] h-[0.9em] bg-emerald-500 ml-[2px] align-middle rounded-[1px]"
-                style={{ animation: "blink 0.9s step-end infinite" }}
-              />
-            )}
+            <MarkdownRenderer content={displayedText} />
           </div>
-
-          {/* "Generating…" label shown below bubble while streaming */}
-          <AnimatePresence>
-            {isStreaming && (
-              <motion.span
-                key="generating"
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-600 px-1 tracking-wide"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                Generating…
-              </motion.span>
-            )}
-          </AnimatePresence>
 
           <span className="text-[10px] text-[#1a3a2a]/30 px-1">{message.timestamp}</span>
 
