@@ -1,9 +1,10 @@
 import { create } from "zustand";
+import { authFetch } from "@/utils/authFetch";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_RAG_API_URL?.replace(/\/$/, "") || "";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
 if (!API_BASE_URL) {
-  throw new Error("NEXT_PUBLIC_RAG_API_URL is required. Set it in your .env.local file.");
+  throw new Error("NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.");
 }
 
 export interface Agent {
@@ -85,7 +86,7 @@ export const useAgentStore = create<AgentState>((set) => ({
       const url = classId 
         ? `${API_BASE_URL}/agents?class_id=${classId}` 
         : `${API_BASE_URL}/agents`;
-      const response = await fetch(url);
+      const response = await authFetch(url);
       const data = await response.json();
       set({ agents: data, isLoading: false });
     } catch (error) {
@@ -96,7 +97,7 @@ export const useAgentStore = create<AgentState>((set) => ({
 
   fetchStudent: async (id) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/students/${id}/profile`);
+      const response = await authFetch(`${API_BASE_URL}/students/${id}/profile`);
       const data = await response.json();
       set({ student: data, masteryLevel: data.global_mastery_pct });
     } catch (error) {
@@ -106,7 +107,7 @@ export const useAgentStore = create<AgentState>((set) => ({
 
   fetchHistory: async (sessionId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/chat/${sessionId}/history`);
+      const response = await authFetch(`${API_BASE_URL}/chat/${sessionId}/history`);
       const data = await response.json();
       set({ chatHistory: data });
     } catch (error) {
@@ -119,7 +120,7 @@ export const useAgentStore = create<AgentState>((set) => ({
       const url = classId 
         ? `${API_BASE_URL}/students/${studentId}/mastery-map?class_id=${classId}`
         : `${API_BASE_URL}/students/${studentId}/mastery-map`;
-      const response = await fetch(url);
+      const response = await authFetch(url);
       const data = await response.json();
       set({ masteryNodes: data });
     } catch (error) {

@@ -1,7 +1,9 @@
+import { authFetch } from "@/utils/authFetch";
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
 if (!BASE_URL) {
-  throw new Error("NEXT_PUBLIC_CORE_API_URL is required. Set it in your .env.local file.");
+  throw new Error("NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.");
 }
 
 export interface LinkedStudent {
@@ -14,7 +16,7 @@ export interface LinkedStudent {
 
 export const parentService = {
   fetchLinkedStudents: async (parentId: string): Promise<LinkedStudent[]> => {
-    const response = await fetch(`${BASE_URL}/parent/students?parent_id=${encodeURIComponent(parentId)}`, {
+    const response = await authFetch(`${BASE_URL}/parent/students?parent_id=${encodeURIComponent(parentId)}`, {
       headers: { "accept": "application/json" }
     });
     
@@ -26,7 +28,7 @@ export const parentService = {
   },
 
   linkStudent: async (parentId: string, studentId: string): Promise<LinkedStudent> => {
-    const response = await fetch(`${BASE_URL}/parent/link`, {
+    const response = await authFetch(`${BASE_URL}/parent/link`, {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
@@ -46,7 +48,7 @@ export const parentService = {
   },
 
   updateStudentStatus: async (parentId: string, studentId: string, status: "APPROVED" | "REJECTED"): Promise<LinkedStudent> => {
-    const response = await fetch(`${BASE_URL}/parent/link/${studentId}/status?parent_id=${encodeURIComponent(parentId)}`, {
+    const response = await authFetch(`${BASE_URL}/parent/link/${studentId}/status?parent_id=${encodeURIComponent(parentId)}`, {
       method: "PATCH",
       headers: { 
         "Content-Type": "application/json",
@@ -63,7 +65,7 @@ export const parentService = {
   },
 
   unlinkStudent: async (parentId: string, studentId: string): Promise<void> => {
-    const response = await fetch(`${BASE_URL}/parent/link/${studentId}?parent_id=${encodeURIComponent(parentId)}`, {
+    const response = await authFetch(`${BASE_URL}/parent/link/${studentId}?parent_id=${encodeURIComponent(parentId)}`, {
       method: "DELETE",
       headers: { "accept": "application/json" }
     });

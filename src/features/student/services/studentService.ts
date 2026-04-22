@@ -1,12 +1,14 @@
+import { authFetch } from "@/utils/authFetch";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
 if (!API_BASE_URL) {
-  throw new Error("NEXT_PUBLIC_CORE_API_URL is required. Set it in your .env.local file.");
+  throw new Error("NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.");
 }
 
 export const studentService = {
   fetchSessions: async (userId: string) => {
-    const response = await fetch(`${API_BASE_URL}/get-session`, {
+    const response = await authFetch(`${API_BASE_URL}/get-session`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user_id: userId }),
@@ -26,26 +28,26 @@ export const studentService = {
   },
 
   fetchAvailableAgents: async (userId: string) => {
-    const response = await fetch(`${API_BASE_URL}/api/students/${userId}/available-agents`);
+    const response = await authFetch(`${API_BASE_URL}/api/students/${userId}/available-agents`);
     if (!response.ok) throw new Error("Failed to fetch available agents");
     return response.json();
   },
 
   fetchAvailablePartners: async () => {
-    const response = await fetch(`${API_BASE_URL}/partners`);
+    const response = await authFetch(`${API_BASE_URL}/partners`);
     if (!response.ok) throw new Error("Failed to fetch partners");
     return response.json();
   },
 
   fetchEnrolledPartners: async (userId: string) => {
-    const response = await fetch(`${API_BASE_URL}/api/students/${userId}/available-agents`);
+    const response = await authFetch(`${API_BASE_URL}/api/students/${userId}/available-agents`);
     if (!response.ok) throw new Error("Failed to fetch enrolled partners");
     return response.json();
   },
 
   sendPartnerRequest: async (userId: string, partnerId: string) => {
     const url = `${API_BASE_URL}/student/partner?student_id=${userId}&partner_id=${partnerId}`;
-    const response = await fetch(url, {
+    const response = await authFetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "accept": "application/json" }
     });
@@ -65,7 +67,7 @@ export const studentService = {
   },
 
   fetchChatHistory: async (userId: string, sessionId: string) => {
-    const response = await fetch(`${API_BASE_URL}/get-history`, {
+    const response = await authFetch(`${API_BASE_URL}/get-history`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -87,7 +89,7 @@ export const studentService = {
     subject: string;
     grade: number;
   }): Promise<Response> => {
-    const response = await fetch(`${API_BASE_URL}/text/april-query`, {
+    const response = await authFetch(`${API_BASE_URL}/text/april-query`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "accept": "application/json" },
       body: JSON.stringify({ ...payload, stream: true }),
@@ -108,7 +110,7 @@ export const studentService = {
     document_title: string;
     grade: number;
   }): Promise<Response> => {
-    const response = await fetch(`${API_BASE_URL}/text/focused-april-query`, {
+    const response = await authFetch(`${API_BASE_URL}/text/focused-april-query`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "accept": "application/json" },
       body: JSON.stringify({ ...payload, stream: true }),
@@ -121,7 +123,7 @@ export const studentService = {
 
   // Analytics Endpoints
   fetchAnalyticsSubjects: async (studentId: string) => {
-    const response = await fetch(`${API_BASE_URL}/students/${studentId}/subjects`, {
+    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/subjects`, {
       headers: { "accept": "application/json" }
     });
     if (!response.ok) throw new Error("Failed to fetch analytics subjects");
@@ -129,7 +131,7 @@ export const studentService = {
   },
 
   fetchSkillSummary: async (studentId: string, subject: string) => {
-    const response = await fetch(`${API_BASE_URL}/students/${studentId}/skill-summary?subject=${encodeURIComponent(subject)}`, {
+    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/skill-summary?subject=${encodeURIComponent(subject)}`, {
       headers: { "accept": "application/json" }
     });
     if (!response.ok) throw new Error("Failed to fetch skill summary");
@@ -137,7 +139,7 @@ export const studentService = {
   },
 
   fetchCGScores: async (studentId: string, subject: string) => {
-    const response = await fetch(`${API_BASE_URL}/students/${studentId}/cg-scores?subject=${encodeURIComponent(subject)}`, {
+    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/cg-scores?subject=${encodeURIComponent(subject)}`, {
       headers: { "accept": "application/json" }
     });
     if (!response.ok) throw new Error("Failed to fetch CG scores");
@@ -145,7 +147,7 @@ export const studentService = {
   },
 
   fetchSkillTree: async (studentId: string, subject: string) => {
-    const response = await fetch(`${API_BASE_URL}/students/${studentId}/skill-tree?subject=${encodeURIComponent(subject)}`, {
+    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/skill-tree?subject=${encodeURIComponent(subject)}`, {
       headers: { "accept": "application/json" }
     });
     if (!response.ok) throw new Error("Failed to fetch skill tree");
@@ -153,7 +155,7 @@ export const studentService = {
   },
 
   fetchChapterMastery: async (studentId: string, subject: string) => {
-    const response = await fetch(`${API_BASE_URL}/students/${studentId}/chapter-mastery?subject=${encodeURIComponent(subject)}`, {
+    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/chapter-mastery?subject=${encodeURIComponent(subject)}`, {
       headers: { "accept": "application/json" }
     });
     if (!response.ok) throw new Error("Failed to fetch chapter mastery");
@@ -161,7 +163,7 @@ export const studentService = {
   },
 
   linkParent: async (studentId: string, parentId: string) => {
-    const response = await fetch(`${API_BASE_URL}/parent/link`, {
+    const response = await authFetch(`${API_BASE_URL}/parent/link`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

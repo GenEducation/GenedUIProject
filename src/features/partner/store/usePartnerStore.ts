@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { authFetch } from "@/utils/authFetch";
 
 export interface Student {
   id: string;
@@ -55,18 +56,13 @@ interface PartnerState {
 const getInitials = (name: string) =>
   name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
-const CORE_API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
-if (!CORE_API_URL) {
-  throw new Error("NEXT_PUBLIC_CORE_API_URL is required. Set it in your .env.local file.");
+const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
+if (!API_URL) {
+  throw new Error("NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.");
 }
 
-const RAG_API_URL = process.env.NEXT_PUBLIC_RAG_API_URL?.replace(/\/$/, "") || "";
-if (!RAG_API_URL) {
-  throw new Error("NEXT_PUBLIC_RAG_API_URL is required. Set it in your .env.local file.");
-}
-
-const getBaseUrl = () => CORE_API_URL;
-const getRagUrl = () => RAG_API_URL;
+const getBaseUrl = () => API_URL;
+const getRagUrl = () => API_URL;
 
 export const usePartnerStore = create<PartnerState>((set, get) => ({
   students: [],
@@ -88,7 +84,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `${getBaseUrl()}/partner/students?partner_id=${partnerId}`
       );
       if (!res.ok) throw new Error("Failed to fetch students");
@@ -140,7 +136,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) throw new Error("No partner ID found");
 
-    const res = await fetch(
+    const res = await authFetch(
       `${getBaseUrl()}/partner/students/${studentId}/status?partner_id=${partnerId}&status=APPROVED`,
       { method: "PATCH" }
     );
@@ -176,7 +172,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) throw new Error("No partner ID found");
 
-    const res = await fetch(
+    const res = await authFetch(
       `${getBaseUrl()}/partner/students/${studentId}/status?partner_id=${partnerId}&status=REJECTED`,
       { method: "PATCH" }
     );
@@ -201,7 +197,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     if (!partnerId) return;
 
     try {
-      const res = await fetch(`${getRagUrl()}/rag/partner/${partnerId}/ingestions`);
+      const res = await authFetch(`${getRagUrl()}/rag/partner/${partnerId}/ingestions`);
       if (!res.ok) throw new Error("Failed to fetch subjects/agents");
 
       const raw: any[] = await res.json();
@@ -256,10 +252,9 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
       const apiUrl = `${getRagUrl()}/rag/admin/ingest/ncert`;
 
-      const response = await fetch(apiUrl, { 
+      const response = await authFetch(apiUrl, { 
         method: "POST", 
         body: formData,
-        headers: partnerId ? { "partner-id": partnerId } : {}
       });
       if (!response.ok) throw new Error("Upload failed");
 
@@ -297,7 +292,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const documentTitle = subject.agent; // agent property holds the document_title
     const encodedTitle = encodeURIComponent(documentTitle);
 
-    const res = await fetch(`${getRagUrl()}/partner/${partnerId}/ingestions/${encodedTitle}`, {
+    const res = await authFetch(`${getRagUrl()}/partner/${partnerId}/ingestions/${encodedTitle}`, {
       method: "DELETE",
     });
 
@@ -313,7 +308,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) throw new Error("No partner ID found");
 
-    const res = await fetch(`${getBaseUrl()}/partner/students/${studentId}?partner_id=${partnerId}`, {
+    const res = await authFetch(`${getBaseUrl()}/partner/students/${studentId}?partner_id=${partnerId}`, {
       method: "DELETE",
     });
 

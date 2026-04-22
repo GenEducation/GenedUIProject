@@ -1,7 +1,10 @@
+import { fetchEventSource } from "@microsoft/fetch-event-source";
+import { authFetch, getAuthToken } from "@/utils/authFetch";
+
 const NOTIFICATION_API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
 if (!NOTIFICATION_API_URL) {
-  throw new Error("NEXT_PUBLIC_NOTIFICATION_SERVICE_URL is required. Set it in your .env.local file.");
+  throw new Error("NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.");
 }
 
 export interface Notification {
@@ -20,7 +23,7 @@ export const notificationService = {
     unreadOnly: boolean = false,
   ): Promise<Notification[]> => {
     const url = `${NOTIFICATION_API_URL}/notify/notifications?user_id=${userId}&unread_only=${unreadOnly}`;
-    const response = await fetch(url, {
+    const response = await authFetch(url, {
       headers: { accept: "application/json" },
     });
     if (!response.ok) throw new Error("Failed to fetch notifications");
@@ -28,7 +31,7 @@ export const notificationService = {
   },
 
   markAsRead: async (notificationId: string): Promise<void> => {
-    const response = await fetch(
+    const response = await authFetch(
       `${NOTIFICATION_API_URL}/notify/notifications/${notificationId}/read`,
       {
         method: "PATCH",
@@ -42,27 +45,37 @@ export const notificationService = {
     if (!response.ok) throw new Error("Failed to mark notification as read");
   },
 
-  subscribeToStream: (userId: string, onMessage: (data: any) => void) => {
-    const eventSource = new EventSource(
-      `${NOTIFICATION_API_URL}/notify/stream?user_id=${userId}`,
-    );
+  /**
+   * SSE subscription using fetchEventSource instead of the native EventSource.
+   * This allows us to inject the Authorization header, which native EventSource cannot do.
+   */
+  subscribeToStream: (userId: string, onMessage: (data: any) => void): (() => void) => {
+    const controller = new AbortController();
+    const token = getAuthToken();
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        onMessage(data);
-      } catch (error) {
-        console.error("Error parsing notification stream data:", error);
-      }
-    };
+    fetchEventSource(`${NOTIFICATION_API_URL}/notify/stream?user_id=${userId}`, {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+        Accept: "text/event-stream",
+      },
+      signal: controller.signal,
+      onmessage(event) {
+        try {
+          const data = JSON.parse(event.data);
+          onMessage(data);
+        } catch (error) {
+          console.error("Error parsing notification stream data:", error);
+        }
+      },
+      onerror(error) {
+        console.error("Notification stream error:", error);
+        // Returning undefined causes automatic reconnection
+      },
+    });
 
-    eventSource.onerror = (error) => {
-      console.error("Notification stream error:", error);
-      // EventSource will automatically try to reconnect unless closed
-    };
-
+    // Return a cleanup function to close the stream
     return () => {
-      eventSource.close();
+      controller.abort();
     };
   },
 };
