@@ -21,13 +21,7 @@ export function AgentPickerModal() {
     : (Array.isArray(availableAgents) ? availableAgents : []);
 
   const handleSelect = (agent: AgentItem) => {
-    const newId = openNewChat({
-      id: agent.agent_id,
-      name: agent.name,
-      grade: `Grade ${agent.grade}`,
-      icon: "🤖",
-      chaptersCount: 0
-    }, agent.agent_id);
+    const newId = openNewChat(agent);
     router.push(`/student/chat/${newId}`);
   };
 
