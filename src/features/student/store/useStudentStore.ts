@@ -104,7 +104,7 @@ interface StudentState {
   fetchChatHistory: (sessionId: string) => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
   openChatById: (sessionId: string) => Promise<void>;
-  openNewChat: (subject: any, agent_id?: string) => string;
+  openNewChat: (agent: AgentItem) => string;
   startFocusedSession: (documentTitle: string, subject: string) => string;
   closeChat: () => void;
   sendMessage: (text: string) => Promise<void>;
@@ -364,18 +364,18 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     }
   },
 
-  openNewChat: (subject, agent_id) => {
+  openNewChat: (agent: AgentItem) => {
     const tempId = `new-${Date.now()}`;
     const newSession: ChatSession = {
       id: tempId,
-      title: subject.name,
-      subject: subject.name,
+      title: agent.name,
+      subject: agent.subject,
       agentType: "Socratic Tutor",
-      agentIcon: subject.icon,
+      agentIcon: "🤖",
       lastActive: "Just now",
       lastTopic: "New Session",
-      grade: subject.grade,
-      agent_id: agent_id || subject.id, // Prefer explicit agent_id, fallback to subject.id
+      grade: `Grade ${agent.grade}`,
+      agent_id: agent.agent_id,
     };
 
     set((state) => ({
@@ -501,7 +501,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           user_id: studentProfile.user_id,
           session_id: isNewSession ? undefined : sessionIdToSend,
           agent_id: activeChat.agent_id || "eng-grade-4",
-          subject: (activeChat as any).name || activeChat.subject || "English",
+          subject: activeChat.subject || "English",
           grade: studentProfile.grade || 10,
         });
       }
