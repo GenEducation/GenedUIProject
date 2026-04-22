@@ -26,7 +26,7 @@ interface StudentDetailsModalProps {
   onReject: (studentId: string) => Promise<void>;
 }
 
-const CORE_API_URL = process.env.NEXT_PUBLIC_CORE_API_URL?.replace(/\/$/, "") || "";
+const CORE_API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 if (!CORE_API_URL) {
   // In a component we can't easily throw at top level without crashing the whole app render 
   // but since we already throw in services/stores, this is just for local consistency.

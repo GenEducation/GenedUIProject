@@ -1,4 +1,4 @@
-export const AUTH_API_BASE_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || "";
+export const AUTH_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL|| "";
 
 if (!AUTH_API_BASE_URL) {
   throw new Error(
@@ -41,7 +41,7 @@ export interface SignInFields {
 }
 
 export async function signIn(data: SignInFields): Promise<AuthTokenResponse> {
-  const response = await fetch(`${AUTH_API_BASE_URL}/sign-in`, {
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/sign-in`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -80,7 +80,7 @@ export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
     if (data.website) body.website = data.website;
   }
 
-  const response = await fetch(`${AUTH_API_BASE_URL}/sign-up`, {
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/sign-up`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
