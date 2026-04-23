@@ -5,6 +5,8 @@ import { ThumbsUp, ThumbsDown, Share2 } from "lucide-react";
 import Image from "next/image";
 import { ChatMessage } from "../store/useStudentStore";
 import React from "react";
+import { VisualBlock } from "./VisualBlock";
+import { MathWidget } from "./MathWidget";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { useSmoothStream } from "@/hooks/useSmoothStream";
 
@@ -26,7 +28,7 @@ export const ChatMessageBubble = React.memo(
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 400, damping: 30 }}
-        className={`flex ${isUser ? "justify-end" : "justify-start"} items-start gap-3`}
+        className={`flex ${isUser ? "justify-end" : "justify-start"} items-start gap-3 w-full`}
       >
         {/* AI avatar */}
         {!isUser && (
@@ -41,22 +43,37 @@ export const ChatMessageBubble = React.memo(
           </div>
         )}
 
-        <div className={`max-w-[72%] space-y-1.5 ${isUser ? "items-end" : "items-start"} flex flex-col`}>
+        <div className={`max-w-[85%] space-y-1.5 ${isUser ? "items-end" : "items-start"} flex flex-col`}>
           {/* Message Content Bin - Always show during streaming or if there is content/status */}
-          {(isStreaming || message.statusText || message.text.length > 0) && (
+          {(isStreaming || message.statusText || message.text.length > 0 || (message.elements && message.elements.length > 0)) && (
             <div
-              className={`px-5 py-4 rounded-2xl leading-relaxed text-sm transition-all duration-300 ${
+              className={`px-5 py-4 rounded-2xl leading-relaxed text-sm transition-all duration-300 w-full ${
                 isUser
                   ? "bg-[#1a3a2a] text-white rounded-tr-sm"
                   : "bg-[#F4F3EE] text-[#1a3a2a] rounded-tl-sm border border-[#1a3a2a]/6"
               }`}
             >
-              {message.text.length === 0 && !message.statusText && isStreaming ? (
+              {message.text.length === 0 && !message.statusText && !message.elements && isStreaming ? (
                 <span className="text-[#1a3a2a]/40 animate-pulse">Processing...</span>
-              ) : message.statusText && message.text.length === 0 ? (
+              ) : message.statusText && message.text.length === 0 && (!message.elements || message.elements.length === 0) ? (
                 <span className="text-[#1a3a2a]/40 animate-pulse">
                   {message.statusText}
                 </span>
+              ) : message.elements && message.elements.length > 0 ? (
+                <div className="space-y-4">
+                  {message.elements.map((el) => {
+                    if (el.type === "text") return <MarkdownRenderer key={el.id} content={el.content} />;
+                    if (el.type === "svg") return <VisualBlock key={el.id} svg={el.content} meta={el.meta} />;
+                    if (el.type === "widget") return <MathWidget key={el.id} expression={el.content} meta={el.meta} />;
+                    return null;
+                  })}
+                  {message.toolStatus && isStreaming && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-[#1a3a2a]/5 text-[#1a3a2a]/60 text-[11px] font-bold rounded-xl animate-pulse mt-2 border border-[#1a3a2a]/5">
+                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce" />
+                      {message.toolStatus}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <MarkdownRenderer content={displayedText} />
               )}

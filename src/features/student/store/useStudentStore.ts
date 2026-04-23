@@ -13,13 +13,22 @@ export interface StudentProfile {
   school_board?: string;
 }
 
+export interface ChatElement {
+  id: string;
+  type: "text" | "svg" | "widget";
+  content: string;
+  meta?: any;
+}
+
 export interface ChatMessage {
   id: string;
   text: string;
+  elements?: ChatElement[];
   sender: "user" | "ai";
   timestamp: string;
   options?: string[];
   statusText?: string;
+  toolStatus?: string;
 }
 
 export interface ChatSession {
@@ -543,10 +552,22 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       let finalOptions: string[] = [];
 
       // ── Phase 1: Read the ENTIRE stream silently ──────────────────────────
-      // Collect all planning statuses and all text chunks before touching the UI.
-      // This eliminates every race-condition from the concurrent approach.
       const planningStatuses: string[] = [];
-      let bufferedText = "";
+      const elements: ChatElement[] = [];
+      let bufferedText = ""; // Full text for legacy/fallback
+      let currentTextBuffer = "";
+      let currentToolStatus: string | undefined;
+
+      const pushTextElement = () => {
+        if (currentTextBuffer) {
+          elements.push({
+            id: Math.random().toString(36).substring(2, 11),
+            type: "text",
+            content: currentTextBuffer,
+          });
+          currentTextBuffer = "";
+        }
+      };
 
       while (true) {
         const { done, value } = await reader.read();
@@ -571,7 +592,35 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             if (status && !planningStatuses.includes(status)) {
               planningStatuses.push(status);
             }
+          } else if (event.type === "tool_status") {
+            currentToolStatus = event.message || "Drawing...";
+          } else if (event.type === "visual_block" || event.type === "visual_error") {
+            pushTextElement();
+            const svgContent = event.type === "visual_block" 
+              ? event.svg 
+              : (event.fallback?.content || event.fallback_text || "[Visual Error]");
+            
+            elements.push({
+              id: Math.random().toString(36).substring(2, 11),
+              type: "svg",
+              content: svgContent,
+              meta: event.meta
+            });
+            currentToolStatus = undefined;
+          } else if (event.type === "math_widget" || event.type === "math_widget_error") {
+            pushTextElement();
+            elements.push({
+              id: Math.random().toString(36).substring(2, 11),
+              type: "widget",
+              content: event.expression || "",
+              meta: { 
+                error: event.type === "math_widget_error", 
+                message: event.message 
+              }
+            });
+            currentToolStatus = undefined;
           } else if ((event.type === "chunk" || event.type === "chunks") && typeof event.text === "string") {
+            currentTextBuffer += event.text;
             bufferedText += event.text;
           } else if (event.type === "done") {
             finalSessionId = event.session_id;
@@ -579,6 +628,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           }
         }
       }
+      pushTextElement();
 
       // ── Phase 2: Play back planning statuses with delays, then reveal text ─
       const statusesToShow = planningStatuses.length > 0 ? planningStatuses : ["Processing..."];
@@ -599,10 +649,16 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         await new Promise(resolve => setTimeout(resolve, 1200));
       }
 
-      // Clear status and reveal the full buffered text
+      // Clear status and reveal the full structured content
       set((state) => {
         const patch = (msgs: ChatMessage[]) =>
-          msgs.map(m => m.id === streamingMsgId ? { ...m, statusText: undefined, text: bufferedText } : m);
+          msgs.map(m => m.id === streamingMsgId ? { 
+            ...m, 
+            statusText: undefined, 
+            text: bufferedText,
+            elements: elements,
+            toolStatus: currentToolStatus
+          } : m);
         return {
           messages: state.activeChat?.id === chatSentFromId ? patch(state.messages) : state.messages,
           chatMessagesCache: { ...state.chatMessagesCache, [chatSentFromId]: patch(state.chatMessagesCache[chatSentFromId] || []) },
@@ -614,10 +670,12 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         const finalisedMsg: ChatMessage = {
           id: streamingMsgId,
           text: bufferedText,
+          elements: elements,
           sender: "ai",
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           options: finalOptions.length > 0 ? finalOptions : undefined,
           statusText: undefined,
+          toolStatus: undefined,
         };
 
         const patchMsg = (msgs: ChatMessage[]) =>
