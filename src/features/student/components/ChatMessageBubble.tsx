@@ -42,16 +42,31 @@ export const ChatMessageBubble = React.memo(
         )}
 
         <div className={`max-w-[72%] space-y-1.5 ${isUser ? "items-end" : "items-start"} flex flex-col`}>
-          {/* Message bubble */}
-          <div
-            className={`px-5 py-4 rounded-2xl leading-relaxed text-sm transition-all duration-300 ${
-              isUser
-                ? "bg-[#1a3a2a] text-white rounded-tr-sm"
-                : "bg-[#F4F3EE] text-[#1a3a2a] rounded-tl-sm border border-[#1a3a2a]/6"
-            }`}
-          >
-            <MarkdownRenderer content={displayedText} />
-          </div>
+          {/* Status Bin for AI planning phase */}
+          {message.statusText && isStreaming && (
+            <div className="px-5 py-3 rounded-2xl bg-[#F4F3EE]/50 border border-[#1a3a2a]/5 rounded-tl-sm flex items-center gap-2">
+              <span className="text-sm font-medium text-emerald-600 animate-pulse">
+                {message.statusText}
+              </span>
+            </div>
+          )}
+
+          {/* Message Content Bin */}
+          {(!message.statusText || message.text.length > 0) && (
+            <div
+              className={`px-5 py-4 rounded-2xl leading-relaxed text-sm transition-all duration-300 ${
+                isUser
+                  ? "bg-[#1a3a2a] text-white rounded-tr-sm"
+                  : "bg-[#F4F3EE] text-[#1a3a2a] rounded-tl-sm border border-[#1a3a2a]/6"
+              }`}
+            >
+              {message.text.length === 0 && !message.statusText && isStreaming ? (
+                <span className="text-[#1a3a2a]/40 animate-pulse">Thinking...</span>
+              ) : (
+                <MarkdownRenderer content={displayedText} />
+              )}
+            </div>
+          )}
 
           <span className="text-[10px] text-[#1a3a2a]/30 px-1">{message.timestamp}</span>
 

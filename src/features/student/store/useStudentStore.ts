@@ -19,6 +19,7 @@ export interface ChatMessage {
   sender: "user" | "ai";
   timestamp: string;
   options?: string[];
+  statusText?: string;
 }
 
 export interface ChatSession {
@@ -250,7 +251,10 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       });
     } catch (error: any) {
       console.error("Partner Request Error:", error);
-      const errorMessage = error?.message || "Failed to send partner request. Please try again.";
+      let errorMessage = error?.message || "Failed to send partner request. Please try again.";
+      if (typeof errorMessage !== "string") {
+        errorMessage = JSON.stringify(errorMessage);
+      }
       set({ 
         partnerRequestStatus: "error", 
         partnerRequestMessage: errorMessage 
@@ -283,7 +287,10 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       });
     } catch (error: any) {
       console.error("Link Parent Error:", error);
-      const errorMessage = error?.message || "Failed to link parent. Please check the ID and try again.";
+      let errorMessage = error?.message || "Failed to link parent. Please check the ID and try again.";
+      if (typeof errorMessage !== "string") {
+        errorMessage = JSON.stringify(errorMessage);
+      }
       
       set({ 
         partnerRequestStatus: "error", 
@@ -555,7 +562,27 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           let event: any;
           try { event = JSON.parse(jsonStr); } catch { continue; }
 
-          if (event.type === "chunk" && typeof event.text === "string") {
+          if (event.type === "planning") {
+            const snapStatus = event.text || event.message || "Thinking...";
+            set((state) => {
+              const patchMsg = (msgs: ChatMessage[]) =>
+                msgs.map((m) =>
+                  m.id === streamingMsgId ? { ...m, statusText: snapStatus } : m
+                );
+
+              const cached = state.chatMessagesCache[chatSentFromId] || [];
+              return {
+                chatMessagesCache: {
+                  ...state.chatMessagesCache,
+                  [chatSentFromId]: patchMsg(cached),
+                },
+                messages:
+                  state.activeChat?.id === chatSentFromId
+                    ? patchMsg(state.messages)
+                    : state.messages,
+              };
+            });
+          } else if ((event.type === "chunk" || event.type === "chunks") && typeof event.text === "string") {
             accumulatedText += event.text;
             const snapText = accumulatedText;
 
@@ -563,7 +590,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             set((state) => {
               const patchMsg = (msgs: ChatMessage[]) =>
                 msgs.map((m) =>
-                  m.id === streamingMsgId ? { ...m, text: snapText } : m
+                  m.id === streamingMsgId ? { ...m, text: snapText, statusText: undefined } : m
                 );
 
               const cached = state.chatMessagesCache[chatSentFromId] || [];
@@ -593,6 +620,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           sender: "ai",
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           options: finalOptions.length > 0 ? finalOptions : undefined,
+          statusText: undefined,
         };
 
         const patchMsg = (msgs: ChatMessage[]) =>
@@ -612,7 +640,11 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             id: finalSessionId,
             session_id: finalSessionId,
           };
-          newRecentChats = [updatedChat, ...state.recentChats];
+          // Filter out existing in case fetchSessions picked it up while streaming
+          const deduplicatedChats = state.recentChats.filter(
+            (c) => c.id !== finalSessionId && c.session_id !== finalSessionId
+          );
+          newRecentChats = [updatedChat, ...deduplicatedChats];
           if (state.activeChat?.id === "new") {
             finalActiveChat = updatedChat;
           }

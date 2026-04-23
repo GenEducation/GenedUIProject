@@ -4,6 +4,7 @@ import { ArrowLeft, LogOut, ShieldCheck, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { useEffect, useState } from "react";
+import { PartnerRequestModal } from "./PartnerRequestModal";
 
 // Mock data
 const MOCK_PARTNERS = [
@@ -233,6 +234,8 @@ export function StudentProfile() {
         </div>
         
       </div>
+
+      <PartnerRequestModal />
     </div>
   );
 }

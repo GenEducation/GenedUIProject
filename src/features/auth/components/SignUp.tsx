@@ -1,6 +1,7 @@
 "use client";
 
-import { ChangeEvent, FormEvent } from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
+import { GoogleLogin } from "@react-oauth/google";
 
 interface SignUpData {
   username: string;
@@ -24,6 +25,7 @@ interface SignUpProps {
   onSwitchToSignin: () => void;
   isSubmitting: boolean;
   errors: Record<string, string>;
+  onGoogleSuccess: (token: string) => void;
 }
 
 // Shared input class builder
@@ -47,7 +49,9 @@ export function SignUp({
   onSwitchToSignin,
   isSubmitting,
   errors,
+  onGoogleSuccess,
 }: SignUpProps) {
+  const [googleToken, setGoogleToken] = useState<string | null>(null);
   const isSignupEnabled = process.env.NEXT_PUBLIC_ENABLE_SIGNUP !== "false";
 
   // ── Signup disabled state ──────────────────────────────────────────────────
@@ -112,19 +116,60 @@ export function SignUp({
       className="space-y-8 rounded-2xl border border-[#042e5c]/10 bg-white/80 backdrop-blur-xl p-8 sm:p-10 shadow-[0_8px_40px_rgba(4,46,92,0.07)]"
     >
       <div className="space-y-5">
+        {!googleToken && (
+          <>
+            <div className="flex justify-center w-full">
+              <GoogleLogin
+                onSuccess={(credentialResponse) => {
+                  if (credentialResponse.credential) {
+                    setGoogleToken(credentialResponse.credential);
+                    onGoogleSuccess(credentialResponse.credential);
+                  }
+                }}
+                onError={() => {
+                  console.error("Google Sign-up Failed");
+                }}
+                width="100%"
+                theme="outline"
+                text="signup_with"
+                shape="rectangular"
+              />
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-white px-2 text-gray-400 font-medium uppercase tracking-widest">Or continue with</span>
+              </div>
+            </div>
+          </>
+        )}
+
+        {googleToken && (
+          <div className="p-4 bg-[#059F6D]/8 border border-[#059F6D]/20 rounded-xl mb-4">
+            <p className="text-sm font-semibold text-[#047a54] text-center">
+              Google Authentication successful! Please complete your profile below.
+            </p>
+          </div>
+        )}
+
         {/* Username */}
-        <div>
-          <label className={labelCls}>Username</label>
-          <input
-            name="username"
-            value={signupData.username}
-            onChange={onChange}
-            type="text"
-            placeholder="Your name"
-            className={inputCls(!!errors.username)}
-          />
-          {errors.username && <p className={errorCls}>{errors.username}</p>}
-        </div>
+        {!googleToken && (
+          <div>
+            <label className={labelCls}>Username</label>
+            <input
+              name="username"
+              value={signupData.username}
+              onChange={onChange}
+              type="text"
+              placeholder="Your name"
+              className={inputCls(!!errors.username)}
+            />
+            {errors.username && <p className={errorCls}>{errors.username}</p>}
+          </div>
+        )}
 
         {/* Role selector */}
         <div>
@@ -248,48 +293,54 @@ export function SignUp({
         )}
 
         {/* Email */}
-        <div>
-          <label className={labelCls}>Email Address</label>
-          <input
-            name="email"
-            value={signupData.email}
-            onChange={onChange}
-            type="email"
-            placeholder="scholar@gened.edu"
-            className={inputCls(!!errors.email)}
-          />
-          {errors.email && <p className={errorCls}>{errors.email}</p>}
-        </div>
+        {!googleToken && (
+          <div>
+            <label className={labelCls}>Email Address</label>
+            <input
+              name="email"
+              value={signupData.email}
+              onChange={onChange}
+              type="email"
+              placeholder="scholar@gened.edu"
+              className={inputCls(!!errors.email)}
+            />
+            {errors.email && <p className={errorCls}>{errors.email}</p>}
+          </div>
+        )}
 
         {/* Password */}
-        <div>
-          <label className={labelCls}>Password</label>
-          <input
-            name="password"
-            value={signupData.password}
-            onChange={onChange}
-            type="password"
-            placeholder="••••••••"
-            className={`${inputCls(!!errors.password)} font-mono tracking-widest`}
-          />
-          {errors.password && <p className={errorCls}>{errors.password}</p>}
-        </div>
+        {!googleToken && (
+          <div>
+            <label className={labelCls}>Password</label>
+            <input
+              name="password"
+              value={signupData.password}
+              onChange={onChange}
+              type="password"
+              placeholder="••••••••"
+              className={`${inputCls(!!errors.password)} font-mono tracking-widest`}
+            />
+            {errors.password && <p className={errorCls}>{errors.password}</p>}
+          </div>
+        )}
 
         {/* Confirm Password */}
-        <div>
-          <label className={labelCls}>Confirm Password</label>
-          <input
-            name="confirmPassword"
-            value={signupData.confirmPassword || ""}
-            onChange={onChange}
-            type="password"
-            placeholder="••••••••"
-            className={`${inputCls(!!errors.confirmPassword)} font-mono tracking-widest`}
-          />
-          {errors.confirmPassword && (
-            <p className={errorCls}>{errors.confirmPassword}</p>
-          )}
-        </div>
+        {!googleToken && (
+          <div>
+            <label className={labelCls}>Confirm Password</label>
+            <input
+              name="confirmPassword"
+              value={signupData.confirmPassword || ""}
+              onChange={onChange}
+              type="password"
+              placeholder="••••••••"
+              className={`${inputCls(!!errors.confirmPassword)} font-mono tracking-widest`}
+            />
+            {errors.confirmPassword && (
+              <p className={errorCls}>{errors.confirmPassword}</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Root error */}

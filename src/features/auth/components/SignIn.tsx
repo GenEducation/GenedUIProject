@@ -3,6 +3,8 @@
 import { useState, ChangeEvent, FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
+import { GoogleLogin } from "@react-oauth/google";
+
 interface SignInProps {
   loginData: {
     username: string;
@@ -13,6 +15,7 @@ interface SignInProps {
   onSwitchToSignup: () => void;
   isSigningIn: boolean;
   errors: Record<string, string>;
+  onGoogleSuccess: (token: string) => void;
 }
 
 export function SignIn({
@@ -22,8 +25,11 @@ export function SignIn({
   onSwitchToSignup,
   isSigningIn,
   errors,
+  onGoogleSuccess,
 }: SignInProps) {
   const [showPassword, setShowPassword] = useState(false);
+
+
 
   return (
     <form
@@ -31,6 +37,33 @@ export function SignIn({
       className="space-y-8 rounded-2xl border border-[#042e5c]/10 bg-white/80 backdrop-blur-xl p-8 sm:p-10 shadow-[0_8px_40px_rgba(4,46,92,0.07)]"
     >
       <div className="space-y-6">
+        {/* Google Sign In Button */}
+        <div className="flex justify-center w-full">
+          <GoogleLogin
+            onSuccess={(credentialResponse) => {
+              if (credentialResponse.credential) {
+                onGoogleSuccess(credentialResponse.credential);
+              }
+            }}
+            onError={() => {
+              console.error("Google Login Failed");
+            }}
+            width="100%"
+            theme="outline"
+            text="signin_with"
+            shape="rectangular"
+          />
+        </div>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-white px-2 text-gray-400 font-medium uppercase tracking-widest">Or continue with</span>
+          </div>
+        </div>
+
         {/* Username field */}
         <div>
           <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/45 mb-2.5 pl-0.5">

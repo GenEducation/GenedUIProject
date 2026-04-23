@@ -56,7 +56,15 @@ export const studentService = {
       let errorMessage = "Request failed";
       try {
         const data = await response.json();
-        errorMessage = data.detail || data.message || errorMessage;
+        if (typeof data.detail === 'string') {
+          errorMessage = data.detail;
+        } else if (data.detail && typeof data.detail.message === 'string') {
+          errorMessage = data.detail.message;
+        } else if (typeof data.message === 'string') {
+          errorMessage = data.message;
+        } else if (data.message && typeof data.message.message === 'string') {
+          errorMessage = data.message.message;
+        }
       } catch (e) {
         // Fallback to generic message if JSON parsing fails
       }
@@ -91,7 +99,7 @@ export const studentService = {
   }): Promise<Response> => {
     const response = await authFetch(`${API_BASE_URL}/text/april-query`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "accept": "application/json" },
+      headers: { "Content-Type": "application/json", "accept": "text/event-stream" },
       body: JSON.stringify({ ...payload, stream: true }),
     });
 
@@ -112,7 +120,7 @@ export const studentService = {
   }): Promise<Response> => {
     const response = await authFetch(`${API_BASE_URL}/text/focused-april-query`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "accept": "application/json" },
+      headers: { "Content-Type": "application/json", "accept": "text/event-stream" },
       body: JSON.stringify({ ...payload, stream: true }),
     });
 
@@ -179,7 +187,15 @@ export const studentService = {
       let errorMessage = `Failed to link parent: ${response.status}`;
       try {
         const data = await response.json();
-        errorMessage = data.detail || data.message || errorMessage;
+        if (typeof data.detail === 'string') {
+          errorMessage = data.detail;
+        } else if (data.detail && typeof data.detail.message === 'string') {
+          errorMessage = data.detail.message;
+        } else if (typeof data.message === 'string') {
+          errorMessage = data.message;
+        } else if (data.message && typeof data.message.message === 'string') {
+          errorMessage = data.message.message;
+        }
       } catch (e) {
         // Fallback to generic message
       }

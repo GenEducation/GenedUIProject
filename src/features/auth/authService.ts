@@ -95,3 +95,54 @@ export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
 
   return response.json();
 }
+
+export async function googleSignIn(token: string): Promise<AuthTokenResponse> {
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/google-sign-in`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ token }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Google Sign-in request failed.");
+  }
+
+  return response.json();
+}
+
+export async function googleSignUp(token: string, data: Partial<SignUpFields>): Promise<AuthTokenResponse> {
+  const body: any = {
+    token,
+    role: data.role?.toUpperCase(),
+  };
+
+  if (data.role === "student") {
+    if (data.age) body.age = Number(data.age);
+    if (data.grade) body.grade = Number(data.grade);
+    if (data.school_board) body.school_board = data.school_board;
+    if (data.partner_id) body.partner_id = data.partner_id;
+  } else if (data.role === "parent") {
+    if (data.phone) body.phone = data.phone;
+  } else if (data.role === "partner") {
+    if (data.organization) body.organization = data.organization;
+    if (data.website) body.website = data.website;
+  }
+
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/google-sign-up`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Google Sign-up request failed.");
+  }
+
+  return response.json();
+}

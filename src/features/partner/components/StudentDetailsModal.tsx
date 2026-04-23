@@ -26,6 +26,8 @@ interface StudentDetailsModalProps {
   onReject: (studentId: string) => Promise<void>;
 }
 
+import { authFetch } from "@/utils/authFetch";
+
 const CORE_API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 if (!CORE_API_URL) {
   // In a component we can't easily throw at top level without crashing the whole app render 
@@ -77,7 +79,7 @@ export function StudentDetailsModal({
       return;
     }
 
-    fetch(`${getBaseUrl()}/partner/students/${studentId}?partner_id=${partnerId}`)
+    authFetch(`${getBaseUrl()}/partner/students/${studentId}?partner_id=${partnerId}`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load student profile");
         return res.json();
@@ -86,7 +88,8 @@ export function StudentDetailsModal({
         setProfile(data);
         setIsFetching(false);
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error("Fetch Student Profile Error:", error);
         setFetchError("Could not load student details. Please try again.");
         setIsFetching(false);
       });

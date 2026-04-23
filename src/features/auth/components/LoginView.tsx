@@ -11,6 +11,7 @@ import { AuthFooter } from "./AuthFooter";
 import { signIn, signUp, SignUpFields } from "../authService";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 const initialSignUpData: SignUpFields = {
   username: "",
@@ -41,6 +42,7 @@ export function LoginView() {
   const [signinErrors, setSigninErrors] = useState<Record<string, string>>({});
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [signupSuccessMessage, setSignupSuccessMessage] = useState("");
+  const [googleSignUpToken, setGoogleSignUpToken] = useState<string | null>(null);
 
   const validateSignIn = () => {
     const errors: Record<string, string> = {};
@@ -57,28 +59,30 @@ export function LoginView() {
     const errors: Record<string, string> = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!signupData.username.trim()) {
-      errors.username = "Username is compulsory";
-    } else if (signupData.username.length < 3) {
-      errors.username = "Username must be at least 3 characters";
-    }
+    if (!googleSignUpToken) {
+      if (!signupData.username.trim()) {
+        errors.username = "Username is compulsory";
+      } else if (signupData.username.length < 3) {
+        errors.username = "Username must be at least 3 characters";
+      }
 
-    if (!signupData.email.trim()) {
-      errors.email = "Email is compulsory";
-    } else if (!emailRegex.test(signupData.email)) {
-      errors.email = "Please enter a valid email address";
-    }
+      if (!signupData.email.trim()) {
+        errors.email = "Email is compulsory";
+      } else if (!emailRegex.test(signupData.email)) {
+        errors.email = "Please enter a valid email address";
+      }
 
-    if (!signupData.password.trim()) {
-      errors.password = "Password is compulsory";
-    } else if (signupData.password.length < 6) {
-      errors.password = "Password must be at least 6 characters";
-    }
+      if (!signupData.password.trim()) {
+        errors.password = "Password is compulsory";
+      } else if (signupData.password.length < 6) {
+        errors.password = "Password must be at least 6 characters";
+      }
 
-    if (!signupData.confirmPassword?.trim()) {
-      errors.confirmPassword = "Confirm Password is compulsory";
-    } else if (signupData.password !== signupData.confirmPassword) {
-      errors.confirmPassword = "Passwords do not match";
+      if (!signupData.confirmPassword?.trim()) {
+        errors.confirmPassword = "Confirm Password is compulsory";
+      } else if (signupData.password !== signupData.confirmPassword) {
+        errors.confirmPassword = "Passwords do not match";
+      }
     }
 
     if (signupData.role === "student") {
@@ -163,27 +167,18 @@ export function LoginView() {
 
       router.push(`/${role}`);
     } catch (error) {
-      let msg = error instanceof Error ? error.message : "Unable to complete signin.";
-      
-      // Try to parse the error message if it's JSON from the backend
-      try {
-        const parsed = JSON.parse(msg);
-        if (parsed.detail) {
-          msg = typeof parsed.detail === "string" ? parsed.detail : JSON.stringify(parsed.detail);
-        }
-      } catch (e) {
-        // Not a JSON string, keep original message
-      }
+      let rawMsg = error instanceof Error ? error.message : "Unable to complete signin.";
+      console.error("Detailed Signin Error:", rawMsg);
 
-      const lowMsg = msg.toLowerCase();
+      const lowMsg = rawMsg.toLowerCase();
       const mappedErrors: Record<string, string> = {};
       
       if (lowMsg.includes("password")) {
-        mappedErrors.password = msg;
+        mappedErrors.password = "The password you entered is incorrect.";
       } else if (lowMsg.includes("username") || lowMsg.includes("user") || lowMsg.includes("credentials") || lowMsg.includes("invalid")) {
-        mappedErrors.username = msg;
+        mappedErrors.username = "Invalid username or password.";
       } else {
-        mappedErrors.username = msg;
+        mappedErrors.username = "Sign-in failed. Please try again later.";
       }
       setSigninErrors(mappedErrors);
     } finally {
@@ -204,27 +199,37 @@ export function LoginView() {
     setIsSubmitting(true);
 
     try {
-      await signUp(signupData);
+      if (googleSignUpToken) {
+        const { googleSignUp } = await import("../authService");
+        await googleSignUp(googleSignUpToken, signupData);
+      } else {
+        await signUp(signupData);
+      }
       
       // Clear any previous signin errors when coming from a successful signup
       setSigninErrors({});
       
       // Force user to sign in manually per requirements
       setSignupSuccessMessage("Account created successfully! Please sign in to access your dashboard.");
-      setLoginData((prev) => ({ ...prev, username: signupData.username, password: "" }));
+      setLoginData((prev) => ({ ...prev, username: googleSignUpToken ? "" : signupData.username, password: "" }));
       setSignupData(initialSignUpData);
+      setGoogleSignUpToken(null);
       setIsSignUp(false);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : "Unable to complete signup.";
-      const lowMsg = msg.toLowerCase();
+      let rawMsg = error instanceof Error ? error.message : "Unable to complete signup.";
+      console.error("Detailed Signup Error:", rawMsg);
 
+      const lowMsg = rawMsg.toLowerCase();
       const mappedErrors: Record<string, string> = {};
+      
       if (lowMsg.includes("email already used") || lowMsg.includes("email")) {
-        mappedErrors.email = msg;
+        mappedErrors.email = "This email address is already in use.";
       } else if (lowMsg.includes("username")) {
-        mappedErrors.username = msg;
+        mappedErrors.username = "This username is already taken.";
+      } else if (lowMsg.includes("token") || lowMsg.includes("google")) {
+        mappedErrors.root = "Google authentication failed. Please try again or use standard registration.";
       } else {
-        mappedErrors.root = "Please try again later";
+        mappedErrors.root = "Registration failed. Please check your information and try again.";
       }
       setSignupErrors(mappedErrors);
     } finally {
@@ -236,6 +241,7 @@ export function LoginView() {
       setSignupSuccessMessage("");
       setSigninErrors({});
       setSignupErrors({});
+      setGoogleSignUpToken(null);
       setIsSignUp((current) => !current);
   };
 
@@ -261,62 +267,119 @@ export function LoginView() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-white text-[#0E1F2B] font-sans selection:bg-[#059F6D]/15 selection:text-[#0E1F2B]">
-      <AuthHeader />
+    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
+      <div className="min-h-screen w-full flex flex-col bg-white text-[#0E1F2B] font-sans selection:bg-[#059F6D]/15 selection:text-[#0E1F2B]">
+        <AuthHeader />
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 flex items-center justify-center px-6 pb-12 lg:px-16">
-        <div className="w-full max-w-7xl rounded-[3rem] bg-white shadow-[0_40px_100px_rgba(45,85,64,0.08)] overflow-hidden grid grid-cols-1 lg:grid-cols-2 border border-[#2D5540]/5">
-          <AuthHero />
+        {/* MAIN CONTENT */}
+        <div className="flex-1 flex items-center justify-center px-6 pb-12 lg:px-16">
+          <div className="w-full max-w-7xl rounded-[3rem] bg-white shadow-[0_40px_100px_rgba(45,85,64,0.08)] overflow-hidden grid grid-cols-1 lg:grid-cols-2 border border-[#2D5540]/5">
+            <AuthHero />
 
-          <section className="p-8 sm:p-10 lg:p-14 flex items-center justify-center bg-white relative">
-            {/* Emerald ambient glow */}
-            <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[#059F6D]/5 rounded-full blur-3xl pointer-events-none" />
+            <section className="p-8 sm:p-10 lg:p-14 flex items-center justify-center bg-white relative">
+              {/* Emerald ambient glow */}
+              <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[#059F6D]/5 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="w-full max-w-md relative z-10">
-              <div className="mb-10 text-center lg:text-left">
-                <h2 className="text-3xl lg:text-4xl font-extrabold text-[#042e5c] tracking-tight font-serif">
-                  {isSignUp ? "Create account" : <><em>Welcome</em> back</>}
-                </h2>
-                <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.25em] text-[#042e5c]/60">
-                  {isSignUp
-                    ? "Forge your scholarly identity"
-                    : "Please sign in to your archive"}
-                </p>
-                {signupSuccessMessage && !isSignUp && (
-                  <div className="mt-6 p-4 bg-[#059F6D]/8 border border-[#059F6D]/20 rounded-xl animate-fade-in">
-                    <p className="text-sm font-semibold text-[#047a54] text-center tracking-tight">
-                      {signupSuccessMessage}
-                    </p>
-                  </div>
+              <div className="w-full max-w-md relative z-10">
+                <div className="mb-10 text-center lg:text-left">
+                  <h2 className="text-3xl lg:text-4xl font-extrabold text-[#042e5c] tracking-tight font-serif">
+                    {isSignUp ? "Create account" : <><em>Welcome</em> back</>}
+                  </h2>
+                  <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.25em] text-[#042e5c]/60">
+                    {isSignUp
+                      ? "Forge your scholarly identity"
+                      : "Please sign in to your archive"}
+                  </p>
+                  {signupSuccessMessage && !isSignUp && (
+                    <div className="mt-6 p-4 bg-[#059F6D]/8 border border-[#059F6D]/20 rounded-xl animate-fade-in">
+                      <p className="text-sm font-semibold text-[#047a54] text-center tracking-tight">
+                        {signupSuccessMessage}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {isSignUp ? (
+                  <SignUp
+                    signupData={signupData}
+                    onChange={handleSignupChange}
+                    onSubmit={handleSignUp}
+                    onSwitchToSignin={toggleSignUp}
+                    isSubmitting={isSubmitting}
+                    errors={signupErrors}
+                    onGoogleSuccess={(token) => {
+                      setGoogleSignUpToken(token);
+                    }}
+                  />
+                ) : (
+                  <SignIn
+                    loginData={loginData}
+                    onChange={handleLoginChange}
+                    onSubmit={handlePrototypeLogin}
+                    onSwitchToSignup={toggleSignUp}
+                    isSigningIn={isSigningIn}
+                    errors={signinErrors}
+                    onGoogleSuccess={async (token) => {
+                      setSigninErrors({});
+                      setIsSigningIn(true);
+                      try {
+                        const { googleSignIn } = await import("../authService");
+                        const res = await googleSignIn(token);
+                        // Persist auth state
+                        localStorage.setItem("gened_auth_token", res.access_token);
+                        localStorage.setItem("gened_user_profile", JSON.stringify(res));
+                        
+                        const normalizedRole = res.role?.toLowerCase() ?? "student";
+                        const role =
+                          normalizedRole === "student" ||
+                          normalizedRole === "partner" ||
+                          normalizedRole === "parent"
+                            ? normalizedRole
+                            : ("student" as const);
+                        
+                        localStorage.setItem("gened_user_role", role);
+
+                        // Persist user-specific IDs for legacy support if needed
+                        if (role === "partner") {
+                          localStorage.setItem("gened_partner_id", res.user_id);
+                        }
+
+                        // Populate stores
+                        if (role === "student") {
+                          useStudentStore.getState().setStudentProfile({
+                            user_id: res.user_id,
+                            username: res.username,
+                            email: res.email,
+                            role: res.role,
+                            grade: res.grade,
+                            school_board: res.school_board,
+                          });
+                        } else if (role === "parent") {
+                          useParentStore.getState().setParentProfile({
+                            user_id: res.user_id || "",
+                            username: res.username || "",
+                            email: res.email || "",
+                            role: res.role || "parent",
+                          });
+                        }
+
+                        router.push(`/${role}`);
+                      } catch (err: any) {
+                        console.error("Detailed Google Sign-in Error:", err.message);
+                        setSigninErrors({ root: "Google Sign-In failed. Please try again or use your username/password." });
+                      } finally {
+                        setIsSigningIn(false);
+                      }
+                    }}
+                  />
                 )}
               </div>
-
-              {isSignUp ? (
-                <SignUp
-                  signupData={signupData}
-                  onChange={handleSignupChange}
-                  onSubmit={handleSignUp}
-                  onSwitchToSignin={toggleSignUp}
-                  isSubmitting={isSubmitting}
-                  errors={signupErrors}
-                />
-              ) : (
-                <SignIn
-                  loginData={loginData}
-                  onChange={handleLoginChange}
-                  onSubmit={handlePrototypeLogin}
-                  onSwitchToSignup={toggleSignUp}
-                  isSigningIn={isSigningIn}
-                  errors={signinErrors}
-                />
-              )}
-            </div>
-          </section>
+            </section>
+          </div>
         </div>
+        <AuthFeatures />
+        <AuthFooter />
       </div>
-      <AuthFeatures />
-      <AuthFooter />
-    </div>
+    </GoogleOAuthProvider>
   );
 }

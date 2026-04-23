@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@microsoft/fetch-event-source": "^2.0.1",
+    "@react-oauth/google": "^0.13.5",
     "framer-motion": "^12.38.0",
     "highlight.js": "^11.11.1",
     "katex": "^0.16.45",
