@@ -539,22 +539,26 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      let accumulatedText = "";
       let finalSessionId: string | undefined;
       let finalOptions: string[] = [];
 
-      // Stream reading loop
+      // ── Phase 1: Read the ENTIRE stream silently ──────────────────────────
+      // Collect all planning statuses and all text chunks before touching the UI.
+      // This eliminates every race-condition from the concurrent approach.
+      const planningStatuses: string[] = [];
+      let bufferedText = "";
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
-        buffer = lines.pop() ?? ""; // keep incomplete last line in buffer
+        buffer = lines.pop() ?? "";
 
         for (const line of lines) {
           const trimmed = line.trim();
-          if (!trimmed.startsWith("data:")) continue;
+          if (!trimmed || !trimmed.startsWith("data:")) continue;
 
           const jsonStr = trimmed.slice(5).trim();
           if (!jsonStr) continue;
@@ -563,48 +567,12 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           try { event = JSON.parse(jsonStr); } catch { continue; }
 
           if (event.type === "planning") {
-            const snapStatus = event.text || event.message || "Thinking...";
-            set((state) => {
-              const patchMsg = (msgs: ChatMessage[]) =>
-                msgs.map((m) =>
-                  m.id === streamingMsgId ? { ...m, statusText: snapStatus } : m
-                );
-
-              const cached = state.chatMessagesCache[chatSentFromId] || [];
-              return {
-                chatMessagesCache: {
-                  ...state.chatMessagesCache,
-                  [chatSentFromId]: patchMsg(cached),
-                },
-                messages:
-                  state.activeChat?.id === chatSentFromId
-                    ? patchMsg(state.messages)
-                    : state.messages,
-              };
-            });
+            const status = event.text || event.message || "";
+            if (status && !planningStatuses.includes(status)) {
+              planningStatuses.push(status);
+            }
           } else if ((event.type === "chunk" || event.type === "chunks") && typeof event.text === "string") {
-            accumulatedText += event.text;
-            const snapText = accumulatedText;
-
-            // Patch the streaming placeholder in both messages array and cache
-            set((state) => {
-              const patchMsg = (msgs: ChatMessage[]) =>
-                msgs.map((m) =>
-                  m.id === streamingMsgId ? { ...m, text: snapText, statusText: undefined } : m
-                );
-
-              const cached = state.chatMessagesCache[chatSentFromId] || [];
-              return {
-                chatMessagesCache: {
-                  ...state.chatMessagesCache,
-                  [chatSentFromId]: patchMsg(cached),
-                },
-                messages:
-                  state.activeChat?.id === chatSentFromId
-                    ? patchMsg(state.messages)
-                    : state.messages,
-              };
-            });
+            bufferedText += event.text;
           } else if (event.type === "done") {
             finalSessionId = event.session_id;
             finalOptions = Array.isArray(event.options) ? event.options : [];
@@ -612,11 +580,40 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         }
       }
 
+      // ── Phase 2: Play back planning statuses with delays, then reveal text ─
+      const statusesToShow = planningStatuses.length > 0 ? planningStatuses : ["Processing..."];
+
+      const patchStatus = (statusText: string | undefined) => {
+        set((state) => {
+          const patch = (msgs: ChatMessage[]) =>
+            msgs.map(m => m.id === streamingMsgId ? { ...m, statusText, text: "" } : m);
+          return {
+            messages: state.activeChat?.id === chatSentFromId ? patch(state.messages) : state.messages,
+            chatMessagesCache: { ...state.chatMessagesCache, [chatSentFromId]: patch(state.chatMessagesCache[chatSentFromId] || []) },
+          };
+        });
+      };
+
+      for (const status of statusesToShow) {
+        patchStatus(status);
+        await new Promise(resolve => setTimeout(resolve, 1200));
+      }
+
+      // Clear status and reveal the full buffered text
+      set((state) => {
+        const patch = (msgs: ChatMessage[]) =>
+          msgs.map(m => m.id === streamingMsgId ? { ...m, statusText: undefined, text: bufferedText } : m);
+        return {
+          messages: state.activeChat?.id === chatSentFromId ? patch(state.messages) : state.messages,
+          chatMessagesCache: { ...state.chatMessagesCache, [chatSentFromId]: patch(state.chatMessagesCache[chatSentFromId] || []) },
+        };
+      });
+
       // Finalise: replace streaming placeholder with finished message + options
       set((state) => {
         const finalisedMsg: ChatMessage = {
           id: streamingMsgId,
-          text: accumulatedText,
+          text: bufferedText,
           sender: "ai",
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           options: finalOptions.length > 0 ? finalOptions : undefined,

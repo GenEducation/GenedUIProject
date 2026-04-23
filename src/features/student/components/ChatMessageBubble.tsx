@@ -42,17 +42,8 @@ export const ChatMessageBubble = React.memo(
         )}
 
         <div className={`max-w-[72%] space-y-1.5 ${isUser ? "items-end" : "items-start"} flex flex-col`}>
-          {/* Status Bin for AI planning phase */}
-          {message.statusText && isStreaming && (
-            <div className="px-5 py-3 rounded-2xl bg-[#F4F3EE]/50 border border-[#1a3a2a]/5 rounded-tl-sm flex items-center gap-2">
-              <span className="text-sm font-medium text-emerald-600 animate-pulse">
-                {message.statusText}
-              </span>
-            </div>
-          )}
-
-          {/* Message Content Bin */}
-          {(!message.statusText || message.text.length > 0) && (
+          {/* Message Content Bin - Always show during streaming or if there is content/status */}
+          {(isStreaming || message.statusText || message.text.length > 0) && (
             <div
               className={`px-5 py-4 rounded-2xl leading-relaxed text-sm transition-all duration-300 ${
                 isUser
@@ -61,7 +52,11 @@ export const ChatMessageBubble = React.memo(
               }`}
             >
               {message.text.length === 0 && !message.statusText && isStreaming ? (
-                <span className="text-[#1a3a2a]/40 animate-pulse">Thinking...</span>
+                <span className="text-[#1a3a2a]/40 animate-pulse">Processing...</span>
+              ) : message.statusText && message.text.length === 0 ? (
+                <span className="text-[#1a3a2a]/40 animate-pulse">
+                  {message.statusText}
+                </span>
               ) : (
                 <MarkdownRenderer content={displayedText} />
               )}

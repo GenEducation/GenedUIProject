@@ -355,12 +355,8 @@ export function SignUp({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="group relative w-full overflow-hidden rounded-xl bg-[#042e5c] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100 shadow-lg shadow-[#042e5c]/20 hover:shadow-xl hover:shadow-[#059F6D]/25"
+          className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
         >
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 w-full h-full bg-[#059F6D] -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
-          />
           <span className="relative z-10">
             {isSubmitting ? "Forging credentials…" : "Create Account"}
           </span>
