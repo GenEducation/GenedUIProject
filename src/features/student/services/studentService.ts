@@ -93,9 +93,11 @@ export const studentService = {
     text: string;
     user_id: string;
     session_id?: string;
-    agent_id: string;
+    agent_id?: string;
     subject: string;
     grade: number;
+    document_title?: string;
+    intent?: string;
   }): Promise<Response> => {
     const response = await authFetch(`${API_BASE_URL}/text/april-query`, {
       method: "POST",
@@ -104,27 +106,6 @@ export const studentService = {
     });
 
     if (!response.ok) throw new Error("API request failed");
-
-    return response;
-  },
-
-  sendFocusedChatMessage: async (payload: {
-    text: string;
-    user_id: string;
-    session_id: string;
-    agent_id: string;
-    subject: string;
-    intent: string;
-    document_title: string;
-    grade: number;
-  }): Promise<Response> => {
-    const response = await authFetch(`${API_BASE_URL}/text/focused-april-query`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "accept": "text/event-stream" },
-      body: JSON.stringify({ ...payload, stream: true }),
-    });
-
-    if (!response.ok) throw new Error("Focused API request failed");
 
     return response;
   },

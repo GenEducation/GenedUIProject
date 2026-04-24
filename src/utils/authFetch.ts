@@ -34,8 +34,9 @@ export async function authFetch(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  // Preserve existing Content-Type if already set
-  if (!headers.has("Content-Type") && init?.body) {
+  // Automatically set Content-Type to application/json only if it's not already set 
+  // and the body is NOT FormData (which needs the browser to set its own boundary).
+  if (!headers.has("Content-Type") && init?.body && !(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
 

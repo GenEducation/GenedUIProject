@@ -15,7 +15,6 @@ export interface SignUpFields {
   age?: string;
   grade?: string;
   school_board?: string;
-  partner_id?: string;
   phone?: string;
   organization?: string;
   website?: string;
@@ -72,7 +71,6 @@ export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
     if (data.age) body.age = Number(data.age);
     if (data.grade) body.grade = Number(data.grade);
     if (data.school_board) body.school_board = data.school_board;
-    if (data.partner_id) body.partner_id = data.partner_id;
   } else if (data.role === "parent") {
     if (data.phone) body.phone = data.phone;
   } else if (data.role === "partner") {
@@ -123,7 +121,6 @@ export async function googleSignUp(token: string, data: Partial<SignUpFields>): 
     if (data.age) body.age = Number(data.age);
     if (data.grade) body.grade = Number(data.grade);
     if (data.school_board) body.school_board = data.school_board;
-    if (data.partner_id) body.partner_id = data.partner_id;
   } else if (data.role === "parent") {
     if (data.phone) body.phone = data.phone;
   } else if (data.role === "partner") {

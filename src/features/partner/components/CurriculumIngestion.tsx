@@ -145,6 +145,7 @@ export function CurriculumIngestion({
               >
                 <option value="">Select Subject</option>
                 <option value="english">English</option>
+                <option value="mathematics">Mathematics</option>
               </select>
             </div>
             <div className="space-y-2">

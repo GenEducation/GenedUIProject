@@ -22,7 +22,6 @@ const initialSignUpData: SignUpFields = {
   age: "",
   grade: "",
   school_board: "",
-  partner_id: "",
   phone: "",
   organization: "",
   website: "",

@@ -29,15 +29,15 @@ export function StudentChatView() {
       }
     }
     // Note: base /student/chat is handled by StudentChatBasePage
-  }, [sessionId, activeChat, openChatById, router, studentProfile]);
+  }, [sessionId, openChatById, router, studentProfile]);
 
   // URL sync: once the backend returns a real session_id (promoting the 'new' state),
   // update the browser URL so page refresh works correctly.
   useEffect(() => {
     // Only upgrade if we are currently on a "new" chat or the base /chat path
     // AND the activeChat has just received a real UUID from the backend.
-    const isNewPath = !sessionId || sessionId === "new";
-    const hasRealId = activeChat && activeChat.id !== "new";
+    const isNewPath = !sessionId || sessionId === "new" || sessionId === "new-focused";
+    const hasRealId = activeChat && activeChat.id !== "new" && activeChat.id !== "new-focused";
 
     if (isNewPath && hasRealId) {
       console.debug("[Chat] Upgrading URL to saved session:", activeChat.id);

@@ -70,7 +70,7 @@ export function StudentChatMain({ activeChat, messages, isAITyping }: StudentCha
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 scroll-smooth">
         <AnimatePresence initial={false}>
-          {isHistoryLoading ? (
+          {isHistoryLoading && messages.length === 0 ? (
             <motion.div
               key="loading-history"
               initial={{ opacity: 0 }}

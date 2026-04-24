@@ -12,7 +12,6 @@ interface SignUpData {
   age?: string;
   grade?: string;
   school_board?: string;
-  partner_id?: string;
   phone?: string;
   organization?: string;
   website?: string;
@@ -129,7 +128,7 @@ export function SignUp({
                 onError={() => {
                   console.error("Google Sign-up Failed");
                 }}
-                width="100%"
+                width="320"
                 theme="outline"
                 text="signup_with"
                 shape="rectangular"
@@ -229,18 +228,6 @@ export function SignUp({
               {errors.school_board && (
                 <p className={errorCls}>{errors.school_board}</p>
               )}
-            </div>
-
-            <div>
-              <label className={labelCls}>Partner ID (Optional)</label>
-              <input
-                name="partner_id"
-                value={signupData.partner_id || ""}
-                onChange={onChange}
-                type="text"
-                placeholder="e.g. PARTNER123"
-                className={inputCls(false)}
-              />
             </div>
           </>
         )}

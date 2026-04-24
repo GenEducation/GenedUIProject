@@ -241,8 +241,10 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       formData.append("subject", subjectName);
       formData.append("document_title", documentTitle); // Mapped to documentTitle (document_title on backend)
       formData.append("agent_name", agentName);
-      formData.append("grade", grade);
+      formData.append("grade", String(parseInt(grade, 10) || 0));
       formData.append("board", board);
+
+      formData.append("document_type", "ncert");
 
       const rawPartnerId = localStorage.getItem("gened_partner_id");
       const partnerId = rawPartnerId?.replace(/['"]+/g, "");
@@ -256,7 +258,11 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         method: "POST", 
         body: formData,
       });
-      if (!response.ok) throw new Error("Upload failed");
+      if (!response.ok) {
+        const errorDetail = await response.text();
+        console.error("Ingestion failed detail:", errorDetail);
+        throw new Error(`Upload failed: ${errorDetail}`);
+      }
 
       const data = await response.json();
 

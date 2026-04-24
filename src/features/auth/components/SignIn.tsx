@@ -48,7 +48,7 @@ export function SignIn({
             onError={() => {
               console.error("Google Login Failed");
             }}
-            width="100%"
+            width="320"
             theme="outline"
             text="signin_with"
             shape="rectangular"

@@ -98,7 +98,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                 <div className="flex items-center gap-1 group">
                   <select 
                     value={selectedAnalyticsSubject}
-                    onChange={(e) => fetchAnalyticsData(e.target.value)}
+                    onChange={(e) => fetchAnalyticsData(e.target.value, studentId)}
                     className="text-xl font-black text-[#1a3a2a] bg-transparent border-none focus:ring-0 cursor-pointer appearance-none p-0 pr-8 hover:text-[#059669] transition-colors"
                   >
                     {analyticsSubjects.map(sub => (

@@ -82,22 +82,35 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
 
     set({ isAnalyticsLoading: true });
     try {
-      const [summary, scores, tree, mastery] = await Promise.all([
+      // Fetch all analytics components in parallel using allSettled
+      // so that one failing endpoint doesn't block the others from rendering.
+      const results = await Promise.allSettled([
         studentService.fetchSkillSummary(effectiveStudentId, targetSubject),
         studentService.fetchCGScores(effectiveStudentId, targetSubject),
         studentService.fetchSkillTree(effectiveStudentId, targetSubject),
         studentService.fetchChapterMastery(effectiveStudentId, targetSubject),
       ]);
 
+      const [summary, scores, tree, mastery] = results;
+
       set({
-        skillSummary: summary,
-        cgScores: scores,
-        skillTree: tree,
-        analyticsChapterMastery: mastery,
+        skillSummary: summary.status === "fulfilled" ? summary.value : get().skillSummary,
+        cgScores: scores.status === "fulfilled" ? (scores.value || []) : get().cgScores,
+        skillTree: tree.status === "fulfilled" ? (tree.value || []) : get().skillTree,
+        analyticsChapterMastery: mastery.status === "fulfilled" ? (mastery.value || []) : get().analyticsChapterMastery,
         isAnalyticsLoading: false
       });
+
+      // Log specific failures for debugging
+      results.forEach((res, idx) => {
+        if (res.status === "rejected") {
+          const endpoints = ["Skill Summary", "CG Scores", "Skill Tree", "Chapter Mastery"];
+          console.error(`${endpoints[idx]} fetch failed:`, res.reason);
+        }
+      });
+
     } catch (error) {
-      console.error("Fetch Analytics Data Error:", error);
+      console.error("Fetch Analytics Data Critical Error:", error);
       set({ isAnalyticsLoading: false });
     }
   },
