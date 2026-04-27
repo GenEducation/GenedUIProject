@@ -747,6 +747,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       // Lazy load voice service to avoid SSR issues
       const { voiceService } = await import("@/features/student/services/voiceService");
       
+      const sessionId = activeChat.session_id || (activeChat.id !== "new" && activeChat.id !== "new-focused" ? activeChat.id : undefined);
+
       await voiceService.startSession(studentProfile.user_id, (event: any) => {
         if (event.type === "connected") {
           set({ voiceSessionStatus: "active" });
@@ -754,6 +756,23 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           set({ voiceSessionStatus: "idle" });
         } else if (event.type === "error") {
           set({ voiceSessionStatus: "error" });
+        } else if (event.type === "session_id") {
+          // Update activeChat with the real session_id from backend
+          const { activeChat } = get();
+          if (activeChat && (activeChat.id === "new" || activeChat.id === "new-focused")) {
+            set((state) => ({
+              activeChat: state.activeChat ? { ...state.activeChat, session_id: event.session_id } : null
+            }));
+          }
+        } else if (event.type === "entry_resolved") {
+          // Update chat metadata when entry phase completes
+          set((state) => ({
+            activeChat: state.activeChat ? { 
+              ...state.activeChat, 
+              subject: event.subject,
+              lastTopic: event.chapter
+            } : null
+          }));
         } else if (event.type === "transcription") {
           // Handle transcription if needed, e.g., show as optimistic user message
           console.debug("Transcription:", event.text);

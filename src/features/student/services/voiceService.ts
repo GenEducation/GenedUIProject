@@ -11,7 +11,7 @@ class VoiceService {
   private mediaStream: MediaStream | null = null;
   private processor: ScriptProcessorNode | null = null;
   private isSessionActive = false;
-  private currentStudentId: string | null = null;
+  private currentSessionId: string | null = null;
   private onEventCallback: ((event: any) => void) | null = null;
   
   // Jitter Buffer State
@@ -20,11 +20,12 @@ class VoiceService {
   private isBuffering = true;
   private readonly TARGET_BUFFER_SIZE = 3; // Number of chunks to buffer before starting playback
 
-  async startSession(studentId: string, onEvent: (event: any) => void) {
+  async startSession(studentId: string, onEvent: (event: any) => void, sessionId?: string) {
     if (this.isSessionActive) return;
 
     this.isSessionActive = true;
     this.currentStudentId = studentId;
+    this.currentSessionId = sessionId || null;
     this.onEventCallback = onEvent;
 
     // Initialize AudioContext on user gesture (triggered by startVoiceSession in store)
@@ -82,9 +83,16 @@ class VoiceService {
   private connect() {
     if (!this.isSessionActive || !this.currentStudentId) return;
 
-    const wsUrl = process.env.NEXT_PUBLIC_VOICE_API;
+    let wsUrl = process.env.NEXT_PUBLIC_VOICE_API;
     if (!wsUrl) {
       throw new Error("NEXT_PUBLIC_VOICE_API not defined");
+    }
+
+    // Import getAuthToken dynamically to avoid circular dependencies if any
+    const token = localStorage.getItem("gened_auth_token") || "";
+    if (token) {
+      const separator = wsUrl.includes("?") ? "&" : "?";
+      wsUrl += `${separator}token=${encodeURIComponent(token)}`;
     }
 
     console.log("[VoiceService] Connecting to", wsUrl);
@@ -97,6 +105,7 @@ class VoiceService {
         JSON.stringify({
           type: "init",
           student_id: this.currentStudentId,
+          session_id: this.currentSessionId,
         })
       );
       this.onEventCallback?.({ type: "connected" });
@@ -108,6 +117,13 @@ class VoiceService {
       } else {
         try {
           const data = JSON.parse(e.data);
+          
+          // Capture session_id from backend for reconnection persistence
+          if (data.type === "session_id" && data.session_id) {
+            console.log("[VoiceService] Captured session_id:", data.session_id);
+            this.currentSessionId = data.session_id;
+          }
+          
           this.onEventCallback?.(data);
         } catch (err) {
           console.error("[VoiceService] Error parsing JSON:", e.data);
