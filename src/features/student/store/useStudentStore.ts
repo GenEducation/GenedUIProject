@@ -304,7 +304,7 @@ interface StudentState {
   setAgentPickerOpen: (open: boolean) => void;
   setPartnerModalOpen: (open: boolean) => void;
   sendPartnerRequest: (partnerId: string) => Promise<void>;
-  linkParent: (parentId: string) => Promise<void>;
+  linkParent: (parentEmailOrPhone: string) => Promise<void>;
   startVoiceSession: () => Promise<void>;
   stopVoiceSession: () => void;
   logoutStudent: () => void;
@@ -456,7 +456,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     }
   },
 
-  linkParent: async (parentId: string) => {
+  linkParent: async (parentEmailOrPhone: string) => {
     const { studentProfile } = get();
     if (!studentProfile?.user_id) {
       set({ 
@@ -474,7 +474,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     });
 
     try {
-      await studentService.linkParent(studentProfile.user_id, parentId);
+      await studentService.linkParent(studentProfile.user_id, parentEmailOrPhone);
       set({ 
         partnerRequestStatus: "success", 
         partnerRequestMessage: "Parent successfully linked to your profile." 

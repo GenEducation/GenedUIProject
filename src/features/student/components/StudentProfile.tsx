@@ -36,7 +36,7 @@ export function StudentProfile() {
     fetchEnrolledPartners();
   }, [fetchAvailablePartners, fetchEnrolledPartners]);
 
-  const [parentId, setParentId] = useState("");
+  const [parentEmailOrPhone, setParentEmailOrPhone] = useState("");
   const [selectedPartnerId, setSelectedPartnerId] = useState("");
 
   const isLoading = partnerRequestStatus === "loading";
@@ -46,9 +46,9 @@ export function StudentProfile() {
   const board = studentProfile?.school_board ?? "Advanced Studies";
 
   const handleLinkParent = async () => {
-    if (parentId.trim()) {
-      await linkParent(parentId.trim());
-      setParentId(""); // Clear input on attempt
+    if (parentEmailOrPhone.trim()) {
+      await linkParent(parentEmailOrPhone.trim());
+      setParentEmailOrPhone(""); // Clear input on attempt
     }
   };
 
@@ -214,15 +214,15 @@ export function StudentProfile() {
               <div className="flex items-center gap-3">
                 <input 
                   type="text"
-                  placeholder="Guardian Parent ID"
-                  value={parentId}
-                  onChange={(e) => setParentId(e.target.value)}
+                  placeholder="Guardian's email or phone"
+                  value={parentEmailOrPhone}
+                  onChange={(e) => setParentEmailOrPhone(e.target.value)}
                   className="flex-1 bg-[#f9f9f9] border border-[#1a3a2a]/5 rounded-2xl px-4 py-3 text-[13px] font-semibold outline-none focus:border-[#2d6a4a] disabled:opacity-50"
                   disabled={isLoading}
                 />
                 <button 
                   onClick={handleLinkParent}
-                  disabled={!parentId.trim() || isLoading}
+                  disabled={!parentEmailOrPhone.trim() || isLoading}
                   className="bg-[#bce4cc] text-[#1a3a2a] px-5 py-3 rounded-2xl font-bold text-[14px] hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Add"}
