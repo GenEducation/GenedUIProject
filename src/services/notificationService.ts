@@ -49,56 +49,57 @@ export const notificationService = {
   },
 
   /**
-   * SSE subscription using native EventSource.
-   * This matches the working implementation and avoids issues with auth headers
-   * that some SSE servers might not support.
+   * SSE subscription using fetchEventSource.
+   * This allows us to inject the Authorization header required by the API Gateway.
    */
-
   subscribeToStream: (
     userId: string,
     onMessage: (data: any) => void,
   ): (() => void) => {
-    // Determine the base URL for the notification service.
-    // We prioritize NEXT_PUBLIC_NOTIFICATION_SERVICE_URL, but if it's missing,
-    // we use the main API host on port 8004 as per your working snippet.
-    const baseUrl = NOTIFICATION_API_URL.replace(/:8080\/?$/, ":8004").replace(
-      /\/$/,
-      "",
-    );
+    const controller = new AbortController();
+    const token = getAuthToken();
+    const streamUrl = `${NOTIFICATION_API_URL}/notify/stream?user_id=${userId}`;
 
-    const streamUrl = `${baseUrl}/notify/stream?user_id=${userId}`;
     console.log(`Connecting to notification stream: ${streamUrl}`);
 
-    const eventSource = new EventSource(streamUrl);
+    fetchEventSource(streamUrl, {
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+        Accept: "text/event-stream",
+      },
+      signal: controller.signal,
+      onopen: async (response) => {
+        if (response.ok) {
+          console.log("✅ Notification stream connected");
+        } else {
+          console.error(
+            "❌ Notification stream connection failed:",
+            response.status,
+          );
+        }
+      },
+      onmessage(event) {
+        console.log("Received notification data:", event.data);
+        try {
+          const data = JSON.parse(event.data);
+          onMessage(data);
+        } catch (error) {
+          onMessage({
+            id: Date.now().toString(),
+            message: event.data,
+            is_read: false,
+            created_at: new Date().toISOString(),
+          });
+        }
+      },
+      onerror(error) {
+        console.error("❌ Notification stream error:", error);
+      },
+    });
 
-    eventSource.onopen = () => {
-      console.log("✅ Notification stream connected");
-    };
-
-    eventSource.onmessage = (event) => {
-      console.log("Received notification data:", event.data);
-      try {
-        const data = JSON.parse(event.data);
-        onMessage(data);
-      } catch (error) {
-        // Fallback for raw string messages
-        onMessage({
-          id: Date.now().toString(),
-          message: event.data,
-          is_read: false,
-          created_at: new Date().toISOString(),
-        });
-      }
-    };
-
-    eventSource.onerror = (err) => {
-      console.error("❌ Notification stream error:", err);
-    };
-
-    // Return a cleanup function to close the stream
     return () => {
       console.log("Closing notification stream");
-      eventSource.close();
+      controller.abort();
     };
   },
 };
