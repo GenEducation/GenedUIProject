@@ -151,7 +151,7 @@ export const studentService = {
     return response.json();
   },
 
-  linkParent: async (studentId: string, parentId: string) => {
+  linkParent: async (studentId: string, parentEmailOrPhone: string) => {
     const response = await authFetch(`${API_BASE_URL}/parent/link`, {
       method: "POST",
       headers: {
@@ -160,7 +160,7 @@ export const studentService = {
       },
       body: JSON.stringify({
         student_id: studentId,
-        parent_id: parentId,
+        parent_email_or_phone: parentEmailOrPhone,
       }),
     });
 
