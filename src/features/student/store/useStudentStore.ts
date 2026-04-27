@@ -47,6 +47,7 @@ export interface ChatSession {
   isFocused?: boolean;
   document_title?: string;
   subject?: string;
+  chatMode?: "text" | "voice";
 }
 
 export interface SubjectItem {
@@ -283,6 +284,7 @@ interface StudentState {
   partnerRequestMessage: string;
   isPartnerModalOpen: boolean;
   streamingMessageId: string | null;
+  voiceSessionStatus: "idle" | "connecting" | "active" | "error";
   
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
@@ -303,6 +305,8 @@ interface StudentState {
   setPartnerModalOpen: (open: boolean) => void;
   sendPartnerRequest: (partnerId: string) => Promise<void>;
   linkParent: (parentId: string) => Promise<void>;
+  startVoiceSession: () => Promise<void>;
+  stopVoiceSession: () => void;
   logoutStudent: () => void;
 }
 
@@ -331,6 +335,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   partnerRequestMessage: "",
   isPartnerModalOpen: false,
   streamingMessageId: null,
+  voiceSessionStatus: "idle",
 
   setStudentProfile: (profile) => set({ studentProfile: profile }),
 
@@ -722,12 +727,70 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     });
   },
 
+  startVoiceSession: async () => {
+    const { activeChat, studentProfile } = get();
+    if (!activeChat || !studentProfile) return;
+
+    // Enforce text mode restriction
+    if (activeChat.chatMode === "text") return;
+
+    set({ voiceSessionStatus: "connecting" });
+    
+    // Set chat mode to voice if not already set
+    if (!activeChat.chatMode) {
+      set((state) => ({
+        activeChat: state.activeChat ? { ...state.activeChat, chatMode: "voice" } : null
+      }));
+    }
+
+    try {
+      // Lazy load voice service to avoid SSR issues
+      const { voiceService } = await import("@/features/student/services/voiceService");
+      
+      await voiceService.startSession(studentProfile.user_id, (event: any) => {
+        if (event.type === "connected") {
+          set({ voiceSessionStatus: "active" });
+        } else if (event.type === "disconnected") {
+          set({ voiceSessionStatus: "idle" });
+        } else if (event.type === "error") {
+          set({ voiceSessionStatus: "error" });
+        } else if (event.type === "transcription") {
+          // Handle transcription if needed, e.g., show as optimistic user message
+          console.debug("Transcription:", event.text);
+        }
+      });
+    } catch (error) {
+      console.error("Failed to start voice session:", error);
+      set({ voiceSessionStatus: "error" });
+    }
+  },
+
+  stopVoiceSession: async () => {
+    try {
+      const { voiceService } = await import("@/features/student/services/voiceService");
+      voiceService.stopSession();
+    } catch (error) {
+      console.error("Failed to stop voice session:", error);
+    }
+    set({ voiceSessionStatus: "idle" });
+  },
+
   sendMessage: async (text: string) => {
     const { studentProfile, activeChat } = get();
     if (!studentProfile || !activeChat) return;
 
     // Capture the ID of the chat where the message was sent
     const chatSentFromId = activeChat.id;
+
+    // Enforce voice mode restriction
+    if (activeChat.chatMode === "voice") return;
+
+    // Set chat mode to text if not already set
+    if (!activeChat.chatMode) {
+      set((state) => ({
+        activeChat: state.activeChat ? { ...state.activeChat, chatMode: "text" } : null
+      }));
+    }
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
