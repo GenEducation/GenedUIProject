@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { StudentChatSidebar } from "./StudentChatSidebar";
@@ -18,6 +18,25 @@ export function StudentChatView() {
   
   const { activeChat, messages, isAITyping, openChatById, studentProfile } = useStudentStore();
 
+  // Sidebar toggle state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
+
+  // Handle responsive auto-hide
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+    
+    handleResize(); // Init
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
   // Guard & Hydration: if user lands on /student/chat/[id] but state is empty (refresh).
   useEffect(() => {
     if (!studentProfile) return; // wait for auth hydration
@@ -28,29 +47,24 @@ export function StudentChatView() {
         openChatById(sessionId);
       }
     }
-    // Note: base /student/chat is handled by StudentChatBasePage
   }, [sessionId, openChatById, router, studentProfile]);
 
-  // URL sync: once the backend returns a real session_id (promoting the 'new' state),
-  // update the browser URL so page refresh works correctly.
+  // URL sync logic...
   useEffect(() => {
-    // Only upgrade if we are currently on a "new" chat or the base /chat path
-    // AND the activeChat has just received a real UUID from the backend.
     const isNewPath = !sessionId || sessionId === "new" || sessionId === "new-focused";
     const hasRealId = activeChat && activeChat.id !== "new" && activeChat.id !== "new-focused";
 
     if (isNewPath && hasRealId) {
-      console.debug("[Chat] Upgrading URL to saved session:", activeChat.id);
       router.replace(`/student/chat/${activeChat.id}`);
     }
   }, [activeChat?.id, sessionId, router]);
 
   if (!activeChat) {
     return (
-      <div className="h-screen flex items-center justify-center bg-white">
+      <div className="h-screen flex items-center justify-center bg-white font-sans">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-[#1a3a2a]/10 border-t-[#1a3a2a] rounded-full animate-spin" />
-          <p className="text-sm font-bold text-[#1a3a2a]/40 tracking-widest uppercase">Initializing Session...</p>
+          <div className="w-10 h-10 border-4 border-[#042E5C]/10 border-t-[#042E5C] rounded-full animate-spin" />
+          <p className="text-sm font-bold text-[#042E5C]/40 tracking-widest uppercase">Initializing Session...</p>
         </div>
       </div>
     );
@@ -59,13 +73,19 @@ export function StudentChatView() {
   return (
     <div className="h-screen flex bg-white font-sans overflow-hidden">
       {/* ── LEFT SIDEBAR ────────────────────────────────────────── */}
-      <StudentChatSidebar activeChatId={activeChat.id} />
+      <StudentChatSidebar 
+        activeChatId={activeChat.id} 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)}
+      />
 
       {/* ── MAIN CHAT AREA ─────────────────────────────────────── */}
       <StudentChatMain
         activeChat={activeChat}
         messages={messages}
         isAITyping={isAITyping}
+        isSidebarOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
       />
     </div>
   );

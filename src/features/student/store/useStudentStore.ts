@@ -219,7 +219,7 @@ function parseContent(content: string): ChatElement[] {
         try {
           const jsonStr = paramsMatch[1].replace(/'/g, '"');
           params = JSON.parse(jsonStr);
-        } catch (e) {
+        } catch {
           console.warn("Failed to parse params for MATH_DRAW", paramsMatch[1]);
         }
       }
@@ -284,6 +284,7 @@ interface StudentState {
   partnerRequestMessage: string;
   isPartnerModalOpen: boolean;
   streamingMessageId: string | null;
+  chatAbortController: AbortController | null;
   voiceSessionStatus: "idle" | "connecting" | "active" | "error";
   
   // Actions
@@ -304,7 +305,12 @@ interface StudentState {
   setAgentPickerOpen: (open: boolean) => void;
   setPartnerModalOpen: (open: boolean) => void;
   sendPartnerRequest: (partnerId: string) => Promise<void>;
+<<<<<<< Updated upstream
   linkParent: (parentEmailOrPhone: string) => Promise<void>;
+=======
+  linkParent: (parentId: string) => Promise<void>;
+  stopMessageGeneration: () => void;
+>>>>>>> Stashed changes
   startVoiceSession: () => Promise<void>;
   stopVoiceSession: () => void;
   logoutStudent: () => void;
@@ -335,6 +341,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   partnerRequestMessage: "",
   isPartnerModalOpen: false,
   streamingMessageId: null,
+  chatAbortController: null,
   voiceSessionStatus: "idle",
 
   setStudentProfile: (profile) => set({ studentProfile: profile }),
@@ -587,7 +594,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           const { subject, documentTitle } = JSON.parse(savedContext);
           startFocusedSession(subject, documentTitle);
           return;
-        } catch (e) {
+        } catch {
           console.error("Failed to recover focused session context");
         }
       }
@@ -746,8 +753,6 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     try {
       // Lazy load voice service to avoid SSR issues
       const { voiceService } = await import("@/features/student/services/voiceService");
-      
-      const sessionId = activeChat.session_id || (activeChat.id !== "new" && activeChat.id !== "new-focused" ? activeChat.id : undefined);
 
       await voiceService.startSession(studentProfile.user_id, (event: any) => {
         if (event.type === "connected") {
@@ -758,11 +763,20 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           set({ voiceSessionStatus: "error" });
         } else if (event.type === "session_id") {
           // Update activeChat with the real session_id from backend
-          const { activeChat } = get();
+          const { activeChat, fetchSessions } = get();
           if (activeChat && (activeChat.id === "new" || activeChat.id === "new-focused")) {
+            const newSessionId = event.session_id;
+            
+            // 1. Update the store
             set((state) => ({
-              activeChat: state.activeChat ? { ...state.activeChat, session_id: event.session_id } : null
+              activeChat: state.activeChat ? { ...state.activeChat, session_id: newSessionId } : null
             }));
+
+            // 2. Update the URL
+            window.history.pushState({}, "", `/student?session=${newSessionId}`);
+
+            // 3. Refresh sidebar to show the new chat
+            fetchSessions();
           }
         } else if (event.type === "entry_resolved") {
           // Update chat metadata when entry phase completes
@@ -851,22 +865,21 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       });
 
       const isNewFocused = activeChat.isFocused && isNewSession;
+      const abortController = new AbortController();
+      set({ chatAbortController: abortController });
 
       const response = await studentService.sendChatMessage({
         text,
         user_id: studentProfile.user_id,
-        // Omit session_id entirely for new focused sessions to match Swagger
         ...(isNewFocused ? {} : { session_id: isNewSession ? undefined : sessionIdToSend }),
-        // Omit agent_id for focused sessions to match Swagger
         ...(!activeChat.isFocused && { agent_id: activeChat.agent_id || "eng-grade-4" }),
         subject: activeChat.subject || "English",
         grade: studentProfile.grade || 10,
-        // Include focused-only metadata if applicable
         ...(activeChat.isFocused && {
           document_title: activeChat.document_title || "General",
           intent: ""
         })
-      });
+      }, abortController.signal);
 
       if (!response.body) throw new Error("No response body for streaming");
 
@@ -1072,39 +1085,54 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           typingChatIds: newTypingIds,
           isAITyping: isStillViewing ? false : state.isAITyping,
           streamingMessageId: null,
+          chatAbortController: null,
         };
       });
-    } catch (error) {
-      console.error("Chat API Error:", error);
-      const errorMsg: ChatMessage = {
-        id: `err-${Date.now()}`,
-        text: "Sorry, I encountered an error connecting to the knowledge base. Please try again.",
-        sender: "ai",
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      };
+    } catch (error: any) {
+      const isAbort = error.name === 'AbortError';
+      
+      if (isAbort) {
+        console.debug("Chat generation aborted by user");
+      } else {
+        console.error("Chat API Error:", error);
+      }
 
       set((state) => {
-        // Replace streaming placeholder with error message
-        const replaceOrAppend = (msgs: ChatMessage[]) => {
+        const errorMsg: ChatMessage = {
+          id: `err-${Date.now()}`,
+          text: "Sorry, I encountered an error connecting to the knowledge base. Please try again.",
+          sender: "ai",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        };
+
+        const cleanOrReplace = (msgs: ChatMessage[]) => {
           const withoutStreaming = msgs.filter((m) => m.id !== streamingMsgId);
-          return [...withoutStreaming, errorMsg];
+          // If it was an abort, just leave it empty. Otherwise, add the error message.
+          return isAbort ? withoutStreaming : [...withoutStreaming, errorMsg];
         };
 
         const cached = state.chatMessagesCache[chatSentFromId] || [];
-        const finishedMessages = replaceOrAppend(cached);
+        const finishedMessages = cleanOrReplace(cached);
         const newTypingIds = state.typingChatIds.filter((id) => id !== chatSentFromId);
 
         return {
           chatMessagesCache: { ...state.chatMessagesCache, [chatSentFromId]: finishedMessages },
-          messages:
-            state.activeChat?.id === chatSentFromId ? finishedMessages : state.messages,
+          messages: state.activeChat?.id === chatSentFromId ? finishedMessages : state.messages,
           typingChatIds: newTypingIds,
-          isAITyping:
-            state.activeChat?.id === chatSentFromId ? false : state.isAITyping,
+          isAITyping: state.activeChat?.id === chatSentFromId ? false : state.isAITyping,
           streamingMessageId: null,
+          chatAbortController: null,
         };
       });
     }
+  },
+
+  stopMessageGeneration: () => {
+    const { chatAbortController } = get();
+    if (chatAbortController) {
+      chatAbortController.abort();
+    }
+    set({ chatAbortController: null, isAITyping: false, streamingMessageId: null });
   },
 
   setAgentPickerOpen: (open) => set({ isAgentPickerOpen: open }),

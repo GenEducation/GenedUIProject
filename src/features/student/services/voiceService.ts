@@ -1,3 +1,5 @@
+import { getAuthToken } from "@/utils/authFetch";
+
 /**
  * VoiceService handles the real-time audio interaction with the April backend.
  * It manages WebSocket connectivity, 16kHz PCM mic capture, and 24kHz PCM playback
@@ -11,6 +13,7 @@ class VoiceService {
   private mediaStream: MediaStream | null = null;
   private processor: ScriptProcessorNode | null = null;
   private isSessionActive = false;
+  private currentStudentId: string | null = null;
   private currentSessionId: string | null = null;
   private onEventCallback: ((event: any) => void) | null = null;
   
@@ -88,8 +91,8 @@ class VoiceService {
       throw new Error("NEXT_PUBLIC_VOICE_API not defined");
     }
 
-    // Import getAuthToken dynamically to avoid circular dependencies if any
-    const token = localStorage.getItem("gened_auth_token") || "";
+    // Get the JWT token
+    const token = getAuthToken();
     if (token) {
       const separator = wsUrl.includes("?") ? "&" : "?";
       wsUrl += `${separator}token=${encodeURIComponent(token)}`;
@@ -101,11 +104,13 @@ class VoiceService {
 
     this.ws.onopen = () => {
       console.log("[VoiceService] Connected");
+      const token = getAuthToken();
       this.ws?.send(
         JSON.stringify({
           type: "init",
           student_id: this.currentStudentId,
           session_id: this.currentSessionId,
+          token: token,
         })
       );
       this.onEventCallback?.({ type: "connected" });

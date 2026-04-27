@@ -65,7 +65,7 @@ export const studentService = {
         } else if (data.message && typeof data.message.message === 'string') {
           errorMessage = data.message.message;
         }
-      } catch (e) {
+      } catch {
         // Fallback to generic message if JSON parsing fails
       }
       throw { status: response.status, message: errorMessage };
@@ -98,11 +98,12 @@ export const studentService = {
     grade: number;
     document_title?: string;
     intent?: string;
-  }): Promise<Response> => {
+  }, signal?: AbortSignal): Promise<Response> => {
     const response = await authFetch(`${API_BASE_URL}/text/april-query`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "accept": "text/event-stream" },
       body: JSON.stringify({ ...payload, stream: true }),
+      signal,
     });
 
     if (!response.ok) throw new Error("API request failed");
@@ -177,7 +178,7 @@ export const studentService = {
         } else if (data.message && typeof data.message.message === 'string') {
           errorMessage = data.message.message;
         }
-      } catch (e) {
+      } catch {
         // Fallback to generic message
       }
       throw { status: response.status, message: errorMessage };

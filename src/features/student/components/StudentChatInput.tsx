@@ -1,22 +1,24 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Send, Mic } from "lucide-react";
+import { Send, Mic, Square } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { useStudentStore, ChatSession } from "../store/useStudentStore";
+import { useStudentStore } from "../store/useStudentStore";
 
 interface StudentChatInputProps {
   chatTitle: string;
+  isCentered?: boolean;
 }
 
-export function StudentChatInput({ chatTitle }: StudentChatInputProps) {
+export function StudentChatInput({ chatTitle, isCentered = false }: StudentChatInputProps) {
   const { 
     sendMessage, 
     isAITyping, 
     activeChat, 
     voiceSessionStatus, 
     startVoiceSession, 
-    stopVoiceSession 
+    stopVoiceSession,
+    stopMessageGeneration
   } = useStudentStore();
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -69,24 +71,30 @@ export function StudentChatInput({ chatTitle }: StudentChatInputProps) {
   const isMicDisabled = activeChat?.chatMode === "text" || isAITyping;
 
   return (
-    <div className="px-8 py-5 border-t border-[#1a3a2a]/8 bg-white flex-shrink-0">
-      <div className="flex items-end gap-4 bg-[#F4F3EE] rounded-2xl px-5 py-3 focus-within:ring-2 focus-within:ring-[#1a3a2a]/15 focus-within:bg-white transition-all relative">
+    <div className={`w-full transition-all duration-500 ${isCentered ? "px-0" : "px-0"}`}>
+      <div 
+        className={`flex items-end gap-3 bg-[#F8F9FA] border border-[#042E5C]/10 rounded-[2rem] px-6 py-4 chat-pill-shadow transition-all relative focus-within:chat-pill-focus focus-within:bg-white focus-within:border-[#042E5C]/20 ${
+          isCentered ? "py-5" : "py-4"
+        }`}
+      >
         <motion.div
-          animate={voiceSessionStatus === "active" ? { scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] } : {}}
+          animate={voiceSessionStatus === "active" ? { scale: [1, 1.2, 1] } : {}}
           transition={{ repeat: Infinity, duration: 1.5 }}
+          className="mb-1.5"
         >
           <Mic
-            size={20}
+            size={22}
             onClick={handleMicClick}
-            className={`flex-shrink-0 cursor-pointer transition-colors mb-2 ${
+            className={`flex-shrink-0 cursor-pointer transition-colors ${
               voiceSessionStatus === "active" 
                 ? "text-red-500 hover:text-red-600" 
                 : isMicDisabled 
-                  ? "text-[#1a3a2a]/10 cursor-not-allowed" 
-                  : "text-[#1a3a2a]/30 hover:text-[#1a3a2a]"
+                  ? "text-[#042E5C]/10 cursor-not-allowed" 
+                  : "text-[#042E5C]/30 hover:text-[#042E5C]"
             }`}
           />
         </motion.div>
+        
         <textarea
           ref={textareaRef}
           value={input}
@@ -95,34 +103,35 @@ export function StudentChatInput({ chatTitle }: StudentChatInputProps) {
           onKeyDown={handleKeyDown}
           placeholder={
             isVoiceActive 
-              ? "Voice chat active..." 
-              : activeChat?.chatMode === "voice" 
-                ? "Switch to text mode disabled" 
-                : `Ask anything about ${chatTitle}...`
+              ? "Listening..." 
+              : `Ask anything about ${chatTitle}...`
           }
           rows={1}
-          className="flex-1 bg-transparent text-sm text-[#1a3a2a] placeholder:text-[#1a3a2a]/30 focus:outline-none resize-none overflow-y-auto min-h-[24px] max-h-[120px] md:max-h-[200px] leading-relaxed py-1.5"
+          className="flex-1 bg-transparent text-[15px] font-medium text-[#042E5C] placeholder:text-[#042E5C]/30 focus:outline-none resize-none overflow-y-auto min-h-[28px] max-h-[120px] md:max-h-[200px] leading-relaxed py-1"
           style={{ height: "auto" }}
         />
+
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={isVoiceActive ? stopVoiceSession : handleSend}
-          disabled={(isTextDisabled && !isVoiceActive) || (!input.trim() && !isVoiceActive) || isAITyping}
-          className={`w-9 h-9 rounded-xl flex-shrink-0 text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed transition-colors mb-1 ${
-            isVoiceActive ? "bg-red-500 hover:bg-red-600" : "bg-[#1a3a2a] hover:bg-[#2d6a4a]"
+          onClick={isVoiceActive ? stopVoiceSession : isAITyping ? stopMessageGeneration : handleSend}
+          disabled={(isTextDisabled && !isVoiceActive && !isAITyping) || (!input.trim() && !isVoiceActive && !isAITyping)}
+          className={`w-10 h-10 rounded-full flex-shrink-0 text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm mb-0.5 ${
+            (isVoiceActive || isAITyping) ? "bg-red-500 hover:bg-red-600" : "bg-[#042E5C] hover:bg-[#064282]"
           }`}
         >
-          {isVoiceActive ? (
-            <div className="w-3 h-3 bg-white rounded-sm" />
+          {isVoiceActive || isAITyping ? (
+            <Square size={16} fill="white" />
           ) : (
-            <Send size={15} />
+            <Send size={18} className="translate-x-0.5" />
           )}
         </motion.button>
       </div>
-      <p className="text-[10px] text-[#1a3a2a]/25 text-center mt-3">
-        Press Enter to send &bull; Shift+Enter for new line
-      </p>
+      {!isCentered && (
+        <p className="text-[11px] font-bold text-[#042E5C]/20 text-center mt-4 uppercase tracking-[0.1em]">
+          Press Enter to send &bull; Shift+Enter for new line
+        </p>
+      )}
     </div>
   );
 }

@@ -25,10 +25,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const allNotifications = await notificationService.fetchNotifications(userId);
-      const unreadNotifications = allNotifications.filter(n => !n.is_read);
       set({ 
-        notifications: unreadNotifications, 
-        unreadCount: unreadNotifications.length,
+        notifications: allNotifications, 
+        unreadCount: allNotifications.filter(n => !n.is_read).length,
         isLoading: false 
       });
     } catch (error) {
@@ -40,7 +39,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     try {
       // Optimistic update
       set((state) => {
-        const updated = state.notifications.filter(n => n.id !== notificationId);
+        const updated = state.notifications.map(n => 
+          n.id === notificationId ? { ...n, is_read: true } : n
+        );
         return {
           notifications: updated,
           unreadCount: updated.filter(n => !n.is_read).length

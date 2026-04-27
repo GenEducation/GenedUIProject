@@ -298,7 +298,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const documentTitle = subject.agent; // agent property holds the document_title
     const encodedTitle = encodeURIComponent(documentTitle);
 
-    const res = await authFetch(`${getRagUrl()}/partner/${partnerId}/ingestions/${encodedTitle}`, {
+    const res = await authFetch(`${getRagUrl()}/rag/partner/${partnerId}/ingestions/${encodedTitle}`, {
       method: "DELETE",
     });
 
