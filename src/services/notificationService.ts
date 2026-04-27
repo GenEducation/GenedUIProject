@@ -1,10 +1,13 @@
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import { authFetch, getAuthToken } from "@/utils/authFetch";
 
-const NOTIFICATION_API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
+const NOTIFICATION_API_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
 if (!NOTIFICATION_API_URL) {
-  throw new Error("NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.");
+  throw new Error(
+    "NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.",
+  );
 }
 
 export interface Notification {
@@ -50,16 +53,22 @@ export const notificationService = {
    * This matches the working implementation and avoids issues with auth headers
    * that some SSE servers might not support.
    */
-  subscribeToStream: (userId: string, onMessage: (data: any) => void): (() => void) => {
+
+  subscribeToStream: (
+    userId: string,
+    onMessage: (data: any) => void,
+  ): (() => void) => {
     // Determine the base URL for the notification service.
     // We prioritize NEXT_PUBLIC_NOTIFICATION_SERVICE_URL, but if it's missing,
     // we use the main API host on port 8004 as per your working snippet.
-    const baseUrl = process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || 
-                    NOTIFICATION_API_URL.replace(/:8080\/?$/, ":8004").replace(/\/$/, "");
-    
-    const streamUrl = `${baseUrl}/stream?user_id=${userId}`;
+    const baseUrl = NOTIFICATION_API_URL.replace(/:8080\/?$/, ":8004").replace(
+      /\/$/,
+      "",
+    );
+
+    const streamUrl = `${baseUrl}/notify/stream?user_id=${userId}`;
     console.log(`Connecting to notification stream: ${streamUrl}`);
-    
+
     const eventSource = new EventSource(streamUrl);
 
     eventSource.onopen = () => {
@@ -77,7 +86,7 @@ export const notificationService = {
           id: Date.now().toString(),
           message: event.data,
           is_read: false,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
         });
       }
     };

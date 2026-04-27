@@ -72,16 +72,76 @@ export interface PartnerItem {
 }
 
 export const AVAILABLE_SUBJECTS: SubjectItem[] = [
-  { id: "sub-1", name: "Quantum Physics", grade: "Grade 12", icon: "⚛", chaptersCount: 12 },
-  { id: "sub-2", name: "Medieval History", grade: "Grade 10", icon: "🏰", chaptersCount: 8 },
-  { id: "sub-3", name: "Advanced Calculus", grade: "Grade 12", icon: "∑", chaptersCount: 15 },
-  { id: "sub-4", name: "Essay Writing", grade: "Grade 9–12", icon: "✍️", chaptersCount: 6 },
-  { id: "sub-5", name: "Research Methods", grade: "Grade 11", icon: "🔍", chaptersCount: 5 },
-  { id: "sub-6", name: "Computer Science", grade: "Grade 10", icon: "💻", chaptersCount: 10 },
-  { id: "sub-7", name: "Biology", grade: "Grade 11", icon: "🧬", chaptersCount: 14 },
-  { id: "sub-8", name: "Economics", grade: "Grade 12", icon: "📊", chaptersCount: 9 },
-  { id: "sub-9", name: "Chemistry", grade: "Grade 11", icon: "⚗️", chaptersCount: 11 },
-  { id: "sub-10", name: "Literature", grade: "Grade 10", icon: "📖", chaptersCount: 7 },
+  {
+    id: "sub-1",
+    name: "Quantum Physics",
+    grade: "Grade 12",
+    icon: "⚛",
+    chaptersCount: 12,
+  },
+  {
+    id: "sub-2",
+    name: "Medieval History",
+    grade: "Grade 10",
+    icon: "🏰",
+    chaptersCount: 8,
+  },
+  {
+    id: "sub-3",
+    name: "Advanced Calculus",
+    grade: "Grade 12",
+    icon: "∑",
+    chaptersCount: 15,
+  },
+  {
+    id: "sub-4",
+    name: "Essay Writing",
+    grade: "Grade 9–12",
+    icon: "✍️",
+    chaptersCount: 6,
+  },
+  {
+    id: "sub-5",
+    name: "Research Methods",
+    grade: "Grade 11",
+    icon: "🔍",
+    chaptersCount: 5,
+  },
+  {
+    id: "sub-6",
+    name: "Computer Science",
+    grade: "Grade 10",
+    icon: "💻",
+    chaptersCount: 10,
+  },
+  {
+    id: "sub-7",
+    name: "Biology",
+    grade: "Grade 11",
+    icon: "🧬",
+    chaptersCount: 14,
+  },
+  {
+    id: "sub-8",
+    name: "Economics",
+    grade: "Grade 12",
+    icon: "📊",
+    chaptersCount: 9,
+  },
+  {
+    id: "sub-9",
+    name: "Chemistry",
+    grade: "Grade 11",
+    icon: "⚗️",
+    chaptersCount: 11,
+  },
+  {
+    id: "sub-10",
+    name: "Literature",
+    grade: "Grade 10",
+    icon: "📖",
+    chaptersCount: 7,
+  },
 ];
 
 // ── Visual Tag Parser ────────────────────────────────────────────────────────
@@ -100,14 +160,14 @@ const SCHOLARLY_BLUEPRINT = `
 function generateHistoricalSVG(type: string, params: any): string {
   const width = 400;
   const height = 280;
-  
+
   let shapeMarkup = "";
-  
+
   // Design Constants
   const brandGreen = "#059669";
   const darkInk = "#1A3A2A";
   const gridColor = "#1A3A2A";
-  
+
   if (type === "rectangle") {
     const wVal = params.width || 5;
     const hVal = params.height || 3;
@@ -115,7 +175,7 @@ function generateHistoricalSVG(type: string, params: any): string {
     const h = Math.min(hVal * 40, height - 120);
     const x = (width - w) / 2;
     const y = (height - h) / 2;
-    
+
     shapeMarkup = `
       <!-- Gradient Definition -->
       <defs>
@@ -127,13 +187,13 @@ function generateHistoricalSVG(type: string, params: any): string {
 
       <!-- Main Shape -->
       <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="url(#shapeGradient)" stroke="${brandGreen}" stroke-width="2" />
-      
+
       <!-- Width Dimension Line -->
       <g opacity="0.6">
         <line x1="${x}" y1="${y - 20}" x2="${x + w}" y2="${y - 20}" stroke="${darkInk}" stroke-width="1" />
         <line x1="${x}" y1="${y - 25}" x2="${x}" y2="${y - 15}" stroke="${darkInk}" stroke-width="1" />
         <line x1="${x + w}" y1="${y - 25}" x2="${x + w}" y2="${y - 15}" stroke="${darkInk}" stroke-width="1" />
-        <text x="${x + w/2}" y="${y - 32}" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="0.05em">${wVal} UNITS</text>
+        <text x="${x + w / 2}" y="${y - 32}" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="0.05em">${wVal} UNITS</text>
       </g>
 
       <!-- Height Dimension Line -->
@@ -141,7 +201,7 @@ function generateHistoricalSVG(type: string, params: any): string {
         <line x1="${x + w + 20}" y1="${y}" x2="${x + w + 20}" y2="${y + h}" stroke="${darkInk}" stroke-width="1" />
         <line x1="${x + w + 15}" y1="${y}" x2="${x + w + 25}" y2="${y}" stroke="${darkInk}" stroke-width="1" />
         <line x1="${x + w + 15}" y1="${y + h}" x2="${x + w + 25}" y2="${y + h}" stroke="${darkInk}" stroke-width="1" />
-        <text x="${x + w + 35}" y="${y + h/2}" dominant-baseline="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="0.05em" transform="rotate(90, ${x + w + 35}, ${y + h/2})">${hVal} UNITS</text>
+        <text x="${x + w + 35}" y="${y + h / 2}" dominant-baseline="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="0.05em" transform="rotate(90, ${x + w + 35}, ${y + h / 2})">${hVal} UNITS</text>
       </g>
     `;
   } else if (type === "circle") {
@@ -149,7 +209,7 @@ function generateHistoricalSVG(type: string, params: any): string {
     const r = Math.min(rVal * 40, 100);
     const cx = width / 2;
     const cy = height / 2;
-    
+
     shapeMarkup = `
       <defs>
         <radialGradient id="circleGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
@@ -158,12 +218,12 @@ function generateHistoricalSVG(type: string, params: any): string {
         </radialGradient>
       </defs>
       <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#circleGradient)" stroke="${brandGreen}" stroke-width="2" />
-      
+
       <!-- Radius Line -->
       <g opacity="0.6">
         <line x1="${cx}" y1="${cy}" x2="${cx + r}" y2="${cy}" stroke="${darkInk}" stroke-width="1.5" stroke-dasharray="4 2" />
         <circle cx="${cx}" cy="${cy}" r="2.5" fill="${darkInk}" />
-        <text x="${cx + r/2}" y="${cy - 12}" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="0.05em">R = ${rVal}</text>
+        <text x="${cx + r / 2}" y="${cy - 12}" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="0.05em">R = ${rVal}</text>
       </g>
     `;
   } else {
@@ -173,19 +233,23 @@ function generateHistoricalSVG(type: string, params: any): string {
   return `
 <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="${width}" height="${height}" rx="24" fill="#FBFBFA"/>
-  
+
   <!-- Subtle Blueprint Grid -->
   <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
     <path d="M 20 0 L 0 0 0 20" fill="none" stroke="${gridColor}" stroke-width="0.5" stroke-opacity="0.04"/>
   </pattern>
   <rect width="100%" height="100%" fill="url(#grid)" rx="24" />
-  
+
   ${shapeMarkup}
-  
-  ${params.label ? `
-    <rect x="${width/2 - 60}" y="${height - 35}" width="120" height="20" rx="10" fill="${darkInk}" fill-opacity="0.03" />
-    <text x="${width/2}" y="${height - 21}" text-anchor="middle" fill="${darkInk}" fill-opacity="0.4" font-family="Inter, sans-serif" font-size="10" font-weight="800" style="text-transform: uppercase; letter-spacing: 0.15em;">${params.label}</text>
-  ` : ""}
+
+  ${
+    params.label
+      ? `
+    <rect x="${width / 2 - 60}" y="${height - 35}" width="120" height="20" rx="10" fill="${darkInk}" fill-opacity="0.03" />
+    <text x="${width / 2}" y="${height - 21}" text-anchor="middle" fill="${darkInk}" fill-opacity="0.4" font-family="Inter, sans-serif" font-size="10" font-weight="800" style="text-transform: uppercase; letter-spacing: 0.15em;">${params.label}</text>
+  `
+      : ""
+  }
 </svg>`;
 }
 
@@ -193,7 +257,7 @@ function parseContent(content: string): ChatElement[] {
   if (!content) return [];
   const elements: ChatElement[] = [];
   const regex = /<<(MATH_DRAW|MATH_WIDGET)\s+([^>]+)>>/g;
-  
+
   let lastIndex = 0;
   let match;
 
@@ -209,11 +273,11 @@ function parseContent(content: string): ChatElement[] {
 
     const type = match[1];
     const attrsRaw = match[2];
-    
+
     if (type === "MATH_DRAW") {
       const typeMatch = attrsRaw.match(/type="([^"]+)"/);
       const paramsMatch = attrsRaw.match(/params=({[^}]+})/);
-      
+
       let params: any = {};
       if (paramsMatch) {
         try {
@@ -229,10 +293,10 @@ function parseContent(content: string): ChatElement[] {
         id: Math.random().toString(36).substring(2, 11),
         type: "svg",
         content: generateHistoricalSVG(shapeType, params),
-        meta: { 
+        meta: {
           shape: shapeType,
           params,
-          is_historical: true 
+          is_historical: true,
         },
       });
     } else if (type === "MATH_WIDGET") {
@@ -286,7 +350,7 @@ interface StudentState {
   streamingMessageId: string | null;
   chatAbortController: AbortController | null;
   voiceSessionStatus: "idle" | "connecting" | "active" | "error";
-  
+
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
   fetchSessions: () => Promise<void>;
@@ -305,12 +369,8 @@ interface StudentState {
   setAgentPickerOpen: (open: boolean) => void;
   setPartnerModalOpen: (open: boolean) => void;
   sendPartnerRequest: (partnerId: string) => Promise<void>;
-<<<<<<< Updated upstream
   linkParent: (parentEmailOrPhone: string) => Promise<void>;
-=======
-  linkParent: (parentId: string) => Promise<void>;
   stopMessageGeneration: () => void;
->>>>>>> Stashed changes
   startVoiceSession: () => Promise<void>;
   stopVoiceSession: () => void;
   logoutStudent: () => void;
@@ -353,14 +413,16 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     set({ isSessionsLoading: true });
     try {
       const data = await studentService.fetchSessions(studentProfile.user_id);
-      
+
       const mappedChats: ChatSession[] = data.sessions.map((s: any) => ({
         id: s.session_id,
         session_id: s.session_id,
         title: s.title || s.agent_name || "Scholarly Session",
         agentType: "English Assistant",
         agentIcon: "📖",
-        lastActive: s.updated_at ? new Date(s.updated_at).toLocaleDateString() : "Recently",
+        lastActive: s.updated_at
+          ? new Date(s.updated_at).toLocaleDateString()
+          : "Recently",
         lastTopic: "Continued Learning",
         grade: "", // Grade is handled via student profile
         agent_id: s.subject_agent, // Mapping backend agent field
@@ -379,8 +441,10 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
     set({ isAgentsLoading: true });
     try {
-      const data = await studentService.fetchAvailableAgents(studentProfile.user_id);
-      
+      const data = await studentService.fetchAvailableAgents(
+        studentProfile.user_id,
+      );
+
       // Flatten the nested structure: data.partners[].subjects[].agents[]
       const agents: AgentItem[] = [];
       if (data.partners && Array.isArray(data.partners)) {
@@ -394,7 +458,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           }
         });
       }
-      
+
       set({ availableAgents: agents, isAgentsLoading: false });
     } catch (error) {
       console.error("Fetch Agents Error:", error);
@@ -417,8 +481,13 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
     set({ isEnrolledPartnersLoading: true });
     try {
-      const data = await studentService.fetchEnrolledPartners(studentProfile.user_id);
-      set({ enrolledPartners: data.partners || [], isEnrolledPartnersLoading: false });
+      const data = await studentService.fetchEnrolledPartners(
+        studentProfile.user_id,
+      );
+      set({
+        enrolledPartners: data.partners || [],
+        isEnrolledPartnersLoading: false,
+      });
     } catch (error) {
       console.error("Fetch Enrolled Partners Error:", error);
       set({ isEnrolledPartnersLoading: false });
@@ -428,37 +497,44 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   sendPartnerRequest: async (partnerId: string) => {
     const { studentProfile } = get();
     if (!studentProfile?.user_id) {
-      set({ 
-        isPartnerModalOpen: true, 
-        partnerRequestStatus: "error", 
-        partnerRequestMessage: "Student profile not found." 
+      set({
+        isPartnerModalOpen: true,
+        partnerRequestStatus: "error",
+        partnerRequestMessage: "Student profile not found.",
       });
       return;
     }
 
-    set({ 
-      isPartnerModalOpen: true, 
+    set({
+      isPartnerModalOpen: true,
       partnerRequestStatus: "loading",
-      partnerRequestMessage: "Sending request..." 
+      partnerRequestMessage: "Sending request...",
     });
 
     try {
-      const data = await studentService.sendPartnerRequest(studentProfile.user_id, partnerId);
-      const message = data.message || data.organization || "Successfully enrolled in partner module.";
+      const data = await studentService.sendPartnerRequest(
+        studentProfile.user_id,
+        partnerId,
+      );
+      const message =
+        data.message ||
+        data.organization ||
+        "Successfully enrolled in partner module.";
 
-      set({ 
-        partnerRequestStatus: "success", 
-        partnerRequestMessage: String(message) 
+      set({
+        partnerRequestStatus: "success",
+        partnerRequestMessage: String(message),
       });
     } catch (error: any) {
       console.error("Partner Request Error:", error);
-      let errorMessage = error?.message || "Failed to send partner request. Please try again.";
+      let errorMessage =
+        error?.message || "Failed to send partner request. Please try again.";
       if (typeof errorMessage !== "string") {
         errorMessage = JSON.stringify(errorMessage);
       }
-      set({ 
-        partnerRequestStatus: "error", 
-        partnerRequestMessage: errorMessage 
+      set({
+        partnerRequestStatus: "error",
+        partnerRequestMessage: errorMessage,
       });
     }
   },
@@ -466,36 +542,41 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   linkParent: async (parentEmailOrPhone: string) => {
     const { studentProfile } = get();
     if (!studentProfile?.user_id) {
-      set({ 
-        isPartnerModalOpen: true, 
-        partnerRequestStatus: "error", 
-        partnerRequestMessage: "Student profile not found." 
+      set({
+        isPartnerModalOpen: true,
+        partnerRequestStatus: "error",
+        partnerRequestMessage: "Student profile not found.",
       });
       return;
     }
 
-    set({ 
-      isPartnerModalOpen: true, 
+    set({
+      isPartnerModalOpen: true,
       partnerRequestStatus: "loading",
-      partnerRequestMessage: "Linking parent profile..." 
+      partnerRequestMessage: "Linking parent profile...",
     });
 
     try {
-      await studentService.linkParent(studentProfile.user_id, parentEmailOrPhone);
-      set({ 
-        partnerRequestStatus: "success", 
-        partnerRequestMessage: "Parent successfully linked to your profile." 
+      await studentService.linkParent(
+        studentProfile.user_id,
+        parentEmailOrPhone,
+      );
+      set({
+        partnerRequestStatus: "success",
+        partnerRequestMessage: "Parent successfully linked to your profile.",
       });
     } catch (error: any) {
       console.error("Link Parent Error:", error);
-      let errorMessage = error?.message || "Failed to link parent. Please check the ID and try again.";
+      let errorMessage =
+        error?.message ||
+        "Failed to link parent. Please check the ID and try again.";
       if (typeof errorMessage !== "string") {
         errorMessage = JSON.stringify(errorMessage);
       }
-      
-      set({ 
-        partnerRequestStatus: "error", 
-        partnerRequestMessage: errorMessage 
+
+      set({
+        partnerRequestStatus: "error",
+        partnerRequestMessage: errorMessage,
       });
     }
   },
@@ -525,31 +606,45 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
       if (!response.ok) throw new Error("Failed to fetch history");
       const data = await response.json();
-      
-      const mappedMessages: ChatMessage[] = (data.history || []).map((h: any, i: number) => {
-        const content = h.content || "";
-        const elements = parseContent(content);
-        
-        return {
-          id: `h-${i}-${Date.now()}`,
-          text: content,
-          elements: elements.length > 1 || (elements.length === 1 && elements[0].type !== "text") ? elements : undefined,
-          sender: h.role === "user" ? "user" : "ai",
-          timestamp: h.created_at ? new Date(h.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "",
-        };
-      });
+
+      const mappedMessages: ChatMessage[] = (data.history || []).map(
+        (h: any, i: number) => {
+          const content = h.content || "";
+          const elements = parseContent(content);
+
+          return {
+            id: `h-${i}-${Date.now()}`,
+            text: content,
+            elements:
+              elements.length > 1 ||
+              (elements.length === 1 && elements[0].type !== "text")
+                ? elements
+                : undefined,
+            sender: h.role === "user" ? "user" : "ai",
+            timestamp: h.created_at
+              ? new Date(h.created_at).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "",
+          };
+        },
+      );
 
       set((state) => {
         const isActive = state.activeChat?.id === sessionId;
-        return { 
+        return {
           messages: isActive ? mappedMessages : state.messages,
-          chatMessagesCache: { ...state.chatMessagesCache, [sessionId]: mappedMessages },
+          chatMessagesCache: {
+            ...state.chatMessagesCache,
+            [sessionId]: mappedMessages,
+          },
           isHistoryLoading: false,
-          historyAbortController: null
+          historyAbortController: null,
         };
       });
     } catch (error: any) {
-      if (error.name === 'AbortError') {
+      if (error.name === "AbortError") {
         console.debug("History fetch aborted for session:", sessionId);
       } else {
         console.error("Fetch History Error:", error);
@@ -576,12 +671,23 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   },
 
   openChatById: async (sessionId) => {
-    const { recentChats, fetchSessions, fetchChatHistory, openNewChat, startFocusedSession } = get();
-    
+    const {
+      recentChats,
+      fetchSessions,
+      fetchChatHistory,
+      openNewChat,
+      startFocusedSession,
+    } = get();
+
     // Handle transient 'new' state on refresh
     if (sessionId === "new") {
       fetchSessions(); // Load history in background
-      openNewChat({ name: "Socratic Tutor", agent_id: "eng-grade-4", subject: "General", grade: 10 });
+      openNewChat({
+        name: "Socratic Tutor",
+        agent_id: "eng-grade-4",
+        subject: "General",
+        grade: 10,
+      });
       return;
     }
 
@@ -604,14 +710,14 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     }
 
     // 1. Try to find in existing list
-    let chat = recentChats.find(c => c.id === sessionId);
-    
+    let chat = recentChats.find((c) => c.id === sessionId);
+
     // 2. If not found, it might be a refresh - fetch sessions
     if (!chat) {
       await fetchSessions();
-      chat = get().recentChats.find(c => c.id === sessionId);
+      chat = get().recentChats.find((c) => c.id === sessionId);
     }
-    
+
     // 3. If found now, open it and trigger history
     if (chat) {
       set((state) => ({
@@ -659,10 +765,10 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
   initNewChat: (agentId: string) => {
     const { availableAgents } = get();
-    // If agents aren't loaded yet, we can't fully init, but fetchAvailableAgents 
+    // If agents aren't loaded yet, we can't fully init, but fetchAvailableAgents
     // is called on StudentHome mount. Here we try to find the agent.
-    const agent = availableAgents.find(a => a.agent_id === agentId);
-    
+    const agent = availableAgents.find((a) => a.agent_id === agentId);
+
     if (agent) {
       const newSession: ChatSession = {
         id: "new",
@@ -681,10 +787,10 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
   startFocusedSession: (documentTitle, subject) => {
     const { availableAgents, studentProfile } = get();
-    
+
     // Find matching agent for the subject
-    const matchingAgent = availableAgents.find(a => 
-      a.subject.toLowerCase() === subject.toLowerCase()
+    const matchingAgent = availableAgents.find(
+      (a) => a.subject.toLowerCase() === subject.toLowerCase(),
     );
 
     const tempId = "new-focused";
@@ -696,24 +802,29 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       agentIcon: "🎯",
       lastActive: "Just now",
       lastTopic: subject,
-      grade: studentProfile?.grade ? `Grade ${studentProfile.grade}` : "General",
+      grade: studentProfile?.grade
+        ? `Grade ${studentProfile.grade}`
+        : "General",
       agent_id: matchingAgent?.agent_id || "eng-grade-4", // Fallback
       isFocused: true,
       document_title: documentTitle,
-      subject: subject
+      subject: subject,
     };
 
     // Navigation to /student/chat is handled by the calling component via router.push
 
     // Save context for refresh recovery
-    sessionStorage.setItem("pending_focused_session", JSON.stringify({ subject, documentTitle }));
+    sessionStorage.setItem(
+      "pending_focused_session",
+      JSON.stringify({ subject, documentTitle }),
+    );
 
     set((state) => ({
       activeChat: newSession,
       isChatOpen: true,
       messages: [],
       chatMessagesCache: { ...state.chatMessagesCache, [tempId]: [] },
-      isAITyping: false
+      isAITyping: false,
     }));
 
     return tempId;
@@ -724,13 +835,13 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     if (historyAbortController) {
       historyAbortController.abort();
     }
-    set({ 
-      isChatOpen: false, 
-      activeChat: null, 
-      messages: [], 
+    set({
+      isChatOpen: false,
+      activeChat: null,
+      messages: [],
       isAITyping: false,
       isHistoryLoading: false,
-      historyAbortController: null
+      historyAbortController: null,
     });
   },
 
@@ -742,17 +853,20 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     if (activeChat.chatMode === "text") return;
 
     set({ voiceSessionStatus: "connecting" });
-    
+
     // Set chat mode to voice if not already set
     if (!activeChat.chatMode) {
       set((state) => ({
-        activeChat: state.activeChat ? { ...state.activeChat, chatMode: "voice" } : null
+        activeChat: state.activeChat
+          ? { ...state.activeChat, chatMode: "voice" }
+          : null,
       }));
     }
 
     try {
       // Lazy load voice service to avoid SSR issues
-      const { voiceService } = await import("@/features/student/services/voiceService");
+      const { voiceService } =
+        await import("@/features/student/services/voiceService");
 
       await voiceService.startSession(studentProfile.user_id, (event: any) => {
         if (event.type === "connected") {
@@ -764,16 +878,25 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         } else if (event.type === "session_id") {
           // Update activeChat with the real session_id from backend
           const { activeChat, fetchSessions } = get();
-          if (activeChat && (activeChat.id === "new" || activeChat.id === "new-focused")) {
+          if (
+            activeChat &&
+            (activeChat.id === "new" || activeChat.id === "new-focused")
+          ) {
             const newSessionId = event.session_id;
-            
+
             // 1. Update the store
             set((state) => ({
-              activeChat: state.activeChat ? { ...state.activeChat, session_id: newSessionId } : null
+              activeChat: state.activeChat
+                ? { ...state.activeChat, session_id: newSessionId }
+                : null,
             }));
 
             // 2. Update the URL
-            window.history.pushState({}, "", `/student?session=${newSessionId}`);
+            window.history.pushState(
+              {},
+              "",
+              `/student?session=${newSessionId}`,
+            );
 
             // 3. Refresh sidebar to show the new chat
             fetchSessions();
@@ -781,11 +904,13 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         } else if (event.type === "entry_resolved") {
           // Update chat metadata when entry phase completes
           set((state) => ({
-            activeChat: state.activeChat ? { 
-              ...state.activeChat, 
-              subject: event.subject,
-              lastTopic: event.chapter
-            } : null
+            activeChat: state.activeChat
+              ? {
+                  ...state.activeChat,
+                  subject: event.subject,
+                  lastTopic: event.chapter,
+                }
+              : null,
           }));
         } else if (event.type === "transcription") {
           // Handle transcription if needed, e.g., show as optimistic user message
@@ -800,7 +925,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
   stopVoiceSession: async () => {
     try {
-      const { voiceService } = await import("@/features/student/services/voiceService");
+      const { voiceService } =
+        await import("@/features/student/services/voiceService");
       voiceService.stopSession();
     } catch (error) {
       console.error("Failed to stop voice session:", error);
@@ -821,7 +947,9 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     // Set chat mode to text if not already set
     if (!activeChat.chatMode) {
       set((state) => ({
-        activeChat: state.activeChat ? { ...state.activeChat, chatMode: "text" } : null
+        activeChat: state.activeChat
+          ? { ...state.activeChat, chatMode: "text" }
+          : null,
       }));
     }
 
@@ -829,7 +957,10 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       id: Date.now().toString(),
       text,
       sender: "user",
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     };
 
     // Insert user message + streaming AI placeholder immediately
@@ -838,26 +969,42 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       id: streamingMsgId,
       text: "",
       sender: "ai",
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     };
 
     set((state) => {
-      const currentMessages = state.chatMessagesCache[chatSentFromId] || state.messages;
+      const currentMessages =
+        state.chatMessagesCache[chatSentFromId] || state.messages;
       const newMessages = [...currentMessages, userMsg, streamingPlaceholder];
 
       return {
-        messages: state.activeChat?.id === chatSentFromId ? newMessages : state.messages,
-        chatMessagesCache: { ...state.chatMessagesCache, [chatSentFromId]: newMessages },
+        messages:
+          state.activeChat?.id === chatSentFromId
+            ? newMessages
+            : state.messages,
+        chatMessagesCache: {
+          ...state.chatMessagesCache,
+          [chatSentFromId]: newMessages,
+        },
         typingChatIds: [...state.typingChatIds, chatSentFromId],
-        isAITyping: state.activeChat?.id === chatSentFromId ? true : state.isAITyping,
+        isAITyping:
+          state.activeChat?.id === chatSentFromId ? true : state.isAITyping,
         streamingMessageId: streamingMsgId,
       };
     });
 
     try {
-      const sessionIdToSend = activeChat.session_id || activeChat.id || undefined;
-      const isNewSession = !sessionIdToSend || sessionIdToSend === "new" || sessionIdToSend.startsWith("new-") || sessionIdToSend.startsWith("focused-");
-      
+      const sessionIdToSend =
+        activeChat.session_id || activeChat.id || undefined;
+      const isNewSession =
+        !sessionIdToSend ||
+        sessionIdToSend === "new" ||
+        sessionIdToSend.startsWith("new-") ||
+        sessionIdToSend.startsWith("focused-");
+
       console.debug("[Chat] Sending message", {
         session_id: isNewSession ? undefined : sessionIdToSend,
         isFocused: activeChat.isFocused,
@@ -868,18 +1015,25 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       const abortController = new AbortController();
       set({ chatAbortController: abortController });
 
-      const response = await studentService.sendChatMessage({
-        text,
-        user_id: studentProfile.user_id,
-        ...(isNewFocused ? {} : { session_id: isNewSession ? undefined : sessionIdToSend }),
-        ...(!activeChat.isFocused && { agent_id: activeChat.agent_id || "eng-grade-4" }),
-        subject: activeChat.subject || "English",
-        grade: studentProfile.grade || 10,
-        ...(activeChat.isFocused && {
-          document_title: activeChat.document_title || "General",
-          intent: ""
-        })
-      }, abortController.signal);
+      const response = await studentService.sendChatMessage(
+        {
+          text,
+          user_id: studentProfile.user_id,
+          ...(isNewFocused
+            ? {}
+            : { session_id: isNewSession ? undefined : sessionIdToSend }),
+          ...(!activeChat.isFocused && {
+            agent_id: activeChat.agent_id || "eng-grade-4",
+          }),
+          subject: activeChat.subject || "English",
+          grade: studentProfile.grade || 10,
+          ...(activeChat.isFocused && {
+            document_title: activeChat.document_title || "General",
+            intent: "",
+          }),
+        },
+        abortController.signal,
+      );
 
       if (!response.body) throw new Error("No response body for streaming");
 
@@ -898,9 +1052,11 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
       const pushTextElement = () => {
         if (currentTextBuffer) {
-          // Strip any raw tags that might be embedded in the text stream 
+          // Strip any raw tags that might be embedded in the text stream
           // to prevent them from showing up as raw text in the UI.
-          const sanitized = currentTextBuffer.replace(/<<(MATH_DRAW|MATH_WIDGET)\s+[^>]+>>/g, "").trim();
+          const sanitized = currentTextBuffer
+            .replace(/<<(MATH_DRAW|MATH_WIDGET)\s+[^>]+>>/g, "")
+            .trim();
           if (sanitized) {
             elements.push({
               id: Math.random().toString(36).substring(2, 11),
@@ -928,7 +1084,11 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           if (!jsonStr) continue;
 
           let event: any;
-          try { event = JSON.parse(jsonStr); } catch { continue; }
+          try {
+            event = JSON.parse(jsonStr);
+          } catch {
+            continue;
+          }
 
           if (event.type === "planning") {
             const status = event.text || event.message || "";
@@ -937,39 +1097,55 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             }
           } else if (event.type === "tool_status") {
             currentToolStatus = event.message || "Drawing...";
-          } else if (event.type === "visual_block" || event.type === "visual_error") {
+          } else if (
+            event.type === "visual_block" ||
+            event.type === "visual_error"
+          ) {
             pushTextElement();
-            const svgContent = event.type === "visual_block" 
-              ? event.svg 
-              : (event.fallback?.content || event.fallback_text || "[Visual Error]");
-            
+            const svgContent =
+              event.type === "visual_block"
+                ? event.svg
+                : event.fallback?.content ||
+                  event.fallback_text ||
+                  "[Visual Error]";
+
             elements.push({
               id: Math.random().toString(36).substring(2, 11),
               type: "svg",
               content: svgContent,
-              meta: event.meta
+              meta: event.meta,
             });
             currentToolStatus = undefined;
-          } else if (event.type === "math_widget" || event.type === "math_widget_error") {
+          } else if (
+            event.type === "math_widget" ||
+            event.type === "math_widget_error"
+          ) {
             pushTextElement();
             elements.push({
               id: Math.random().toString(36).substring(2, 11),
               type: "widget",
               content: event.expression || "",
-              meta: { 
-                error: event.type === "math_widget_error", 
-                message: event.message 
-              }
+              meta: {
+                error: event.type === "math_widget_error",
+                message: event.message,
+              },
             });
             currentToolStatus = undefined;
-          } else if ((event.type === "chunk" || event.type === "chunks") && typeof event.text === "string") {
+          } else if (
+            (event.type === "chunk" || event.type === "chunks") &&
+            typeof event.text === "string"
+          ) {
             currentTextBuffer += event.text;
             bufferedText += event.text;
           } else if (event.type === "done") {
             finalSessionId = event.session_id;
             finalOptions = Array.isArray(event.options) ? event.options : [];
             // If no chunks were received, fall back to the full response text provided in the 'done' event
-            if (!bufferedText && typeof event.response === "string" && event.response.trim()) {
+            if (
+              !bufferedText &&
+              typeof event.response === "string" &&
+              event.response.trim()
+            ) {
               currentTextBuffer = event.response;
               bufferedText = event.response;
             }
@@ -979,37 +1155,62 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       pushTextElement();
 
       // ── Phase 2: Play back planning statuses with delays, then reveal text ─
-      const statusesToShow = planningStatuses.length > 0 ? planningStatuses : ["Processing..."];
+      const statusesToShow =
+        planningStatuses.length > 0 ? planningStatuses : ["Processing..."];
 
       const patchStatus = (statusText: string | undefined) => {
         set((state) => {
           const patch = (msgs: ChatMessage[]) =>
-            msgs.map(m => m.id === streamingMsgId ? { ...m, statusText, text: "" } : m);
+            msgs.map((m) =>
+              m.id === streamingMsgId ? { ...m, statusText, text: "" } : m,
+            );
           return {
-            messages: state.activeChat?.id === chatSentFromId ? patch(state.messages) : state.messages,
-            chatMessagesCache: { ...state.chatMessagesCache, [chatSentFromId]: patch(state.chatMessagesCache[chatSentFromId] || []) },
+            messages:
+              state.activeChat?.id === chatSentFromId
+                ? patch(state.messages)
+                : state.messages,
+            chatMessagesCache: {
+              ...state.chatMessagesCache,
+              [chatSentFromId]: patch(
+                state.chatMessagesCache[chatSentFromId] || [],
+              ),
+            },
           };
         });
       };
 
       for (const status of statusesToShow) {
         patchStatus(status);
-        await new Promise(resolve => setTimeout(resolve, 1200));
+        await new Promise((resolve) => setTimeout(resolve, 1200));
       }
 
       // Clear status and reveal the full structured content
       set((state) => {
         const patch = (msgs: ChatMessage[]) =>
-          msgs.map(m => m.id === streamingMsgId ? { 
-            ...m, 
-            statusText: undefined, 
-            text: bufferedText.replace(/<<(MATH_DRAW|MATH_WIDGET)\s+[^>]+>>/g, "").trim(),
-            elements: elements,
-            toolStatus: currentToolStatus
-          } : m);
+          msgs.map((m) =>
+            m.id === streamingMsgId
+              ? {
+                  ...m,
+                  statusText: undefined,
+                  text: bufferedText
+                    .replace(/<<(MATH_DRAW|MATH_WIDGET)\s+[^>]+>>/g, "")
+                    .trim(),
+                  elements: elements,
+                  toolStatus: currentToolStatus,
+                }
+              : m,
+          );
         return {
-          messages: state.activeChat?.id === chatSentFromId ? patch(state.messages) : state.messages,
-          chatMessagesCache: { ...state.chatMessagesCache, [chatSentFromId]: patch(state.chatMessagesCache[chatSentFromId] || []) },
+          messages:
+            state.activeChat?.id === chatSentFromId
+              ? patch(state.messages)
+              : state.messages,
+          chatMessagesCache: {
+            ...state.chatMessagesCache,
+            [chatSentFromId]: patch(
+              state.chatMessagesCache[chatSentFromId] || [],
+            ),
+          },
         };
       });
 
@@ -1020,7 +1221,10 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           text: bufferedText,
           elements: elements,
           sender: "ai",
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
           options: finalOptions.length > 0 ? finalOptions : undefined,
           statusText: undefined,
           toolStatus: undefined,
@@ -1030,8 +1234,11 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           msgs.map((m) => (m.id === streamingMsgId ? finalisedMsg : m));
 
         // Update the session in recentChats
-        const isPromotingNewChat = chatSentFromId === "new" || chatSentFromId === "new-focused";
-        const chatInList = state.recentChats.find((c) => c.id === chatSentFromId);
+        const isPromotingNewChat =
+          chatSentFromId === "new" || chatSentFromId === "new-focused";
+        const chatInList = state.recentChats.find(
+          (c) => c.id === chatSentFromId,
+        );
         let newRecentChats = state.recentChats;
         let finalActiveChat = state.activeChat;
         const realId = finalSessionId || chatSentFromId;
@@ -1045,7 +1252,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           };
           // Filter out existing in case fetchSessions picked it up while streaming
           const deduplicatedChats = state.recentChats.filter(
-            (c) => c.id !== finalSessionId && c.session_id !== finalSessionId
+            (c) => c.id !== finalSessionId && c.session_id !== finalSessionId,
           );
           newRecentChats = [updatedChat, ...deduplicatedChats];
           if (state.activeChat?.id === "new") {
@@ -1060,7 +1267,9 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           // Replace the temp entry and remove any duplicate with the same realId
           newRecentChats = state.recentChats
             .map((c) => (c.id === chatSentFromId ? updatedChat : c))
-            .filter((c, idx, arr) => arr.findIndex((x) => x.id === c.id) === idx);
+            .filter(
+              (c, idx, arr) => arr.findIndex((x) => x.id === c.id) === idx,
+            );
           if (state.activeChat?.id === chatSentFromId) {
             finalActiveChat = updatedChat;
           }
@@ -1069,12 +1278,17 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         // Migrate cache key from tempId to realId
         const currentCached = state.chatMessagesCache[chatSentFromId] || [];
         const finalisedMessages = patchMsg(currentCached);
-        const newCache = { ...state.chatMessagesCache, [realId]: finalisedMessages };
+        const newCache = {
+          ...state.chatMessagesCache,
+          [realId]: finalisedMessages,
+        };
         if (realId !== chatSentFromId) {
           delete newCache[chatSentFromId];
         }
 
-        const newTypingIds = state.typingChatIds.filter((id) => id !== chatSentFromId);
+        const newTypingIds = state.typingChatIds.filter(
+          (id) => id !== chatSentFromId,
+        );
         const isStillViewing = state.activeChat?.id === chatSentFromId;
 
         return {
@@ -1089,8 +1303,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         };
       });
     } catch (error: any) {
-      const isAbort = error.name === 'AbortError';
-      
+      const isAbort = error.name === "AbortError";
+
       if (isAbort) {
         console.debug("Chat generation aborted by user");
       } else {
@@ -1102,7 +1316,10 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           id: `err-${Date.now()}`,
           text: "Sorry, I encountered an error connecting to the knowledge base. Please try again.",
           sender: "ai",
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
         };
 
         const cleanOrReplace = (msgs: ChatMessage[]) => {
@@ -1113,13 +1330,22 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
         const cached = state.chatMessagesCache[chatSentFromId] || [];
         const finishedMessages = cleanOrReplace(cached);
-        const newTypingIds = state.typingChatIds.filter((id) => id !== chatSentFromId);
+        const newTypingIds = state.typingChatIds.filter(
+          (id) => id !== chatSentFromId,
+        );
 
         return {
-          chatMessagesCache: { ...state.chatMessagesCache, [chatSentFromId]: finishedMessages },
-          messages: state.activeChat?.id === chatSentFromId ? finishedMessages : state.messages,
+          chatMessagesCache: {
+            ...state.chatMessagesCache,
+            [chatSentFromId]: finishedMessages,
+          },
+          messages:
+            state.activeChat?.id === chatSentFromId
+              ? finishedMessages
+              : state.messages,
           typingChatIds: newTypingIds,
-          isAITyping: state.activeChat?.id === chatSentFromId ? false : state.isAITyping,
+          isAITyping:
+            state.activeChat?.id === chatSentFromId ? false : state.isAITyping,
           streamingMessageId: null,
           chatAbortController: null,
         };
@@ -1132,12 +1358,20 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     if (chatAbortController) {
       chatAbortController.abort();
     }
-    set({ chatAbortController: null, isAITyping: false, streamingMessageId: null });
+    set({
+      chatAbortController: null,
+      isAITyping: false,
+      streamingMessageId: null,
+    });
   },
 
   setAgentPickerOpen: (open) => set({ isAgentPickerOpen: open }),
-  setPartnerModalOpen: (open) => set({ isPartnerModalOpen: open, partnerRequestStatus: open ? get().partnerRequestStatus : "idle" }),
-  
+  setPartnerModalOpen: (open) =>
+    set({
+      isPartnerModalOpen: open,
+      partnerRequestStatus: open ? get().partnerRequestStatus : "idle",
+    }),
+
   setProfileOpen: (open) => set({ isProfileOpen: open }),
 
   logoutStudent: () => {
