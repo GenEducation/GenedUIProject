@@ -72,14 +72,14 @@ export function StudentChatView() {
 
   return (
     <div className="h-screen flex bg-white font-sans overflow-hidden">
-      {/* ── LEFT SIDEBAR ────────────────────────────────────────── */}
+      {/* -- LEFT SIDEBAR ------------------------------------------ */}
       <StudentChatSidebar 
         activeChatId={activeChat.id} 
         isOpen={isSidebarOpen} 
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      {/* ── MAIN CHAT AREA ─────────────────────────────────────── */}
+      {/* Main Chat Area */}
       <StudentChatMain
         activeChat={activeChat}
         messages={messages}

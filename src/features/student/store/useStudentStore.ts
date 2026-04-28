@@ -4,7 +4,7 @@ import { authFetch } from "@/utils/authFetch";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// -- Types --------------------------------------------------------------------
 
 export interface StudentProfile {
   user_id: string;
@@ -29,6 +29,7 @@ export interface ChatMessage {
   elements?: ChatElement[];
   sender: "user" | "ai";
   timestamp: string;
+  isPlanning?: boolean;
   options?: string[];
   statusText?: string;
   toolStatus?: string;
@@ -144,7 +145,7 @@ export const AVAILABLE_SUBJECTS: SubjectItem[] = [
   },
 ];
 
-// ── Visual Tag Parser ────────────────────────────────────────────────────────
+// -- Visual Tag Parser --------------------------------------------------------
 
 const SCHOLARLY_BLUEPRINT = `
 <svg width="400" height="200" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -323,7 +324,7 @@ function parseContent(content: string): ChatElement[] {
   return elements;
 }
 
-// ── Store interface ───────────────────────────────────────────────────────────
+// -- Store interface ----------------------------------------------------------─
 
 interface StudentState {
   studentProfile: StudentProfile | null;
@@ -376,7 +377,7 @@ interface StudentState {
   logoutStudent: () => void;
 }
 
-// ── Store ─────────────────────────────────────────────────────────────────────
+// -- Store --------------------------------------------------------------------─
 
 export const useStudentStore = create<StudentState>((set, get) => ({
   studentProfile: null,
@@ -917,10 +918,99 @@ export const useStudentStore = create<StudentState>((set, get) => ({
                 }
               : null,
           }));
-        } else if (event.type === "transcription") {
-          // Handle transcription if needed, e.g., show as optimistic user message
+        } else if (event.type === "planning") {
+          const { text } = event;
+          set((state) => {
+            const lastMsg = state.messages[state.messages.length - 1];
+            const isContinuingPlanning = 
+              lastMsg && 
+              lastMsg.sender === "ai" && 
+              lastMsg.isPlanning && 
+              state.streamingMessageId === lastMsg.id;
+
+            let updatedMessages = [...state.messages];
+            let newId = state.streamingMessageId;
+
+            if (isContinuingPlanning) {
+              updatedMessages[updatedMessages.length - 1] = {
+                ...lastMsg,
+                text: text || "Thinking...",
+              };
+            } else {
+              newId = `planning-${Date.now()}`;
+              updatedMessages.push({
+                id: newId,
+                text: text || "Thinking...",
+                sender: "ai",
+                isPlanning: true,
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              });
+            }
+
+            return {
+              messages: updatedMessages,
+              streamingMessageId: newId,
+              isAITyping: true,
+            };
+          });
+        } else if (event.type === "turn_complete") {
+          set({ isAITyping: false, streamingMessageId: null });
+        } else if (event.type === "status") {
+          if (event.phase !== "teaching") {
+            set({ isAITyping: false });
+          }
         }
-      }, activeChat.session_id, activeChat.subject);
+        },
+        (content, role) => {
+          const { activeChat } = get();
+          if (!activeChat) return;
+
+          set((state) => {
+            const lastMsg = state.messages[state.messages.length - 1];
+            const sender = role === "user" ? "user" : "ai";
+            
+            // Check if we are continuing a message or replacing a planning message
+            const isContinuing = 
+              lastMsg && 
+              lastMsg.sender === sender && 
+              state.streamingMessageId === lastMsg.id;
+            
+            const isReplacingPlanning = 
+              lastMsg && 
+              lastMsg.sender === "ai" && 
+              lastMsg.isPlanning &&
+              state.streamingMessageId === lastMsg.id;
+
+            let updatedMessages = [...state.messages];
+            let newId = state.streamingMessageId;
+
+            if (isContinuing) {
+              updatedMessages[updatedMessages.length - 1] = {
+                ...lastMsg,
+                // If we were planning, replace the text entirely on the first transcript chunk
+                text: isReplacingPlanning ? content : lastMsg.text + (role === "user" ? " " : "") + content,
+                isPlanning: false // Once transcript starts, it's no longer planning
+              };
+            } else {
+              newId = `voice-${Date.now()}`;
+              updatedMessages.push({
+                id: newId,
+                text: content,
+                sender,
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              });
+            }
+
+            return {
+              messages: updatedMessages,
+              streamingMessageId: newId,
+              isAITyping: role === "assistant"
+            };
+          });
+        },
+        activeChat.session_id,
+        activeChat.subject
+      );
     } catch (error) {
       console.error("Failed to start voice session:", error);
       set({ voiceSessionStatus: "error" });
@@ -1047,7 +1137,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       let finalSessionId: string | undefined;
       let finalOptions: string[] = [];
 
-      // ── Phase 1: Read the ENTIRE stream silently ──────────────────────────
+      // -- Phase 1: Read the ENTIRE stream silently --------------------------
       const planningStatuses: string[] = [];
       const elements: ChatElement[] = [];
       let bufferedText = ""; // Full text for legacy/fallback
@@ -1158,7 +1248,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       }
       pushTextElement();
 
-      // ── Phase 2: Play back planning statuses with delays, then reveal text ─
+      // -- Phase 2: Play back planning statuses with delays, then reveal text ─
       const statusesToShow =
         planningStatuses.length > 0 ? planningStatuses : ["Processing..."];
 

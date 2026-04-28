@@ -76,7 +76,7 @@ export function ParentHome() {
 
   return (
     <div className="flex h-screen bg-[#FBFBFA] overflow-hidden font-sans relative">
-      {/* ── MOBILE SIDEBAR OVERLAY ────────────────────────────────────────── */}
+      {/* -- MOBILE SIDEBAR OVERLAY ------------------------------------------ */}
       <AnimatePresence>
         {isSidebarOpen && (
           <motion.div
@@ -89,7 +89,7 @@ export function ParentHome() {
         )}
       </AnimatePresence>
 
-      {/* ── SIDEBAR ────────────────────────────────────────────────────────── */}
+      {/* -- SIDEBAR ---------------------------------------------------------- */}
       <aside className={`
         fixed inset-y-0 left-0 w-80 bg-white border-r border-[#1a3a2a]/5 flex flex-col z-50 transition-transform duration-300
         lg:translate-x-0 lg:static lg:flex
@@ -189,7 +189,7 @@ export function ParentHome() {
         </div>
       </aside>
 
-      {/* ── MAIN CONTENT ───────────────────────────────────────────────────── */}
+      {/* -- MAIN CONTENT ----------------------------------------------------─ */}
       <main className="flex-1 overflow-hidden flex flex-col">
         {/* Global Parent Header */}
         <header className="px-6 lg:px-10 py-6 bg-white border-b border-[#1a3a2a]/5 flex items-center justify-between z-20">

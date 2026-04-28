@@ -60,7 +60,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
 
   return (
     <div className="h-screen overflow-y-auto bg-[#FBFBFA] flex flex-col font-sans">
-      {/* ── TOP NAVIGATION (Student Only) ─────────────────────────────────── */}
+      {/* -- TOP NAVIGATION (Student Only) ----------------------------------─ */}
       {mode === "student" && (
         <header className="px-8 py-6 flex items-center justify-between bg-white border-b border-[#1a3a2a]/5 sticky top-0 z-20">
           <img src="/Logo.svg" alt="GenEd Logo" className="h-8 w-auto" />
@@ -76,7 +76,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
         </header>
       )}
 
-      {/* ── SUB-NAVIGATION CONTROLS ────────────────────────────────────────── */}
+      {/* -- SUB-NAVIGATION CONTROLS ------------------------------------------ */}
       <div className={`px-8 py-4 flex items-center gap-8 bg-transparent border-b border-[#1a3a2a]/5 sticky ${mode === 'student' ? 'top-[89px]' : 'top-0'} z-10 backdrop-blur-sm bg-white/30`}>
         {mode === "student" && (
           <>
@@ -115,7 +115,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
         )}
       </div>
 
-      {/* ── DASHBOARD CONTENT ──────────────────────────────────────────────── */}
+      {/* -- DASHBOARD CONTENT ------------------------------------------------ */}
       <main className="flex-1 px-8 py-10 max-w-7xl mx-auto w-full space-y-12 pb-20">
         <section className="space-y-4">
           

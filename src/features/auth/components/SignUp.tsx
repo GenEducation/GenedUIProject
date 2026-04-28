@@ -53,7 +53,7 @@ export function SignUp({
   const [googleToken, setGoogleToken] = useState<string | null>(null);
   const isSignupEnabled = process.env.NEXT_PUBLIC_ENABLE_SIGNUP !== "false";
 
-  // ── Signup disabled state ──────────────────────────────────────────────────
+  // -- Signup disabled state --------------------------------------------------
   if (!isSignupEnabled) {
     return (
       <div className="rounded-2xl border border-[#042e5c]/10 bg-white/80 backdrop-blur-xl p-8 sm:p-10 shadow-[0_8px_40px_rgba(4,46,92,0.07)] text-center py-20 flex flex-col items-center justify-center">
@@ -108,7 +108,7 @@ export function SignUp({
     );
   }
 
-  // ── Full signup form ───────────────────────────────────────────────────────
+  // -- Full signup form ------------------------------------------------------─
   return (
     <form
       onSubmit={onSubmit}

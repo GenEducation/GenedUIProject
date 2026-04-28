@@ -75,7 +75,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
   setSelectedStudent: (student) => set({ selectedStudent: student }),
 
-  // ── Fetch students from backend ─────────────────────────────────────────
+  // -- Fetch students from backend ----------------------------------------─
   fetchStudents: async () => {
     const rawPartnerId = localStorage.getItem("gened_partner_id");
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
@@ -130,7 +130,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     }
   },
 
-  // ── Approve request (backend-first) ────────────────────────────────────
+  // -- Approve request (backend-first) ------------------------------------
   approveRequest: async (studentId) => {
     const rawPartnerId = localStorage.getItem("gened_partner_id");
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
@@ -166,7 +166,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     });
   },
 
-  // ── Reject request (backend-first) ─────────────────────────────────────
+  // -- Reject request (backend-first) ------------------------------------─
   rejectRequest: async (studentId) => {
     const rawPartnerId = localStorage.getItem("gened_partner_id");
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
@@ -190,7 +190,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     });
   },
 
-  // ── Subject actions ────────────────────────────────────────────────────
+  // -- Subject actions ----------------------------------------------------
   fetchSubjects: async () => {
     const rawPartnerId = localStorage.getItem("gened_partner_id");
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
@@ -326,7 +326,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     }));
   },
 
-  // ── Logout ─────────────────────────────────────────────────────────────
+  // -- Logout ------------------------------------------------------------─
   logoutPartner: () => {
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");

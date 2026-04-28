@@ -2,8 +2,7 @@ import { getAuthToken } from "@/utils/authFetch";
 
 /**
  * VoiceService handles the real-time audio interaction with the April backend.
- * It manages WebSocket connectivity, 16kHz PCM mic capture, and 24kHz PCM playback
- * with a jitter buffer to ensure smooth audio output.
+ * Now includes a Synchronized Typewriter to align text display with audio playback.
  */
 
 class VoiceService {
@@ -17,29 +16,42 @@ class VoiceService {
   private currentSessionId: string | null = null;
   private currentSubject: string | null = null;
   private onEventCallback: ((event: any) => void) | null = null;
+  private onTextRevealCallback: ((text: string, role: "user" | "assistant") => void) | null = null;
   
-  // Jitter Buffer State
+  // Jitter Buffer & Sync State
   private nextStartTime = 0;
   private bufferQueue: ArrayBuffer[] = [];
   private isBuffering = true;
-  private readonly TARGET_BUFFER_SIZE = 3; // Number of chunks to buffer before starting playback
+  private readonly TARGET_BUFFER_SIZE = 3;
 
-  async startSession(studentId: string, onEvent: (event: any) => void, sessionId?: string, subject?: string) {
-    // Always update the current context
+  // Typewriter Sync State
+  private pendingAssistantText = "";
+  private revealedAssistantText = "";
+  private lastTypeTime = 0;
+  private isTypewriterRunning = false;
+
+  async startSession(
+    studentId: string, 
+    onEvent: (event: any) => void, 
+    onTextReveal: (text: string, role: "user" | "assistant") => void,
+    sessionId?: string, 
+    subject?: string
+  ) {
     this.currentStudentId = studentId;
     this.currentSessionId = sessionId || null;
     this.currentSubject = subject ?? null;
     this.onEventCallback = onEvent;
+    this.onTextRevealCallback = onTextReveal;
 
     if (this.isSessionActive) {
-      // If already active, just re-send the init message to sync context
       this.sendInitMessage();
       return;
     }
 
     this.isSessionActive = true;
+    this.pendingAssistantText = "";
+    this.revealedAssistantText = "";
 
-    // Initialize AudioContext on user gesture
     if (!this.audioCtx) {
       this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
         sampleRate: 24000,
@@ -52,21 +64,17 @@ class VoiceService {
     this.bufferQueue = [];
     this.isBuffering = true;
 
-    // Start Microphone once and keep it alive
     await this.initMicrophone();
-    
-    // Start WebSocket connection
     this.connect();
+    this.startTypewriterLoop();
   }
 
   private async initMicrophone() {
     if (this.mediaStream) return;
-
     try {
       this.micCtx = new AudioContext({ sampleRate: 16000 });
       this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const source = this.micCtx.createMediaStreamSource(this.mediaStream);
-      
       this.processor = this.micCtx.createScriptProcessor(4096, 1, 1);
       
       this.processor.onaudioprocess = (e) => {
@@ -82,7 +90,6 @@ class VoiceService {
 
       source.connect(this.processor);
       this.processor.connect(this.micCtx.destination);
-      console.log("[VoiceService] Mic started at 16kHz");
     } catch (err) {
       console.error("[VoiceService] Mic Error:", err);
       this.onEventCallback?.({ type: "error", error: err });
@@ -93,20 +100,14 @@ class VoiceService {
     if (!this.isSessionActive || !this.currentStudentId) return;
 
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!apiBaseUrl) {
-      throw new Error("NEXT_PUBLIC_API_URL not defined");
-    }
-
-    const wsBaseUrl = apiBaseUrl.replace(/^http/, "ws");
+    const wsBaseUrl = apiBaseUrl?.replace(/^http/, "ws");
     const token = getAuthToken();
     const wsUrl = `${wsBaseUrl}/ws/april-live?token=${token || ""}&user_id=${this.currentStudentId}`;
 
-    console.log("[VoiceService] Connecting to unified WS:", wsUrl.split('token=')[0] + 'token=REDACTED');
     this.ws = new WebSocket(wsUrl);
     this.ws.binaryType = "arraybuffer";
 
     this.ws.onopen = () => {
-      console.log("[VoiceService] Connected");
       this.sendInitMessage();
       this.onEventCallback?.({ type: "connected" });
     };
@@ -119,6 +120,16 @@ class VoiceService {
           if (data.type === "session_id" && data.session_id) {
             this.currentSessionId = data.session_id;
           }
+
+          if (data.type === "transcript") {
+            if (data.role === "user") {
+              // User transcript is shown immediately as it's not tied to playback
+              this.onTextRevealCallback?.(data.content, "user");
+            } else {
+              // Assistant transcript is buffered for synchronized typewriter
+              this.pendingAssistantText += (this.pendingAssistantText ? " " : "") + data.content;
+            }
+          }
           
           this.onEventCallback?.(data);
         } catch (err) {
@@ -130,37 +141,25 @@ class VoiceService {
     };
 
     this.ws.onclose = () => {
-      console.log("[VoiceService] WebSocket closed");
       if (this.isSessionActive) {
         setTimeout(() => this.connect(), 1000);
       } else {
         this.onEventCallback?.({ type: "disconnected" });
       }
     };
-
-    this.ws.onerror = (err) => {
-      console.error("[VoiceService] WebSocket error:", err);
-    };
   }
 
   private sendInitMessage() {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-
-    const token = getAuthToken();
     this.ws.send(
       JSON.stringify({
         type: "init",
         student_id: this.currentStudentId,
         session_id: this.currentSessionId,
         subject: this.currentSubject,
-        token: token,
+        token: getAuthToken(),
       })
     );
-    console.log("[VoiceService] Sent Init:", {
-      student_id: this.currentStudentId,
-      session_id: this.currentSessionId,
-      subject: this.currentSubject,
-    });
   }
 
   private handleIncomingAudio(buffer: ArrayBuffer) {
@@ -197,12 +196,55 @@ class VoiceService {
     }
   }
 
+  private startTypewriterLoop() {
+    if (this.isTypewriterRunning) return;
+    this.isTypewriterRunning = true;
+    this.lastTypeTime = performance.now();
+    
+    const loop = (now: number) => {
+      if (!this.isSessionActive) {
+        this.isTypewriterRunning = false;
+        return;
+      }
+
+      const dt = (now - this.lastTypeTime) / 1000; // seconds
+      this.lastTypeTime = now;
+
+      // Calculate how much text remains to be revealed
+      const remainingText = this.pendingAssistantText.substring(this.revealedAssistantText.length);
+      
+      if (remainingText.length > 0) {
+        // Calculate remaining audio duration
+        const currentTime = this.audioCtx?.currentTime || 0;
+        const remainingAudio = Math.max(0.1, this.nextStartTime - currentTime);
+        
+        // Target speed: reveal all remaining text over the remaining audio duration
+        // We add a slight multiplier (1.1) to ensure text finishes just before audio ends
+        const charsPerSecond = (remainingText.length / remainingAudio) * 1.1;
+        
+        // Calculate how many characters to reveal in this frame
+        const charsToRevealCount = Math.ceil(charsPerSecond * dt);
+        
+        if (charsToRevealCount > 0) {
+          const nextChars = remainingText.substring(0, charsToRevealCount);
+          this.revealedAssistantText += nextChars;
+          this.onTextRevealCallback?.(nextChars, "assistant");
+        }
+      }
+
+      requestAnimationFrame(loop);
+    };
+
+    requestAnimationFrame(loop);
+  }
+
   stopSession() {
-    console.log("[VoiceService] Stopping session");
     this.isSessionActive = false;
     this.currentStudentId = null;
     this.currentSessionId = null;
     this.currentSubject = null;
+    this.pendingAssistantText = "";
+    this.revealedAssistantText = "";
     
     if (this.ws) {
       this.ws.close();
@@ -225,6 +267,7 @@ class VoiceService {
     this.isBuffering = true;
     this.bufferQueue = [];
     this.onEventCallback = null;
+    this.onTextRevealCallback = null;
   }
 }
 

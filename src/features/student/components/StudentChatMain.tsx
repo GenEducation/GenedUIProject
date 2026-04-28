@@ -29,8 +29,11 @@ export function StudentChatMain({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isAITyping]);
+    // During streaming or AI typing, use "auto" for instant sync
+    // Otherwise use "smooth" for a nice transition
+    const behavior = (streamingMessageId || isAITyping) ? "auto" : "smooth";
+    messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
+  }, [messages, isAITyping, streamingMessageId]);
 
   const handleOptionSelect = useCallback(
     (option: string) => {

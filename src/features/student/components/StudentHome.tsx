@@ -229,7 +229,7 @@ export function StudentHome() {
   );
 }
 
-// ── Recent Chat Card ──────────────────────────────────────────────────────────
+// -- Recent Chat Card ----------------------------------------------------------
 
 function RecentChatCard({
   chat,
