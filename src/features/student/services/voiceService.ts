@@ -15,6 +15,7 @@ class VoiceService {
   private isSessionActive = false;
   private currentStudentId: string | null = null;
   private currentSessionId: string | null = null;
+  private currentSubject: string | null = null;
   private onEventCallback: ((event: any) => void) | null = null;
   
   // Jitter Buffer State
@@ -23,15 +24,22 @@ class VoiceService {
   private isBuffering = true;
   private readonly TARGET_BUFFER_SIZE = 3; // Number of chunks to buffer before starting playback
 
-  async startSession(studentId: string, onEvent: (event: any) => void, sessionId?: string) {
-    if (this.isSessionActive) return;
-
-    this.isSessionActive = true;
+  async startSession(studentId: string, onEvent: (event: any) => void, sessionId?: string, subject?: string) {
+    // Always update the current context
     this.currentStudentId = studentId;
     this.currentSessionId = sessionId || null;
+    this.currentSubject = subject || null;
     this.onEventCallback = onEvent;
 
-    // Initialize AudioContext on user gesture (triggered by startVoiceSession in store)
+    if (this.isSessionActive) {
+      // If already active, just re-send the init message to sync context
+      this.sendInitMessage();
+      return;
+    }
+
+    this.isSessionActive = true;
+
+    // Initialize AudioContext on user gesture
     if (!this.audioCtx) {
       this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
         sampleRate: 24000,
@@ -52,23 +60,21 @@ class VoiceService {
   }
 
   private async initMicrophone() {
-    if (this.mediaStream) return; // Already running
+    if (this.mediaStream) return;
 
     try {
       this.micCtx = new AudioContext({ sampleRate: 16000 });
       this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const source = this.micCtx.createMediaStreamSource(this.mediaStream);
       
-      // ScriptProcessor is deprecated but widely supported for simple PCM conversion
-      // AudioWorklet would be better for production but requires a separate file
-      this.processor = this.micCtx.createScriptProcessor(2048, 1, 1);
-
+      this.processor = this.micCtx.createScriptProcessor(4096, 1, 1);
+      
       this.processor.onaudioprocess = (e) => {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-          const f32 = e.inputBuffer.getChannelData(0);
-          const i16 = new Int16Array(f32.length);
-          for (let i = 0; i < f32.length; i++) {
-            i16[i] = Math.max(-1, Math.min(1, f32[i])) * 0x7fff;
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          const input = e.inputBuffer.getChannelData(0);
+          const i16 = new Int16Array(input.length);
+          for (let i = 0; i < input.length; i++) {
+            i16[i] = Math.max(-1, Math.min(1, input[i])) * 0x7FFF;
           }
           this.ws.send(i16.buffer);
         }
@@ -91,7 +97,6 @@ class VoiceService {
       throw new Error("NEXT_PUBLIC_API_URL not defined");
     }
 
-    // Convert http(s):// to ws(s):// and append the new unified path
     const wsBaseUrl = apiBaseUrl.replace(/^http/, "ws");
     const token = getAuthToken();
     const wsUrl = `${wsBaseUrl}/ws/april-live?token=${token || ""}&user_id=${this.currentStudentId}`;
@@ -102,44 +107,31 @@ class VoiceService {
 
     this.ws.onopen = () => {
       console.log("[VoiceService] Connected");
-      const token = getAuthToken();
-      this.ws?.send(
-        JSON.stringify({
-          type: "init",
-          student_id: this.currentStudentId,
-          session_id: this.currentSessionId,
-          token: token,
-        })
-      );
+      this.sendInitMessage();
       this.onEventCallback?.({ type: "connected" });
     };
 
-    this.ws.onmessage = (e) => {
-      if (e.data instanceof ArrayBuffer) {
-        this.handleIncomingAudio(e.data);
-      } else {
+    this.ws.onmessage = (event) => {
+      if (typeof event.data === "string") {
         try {
-          const data = JSON.parse(e.data);
+          const data = JSON.parse(event.data);
           
-          // Capture session_id from backend for reconnection persistence
           if (data.type === "session_id" && data.session_id) {
-            console.log("[VoiceService] Captured session_id:", data.session_id);
             this.currentSessionId = data.session_id;
           }
           
           this.onEventCallback?.(data);
         } catch (err) {
-          console.error("[VoiceService] Error parsing JSON:", e.data);
+          console.error("[VoiceService] Error parsing JSON:", event.data);
         }
+      } else {
+        this.handleIncomingAudio(event.data);
       }
     };
 
     this.ws.onclose = () => {
       console.log("[VoiceService] WebSocket closed");
-      
-      // If the session is still supposed to be active, reconnect
       if (this.isSessionActive) {
-        console.log("[VoiceService] Reconnecting in 1s...");
         setTimeout(() => this.connect(), 1000);
       } else {
         this.onEventCallback?.({ type: "disconnected" });
@@ -148,8 +140,27 @@ class VoiceService {
 
     this.ws.onerror = (err) => {
       console.error("[VoiceService] WebSocket error:", err);
-      // Let onclose handle reconnection
     };
+  }
+
+  private sendInitMessage() {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+    const token = getAuthToken();
+    this.ws.send(
+      JSON.stringify({
+        type: "init",
+        student_id: this.currentStudentId,
+        session_id: this.currentSessionId,
+        subject: this.currentSubject,
+        token: token,
+      })
+    );
+    console.log("[VoiceService] Sent Init:", {
+      student_id: this.currentStudentId,
+      session_id: this.currentSessionId,
+      subject: this.currentSubject,
+    });
   }
 
   private handleIncomingAudio(buffer: ArrayBuffer) {
@@ -159,54 +170,45 @@ class VoiceService {
         this.isBuffering = false;
         this.flushBuffer();
       }
-    } else {
-      this.playPCM(buffer);
+      return;
     }
+
+    const floatData = new Float32Array(buffer.byteLength / 2);
+    const int16Data = new Int16Array(buffer);
+    for (let i = 0; i < int16Data.length; i++) {
+      floatData[i] = int16Data[i] / 0x7FFF;
+    }
+
+    const audioBuffer = this.audioCtx!.createBuffer(1, floatData.length, 24000);
+    audioBuffer.getChannelData(0).set(floatData);
+
+    const source = this.audioCtx!.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(this.audioCtx!.destination);
+
+    const startTime = Math.max(this.audioCtx!.currentTime, this.nextStartTime);
+    source.start(startTime);
+    this.nextStartTime = startTime + audioBuffer.duration;
   }
 
   private flushBuffer() {
     while (this.bufferQueue.length > 0) {
-      const chunk = this.bufferQueue.shift();
-      if (chunk) this.playPCM(chunk);
+      this.handleIncomingAudio(this.bufferQueue.shift()!);
     }
-  }
-
-  private playPCM(buffer: ArrayBuffer) {
-    if (!this.audioCtx) return;
-
-    const i16 = new Int16Array(buffer);
-    const f32 = new Float32Array(i16.length);
-    for (let i = 0; i < i16.length; i++) {
-      f32[i] = i16[i] / 0x7fff;
-    }
-
-    const audioBuffer = this.audioCtx.createBuffer(1, f32.length, 24000);
-    audioBuffer.copyToChannel(f32, 0);
-
-    const src = this.audioCtx.createBufferSource();
-    src.buffer = audioBuffer;
-    src.connect(this.audioCtx.destination);
-
-    const now = this.audioCtx.currentTime;
-    
-    // Jitter Buffer Logic:
-    // If we have lagged behind, catch up to 'now' + small buffer
-    // Otherwise, continue from nextStartTime
-    const startTime = Math.max(now + 0.05, this.nextStartTime); 
-    
-    src.start(startTime);
-    this.nextStartTime = startTime + audioBuffer.duration;
   }
 
   stopSession() {
     console.log("[VoiceService] Stopping session");
     this.isSessionActive = false;
-    this.ws?.close();
-    this.cleanup();
-  }
-
-  private cleanup() {
-    this.ws = null;
+    this.currentStudentId = null;
+    this.currentSessionId = null;
+    this.currentSubject = null;
+    
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    
     this.mediaStream?.getTracks().forEach((t) => t.stop());
     this.mediaStream = null;
     
@@ -222,7 +224,6 @@ class VoiceService {
     
     this.isBuffering = true;
     this.bufferQueue = [];
-    this.currentStudentId = null;
     this.onEventCallback = null;
   }
 }

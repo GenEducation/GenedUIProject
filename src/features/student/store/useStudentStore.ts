@@ -868,7 +868,9 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       const { voiceService } =
         await import("@/features/student/services/voiceService");
 
-      await voiceService.startSession(studentProfile.user_id, (event: any) => {
+      await voiceService.startSession(
+        studentProfile.user_id,
+        (event: any) => {
         if (event.type === "connected") {
           set({ voiceSessionStatus: "active" });
         } else if (event.type === "disconnected") {
@@ -914,9 +916,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           }));
         } else if (event.type === "transcription") {
           // Handle transcription if needed, e.g., show as optimistic user message
-          console.debug("Transcription:", event.text);
         }
-      });
+      }, activeChat.session_id, activeChat.subject);
     } catch (error) {
       console.error("Failed to start voice session:", error);
       set({ voiceSessionStatus: "error" });
