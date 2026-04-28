@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { authFetch } from "@/utils/authFetch";
 
 export interface Student {
   id: string;
@@ -42,7 +43,7 @@ interface PartnerState {
   // Subject Actions
   fetchSubjects: () => Promise<void>;
   addSubject: (subject: Subject) => void;
-  uploadCurriculum: (file: File, subjectName: string, chapterTitle: string, grade: string, board: string) => Promise<void>;
+  uploadCurriculum: (file: File, subjectName: string, documentTitle: string, agentName: string, grade: string, board: string) => Promise<void>;
   removeSubject: (agentId: string) => Promise<void>;
   removeStudent: (studentId: string) => Promise<void>;
 
@@ -55,11 +56,13 @@ interface PartnerState {
 const getInitials = (name: string) =>
   name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
-const getBaseUrl = () =>
-  (process.env.NEXT_PUBLIC_CORE_API_URL || "http://192.168.1.15:8000").replace(/\/$/, "");
+const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
+if (!API_URL) {
+  throw new Error("NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.");
+}
 
-const getRagUrl = () =>
-  (process.env.NEXT_PUBLIC_RAG_API_URL || "http://192.168.1.15:8001").replace(/\/$/, "");
+const getBaseUrl = () => API_URL;
+const getRagUrl = () => API_URL;
 
 export const usePartnerStore = create<PartnerState>((set, get) => ({
   students: [],
@@ -72,7 +75,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
   setSelectedStudent: (student) => set({ selectedStudent: student }),
 
-  // ── Fetch students from backend ─────────────────────────────────────────
+  // -- Fetch students from backend ----------------------------------------─
   fetchStudents: async () => {
     const rawPartnerId = localStorage.getItem("gened_partner_id");
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
@@ -81,7 +84,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `${getBaseUrl()}/partner/students?partner_id=${partnerId}`
       );
       if (!res.ok) throw new Error("Failed to fetch students");
@@ -127,13 +130,13 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     }
   },
 
-  // ── Approve request (backend-first) ────────────────────────────────────
+  // -- Approve request (backend-first) ------------------------------------
   approveRequest: async (studentId) => {
     const rawPartnerId = localStorage.getItem("gened_partner_id");
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) throw new Error("No partner ID found");
 
-    const res = await fetch(
+    const res = await authFetch(
       `${getBaseUrl()}/partner/students/${studentId}/status?partner_id=${partnerId}&status=APPROVED`,
       { method: "PATCH" }
     );
@@ -163,13 +166,13 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     });
   },
 
-  // ── Reject request (backend-first) ─────────────────────────────────────
+  // -- Reject request (backend-first) ------------------------------------─
   rejectRequest: async (studentId) => {
     const rawPartnerId = localStorage.getItem("gened_partner_id");
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) throw new Error("No partner ID found");
 
-    const res = await fetch(
+    const res = await authFetch(
       `${getBaseUrl()}/partner/students/${studentId}/status?partner_id=${partnerId}&status=REJECTED`,
       { method: "PATCH" }
     );
@@ -187,14 +190,14 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     });
   },
 
-  // ── Subject actions ────────────────────────────────────────────────────
+  // -- Subject actions ----------------------------------------------------
   fetchSubjects: async () => {
     const rawPartnerId = localStorage.getItem("gened_partner_id");
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) return;
 
     try {
-      const res = await fetch(`${getRagUrl()}/partner/${partnerId}/ingestions`);
+      const res = await authFetch(`${getRagUrl()}/rag/partner/${partnerId}/ingestions`);
       if (!res.ok) throw new Error("Failed to fetch subjects/agents");
 
       const raw: any[] = await res.json();
@@ -217,13 +220,13 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   addSubject: (subject) =>
     set((state) => ({ subjects: [subject, ...state.subjects] })),
 
-  uploadCurriculum: async (file, subjectName, chapterTitle, grade, board) => {
+  uploadCurriculum: async (file, subjectName, documentTitle, agentName, grade, board) => {
     const tempId = Math.random().toString(36).substring(2, 9);
 
     const optimisticSubject: Subject = {
       id: tempId,
       subject: subjectName,
-      agent: chapterTitle, // Show the Chapter Title as the primary name
+      agent: documentTitle, // Show the Document Title as the primary name
       grade,
       board,
       status: "in-progress",
@@ -236,9 +239,12 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("subject", subjectName);
-      formData.append("document_title", chapterTitle); // Mapped to chapterTitle (document_title on backend)
-      formData.append("grade", grade);
+      formData.append("document_title", documentTitle); // Mapped to documentTitle (document_title on backend)
+      formData.append("agent_name", agentName);
+      formData.append("grade", String(parseInt(grade, 10) || 0));
       formData.append("board", board);
+
+      formData.append("document_type", "ncert");
 
       const rawPartnerId = localStorage.getItem("gened_partner_id");
       const partnerId = rawPartnerId?.replace(/['"]+/g, "");
@@ -246,14 +252,17 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         formData.append("partner_id", partnerId);
       }
 
-      const apiUrl = `${getRagUrl()}/admin/ingest/ncert`;
+      const apiUrl = `${getRagUrl()}/rag/admin/ingest/ncert`;
 
-      const response = await fetch(apiUrl, { 
+      const response = await authFetch(apiUrl, { 
         method: "POST", 
         body: formData,
-        headers: partnerId ? { "partner-id": partnerId } : {}
       });
-      if (!response.ok) throw new Error("Upload failed");
+      if (!response.ok) {
+        const errorDetail = await response.text();
+        console.error("Ingestion failed detail:", errorDetail);
+        throw new Error(`Upload failed: ${errorDetail}`);
+      }
 
       const data = await response.json();
 
@@ -279,15 +288,21 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   },
 
   removeSubject: async (agentId) => {
+    const subject = get().subjects.find((s) => s.id === agentId);
+    if (!subject) throw new Error("Subject not found");
+
     const rawPartnerId = localStorage.getItem("gened_partner_id");
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) throw new Error("No partner ID found");
 
-    const res = await fetch(`${getBaseUrl()}/api/partners/${partnerId}/agents/${agentId}`, {
+    const documentTitle = subject.agent; // agent property holds the document_title
+    const encodedTitle = encodeURIComponent(documentTitle);
+
+    const res = await authFetch(`${getRagUrl()}/rag/partner/${partnerId}/ingestions/${encodedTitle}`, {
       method: "DELETE",
     });
 
-    if (!res.ok) throw new Error("Failed to delete subject");
+    if (!res.ok) throw new Error("Failed to delete subject ingestion");
 
     set((state) => ({
       subjects: state.subjects.filter((s) => s.id !== agentId),
@@ -299,7 +314,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) throw new Error("No partner ID found");
 
-    const res = await fetch(`${getBaseUrl()}/partner/students/${studentId}?partner_id=${partnerId}`, {
+    const res = await authFetch(`${getBaseUrl()}/partner/students/${studentId}?partner_id=${partnerId}`, {
       method: "DELETE",
     });
 
@@ -311,7 +326,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     }));
   },
 
-  // ── Logout ─────────────────────────────────────────────────────────────
+  // -- Logout ------------------------------------------------------------─
   logoutPartner: () => {
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");

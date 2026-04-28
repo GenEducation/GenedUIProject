@@ -1,8 +1,14 @@
-const API_BASE_URL = (process.env.NEXT_PUBLIC_CORE_API_URL || "http://192.168.1.6:8000").replace(/\/$/, "");
+import { authFetch } from "@/utils/authFetch";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
+
+if (!API_BASE_URL) {
+  throw new Error("NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.");
+}
 
 export const studentService = {
   fetchSessions: async (userId: string) => {
-    const response = await fetch(`${API_BASE_URL}/get-session`, {
+    const response = await authFetch(`${API_BASE_URL}/get-session`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user_id: userId }),
@@ -22,39 +28,54 @@ export const studentService = {
   },
 
   fetchAvailableAgents: async (userId: string) => {
-    const response = await fetch(`${API_BASE_URL}/api/students/${userId}/available-agents`);
+    const response = await authFetch(`${API_BASE_URL}/api/students/${userId}/available-agents`);
     if (!response.ok) throw new Error("Failed to fetch available agents");
     return response.json();
   },
 
   fetchAvailablePartners: async () => {
-    const response = await fetch(`${API_BASE_URL}/partners`);
+    const response = await authFetch(`${API_BASE_URL}/partners`);
     if (!response.ok) throw new Error("Failed to fetch partners");
     return response.json();
   },
 
   fetchEnrolledPartners: async (userId: string) => {
-    const response = await fetch(`${API_BASE_URL}/api/students/${userId}/available-agents`);
+    const response = await authFetch(`${API_BASE_URL}/api/students/${userId}/available-agents`);
     if (!response.ok) throw new Error("Failed to fetch enrolled partners");
     return response.json();
   },
 
   sendPartnerRequest: async (userId: string, partnerId: string) => {
     const url = `${API_BASE_URL}/student/partner?student_id=${userId}&partner_id=${partnerId}`;
-    const response = await fetch(url, {
+    const response = await authFetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "accept": "application/json" }
     });
 
     if (!response.ok) {
-      throw new Error("Request failed");
+      let errorMessage = "Request failed";
+      try {
+        const data = await response.json();
+        if (typeof data.detail === 'string') {
+          errorMessage = data.detail;
+        } else if (data.detail && typeof data.detail.message === 'string') {
+          errorMessage = data.detail.message;
+        } else if (typeof data.message === 'string') {
+          errorMessage = data.message;
+        } else if (data.message && typeof data.message.message === 'string') {
+          errorMessage = data.message.message;
+        }
+      } catch {
+        // Fallback to generic message if JSON parsing fails
+      }
+      throw { status: response.status, message: errorMessage };
     }
 
     return response.json();
   },
 
   fetchChatHistory: async (userId: string, sessionId: string) => {
-    const response = await fetch(`${API_BASE_URL}/get-history`, {
+    const response = await authFetch(`${API_BASE_URL}/get-history`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -72,45 +93,27 @@ export const studentService = {
     text: string;
     user_id: string;
     session_id?: string;
-    agent_id: string;
+    agent_id?: string;
     subject: string;
     grade: number;
-  }) => {
-    const response = await fetch(`${API_BASE_URL}/text/april-query`, {
+    document_title?: string;
+    intent?: string;
+  }, signal?: AbortSignal): Promise<Response> => {
+    const response = await authFetch(`${API_BASE_URL}/text/april-query`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json", "accept": "text/event-stream" },
+      body: JSON.stringify({ ...payload, stream: true }),
+      signal,
     });
 
     if (!response.ok) throw new Error("API request failed");
 
-    return response.json();
-  },
-
-  sendFocusedChatMessage: async (payload: {
-    text: string;
-    user_id: string;
-    session_id: string;
-    agent_id: string;
-    subject: string;
-    intent: string;
-    document_title: string;
-    grade: number;
-  }) => {
-    const response = await fetch(`${API_BASE_URL}/text/focused-april-query`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) throw new Error("Focused API request failed");
-
-    return response.json();
+    return response;
   },
 
   // Analytics Endpoints
   fetchAnalyticsSubjects: async (studentId: string) => {
-    const response = await fetch(`${API_BASE_URL}/students/${studentId}/subjects`, {
+    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/subjects`, {
       headers: { "accept": "application/json" }
     });
     if (!response.ok) throw new Error("Failed to fetch analytics subjects");
@@ -118,7 +121,7 @@ export const studentService = {
   },
 
   fetchSkillSummary: async (studentId: string, subject: string) => {
-    const response = await fetch(`${API_BASE_URL}/students/${studentId}/skill-summary?subject=${encodeURIComponent(subject)}`, {
+    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/skill-summary?subject=${encodeURIComponent(subject)}`, {
       headers: { "accept": "application/json" }
     });
     if (!response.ok) throw new Error("Failed to fetch skill summary");
@@ -126,7 +129,7 @@ export const studentService = {
   },
 
   fetchCGScores: async (studentId: string, subject: string) => {
-    const response = await fetch(`${API_BASE_URL}/students/${studentId}/cg-scores?subject=${encodeURIComponent(subject)}`, {
+    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/cg-scores?subject=${encodeURIComponent(subject)}`, {
       headers: { "accept": "application/json" }
     });
     if (!response.ok) throw new Error("Failed to fetch CG scores");
@@ -134,7 +137,7 @@ export const studentService = {
   },
 
   fetchSkillTree: async (studentId: string, subject: string) => {
-    const response = await fetch(`${API_BASE_URL}/students/${studentId}/skill-tree?subject=${encodeURIComponent(subject)}`, {
+    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/skill-tree?subject=${encodeURIComponent(subject)}`, {
       headers: { "accept": "application/json" }
     });
     if (!response.ok) throw new Error("Failed to fetch skill tree");
@@ -142,15 +145,15 @@ export const studentService = {
   },
 
   fetchChapterMastery: async (studentId: string, subject: string) => {
-    const response = await fetch(`${API_BASE_URL}/students/${studentId}/chapter-mastery?subject=${encodeURIComponent(subject)}`, {
+    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/chapter-mastery?subject=${encodeURIComponent(subject)}`, {
       headers: { "accept": "application/json" }
     });
     if (!response.ok) throw new Error("Failed to fetch chapter mastery");
     return response.json();
   },
 
-  linkParent: async (studentId: string, parentId: string) => {
-    const response = await fetch(`${API_BASE_URL}/parent/link`, {
+  linkParent: async (studentId: string, parentEmailOrPhone: string) => {
+    const response = await authFetch(`${API_BASE_URL}/parent/link`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -158,16 +161,27 @@ export const studentService = {
       },
       body: JSON.stringify({
         student_id: studentId,
-        parent_id: parentId,
+        parent_email_or_phone: parentEmailOrPhone,
       }),
     });
 
     if (!response.ok) {
-      if (response.status === 409) {
+      let errorMessage = `Failed to link parent: ${response.status}`;
+      try {
         const data = await response.json();
-        throw { status: 409, message: data.detail || "Student is already linked to a parent." };
+        if (typeof data.detail === 'string') {
+          errorMessage = data.detail;
+        } else if (data.detail && typeof data.detail.message === 'string') {
+          errorMessage = data.detail.message;
+        } else if (typeof data.message === 'string') {
+          errorMessage = data.message;
+        } else if (data.message && typeof data.message.message === 'string') {
+          errorMessage = data.message.message;
+        }
+      } catch {
+        // Fallback to generic message
       }
-      throw new Error(`Failed to link parent: ${response.status}`);
+      throw { status: response.status, message: errorMessage };
     }
 
     return response.json();

@@ -24,10 +24,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   fetchNotifications: async (userId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const notifications = await notificationService.fetchNotifications(userId);
+      const allNotifications = await notificationService.fetchNotifications(userId);
       set({ 
-        notifications, 
-        unreadCount: notifications.filter(n => !n.is_read).length,
+        notifications: allNotifications, 
+        unreadCount: allNotifications.filter(n => !n.is_read).length,
         isLoading: false 
       });
     } catch (error) {
@@ -70,10 +70,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   initStream: (userId: string) => {
     const unsub = notificationService.subscribeToStream(userId, (data) => {
-      // Handle the data format from backend. 
-      // If data is a notification object, add it.
-      if (data && typeof data === 'object') {
+      console.log("🔔 [NotificationStore] Processing incoming data:", data);
+      
+      // Validate the incoming SSE data payload correctly
+      if (data && typeof data === 'object' && data.id) {
         get().addNotification(data as Notification);
+      } else {
+        console.warn("⚠️ [NotificationStore] Received malformed or incomplete notification payload:", data);
       }
     });
     

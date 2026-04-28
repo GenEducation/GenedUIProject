@@ -1,4 +1,4 @@
-export const AUTH_API_BASE_URL = process.env.NEXT_PUBLIC_AUTH_API_URL || "";
+export const AUTH_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL|| "";
 
 if (!AUTH_API_BASE_URL) {
   throw new Error(
@@ -10,11 +10,11 @@ export interface SignUpFields {
   username: string;
   email: string;
   password: string;
+  confirmPassword?: string;
   role: "student" | "parent" | "partner";
   age?: string;
   grade?: string;
   school_board?: string;
-  partner_id?: string;
   phone?: string;
   organization?: string;
   website?: string;
@@ -40,7 +40,7 @@ export interface SignInFields {
 }
 
 export async function signIn(data: SignInFields): Promise<AuthTokenResponse> {
-  const response = await fetch(`${AUTH_API_BASE_URL}/sign-in`, {
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/sign-in`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -71,7 +71,6 @@ export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
     if (data.age) body.age = Number(data.age);
     if (data.grade) body.grade = Number(data.grade);
     if (data.school_board) body.school_board = data.school_board;
-    if (data.partner_id) body.partner_id = data.partner_id;
   } else if (data.role === "parent") {
     if (data.phone) body.phone = data.phone;
   } else if (data.role === "partner") {
@@ -79,7 +78,7 @@ export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
     if (data.website) body.website = data.website;
   }
 
-  const response = await fetch(`${AUTH_API_BASE_URL}/sign-up`, {
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/sign-up`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -90,6 +89,56 @@ export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(errorText || "Signup request failed.");
+  }
+
+  return response.json();
+}
+
+export async function googleSignIn(token: string): Promise<AuthTokenResponse> {
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/google-sign-in`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ token }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Google Sign-in request failed.");
+  }
+
+  return response.json();
+}
+
+export async function googleSignUp(token: string, data: Partial<SignUpFields>): Promise<AuthTokenResponse> {
+  const body: any = {
+    token,
+    role: data.role?.toUpperCase(),
+  };
+
+  if (data.role === "student") {
+    if (data.age) body.age = Number(data.age);
+    if (data.grade) body.grade = Number(data.grade);
+    if (data.school_board) body.school_board = data.school_board;
+  } else if (data.role === "parent") {
+    if (data.phone) body.phone = data.phone;
+  } else if (data.role === "partner") {
+    if (data.organization) body.organization = data.organization;
+    if (data.website) body.website = data.website;
+  }
+
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/google-sign-up`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Google Sign-up request failed.");
   }
 
   return response.json();

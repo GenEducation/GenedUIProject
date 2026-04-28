@@ -4,6 +4,7 @@ import {
   BarChart2, ArrowLeft, CheckCircle2, 
   Target, GraduationCap, ChevronDown, LayoutGrid 
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { MetricCard } from "./MetricCard";
@@ -19,10 +20,10 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
   mode = "student", 
   studentId 
 }) => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"skill" | "chapter">("chapter");
   const { studentProfile } = useStudentStore();
   const { 
-    setAnalyticsOpen, 
     analyticsSubjects, 
     selectedAnalyticsSubject,
     skillSummary,
@@ -59,7 +60,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
 
   return (
     <div className="h-screen overflow-y-auto bg-[#FBFBFA] flex flex-col font-sans">
-      {/* ── TOP NAVIGATION (Student Only) ─────────────────────────────────── */}
+      {/* -- TOP NAVIGATION (Student Only) ----------------------------------─ */}
       {mode === "student" && (
         <header className="px-8 py-6 flex items-center justify-between bg-white border-b border-[#1a3a2a]/5 sticky top-0 z-20">
           <img src="/Logo.svg" alt="GenEd Logo" className="h-8 w-auto" />
@@ -75,12 +76,12 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
         </header>
       )}
 
-      {/* ── SUB-NAVIGATION CONTROLS ────────────────────────────────────────── */}
+      {/* -- SUB-NAVIGATION CONTROLS ------------------------------------------ */}
       <div className={`px-8 py-4 flex items-center gap-8 bg-transparent border-b border-[#1a3a2a]/5 sticky ${mode === 'student' ? 'top-[89px]' : 'top-0'} z-10 backdrop-blur-sm bg-white/30`}>
         {mode === "student" && (
           <>
             <button 
-              onClick={() => setAnalyticsOpen(false)}
+              onClick={() => router.back()}
               className="flex items-center gap-2 text-[#1a3a2a]/60 hover:text-[#1a3a2a] transition-all group lg:min-w-[80px]"
             >
               <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
@@ -97,7 +98,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                 <div className="flex items-center gap-1 group">
                   <select 
                     value={selectedAnalyticsSubject}
-                    onChange={(e) => fetchAnalyticsData(e.target.value)}
+                    onChange={(e) => fetchAnalyticsData(e.target.value, studentId)}
                     className="text-xl font-black text-[#1a3a2a] bg-transparent border-none focus:ring-0 cursor-pointer appearance-none p-0 pr-8 hover:text-[#059669] transition-colors"
                   >
                     {analyticsSubjects.map(sub => (
@@ -114,7 +115,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
         )}
       </div>
 
-      {/* ── DASHBOARD CONTENT ──────────────────────────────────────────────── */}
+      {/* -- DASHBOARD CONTENT ------------------------------------------------ */}
       <main className="flex-1 px-8 py-10 max-w-7xl mx-auto w-full space-y-12 pb-20">
         <section className="space-y-4">
           

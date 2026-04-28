@@ -32,7 +32,8 @@ export function CurriculumIngestion({
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(65);
   const [subjectName, setSubjectName] = useState("");
-  const [chapterTitle, setChapterTitle] = useState("");
+  const [documentTitle, setDocumentTitle] = useState("");
+  const [agentName, setAgentName] = useState("");
   const [grade, setGrade] = useState("");
   const [board, setBoard] = useState("");
   
@@ -59,12 +60,12 @@ export function CurriculumIngestion({
     }
   };
 
-   const handleProcess = async () => {
-    if (!subjectName || !chapterTitle || !grade || !file) return;
+  const handleProcess = async () => {
+    if (!subjectName || !documentTitle || !agentName || !grade || !file) return;
     
     setIsProcessing(true);
     try {
-      await uploadCurriculum(file, subjectName, chapterTitle, grade, board);
+      await uploadCurriculum(file, subjectName, documentTitle, agentName, grade, board);
       onClose();
     } catch (error) {
       console.error(error);
@@ -144,14 +145,24 @@ export function CurriculumIngestion({
               >
                 <option value="">Select Subject</option>
                 <option value="english">English</option>
+                <option value="mathematics">Mathematics</option>
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Chapter Title</label>
+              <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Document Title</label>
               <input 
-                value={chapterTitle}
-                onChange={(e) => setChapterTitle(e.target.value)}
-                placeholder="e.g. Plant Reproduction"
+                value={documentTitle}
+                onChange={(e) => setDocumentTitle(e.target.value)}
+                placeholder="e.g. NCERT Science Class 10"
+                className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/50 transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Agent Name</label>
+              <input 
+                value={agentName}
+                onChange={(e) => setAgentName(e.target.value)}
+                placeholder="e.g. Bio-Bot 3000"
                 className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/50 transition-all"
               />
             </div>
@@ -219,7 +230,7 @@ export function CurriculumIngestion({
           </button>
           <button 
             onClick={handleProcess}
-            disabled={isProcessing || !subjectName || !chapterTitle || !grade || !board || !file}
+            disabled={isProcessing || !subjectName || !documentTitle || !agentName || !grade || !board || !file}
             className="w-full sm:w-auto px-8 py-2 md:py-3 bg-[#D1E6D9] text-[#1A3D2C] text-sm font-black rounded-2xl hover:bg-[#1A3D2C] hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isProcessing ? "Processing..." : "Process Artifact"}

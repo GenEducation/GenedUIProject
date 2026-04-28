@@ -26,8 +26,17 @@ interface StudentDetailsModalProps {
   onReject: (studentId: string) => Promise<void>;
 }
 
-const getBaseUrl = () =>
-  (process.env.NEXT_PUBLIC_CORE_API_URL || "http://192.168.1.15:8000").replace(/\/$/, "");
+import { authFetch } from "@/utils/authFetch";
+
+const CORE_API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
+if (!CORE_API_URL) {
+  // In a component we can't easily throw at top level without crashing the whole app render 
+  // but since we already throw in services/stores, this is just for local consistency.
+  // Actually, we'll keep it consistent with the other files.
+  throw new Error("NEXT_PUBLIC_CORE_API_URL is required. Set it in your .env.local file.");
+}
+
+const getBaseUrl = () => CORE_API_URL;
 
 const formatDate = (iso: string) => {
   try {
@@ -70,7 +79,7 @@ export function StudentDetailsModal({
       return;
     }
 
-    fetch(`${getBaseUrl()}/partner/students/${studentId}?partner_id=${partnerId}`)
+    authFetch(`${getBaseUrl()}/partner/students/${studentId}?partner_id=${partnerId}`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load student profile");
         return res.json();
@@ -79,7 +88,8 @@ export function StudentDetailsModal({
         setProfile(data);
         setIsFetching(false);
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error("Fetch Student Profile Error:", error);
         setFetchError("Could not load student details. Please try again.");
         setIsFetching(false);
       });

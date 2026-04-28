@@ -26,6 +26,22 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Improve base scaling */
+  font-size: 16px; 
+  line-height: 1.6;
+}
+
+/* Sidebar Transition Utilities */
+.sidebar-transition {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-pill-shadow {
+  box-shadow: 0 4px 20px -4px rgba(4, 46, 92, 0.1), 0 2px 8px -2px rgba(4, 46, 92, 0.05);
+}
+
+.chat-pill-focus {
+  box-shadow: 0 0 0 2px rgba(5, 159, 109, 0.1), 0 8px 30px -4px rgba(4, 46, 92, 0.15);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -64,3 +80,15 @@ h1, h2, h3, h4, h5, h6 {
   scrollbar-width: thin;
   scrollbar-color: #E0F2FE transparent;
 }
+
+/* Streaming cursor blink animation — used by ChatMessageBubble */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+

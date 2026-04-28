@@ -30,17 +30,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
   return (
     <div className="flex-1 px-4 md:px-12 pt-8 md:pt-12 pb-8 bg-white flex flex-col h-full overflow-hidden">
-      {/* Header Section */}
-      <header className="flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0 mb-4 md:mb-6">
-        <div className="space-y-1.5 md:space-y-2 max-w-2xl">
-          <p className="text-[10px] font-black text-[#1A3D2C]/40 uppercase tracking-[0.2em]">
-            Academic Registry
-          </p>
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-[#1A3D2C] tracking-tight">
-            Subject Registry List
-          </h2>
-        </div>
-        
+      {/* Actions Section */}
+      <div className="flex justify-end mb-4 md:mb-6">
         <button 
           onClick={onUploadClick}
           className="w-full md:w-auto flex items-center justify-center gap-3 px-6 py-3 bg-[#1A3D2C] text-white rounded-2xl hover:bg-[#1A3D2C]/90 transition-all shadow-[0_8px_30px_rgba(26,61,44,0.2)] group"
@@ -50,7 +41,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
           </div>
           <span className="text-sm font-bold tracking-tight">Upload Curriculum</span>
         </button>
-      </header>
+      </div>
 
       {/* Registry List */}
       <div className="flex-1 flex flex-col bg-[#FBFCFB] rounded-[2rem] md:rounded-[2.5rem] p-3 md:p-4 border border-gray-100/50 shadow-[0_8px_40px_rgba(0,0,0,0.02)] min-h-0 overflow-hidden">

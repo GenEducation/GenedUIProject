@@ -38,9 +38,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, alig
 
   useEffect(() => {
     fetchNotifications(userId);
-    const unsub = initStream(userId);
-    return () => unsub();
-  }, [userId, fetchNotifications, initStream]);
+  }, [userId, fetchNotifications]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -102,23 +100,38 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, alig
                   {notifications.map((notif) => (
                     <div 
                       key={notif.id}
-                      onClick={() => !notif.is_read && markAsRead(notif.id)}
-                      className={`p-5 flex gap-4 hover:bg-[#F4F3EE]/50 transition-colors cursor-pointer group relative ${!notif.is_read ? 'bg-[#059669]/5' : ''}`}
+                      className={`p-5 flex gap-4 transition-colors group relative border-b border-[#1a3a2a]/5 last:border-b-0 ${!notif.is_read ? 'bg-[#059669]/5' : ''}`}
                     >
                       <div className="shrink-0 mt-1">
                         {getIcon(notif.type)}
                       </div>
                       <div className="flex-1 space-y-1">
-                        <p className={`text-sm leading-relaxed ${!notif.is_read ? 'font-bold text-[#1a3a2a]' : 'text-[#1a3a2a]/70'}`}>
+                        {notif.title && (
+                          <h4 className={`text-sm tracking-tight ${!notif.is_read ? 'font-black text-[#1a3a2a]' : 'font-bold text-[#1a3a2a]/70'}`}>
+                            {notif.title}
+                          </h4>
+                        )}
+                        <p className={`text-xs leading-relaxed ${!notif.is_read ? 'font-semibold text-[#1a3a2a]/90' : 'font-medium text-[#1a3a2a]/60'}`}>
                           {notif.message}
                         </p>
-                        <p className="text-[10px] font-medium text-[#1a3a2a]/40">
-                          {timeAgo(notif.created_at)}
-                        </p>
+                        <div className="flex items-center justify-between pt-1.5">
+                          <p className="text-[10px] font-medium text-[#1a3a2a]/40 uppercase tracking-wider">
+                            {timeAgo(notif.created_at)}
+                          </p>
+                          {!notif.is_read && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                markAsRead(notif.id);
+                              }}
+                              className="text-[10px] uppercase tracking-widest font-black text-[#059669] hover:bg-[#059669]/10 px-2 py-1 rounded-md transition-colors shadow-sm border border-[#059669]/20"
+                            >
+                              Mark Read
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      {!notif.is_read && (
-                        <div className="w-2 h-2 rounded-full bg-[#059669] shrink-0 mt-2" />
-                      )}
                     </div>
                   ))}
                 </div>
@@ -132,13 +145,6 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, alig
               )}
             </div>
 
-            {notifications.length > 0 && (
-              <div className="p-4 bg-[#FBFBFA] border-t border-[#1a3a2a]/5 text-center">
-                <button className="text-[10px] font-black text-[#059669] hover:underline uppercase tracking-widest">
-                  View All Notifications
-                </button>
-              </div>
-            )}
           </motion.div>
         )}
       </AnimatePresence>
