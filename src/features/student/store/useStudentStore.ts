@@ -413,6 +413,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     set({ isSessionsLoading: true });
     try {
       const data = await studentService.fetchSessions(studentProfile.user_id);
+      console.log("📂 [StudentStore] Raw Sessions Data:", data);
 
       const mappedChats: ChatSession[] = data.sessions.map((s: any) => ({
         id: s.session_id,
@@ -426,6 +427,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         lastTopic: "Continued Learning",
         grade: "", // Grade is handled via student profile
         agent_id: s.subject_agent, // Mapping backend agent field
+        subject: s.subject || "", 
       }));
 
       set({ recentChats: mappedChats, isSessionsLoading: false });
@@ -852,6 +854,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     // Enforce text mode restriction
     if (activeChat.chatMode === "text") return;
 
+    console.log("🎙️ [StudentStore] Starting Voice Session for Chat:", activeChat);
     set({ voiceSessionStatus: "connecting" });
 
     // Set chat mode to voice if not already set

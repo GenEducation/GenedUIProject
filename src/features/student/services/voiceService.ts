@@ -28,7 +28,7 @@ class VoiceService {
     // Always update the current context
     this.currentStudentId = studentId;
     this.currentSessionId = sessionId || null;
-    this.currentSubject = subject || null;
+    this.currentSubject = subject ?? null;
     this.onEventCallback = onEvent;
 
     if (this.isSessionActive) {
