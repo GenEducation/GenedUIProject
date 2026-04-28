@@ -69,9 +69,7 @@ export const notificationService = {
       },
       signal: controller.signal,
       onopen: async (response) => {
-        if (response.ok) {
-          console.log("✅ Notification stream connected");
-        } else {
+        if (!response.ok) {
           console.error(
             "❌ Notification stream connection failed:",
             response.status,
@@ -79,17 +77,21 @@ export const notificationService = {
         }
       },
       onmessage(event) {
-        console.log("Received notification data:", event.data);
+        const rawData = event.data?.trim();
+        
+        // Ignore heartbeats, keep-alives, or empty messages
+        if (!rawData || rawData === "heartbeat" || rawData === "keep-alive" || rawData === ":") {
+          return;
+        }
+
         try {
-          const data = JSON.parse(event.data);
-          onMessage(data);
+          const data = JSON.parse(rawData);
+          // Only trigger if it looks like a real notification object
+          if (data && data.id) {
+            onMessage(data);
+          }
         } catch (error) {
-          onMessage({
-            id: Date.now().toString(),
-            message: event.data,
-            is_read: false,
-            created_at: new Date().toISOString(),
-          });
+          // Silent ignore for non-JSON messages (heartbeats/metadata)
         }
       },
       onerror(error) {

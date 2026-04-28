@@ -38,9 +38,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, alig
 
   useEffect(() => {
     fetchNotifications(userId);
-    const unsub = initStream(userId);
-    return () => unsub();
-  }, [userId, fetchNotifications, initStream]);
+  }, [userId, fetchNotifications]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

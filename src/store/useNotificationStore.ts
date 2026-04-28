@@ -70,11 +70,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   initStream: (userId: string) => {
     const unsub = notificationService.subscribeToStream(userId, (data) => {
+      console.log("🔔 [NotificationStore] Processing incoming data:", data);
+      
       // Validate the incoming SSE data payload correctly
       if (data && typeof data === 'object' && data.id) {
         get().addNotification(data as Notification);
       } else {
-        console.warn("Received malformed or incomplete notification payload:", data);
+        console.warn("⚠️ [NotificationStore] Received malformed or incomplete notification payload:", data);
       }
     });
     

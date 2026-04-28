@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { usePartnerStore } from "../store/usePartnerStore";
+import { useNotificationStore } from "@/store/useNotificationStore";
 import { StudentDetailsModal } from "./StudentDetailsModal";
 import { StudentRegistryTable } from "./StudentRegistryTable";
 import { PendingRequestsSidebar } from "./PendingRequestsSidebar";
@@ -15,9 +16,20 @@ export function EnrollmentAdmin() {
   const rejectRequest = usePartnerStore((state) => state.rejectRequest);
   const fetchStudents = usePartnerStore((state) => state.fetchStudents);
 
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+
   useEffect(() => {
     fetchStudents();
-  }, []);
+  }, [fetchStudents]);
+
+  // Live Refresh: Whenever a new notification arrives, re-fetch the student list
+  // to ensure the "Pending Requests" and "Student Registry" are up to date.
+  useEffect(() => {
+    if (unreadCount > 0) {
+      console.log("🔄 Live Sync: New notification detected, refreshing enrollment data...");
+      fetchStudents();
+    }
+  }, [unreadCount, fetchStudents]);
 
   return (
     <div className="flex-1 px-4 md:px-12 pt-8 md:pt-12 pb-8 bg-white flex flex-col h-full overflow-hidden">
