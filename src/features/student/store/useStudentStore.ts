@@ -257,7 +257,7 @@ function generateHistoricalSVG(type: string, params: any): string {
 function parseContent(content: string): ChatElement[] {
   if (!content) return [];
   const elements: ChatElement[] = [];
-  const regex = /<<(MATH_DRAW|MATH_WIDGET)\s+([^>]+)>>/g;
+  const regex = /<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s+([^>]+)>>/g;
 
   let lastIndex = 0;
   let match;
@@ -277,15 +277,25 @@ function parseContent(content: string): ChatElement[] {
 
     if (type === "MATH_DRAW") {
       const typeMatch = attrsRaw.match(/type="([^"]+)"/);
-      const paramsMatch = attrsRaw.match(/params=({[^}]+})/);
-
+      // Handle nested JSON by finding balanced braces
+      const paramsStart = attrsRaw.indexOf("params=");
       let params: any = {};
-      if (paramsMatch) {
-        try {
-          const jsonStr = paramsMatch[1].replace(/'/g, '"');
-          params = JSON.parse(jsonStr);
-        } catch {
-          console.warn("Failed to parse params for MATH_DRAW", paramsMatch[1]);
+      if (paramsStart >= 0) {
+        const jsonStart = attrsRaw.indexOf("{", paramsStart);
+        if (jsonStart >= 0) {
+          let depth = 0;
+          let jsonEnd = jsonStart;
+          for (let i = jsonStart; i < attrsRaw.length; i++) {
+            if (attrsRaw[i] === "{") depth++;
+            else if (attrsRaw[i] === "}") depth--;
+            if (depth === 0) { jsonEnd = i + 1; break; }
+          }
+          try {
+            const jsonStr = attrsRaw.substring(jsonStart, jsonEnd).replace(/'/g, '"');
+            params = JSON.parse(jsonStr);
+          } catch {
+            console.warn("Failed to parse params for MATH_DRAW", attrsRaw.substring(jsonStart, jsonEnd));
+          }
         }
       }
 
@@ -306,6 +316,18 @@ function parseContent(content: string): ChatElement[] {
         id: Math.random().toString(36).substring(2, 11),
         type: "widget",
         content: exprMatch ? exprMatch[1] : "",
+      });
+    } else if (type === "SHOW_FIGURE") {
+      const figureIdMatch = attrsRaw.match(/figure_id="([^"]+)"/);
+      elements.push({
+        id: Math.random().toString(36).substring(2, 11),
+        type: "svg",
+        content: SCHOLARLY_BLUEPRINT,
+        meta: {
+          shape: "image",
+          source: "show_figure",
+          figure_id: figureIdMatch ? figureIdMatch[1] : "",
+        },
       });
     }
 
@@ -959,6 +981,88 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           if (event.phase !== "teaching") {
             set({ isAITyping: false });
           }
+        } else if (event.type === "tool_status") {
+          set((state) => {
+            const updatedMessages = [...state.messages];
+            let lastMsg = updatedMessages[updatedMessages.length - 1];
+            let newStreamingId = state.streamingMessageId;
+            
+            if (!lastMsg || lastMsg.sender === "user") {
+              const newId = `voice-tool-${Date.now()}`;
+              lastMsg = {
+                id: newId,
+                text: "",
+                sender: "ai",
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                toolStatus: event.message
+              };
+              updatedMessages.push(lastMsg);
+              newStreamingId = newId;
+            } else {
+              updatedMessages[updatedMessages.length - 1] = {
+                ...lastMsg,
+                toolStatus: event.message
+              };
+            }
+            return { messages: updatedMessages, isAITyping: true, streamingMessageId: newStreamingId };
+          });
+        } else if (event.type === "visual_block" || event.type === "math_widget") {
+          set((state) => {
+            const updatedMessages = [...state.messages];
+            let lastMsgIdx = updatedMessages.length - 1;
+            let lastMsg = updatedMessages[lastMsgIdx];
+            let newStreamingId = state.streamingMessageId;
+
+            if (!lastMsg || lastMsg.sender === "user") {
+              const newId = `voice-visual-${Date.now()}`;
+              lastMsg = {
+                id: newId,
+                text: "",
+                sender: "ai",
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              };
+              updatedMessages.push(lastMsg);
+              lastMsgIdx = updatedMessages.length - 1;
+              newStreamingId = newId;
+            }
+
+            if (lastMsgIdx >= 0) {
+              const elements = lastMsg.elements ? [...lastMsg.elements] : [
+                ...(lastMsg.text ? [{ id: Date.now().toString() + "-text", type: "text" as const, content: lastMsg.text }] : [])
+              ];
+              
+              if (event.type === "visual_block") {
+                let svgContent = event.svg || "";
+                if (!svgContent && event.image) {
+                  try {
+                    svgContent = decodeURIComponent(escape(atob(event.image)));
+                  } catch (e) {
+                    console.error("Failed to decode base64 image", e);
+                  }
+                }
+                elements.push({
+                  id: Date.now().toString() + "-svg",
+                  type: "svg",
+                  content: svgContent,
+                  meta: event.meta
+                });
+              } else if (event.type === "math_widget") {
+                elements.push({
+                  id: Date.now().toString() + "-widget",
+                  type: "widget",
+                  content: event.expression || "",
+                  meta: event.options
+                });
+              }
+
+              updatedMessages[lastMsgIdx] = {
+                ...lastMsg,
+                elements,
+                toolStatus: undefined
+              };
+            }
+            return { messages: updatedMessages, streamingMessageId: newStreamingId };
+          });
         }
         },
         (content, role) => {
@@ -985,12 +1089,34 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             let newId = state.streamingMessageId;
 
             if (isContinuing) {
-              updatedMessages[updatedMessages.length - 1] = {
+              const newText = isReplacingPlanning ? content : lastMsg.text + (role === "user" ? " " : "") + content;
+              const updated: ChatMessage = {
                 ...lastMsg,
-                // If we were planning, replace the text entirely on the first transcript chunk
-                text: isReplacingPlanning ? content : lastMsg.text + (role === "user" ? " " : "") + content,
-                isPlanning: false // Once transcript starts, it's no longer planning
+                text: newText,
+                isPlanning: false
               };
+
+              // If the message already has elements (e.g. from a visual_block),
+              // keep the SVG/widget elements and update the trailing text element
+              if (updated.elements && updated.elements.length > 0) {
+                const existingTextIdx = updated.elements.findIndex(
+                  (el) => el.type === "text" && el.id.endsWith("-transcript")
+                );
+                if (existingTextIdx >= 0) {
+                  updated.elements = [...updated.elements];
+                  updated.elements[existingTextIdx] = {
+                    ...updated.elements[existingTextIdx],
+                    content: newText
+                  };
+                } else {
+                  updated.elements = [
+                    ...updated.elements,
+                    { id: Date.now().toString() + "-transcript", type: "text" as const, content: newText }
+                  ];
+                }
+              }
+
+              updatedMessages[updatedMessages.length - 1] = updated;
             } else {
               newId = `voice-${Date.now()}`;
               updatedMessages.push({
