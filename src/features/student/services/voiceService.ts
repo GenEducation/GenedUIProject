@@ -86,19 +86,17 @@ class VoiceService {
   private connect() {
     if (!this.isSessionActive || !this.currentStudentId) return;
 
-    let wsUrl = process.env.NEXT_PUBLIC_VOICE_API;
-    if (!wsUrl) {
-      throw new Error("NEXT_PUBLIC_VOICE_API not defined");
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiBaseUrl) {
+      throw new Error("NEXT_PUBLIC_API_URL not defined");
     }
 
-    // Get the JWT token
+    // Convert http(s):// to ws(s):// and append the new unified path
+    const wsBaseUrl = apiBaseUrl.replace(/^http/, "ws");
     const token = getAuthToken();
-    if (token) {
-      const separator = wsUrl.includes("?") ? "&" : "?";
-      wsUrl += `${separator}token=${encodeURIComponent(token)}`;
-    }
+    const wsUrl = `${wsBaseUrl}/ws/april-live?token=${token || ""}&user_id=${this.currentStudentId}`;
 
-    console.log("[VoiceService] Connecting to", wsUrl);
+    console.log("[VoiceService] Connecting to unified WS:", wsUrl.split('token=')[0] + 'token=REDACTED');
     this.ws = new WebSocket(wsUrl);
     this.ws.binaryType = "arraybuffer";
 
