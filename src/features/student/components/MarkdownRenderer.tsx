@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -10,6 +10,7 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 // We can use a standard highlight.js theme
 import "highlight.js/styles/github-dark.css";
+import { authFetch } from "@/utils/authFetch";
 
 interface MarkdownRendererProps {
   content: string;
@@ -73,10 +74,97 @@ const markdownComponents: any = {
   },
   
   // Paragraph styles
-  p: ({ node, ...props }: any) => <motion.p initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mb-3 last:mb-0 leading-relaxed" {...(props as any)} />,
+  p: ({ node, ...props }: any) => <p className="mb-3 last:mb-0 leading-relaxed" {...(props as any)} />,
+  
+  // Image styles (supports resolved figures)
+  img: ({ src, alt, ...props }: any) => {
+    const isFigure = src?.includes("/rag/retrieve/figure/");
+    if (isFigure) {
+        const uuid = src.split('/').pop() || "";
+        return <FigureView uuid={uuid} />;
+    }
+    return (
+      <motion.img 
+        initial={{ opacity: 0, scale: 0.95 }} 
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        src={src} 
+        alt={alt || "Illustration"} 
+        className="rounded-2xl border border-[#1a3a2a]/10 shadow-md w-full h-auto object-contain max-h-[400px] my-6 block mx-auto"
+        {...props} 
+      />
+    );
+  },
 };
 
+/**
+ * FigureView handles authenticated image fetching for historical figures
+ */
+export const FigureView = React.memo(({ uuid }: { uuid: string }) => {
+  const [src, setSrc] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    
+    const fetchImage = async () => {
+      try {
+        const res = await authFetch(`${API_URL}/rag/retrieve/figure/${uuid}`);
+        if (!res.ok) throw new Error("Failed to fetch figure");
+        const blob = await res.blob();
+        objectUrl = URL.createObjectURL(blob);
+        setSrc(objectUrl);
+      } catch (err) {
+        console.error("Figure load error:", err);
+        setError(true);
+      }
+    };
+
+    fetchImage();
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [uuid, API_URL]);
+
+  if (error) {
+    return (
+      <div className="my-6 p-6 bg-red-50 border border-red-100 rounded-2xl text-center">
+        <p className="text-xs font-bold text-red-400 uppercase tracking-widest">Error loading figure</p>
+      </div>
+    );
+  }
+
+  if (!src) {
+    return (
+      <div className="my-6 h-40 animate-pulse bg-[#1a3a2a]/5 rounded-2xl flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#1a3a2a]/10 border-t-[#1a3a2a]/30 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <motion.img 
+      initial={{ opacity: 0, scale: 0.98 }} 
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5 }}
+      src={src} 
+      alt="Historical Figure" 
+      className="rounded-2xl border border-[#1a3a2a]/10 shadow-md w-full h-auto object-contain max-h-[500px] my-6 block mx-auto"
+    />
+  );
+});
+
 export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) => {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+  
+  // Parse history markers: <<SHOW_FIGURE(uuid)>> -> Markdown Image
+  const processedContent = useMemo(() => {
+    return content.replace(/<<SHOW_FIGURE\((.+?)\)>>/g, (_, uuid) => {
+      return `\n\n![Figure](${API_URL}/rag/retrieve/figure/${uuid})\n\n`;
+    });
+  }, [content, API_URL]);
+
   return (
     <div className="markdown-content">
       <ReactMarkdown
@@ -84,7 +172,7 @@ export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) 
         rehypePlugins={[rehypeHighlight, rehypeKatex]}
         components={markdownComponents}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );

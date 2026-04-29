@@ -18,7 +18,7 @@ export interface StudentProfile {
 
 export interface ChatElement {
   id: string;
-  type: "text" | "svg" | "widget";
+  type: "text" | "svg" | "widget" | "image";
   content: string;
   meta?: any;
 }
@@ -257,7 +257,8 @@ function generateHistoricalSVG(type: string, params: any): string {
 function parseContent(content: string): ChatElement[] {
   if (!content) return [];
   const elements: ChatElement[] = [];
-  const regex = /<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s+([^>]+)>>/g;
+  const regex = /<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s*([\s\S]*?)>>/g;
+  let elementCount = 0;
 
   let lastIndex = 0;
   let match;
@@ -266,7 +267,7 @@ function parseContent(content: string): ChatElement[] {
     const textBefore = content.substring(lastIndex, match.index);
     if (textBefore.trim()) {
       elements.push({
-        id: Math.random().toString(36).substring(2, 11),
+        id: `el-${elementCount++}`,
         type: "text",
         content: textBefore.trim(),
       });
@@ -300,10 +301,10 @@ function parseContent(content: string): ChatElement[] {
       }
 
       const shapeType = typeMatch ? typeMatch[1] : "diagram";
-      
+
       if (shapeType === "desmos") {
         elements.push({
-          id: Math.random().toString(36).substring(2, 11),
+          id: `el-${elementCount++}`,
           type: "widget",
           content: params.expression || "",
           meta: {
@@ -312,7 +313,7 @@ function parseContent(content: string): ChatElement[] {
         });
       } else {
         elements.push({
-          id: Math.random().toString(36).substring(2, 11),
+          id: `el-${elementCount++}`,
           type: "svg",
           content: generateHistoricalSVG(shapeType, params),
           meta: {
@@ -325,14 +326,14 @@ function parseContent(content: string): ChatElement[] {
     } else if (type === "MATH_WIDGET") {
       const exprMatch = attrsRaw.match(/expression="([^"]+)"/);
       elements.push({
-        id: Math.random().toString(36).substring(2, 11),
+        id: `el-${elementCount++}`,
         type: "widget",
         content: exprMatch ? exprMatch[1] : "",
       });
     } else if (type === "SHOW_FIGURE") {
-      const figureIdMatch = attrsRaw.match(/figure_id="([^"]+)"/);
+      const figureIdMatch = attrsRaw.match(/figure_id="([^"]+)"/) || attrsRaw.match(/\(([^)]+)\)/);
       elements.push({
-        id: Math.random().toString(36).substring(2, 11),
+        id: `el-${elementCount++}`,
         type: "svg",
         content: SCHOLARLY_BLUEPRINT,
         meta: {
@@ -1275,72 +1276,177 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       let finalSessionId: string | undefined;
       let finalOptions: string[] = [];
 
-      // -- Live Streaming Phase ----------------------------------------------
+      // -- Reactive Streaming State -------------------------------------------
+      let isPlanningUIPresented = false;
+      let streamDone = false;
+      const planningQueue: string[] = [];
+      const bufferedEvents: any[] = [];
       const elements: ChatElement[] = [];
-      let bufferedText = ""; // Full text for legacy/fallback
+      let bufferedText = "";
       let currentTextBuffer = "";
       let currentToolStatus: string | undefined;
       let currentStatusText: string | undefined = "Processing...";
 
-      const pushTextElement = () => {
-        if (currentTextBuffer) {
-          const parsed = parseContent(currentTextBuffer);
-          if (parsed.length > 0) {
-            elements.push(...parsed);
-          }
-          currentTextBuffer = "";
-        }
-      };
-
-      const updateLiveMessage = () => {
+      const updateUI = (text: string, els: ChatElement[], toolStatus?: string, statusText?: string) => {
         set((state) => {
-          const liveElements = [...elements];
-          const strippedBuffer = currentTextBuffer
-            .replace(/<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s+[^>]+>>/g, "")
-            .replace(/<<[^>]*$/g, ""); // Strip any unclosed tags at the end
-
-          if (strippedBuffer.trim() || currentTextBuffer.trim()) {
-            liveElements.push({
-              id: "live-text-buffer",
-              type: "text",
-              content: strippedBuffer,
-            });
-          }
-
           const patch = (msgs: ChatMessage[]) =>
             msgs.map((m) =>
-              m.id === streamingMsgId
-                ? {
-                    ...m,
-                    text: bufferedText
-                      .replace(/<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s+[^>]+>>/g, "")
-                      .trim(),
-                    elements: liveElements,
-                    statusText: bufferedText.trim().length > 0 ? undefined : currentStatusText,
-                    toolStatus: currentToolStatus,
-                  }
-                : m,
+              m.id === streamingMsgId 
+                ? { 
+                    ...m, 
+                    text: text.replace(/<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>/g, "").trim(),
+                    elements: els.length > 0 ? [...els] : undefined,
+                    toolStatus,
+                    statusText
+                  } 
+                : m
             );
           return {
-            messages:
-              state.activeChat?.id === chatSentFromId
-                ? patch(state.messages)
-                : state.messages,
+            messages: state.activeChat?.id === chatSentFromId ? patch(state.messages) : state.messages,
             chatMessagesCache: {
               ...state.chatMessagesCache,
-              [chatSentFromId]: patch(
-                state.chatMessagesCache[chatSentFromId] || [],
-              ),
+              [chatSentFromId]: patch(state.chatMessagesCache[chatSentFromId] || []),
             },
           };
         });
       };
 
-      updateLiveMessage(); // Initial state update with "Processing..."
+      const pushTextElement = (text: string) => {
+        const sanitized = text.replace(/<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>/g, "").trim();
+        if (sanitized) {
+          elements.push({
+            id: `stream-el-${elements.length}`,
+            type: "text",
+            content: sanitized,
+          });
+        }
+      };
 
+      const handleEvent = (event: any) => {
+        if (event.type === "planning") {
+          const status = event.text || event.message || "";
+          if (status && !planningQueue.includes(status)) {
+            planningQueue.push(status);
+          }
+        } else if (event.type === "tool_status") {
+          currentToolStatus = event.message || "Drawing...";
+          if (isPlanningUIPresented) updateUI(bufferedText, elements, currentToolStatus);
+        } else if (event.type === "visual_block" || event.type === "visual_error") {
+          pushTextElement(currentTextBuffer);
+          currentTextBuffer = "";
+          
+          if (event.image) {
+            elements.push({
+              id: `stream-el-${elements.length}`,
+              type: "image",
+              content: `data:image/jpeg;base64,${event.image}`,
+              meta: event.meta,
+            });
+          } else {
+            const svgContent = event.type === "visual_block" ? event.svg : (event.fallback?.content || event.fallback_text || "[Visual Error]");
+            elements.push({
+              id: `stream-el-${elements.length}`,
+              type: "svg",
+              content: svgContent,
+              meta: event.meta,
+            });
+          }
+          currentToolStatus = undefined;
+          if (isPlanningUIPresented) updateUI(bufferedText, elements);
+        } else if (event.type === "math_widget" || event.type === "math_widget_error") {
+          pushTextElement(currentTextBuffer);
+          currentTextBuffer = "";
+          elements.push({
+            id: `stream-el-${elements.length}`,
+            type: "widget",
+            content: event.expression || "",
+            meta: { error: event.type === "math_widget_error", message: event.message },
+          });
+          currentToolStatus = undefined;
+          if (isPlanningUIPresented) updateUI(bufferedText, elements);
+        } else if ((event.type === "chunk" || event.type === "chunks") && typeof event.text === "string") {
+          currentTextBuffer += event.text;
+          bufferedText += event.text;
+
+          // Detect and extract embedded tags (MATH_DRAW, etc.) from the text stream
+          const tagRegex = /<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>/g;
+          let match;
+          while ((match = tagRegex.exec(currentTextBuffer)) !== null) {
+            const tag = match[0];
+            
+            // 1. Finalize and push any text that appeared BEFORE the tag
+            const textBefore = currentTextBuffer.substring(0, match.index);
+            if (textBefore.trim()) pushTextElement(textBefore);
+            
+            // 2. Parse the tag itself into a visual element
+            const extracted = parseContent(tag);
+            const tagElement = extracted.find(el => el.type !== "text");
+            if (tagElement) {
+              elements.push(tagElement);
+            }
+            
+            // 3. Remove the processed part (textBefore + tag) from the active buffer
+            currentTextBuffer = currentTextBuffer.substring(match.index + tag.length);
+            tagRegex.lastIndex = 0; // Reset for remaining text
+          }
+
+          if (isPlanningUIPresented) {
+            updateUI(bufferedText, elements, currentToolStatus);
+          }
+        } else if (event.type === "done") {
+          finalSessionId = event.session_id;
+          finalOptions = Array.isArray(event.options) ? event.options : [];
+          if (!bufferedText && typeof event.response === "string" && event.response.trim()) {
+            currentTextBuffer = event.response;
+            bufferedText = event.response;
+            if (isPlanningUIPresented) updateUI(bufferedText, elements);
+          }
+        }
+      };
+
+      // -- Orchestrator Loop (Non-blocking) -----------------------------------
+      const orchestrateUI = async () => {
+        let shownStatuses = 0;
+        
+        while (!streamDone || planningQueue.length > shownStatuses) {
+          if (planningQueue.length > shownStatuses) {
+            const status = planningQueue[shownStatuses];
+            shownStatuses++;
+            updateUI("", [], undefined, status);
+            await new Promise((r) => setTimeout(r, 1200));
+          } else if (streamDone) {
+            break;
+          } else {
+            // If we have no more planning statuses but the stream is still going,
+            // we wait a bit to see if more planning statuses arrive.
+            // If the AI has already started sending chunks (bufferedEvents has data),
+            // and we've shown at least one planning status (or there were none), 
+            // we can proceed to streaming.
+            if (bufferedEvents.length > 0 || shownStatuses > 0) break;
+            await new Promise((r) => setTimeout(r, 100));
+          }
+        }
+
+        isPlanningUIPresented = true;
+        // Process all events that were buffered during the planning phase
+        while (bufferedEvents.length > 0) {
+          handleEvent(bufferedEvents.shift());
+        }
+        // Final sync for the switch from "Thinking" to "Streaming"
+        pushTextElement(currentTextBuffer);
+        currentTextBuffer = "";
+        updateUI(bufferedText, elements, currentToolStatus);
+      };
+
+      const uiPromise = orchestrateUI();
+
+      // -- Stream Reader Loop -------------------------------------------------
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          streamDone = true;
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
@@ -1349,93 +1455,26 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         for (const line of lines) {
           const trimmed = line.trim();
           if (!trimmed || !trimmed.startsWith("data:")) continue;
-
           const jsonStr = trimmed.slice(5).trim();
           if (!jsonStr) continue;
 
-          let event: any;
           try {
-            event = JSON.parse(jsonStr);
-          } catch {
-            continue;
-          }
-
-          let shouldUpdate = false;
-
-          if (event.type === "planning") {
-            const status = event.text || event.message || "";
-            if (status && status !== currentStatusText) {
-              currentStatusText = status;
-              shouldUpdate = true;
+            const event = JSON.parse(jsonStr);
+            if (event.type === "planning") {
+              handleEvent(event);
+            } else if (isPlanningUIPresented) {
+              handleEvent(event);
+            } else {
+              bufferedEvents.push(event);
             }
-          } else if (event.type === "tool_status") {
-            currentToolStatus = event.message || "Drawing...";
-            shouldUpdate = true;
-          } else if (
-            event.type === "visual_block" ||
-            event.type === "visual_error"
-          ) {
-            pushTextElement();
-            const svgContent =
-              event.type === "visual_block"
-                ? event.svg
-                : event.fallback?.content ||
-                  event.fallback_text ||
-                  "[Visual Error]";
-
-            elements.push({
-              id: Math.random().toString(36).substring(2, 11),
-              type: "svg",
-              content: svgContent,
-              meta: event.meta,
-            });
-            currentToolStatus = undefined;
-            shouldUpdate = true;
-          } else if (
-            event.type === "math_widget" ||
-            event.type === "math_widget_error"
-          ) {
-            pushTextElement();
-            elements.push({
-              id: Math.random().toString(36).substring(2, 11),
-              type: "widget",
-              content: event.expression || "",
-              meta: {
-                error: event.type === "math_widget_error",
-                message: event.message,
-              },
-            });
-            currentToolStatus = undefined;
-            shouldUpdate = true;
-          } else if (
-            (event.type === "chunk" || event.type === "chunks") &&
-            typeof event.text === "string"
-          ) {
-            currentTextBuffer += event.text;
-            bufferedText += event.text;
-            shouldUpdate = true;
-          } else if (event.type === "done") {
-            finalSessionId = event.session_id;
-            finalOptions = Array.isArray(event.options) ? event.options : [];
-            // If no chunks were received, fall back to the full response text provided in the 'done' event
-            if (
-              !bufferedText &&
-              typeof event.response === "string" &&
-              event.response.trim()
-            ) {
-              currentTextBuffer = event.response;
-              bufferedText = event.response;
-              shouldUpdate = true;
-            }
+          } catch (e) {
+            console.warn("Failed to parse event", jsonStr);
           }
 
-          if (shouldUpdate) {
-            updateLiveMessage();
-          }
         }
       }
-      pushTextElement();
-      updateLiveMessage();
+
+      await uiPromise; // Ensure orchestrator finishes flushes
 
       // Finalise: replace streaming placeholder with finished message + options
       set((state) => {

@@ -21,6 +21,11 @@ interface ChatMessageBubbleProps {
   onOptionSelect?: (option: string) => void;
 }
 
+const SmoothMarkdown = ({ content, isStreaming }: { content: string; isStreaming: boolean }) => {
+  const displayedText = useSmoothStream(content, isStreaming, 15);
+  return <MarkdownRenderer content={displayedText} />;
+};
+
 export const ChatMessageBubble = React.memo(
   ({ message, isStreaming, onOptionSelect }: ChatMessageBubbleProps) => {
     const isUser = message.sender === "user";
@@ -79,6 +84,7 @@ export const ChatMessageBubble = React.memo(
                       return <StreamingTextRenderer key={el.id} content={el.content} isStreaming={!!isStreaming && isLastElement} />;
                     }
                     if (el.type === "svg") return <VisualBlock key={el.id} svg={el.content} meta={el.meta} />;
+                    if (el.type === "image") return <VisualBlock key={el.id} image={el.content} meta={el.meta} />;
                     if (el.type === "widget") return <MathWidget key={el.id} expression={el.content} meta={el.meta} />;
                     return null;
                   })}
