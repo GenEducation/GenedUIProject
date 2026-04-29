@@ -106,7 +106,10 @@ export const studentService = {
       signal,
     });
 
-    if (!response.ok) throw new Error("API request failed");
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw data;
+    }
 
     return response;
   },

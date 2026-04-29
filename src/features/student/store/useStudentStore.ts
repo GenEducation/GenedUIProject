@@ -162,6 +162,9 @@ function generateHistoricalSVG(type: string, params: any): string {
   const width = 400;
   const height = 280;
 
+  // Normalize type: remove quotes, backslashes, and lowercase it
+  type = type.replace(/[\\"]/g, '').toLowerCase().trim();
+
   let shapeMarkup = "";
 
   // Design Constants
@@ -453,6 +456,103 @@ function generateHistoricalSVG(type: string, params: any): string {
     }
     
     shapeMarkup = calendarMarkup;
+  } else if (type === "coordinate_plane") {
+    const points: Array<{ x: number; y: number; label?: string }> = params.points || [];
+    const lines: Array<{ p1: [number, number]; p2: [number, number]; label?: string }> = params.lines || [];
+
+    // Determine the range from points, default to [-1, 5] with safety filters
+    const allX = points.map((p) => p.x).filter(v => typeof v === 'number' && !isNaN(v))
+      .concat(lines.flatMap((l) => [l.p1?.[0], l.p2?.[0]]).filter(v => typeof v === 'number' && !isNaN(v)));
+    const allY = points.map((p) => p.y).filter(v => typeof v === 'number' && !isNaN(v))
+      .concat(lines.flatMap((l) => [l.p1?.[1], l.p2?.[1]]).filter(v => typeof v === 'number' && !isNaN(v)));
+    const minX = Math.min(0, ...allX) - 1;
+    const maxX = Math.max(1, ...allX) + 1;
+    const minY = Math.min(0, ...allY) - 1;
+    const maxY = Math.max(1, ...allY) + 1;
+
+    const margin = 48;
+    const plotW = width - margin * 2;
+    const plotH = height - margin * 2;
+
+    // Mapping functions: data coords → SVG px
+    const toSvgX = (x: number) => margin + ((x - minX) / (maxX - minX)) * plotW;
+    const toSvgY = (y: number) => margin + height - margin * 2 - ((y - minY) / (maxY - minY)) * plotH;
+
+    // Grid
+    let gridLines = "";
+    for (let gx = Math.ceil(minX); gx <= Math.floor(maxX); gx++) {
+      const sx = toSvgX(gx);
+      gridLines += `<line x1="${sx}" y1="${margin}" x2="${sx}" y2="${height - margin}" stroke="${gridColor}" stroke-width="0.5" stroke-opacity="0.08"/>`;
+      if (gx !== 0) {
+        gridLines += `<text x="${sx}" y="${toSvgY(0) + 14}" text-anchor="middle" fill="${darkInk}" font-family="Inter,sans-serif" font-size="9" fill-opacity="0.4">${gx}</text>`;
+      }
+    }
+    for (let gy = Math.ceil(minY); gy <= Math.floor(maxY); gy++) {
+      const sy = toSvgY(gy);
+      gridLines += `<line x1="${margin}" y1="${sy}" x2="${width - margin}" y2="${sy}" stroke="${gridColor}" stroke-width="0.5" stroke-opacity="0.08"/>`;
+      if (gy !== 0) {
+        gridLines += `<text x="${toSvgX(0) - 10}" y="${sy + 4}" text-anchor="end" fill="${darkInk}" font-family="Inter,sans-serif" font-size="9" fill-opacity="0.4">${gy}</text>`;
+      }
+    }
+
+    // Axes
+    const ox = toSvgX(0);
+    const oy = toSvgY(0);
+    const axes = `
+      <line x1="${margin}" y1="${oy}" x2="${width - margin}" y2="${oy}" stroke="${darkInk}" stroke-width="1.5" stroke-opacity="0.3"/>
+      <line x1="${ox}" y1="${margin}" x2="${ox}" y2="${height - margin}" stroke="${darkInk}" stroke-width="1.5" stroke-opacity="0.3"/>
+      <text x="${width - margin + 6}" y="${oy + 4}" fill="${darkInk}" font-family="Inter,sans-serif" font-size="10" font-weight="bold" fill-opacity="0.4">x</text>
+      <text x="${ox + 4}" y="${margin - 4}" fill="${darkInk}" font-family="Inter,sans-serif" font-size="10" font-weight="bold" fill-opacity="0.4">y</text>
+      <text x="${ox - 10}" y="${oy + 14}" text-anchor="middle" fill="${darkInk}" font-family="Inter,sans-serif" font-size="9" fill-opacity="0.4">0</text>
+    `;
+
+    // Lines between points
+    let lineMarkup = "";
+    lines.forEach((l) => {
+      const x1 = toSvgX(l.p1[0]);
+      const y1 = toSvgY(l.p1[1]);
+      const x2 = toSvgX(l.p2[0]);
+      const y2 = toSvgY(l.p2[1]);
+      const midX = (x1 + x2) / 2;
+      const midY = (y1 + y2) / 2;
+      lineMarkup += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${brandGreen}" stroke-width="2" stroke-linecap="round"/>`;
+      if (l.label) {
+        lineMarkup += `<text x="${midX + 5}" y="${midY - 5}" fill="${brandGreen}" font-family="Inter,sans-serif" font-size="10" font-weight="700">${l.label}</text>`;
+      }
+    });
+
+    // Points
+    let pointMarkup = "";
+    points.forEach((p) => {
+      const sx = toSvgX(p.x);
+      const sy = toSvgY(p.y);
+      pointMarkup += `<circle cx="${sx}" cy="${sy}" r="4.5" fill="${brandGreen}" stroke="white" stroke-width="1.5"/>`;
+      if (p.label) {
+        pointMarkup += `<text x="${sx + 8}" y="${sy - 6}" fill="${darkInk}" font-family="Inter,sans-serif" font-size="11" font-weight="700">${p.label}</text>`;
+      }
+    });
+
+    shapeMarkup = gridLines + axes + lineMarkup + pointMarkup;
+  } else if (type === "point" || type === "coordinate") {
+    // Treat (0,0) as center if they are small relative numbers, or use as absolute if large
+    // AI usually sends 0,0 for center
+    const rawX = typeof params.x === 'number' ? params.x : 0;
+    const rawY = typeof params.y === 'number' ? params.y : 0;
+    
+    // Simple heuristic: if coords are small (e.g. < 50), treat them as relative to center
+    const x = Math.abs(rawX) < 100 ? (width / 2) + rawX * 20 : rawX;
+    const y = Math.abs(rawY) < 100 ? (height / 2) - rawY * 20 : rawY;
+    
+    const label = params.label || "";
+    const color = params.color || "#FF6B35";
+    
+    shapeMarkup = `
+      <circle cx="${x}" cy="${y}" r="6" fill="${color}" stroke="white" stroke-width="2" />
+      <circle cx="${x}" cy="${y}" r="12" fill="${color}" fill-opacity="0.15" />
+      ${label ? `
+        <text x="${x}" y="${y + 25}" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="12" font-weight="800">${label}</text>
+      ` : ""}
+    `;
   } else {
     return SCHOLARLY_BLUEPRINT;
   }
@@ -483,13 +583,15 @@ function generateHistoricalSVG(type: string, params: any): string {
 function parseContent(content: string): ChatElement[] {
   if (!content) return [];
   const elements: ChatElement[] = [];
-  const regex = /<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s*([\s\S]*?)>>?/g;
+  // Detect special visual tags AND raw SVG blocks
+  const visualTagRegex = /(?:<<|<)(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s+([\s\S]*?)(?:>>|>|$)/g;
+  const rawSvgRegex = /<svg[\s\S]*?<\/svg>/g;
   let elementCount = 0;
 
   let lastIndex = 0;
   let match;
 
-  while ((match = regex.exec(content)) !== null) {
+  while ((match = visualTagRegex.exec(content)) !== null) {
     const textBefore = content.substring(lastIndex, match.index);
     if (textBefore.trim()) {
       elements.push({
@@ -500,10 +602,11 @@ function parseContent(content: string): ChatElement[] {
     }
 
     const type = match[1];
-    const attrsRaw = match[2];
+    let attrsRaw = match[2];
 
     if (type === "MATH_DRAW") {
-      const typeMatch = attrsRaw.match(/type="([^"]+)"/);
+      // More robust type extraction handling escaped quotes, single quotes, or no quotes
+      const typeMatch = attrsRaw.match(/type\s*=\s*[\\"]*([^\\"\s\>]+)[\\"]*/i);
       // Handle nested JSON by finding balanced braces
       const paramsStart = attrsRaw.indexOf("params=");
       let params: any = {};
@@ -518,10 +621,18 @@ function parseContent(content: string): ChatElement[] {
             if (depth === 0) { jsonEnd = i + 1; break; }
           }
           try {
-            const jsonStr = attrsRaw.substring(jsonStart, jsonEnd).replace(/'/g, '"');
+            let jsonStr = attrsRaw.substring(jsonStart, jsonEnd);
+            // Robust unescaping for historical JSON strings
+            if (jsonStr.includes('\\"')) {
+              jsonStr = jsonStr.replace(/\\"/g, '"');
+            }
+            // Fix single quotes for AI-generated JSON
+            if (!jsonStr.includes('"') && jsonStr.includes("'")) {
+              jsonStr = jsonStr.replace(/'/g, '"');
+            }
             params = JSON.parse(jsonStr);
-          } catch {
-            console.warn("Failed to parse params for MATH_DRAW", attrsRaw.substring(jsonStart, jsonEnd));
+          } catch (e) {
+            console.warn("[Parser] Failed to parse params for", type, attrsRaw.substring(jsonStart, jsonEnd), e);
           }
         }
       }
@@ -570,15 +681,46 @@ function parseContent(content: string): ChatElement[] {
       });
     }
 
-    lastIndex = regex.lastIndex;
+    lastIndex = visualTagRegex.lastIndex;
   }
 
-  const remainingText = content.substring(lastIndex);
-  if (remainingText.trim() || elements.length === 0) {
+  // 2. Process any remaining text for raw SVG blocks
+  const remainingTextAfterTags = content.substring(lastIndex);
+  let rawLastIndex = 0;
+  let rawMatch;
+
+  while ((rawMatch = rawSvgRegex.exec(remainingTextAfterTags)) !== null) {
+    const textBefore = remainingTextAfterTags.substring(rawLastIndex, rawMatch.index);
+    if (textBefore.trim()) {
+      elements.push({
+        id: `el-${elementCount++}-${Date.now()}`,
+        type: "text",
+        content: textBefore.trim(),
+      });
+    }
+
     elements.push({
-      id: Math.random().toString(36).substring(2, 11),
+      id: `svg-${elementCount++}-${Date.now()}`,
+      type: "svg",
+      content: rawMatch[0],
+    });
+
+    rawLastIndex = rawSvgRegex.lastIndex;
+  }
+
+  const finalTrailing = remainingTextAfterTags.substring(rawLastIndex);
+  if (finalTrailing.trim()) {
+    elements.push({
+      id: `el-${elementCount++}-${Date.now()}`,
       type: "text",
-      content: remainingText.trim() || content,
+      content: finalTrailing.trim(),
+    });
+  } else if (elements.length === 0 && content.trim()) {
+    // Fallback if nothing was matched but there is content
+    elements.push({
+      id: `el-fallback-${Date.now()}`,
+      type: "text",
+      content: content.trim(),
     });
   }
 
@@ -905,7 +1047,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
           return {
             id: `h-${i}-${Date.now()}`,
-            text: content,
+            text: content.replace(/(?:<<|<)(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?(?:>>|>)/g, "").replace(/<svg[\s\S]*?<\/svg>/g, "").trim(),
             elements:
               elements.length > 1 ||
               (elements.length === 1 && elements[0].type !== "text")
@@ -1544,7 +1686,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
               m.id === streamingMsgId 
                 ? { 
                     ...m, 
-                    text: text.replace(/<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>?/g, "").trim(),
+                    text: text.replace(/(?:<<|<)(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?(?:>>|>|$)/g, "").replace(/<svg[\s\S]*?<\/svg>/g, "").trim(),
                     elements: els.length > 0 ? [...els] : undefined,
                     toolStatus,
                     statusText: statusText !== undefined ? statusText : currentStatusText
@@ -1944,7 +2086,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       set((state) => {
         const errorMsg: ChatMessage = {
           id: `err-${Date.now()}`,
-          text: "Sorry, I encountered an error connecting to the knowledge base. Please try again.",
+          text: error.detail ||  "Sorry, I encountered an error connecting to the knowledge base. Please try again.",
           sender: "ai",
           timestamp: new Date().toLocaleTimeString([], {
             hour: "2-digit",
