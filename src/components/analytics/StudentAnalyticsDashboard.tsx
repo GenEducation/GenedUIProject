@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   BarChart2, ArrowLeft, CheckCircle2, 
@@ -10,30 +10,67 @@ import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { MetricCard } from "./MetricCard";
 import { SkillMasteryView } from "./SkillMasteryView";
 import { ChapterMasteryView } from "./ChapterMasteryView";
+import { SkillProgression } from "./SkillProgression";
+
+type TabType = "chapter" | "skill" | "progression";
 
 interface StudentAnalyticsDashboardProps {
   mode?: "student" | "parent";
   studentId?: string;
 }
 
+const TAB_HEADINGS: Record<TabType, string> = {
+  chapter: "Curriculum Mastery Overview",
+  skill: "Skill Proficiency Mapping",
+  progression: "Skill Progression Over Time",
+};
+
 export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps> = ({ 
   mode = "student", 
-  studentId 
+  studentId: propStudentId 
 }) => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"skill" | "chapter">("chapter");
+  const [activeTab, setActiveTab] = useState<TabType>("chapter");
   const { studentProfile } = useStudentStore();
   const { 
     analyticsSubjects, 
     selectedAnalyticsSubject,
     skillSummary,
     fetchAnalyticsData,
-    isAnalyticsLoading
+    fetchSkillProgressionData,
+    isAnalyticsLoading,
+    skillProgression,
   } = useAnalyticsStore();
 
-  React.useEffect(() => {
-    fetchAnalyticsData(undefined, studentId);
-  }, [fetchAnalyticsData, studentId]);
+  // Use prop ID if available (parent mode), otherwise fallback to logged-in student's ID
+  const effectiveStudentId = propStudentId || studentProfile?.user_id;
+
+  // -- Initial data load -------------------------------------------------------
+  useEffect(() => {
+    if (effectiveStudentId) {
+      fetchAnalyticsData(undefined, effectiveStudentId);
+    }
+  }, [fetchAnalyticsData, effectiveStudentId]);
+
+  // -- Progression tab: lazy-load on first visit, then reload on subject change --
+  useEffect(() => {
+    if (activeTab === "progression" && effectiveStudentId) {
+      fetchSkillProgressionData(undefined, effectiveStudentId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedAnalyticsSubject, effectiveStudentId]);
+
+  // -- Subject dropdown change --------------------------------------------------
+  const handleSubjectChange = (newSubject: string) => {
+    if (!effectiveStudentId) return;
+    
+    // Always reload core analytics
+    fetchAnalyticsData(newSubject, effectiveStudentId);
+    // Also reload progression if the tab is active
+    if (activeTab === "progression") {
+      fetchSkillProgressionData(newSubject, effectiveStudentId);
+    }
+  };
 
   const metrics = [
     {
@@ -98,7 +135,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                 <div className="flex items-center gap-1 group">
                   <select 
                     value={selectedAnalyticsSubject}
-                    onChange={(e) => fetchAnalyticsData(e.target.value, studentId)}
+                    onChange={(e) => handleSubjectChange(e.target.value)}
                     className="text-xl font-black text-[#1a3a2a] bg-transparent border-none focus:ring-0 cursor-pointer appearance-none p-0 pr-8 hover:text-[#059669] transition-colors"
                   >
                     {analyticsSubjects.map(sub => (
@@ -131,7 +168,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
           <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-bold text-[#1a3a2a]">
-                {activeTab === "chapter" ? "Curriculum Mastery Overview" : "Skill Proficiency Mapping"}
+                {TAB_HEADINGS[activeTab]}
               </h3>
               
               <div className="flex gap-2 p-1.5 bg-[#F4F3EE] rounded-2xl">
@@ -155,6 +192,16 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                 >
                   Skill Mastery
                 </button>
+                <button
+                  onClick={() => setActiveTab("progression")}
+                  className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    activeTab === "progression"
+                      ? "bg-white text-[#1a3a2a] shadow-sm"
+                      : "text-[#1a3a2a]/70 hover:text-[#1a3a2a]"
+                  }`}
+                >
+                  Skill Progression
+                </button>
               </div>
             </div>
 
@@ -166,7 +213,13 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3 }}
               >
-                {activeTab === "skill" ? <SkillMasteryView /> : <ChapterMasteryView mode={mode} />}
+                {activeTab === "skill" ? (
+                  <SkillMasteryView />
+                ) : activeTab === "progression" ? (
+                  <SkillProgression />
+                ) : (
+                  <ChapterMasteryView mode={mode} />
+                )}
               </motion.div>
             </AnimatePresence>
           </div>

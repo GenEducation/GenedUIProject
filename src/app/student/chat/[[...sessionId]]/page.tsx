@@ -40,8 +40,9 @@ export default function StudentChatUnifiedPage({
   useEffect(() => {
     if (!studentProfile) return;
 
+    const { hasFetchedSessions } = useStudentStore.getState();
     // Ensure sessions are loaded for the sidebar
-    if (recentChats.length === 0 && !isSessionsLoading) {
+    if (!hasFetchedSessions && !isSessionsLoading) {
       fetchSessions();
     }
 

@@ -335,7 +335,7 @@ function parseContent(content: string): ChatElement[] {
       elements.push({
         id: `el-${elementCount++}`,
         type: "svg",
-        content: SCHOLARLY_BLUEPRINT,
+        content: "", // Optimized: content not needed as VisualBlock handles placeholder/fetching
         meta: {
           shape: "image",
           source: "show_figure",
@@ -358,6 +358,29 @@ function parseContent(content: string): ChatElement[] {
 
   return elements;
 }
+
+const MAX_CACHED_SESSIONS = 10;
+
+/**
+ * Ensures the chat cache doesn't grow indefinitely by evicting the oldest sessions
+ */
+const manageCacheEviction = (cache: Record<string, ChatMessage[]>, newSessionId: string, newMessages: ChatMessage[]) => {
+  const updatedCache = { ...cache, [newSessionId]: newMessages };
+  const sessionIds = Object.keys(updatedCache);
+  
+  if (sessionIds.length > MAX_CACHED_SESSIONS) {
+    // Simple FIFO eviction: remove the first key (oldest)
+    const oldestSessionId = sessionIds[0];
+    // Don't evict the current session we just added
+    if (oldestSessionId !== newSessionId) {
+      delete updatedCache[oldestSessionId];
+    } else if (sessionIds.length > 1) {
+      delete updatedCache[sessionIds[1]];
+    }
+  }
+  
+  return updatedCache;
+};
 
 // -- Store interface ----------------------------------------------------------─
 
@@ -386,6 +409,8 @@ interface StudentState {
   streamingMessageId: string | null;
   chatAbortController: AbortController | null;
   voiceSessionStatus: "idle" | "connecting" | "active" | "error";
+  hasFetchedSessions: boolean;
+  hasFetchedAgents: boolean;
 
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
@@ -439,12 +464,14 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   streamingMessageId: null,
   chatAbortController: null,
   voiceSessionStatus: "idle",
+  hasFetchedSessions: false,
+  hasFetchedAgents: false,
 
   setStudentProfile: (profile) => set({ studentProfile: profile }),
 
   fetchSessions: async () => {
-    const { studentProfile } = get();
-    if (!studentProfile) return;
+    const { studentProfile, isSessionsLoading, hasFetchedSessions } = get();
+    if (!studentProfile || isSessionsLoading || hasFetchedSessions) return;
 
     set({ isSessionsLoading: true });
     try {
@@ -466,7 +493,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         subject: s.subject || "", 
       }));
 
-      set({ recentChats: mappedChats, isSessionsLoading: false });
+      set({ recentChats: mappedChats, isSessionsLoading: false, hasFetchedSessions: true });
     } catch (error) {
       console.error("Fetch Sessions Error:", error);
       set({ isSessionsLoading: false });
@@ -474,8 +501,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   },
 
   fetchAvailableAgents: async () => {
-    const { studentProfile } = get();
-    if (!studentProfile) return;
+    const { studentProfile, isAgentsLoading, hasFetchedAgents } = get();
+    if (!studentProfile || isAgentsLoading || hasFetchedAgents) return;
 
     set({ isAgentsLoading: true });
     try {
@@ -497,7 +524,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         });
       }
 
-      set({ availableAgents: agents, isAgentsLoading: false });
+      set({ availableAgents: agents, isAgentsLoading: false, hasFetchedAgents: true });
     } catch (error) {
       console.error("Fetch Agents Error:", error);
       set({ availableAgents: [], isAgentsLoading: false });
@@ -673,10 +700,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         const isActive = state.activeChat?.id === sessionId;
         return {
           messages: isActive ? mappedMessages : state.messages,
-          chatMessagesCache: {
-            ...state.chatMessagesCache,
-            [sessionId]: mappedMessages,
-          },
+          chatMessagesCache: manageCacheEviction(state.chatMessagesCache, sessionId, mappedMessages),
           isHistoryLoading: false,
           historyAbortController: null,
         };
@@ -1537,15 +1561,17 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           }
         }
 
-        // Migrate cache key from tempId to realId
+        // Migrate cache key from tempId to realId with eviction management
         const currentCached = state.chatMessagesCache[chatSentFromId] || [];
         const finalisedMessages = patchMsg(currentCached);
-        const newCache = {
-          ...state.chatMessagesCache,
-          [realId]: finalisedMessages,
-        };
+        
+        let newCache = manageCacheEviction(state.chatMessagesCache, realId, finalisedMessages);
+        
         if (realId !== chatSentFromId) {
-          delete newCache[chatSentFromId];
+          // Explicitly cleanup the temporary ID cache
+          const cleanedCache = { ...newCache };
+          delete cleanedCache[chatSentFromId];
+          newCache = cleanedCache;
         }
 
         const newTypingIds = state.typingChatIds.filter(
@@ -1597,10 +1623,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         );
 
         return {
-          chatMessagesCache: {
-            ...state.chatMessagesCache,
-            [chatSentFromId]: finishedMessages,
-          },
+          chatMessagesCache: manageCacheEviction(state.chatMessagesCache, chatSentFromId, finishedMessages),
           messages:
             state.activeChat?.id === chatSentFromId
               ? finishedMessages
@@ -1652,6 +1675,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       isPartnerModalOpen: false,
       isAITyping: false,
       typingChatIds: [],
+      hasFetchedSessions: false,
+      hasFetchedAgents: false,
     });
     window.location.href = "/";
   },

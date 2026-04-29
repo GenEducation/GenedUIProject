@@ -85,16 +85,26 @@ export function LoginView() {
     }
 
     if (signupData.role === "student") {
+      const ageNum = Number(signupData.age);
       if (!signupData.age?.trim()) {
         errors.age = "Age is compulsory";
-      } else if (isNaN(Number(signupData.age))) {
+      } else if (isNaN(ageNum)) {
         errors.age = "Age must be a numeric value";
+      } else if (ageNum <= 0) {
+        errors.age = "Age must be a positive number";
+      } else if (ageNum > 50) {
+        errors.age = "Age must be 50 or less";
       }
 
+      const gradeNum = Number(signupData.grade);
       if (!signupData.grade?.trim()) {
         errors.grade = "Grade is compulsory";
-      } else if (isNaN(Number(signupData.grade))) {
+      } else if (isNaN(gradeNum)) {
         errors.grade = "Grade must be a numeric value";
+      } else if (gradeNum <= 0) {
+        errors.grade = "Grade must be a positive number";
+      } else if (gradeNum > 12) {
+        errors.grade = "Grade must be 12 or less";
       }
 
       if (!signupData.school_board?.trim()) errors.school_board = "Board is compulsory";

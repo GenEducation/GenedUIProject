@@ -185,5 +185,23 @@ export const studentService = {
     }
 
     return response.json();
-  }
+  },
+
+  fetchSkillProgression: async (studentId: string, subject: string) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/students/${studentId}/skill-progression?subject=${encodeURIComponent(subject)}`,
+      { headers: { accept: "application/json" } }
+    );
+    if (!response.ok) throw new Error("Failed to fetch skill progression");
+    return response.json(); // SkillProgressionEntry[]
+  },
+
+  fetchSkillProfileHistory: async (studentId: string, subject: string) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/students/${studentId}/skill-profile-history?subject=${encodeURIComponent(subject)}`,
+      { headers: { accept: "application/json" } }
+    );
+    if (!response.ok) throw new Error("Failed to fetch skill profile history");
+    return response.json(); // { subject, history: OverallHistoryPoint[] }
+  },
 };
