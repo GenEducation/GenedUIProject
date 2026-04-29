@@ -16,7 +16,7 @@ export function StudentChatView() {
   const sessionIdRaw = params?.sessionId;
   const sessionId = Array.isArray(sessionIdRaw) ? sessionIdRaw[0] : (sessionIdRaw as string | undefined);
   
-  const { activeChat, messages, isAITyping, openChatById, studentProfile } = useStudentStore();
+  const { activeChat, messages, isAITyping, openChatById, studentProfile, isSessionsLoading } = useStudentStore();
 
   // Sidebar toggle state
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -47,7 +47,7 @@ export function StudentChatView() {
         openChatById(sessionId);
       }
     }
-  }, [sessionId, openChatById, router, studentProfile]);
+  }, [sessionId, openChatById, router, studentProfile, isSessionsLoading]);
 
   // URL sync logic...
   useEffect(() => {

@@ -793,9 +793,9 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       if (!get().chatMessagesCache[sessionId]) {
         await fetchChatHistory(sessionId);
       }
-    } else {
+    } else if (!get().isSessionsLoading && get().hasFetchedSessions) {
       console.error("Chat not found even after fetching sessions:", sessionId);
-      // Fallback: redirect home if session is invalid
+      // Fallback: redirect home only if we are SURE it's not there
       window.location.href = "/student";
     }
   },
@@ -1321,7 +1321,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
                     text: text.replace(/<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>/g, "").trim(),
                     elements: els.length > 0 ? [...els] : undefined,
                     toolStatus,
-                    statusText
+                    statusText: statusText !== undefined ? statusText : currentStatusText
                   } 
                 : m
             );
@@ -1436,6 +1436,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           if (planningQueue.length > shownStatuses) {
             const status = planningQueue[shownStatuses];
             shownStatuses++;
+            currentStatusText = status;
             updateUI("", [], undefined, status);
             await new Promise((r) => setTimeout(r, 1200));
           } else if (streamDone) {
