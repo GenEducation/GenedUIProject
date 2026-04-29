@@ -80,7 +80,7 @@ export const ChatMessageBubble = React.memo(
                 <div className="space-y-5">
                   {message.elements.map((el, index) => {
                     if (el.type === "text") {
-                      const isLastElement = index === message.elements.length - 1;
+                      const isLastElement = index === message.elements!.length - 1;
                       return <StreamingTextRenderer key={el.id} content={el.content} isStreaming={!!isStreaming && isLastElement} />;
                     }
                     if (el.type === "svg") return <VisualBlock key={el.id} svg={el.content} meta={el.meta} />;

@@ -206,27 +206,253 @@ function generateHistoricalSVG(type: string, params: any): string {
       </g>
     `;
   } else if (type === "circle") {
-    const rVal = params.radius || 2;
-    const r = Math.min(rVal * 40, 100);
+    const isClock = params.highlight || params.showStepsBetween || (params.labels && params.labels.length > 0) || params.hour !== undefined || params.minute !== undefined;
+    const rVal = params.radius || (isClock ? 5 : 2);
+    const actualR = isClock ? 100 : Math.min(rVal * 40, 100);
     const cx = width / 2;
     const cy = height / 2;
 
-    shapeMarkup = `
+    const baseCircle = `
       <defs>
         <radialGradient id="circleGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
           <stop offset="0%" stop-color="${brandGreen}" stop-opacity="0.15" />
           <stop offset="100%" stop-color="${brandGreen}" stop-opacity="0.05" />
         </radialGradient>
       </defs>
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#circleGradient)" stroke="${brandGreen}" stroke-width="2" />
+      <circle cx="${cx}" cy="${cy}" r="${actualR}" fill="url(#circleGradient)" stroke="${brandGreen}" stroke-width="2" />
+    `;
 
-      <!-- Radius Line -->
+    if (isClock) {
+      let clockElements = "";
+      
+      if (params.highlight) {
+        const { from, to, color, steps } = params.highlight;
+        const startAngle = (from * 30 - 90);
+        const endAngle = (from > to ? (to + 12) * 30 - 90 : to * 30 - 90);
+        
+        const startRad = startAngle * (Math.PI / 180);
+        const endRad = endAngle * (Math.PI / 180);
+        
+        const arcX1 = cx + actualR * Math.cos(startRad);
+        const arcY1 = cy + actualR * Math.sin(startRad);
+        const arcX2 = cx + actualR * Math.cos(endRad);
+        const arcY2 = cy + actualR * Math.sin(endRad);
+        
+        const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+        
+        clockElements += `
+        <path d="M ${cx} ${cy} L ${arcX1} ${arcY1} A ${actualR} ${actualR} 0 ${largeArcFlag} 1 ${arcX2} ${arcY2} Z" fill="${color || '#F59E0B'}" fill-opacity="0.3" />`;
+        
+        if (steps) {
+          for (let i = 1; i < steps; i++) {
+            const angle = (startAngle + (endAngle - startAngle) * (i / steps)) * (Math.PI / 180);
+            const x1 = cx + (actualR - 8) * Math.cos(angle);
+            const y1 = cy + (actualR - 8) * Math.sin(angle);
+            const x2 = cx + actualR * Math.cos(angle);
+            const y2 = cy + actualR * Math.sin(angle);
+            clockElements += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color || '#F59E0B'}" stroke-width="2" />`;
+          }
+        }
+      }
+
+      if (params.showStepsBetween) {
+        params.showStepsBetween.forEach((pair: [number, number]) => {
+          const [start, end] = pair;
+          const startAngle = (start * 30 - 90);
+          const endAngle = (start > end ? (end + 12) * 30 - 90 : end * 30 - 90);
+          const steps = params.highlight?.steps || 5;
+          for (let i = 1; i < steps; i++) {
+            const angle = (startAngle + (endAngle - startAngle) * (i / steps)) * (Math.PI / 180);
+            const x1 = cx + (actualR - 5) * Math.cos(angle);
+            const y1 = cy + (actualR - 5) * Math.sin(angle);
+            const x2 = cx + actualR * Math.cos(angle);
+            const y2 = cy + actualR * Math.sin(angle);
+            clockElements += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${darkInk}" stroke-width="1" opacity="0.5" />`;
+          }
+        });
+      }
+
+      if (params.labels && Array.isArray(params.labels)) {
+        params.labels.forEach((label: any) => {
+          const lx = cx + (label.x * actualR * 0.85); // Adjust offset for labels
+          const ly = cy - (label.y * actualR * 0.85);
+          clockElements += `<text x="${lx}" y="${ly}" dominant-baseline="middle" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="12" font-weight="bold">${label.text}</text>`;
+        });
+      } else {
+        for (let i = 1; i <= 12; i++) {
+          const angle = (i * 30 - 90) * (Math.PI / 180);
+          const x1 = cx + (actualR - 10) * Math.cos(angle);
+          const y1 = cy + (actualR - 10) * Math.sin(angle);
+          const x2 = cx + actualR * Math.cos(angle);
+          const y2 = cy + actualR * Math.sin(angle);
+          clockElements += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${darkInk}" stroke-width="2" />`;
+          
+          const tx = cx + (actualR - 25) * Math.cos(angle);
+          const ty = cy + (actualR - 25) * Math.sin(angle);
+          clockElements += `<text x="${tx}" y="${ty}" dominant-baseline="middle" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="12" font-weight="bold">${i}</text>`;
+        }
+      }
+
+      // Render Hands
+      if (params.hour !== undefined) {
+        const hAngle = ((params.hour % 12) * 30 + (params.minute || 0) * 0.5 - 90) * (Math.PI / 180);
+        const hx = cx + (actualR * 0.5) * Math.cos(hAngle);
+        const hy = cy + (actualR * 0.5) * Math.sin(hAngle);
+        clockElements += `<line x1="${cx}" y1="${cy}" x2="${hx}" y2="${hy}" stroke="${darkInk}" stroke-width="4" stroke-linecap="round" />`;
+      }
+      
+      if (params.minute !== undefined) {
+        const mAngle = (params.minute * 6 - 90) * (Math.PI / 180);
+        const mx = cx + (actualR * 0.8) * Math.cos(mAngle);
+        const my = cy + (actualR * 0.8) * Math.sin(mAngle);
+        clockElements += `<line x1="${cx}" y1="${cy}" x2="${mx}" y2="${my}" stroke="${brandGreen}" stroke-width="3" stroke-linecap="round" />`;
+      }
+
+      if (params.hour !== undefined || params.minute !== undefined) {
+        clockElements += `<circle cx="${cx}" cy="${cy}" r="4" fill="${darkInk}" />`;
+      }
+
+      shapeMarkup = baseCircle + clockElements;
+    } else {
+      shapeMarkup = baseCircle + `
+        <!-- Radius Line -->
+        <g opacity="0.6">
+          <line x1="${cx}" y1="${cy}" x2="${cx + actualR}" y2="${cy}" stroke="${darkInk}" stroke-width="1.5" stroke-dasharray="4 2" />
+          <circle cx="${cx}" cy="${cy}" r="2.5" fill="${darkInk}" />
+          <text x="${cx + actualR / 2}" y="${cy - 12}" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="0.05em">R = ${rVal}</text>
+        </g>
+      `;
+    }
+  } else if (type === "triangle") {
+    const base = params.base || 4;
+    const heightVal = params.height || 3;
+    const isRight = params.type === "right";
+    
+    const w = Math.min(base * 30, width - 120);
+    const h = Math.min(heightVal * 30, height - 120);
+    const x = (width - w) / 2;
+    const y = (height + h) / 2;
+    
+    let pathD = "";
+    if (isRight) {
+      pathD = `M ${x} ${y} L ${x + w} ${y} L ${x} ${y - h} Z`;
+    } else {
+      pathD = `M ${x} ${y} L ${x + w} ${y} L ${x + w / 2} ${y - h} Z`;
+    }
+
+    shapeMarkup = `
+      <defs>
+        <linearGradient id="triGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${brandGreen}" stop-opacity="0.08" />
+          <stop offset="100%" stop-color="${brandGreen}" stop-opacity="0.15" />
+        </linearGradient>
+      </defs>
+      <path d="${pathD}" fill="url(#triGradient)" stroke="${brandGreen}" stroke-width="2" />
+      
+      <!-- Base Dimension -->
       <g opacity="0.6">
-        <line x1="${cx}" y1="${cy}" x2="${cx + r}" y2="${cy}" stroke="${darkInk}" stroke-width="1.5" stroke-dasharray="4 2" />
-        <circle cx="${cx}" cy="${cy}" r="2.5" fill="${darkInk}" />
-        <text x="${cx + r / 2}" y="${cy - 12}" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="0.05em">R = ${rVal}</text>
+        <line x1="${x}" y1="${y + 15}" x2="${x + w}" y2="${y + 15}" stroke="${darkInk}" stroke-width="1" />
+        <line x1="${x}" y1="${y + 10}" x2="${x}" y2="${y + 20}" stroke="${darkInk}" stroke-width="1" />
+        <line x1="${x + w}" y1="${y + 10}" x2="${x + w}" y2="${y + 20}" stroke="${darkInk}" stroke-width="1" />
+        <text x="${x + w / 2}" y="${y + 30}" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="0.05em">BASE = ${base}</text>
+      </g>
+      
+      <!-- Height Dimension -->
+      <g opacity="0.6">
+        <line x1="${isRight ? x - 15 : x + w / 2}" y1="${y}" x2="${isRight ? x - 15 : x + w / 2}" y2="${y - h}" stroke="${darkInk}" stroke-width="1" stroke-dasharray="4 2" />
+        <text x="${isRight ? x - 20 : x + w / 2 + 5}" y="${y - h / 2}" dominant-baseline="middle" text-anchor="${isRight ? 'end' : 'start'}" fill="${darkInk}" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="0.05em">H = ${heightVal}</text>
       </g>
     `;
+  } else if (type === "line" || type === "number_line") {
+    const length = params.length || 10;
+    const start = params.start || 0;
+    const end = params.end || length;
+    const step = params.step || 1;
+    
+    const margin = 40;
+    const lineY = height / 2;
+    const lineW = width - (margin * 2);
+    const scale = lineW / (end - start);
+    
+    let ticks = "";
+    for (let i = start; i <= end; i += step) {
+      const tx = margin + (i - start) * scale;
+      ticks += `
+        <line x1="${tx}" y1="${lineY - 5}" x2="${tx}" y2="${lineY + 5}" stroke="${darkInk}" stroke-width="2" />
+        <text x="${tx}" y="${lineY + 20}" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="10" font-weight="bold">${i}</text>
+      `;
+    }
+    
+    let highlightMarkup = "";
+    if (params.highlight && params.highlight.start !== undefined && params.highlight.end !== undefined) {
+      const hx = margin + (params.highlight.start - start) * scale;
+      const hw = (params.highlight.end - params.highlight.start) * scale;
+      highlightMarkup = `
+        <rect x="${hx}" y="${lineY - 10}" width="${hw}" height="20" rx="4" fill="${brandGreen}" fill-opacity="0.3" />
+        <line x1="${hx}" y1="${lineY}" x2="${hx + hw}" y2="${lineY}" stroke="${brandGreen}" stroke-width="4" />
+      `;
+    }
+    
+    shapeMarkup = `
+      <!-- Main Line -->
+      <line x1="${margin - 10}" y1="${lineY}" x2="${width - margin + 10}" y2="${lineY}" stroke="${darkInk}" stroke-width="2" />
+      
+      <!-- Arrows -->
+      <path d="M ${margin - 10} ${lineY} L ${margin - 5} ${lineY - 5} L ${margin - 5} ${lineY + 5} Z" fill="${darkInk}" />
+      <path d="M ${width - margin + 10} ${lineY} L ${width - margin + 5} ${lineY - 5} L ${width - margin + 5} ${lineY + 5} Z" fill="${darkInk}" />
+      
+      ${highlightMarkup}
+      ${ticks}
+    `;
+  } else if (type === "calendar") {
+    const month = params.month || 1; // 1-12
+    const year = params.year || 2024;
+    const startDay = params.startDay || "Sunday"; // Sunday, Monday, etc.
+    
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
+    
+    // Simple logic for days in month
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const firstDayIndex = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].indexOf(startDay);
+    
+    const cellW = 40;
+    const cellH = 30;
+    const gridW = cellW * 7;
+    const startX = (width - gridW) / 2;
+    const startY = 80;
+    
+    let calendarMarkup = `
+      <text x="${width / 2}" y="50" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="16" font-weight="800">${monthNames[month - 1]} ${year}</text>
+    `;
+    
+    // Day headers
+    for (let i = 0; i < 7; i++) {
+      calendarMarkup += `
+        <text x="${startX + i * cellW + cellW / 2}" y="${startY - 10}" text-anchor="middle" fill="${darkInk}" fill-opacity="0.4" font-family="Inter, sans-serif" font-size="10" font-weight="bold">${dayLabels[i]}</text>
+      `;
+    }
+    
+    // Grid and days
+    for (let i = 0; i < 42; i++) {
+      const row = Math.floor(i / 7);
+      const col = i % 7;
+      const x = startX + col * cellW;
+      const y = startY + row * cellH;
+      const dayNum = i - firstDayIndex + 1;
+      
+      calendarMarkup += `
+        <rect x="${x}" y="${y}" width="${cellW}" height="${cellH}" stroke="${darkInk}" stroke-opacity="0.05" fill="none" />
+      `;
+      
+      if (dayNum > 0 && dayNum <= daysInMonth) {
+        calendarMarkup += `
+          <text x="${x + cellW / 2}" y="${y + cellH / 2}" dominant-baseline="middle" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="12" font-weight="bold">${dayNum}</text>
+        `;
+      }
+    }
+    
+    shapeMarkup = calendarMarkup;
   } else {
     return SCHOLARLY_BLUEPRINT;
   }
@@ -257,7 +483,7 @@ function generateHistoricalSVG(type: string, params: any): string {
 function parseContent(content: string): ChatElement[] {
   if (!content) return [];
   const elements: ChatElement[] = [];
-  const regex = /<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s*([\s\S]*?)>>/g;
+  const regex = /<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s*([\s\S]*?)>>?/g;
   let elementCount = 0;
 
   let lastIndex = 0;
@@ -1318,7 +1544,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
               m.id === streamingMsgId 
                 ? { 
                     ...m, 
-                    text: text.replace(/<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>/g, "").trim(),
+                    text: text.replace(/<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>?/g, "").trim(),
                     elements: els.length > 0 ? [...els] : undefined,
                     toolStatus,
                     statusText: statusText !== undefined ? statusText : currentStatusText
@@ -1335,14 +1561,33 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         });
       };
 
-      const pushTextElement = (text: string) => {
-        const sanitized = text.replace(/<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>/g, "").trim();
-        if (sanitized) {
-          elements.push({
-            id: `stream-el-${elements.length}`,
-            type: "text",
-            content: sanitized,
-          });
+      const pushTextElement = (textOverride?: string) => {
+        const textToParse = textOverride !== undefined ? textOverride : currentTextBuffer;
+        if (textToParse) {
+          const parsed = parseContent(textToParse);
+          if (parsed.length > 0) {
+            parsed.forEach((newEl) => {
+              // If we're adding a native SVG, check if we can replace a recent backend-provided placeholder
+              if (newEl.type === "svg" && newEl.meta?.shape) {
+                const lastIdx = elements.length - 1;
+                const lastEl = lastIdx >= 0 ? elements[lastIdx] : null;
+
+                if (
+                  lastEl &&
+                  lastEl.type === "svg" &&
+                  lastEl.meta?.shape === newEl.meta.shape
+                ) {
+                  // Upgrade the existing element in place
+                  elements[lastIdx] = newEl;
+                } else {
+                  elements.push(newEl);
+                }
+              } else {
+                elements.push(newEl);
+              }
+            });
+          }
+          if (textOverride === undefined) currentTextBuffer = "";
         }
       };
 
@@ -1393,7 +1638,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           bufferedText += event.text;
 
           // Detect and extract embedded tags (MATH_DRAW, etc.) from the text stream
-          const tagRegex = /<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>/g;
+          const tagRegex = /<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>?/g;
           let match;
           while ((match = tagRegex.exec(currentTextBuffer)) !== null) {
             const tag = match[0];
@@ -1483,19 +1728,115 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           const jsonStr = trimmed.slice(5).trim();
           if (!jsonStr) continue;
 
+          let event: any;
           try {
-            const event = JSON.parse(jsonStr);
-            if (event.type === "planning") {
-              handleEvent(event);
-            } else if (isPlanningUIPresented) {
-              handleEvent(event);
-            } else {
-              bufferedEvents.push(event);
-            }
-          } catch (e) {
-            console.warn("Failed to parse event", jsonStr);
+            event = JSON.parse(jsonStr);
+          } catch {
+            continue;
           }
 
+          let shouldUpdate = false;
+
+          if (event.type === "planning") {
+            const status = event.text || event.message || "";
+            if (status && status !== currentStatusText) {
+              currentStatusText = status;
+              shouldUpdate = true;
+            }
+          } else if (event.type === "tool_status") {
+            currentToolStatus = event.message || "Drawing...";
+            shouldUpdate = true;
+          } else if (
+            event.type === "visual_block" ||
+            event.type === "visual_error"
+          ) {
+            pushTextElement();
+
+            // If we've already parsed a better native version of this shape from the text stream, skip the redundant visual_block
+            if (
+              event.meta?.shape &&
+              elements.length > 0 &&
+              elements[elements.length - 1].type === "svg" &&
+              elements[elements.length - 1].meta?.shape === event.meta.shape
+            ) {
+              currentToolStatus = undefined;
+              shouldUpdate = true;
+              continue;
+            }
+
+            let svgContent =
+              event.type === "visual_block"
+                ? event.svg
+                : event.fallback?.content ||
+                  event.fallback_text ||
+                  "[Visual Error]";
+
+            // Even if we don't have params yet, if it's a natively supported shape, 
+            // use our advanced style as a better starting point than the backend's old SVG.
+            if (event.meta?.shape) {
+              const localSupported = ["rectangle", "circle", "triangle", "line", "number_line", "calendar"];
+              if (localSupported.includes(event.meta.shape)) {
+                svgContent = generateHistoricalSVG(event.meta.shape, event.meta.params || {});
+              }
+            }
+
+            elements.push({
+              id: Math.random().toString(36).substring(2, 11),
+              type: "svg",
+              content: svgContent,
+              meta: event.meta,
+            });
+            currentToolStatus = undefined;
+            shouldUpdate = true;
+          } else if (
+            event.type === "math_widget" ||
+            event.type === "math_widget_error"
+          ) {
+            pushTextElement();
+            elements.push({
+              id: Math.random().toString(36).substring(2, 11),
+              type: "widget",
+              content: event.expression || "",
+              meta: {
+                error: event.type === "math_widget_error",
+                message: event.message,
+              },
+            });
+            currentToolStatus = undefined;
+            shouldUpdate = true;
+          } else if (
+            (event.type === "chunk" || event.type === "chunks") &&
+            typeof event.text === "string"
+          ) {
+            currentTextBuffer += event.text;
+            bufferedText += event.text;
+            
+            // If we detect a completed math/visual tag, flush it to elements immediately
+            // so it renders with our advanced frontend logic right away
+            if (currentTextBuffer.includes(">>") || (currentTextBuffer.includes("<<") && currentTextBuffer.trim().endsWith(">"))) {
+              pushTextElement();
+            }
+            
+            
+            shouldUpdate = true;
+          } else if (event.type === "done") {
+            finalSessionId = event.session_id;
+            finalOptions = Array.isArray(event.options) ? event.options : [];
+            // If no chunks were received, fall back to the full response text provided in the 'done' event
+            if (
+              !bufferedText &&
+              typeof event.response === "string" &&
+              event.response.trim()
+            ) {
+              currentTextBuffer = event.response;
+              bufferedText = event.response;
+              shouldUpdate = true;
+            }
+          }
+
+          if (shouldUpdate) {
+            updateUI(bufferedText, elements, currentToolStatus, currentStatusText);
+          }
         }
       }
 
@@ -1636,8 +1977,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           chatAbortController: null,
         };
       });
-    }
-  },
+      }
+    },
 
   stopMessageGeneration: () => {
     const { chatAbortController } = get();
