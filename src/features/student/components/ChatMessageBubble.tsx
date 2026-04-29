@@ -10,6 +10,11 @@ import { MathWidget } from "./MathWidget";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { useSmoothStream } from "@/hooks/useSmoothStream";
 
+const StreamingTextRenderer = React.memo(({ content, isStreaming }: { content: string, isStreaming: boolean }) => {
+  const displayedText = useSmoothStream(content, isStreaming, 15);
+  return <MarkdownRenderer content={displayedText} />;
+});
+
 interface ChatMessageBubbleProps {
   message: ChatMessage;
   isStreaming?: boolean;
@@ -68,8 +73,11 @@ export const ChatMessageBubble = React.memo(
                 </span>
               ) : message.elements && message.elements.length > 0 ? (
                 <div className="space-y-5">
-                  {message.elements.map((el) => {
-                    if (el.type === "text") return <MarkdownRenderer key={el.id} content={el.content} />;
+                  {message.elements.map((el, index) => {
+                    if (el.type === "text") {
+                      const isLastElement = index === message.elements.length - 1;
+                      return <StreamingTextRenderer key={el.id} content={el.content} isStreaming={!!isStreaming && isLastElement} />;
+                    }
                     if (el.type === "svg") return <VisualBlock key={el.id} svg={el.content} meta={el.meta} />;
                     if (el.type === "widget") return <MathWidget key={el.id} expression={el.content} meta={el.meta} />;
                     return null;

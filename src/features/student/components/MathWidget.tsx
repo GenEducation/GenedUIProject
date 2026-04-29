@@ -18,16 +18,40 @@ export const MathWidget: React.FC<MathWidgetProps> = ({ expression, meta }) => {
     );
   }
 
-  // Basic Desmos embedding. For a more robust solution, use the Desmos API.
-  const desmosUrl = `https://www.desmos.com/calculator?expression=${encodeURIComponent(expression)}`;
+  // Use srcDoc with the Desmos API to embed the graph with the provided expression
+  const desmosHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <script src="https://www.desmos.com/api/v1.9/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+      <style>
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+        #calculator { width: 100%; height: 100%; }
+      </style>
+    </head>
+    <body>
+      <div id="calculator"></div>
+      <script>
+        var elt = document.getElementById('calculator');
+        var calculator = Desmos.GraphingCalculator(elt, {
+          expressions: false,
+          settingsMenu: false,
+          zoomButtons: false
+        });
+        calculator.setExpression({ id: 'graph1', latex: ${JSON.stringify(expression)} });
+      </script>
+    </body>
+    </html>
+  `;
 
   return (
     <div className="my-4 rounded-2xl border border-[#1a3a2a]/10 shadow-sm overflow-hidden bg-white group">
       <div className="relative">
         <iframe
-          src={desmosUrl}
+          srcDoc={desmosHtml}
           className="w-full h-[350px] border-none"
           title="Desmos Graph"
+          sandbox="allow-scripts allow-same-origin"
         />
         {/* Overlay to catch clicks if needed or just styling */}
         <div className="absolute inset-0 pointer-events-none border border-[#1a3a2a]/5 rounded-2xl" />

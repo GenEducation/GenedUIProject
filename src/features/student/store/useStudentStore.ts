@@ -300,16 +300,28 @@ function parseContent(content: string): ChatElement[] {
       }
 
       const shapeType = typeMatch ? typeMatch[1] : "diagram";
-      elements.push({
-        id: Math.random().toString(36).substring(2, 11),
-        type: "svg",
-        content: generateHistoricalSVG(shapeType, params),
-        meta: {
-          shape: shapeType,
-          params,
-          is_historical: true,
-        },
-      });
+      
+      if (shapeType === "desmos") {
+        elements.push({
+          id: Math.random().toString(36).substring(2, 11),
+          type: "widget",
+          content: params.expression || "",
+          meta: {
+            ...params
+          }
+        });
+      } else {
+        elements.push({
+          id: Math.random().toString(36).substring(2, 11),
+          type: "svg",
+          content: generateHistoricalSVG(shapeType, params),
+          meta: {
+            shape: shapeType,
+            params,
+            is_historical: true,
+          },
+        });
+      }
     } else if (type === "MATH_WIDGET") {
       const exprMatch = attrsRaw.match(/expression="([^"]+)"/);
       elements.push({
@@ -1263,30 +1275,68 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       let finalSessionId: string | undefined;
       let finalOptions: string[] = [];
 
-      // -- Phase 1: Read the ENTIRE stream silently --------------------------
-      const planningStatuses: string[] = [];
+      // -- Live Streaming Phase ----------------------------------------------
       const elements: ChatElement[] = [];
       let bufferedText = ""; // Full text for legacy/fallback
       let currentTextBuffer = "";
       let currentToolStatus: string | undefined;
+      let currentStatusText: string | undefined = "Processing...";
 
       const pushTextElement = () => {
         if (currentTextBuffer) {
-          // Strip any raw tags that might be embedded in the text stream
-          // to prevent them from showing up as raw text in the UI.
-          const sanitized = currentTextBuffer
-            .replace(/<<(MATH_DRAW|MATH_WIDGET)\s+[^>]+>>/g, "")
-            .trim();
-          if (sanitized) {
-            elements.push({
-              id: Math.random().toString(36).substring(2, 11),
-              type: "text",
-              content: sanitized,
-            });
+          const parsed = parseContent(currentTextBuffer);
+          if (parsed.length > 0) {
+            elements.push(...parsed);
           }
           currentTextBuffer = "";
         }
       };
+
+      const updateLiveMessage = () => {
+        set((state) => {
+          const liveElements = [...elements];
+          const strippedBuffer = currentTextBuffer
+            .replace(/<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s+[^>]+>>/g, "")
+            .replace(/<<[^>]*$/g, ""); // Strip any unclosed tags at the end
+
+          if (strippedBuffer.trim() || currentTextBuffer.trim()) {
+            liveElements.push({
+              id: "live-text-buffer",
+              type: "text",
+              content: strippedBuffer,
+            });
+          }
+
+          const patch = (msgs: ChatMessage[]) =>
+            msgs.map((m) =>
+              m.id === streamingMsgId
+                ? {
+                    ...m,
+                    text: bufferedText
+                      .replace(/<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s+[^>]+>>/g, "")
+                      .trim(),
+                    elements: liveElements,
+                    statusText: bufferedText.trim().length > 0 ? undefined : currentStatusText,
+                    toolStatus: currentToolStatus,
+                  }
+                : m,
+            );
+          return {
+            messages:
+              state.activeChat?.id === chatSentFromId
+                ? patch(state.messages)
+                : state.messages,
+            chatMessagesCache: {
+              ...state.chatMessagesCache,
+              [chatSentFromId]: patch(
+                state.chatMessagesCache[chatSentFromId] || [],
+              ),
+            },
+          };
+        });
+      };
+
+      updateLiveMessage(); // Initial state update with "Processing..."
 
       while (true) {
         const { done, value } = await reader.read();
@@ -1310,13 +1360,17 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             continue;
           }
 
+          let shouldUpdate = false;
+
           if (event.type === "planning") {
             const status = event.text || event.message || "";
-            if (status && !planningStatuses.includes(status)) {
-              planningStatuses.push(status);
+            if (status && status !== currentStatusText) {
+              currentStatusText = status;
+              shouldUpdate = true;
             }
           } else if (event.type === "tool_status") {
             currentToolStatus = event.message || "Drawing...";
+            shouldUpdate = true;
           } else if (
             event.type === "visual_block" ||
             event.type === "visual_error"
@@ -1336,6 +1390,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
               meta: event.meta,
             });
             currentToolStatus = undefined;
+            shouldUpdate = true;
           } else if (
             event.type === "math_widget" ||
             event.type === "math_widget_error"
@@ -1351,12 +1406,14 @@ export const useStudentStore = create<StudentState>((set, get) => ({
               },
             });
             currentToolStatus = undefined;
+            shouldUpdate = true;
           } else if (
             (event.type === "chunk" || event.type === "chunks") &&
             typeof event.text === "string"
           ) {
             currentTextBuffer += event.text;
             bufferedText += event.text;
+            shouldUpdate = true;
           } else if (event.type === "done") {
             finalSessionId = event.session_id;
             finalOptions = Array.isArray(event.options) ? event.options : [];
@@ -1368,71 +1425,17 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             ) {
               currentTextBuffer = event.response;
               bufferedText = event.response;
+              shouldUpdate = true;
             }
+          }
+
+          if (shouldUpdate) {
+            updateLiveMessage();
           }
         }
       }
       pushTextElement();
-
-      // -- Phase 2: Play back planning statuses with delays, then reveal text ─
-      const statusesToShow =
-        planningStatuses.length > 0 ? planningStatuses : ["Processing..."];
-
-      const patchStatus = (statusText: string | undefined) => {
-        set((state) => {
-          const patch = (msgs: ChatMessage[]) =>
-            msgs.map((m) =>
-              m.id === streamingMsgId ? { ...m, statusText, text: "" } : m,
-            );
-          return {
-            messages:
-              state.activeChat?.id === chatSentFromId
-                ? patch(state.messages)
-                : state.messages,
-            chatMessagesCache: {
-              ...state.chatMessagesCache,
-              [chatSentFromId]: patch(
-                state.chatMessagesCache[chatSentFromId] || [],
-              ),
-            },
-          };
-        });
-      };
-
-      for (const status of statusesToShow) {
-        patchStatus(status);
-        await new Promise((resolve) => setTimeout(resolve, 1200));
-      }
-
-      // Clear status and reveal the full structured content
-      set((state) => {
-        const patch = (msgs: ChatMessage[]) =>
-          msgs.map((m) =>
-            m.id === streamingMsgId
-              ? {
-                  ...m,
-                  statusText: undefined,
-                  text: bufferedText
-                    .replace(/<<(MATH_DRAW|MATH_WIDGET)\s+[^>]+>>/g, "")
-                    .trim(),
-                  elements: elements,
-                  toolStatus: currentToolStatus,
-                }
-              : m,
-          );
-        return {
-          messages:
-            state.activeChat?.id === chatSentFromId
-              ? patch(state.messages)
-              : state.messages,
-          chatMessagesCache: {
-            ...state.chatMessagesCache,
-            [chatSentFromId]: patch(
-              state.chatMessagesCache[chatSentFromId] || [],
-            ),
-          },
-        };
-      });
+      updateLiveMessage();
 
       // Finalise: replace streaming placeholder with finished message + options
       set((state) => {
