@@ -18,7 +18,7 @@ export interface StudentProfile {
 
 export interface ChatElement {
   id: string;
-  type: "text" | "svg" | "widget" | "image";
+  type: "text" | "svg" | "widget" | "image" | "visual";
   content: string;
   meta?: any;
 }
@@ -413,8 +413,13 @@ function parseContent(content: string): ChatElement[] {
   if (!content) return [];
   const elements: ChatElement[] = [];
   
-  // Detect special visual tags AND raw SVG blocks in a single pass to maintain order
-  const masterRegex = /(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s+([\s\S]*?)(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
+  // Master regex to capture:
+  // 1. v2 Block Visuals: <<VISUAL type="p5sketch" label="...">>code<</VISUAL>> or <...> </VISUAL>
+  // 2. v2 Self-closing Desmos: <<VISUAL type="desmos" expression="..." />>
+  // 3. Legacy MATH_DRAW / MATH_WIDGET / SHOW_FIGURE
+  // 4. Raw SVG tags
+  const masterRegex = /(?:<<VISUAL\s+type="([^"]+)"\s+label="([^"]*)"(?:[^>]*)>>?([\s\S]*?)<<?\/VISUAL>>?)|(?:<<VISUAL\s+type="desmos"\s+expression="([^"]+)"[^/]*\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s+([\s\S]*?)(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
+  
   let elementCount = 0;
   let lastIndex = 0;
   let match;
@@ -429,95 +434,116 @@ function parseContent(content: string): ChatElement[] {
       });
     }
 
-    if (match[3]) {
-      // It's a raw SVG match
+    if (match[1]) {
+      // v2 Block tag: [1]=engine, [2]=label, [3]=payload
+      const engine = match[1];
+      const label = match[2];
+      const payload = match[3].trim();
       elements.push({
-        id: `svg-${elementCount++}-${Date.now()}`,
-        type: "svg",
-        content: normalizeSvg(match[3]),
-        meta: { isRawBackendSvg: true },
+        id: `visual-${elementCount++}-${Date.now()}`,
+        type: "visual",
+        content: engine,
+        meta: {
+          engine,
+          label,
+          code: engine === "p5sketch" ? payload : undefined,
+          commands: engine === "geogebra" ? (() => {
+            try { 
+              const parsed = JSON.parse(payload);
+              return Array.isArray(parsed.commands) ? parsed.commands : [];
+            } catch(e) { return [payload]; }
+          })() : undefined,
+          options: engine === "geogebra" ? (() => {
+            try { 
+              return JSON.parse(payload).options; 
+            } catch(e) { return undefined; }
+          })() : undefined,
+          image: engine === "show_figure" ? payload : undefined,
+        }
       });
-    } else {
-      // It's a themed visual tag
-      const type = match[1];
-      let attrsRaw = match[2];
+    } else if (match[4]) {
+      // v2 Desmos self-closing: [4]=expression
+      elements.push({
+        id: `visual-${elementCount++}-${Date.now()}`,
+        type: "visual",
+        content: "desmos",
+        meta: {
+          engine: "desmos",
+          label: "Graph",
+          options: { expression: match[4] }
+        }
+      });
+    } else if (match[5]) {
+      // Legacy tags
+      const type = match[5];
+      let attrsRaw = match[6];
 
-    if (type === "MATH_DRAW") {
-      // More robust type extraction handling escaped quotes, single quotes, or no quotes
-      const typeMatch = attrsRaw.match(/type\s*=\s*[\\"]*([^\\"\s\>]+)[\\"]*/i);
-      // Handle nested JSON by finding balanced braces
-      const paramsStart = attrsRaw.indexOf("params=");
-      let params: any = {};
-      if (paramsStart >= 0) {
-        const jsonStart = attrsRaw.indexOf("{", paramsStart);
-        if (jsonStart >= 0) {
-          let depth = 0;
-          let jsonEnd = jsonStart;
-          for (let i = jsonStart; i < attrsRaw.length; i++) {
-            if (attrsRaw[i] === "{") depth++;
-            else if (attrsRaw[i] === "}") depth--;
-            if (depth === 0) { jsonEnd = i + 1; break; }
-          }
-          try {
-            let jsonStr = attrsRaw.substring(jsonStart, jsonEnd);
-            // Robust unescaping for historical JSON strings
-            if (jsonStr.includes('\\"')) {
-              jsonStr = jsonStr.replace(/\\"/g, '"');
+      if (type === "MATH_DRAW") {
+        const typeMatch = attrsRaw.match(/type\s*=\s*[\\"]*([^\\"\s\>]+)[\\"]*/i);
+        const paramsStart = attrsRaw.indexOf("params=");
+        let params: any = {};
+        if (paramsStart >= 0) {
+          const jsonStart = attrsRaw.indexOf("{", paramsStart);
+          if (jsonStart >= 0) {
+            let depth = 0;
+            let jsonEnd = jsonStart;
+            for (let i = jsonStart; i < attrsRaw.length; i++) {
+              if (attrsRaw[i] === "{") depth++;
+              else if (attrsRaw[i] === "}") depth--;
+              if (depth === 0) { jsonEnd = i + 1; break; }
             }
-            // Fix single quotes for AI-generated JSON
-            if (!jsonStr.includes('"') && jsonStr.includes("'")) {
-              jsonStr = jsonStr.replace(/'/g, '"');
-            }
-            params = JSON.parse(jsonStr);
-          } catch (e) {
-            console.warn("[Parser] Failed to parse params for", type, attrsRaw.substring(jsonStart, jsonEnd), e);
+            try {
+              let jsonStr = attrsRaw.substring(jsonStart, jsonEnd);
+              if (jsonStr.includes('\\"')) jsonStr = jsonStr.replace(/\\"/g, '"');
+              if (!jsonStr.includes('"') && jsonStr.includes("'")) jsonStr = jsonStr.replace(/'/g, '"');
+              params = JSON.parse(jsonStr);
+            } catch (e) {}
           }
         }
-      }
-
-      const shapeType = typeMatch ? typeMatch[1] : "diagram";
-
-      if (shapeType === "desmos") {
+        const shapeType = typeMatch ? typeMatch[1] : "diagram";
+        if (shapeType === "desmos") {
+          elements.push({
+            id: `el-${elementCount++}`,
+            type: "widget",
+            content: params.expression || "",
+            meta: params
+          });
+        } else {
+          elements.push({
+            id: `el-${elementCount++}`,
+            type: "svg",
+            content: generateHistoricalSVG(shapeType, params),
+            meta: { shape: shapeType, params, is_historical: true },
+          });
+        }
+      } else if (type === "MATH_WIDGET") {
+        const exprMatch = attrsRaw.match(/expression="([^"]+)"/);
         elements.push({
           id: `el-${elementCount++}`,
           type: "widget",
-          content: params.expression || "",
-          meta: {
-            ...params
-          }
+          content: exprMatch ? exprMatch[1] : "",
         });
-      } else {
+      } else if (type === "SHOW_FIGURE") {
+        const figureIdMatch = attrsRaw.match(/figure_id="([^"]+)"/) || attrsRaw.match(/\(([^)]+)\)/);
         elements.push({
           id: `el-${elementCount++}`,
-          type: "svg",
-          content: generateHistoricalSVG(shapeType, params),
+          type: "visual",
+          content: "show_figure",
           meta: {
-            shape: shapeType,
-            params,
-            is_historical: true,
+            engine: "show_figure",
+            label: "Textbook Figure",
+            image: figureIdMatch ? figureIdMatch[1] : "",
           },
         });
       }
-    } else if (type === "MATH_WIDGET") {
-      const exprMatch = attrsRaw.match(/expression="([^"]+)"/);
+    } else if (match[7]) {
+      // Raw SVG
       elements.push({
-        id: `el-${elementCount++}`,
-        type: "widget",
-        content: exprMatch ? exprMatch[1] : "",
-      });
-    } else if (type === "SHOW_FIGURE") {
-      const figureIdMatch = attrsRaw.match(/figure_id="([^"]+)"/) || attrsRaw.match(/\(([^)]+)\)/);
-      elements.push({
-        id: `el-${elementCount++}`,
+        id: `svg-${elementCount++}-${Date.now()}`,
         type: "svg",
-        content: "", // Optimized: content not needed as VisualBlock handles placeholder/fetching
-        meta: {
-          shape: "image",
-          source: "show_figure",
-          figure_id: figureIdMatch ? figureIdMatch[1] : "",
-        },
+        content: normalizeSvg(match[7]),
+        meta: { isRawBackendSvg: true },
       });
-    }
     }
     lastIndex = masterRegex.lastIndex;
   }
@@ -530,7 +556,6 @@ function parseContent(content: string): ChatElement[] {
       content: finalTrailing.trim(),
     });
   } else if (elements.length === 0 && content.trim()) {
-    // Fallback if nothing was matched but there is content
     elements.push({
       id: `el-fallback-${Date.now()}`,
       type: "text",
@@ -1225,7 +1250,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             }
             return { messages: updatedMessages, isAITyping: true, streamingMessageId: newStreamingId };
           });
-        } else if (event.type === "visual_block" || event.type === "math_widget") {
+        } else if (event.type === "visual_block" || event.type === "visual_error") {
           set((state) => {
             const updatedMessages = [...state.messages];
             let lastMsgIdx = updatedMessages.length - 1;
@@ -1250,27 +1275,85 @@ export const useStudentStore = create<StudentState>((set, get) => ({
                 ...(lastMsg.text ? [{ id: Date.now().toString() + "-text", type: "text" as const, content: lastMsg.text }] : [])
               ];
               
-              if (event.type === "visual_block") {
-                let svgContent = event.svg || "";
-                if (!svgContent && event.image) {
-                  try {
-                    svgContent = decodeURIComponent(escape(atob(event.image)));
-                  } catch (e) {
-                    console.error("Failed to decode base64 image", e);
+              if (event.type === "visual_error") {
+                elements.push({
+                  id: `visual-error-${Date.now()}`,
+                  type: "visual",
+                  content: "error",
+                  meta: {
+                    engine: event.engine || "unknown",
+                    label: event.label || "Visual",
+                    message: event.message,
+                    fallback_text: event.fallback_text || "[Visual Error]"
                   }
-                }
-                elements.push({
-                  id: Date.now().toString() + "-svg",
-                  type: "svg",
-                  content: svgContent,
-                  meta: event.meta
                 });
-              } else if (event.type === "math_widget") {
+              } else {
+                const engine = event.engine || event.meta?.engine || "p5sketch";
                 elements.push({
-                  id: Date.now().toString() + "-widget",
-                  type: "widget",
-                  content: event.expression || "",
-                  meta: event.options
+                  id: `visual-${Date.now()}-${elements.length}`,
+                  type: "visual",
+                  content: engine,
+                  meta: {
+                    engine,
+                    label: event.label || "Visual",
+                    code: event.code,
+                    commands: event.commands,
+                    image: event.image,
+                    options: event.options,
+                    meta: event.meta
+                  }
+                });
+              }
+
+              updatedMessages[lastMsgIdx] = {
+                ...lastMsg,
+                elements,
+                toolStatus: undefined
+              };
+            }
+            return { messages: updatedMessages, streamingMessageId: newStreamingId };
+          });
+        } else if (event.type === "math_widget" || event.type === "math_widget_error") {
+          set((state) => {
+            const updatedMessages = [...state.messages];
+            let lastMsgIdx = updatedMessages.length - 1;
+            let lastMsg = updatedMessages[lastMsgIdx];
+            let newStreamingId = state.streamingMessageId;
+
+            if (!lastMsg || lastMsg.sender === "user") {
+              const newId = `voice-math-${Date.now()}`;
+              lastMsg = {
+                id: newId,
+                text: "",
+                sender: "ai",
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              };
+              updatedMessages.push(lastMsg);
+              lastMsgIdx = updatedMessages.length - 1;
+              newStreamingId = newId;
+            }
+
+            if (lastMsgIdx >= 0) {
+              const elements = lastMsg.elements ? [...lastMsg.elements] : [
+                ...(lastMsg.text ? [{ id: Date.now().toString() + "-text", type: "text" as const, content: lastMsg.text }] : [])
+              ];
+              
+              if (event.type === "math_widget_error") {
+                elements.push({
+                  id: `math-error-${Date.now()}`,
+                  type: "text",
+                  content: event.fallback_text || "[Math Widget Error]",
+                });
+              } else {
+                elements.push({
+                  id: `visual-${Date.now()}-${elements.length}`,
+                  type: "visual",
+                  content: "desmos",
+                  meta: {
+                    engine: "desmos",
+                    label: "Graph",
+                    options: { expression: event.expression, ...event.options }
+                  }
                 });
               }
 
@@ -1498,7 +1581,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         // Create a transient display list that includes the current buffer tail
         // this ensures words appearing after a visual block are visible immediately
         const displayElements = [...els];
-        const tags = /(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
+        const tags = /(?:<<VISUAL[\s\S]*?<<?\/VISUAL>>?)|(?:<<VISUAL[\s\S]*?\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
         const tailText = currentTextBuffer.replace(tags, "").trim();
         
         if (tailText) {
@@ -1575,73 +1658,48 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           pushTextElement(currentTextBuffer);
           currentTextBuffer = "";
           
-          if (event.image) {
+          if (event.type === "visual_error") {
             elements.push({
-              id: `stream-el-${elements.length}`,
-              type: "image",
-              content: `data:image/jpeg;base64,${event.image}`,
-              meta: event.meta,
+              id: `visual-error-${Date.now()}`,
+              type: "visual",
+              content: "error",
+              meta: {
+                engine: event.engine || "unknown",
+                label: event.label || "Visual",
+                message: event.message,
+                fallback_text: event.fallback_text || "[Visual Error]"
+              }
             });
           } else {
-            // If we've already parsed a better native version of this shape from the text stream, skip the redundant visual_block
-            if (
-              event.meta?.shape &&
-              elements.length > 0 &&
-              elements[elements.length - 1].type === "svg" &&
-              elements[elements.length - 1].meta?.shape === event.meta.shape
-            ) {
-              currentToolStatus = undefined;
-              if (isPlanningUIPresented) updateUI(bufferedText, elements);
-              return;
-            }
+            const engine = event.engine || event.meta?.engine || "p5sketch";
+            const label = event.label || "Visual";
+            
+            // Deduplication: If we already have a visual from the text stream with the same label/engine, skip this
+            const isDuplicate = elements.some(el => 
+              el.type === "visual" && 
+              el.meta?.engine === engine && 
+              el.meta?.label === label
+            );
 
-            let svgContent =
-              event.type === "visual_block"
-                ? event.svg
-                : event.fallback?.content ||
-                  event.fallback_text ||
-                  "[Visual Error]";
-
-            // Even if we don't have params yet, if it's a natively supported shape, 
-            // use our advanced style as a better starting point than the backend's old SVG.
-            if (event.meta?.shape) {
-              const localSupported = [
-                "rectangle", "square", "circle", "triangle", "line", "number_line",
-                "calendar", "coordinate_plane", "point", "coordinate",
-                "fraction_visual", "bar_graph", "line_graph", "angle", "parabola",
-                "polygon", "hexagon", "pentagon", "octagon", "star",
-                "rhombus", "diamond", "trapezium", "trapezoid", "semicircle", "arc",
-                "histogram", "venn_diagram", "probability_tree",
-              ];
-              if (localSupported.includes(event.meta.shape.toLowerCase().trim())) {
-                svgContent = generateHistoricalSVG(event.meta.shape, event.meta.params || {});
-              } else {
-                svgContent = normalizeSvg(svgContent);
-              }
-            } else {
-              svgContent = normalizeSvg(svgContent);
-            }
-
-            // If the last element is a raw backend SVG placeholder (no typed meta),
-            // replace it with this properly themed version instead of appending a duplicate
-            const lastIdx = elements.length - 1;
-            const lastEl = lastIdx >= 0 ? elements[lastIdx] : null;
-            if (lastEl && lastEl.type === "svg" && lastEl.meta?.isRawBackendSvg) {
-              elements[lastIdx] = {
-                id: lastEl.id,
-                type: "svg",
-                content: svgContent,
-                meta: event.meta,
-              };
-            } else {
+            if (!isDuplicate) {
               elements.push({
-                id: Math.random().toString(36).substring(2, 11),
-                type: "svg",
-                content: svgContent,
-                meta: event.meta,
+                id: `visual-${Date.now()}-${elements.length}`,
+                type: "visual",
+                content: engine,
+                meta: {
+                  engine,
+                  label,
+                  code: event.code,
+                  commands: event.commands,
+                  image: event.image,
+                  options: event.options,
+                  meta: event.meta
+                }
               });
             }
           }
+          currentToolStatus = undefined;
+          if (isPlanningUIPresented) updateUI(bufferedText, elements);
           currentToolStatus = undefined;
           if (isPlanningUIPresented) updateUI(bufferedText, elements);
         } else if (event.type === "math_widget" || event.type === "math_widget_error") {
@@ -1659,8 +1717,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           currentTextBuffer += event.text;
           bufferedText += event.text;
 
-          // Detect and extract embedded tags (MATH_DRAW, etc.) OR raw SVG blocks from the text stream
-          const tagRegex = /(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>?)|(?:<svg[\s\S]*?<\/svg>)/g;
+          // Detect and extract embedded tags (VISUAL, MATH_DRAW, etc.) OR raw SVG blocks from the text stream
+          const tagRegex = /(?:<<VISUAL[\s\S]*?<<?\/VISUAL>>?)|(?:<<VISUAL[\s\S]*?\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>?)|(?:<svg[\s\S]*?<\/svg>)/g;
           let match;
           while ((match = tagRegex.exec(currentTextBuffer)) !== null) {
             const tag = match[0];
@@ -1681,7 +1739,16 @@ export const useStudentStore = create<StudentState>((set, get) => ({
               const extracted = parseContent(tag);
               const tagElement = extracted.find(el => el.type !== "text");
               if (tagElement) {
-                elements.push(tagElement);
+                // Deduplication: If this is a visual block, check if it's already in elements
+                const isDuplicate = tagElement.type === "visual" && elements.some(el => 
+                  el.type === "visual" && 
+                  el.meta?.engine === tagElement.meta?.engine && 
+                  el.meta?.label === tagElement.meta?.label
+                );
+                
+                if (!isDuplicate) {
+                  elements.push(tagElement);
+                }
               }
             }
             

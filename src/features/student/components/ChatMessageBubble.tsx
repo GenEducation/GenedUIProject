@@ -10,6 +10,10 @@ import { MathWidget } from "./MathWidget";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { useSmoothStream } from "@/hooks/useSmoothStream";
 
+import { VisualCard } from "./VisualCard";
+import { P5Visual } from "./P5Visual";
+import { GeoGebraVisual } from "./GeoGebraVisual";
+
 const StreamingTextRenderer = React.memo(({ content, isStreaming }: { content: string, isStreaming: boolean }) => {
   const displayedText = useSmoothStream(content, isStreaming, 15);
   return <MarkdownRenderer content={displayedText} />;
@@ -82,6 +86,50 @@ export const ChatMessageBubble = React.memo(
                     if (el.type === "text") {
                       const isLastElement = index === message.elements!.length - 1;
                       return <StreamingTextRenderer key={el.id} content={el.content} isStreaming={!!isStreaming && isLastElement} />;
+                    }
+                    if (el.type === "visual") {
+                      if (el.content === "error") {
+                        return (
+                          <div key={el.id} className="bg-[#FFF8E1] text-[#F57F17] px-3 py-2 rounded-lg text-xs font-medium self-center my-2">
+                             📐 Visual unavailable — {el.meta?.label || "Visual"}
+                          </div>
+                        );
+                      }
+                      if (el.meta?.engine === "p5sketch") {
+                        return (
+                          <VisualCard key={el.id} engine="p5sketch" label={el.meta.label}>
+                            <P5Visual code={el.meta.code} />
+                          </VisualCard>
+                        );
+                      }
+                      if (el.meta?.engine === "geogebra") {
+                        return (
+                          <VisualCard key={el.id} engine="geogebra" label={el.meta.label}>
+                            <GeoGebraVisual id={el.id} commands={el.meta.commands} options={el.meta.options} />
+                          </VisualCard>
+                        );
+                      }
+                      if (el.meta?.engine === "desmos") {
+                        return (
+                          <VisualCard key={el.id} engine="desmos" label={el.meta.label || "Graph"}>
+                            <MathWidget expression={el.meta.options?.expression || el.meta.code || ""} meta={el.meta.options} minimal={true} />
+                          </VisualCard>
+                        );
+                      }
+                      if (el.meta?.engine === "show_figure") {
+                        const imgSource = el.meta.image?.startsWith('data:') ? el.meta.image : (el.meta.image ? `data:image/jpeg;base64,${el.meta.image}` : null);
+                        return (
+                          <VisualCard key={el.id} engine="show_figure" label={el.meta.label}>
+                            <div className="flex flex-col items-center">
+                              {imgSource ? (
+                                <img src={imgSource} alt={el.meta.label} className="max-w-full rounded-lg" />
+                              ) : (
+                                <div className="bg-[#FFF8E1] text-[#F57F17] px-3 py-2 rounded-lg text-xs font-medium">📐 Figure ID: {el.meta.figure_id || "unknown"}</div>
+                              )}
+                            </div>
+                          </VisualCard>
+                        );
+                      }
                     }
                     if (el.type === "svg") return <VisualBlock key={el.id} svg={el.content} meta={el.meta} />;
                     if (el.type === "image") return <VisualBlock key={el.id} image={el.content} meta={el.meta} />;
