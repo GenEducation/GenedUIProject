@@ -43,7 +43,7 @@ interface PartnerState {
   // Subject Actions
   fetchSubjects: () => Promise<void>;
   addSubject: (subject: Subject) => void;
-  uploadCurriculum: (file: File, subjectName: string, documentTitle: string, agentName: string, grade: string, board: string) => Promise<void>;
+  uploadCurriculum: (file: File, subjectName: string, documentTitle: string, agentName: string, grade: string, board: string, documentType: string) => Promise<void>;
   removeSubject: (agentId: string) => Promise<void>;
   removeStudent: (studentId: string) => Promise<void>;
 
@@ -220,7 +220,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   addSubject: (subject) =>
     set((state) => ({ subjects: [subject, ...state.subjects] })),
 
-  uploadCurriculum: async (file, subjectName, documentTitle, agentName, grade, board) => {
+  uploadCurriculum: async (file, subjectName, documentTitle, agentName, grade, board, documentType) => {
     const tempId = Math.random().toString(36).substring(2, 9);
 
     const optimisticSubject: Subject = {
@@ -244,7 +244,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       formData.append("grade", String(parseInt(grade, 10) || 0));
       formData.append("board", board);
 
-      formData.append("document_type", "ncert");
+      formData.append("document_type", documentType || "chapter");
 
       const rawPartnerId = localStorage.getItem("gened_partner_id");
       const partnerId = rawPartnerId?.replace(/['"]+/g, "");
@@ -261,7 +261,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       if (!response.ok) {
         const errorDetail = await response.text();
         console.error("Ingestion failed detail:", errorDetail);
-        throw new Error(`Upload failed: ${errorDetail}`);
+        // Throw an object containing the status so the catch block can decide how to handle it
+        throw { status: response.status, message: errorDetail };
       }
 
       const data = await response.json();
@@ -277,12 +278,25 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
             : s
         ),
       }));
-    } catch (error) {
+    } catch (error: any) {
+      const status = error?.status;
+      
+      // Per user request: 429 and 504 errors should be ignored completely.
+      // Do not update the state or show as failed.
+      if (status === 429 || status === 504) {
+        return;
+      }
+
       console.error("Ingestion error:", error);
+      
+      // Only 500 (Internal Server Error) from backend should be shown as failed.
+      // Other non-ignored errors will be removed from the list.
+      const shouldMarkAsFailed = status === 500;
+
       set((state) => ({
-        subjects: state.subjects.map((s) =>
-          s.id === tempId ? { ...s, status: "failed" } : s
-        ),
+        subjects: shouldMarkAsFailed
+          ? state.subjects.map((s) => (s.id === tempId ? { ...s, status: "failed" } : s))
+          : state.subjects.filter((s) => s.id !== tempId),
       }));
     }
   },

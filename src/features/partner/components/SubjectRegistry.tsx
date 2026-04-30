@@ -96,7 +96,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           {subject.status}
                         </span>
 
-                        {isActive && (
+                        {(isActive || isFailed) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

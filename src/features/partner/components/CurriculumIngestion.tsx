@@ -36,6 +36,7 @@ export function CurriculumIngestion({
   const [agentName, setAgentName] = useState("");
   const [grade, setGrade] = useState("");
   const [board, setBoard] = useState("");
+  const [documentType, setDocumentType] = useState("chapter");
   
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -65,7 +66,7 @@ export function CurriculumIngestion({
     
     setIsProcessing(true);
     try {
-      await uploadCurriculum(file, subjectName, documentTitle, agentName, grade, board);
+      await uploadCurriculum(file, subjectName, documentTitle, agentName, grade, board, documentType);
       onClose();
     } catch (error) {
       console.error(error);
@@ -190,6 +191,15 @@ export function CurriculumIngestion({
                 <option value="CBSE">CBSE</option>
               </select>
             </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Document Type</label>
+              <input 
+                value={documentType}
+                onChange={(e) => setDocumentType(e.target.value)}
+                placeholder="e.g. chapter"
+                className="w-full px-4 md:px-5 py-3 md:py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/15 focus:border-[#1A3D2C]/40 rounded-2xl text-[11px] md:text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/50 transition-all"
+              />
+            </div>
           </div>
 
           {/* Upload Progress */}
@@ -230,7 +240,7 @@ export function CurriculumIngestion({
           </button>
           <button 
             onClick={handleProcess}
-            disabled={isProcessing || !subjectName || !documentTitle || !agentName || !grade || !board || !file}
+            disabled={isProcessing || !subjectName || !documentTitle || !agentName || !grade || !board || !documentType || !file}
             className="w-full sm:w-auto px-8 py-2 md:py-3 bg-[#D1E6D9] text-[#1A3D2C] text-sm font-black rounded-2xl hover:bg-[#1A3D2C] hover:text-white transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isProcessing ? "Processing..." : "Process Artifact"}
