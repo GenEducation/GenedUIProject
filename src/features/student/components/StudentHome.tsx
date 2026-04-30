@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowRight, Plus, BookOpen, PenLine, Search, LogOut, User, Loader2, BarChart2 } from "lucide-react";
@@ -40,6 +40,7 @@ export function StudentHome() {
   `;
 
   const router = useRouter();
+  const [isOnboardingDropdownOpen, setOnboardingDropdownOpen] = useState(false);
 
   const { 
     studentProfile, 
@@ -67,6 +68,14 @@ export function StudentHome() {
   const username = studentProfile?.username ?? "Scholar";
   const userId = studentProfile?.user_id ?? "";
 
+  const onboardingSubjects = Array.from(
+    new Map(
+      availableAgents
+        .filter((a) => a.subject === "English" || a.subject === "Mathematics")
+        .map((a) => [a.subject, a])
+    ).values()
+  );
+
   return (
     <div className="min-h-screen bg-[#F4F3EE] font-sans">
       {/* Nav */}
@@ -82,6 +91,50 @@ export function StudentHome() {
           <img src="/Logo.svg" alt="Gened Logo" className="h-10 w-auto" />
         </button>
         <div className="flex items-center gap-3">
+          {/* Subject Onboarding Dropdown */}
+          <div className="relative">
+            <button 
+              onClick={() => setOnboardingDropdownOpen(!isOnboardingDropdownOpen)}
+              className="flex items-center gap-2 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors px-3 py-2 rounded-xl border border-amber-200"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              Subject Onboarding
+            </button>
+            
+            {isOnboardingDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setOnboardingDropdownOpen(false)} />
+                <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#1a3a2a]/10 overflow-hidden z-50">
+                  <div className="p-3 bg-amber-50 border-b border-amber-100">
+                    <p className="text-xs font-bold text-amber-800">Pending Onboarding</p>
+                    <p className="text-[10px] text-amber-700/70 mt-0.5 leading-tight">Select a subject to complete your assessment.</p>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto p-2 space-y-1">
+                    {onboardingSubjects.length > 0 ? (
+                      onboardingSubjects.map((agent) => (
+                        <button
+                          key={agent.agent_id}
+                          onClick={() => {
+                            setOnboardingDropdownOpen(false);
+                            router.push(`/student/onboarding?type=subject&subject=${encodeURIComponent(agent.subject)}&grade=${agent.grade}`);
+                          }}
+                          className="w-full flex flex-col text-left px-3 py-2.5 rounded-xl hover:bg-[#1a3a2a]/5 transition-colors"
+                        >
+                          <span className="text-sm font-bold text-[#1a3a2a]">{agent.subject}</span>
+                          <span className="text-[10px] font-bold text-[#1a3a2a]/50 uppercase tracking-wider mt-0.5">Grade {agent.grade} • {agent.name}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-3 py-6 text-center">
+                        <p className="text-xs font-bold text-[#1a3a2a]/40">No subjects available</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
           <button
             onClick={() => router.push('/student/analytics')}
             className="flex items-center gap-2 text-xs font-semibold text-[#1a3a2a]/50 hover:text-[#1a3a2a] transition-colors px-3 py-2 rounded-xl hover:bg-[#1a3a2a]/5"

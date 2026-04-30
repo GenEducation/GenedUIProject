@@ -1934,7 +1934,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       set((state) => {
         const errorMsg: ChatMessage = {
           id: `err-${Date.now()}`,
-          text: error.detail ||  "Sorry, I encountered an error connecting to the knowledge base. Please try again.",
+          text: error.detail || "Sorry, I encountered an error connecting to the knowledge base. Please try again.",
           sender: "ai",
           timestamp: new Date().toLocaleTimeString([], {
             hour: "2-digit",

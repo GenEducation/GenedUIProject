@@ -49,7 +49,7 @@ export function PartnerAdmin() {
         </header>
 
         {/* Content View */}
-        <div className="flex-1 relative overflow-hidden">
+        <div className="flex-1 relative flex flex-col overflow-hidden">
           <AnimatePresence mode="wait">
             {activeView === "subjects" ? (
               <motion.div
@@ -57,7 +57,7 @@ export function PartnerAdmin() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="h-full flex flex-col"
+                className="flex-1 flex flex-col h-full"
               >
                 <SubjectRegistry onUploadClick={() => setShowUploadModal(true)} />
               </motion.div>
@@ -67,7 +67,7 @@ export function PartnerAdmin() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="h-full flex flex-col"
+                className="flex-1 flex flex-col h-full"
               >
                 <EnrollmentAdmin />
               </motion.div>

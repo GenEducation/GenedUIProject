@@ -1,12 +1,15 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import { useEffect } from "react";
 import { StudentHome } from "./StudentHome";
 import { StudentChatView } from "./StudentChatView";
 import { StudentProfile } from "./StudentProfile";
 import { StudentAnalyticsDashboard } from "@/components/analytics/StudentAnalyticsDashboard";
 import { PartnerRequestModal } from "./PartnerRequestModal";
+import { useStudentStore } from "../store/useStudentStore";
+import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 
 /**
  * StudentPortal renders the correct sub-view based on the current URL path.
@@ -14,6 +17,22 @@ import { PartnerRequestModal } from "./PartnerRequestModal";
  */
 export function StudentPortal() {
   const pathname = usePathname();
+  const router = useRouter();
+  
+  const { studentProfile } = useStudentStore();
+  const { dnaStatus, checkDNAStatus } = useOnboardingStore();
+
+  useEffect(() => {
+    if (studentProfile?.user_id) {
+      checkDNAStatus(studentProfile.user_id);
+    }
+  }, [studentProfile, checkDNAStatus]);
+
+  useEffect(() => {
+    if (dnaStatus === "PENDING" && pathname !== "/student/onboarding") {
+      router.replace("/student/onboarding");
+    }
+  }, [dnaStatus, pathname, router]);
 
   const isChatRoute = pathname === "/student/chat";
   const isProfileRoute = pathname === "/student/profile";

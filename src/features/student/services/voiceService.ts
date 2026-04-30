@@ -15,6 +15,7 @@ class VoiceService {
   private currentStudentId: string | null = null;
   private currentSessionId: string | null = null;
   private currentSubject: string | null = null;
+  private wsEndpoint: string = "/ws/april-live";
   private onEventCallback: ((event: any) => void) | null = null;
   private onTextRevealCallback: ((text: string, role: "user" | "assistant") => void) | null = null;
   
@@ -39,11 +40,13 @@ class VoiceService {
     onEvent: (event: any) => void, 
     onTextReveal: (text: string, role: "user" | "assistant") => void,
     sessionId?: string, 
-    subject?: string
+    subject?: string,
+    wsEndpoint: string = "/ws/april-live"
   ) {
     this.currentStudentId = studentId;
     this.currentSessionId = sessionId || null;
     this.currentSubject = subject ?? null;
+    this.wsEndpoint = wsEndpoint;
     this.onEventCallback = onEvent;
     this.onTextRevealCallback = onTextReveal;
 
@@ -107,7 +110,8 @@ class VoiceService {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
     const wsBaseUrl = apiBaseUrl?.replace(/^http/, "ws");
     const token = getAuthToken();
-    const wsUrl = `${wsBaseUrl}/ws/april-live?token=${token || ""}&user_id=${this.currentStudentId}`;
+    const endpoint = this.wsEndpoint || "/ws/april-live";
+    const wsUrl = `${wsBaseUrl}${endpoint}?token=${token || ""}&user_id=${this.currentStudentId}`;
 
     this.ws = new WebSocket(wsUrl);
     this.ws.binaryType = "arraybuffer";
