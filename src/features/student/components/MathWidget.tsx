@@ -3,12 +3,13 @@ import React from 'react';
 interface MathWidgetProps {
   expression: string;
   meta?: any;
+  minimal?: boolean;
 }
 
-export const MathWidget: React.FC<MathWidgetProps> = ({ expression, meta }) => {
+export const MathWidget: React.FC<MathWidgetProps> = ({ expression, meta, minimal = false }) => {
   if (meta?.error) {
     return (
-      <div className="my-4 p-4 bg-red-50 rounded-2xl border border-red-100 text-red-800 text-sm">
+      <div className={`my-4 p-4 bg-red-50 rounded-2xl border border-red-100 text-red-800 text-sm ${minimal ? 'm-0' : ''}`}>
         <div className="font-black text-[10px] uppercase tracking-tighter mb-1 opacity-50">Interactive graph unavailable</div>
         <div className="font-mono bg-white/50 p-2 rounded border border-red-200/50">
           {expression}
@@ -43,6 +44,19 @@ export const MathWidget: React.FC<MathWidgetProps> = ({ expression, meta }) => {
     </body>
     </html>
   `;
+
+  if (minimal) {
+    return (
+      <div className="w-full h-full relative">
+        <iframe
+          srcDoc={desmosHtml}
+          className="w-full h-[320px] border-none"
+          title="Desmos Graph"
+          sandbox="allow-scripts allow-same-origin"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="my-4 rounded-2xl border border-[#1a3a2a]/10 shadow-sm overflow-hidden bg-white group">

@@ -30,7 +30,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   };
 
   return (
-    <div className="flex-1 px-4 md:px-12 pt-8 md:pt-12 pb-8 bg-white flex flex-col h-full overflow-hidden">
+    <div className="flex-1 px-4 md:px-12 pt-8 md:pt-12 pb-8 bg-white flex flex-col min-h-0 overflow-hidden">
       {/* Actions Section */}
       <div className="flex justify-end mb-4 md:mb-6">
         <button 
