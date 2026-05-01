@@ -36,27 +36,29 @@ export function VisualCard({ engine, label, children }: VisualCardProps) {
 
   const cardContent = (
     <div
-      className={`bg-white border border-[#E8E8E8] shadow-[0_2px_8px_rgba(0,0,0,0.06)] rounded-xl flex flex-col overflow-hidden w-full max-w-[680px] my-3 ${
-        isExpanded ? "fixed inset-4 z-50 max-w-none h-auto max-h-none" : ""
+      className={`bg-white border border-[#E8E8E8] shadow-[0_4px_20px_rgba(0,0,0,0.1)] rounded-2xl flex flex-col overflow-hidden my-3 transition-all duration-300 ${
+        isExpanded 
+          ? "fixed top-12 bottom-12 left-1/2 -translate-x-1/2 w-[60vw] z-50 shadow-[0_20px_60px_rgba(0,0,0,0.4)]" 
+          : "w-full max-w-[680px]"
       }`}
     >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#E8E8E8] bg-white">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E8E8] bg-white">
         <div
-          className="text-xs font-semibold px-2 py-1 rounded-md"
+          className="text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider"
           style={{ backgroundColor: chipBg, color: chipColor }}
         >
           {chipText}
         </div>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-md hover:bg-gray-100"
+          className="relative z-10 text-gray-400 hover:text-[#042E5C] transition-all p-1.5 rounded-lg hover:bg-[#F0F7FF]"
           title={isExpanded ? "Close" : "Expand"}
         >
-          {isExpanded ? <X size={16} /> : <Expand size={16} />}
+          {isExpanded ? <X size={20} /> : <Expand size={18} />}
         </button>
       </div>
 
-      <div className={`relative w-full ${isExpanded ? "flex-1" : "min-h-[260px] max-h-[420px]"} bg-[#FAFAFA] flex items-center justify-center overflow-hidden`}>
+      <div className={`relative w-full ${isExpanded ? "flex-1" : "min-h-[280px] max-h-[420px]"} flex items-center justify-center overflow-hidden`}>
         {children}
       </div>
 

@@ -48,15 +48,69 @@ export function P5Visual({ code }: P5VisualProps) {
 <head>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: transparent; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 100vw; height: 100vh; }
+  body { 
+    background: transparent; 
+    overflow: hidden; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    width: 100vw; 
+    height: 100vh; 
+  }
+  #canvas-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-origin: center center;
+    width: 100%;
+    height: 100%;
+  }
   canvas { display: block; }
 </style>
 </head>
 <body>
+<div id="canvas-container"></div>
 <script>
   ${escapedP5}
 </script>
 <script>
+  let sketchW = 400;
+  let sketchH = 320;
+
+  // Intercept createCanvas to put it in our container
+  const _origCreateCanvas = window.createCanvas;
+  window.createCanvas = function(w, h, renderer) {
+    sketchW = w;
+    sketchH = h;
+    const canvas = _origCreateCanvas(w, h, renderer);
+    canvas.parent('canvas-container');
+    
+    // Initial scale
+    setTimeout(() => updateScale(), 10);
+    return canvas;
+  };
+
+  function updateScale() {
+    const container = document.getElementById('canvas-container');
+    if (!container) return;
+    
+    // Use the sketch width/height if available, otherwise fallback
+    const w = window.width || sketchW;
+    const h = window.height || sketchH;
+    
+    const scaleX = window.innerWidth / w;
+    const scaleY = window.innerHeight / h;
+    
+    // Maximize scale - we use min to fit, but we ensure it takes as much space as possible
+    const scale = Math.min(scaleX, scaleY);
+    container.style.transform = \`scale(\${scale})\`;
+  }
+
+  window.addEventListener('resize', updateScale);
+  
+  // Periodically check if scale needs adjustment (failsafe for dynamic container changes)
+  setInterval(updateScale, 500);
+
   ${escapedCode}
 </script>
 </body>
@@ -75,34 +129,8 @@ export function P5Visual({ code }: P5VisualProps) {
     };
   }, [code]);
 
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe || !srcdoc) return;
-
-    const handleLoad = () => {
-      setLoading(false);
-      
-      // Auto-scale logic
-      if (containerRef.current) {
-        const sketchWidth = 400; // standard convention from prompt
-        const containerWidth = containerRef.current.offsetWidth;
-        if (containerWidth > 0 && containerWidth < sketchWidth) {
-          const scale = containerWidth / sketchWidth;
-          iframe.style.transform = `scale(${scale})`;
-          iframe.style.transformOrigin = "top left";
-          iframe.style.width = `${sketchWidth}px`;
-          // We don't shrink the iframe height, we just let it scale visual
-          iframe.style.height = `${320 / scale}px`;
-        }
-      }
-    };
-
-    iframe.addEventListener("load", handleLoad);
-    return () => iframe.removeEventListener("load", handleLoad);
-  }, [srcdoc]);
-
   return (
-    <div ref={containerRef} className="w-full h-full relative flex items-center justify-center overflow-hidden">
+    <div ref={containerRef} className="w-full h-full relative overflow-hidden bg-white">
       {loading && (
         <div className="absolute inset-0 z-10" style={{ background: "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }}>
           <style>{`
@@ -119,13 +147,11 @@ export function P5Visual({ code }: P5VisualProps) {
           sandbox="allow-scripts"
           scrolling="no"
           srcDoc={srcdoc}
-          className="transition-opacity duration-300"
+          onLoad={() => setLoading(false)}
+          className="w-full h-full border-none transition-opacity duration-300"
           style={{
-            width: "100%",
-            height: "320px",
-            border: "none",
-            background: "transparent",
             opacity: loading ? 0 : 1,
+            pointerEvents: "auto",
           }}
         />
       )}
