@@ -44,12 +44,15 @@ interface PartnerState {
   fetchSubjects: () => Promise<void>;
   addSubject: (subject: Subject) => void;
   uploadCurriculum: (file: File, subjectName: string, documentTitle: string, agentName: string, grade: string, board: string, documentType: string) => Promise<void>;
+  cancelIngestion: (tempId: string) => Promise<void>;
   removeSubject: (agentId: string) => Promise<void>;
   removeStudent: (studentId: string) => Promise<void>;
 
   // Auth/Logout Action
   logoutPartner: () => void;
 }
+
+const abortControllers = new Map<string, AbortController>();
 
 
 
@@ -235,6 +238,10 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
     set((state) => ({ subjects: [optimisticSubject, ...state.subjects] }));
 
+    // Setup AbortController for cancellation
+    const controller = new AbortController();
+    abortControllers.set(tempId, controller);
+
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -257,6 +264,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       const response = await authFetch(apiUrl, { 
         method: "POST", 
         body: formData,
+        signal: controller.signal,
       });
       if (!response.ok) {
         const errorDetail = await response.text();
@@ -279,6 +287,9 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         ),
       }));
     } catch (error: any) {
+      // Don't treat abort as an error that marks as failed
+      if (error.name === 'AbortError') return;
+
       const status = error?.status;
       
       // Per user request: 429 and 504 errors should be ignored completely.
@@ -298,7 +309,38 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
           ? state.subjects.map((s) => (s.id === tempId ? { ...s, status: "failed" } : s))
           : state.subjects.filter((s) => s.id !== tempId),
       }));
+    } finally {
+      abortControllers.delete(tempId);
     }
+  },
+
+  cancelIngestion: async (tempId) => {
+    const controller = abortControllers.get(tempId);
+    if (controller) {
+      controller.abort();
+      abortControllers.delete(tempId);
+    }
+
+    const subject = get().subjects.find(s => s.id === tempId);
+
+    // Explicitly send cancel signal to backend
+    const rawPartnerId = localStorage.getItem("gened_partner_id");
+    const partnerId = rawPartnerId?.replace(/['"]+/g, "");
+    
+    if (partnerId && subject) {
+      try {
+        const encodedTitle = encodeURIComponent(subject.agent);
+        await authFetch(`${getRagUrl()}/rag/admin/ingest/cancel?partner_id=${partnerId}&document_title=${encodedTitle}`, {
+          method: "POST"
+        });
+      } catch (err) {
+        console.error("Failed to send explicit cancel signal to backend", err);
+      }
+    }
+
+    set((state) => ({
+      subjects: state.subjects.filter((s) => s.id !== tempId),
+    }));
   },
 
   removeSubject: async (agentId) => {
