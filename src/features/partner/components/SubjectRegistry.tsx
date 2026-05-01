@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { Plus, Trash2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { Plus, Trash2, Square } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { usePartnerStore } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
@@ -14,6 +14,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const subjects = usePartnerStore((state) => state.subjects);
   const fetchSubjects = usePartnerStore((state) => state.fetchSubjects);
   const removeSubject = usePartnerStore((state) => state.removeSubject);
+  const cancelIngestion = usePartnerStore((state) => state.cancelIngestion);
 
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
 
@@ -95,6 +96,21 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                         >
                           {subject.status}
                         </span>
+
+                        {isProcessing && (
+                          <div className="flex items-center gap-2 mr-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                cancelIngestion(subject.id);
+                              }}
+                              className="p-2 text-[#1A3D2C]/40 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all group/stop"
+                              title="Stop Ingestion"
+                            >
+                              <Square size={14} className="fill-current group-hover/stop:scale-90 transition-transform" />
+                            </button>
+                          </div>
+                        )}
 
                         {(isActive || isFailed) && (
                           <button
