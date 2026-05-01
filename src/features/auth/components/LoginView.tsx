@@ -306,6 +306,13 @@ export function LoginView() {
                       </p>
                     </div>
                   )}
+                  {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("error") === "unauthorized" && !isSignUp && (
+                    <div className="mt-6 p-4 bg-red-50 border border-red-100 rounded-xl animate-bounce-subtle">
+                      <p className="text-sm font-semibold text-red-600 text-center tracking-tight">
+                        Access Denied: You do not have permission to view this data.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {isSignUp ? (

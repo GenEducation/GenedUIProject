@@ -40,10 +40,10 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
     try {
       const profile = JSON.parse(profileStr);
 
-      // Hydrate the appropriate store if not already hydrated
+      // Hydrate the appropriate store if not already hydrated or if ID mismatch (Context Sync)
       if (role === "student") {
         const currentProfile = useStudentStore.getState().studentProfile;
-        if (!currentProfile) {
+        if (!currentProfile || currentProfile.user_id !== profile.user_id) {
           useStudentStore.getState().setStudentProfile({
             user_id: profile.user_id,
             username: profile.username,
@@ -55,7 +55,7 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
         }
       } else if (role === "parent") {
         const currentProfile = useParentStore.getState().parentProfile;
-        if (!currentProfile) {
+        if (!currentProfile || currentProfile.user_id !== profile.user_id) {
           useParentStore.getState().setParentProfile({
             user_id: profile.user_id || "",
             username: profile.username || "",
