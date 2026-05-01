@@ -57,6 +57,13 @@ export function GeoGebraVisual({ id, commands, options = {} }: GeoGebraVisualPro
                   console.error("GeoGebra evalCommand error:", cmd, e);
                 }
               });
+              
+              // Center the view on all objects
+              setTimeout(() => {
+                if (isMounted) {
+                  api.zoomAll();
+                }
+              }, 100);
             }
             setLoading(false);
           },

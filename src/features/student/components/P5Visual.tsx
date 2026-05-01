@@ -56,16 +56,21 @@ export function P5Visual({ code }: P5VisualProps) {
     justify-content: center; 
     width: 100vw; 
     height: 100vh; 
+    margin: 0;
+    padding: 0;
   }
   #canvas-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-origin: center center;
     display: flex;
     align-items: center;
     justify-content: center;
-    transform-origin: center center;
-    width: 100%;
-    height: 100%;
   }
-  canvas { display: block; }
+  canvas { 
+    display: block; 
+  }
 </style>
 </head>
 <body>
@@ -74,42 +79,38 @@ export function P5Visual({ code }: P5VisualProps) {
   ${escapedP5}
 </script>
 <script>
-  let sketchW = 400;
-  let sketchH = 320;
-
   // Intercept createCanvas to put it in our container
   const _origCreateCanvas = window.createCanvas;
   window.createCanvas = function(w, h, renderer) {
-    sketchW = w;
-    sketchH = h;
     const canvas = _origCreateCanvas(w, h, renderer);
     canvas.parent('canvas-container');
-    
-    // Initial scale
-    setTimeout(() => updateScale(), 10);
+    // Force a re-scale once the canvas is created
+    setTimeout(updateScale, 10);
     return canvas;
   };
 
   function updateScale() {
     const container = document.getElementById('canvas-container');
-    if (!container) return;
+    const canvas = document.querySelector('canvas');
+    if (!container || !canvas) return;
     
-    // Use the sketch width/height if available, otherwise fallback
-    const w = window.width || sketchW;
-    const h = window.height || sketchH;
+    // Get the base dimensions defined in the sketch
+    const w = canvas.width;
+    const h = canvas.height;
     
+    if (w === 0 || h === 0) return;
+
     const scaleX = window.innerWidth / w;
     const scaleY = window.innerHeight / h;
     
-    // Maximize scale - we use min to fit, but we ensure it takes as much space as possible
-    const scale = Math.min(scaleX, scaleY);
-    container.style.transform = \`scale(\${scale})\`;
+    // Use 0.8 multiplier to ensure a generous "Safe Zone" for animations
+    const scale = Math.min(scaleX, scaleY) * 0.8;
+    
+    container.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
   }
 
   window.addEventListener('resize', updateScale);
-  
-  // Periodically check if scale needs adjustment (failsafe for dynamic container changes)
-  setInterval(updateScale, 500);
+  setInterval(updateScale, 200);
 
   ${escapedCode}
 </script>
@@ -130,7 +131,7 @@ export function P5Visual({ code }: P5VisualProps) {
   }, [code]);
 
   return (
-    <div ref={containerRef} className="w-full h-full relative overflow-hidden bg-white">
+    <div ref={containerRef} className="relative w-full h-full overflow-hidden">
       {loading && (
         <div className="absolute inset-0 z-10" style={{ background: "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }}>
           <style>{`

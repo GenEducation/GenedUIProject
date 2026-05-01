@@ -38,7 +38,7 @@ export function VisualCard({ engine, label, children }: VisualCardProps) {
     <div
       className={`bg-white border border-[#E8E8E8] shadow-[0_4px_20px_rgba(0,0,0,0.1)] rounded-2xl flex flex-col overflow-hidden my-3 transition-all duration-300 ${
         isExpanded 
-          ? "fixed top-12 bottom-12 left-1/2 -translate-x-1/2 w-[60vw] z-50 shadow-[0_20px_60px_rgba(0,0,0,0.4)]" 
+          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[700px] h-[60vh] z-50 shadow-[0_20px_60px_rgba(0,0,0,0.4)]" 
           : "w-full max-w-[680px]"
       }`}
     >
@@ -58,7 +58,7 @@ export function VisualCard({ engine, label, children }: VisualCardProps) {
         </button>
       </div>
 
-      <div className={`relative w-full ${isExpanded ? "flex-1" : "min-h-[280px] max-h-[420px]"} flex items-center justify-center overflow-hidden`}>
+      <div className={`relative w-full ${isExpanded ? "flex-1 min-h-0" : "min-h-[320px] max-h-[480px] flex items-center justify-center"} overflow-hidden p-0 m-0`}>
         {children}
       </div>
 
