@@ -27,6 +27,7 @@ interface StudentDetailsModalProps {
 }
 
 import { authFetch } from "@/utils/authFetch";
+import { usePartnerStore } from "@/features/partner/store/usePartnerStore";
 
 const CORE_API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 if (!CORE_API_URL) {
@@ -75,6 +76,17 @@ export function StudentDetailsModal({
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) {
       setFetchError("Partner ID not found. Please sign in again.");
+      setIsFetching(false);
+      return;
+    }
+
+    // IDOR Prevention: Verify that this studentId belongs to the partner's authorized list before fetching
+    const studentList = usePartnerStore.getState().students;
+    const pendingList = usePartnerStore.getState().pendingRequests;
+    const isAuthorized = studentList.some(s => s.id === studentId) || pendingList.some(s => s.id === studentId);
+
+    if (!isAuthorized) {
+      setFetchError("Unauthorized: You do not have permission to view this student's profile.");
       setIsFetching(false);
       return;
     }

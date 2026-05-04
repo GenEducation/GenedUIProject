@@ -34,14 +34,36 @@ export async function authFetch(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
+  const profileStr = localStorage.getItem("gened_user_profile");
+  if (profileStr) {
+    try {
+      const profile = JSON.parse(profileStr);
+      if (profile.user_id) {
+        headers.set("x-user-id", profile.user_id);
+      }
+    } catch (e) {
+      console.error("Error parsing user profile for x-user-id header", e);
+    }
+  }
+
   // Automatically set Content-Type to application/json only if it's not already set 
   // and the body is NOT FormData (which needs the browser to set its own boundary).
   if (!headers.has("Content-Type") && init?.body && !(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
 
-  return fetch(input, {
+  const response = await fetch(input, {
     ...init,
     headers,
   });
+
+  // Global Error Handling
+  if (response.status === 403) {
+    // Graceful redirect for Forbidden errors
+    if (typeof window !== "undefined") {
+      window.location.href = "/?error=unauthorized";
+    }
+  }
+
+  return response;
 }
