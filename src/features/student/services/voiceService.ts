@@ -107,12 +107,23 @@ class VoiceService {
   private connect() {
     if (!this.isSessionActive || !this.currentStudentId) return;
 
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const wsBaseUrl = apiBaseUrl?.replace(/^http/, "ws");
+    // Robustly construct the WebSocket URL
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "");
+    
+    // Clean up the base URL and swap protocol
+    // http://api.example.com -> ws://api.example.com
+    // https://api.example.com -> wss://api.example.com
+    const wsBaseUrl = apiBaseUrl.replace(/^http/, "ws").replace(/\/$/, "");
+    
     const token = getAuthToken();
     const endpoint = this.wsEndpoint || "/ws/april-live";
-    const wsUrl = `${wsBaseUrl}${endpoint}?token=${token || ""}&user_id=${this.currentStudentId}`;
+    
+    // Ensure endpoint starts with a slash
+    const formattedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    
+    const wsUrl = `${wsBaseUrl}${formattedEndpoint}?token=${token || ""}&user_id=${this.currentStudentId}`;
 
+    console.log(`[VoiceService] Connecting to: ${wsUrl}`);
     this.ws = new WebSocket(wsUrl);
     this.ws.binaryType = "arraybuffer";
 

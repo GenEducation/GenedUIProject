@@ -22,7 +22,12 @@ export const onboardingService = {
     return response.json();
   },
 
-  sendGeneralChatMessage: async (payload: { student_id: string; message: string }, signal?: AbortSignal) => {
+  sendGeneralChatMessage: async (payload: { 
+    student_id: string; 
+    message: string;
+    audio_data?: string;
+    audio_mime_type?: string;
+  }, signal?: AbortSignal) => {
     const response = await authFetch(`${API_BASE_URL}/api/onboarding/general/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -46,7 +51,13 @@ export const onboardingService = {
     return response.json();
   },
 
-  sendSubjectChatMessage: async (payload: { student_id: string; subject: string; message: string }, signal?: AbortSignal) => {
+  sendSubjectChatMessage: async (payload: { 
+    student_id: string; 
+    subject: string; 
+    message: string;
+    audio_data?: string;
+    audio_mime_type?: string;
+  }, signal?: AbortSignal) => {
     const response = await authFetch(`${API_BASE_URL}/api/onboarding/subject/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

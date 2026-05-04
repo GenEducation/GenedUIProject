@@ -13,14 +13,16 @@ export function OnboardingChatView() {
     messages, 
     isAITyping, 
     isVoiceOnly, 
-    voiceSessionStatus, 
-    sendMessage, 
-    startVoiceSession, 
-    stopVoiceSession 
+    sendVoiceMessage, 
+    sendMessage 
   } = useOnboardingStore();
   const { studentProfile } = useStudentStore();
   
   const [input, setInput] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -40,7 +42,58 @@ export function OnboardingChatView() {
     adjustHeight();
   }, [input]);
 
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        // Strip the prefix (e.g., "data:audio/webm;base64,")
+        const base64Data = base64String.split(",")[1];
+        resolve(base64Data);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType });
+        const base64Audio = await blobToBase64(audioBlob);
+        
+        if (studentProfile) {
+          sendVoiceMessage(studentProfile.user_id, base64Audio, mediaRecorder.mimeType);
+        }
+        
+        // Stop all tracks to release the microphone
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Failed to start recording:", err);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
 
   const handleSend = () => {
     if (!input.trim() || !studentProfile) return;
@@ -58,18 +111,19 @@ export function OnboardingChatView() {
 
   const handleMicClick = () => {
     if (!studentProfile) return;
-    if (voiceSessionStatus === "active") {
-      stopVoiceSession();
-    } else if (voiceSessionStatus === "idle") {
-      startVoiceSession(studentProfile.user_id);
+    
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
 
-  const isVoiceActive = voiceSessionStatus === "active" || voiceSessionStatus === "connecting";
+  const isVoiceActive = isRecording;
   const isInputDisabled = isVoiceOnly || isVoiceActive || isAITyping;
 
   let placeholder = "Type your response...";
-  if (isVoiceActive) placeholder = "Listening...";
+  if (isRecording) placeholder = "Recording your voice...";
   else if (isVoiceOnly) placeholder = "Please use the microphone to speak your answer...";
   else if (isAITyping) placeholder = "Assistant is typing...";
 
@@ -130,12 +184,12 @@ export function OnboardingChatView() {
           isVoiceOnly ? "border-red-400/50 bg-red-50/50" : "border-[#042E5C]/10 focus-within:border-[#042E5C]/20"
         }`}>
           <motion.button
-            animate={voiceSessionStatus === "active" ? { scale: [1, 1.2, 1] } : {}}
+            animate={isRecording ? { scale: [1, 1.2, 1] } : {}}
             transition={{ repeat: Infinity, duration: 1.5 }}
             onClick={handleMicClick}
             disabled={isAITyping}
             className={`flex-shrink-0 mb-1 cursor-pointer transition-colors ${
-              voiceSessionStatus === "active" 
+              isRecording 
                 ? "text-red-500 hover:text-red-600" 
                 : isVoiceOnly 
                   ? "text-red-500 animate-pulse" 
@@ -159,7 +213,7 @@ export function OnboardingChatView() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={isVoiceActive ? stopVoiceSession : handleSend}
+            onClick={isRecording ? stopRecording : handleSend}
             disabled={(!input.trim() && !isVoiceActive) || (isInputDisabled && !isVoiceActive)}
             className={`w-10 h-10 rounded-full flex-shrink-0 text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm ${
               isVoiceActive ? "bg-red-500 hover:bg-red-600" : "bg-[#042E5C] hover:bg-[#064282]"

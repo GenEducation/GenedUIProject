@@ -1,7 +1,5 @@
 import { create } from "zustand";
 import { onboardingService } from "../services/onboardingService";
-import { getAuthToken } from "@/utils/authFetch";
-import { voiceService } from "@/features/student/services/voiceService";
 
 export interface OnboardingMessage {
   id: string;
@@ -21,7 +19,6 @@ interface OnboardingState {
   isComplete: boolean;
   isVoiceOnly: boolean;
   streamingMessageId: string | null;
-  voiceSessionStatus: "idle" | "connecting" | "active" | "error";
 
   checkDNAStatus: (studentId: string) => Promise<void>;
   startOnboarding: (
@@ -31,9 +28,7 @@ interface OnboardingState {
     grade?: number
   ) => Promise<void>;
   sendMessage: (studentId: string, text: string) => Promise<void>;
-  
-  startVoiceSession: (studentId: string) => Promise<void>;
-  stopVoiceSession: () => Promise<void>;
+  sendVoiceMessage: (studentId: string, audioData: string, mimeType: string) => Promise<void>;
   clearSession: () => void;
 }
 
@@ -48,7 +43,6 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
   isComplete: false,
   isVoiceOnly: false,
   streamingMessageId: null,
-  voiceSessionStatus: "idle",
 
   checkDNAStatus: async (studentId: string) => {
     try {
@@ -96,7 +90,7 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
     const { type, subject, messages } = get();
     if (!type) return;
 
-    // Remove voice lock if user manually typed (or sent a voice message which acts the same here)
+    // Reset voice lock if user manually typed
     set({ isVoiceOnly: false });
 
     const userMsgId = Date.now().toString();
@@ -159,75 +153,89 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
     }
   },
 
-  startVoiceSession: async (studentId: string) => {
-    const { type, subject } = get();
-    set({ voiceSessionStatus: "connecting" });
+  sendVoiceMessage: async (studentId: string, audioData: string, mimeType: string) => {
+    const { type, subject, messages } = get();
+    if (!type) return;
+
+    // Reset voice lock for the next turn
+    set({ isVoiceOnly: false });
+
+    const userMsgId = `voice-user-${Date.now()}`;
+    const userMsg: OnboardingMessage = {
+      id: userMsgId,
+      sender: "user",
+      text: "🎤 [Voice Message]", 
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    const streamingMsgId = `stream-${Date.now()}`;
+    const initialAIMsg: OnboardingMessage = {
+      id: streamingMsgId,
+      sender: "ai",
+      text: "",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    set({ 
+      messages: [...messages, userMsg, initialAIMsg],
+      isAITyping: true,
+      streamingMessageId: streamingMsgId
+    });
+
     try {
-      const wsEndpoint = type === "general" ? "/ws/onboarding/general" : "/ws/onboarding/subject";
+      let data;
+      if (type === "general") {
+        data = await onboardingService.sendGeneralChatMessage({ 
+          student_id: studentId, 
+          message: "", 
+          audio_data: audioData, 
+          audio_mime_type: mimeType 
+        });
+      } else {
+        data = await onboardingService.sendSubjectChatMessage({ 
+          student_id: studentId, 
+          subject: subject!, 
+          message: "", 
+          audio_data: audioData, 
+          audio_mime_type: mimeType 
+        });
+      }
+
+      let responseText = data.response || "";
+      let isCompleteFlag = data.is_complete || false;
+      let voiceOnly = false;
       
-      await voiceService.startSession(
-        studentId,
-        (event) => {
-          if (event.type === "connected") set({ voiceSessionStatus: "active" });
-          else if (event.type === "disconnected" || event.type === "error") set({ voiceSessionStatus: "error" });
-        },
-        (content, role) => {
-          set((state) => {
-            const lastMsg = state.messages[state.messages.length - 1];
-            const sender = role === "user" ? "user" : "ai";
-            const isContinuing = lastMsg && lastMsg.sender === sender && state.streamingMessageId === lastMsg.id;
-            
-            let updatedMessages = [...state.messages];
-            let newId = state.streamingMessageId;
+      if (responseText.includes("<<VOICE_ONLY>>")) {
+        voiceOnly = true;
+        responseText = responseText.replace(/<<VOICE_ONLY>>/g, "").trim();
+      }
 
-            let textToDisplay = isContinuing ? lastMsg.text + (role === "user" ? " " : "") + content : content;
-            let voiceOnly = state.isVoiceOnly;
-
-            if (role === "assistant" && textToDisplay.includes("<<VOICE_ONLY>>")) {
-              voiceOnly = true;
-              textToDisplay = textToDisplay.replace(/<<VOICE_ONLY>>/g, "").trim();
-            }
-
-            if (isContinuing) {
-              updatedMessages[updatedMessages.length - 1] = { ...lastMsg, text: textToDisplay };
-            } else {
-              newId = `voice-${Date.now()}`;
-              updatedMessages.push({
-                id: newId,
-                text: textToDisplay,
-                sender,
-                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-              });
-            }
-
-            return {
-              messages: updatedMessages,
-              streamingMessageId: newId,
-              isAITyping: role === "assistant",
-              isVoiceOnly: voiceOnly
-            };
-          });
-        },
-        undefined,
-        subject || undefined,
-        wsEndpoint
-      );
+      set((state) => ({
+        messages: state.messages.map(m => 
+          m.id === streamingMsgId ? { ...m, text: responseText } : m
+        ),
+        isAITyping: false,
+        streamingMessageId: null,
+        isComplete: isCompleteFlag,
+        isVoiceOnly: voiceOnly
+      }));
     } catch (error) {
-      console.error("Voice session failed:", error);
-      set({ voiceSessionStatus: "error" });
+      console.error("Failed to send voice message:", error);
+      set((state) => ({
+        messages: state.messages.map(m => 
+          m.id === streamingMsgId ? { ...m, text: "Sorry, I encountered an error processing your voice. Please try again." } : m
+        ),
+        isAITyping: false,
+        streamingMessageId: null
+      }));
     }
-  },
-
-  stopVoiceSession: async () => {
-    voiceService.stopSession();
-    set({ voiceSessionStatus: "idle", isAITyping: false, streamingMessageId: null });
   },
 
   clearSession: () => {
     set({
       type: null, subject: null, grade: null, messages: [], 
       isAITyping: false, isComplete: false, isVoiceOnly: false,
-      streamingMessageId: null, voiceSessionStatus: "idle"
+      streamingMessageId: null
     });
   }
 }));
