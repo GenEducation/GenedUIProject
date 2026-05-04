@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, ChangeEvent, FormEvent } from "react";
+import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 
 import { GoogleLogin } from "@react-oauth/google";
@@ -94,12 +95,12 @@ export function SignIn({
             <label className="text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/45">
               Password
             </label>
-            <a
-              href="#"
+            <Link
+              href="/forgot-password"
               className="text-[10px] font-semibold text-[#059F6D] hover:text-[#047a54] hover:underline transition-colors tracking-wide"
             >
               Forgot password?
-            </a>
+            </Link>
           </div>
           <div className="relative">
             <input

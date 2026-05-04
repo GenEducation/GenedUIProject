@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { OnboardingChatView } from "@/features/onboarding/components/OnboardingChatView";
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { studentProfile } = useStudentStore();
@@ -42,7 +42,7 @@ export default function OnboardingPage() {
         router.replace("/student");
       }
     }
-  }, [isComplete, queryType, router, clearSession]);
+  }, [isComplete, queryType, router, clearSession, studentProfile?.user_id]);
 
   if (!studentProfile) return null;
 
@@ -50,5 +50,20 @@ export default function OnboardingPage() {
     <div className="h-screen bg-[#F4F3EE] flex flex-col">
       <OnboardingChatView />
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen bg-[#F4F3EE] flex flex-col items-center justify-center space-y-4">
+        <div className="w-12 h-12 border-4 border-[#1a3a2a]/10 border-t-[#1a3a2a] rounded-full animate-spin" />
+        <p className="text-sm font-bold text-[#1a3a2a]/40 uppercase tracking-widest animate-pulse">
+          Initializing Assessment...
+        </p>
+      </div>
+    }>
+      <OnboardingContent />
+    </Suspense>
   );
 }

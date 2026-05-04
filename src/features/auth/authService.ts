@@ -143,3 +143,40 @@ export async function googleSignUp(token: string, data: Partial<SignUpFields>): 
 
   return response.json();
 }
+
+export async function requestPasswordReset(email: string): Promise<{ success: boolean }> {
+  // Mock delay
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  
+  // Future API implementation:
+  /*
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!response.ok) throw new Error("Failed to request password reset");
+  return response.json();
+  */
+  
+  return { success: true };
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<{ success: boolean }> {
+  // Mock delay
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+  
+  // Future API implementation:
+  /*
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, new_password: newPassword }),
+  });
+  if (!response.ok) throw new Error("Failed to reset password");
+  return response.json();
+  */
+  
+  return { success: true };
+}
+
