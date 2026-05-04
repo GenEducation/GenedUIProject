@@ -108,7 +108,10 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                 {studentProfile?.username || "A. Sterling"}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1a3a2a] to-[#059669] border-2 border-white shadow-md" />
+            <button 
+              onClick={() => router.push('/student/profile')}
+              className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1a3a2a] to-[#059669] border-2 border-white shadow-md hover:scale-105 transition-transform" 
+            />
           </div>
         </header>
       )}
