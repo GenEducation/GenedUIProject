@@ -618,6 +618,7 @@ interface StudentState {
   voiceSessionStatus: "idle" | "connecting" | "active" | "error";
   hasFetchedSessions: boolean;
   hasFetchedAgents: boolean;
+  isMuted: boolean;
 
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
@@ -641,6 +642,7 @@ interface StudentState {
   stopMessageGeneration: () => void;
   startVoiceSession: () => Promise<void>;
   stopVoiceSession: () => void;
+  toggleMute: () => void;
   logoutStudent: () => void;
 }
 
@@ -673,6 +675,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   voiceSessionStatus: "idle",
   hasFetchedSessions: false,
   hasFetchedAgents: false,
+  isMuted: false,
 
   setStudentProfile: (profile) => set({ studentProfile: profile }),
 
@@ -1153,6 +1156,9 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       }));
     }
 
+    // Reset mute state on new session
+    set({ isMuted: false });
+
     try {
       // Lazy load voice service to avoid SSR issues
       const { voiceService } =
@@ -1473,7 +1479,20 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     } catch (error) {
       console.error("Failed to stop voice session:", error);
     }
-    set({ voiceSessionStatus: "idle" });
+    set({ voiceSessionStatus: "idle", isMuted: false });
+  },
+
+  toggleMute: async () => {
+    const { isMuted } = get();
+    const newMutedState = !isMuted;
+    
+    try {
+      const { voiceService } = await import("@/features/student/services/voiceService");
+      voiceService.setMuted(newMutedState);
+      set({ isMuted: newMutedState });
+    } catch (error) {
+      console.error("Failed to toggle mute:", error);
+    }
   },
 
   sendMessage: async (text: string) => {

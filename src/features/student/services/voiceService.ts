@@ -18,6 +18,7 @@ class VoiceService {
   private wsEndpoint: string = "/ws/april-live";
   private onEventCallback: ((event: any) => void) | null = null;
   private onTextRevealCallback: ((text: string, role: "user" | "assistant") => void) | null = null;
+  private isMuted = false;
   
   // Connection & Retry State
   private retryCount = 0;
@@ -86,7 +87,7 @@ class VoiceService {
       this.processor = this.micCtx.createScriptProcessor(4096, 1, 1);
       
       this.processor.onaudioprocess = (e) => {
-        if (this.ws?.readyState === WebSocket.OPEN) {
+        if (this.ws?.readyState === WebSocket.OPEN && !this.isMuted) {
           const input = e.inputBuffer.getChannelData(0);
           const i16 = new Int16Array(input.length);
           for (let i = 0; i < input.length; i++) {
@@ -298,6 +299,11 @@ class VoiceService {
     this.bufferQueue = [];
     this.onEventCallback = null;
     this.onTextRevealCallback = null;
+  }
+
+  setMuted(muted: boolean) {
+    this.isMuted = muted;
+    console.log(`[VoiceService] Mic ${muted ? "Muted" : "Unmuted"}`);
   }
 }
 
