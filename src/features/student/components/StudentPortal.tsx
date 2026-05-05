@@ -3,7 +3,6 @@
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
-import { StudentHome } from "./StudentHome";
 import { StudentChatView } from "./StudentChatView";
 import { StudentProfile } from "./StudentProfile";
 import { StudentAnalyticsDashboard } from "@/components/analytics/StudentAnalyticsDashboard";
@@ -13,7 +12,7 @@ import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingSto
 
 /**
  * StudentPortal renders the correct sub-view based on the current URL path.
- * This replaces the old flag-based (isChatOpen, isProfileOpen, isAnalyticsOpen) approach.
+ * The default view is the Chat Hub, with dedicated routes for Profile and Analytics.
  */
 export function StudentPortal() {
   const pathname = usePathname();
@@ -34,7 +33,6 @@ export function StudentPortal() {
     }
   }, [dnaStatus, pathname, router]);
 
-  const isChatRoute = pathname === "/student/chat";
   const isProfileRoute = pathname === "/student/profile";
   const isAnalyticsRoute = pathname === "/student/analytics";
 
@@ -63,27 +61,16 @@ export function StudentPortal() {
           >
             <StudentProfile />
           </motion.div>
-        ) : isChatRoute ? (
+        ) : (
           <motion.div
-            key="chat"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 30 }}
-            transition={{ type: "spring", stiffness: 380, damping: 34 }}
+            key="chat-hub-portal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
             className="h-full"
           >
             <StudentChatView />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="home"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ type: "spring", stiffness: 380, damping: 34 }}
-            className="h-full overflow-y-auto"
-          >
-            <StudentHome />
           </motion.div>
         )}
       </AnimatePresence>

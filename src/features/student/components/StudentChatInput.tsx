@@ -8,9 +8,10 @@ import { useStudentStore } from "../store/useStudentStore";
 interface StudentChatInputProps {
   chatTitle: string;
   isCentered?: boolean;
+  isHub?: boolean;
 }
 
-export function StudentChatInput({ chatTitle, isCentered = false }: StudentChatInputProps) {
+export function StudentChatInput({ chatTitle, isCentered = false, isHub = false }: StudentChatInputProps) {
   const { 
     sendMessage, 
     isAITyping, 
@@ -86,7 +87,9 @@ export function StudentChatInput({ chatTitle, isCentered = false }: StudentChatI
           placeholder={
             isVoiceActive 
               ? "Listening..." 
-              : `Ask anything about ${chatTitle}...`
+              : isHub 
+                ? "Ask Anything..." 
+                : `Ask anything to ${chatTitle}...`
           }
           rows={1}
           className="flex-1 bg-transparent text-[15px] font-medium text-[#042E5C] placeholder:text-[#042E5C]/30 focus:outline-none resize-none overflow-y-auto min-h-[28px] max-h-[120px] md:max-h-[200px] leading-relaxed py-1"

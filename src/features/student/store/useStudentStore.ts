@@ -1116,16 +1116,36 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
   startVoiceSession: async () => {
     const { activeChat, studentProfile } = get();
-    if (!activeChat || !studentProfile) return;
+    if (!studentProfile) return;
+
+    // Handle Hub start
+    const isHubStart = !activeChat;
+    const effectiveChat: ChatSession = activeChat || {
+      id: "new",
+      title: "New Session",
+      subject: "General",
+      agent_id: undefined,
+      isFocused: false,
+      agentType: "General Assistant",
+      agentIcon: "🤖",
+      lastActive: "Just now",
+      lastTopic: "Continued Learning",
+      chatMode: "voice"
+    };
+
+    // Force transition from Hub to Chat view immediately
+    if (isHubStart) {
+      set({ activeChat: { ...effectiveChat, chatMode: "voice" } });
+    }
 
     // Enforce text mode restriction
-    if (activeChat.chatMode === "text") return;
+    if (activeChat?.chatMode === "text") return;
 
-    console.log("🎙️ [StudentStore] Starting Voice Session for Chat:", activeChat);
+    console.log("🎙️ [StudentStore] Starting Voice Session for Chat:", effectiveChat);
     set({ voiceSessionStatus: "connecting" });
 
     // Set chat mode to voice if not already set
-    if (!activeChat.chatMode) {
+    if (activeChat && !activeChat.chatMode) {
       set((state) => ({
         activeChat: state.activeChat
           ? { ...state.activeChat, chatMode: "voice" }
@@ -1436,8 +1456,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             };
           });
         },
-        activeChat.session_id,
-        activeChat.subject
+        effectiveChat.session_id,
+        effectiveChat.subject
       );
     } catch (error) {
       console.error("Failed to start voice session:", error);
@@ -1458,22 +1478,33 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
   sendMessage: async (text: string) => {
     const { studentProfile, activeChat } = get();
-    if (!studentProfile || !activeChat) return;
+    if (!studentProfile) return;
+
+    // Handle Hub messaging (activeChat is null) or specific new chats
+    const isHubMessage = !activeChat;
+    const effectiveChat: ChatSession = activeChat || {
+      id: "new",
+      title: "New Session",
+      subject: "General",
+      agent_id: undefined,
+      isFocused: false,
+      agentType: "General Assistant",
+      agentIcon: "🤖",
+      lastActive: "Just now",
+      lastTopic: "Continued Learning",
+      chatMode: "text"
+    };
 
     // Capture the ID of the chat where the message was sent
-    const chatSentFromId = activeChat.id;
+    const chatSentFromId = effectiveChat.id;
+
+    // Force transition from Hub to Chat view immediately
+    if (isHubMessage) {
+      set({ activeChat: { ...effectiveChat, chatMode: "text" } });
+    }
 
     // Enforce voice mode restriction
-    if (activeChat.chatMode === "voice") return;
-
-    // Set chat mode to text if not already set
-    if (!activeChat.chatMode) {
-      set((state) => ({
-        activeChat: state.activeChat
-          ? { ...state.activeChat, chatMode: "text" }
-          : null,
-      }));
-    }
+    if (effectiveChat.chatMode === "voice") return;
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
@@ -1503,8 +1534,12 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       const newMessages = [...currentMessages, userMsg, streamingPlaceholder];
 
       return {
+        // Atomic update: ensure activeChat is set if it was null (Hub message)
+        activeChat: state.activeChat 
+          ? (state.activeChat.chatMode ? state.activeChat : { ...state.activeChat, chatMode: "text" })
+          : { ...effectiveChat, chatMode: "text" },
         messages:
-          state.activeChat?.id === chatSentFromId
+          (state.activeChat?.id === chatSentFromId || isHubMessage)
             ? newMessages
             : state.messages,
         chatMessagesCache: {
@@ -1513,14 +1548,14 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         },
         typingChatIds: [...state.typingChatIds, chatSentFromId],
         isAITyping:
-          state.activeChat?.id === chatSentFromId ? true : state.isAITyping,
+          (state.activeChat?.id === chatSentFromId || isHubMessage) ? true : state.isAITyping,
         streamingMessageId: streamingMsgId,
       };
     });
 
     try {
       const sessionIdToSend =
-        activeChat.session_id || activeChat.id || undefined;
+        effectiveChat.session_id || (effectiveChat.id === "new" ? undefined : effectiveChat.id);
       const isNewSession =
         !sessionIdToSend ||
         sessionIdToSend === "new" ||
@@ -1529,11 +1564,11 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
       console.debug("[Chat] Sending message", {
         session_id: isNewSession ? undefined : sessionIdToSend,
-        isFocused: activeChat.isFocused,
+        isFocused: effectiveChat.isFocused,
         text,
       });
 
-      const isNewFocused = activeChat.isFocused && isNewSession;
+      const isNewFocused = effectiveChat.isFocused && isNewSession;
       const abortController = new AbortController();
       set({ chatAbortController: abortController });
 
@@ -1541,19 +1576,22 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         {
           text,
           user_id: studentProfile.user_id,
-          ...(isNewFocused
-            ? {}
-            : { session_id: isNewSession ? undefined : sessionIdToSend }),
-          ...(!activeChat.isFocused && {
-            agent_id: activeChat.agent_id || "eng-grade-4",
-          }),
-          subject: activeChat.subject || "English",
           grade: studentProfile.grade || 10,
-          ...(activeChat.isFocused && {
-            document_title: activeChat.document_title || "General",
+          // Only send session/agent info if NOT a Hub-initiated general query
+          ...(!isHubMessage && {
+            ...(isNewFocused
+              ? {}
+              : { session_id: isNewSession ? undefined : sessionIdToSend }),
+            ...(!effectiveChat.isFocused && {
+              agent_id: effectiveChat.agent_id,
+            }),
+            subject: effectiveChat.subject || "General",
+          }),
+          ...(effectiveChat.isFocused && {
+            document_title: effectiveChat.document_title || "General",
             intent: "",
           }),
-        },
+        } as any,
         abortController.signal,
       );
 
@@ -1832,6 +1870,35 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             event = JSON.parse(jsonStr);
           } catch {
             continue;
+          }
+
+          // Late-binding session ID sync
+          if (event.type === "session_id" && event.session_id) {
+            const newSessionId = event.session_id;
+            const { activeChat: currentChat, fetchSessions } = get();
+            
+            // Sync state and URL only if we are transitioning from a new/null session
+            if (!currentChat || currentChat.id === "new" || currentChat.id === "new-focused") {
+              const updatedChat: ChatSession = currentChat ? { 
+                ...currentChat, 
+                id: newSessionId, 
+                session_id: newSessionId 
+              } : {
+                id: newSessionId,
+                session_id: newSessionId,
+                title: event.title || "New Session",
+                agentType: "Socratic Assistant",
+                agentIcon: "🤖",
+                lastActive: "Just now",
+                lastTopic: "Continued Learning",
+                subject: event.subject || "General",
+                grade: "",
+              };
+
+              set({ activeChat: updatedChat });
+              window.history.pushState(null, "", `/student/chat/${newSessionId}`);
+              fetchSessions(); // Refresh sidebar history
+            }
           }
 
           let shouldUpdate = false;
