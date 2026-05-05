@@ -1,6 +1,6 @@
 "use client";
 
-import { User, BarChart2, Loader2 } from "lucide-react";
+import { User, BarChart2, Loader2, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
@@ -45,6 +45,22 @@ export const StudentChatSidebar = React.memo(({
 
         {/* Thread list */}
         <div className="flex-1 p-5 space-y-1 overflow-y-auto">
+          
+          {/* Start New Chat Action */}
+          <button
+            onClick={() => {
+              closeChat();
+              router.push('/student');
+              if (window.innerWidth < 1024) onClose();
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left bg-white border border-[#042E5C]/5 text-[#042E5C] hover:bg-[#042E5C]/5 hover:border-[#042E5C]/10 transition-all shadow-sm mb-6 group"
+          >
+            <div className="w-8 h-8 rounded-lg bg-[#042E5C]/5 flex items-center justify-center text-[#042E5C]/60 group-hover:bg-[#042E5C] group-hover:text-white transition-colors">
+              <Plus size={18} />
+            </div>
+            <span className="text-[13px] font-extrabold">Start New Chat</span>
+          </button>
+
           <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#042E5C]/30 px-2 pb-3">
             Recent Knowledge Threads
           </p>
