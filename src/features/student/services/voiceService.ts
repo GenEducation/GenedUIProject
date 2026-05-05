@@ -41,7 +41,7 @@ class VoiceService {
     onTextReveal: (text: string, role: "user" | "assistant") => void,
     sessionId?: string, 
     subject?: string,
-    wsEndpoint: string = "/ws/april-live"
+    wsEndpoint: string = "/ws/april-live-graph"
   ) {
     this.currentStudentId = studentId;
     this.currentSessionId = sessionId || null;

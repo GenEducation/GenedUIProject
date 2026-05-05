@@ -77,6 +77,22 @@ export function StudentChatInput({ chatTitle, isCentered = false }: StudentChatI
           isCentered ? "py-5" : "py-4"
         }`}
       >
+        <textarea
+          ref={textareaRef}
+          value={input}
+          disabled={isTextDisabled}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={
+            isVoiceActive 
+              ? "Listening..." 
+              : `Ask anything about ${chatTitle}...`
+          }
+          rows={1}
+          className="flex-1 bg-transparent text-[15px] font-medium text-[#042E5C] placeholder:text-[#042E5C]/30 focus:outline-none resize-none overflow-y-auto min-h-[28px] max-h-[120px] md:max-h-[200px] leading-relaxed py-1"
+          style={{ height: "auto" }}
+        />
+
         <motion.div
           animate={voiceSessionStatus === "active" ? { scale: [1, 1.2, 1] } : {}}
           transition={{ repeat: Infinity, duration: 1.5 }}
@@ -94,22 +110,6 @@ export function StudentChatInput({ chatTitle, isCentered = false }: StudentChatI
             }`}
           />
         </motion.div>
-        
-        <textarea
-          ref={textareaRef}
-          value={input}
-          disabled={isTextDisabled}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            isVoiceActive 
-              ? "Listening..." 
-              : `Ask anything about ${chatTitle}...`
-          }
-          rows={1}
-          className="flex-1 bg-transparent text-[15px] font-medium text-[#042E5C] placeholder:text-[#042E5C]/30 focus:outline-none resize-none overflow-y-auto min-h-[28px] max-h-[120px] md:max-h-[200px] leading-relaxed py-1"
-          style={{ height: "auto" }}
-        />
 
         <motion.button
           whileHover={{ scale: 1.05 }}
