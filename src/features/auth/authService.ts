@@ -18,6 +18,7 @@ export interface SignUpFields {
   phone?: string;
   organization?: string;
   website?: string;
+  otp_code?: string;
 }
 
 export interface AuthTokenResponse {
@@ -40,6 +41,22 @@ export interface SignInFields {
   password: string;
 }
 
+async function handleAuthError(response: Response, defaultMsg: string): Promise<never> {
+  let errorMessage = defaultMsg;
+  try {
+    const errorData = await response.json();
+    if (Array.isArray(errorData.detail)) {
+      errorMessage = errorData.detail.map((err: any) => err.msg).join(", ");
+    } else {
+      errorMessage = errorData.detail || errorData.message || errorMessage;
+    }
+  } catch (e) {
+    const errorText = await response.text().catch(() => "");
+    errorMessage = errorText || errorMessage;
+  }
+  throw new Error(errorMessage);
+}
+
 export async function signIn(data: SignInFields): Promise<AuthTokenResponse> {
   const response = await fetch(`${AUTH_API_BASE_URL}/auth/sign-in`, {
     method: "POST",
@@ -53,8 +70,7 @@ export async function signIn(data: SignInFields): Promise<AuthTokenResponse> {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Signin request failed.");
+    await handleAuthError(response, "Signin request failed.");
   }
 
   return response.json();
@@ -66,6 +82,7 @@ export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
     email_id: data.email,
     password: data.password,
     role: data.role.toUpperCase(),
+    otp_code: data.otp_code,
   };
 
   if (data.role === "student") {
@@ -88,8 +105,7 @@ export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Signup request failed.");
+    await handleAuthError(response, "Signup request failed.");
   }
 
   return response.json();
@@ -105,8 +121,7 @@ export async function googleSignIn(token: string): Promise<AuthTokenResponse> {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Google Sign-in request failed.");
+    await handleAuthError(response, "Google Sign-in request failed.");
   }
 
   return response.json();
@@ -139,46 +154,59 @@ export async function googleSignUp(token: string, data: Partial<SignUpFields>): 
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Google Sign-up request failed.");
+    await handleAuthError(response, "Google Sign-up request failed.");
   }
 
   return response.json();
 }
 
-export async function requestPasswordReset(email: string): Promise<{ success: boolean }> {
-  // Mock delay
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-  
-  // Future API implementation:
-  /*
+export async function sendOtp(email: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/send-otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) {
+    await handleAuthError(response, "Failed to send OTP");
+  }
+
+  return response.json();
+}
+
+export async function requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
   const response = await fetch(`${AUTH_API_BASE_URL}/auth/forgot-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
   });
-  if (!response.ok) throw new Error("Failed to request password reset");
+
+  if (!response.ok) {
+    await handleAuthError(response, "Failed to initiate password reset");
+  }
+
   return response.json();
-  */
-  
-  return { success: true };
 }
 
-export async function resetPassword(token: string, newPassword: string): Promise<{ success: boolean }> {
-  // Mock delay
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-  
-  // Future API implementation:
-  /*
+export async function resetPassword(data: {
+  email: string;
+  otp_code: string;
+  new_password: string;
+}): Promise<{ success: boolean; message: string }> {
   const response = await fetch(`${AUTH_API_BASE_URL}/auth/reset-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, new_password: newPassword }),
+    body: JSON.stringify({
+      email: data.email,
+      otp_code: data.otp_code,
+      new_password: data.new_password,
+    }),
   });
-  if (!response.ok) throw new Error("Failed to reset password");
+
+  if (!response.ok) {
+    await handleAuthError(response, "Failed to reset password");
+  }
+
   return response.json();
-  */
-  
-  return { success: true };
 }
 

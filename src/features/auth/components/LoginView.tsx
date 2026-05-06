@@ -26,6 +26,7 @@ const initialSignUpData: SignUpFields = {
   phone: "",
   organization: "",
   website: "",
+  otp_code: "",
 };
 
 export function LoginView() {

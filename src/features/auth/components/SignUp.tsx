@@ -17,6 +17,7 @@ interface SignUpData {
   phone?: string;
   organization?: string;
   website?: string;
+  otp_code?: string;
 }
 
 interface SignUpProps {
@@ -127,6 +128,9 @@ export function SignUp({
   const [step, setStep] = useState(1);
   const [googleToken, setGoogleToken] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [otpSentMessage, setOtpSentMessage] = useState("");
   const isSignupEnabled = process.env.NEXT_PUBLIC_ENABLE_SIGNUP !== "false";
 
   // -- Signup disabled state --------------------------------------------------
@@ -196,6 +200,9 @@ export function SignUp({
         if (signupData.password !== signupData.confirmPassword) {
           errors.confirmPassword = "Passwords do not match";
         }
+        if (isOtpSent && !signupData.otp_code?.trim()) {
+          errors.email = "Please enter the OTP code sent to your email";
+        }
       }
 
       if (Object.keys(errors).length > 0) {
@@ -248,18 +255,70 @@ export function SignUp({
 
           <div>
             <label className={labelCls}>Email Address</label>
-            <input
-              name="email"
-              value={signupData.email}
-              onChange={onChange}
-              type="email"
-              placeholder="scholar@gened.edu"
-              className={inputCls(!!errors.email || !!localErrors.email)}
-            />
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <input
+                  name="email"
+                  value={signupData.email}
+                  onChange={onChange}
+                  type="email"
+                  placeholder="scholar@gened.edu"
+                  className={inputCls(!!errors.email || !!localErrors.email)}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!signupData.email) {
+                    setLocalErrors({ email: "Email is required to send OTP" });
+                    return;
+                  }
+                  setIsSendingOtp(true);
+                  setOtpSentMessage("");
+                  try {
+                    const { sendOtp } = await import("../authService");
+                    await sendOtp(signupData.email);
+                    setIsOtpSent(true);
+                    setOtpSentMessage("OTP sent to your email!");
+                  } catch (err: any) {
+                    setLocalErrors({ email: err.message || "Failed to send OTP" });
+                  } finally {
+                    setIsSendingOtp(false);
+                  }
+                }}
+                disabled={isSendingOtp || !signupData.email}
+                className="px-6 py-3.5 rounded-xl bg-[#042e5c]/5 text-[#042e5c] text-xs font-bold transition-all hover:bg-[#042e5c]/10 active:scale-95 disabled:opacity-50"
+              >
+                {isSendingOtp ? "Sending..." : isOtpSent ? "Resend" : "Verify"}
+              </button>
+            </div>
+            {otpSentMessage && (
+              <p className="text-[#059F6D] text-[10px] font-bold mt-1.5 ml-0.5 tracking-tight animate-in fade-in">
+                {otpSentMessage}
+              </p>
+            )}
             {(errors.email || localErrors.email) && (
               <p className={errorCls}>{errors.email || localErrors.email}</p>
             )}
           </div>
+
+          {isOtpSent && (
+            <div className="animate-in fade-in slide-in-from-top-2">
+              <label className={labelCls}>OTP Code</label>
+              <input
+                name="otp_code"
+                value={signupData.otp_code || ""}
+                onChange={onChange}
+                type="text"
+                placeholder="Enter 6-digit code"
+                className={inputCls(false)}
+                maxLength={6}
+              />
+              <p className="text-[#042e5c]/40 text-[9px] mt-1.5 ml-0.5 font-medium">
+                Check your inbox for the verification code
+              </p>
+            </div>
+          )}
 
           <div>
             <label className={labelCls}>Password</label>
