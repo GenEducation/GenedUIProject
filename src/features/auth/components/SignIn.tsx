@@ -113,7 +113,7 @@ export function SignIn({
                 errors.password
                   ? "border-rose-400 bg-rose-50/30"
                   : "border-[#042e5c]/15 bg-white/70"
-              } px-5 py-3.5 text-sm text-[#0E1F2B] transition-all duration-200 placeholder:text-[#0E1F2B]/25 hover:border-[#059F6D]/40 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/15 font-mono tracking-widest`}
+              } px-5 py-3.5 text-sm text-[#0E1F2B] transition-all duration-200 placeholder:text-[#0E1F2B]/25 hover:border-[#059F6D]/40 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/15`}
             />
             <button
               type="button"

@@ -161,7 +161,10 @@ export function StudentProfile() {
           {/* Right Column */}
           <div className="md:col-span-5 space-y-8">
             {/* Partner Requests */}
-            <div className="bg-[#f0f0eb] border border-[#1a3a2a]/5 rounded-3xl p-8 space-y-6 shadow-sm">
+            <div 
+              className="bg-[#f0f0eb] border border-[#1a3a2a]/5 rounded-3xl p-8 space-y-6 shadow-sm"
+              data-tutorial="partner-requests"
+            >
               <div className="flex items-center gap-3 text-[#1a3a2a] font-bold">
                 <h2 className="text-lg tracking-tight">Partner Requests</h2>
               </div>
@@ -206,7 +209,10 @@ export function StudentProfile() {
             </div>
 
             {/* Parent Access */}
-            <div className="bg-white border border-[#1a3a2a]/5 rounded-3xl p-8 space-y-6 shadow-sm">
+            <div 
+              className="bg-white border border-[#1a3a2a]/5 rounded-3xl p-8 space-y-6 shadow-sm"
+              data-tutorial="parent-access"
+            >
               <div className="flex items-center gap-3 text-[#1a3a2a] font-bold">
                 <h2 className="text-lg tracking-tight">Parent Access</h2>
               </div>

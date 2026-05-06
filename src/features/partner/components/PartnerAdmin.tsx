@@ -15,7 +15,8 @@ export function PartnerAdmin() {
   const pathname = usePathname();
 
   // Derive active view from URL
-  const activeView: "subjects" | "analytics" = pathname === '/partner/analytics' ? 'analytics' : 'subjects';
+  // Derive active view from URL - Analytics is now the default
+  const activeView: "subjects" | "analytics" = pathname === '/partner/subjects' ? 'subjects' : 'analytics';
 
   const [showUploadModal, setShowUploadModal] = useState(false);
 
@@ -27,7 +28,7 @@ export function PartnerAdmin() {
       {/* Navigation Sidebar */}
       <SideBar 
         activeView={activeView} 
-        onViewChange={(view) => router.push(view === 'subjects' ? '/partner' : '/partner/analytics')} 
+        onViewChange={(view) => router.push(view === 'analytics' ? '/partner' : '/partner/subjects')} 
       />
 
       {/* Main Content Area */}
@@ -41,10 +42,6 @@ export function PartnerAdmin() {
           </div>
           <div className="flex items-center gap-4">
             {partnerId && <NotificationBell userId={partnerId} align="right" />}
-            
-            <button className="w-10 h-10 rounded-xl bg-white border border-[#1A3D2C]/10 shadow-sm hover:shadow-md hover:border-[#1A3D2C]/20 text-[#1A3D2C] transition-all flex items-center justify-center">
-              <User size={18} />
-            </button>
           </div>
         </header>
 

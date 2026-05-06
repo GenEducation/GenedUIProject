@@ -1,15 +1,12 @@
 "use client";
 
-import { User, BarChart2, Loader2, Plus } from "lucide-react";
+import { User, BarChart2, Loader2, Plus, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
-import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import React from "react";
 
 /**
  * StudentChatSidebar renders the list of recent knowledge threads.
- * It is memoized to prevent unnecessary re-renders when the main chat
- * area updates, and it consumes its own data from the store.
  */
 export const StudentChatSidebar = React.memo(({ 
   activeChatId, 
@@ -21,7 +18,7 @@ export const StudentChatSidebar = React.memo(({
   onClose: () => void;
 }) => {
   const router = useRouter();
-  const { openExistingChat, closeChat, recentChats, isSessionsLoading } = useStudentStore();
+  const { openExistingChat, closeChat, recentChats, isSessionsLoading, logoutStudent } = useStudentStore();
 
   return (
     <aside 
@@ -39,7 +36,7 @@ export const StudentChatSidebar = React.memo(({
             }}
             className="hover:opacity-80 transition-opacity"
           >
-            <img src="/Logo.svg" alt="Gened Logo" className="h-9 w-auto" />
+            <img src="/Logo.svg" alt="Gened Logo" className="h-9 w-auto" data-tutorial="logo" />
           </button>
         </div>
 
@@ -54,6 +51,7 @@ export const StudentChatSidebar = React.memo(({
               if (window.innerWidth < 1024) onClose();
             }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left bg-white border border-[#042E5C]/5 text-[#042E5C] hover:bg-[#042E5C]/5 hover:border-[#042E5C]/10 transition-all shadow-sm mb-6 group"
+            data-tutorial="new-chat"
           >
             <div className="w-8 h-8 rounded-lg bg-[#042E5C]/5 flex items-center justify-center text-[#042E5C]/60 group-hover:bg-[#042E5C] group-hover:text-white transition-colors">
               <Plus size={18} />
@@ -102,10 +100,11 @@ export const StudentChatSidebar = React.memo(({
         </div>
 
         {/* Sidebar footer */}
-        <div className="p-5 border-t border-[#042E5C]/8 space-y-2">
+        <div className="p-5 border-t border-[#042E5C]/8 space-y-1">
           <button 
             onClick={() => router.push('/student/profile')}
             className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-[#042E5C]/50 hover:text-[#042E5C] hover:bg-[#042E5C]/5 transition-all"
+            data-tutorial="profile-nav"
           >
             <User size={18} />
             <span className="text-[13px] font-bold">Profile</span>
@@ -113,9 +112,17 @@ export const StudentChatSidebar = React.memo(({
           <button 
             onClick={() => router.push('/student/analytics')}
             className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-[#042E5C]/50 hover:text-[#042E5C] hover:bg-[#042E5C]/5 transition-all"
+            data-tutorial="analytics-nav"
           >
             <BarChart2 size={18} />
             <span className="text-[13px] font-bold">Analytics</span>
+          </button>
+          <button 
+            onClick={logoutStudent}
+            className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-[#042E5C]/50 hover:text-red-500 hover:bg-red-50 transition-all"
+          >
+            <LogOut size={18} />
+            <span className="text-[13px] font-bold">Logout</span>
           </button>
         </div>
       </div>
