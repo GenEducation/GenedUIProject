@@ -13,6 +13,7 @@ import { useSmoothStream } from "@/hooks/useSmoothStream";
 import { VisualCard } from "./VisualCard";
 import { P5Visual } from "./P5Visual";
 import { GeoGebraVisual } from "./GeoGebraVisual";
+import { ActivityRenderer } from "./ActivityRenderer";
 
 const StreamingTextRenderer = React.memo(({ content, isStreaming }: { content: string, isStreaming: boolean }) => {
   const displayedText = useSmoothStream(content, isStreaming, 15);
@@ -145,6 +146,19 @@ export const ChatMessageBubble = React.memo(
                 </div>
               ) : (
                 <MarkdownRenderer content={displayedText} />
+              )}
+
+              {/* Render Activities if present */}
+              {message.actions && message.actions.length > 0 && (
+                <div className="mt-4">
+                  {message.actions.map((action, idx) => (
+                    <ActivityRenderer 
+                      key={`${action.activity_id}-${idx}`} 
+                      action={action} 
+                      isCompleted={!isStreaming && idx === 0 && !!(message.text && message.sender === 'ai')} 
+                    />
+                  ))}
+                </div>
               )}
             </div>
           )}
