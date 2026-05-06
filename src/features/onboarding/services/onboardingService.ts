@@ -70,4 +70,33 @@ export const onboardingService = {
     }
     return response.json();
   },
+  completeGeneralOnboarding: async (data: {
+    student_id: string;
+    name: string;
+    age: number;
+    grade: number;
+    learning_preferences: string[];
+    interests: string[];
+    strengths: string[];
+    weaknesses: string[];
+  }) => {
+    const response = await authFetch(`${API_BASE_URL}/api/onboarding/general/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "Unknown error");
+      console.error(`Onboarding completion failed with status ${response.status}:`, errorText);
+      let errorMessage = "Failed to complete onboarding";
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // Not JSON
+      }
+      throw new Error(errorMessage);
+    }
+    return response.json();
+  },
 };

@@ -32,6 +32,7 @@ export interface AuthTokenResponse {
   organization?: string;
   website?: string | null;
   school_board?: string;
+  age?: number;
 }
 
 export interface SignInFields {
@@ -114,6 +115,7 @@ export async function googleSignIn(token: string): Promise<AuthTokenResponse> {
 export async function googleSignUp(token: string, data: Partial<SignUpFields>): Promise<AuthTokenResponse> {
   const body: any = {
     token,
+    username: data.username,
     role: data.role?.toUpperCase(),
   };
 
