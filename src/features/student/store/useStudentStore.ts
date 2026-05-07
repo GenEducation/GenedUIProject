@@ -14,6 +14,8 @@ export interface StudentProfile {
   age?: number;
   grade?: number;
   school_board?: string;
+  plan?: "FREE" | "PRO";
+  plan_expires_at?: string | null;
 }
 
 export interface ChatElement {
@@ -601,7 +603,16 @@ const manageCacheEviction = (cache: Record<string, ChatMessage[]>, newSessionId:
 
 // -- Store interface ----------------------------------------------------------─
 
-interface StudentState {
+export interface OnboardingSubject {
+  subject: string;
+  status: "PENDING" | "COMPLETED";
+}
+
+export interface OnboardingStatus {
+  subjects: OnboardingSubject[];
+}
+
+export interface StudentState {
   studentProfile: StudentProfile | null;
   recentChats: ChatSession[];
   activeChat: ChatSession | null;
@@ -629,7 +640,10 @@ interface StudentState {
   hasFetchedSessions: boolean;
   hasFetchedAgents: boolean;
   isMuted: boolean;
+  isRateLimitHit: boolean;
   activeActivity: ActivityAction | null;
+  onboardingStatus: OnboardingStatus | null;
+  isOnboardingLoading: boolean;
 
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
@@ -638,6 +652,7 @@ interface StudentState {
   fetchAvailablePartners: () => Promise<void>;
   fetchEnrolledPartners: () => Promise<void>;
   fetchChatHistory: (sessionId: string) => Promise<void>;
+  fetchOnboardingStatus: () => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
   openChatById: (sessionId: string) => Promise<void>;
   openNewChat: (agent: AgentItem) => string;
@@ -646,6 +661,7 @@ interface StudentState {
   closeChat: () => void;
   setProfileOpen: (open: boolean) => void;
   setAgentPickerOpen: (open: boolean) => void;
+  setRateLimitHit: (hit: boolean) => void;
   setPartnerModalOpen: (open: boolean) => void;
   stopMessageGeneration: () => void;
   submitActivityResult: (activityId: string, activityType: string, transcript: string) => Promise<void>;
@@ -670,6 +686,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   isChatOpen: false,
   isProfileOpen: false,
   isAgentPickerOpen: false,
+  isRateLimitHit: false,
   isAITyping: false,
   isSessionsLoading: false,
   isHistoryLoading: false,
@@ -688,6 +705,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   hasFetchedSessions: false,
   hasFetchedAgents: false,
   isMuted: false,
+  onboardingStatus: null,
+  isOnboardingLoading: false,
   logoutStudent: () => {
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");
@@ -706,12 +725,14 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       typingChatIds: [],
       hasFetchedSessions: false,
       hasFetchedAgents: false,
+      onboardingStatus: null,
     });
     window.location.href = "/";
   },
   activeActivity: null,
   setProfileOpen: (open) => set({ isProfileOpen: open }),
   setAgentPickerOpen: (open) => set({ isAgentPickerOpen: open }),
+  setRateLimitHit: (hit) => set({ isRateLimitHit: hit }),
   setPartnerModalOpen: (open) =>
     set({
       isPartnerModalOpen: open,
@@ -728,6 +749,22 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       streamingMessageId: null,
     });
   },
+
+  fetchOnboardingStatus: async () => {
+    const { studentProfile, isOnboardingLoading } = get();
+    if (!studentProfile || isOnboardingLoading) return;
+    
+    set({ isOnboardingLoading: true });
+    try {
+      const status = await studentService.fetchOnboardingStatus(studentProfile.user_id);
+      set({ onboardingStatus: status });
+    } catch (error) {
+      console.error("Failed to fetch onboarding status:", error);
+    } finally {
+      set({ isOnboardingLoading: false });
+    }
+  },
+
   submitActivityResult: async (activityId, activityType, transcript) => {
     set({ activeActivity: null });
     await get().sendMessage(undefined, {
@@ -1676,6 +1713,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         abortController.signal,
       );
 
+      if (response.status === 429) {
+        set({ isRateLimitHit: true });
+        return;
+      }
+
       if (!response.body) throw new Error("No response body for streaming");
 
       const reader = response.body.getReader();
@@ -2145,9 +2187,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       });
     } catch (error: any) {
       const isAbort = error.name === "AbortError";
+      const isRateLimit = error.status === 429;
 
       if (isAbort) {
         console.debug("Chat generation aborted by user");
+      } else if (isRateLimit) {
+        set({ isRateLimitHit: true });
       } else {
         console.error("Chat API Error:", error);
       }
@@ -2165,8 +2210,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
         const cleanOrReplace = (msgs: ChatMessage[]) => {
           const withoutStreaming = msgs.filter((m) => m.id !== streamingMsgId);
-          // If it was an abort, just leave it empty. Otherwise, add the error message.
-          return isAbort ? withoutStreaming : [...withoutStreaming, errorMsg];
+          // If it was an abort OR a rate limit, just leave it empty.
+          // Otherwise, add the error message.
+          return (isAbort || isRateLimit) ? withoutStreaming : [...withoutStreaming, errorMsg];
         };
 
         const cached = state.chatMessagesCache[chatSentFromId] || [];

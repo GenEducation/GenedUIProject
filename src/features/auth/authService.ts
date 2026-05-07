@@ -34,6 +34,8 @@ export interface AuthTokenResponse {
   website?: string | null;
   school_board?: string;
   age?: number;
+  plan?: "FREE" | "PRO";
+  plan_expires_at?: string | null;
 }
 
 export interface SignInFields {

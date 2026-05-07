@@ -52,6 +52,8 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
             role: profile.role,
             grade: profile.grade,
             school_board: profile.school_board,
+            plan: profile.plan,
+            plan_expires_at: profile.plan_expires_at,
           });
         }
       } else if (role === "parent") {

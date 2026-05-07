@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { GlobalLoader } from "@/components/shared/loaders/GlobalLoader";
 import { SiteTutorial } from "@/components/shared/SiteTutorial";
+import Script from "next/script";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -30,6 +31,10 @@ export default function RootLayout({
         <GlobalLoader />
         {children}
         <SiteTutorial />
+        <Script 
+          src="https://checkout.razorpay.com/v1/checkout.js" 
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );

@@ -8,6 +8,7 @@ import Image from "next/image";
 import { useStudentStore, ChatMessage, ChatSession } from "../store/useStudentStore";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { StudentChatInput } from "./StudentChatInput";
+import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 
 interface StudentChatMainProps {
   activeChat: ChatSession;
@@ -25,7 +26,14 @@ export function StudentChatMain({
   toggleSidebar
 }: StudentChatMainProps) {
   const router = useRouter();
-  const { closeChat, isHistoryLoading, sendMessage, streamingMessageId } = useStudentStore();
+  const { 
+    closeChat, 
+    isHistoryLoading, 
+    sendMessage, 
+    streamingMessageId,
+    isRateLimitHit,
+    setRateLimitHit
+  } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -127,13 +135,6 @@ export function StudentChatMain({
               </motion.div>
             ) : (
               <div className="flex-1 flex flex-col">
-                {/* Session label */}
-                <div className="flex justify-center py-6 border-b border-[#042E5C]/5">
-                  <span className="text-[11px] font-extrabold text-[#042E5C]/20 uppercase tracking-[0.3em]">
-                    Foundation Session &bull; Today
-                  </span>
-                </div>
-
                 {/* Messages List */}
                 <div className="flex-1 px-6 md:px-12 py-8 space-y-8 max-w-5xl mx-auto w-full">
                   {messages.map((msg) => (
@@ -154,13 +155,12 @@ export function StudentChatMain({
         {/* Dedicated Bottom Input Area (Outside Scroll) */}
         {!isNewChat && !isHistoryLoading && (
           <div className="flex-shrink-0 px-6 pb-8 bg-white pt-4 border-t border-[#042E5C]/5">
-            <div className="max-w-5xl mx-auto">
+            <div className="max-w-5xl mx-auto relative">
+              <RateLimitPrompt 
+                isVisible={isRateLimitHit} 
+                onClose={() => setRateLimitHit(false)} 
+              />
               <StudentChatInput chatTitle={activeChat.title} />
-              <div className="mt-4 text-center">
-                <span className="text-[10px] font-bold text-[#042E5C]/20 uppercase tracking-widest">
-                  Press Enter to send • Shift+Enter for new line
-                </span>
-              </div>
             </div>
           </div>
         )}

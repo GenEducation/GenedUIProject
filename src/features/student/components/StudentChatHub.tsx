@@ -1,13 +1,15 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { 
   useStudentStore, 
 } from "../store/useStudentStore";
 import { StudentChatInput } from "./StudentChatInput";
 import { AlertCircle, ChevronRight, Clock, Bot, Menu, LogOut } from "lucide-react";
+import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
+import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 
 interface StudentChatHubProps {
   toggleSidebar: () => void;
@@ -15,6 +17,7 @@ interface StudentChatHubProps {
 
 export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
   const router = useRouter();
+  const [activeOnboarding, setActiveOnboarding] = useState<{ subject: string; grade: number } | null>(null);
   const { 
     studentProfile, 
     recentChats, 
@@ -24,17 +27,22 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
     openExistingChat,
     openNewChat,
     setAgentPickerOpen,
+    isRateLimitHit,
+    setRateLimitHit,
     isSessionsLoading,
     isAgentsLoading,
-    logoutStudent
+    logoutStudent,
+    onboardingStatus,
+    fetchOnboardingStatus
   } = useStudentStore();
 
   useEffect(() => {
     if (studentProfile) {
       fetchSessions();
       fetchAvailableAgents();
+      fetchOnboardingStatus();
     }
-  }, [studentProfile, fetchSessions, fetchAvailableAgents]);
+  }, [studentProfile, fetchSessions, fetchAvailableAgents, fetchOnboardingStatus]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -47,14 +55,16 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
   const username = studentProfile?.username ?? "Scholar";
   const greeting = getGreeting();
 
-  // Filter for onboarding subjects (English and Math assessments)
-  const onboardingSubjects = Array.from(
-    new Map(
-      availableAgents
-        .filter((a) => a.subject === "English" || a.subject === "Mathematics")
-        .map((a) => [a.subject, a])
-    ).values()
-  );
+  // Filter for onboarding subjects that are actually PENDING from the API
+  const onboardingSubjects = onboardingStatus?.subjects
+    ? onboardingStatus.subjects
+        .filter(s => s.status === "PENDING")
+        .map(s => {
+          // Find the corresponding agent in availableAgents to get icons/details if needed
+          const agent = availableAgents.find(a => a.subject === s.subject);
+          return agent || { subject: s.subject, agent_id: s.subject, grade: studentProfile?.grade };
+        })
+    : [];
 
   const animateGradientStyle = `
     @keyframes shiftGradient {
@@ -136,7 +146,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                 {onboardingSubjects.map(agent => (
                   <button
                     key={agent.agent_id}
-                    onClick={() => router.push(`/student/onboarding?type=subject&subject=${encodeURIComponent(agent.subject)}&grade=${agent.grade}`)}
+                    onClick={() => setActiveOnboarding({ subject: agent.subject, grade: Number(agent.grade) || studentProfile?.grade || 1 })}
                     className="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition-colors"
                   >
                     Start {agent.subject}
@@ -216,6 +226,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                   icon={<Bot size={18} />}
                   onClick={() => {
                     openNewChat(agent);
+                    router.push('/student/chat/new');
                   }}
                   delay={0.3 + i * 0.05}
                 />
@@ -240,12 +251,27 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             transition={{ delay: 0.4 }}
             className="relative z-10 max-w-3xl mx-auto w-full"
           >
+            <RateLimitPrompt 
+              isVisible={isRateLimitHit} 
+              onClose={() => setRateLimitHit(false)} 
+            />
             <StudentChatInput chatTitle="New Session" isHub={true} />
           </motion.section>
         )}
 
         </div>
       </div>
+
+      {/* Subject Onboarding Modal */}
+      <AnimatePresence>
+        {activeOnboarding && (
+          <OnboardingModal
+            subject={activeOnboarding.subject}
+            grade={activeOnboarding.grade}
+            onClose={() => setActiveOnboarding(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
