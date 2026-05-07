@@ -18,7 +18,14 @@ export const StudentChatSidebar = React.memo(({
   onClose: () => void;
 }) => {
   const router = useRouter();
-  const { openExistingChat, closeChat, recentChats, isSessionsLoading, logoutStudent } = useStudentStore();
+  const { 
+    openExistingChat, 
+    closeChat, 
+    recentChats, 
+    isSessionsLoading, 
+    logoutStudent,
+    studentProfile 
+  } = useStudentStore();
 
   return (
     <aside 
@@ -103,11 +110,22 @@ export const StudentChatSidebar = React.memo(({
         <div className="p-5 border-t border-[#042E5C]/8 space-y-1">
           <button 
             onClick={() => router.push('/student/profile')}
-            className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-[#042E5C]/50 hover:text-[#042E5C] hover:bg-[#042E5C]/5 transition-all"
+            className="w-full flex items-center justify-between gap-4 px-4 py-3 rounded-2xl text-[#042E5C]/50 hover:text-[#042E5C] hover:bg-[#042E5C]/5 transition-all group"
             data-tutorial="profile-nav"
           >
-            <User size={18} />
-            <span className="text-[13px] font-bold">Profile</span>
+            <div className="flex items-center gap-4">
+              <User size={18} />
+              <span className="text-[13px] font-bold">Profile</span>
+            </div>
+            {studentProfile?.plan && (
+              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider uppercase border shadow-sm ${
+                studentProfile.plan === "PRO" 
+                  ? "bg-[#059F6D]/10 text-[#059F6D] border-[#059F6D]/20" 
+                  : "bg-[#042E5C]/10 text-[#042E5C] border-[#042E5C]/20"
+              }`}>
+                {studentProfile.plan}
+              </span>
+            )}
           </button>
           <button 
             onClick={() => router.push('/student/analytics')}

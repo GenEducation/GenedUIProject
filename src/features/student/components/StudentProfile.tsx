@@ -6,6 +6,7 @@ import { useStudentStore } from "../store/useStudentStore";
 import { useEffect, useState } from "react";
 import { PartnerRequestModal } from "./PartnerRequestModal";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
+import { UpgradeButton } from "@/features/billing/UpgradeButton";
 
 // Mock data
 const MOCK_PARTNERS = [
@@ -57,10 +58,8 @@ export function StudentProfile() {
   return (
     <div className="min-h-screen bg-[#F4F3EE] font-sans flex flex-col overflow-y-auto">
       {/* Top Header Logo */}
-      <div className="px-8 py-5">
-        <div className="flex items-center">
-          <img src="/Logo.svg" alt="Scholarly Logo" className="h-10 w-auto" />
-        </div>
+      <div className="px-8 py-5 flex items-center justify-between">
+        <img src="/Logo.svg" alt="Scholarly Logo" className="h-10 w-auto" />
       </div>
 
       <div className="flex-1 w-full max-w-4xl mx-auto px-8 pb-20 space-y-12 mt-4">
@@ -218,31 +217,62 @@ export function StudentProfile() {
 
             {/* Parent Access */}
             <div 
-              className="bg-white border border-[#1a3a2a]/5 rounded-3xl p-8 space-y-6 shadow-sm"
+              className="bg-white border border-[#1a3a2a]/5 rounded-3xl p-8 space-y-6 shadow-sm overflow-hidden"
               data-tutorial="parent-access"
             >
               <div className="flex items-center gap-3 text-[#1a3a2a] font-bold">
                 <h2 className="text-lg tracking-tight">Parent Access</h2>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 w-full">
                 <input 
                   type="text"
                   placeholder="Guardian's email or phone"
                   value={parentEmailOrPhone}
                   onChange={(e) => setParentEmailOrPhone(e.target.value)}
-                  className="flex-1 bg-[#f9f9f9] border border-[#1a3a2a]/5 rounded-2xl px-4 py-3 text-[13px] font-semibold outline-none focus:border-[#2d6a4a] disabled:opacity-50"
+                  className="flex-1 min-w-0 bg-[#f9f9f9] border border-[#1a3a2a]/5 rounded-2xl px-4 py-3 text-[13px] font-semibold outline-none focus:border-[#2d6a4a] disabled:opacity-50"
                   disabled={isLoading}
                 />
                 <button 
                   onClick={handleLinkParent}
                   disabled={!parentEmailOrPhone.trim() || isLoading}
-                  className="bg-[#bce4cc] text-[#1a3a2a] px-5 py-3 rounded-2xl font-bold text-[14px] hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="shrink-0 bg-[#bce4cc] text-[#1a3a2a] px-5 py-3 rounded-2xl font-bold text-[14px] hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Add"}
                 </button>
               </div>
+            </div>
 
+            {/* Subscription Plan */}
+            <div className="bg-gradient-to-br from-[#042E5C] to-[#064282] border border-white/10 rounded-3xl p-8 space-y-6 shadow-xl text-white">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-lg font-black tracking-tight uppercase">Subscription</h2>
+                  <p className="text-white/60 text-xs font-bold uppercase tracking-widest">
+                    Current: <span className="text-[#059F6D]">{studentProfile?.plan || "FREE"}</span>
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10">
+                  <ShieldCheck size={24} className="text-[#059F6D]" />
+                </div>
+              </div>
+              
+              <p className="text-[13px] font-medium text-white/70 leading-relaxed">
+                {studentProfile?.plan === "PRO" 
+                  ? "You have full access to advanced math visualizations and priority AI support." 
+                  : "Upgrade to unlock priority support and advanced visualizations."}
+              </p>
+
+              {studentProfile?.plan !== "PRO" && (
+                <UpgradeButton 
+                  userId={studentProfile?.user_id || ""}
+                  userName={studentProfile?.username || ""}
+                  userEmail={studentProfile?.email}
+                  className="w-full justify-center py-4 rounded-2xl shadow-lg shadow-[#059F6D]/20 border border-white/10"
+                >
+                  Upgrade to Pro Access
+                </UpgradeButton>
+              )}
             </div>
           </div>
         </div>
