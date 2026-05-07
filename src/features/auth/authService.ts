@@ -202,7 +202,6 @@ export async function resetPassword(data: {
       new_password: data.new_password,
     }),
   });
-
   if (!response.ok) {
     await handleAuthError(response, "Failed to reset password");
   }

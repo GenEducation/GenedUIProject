@@ -98,6 +98,11 @@ export const studentService = {
     grade: number;
     document_title?: string;
     intent?: string;
+    activity_input?: {
+      activity_id: string;
+      activity_type: string;
+      transcript: string;
+    };
   }, signal?: AbortSignal): Promise<Response> => {
     const response = await authFetch(`${API_BASE_URL}/text/april-query`, {
       method: "POST",

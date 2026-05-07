@@ -21,7 +21,8 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
     stopVoiceSession,
     stopMessageGeneration,
     isMuted,
-    toggleMute
+    toggleMute,
+    activeActivity
   } = useStudentStore();
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -70,8 +71,8 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
   };
 
   const isVoiceActive = voiceSessionStatus === "active" || voiceSessionStatus === "connecting";
-  const isTextDisabled = activeChat?.chatMode === "voice" || isVoiceActive;
-  const isMicDisabled = activeChat?.chatMode === "text" || isAITyping;
+  const isTextDisabled = activeChat?.chatMode === "voice" || isVoiceActive || !!activeActivity;
+  const isMicDisabled = activeChat?.chatMode === "text" || isAITyping || !!activeActivity;
 
   return (
     <div className={`w-full transition-all duration-500 ${isCentered ? "px-0" : "px-0"}`}>
@@ -87,11 +88,13 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={
-            isVoiceActive 
-              ? "Listening..." 
-              : isHub 
-                ? "Ask Anything..." 
-                : `Ask anything to ${chatTitle}...`
+            activeActivity
+              ? "Complete the activity above..."
+              : isVoiceActive 
+                ? "Listening..." 
+                : isHub 
+                  ? "Ask Anything..." 
+                  : `Ask anything to ${chatTitle}...`
           }
           rows={1}
           className="flex-1 bg-transparent text-[15px] font-medium text-[#042E5C] placeholder:text-[#042E5C]/30 focus:outline-none resize-none overflow-y-auto min-h-[28px] max-h-[120px] md:max-h-[200px] leading-relaxed py-1"

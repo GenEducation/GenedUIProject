@@ -23,6 +23,15 @@ export interface ChatElement {
   meta?: any;
 }
 
+export interface ActivityAction {
+  type: "teacher_speak" | "request_reading" | "request_listening" | "request_spelling" | "request_repeat";
+  activity_id: string;
+  content: string;
+  lo_id?: string;
+  question?: string;
+  words?: string[];
+}
+
 export interface ChatMessage {
   id: string;
   text: string;
@@ -33,6 +42,7 @@ export interface ChatMessage {
   options?: string[];
   statusText?: string;
   toolStatus?: string;
+  actions?: ActivityAction[];
 }
 
 export interface ChatSession {
@@ -619,6 +629,7 @@ interface StudentState {
   hasFetchedSessions: boolean;
   hasFetchedAgents: boolean;
   isMuted: boolean;
+  activeActivity: ActivityAction | null;
 
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
@@ -633,13 +644,14 @@ interface StudentState {
   initNewChat: (agentId: string) => void;
   startFocusedSession: (documentTitle: string, subject: string) => string;
   closeChat: () => void;
-  sendMessage: (text: string) => Promise<void>;
   setProfileOpen: (open: boolean) => void;
   setAgentPickerOpen: (open: boolean) => void;
   setPartnerModalOpen: (open: boolean) => void;
+  stopMessageGeneration: () => void;
+  submitActivityResult: (activityId: string, activityType: string, transcript: string) => Promise<void>;
+  sendMessage: (text?: string, activityInput?: any) => Promise<void>;
   sendPartnerRequest: (partnerId: string) => Promise<void>;
   linkParent: (parentEmailOrPhone: string) => Promise<void>;
-  stopMessageGeneration: () => void;
   startVoiceSession: () => Promise<void>;
   stopVoiceSession: () => void;
   toggleMute: () => void;
@@ -648,7 +660,7 @@ interface StudentState {
 
 // -- Store --------------------------------------------------------------------─
 
-export const useStudentStore = create<StudentState>((set, get) => ({
+export const useStudentStore = create<StudentState>()((set, get) => ({
   studentProfile: null,
   recentChats: [],
   activeChat: null,
@@ -676,6 +688,54 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   hasFetchedSessions: false,
   hasFetchedAgents: false,
   isMuted: false,
+  logoutStudent: () => {
+    localStorage.removeItem("gened_user_role");
+    localStorage.removeItem("gened_auth_token");
+    localStorage.removeItem("gened_user_profile");
+    localStorage.removeItem("gened_partner_id");
+    set({
+      studentProfile: null,
+      activeChat: null,
+      messages: [],
+      chatMessagesCache: {},
+      isChatOpen: false,
+      isProfileOpen: false,
+      isAgentPickerOpen: false,
+      isPartnerModalOpen: false,
+      isAITyping: false,
+      typingChatIds: [],
+      hasFetchedSessions: false,
+      hasFetchedAgents: false,
+    });
+    window.location.href = "/";
+  },
+  activeActivity: null,
+  setProfileOpen: (open) => set({ isProfileOpen: open }),
+  setAgentPickerOpen: (open) => set({ isAgentPickerOpen: open }),
+  setPartnerModalOpen: (open) =>
+    set({
+      isPartnerModalOpen: open,
+      partnerRequestStatus: open ? get().partnerRequestStatus : "idle",
+    }),
+  stopMessageGeneration: () => {
+    const { chatAbortController } = get();
+    if (chatAbortController) {
+      chatAbortController.abort();
+    }
+    set({
+      chatAbortController: null,
+      isAITyping: false,
+      streamingMessageId: null,
+    });
+  },
+  submitActivityResult: async (activityId, activityType, transcript) => {
+    set({ activeActivity: null });
+    await get().sendMessage(undefined, {
+      activity_id: activityId,
+      activity_type: activityType,
+      transcript: transcript
+    });
+  },
 
   setStudentProfile: (profile) => set({ studentProfile: profile }),
 
@@ -902,6 +962,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
                   minute: "2-digit",
                 })
               : "",
+            actions: h.meta_data?.actions || undefined,
           };
         },
       );
@@ -1495,7 +1556,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     }
   },
 
-  sendMessage: async (text: string) => {
+  sendMessage: async (text?: string, activityInput?: any): Promise<void> => {
     const { studentProfile, activeChat } = get();
     if (!studentProfile) return;
 
@@ -1527,7 +1588,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
-      text,
+      text: text || activityInput?.transcript || "Completing activity...",
       sender: "user",
       timestamp: new Date().toLocaleTimeString([], {
         hour: "2-digit",
@@ -1596,6 +1657,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           text,
           user_id: studentProfile.user_id,
           grade: studentProfile.grade || 10,
+          activity_input: activityInput,
           // Only send session/agent info if NOT a Hub-initiated general query
           ...(!isHubMessage && {
             ...(isNewFocused
@@ -1621,6 +1683,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       let buffer = "";
       let finalSessionId: string | undefined;
       let finalOptions: string[] = [];
+      let finalActions: ActivityAction[] = [];
 
       // -- Reactive Streaming State -------------------------------------------
       let isPlanningUIPresented = false;
@@ -1820,6 +1883,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         } else if (event.type === "done") {
           finalSessionId = event.session_id;
           finalOptions = Array.isArray(event.options) ? event.options : [];
+          finalActions = Array.isArray(event.actions) ? event.actions : [];
           if (event.response) doneResponse = event.response;
           if (!bufferedText && typeof event.response === "string" && event.response.trim()) {
             currentTextBuffer = event.response;
@@ -1997,6 +2061,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             minute: "2-digit",
           }),
           options: finalOptions.length > 0 ? finalOptions : undefined,
+          actions: finalActions.length > 0 ? finalActions : undefined,
           statusText: undefined,
           toolStatus: undefined,
         };
@@ -2073,6 +2138,9 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           isAITyping: isStillViewing ? false : state.isAITyping,
           streamingMessageId: null,
           chatAbortController: null,
+          activeActivity: finalActions.find(a => 
+            ["request_reading", "request_listening", "request_spelling", "request_repeat"].includes(a.type)
+          ) || null,
         };
       });
     } catch (error: any) {
@@ -2120,49 +2188,6 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           chatAbortController: null,
         };
       });
-      }
-    },
-
-  stopMessageGeneration: () => {
-    const { chatAbortController } = get();
-    if (chatAbortController) {
-      chatAbortController.abort();
     }
-    set({
-      chatAbortController: null,
-      isAITyping: false,
-      streamingMessageId: null,
-    });
-  },
-
-  setAgentPickerOpen: (open) => set({ isAgentPickerOpen: open }),
-  setPartnerModalOpen: (open) =>
-    set({
-      isPartnerModalOpen: open,
-      partnerRequestStatus: open ? get().partnerRequestStatus : "idle",
-    }),
-
-  setProfileOpen: (open) => set({ isProfileOpen: open }),
-
-  logoutStudent: () => {
-    localStorage.removeItem("gened_user_role");
-    localStorage.removeItem("gened_auth_token");
-    localStorage.removeItem("gened_user_profile");
-    localStorage.removeItem("gened_partner_id");
-    set({
-      studentProfile: null,
-      activeChat: null,
-      messages: [],
-      chatMessagesCache: {},
-      isChatOpen: false,
-      isProfileOpen: false,
-      isAgentPickerOpen: false,
-      isPartnerModalOpen: false,
-      isAITyping: false,
-      typingChatIds: [],
-      hasFetchedSessions: false,
-      hasFetchedAgents: false,
-    });
-    window.location.href = "/";
   },
 }));

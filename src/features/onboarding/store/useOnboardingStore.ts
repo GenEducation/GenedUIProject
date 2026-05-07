@@ -12,7 +12,7 @@ interface OnboardingState {
   type: "general" | "subject" | null;
   subject: string | null;
   grade: number | null;
-  dnaStatus: "PENDING" | "GENERAL_COMPLETED" | null;
+  dnaStatus: "PENDING" | "GENERAL_COMPLETED" | "COMPLETED" | string | null;
   
   messages: OnboardingMessage[];
   isAITyping: boolean;

@@ -86,17 +86,6 @@ export function StudentChatHub() {
         
         {/* 1. Greeting & Onboarding Alert */}
         <div className="relative space-y-6">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={logoutStudent}
-            className="absolute -top-4 right-0 p-2 text-[#042E5C]/40 hover:text-red-500 transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-widest"
-            title="Logout"
-          >
-            <span className="hidden md:inline">Logout</span>
-            <LogOut size={18} />
-          </motion.button>
-
           <motion.header
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
