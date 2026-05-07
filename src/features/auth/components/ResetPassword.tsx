@@ -7,9 +7,12 @@ import { resetPassword } from "../authService";
 
 interface ResetPasswordProps {
   token: string;
+  initialEmail?: string;
 }
 
-export function ResetPassword({ token }: ResetPasswordProps) {
+export function ResetPassword({ token, initialEmail = "" }: ResetPasswordProps) {
+  const [email, setEmail] = useState(initialEmail);
+  const [otpCode, setOtpCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -19,7 +22,7 @@ export function ResetPassword({ token }: ResetPasswordProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!password || !confirmPassword) return;
+    if (!email || !otpCode || !password || !confirmPassword) return;
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
@@ -35,7 +38,11 @@ export function ResetPassword({ token }: ResetPasswordProps) {
     setError(null);
 
     try {
-      await resetPassword(token, password);
+      await resetPassword({
+        email,
+        otp_code: otpCode,
+        new_password: password
+      });
       setIsSuccess(true);
     } catch (err: any) {
       setError(err.message || "Failed to reset password");
@@ -60,7 +67,7 @@ export function ResetPassword({ token }: ResetPasswordProps) {
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
             </div>
             <p className="text-sm font-bold text-emerald-800 leading-relaxed">
-              [MOCK] Your password has been reset successfully.
+              Your password has been reset successfully.
             </p>
           </div>
           <Link
@@ -73,6 +80,36 @@ export function ResetPassword({ token }: ResetPasswordProps) {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-5">
+            <div>
+              <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/45 mb-2.5 pl-0.5">
+                Email Address
+              </label>
+              <input
+                name="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                required
+                placeholder="e.g. socrates@example.com"
+                className="w-full rounded-xl border border-[#042e5c]/15 bg-white/70 px-5 py-3.5 text-sm text-[#0E1F2B] transition-all duration-200 placeholder:text-[#0E1F2B]/25 hover:border-[#059F6D]/40 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/15"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/45 mb-2.5 pl-0.5">
+                Verification Code (OTP)
+              </label>
+              <input
+                name="otpCode"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value)}
+                type="text"
+                required
+                placeholder="Enter 6-digit code"
+                className="w-full rounded-xl border border-[#042e5c]/15 bg-white/70 px-5 py-3.5 text-sm text-[#0E1F2B] transition-all duration-200 placeholder:text-[#0E1F2B]/25 hover:border-[#059F6D]/40 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/15 font-mono tracking-[0.3em]"
+              />
+            </div>
+
             <div>
               <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/45 mb-2.5 pl-0.5">
                 New Password
@@ -122,7 +159,7 @@ export function ResetPassword({ token }: ResetPasswordProps) {
           <div className="space-y-6 pt-2">
             <button
               type="submit"
-              disabled={isSubmitting || !password || !confirmPassword}
+              disabled={isSubmitting || !email || !otpCode || !password || !confirmPassword}
               className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
             >
               <span className="relative z-10 flex items-center justify-center gap-2">

@@ -8,13 +8,14 @@ import { ResetPassword } from "@/features/auth/components/ResetPassword";
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const token = searchParams?.get("token") || "";
+  const email = searchParams?.get("email") || "";
 
   return (
     <AuthPageLayout 
       title={<><em>Update</em> Passphrase</>} 
       subtitle="Secure your archive with a new key"
     >
-      <ResetPassword token={token} />
+      <ResetPassword token={token} initialEmail={email} />
     </AuthPageLayout>
   );
 }
