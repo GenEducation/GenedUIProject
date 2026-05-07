@@ -177,7 +177,7 @@ export function LoginView() {
         });
       }
 
-      router.push(`/${role}`);
+      router.replace(`/${role}`);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
       let rawMsg = error instanceof Error ? error.message : "Unable to complete signin.";
@@ -254,7 +254,7 @@ export function LoginView() {
       }
 
       // Redirect immediately
-      router.push(`/${role}`);
+      router.replace(`/${role}`);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
       let rawMsg = error instanceof Error ? error.message : "Unable to complete signup.";

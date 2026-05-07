@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { GlobalLoader } from "@/components/shared/loaders/GlobalLoader";
+import { SiteTutorial } from "@/components/shared/SiteTutorial";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -28,6 +29,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${playfair.variable} antialiased font-sans`}>
         <GlobalLoader />
         {children}
+        <SiteTutorial />
       </body>
     </html>
   );

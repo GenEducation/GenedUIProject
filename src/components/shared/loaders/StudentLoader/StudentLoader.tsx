@@ -41,9 +41,6 @@ export const StudentLoader: React.FC<StudentLoaderProps> = ({ isVisible, onCompl
       if (currentProgress >= 100) {
         clearInterval(progressInterval);
         setIsDone(true);
-        setTimeout(() => {
-          onComplete?.();
-        }, 800);
       }
     }, intervalTime);
 

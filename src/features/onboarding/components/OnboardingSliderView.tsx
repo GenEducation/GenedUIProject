@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Loader2, User, TrendingUp, Shield, Clock, Lock, ShieldCheck } from "lucide-react";
 import { onboardingService } from "../services/onboardingService";
+import { WavingStudentCharacter } from "../../../components/shared/loaders/StudentLoader/WavingStudentCharacter";
 
 interface OnboardingSliderViewProps {
   studentProfile: {
@@ -87,6 +88,7 @@ export const OnboardingSliderView: React.FC<OnboardingSliderViewProps> = ({
       };
       console.log("Submitting onboarding data:", payload);
       await onboardingService.completeGeneralOnboarding(payload);
+      localStorage.setItem("start_tutorial_after_onboarding", "true");
       onComplete();
     } catch (err) {
       console.error("Onboarding submission failed:", err);
@@ -103,81 +105,101 @@ export const OnboardingSliderView: React.FC<OnboardingSliderViewProps> = ({
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="w-full max-w-2xl overflow-hidden rounded-[2.5rem] border border-white/20 bg-white/80 p-8 shadow-[0_32px_80px_rgba(4,46,92,0.12)] backdrop-blur-xl sm:p-12"
+        className="w-full max-w-4xl overflow-hidden rounded-[2.5rem] border border-white/20 bg-white/80 shadow-[0_32px_80px_rgba(4,46,92,0.12)] backdrop-blur-xl min-h-[580px] flex flex-col"
       >
         <AnimatePresence mode="wait">
           {!isStarted ? (
             <motion.div
               key="welcome"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="flex flex-col items-center text-center space-y-8"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="flex h-full w-full flex-col md:flex-row"
             >
-              <div className="w-48 h-48 sm:w-64 sm:h-64">
-                <svg width="100%" height="100%" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#ffffff"/>
-                      <stop offset="100%" stopColor="#dfefff"/>
-                    </linearGradient>
-                    <filter id="glow">
-                      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                      <feMerge>
-                        <feMergeNode in="coloredBlur"/>
-                        <feMergeNode in="SourceGraphic"/>
-                      </feMerge>
-                    </filter>
-                  </defs>
-
-                  {/* antennas */}
-                  <ellipse cx="185" cy="90" rx="18" ry="42" fill="white" stroke="#111" strokeWidth="6" transform="rotate(-15 185 90)"/>
-                  <ellipse cx="327" cy="90" rx="18" ry="42" fill="white" stroke="#111" strokeWidth="6" transform="rotate(15 327 90)"/>
-
-                  {/* side ears */}
-                  <ellipse cx="115" cy="220" rx="45" ry="60" fill="#d9f3ff" stroke="#111" strokeWidth="8"/>
-                  <ellipse cx="397" cy="220" rx="45" ry="60" fill="#d9f3ff" stroke="#111" strokeWidth="8"/>
-
-                  {/* head */}
-                  <rect x="110" y="120" width="292" height="220" rx="90" fill="url(#bg)" stroke="#111" strokeWidth="10"/>
-
-                  {/* face screen */}
-                  <rect x="150" y="170" width="212" height="120" rx="40" fill="#0a0a0f"/>
-
-                  {/* eyes */}
-                  <rect x="195" y="205" width="28" height="48" rx="10" fill="#67e8ff" filter="url(#glow)"/>
-                  <rect x="289" y="205" width="28" height="48" rx="10" fill="#67e8ff" filter="url(#glow)"/>
-
-                  {/* smile */}
-                  <path d="M230 255 Q256 275 282 255" stroke="#67e8ff" strokeWidth="8" fill="none" strokeLinecap="round" filter="url(#glow)"/>
-
-                  {/* waving hand */}
-                  <ellipse cx="430" cy="300" rx="35" ry="55" fill="#111" transform="rotate(-35 430 300)"/>
-
-                  {/* motion lines */}
-                  <path d="M470 255 Q485 245 492 258" stroke="#3bdcff" strokeWidth="6" fill="none" strokeLinecap="round"/>
-                  <path d="M475 280 Q495 275 498 292" stroke="#3bdcff" strokeWidth="6" fill="none" strokeLinecap="round"/>
-
-                  {/* subtle shadow */}
-                  <ellipse cx="256" cy="395" rx="120" ry="20" fill="#dbeafe" opacity="0.5"/>
-                </svg>
+              {/* Left Column: Visuals & Benefits */}
+              <div className="relative flex flex-1 flex-col items-center justify-center bg-gradient-to-br from-[#059F6D] to-[#042e5c] p-10 text-white overflow-hidden">
+                {/* Decorative Stars/Sparks */}
+                <div className="absolute top-10 left-10 w-2 h-2 bg-yellow-300 rounded-full blur-[1px] animate-pulse" />
+                <div className="absolute top-40 right-20 w-3 h-3 bg-blue-300 rounded-full blur-[1px] opacity-60" />
+                <div className="absolute bottom-20 left-20 w-2 h-2 bg-pink-300 rounded-full blur-[1px] opacity-40" />
+                
+                <div className="relative z-10 flex flex-col items-center">
+                  <div className="mb-12">
+                    <WavingStudentCharacter />
+                  </div>
+                  
+                  <div className="space-y-8 w-full max-w-[280px]">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 backdrop-blur-md">
+                        <User className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold tracking-tight">Personalized Learning</h4>
+                        <p className="text-[11px] text-white/70 font-medium">I adapt to how you think and learn.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 backdrop-blur-md">
+                        <TrendingUp className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold tracking-tight">Smarter Progress</h4>
+                        <p className="text-[11px] text-white/70 font-medium">I adjust the pace and difficulty for you.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 backdrop-blur-md">
+                        <Shield className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold tracking-tight">Your Privacy Matters</h4>
+                        <p className="text-[11px] text-white/70 font-medium">Your data is private and never shared.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-4">
-                <h2 className="font-serif text-3xl font-extrabold text-[#042e5c] sm:text-4xl">
-                  Hello, I'm GenEd!
-                </h2>
-                <p className="max-w-md text-lg text-[#042e5c]/70 leading-relaxed">
-                  I would like to ask a few questions before we start our journey to help me customize this experience for you.
-                </p>
-              </div>
+              {/* Right Column: Call to Action */}
+              <div className="flex flex-1 flex-col bg-white p-10 sm:p-14">
+                <div className="mb-auto">
+                  <h2 className="font-serif text-3xl font-extrabold text-[#042e5c] leading-tight mb-4">
+                    Let's build your <br /><span className="text-[#059F6D]">learning profile</span>
+                  </h2>
+                  <p className="text-sm text-[#042e5c]/60 leading-relaxed font-medium">
+                    I'll ask you a few simple questions to understand how you learn best. This helps me teach you in the most effective way.
+                  </p>
 
-              <button
-                onClick={() => setIsStarted(true)}
-                className="mt-4 rounded-2xl bg-[#059F6D] px-10 py-4 text-lg font-bold text-white shadow-xl shadow-[#059F6D]/20 transition-all hover:shadow-2xl hover:shadow-[#059F6D]/30 active:scale-[0.98]"
-              >
-                Start Onboarding
-              </button>
+                  <div className="mt-10 space-y-3">
+                    <div className="flex items-center gap-3 rounded-2xl bg-gray-50 px-5 py-4 border border-gray-100">
+                      <Clock className="h-5 w-5 text-[#042e5c]/40" />
+                      <span className="text-[13px] font-bold text-[#042e5c]/70">Takes about 5-7 minutes</span>
+                    </div>
+                    <div className="flex items-center gap-3 rounded-2xl bg-gray-50 px-5 py-4 border border-gray-100">
+                      <Lock className="h-5 w-5 text-[#042e5c]/40" />
+                      <span className="text-[13px] font-bold text-[#042e5c]/70">100% Private & Secure</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-12 space-y-6">
+                  <button
+                    onClick={() => setIsStarted(true)}
+                    className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-[#059F6D] py-4.5 text-sm font-bold text-white shadow-xl shadow-[#059F6D]/20 transition-all hover:bg-[#047a54] active:scale-[0.98]"
+                  >
+                    Start Onboarding
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </button>
+                  <div className="pt-6 border-t border-gray-100 flex items-start gap-3">
+                    <ShieldCheck className="h-5 w-5 text-[#059F6D] shrink-0 mt-0.5" />
+                    <p className="text-[10px] text-[#042e5c]/40 leading-relaxed font-medium">
+                      By continuing, you agree to our <a href="#" className="underline font-bold text-[#059F6D]">Terms of Service</a> and <a href="#" className="underline font-bold text-[#059F6D]">Privacy Policy</a>.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           ) : (
             <motion.div
@@ -185,7 +207,7 @@ export const OnboardingSliderView: React.FC<OnboardingSliderViewProps> = ({
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-8"
+              className="space-y-8 p-8 sm:p-14"
             >
               {/* Progress Bar */}
               <div className="mb-12 flex gap-2">
@@ -222,6 +244,14 @@ export const OnboardingSliderView: React.FC<OnboardingSliderViewProps> = ({
                     onChange={(e) =>
                       setAnswers({ ...answers, [currentQuestion.id]: e.target.value })
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        if (answers[currentQuestion.id].trim() && !isSubmitting) {
+                          handleNext();
+                        }
+                      }
+                    }}
                     placeholder={currentQuestion.placeholder}
                     className="min-h-[200px] w-full rounded-2xl border border-[#042e5c]/10 bg-white/50 p-6 text-lg text-[#042e5c] transition-all focus:border-[#059F6D] focus:outline-none focus:ring-4 focus:ring-[#059F6D]/5"
                   />

@@ -5,11 +5,10 @@ const sw = 2;
 
 export const Head = () => (
   <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Pink Beanie Pom-pom */}
-    <circle cx="30" cy="10" r="6" fill="#F472B6" stroke={stroke} strokeWidth={sw} />
+    {/* Head shape */}
     
-    {/* Blue Hair / Hat base */}
-    <circle cx="30" cy="30" r="18" fill="#3B82F6" stroke={stroke} strokeWidth={sw} />
+    {/* Black Hair / Hat base */}
+    <circle cx="30" cy="30" r="18" fill="#111827" stroke={stroke} strokeWidth={sw} />
     
     {/* Face */}
     <circle cx="30" cy="35" r="14" fill="#FCD3A1" stroke={stroke} strokeWidth={sw} />
@@ -33,15 +32,15 @@ export const Body = () => (
 );
 
 export const LeftArm = () => (
-  <svg width="30" height="40" viewBox="0 0 30 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M 5 5 Q 5 25 25 25" stroke={stroke} strokeWidth={8} strokeLinecap="round" />
-    <circle cx="25" cy="25" r="5" fill="#FCD3A1" stroke={stroke} strokeWidth={sw} />
+  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M 20 5 Q 20 25 35 25" stroke={stroke} strokeWidth={8} strokeLinecap="round" />
+    <circle cx="35" cy="25" r="5" fill="#FCD3A1" stroke={stroke} strokeWidth={sw} />
   </svg>
 );
 
 export const RightArm = () => (
-  <svg width="30" height="40" viewBox="0 0 30 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M 25 5 Q 5 5 5 25" stroke={stroke} strokeWidth={8} strokeLinecap="round" />
+  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M 20 5 Q 20 5 5 25" stroke={stroke} strokeWidth={8} strokeLinecap="round" />
     <circle cx="5" cy="25" r="5" fill="#FCD3A1" stroke={stroke} strokeWidth={sw} />
   </svg>
 );

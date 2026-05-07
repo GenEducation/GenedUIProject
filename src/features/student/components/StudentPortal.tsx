@@ -10,8 +10,8 @@ import { PartnerRequestModal } from "./PartnerRequestModal";
 import { useStudentStore } from "../store/useStudentStore";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { OnboardingSliderView } from "@/features/onboarding/components/OnboardingSliderView";
-import { SiteTutorial, TutorialStep } from "@/components/shared/SiteTutorial";
-import { useState } from "react";
+import { SiteTutorial } from "@/components/shared/SiteTutorial";
+import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 
 /**
  * StudentPortal renders the correct sub-view based on the current URL path.
@@ -19,9 +19,9 @@ import { useState } from "react";
  */
 export function StudentPortal() {
   const pathname = usePathname();
-  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   
   const { studentProfile } = useStudentStore();
+  const { startTutorial } = useTutorialStore();
   const { dnaStatus, checkDNAStatus } = useOnboardingStore();
 
   useEffect(() => {
@@ -32,61 +32,17 @@ export function StudentPortal() {
 
   useEffect(() => {
     const isNewUser = localStorage.getItem("gened_new_user") === "true";
-    if (isNewUser && dnaStatus === "COMPLETED") {
-      setIsTutorialOpen(true);
+    const justFinishedOnboarding = localStorage.getItem("start_tutorial_after_onboarding") === "true";
+    
+    if ((isNewUser || justFinishedOnboarding) && dnaStatus && dnaStatus !== "PENDING") {
+      startTutorial();
+      localStorage.removeItem("gened_new_user");
+      localStorage.removeItem("start_tutorial_after_onboarding");
     }
-  }, [dnaStatus]);
+  }, [dnaStatus, startTutorial]);
+  
   const isProfileRoute = pathname === "/student/profile";
   const isAnalyticsRoute = pathname === "/student/analytics";
-
-  const tutorialSteps: TutorialStep[] = [
-    {
-      target: '[data-tutorial="logo"]',
-      title: "Welcome to GenEd!",
-      description: "This is your learning sanctuary. Let's take a quick tour of your new tools.",
-      position: "bottom"
-    },
-    {
-      target: '[data-tutorial="new-chat"]',
-      title: "Learning Chat Hub",
-      description: "Start a Socratic conversation here to master any subject through deep inquiry.",
-      position: "bottom"
-    },
-    {
-      target: '[data-tutorial="analytics-nav"]',
-      title: "Academic Analytics",
-      description: "Track your strengths, interests, and cognitive growth in real-time.",
-      position: "top"
-    },
-    {
-      target: '[data-tutorial="profile-nav"]',
-      title: "Personal Profile",
-      description: "Customize your identity and manage connections to guardians and schools.",
-      position: "top"
-    },
-  ];
-
-  if (isProfileRoute) {
-    tutorialSteps.push(
-      {
-        target: '[data-tutorial="parent-access"]',
-        title: "Guardian Access",
-        description: "Add your parent's email here so they can stay updated on your progress.",
-        position: "top"
-      },
-      {
-        target: '[data-tutorial="partner-requests"]',
-        title: "School Partners",
-        description: "Connect with your institution here to access specialized curriculum.",
-        position: "top"
-      }
-    );
-  }
-
-  const handleTutorialComplete = () => {
-    setIsTutorialOpen(false);
-    localStorage.removeItem("gened_new_user");
-  };
 
   return (
     <div className="h-screen overflow-hidden">
@@ -135,15 +91,6 @@ export function StudentPortal() {
         <OnboardingSliderView
           studentProfile={studentProfile}
           onComplete={() => checkDNAStatus(studentProfile.user_id)}
-        />
-      )}
-
-      {/* Site Tutorial */}
-      {isTutorialOpen && (
-        <SiteTutorial
-          steps={tutorialSteps}
-          onComplete={handleTutorialComplete}
-          onClose={() => setIsTutorialOpen(false)}
         />
       )}
     </div>

@@ -123,6 +123,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
             <button 
               onClick={() => router.back()}
               className="flex items-center gap-2 text-[#1a3a2a]/60 hover:text-[#1a3a2a] transition-all group lg:min-w-[80px]"
+              data-tutorial="analytics-back-button"
             >
               <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
               <span className="text-sm font-bold border-b-2 border-transparent group-hover:border-[#1a3a2a]/20">Back</span>
@@ -176,6 +177,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
               
               <div className="flex gap-2 p-1.5 bg-[#F4F3EE] rounded-2xl">
                 <button 
+                  data-tutorial="chapter-mastery-tab"
                   onClick={() => setActiveTab("chapter")}
                   className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
                     activeTab === "chapter" 
@@ -186,6 +188,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                   Chapter Mastery
                 </button>
                 <button 
+                  data-tutorial="skill-mastery-tab"
                   onClick={() => setActiveTab("skill")}
                   className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
                     activeTab === "skill" 
@@ -196,6 +199,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                   Skill Mastery
                 </button>
                 <button
+                  data-tutorial="skill-progression-tab"
                   onClick={() => setActiveTab("progression")}
                   className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
                     activeTab === "progression"

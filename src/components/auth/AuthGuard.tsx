@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
+import { useLoaderStore } from "@/stores/useLoaderStore";
 
 type Role = "student" | "parent" | "partner";
 
@@ -67,6 +68,13 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
       // Partner hydration is handled from localStorage directly in the store
 
       setIsAuthorized(true);
+
+      // Stop the global loader if it's running
+      const timeout = setTimeout(() => {
+        useLoaderStore.getState().stopLoading();
+      }, 500);
+
+      return () => clearTimeout(timeout);
     } catch {
       // Corrupt localStorage — clear and re-login
       localStorage.clear();

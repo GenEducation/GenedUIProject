@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { useEffect, useState } from "react";
 import { PartnerRequestModal } from "./PartnerRequestModal";
+import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 
 // Mock data
 const MOCK_PARTNERS = [
@@ -30,6 +31,7 @@ export function StudentProfile() {
     isEnrolledPartnersLoading,
     linkParent 
   } = useStudentStore();
+  const { completeAction } = useTutorialStore();
   
   useEffect(() => {
     fetchAvailablePartners();
@@ -67,6 +69,7 @@ export function StudentProfile() {
           <button 
             onClick={() => router.back()}
             className="flex items-center gap-2 text-sm text-[#1a3a2a]/60 hover:text-[#1a3a2a] font-semibold transition-colors"
+            data-tutorial="profile-back-button"
           >
             <ArrowLeft size={16} />
             Back
@@ -192,7 +195,12 @@ export function StudentProfile() {
                 </div>
                 
                 <button 
-                  onClick={() => selectedPartnerId && sendPartnerRequest(selectedPartnerId)}
+                  onClick={() => {
+                    if (selectedPartnerId) {
+                      sendPartnerRequest(selectedPartnerId);
+                      completeAction("send_admin_request");
+                    }
+                  }}
                   disabled={!selectedPartnerId || isLoading}
                   className="w-full bg-[#2d6a4a] hover:bg-[#1a3a2a] text-white rounded-2xl py-3.5 font-bold text-[14px] transition-colors shadow-lg shadow-[#2d6a4a]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
