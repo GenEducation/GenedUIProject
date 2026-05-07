@@ -22,7 +22,8 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
     stopMessageGeneration,
     isMuted,
     toggleMute,
-    activeActivity
+    activeActivity,
+    isRateLimitHit
   } = useStudentStore();
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -84,17 +85,19 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
         <textarea
           ref={textareaRef}
           value={input}
-          disabled={isTextDisabled}
+          disabled={isTextDisabled || isRateLimitHit}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={
-            activeActivity
-              ? "Complete the activity above..."
-              : isVoiceActive 
-                ? "Listening..." 
-                : isHub 
-                  ? "Ask Anything..." 
-                  : `Ask anything to ${chatTitle}...`
+            isRateLimitHit
+              ? "Daily limit reached. Upgrade to continue..."
+              : activeActivity
+                ? "Complete the activity above..."
+                : isVoiceActive 
+                  ? "Listening..." 
+                  : isHub 
+                    ? "Ask Anything..." 
+                    : `Ask anything to ${chatTitle}...`
           }
           rows={1}
           className="flex-1 bg-transparent text-[15px] font-medium text-[#042E5C] placeholder:text-[#042E5C]/30 focus:outline-none resize-none overflow-y-auto min-h-[28px] max-h-[120px] md:max-h-[200px] leading-relaxed py-1"
@@ -133,7 +136,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={isVoiceActive ? stopVoiceSession : isAITyping ? stopMessageGeneration : handleSend}
-            disabled={(isTextDisabled && !isVoiceActive && !isAITyping) || (!input.trim() && !isVoiceActive && !isAITyping)}
+            disabled={isRateLimitHit || (isTextDisabled && !isVoiceActive && !isAITyping) || (!input.trim() && !isVoiceActive && !isAITyping)}
             className={`w-10 h-10 rounded-full flex-shrink-0 text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm ${
               (isVoiceActive || isAITyping) ? "bg-red-500 hover:bg-red-600" : "bg-[#042E5C] hover:bg-[#064282]"
             }`}

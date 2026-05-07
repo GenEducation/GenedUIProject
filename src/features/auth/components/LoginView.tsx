@@ -167,6 +167,8 @@ export function LoginView() {
           role: token.role,
           grade: token.grade,
           school_board: token.school_board,
+          plan: token.plan,
+          plan_expires_at: token.plan_expires_at,
         });
       } else if (role === "parent") {
         useParentStore.getState().setParentProfile({
@@ -250,6 +252,8 @@ export function LoginView() {
           grade: authResponse.grade,
           school_board: authResponse.school_board,
           age: authResponse.age,
+          plan: authResponse.plan,
+          plan_expires_at: authResponse.plan_expires_at,
         });
       }
 

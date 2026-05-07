@@ -48,6 +48,12 @@ export const studentService = {
     return response.json();
   },
 
+  fetchOnboardingStatus: async (studentId: string) => {
+    const response = await authFetch(`${API_BASE_URL}/api/onboarding/subject/status/${studentId}`);
+    if (!response.ok) throw new Error("Failed to fetch onboarding status");
+    return response.json();
+  },
+
   sendPartnerRequest: async (userId: string, partnerId: string) => {
     const url = `${API_BASE_URL}/student/partner?student_id=${userId}&partner_id=${partnerId}`;
     const response = await authFetch(url, {
@@ -116,7 +122,7 @@ export const studentService = {
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      throw data;
+      throw { status: response.status, ...data };
     }
 
     return response;
