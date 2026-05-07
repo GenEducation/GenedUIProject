@@ -15,6 +15,9 @@ export const studentService = {
     });
 
     if (!response.ok) {
+      if (response.status === 404) {
+        return { sessions: [] };
+      }
       const errorBody = await response.text();
       console.error("Detailed Session Fetch Error:", {
         status: response.status,

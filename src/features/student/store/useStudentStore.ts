@@ -766,7 +766,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       set({ recentChats: mappedChats, isSessionsLoading: false, hasFetchedSessions: true });
     } catch (error) {
       console.error("Fetch Sessions Error:", error);
-      set({ isSessionsLoading: false });
+      set({ isSessionsLoading: false, hasFetchedSessions: true });
     }
   },
 

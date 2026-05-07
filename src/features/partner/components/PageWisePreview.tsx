@@ -11,6 +11,7 @@ interface PageWisePreviewProps {
 export function PageWisePreview({ file }: PageWisePreviewProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [isPageLoading, setIsPageLoading] = useState(false);
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
@@ -20,12 +21,23 @@ export function PageWisePreview({ file }: PageWisePreviewProps) {
     };
   }, [file]);
 
+  // Reset loading state after a brief delay to mask the PDF jump
+  useEffect(() => {
+    if (isPageLoading) {
+      const timer = setTimeout(() => setIsPageLoading(false), 400);
+      return () => clearTimeout(timer);
+    }
+  }, [isPageLoading, currentPage]);
+
   const handlePrevPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
+    if (currentPage > 1) {
+      setIsPageLoading(true);
+      setCurrentPage(currentPage - 1);
+    }
   };
 
   const handleNextPage = () => {
-    // We don't know total pages without a heavy lib, so we just increment
+    setIsPageLoading(true);
     setCurrentPage(currentPage + 1);
   };
 
@@ -61,13 +73,25 @@ export function PageWisePreview({ file }: PageWisePreviewProps) {
         <div className="relative h-full aspect-[1/1.414] max-w-[800px] bg-white shadow-2xl rounded-lg overflow-hidden group">
           <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ width: 'calc(100% + 40px)', height: 'calc(100% + 40px)', margin: '-20px' }}>
             <iframe 
-              key={currentPage}
               src={`${fileUrl}#page=${currentPage}&toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
               className="w-full h-full border-none"
               title="Document Preview"
             />
           </div>
-          
+
+          <AnimatePresence>
+            {isPageLoading && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-white/80 backdrop-blur-[2px] flex flex-col items-center justify-center z-10"
+              >
+                <div className="w-8 h-8 border-4 border-[#1A3D2C]/10 border-t-[#1A3D2C] rounded-full animate-spin mb-2" />
+                <p className="text-[10px] font-black text-[#1A3D2C]/40 uppercase tracking-[0.2em]">Syncing Page {currentPage}...</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
       {/* Pagination Footer */}

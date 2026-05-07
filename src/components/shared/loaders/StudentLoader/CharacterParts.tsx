@@ -34,15 +34,15 @@ export const Body = () => (
 
 export const LeftArm = () => (
   <svg width="30" height="40" viewBox="0 0 30 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M 5 5 Q 25 5 25 25" stroke={stroke} strokeWidth={8} strokeLinecap="round" />
+    <path d="M 5 5 Q 5 25 25 25" stroke={stroke} strokeWidth={8} strokeLinecap="round" />
     <circle cx="25" cy="25" r="5" fill="#FCD3A1" stroke={stroke} strokeWidth={sw} />
   </svg>
 );
 
 export const RightArm = () => (
-  <svg width="20" height="40" viewBox="0 0 20 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M 10 5 L 10 30" stroke={stroke} strokeWidth={8} strokeLinecap="round" />
-    <circle cx="10" cy="30" r="5" fill="#FCD3A1" stroke={stroke} strokeWidth={sw} />
+  <svg width="30" height="40" viewBox="0 0 30 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M 25 5 Q 5 5 5 25" stroke={stroke} strokeWidth={8} strokeLinecap="round" />
+    <circle cx="5" cy="25" r="5" fill="#FCD3A1" stroke={stroke} strokeWidth={sw} />
   </svg>
 );
 

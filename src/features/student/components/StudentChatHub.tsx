@@ -7,9 +7,13 @@ import {
   useStudentStore, 
 } from "../store/useStudentStore";
 import { StudentChatInput } from "./StudentChatInput";
-import { AlertCircle, ChevronRight, Clock, Bot, LogOut } from "lucide-react";
+import { AlertCircle, ChevronRight, Clock, Bot, Menu, LogOut } from "lucide-react";
 
-export function StudentChatHub() {
+interface StudentChatHubProps {
+  toggleSidebar: () => void;
+}
+
+export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
   const router = useRouter();
   const { 
     studentProfile, 
@@ -80,9 +84,23 @@ export function StudentChatHub() {
   const hasAgents = availableAgents.length > 0;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F3EE]/30">
+    <div className="flex-1 flex flex-col h-full bg-[#F4F3EE]/30 overflow-hidden">
       <style>{animateGradientStyle}</style>
-      <div className="max-w-5xl mx-auto px-6 py-12 space-y-12">
+      
+      {/* Mobile-friendly Header */}
+      <header className="lg:hidden flex items-center justify-between px-6 py-4 bg-white border-b border-[#042E5C]/8 flex-shrink-0">
+        <button
+          onClick={toggleSidebar}
+          className="w-10 h-10 rounded-xl bg-[#F4F3EE] flex items-center justify-center text-[#042E5C]/60 hover:text-[#042E5C] transition-all"
+        >
+          <Menu size={20} />
+        </button>
+        <img src="/Logo.svg" alt="GenEd Logo" className="h-6 w-auto" />
+        <div className="w-10" /> {/* Spacer for balance */}
+      </header>
+
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-5xl mx-auto px-6 py-12 space-y-12">
         
         {/* 1. Greeting & Onboarding Alert */}
         <div className="relative space-y-6">
@@ -226,6 +244,7 @@ export function StudentChatHub() {
           </motion.section>
         )}
 
+        </div>
       </div>
     </div>
   );

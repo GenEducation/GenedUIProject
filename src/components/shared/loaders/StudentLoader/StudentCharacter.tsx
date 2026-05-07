@@ -31,7 +31,7 @@ export const StudentCharacter = () => {
 
         {/* Right Arm (Back) */}
         <motion.div
-          className="absolute left-[20px] top-[10px] origin-top z-0"
+          className="absolute left-[5px] top-[10px] origin-top z-0"
           animate={{ rotate: [-20, 20, -20] }}
           transition={walkCycle}
         >

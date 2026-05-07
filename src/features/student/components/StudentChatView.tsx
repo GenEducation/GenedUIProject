@@ -58,7 +58,7 @@ export function StudentChatView() {
         openChatById(sessionId);
       }
     }
-  }, [sessionId, openChatById, router, studentProfile, isSessionsLoading]);
+  }, [sessionId, openChatById, router, studentProfile]);
 
   // URL sync logic...
   useEffect(() => {
@@ -107,7 +107,7 @@ export function StudentChatView() {
 
       {/* Main Area: Hub vs Chat */}
       {isHubState ? (
-        <StudentChatHub />
+        <StudentChatHub toggleSidebar={toggleSidebar} />
       ) : (
         <StudentChatMain
           activeChat={activeChat!}
