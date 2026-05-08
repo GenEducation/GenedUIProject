@@ -114,6 +114,12 @@ export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) 
     // Fix: Remove backticks wrapping math ($...$) to prevent them from being treated as code blocks
     // This resolves the "green box" issue where math wouldn't render properly
     cleaned = cleaned.replace(/`(\$.+?\$)`/g, '$1');
+
+    // Fix: Escape underscores specifically inside math blocks to prevent KaTeX "Double Subscript" errors
+    // We only escape sequences of 2 or more underscores (e.g. ____) to preserve valid subscripts like x_1
+    cleaned = cleaned.replace(/\$([\s\S]+?)\$/g, (match, math) => {
+      return '$' + math.replace(/_{2,}/g, (m: string) => m.replace(/_/g, '\\_')) + '$';
+    });
     
     return cleaned;
   }, [content, API_URL]);
