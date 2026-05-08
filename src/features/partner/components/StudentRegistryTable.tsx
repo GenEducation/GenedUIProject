@@ -20,7 +20,7 @@ export function StudentRegistryTable() {
   };
 
   return (
-    <div className="lg:col-span-8 flex flex-col bg-[#FBFCFB] rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 border border-gray-100 shadow-xl min-h-[400px] lg:min-h-0 overflow-hidden">
+    <div className="lg:col-span-8 flex flex-col bg-[#FBFCFB] rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 border border-gray-100 shadow-xl min-h-[400px] lg:min-h-0 overflow-hidden h-full">
       <div className="flex justify-between items-center mb-6 md:mb-10">
         <h3 className="text-lg md:text-2xl font-black text-[#1A3D2C]">Student Registry</h3>
       </div>

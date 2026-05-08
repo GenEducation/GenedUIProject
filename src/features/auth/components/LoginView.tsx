@@ -12,6 +12,7 @@ import { signIn, signUp, SignUpFields } from "../authService";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { useLoaderStore } from "@/stores/useLoaderStore";
 
 const initialSignUpData: SignUpFields = {
   username: "",
@@ -25,6 +26,7 @@ const initialSignUpData: SignUpFields = {
   phone: "",
   organization: "",
   website: "",
+  otp_code: "",
 };
 
 export function LoginView() {
@@ -58,13 +60,13 @@ export function LoginView() {
     const errors: Record<string, string> = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!googleSignUpToken) {
-      if (!signupData.username.trim()) {
-        errors.username = "Username is compulsory";
-      } else if (signupData.username.length < 3) {
-        errors.username = "Username must be at least 3 characters";
-      }
+    if (!signupData.username.trim()) {
+      errors.username = "Username is compulsory";
+    } else if (signupData.username.length < 3) {
+      errors.username = "Username must be at least 3 characters";
+    }
 
+    if (!googleSignUpToken) {
       if (!signupData.email.trim()) {
         errors.email = "Email is compulsory";
       } else if (!emailRegex.test(signupData.email)) {
@@ -85,16 +87,26 @@ export function LoginView() {
     }
 
     if (signupData.role === "student") {
+      const ageNum = Number(signupData.age);
       if (!signupData.age?.trim()) {
         errors.age = "Age is compulsory";
-      } else if (isNaN(Number(signupData.age))) {
+      } else if (isNaN(ageNum)) {
         errors.age = "Age must be a numeric value";
+      } else if (ageNum <= 0) {
+        errors.age = "Age must be a positive number";
+      } else if (ageNum > 50) {
+        errors.age = "Age must be 50 or less";
       }
 
+      const gradeNum = Number(signupData.grade);
       if (!signupData.grade?.trim()) {
         errors.grade = "Grade is compulsory";
-      } else if (isNaN(Number(signupData.grade))) {
+      } else if (isNaN(gradeNum)) {
         errors.grade = "Grade must be a numeric value";
+      } else if (gradeNum <= 0) {
+        errors.grade = "Grade must be a positive number";
+      } else if (gradeNum > 12) {
+        errors.grade = "Grade must be 12 or less";
       }
 
       if (!signupData.school_board?.trim()) errors.school_board = "Board is compulsory";
@@ -122,6 +134,7 @@ export function LoginView() {
     }
 
     setIsSigningIn(true);
+    useLoaderStore.getState().startLoading();
 
     try {
       const token = await signIn(loginData);
@@ -154,6 +167,8 @@ export function LoginView() {
           role: token.role,
           grade: token.grade,
           school_board: token.school_board,
+          plan: token.plan,
+          plan_expires_at: token.plan_expires_at,
         });
       } else if (role === "parent") {
         useParentStore.getState().setParentProfile({
@@ -164,8 +179,9 @@ export function LoginView() {
         });
       }
 
-      router.push(`/${role}`);
+      router.replace(`/${role}`);
     } catch (error) {
+      useLoaderStore.getState().stopLoading();
       let rawMsg = error instanceof Error ? error.message : "Unable to complete signin.";
       console.error("Detailed Signin Error:", rawMsg);
 
@@ -196,25 +212,55 @@ export function LoginView() {
     }
 
     setIsSubmitting(true);
+    useLoaderStore.getState().startLoading();
 
     try {
+      let authResponse;
       if (googleSignUpToken) {
         const { googleSignUp } = await import("../authService");
-        await googleSignUp(googleSignUpToken, signupData);
+        authResponse = await googleSignUp(googleSignUpToken, signupData);
       } else {
-        await signUp(signupData);
+        authResponse = await signUp(signupData);
       }
       
-      // Clear any previous signin errors when coming from a successful signup
-      setSigninErrors({});
+      // Persist auth state (same as sign-in)
+      localStorage.setItem("gened_auth_token", authResponse.access_token);
+      localStorage.setItem("gened_user_profile", JSON.stringify(authResponse));
       
-      // Force user to sign in manually per requirements
-      setSignupSuccessMessage("Account created successfully! Please sign in to access your dashboard.");
-      setLoginData((prev) => ({ ...prev, username: googleSignUpToken ? "" : signupData.username, password: "" }));
-      setSignupData(initialSignUpData);
-      setGoogleSignUpToken(null);
-      setIsSignUp(false);
+      const normalizedRole = authResponse.role?.toLowerCase() ?? "student";
+      const role =
+        normalizedRole === "student" ||
+        normalizedRole === "partner" ||
+        normalizedRole === "parent"
+          ? normalizedRole
+          : ("student" as const);
+      
+      localStorage.setItem("gened_user_role", role);
+      localStorage.setItem("gened_new_user", "true"); // Flag for tutorial
+
+      if (role === "partner") {
+        localStorage.setItem("gened_partner_id", authResponse.user_id);
+      }
+
+      // Populate stores
+      if (role === "student") {
+        useStudentStore.getState().setStudentProfile({
+          user_id: authResponse.user_id,
+          username: authResponse.username,
+          email: authResponse.email,
+          role: authResponse.role,
+          grade: authResponse.grade,
+          school_board: authResponse.school_board,
+          age: authResponse.age,
+          plan: authResponse.plan,
+          plan_expires_at: authResponse.plan_expires_at,
+        });
+      }
+
+      // Redirect immediately
+      router.replace(`/${role}`);
     } catch (error) {
+      useLoaderStore.getState().stopLoading();
       let rawMsg = error instanceof Error ? error.message : "Unable to complete signup.";
       console.error("Detailed Signup Error:", rawMsg);
 
@@ -293,6 +339,13 @@ export function LoginView() {
                     <div className="mt-6 p-4 bg-[#059F6D]/8 border border-[#059F6D]/20 rounded-xl animate-fade-in">
                       <p className="text-sm font-semibold text-[#047a54] text-center tracking-tight">
                         {signupSuccessMessage}
+                      </p>
+                    </div>
+                  )}
+                  {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("error") === "unauthorized" && !isSignUp && (
+                    <div className="mt-6 p-4 bg-red-50 border border-red-100 rounded-xl animate-bounce-subtle">
+                      <p className="text-sm font-semibold text-red-600 text-center tracking-tight">
+                        Access Denied: You do not have permission to view this data.
                       </p>
                     </div>
                   )}

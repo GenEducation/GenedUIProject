@@ -19,8 +19,8 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
   const partnerId = rawPartnerId?.replace(/['"]+/g, "");
 
   const navItems: { id: "subjects" | "analytics"; label: string; icon: any; badge?: number | null }[] = [
-    { id: "subjects", label: "Subjects", icon: BookOpen },
     { id: "analytics", label: "Analytics", icon: BarChart2, badge: numberOfPendingRequests > 0 ? numberOfPendingRequests : null },
+    { id: "subjects", label: "Subjects", icon: BookOpen },
   ];
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -10,6 +10,8 @@ import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 // We can use a standard highlight.js theme
 import "highlight.js/styles/github-dark.css";
+import { authFetch } from "@/utils/authFetch";
+import { FigureView } from "./FigureView";
 
 interface MarkdownRendererProps {
   content: string;
@@ -66,17 +68,62 @@ const markdownComponents: any = {
         </pre>
       </motion.div>
     ) : (
-      <code className="bg-[#1a3a2a]/5 px-1.5 py-0.5 rounded-md text-[13px] font-bold text-emerald-700" {...props}>
+      <code className="text-[13px] font-black text-emerald-700 font-mono" {...props}>
         {children}
       </code>
     );
   },
   
   // Paragraph styles
-  p: ({ node, ...props }: any) => <motion.p initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mb-3 last:mb-0 leading-relaxed" {...(props as any)} />,
+  p: ({ node, ...props }: any) => <p className="mb-3 last:mb-0 leading-relaxed" {...(props as any)} />,
+  
+  // Image styles (supports resolved figures)
+  img: ({ src, alt, ...props }: any) => {
+    const isFigure = src?.includes("/rag/retrieve/figure/");
+    if (isFigure) {
+        const uuid = src.split('/').pop() || "";
+        return <FigureView uuid={uuid} />;
+    }
+    return (
+      <motion.img 
+        initial={{ opacity: 0, scale: 0.95 }} 
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        src={src} 
+        alt={alt || "Illustration"} 
+        className="rounded-2xl border border-[#1a3a2a]/10 shadow-md w-full h-auto object-contain max-h-[400px] my-6 block mx-auto"
+        {...props} 
+      />
+    );
+  },
 };
 
 export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) => {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+  
+  // Parse history markers: <<SHOW_FIGURE(uuid)>> -> Markdown Image
+  // Also cleans up AI-generated "slop" where math is unnecessarily wrapped in backticks
+  const processedContent = useMemo(() => {
+    let cleaned = content;
+    
+    // Handle Figure tags (and strip backticks if AI unnecessarily added them)
+    cleaned = cleaned.replace(/`?(<<SHOW_FIGURE\((.+?)\)>>)`?/g, (_, __, uuid) => {
+      return `\n\n![Figure](${API_URL}/rag/retrieve/figure/${uuid})\n\n`;
+    });
+
+    // Fix: Remove backticks wrapping math ($...$) to prevent them from being treated as code blocks
+    // This resolves the "green box" issue where math wouldn't render properly
+    cleaned = cleaned.replace(/`(\$.+?\$)`/g, '$1');
+
+    // Fix: Escape underscores specifically inside math blocks to prevent KaTeX "Double Subscript" errors
+    // We only escape sequences of 2 or more underscores (e.g. ____) to preserve valid subscripts like x_1
+    cleaned = cleaned.replace(/\$([\s\S]+?)\$/g, (match, math) => {
+      return '$' + math.replace(/_{2,}/g, (m: string) => m.replace(/_/g, '\\_')) + '$';
+    });
+    
+    return cleaned;
+  }, [content, API_URL]);
+
   return (
     <div className="markdown-content">
       <ReactMarkdown
@@ -84,7 +131,7 @@ export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) 
         rehypePlugins={[rehypeHighlight, rehypeKatex]}
         components={markdownComponents}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );

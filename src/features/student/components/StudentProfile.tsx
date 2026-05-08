@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { useEffect, useState } from "react";
 import { PartnerRequestModal } from "./PartnerRequestModal";
+import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
+import { UpgradeButton } from "@/features/billing/UpgradeButton";
 
 // Mock data
 const MOCK_PARTNERS = [
@@ -30,6 +32,7 @@ export function StudentProfile() {
     isEnrolledPartnersLoading,
     linkParent 
   } = useStudentStore();
+  const { completeAction } = useTutorialStore();
   
   useEffect(() => {
     fetchAvailablePartners();
@@ -55,18 +58,17 @@ export function StudentProfile() {
   return (
     <div className="min-h-screen bg-[#F4F3EE] font-sans flex flex-col overflow-y-auto">
       {/* Top Header Logo */}
-      <div className="px-8 py-5">
-        <div className="flex items-center">
-          <img src="/Logo.svg" alt="Scholarly Logo" className="h-10 w-auto" />
-        </div>
+      <div className="px-4 sm:px-8 py-5 flex items-center justify-between">
+        <img src="/Logo.svg" alt="Scholarly Logo" className="h-10 w-auto" />
       </div>
 
-      <div className="flex-1 w-full max-w-4xl mx-auto px-8 pb-20 space-y-12 mt-4">
+      <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-8 pb-20 space-y-8 sm:space-y-12 mt-4">
         {/* Top Controls: Back & Logout */}
         <div className="flex items-center justify-between">
           <button 
             onClick={() => router.back()}
             className="flex items-center gap-2 text-sm text-[#1a3a2a]/60 hover:text-[#1a3a2a] font-semibold transition-colors"
+            data-tutorial="profile-back-button"
           >
             <ArrowLeft size={16} />
             Back
@@ -83,7 +85,7 @@ export function StudentProfile() {
 
         {/* Title area */}
         <div className="space-y-3 max-w-2xl">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-[#1a3a2a] tracking-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#1a3a2a] tracking-tight">
             Student Identity
           </h1>
           <p className="text-[#1a3a2a]/60 text-[15px] leading-relaxed font-medium">
@@ -92,7 +94,7 @@ export function StudentProfile() {
         </div>
 
         {/* Content Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8 items-start">
           
           {/* Left Column */}
           <div className="md:col-span-7 space-y-8">
@@ -161,7 +163,10 @@ export function StudentProfile() {
           {/* Right Column */}
           <div className="md:col-span-5 space-y-8">
             {/* Partner Requests */}
-            <div className="bg-[#f0f0eb] border border-[#1a3a2a]/5 rounded-3xl p-8 space-y-6 shadow-sm">
+            <div 
+              className="bg-[#f0f0eb] border border-[#1a3a2a]/5 rounded-3xl p-8 space-y-6 shadow-sm"
+              data-tutorial="partner-requests"
+            >
               <div className="flex items-center gap-3 text-[#1a3a2a] font-bold">
                 <h2 className="text-lg tracking-tight">Partner Requests</h2>
               </div>
@@ -189,7 +194,12 @@ export function StudentProfile() {
                 </div>
                 
                 <button 
-                  onClick={() => selectedPartnerId && sendPartnerRequest(selectedPartnerId)}
+                  onClick={() => {
+                    if (selectedPartnerId) {
+                      sendPartnerRequest(selectedPartnerId);
+                      completeAction("send_admin_request");
+                    }
+                  }}
                   disabled={!selectedPartnerId || isLoading}
                   className="w-full bg-[#2d6a4a] hover:bg-[#1a3a2a] text-white rounded-2xl py-3.5 font-bold text-[14px] transition-colors shadow-lg shadow-[#2d6a4a]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
@@ -206,29 +216,63 @@ export function StudentProfile() {
             </div>
 
             {/* Parent Access */}
-            <div className="bg-white border border-[#1a3a2a]/5 rounded-3xl p-8 space-y-6 shadow-sm">
+            <div 
+              className="bg-white border border-[#1a3a2a]/5 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm overflow-hidden"
+              data-tutorial="parent-access"
+            >
               <div className="flex items-center gap-3 text-[#1a3a2a] font-bold">
                 <h2 className="text-lg tracking-tight">Parent Access</h2>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 w-full">
                 <input 
                   type="text"
                   placeholder="Guardian's email or phone"
                   value={parentEmailOrPhone}
                   onChange={(e) => setParentEmailOrPhone(e.target.value)}
-                  className="flex-1 bg-[#f9f9f9] border border-[#1a3a2a]/5 rounded-2xl px-4 py-3 text-[13px] font-semibold outline-none focus:border-[#2d6a4a] disabled:opacity-50"
+                  className="flex-1 min-w-0 bg-[#f9f9f9] border border-[#1a3a2a]/5 rounded-2xl px-4 py-3 text-[13px] font-semibold outline-none focus:border-[#2d6a4a] disabled:opacity-50"
                   disabled={isLoading}
                 />
                 <button 
                   onClick={handleLinkParent}
                   disabled={!parentEmailOrPhone.trim() || isLoading}
-                  className="bg-[#bce4cc] text-[#1a3a2a] px-5 py-3 rounded-2xl font-bold text-[14px] hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="shrink-0 bg-[#bce4cc] text-[#1a3a2a] px-5 py-3 rounded-2xl font-bold text-[14px] hover:opacity-80 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   {isLoading ? <Loader2 size={16} className="animate-spin" /> : "Add"}
                 </button>
               </div>
+            </div>
 
+            {/* Subscription Plan */}
+            <div className="bg-gradient-to-br from-[#042E5C] to-[#064282] border border-white/10 rounded-3xl p-8 space-y-6 shadow-xl text-white">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-lg font-black tracking-tight uppercase">Subscription</h2>
+                  <p className="text-white/60 text-xs font-bold uppercase tracking-widest">
+                    Current: <span className="text-[#059F6D]">{studentProfile?.plan || "FREE"}</span>
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10">
+                  <ShieldCheck size={24} className="text-[#059F6D]" />
+                </div>
+              </div>
+              
+              <p className="text-[13px] font-medium text-white/70 leading-relaxed">
+                {studentProfile?.plan === "PRO" 
+                  ? "You have full access to advanced math visualizations and priority AI support." 
+                  : "Upgrade to unlock priority support and advanced visualizations."}
+              </p>
+
+              {studentProfile?.plan !== "PRO" && (
+                <UpgradeButton 
+                  userId={studentProfile?.user_id || ""}
+                  userName={studentProfile?.username || ""}
+                  userEmail={studentProfile?.email}
+                  className="w-full justify-center py-4 rounded-2xl shadow-lg shadow-[#059F6D]/20 border border-white/10"
+                >
+                  Upgrade to Pro Access
+                </UpgradeButton>
+              )}
             </div>
           </div>
         </div>

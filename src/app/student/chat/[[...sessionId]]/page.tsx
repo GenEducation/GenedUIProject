@@ -40,8 +40,9 @@ export default function StudentChatUnifiedPage({
   useEffect(() => {
     if (!studentProfile) return;
 
+    const { hasFetchedSessions } = useStudentStore.getState();
     // Ensure sessions are loaded for the sidebar
-    if (recentChats.length === 0 && !isSessionsLoading) {
+    if (!hasFetchedSessions && !isSessionsLoading) {
       fetchSessions();
     }
 
@@ -65,7 +66,7 @@ export default function StudentChatUnifiedPage({
       const timeout = setTimeout(() => router.replace("/student"), 500);
       return () => clearTimeout(timeout);
     }
-  }, [agentFromUrl, sessionIdFromUrl, activeChat, initNewChat, router, availableAgents.length, studentProfile, fetchAvailableAgents, fetchSessions, recentChats.length, isSessionsLoading]);
+  }, [agentFromUrl, sessionIdFromUrl, activeChat, initNewChat, router, availableAgents.length, studentProfile, fetchAvailableAgents, fetchSessions, recentChats.length]);
 
   // Show a local "preparing" spinner only if we have NO chat state and are trying to load one
   const isLoading = !activeChat && (agentFromUrl || sessionIdFromUrl);

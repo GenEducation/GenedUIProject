@@ -1,11 +1,36 @@
 import { create } from "zustand";
 import { studentService } from "@/features/student/services/studentService";
 
+// -- Types --------------------------------------------------------------------
+
 interface SkillSummary {
   overall_score: number;
   skill_index: number;
   session_count?: number;
 }
+
+export interface SkillHistoryPoint {
+  mastery_level: number;
+  assessment_count: number;
+  source: string;
+  session_id: string | null;
+  recorded_at: string; // ISO timestamp
+}
+
+export interface SkillProgressionEntry {
+  skill_id: string;
+  skill_name: string;
+  history: SkillHistoryPoint[];
+}
+
+export interface OverallHistoryPoint {
+  overall_score: number;
+  skill_index: number;
+  adaptive_mode: string;
+  recorded_at: string;
+}
+
+// -- Store Interface ----------------------------------------------------------
 
 interface AnalyticsState {
   isAnalyticsOpen: boolean;
@@ -17,12 +42,20 @@ interface AnalyticsState {
   analyticsChapterMastery: any[];
   isAnalyticsLoading: boolean;
 
+  // Skill Progression state
+  skillProgression: SkillProgressionEntry[];
+  skillProfileHistory: OverallHistoryPoint[];
+  isProgressionLoading: boolean;
+
   // Actions
   setAnalyticsOpen: (open: boolean) => void;
   setSelectedAnalyticsSubject: (subject: string) => void;
   fetchAnalyticsSubjects: (studentId: string) => Promise<void>;
   fetchAnalyticsData: (subject?: string, studentIdOverride?: string) => Promise<void>;
+  fetchSkillProgressionData: (subject?: string, studentIdOverride?: string) => Promise<void>;
 }
+
+// -- Store --------------------------------------------------------------------
 
 export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   isAnalyticsOpen: false,
@@ -34,14 +67,34 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   analyticsChapterMastery: [],
   isAnalyticsLoading: false,
 
+  // Skill Progression initial state
+  skillProgression: [],
+  skillProfileHistory: [],
+  isProgressionLoading: false,
+
   setAnalyticsOpen: (open) => set({ isAnalyticsOpen: open }),
 
   setSelectedAnalyticsSubject: (subject) => set({ selectedAnalyticsSubject: subject }),
 
   fetchAnalyticsSubjects: async (studentId) => {
     try {
-      const data = await studentService.fetchAnalyticsSubjects(studentId);
-      const subjects = data.subjects || [];
+      const data = await studentService.fetchAvailableAgents(studentId);
+      
+      const subjectNames = new Set<string>();
+      if (data.partners && Array.isArray(data.partners)) {
+        data.partners.forEach((partner: any) => {
+          if (partner.subjects && Array.isArray(partner.subjects)) {
+            partner.subjects.forEach((sub: any) => {
+              const subjectName = sub.subject || sub.name;
+              if (subjectName && subjectName !== "General") {
+                subjectNames.add(subjectName);
+              }
+            });
+          }
+        });
+      }
+
+      const subjects = Array.from(subjectNames).sort();
       set({ analyticsSubjects: subjects });
       
       // If no subject selected and we have subjects, select the first one
@@ -66,8 +119,22 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     if (!targetSubject) {
       // First, fetch subjects if none selected
       try {
-        const subData = await studentService.fetchAnalyticsSubjects(effectiveStudentId);
-        const subjects = subData.subjects || [];
+        const agentData = await studentService.fetchAvailableAgents(effectiveStudentId);
+        const subjectNames = new Set<string>();
+        if (agentData.partners && Array.isArray(agentData.partners)) {
+          agentData.partners.forEach((partner: any) => {
+            if (partner.subjects && Array.isArray(partner.subjects)) {
+              partner.subjects.forEach((sub: any) => {
+                const subjectName = sub.subject || sub.name;
+                if (subjectName && subjectName !== "General") {
+                  subjectNames.add(subjectName);
+                }
+              });
+            }
+          });
+        }
+        
+        const subjects = Array.from(subjectNames).sort();
         set({ analyticsSubjects: subjects });
         if (subjects.length > 0) {
           get().fetchAnalyticsData(subjects[0], studentIdOverride);
@@ -112,6 +179,46 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     } catch (error) {
       console.error("Fetch Analytics Data Critical Error:", error);
       set({ isAnalyticsLoading: false });
+    }
+  },
+
+  fetchSkillProgressionData: async (subject, studentIdOverride) => {
+    const { selectedAnalyticsSubject } = get();
+    const targetSubject = subject || selectedAnalyticsSubject;
+    const effectiveStudentId = studentIdOverride;
+
+    if (!effectiveStudentId || !targetSubject) {
+      console.warn("fetchSkillProgressionData: Missing student ID or subject.");
+      return;
+    }
+
+    set({ isProgressionLoading: true });
+
+    try {
+      const [progressionRes, profileRes] = await Promise.allSettled([
+        studentService.fetchSkillProgression(effectiveStudentId, targetSubject),
+        studentService.fetchSkillProfileHistory(effectiveStudentId, targetSubject),
+      ]);
+
+      set({
+        skillProgression:
+          progressionRes.status === "fulfilled" ? (progressionRes.value ?? []) : get().skillProgression,
+        skillProfileHistory:
+          profileRes.status === "fulfilled"
+            ? (profileRes.value?.history ?? [])
+            : get().skillProfileHistory,
+        isProgressionLoading: false,
+      });
+
+      if (progressionRes.status === "rejected") {
+        console.error("Skill Progression fetch failed:", progressionRes.reason);
+      }
+      if (profileRes.status === "rejected") {
+        console.error("Skill Profile History fetch failed:", profileRes.reason);
+      }
+    } catch (error) {
+      console.error("fetchSkillProgressionData Critical Error:", error);
+      set({ isProgressionLoading: false });
     }
   },
 }));

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { Plus, Trash2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { Plus, Trash2, Square } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { usePartnerStore } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
@@ -14,6 +14,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const subjects = usePartnerStore((state) => state.subjects);
   const fetchSubjects = usePartnerStore((state) => state.fetchSubjects);
   const removeSubject = usePartnerStore((state) => state.removeSubject);
+  const cancelIngestion = usePartnerStore((state) => state.cancelIngestion);
 
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
 
@@ -29,7 +30,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   };
 
   return (
-    <div className="flex-1 px-4 md:px-12 pt-8 md:pt-12 pb-8 bg-white flex flex-col h-full overflow-hidden">
+    <div className="flex-1 px-4 md:px-12 pt-8 md:pt-12 pb-8 bg-white flex flex-col min-h-0 overflow-hidden">
       {/* Actions Section */}
       <div className="flex justify-end mb-4 md:mb-6">
         <button 
@@ -68,7 +69,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                   <div className="flex-1 flex flex-col">
                     <div className="flex items-center justify-between pr-4 w-full">
                       {/* Left: Agent Name & Grade */}
-                      <div className="flex flex-col gap-0.5 group-hover:translate-x-1 transition-transform min-w-[140px]">
+                      <div className="flex flex-col gap-0.5 group-hover:translate-x-1 transition-transform w-[280px] md:w-[320px] shrink-0">
                         <h3 className="text-base md:text-lg font-bold text-[#1A3D2C] tracking-tight flex items-center gap-2">
                           {subject.agent}
                         </h3>
@@ -78,8 +79,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                       </div>
 
                       {/* Middle: Subject */}
-                      <div className="hidden sm:flex flex-1 justify-center">
-                        <span className="text-sm font-bold text-[#1A3D2C]/70 bg-[#1A3D2C]/5 px-4 py-1.5 rounded-xl border border-[#1A3D2C]/10">
+                      <div className="hidden sm:flex flex-1 items-center">
+                        <span className="text-sm font-bold text-[#1A3D2C]/70 bg-[#1A3D2C]/5 px-4 py-1.5 rounded-xl border border-[#1A3D2C]/10 capitalize">
                           {subject.subject}
                         </span>
                       </div>
@@ -96,7 +97,22 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           {subject.status}
                         </span>
 
-                        {isActive && (
+                        {isProcessing && (
+                          <div className="flex items-center gap-2 mr-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                cancelIngestion(subject.id);
+                              }}
+                              className="p-2 text-[#1A3D2C]/40 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all group/stop"
+                              title="Stop Ingestion"
+                            >
+                              <Square size={14} className="fill-current group-hover/stop:scale-90 transition-transform" />
+                            </button>
+                          </div>
+                        )}
+
+                        {(isActive || isFailed) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

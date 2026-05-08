@@ -14,13 +14,24 @@ export interface StudentProfile {
   age?: number;
   grade?: number;
   school_board?: string;
+  plan?: "FREE" | "PRO";
+  plan_expires_at?: string | null;
 }
 
 export interface ChatElement {
   id: string;
-  type: "text" | "svg" | "widget";
+  type: "text" | "svg" | "widget" | "image" | "visual";
   content: string;
   meta?: any;
+}
+
+export interface ActivityAction {
+  type: "teacher_speak" | "request_reading" | "request_listening" | "request_spelling" | "request_repeat";
+  activity_id: string;
+  content: string;
+  lo_id?: string;
+  question?: string;
+  words?: string[];
 }
 
 export interface ChatMessage {
@@ -33,6 +44,7 @@ export interface ChatMessage {
   options?: string[];
   statusText?: string;
   toolStatus?: string;
+  actions?: ActivityAction[];
 }
 
 export interface ChatSession {
@@ -149,12 +161,12 @@ export const AVAILABLE_SUBJECTS: SubjectItem[] = [
 
 const SCHOLARLY_BLUEPRINT = `
 <svg width="400" height="200" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="400" height="200" rx="12" fill="#F8FBF9"/>
-  <path d="M0 20H400M0 40H400M0 60H400M0 80H400M0 100H400M0 120H400M0 140H400M0 160H400M0 180H400" stroke="#1A3A2A" stroke-opacity="0.03"/>
-  <path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M320 0V200M340 0V200M360 0V200M380 0V200" stroke="#1A3A2A" stroke-opacity="0.03"/>
-  <rect x="100" y="50" width="200" height="100" rx="8" stroke="#1A3A2A" stroke-opacity="0.1" stroke-dasharray="4 4"/>
-  <text x="200" y="105" text-anchor="middle" fill="#1A3A2A" fill-opacity="0.3" font-family="sans-serif" font-size="12" font-weight="bold" style="text-transform: uppercase; letter-spacing: 0.1em;">Scholarly Blueprint</text>
-  <text x="200" y="125" text-anchor="middle" fill="#1A3A2A" fill-opacity="0.2" font-family="sans-serif" font-size="10">Visualization Ready</text>
+  <rect width="400" height="200" rx="12" fill="#F0F7FF"/>
+  <path d="M0 20H400M0 40H400M0 60H400M0 80H400M0 100H400M0 120H400M0 140H400M0 160H400M0 180H400" stroke="#1A6BBF" stroke-opacity="0.04"/>
+  <path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M320 0V200M340 0V200M360 0V200M380 0V200" stroke="#1A6BBF" stroke-opacity="0.04"/>
+  <rect x="100" y="50" width="200" height="100" rx="8" stroke="#1A6BBF" stroke-opacity="0.15" stroke-dasharray="4 4"/>
+  <text x="200" y="105" text-anchor="middle" fill="#1A6BBF" fill-opacity="0.3" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="bold" style="text-transform: uppercase; letter-spacing: 0.1em;">Scholarly Blueprint</text>
+  <text x="200" y="125" text-anchor="middle" fill="#1A6BBF" fill-opacity="0.2" font-family="Inter, Arial, sans-serif" font-size="10">Visualization Ready</text>
 </svg>
 `;
 
@@ -162,171 +174,445 @@ function generateHistoricalSVG(type: string, params: any): string {
   const width = 400;
   const height = 280;
 
+  // Normalize type: remove quotes, backslashes, and lowercase it
+  type = type.replace(/[\\"]/g, '').toLowerCase().trim();
+
+  // Resolve aliases to canonical types
+  if (type === "diamond") type = "rhombus";
+  if (type === "square") type = "rectangle";
+  if (type === "semicircle" || type === "arc") type = "semicircle";
+  if (type === "hexagon") type = "hexagon";  // already canonical
+  if (type === "pentagon") type = "pentagon";
+  if (type === "octagon") type = "octagon";
+  if (type === "star") type = "star";
+  if (type === "trapezoid") type = "trapezium";
+
   let shapeMarkup = "";
 
-  // Design Constants
-  const brandGreen = "#059669";
-  const darkInk = "#1A3A2A";
-  const gridColor = "#1A3A2A";
-
+  // Design Constants — aligned with math_visualization_handoff.md
+  const primaryBlue = "#1A6BBF";   // Main strokes, axes, primary shapes
+  const highlightOrange = "#FF6B35"; // Points, markers, radius lines
+  const textDark = "#2C2C2C";        // Labels, titles, scale numbers
+  const fillBlueLight = "#D6EAFF";   // Default shape fill
+  const gridGray = "#E8E8E8";        // Background grids
+  // Aliases kept for backward compat with template literals below
+  const brandGreen = primaryBlue;
+  const darkInk = textDark;
   if (type === "rectangle") {
-    const wVal = params.width || 5;
-    const hVal = params.height || 3;
-    const w = Math.min(wVal * 40, width - 120);
-    const h = Math.min(hVal * 40, height - 120);
-    const x = (width - w) / 2;
-    const y = (height - h) / 2;
-
+    const wVal = params.width || 5, hVal = params.height || 3;
+    const w = Math.min(wVal * 40, width - 120), h = Math.min(hVal * 40, height - 120);
+    const x = (width - w) / 2, y = (height - h) / 2;
     shapeMarkup = `
-      <!-- Gradient Definition -->
-      <defs>
-        <linearGradient id="shapeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="${brandGreen}" stop-opacity="0.08" />
-          <stop offset="100%" stop-color="${brandGreen}" stop-opacity="0.15" />
-        </linearGradient>
-      </defs>
-
-      <!-- Main Shape -->
-      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="url(#shapeGradient)" stroke="${brandGreen}" stroke-width="2" />
-
-      <!-- Width Dimension Line -->
-      <g opacity="0.6">
-        <line x1="${x}" y1="${y - 20}" x2="${x + w}" y2="${y - 20}" stroke="${darkInk}" stroke-width="1" />
-        <line x1="${x}" y1="${y - 25}" x2="${x}" y2="${y - 15}" stroke="${darkInk}" stroke-width="1" />
-        <line x1="${x + w}" y1="${y - 25}" x2="${x + w}" y2="${y - 15}" stroke="${darkInk}" stroke-width="1" />
-        <text x="${x + w / 2}" y="${y - 32}" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="0.05em">${wVal} UNITS</text>
-      </g>
-
-      <!-- Height Dimension Line -->
-      <g opacity="0.6">
-        <line x1="${x + w + 20}" y1="${y}" x2="${x + w + 20}" y2="${y + h}" stroke="${darkInk}" stroke-width="1" />
-        <line x1="${x + w + 15}" y1="${y}" x2="${x + w + 25}" y2="${y}" stroke="${darkInk}" stroke-width="1" />
-        <line x1="${x + w + 15}" y1="${y + h}" x2="${x + w + 25}" y2="${y + h}" stroke="${darkInk}" stroke-width="1" />
-        <text x="${x + w + 35}" y="${y + h / 2}" dominant-baseline="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="0.05em" transform="rotate(90, ${x + w + 35}, ${y + h / 2})">${hVal} UNITS</text>
-      </g>
+      <defs><linearGradient id="rectGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${primaryBlue}" stop-opacity="0.08" /><stop offset="100%" stop-color="${primaryBlue}" stop-opacity="0.15" /></linearGradient></defs>
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="url(#rectGrad)" stroke="${primaryBlue}" stroke-width="2.5" />
+      ${params.label ? `<text x="${width/2}" y="${y + h + 25}" text-anchor="middle" fill="${textDark}" font-size="12" font-weight="800">${params.label}</text>` : ""}
     `;
   } else if (type === "circle") {
-    const rVal = params.radius || 2;
-    const r = Math.min(rVal * 40, 100);
-    const cx = width / 2;
-    const cy = height / 2;
+    const isClock = params.hour !== undefined || params.minute !== undefined;
+    const rVal = params.radius || 3, actualR = isClock ? 100 : Math.min(rVal * 40, 100);
+    const cx = width / 2, cy = height / 2;
+    const base = `<defs><radialGradient id="circGrad" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="${primaryBlue}" stop-opacity="0.15" /><stop offset="100%" stop-color="${primaryBlue}" stop-opacity="0.05" /></radialGradient></defs><circle cx="${cx}" cy="${cy}" r="${actualR}" fill="url(#circGrad)" stroke="${primaryBlue}" stroke-width="2.5" />`;
+    if (isClock) {
+      const hA = (((params.hour || 0) % 12) * 30 + (params.minute || 0) * 0.5 - 90) * (Math.PI / 180);
+      const mA = ((params.minute || 0) * 6 - 90) * (Math.PI / 180);
+      shapeMarkup = base + `<line x1="${cx}" y1="${cy}" x2="${cx + actualR*0.5*Math.cos(hA)}" y2="${cy + actualR*0.5*Math.sin(hA)}" stroke="${textDark}" stroke-width="4" stroke-linecap="round" />` +
+                    `<line x1="${cx}" y1="${cy}" x2="${cx + actualR*0.8*Math.cos(mA)}" y2="${cy + actualR*0.8*Math.sin(mA)}" stroke="${primaryBlue}" stroke-width="3" stroke-linecap="round" />` +
+                    `<circle cx="${cx}" cy="${cy}" r="4" fill="${textDark}" />`;
+    } else {
+      shapeMarkup = base + `<line x1="${cx}" y1="${cy}" x2="${cx + actualR}" y2="${cy}" stroke="${highlightOrange}" stroke-width="1.5" stroke-dasharray="4 2" />` +
+                    `<circle cx="${cx}" cy="${cy}" r="2.5" fill="${highlightOrange}" /><text x="${cx + actualR / 2}" y="${cy - 12}" text-anchor="middle" fill="${textDark}" font-size="11" font-weight="700">R = ${rVal}</text>`;
+    }
+  } else if (type === "triangle") {
+    const w = 150, h = 120, x = (width - w) / 2, y = (height + h) / 2;
+    shapeMarkup = `<path d="M ${x} ${y} L ${x + w} ${y} L ${x + w / 2} ${y - h} Z" fill="${primaryBlue}" fill-opacity="0.1" stroke="${primaryBlue}" stroke-width="2.5" stroke-linejoin="round" />` +
+                  (params.label ? `<text x="${width/2}" y="${y + 30}" text-anchor="middle" fill="${textDark}" font-size="12" font-weight="800">${params.label}</text>` : "");
+  } else if (type === "line") {
+    const x1 = 100, y1 = height/2, x2 = width - 100, y2 = height/2;
+    shapeMarkup = `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${primaryBlue}" stroke-width="3" stroke-linecap="round" />` +
+                  `<circle cx="${x1}" cy="${y1}" r="5" fill="${highlightOrange}" stroke="white" stroke-width="2" /><circle cx="${x2}" cy="${y2}" r="5" fill="${highlightOrange}" stroke="white" stroke-width="2" />`;
+  } else if (type === "angle") {
+    const cx = width / 2, cy = height / 2 + 30, deg = params.degrees || 45, rad = deg * (Math.PI / 180), r = 40;
+    shapeMarkup = `<path d="M ${cx + r} ${cy} A ${r} ${r} 0 ${deg > 180 ? 1 : 0} 0 ${cx + r * Math.cos(-rad)} ${cy + r * Math.sin(-rad)}" fill="${primaryBlue}" fill-opacity="0.1" stroke="${primaryBlue}" stroke-width="2" />` +
+                  `<line x1="${cx}" y1="${cy}" x2="${cx + 120}" y2="${cy}" stroke="${textDark}" stroke-width="3" stroke-linecap="round" />` +
+                  `<line x1="${cx}" y1="${cy}" x2="${cx + 120 * Math.cos(-rad)}" y2="${cy + 120 * Math.sin(-rad)}" stroke="${textDark}" stroke-width="3" stroke-linecap="round" />` +
+                  `<text x="${cx + r + 20}" y="${cy - 15}" fill="${primaryBlue}" font-size="14" font-weight="bold">${deg}°</text>`;
+  } else if (type === "parabola") {
+    const a = params.a || 0.01, h = params.h || 0, k = params.k || 0, cx = width / 2, cy = height / 2;
+    let pts = ""; for (let x = -150; x <= 150; x += 5) pts += `${cx + x},${cy - (a * Math.pow(x - h, 2) + k)} `;
+    shapeMarkup = `<polyline points="${pts}" fill="none" stroke="${primaryBlue}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />`;
+  } else if (type === "fraction_visual") {
+    const n = params.numerator || 3, d = params.denominator || 4, r = 80, cx = width/2, cy = height/2;
+    let ws = ""; for (let i = 0; i < d; i++) {
+      const s = (i * (360/d) - 90) * (Math.PI/180), e = ((i+1) * (360/d) - 90) * (Math.PI/180);
+      ws += `<path d="M ${cx} ${cy} L ${cx+r*Math.cos(s)} ${cy+r*Math.sin(s)} A ${r} ${r} 0 0 1 ${cx+r*Math.cos(e)} ${cy+r*Math.sin(e)} Z" fill="${i < n ? primaryBlue : 'none'}" fill-opacity="0.2" stroke="${primaryBlue}" stroke-width="1.5" />`;
+    }
+    shapeMarkup = ws + `<text x="${cx}" y="${cy + r + 40}" text-anchor="middle" fill="${textDark}" font-size="18" font-weight="800">${n}/${d}</text>`;
+  } else if (type === "bar_graph" || type === "line_graph") {
+    const data = params.data || [10, 20, 15, 25], max = Math.max(...data, 1), chartW = width - 100, chartH = height - 100, sx = 50, sy = height - 50;
+    let g = ""; data.forEach((v: number, i: number) => {
+      const x = sx + i * (chartW / data.length) + (chartW / data.length) * 0.15, h = (v/max) * chartH, w = (chartW / data.length) * 0.7;
+      if (type === "bar_graph") g += `<rect x="${x}" y="${sy-h}" width="${w}" height="${h}" rx="4" fill="${primaryBlue}" fill-opacity="0.2" stroke="${primaryBlue}" stroke-width="1.5" />`;
+      else g += `<circle cx="${x + w/2}" cy="${sy-(v/max)*chartH}" r="5" fill="${highlightOrange}" stroke="white" stroke-width="2" />`;
+    });
+    shapeMarkup = `<line x1="${sx}" y1="${sy}" x2="${sx+chartW}" y2="${sy}" stroke="${textDark}" stroke-opacity="0.3" /><line x1="${sx}" y1="${sy}" x2="${sx}" y2="${sy-chartH}" stroke="${textDark}" stroke-opacity="0.3" />` + g;
+  } else if (type === "number_line") {
+    const start = params.start || 0, end = params.end || 10, margin = 50, lineY = height/2, lineW = width - 100, scale = lineW/(end-start);
+    let ts = ""; for (let i = start; i <= end; i++) {
+      const x = margin + (i-start)*scale;
+      ts += `<line x1="${x}" y1="${lineY-5}" x2="${x}" y2="${lineY+5}" stroke="${textDark}" stroke-width="1.5" /><text x="${x}" y="${lineY+20}" text-anchor="middle" fill="${textDark}" font-size="10" font-weight="bold">${i}</text>`;
+    }
+    shapeMarkup = `<line x1="${margin-10}" y1="${lineY}" x2="${width-margin+10}" y2="${lineY}" stroke="${textDark}" stroke-width="2" />` + ts;
+  } else if (type === "calendar") {
+    const month = params.month || 1, year = params.year || 2024, days = new Date(year, month, 0).getDate(), first = new Date(year, month-1, 1).getDay();
+    let cal = `<text x="${width/2}" y="50" text-anchor="middle" fill="${textDark}" font-size="16" font-weight="800">${month}/${year}</text>`;
+    for (let i = 0; i < 42; i++) {
+      const d = i - first + 1, x = 60 + (i%7)*40, y = 80 + Math.floor(i/7)*30;
+      cal += `<rect x="${x}" y="${y}" width="40" height="30" stroke="${textDark}" stroke-opacity="0.1" fill="none" />`;
+      if (d > 0 && d <= days) cal += `<text x="${x+20}" y="${y+15}" dominant-baseline="middle" text-anchor="middle" fill="${textDark}" font-size="12" font-weight="bold">${d}</text>`;
+    }
+    shapeMarkup = cal;
+  } else if (type === "coordinate_plane") {
+    const pts = params.points || [], lns = params.lines || [], margin = 50, plotW = width-100, plotH = height-100;
+    const toX = (v: number) => margin + ((v + 5)/10) * plotW, toY = (v: number) => height - margin - ((v + 5)/10) * plotH;
+    let g = ""; for (let i = -5; i <= 5; i++) {
+      g += `<line x1="${toX(i)}" y1="${margin}" x2="${toX(i)}" y2="${height-margin}" stroke="${gridGray}" stroke-width="0.5" />`;
+      g += `<line x1="${margin}" y1="${toY(i)}" x2="${width-margin}" y2="${toY(i)}" stroke="${gridGray}" stroke-width="0.5" />`;
+    }
+    const axes = `<line x1="${margin}" y1="${toY(0)}" x2="${width-margin}" y2="${toY(0)}" stroke="${textDark}" stroke-opacity="0.3" /><line x1="${toX(0)}" y1="${margin}" x2="${toX(0)}" y2="${height-margin}" stroke="${textDark}" stroke-opacity="0.3" />`;
+    let m = ""; pts.forEach((p: any) => m += `<circle cx="${toX(p.x)}" cy="${toY(p.y)}" r="5" fill="${highlightOrange}" stroke="white" stroke-width="2" />`);
+    lns.forEach((l: any) => m += `<line x1="${toX(l.p1[0])}" y1="${toY(l.p1[1])}" x2="${toX(l.p2[0])}" y2="${toY(l.p2[1])}" stroke="${primaryBlue}" stroke-width="2.5" />`);
+    shapeMarkup = g + axes + m;
+  } else if (type === "point" || type === "coordinate") {
+    const x = width/2 + (params.x||0)*20, y = height/2 - (params.y||0)*20;
+    shapeMarkup = `<circle cx="${x}" cy="${y}" r="6" fill="${highlightOrange}" stroke="white" stroke-width="2" /><circle cx="${x}" cy="${y}" r="12" fill="${highlightOrange}" fill-opacity="0.15" />`;
+  } else if (type === "polygon") {
+    const vs: any[] = params.vertices || [];
+    if (vs.length >= 3) {
+      const coords = vs.map((v: any) => ({
+        x: Array.isArray(v) ? v[0] : (v.x ?? 0),
+        y: Array.isArray(v) ? v[1] : (v.y ?? 0),
+      }));
+      // Auto-center: subtract centroid so shape is always in the middle
+      const cx0 = coords.reduce((s, c) => s + c.x, 0) / coords.length;
+      const cy0 = coords.reduce((s, c) => s + c.y, 0) / coords.length;
+      const centered = coords.map(c => ({ x: c.x - cx0, y: c.y - cy0 }));
+      // Auto-scale: ensure the shape fits inside the view
+      const maxExtent = Math.max(...centered.map(c => Math.max(Math.abs(c.x), Math.abs(c.y))), 1);
+      const scale = Math.min(20, (width - 120) / 2 / maxExtent, (height - 80) / 2 / maxExtent);
+      const ps = centered.map(c => `${width/2 + c.x*scale},${height/2 - c.y*scale}`).join(" ");
+      shapeMarkup = `<polygon points="${ps}" fill="${primaryBlue}" fill-opacity="0.1" stroke="${primaryBlue}" stroke-width="2.5" stroke-linejoin="round" />`;
+    }
+  } else if (["hexagon","pentagon","octagon"].includes(type)) {
+    const sides = type === "hexagon" ? 6 : type === "pentagon" ? 5 : 8;
+    const r = 100, cx = width/2, cy = height/2;
+    const pts = Array.from({length: sides}, (_, i) => {
+      const a = (i * 2 * Math.PI / sides) - Math.PI/2;
+      return `${cx + r*Math.cos(a)},${cy + r*Math.sin(a)}`;
+    }).join(" ");
+    shapeMarkup = `<polygon points="${pts}" fill="${primaryBlue}" fill-opacity="0.1" stroke="${primaryBlue}" stroke-width="2.5" stroke-linejoin="round" />`;
+  } else if (type === "star") {
+    const outerR = 100, innerR = 42, cx = width/2, cy = height/2;
+    const pts = Array.from({length: 10}, (_, i) => {
+      const r2 = i % 2 === 0 ? outerR : innerR;
+      const a = (i * Math.PI / 5) - Math.PI/2;
+      return `${cx + r2*Math.cos(a)},${cy + r2*Math.sin(a)}`;
+    }).join(" ");
+    shapeMarkup = `<polygon points="${pts}" fill="${primaryBlue}" fill-opacity="0.1" stroke="${primaryBlue}" stroke-width="2.5" stroke-linejoin="round" />`;
+  } else if (type === "rhombus") {
+    const rw = params.width ? Math.min(params.width*30, 160) : 140;
+    const rh = params.height ? Math.min(params.height*30, 120) : 100;
+    const cx = width/2, cy = height/2;
+    shapeMarkup = `<polygon points="${cx},${cy-rh/2} ${cx+rw/2},${cy} ${cx},${cy+rh/2} ${cx-rw/2},${cy}" fill="${primaryBlue}" fill-opacity="0.1" stroke="${primaryBlue}" stroke-width="2.5" stroke-linejoin="round" />`;
+  } else if (type === "trapezium") {
+    const topW = 100, botW = 160, h2 = 90, cx = width/2, cy = height/2;
+    shapeMarkup = `<polygon points="${cx-topW/2},${cy-h2/2} ${cx+topW/2},${cy-h2/2} ${cx+botW/2},${cy+h2/2} ${cx-botW/2},${cy+h2/2}" fill="${primaryBlue}" fill-opacity="0.1" stroke="${primaryBlue}" stroke-width="2.5" stroke-linejoin="round" />`;
+  } else if (type === "semicircle") {
+    const sr = params.radius ? Math.min(params.radius*30, 100) : 100;
+    const cx = width/2, cy = height/2 + 20;
+    shapeMarkup = `<path d="M ${cx-sr} ${cy} A ${sr} ${sr} 0 0 1 ${cx+sr} ${cy} Z" fill="${primaryBlue}" fill-opacity="0.1" stroke="${primaryBlue}" stroke-width="2.5" />`;
+  } else if (type === "histogram") {
+    const bins: number[] = params.bins || [0,2,4,6,8,10];
+    const freqs: number[] = params.frequencies || [3,7,5,9,4];
+    const maxF = Math.max(...freqs, 1), chartH = height-90, sx = 50, sy = height-50;
+    const binW = (width-100) / freqs.length;
+    let g = "";
+    freqs.forEach((f, i) => {
+      const bh = (f/maxF)*chartH;
+      g += `<rect x="${sx + i*binW}" y="${sy-bh}" width="${binW}" height="${bh}" fill="${primaryBlue}" fill-opacity="0.18" stroke="${primaryBlue}" stroke-width="1.5" />`;
+      if (bins[i] !== undefined) g += `<text x="${sx+i*binW}" y="${sy+16}" fill="${textDark}" font-size="9" text-anchor="middle">${bins[i]}</text>`;
+    });
+    shapeMarkup = `<line x1="${sx}" y1="${sy}" x2="${sx+(width-100)}" y2="${sy}" stroke="${textDark}" stroke-opacity="0.3" /><line x1="${sx}" y1="${sy}" x2="${sx}" y2="${sy-chartH}" stroke="${textDark}" stroke-opacity="0.3" />` + g;
+  } else if (type === "venn_diagram") {
+    const sets: string[] = params.sets || ["A","B"];
+    const cx = width/2, cy = height/2, r = 90, offset = 55;
+    const x1 = cx-offset/2, x2 = cx+offset/2;
+    shapeMarkup =
+      `<circle cx="${x1}" cy="${cy}" r="${r}" fill="${primaryBlue}" fill-opacity="0.12" stroke="${primaryBlue}" stroke-width="2.5" />` +
+      `<circle cx="${x2}" cy="${cy}" r="${r}" fill="${highlightOrange}" fill-opacity="0.12" stroke="${highlightOrange}" stroke-width="2.5" />` +
+      `<text x="${x1-r/2}" y="${cy+5}" text-anchor="middle" fill="${primaryBlue}" font-size="18" font-weight="800">${sets[0]||"A"}</text>` +
+      `<text x="${x2+r/2}" y="${cy+5}" text-anchor="middle" fill="${highlightOrange}" font-size="18" font-weight="800">${sets[1]||"B"}</text>` +
+      (params.intersection_label ? `<text x="${cx}" y="${cy+5}" text-anchor="middle" fill="${textDark}" font-size="11" font-weight="700">${params.intersection_label}</text>` : "");
+  } else if (type === "probability_tree") {
+    const branches: string[] = params.branches || [["H","T"],["H","T"]];
+    const probs: number[] = params.probabilities || [0.5,0.5];
+    const startX = 60, startY = height/2;
+    const level1X = 180, level2X = 320;
+    let g = `<circle cx="${startX}" cy="${startY}" r="6" fill="${primaryBlue}" />`;
+    const b1 = Array.isArray(branches[0]) ? branches[0] : (branches as any);
+    const yPositions = b1.map((_:any, i:number) => startY - ((b1.length-1)/2 - i) * 80);
+    yPositions.forEach((y1: number, i: number) => {
+      g += `<line x1="${startX}" y1="${startY}" x2="${level1X}" y2="${y1}" stroke="${primaryBlue}" stroke-width="2" />`;
+      g += `<circle cx="${level1X}" cy="${y1}" r="5" fill="${highlightOrange}" stroke="white" stroke-width="1.5" />`;
+      g += `<text x="${(startX+level1X)/2}" y="${(startY+y1)/2-6}" text-anchor="middle" fill="${textDark}" font-size="10" font-weight="700">${probs[i]||""}</text>`;
+      const b2 = Array.isArray(branches[1]) ? branches[1] : ["H","T"];
+      const yPos2 = b2.map((_:any, j:number) => y1 - ((b2.length-1)/2 - j) * 40);
+      yPos2.forEach((y2: number, j: number) => {
+        g += `<line x1="${level1X}" y1="${y1}" x2="${level2X}" y2="${y2}" stroke="${textDark}" stroke-width="1.5" stroke-opacity="0.5" />`;
+        g += `<circle cx="${level2X}" cy="${y2}" r="4" fill="${primaryBlue}" fill-opacity="0.4" />`;
+        g += `<text x="${level2X+14}" y="${y2+4}" fill="${textDark}" font-size="10" font-weight="600">${b2[j]||""}</text>`;
+      });
+    });
+    shapeMarkup = g;
+  }
 
-    shapeMarkup = `
-      <defs>
-        <radialGradient id="circleGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-          <stop offset="0%" stop-color="${brandGreen}" stop-opacity="0.15" />
-          <stop offset="100%" stop-color="${brandGreen}" stop-opacity="0.05" />
-        </radialGradient>
-      </defs>
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#circleGradient)" stroke="${brandGreen}" stroke-width="2" />
-
-      <!-- Radius Line -->
-      <g opacity="0.6">
-        <line x1="${cx}" y1="${cy}" x2="${cx + r}" y2="${cy}" stroke="${darkInk}" stroke-width="1.5" stroke-dasharray="4 2" />
-        <circle cx="${cx}" cy="${cy}" r="2.5" fill="${darkInk}" />
-        <text x="${cx + r / 2}" y="${cy - 12}" text-anchor="middle" fill="${darkInk}" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="0.05em">R = ${rVal}</text>
-      </g>
-    `;
-  } else {
+  if (!shapeMarkup) {
     return SCHOLARLY_BLUEPRINT;
   }
 
   return `
 <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="${width}" height="${height}" rx="24" fill="#FBFBFA"/>
-
-  <!-- Subtle Blueprint Grid -->
+  <rect width="${width}" height="${height}" rx="24" fill="#F7FAFF"/>
   <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="${gridColor}" stroke-width="0.5" stroke-opacity="0.04"/>
+    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="${gridGray}" stroke-width="0.5" stroke-opacity="0.08"/>
   </pattern>
   <rect width="100%" height="100%" fill="url(#grid)" rx="24" />
-
   ${shapeMarkup}
-
-  ${
-    params.label
-      ? `
-    <rect x="${width / 2 - 60}" y="${height - 35}" width="120" height="20" rx="10" fill="${darkInk}" fill-opacity="0.03" />
-    <text x="${width / 2}" y="${height - 21}" text-anchor="middle" fill="${darkInk}" fill-opacity="0.4" font-family="Inter, sans-serif" font-size="10" font-weight="800" style="text-transform: uppercase; letter-spacing: 0.15em;">${params.label}</text>
-  `
-      : ""
-  }
+  ${params.label ? `<rect x="${width/2-60}" y="${height-35}" width="120" height="20" rx="10" fill="${textDark}" fill-opacity="0.03" /><text x="${width/2}" y="${height-21}" text-anchor="middle" fill="${textDark}" fill-opacity="0.4" font-family="Inter, sans-serif" font-size="10" font-weight="800" style="text-transform: uppercase; letter-spacing: 0.15em;">${params.label}</text>` : ""}
 </svg>`;
+}
+
+/**
+ * Normalizes a raw backend SVG to be responsive and consistently sized.
+ * Forces width=100%, removes hardcoded px dimensions, preserves viewBox.
+ * Applied to any raw <svg> that bypasses generateHistoricalSVG.
+ */
+function normalizeSvg(svgString: string): string {
+  // Ensure viewBox is preserved for scaling; override w/h to be responsive
+  let normalized = svgString
+    .replace(/\bwidth="[^"]*px"/g, 'width="100%"')
+    .replace(/\bheight="[^"]*px"/g, 'height="auto"')
+    .replace(/\bwidth='[^']*px'/g, "width='100%'")
+    .replace(/\bheight='[^']*px'/g, "height='auto'");
+
+  // If there's no viewBox but there are numeric w/h attributes, create one
+  if (!normalized.includes('viewBox')) {
+    const wMatch = svgString.match(/\bwidth=["'](\d+)["']/);
+    const hMatch = svgString.match(/\bheight=["'](\d+)["']/);
+    if (wMatch && hMatch) {
+      normalized = normalized.replace('<svg', `<svg viewBox="0 0 ${wMatch[1]} ${hMatch[1]}"`);
+    }
+  }
+
+  // Also override numeric-only width/height (no px unit)
+  normalized = normalized
+    .replace(/(<svg[^>]*?)\bwidth="(\d+)"/, '$1width="100%"')
+    .replace(/(<svg[^>]*?)\bheight="(\d+)"/, '$1height="auto"');
+
+  return normalized;
 }
 
 function parseContent(content: string): ChatElement[] {
   if (!content) return [];
   const elements: ChatElement[] = [];
-  const regex = /<<(MATH_DRAW|MATH_WIDGET)\s+([^>]+)>>/g;
-
+  
+  // Master regex to capture:
+  // 1. v2 Block Visuals: <<VISUAL type="p5sketch" label="...">>code<</VISUAL>> or <...> </VISUAL>
+  // 2. v2 Self-closing Desmos: <<VISUAL type="desmos" expression="..." />>
+  // 3. Legacy MATH_DRAW / MATH_WIDGET / SHOW_FIGURE
+  // 4. Raw SVG tags
+  const masterRegex = /(?:<<VISUAL\s+type="([^"]+)"\s+label="([^"]*)"(?:[^>]*)>>?([\s\S]*?)<<?\/VISUAL>>?)|(?:<<VISUAL\s+type="desmos"\s+expression="([^"]+)"[^/]*\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s+([\s\S]*?)(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
+  
+  let elementCount = 0;
   let lastIndex = 0;
   let match;
 
-  while ((match = regex.exec(content)) !== null) {
+  while ((match = masterRegex.exec(content)) !== null) {
     const textBefore = content.substring(lastIndex, match.index);
     if (textBefore.trim()) {
       elements.push({
-        id: Math.random().toString(36).substring(2, 11),
+        id: `el-${elementCount++}`,
         type: "text",
         content: textBefore.trim(),
       });
     }
 
-    const type = match[1];
-    const attrsRaw = match[2];
-
-    if (type === "MATH_DRAW") {
-      const typeMatch = attrsRaw.match(/type="([^"]+)"/);
-      const paramsMatch = attrsRaw.match(/params=({[^}]+})/);
-
-      let params: any = {};
-      if (paramsMatch) {
-        try {
-          const jsonStr = paramsMatch[1].replace(/'/g, '"');
-          params = JSON.parse(jsonStr);
-        } catch {
-          console.warn("Failed to parse params for MATH_DRAW", paramsMatch[1]);
-        }
-      }
-
-      const shapeType = typeMatch ? typeMatch[1] : "diagram";
+    if (match[1]) {
+      // v2 Block tag: [1]=engine, [2]=label, [3]=payload
+      const engine = match[1];
+      const label = match[2];
+      const payload = match[3].trim();
       elements.push({
-        id: Math.random().toString(36).substring(2, 11),
-        type: "svg",
-        content: generateHistoricalSVG(shapeType, params),
+        id: `visual-${elementCount++}-${Date.now()}`,
+        type: "visual",
+        content: engine,
         meta: {
-          shape: shapeType,
-          params,
-          is_historical: true,
-        },
+          engine,
+          label,
+          code: engine === "p5sketch" ? payload : undefined,
+          commands: engine === "geogebra" ? (() => {
+            try { 
+              const parsed = JSON.parse(payload);
+              return Array.isArray(parsed.commands) ? parsed.commands : [];
+            } catch(e) { return [payload]; }
+          })() : undefined,
+          options: engine === "geogebra" ? (() => {
+            try { 
+              return JSON.parse(payload).options; 
+            } catch(e) { return undefined; }
+          })() : undefined,
+          image: engine === "show_figure" ? payload : undefined,
+        }
       });
-    } else if (type === "MATH_WIDGET") {
-      const exprMatch = attrsRaw.match(/expression="([^"]+)"/);
+    } else if (match[4]) {
+      // v2 Desmos self-closing: [4]=expression
       elements.push({
-        id: Math.random().toString(36).substring(2, 11),
-        type: "widget",
-        content: exprMatch ? exprMatch[1] : "",
+        id: `visual-${elementCount++}-${Date.now()}`,
+        type: "visual",
+        content: "desmos",
+        meta: {
+          engine: "desmos",
+          label: "Graph",
+          options: { expression: match[4] }
+        }
+      });
+    } else if (match[5]) {
+      // Legacy tags
+      const type = match[5];
+      let attrsRaw = match[6];
+
+      if (type === "MATH_DRAW") {
+        const typeMatch = attrsRaw.match(/type\s*=\s*[\\"]*([^\\"\s\>]+)[\\"]*/i);
+        const paramsStart = attrsRaw.indexOf("params=");
+        let params: any = {};
+        if (paramsStart >= 0) {
+          const jsonStart = attrsRaw.indexOf("{", paramsStart);
+          if (jsonStart >= 0) {
+            let depth = 0;
+            let jsonEnd = jsonStart;
+            for (let i = jsonStart; i < attrsRaw.length; i++) {
+              if (attrsRaw[i] === "{") depth++;
+              else if (attrsRaw[i] === "}") depth--;
+              if (depth === 0) { jsonEnd = i + 1; break; }
+            }
+            try {
+              let jsonStr = attrsRaw.substring(jsonStart, jsonEnd);
+              if (jsonStr.includes('\\"')) jsonStr = jsonStr.replace(/\\"/g, '"');
+              if (!jsonStr.includes('"') && jsonStr.includes("'")) jsonStr = jsonStr.replace(/'/g, '"');
+              params = JSON.parse(jsonStr);
+            } catch (e) {}
+          }
+        }
+        const shapeType = typeMatch ? typeMatch[1] : "diagram";
+        if (shapeType === "desmos") {
+          elements.push({
+            id: `el-${elementCount++}`,
+            type: "widget",
+            content: params.expression || "",
+            meta: params
+          });
+        } else {
+          elements.push({
+            id: `el-${elementCount++}`,
+            type: "svg",
+            content: generateHistoricalSVG(shapeType, params),
+            meta: { shape: shapeType, params, is_historical: true },
+          });
+        }
+      } else if (type === "MATH_WIDGET") {
+        const exprMatch = attrsRaw.match(/expression="([^"]+)"/);
+        elements.push({
+          id: `el-${elementCount++}`,
+          type: "widget",
+          content: exprMatch ? exprMatch[1] : "",
+        });
+      } else if (type === "SHOW_FIGURE") {
+        const figureIdMatch = attrsRaw.match(/figure_id="([^"]+)"/) || attrsRaw.match(/\(([^)]+)\)/);
+        elements.push({
+          id: `el-${elementCount++}`,
+          type: "visual",
+          content: "show_figure",
+          meta: {
+            engine: "show_figure",
+            label: "Textbook Figure",
+            image: figureIdMatch ? figureIdMatch[1] : "",
+          },
+        });
+      }
+    } else if (match[7]) {
+      // Raw SVG
+      elements.push({
+        id: `svg-${elementCount++}-${Date.now()}`,
+        type: "svg",
+        content: normalizeSvg(match[7]),
+        meta: { isRawBackendSvg: true },
       });
     }
-
-    lastIndex = regex.lastIndex;
+    lastIndex = masterRegex.lastIndex;
   }
 
-  const remainingText = content.substring(lastIndex);
-  if (remainingText.trim() || elements.length === 0) {
+  const finalTrailing = content.substring(lastIndex);
+  if (finalTrailing.trim()) {
     elements.push({
-      id: Math.random().toString(36).substring(2, 11),
+      id: `el-${elementCount++}-${Date.now()}`,
       type: "text",
-      content: remainingText.trim() || content,
+      content: finalTrailing.trim(),
+    });
+  } else if (elements.length === 0 && content.trim()) {
+    elements.push({
+      id: `el-fallback-${Date.now()}`,
+      type: "text",
+      content: content.trim(),
     });
   }
 
   return elements;
 }
 
+const MAX_CACHED_SESSIONS = 10;
+
+/**
+ * Ensures the chat cache doesn't grow indefinitely by evicting the oldest sessions
+ */
+const manageCacheEviction = (cache: Record<string, ChatMessage[]>, newSessionId: string, newMessages: ChatMessage[]) => {
+  const updatedCache = { ...cache, [newSessionId]: newMessages };
+  const sessionIds = Object.keys(updatedCache);
+  
+  if (sessionIds.length > MAX_CACHED_SESSIONS) {
+    // Simple FIFO eviction: remove the first key (oldest)
+    const oldestSessionId = sessionIds[0];
+    // Don't evict the current session we just added
+    if (oldestSessionId !== newSessionId) {
+      delete updatedCache[oldestSessionId];
+    } else if (sessionIds.length > 1) {
+      delete updatedCache[sessionIds[1]];
+    }
+  }
+  
+  return updatedCache;
+};
+
 // -- Store interface ----------------------------------------------------------─
 
-interface StudentState {
+export interface OnboardingSubject {
+  subject: string;
+  status: "PENDING" | "COMPLETED";
+}
+
+export interface OnboardingStatus {
+  subjects: OnboardingSubject[];
+}
+
+export interface StudentState {
   studentProfile: StudentProfile | null;
   recentChats: ChatSession[];
   activeChat: ChatSession | null;
@@ -351,6 +637,13 @@ interface StudentState {
   streamingMessageId: string | null;
   chatAbortController: AbortController | null;
   voiceSessionStatus: "idle" | "connecting" | "active" | "error";
+  hasFetchedSessions: boolean;
+  hasFetchedAgents: boolean;
+  isMuted: boolean;
+  isRateLimitHit: boolean;
+  activeActivity: ActivityAction | null;
+  onboardingStatus: OnboardingStatus | null;
+  isOnboardingLoading: boolean;
 
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
@@ -359,27 +652,31 @@ interface StudentState {
   fetchAvailablePartners: () => Promise<void>;
   fetchEnrolledPartners: () => Promise<void>;
   fetchChatHistory: (sessionId: string) => Promise<void>;
+  fetchOnboardingStatus: () => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
   openChatById: (sessionId: string) => Promise<void>;
   openNewChat: (agent: AgentItem) => string;
   initNewChat: (agentId: string) => void;
   startFocusedSession: (documentTitle: string, subject: string) => string;
   closeChat: () => void;
-  sendMessage: (text: string) => Promise<void>;
   setProfileOpen: (open: boolean) => void;
   setAgentPickerOpen: (open: boolean) => void;
+  setRateLimitHit: (hit: boolean) => void;
   setPartnerModalOpen: (open: boolean) => void;
+  stopMessageGeneration: () => void;
+  submitActivityResult: (activityId: string, activityType: string, transcript: string) => Promise<void>;
+  sendMessage: (text?: string, activityInput?: any) => Promise<void>;
   sendPartnerRequest: (partnerId: string) => Promise<void>;
   linkParent: (parentEmailOrPhone: string) => Promise<void>;
-  stopMessageGeneration: () => void;
   startVoiceSession: () => Promise<void>;
   stopVoiceSession: () => void;
+  toggleMute: () => void;
   logoutStudent: () => void;
 }
 
 // -- Store --------------------------------------------------------------------─
 
-export const useStudentStore = create<StudentState>((set, get) => ({
+export const useStudentStore = create<StudentState>()((set, get) => ({
   studentProfile: null,
   recentChats: [],
   activeChat: null,
@@ -389,6 +686,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   isChatOpen: false,
   isProfileOpen: false,
   isAgentPickerOpen: false,
+  isRateLimitHit: false,
   isAITyping: false,
   isSessionsLoading: false,
   isHistoryLoading: false,
@@ -404,12 +702,83 @@ export const useStudentStore = create<StudentState>((set, get) => ({
   streamingMessageId: null,
   chatAbortController: null,
   voiceSessionStatus: "idle",
+  hasFetchedSessions: false,
+  hasFetchedAgents: false,
+  isMuted: false,
+  onboardingStatus: null,
+  isOnboardingLoading: false,
+  logoutStudent: () => {
+    localStorage.removeItem("gened_user_role");
+    localStorage.removeItem("gened_auth_token");
+    localStorage.removeItem("gened_user_profile");
+    localStorage.removeItem("gened_partner_id");
+    set({
+      studentProfile: null,
+      activeChat: null,
+      messages: [],
+      chatMessagesCache: {},
+      isChatOpen: false,
+      isProfileOpen: false,
+      isAgentPickerOpen: false,
+      isPartnerModalOpen: false,
+      isAITyping: false,
+      typingChatIds: [],
+      hasFetchedSessions: false,
+      hasFetchedAgents: false,
+      onboardingStatus: null,
+    });
+    window.location.href = "/";
+  },
+  activeActivity: null,
+  setProfileOpen: (open) => set({ isProfileOpen: open }),
+  setAgentPickerOpen: (open) => set({ isAgentPickerOpen: open }),
+  setRateLimitHit: (hit) => set({ isRateLimitHit: hit }),
+  setPartnerModalOpen: (open) =>
+    set({
+      isPartnerModalOpen: open,
+      partnerRequestStatus: open ? get().partnerRequestStatus : "idle",
+    }),
+  stopMessageGeneration: () => {
+    const { chatAbortController } = get();
+    if (chatAbortController) {
+      chatAbortController.abort();
+    }
+    set({
+      chatAbortController: null,
+      isAITyping: false,
+      streamingMessageId: null,
+    });
+  },
+
+  fetchOnboardingStatus: async () => {
+    const { studentProfile, isOnboardingLoading } = get();
+    if (!studentProfile || isOnboardingLoading) return;
+    
+    set({ isOnboardingLoading: true });
+    try {
+      const status = await studentService.fetchOnboardingStatus(studentProfile.user_id);
+      set({ onboardingStatus: status });
+    } catch (error) {
+      console.error("Failed to fetch onboarding status:", error);
+    } finally {
+      set({ isOnboardingLoading: false });
+    }
+  },
+
+  submitActivityResult: async (activityId, activityType, transcript) => {
+    set({ activeActivity: null });
+    await get().sendMessage(undefined, {
+      activity_id: activityId,
+      activity_type: activityType,
+      transcript: transcript
+    });
+  },
 
   setStudentProfile: (profile) => set({ studentProfile: profile }),
 
   fetchSessions: async () => {
-    const { studentProfile } = get();
-    if (!studentProfile) return;
+    const { studentProfile, isSessionsLoading, hasFetchedSessions } = get();
+    if (!studentProfile || isSessionsLoading || hasFetchedSessions) return;
 
     set({ isSessionsLoading: true });
     try {
@@ -431,16 +800,16 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         subject: s.subject || "", 
       }));
 
-      set({ recentChats: mappedChats, isSessionsLoading: false });
+      set({ recentChats: mappedChats, isSessionsLoading: false, hasFetchedSessions: true });
     } catch (error) {
       console.error("Fetch Sessions Error:", error);
-      set({ isSessionsLoading: false });
+      set({ isSessionsLoading: false, hasFetchedSessions: true });
     }
   },
 
   fetchAvailableAgents: async () => {
-    const { studentProfile } = get();
-    if (!studentProfile) return;
+    const { studentProfile, isAgentsLoading, hasFetchedAgents } = get();
+    if (!studentProfile || isAgentsLoading || hasFetchedAgents) return;
 
     set({ isAgentsLoading: true });
     try {
@@ -462,7 +831,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         });
       }
 
-      set({ availableAgents: agents, isAgentsLoading: false });
+      set({ availableAgents: agents, isAgentsLoading: false, hasFetchedAgents: true });
     } catch (error) {
       console.error("Fetch Agents Error:", error);
       set({ availableAgents: [], isAgentsLoading: false });
@@ -610,6 +979,9 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       if (!response.ok) throw new Error("Failed to fetch history");
       const data = await response.json();
 
+      // Extract subject from history if activeChat is missing it or has "General"
+      const historySubject = data.history?.[0]?.meta_data?.subject;
+
       const mappedMessages: ChatMessage[] = (data.history || []).map(
         (h: any, i: number) => {
           const content = h.content || "";
@@ -617,7 +989,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
           return {
             id: `h-${i}-${Date.now()}`,
-            text: content,
+            text: content.replace(/(?:<<|<)(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?(?:>>|>)/g, "").replace(/<svg[\s\S]*?<\/svg>/g, "").trim(),
             elements:
               elements.length > 1 ||
               (elements.length === 1 && elements[0].type !== "text")
@@ -630,18 +1002,25 @@ export const useStudentStore = create<StudentState>((set, get) => ({
                   minute: "2-digit",
                 })
               : "",
+            actions: h.meta_data?.actions || undefined,
           };
         },
       );
 
       set((state) => {
         const isActive = state.activeChat?.id === sessionId;
+        const activeChat = state.activeChat;
+        
+        // Recover subject from history if current state is generic or missing
+        let updatedActiveChat = activeChat;
+        if (isActive && activeChat && historySubject && (!activeChat.subject || activeChat.subject === "General")) {
+          updatedActiveChat = { ...activeChat, subject: historySubject };
+        }
+
         return {
+          activeChat: updatedActiveChat,
           messages: isActive ? mappedMessages : state.messages,
-          chatMessagesCache: {
-            ...state.chatMessagesCache,
-            [sessionId]: mappedMessages,
-          },
+          chatMessagesCache: manageCacheEviction(state.chatMessagesCache, sessionId, mappedMessages),
           isHistoryLoading: false,
           historyAbortController: null,
         };
@@ -734,9 +1113,9 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       if (!get().chatMessagesCache[sessionId]) {
         await fetchChatHistory(sessionId);
       }
-    } else {
+    } else if (!get().isSessionsLoading && get().hasFetchedSessions) {
       console.error("Chat not found even after fetching sessions:", sessionId);
-      // Fallback: redirect home if session is invalid
+      // Fallback: redirect home only if we are SURE it's not there
       window.location.href = "/student";
     }
   },
@@ -850,22 +1229,45 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
   startVoiceSession: async () => {
     const { activeChat, studentProfile } = get();
-    if (!activeChat || !studentProfile) return;
+    if (!studentProfile) return;
+
+    // Handle Hub start
+    const isHubStart = !activeChat;
+    const effectiveChat: ChatSession = activeChat || {
+      id: "new",
+      title: "New Session",
+      subject: "General",
+      agent_id: undefined,
+      isFocused: false,
+      agentType: "General Assistant",
+      agentIcon: "🤖",
+      lastActive: "Just now",
+      lastTopic: "Continued Learning",
+      chatMode: "voice"
+    };
+
+    // Force transition from Hub to Chat view immediately
+    if (isHubStart) {
+      set({ activeChat: { ...effectiveChat, chatMode: "voice" } });
+    }
 
     // Enforce text mode restriction
-    if (activeChat.chatMode === "text") return;
+    if (activeChat?.chatMode === "text") return;
 
-    console.log("🎙️ [StudentStore] Starting Voice Session for Chat:", activeChat);
+    console.log("🎙️ [StudentStore] Starting Voice Session for Chat:", effectiveChat);
     set({ voiceSessionStatus: "connecting" });
 
     // Set chat mode to voice if not already set
-    if (!activeChat.chatMode) {
+    if (activeChat && !activeChat.chatMode) {
       set((state) => ({
         activeChat: state.activeChat
           ? { ...state.activeChat, chatMode: "voice" }
           : null,
       }));
     }
+
+    // Reset mute state on new session
+    set({ isMuted: false });
 
     try {
       // Lazy load voice service to avoid SSR issues
@@ -959,6 +1361,146 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           if (event.phase !== "teaching") {
             set({ isAITyping: false });
           }
+        } else if (event.type === "tool_status") {
+          set((state) => {
+            const updatedMessages = [...state.messages];
+            let lastMsg = updatedMessages[updatedMessages.length - 1];
+            let newStreamingId = state.streamingMessageId;
+            
+            if (!lastMsg || lastMsg.sender === "user") {
+              const newId = `voice-tool-${Date.now()}`;
+              lastMsg = {
+                id: newId,
+                text: "",
+                sender: "ai",
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                toolStatus: event.message
+              };
+              updatedMessages.push(lastMsg);
+              newStreamingId = newId;
+            } else {
+              updatedMessages[updatedMessages.length - 1] = {
+                ...lastMsg,
+                toolStatus: event.message
+              };
+            }
+            return { messages: updatedMessages, isAITyping: true, streamingMessageId: newStreamingId };
+          });
+        } else if (event.type === "visual_block" || event.type === "visual_error") {
+          set((state) => {
+            const updatedMessages = [...state.messages];
+            let lastMsgIdx = updatedMessages.length - 1;
+            let lastMsg = updatedMessages[lastMsgIdx];
+            let newStreamingId = state.streamingMessageId;
+
+            if (!lastMsg || lastMsg.sender === "user") {
+              const newId = `voice-visual-${Date.now()}`;
+              lastMsg = {
+                id: newId,
+                text: "",
+                sender: "ai",
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              };
+              updatedMessages.push(lastMsg);
+              lastMsgIdx = updatedMessages.length - 1;
+              newStreamingId = newId;
+            }
+
+            if (lastMsgIdx >= 0) {
+              const elements = lastMsg.elements ? [...lastMsg.elements] : [
+                ...(lastMsg.text ? [{ id: Date.now().toString() + "-text", type: "text" as const, content: lastMsg.text }] : [])
+              ];
+              
+              if (event.type === "visual_error") {
+                elements.push({
+                  id: `visual-error-${Date.now()}`,
+                  type: "visual",
+                  content: "error",
+                  meta: {
+                    engine: event.engine || "unknown",
+                    label: event.label || "Visual",
+                    message: event.message,
+                    fallback_text: event.fallback_text || "[Visual Error]"
+                  }
+                });
+              } else {
+                const engine = event.engine || event.meta?.engine || "p5sketch";
+                elements.push({
+                  id: `visual-${Date.now()}-${elements.length}`,
+                  type: "visual",
+                  content: engine,
+                  meta: {
+                    engine,
+                    label: event.label || "Visual",
+                    code: event.code,
+                    commands: event.commands,
+                    image: event.image,
+                    options: event.options,
+                    meta: event.meta
+                  }
+                });
+              }
+
+              updatedMessages[lastMsgIdx] = {
+                ...lastMsg,
+                elements,
+                toolStatus: undefined
+              };
+            }
+            return { messages: updatedMessages, streamingMessageId: newStreamingId };
+          });
+        } else if (event.type === "math_widget" || event.type === "math_widget_error") {
+          set((state) => {
+            const updatedMessages = [...state.messages];
+            let lastMsgIdx = updatedMessages.length - 1;
+            let lastMsg = updatedMessages[lastMsgIdx];
+            let newStreamingId = state.streamingMessageId;
+
+            if (!lastMsg || lastMsg.sender === "user") {
+              const newId = `voice-math-${Date.now()}`;
+              lastMsg = {
+                id: newId,
+                text: "",
+                sender: "ai",
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              };
+              updatedMessages.push(lastMsg);
+              lastMsgIdx = updatedMessages.length - 1;
+              newStreamingId = newId;
+            }
+
+            if (lastMsgIdx >= 0) {
+              const elements = lastMsg.elements ? [...lastMsg.elements] : [
+                ...(lastMsg.text ? [{ id: Date.now().toString() + "-text", type: "text" as const, content: lastMsg.text }] : [])
+              ];
+              
+              if (event.type === "math_widget_error") {
+                elements.push({
+                  id: `math-error-${Date.now()}`,
+                  type: "text",
+                  content: event.fallback_text || "[Math Widget Error]",
+                });
+              } else {
+                elements.push({
+                  id: `visual-${Date.now()}-${elements.length}`,
+                  type: "visual",
+                  content: "desmos",
+                  meta: {
+                    engine: "desmos",
+                    label: "Graph",
+                    options: { expression: event.expression, ...event.options }
+                  }
+                });
+              }
+
+              updatedMessages[lastMsgIdx] = {
+                ...lastMsg,
+                elements,
+                toolStatus: undefined
+              };
+            }
+            return { messages: updatedMessages, streamingMessageId: newStreamingId };
+          });
         }
         },
         (content, role) => {
@@ -985,12 +1527,34 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             let newId = state.streamingMessageId;
 
             if (isContinuing) {
-              updatedMessages[updatedMessages.length - 1] = {
+              const newText = isReplacingPlanning ? content : lastMsg.text + (role === "user" ? " " : "") + content;
+              const updated: ChatMessage = {
                 ...lastMsg,
-                // If we were planning, replace the text entirely on the first transcript chunk
-                text: isReplacingPlanning ? content : lastMsg.text + (role === "user" ? " " : "") + content,
-                isPlanning: false // Once transcript starts, it's no longer planning
+                text: newText,
+                isPlanning: false
               };
+
+              // If the message already has elements (e.g. from a visual_block),
+              // keep the SVG/widget elements and update the trailing text element
+              if (updated.elements && updated.elements.length > 0) {
+                const existingTextIdx = updated.elements.findIndex(
+                  (el) => el.type === "text" && el.id.endsWith("-transcript")
+                );
+                if (existingTextIdx >= 0) {
+                  updated.elements = [...updated.elements];
+                  updated.elements[existingTextIdx] = {
+                    ...updated.elements[existingTextIdx],
+                    content: newText
+                  };
+                } else {
+                  updated.elements = [
+                    ...updated.elements,
+                    { id: Date.now().toString() + "-transcript", type: "text" as const, content: newText }
+                  ];
+                }
+              }
+
+              updatedMessages[updatedMessages.length - 1] = updated;
             } else {
               newId = `voice-${Date.now()}`;
               updatedMessages.push({
@@ -1008,8 +1572,8 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             };
           });
         },
-        activeChat.session_id,
-        activeChat.subject
+        effectiveChat.session_id,
+        effectiveChat.subject
       );
     } catch (error) {
       console.error("Failed to start voice session:", error);
@@ -1025,31 +1589,55 @@ export const useStudentStore = create<StudentState>((set, get) => ({
     } catch (error) {
       console.error("Failed to stop voice session:", error);
     }
-    set({ voiceSessionStatus: "idle" });
+    set({ voiceSessionStatus: "idle", isMuted: false });
   },
 
-  sendMessage: async (text: string) => {
+  toggleMute: async () => {
+    const { isMuted } = get();
+    const newMutedState = !isMuted;
+    
+    try {
+      const { voiceService } = await import("@/features/student/services/voiceService");
+      voiceService.setMuted(newMutedState);
+      set({ isMuted: newMutedState });
+    } catch (error) {
+      console.error("Failed to toggle mute:", error);
+    }
+  },
+
+  sendMessage: async (text?: string, activityInput?: any): Promise<void> => {
     const { studentProfile, activeChat } = get();
-    if (!studentProfile || !activeChat) return;
+    if (!studentProfile) return;
+
+    // Handle Hub messaging (activeChat is null) or specific new chats
+    const isHubMessage = !activeChat;
+    const effectiveChat: ChatSession = activeChat || {
+      id: "new",
+      title: "New Session",
+      subject: "General",
+      agent_id: undefined,
+      isFocused: false,
+      agentType: "General Assistant",
+      agentIcon: "🤖",
+      lastActive: "Just now",
+      lastTopic: "Continued Learning",
+      chatMode: "text"
+    };
 
     // Capture the ID of the chat where the message was sent
-    const chatSentFromId = activeChat.id;
+    const chatSentFromId = effectiveChat.id;
+
+    // Force transition from Hub to Chat view immediately
+    if (isHubMessage) {
+      set({ activeChat: { ...effectiveChat, chatMode: "text" } });
+    }
 
     // Enforce voice mode restriction
-    if (activeChat.chatMode === "voice") return;
-
-    // Set chat mode to text if not already set
-    if (!activeChat.chatMode) {
-      set((state) => ({
-        activeChat: state.activeChat
-          ? { ...state.activeChat, chatMode: "text" }
-          : null,
-      }));
-    }
+    if (effectiveChat.chatMode === "voice") return;
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
-      text,
+      text: text || activityInput?.transcript || "Completing activity...",
       sender: "user",
       timestamp: new Date().toLocaleTimeString([], {
         hour: "2-digit",
@@ -1075,8 +1663,12 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       const newMessages = [...currentMessages, userMsg, streamingPlaceholder];
 
       return {
+        // Atomic update: ensure activeChat is set if it was null (Hub message)
+        activeChat: state.activeChat 
+          ? (state.activeChat.chatMode ? state.activeChat : { ...state.activeChat, chatMode: "text" })
+          : { ...effectiveChat, chatMode: "text" },
         messages:
-          state.activeChat?.id === chatSentFromId
+          (state.activeChat?.id === chatSentFromId || isHubMessage)
             ? newMessages
             : state.messages,
         chatMessagesCache: {
@@ -1085,14 +1677,14 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         },
         typingChatIds: [...state.typingChatIds, chatSentFromId],
         isAITyping:
-          state.activeChat?.id === chatSentFromId ? true : state.isAITyping,
+          (state.activeChat?.id === chatSentFromId || isHubMessage) ? true : state.isAITyping,
         streamingMessageId: streamingMsgId,
       };
     });
 
     try {
       const sessionIdToSend =
-        activeChat.session_id || activeChat.id || undefined;
+        effectiveChat.session_id || (effectiveChat.id === "new" ? undefined : effectiveChat.id);
       const isNewSession =
         !sessionIdToSend ||
         sessionIdToSend === "new" ||
@@ -1101,11 +1693,11 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
       console.debug("[Chat] Sending message", {
         session_id: isNewSession ? undefined : sessionIdToSend,
-        isFocused: activeChat.isFocused,
+        isFocused: effectiveChat.isFocused,
         text,
       });
 
-      const isNewFocused = activeChat.isFocused && isNewSession;
+      const isNewFocused = effectiveChat.isFocused && isNewSession;
       const abortController = new AbortController();
       set({ chatAbortController: abortController });
 
@@ -1113,21 +1705,30 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         {
           text,
           user_id: studentProfile.user_id,
-          ...(isNewFocused
-            ? {}
-            : { session_id: isNewSession ? undefined : sessionIdToSend }),
-          ...(!activeChat.isFocused && {
-            agent_id: activeChat.agent_id || "eng-grade-4",
-          }),
-          subject: activeChat.subject || "English",
           grade: studentProfile.grade || 10,
-          ...(activeChat.isFocused && {
-            document_title: activeChat.document_title || "General",
+          activity_input: activityInput,
+          // Only send session/agent info if NOT a Hub-initiated general query
+          ...(!isHubMessage && {
+            ...(isNewFocused
+              ? {}
+              : { session_id: isNewSession ? undefined : sessionIdToSend }),
+            ...(!effectiveChat.isFocused && {
+              agent_id: effectiveChat.agent_id,
+            }),
+            subject: effectiveChat.subject || "General",
+          }),
+          ...(effectiveChat.isFocused && {
+            document_title: effectiveChat.document_title || "General",
             intent: "",
           }),
-        },
+        } as any,
         abortController.signal,
       );
+
+      if (response.status === 429) {
+        set({ isRateLimitHit: true });
+        return;
+      }
 
       if (!response.body) throw new Error("No response body for streaming");
 
@@ -1136,35 +1737,260 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       let buffer = "";
       let finalSessionId: string | undefined;
       let finalOptions: string[] = [];
+      let finalActions: ActivityAction[] = [];
 
-      // -- Phase 1: Read the ENTIRE stream silently --------------------------
-      const planningStatuses: string[] = [];
+      // -- Reactive Streaming State -------------------------------------------
+      let isPlanningUIPresented = false;
+      let streamDone = false;
+      const planningQueue: string[] = [];
+      const bufferedEvents: any[] = [];
       const elements: ChatElement[] = [];
-      let bufferedText = ""; // Full text for legacy/fallback
+      let bufferedText = "";
       let currentTextBuffer = "";
       let currentToolStatus: string | undefined;
+      let currentStatusText: string | undefined = "Processing...";
+      let doneResponse = ""; // Stores the full response from the done event for post-stream SVG upgrade
 
-      const pushTextElement = () => {
-        if (currentTextBuffer) {
-          // Strip any raw tags that might be embedded in the text stream
-          // to prevent them from showing up as raw text in the UI.
-          const sanitized = currentTextBuffer
-            .replace(/<<(MATH_DRAW|MATH_WIDGET)\s+[^>]+>>/g, "")
-            .trim();
-          if (sanitized) {
-            elements.push({
-              id: Math.random().toString(36).substring(2, 11),
-              type: "text",
-              content: sanitized,
+      const updateUI = (text: string, els: ChatElement[], toolStatus?: string, statusText?: string) => {
+        // Create a transient display list that includes the current buffer tail
+        // this ensures words appearing after a visual block are visible immediately
+        const displayElements = [...els];
+        const tags = /(?:<<VISUAL[\s\S]*?<<?\/VISUAL>>?)|(?:<<VISUAL[\s\S]*?\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
+        const tailText = currentTextBuffer.replace(tags, "").trim();
+        
+        if (tailText) {
+          displayElements.push({
+            id: `stream-tail-${Date.now()}`,
+            type: "text",
+            content: tailText
+          });
+        }
+
+        set((state) => {
+          const patch = (msgs: ChatMessage[]) =>
+            msgs.map((m) =>
+              m.id === streamingMsgId 
+                ? { 
+                    ...m, 
+                    text: text.replace(tags, "").trim(),
+                    elements: displayElements.length > 0 ? displayElements : undefined,
+                    toolStatus,
+                    statusText: statusText !== undefined ? statusText : currentStatusText
+                  } 
+                : m
+            );
+          return {
+            messages: state.activeChat?.id === chatSentFromId ? patch(state.messages) : state.messages,
+            chatMessagesCache: {
+              ...state.chatMessagesCache,
+              [chatSentFromId]: patch(state.chatMessagesCache[chatSentFromId] || []),
+            },
+          };
+        });
+      };
+
+      const pushTextElement = (textOverride?: string) => {
+        const textToParse = textOverride !== undefined ? textOverride : currentTextBuffer;
+        if (textToParse) {
+          const parsed = parseContent(textToParse);
+          if (parsed.length > 0) {
+            parsed.forEach((newEl) => {
+              // If we're adding a native SVG, check if we can replace a recent backend-provided placeholder
+              if (newEl.type === "svg" && newEl.meta?.shape) {
+                const lastIdx = elements.length - 1;
+                const lastEl = lastIdx >= 0 ? elements[lastIdx] : null;
+
+                if (
+                  lastEl &&
+                  lastEl.type === "svg" &&
+                  lastEl.meta?.shape === newEl.meta.shape
+                ) {
+                  // Upgrade the existing element in place
+                  elements[lastIdx] = newEl;
+                } else {
+                  elements.push(newEl);
+                }
+              } else {
+                elements.push(newEl);
+              }
             });
           }
-          currentTextBuffer = "";
+          if (textOverride === undefined) currentTextBuffer = "";
         }
       };
 
+      const handleEvent = (event: any) => {
+        if (event.type === "planning") {
+          const status = event.text || event.message || "";
+          if (status && !planningQueue.includes(status)) {
+            planningQueue.push(status);
+          }
+        } else if (event.type === "tool_status") {
+          currentToolStatus = event.message || "Drawing...";
+          if (isPlanningUIPresented) updateUI(bufferedText, elements, currentToolStatus);
+        } else if (event.type === "visual_block" || event.type === "visual_error") {
+          pushTextElement(currentTextBuffer);
+          currentTextBuffer = "";
+          
+          if (event.type === "visual_error") {
+            elements.push({
+              id: `visual-error-${Date.now()}`,
+              type: "visual",
+              content: "error",
+              meta: {
+                engine: event.engine || "unknown",
+                label: event.label || "Visual",
+                message: event.message,
+                fallback_text: event.fallback_text || "[Visual Error]"
+              }
+            });
+          } else {
+            const engine = event.engine || event.meta?.engine || "p5sketch";
+            const label = event.label || "Visual";
+            
+            // Deduplication: If we already have a visual from the text stream with the same label/engine, skip this
+            const isDuplicate = elements.some(el => 
+              el.type === "visual" && 
+              el.meta?.engine === engine && 
+              el.meta?.label === label
+            );
+
+            if (!isDuplicate) {
+              elements.push({
+                id: `visual-${Date.now()}-${elements.length}`,
+                type: "visual",
+                content: engine,
+                meta: {
+                  engine,
+                  label,
+                  code: event.code,
+                  commands: event.commands,
+                  image: event.image,
+                  options: event.options,
+                  meta: event.meta
+                }
+              });
+            }
+          }
+          currentToolStatus = undefined;
+          if (isPlanningUIPresented) updateUI(bufferedText, elements);
+          currentToolStatus = undefined;
+          if (isPlanningUIPresented) updateUI(bufferedText, elements);
+        } else if (event.type === "math_widget" || event.type === "math_widget_error") {
+          pushTextElement(currentTextBuffer);
+          currentTextBuffer = "";
+          elements.push({
+            id: `stream-el-${elements.length}`,
+            type: "widget",
+            content: event.expression || "",
+            meta: { error: event.type === "math_widget_error", message: event.message },
+          });
+          currentToolStatus = undefined;
+          if (isPlanningUIPresented) updateUI(bufferedText, elements);
+        } else if ((event.type === "chunk" || event.type === "chunks") && typeof event.text === "string") {
+          currentTextBuffer += event.text;
+          bufferedText += event.text;
+
+          // Detect and extract embedded tags (VISUAL, MATH_DRAW, etc.) OR raw SVG blocks from the text stream
+          const tagRegex = /(?:<<VISUAL[\s\S]*?<<?\/VISUAL>>?)|(?:<<VISUAL[\s\S]*?\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>?)|(?:<svg[\s\S]*?<\/svg>)/g;
+          let match;
+          while ((match = tagRegex.exec(currentTextBuffer)) !== null) {
+            const tag = match[0];
+            
+            // 1. Finalize and push any text that appeared BEFORE the tag
+            const textBefore = currentTextBuffer.substring(0, match.index);
+            if (textBefore.trim()) pushTextElement(textBefore);
+            
+            // 2. Process the tag itself
+            if (tag.startsWith("<svg")) {
+              elements.push({
+                id: `stream-svg-${elements.length}-${Date.now()}`,
+                type: "svg",
+                content: normalizeSvg(tag),
+                meta: { isRawBackendSvg: true }
+              });
+            } else {
+              const extracted = parseContent(tag);
+              const tagElement = extracted.find(el => el.type !== "text");
+              if (tagElement) {
+                // Deduplication: If this is a visual block, check if it's already in elements
+                const isDuplicate = tagElement.type === "visual" && elements.some(el => 
+                  el.type === "visual" && 
+                  el.meta?.engine === tagElement.meta?.engine && 
+                  el.meta?.label === tagElement.meta?.label
+                );
+                
+                if (!isDuplicate) {
+                  elements.push(tagElement);
+                }
+              }
+            }
+            
+            // 3. Remove the processed part (textBefore + tag) from the active buffer
+            currentTextBuffer = currentTextBuffer.substring(match.index + tag.length);
+            tagRegex.lastIndex = 0; // Reset for remaining text
+          }
+
+          if (isPlanningUIPresented) {
+            updateUI(bufferedText, elements, currentToolStatus);
+          }
+        } else if (event.type === "done") {
+          finalSessionId = event.session_id;
+          finalOptions = Array.isArray(event.options) ? event.options : [];
+          finalActions = Array.isArray(event.actions) ? event.actions : [];
+          if (event.response) doneResponse = event.response;
+          if (!bufferedText && typeof event.response === "string" && event.response.trim()) {
+            currentTextBuffer = event.response;
+            bufferedText = event.response;
+            if (isPlanningUIPresented) updateUI(bufferedText, elements);
+          }
+        }
+      };
+
+      // -- Orchestrator Loop (Non-blocking) -----------------------------------
+      const orchestrateUI = async () => {
+        let shownStatuses = 0;
+        
+        while (!streamDone || planningQueue.length > shownStatuses) {
+          if (planningQueue.length > shownStatuses) {
+            const status = planningQueue[shownStatuses];
+            shownStatuses++;
+            currentStatusText = status;
+            updateUI(bufferedText, elements, currentToolStatus, status);
+            await new Promise((r) => setTimeout(r, 1200));
+          } else if (streamDone) {
+            break;
+          } else {
+            // If we have no more planning statuses but the stream is still going,
+            // we wait a bit to see if more planning statuses arrive.
+            // If the AI has already started sending chunks (bufferedEvents has data),
+            // and we've shown at least one planning status (or there were none), 
+            // we can proceed to streaming.
+            if (bufferedEvents.length > 0 || shownStatuses > 0) break;
+            await new Promise((r) => setTimeout(r, 100));
+          }
+        }
+
+        isPlanningUIPresented = true;
+        // Process all events that were buffered during the planning phase
+        while (bufferedEvents.length > 0) {
+          handleEvent(bufferedEvents.shift());
+        }
+        // Final sync for the switch from "Thinking" to "Streaming"
+        pushTextElement(currentTextBuffer);
+        currentTextBuffer = "";
+        updateUI(bufferedText, elements, currentToolStatus);
+      };
+
+      const uiPromise = orchestrateUI();
+
+      // -- Stream Reader Loop -------------------------------------------------
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          streamDone = true;
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
@@ -1173,7 +1999,6 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         for (const line of lines) {
           const trimmed = line.trim();
           if (!trimmed || !trimmed.startsWith("data:")) continue;
-
           const jsonStr = trimmed.slice(5).trim();
           if (!jsonStr) continue;
 
@@ -1184,129 +2009,99 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             continue;
           }
 
+          // Late-binding session ID sync
+          if (event.type === "session_id" && event.session_id) {
+            const newSessionId = event.session_id;
+            const { activeChat: currentChat, fetchSessions } = get();
+            
+            // Sync state and URL only if we are transitioning from a new/null session
+            if (!currentChat || currentChat.id === "new" || currentChat.id === "new-focused") {
+              const updatedChat: ChatSession = currentChat ? { 
+                ...currentChat, 
+                id: newSessionId, 
+                session_id: newSessionId 
+              } : {
+                id: newSessionId,
+                session_id: newSessionId,
+                title: event.title || "New Session",
+                agentType: "Socratic Assistant",
+                agentIcon: "🤖",
+                lastActive: "Just now",
+                lastTopic: "Continued Learning",
+                subject: event.subject || "General",
+                grade: "",
+              };
+
+              set({ activeChat: updatedChat });
+              window.history.pushState(null, "", `/student/chat/${newSessionId}`);
+              fetchSessions(); // Refresh sidebar history
+            }
+          }
+
+          let shouldUpdate = false;
+
+          // Standardize planning/tool updates for batching
           if (event.type === "planning") {
             const status = event.text || event.message || "";
-            if (status && !planningStatuses.includes(status)) {
-              planningStatuses.push(status);
+            if (status && status !== currentStatusText) {
+              currentStatusText = status;
+              shouldUpdate = true;
             }
           } else if (event.type === "tool_status") {
             currentToolStatus = event.message || "Drawing...";
-          } else if (
-            event.type === "visual_block" ||
-            event.type === "visual_error"
-          ) {
-            pushTextElement();
-            const svgContent =
-              event.type === "visual_block"
-                ? event.svg
-                : event.fallback?.content ||
-                  event.fallback_text ||
-                  "[Visual Error]";
+            shouldUpdate = true;
+          }
 
-            elements.push({
-              id: Math.random().toString(36).substring(2, 11),
-              type: "svg",
-              content: svgContent,
-              meta: event.meta,
-            });
-            currentToolStatus = undefined;
-          } else if (
-            event.type === "math_widget" ||
-            event.type === "math_widget_error"
-          ) {
-            pushTextElement();
-            elements.push({
-              id: Math.random().toString(36).substring(2, 11),
-              type: "widget",
-              content: event.expression || "",
-              meta: {
-                error: event.type === "math_widget_error",
-                message: event.message,
-              },
-            });
-            currentToolStatus = undefined;
-          } else if (
-            (event.type === "chunk" || event.type === "chunks") &&
-            typeof event.text === "string"
-          ) {
-            currentTextBuffer += event.text;
-            bufferedText += event.text;
-          } else if (event.type === "done") {
-            finalSessionId = event.session_id;
-            finalOptions = Array.isArray(event.options) ? event.options : [];
-            // If no chunks were received, fall back to the full response text provided in the 'done' event
+          if (!isPlanningUIPresented) {
+            bufferedEvents.push(event);
+          } else {
+            handleEvent(event);
+            shouldUpdate = true;
+          }
+
+          if (shouldUpdate && isPlanningUIPresented) {
+            updateUI(bufferedText, elements, currentToolStatus, currentStatusText);
+          }
+        }
+      }
+
+      await uiPromise; // Ensure orchestrator finishes flushes
+
+      // -- Post-stream SVG Upgrade --------------------------------------------
+      // The done event's `response` field contains <<MATH_DRAW>> tags which
+      // parseContent converts to properly themed SVGs via generateHistoricalSVG.
+      // This replaces any raw backend SVG placeholders (isRawBackendSvg: true)
+      // that arrived in chunk events, ensuring streaming and history renders match.
+      if (doneResponse) {
+        const finalParsed = parseContent(doneResponse);
+        const finalVisuals = finalParsed.filter((el) => el.type !== "text");
+        if (finalVisuals.length > 0) {
+          let upgraded = 0;
+          for (let i = 0; i < elements.length; i++) {
             if (
-              !bufferedText &&
-              typeof event.response === "string" &&
-              event.response.trim()
+              elements[i].type === "svg" &&
+              elements[i].meta?.isRawBackendSvg &&
+              upgraded < finalVisuals.length
             ) {
-              currentTextBuffer = event.response;
-              bufferedText = event.response;
+              elements[i] = { ...finalVisuals[upgraded++], id: elements[i].id };
+            }
+          }
+          // Add any visuals from done.response that had no chunk placeholder
+          for (let j = upgraded; j < finalVisuals.length; j++) {
+            if (!elements.some((el) => el.type !== "text" && !el.meta?.isRawBackendSvg)) {
+              elements.push(finalVisuals[j]);
             }
           }
         }
       }
-      pushTextElement();
 
-      // -- Phase 2: Play back planning statuses with delays, then reveal text ─
-      const statusesToShow =
-        planningStatuses.length > 0 ? planningStatuses : ["Processing..."];
-
-      const patchStatus = (statusText: string | undefined) => {
-        set((state) => {
-          const patch = (msgs: ChatMessage[]) =>
-            msgs.map((m) =>
-              m.id === streamingMsgId ? { ...m, statusText, text: "" } : m,
-            );
-          return {
-            messages:
-              state.activeChat?.id === chatSentFromId
-                ? patch(state.messages)
-                : state.messages,
-            chatMessagesCache: {
-              ...state.chatMessagesCache,
-              [chatSentFromId]: patch(
-                state.chatMessagesCache[chatSentFromId] || [],
-              ),
-            },
-          };
-        });
-      };
-
-      for (const status of statusesToShow) {
-        patchStatus(status);
-        await new Promise((resolve) => setTimeout(resolve, 1200));
+      // Flush any remaining text in the buffer into elements before finalizing.
+      // Without this, text that arrives after the last visual block is only shown
+      // transiently as a stream-tail and is lost from the final elements array.
+      if (currentTextBuffer.trim()) {
+        pushTextElement(currentTextBuffer);
+        currentTextBuffer = "";
       }
-
-      // Clear status and reveal the full structured content
-      set((state) => {
-        const patch = (msgs: ChatMessage[]) =>
-          msgs.map((m) =>
-            m.id === streamingMsgId
-              ? {
-                  ...m,
-                  statusText: undefined,
-                  text: bufferedText
-                    .replace(/<<(MATH_DRAW|MATH_WIDGET)\s+[^>]+>>/g, "")
-                    .trim(),
-                  elements: elements,
-                  toolStatus: currentToolStatus,
-                }
-              : m,
-          );
-        return {
-          messages:
-            state.activeChat?.id === chatSentFromId
-              ? patch(state.messages)
-              : state.messages,
-          chatMessagesCache: {
-            ...state.chatMessagesCache,
-            [chatSentFromId]: patch(
-              state.chatMessagesCache[chatSentFromId] || [],
-            ),
-          },
-        };
-      });
 
       // Finalise: replace streaming placeholder with finished message + options
       set((state) => {
@@ -1320,6 +2115,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
             minute: "2-digit",
           }),
           options: finalOptions.length > 0 ? finalOptions : undefined,
+          actions: finalActions.length > 0 ? finalActions : undefined,
           statusText: undefined,
           toolStatus: undefined,
         };
@@ -1369,15 +2165,17 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           }
         }
 
-        // Migrate cache key from tempId to realId
+        // Migrate cache key from tempId to realId with eviction management
         const currentCached = state.chatMessagesCache[chatSentFromId] || [];
         const finalisedMessages = patchMsg(currentCached);
-        const newCache = {
-          ...state.chatMessagesCache,
-          [realId]: finalisedMessages,
-        };
+        
+        let newCache = manageCacheEviction(state.chatMessagesCache, realId, finalisedMessages);
+        
         if (realId !== chatSentFromId) {
-          delete newCache[chatSentFromId];
+          // Explicitly cleanup the temporary ID cache
+          const cleanedCache = { ...newCache };
+          delete cleanedCache[chatSentFromId];
+          newCache = cleanedCache;
         }
 
         const newTypingIds = state.typingChatIds.filter(
@@ -1394,13 +2192,19 @@ export const useStudentStore = create<StudentState>((set, get) => ({
           isAITyping: isStillViewing ? false : state.isAITyping,
           streamingMessageId: null,
           chatAbortController: null,
+          activeActivity: finalActions.find(a => 
+            ["request_reading", "request_listening", "request_spelling", "request_repeat"].includes(a.type)
+          ) || null,
         };
       });
     } catch (error: any) {
       const isAbort = error.name === "AbortError";
+      const isRateLimit = error.status === 429;
 
       if (isAbort) {
         console.debug("Chat generation aborted by user");
+      } else if (isRateLimit) {
+        set({ isRateLimitHit: true });
       } else {
         console.error("Chat API Error:", error);
       }
@@ -1408,7 +2212,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
       set((state) => {
         const errorMsg: ChatMessage = {
           id: `err-${Date.now()}`,
-          text: "Sorry, I encountered an error connecting to the knowledge base. Please try again.",
+          text: error.detail || "Sorry, I encountered an error connecting to the knowledge base. Please try again.",
           sender: "ai",
           timestamp: new Date().toLocaleTimeString([], {
             hour: "2-digit",
@@ -1418,8 +2222,9 @@ export const useStudentStore = create<StudentState>((set, get) => ({
 
         const cleanOrReplace = (msgs: ChatMessage[]) => {
           const withoutStreaming = msgs.filter((m) => m.id !== streamingMsgId);
-          // If it was an abort, just leave it empty. Otherwise, add the error message.
-          return isAbort ? withoutStreaming : [...withoutStreaming, errorMsg];
+          // If it was an abort OR a rate limit, just leave it empty.
+          // Otherwise, add the error message.
+          return (isAbort || isRateLimit) ? withoutStreaming : [...withoutStreaming, errorMsg];
         };
 
         const cached = state.chatMessagesCache[chatSentFromId] || [];
@@ -1429,10 +2234,7 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         );
 
         return {
-          chatMessagesCache: {
-            ...state.chatMessagesCache,
-            [chatSentFromId]: finishedMessages,
-          },
+          chatMessagesCache: manageCacheEviction(state.chatMessagesCache, chatSentFromId, finishedMessages),
           messages:
             state.activeChat?.id === chatSentFromId
               ? finishedMessages
@@ -1445,46 +2247,5 @@ export const useStudentStore = create<StudentState>((set, get) => ({
         };
       });
     }
-  },
-
-  stopMessageGeneration: () => {
-    const { chatAbortController } = get();
-    if (chatAbortController) {
-      chatAbortController.abort();
-    }
-    set({
-      chatAbortController: null,
-      isAITyping: false,
-      streamingMessageId: null,
-    });
-  },
-
-  setAgentPickerOpen: (open) => set({ isAgentPickerOpen: open }),
-  setPartnerModalOpen: (open) =>
-    set({
-      isPartnerModalOpen: open,
-      partnerRequestStatus: open ? get().partnerRequestStatus : "idle",
-    }),
-
-  setProfileOpen: (open) => set({ isProfileOpen: open }),
-
-  logoutStudent: () => {
-    localStorage.removeItem("gened_user_role");
-    localStorage.removeItem("gened_auth_token");
-    localStorage.removeItem("gened_user_profile");
-    localStorage.removeItem("gened_partner_id");
-    set({
-      studentProfile: null,
-      activeChat: null,
-      messages: [],
-      chatMessagesCache: {},
-      isChatOpen: false,
-      isProfileOpen: false,
-      isAgentPickerOpen: false,
-      isPartnerModalOpen: false,
-      isAITyping: false,
-      typingChatIds: [],
-    });
-    window.location.href = "/";
   },
 }));

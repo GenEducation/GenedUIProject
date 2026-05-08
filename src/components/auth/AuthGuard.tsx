@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
+import { useLoaderStore } from "@/stores/useLoaderStore";
 
 type Role = "student" | "parent" | "partner";
 
@@ -40,10 +41,10 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
     try {
       const profile = JSON.parse(profileStr);
 
-      // Hydrate the appropriate store if not already hydrated
+      // Hydrate the appropriate store if not already hydrated or if ID mismatch (Context Sync)
       if (role === "student") {
         const currentProfile = useStudentStore.getState().studentProfile;
-        if (!currentProfile) {
+        if (!currentProfile || currentProfile.user_id !== profile.user_id) {
           useStudentStore.getState().setStudentProfile({
             user_id: profile.user_id,
             username: profile.username,
@@ -51,11 +52,13 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
             role: profile.role,
             grade: profile.grade,
             school_board: profile.school_board,
+            plan: profile.plan,
+            plan_expires_at: profile.plan_expires_at,
           });
         }
       } else if (role === "parent") {
         const currentProfile = useParentStore.getState().parentProfile;
-        if (!currentProfile) {
+        if (!currentProfile || currentProfile.user_id !== profile.user_id) {
           useParentStore.getState().setParentProfile({
             user_id: profile.user_id || "",
             username: profile.username || "",
@@ -67,6 +70,13 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
       // Partner hydration is handled from localStorage directly in the store
 
       setIsAuthorized(true);
+
+      // Stop the global loader if it's running
+      const timeout = setTimeout(() => {
+        useLoaderStore.getState().stopLoading();
+      }, 500);
+
+      return () => clearTimeout(timeout);
     } catch {
       // Corrupt localStorage — clear and re-login
       localStorage.clear();

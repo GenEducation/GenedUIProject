@@ -5,6 +5,9 @@ import { useRouter, useParams } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { StudentChatSidebar } from "./StudentChatSidebar";
 import { StudentChatMain } from "./StudentChatMain";
+import { StudentChatHub } from "./StudentChatHub";
+import { AgentPickerModal } from "./AgentPickerModal";
+import { PlanBanner } from "@/features/billing/components/PlanBanner";
 
 /**
  * StudentChatView acts as a container for the modular chat layout.
@@ -16,7 +19,16 @@ export function StudentChatView() {
   const sessionIdRaw = params?.sessionId;
   const sessionId = Array.isArray(sessionIdRaw) ? sessionIdRaw[0] : (sessionIdRaw as string | undefined);
   
-  const { activeChat, messages, isAITyping, openChatById, studentProfile } = useStudentStore();
+  const { 
+    activeChat, 
+    messages, 
+    isAITyping, 
+    openChatById, 
+    studentProfile, 
+    isSessionsLoading, 
+    closeChat,
+    isAgentPickerOpen
+  } = useStudentStore();
 
   // Sidebar toggle state
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -59,12 +71,27 @@ export function StudentChatView() {
     }
   }, [activeChat?.id, sessionId, router]);
 
-  if (!activeChat) {
+  // 3. Determine if we are in the "Hub" state (Discovery) or "Chat" state (Active)
+  const isHubState = !sessionId && !activeChat && messages.length === 0 && !isAITyping;
+
+  // 4. Safety Guard: If we have a sessionId but no activeChat yet (history loading), show loading
+  if (sessionId && !activeChat) {
     return (
       <div className="h-screen flex items-center justify-center bg-white font-sans">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-[#042E5C]/10 border-t-[#042E5C] rounded-full animate-spin" />
-          <p className="text-sm font-bold text-[#042E5C]/40 tracking-widest uppercase">Initializing Session...</p>
+          <p className="text-sm font-bold text-[#042E5C]/40 tracking-widest uppercase">Loading Chat...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isSessionsLoading && !studentProfile) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-white font-sans">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-[#042E5C]/10 border-t-[#042E5C] rounded-full animate-spin" />
+          <p className="text-sm font-bold text-[#042E5C]/40 tracking-widest uppercase">Initializing Portal...</p>
         </div>
       </div>
     );
@@ -72,21 +99,30 @@ export function StudentChatView() {
 
   return (
     <div className="h-screen flex bg-white font-sans overflow-hidden">
-      {/* -- LEFT SIDEBAR ------------------------------------------ */}
+      {/* -- LEFT SIDEBAR (Always present for consistency) ---------------- */}
       <StudentChatSidebar 
-        activeChatId={activeChat.id} 
+        activeChatId={activeChat?.id || "none"} 
         isOpen={isSidebarOpen} 
-        onClose={() => setIsSidebarOpen(false)}
+        onClose={() => setIsSidebarOpen(false)} 
       />
 
-      {/* Main Chat Area */}
-      <StudentChatMain
-        activeChat={activeChat}
-        messages={messages}
-        isAITyping={isAITyping}
-        isSidebarOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar}
-      />
+      {/* Main Area: Hub vs Chat */}
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        <PlanBanner />
+        {isHubState ? (
+          <StudentChatHub toggleSidebar={toggleSidebar} />
+        ) : (
+          <StudentChatMain
+            activeChat={activeChat!}
+            messages={messages}
+            isAITyping={isAITyping}
+            isSidebarOpen={isSidebarOpen}
+            toggleSidebar={toggleSidebar}
+          />
+        )}
+      </div>
+
+      {isAgentPickerOpen && <AgentPickerModal />}
     </div>
   );
 }

@@ -15,8 +15,14 @@ class VoiceService {
   private currentStudentId: string | null = null;
   private currentSessionId: string | null = null;
   private currentSubject: string | null = null;
+  private wsEndpoint: string = "/ws/april-live";
   private onEventCallback: ((event: any) => void) | null = null;
   private onTextRevealCallback: ((text: string, role: "user" | "assistant") => void) | null = null;
+  private isMuted = false;
+  
+  // Connection & Retry State
+  private retryCount = 0;
+  private readonly MAX_RETRIES = 5;
   
   // Jitter Buffer & Sync State
   private nextStartTime = 0;
@@ -35,11 +41,13 @@ class VoiceService {
     onEvent: (event: any) => void, 
     onTextReveal: (text: string, role: "user" | "assistant") => void,
     sessionId?: string, 
-    subject?: string
+    subject?: string,
+    wsEndpoint: string = "/ws/april-live-graph"
   ) {
     this.currentStudentId = studentId;
     this.currentSessionId = sessionId || null;
     this.currentSubject = subject ?? null;
+    this.wsEndpoint = wsEndpoint;
     this.onEventCallback = onEvent;
     this.onTextRevealCallback = onTextReveal;
 
@@ -49,6 +57,7 @@ class VoiceService {
     }
 
     this.isSessionActive = true;
+    this.retryCount = 0;
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
 
@@ -78,7 +87,7 @@ class VoiceService {
       this.processor = this.micCtx.createScriptProcessor(4096, 1, 1);
       
       this.processor.onaudioprocess = (e) => {
-        if (this.ws?.readyState === WebSocket.OPEN) {
+        if (this.ws?.readyState === WebSocket.OPEN && !this.isMuted) {
           const input = e.inputBuffer.getChannelData(0);
           const i16 = new Int16Array(input.length);
           for (let i = 0; i < input.length; i++) {
@@ -99,15 +108,28 @@ class VoiceService {
   private connect() {
     if (!this.isSessionActive || !this.currentStudentId) return;
 
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
-    const wsBaseUrl = apiBaseUrl?.replace(/^http/, "ws");
+    // Robustly construct the WebSocket URL
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "");
+    
+    // Clean up the base URL and swap protocol
+    // http://api.example.com -> ws://api.example.com
+    // https://api.example.com -> wss://api.example.com
+    const wsBaseUrl = apiBaseUrl.replace(/^http/, "ws").replace(/\/$/, "");
+    
     const token = getAuthToken();
-    const wsUrl = `${wsBaseUrl}/ws/april-live?token=${token || ""}&user_id=${this.currentStudentId}`;
+    const endpoint = this.wsEndpoint || "/ws/april-live";
+    
+    // Ensure endpoint starts with a slash
+    const formattedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+    
+    const wsUrl = `${wsBaseUrl}${formattedEndpoint}?token=${token || ""}&user_id=${this.currentStudentId}`;
 
+    console.log(`[VoiceService] Connecting to: ${wsUrl}`);
     this.ws = new WebSocket(wsUrl);
     this.ws.binaryType = "arraybuffer";
 
     this.ws.onopen = () => {
+      this.retryCount = 0;
       this.sendInitMessage();
       this.onEventCallback?.({ type: "connected" });
     };
@@ -141,10 +163,19 @@ class VoiceService {
     };
 
     this.ws.onclose = () => {
-      if (this.isSessionActive) {
-        setTimeout(() => this.connect(), 1000);
+      if (this.isSessionActive && this.retryCount < this.MAX_RETRIES) {
+        this.retryCount++;
+        const delay = Math.pow(2, this.retryCount - 1) * 1000;
+        console.log(`[VoiceService] Reconnecting in ${delay}ms (Attempt ${this.retryCount}/${this.MAX_RETRIES})...`);
+        setTimeout(() => this.connect(), delay);
       } else {
-        this.onEventCallback?.({ type: "disconnected" });
+        if (this.retryCount >= this.MAX_RETRIES) {
+          console.error("[VoiceService] Max retries reached. Connection failed.");
+          this.onEventCallback?.({ type: "error", error: "Connection lost. Please try again." });
+          this.stopSession();
+        } else {
+          this.onEventCallback?.({ type: "disconnected" });
+        }
       }
     };
   }
@@ -268,6 +299,11 @@ class VoiceService {
     this.bufferQueue = [];
     this.onEventCallback = null;
     this.onTextRevealCallback = null;
+  }
+
+  setMuted(muted: boolean) {
+    this.isMuted = muted;
+    console.log(`[VoiceService] Mic ${muted ? "Muted" : "Unmuted"}`);
   }
 }
 

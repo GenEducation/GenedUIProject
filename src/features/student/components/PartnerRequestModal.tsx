@@ -17,7 +17,7 @@ export function PartnerRequestModal() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[19999]"
           />
 
           {/* Panel */}
@@ -27,7 +27,7 @@ export function PartnerRequestModal() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", stiffness: 380, damping: 32 }}
-            className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-black/20 z-50 overflow-hidden"
+            className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-black/20 z-[20000] overflow-hidden"
           >
             {/* Header (Optional, but good for closing) */}
             {partnerRequestStatus !== "loading" && (

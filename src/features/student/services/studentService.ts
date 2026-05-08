@@ -15,6 +15,9 @@ export const studentService = {
     });
 
     if (!response.ok) {
+      if (response.status === 404) {
+        return { sessions: [] };
+      }
       const errorBody = await response.text();
       console.error("Detailed Session Fetch Error:", {
         status: response.status,
@@ -42,6 +45,12 @@ export const studentService = {
   fetchEnrolledPartners: async (userId: string) => {
     const response = await authFetch(`${API_BASE_URL}/api/students/${userId}/available-agents`);
     if (!response.ok) throw new Error("Failed to fetch enrolled partners");
+    return response.json();
+  },
+
+  fetchOnboardingStatus: async (studentId: string) => {
+    const response = await authFetch(`${API_BASE_URL}/api/onboarding/subject/status/${studentId}`);
+    if (!response.ok) throw new Error("Failed to fetch onboarding status");
     return response.json();
   },
 
@@ -98,6 +107,11 @@ export const studentService = {
     grade: number;
     document_title?: string;
     intent?: string;
+    activity_input?: {
+      activity_id: string;
+      activity_type: string;
+      transcript: string;
+    };
   }, signal?: AbortSignal): Promise<Response> => {
     const response = await authFetch(`${API_BASE_URL}/text/april-query`, {
       method: "POST",
@@ -106,7 +120,10 @@ export const studentService = {
       signal,
     });
 
-    if (!response.ok) throw new Error("API request failed");
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw { status: response.status, ...data };
+    }
 
     return response;
   },
@@ -185,5 +202,23 @@ export const studentService = {
     }
 
     return response.json();
-  }
+  },
+
+  fetchSkillProgression: async (studentId: string, subject: string) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/students/${studentId}/skill-progression?subject=${encodeURIComponent(subject)}`,
+      { headers: { accept: "application/json" } }
+    );
+    if (!response.ok) throw new Error("Failed to fetch skill progression");
+    return response.json(); // SkillProgressionEntry[]
+  },
+
+  fetchSkillProfileHistory: async (studentId: string, subject: string) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/students/${studentId}/skill-profile-history?subject=${encodeURIComponent(subject)}`,
+      { headers: { accept: "application/json" } }
+    );
+    if (!response.ok) throw new Error("Failed to fetch skill profile history");
+    return response.json(); // { subject, history: OverallHistoryPoint[] }
+  },
 };

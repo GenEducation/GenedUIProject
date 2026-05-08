@@ -9,25 +9,28 @@ import { CurriculumIngestion } from "./CurriculumIngestion";
 import { AnimatePresence, motion } from "framer-motion";
 import { NotificationBell } from "@/components/NotificationBell";
 import { User } from "lucide-react";
+import { usePartnerStore } from "../store/usePartnerStore";
 
 export function PartnerAdmin() {
   const router = useRouter();
   const pathname = usePathname();
 
   // Derive active view from URL
-  const activeView: "subjects" | "analytics" = pathname === '/partner/analytics' ? 'analytics' : 'subjects';
+  // Derive active view from URL - Analytics is now the default
+  const activeView: "subjects" | "analytics" = pathname === '/partner/subjects' ? 'subjects' : 'analytics';
 
-  const [showUploadModal, setShowUploadModal] = useState(false);
+  const showUploadModal = usePartnerStore((state) => state.showUploadModal);
+  const setShowUploadModal = usePartnerStore((state) => state.setShowUploadModal);
 
   const rawPartnerId = typeof window !== 'undefined' ? localStorage.getItem("gened_partner_id") : null;
   const partnerId = rawPartnerId?.replace(/['"]+/g, "");
 
   return (
-    <div className="flex h-full bg-[#F8F9F8] overflow-hidden">
+    <div className="flex h-screen bg-[#F8F9F8] overflow-hidden">
       {/* Navigation Sidebar */}
       <SideBar 
         activeView={activeView} 
-        onViewChange={(view) => router.push(view === 'subjects' ? '/partner' : '/partner/analytics')} 
+        onViewChange={(view) => router.push(view === 'analytics' ? '/partner' : '/partner/subjects')} 
       />
 
       {/* Main Content Area */}
@@ -41,15 +44,11 @@ export function PartnerAdmin() {
           </div>
           <div className="flex items-center gap-4">
             {partnerId && <NotificationBell userId={partnerId} align="right" />}
-            
-            <button className="w-10 h-10 rounded-xl bg-white border border-[#1A3D2C]/10 shadow-sm hover:shadow-md hover:border-[#1A3D2C]/20 text-[#1A3D2C] transition-all flex items-center justify-center">
-              <User size={18} />
-            </button>
           </div>
         </header>
 
         {/* Content View */}
-        <div className="flex-1 relative overflow-hidden">
+        <div className="flex-1 relative flex flex-col overflow-hidden">
           <AnimatePresence mode="wait">
             {activeView === "subjects" ? (
               <motion.div
@@ -57,7 +56,7 @@ export function PartnerAdmin() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="h-full flex flex-col"
+                className="flex-1 flex flex-col h-full"
               >
                 <SubjectRegistry onUploadClick={() => setShowUploadModal(true)} />
               </motion.div>
@@ -67,7 +66,7 @@ export function PartnerAdmin() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="h-full flex flex-col"
+                className="flex-1 flex flex-col h-full"
               >
                 <EnrollmentAdmin />
               </motion.div>
