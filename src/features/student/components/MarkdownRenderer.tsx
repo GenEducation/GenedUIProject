@@ -68,7 +68,7 @@ const markdownComponents: any = {
         </pre>
       </motion.div>
     ) : (
-      <code className="bg-[#1a3a2a]/5 px-1.5 py-0.5 rounded-md text-[13px] font-bold text-emerald-700" {...props}>
+      <code className="text-[13px] font-black text-emerald-700 font-mono" {...props}>
         {children}
       </code>
     );
@@ -102,10 +102,20 @@ export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
   
   // Parse history markers: <<SHOW_FIGURE(uuid)>> -> Markdown Image
+  // Also cleans up AI-generated "slop" where math is unnecessarily wrapped in backticks
   const processedContent = useMemo(() => {
-    return content.replace(/<<SHOW_FIGURE\((.+?)\)>>/g, (_, uuid) => {
+    let cleaned = content;
+    
+    // Handle Figure tags (and strip backticks if AI unnecessarily added them)
+    cleaned = cleaned.replace(/`?(<<SHOW_FIGURE\((.+?)\)>>)`?/g, (_, __, uuid) => {
       return `\n\n![Figure](${API_URL}/rag/retrieve/figure/${uuid})\n\n`;
     });
+
+    // Fix: Remove backticks wrapping math ($...$) to prevent them from being treated as code blocks
+    // This resolves the "green box" issue where math wouldn't render properly
+    cleaned = cleaned.replace(/`(\$.+?\$)`/g, '$1');
+    
+    return cleaned;
   }, [content, API_URL]);
 
   return (
