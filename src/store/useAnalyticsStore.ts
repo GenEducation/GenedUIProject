@@ -78,8 +78,23 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
 
   fetchAnalyticsSubjects: async (studentId) => {
     try {
-      const data = await studentService.fetchAnalyticsSubjects(studentId);
-      const subjects = (data.subjects || []).filter((s: string) => s !== "General");
+      const data = await studentService.fetchAvailableAgents(studentId);
+      
+      const subjectNames = new Set<string>();
+      if (data.partners && Array.isArray(data.partners)) {
+        data.partners.forEach((partner: any) => {
+          if (partner.subjects && Array.isArray(partner.subjects)) {
+            partner.subjects.forEach((sub: any) => {
+              const subjectName = sub.subject || sub.name;
+              if (subjectName && subjectName !== "General") {
+                subjectNames.add(subjectName);
+              }
+            });
+          }
+        });
+      }
+
+      const subjects = Array.from(subjectNames).sort();
       set({ analyticsSubjects: subjects });
       
       // If no subject selected and we have subjects, select the first one
@@ -104,8 +119,22 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     if (!targetSubject) {
       // First, fetch subjects if none selected
       try {
-        const subData = await studentService.fetchAnalyticsSubjects(effectiveStudentId);
-        const subjects = (subData.subjects || []).filter((s: string) => s !== "General");
+        const agentData = await studentService.fetchAvailableAgents(effectiveStudentId);
+        const subjectNames = new Set<string>();
+        if (agentData.partners && Array.isArray(agentData.partners)) {
+          agentData.partners.forEach((partner: any) => {
+            if (partner.subjects && Array.isArray(partner.subjects)) {
+              partner.subjects.forEach((sub: any) => {
+                const subjectName = sub.subject || sub.name;
+                if (subjectName && subjectName !== "General") {
+                  subjectNames.add(subjectName);
+                }
+              });
+            }
+          });
+        }
+        
+        const subjects = Array.from(subjectNames).sort();
         set({ analyticsSubjects: subjects });
         if (subjects.length > 0) {
           get().fetchAnalyticsData(subjects[0], studentIdOverride);

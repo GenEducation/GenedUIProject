@@ -138,7 +138,7 @@ export const useTutorialStore = create<TutorialState>()(
       currentStepIndex: 0,
       completedActions: {},
       hasEnded: false,
-      hasDismissedCelebration: false,
+      hasDismissedCelebration: true, // Default to true so old users don't see it
 
       getCurrentStep: () => {
         const { currentStepIndex } = get();
@@ -151,7 +151,7 @@ export const useTutorialStore = create<TutorialState>()(
           currentStepIndex: 0,
           completedActions: {},
           hasEnded: false,
-          hasDismissedCelebration: false,
+          hasDismissedCelebration: false, // Reset to false when starting
         });
       },
 
@@ -160,7 +160,7 @@ export const useTutorialStore = create<TutorialState>()(
         if (currentStepIndex < TUTORIAL_SEQUENCE.length - 1) {
           set({ currentStepIndex: currentStepIndex + 1 });
         } else {
-          set({ isActive: false, hasEnded: true });
+          set({ isActive: false, hasEnded: true, hasDismissedCelebration: false });
         }
       },
 
@@ -172,7 +172,11 @@ export const useTutorialStore = create<TutorialState>()(
       },
 
       skipTutorial: () => {
-        set({ isActive: false, hasEnded: true });
+        set({ 
+          isActive: false, 
+          hasEnded: true,
+          hasDismissedCelebration: true // Don't show celebration on skip
+        });
       },
 
       completeAction: (actionId: string) => {
