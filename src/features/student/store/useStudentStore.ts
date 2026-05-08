@@ -1009,11 +1009,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
       set((state) => {
         const isActive = state.activeChat?.id === sessionId;
+        const activeChat = state.activeChat;
         
         // Recover subject from history if current state is generic or missing
-        const updatedActiveChat = (isActive && historySubject && (!state.activeChat?.subject || state.activeChat.subject === "General"))
-          ? { ...state.activeChat, subject: historySubject }
-          : state.activeChat;
+        let updatedActiveChat = activeChat;
+        if (isActive && activeChat && historySubject && (!activeChat.subject || activeChat.subject === "General")) {
+          updatedActiveChat = { ...activeChat, subject: historySubject };
+        }
 
         return {
           activeChat: updatedActiveChat,
