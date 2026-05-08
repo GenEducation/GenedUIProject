@@ -1,54 +1,85 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 /**
  * A hook that takes a target text (which may be updating in chunks via SSE)
- * and slowly plays it out character by character to create a smooth, elegant
- * typing effect.
- * 
+ * and plays it out smoothly to create an elegant typing effect.
+ *
+ * Key improvements over v1:
+ * 1. Dynamic step size — catches up faster when a large burst arrives.
+ * 2. Immediate flush on stream end — no orphaned characters after streaming stops.
+ * 3. All state mutations are inside useEffect — no illegal setState-in-render.
+ *
  * @param targetText The full text received so far
  * @param isStreaming Whether the backend is currently still sending text
- * @param baseSpeedMs Base speed in milliseconds per character
+ * @param baseSpeedMs Base speed in milliseconds per tick (default 15ms)
  */
 export function useSmoothStream(targetText: string, isStreaming: boolean, baseSpeedMs = 15) {
-  const [displayedText, setDisplayedText] = useState(() => isStreaming ? "" : targetText);
-  const [wasEverStreaming, setWasEverStreaming] = useState(isStreaming);
-  const [prevTargetText, setPrevTargetText] = useState(targetText);
+  // Start empty during streaming, start at full text for historical messages
+  const [displayedText, setDisplayedText] = useState(() => (isStreaming ? "" : targetText));
 
-  // Sync wasEverStreaming during render if it transitions to true
-  if (isStreaming && !wasEverStreaming) {
-    setWasEverStreaming(true);
-  }
+  // Track the previous targetText to detect resets (e.g. switching chat)
+  const prevTargetRef = useRef(targetText);
 
-  // Handle sudden resets or property changes during render
-  // (e.g. switching active chat or clear text)
-  if (targetText !== prevTargetText) {
-    setPrevTargetText(targetText);
-    
-    // If it's a reset (text shortened) or a non-streaming historical chat
-    if (targetText.length < displayedText.length || targetText === "" || (!isStreaming && !wasEverStreaming)) {
+  // -- Effect 1: Handle resets & historical messages --------------------------
+  // If targetText suddenly gets shorter (chat switch / clear), or was never
+  // streaming (historical load), snap directly to the full text immediately.
+  useEffect(() => {
+    const prevTarget = prevTargetRef.current;
+    prevTargetRef.current = targetText;
+
+    const isShorter = targetText.length < prevTarget.length;
+    const isReset = targetText === "";
+    const isHistorical = !isStreaming && prevTarget === targetText;
+
+    if (isShorter || isReset) {
+      // Chat was switched or cleared — snap instantly
+      setDisplayedText(targetText);
+    } else if (isHistorical && targetText !== "") {
+      // Historical chat loaded with no streaming — show immediately
       setDisplayedText(targetText);
     }
-  }
+  }, [targetText, isStreaming]);
 
+  // -- Effect 2: Flush remaining text immediately when stream ends ------------
   useEffect(() => {
-    // If it is NOT streaming, AND it NEVER streamed in this component's lifetime
-    // (i.e. loading historical chats), we handle this in the render phase above.
-    if (!isStreaming && !wasEverStreaming) return;
+    if (!isStreaming) {
+      // Stream has ended — flush any remaining buffered characters right away
+      setDisplayedText((prev) => {
+        if (prev !== targetText) return targetText;
+        return prev;
+      });
+    }
+  }, [isStreaming, targetText]);
 
-    // Determine how many characters we are behind
+  // -- Effect 3: The typing animation loop -----------------------------------
+  useEffect(() => {
+    // Only animate when actively streaming
+    if (!isStreaming) return;
+
     const lag = targetText.length - displayedText.length;
 
-    if (lag > 0) {
-      // Constant speed: add 1 character per tick
-      const stepSize = 1;
+    // Nothing left to type
+    if (lag <= 0) return;
 
-      const timeout = setTimeout(() => {
-        setDisplayedText((prev) => targetText.slice(0, prev.length + stepSize));
-      }, baseSpeedMs);
-
-      return () => clearTimeout(timeout);
+    // Dynamic step size:
+    // - Small lag (< 30 chars): type 1 char/tick for a natural look
+    // - Medium lag (30–100): accelerate to catch up smoothly
+    // - Large lag (> 100): jump ahead quickly to avoid falling far behind
+    let stepSize: number;
+    if (lag > 100) {
+      stepSize = Math.ceil(lag / 10); // big burst — catch up fast
+    } else if (lag > 30) {
+      stepSize = Math.ceil(lag / 20); // medium lag — moderate catch-up
+    } else {
+      stepSize = 1; // small lag — natural 1-char typewriter
     }
-  }, [targetText, displayedText, isStreaming, wasEverStreaming, baseSpeedMs]);
+
+    const timeout = setTimeout(() => {
+      setDisplayedText((prev) => targetText.slice(0, prev.length + stepSize));
+    }, baseSpeedMs);
+
+    return () => clearTimeout(timeout);
+  }, [targetText, displayedText, isStreaming, baseSpeedMs]);
 
   return displayedText;
 }

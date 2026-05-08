@@ -1,4 +1,4 @@
-import { FigureView } from './MarkdownRenderer';
+import { FigureView } from './FigureView';
 
 interface VisualBlockProps {
   svg?: string;

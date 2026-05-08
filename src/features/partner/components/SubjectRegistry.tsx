@@ -69,7 +69,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                   <div className="flex-1 flex flex-col">
                     <div className="flex items-center justify-between pr-4 w-full">
                       {/* Left: Agent Name & Grade */}
-                      <div className="flex flex-col gap-0.5 group-hover:translate-x-1 transition-transform min-w-[140px]">
+                      <div className="flex flex-col gap-0.5 group-hover:translate-x-1 transition-transform w-[280px] md:w-[320px] shrink-0">
                         <h3 className="text-base md:text-lg font-bold text-[#1A3D2C] tracking-tight flex items-center gap-2">
                           {subject.agent}
                         </h3>
@@ -79,8 +79,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                       </div>
 
                       {/* Middle: Subject */}
-                      <div className="hidden sm:flex flex-1 justify-center">
-                        <span className="text-sm font-bold text-[#1A3D2C]/70 bg-[#1A3D2C]/5 px-4 py-1.5 rounded-xl border border-[#1A3D2C]/10">
+                      <div className="hidden sm:flex flex-1 items-center">
+                        <span className="text-sm font-bold text-[#1A3D2C]/70 bg-[#1A3D2C]/5 px-4 py-1.5 rounded-xl border border-[#1A3D2C]/10 capitalize">
                           {subject.subject}
                         </span>
                       </div>
