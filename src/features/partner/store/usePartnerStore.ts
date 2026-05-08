@@ -32,6 +32,7 @@ interface PartnerState {
 
   // --- UI State ---
   isLoading: boolean;
+  showUploadModal: boolean;
 
   // --- Actions ---
   // Analytics Actions
@@ -47,6 +48,7 @@ interface PartnerState {
   cancelIngestion: (tempId: string) => Promise<void>;
   removeSubject: (agentId: string) => Promise<void>;
   removeStudent: (studentId: string) => Promise<void>;
+  setShowUploadModal: (show: boolean) => void;
 
   // Auth/Logout Action
   logoutPartner: () => void;
@@ -75,8 +77,10 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   selectedStudent: null,
   subjects: [],
   isLoading: false,
+  showUploadModal: false,
 
   setSelectedStudent: (student) => set({ selectedStudent: student }),
+  setShowUploadModal: (show) => set({ showUploadModal: show }),
 
   // -- Fetch students from backend ----------------------------------------─
   fetchStudents: async () => {

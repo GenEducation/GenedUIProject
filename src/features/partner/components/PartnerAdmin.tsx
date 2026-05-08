@@ -9,6 +9,7 @@ import { CurriculumIngestion } from "./CurriculumIngestion";
 import { AnimatePresence, motion } from "framer-motion";
 import { NotificationBell } from "@/components/NotificationBell";
 import { User } from "lucide-react";
+import { usePartnerStore } from "../store/usePartnerStore";
 
 export function PartnerAdmin() {
   const router = useRouter();
@@ -18,7 +19,8 @@ export function PartnerAdmin() {
   // Derive active view from URL - Analytics is now the default
   const activeView: "subjects" | "analytics" = pathname === '/partner/subjects' ? 'subjects' : 'analytics';
 
-  const [showUploadModal, setShowUploadModal] = useState(false);
+  const showUploadModal = usePartnerStore((state) => state.showUploadModal);
+  const setShowUploadModal = usePartnerStore((state) => state.setShowUploadModal);
 
   const rawPartnerId = typeof window !== 'undefined' ? localStorage.getItem("gened_partner_id") : null;
   const partnerId = rawPartnerId?.replace(/['"]+/g, "");

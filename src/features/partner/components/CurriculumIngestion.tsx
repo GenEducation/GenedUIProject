@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, X, FileText, Check, RotateCcw } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { usePartnerStore } from "../store/usePartnerStore";
 import { PageWisePreview } from "./PageWisePreview";
 
@@ -33,6 +33,11 @@ export function CurriculumIngestion({
   
   const uploadCurriculum = usePartnerStore((state) => state.uploadCurriculum);
 
+  useEffect(() => {
+    console.log("CurriculumIngestion: Mounted");
+    return () => console.log("CurriculumIngestion: Unmounted");
+  }, []);
+
   const validateFile = (selectedFile: File) => {
     if (selectedFile.type !== "application/pdf" && !selectedFile.name.toLowerCase().endsWith(".pdf")) {
       setFileError("Invalid document type. Only PDF files are allowed.");
@@ -54,14 +59,11 @@ export function CurriculumIngestion({
     if (!subjectName || !documentTitle || !agentName || !grade || !file) return;
     
     setIsProcessing(true);
-    try {
-      await uploadCurriculum(file, subjectName, documentTitle, agentName, grade, board, documentType);
-      onClose();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsProcessing(false);
-    }
+    // Trigger upload (handles its own success/error state updates)
+    uploadCurriculum(file, subjectName, documentTitle, agentName, grade, board, documentType);
+    
+    // Close immediately as per user request
+    onClose();
   };
 
   const hasFile = !!file;
@@ -194,9 +196,9 @@ export function CurriculumIngestion({
                       className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
                     >
                       <option value="">Grade</option>
-                      <option value="4">Grade 4</option>
-                      <option value="5">Grade 5</option>
-                      <option value="6">Grade 6</option>
+                      {[...Array(12)].map((_, i) => (
+                        <option key={i + 1} value={i + 1}>Grade {i + 1}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="space-y-2">

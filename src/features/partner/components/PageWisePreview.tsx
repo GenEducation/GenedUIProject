@@ -4,18 +4,36 @@ import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, FileText, Maximize2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { PDFDocument } from 'pdf-lib';
+
 interface PageWisePreviewProps {
   file: File;
 }
 
 export function PageWisePreview({ file }: PageWisePreviewProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [isPageLoading, setIsPageLoading] = useState(false);
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
     setFileUrl(url);
+
+    // Detect total pages
+    const loadPdf = async () => {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+        const count = pdfDoc.getPageCount();
+        console.log("PDF loaded with pdf-lib, total pages:", count);
+        setTotalPages(count);
+      } catch (error) {
+        console.error("Error loading PDF for page count:", error);
+      }
+    };
+    loadPdf();
+
     return () => {
       URL.revokeObjectURL(url);
     };
@@ -24,7 +42,7 @@ export function PageWisePreview({ file }: PageWisePreviewProps) {
   // Reset loading state after a brief delay to mask the PDF jump
   useEffect(() => {
     if (isPageLoading) {
-      const timer = setTimeout(() => setIsPageLoading(false), 400);
+      const timer = setTimeout(() => setIsPageLoading(false), 800);
       return () => clearTimeout(timer);
     }
   }, [isPageLoading, currentPage]);
@@ -37,8 +55,10 @@ export function PageWisePreview({ file }: PageWisePreviewProps) {
   };
 
   const handleNextPage = () => {
-    setIsPageLoading(true);
-    setCurrentPage(currentPage + 1);
+    if (currentPage < totalPages) {
+      setIsPageLoading(true);
+      setCurrentPage(currentPage + 1);
+    }
   };
 
   if (!fileUrl) return null;
@@ -73,8 +93,9 @@ export function PageWisePreview({ file }: PageWisePreviewProps) {
         <div className="relative h-full aspect-[1/1.414] max-w-[800px] bg-white shadow-2xl rounded-lg overflow-hidden group">
           <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ width: 'calc(100% + 40px)', height: 'calc(100% + 40px)', margin: '-20px' }}>
             <iframe 
+              key={`${fileUrl}-${currentPage}`}
               src={`${fileUrl}#page=${currentPage}&toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
-              className="w-full h-full border-none"
+              className={`w-full h-full border-none transition-opacity duration-300 ${isPageLoading ? 'opacity-0' : 'opacity-100'}`}
               title="Document Preview"
             />
           </div>
@@ -106,12 +127,16 @@ export function PageWisePreview({ file }: PageWisePreviewProps) {
         
         <div className="flex flex-col items-center min-w-[60px]">
           <span className="text-[10px] font-black text-[#1A3D2C]/40 uppercase tracking-widest">Page</span>
-          <span className="text-lg font-black text-[#1A3D2C]">{currentPage}</span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-lg font-black text-[#1A3D2C]">{currentPage}</span>
+            <span className="text-xs font-bold text-[#1A3D2C]/30">/ {totalPages}</span>
+          </div>
         </div>
 
         <button 
           onClick={handleNextPage}
-          className="w-14 h-14 flex items-center justify-center rounded-2xl bg-[#F8F9F8] text-[#1A3D2C]/40 hover:text-[#1A3D2C] hover:bg-[#D1E6D9]/30 transition-all shadow-sm"
+          disabled={currentPage >= totalPages}
+          className="w-14 h-14 flex items-center justify-center rounded-2xl bg-[#F8F9F8] text-[#1A3D2C]/40 hover:text-[#1A3D2C] hover:bg-[#D1E6D9]/30 disabled:opacity-30 transition-all shadow-sm"
         >
           <ChevronRight size={28} />
         </button>
