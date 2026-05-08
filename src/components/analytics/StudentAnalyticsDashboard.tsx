@@ -11,6 +11,7 @@ import { MetricCard } from "./MetricCard";
 import { SkillMasteryView } from "./SkillMasteryView";
 import { ChapterMasteryView } from "./ChapterMasteryView";
 import { SkillProgression } from "./SkillProgression";
+import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 
 type TabType = "chapter" | "skill" | "progression";
 
@@ -41,6 +42,8 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
     isAnalyticsLoading,
     skillProgression,
   } = useAnalyticsStore();
+
+  const { isActive, nextStep, completeAction, getCurrentStep } = useTutorialStore();
 
   // Use prop ID if available (parent mode), otherwise fallback to logged-in student's ID
   const effectiveStudentId = propStudentId || studentProfile?.user_id;
@@ -81,7 +84,9 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
     },
     {
       label: "Skill Index",
-      value: skillSummary ? skillSummary.skill_index.toFixed(2) : "0.00",
+      value: (skillSummary?.skill_index !== undefined && skillSummary?.skill_index !== null) 
+        ? skillSummary.skill_index.toFixed(2) 
+        : "0.00",
       subValue: "/ 1.00",
       icon: <GraduationCap size={18} />,
       description: "Calculated across 8 foundational cognitive skills identified in your learning sessions."
@@ -121,7 +126,14 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
         {mode === "student" && (
           <>
             <button 
-              onClick={() => router.back()}
+              onClick={() => {
+                const currentStep = getCurrentStep();
+                if (isActive && currentStep?.id === "go-to-chat") {
+                  completeAction("navigate");
+                  nextStep();
+                }
+                router.back();
+              }}
               className="flex items-center gap-2 text-[#1a3a2a]/60 hover:text-[#1a3a2a] transition-all group lg:min-w-[80px]"
               data-tutorial="analytics-back-button"
             >
@@ -142,9 +154,13 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                     onChange={(e) => handleSubjectChange(e.target.value)}
                     className="text-xl font-black text-[#1a3a2a] bg-transparent border-none focus:ring-0 cursor-pointer appearance-none p-0 pr-8 hover:text-[#059669] transition-colors"
                   >
-                    {analyticsSubjects.map(sub => (
-                      <option key={sub} value={sub}>{sub}</option>
-                    ))}
+                    {analyticsSubjects.length > 0 ? (
+                      analyticsSubjects.map(sub => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))
+                    ) : (
+                      <option value="">No Subjects Found</option>
+                    )}
                   </select>
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-[#1a3a2a]/30 group-hover:text-[#059669] transition-colors">
                     <ChevronDown size={18} strokeWidth={3} />

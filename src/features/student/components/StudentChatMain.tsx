@@ -9,6 +9,7 @@ import { useStudentStore, ChatMessage, ChatSession } from "../store/useStudentSt
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { StudentChatInput } from "./StudentChatInput";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
+import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 
 interface StudentChatMainProps {
   activeChat: ChatSession;
@@ -52,13 +53,23 @@ export function StudentChatMain({
 
   const isNewChat = messages.length === 0 && !isHistoryLoading;
 
+  const { isActive, nextStep, completeAction, getCurrentStep } = useTutorialStore();
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-white">
       {/* Top bar */}
       <header className="flex items-center justify-between px-6 py-5 border-b border-[#042E5C]/8 bg-white flex-shrink-0">
         <div className="flex items-center gap-4">
           <button
-            onClick={toggleSidebar}
+            onClick={() => {
+              toggleSidebar();
+              const currentStep = getCurrentStep();
+              if (isActive && currentStep?.requiresAction === "open_sidebar") {
+                completeAction("open_sidebar");
+                nextStep();
+              }
+            }}
+            data-tutorial="hamburger-menu"
             className="w-10 h-10 rounded-xl bg-[#F4F3EE] flex items-center justify-center text-[#042E5C]/60 hover:text-[#042E5C] transition-all"
           >
             <Menu size={20} />

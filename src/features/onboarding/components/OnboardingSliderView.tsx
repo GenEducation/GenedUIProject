@@ -105,7 +105,7 @@ export const OnboardingSliderView: React.FC<OnboardingSliderViewProps> = ({
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="w-full max-w-4xl overflow-hidden rounded-[2.5rem] border border-white/20 bg-white/80 shadow-[0_32px_80px_rgba(4,46,92,0.12)] backdrop-blur-xl min-h-[580px] flex flex-col"
+        className="w-full max-w-4xl overflow-hidden rounded-[2.5rem] border border-white/20 bg-white/80 shadow-[0_32px_80px_rgba(4,46,92,0.12)] backdrop-blur-xl flex flex-col"
       >
         <AnimatePresence mode="wait">
           {!isStarted ? (
@@ -116,8 +116,8 @@ export const OnboardingSliderView: React.FC<OnboardingSliderViewProps> = ({
               exit={{ opacity: 0, scale: 0.95 }}
               className="flex h-full w-full flex-col md:flex-row"
             >
-              {/* Left Column: Visuals & Benefits */}
-              <div className="relative flex flex-1 flex-col items-center justify-center bg-gradient-to-br from-[#059F6D] to-[#042e5c] p-10 text-white overflow-hidden">
+              {/* Left Column: Visuals & Benefits — hidden on mobile, shown on md+ */}
+              <div className="hidden md:flex md:relative md:flex-1 flex-col items-center justify-center bg-gradient-to-br from-[#059F6D] to-[#042e5c] p-10 text-white overflow-hidden">
                 {/* Decorative Stars/Sparks */}
                 <div className="absolute top-10 left-10 w-2 h-2 bg-yellow-300 rounded-full blur-[1px] animate-pulse" />
                 <div className="absolute top-40 right-20 w-3 h-3 bg-blue-300 rounded-full blur-[1px] opacity-60" />
@@ -163,9 +163,17 @@ export const OnboardingSliderView: React.FC<OnboardingSliderViewProps> = ({
               </div>
 
               {/* Right Column: Call to Action */}
-              <div className="flex flex-1 flex-col bg-white p-10 sm:p-14">
+              <div className="flex flex-col bg-white p-6 sm:p-10 md:p-14 flex-1 overflow-y-auto">
+                {/* Mobile-only top banner */}
+                <div className="flex items-center gap-3 mb-6 md:hidden bg-gradient-to-r from-[#059F6D] to-[#042e5c] rounded-2xl px-4 py-3">
+                  <span className="text-2xl">🎓</span>
+                  <div>
+                    <p className="text-white font-black text-sm">GenEd AI</p>
+                    <p className="text-white/70 text-xs">Your personal learning guide</p>
+                  </div>
+                </div>
                 <div className="mb-auto">
-                  <h2 className="font-serif text-3xl font-extrabold text-[#042e5c] leading-tight mb-4">
+                  <h2 className="font-serif text-2xl md:text-3xl font-extrabold text-[#042e5c] leading-tight mb-4">
                     Let's build your <br /><span className="text-[#059F6D]">learning profile</span>
                   </h2>
                   <p className="text-sm text-[#042e5c]/60 leading-relaxed font-medium">
@@ -184,7 +192,7 @@ export const OnboardingSliderView: React.FC<OnboardingSliderViewProps> = ({
                   </div>
                 </div>
 
-                <div className="mt-12 space-y-6">
+                <div className="mt-8 space-y-6">
                   <button
                     onClick={() => setIsStarted(true)}
                     className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-[#059F6D] py-4.5 text-sm font-bold text-white shadow-xl shadow-[#059F6D]/20 transition-all hover:bg-[#047a54] active:scale-[0.98]"
@@ -207,7 +215,7 @@ export const OnboardingSliderView: React.FC<OnboardingSliderViewProps> = ({
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-8 p-8 sm:p-14"
+              className="space-y-6 p-6 sm:p-10 overflow-y-auto flex-1"
             >
               {/* Progress Bar */}
               <div className="mb-12 flex gap-2">
@@ -231,7 +239,7 @@ export const OnboardingSliderView: React.FC<OnboardingSliderViewProps> = ({
                   className="space-y-8"
                 >
                   <div>
-                    <h2 className="font-serif text-3xl font-extrabold text-[#042e5c] sm:text-4xl">
+                    <h2 className="font-serif text-2xl sm:text-3xl font-extrabold text-[#042e5c] sm:text-4xl">
                       {currentQuestion.title}
                     </h2>
                     <p className="mt-2 text-lg text-[#042e5c]/60">
@@ -253,7 +261,7 @@ export const OnboardingSliderView: React.FC<OnboardingSliderViewProps> = ({
                       }
                     }}
                     placeholder={currentQuestion.placeholder}
-                    className="min-h-[200px] w-full rounded-2xl border border-[#042e5c]/10 bg-white/50 p-6 text-lg text-[#042e5c] transition-all focus:border-[#059F6D] focus:outline-none focus:ring-4 focus:ring-[#059F6D]/5"
+                    className="min-h-[140px] sm:min-h-[200px] w-full rounded-2xl border border-[#042e5c]/10 bg-white/50 p-4 sm:p-6 text-base sm:text-lg text-[#042e5c] transition-all focus:border-[#059F6D] focus:outline-none focus:ring-4 focus:ring-[#059F6D]/5"
                   />
                 </motion.div>
               </AnimatePresence>

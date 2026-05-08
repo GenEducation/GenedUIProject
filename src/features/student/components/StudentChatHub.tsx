@@ -10,6 +10,8 @@ import { StudentChatInput } from "./StudentChatInput";
 import { AlertCircle, ChevronRight, Clock, Bot, Menu, LogOut } from "lucide-react";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
+import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
+import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 
 interface StudentChatHubProps {
   toggleSidebar: () => void;
@@ -36,13 +38,16 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
     fetchOnboardingStatus
   } = useStudentStore();
 
+  const { dnaStatus, checkDNAStatus } = useOnboardingStore();
+
   useEffect(() => {
     if (studentProfile) {
       fetchSessions();
       fetchAvailableAgents();
       fetchOnboardingStatus();
+      checkDNAStatus(studentProfile.user_id);
     }
-  }, [studentProfile, fetchSessions, fetchAvailableAgents, fetchOnboardingStatus]);
+  }, [studentProfile, fetchSessions, fetchAvailableAgents, fetchOnboardingStatus, checkDNAStatus]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -93,6 +98,8 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
 
   const hasAgents = availableAgents.length > 0;
 
+  const { isActive, nextStep, completeAction, getCurrentStep } = useTutorialStore();
+
   return (
     <div className="flex-1 flex flex-col h-full bg-[#F4F3EE]/30 overflow-hidden">
       <style>{animateGradientStyle}</style>
@@ -100,7 +107,15 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
       {/* Mobile-friendly Header */}
       <header className="lg:hidden flex items-center justify-between px-6 py-4 bg-white border-b border-[#042E5C]/8 flex-shrink-0">
         <button
-          onClick={toggleSidebar}
+          onClick={() => {
+            toggleSidebar();
+            const currentStep = getCurrentStep();
+            if (isActive && currentStep?.requiresAction === "open_sidebar") {
+              completeAction("open_sidebar");
+              nextStep();
+            }
+          }}
+          data-tutorial="hamburger-menu"
           className="w-10 h-10 rounded-xl bg-[#F4F3EE] flex items-center justify-center text-[#042E5C]/60 hover:text-[#042E5C] transition-all"
         >
           <Menu size={20} />
@@ -110,7 +125,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
       </header>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-6 py-12 space-y-12">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-10 sm:space-y-12">
         
         {/* 1. Greeting & Onboarding Alert */}
         <div className="relative space-y-6">
@@ -119,10 +134,10 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight animate-gradient-text">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight animate-gradient-text">
               {greeting}, {username}!
             </h1>
-            <p className="text-xl md:text-2xl font-bold text-[#042E5C]/60 tracking-tight">
+            <p className="text-base sm:text-xl md:text-2xl font-bold text-[#042E5C]/60 tracking-tight">
               Where should we start?
             </p>
           </motion.header>
@@ -131,10 +146,10 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             <motion.div
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between shadow-sm"
+              className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
                   <AlertCircle size={20} />
                 </div>
                 <div>
@@ -142,7 +157,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                   <p className="text-xs text-amber-700/70">Complete your onboarding for {onboardingSubjects.map(s => s.subject).join(" & ")}.</p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-shrink-0 flex-wrap">
                 {onboardingSubjects.map(agent => (
                   <button
                     key={agent.agent_id}

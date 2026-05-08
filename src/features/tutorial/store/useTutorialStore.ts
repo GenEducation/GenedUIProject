@@ -9,9 +9,21 @@ export interface TutorialStepDef {
   position?: "top" | "bottom" | "left" | "right";
   expectedRoute?: string;
   requiresAction?: string;
+  mobileOnly?: boolean;
 }
 
 export const TUTORIAL_SEQUENCE: TutorialStepDef[] = [
+  // 0. Mobile Hamburger Menu (Mobile Only)
+  {
+    id: "hamburger-menu",
+    target: '[data-tutorial="hamburger-menu"]',
+    title: "Open Menu",
+    description: "On smaller screens, you can access your profile and analytics from this menu icon.",
+    expectedRoute: "/student",
+    position: "bottom",
+    mobileOnly: true,
+    requiresAction: "open_sidebar"
+  },
   // 1. Start in Chat Hub
   {
     id: "go-to-profile",
@@ -50,6 +62,16 @@ export const TUTORIAL_SEQUENCE: TutorialStepDef[] = [
     requiresAction: "navigate"
   },
   {
+    id: "hamburger-menu-analytics",
+    target: '[data-tutorial="hamburger-menu"]',
+    title: "Open Menu",
+    description: "Open the menu again to find your Analytics dashboard.",
+    expectedRoute: "/student",
+    position: "bottom",
+    mobileOnly: true,
+    requiresAction: "open_sidebar"
+  },
+  {
     id: "go-to-analytics",
     target: '[data-tutorial="analytics-nav"]',
     title: "Track Progress",
@@ -81,34 +103,16 @@ export const TUTORIAL_SEQUENCE: TutorialStepDef[] = [
     title: "Skill Progression",
     description: "This shows how your skills have improved over time.",
     expectedRoute: "/student/analytics",
-    position: "bottom"
   },
   {
     id: "go-to-chat",
     target: '[data-tutorial="analytics-back-button"]',
-    title: "Back to Learning",
-    description: "Let's head back to the Chat Hub to start learning. Click the Back button.",
+    title: "You're All Set!",
+    description: "Amazing work! Click Back to return to the Chat Hub and start your learning journey.",
     expectedRoute: "/student/analytics",
     position: "bottom",
     requiresAction: "navigate"
   },
-  // 4. Chat Hub
-  {
-    id: "new-chat",
-    target: '[data-tutorial="new-chat"]',
-    title: "Start a Conversation",
-    description: "Click here to start a new chat with a Socratic agent.",
-    expectedRoute: "/student",
-    position: "bottom"
-  },
-  {
-    id: "agent-picker-info",
-    target: '[data-tutorial="new-chat"]', 
-    title: "Select an Agent",
-    description: "You can pick different agents specializing in various subjects to start learning. You're all set!",
-    expectedRoute: "/student",
-    position: "bottom"
-  }
 ];
 
 interface TutorialState {
@@ -116,12 +120,15 @@ interface TutorialState {
   currentStepIndex: number;
   completedActions: Record<string, boolean>;
   hasEnded: boolean;
+  hasDismissedCelebration: boolean;
   
   startTutorial: () => void;
   nextStep: () => void;
   prevStep: () => void;
   skipTutorial: () => void;
   completeAction: (actionId: string) => void;
+  getCurrentStep: () => TutorialStepDef | null;
+  dismissCelebration: () => void;
 }
 
 export const useTutorialStore = create<TutorialState>()(
@@ -131,6 +138,12 @@ export const useTutorialStore = create<TutorialState>()(
       currentStepIndex: 0,
       completedActions: {},
       hasEnded: false,
+      hasDismissedCelebration: false,
+
+      getCurrentStep: () => {
+        const { currentStepIndex } = get();
+        return TUTORIAL_SEQUENCE[currentStepIndex] || null;
+      },
 
       startTutorial: () => {
         set({
@@ -138,6 +151,7 @@ export const useTutorialStore = create<TutorialState>()(
           currentStepIndex: 0,
           completedActions: {},
           hasEnded: false,
+          hasDismissedCelebration: false,
         });
       },
 
@@ -168,6 +182,10 @@ export const useTutorialStore = create<TutorialState>()(
             [actionId]: true,
           },
         }));
+      },
+
+      dismissCelebration: () => {
+        set({ hasDismissedCelebration: true });
       },
     }),
     {

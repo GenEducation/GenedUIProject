@@ -58,11 +58,11 @@ export function StudentProfile() {
   return (
     <div className="min-h-screen bg-[#F4F3EE] font-sans flex flex-col overflow-y-auto">
       {/* Top Header Logo */}
-      <div className="px-8 py-5 flex items-center justify-between">
+      <div className="px-4 sm:px-8 py-5 flex items-center justify-between">
         <img src="/Logo.svg" alt="Scholarly Logo" className="h-10 w-auto" />
       </div>
 
-      <div className="flex-1 w-full max-w-4xl mx-auto px-8 pb-20 space-y-12 mt-4">
+      <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-8 pb-20 space-y-8 sm:space-y-12 mt-4">
         {/* Top Controls: Back & Logout */}
         <div className="flex items-center justify-between">
           <button 
@@ -85,7 +85,7 @@ export function StudentProfile() {
 
         {/* Title area */}
         <div className="space-y-3 max-w-2xl">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-[#1a3a2a] tracking-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#1a3a2a] tracking-tight">
             Student Identity
           </h1>
           <p className="text-[#1a3a2a]/60 text-[15px] leading-relaxed font-medium">
@@ -94,7 +94,7 @@ export function StudentProfile() {
         </div>
 
         {/* Content Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8 items-start">
           
           {/* Left Column */}
           <div className="md:col-span-7 space-y-8">
@@ -217,7 +217,7 @@ export function StudentProfile() {
 
             {/* Parent Access */}
             <div 
-              className="bg-white border border-[#1a3a2a]/5 rounded-3xl p-8 space-y-6 shadow-sm overflow-hidden"
+              className="bg-white border border-[#1a3a2a]/5 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm overflow-hidden"
               data-tutorial="parent-access"
             >
               <div className="flex items-center gap-3 text-[#1a3a2a] font-bold">

@@ -161,7 +161,7 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 16 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full max-w-4xl h-[85vh] max-h-[700px] overflow-hidden rounded-[2.5rem] border border-white/20 bg-white shadow-[0_32px_80px_rgba(4,46,92,0.18)] flex"
+        className="w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-[2rem] border border-white/20 bg-white shadow-[0_32px_80px_rgba(4,46,92,0.18)] flex flex-col md:flex-row"
       >
         {/* Left Panel */}
         <div className="hidden md:flex w-[320px] shrink-0 flex-col bg-gradient-to-br from-[#059F6D] to-[#042e5c] text-white relative overflow-hidden p-8">
@@ -251,7 +251,7 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-5">
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full gap-4">
                 <div className="w-10 h-10 rounded-full border-4 border-[#042E5C]/10 border-t-[#042E5C]/40 animate-spin" />
@@ -297,7 +297,7 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
           </div>
 
           {/* Input */}
-          <div className="px-5 py-4 border-t border-[#042E5C]/5 bg-white shrink-0">
+          <div className="px-4 sm:px-5 py-4 border-t border-[#042E5C]/5 bg-white shrink-0">
             <div className={`flex items-end gap-3 bg-[#F8F9FA] border rounded-[2rem] px-5 py-3 transition-all focus-within:bg-white focus-within:shadow-md ${
               isVoiceOnly ? "border-red-400/50" : "border-[#042E5C]/10 focus-within:border-[#042E5C]/20"
             }`}>

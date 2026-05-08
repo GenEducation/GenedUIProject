@@ -79,7 +79,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   fetchAnalyticsSubjects: async (studentId) => {
     try {
       const data = await studentService.fetchAnalyticsSubjects(studentId);
-      const subjects = data.subjects || [];
+      const subjects = (data.subjects || []).filter((s: string) => s !== "General");
       set({ analyticsSubjects: subjects });
       
       // If no subject selected and we have subjects, select the first one
@@ -105,7 +105,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       // First, fetch subjects if none selected
       try {
         const subData = await studentService.fetchAnalyticsSubjects(effectiveStudentId);
-        const subjects = subData.subjects || [];
+        const subjects = (subData.subjects || []).filter((s: string) => s !== "General");
         set({ analyticsSubjects: subjects });
         if (subjects.length > 0) {
           get().fetchAnalyticsData(subjects[0], studentIdOverride);
