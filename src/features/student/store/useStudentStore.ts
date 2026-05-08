@@ -979,6 +979,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       if (!response.ok) throw new Error("Failed to fetch history");
       const data = await response.json();
 
+      // Extract subject from history if activeChat is missing it or has "General"
+      const historySubject = data.history?.[0]?.meta_data?.subject;
+
       const mappedMessages: ChatMessage[] = (data.history || []).map(
         (h: any, i: number) => {
           const content = h.content || "";
@@ -1006,7 +1009,14 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
       set((state) => {
         const isActive = state.activeChat?.id === sessionId;
+        
+        // Recover subject from history if current state is generic or missing
+        const updatedActiveChat = (isActive && historySubject && (!state.activeChat?.subject || state.activeChat.subject === "General"))
+          ? { ...state.activeChat, subject: historySubject }
+          : state.activeChat;
+
         return {
+          activeChat: updatedActiveChat,
           messages: isActive ? mappedMessages : state.messages,
           chatMessagesCache: manageCacheEviction(state.chatMessagesCache, sessionId, mappedMessages),
           isHistoryLoading: false,
