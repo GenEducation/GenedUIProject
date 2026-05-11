@@ -27,7 +27,8 @@ export function StudentChatView() {
     studentProfile, 
     isSessionsLoading, 
     closeChat,
-    isAgentPickerOpen
+    isAgentPickerOpen,
+    sendMessage
   } = useStudentStore();
 
   // Sidebar toggle state
@@ -70,8 +71,25 @@ export function StudentChatView() {
       router.replace(`/student/chat/${activeChat.id}`);
     }
   }, [activeChat?.id, sessionId, router]);
+  
+  // 3. Auto-start logic for new chats
+  useEffect(() => {
+    // Only trigger if we have an active "new" chat with no messages and AI isn't already typing
+    if (
+      activeChat && 
+      (activeChat.id === "new" || activeChat.id === "new-focused") && 
+      messages.length === 0 && 
+      !isAITyping
+    ) {
+      // Small delay to ensure UI transition is smooth
+      const timer = setTimeout(() => {
+        sendMessage("hello, let's start studying");
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [activeChat?.id, messages.length, isAITyping, sendMessage]);
 
-  // 3. Determine if we are in the "Hub" state (Discovery) or "Chat" state (Active)
+  // 4. Determine if we are in the "Hub" state (Discovery) or "Chat" state (Active)
   const isHubState = !sessionId && !activeChat && messages.length === 0 && !isAITyping;
 
   // 4. Safety Guard: If we have a sessionId but no activeChat yet (history loading), show loading

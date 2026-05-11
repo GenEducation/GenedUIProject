@@ -161,7 +161,7 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 16 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-[2rem] border border-white/20 bg-white shadow-[0_32px_80px_rgba(4,46,92,0.18)] flex flex-col md:flex-row"
+        className="w-full max-w-4xl h-[92vh] sm:max-h-[90vh] overflow-hidden sm:rounded-[2rem] rounded-t-[2rem] border border-white/20 bg-white shadow-[0_32px_80px_rgba(4,46,92,0.18)] flex flex-col md:flex-row"
       >
         {/* Left Panel */}
         <div className="hidden md:flex w-[320px] shrink-0 flex-col bg-gradient-to-br from-[#059F6D] to-[#042e5c] text-white relative overflow-hidden p-8">
@@ -175,7 +175,7 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
             <div className="inline-flex items-center gap-3 bg-white/10 border border-white/10 backdrop-blur-md rounded-2xl px-4 py-3">
               <span className="text-2xl">{subjectIcon}</span>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 leading-none mb-1">Assessment</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 leading-none mb-1">Onboarding</p>
                 <p className="text-sm font-extrabold text-white leading-tight">{subject}</p>
               </div>
             </div>
@@ -183,7 +183,7 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
           </div>
 
           {/* Character */}
-          <div className="relative z-10 flex flex-1 items-center justify-center min-h-0">
+          <div className="relative z-10 flex flex-1 items-center justify-center min-h-0 -mt-10">
             <div className="relative scale-90">
               <div className="absolute inset-0 rounded-full bg-white/5 blur-2xl scale-110" />
               <WavingStudentCharacter />
@@ -224,7 +224,7 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
 
             <div className="pt-5 border-t border-white/10 flex items-center gap-2">
               <ShieldCheck size={14} className="text-[#059F6D] shrink-0" />
-              <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest">Secure Assessment</p>
+              <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest">Secure Onboarding</p>
             </div>
           </div>
         </div>
@@ -238,7 +238,7 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
                 <h2 className="font-extrabold text-[#042E5C] text-[15px] leading-tight">GenEd Onboarding</h2>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#059F6D] animate-pulse block" />
-                  <p className="text-[10px] font-bold text-[#042E5C]/40 uppercase tracking-widest">Assessment in progress</p>
+                  <p className="text-[10px] font-bold text-[#042E5C]/40 uppercase tracking-widest">Onboarding in progress</p>
                 </div>
               </div>
             </div>
@@ -256,7 +256,7 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
               <div className="flex flex-col items-center justify-center h-full gap-4">
                 <div className="w-10 h-10 rounded-full border-4 border-[#042E5C]/10 border-t-[#042E5C]/40 animate-spin" />
                 <p className="text-xs font-bold text-[#042E5C]/30 uppercase tracking-widest animate-pulse">
-                  Starting assessment...
+                  Starting onboarding...
                 </p>
               </div>
             )}

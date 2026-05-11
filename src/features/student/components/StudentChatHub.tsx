@@ -153,7 +153,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                   <AlertCircle size={20} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-amber-900">Pending Assessments</p>
+                  <p className="text-sm font-bold text-amber-900">Pending Onboarding</p>
                   <p className="text-xs text-amber-700/70">Complete your onboarding for {onboardingSubjects.map(s => s.subject).join(" & ")}.</p>
                 </div>
               </div>
@@ -251,7 +251,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                 <div className="max-w-xs mx-auto space-y-3">
                   <Bot size={32} className="mx-auto text-[#042E5C]/20" />
                   <p className="text-sm font-bold text-[#042E5C]/40 uppercase tracking-widest">No agents assigned yet</p>
-                  <p className="text-xs text-[#042E5C]/30 leading-relaxed px-4">Complete your initial assessments to unlock your personalized learning agents.</p>
+                  <p className="text-xs text-[#042E5C]/30 leading-relaxed px-4">Complete your initial onboarding to unlock your personalized learning agents.</p>
                 </div>
               </div>
             )}
