@@ -11,6 +11,8 @@ interface MetricCardProps {
   };
   icon?: React.ReactNode;
   description?: string;
+  valueColor?: string;
+  status?: string;
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({
@@ -19,7 +21,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   subValue,
   trend,
   icon,
-  description
+  description,
+  valueColor,
+  status
 }) => {
   return (
     <div className="bg-white p-6 rounded-3xl border border-[#1a3a2a]/5 shadow-sm hover:shadow-xl transition-all group">
@@ -35,9 +39,17 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       </div>
       
       <div className="flex items-baseline gap-2">
-        <h3 className="text-4xl font-bold text-[#1a3a2a]">{value}</h3>
+        <h3 className="text-4xl font-bold transition-colors duration-300" style={{ color: valueColor || "#1a3a2a" }}>{value}</h3>
         {subValue && (
           <span className="text-sm font-semibold text-[#1a3a2a]/60">{subValue}</span>
+        )}
+        {status && (
+          <span 
+            className="ml-auto px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-white"
+            style={{ backgroundColor: valueColor || "#3B82F6" }}
+          >
+            {status}
+          </span>
         )}
         {trend && (
           <div className={`flex items-center gap-1 text-xs font-bold ${trend.isPositive ? 'text-[#059669]' : 'text-red-500'}`}>

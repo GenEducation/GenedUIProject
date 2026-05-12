@@ -275,6 +275,7 @@ export function SignUp({
                   }
                   setIsSendingOtp(true);
                   setOtpSentMessage("");
+                  setLocalErrors({}); // Clear any previous local errors
                   try {
                     const { sendOtp } = await import("../authService");
                     await sendOtp(signupData.email);

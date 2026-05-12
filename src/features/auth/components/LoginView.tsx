@@ -294,14 +294,14 @@ export function LoginView() {
     const { name, value } = event.target;
     setLoginData((current) => ({ ...current, [name]: value }));
     
-    // Clear error for this field when user starts typing
-    if (signinErrors[name]) {
-      setSigninErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
+    // Clear field-specific error and root error when user starts typing
+    setSigninErrors((prev) => {
+      if (!prev[name] && !prev.root) return prev;
+      const newErrors = { ...prev };
+      delete newErrors[name];
+      delete newErrors.root;
+      return newErrors;
+    });
   };
 
   const handleSignupChange = (
@@ -309,6 +309,15 @@ export function LoginView() {
   ) => {
     const { name, value } = event.target;
     setSignupData((current) => ({ ...current, [name]: value }));
+
+    // Clear field-specific error and root error when user starts typing
+    setSignupErrors((prev) => {
+      if (!prev[name] && !prev.root) return prev;
+      const newErrors = { ...prev };
+      delete newErrors[name];
+      delete newErrors.root;
+      return newErrors;
+    });
   };
 
   return (

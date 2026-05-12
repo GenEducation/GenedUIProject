@@ -76,6 +76,8 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
       }
       clearSession();
       onClose();
+      // Ensure the dashboard/parent page is fresh after onboarding
+      window.location.reload();
     }
   }, [isComplete, clearSession, onClose, studentProfile?.user_id]);
 

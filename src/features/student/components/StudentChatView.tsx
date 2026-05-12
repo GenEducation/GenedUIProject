@@ -7,7 +7,6 @@ import { StudentChatSidebar } from "./StudentChatSidebar";
 import { StudentChatMain } from "./StudentChatMain";
 import { StudentChatHub } from "./StudentChatHub";
 import { AgentPickerModal } from "./AgentPickerModal";
-import { PlanBanner } from "@/features/billing/components/PlanBanner";
 
 /**
  * StudentChatView acts as a container for the modular chat layout.
@@ -126,7 +125,6 @@ export function StudentChatView() {
 
       {/* Main Area: Hub vs Chat */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
-        <PlanBanner />
         {isHubState ? (
           <StudentChatHub toggleSidebar={toggleSidebar} />
         ) : (

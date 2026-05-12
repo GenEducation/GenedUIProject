@@ -103,6 +103,7 @@ export const TUTORIAL_SEQUENCE: TutorialStepDef[] = [
     title: "Skill Progression",
     description: "This shows how your skills have improved over time.",
     expectedRoute: "/student/analytics",
+    position: "bottom"
   },
   {
     id: "go-to-chat",

@@ -61,14 +61,14 @@ const markdownComponents: any = {
             {match[1]}
           </div>
         )}
-        <pre className="!bg-[#1a3a2a] !p-4 rounded-2xl overflow-x-auto shadow-sm">
-          <code className={`${className} !text-[13px] !leading-relaxed`} {...props}>
+        <pre className="!bg-slate-100 !p-4 rounded-2xl border border-slate-200 overflow-x-auto shadow-sm">
+          <code className={`${className} !text-[13px] !text-slate-800 !leading-relaxed`} {...props}>
             {children}
           </code>
         </pre>
       </motion.div>
     ) : (
-      <code className="text-[13px] font-black text-emerald-700 font-mono" {...props}>
+      <code className="text-[13px] font-black text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded-md font-mono" {...props}>
         {children}
       </code>
     );
@@ -114,6 +114,26 @@ export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) 
     // Fix: Remove backticks wrapping math ($...$) to prevent them from being treated as code blocks
     // This resolves the "green box" issue where math wouldn't render properly
     cleaned = cleaned.replace(/`(\$.+?\$)`/g, '$1');
+
+    // Fix: Remove backticks (single or triple) wrapping simple text that the AI might have accidentally formatted as code
+    // We target strings that are short, contain spaces, and don't look like code (no common code symbols like ; { } ( ) =)
+    const isCodeLike = (str: string) => /[;{}[\]()=]/.test(str);
+    
+    // Cleanup triple backticks
+    cleaned = cleaned.replace(/```\n?([^`]+?)\n?```/g, (match, p1) => {
+      if (p1.length < 100 && p1.includes(' ') && !isCodeLike(p1)) {
+        return p1.trim();
+      }
+      return match;
+    });
+
+    // Cleanup single backticks
+    cleaned = cleaned.replace(/`([^`\n]+)`/g, (match, p1) => {
+      if (p1.length < 60 && p1.includes(' ') && !isCodeLike(p1)) {
+        return p1;
+      }
+      return match;
+    });
 
     // Fix: Escape underscores specifically inside math blocks to prevent KaTeX "Double Subscript" errors
     // We only escape sequences of 2 or more underscores (e.g. ____) to preserve valid subscripts like x_1

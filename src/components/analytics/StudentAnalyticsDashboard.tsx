@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   BarChart2, ArrowLeft, CheckCircle2, 
-  Target, GraduationCap, ChevronDown, LayoutGrid 
+  Target, GraduationCap, ChevronDown, LayoutGrid, Info
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
@@ -32,6 +32,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
 }) => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>("chapter");
+  const [showExplanation, setShowExplanation] = useState(false);
   const { studentProfile } = useStudentStore();
   const { 
     analyticsSubjects, 
@@ -75,6 +76,31 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
     }
   };
 
+  const getSkillIndexConfig = () => {
+    const grade = studentProfile?.grade ?? 5; // Default to 5 if not set
+    const index = skillSummary?.skill_index ?? 0;
+    
+    let denominator = 1.00;
+    if (grade >= 0 && grade <= 4) denominator = 2.00;
+    else if (grade >= 5 && grade <= 8) denominator = 1.43;
+    else if (grade >= 9 && grade <= 10) denominator = 1.14;
+
+    let status = "At Grade Level";
+    let color = "#3B82F6"; // Blue
+
+    if (index < 0.8) {
+      status = "Struggling";
+      color = "#EF4444"; // Red
+    } else if (index > 1.2) {
+      status = "Outperforming";
+      color = "#10B981"; // Green
+    }
+
+    return { denominator, status, color };
+  };
+
+  const skillConfig = getSkillIndexConfig();
+
   const metrics = [
     {
       label: "Overall Mastery Score",
@@ -87,9 +113,11 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
       value: (skillSummary?.skill_index !== undefined && skillSummary?.skill_index !== null) 
         ? skillSummary.skill_index.toFixed(2) 
         : "0.00",
-      subValue: "/ 1.00",
+      subValue: `/ ${skillConfig.denominator.toFixed(2)}`,
       icon: <GraduationCap size={18} />,
-      description: "Calculated across 8 foundational cognitive skills identified in your learning sessions."
+      description: "A composite score reflecting your cognitive agility and mastery relative to grade standards.",
+      valueColor: skillConfig.color,
+      status: skillConfig.status
     },
     {
       label: "Completed Sessions",
@@ -114,7 +142,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
               </p>
             </div>
             <button 
-              onClick={() => router.push('/student/profile')}
+              onClick={() => window.location.href = '/student/profile'}
               className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1a3a2a] to-[#059669] border-2 border-white shadow-md hover:scale-105 transition-transform" 
             />
           </div>
@@ -132,7 +160,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                   completeAction("navigate");
                   nextStep();
                 }
-                router.back();
+                window.location.href = '/student';
               }}
               className="flex items-center gap-2 text-[#1a3a2a]/60 hover:text-[#1a3a2a] transition-all group lg:min-w-[80px]"
               data-tutorial="analytics-back-button"
@@ -180,6 +208,74 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
             {metrics.map((metric, idx) => (
               <MetricCard key={idx} {...metric} />
             ))}
+          </div>
+
+          <motion.div 
+            initial={false}
+            animate={{ height: showExplanation ? "auto" : 0, opacity: showExplanation ? 1 : 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white/50 border border-[#1a3a2a]/5 rounded-3xl p-8 mt-6 space-y-6">
+              <div className="flex items-center gap-3 text-[#1a3a2a]">
+                <Info size={20} className="text-[#059669]" />
+                <h4 className="text-lg font-bold">Understanding Your Skill Index</h4>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <p className="text-sm font-bold text-[#1a3a2a]/60 uppercase tracking-wider">Index Ranges by Grade</p>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-white rounded-xl border border-[#1a3a2a]/5">
+                      <span className="text-sm font-semibold text-[#1a3a2a]">Grades 0 - 4</span>
+                      <span className="text-sm font-black text-[#1a3a2a]">0.00 - 2.00</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-white rounded-xl border border-[#1a3a2a]/5">
+                      <span className="text-sm font-semibold text-[#1a3a2a]">Grades 5 - 8</span>
+                      <span className="text-sm font-black text-[#1a3a2a]">0.00 - 1.43</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-white rounded-xl border border-[#1a3a2a]/5">
+                      <span className="text-sm font-semibold text-[#1a3a2a]">Grades 9 - 10</span>
+                      <span className="text-sm font-black text-[#1a3a2a]">0.00 - 1.14</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <p className="text-sm font-bold text-[#1a3a2a]/60 uppercase tracking-wider">Performance Indicators</p>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-[#EF4444]/10">
+                      <div className="w-2 h-2 rounded-full bg-[#EF4444]" />
+                      <span className="text-sm font-semibold text-[#1a3a2a]">Below 0.80</span>
+                      <span className="ml-auto text-xs font-bold text-[#EF4444] uppercase">Struggling</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-[#3B82F6]/10">
+                      <div className="w-2 h-2 rounded-full bg-[#3B82F6]" />
+                      <span className="text-sm font-semibold text-[#1a3a2a]">0.80 - 1.20</span>
+                      <span className="ml-auto text-xs font-bold text-[#3B82F6] uppercase">On Track</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-[#10B981]/10">
+                      <div className="w-2 h-2 rounded-full bg-[#10B981]" />
+                      <span className="text-sm font-semibold text-[#1a3a2a]">Above 1.20</span>
+                      <span className="ml-auto text-xs font-bold text-[#10B981] uppercase">Outperforming</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-[#1a3a2a]/50 italic">
+                * The Skill Index is a dynamic metric that adapts to your grade level, providing a fair assessment of your academic standing relative to standardized benchmarks.
+              </p>
+            </div>
+          </motion.div>
+
+          <div className="flex justify-center">
+            <button 
+              onClick={() => setShowExplanation(!showExplanation)}
+              className="flex items-center gap-2 text-xs font-bold text-[#1a3a2a]/40 hover:text-[#1a3a2a] transition-colors"
+            >
+              <Info size={14} />
+              {showExplanation ? "Hide Skill Index Explanation" : "How is Skill Index calculated?"}
+            </button>
           </div>
         </section>
 
