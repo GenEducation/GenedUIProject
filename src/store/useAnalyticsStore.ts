@@ -6,6 +6,9 @@ import { studentService } from "@/features/student/services/studentService";
 interface SkillSummary {
   overall_score: number;
   skill_index: number;
+  skill_index_max?: number;
+  skill_index_progress?: number;
+  skill_index_status?: string;
   session_count?: number;
 }
 

@@ -77,26 +77,46 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
   };
 
   const getSkillIndexConfig = () => {
-    const grade = studentProfile?.grade ?? 5; // Default to 5 if not set
+    const grade = studentProfile?.grade ?? 5;
     const index = skillSummary?.skill_index ?? 0;
     
-    let denominator = 1.00;
-    if (grade >= 0 && grade <= 4) denominator = 2.00;
-    else if (grade >= 5 && grade <= 8) denominator = 1.43;
-    else if (grade >= 9 && grade <= 10) denominator = 1.14;
-
-    let status = "At Grade Level";
-    let color = "#3B82F6"; // Blue
-
-    if (index < 0.8) {
-      status = "Struggling";
-      color = "#EF4444"; // Red
-    } else if (index > 1.2) {
-      status = "Outperforming";
-      color = "#10B981"; // Green
+    // Prefer backend provided values, fallback to client-side logic
+    let denominator = skillSummary?.skill_index_max;
+    if (denominator === undefined) {
+      if (grade >= 0 && grade <= 4) denominator = 2.00;
+      else if (grade >= 5 && grade <= 8) denominator = 1.43;
+      else if (grade >= 9 && grade <= 10) denominator = 1.14;
+      else denominator = 1.00;
     }
 
-    return { denominator, status, color };
+    let status = skillSummary?.skill_index_status;
+    let color = "#3B82F6"; // Blue
+
+    if (!status) {
+      if (index < 0.8) status = "Struggling";
+      else if (index > 1.2) status = "Outperforming";
+      else status = "At Grade Level";
+    }
+
+    // Assign color based on status (regardless of where status came from)
+    if (status === "Struggling") color = "#EF4444";
+    else if (status === "Outperforming") color = "#10B981";
+    else color = "#3B82F6";
+
+    // Progress percentage (0-100)
+    let progress = skillSummary?.skill_index_progress;
+    if (progress === undefined) {
+      progress = (index / (denominator || 1)) * 100;
+    }
+
+    // Segments calculation
+    const segments = [
+      { color: "#EF4444", width: (0.8 / (denominator || 1)) * 100 },
+      { color: "#3B82F6", width: (0.4 / (denominator || 1)) * 100 },
+      { color: "#10B981", width: (Math.max(0, (denominator || 1) - 1.2) / (denominator || 1)) * 100 }
+    ];
+
+    return { denominator, status, color, progress, segments };
   };
 
   const skillConfig = getSkillIndexConfig();
@@ -106,25 +126,32 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
       label: "Overall Mastery Score",
       value: skillSummary ? `${Math.round(skillSummary.overall_score * 100)}%` : "0%",
       icon: <Target size={18} />,
-      description: "Based on content coverage and session performance across all active subjects."
+      description: "Based on content coverage and session performance across all active subjects.",
+      showProgress: true,
+      progress: (skillSummary?.overall_score || 0) * 100,
+      valueColor: "#10B981" // Always green for mastery progress
     },
     {
       label: "Skill Index",
       value: (skillSummary?.skill_index !== undefined && skillSummary?.skill_index !== null) 
         ? skillSummary.skill_index.toFixed(2) 
         : "0.00",
-      subValue: `/ ${skillConfig.denominator.toFixed(2)}`,
       icon: <GraduationCap size={18} />,
       description: "A composite score reflecting your cognitive agility and mastery relative to grade standards.",
       valueColor: skillConfig.color,
-      status: skillConfig.status
+      status: skillConfig.status,
+      showProgress: true,
+      progress: skillConfig.progress,
+      isSegmented: true,
+      segments: skillConfig.segments
     },
     {
       label: "Completed Sessions",
       value: skillSummary?.session_count || 0,
       subValue: "this month",
       icon: <CheckCircle2 size={18} />,
-      description: "Your engagement is significantly contributing to your progress. Keep the momentum!"
+      description: "Your engagement is significantly contributing to your progress. Keep the momentum!",
+      showProgress: false
     }
   ];
 

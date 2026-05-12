@@ -1064,12 +1064,23 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     // Handle transient 'new' state on refresh
     if (sessionId === "new") {
       fetchSessions(); // Load history in background
-      openNewChat({
-        name: "Socratic Tutor",
-        agent_id: "eng-grade-4",
-        subject: "General",
-        grade: 10,
-      });
+      const profile = get().studentProfile;
+      const agents = get().availableAgents;
+      
+      // Try to find an agent for the student's grade, or fallback to first available
+      const defaultAgent = agents.find(a => a.grade === profile?.grade) || agents[0];
+
+      if (defaultAgent) {
+        openNewChat(defaultAgent);
+      } else {
+        // Absolute fallback only if no agents are loaded yet
+        openNewChat({
+          name: "Socratic Tutor",
+          agent_id: "eng-grade-4",
+          subject: "",
+          grade: profile?.grade || 4,
+        });
+      }
       return;
     }
 
@@ -1611,11 +1622,16 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
     // Handle Hub messaging (activeChat is null) or specific new chats
     const isHubMessage = !activeChat;
+    const profile = get().studentProfile;
+    
+    // If it's a Hub message, try to find a sensible default agent for the student
+    const defaultAgent = get().availableAgents.find(a => a.grade === profile?.grade) || get().availableAgents[0];
+
     const effectiveChat: ChatSession = activeChat || {
       id: "new",
-      title: "New Session",
-      subject: "General",
-      agent_id: undefined,
+      title: defaultAgent?.name || "New Session",
+      subject: defaultAgent?.subject,
+      agent_id: defaultAgent?.agent_id,
       isFocused: false,
       agentType: "General Assistant",
       agentIcon: "🤖",
@@ -1705,7 +1721,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         {
           text,
           user_id: studentProfile.user_id,
-          grade: studentProfile.grade || 10,
+          grade: studentProfile.grade,
           activity_input: activityInput,
           // Only send session/agent info if NOT a Hub-initiated general query
           ...(!isHubMessage && {
@@ -1715,7 +1731,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             ...(!effectiveChat.isFocused && {
               agent_id: effectiveChat.agent_id,
             }),
-            subject: effectiveChat.subject || "General",
+            ...(effectiveChat.subject && { subject: effectiveChat.subject }),
           }),
           ...(effectiveChat.isFocused && {
             document_title: effectiveChat.document_title || "General",
