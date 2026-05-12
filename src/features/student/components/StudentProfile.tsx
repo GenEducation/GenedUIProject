@@ -66,7 +66,7 @@ export function StudentProfile() {
         {/* Top Controls: Back & Logout */}
         <div className="flex items-center justify-between">
           <button 
-            onClick={() => router.back()}
+            onClick={() => window.location.href = '/student'}
             className="flex items-center gap-2 text-sm text-[#1a3a2a]/60 hover:text-[#1a3a2a] font-semibold transition-colors"
             data-tutorial="profile-back-button"
           >

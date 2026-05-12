@@ -174,7 +174,7 @@ export function OnboardingChatView() {
   }, [isInputDisabled]);
 
   const subjectIcon = subject ? (SUBJECT_ICONS[subject] || "📚") : "📚";
-  const subjectLabel = subject ? `${subject} Assessment` : "Subject Assessment";
+  const subjectLabel = subject ? `${subject} Onboarding` : "Subject Onboarding";
 
   // Visible messages: filter out the empty streaming placeholder (shown via TypingIndicator instead)
   const visibleMessages = messages.filter(
@@ -196,7 +196,7 @@ export function OnboardingChatView() {
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#059F6D] animate-pulse block" />
               <p className="text-[10px] font-bold text-[#042E5C]/40 uppercase tracking-widest">
-                Assessment in progress
+                Onboarding in progress
               </p>
             </div>
           </div>
@@ -210,7 +210,7 @@ export function OnboardingChatView() {
           <div className="flex flex-col items-center justify-center h-full gap-4 py-16">
             <div className="w-12 h-12 rounded-full border-4 border-[#042E5C]/10 border-t-[#042E5C]/40 animate-spin" />
             <p className="text-xs font-bold text-[#042E5C]/30 uppercase tracking-widest animate-pulse">
-              Starting your assessment...
+              Starting your onboarding...
             </p>
           </div>
         )}

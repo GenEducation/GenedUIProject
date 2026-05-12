@@ -76,7 +76,7 @@ function OnboardingContent() {
           <div className="inline-flex items-center gap-2.5 bg-white/10 border border-white/10 rounded-2xl px-4 py-3">
             <span className="text-2xl">{subjectIcon}</span>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Assessment</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Onboarding</p>
               <p className="text-sm font-extrabold text-white leading-tight">{subjectLabel}</p>
             </div>
           </div>
@@ -88,7 +88,7 @@ function OnboardingContent() {
         </div>
 
         {/* Character */}
-        <div className="relative z-10 flex items-center justify-center flex-1 min-h-0 py-4">
+        <div className="relative z-10 flex items-center justify-center flex-1 min-h-0 py-4 -mt-10">
           <div className="relative">
             <div className="absolute inset-0 scale-110 rounded-full bg-white/5 blur-2xl" />
             <WavingStudentCharacter />
@@ -142,7 +142,7 @@ export default function OnboardingPage() {
         <div className="h-screen bg-[#042E5C] flex flex-col items-center justify-center space-y-4">
           <div className="w-12 h-12 border-4 border-white/10 border-t-white/60 rounded-full animate-spin" />
           <p className="text-sm font-bold text-white/30 uppercase tracking-widest animate-pulse">
-            Initializing Assessment...
+            Initializing Onboarding...
           </p>
         </div>
       }

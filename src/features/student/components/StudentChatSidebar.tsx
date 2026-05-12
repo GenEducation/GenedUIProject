@@ -39,7 +39,7 @@ export const StudentChatSidebar = React.memo(({
           <button
             onClick={() => {
               closeChat();
-              router.push('/student');
+              window.location.href = '/student';
             }}
             className="hover:opacity-80 transition-opacity"
           >
@@ -54,7 +54,7 @@ export const StudentChatSidebar = React.memo(({
           <button
             onClick={() => {
               closeChat();
-              router.push('/student');
+              window.location.href = '/student';
               if (window.innerWidth < 1024) onClose();
             }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left bg-white border border-[#042E5C]/5 text-[#042E5C] hover:bg-[#042E5C]/5 hover:border-[#042E5C]/10 transition-all shadow-sm mb-6 group"
@@ -80,7 +80,7 @@ export const StudentChatSidebar = React.memo(({
                 key={chat.id}
                 onClick={() => {
                   openExistingChat(chat);
-                  router.push(`/student/chat/${chat.id}`);
+                  window.location.href = `/student/chat/${chat.id}`;
                   if (window.innerWidth < 1024) onClose();
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all group ${
@@ -109,7 +109,7 @@ export const StudentChatSidebar = React.memo(({
         {/* Sidebar footer */}
         <div className="p-5 border-t border-[#042E5C]/8 space-y-1">
           <button 
-            onClick={() => router.push('/student/profile')}
+            onClick={() => window.location.href = '/student/profile'}
             className="w-full flex items-center justify-between gap-4 px-4 py-3 rounded-2xl text-[#042E5C]/50 hover:text-[#042E5C] hover:bg-[#042E5C]/5 transition-all group"
             data-tutorial="profile-nav"
           >
@@ -128,7 +128,7 @@ export const StudentChatSidebar = React.memo(({
             )}
           </button>
           <button 
-            onClick={() => router.push('/student/analytics')}
+            onClick={() => window.location.href = '/student/analytics'}
             className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-[#042E5C]/50 hover:text-[#042E5C] hover:bg-[#042E5C]/5 transition-all"
             data-tutorial="analytics-nav"
           >

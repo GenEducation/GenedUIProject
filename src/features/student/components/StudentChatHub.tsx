@@ -142,34 +142,37 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             </p>
           </motion.header>
 
-          {onboardingSubjects.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
-                  <AlertCircle size={20} />
+          {/* Reserved space for onboarding alert to prevent layout shift */}
+          <div className="min-h-[84px] flex flex-col justify-center">
+            {onboardingSubjects.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
+                    <AlertCircle size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-amber-900">Pending Onboarding</p>
+                    <p className="text-xs text-amber-700/70">Complete your onboarding for {onboardingSubjects.map(s => s.subject).join(" & ")}.</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-amber-900">Pending Assessments</p>
-                  <p className="text-xs text-amber-700/70">Complete your onboarding for {onboardingSubjects.map(s => s.subject).join(" & ")}.</p>
+                <div className="flex gap-2 flex-shrink-0 flex-wrap">
+                  {onboardingSubjects.map(agent => (
+                    <button
+                      key={agent.agent_id}
+                      onClick={() => setActiveOnboarding({ subject: agent.subject, grade: Number(agent.grade) || studentProfile?.grade || 1 })}
+                      className="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition-colors"
+                    >
+                      Start {agent.subject}
+                    </button>
+                  ))}
                 </div>
-              </div>
-              <div className="flex gap-2 flex-shrink-0 flex-wrap">
-                {onboardingSubjects.map(agent => (
-                  <button
-                    key={agent.agent_id}
-                    onClick={() => setActiveOnboarding({ subject: agent.subject, grade: Number(agent.grade) || studentProfile?.grade || 1 })}
-                    className="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition-colors"
-                  >
-                    Start {agent.subject}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
+              </motion.div>
+            )}
+          </div>
         </div>
 
         {/* 2. Recent Chats */}
@@ -197,7 +200,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                     icon={<Clock size={18} />}
                     onClick={() => {
                       openExistingChat(chat);
-                      router.push(`/student/chat/${chat.id}`);
+                      window.location.href = `/student/chat/${chat.id}`;
                     }}
                     delay={0.2 + i * 0.05}
                   />
@@ -241,7 +244,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                   icon={<Bot size={18} />}
                   onClick={() => {
                     openNewChat(agent);
-                    router.push('/student/chat/new');
+                    window.location.href = '/student/chat/new';
                   }}
                   delay={0.3 + i * 0.05}
                 />
@@ -251,7 +254,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                 <div className="max-w-xs mx-auto space-y-3">
                   <Bot size={32} className="mx-auto text-[#042E5C]/20" />
                   <p className="text-sm font-bold text-[#042E5C]/40 uppercase tracking-widest">No agents assigned yet</p>
-                  <p className="text-xs text-[#042E5C]/30 leading-relaxed px-4">Complete your initial assessments to unlock your personalized learning agents.</p>
+                  <p className="text-xs text-[#042E5C]/30 leading-relaxed px-4">Complete your initial onboarding to unlock your personalized learning agents.</p>
                 </div>
               </div>
             )}
