@@ -654,7 +654,7 @@ export interface StudentState {
   fetchChatHistory: (sessionId: string) => Promise<void>;
   fetchOnboardingStatus: () => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
-  openChatById: (sessionId: string) => Promise<void>;
+  openChatById: (sessionId: string, agentId?: string) => Promise<void>;
   openNewChat: (agent: AgentItem) => string;
   initNewChat: (agentId: string) => void;
   startFocusedSession: (documentTitle: string, subject: string) => string;
@@ -1052,7 +1052,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
   },
 
-  openChatById: async (sessionId) => {
+  openChatById: async (sessionId, agentId) => {
     const {
       recentChats,
       fetchSessions,
@@ -1067,16 +1067,20 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       const profile = get().studentProfile;
       const agents = get().availableAgents;
       
-      // Try to find an agent for the student's grade, or fallback to first available
-      const defaultAgent = agents.find(a => a.grade === profile?.grade) || agents[0];
+      // 1. Try to find the specific agent requested in URL
+      // 2. Otherwise try to find an agent for the student's grade
+      // 3. Fallback to first available
+      const targetAgent = (agentId ? agents.find(a => a.agent_id === agentId) : null) || 
+                          agents.find(a => a.grade === profile?.grade) || 
+                          agents[0];
 
-      if (defaultAgent) {
-        openNewChat(defaultAgent);
+      if (targetAgent) {
+        openNewChat(targetAgent);
       } else {
         // Absolute fallback only if no agents are loaded yet
         openNewChat({
           name: "Socratic Tutor",
-          agent_id: "eng-grade-4",
+          agent_id: agentId || "eng-grade-4",
           subject: "",
           grade: profile?.grade || 4,
         });
@@ -1723,16 +1727,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           user_id: studentProfile.user_id,
           grade: studentProfile.grade,
           activity_input: activityInput,
-          // Only send session/agent info if NOT a Hub-initiated general query
-          ...(!isHubMessage && {
-            ...(isNewFocused
-              ? {}
-              : { session_id: isNewSession ? undefined : sessionIdToSend }),
-            ...(!effectiveChat.isFocused && {
-              agent_id: effectiveChat.agent_id,
-            }),
-            ...(effectiveChat.subject && { subject: effectiveChat.subject }),
-          }),
+          // Send session/agent/subject info
+          ...(sessionIdToSend && !isNewFocused && { session_id: sessionIdToSend }),
+          ...(!effectiveChat.isFocused && effectiveChat.agent_id && { agent_id: effectiveChat.agent_id }),
+          ...(effectiveChat.subject && { subject: effectiveChat.subject }),
           ...(effectiveChat.isFocused && {
             document_title: effectiveChat.document_title || "General",
             intent: "",

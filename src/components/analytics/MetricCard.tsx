@@ -65,9 +65,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         <div className="flex flex-col gap-1 mb-6">
           {/* Flag Indicator Above */}
           <div className="relative w-full h-5">
-             <div 
-                className="absolute bottom-0 flex flex-col items-center transition-all duration-1000 ease-out"
-                style={{ left: `${Math.min(99, Math.max(0, progress))}%`, transform: 'translateX(-50%)' }}
+              <div 
+                className="absolute bottom-0 flex flex-col items-start transition-all duration-1000 ease-out"
+                style={{ left: `${Math.min(99, Math.max(0, progress))}%` }}
               >
                 <Flag size={14} fill={valueColor || "#1a3a2a"} style={{ color: valueColor || "#1a3a2a" }} />
               </div>

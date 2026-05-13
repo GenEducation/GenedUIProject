@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { StudentChatSidebar } from "./StudentChatSidebar";
 import { StudentChatMain } from "./StudentChatMain";
@@ -15,8 +15,10 @@ import { AgentPickerModal } from "./AgentPickerModal";
 export function StudentChatView() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const sessionIdRaw = params?.sessionId;
   const sessionId = Array.isArray(sessionIdRaw) ? sessionIdRaw[0] : (sessionIdRaw as string | undefined);
+  const agentId = searchParams.get("agentId");
   
   const { 
     activeChat, 
@@ -56,10 +58,10 @@ export function StudentChatView() {
     if (sessionId) {
       if (!activeChat || activeChat.id !== sessionId) {
         // Either fresh landing or switched tabs - try to hydrate from ID
-        openChatById(sessionId);
+        openChatById(sessionId, agentId || undefined);
       }
     }
-  }, [sessionId, openChatById, router, studentProfile]);
+  }, [sessionId, openChatById, router, studentProfile, agentId]);
 
   // URL sync logic...
   useEffect(() => {

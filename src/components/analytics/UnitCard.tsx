@@ -13,6 +13,7 @@ interface UnitCardProps {
   isLocked?: boolean;
   prerequisite?: string;
   onAction?: () => void;
+  onTestAction?: () => void;
   hideActions?: boolean;
 }
 
@@ -32,6 +33,7 @@ export const UnitCard: React.FC<UnitCardProps> = ({
   isLocked,
   prerequisite,
   onAction,
+  onTestAction,
   hideActions = false
 }) => {
   const color = statusColors[status];
@@ -90,23 +92,28 @@ export const UnitCard: React.FC<UnitCardProps> = ({
       </div>
 
       {!hideActions && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <button 
             onClick={onAction}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-[11px] font-bold transition-all ${
               status === 'NEEDS WORK' 
-              ? 'bg-[#1a3a2a] text-white shadow-lg hover:shadow-[#1a3a2a]/20 translate-y-0 active:translate-y-0.5' 
-              : 'text-[#1a3a2a] hover:bg-[#F4F3EE]'
+              ? 'bg-[#1a3a2a] text-white shadow-lg hover:shadow-[#1a3a2a]/20' 
+              : 'text-[#1a3a2a] bg-[#F4F3EE] hover:bg-[#E8E7E0]'
             }`}
           >
-            {mastery === 0 ? (
-              <>Start Session <ArrowRight size={14} /></>
-            ) : (
-              <>Continue Session <ArrowRight size={14} /></>
-            )}
+            {mastery === 0 ? "Start" : "Continue"}
+            <ArrowRight size={14} />
+          </button>
+
+          <button 
+            onClick={onTestAction}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-[11px] font-bold text-[#042E5C] border-2 border-[#042E5C]/10 hover:border-[#042E5C]/30 transition-all"
+          >
+            Take Test
           </button>
         </div>
       )}
     </div>
   );
-};
+}
+;

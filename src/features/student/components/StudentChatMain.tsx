@@ -75,7 +75,7 @@ export function StudentChatMain({
             <Menu size={20} />
           </button>
           <button
-            onClick={() => { closeChat(); window.location.href = '/student'; }}
+            onClick={() => { closeChat(); router.push('/student'); }}
             className="w-10 h-10 rounded-xl bg-[#F4F3EE] flex items-center justify-center text-[#042E5C]/60 hover:text-[#042E5C] hover:bg-[#042E5C]/5 transition-all"
           >
             <ArrowLeft size={20} />

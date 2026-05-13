@@ -7,7 +7,7 @@ import {
   useStudentStore, 
 } from "../store/useStudentStore";
 import { StudentChatInput } from "./StudentChatInput";
-import { AlertCircle, ChevronRight, Clock, Bot, Menu, LogOut } from "lucide-react";
+import { AlertCircle, ChevronRight, Clock, Bot, Menu, Info } from "lucide-react";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
@@ -200,7 +200,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                     icon={<Clock size={18} />}
                     onClick={() => {
                       openExistingChat(chat);
-                      window.location.href = `/student/chat/${chat.id}`;
+                      router.push(`/student/chat/${chat.id}`);
                     }}
                     delay={0.2 + i * 0.05}
                   />
@@ -244,7 +244,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                   icon={<Bot size={18} />}
                   onClick={() => {
                     openNewChat(agent);
-                    window.location.href = '/student/chat/new';
+                    router.push(`/student/chat/new?agentId=${agent.agent_id}`);
                   }}
                   delay={0.3 + i * 0.05}
                 />
