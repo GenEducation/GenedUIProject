@@ -14,6 +14,7 @@ import { VisualCard } from "./VisualCard";
 import { P5Visual } from "./P5Visual";
 import { GeoGebraVisual } from "./GeoGebraVisual";
 import { ActivityRenderer } from "./ActivityRenderer";
+import { ComprehensionWidget } from "./ComprehensionWidget";
 
 const StreamingTextRenderer = React.memo(({ content, isStreaming }: { content: string, isStreaming: boolean }) => {
   const displayedText = useSmoothStream(content, isStreaming, 15);
@@ -98,15 +99,15 @@ export const ChatMessageBubble = React.memo(
                       }
                       if (el.meta?.engine === "p5sketch") {
                         return (
-                          <VisualCard key={el.id} engine="p5sketch" label={el.meta.label}>
-                            <P5Visual code={el.meta.code} />
+                          <VisualCard key={el.id} engine="p5sketch" label={el.meta.label || ""}>
+                            <P5Visual code={el.meta.code || ""} />
                           </VisualCard>
                         );
                       }
                       if (el.meta?.engine === "geogebra") {
                         return (
-                          <VisualCard key={el.id} engine="geogebra" label={el.meta.label}>
-                            <GeoGebraVisual id={el.id} commands={el.meta.commands} options={el.meta.options} />
+                          <VisualCard key={el.id} engine="geogebra" label={el.meta.label || ""}>
+                            <GeoGebraVisual id={el.id} commands={el.meta.commands || []} options={el.meta.options} />
                           </VisualCard>
                         );
                       }
@@ -120,10 +121,10 @@ export const ChatMessageBubble = React.memo(
                       if (el.meta?.engine === "show_figure") {
                         const imgSource = el.meta.image?.startsWith('data:') ? el.meta.image : (el.meta.image ? `data:image/jpeg;base64,${el.meta.image}` : null);
                         return (
-                          <VisualCard key={el.id} engine="show_figure" label={el.meta.label}>
+                          <VisualCard key={el.id} engine="show_figure" label={el.meta.label || ""}>
                             <div className="flex flex-col items-center">
                               {imgSource ? (
-                                <img src={imgSource} alt={el.meta.label} className="max-w-full rounded-lg" />
+                                <img src={imgSource} alt={el.meta.label || "Figure"} className="max-w-full rounded-lg" />
                               ) : (
                                 <div className="bg-[#FFF8E1] text-[#F57F17] px-3 py-2 rounded-lg text-xs font-medium">📐 Figure ID: {el.meta.figure_id || "unknown"}</div>
                               )}
@@ -135,6 +136,22 @@ export const ChatMessageBubble = React.memo(
                     if (el.type === "svg") return <VisualBlock key={el.id} svg={el.content} meta={el.meta} />;
                     if (el.type === "image") return <VisualBlock key={el.id} image={el.content} meta={el.meta} />;
                     if (el.type === "widget") return <MathWidget key={el.id} expression={el.content} meta={el.meta} />;
+                    if (el.type === "comprehension_widget") {
+                      return (
+                        <ComprehensionWidget
+                          key={el.id}
+                          directiveId={el.meta?.directive_id || el.id}
+                          widgetType={el.meta?.widget_type || "free_response"}
+                          question={el.meta?.question}
+                          choices={el.meta?.choices}
+                          allowRetry={el.meta?.allow_retry}
+                          word={el.meta?.word}
+                          syllables={el.meta?.syllables}
+                          phonetic={el.meta?.phonetic}
+                          slowAvailable={el.meta?.slow_available}
+                        />
+                      );
+                    }
                     return null;
                   })}
                   {message.toolStatus && isStreaming && (

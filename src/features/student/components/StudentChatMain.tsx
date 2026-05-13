@@ -1,8 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Loader2, Menu } from "lucide-react";
-import { useRef, useEffect, useCallback } from "react";
+import { ArrowLeft, Loader2, Menu, Volume2, VolumeX, Mic, MicOff, Square } from "lucide-react";
+import React, { useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useStudentStore, ChatMessage, ChatSession } from "../store/useStudentStore";
@@ -19,6 +19,78 @@ interface StudentChatMainProps {
   toggleSidebar: () => void;
 }
 
+// ── Audio status pill (TTS playback indicator) ───────────────────────────────
+function AudioStatusPill({ state, onStop }: { state: string; onStop: () => void }) {
+  const isActive = ["loading", "buffering", "playing"].includes(state);
+  if (!isActive) return null;
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200"
+    >
+      {state === "playing" ? (
+        <>
+          <Volume2 size={13} className="text-emerald-600 animate-pulse" />
+          <span className="text-xs font-bold text-emerald-700">Listening...</span>
+          <button
+            onClick={onStop}
+            className="ml-1 w-4 h-4 rounded-full bg-emerald-200 flex items-center justify-center hover:bg-emerald-300 transition-colors"
+            title="Stop playback"
+          >
+            <Square size={8} className="text-emerald-700" />
+          </button>
+        </>
+      ) : (
+        <>
+          <Loader2 size={13} className="text-emerald-500 animate-spin" />
+          <span className="text-xs font-bold text-emerald-600">Preparing audio...</span>
+        </>
+      )}
+    </motion.div>
+  );
+}
+
+// ── Recording status pill ────────────────────────────────────────────────────
+function RecordingStatusPill({ state, onStop }: { state: string; onStop: () => void }) {
+  if (state === "idle" || state === "completed") return null;
+
+  const stateMap: Record<string, { label: string; icon: React.JSX.Element; color: string }> = {
+    permission_request: { label: "Mic access...", icon: <Loader2 size={13} className="animate-spin text-amber-500" />, color: "amber" },
+    ready:             { label: "Mic ready",     icon: <Mic size={13} className="text-emerald-500" />, color: "emerald" },
+    recording:         { label: "Recording...",  icon: <Mic size={13} className="text-red-500 animate-pulse" />, color: "red" },
+    uploading:         { label: "Uploading...",  icon: <Loader2 size={13} className="animate-spin text-blue-500" />, color: "blue" },
+    processing:        { label: "Processing...", icon: <Loader2 size={13} className="animate-spin text-purple-500" />, color: "purple" },
+    error:             { label: "Try again",     icon: <MicOff size={13} className="text-red-400" />, color: "red" },
+  };
+
+  const info = stateMap[state];
+  if (!info) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      className={`flex items-center gap-2 px-3 py-1.5 rounded-full bg-${info.color}-50 border border-${info.color}-200`}
+    >
+      {info.icon}
+      <span className={`text-xs font-bold text-${info.color}-700`}>{info.label}</span>
+      {state === "recording" && (
+        <button
+          onClick={onStop}
+          className="ml-1 w-4 h-4 rounded-full bg-red-200 flex items-center justify-center hover:bg-red-300 transition-colors"
+          title="Stop recording"
+        >
+          <Square size={8} className="text-red-700" />
+        </button>
+      )}
+    </motion.div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 export function StudentChatMain({ 
   activeChat, 
   messages, 
@@ -33,7 +105,12 @@ export function StudentChatMain({
     sendMessage, 
     streamingMessageId,
     isRateLimitHit,
-    setRateLimitHit
+    setRateLimitHit,
+    // English skill mode state
+    playbackState,
+    recordingState,
+    stopPlayback,
+    stopSkillRecording,
   } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -43,6 +120,18 @@ export function StudentChatMain({
     const behavior = (streamingMessageId || isAITyping) ? "auto" : "smooth";
     messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
   }, [messages, isAITyping, streamingMessageId]);
+
+  // Cleanup audio on unmount / navigation (Wave 1 §3.2)
+  useEffect(() => {
+    return () => {
+      import("@/features/student/services/audioPlayerService").then(({ audioPlayerService }) => {
+        audioPlayerService.destroy();
+      });
+      import("@/features/student/services/audioRecorderService").then(({ audioRecorderService }) => {
+        audioRecorderService.destroy();
+      });
+    };
+  }, []);
 
   const handleOptionSelect = useCallback(
     (option: string) => {
@@ -92,11 +181,19 @@ export function StudentChatMain({
             </div>
           </div>
         </div>
-        {activeChat.grade && (
-          <span className="text-xs font-bold text-[#042E5C]/40 bg-[#F4F3EE] px-4 py-2 rounded-full">
-            {activeChat.grade}
-          </span>
-        )}
+
+        {/* Right side: grade badge + audio/recording status pills */}
+        <div className="flex items-center gap-2">
+          <AnimatePresence>
+            <AudioStatusPill state={playbackState} onStop={stopPlayback} />
+            <RecordingStatusPill state={recordingState} onStop={stopSkillRecording} />
+          </AnimatePresence>
+          {activeChat.grade && (
+            <span className="text-xs font-bold text-[#042E5C]/40 bg-[#F4F3EE] px-4 py-2 rounded-full">
+              {activeChat.grade}
+            </span>
+          )}
+        </div>
       </header>
 
       {/* Main Content Area */}
@@ -179,4 +276,3 @@ export function StudentChatMain({
     </div>
   );
 }
-

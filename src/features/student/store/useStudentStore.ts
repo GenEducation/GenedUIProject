@@ -20,9 +20,37 @@ export interface StudentProfile {
 
 export interface ChatElement {
   id: string;
-  type: "text" | "svg" | "widget" | "image" | "visual";
+  type: "text" | "svg" | "widget" | "image" | "visual" | "comprehension_widget";
   content: string;
-  meta?: any;
+  meta?: {
+    // existing visual meta
+    engine?: string;
+    label?: string;
+    code?: string;
+    commands?: any[];
+    options?: any;
+    image?: string;
+    figure_id?: string;
+    shape?: string;
+    params?: any;
+    is_historical?: boolean;
+    isRawBackendSvg?: boolean;
+    error?: boolean;
+    message?: string;
+    fallback_text?: string;
+    // comprehension widget meta (Wave 2 §10)
+    widget_type?: "mcq" | "fill_blank" | "retell" | "free_response";
+    question?: string;
+    choices?: Array<{ id: string; label: string }>;
+    allow_retry?: boolean;
+    directive_id?: string;
+    // difficult word meta
+    word?: string;
+    syllables?: string[];
+    phonetic?: string;
+    slow_available?: boolean;
+    [key: string]: any;
+  };
 }
 
 export interface ActivityAction {
@@ -645,6 +673,13 @@ export interface StudentState {
   onboardingStatus: OnboardingStatus | null;
   isOnboardingLoading: boolean;
 
+  // ── English Skill Mode State (Wave 1–4) ─────────────────────────────────────
+  playbackState: "idle" | "loading" | "buffering" | "playing" | "paused" | "stopped" | "completed" | "error";
+  recordingState: "idle" | "permission_request" | "ready" | "recording" | "uploading" | "processing" | "completed" | "error";
+  activeDirectiveId: string | null;
+  highlightedWordIndex: number;
+  activeSkillDirective: any | null; // parsed directive payload (SPEAK_PARA, READ_ALOUD, etc.)
+
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
   fetchSessions: () => Promise<void>;
@@ -672,6 +707,16 @@ export interface StudentState {
   stopVoiceSession: () => void;
   toggleMute: () => void;
   logoutStudent: () => void;
+
+  // ── English Skill Mode Actions (Wave 1–4) ────────────────────────────────────
+  playDirectiveTts: (directiveId: string, timepoints: any[]) => void;
+  stopPlayback: () => void;
+  startSkillRecording: (directiveId: string) => void;
+  stopSkillRecording: () => void;
+  reportConversationAction: (type: string, directiveId: string) => Promise<void>;
+  submitOralResult: (directiveId: string, gcsUri: string) => Promise<void>;
+  submitComprehensionAnswer: (directiveId: string, interactionType: string, answer: string) => Promise<void>;
+  setHighlightedWordIndex: (index: number) => void;
 }
 
 // -- Store --------------------------------------------------------------------─
@@ -707,6 +752,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   isMuted: false,
   onboardingStatus: null,
   isOnboardingLoading: false,
+  // English skill mode initial state
+  playbackState: "idle",
+  recordingState: "idle",
+  activeDirectiveId: null,
+  highlightedWordIndex: -1,
+  activeSkillDirective: null,
   logoutStudent: () => {
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");
@@ -1620,6 +1671,123 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
   },
 
+  // ── English Skill Mode Actions ─────────────────────────────────────────────
+
+  setHighlightedWordIndex: (index) => set({ highlightedWordIndex: index }),
+
+  /** Trigger TTS playback for a directive (called from SSE tts_start handler) */
+  playDirectiveTts: (directiveId, timepoints) => {
+    set({ activeDirectiveId: directiveId, playbackState: "loading", highlightedWordIndex: -1 });
+    // Lazy-import to avoid SSR issues with AudioContext
+    import("@/features/student/services/audioPlayerService").then(({ audioPlayerService }) => {
+      audioPlayerService.play(directiveId, timepoints, {
+        onStateChange: (state) => set({ playbackState: state }),
+        onTimeUpdate: (_time, wordIndex) => set({ highlightedWordIndex: wordIndex }),
+        onComplete: (dId) => {
+          // Report playback_complete to backend (Wave 1 §7.1)
+          const { activeChat } = get();
+          const sessionId = activeChat?.session_id || activeChat?.id;
+          if (sessionId && sessionId !== "new") {
+            get().reportConversationAction("playback_complete", dId);
+          }
+          set({ activeDirectiveId: null, highlightedWordIndex: -1 });
+        },
+        onError: (_dId, msg) => {
+          // Wave 4: graceful degradation — log, never crash
+          console.warn("[TTS]", msg);
+          set({ playbackState: "idle" });
+        },
+      });
+    });
+  },
+
+  /** Stop any active TTS playback */
+  stopPlayback: () => {
+    import("@/features/student/services/audioPlayerService").then(({ audioPlayerService }) => {
+      audioPlayerService.stop();
+    });
+    set({ playbackState: "idle", activeDirectiveId: null, highlightedWordIndex: -1 });
+  },
+
+  /** Start recording for a READ_ALOUD / KARAOKE / SHOW_FIGURE_DESCRIBE directive */
+  startSkillRecording: (directiveId) => {
+    set({ activeDirectiveId: directiveId, recordingState: "permission_request" });
+    import("@/features/student/services/audioRecorderService").then(({ audioRecorderService }) => {
+      audioRecorderService.start(directiveId, {
+        onStateChange: (state) => set({ recordingState: state }),
+        onSilenceDetected: () => {
+          // Wave 4 §2 — silence does NOT show "Incorrect" — let Aanya handle
+          const { activeChat } = get();
+          const sessionId = activeChat?.session_id || activeChat?.id;
+          if (sessionId && sessionId !== "new") {
+            get().reportConversationAction("silence_detected", directiveId);
+          }
+        },
+        onUploadComplete: (gcsUri, dId) => {
+          get().submitOralResult(dId, gcsUri);
+        },
+        onError: (msg) => {
+          console.warn("[Recording]", msg);
+          set({ recordingState: "idle" });
+        },
+      });
+    });
+  },
+
+  /** Stop active recording */
+  stopSkillRecording: () => {
+    import("@/features/student/services/audioRecorderService").then(({ audioRecorderService }) => {
+      audioRecorderService.stop();
+    });
+  },
+
+  /** POST /session/{id}/conversation-action (fire-and-forget) */
+  reportConversationAction: async (type, directiveId) => {
+    const { activeChat } = get();
+    const sessionId = activeChat?.session_id || activeChat?.id;
+    if (!sessionId || sessionId === "new") return;
+    try {
+      await studentService.reportConversationAction(
+        sessionId,
+        type as any,
+        directiveId
+      );
+    } catch {
+      // Fire-and-forget — never surface to student
+    }
+  },
+
+  /** POST /session/{id}/oral-result after GCS upload */
+  submitOralResult: async (directiveId, gcsUri) => {
+    const { activeChat } = get();
+    const sessionId = activeChat?.session_id || activeChat?.id;
+    if (!sessionId || sessionId === "new") return;
+    try {
+      await studentService.submitOralResult(sessionId, directiveId, gcsUri);
+      set({ recordingState: "completed" });
+    } catch (err) {
+      console.warn("[OralResult] submission failed:", err);
+      set({ recordingState: "error" });
+    }
+  },
+
+  /** POST /session/{id}/comprehension-answer */
+  submitComprehensionAnswer: async (directiveId, interactionType, answer) => {
+    const { activeChat } = get();
+    const sessionId = activeChat?.session_id || activeChat?.id;
+    if (!sessionId || sessionId === "new") return;
+    try {
+      await studentService.submitComprehensionAnswer(
+        sessionId,
+        directiveId,
+        interactionType as any,
+        answer
+      );
+    } catch (err) {
+      console.warn("[ComprehensionAnswer] submission failed:", err);
+    }
+  },
+
   sendMessage: async (text?: string, activityInput?: any): Promise<void> => {
     const { studentProfile, activeChat } = get();
     if (!studentProfile) return;
@@ -1905,8 +2073,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           currentTextBuffer += event.text;
           bufferedText += event.text;
 
-          // Detect and extract embedded tags (VISUAL, MATH_DRAW, etc.) OR raw SVG blocks from the text stream
-          const tagRegex = /(?:<<VISUAL[\s\S]*?<<?\/VISUAL>>?)|(?:<<VISUAL[\s\S]*?\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>?)|(?:<svg[\s\S]*?<\/svg>)/g;
+          // Detect and extract embedded tags (VISUAL, MATH_DRAW, English skill directives, raw SVG)
+          // English skill directives are stripped from visible text and parsed for the audio/widget layer
+          const tagRegex = /(?:<<VISUAL[\s\S]*?<<?\/VISUAL>>?)|(?:<<VISUAL[\s\S]*?\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)[\s\S]*?>>?)|(?:<svg[\s\S]*?<\/svg>)/g;
           let match;
           while ((match = tagRegex.exec(currentTextBuffer)) !== null) {
             const tag = match[0];
@@ -1943,11 +2112,77 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             // 3. Remove the processed part (textBefore + tag) from the active buffer
             currentTextBuffer = currentTextBuffer.substring(match.index + tag.length);
             tagRegex.lastIndex = 0; // Reset for remaining text
+
+            // Handle English skill directives — strip from visible text, parse payload
+            if (match[1] && /^(SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)$/.test(match[1])) {
+              const directiveType = match[1];
+              const jsonStart = tag.indexOf(":");
+              if (jsonStart !== -1) {
+                try {
+                  const payload = JSON.parse(tag.slice(jsonStart + 1, -2).trim());
+                  // Store directive for the audio/recording layer to act on
+                  set({ activeSkillDirective: { type: directiveType, ...payload } });
+
+                  // For LISTEN_COMPREHENSION, render an inline comprehension widget
+                  if (directiveType === "LISTEN_COMPREHENSION" && payload.directive_id) {
+                    elements.push({
+                      id: `cw-${payload.directive_id}`,
+                      type: "comprehension_widget",
+                      content: payload.question || "",
+                      meta: {
+                        widget_type: payload.interaction_type || "mcq",
+                        question: payload.question || "",
+                        choices: payload.options || [],
+                        allow_retry: true,
+                        directive_id: payload.directive_id,
+                      },
+                    });
+                    if (isPlanningUIPresented) updateUI(bufferedText, elements);
+                  }
+
+                  // For DIFFICULT_WORD, render a tappable word chip
+                  if (directiveType === "DIFFICULT_WORD" && payload.word) {
+                    elements.push({
+                      id: `dw-${payload.directive_id || payload.word}-${Date.now()}`,
+                      type: "comprehension_widget",
+                      content: payload.word,
+                      meta: {
+                        widget_type: "difficult_word" as any,
+                        word: payload.word,
+                        syllables: payload.syllables,
+                        phonetic: payload.phonetic,
+                        slow_available: payload.slow_available,
+                        directive_id: payload.directive_id,
+                      },
+                    });
+                    if (isPlanningUIPresented) updateUI(bufferedText, elements);
+                  }
+                } catch {
+                  // Malformed directive — ignore, continue stream (Wave 1 §10.5)
+                }
+              }
+              continue; // don't fall through to pushTextElement
+            }
           }
 
           if (isPlanningUIPresented) {
             updateUI(bufferedText, elements, currentToolStatus);
           }
+        } else if (event.type === "tts_start") {
+          // Backend generated TTS — trigger audio playback (Wave 1 §1.4)
+          get().playDirectiveTts(event.directive_id, event.timepoints || []);
+        } else if (event.type === "recording_open") {
+          // Backend wants student to read aloud (Wave 2 §1.3)
+          get().startSkillRecording(event.directive_id);
+        } else if (event.type === "recording_closed") {
+          // Backend closed the recording window
+          get().stopSkillRecording();
+        } else if (event.type === "skill_result") {
+          // Oral reading / comprehension result — store for UI display
+          set({ activeSkillDirective: { type: "skill_result", ...event.payload } });
+        } else if (event.type === "skill_error") {
+          // Wave 4: graceful degradation — log only, session continues
+          console.warn("[SkillError]", event.error_type, event.message);
         } else if (event.type === "done") {
           finalSessionId = event.session_id;
           finalOptions = Array.isArray(event.options) ? event.options : [];
