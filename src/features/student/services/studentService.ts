@@ -228,13 +228,16 @@ export const studentService = {
   reportConversationAction: async (
     sessionId: string,
     type: "playback_complete" | "silence_detected" | "repeat_requested" | "slower_requested" | "interaction_skipped",
-    directiveId: string
+    directiveId: string,
+    studentId?: string
   ) => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (studentId) headers["X-User-Id"] = studentId;
     const response = await authFetch(
       `${API_BASE_URL}/session/${sessionId}/conversation-action`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ type, directive_id: directiveId, timestamp: new Date().toISOString() }),
       }
     );
@@ -245,12 +248,14 @@ export const studentService = {
   },
 
   /** Submit oral reading result after GCS upload */
-  submitOralResult: async (sessionId: string, directiveId: string, gcsUri: string) => {
+  submitOralResult: async (sessionId: string, directiveId: string, gcsUri: string, studentId?: string) => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (studentId) headers["X-User-Id"] = studentId;
     const response = await authFetch(
       `${API_BASE_URL}/session/${sessionId}/oral-result`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ directive_id: directiveId, gcs_uri: gcsUri }),
       }
     );
@@ -263,13 +268,16 @@ export const studentService = {
     sessionId: string,
     directiveId: string,
     interactionType: "mcq" | "fill_blank" | "retell" | "free_response",
-    answer: string
+    answer: string,
+    studentId?: string
   ) => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (studentId) headers["X-User-Id"] = studentId;
     const response = await authFetch(
       `${API_BASE_URL}/session/${sessionId}/comprehension-answer`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ directive_id: directiveId, interaction_type: interactionType, answer }),
       }
     );

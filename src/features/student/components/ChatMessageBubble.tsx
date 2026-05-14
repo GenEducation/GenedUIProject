@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ThumbsUp, ThumbsDown, Share2, Copy, Check } from "lucide-react";
 import Image from "next/image";
 import { ChatMessage } from "../store/useStudentStore";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { VisualBlock } from "./VisualBlock";
 import { MathWidget } from "./MathWidget";
 import { MarkdownRenderer } from "./MarkdownRenderer";
@@ -15,10 +15,49 @@ import { P5Visual } from "./P5Visual";
 import { GeoGebraVisual } from "./GeoGebraVisual";
 import { ActivityRenderer } from "./ActivityRenderer";
 import { ComprehensionWidget } from "./ComprehensionWidget";
+import { KaraokeRenderer } from "./KaraokeRenderer";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
+
+// ── Mode 5: Picture Description Block ────────────────────────────────────────
+function FigureDescribeBlock({ figureAssetUrl, prompt, directiveId }: {
+  figureAssetUrl?: string; prompt: string; directiveId?: string;
+}) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!figureAssetUrl) { setLoading(false); return; }
+    // If it's a relative path (signed URL endpoint), fetch it
+    const resolvedUrl = figureAssetUrl.startsWith("http")
+      ? figureAssetUrl
+      : `${API_BASE_URL}${figureAssetUrl}`;
+    fetch(resolvedUrl, { credentials: "include" })
+      .then((r) => r.ok ? r.blob() : Promise.reject())
+      .then((blob) => setImageUrl(URL.createObjectURL(blob)))
+      .catch(() => setImageUrl(null))
+      .finally(() => setLoading(false));
+  }, [figureAssetUrl]);
+
+  return (
+    <div className="flex flex-col items-center gap-3 w-full">
+      {loading ? (
+        <div className="w-full h-32 bg-[#F0F7FF] rounded-xl animate-pulse" />
+      ) : imageUrl ? (
+        <img src={imageUrl} alt="Scene" className="max-w-full rounded-xl shadow-sm" />
+      ) : (
+        <div className="w-full p-4 bg-[#FFF8E1] text-[#F57F17] rounded-xl text-xs font-medium text-center">
+          🖼️ Image unavailable
+        </div>
+      )}
+      <p className="text-sm font-semibold text-[#042E5C]/80 text-center">{prompt}</p>
+    </div>
+  );
+}
 
 const StreamingTextRenderer = React.memo(({ content, isStreaming }: { content: string, isStreaming: boolean }) => {
   const displayedText = useSmoothStream(content, isStreaming, 15);
-  return <MarkdownRenderer content={displayedText} />;
+  return <MarkdownRenderer content={displayedText} showToolbar={!isStreaming} />;
 });
 
 interface ChatMessageBubbleProps {
@@ -29,7 +68,7 @@ interface ChatMessageBubbleProps {
 
 const SmoothMarkdown = ({ content, isStreaming }: { content: string; isStreaming: boolean }) => {
   const displayedText = useSmoothStream(content, isStreaming, 15);
-  return <MarkdownRenderer content={displayedText} />;
+  return <MarkdownRenderer content={displayedText} showToolbar={!isStreaming} />;
 };
 
 export const ChatMessageBubble = React.memo(
@@ -132,6 +171,20 @@ export const ChatMessageBubble = React.memo(
                           </VisualCard>
                         );
                       }
+                      if (el.meta?.engine === "show_figure_describe") {
+                        return (
+                          <VisualCard key={el.id} engine="show_figure" label="Picture Description">
+                            <div className="flex flex-col items-center gap-3">
+                              <FigureDescribeBlock
+                                key={el.id}
+                                figureAssetUrl={el.meta.figure_asset_url}
+                                prompt={el.meta.label || "What do you see in this picture?"}
+                                directiveId={el.meta.directive_id}
+                              />
+                            </div>
+                          </VisualCard>
+                        );
+                      }
                     }
                     if (el.type === "svg") return <VisualBlock key={el.id} svg={el.content} meta={el.meta} />;
                     if (el.type === "image") return <VisualBlock key={el.id} image={el.content} meta={el.meta} />;
@@ -152,6 +205,16 @@ export const ChatMessageBubble = React.memo(
                         />
                       );
                     }
+                    if (el.type === "english_skill_view") {
+                      return (
+                        <KaraokeRenderer
+                          key={el.id}
+                          text={el.content}
+                          directiveId={el.meta?.directive_id || ""}
+                          mode={el.meta?.mode}
+                        />
+                      );
+                    }
                     return null;
                   })}
                   {message.toolStatus && isStreaming && (
@@ -162,7 +225,7 @@ export const ChatMessageBubble = React.memo(
                   )}
                 </div>
               ) : (
-                <MarkdownRenderer content={displayedText} />
+                <MarkdownRenderer content={displayedText} showToolbar={!isUser && !isStreaming} />
               )}
 
               {/* Render Activities if present */}

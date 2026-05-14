@@ -176,16 +176,18 @@ class AudioPlayerService {
   }
 
   /** Play a single word/syllable TTS (Mode 2 — tap on difficult word) */
-  async playWord(directiveId: string): Promise<void> {
+  async playWord(directiveId: string, word: string, slow = false, grade = 5): Promise<void> {
     this.stop();
     this.activeDirectiveId = directiveId;
     this.setState("loading");
 
     try {
       const ctx = this.getOrCreateContext();
-      const response = await authFetch(
-        `${API_BASE_URL}/audio/word-tts?directive_id=${directiveId}`
-      );
+      // Spec: GET /audio/word-tts?word={word}&grade={grade}&slow={bool}
+      const url = word
+        ? `${API_BASE_URL}/audio/word-tts?word=${encodeURIComponent(word)}&grade=${grade}&slow=${slow}`
+        : `${API_BASE_URL}/audio/word-tts?directive_id=${directiveId}`;
+      const response = await authFetch(url);
       if (!response.ok) {
         this.setState("error");
         return;

@@ -32,16 +32,19 @@ interface ComprehensionWidgetProps {
 
 // ── Difficult Word Chip ───────────────────────────────────────────────────────
 
-function DifficultWordChip({ directiveId, word, syllables, phonetic }: ComprehensionWidgetProps) {
+function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailable }: ComprehensionWidgetProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const { playDirectiveTts } = useStudentStore();
+  const [isSlow, setIsSlow] = useState(false);
 
-  const handleTap = () => {
+  const handlePlay = (slow: boolean) => {
     if (isPlaying) return;
     setIsPlaying(true);
-    // Use word-tts endpoint via audioPlayerService directly
+    setIsSlow(slow);
     import("@/features/student/services/audioPlayerService").then(({ audioPlayerService }) => {
-      audioPlayerService.playWord(directiveId).finally(() => setIsPlaying(false));
+      audioPlayerService.playWord(directiveId, word || "", slow).finally(() => {
+        setIsPlaying(false);
+        setIsSlow(false);
+      });
     });
   };
 
@@ -49,22 +52,48 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic }: Comprehen
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 border border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors select-none"
-      onClick={handleTap}
-      title="Tap to hear pronunciation"
+      className="inline-flex flex-col px-5 py-3.5 rounded-2xl bg-blue-50/80 border border-blue-200 select-none"
     >
-      <Volume2
-        size={14}
-        className={`flex-shrink-0 transition-colors ${isPlaying ? "text-blue-600 animate-pulse" : "text-blue-400"}`}
-      />
-      <span className="font-bold text-blue-700 text-sm">{word}</span>
-      {syllables && syllables.length > 0 && (
-        <span className="text-blue-400 text-xs font-medium">
-          {syllables.join("·")}
-        </span>
-      )}
-      {phonetic && (
-        <span className="text-blue-300 text-xs italic">{phonetic}</span>
+      <div className="flex items-center gap-6 justify-between">
+        <span className="font-bold text-blue-800 text-lg leading-tight">{word}</span>
+        
+        <div className="flex items-center gap-2">
+          {slowAvailable && (
+            <button
+              onClick={() => handlePlay(true)}
+              disabled={isPlaying}
+              title="Slower pronunciation"
+              className={`text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all ${
+                isPlaying && isSlow
+                  ? "bg-blue-200 text-blue-700 border-blue-300"
+                  : "bg-white text-blue-500 border-blue-200 hover:bg-blue-100"
+              }`}
+            >
+              slow
+            </button>
+          )}
+          <button
+            onClick={() => handlePlay(false)}
+            disabled={isPlaying}
+            title="Tap to hear pronunciation"
+            className={`flex-shrink-0 transition-colors hover:opacity-70 ${isPlaying && !isSlow ? "text-blue-600 animate-pulse" : "text-blue-500"}`}
+          >
+            <Volume2 size={20} />
+          </button>
+        </div>
+      </div>
+
+      {((syllables && syllables.length > 0) || phonetic) && (
+        <div className="flex items-center gap-2 mt-1">
+          {syllables && syllables.length > 0 && (
+            <span className="text-blue-500 text-[15px] font-medium tracking-wide">
+              {syllables.join(" · ")}
+            </span>
+          )}
+          {phonetic && (
+            <span className="text-blue-400 text-xs italic">{phonetic}</span>
+          )}
+        </div>
       )}
     </motion.div>
   );

@@ -20,7 +20,7 @@ export interface StudentProfile {
 
 export interface ChatElement {
   id: string;
-  type: "text" | "svg" | "widget" | "image" | "visual" | "comprehension_widget";
+  type: "text" | "svg" | "widget" | "image" | "visual" | "comprehension_widget" | "english_skill_view";
   content: string;
   meta?: {
     // existing visual meta
@@ -456,9 +456,9 @@ function parseContent(content: string): ChatElement[] {
   // Master regex to capture:
   // 1. v2 Block Visuals: <<VISUAL type="p5sketch" label="...">>code<</VISUAL>> or <...> </VISUAL>
   // 2. v2 Self-closing Desmos: <<VISUAL type="desmos" expression="..." />>
-  // 3. Legacy MATH_DRAW / MATH_WIDGET / SHOW_FIGURE
+  // 3. Legacy and Skill Modes
   // 4. Raw SVG tags
-  const masterRegex = /(?:<<VISUAL\s+type="([^"]+)"\s+label="([^"]*)"(?:[^>]*)>>?([\s\S]*?)<<?\/VISUAL>>?)|(?:<<VISUAL\s+type="desmos"\s+expression="([^"]+)"[^/]*\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s+([\s\S]*?)(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
+  const masterRegex = /(?:<<VISUAL\s+type="([^"]+)"\s+label="([^"]*)"(?:[^>]*)>>?([\s\S]*?)<<?\/VISUAL>>?)|(?:<<VISUAL\s+type="desmos"\s+expression="([^"]+)"[^/]*\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)(?::|\s+)([\s\S]*?)(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
   
   let elementCount = 0;
   let lastIndex = 0;
@@ -575,6 +575,34 @@ function parseContent(content: string): ChatElement[] {
             image: figureIdMatch ? figureIdMatch[1] : "",
           },
         });
+      } else if (["SPEAK_PARA", "DIFFICULT_WORD", "READ_ALOUD", "LISTEN_COMPREHENSION", "SHOW_FIGURE_DESCRIBE", "KARAOKE"].includes(type)) {
+        try {
+          const payload = JSON.parse(attrsRaw.trim());
+          if (type === "DIFFICULT_WORD" && payload.word) {
+            elements.push({
+              id: `dw-${payload.directive_id || payload.word}-${Date.now()}`,
+              type: "comprehension_widget",
+              content: payload.word,
+              meta: {
+                widget_type: "difficult_word" as any,
+                word: payload.word,
+                syllables: payload.syllables,
+                phonetic: payload.phonetic,
+                slow_available: payload.slow_available,
+                directive_id: payload.directive_id,
+              },
+            });
+          } else if (["SPEAK_PARA", "KARAOKE", "READ_ALOUD"].includes(type)) {
+            elements.push({
+              id: `sv-${payload.directive_id || Date.now()}`,
+              type: "english_skill_view",
+              content: payload.source_text || "",
+              meta: { directive_id: payload.directive_id, mode: type }
+            });
+          }
+        } catch (e) {
+          console.error("Failed to parse English skill directive in history", e);
+        }
       }
     } else if (match[7]) {
       // Raw SVG
@@ -676,6 +704,8 @@ export interface StudentState {
   // ── English Skill Mode State (Wave 1–4) ─────────────────────────────────────
   playbackState: "idle" | "loading" | "buffering" | "playing" | "paused" | "stopped" | "completed" | "error";
   recordingState: "idle" | "permission_request" | "ready" | "recording" | "uploading" | "processing" | "completed" | "error";
+  /** null = no prompt, 'silence' = auto-stop confirm dialog, 'cap' = duration nudge */
+  recordingPrompt: "silence" | "cap" | null;
   activeDirectiveId: string | null;
   highlightedWordIndex: number;
   activeSkillDirective: any | null; // parsed directive payload (SPEAK_PARA, READ_ALOUD, etc.)
@@ -711,8 +741,9 @@ export interface StudentState {
   // ── English Skill Mode Actions (Wave 1–4) ────────────────────────────────────
   playDirectiveTts: (directiveId: string, timepoints: any[]) => void;
   stopPlayback: () => void;
-  startSkillRecording: (directiveId: string) => void;
+  startSkillRecording: (directiveId: string, expectedDurationMs?: number) => void;
   stopSkillRecording: () => void;
+  dismissRecordingPrompt: () => void;
   reportConversationAction: (type: string, directiveId: string) => Promise<void>;
   submitOralResult: (directiveId: string, gcsUri: string) => Promise<void>;
   submitComprehensionAnswer: (directiveId: string, interactionType: string, answer: string) => Promise<void>;
@@ -755,6 +786,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   // English skill mode initial state
   playbackState: "idle",
   recordingState: "idle",
+  recordingPrompt: null,
   activeDirectiveId: null,
   highlightedWordIndex: -1,
   activeSkillDirective: null,
@@ -1040,7 +1072,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
           return {
             id: `h-${i}-${Date.now()}`,
-            text: content.replace(/(?:<<|<)(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?(?:>>|>)/g, "").replace(/<svg[\s\S]*?<\/svg>/g, "").trim(),
+            text: content.replace(/(?:<<|<)(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)[\s\S]*?(?:>>|>)/g, "").replace(/<svg[\s\S]*?<\/svg>/g, "").trim(),
             elements:
               elements.length > 1 ||
               (elements.length === 1 && elements[0].type !== "text")
@@ -1710,18 +1742,31 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   },
 
   /** Start recording for a READ_ALOUD / KARAOKE / SHOW_FIGURE_DESCRIBE directive */
-  startSkillRecording: (directiveId) => {
-    set({ activeDirectiveId: directiveId, recordingState: "permission_request" });
+  startSkillRecording: (directiveId, expectedDurationMs = 15000) => {
+    const { recordingState, activeDirectiveId } = get();
+    if (recordingState !== "idle" && recordingState !== "completed" && recordingState !== "error") {
+      if (activeDirectiveId === directiveId) return; // Already recording this one
+      // If it's a different one, we should probably stop the old one first, but for now just return
+      return;
+    }
+
+    set({ activeDirectiveId: directiveId, recordingState: "permission_request", recordingPrompt: null });
     import("@/features/student/services/audioRecorderService").then(({ audioRecorderService }) => {
-      audioRecorderService.start(directiveId, {
+      const { activeChat, studentProfile } = get();
+      const sessionId = activeChat?.session_id || activeChat?.id || "";
+      const studentId = studentProfile?.user_id || "";
+      audioRecorderService.start(directiveId, sessionId, studentId, {
         onStateChange: (state) => set({ recordingState: state }),
         onSilenceDetected: () => {
-          // Wave 4 §2 — silence does NOT show "Incorrect" — let Aanya handle
-          const { activeChat } = get();
-          const sessionId = activeChat?.session_id || activeChat?.id;
-          if (sessionId && sessionId !== "new") {
+          set({ recordingPrompt: "silence" });
+          // We can also report the action if we want, but UI confirm is primary now
+          const sId = get().activeChat?.session_id || get().activeChat?.id;
+          if (sId && sId !== "new") {
             get().reportConversationAction("silence_detected", directiveId);
           }
+        },
+        onDurationCap: () => {
+          set({ recordingPrompt: "cap" });
         },
         onUploadComplete: (gcsUri, dId) => {
           get().submitOralResult(dId, gcsUri);
@@ -1739,6 +1784,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     import("@/features/student/services/audioRecorderService").then(({ audioRecorderService }) => {
       audioRecorderService.stop();
     });
+    set({ recordingPrompt: null });
+  },
+
+  dismissRecordingPrompt: () => {
+    set({ recordingPrompt: null });
   },
 
   /** POST /session/{id}/conversation-action (fire-and-forget) */
@@ -2168,12 +2218,88 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           if (isPlanningUIPresented) {
             updateUI(bufferedText, elements, currentToolStatus);
           }
+        } else if (event.type === "skill_action") {
+          // Mode Controller (The "What"): Prepare the UI state for a skill mode
+          const { mode, payload } = event;
+          const directiveType = (mode || "").toUpperCase();
+          
+          set({ activeSkillDirective: { type: directiveType, ...payload } });
+
+          // Add a dedicated reading block element if it's a speaking mode (Wave 1/2)
+          if ((directiveType === "SPEAK_PARA" || directiveType === "KARAOKE" || directiveType === "READ_ALOUD") && payload.directive_id) {
+            if (!elements.some(el => el.id === `sv-${payload.directive_id}`)) {
+              elements.push({
+                id: `sv-${payload.directive_id}`,
+                type: "english_skill_view",
+                content: payload.source_text || "",
+                meta: { directive_id: payload.directive_id, mode: directiveType }
+              });
+              if (isPlanningUIPresented) updateUI(bufferedText, elements);
+            }
+          }
+
+          // DIFFICULT_WORD: inject a tappable pronunciation chip
+          if (directiveType === "DIFFICULT_WORD" && payload.word) {
+            const dwId = `dw-${payload.directive_id || payload.word}-${Date.now()}`;
+            elements.push({
+              id: dwId,
+              type: "comprehension_widget",
+              content: payload.word,
+              meta: {
+                widget_type: "difficult_word" as any,
+                word: payload.word,
+                syllables: payload.syllables,
+                phonetic: payload.phonetic,
+                slow_available: payload.slow_available,
+                directive_id: payload.directive_id,
+              },
+            });
+            updateUI(bufferedText, elements);
+          }
+
+          // LISTEN_COMPREHENSION: inject inline quiz widget
+          if (directiveType === "LISTEN_COMPREHENSION" && payload.directive_id) {
+            if (!elements.some(el => el.id === `cw-${payload.directive_id}`)) {
+              elements.push({
+                id: `cw-${payload.directive_id}`,
+                type: "comprehension_widget",
+                content: payload.question || "",
+                meta: {
+                  widget_type: payload.interaction_type || "mcq",
+                  question: payload.question || "",
+                  choices: payload.options || [],
+                  allow_retry: true,
+                  directive_id: payload.directive_id,
+                },
+              });
+              updateUI(bufferedText, elements);
+            }
+          }
+
+          // SHOW_FIGURE_DESCRIBE: inject a visual card with the figure
+          if (directiveType === "SHOW_FIGURE_DESCRIBE" && payload.directive_id) {
+            if (!elements.some(el => el.id === `fig-${payload.directive_id}`)) {
+              elements.push({
+                id: `fig-${payload.directive_id}`,
+                type: "visual",
+                content: "show_figure_describe",
+                meta: {
+                  engine: "show_figure_describe",
+                  label: payload.prompt || "What do you see?",
+                  figure_id: payload.figure_id,
+                  directive_id: payload.directive_id,
+                  figure_asset_url: payload.figure_asset_url,
+                },
+              });
+              updateUI(bufferedText, elements);
+            }
+          }
         } else if (event.type === "tts_start") {
           // Backend generated TTS — trigger audio playback (Wave 1 §1.4)
           get().playDirectiveTts(event.directive_id, event.timepoints || []);
         } else if (event.type === "recording_open") {
           // Backend wants student to read aloud (Wave 2 §1.3)
-          get().startSkillRecording(event.directive_id);
+          get().startSkillRecording(event.directive_id, event.expected_duration_ms);
         } else if (event.type === "recording_closed") {
           // Backend closed the recording window
           get().stopSkillRecording();
@@ -2188,11 +2314,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           finalOptions = Array.isArray(event.options) ? event.options : [];
           finalActions = Array.isArray(event.actions) ? event.actions : [];
           if (event.response) doneResponse = event.response;
-          if (!bufferedText && typeof event.response === "string" && event.response.trim()) {
-            currentTextBuffer = event.response;
-            bufferedText = event.response;
-            if (isPlanningUIPresented) updateUI(bufferedText, elements);
-          }
         }
       };
 
@@ -2357,7 +2478,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         const finalisedMsg: ChatMessage = {
           id: streamingMsgId,
           text: bufferedText,
-          elements: elements,
+          elements: [...elements],
           sender: "ai",
           timestamp: new Date().toLocaleTimeString([], {
             hour: "2-digit",
