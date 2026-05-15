@@ -100,30 +100,6 @@ const getMarkdownComponents = (showToolbar: boolean) => ({
     return (
       <div className="relative group mb-3 last:mb-0">
         <p className="leading-relaxed" {...props}>{children}</p>
-        
-        {/* Contextual Toolbar (Invisible Mode) */}
-        {showToolbar && (
-          <div className="absolute -top-10 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-white shadow-sm border border-[#042E5C]/10 rounded-lg p-1 z-10 pointer-events-auto">
-            <button onClick={() => handleAction("Read to me")} className="p-1.5 hover:bg-[#F4F3EE] rounded-md text-[#042E5C]/60 hover:text-[#042E5C] transition-colors" title="Read to me">
-              <Volume2 size={14} />
-            </button>
-            <button onClick={() => handleAction("I'll read")} className="p-1.5 hover:bg-[#F4F3EE] rounded-md text-[#042E5C]/60 hover:text-[#042E5C] transition-colors" title="I'll read">
-              <Mic size={14} />
-            </button>
-            <button onClick={() => handleAction("Repeat")} className="p-1.5 hover:bg-[#F4F3EE] rounded-md text-[#042E5C]/60 hover:text-[#042E5C] transition-colors" title="Repeat">
-              <RotateCcw size={14} />
-            </button>
-            <button onClick={() => handleAction("Slower")} className="p-1.5 hover:bg-[#F4F3EE] rounded-md text-[#042E5C]/60 hover:text-[#042E5C] transition-colors" title="Slower">
-              <div className="relative flex items-center justify-center">
-                <Volume2 size={14} />
-                <span className="absolute -bottom-1.5 -right-1.5 text-[7px] font-bold">.5x</span>
-              </div>
-            </button>
-            <button onClick={() => handleAction("Practice pronunciation")} className="px-1.5 py-1 hover:bg-[#F4F3EE] rounded-md text-[#042E5C]/60 hover:text-[#042E5C] transition-colors text-[10px] font-bold leading-none" title="Practice pronunciation">
-              Aa
-            </button>
-          </div>
-        )}
       </div>
     );
   },
@@ -149,13 +125,6 @@ const getMarkdownComponents = (showToolbar: boolean) => ({
           className="rounded-2xl border border-[#1a3a2a]/10 shadow-md w-full h-auto object-contain max-h-[400px] block mx-auto"
           {...props} 
         />
-        {showToolbar && (
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-white/90 backdrop-blur-sm shadow-sm border border-[#042E5C]/10 rounded-lg p-1 z-10 pointer-events-auto">
-            <button onClick={handleAction} className="flex items-center gap-1.5 px-2 py-1 hover:bg-[#F4F3EE] rounded-md text-[#042E5C]/70 hover:text-[#042E5C] transition-colors text-xs font-bold" title="Describe this image">
-              <ImageIcon size={14} /> Describe
-            </button>
-          </div>
-        )}
       </div>
     );
   },
