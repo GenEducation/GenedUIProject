@@ -17,6 +17,7 @@ interface KaraokeRendererProps {
 export const KaraokeRenderer = ({ text, directiveId, mode }: KaraokeRendererProps) => {
   const highlightedWordIndex = useStudentStore(state => state.highlightedWordIndex);
   const activeDirectiveId = useStudentStore(state => state.activeDirectiveId);
+  const recordingState = useStudentStore(state => state.recordingState);
   const isActive = activeDirectiveId === directiveId;
 
   // Split by words but preserve whitespace/newlines to maintain poem formatting
@@ -63,14 +64,25 @@ export const KaraokeRenderer = ({ text, directiveId, mode }: KaraokeRendererProp
       </div>
 
       {/* Mode Indicator */}
-      {isActive && (
+      {isActive && recordingState !== "completed" && (
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-600"
         >
           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-          {mode === "READ_ALOUD" ? "Student is reading" : "Aanya is reading"}
+          {recordingState === "processing" ? "Analyzing..." : (mode === "READ_ALOUD" ? "Student is reading" : "Aanya is reading")}
+        </motion.div>
+      )}
+
+      {isActive && recordingState === "completed" && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600"
+        >
+          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+          Reading Task Completed
         </motion.div>
       )}
     </div>

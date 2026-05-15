@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useStudentStore, ChatMessage, ChatSession } from "../store/useStudentStore";
 import { ChatMessageBubble } from "./ChatMessageBubble";
+import { KaraokeRenderer } from "./KaraokeRenderer";
 import { StudentChatInput } from "./StudentChatInput";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
@@ -57,16 +58,27 @@ function ReadingSkillModal({
   state, 
   prompt, 
   skillData,
+  error,
+  analysisResult,
+  playbackState,
+  onStart,
   onStop, 
+  onPlayAanya,
   onDismissPrompt 
 }: { 
   state: string; 
   prompt: "silence" | "cap" | null; 
   skillData: any;
+  error: string | null;
+  analysisResult: any | null;
+  playbackState: string;
+  onStart: () => void;
   onStop: () => void;
+  onPlayAanya: () => void;
   onDismissPrompt: () => void;
 }) {
-  if (state === "idle" || state === "completed") return null;
+  // Reset to return null only on idle
+  if (state === "idle") return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -119,18 +131,25 @@ function ReadingSkillModal({
 
         {/* Content Area */}
         <div className="p-8 flex-1 overflow-y-auto max-h-[40vh]">
-          <div className="bg-blue-50/30 rounded-2xl p-6 border border-blue-100/50">
-            <p className="text-2xl font-medium text-[#042E5C] leading-relaxed whitespace-pre-wrap text-center italic">
-              "{skillData?.source_text || skillData?.text || "..."}"
-            </p>
+          <div className="bg-[#F7FAFF] rounded-3xl p-4 mb-8 border border-[#042E5C]/5">
+            <KaraokeRenderer 
+              text={skillData?.source_text || skillData?.text || ""} 
+              directiveId={skillData?.directive_id || ""} 
+              mode={skillData?.type}
+            />
           </div>
         </div>
 
         {/* Actions Area */}
         <div className="px-8 pb-8 pt-4 flex flex-col gap-4">
-          {(state === "recording" || state === "permission_request" || state === "ready") && (
-            <div className="w-full flex flex-col gap-3">
-              {prompt === "silence" && (
+              {(state === "recording" || state === "permission_request" || state === "ready" || state === "uploading" || state === "processing") && (
+                <div className="w-full flex flex-col gap-3">
+                  {state === "processing" && (
+                    <div className="bg-blue-50 text-blue-800 text-xs px-4 py-3 rounded-xl text-center font-bold border border-blue-200 animate-pulse">
+                      Analyzing your reading...
+                    </div>
+                  )}
+                  {prompt === "silence" && (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -146,13 +165,24 @@ function ReadingSkillModal({
               )}
 
               <button
-                onClick={onStop}
-                className="w-full bg-[#042E5C] hover:bg-[#042E5C]/90 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-blue-900/10 active:scale-[0.98]"
+                disabled={state === "permission_request" || state === "uploading" || state === "processing"}
+                onClick={(state === "permission_request" || state === "ready") ? onStart : onStop}
+                className="w-full bg-[#042E5C] hover:bg-[#042E5C]/90 disabled:bg-[#042E5C]/50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-blue-900/10 active:scale-[0.98]"
               >
-                {state === "permission_request" || state === "ready" ? (
+                {state === "permission_request" ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Requesting Mic...
+                  </>
+                ) : state === "ready" ? (
                   <>
                     <Mic className="w-5 h-5" />
                     Start Reading Now
+                  </>
+                ) : state === "uploading" || state === "processing" ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Saving...
                   </>
                 ) : (
                   <>
@@ -172,19 +202,100 @@ function ReadingSkillModal({
               )}
             </div>
           )}
+
+          {state === "completed" && analysisResult && (
+            <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 flex flex-col items-center">
+                  <span className="text-[10px] uppercase tracking-wider text-blue-600 font-bold">Accuracy</span>
+                  <span className="text-xl font-black text-blue-900">
+                    {Math.max(0, Math.round((1 - (analysisResult.wer || 0)) * 100))}%
+                  </span>
+                </div>
+                <div className="bg-green-50/50 p-3 rounded-xl border border-green-100 flex flex-col items-center">
+                  <span className="text-[10px] uppercase tracking-wider text-green-600 font-bold">Speed</span>
+                  <span className="text-xl font-black text-green-900">
+                    {Math.round(analysisResult.pace_wpm || 0)} <span className="text-[10px] font-normal">wpm</span>
+                  </span>
+                </div>
+                <div className="bg-purple-50/50 p-3 rounded-xl border border-purple-100 flex flex-col items-center">
+                  <span className="text-[10px] uppercase tracking-wider text-purple-600 font-bold">Fluency</span>
+                  <span className="text-lg font-black text-purple-900 capitalize">
+                    {analysisResult.fluency || "Good"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-4 bg-orange-50/30 rounded-2xl border border-orange-100/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-orange-200 flex items-center justify-center text-[10px] font-bold text-orange-700">A</div>
+                  <span className="text-xs font-bold text-orange-800">Aanya's Feedback</span>
+                </div>
+                <p className="text-sm text-orange-900/80 italic leading-relaxed">
+                  "{analysisResult.feedback || "Great job reading! Keep it up."}"
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                {skillData?.type === "KARAOKE" && (
+                  <button
+                    onClick={onPlayAanya}
+                    disabled={playbackState === "loading" || playbackState === "buffering"}
+                    className="flex-1 bg-white border-2 border-[#042E5C] text-[#042E5C] font-bold py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {(playbackState === "loading" || playbackState === "buffering") ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Volume2 className="w-5 h-5" />
+                    )}
+                    Hear Aanya
+                  </button>
+                )}
+                <button
+                  onClick={onStop}
+                  className="flex-1 bg-[#042E5C] text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-900/20 active:scale-[0.98] transition-all"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
           
           {state === "error" && (
-            <div className="flex flex-col gap-4 items-center">
-              <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center gap-3 text-red-600">
-                <MicOff className="w-5 h-5" />
-                <span className="font-bold">Microphone access failed</span>
+            <div className="flex flex-col gap-3 items-center w-full">
+              <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center gap-3 text-red-600 w-full">
+                <MicOff className="w-5 h-5 flex-shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-bold">
+                    {error?.toLowerCase().includes("upload") || error?.toLowerCase().includes("server") || error?.includes("500")
+                      ? "Upload Failed"
+                      : error?.toLowerCase().includes("fetch") || error?.toLowerCase().includes("network")
+                      ? "Network Error"
+                      : "Microphone access failed"}
+                  </span>
+                  {error && <span className="text-[10px] opacity-70 leading-tight mt-0.5">{error}</span>}
+                  {typeof window !== "undefined" && !window.isSecureContext && (
+                    <span className="text-[10px] font-extrabold uppercase tracking-tighter mt-1 bg-red-100 px-2 py-0.5 rounded">
+                      Insecure Context (Requires HTTPS or localhost)
+                    </span>
+                  )}
+                </div>
               </div>
-              <button
-                onClick={onStop}
-                className="w-full bg-[#042E5C] text-white font-bold py-4 rounded-2xl"
-              >
-                Close Task
-              </button>
+              
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={onStart}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all"
+                >
+                  Try Again
+                </button>
+                <button
+                  onClick={onStop}
+                  className="flex-1 bg-[#042E5C]/5 hover:bg-[#042E5C]/10 text-[#042E5C] font-bold py-4 rounded-2xl transition-all"
+                >
+                  Close Task
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -211,10 +322,14 @@ export function StudentChatMain({
     setRateLimitHit,
     recordingState, 
     recordingPrompt, 
+    recordingError,
     activeSkillDirective,
-    stopSkillRecording, 
-    dismissRecordingPrompt,
+    oralAnalysisResult,
     playbackState,
+    playDirectiveTts,
+    stopSkillRecording, 
+    confirmStartRecording,
+    dismissRecordingPrompt,
     stopPlayback
   } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -366,12 +481,21 @@ export function StudentChatMain({
 
         {/* Global Reading Skill Modal */}
         <AnimatePresence>
-          {recordingState !== "idle" && recordingState !== "completed" && (
+          {recordingState !== "idle" && (
             <ReadingSkillModal 
               state={recordingState} 
               prompt={recordingPrompt} 
               skillData={activeSkillDirective}
+              error={recordingError}
+              analysisResult={oralAnalysisResult}
+              playbackState={playbackState}
+              onStart={confirmStartRecording}
               onStop={stopSkillRecording}
+              onPlayAanya={() => {
+                if (activeSkillDirective?.directive_id) {
+                  playDirectiveTts(activeSkillDirective.directive_id, []);
+                }
+              }}
               onDismissPrompt={dismissRecordingPrompt}
             />
           )}

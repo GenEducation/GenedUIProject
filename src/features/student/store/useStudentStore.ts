@@ -706,9 +706,12 @@ export interface StudentState {
   recordingState: "idle" | "permission_request" | "ready" | "recording" | "uploading" | "processing" | "completed" | "error";
   /** null = no prompt, 'silence' = auto-stop confirm dialog, 'cap' = duration nudge */
   recordingPrompt: "silence" | "cap" | null;
+  recordingError: string | null;
   activeDirectiveId: string | null;
-  highlightedWordIndex: number;
-  activeSkillDirective: any | null; // parsed directive payload (SPEAK_PARA, READ_ALOUD, etc.)
+   highlightedWordIndex: number;
+  activeSkillDirective: any | null; 
+  oralAnalysisResult: any | null;
+  karaokeTimer: any | null;
 
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
@@ -744,10 +747,13 @@ export interface StudentState {
   startSkillRecording: (directiveId: string, expectedDurationMs?: number) => void;
   stopSkillRecording: () => void;
   dismissRecordingPrompt: () => void;
+  confirmStartRecording: () => void;
   reportConversationAction: (type: string, directiveId: string) => Promise<void>;
   submitOralResult: (directiveId: string, gcsUri: string) => Promise<void>;
   submitComprehensionAnswer: (directiveId: string, interactionType: string, answer: string) => Promise<void>;
   setHighlightedWordIndex: (index: number) => void;
+  startKaraokePaceTimer: (wordCount: number) => void;
+  stopKaraokePaceTimer: () => void;
 }
 
 // -- Store --------------------------------------------------------------------─
@@ -787,9 +793,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   playbackState: "idle",
   recordingState: "idle",
   recordingPrompt: null,
+  recordingError: null,
   activeDirectiveId: null,
   highlightedWordIndex: -1,
   activeSkillDirective: null,
+  oralAnalysisResult: null,
+  karaokeTimer: null,
   logoutStudent: () => {
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");
@@ -1349,14 +1358,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       set({ activeChat: { ...effectiveChat, chatMode: "voice" } });
     }
 
-    // Enforce text mode restriction
-    if (activeChat?.chatMode === "text") return;
-
     console.log("🎙️ [StudentStore] Starting Voice Session for Chat:", effectiveChat);
     set({ voiceSessionStatus: "connecting" });
 
-    // Set chat mode to voice if not already set
-    if (activeChat && !activeChat.chatMode) {
+    // Ensure chat mode is voice
+    if (activeChat) {
       set((state) => ({
         activeChat: state.activeChat
           ? { ...state.activeChat, chatMode: "voice" }
@@ -1707,6 +1713,31 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   setHighlightedWordIndex: (index) => set({ highlightedWordIndex: index }),
 
+  startKaraokePaceTimer: (wordCount: number) => {
+    const { karaokeTimer } = get();
+    if (karaokeTimer) clearInterval(karaokeTimer);
+    
+    set({ highlightedWordIndex: 0 });
+    
+    // 150 WPM = 400ms per word
+    const interval = setInterval(() => {
+      const { highlightedWordIndex } = get();
+      if (highlightedWordIndex < wordCount - 1) {
+        set({ highlightedWordIndex: highlightedWordIndex + 1 });
+      } else {
+        get().stopKaraokePaceTimer();
+      }
+    }, 400);
+
+    set({ karaokeTimer: interval });
+  },
+
+  stopKaraokePaceTimer: () => {
+    const { karaokeTimer } = get();
+    if (karaokeTimer) clearInterval(karaokeTimer);
+    set({ karaokeTimer: null });
+  },
+
   /** Trigger TTS playback for a directive (called from SSE tts_start handler) */
   playDirectiveTts: (directiveId, timepoints) => {
     set({ activeDirectiveId: directiveId, playbackState: "loading", highlightedWordIndex: -1 });
@@ -1741,28 +1772,56 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     set({ playbackState: "idle", activeDirectiveId: null, highlightedWordIndex: -1 });
   },
 
-  /** Start recording for a READ_ALOUD / KARAOKE / SHOW_FIGURE_DESCRIBE directive */
+  /** Prepare for recording — opens the modal but doesn't activate mic yet (Wave 2 §9) */
   startSkillRecording: (directiveId, expectedDurationMs = 15000) => {
     const { recordingState, activeDirectiveId } = get();
     if (recordingState !== "idle" && recordingState !== "completed" && recordingState !== "error") {
-      if (activeDirectiveId === directiveId) return; // Already recording this one
-      // If it's a different one, we should probably stop the old one first, but for now just return
+      if (activeDirectiveId === directiveId) return;
+    }
+
+    set({ 
+      activeDirectiveId: directiveId, 
+      recordingState: "ready", 
+      recordingPrompt: null,
+      recordingError: null
+    });
+  },
+
+  /** Actual mic activation triggered by user in the modal */
+  confirmStartRecording: () => {
+    const { activeDirectiveId, activeChat, studentProfile, recordingState } = get();
+    if (!activeDirectiveId) return;
+    
+    // Guard: Don't start if already in progress
+    if (recordingState === "permission_request" || recordingState === "recording") {
+      console.warn("[Recording] Already starting or recording, ignoring click");
       return;
     }
 
-    set({ activeDirectiveId: directiveId, recordingState: "permission_request", recordingPrompt: null });
+    console.log("[Recording] confirmStartRecording triggered", { activeDirectiveId, currentState: recordingState });
+    set({ recordingState: "permission_request" });
+    
     import("@/features/student/services/audioRecorderService").then(({ audioRecorderService }) => {
-      const { activeChat, studentProfile } = get();
       const sessionId = activeChat?.session_id || activeChat?.id || "";
       const studentId = studentProfile?.user_id || "";
-      audioRecorderService.start(directiveId, sessionId, studentId, {
-        onStateChange: (state) => set({ recordingState: state }),
+      
+      audioRecorderService.start(activeDirectiveId, sessionId, studentId, {
+        onStateChange: (state) => {
+          set({ recordingState: state });
+          if (state === "recording") {
+            const { activeSkillDirective } = get();
+            if (activeSkillDirective?.type === "KARAOKE" && activeSkillDirective.source_text) {
+              const wordCount = activeSkillDirective.source_text.trim().split(/\s+/).length;
+              get().startKaraokePaceTimer(wordCount);
+            }
+          }
+        },
         onSilenceDetected: () => {
           set({ recordingPrompt: "silence" });
           // We can also report the action if we want, but UI confirm is primary now
           const sId = get().activeChat?.session_id || get().activeChat?.id;
           if (sId && sId !== "new") {
-            get().reportConversationAction("silence_detected", directiveId);
+            get().reportConversationAction("silence_detected", activeDirectiveId);
           }
         },
         onDurationCap: () => {
@@ -1773,7 +1832,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         },
         onError: (msg) => {
           console.warn("[Recording]", msg);
-          set({ recordingState: "idle" });
+          set({ recordingError: msg });
+          // Don't set to idle; let the error state persist so the modal shows the error UI
         },
       });
     });
@@ -1781,10 +1841,24 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   /** Stop active recording */
   stopSkillRecording: () => {
+    const { activeSkillDirective, activeChat } = get();
+    if (activeSkillDirective?.type === "KARAOKE") {
+      const sessionId = activeChat?.session_id || activeChat?.id;
+      if (sessionId && sessionId !== "new") {
+        get().reportConversationAction("playback_complete", activeSkillDirective.directive_id);
+      }
+    }
+
     import("@/features/student/services/audioRecorderService").then(({ audioRecorderService }) => {
       audioRecorderService.stop();
     });
-    set({ recordingPrompt: null });
+    get().stopKaraokePaceTimer();
+    set({ 
+      recordingState: "idle", 
+      recordingPrompt: null,
+      recordingError: null,
+      oralAnalysisResult: null
+    });
   },
 
   dismissRecordingPrompt: () => {
@@ -1812,12 +1886,21 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     const { activeChat } = get();
     const sessionId = activeChat?.session_id || activeChat?.id;
     if (!sessionId || sessionId === "new") return;
+
+    set({ recordingState: "processing", oralAnalysisResult: null });
+
     try {
-      await studentService.submitOralResult(sessionId, directiveId, gcsUri);
-      set({ recordingState: "completed" });
+      const result = await studentService.submitOralResult(sessionId, directiveId, gcsUri);
+      set({ 
+        recordingState: "completed",
+        oralAnalysisResult: result 
+      });
     } catch (err) {
       console.warn("[OralResult] submission failed:", err);
-      set({ recordingState: "error" });
+      set({ 
+        recordingState: "error", 
+        recordingError: "Failed to analyze your reading. Please try again." 
+      });
     }
   },
 
@@ -2219,6 +2302,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             updateUI(bufferedText, elements, currentToolStatus);
           }
         } else if (event.type === "skill_action") {
+          // Flush buffer before skill action to ensure chronological order
+          pushTextElement(currentTextBuffer);
+          currentTextBuffer = "";
+
           // Mode Controller (The "What"): Prepare the UI state for a skill mode
           const { mode, payload } = event;
           const directiveType = (mode || "").toUpperCase();

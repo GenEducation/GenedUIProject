@@ -132,7 +132,7 @@ class AudioPlayerService {
       const ctx = this.getOrCreateContext();
 
       const response = await authFetch(
-        `${API_BASE_URL}/audio/tts?directive_id=${directiveId}`
+        `${API_BASE_URL}/english/audio/tts?directive_id=${directiveId}`
       );
 
       if (!response.ok) {
@@ -185,8 +185,8 @@ class AudioPlayerService {
       const ctx = this.getOrCreateContext();
       // Spec: GET /audio/word-tts?word={word}&grade={grade}&slow={bool}
       const url = word
-        ? `${API_BASE_URL}/audio/word-tts?word=${encodeURIComponent(word)}&grade=${grade}&slow=${slow}`
-        : `${API_BASE_URL}/audio/word-tts?directive_id=${directiveId}`;
+        ? `${API_BASE_URL}/english/audio/word-tts?word=${encodeURIComponent(word)}&grade=${grade}&slow=${slow}`
+        : `${API_BASE_URL}/english/audio/word-tts?directive_id=${directiveId}`;
       const response = await authFetch(url);
       if (!response.ok) {
         this.setState("error");

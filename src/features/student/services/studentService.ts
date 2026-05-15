@@ -228,16 +228,13 @@ export const studentService = {
   reportConversationAction: async (
     sessionId: string,
     type: "playback_complete" | "silence_detected" | "repeat_requested" | "slower_requested" | "interaction_skipped",
-    directiveId: string,
-    studentId?: string
+    directiveId: string
   ) => {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (studentId) headers["X-User-Id"] = studentId;
     const response = await authFetch(
-      `${API_BASE_URL}/session/${sessionId}/conversation-action`,
+      `${API_BASE_URL}/english/session/${sessionId}/conversation-action`,
       {
         method: "POST",
-        headers,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type, directive_id: directiveId, timestamp: new Date().toISOString() }),
       }
     );
@@ -248,14 +245,12 @@ export const studentService = {
   },
 
   /** Submit oral reading result after GCS upload */
-  submitOralResult: async (sessionId: string, directiveId: string, gcsUri: string, studentId?: string) => {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (studentId) headers["X-User-Id"] = studentId;
+  submitOralResult: async (sessionId: string, directiveId: string, gcsUri: string) => {
     const response = await authFetch(
-      `${API_BASE_URL}/session/${sessionId}/oral-result`,
+      `${API_BASE_URL}/english/session/${sessionId}/oral-result`,
       {
         method: "POST",
-        headers,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ directive_id: directiveId, gcs_uri: gcsUri }),
       }
     );
@@ -268,20 +263,33 @@ export const studentService = {
     sessionId: string,
     directiveId: string,
     interactionType: "mcq" | "fill_blank" | "retell" | "free_response",
-    answer: string,
-    studentId?: string
+    answer: string
   ) => {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (studentId) headers["X-User-Id"] = studentId;
     const response = await authFetch(
-      `${API_BASE_URL}/session/${sessionId}/comprehension-answer`,
+      `${API_BASE_URL}/english/session/${sessionId}/comprehension-answer`,
       {
         method: "POST",
-        headers,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ directive_id: directiveId, interaction_type: interactionType, answer }),
       }
     );
     if (!response.ok) throw new Error(`comprehension-answer failed: ${response.status}`);
     return response.json();
+  },
+
+  /** Fetch high-level skill history for a session */
+  fetchSkillSessions: async (sessionId: string) => {
+    const response = await authFetch(`${API_BASE_URL}/english/session/${sessionId}/skill-sessions`);
+    if (!response.ok) throw new Error("Failed to fetch skill sessions");
+    return response.json();
+  },
+
+  /** Get a signed URL for a specific figure in a directive */
+  fetchFigureSignedUrl: async (sessionId: string, directiveId: string) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/english/session/${sessionId}/figure/${directiveId}/signed-url`
+    );
+    if (!response.ok) throw new Error("Failed to fetch figure signed URL");
+    return response.json(); // { signed_url: string, ... }
   },
 };

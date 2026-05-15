@@ -122,9 +122,11 @@ class AudioRecorderService {
       this.stream = stream;
       this.setState("ready");
       return true;
-    } catch {
+    } catch (err: any) {
       this.setState("error");
-      this.callbacks.onError?.("Microphone permission denied");
+      const msg = err?.message || "Microphone permission denied";
+      console.warn("[RecorderService] Permission failed:", err);
+      this.callbacks.onError?.(msg);
       return false;
     }
   }
@@ -138,8 +140,14 @@ class AudioRecorderService {
     expectedDurationMs = 15000
   ): Promise<void> {
     if (this.state !== "idle" && this.state !== "completed" && this.state !== "error") {
-      return;
+      console.warn("[RecorderService] start called while in state:", this.state);
+      // If we are in permission_request, we shouldn't start again, but we should allow it if it's the same directive
+      if (this.activeDirectiveId === directiveId) return;
+      // Otherwise, force stop the previous one
+      this.stop();
     }
+    
+    console.log("[RecorderService] Starting recording for directive:", directiveId);
     this.callbacks = callbacks;
     this.activeDirectiveId = directiveId;
     this.activeSessionId = sessionId;
@@ -157,13 +165,18 @@ class AudioRecorderService {
 
     // Set up silence detection analyser
     try {
-      this.audioCtx = new AudioContext();
+      if (!this.audioCtx) {
+        this.audioCtx = new AudioContext();
+      }
+      if (this.audioCtx.state === "suspended") {
+        await this.audioCtx.resume();
+      }
       this.analyser = this.audioCtx.createAnalyser();
       this.analyser.fftSize = 2048;
       const source = this.audioCtx.createMediaStreamSource(this.stream!);
       source.connect(this.analyser);
-    } catch {
-      // Non-fatal: silence detection is best-effort
+    } catch (err) {
+      console.warn("Non-fatal: silence detection is best-effort", err);
     }
 
     // Prefer WebM/Opus (Wave 2 §9.1)
@@ -233,34 +246,59 @@ class AudioRecorderService {
     try {
       // 1. Obtain signed upload URL from backend — spec: POST /session/{id}/audio-upload
       const uploadUrlEndpoint = sessionId
-        ? `${API_BASE_URL}/session/${sessionId}/audio-upload`
-        : `${API_BASE_URL}/session/audio-upload`;
+        ? `${API_BASE_URL}/english/session/${sessionId}/audio-upload`
+        : `${API_BASE_URL}/english/session/audio-upload`;
 
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (studentId) headers["X-User-Id"] = studentId;
+      console.log("[RecorderService] Requesting Step A from:", uploadUrlEndpoint);
 
       const signedRes = await authFetch(uploadUrlEndpoint, {
         method: "POST",
-        headers,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           directive_id: directiveId,
-          mime_type: mimeType,
+          mime_type: mimeType.split(";")[0], // Clean mime type (e.g. audio/webm)
+          file_size: blob.size,
           file_size_bytes: blob.size,
           codec: mimeType.includes("opus") ? "opus" : "webm",
         }),
       });
 
-      if (!signedRes.ok) throw new Error(`Failed to get upload URL: ${signedRes.status}`);
-      const { upload_url, signed_url, gcs_uri } = await signedRes.json();
+      if (!signedRes.ok) {
+        let errorMessage = `Server Error: ${signedRes.status}`;
+        try {
+          const errorData = await signedRes.json();
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch {
+          // If not JSON, try text
+          const errorText = await signedRes.text().catch(() => "");
+          if (errorText) errorMessage = errorText.slice(0, 100);
+        }
+        throw new Error(errorMessage);
+      }
+      
+      const { upload_url, signed_url, gcs_uri, headers: responseHeaders } = await signedRes.json();
       const finalUploadUrl = upload_url || signed_url;
       if (!finalUploadUrl) throw new Error("No upload URL returned from backend");
 
       // 2. PUT directly to GCS (backend never proxies blobs)
-      const uploadRes = await fetch(finalUploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": mimeType },
-        body: blob,
-      });
+      let uploadRes;
+      try {
+        const putHeaders: Record<string, string> = { "Content-Type": mimeType };
+        // Spread headers from backend if provided (Wave 3 §7.2)
+        if (responseHeaders) {
+          Object.assign(putHeaders, responseHeaders);
+        }
+
+        console.log("[RecorderService] Uploading to GCS with headers:", putHeaders);
+
+        uploadRes = await fetch(finalUploadUrl, {
+          method: "PUT",
+          headers: putHeaders,
+          body: blob,
+        });
+      } catch (err: any) {
+        throw new Error(`GCS Network Error: ${err?.message || "Failed to connect to storage"}. This might be a CORS issue.`);
+      }
 
       if (!uploadRes.ok) throw new Error(`GCS upload failed: ${uploadRes.status}`);
 

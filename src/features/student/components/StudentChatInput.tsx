@@ -63,8 +63,6 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
   };
 
   const handleMicClick = () => {
-    if (activeChat?.chatMode === "text") return;
-    
     if (voiceSessionStatus === "active") {
       toggleMute();
     } else if (voiceSessionStatus === "idle") {
