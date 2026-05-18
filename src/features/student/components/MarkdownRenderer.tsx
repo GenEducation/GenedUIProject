@@ -13,7 +13,6 @@ import "highlight.js/styles/github-dark.css";
 import { authFetch } from "@/utils/authFetch";
 import { FigureView } from "./FigureView";
 import { useStudentStore } from "../store/useStudentStore";
-import { Volume2, Mic, RotateCcw, Image as ImageIcon } from "lucide-react";
 
 interface MarkdownRendererProps {
   content: string;
@@ -27,18 +26,6 @@ interface MarkdownRendererProps {
  * - Syntax highlighting for code blocks
  * - GenEd branded styling
  */
-const extractTextContent = (children: any): string => {
-  if (typeof children === "string") return children;
-  if (Array.isArray(children)) {
-    return children.map(c => {
-      if (typeof c === "string") return c;
-      if (c?.props?.children) return extractTextContent(c.props.children);
-      return "";
-    }).join("");
-  }
-  if (children?.props?.children) return extractTextContent(children.props.children);
-  return "";
-};
 
 const getMarkdownComponents = (showToolbar: boolean) => ({
   // Header styles
@@ -92,10 +79,6 @@ const getMarkdownComponents = (showToolbar: boolean) => ({
   
   // Paragraph styles
   p: ({ node, children, ...props }: any) => {
-    const handleAction = (action: string) => {
-      const text = extractTextContent(children);
-      useStudentStore.getState().sendMessage(`${action}: "${text}"`);
-    };
 
     return (
       <div className="relative group mb-3 last:mb-0">
@@ -111,9 +94,6 @@ const getMarkdownComponents = (showToolbar: boolean) => ({
         const uuid = src.split('/').pop() || "";
         return <FigureView uuid={uuid} />;
     }
-    const handleAction = () => {
-      useStudentStore.getState().sendMessage(`Describe this image`);
-    };
     return (
       <div className="relative group my-6">
         <motion.img 
