@@ -1,6 +1,7 @@
 import React from "react";
 import { UnitCard } from "./UnitCard";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { useTestStore } from "@/features/student/store/useTestStore";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { useRouter } from "next/navigation";
 
@@ -10,13 +11,26 @@ interface ChapterMasteryViewProps {
 
 export const ChapterMasteryView: React.FC<ChapterMasteryViewProps> = ({ mode = "student" }) => {
   const router = useRouter();
-  const { startFocusedSession } = useStudentStore();
+  const { startFocusedSession, studentProfile } = useStudentStore();
+  const { startTest } = useTestStore();
   const { analyticsChapterMastery, selectedAnalyticsSubject } = useAnalyticsStore();
 
   const getStatus = (score: number): "PROFICIENT" | "DEVELOPING" | "NEEDS WORK" => {
     if (score >= 0.8) return "PROFICIENT";
     if (score >= 0.5) return "DEVELOPING";
     return "NEEDS WORK";
+  };
+
+  const handleStartTest = (documentTitle: string) => {
+    if (!studentProfile) return;
+    startTest({
+      student_id: studentProfile.user_id,
+      chapter_query: documentTitle,
+      subject: selectedAnalyticsSubject,
+      grade: studentProfile.grade || 5,
+      questions_per_section: 3
+    });
+    router.push("/student/test?from=analytics");
   };
 
   return (
@@ -34,6 +48,7 @@ export const ChapterMasteryView: React.FC<ChapterMasteryViewProps> = ({ mode = "
             const newId = startFocusedSession(item.document_title, selectedAnalyticsSubject); 
             router.push(`/student/chat/${newId}`); 
           }}
+          onTestAction={() => handleStartTest(item.document_title)}
           hideActions={mode === "parent"}
         />
       ))}

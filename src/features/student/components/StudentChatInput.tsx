@@ -23,7 +23,8 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
     isMuted,
     toggleMute,
     activeActivity,
-    isRateLimitHit
+    isRateLimitHit,
+    messages
   } = useStudentStore();
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -62,8 +63,6 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
   };
 
   const handleMicClick = () => {
-    if (activeChat?.chatMode === "text") return;
-    
     if (voiceSessionStatus === "active") {
       toggleMute();
     } else if (voiceSessionStatus === "idle") {
@@ -72,8 +71,9 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
   };
 
   const isVoiceActive = voiceSessionStatus === "active" || voiceSessionStatus === "connecting";
-  const isTextDisabled = activeChat?.chatMode === "voice" || isVoiceActive || !!activeActivity;
-  const isMicDisabled = activeChat?.chatMode === "text" || isAITyping || !!activeActivity;
+  const isFirstResponseWaiting = messages.length <= 2 && isAITyping;
+  const isTextDisabled = !!activeActivity || isFirstResponseWaiting;
+  const isMicDisabled = !!activeActivity || isFirstResponseWaiting;
 
   return (
     <div className={`w-full transition-all duration-500 ${isCentered ? "px-0" : "px-0"}`}>

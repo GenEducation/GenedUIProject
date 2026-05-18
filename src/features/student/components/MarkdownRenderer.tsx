@@ -12,9 +12,11 @@ import "katex/dist/katex.min.css";
 import "highlight.js/styles/github-dark.css";
 import { authFetch } from "@/utils/authFetch";
 import { FigureView } from "./FigureView";
+import { useStudentStore } from "../store/useStudentStore";
 
 interface MarkdownRendererProps {
   content: string;
+  showToolbar?: boolean;
 }
 
 /**
@@ -24,7 +26,8 @@ interface MarkdownRendererProps {
  * - Syntax highlighting for code blocks
  * - GenEd branded styling
  */
-const markdownComponents: any = {
+
+const getMarkdownComponents = (showToolbar: boolean) => ({
   // Header styles
   h1: ({ ...props }: any) => <h1 className="text-lg font-black mt-4 mb-2 text-[#1a3a2a]" {...props} />,
   h2: ({ ...props }: any) => <h2 className="text-md font-bold mt-3 mb-1 text-[#1a3a2a]" {...props} />,
@@ -61,21 +64,28 @@ const markdownComponents: any = {
             {match[1]}
           </div>
         )}
-        <pre className="!bg-[#1a3a2a] !p-4 rounded-2xl overflow-x-auto shadow-sm">
-          <code className={`${className} !text-[13px] !leading-relaxed`} {...props}>
+        <pre className="!bg-slate-100 !p-4 rounded-2xl border border-slate-200 overflow-x-auto shadow-sm">
+          <code className={`${className} !text-[13px] !text-slate-800 !leading-relaxed`} {...props}>
             {children}
           </code>
         </pre>
       </motion.div>
     ) : (
-      <code className="text-[13px] font-black text-emerald-700 font-mono" {...props}>
+      <code className="text-[13px] font-black text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded-md font-mono" {...props}>
         {children}
       </code>
     );
   },
   
   // Paragraph styles
-  p: ({ node, ...props }: any) => <p className="mb-3 last:mb-0 leading-relaxed" {...(props as any)} />,
+  p: ({ node, children, ...props }: any) => {
+
+    return (
+      <div className="relative group mb-3 last:mb-0">
+        <p className="leading-relaxed" {...props}>{children}</p>
+      </div>
+    );
+  },
   
   // Image styles (supports resolved figures)
   img: ({ src, alt, ...props }: any) => {
@@ -85,20 +95,22 @@ const markdownComponents: any = {
         return <FigureView uuid={uuid} />;
     }
     return (
-      <motion.img 
-        initial={{ opacity: 0, scale: 0.95 }} 
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4 }}
-        src={src} 
-        alt={alt || "Illustration"} 
-        className="rounded-2xl border border-[#1a3a2a]/10 shadow-md w-full h-auto object-contain max-h-[400px] my-6 block mx-auto"
-        {...props} 
-      />
+      <div className="relative group my-6">
+        <motion.img 
+          initial={{ opacity: 0, scale: 0.95 }} 
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+          src={src} 
+          alt={alt || "Illustration"} 
+          className="rounded-2xl border border-[#1a3a2a]/10 shadow-md w-full h-auto object-contain max-h-[400px] block mx-auto"
+          {...props} 
+        />
+      </div>
     );
   },
-};
+});
 
-export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) => {
+export const MarkdownRenderer = React.memo(({ content, showToolbar }: MarkdownRendererProps) => {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
   
   // Parse history markers: <<SHOW_FIGURE(uuid)>> -> Markdown Image
@@ -111,9 +123,32 @@ export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) 
       return `\n\n![Figure](${API_URL}/rag/retrieve/figure/${uuid})\n\n`;
     });
 
+    // Strip raw audio skill directives so they don't render as text in the UI
+    cleaned = cleaned.replace(/<<(?:SPEAK_PARA|KARAOKE|PRONUNCIATION):[\s\S]*?>>/g, '');
+
     // Fix: Remove backticks wrapping math ($...$) to prevent them from being treated as code blocks
     // This resolves the "green box" issue where math wouldn't render properly
     cleaned = cleaned.replace(/`(\$.+?\$)`/g, '$1');
+
+    // Fix: Remove backticks (single or triple) wrapping simple text that the AI might have accidentally formatted as code
+    // We target strings that are short, contain spaces, and don't look like code (no common code symbols like ; { } ( ) =)
+    const isCodeLike = (str: string) => /[;{}[\]()=]/.test(str);
+    
+    // Cleanup triple backticks
+    cleaned = cleaned.replace(/```\n?([^`]+?)\n?```/g, (match, p1) => {
+      if (p1.length < 100 && p1.includes(' ') && !isCodeLike(p1)) {
+        return p1.trim();
+      }
+      return match;
+    });
+
+    // Cleanup single backticks
+    cleaned = cleaned.replace(/`([^`\n]+)`/g, (match, p1) => {
+      if (p1.length < 60 && p1.includes(' ') && !isCodeLike(p1)) {
+        return p1;
+      }
+      return match;
+    });
 
     // Fix: Escape underscores specifically inside math blocks to prevent KaTeX "Double Subscript" errors
     // We only escape sequences of 2 or more underscores (e.g. ____) to preserve valid subscripts like x_1
@@ -124,12 +159,14 @@ export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) 
     return cleaned;
   }, [content, API_URL]);
 
+  const components = useMemo(() => getMarkdownComponents(showToolbar || false), [showToolbar]);
+
   return (
     <div className="markdown-content">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeHighlight, rehypeKatex]}
-        components={markdownComponents}
+        components={components}
       >
         {processedContent}
       </ReactMarkdown>

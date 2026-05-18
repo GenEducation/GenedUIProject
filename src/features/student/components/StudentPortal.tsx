@@ -5,12 +5,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
 import { StudentChatView } from "./StudentChatView";
 import { StudentProfile } from "./StudentProfile";
+import { AssessmentsPage } from "@/features/student/components/AssessmentsPage";
 import { StudentAnalyticsDashboard } from "@/components/analytics/StudentAnalyticsDashboard";
-import { PartnerRequestModal } from "./PartnerRequestModal";
-import { useStudentStore } from "../store/useStudentStore";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
-import { OnboardingSliderView } from "@/features/onboarding/components/OnboardingSliderView";
-import { SiteTutorial } from "@/components/shared/SiteTutorial";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 
 /**
@@ -20,15 +17,8 @@ import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 export function StudentPortal() {
   const pathname = usePathname();
   
-  const { studentProfile } = useStudentStore();
+  const { dnaStatus } = useOnboardingStore();
   const { startTutorial } = useTutorialStore();
-  const { dnaStatus, checkDNAStatus } = useOnboardingStore();
-
-  useEffect(() => {
-    if (studentProfile?.user_id) {
-      checkDNAStatus(studentProfile.user_id);
-    }
-  }, [studentProfile, checkDNAStatus]);
 
   useEffect(() => {
     const isNewUser = localStorage.getItem("gened_new_user") === "true";
@@ -42,6 +32,7 @@ export function StudentPortal() {
   }, [dnaStatus, startTutorial]);
   
   const isProfileRoute = pathname === "/student/profile";
+  const isAssessmentsRoute = pathname === "/student/assessments";
   const isAnalyticsRoute = pathname === "/student/analytics";
 
   return (
@@ -61,13 +52,20 @@ export function StudentPortal() {
         ) : isProfileRoute ? (
           <motion.div
             key="profile"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ type: "spring", stiffness: 380, damping: 34 }}
-            className="h-full overflow-y-auto"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
           >
             <StudentProfile />
+          </motion.div>
+        ) : isAssessmentsRoute ? (
+          <motion.div
+            key="assessments"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+          >
+            <AssessmentsPage />
           </motion.div>
         ) : (
           <motion.div
@@ -82,17 +80,6 @@ export function StudentPortal() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Enrollment Status Modal */}
-      <PartnerRequestModal />
-
-      {/* Onboarding Slider Overlay */}
-      {dnaStatus === "PENDING" && studentProfile && (
-        <OnboardingSliderView
-          studentProfile={studentProfile}
-          onComplete={() => checkDNAStatus(studentProfile.user_id)}
-        />
-      )}
     </div>
   );
 }

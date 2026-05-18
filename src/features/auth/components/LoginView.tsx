@@ -47,11 +47,11 @@ export function LoginView() {
 
   const validateSignIn = () => {
     const errors: Record<string, string> = {};
-    if (!loginData.username.trim()) errors.username = "A username is required to identify your archive.";
+    if (!loginData.username.trim()) errors.username = "A username is required to sign in.";
     if (!loginData.password.trim()) {
-      errors.password = "A passphrase is required to access the sanctuary.";
+      errors.password = "A password is required to sign in.";
     } else if (loginData.password.length < 6) {
-      errors.password = "Your passphrase must contain at least 6 characters.";
+      errors.password = "Your password must contain at least 6 characters.";
     }
     return errors;
   };
@@ -294,14 +294,14 @@ export function LoginView() {
     const { name, value } = event.target;
     setLoginData((current) => ({ ...current, [name]: value }));
     
-    // Clear error for this field when user starts typing
-    if (signinErrors[name]) {
-      setSigninErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
+    // Clear field-specific error and root error when user starts typing
+    setSigninErrors((prev) => {
+      if (!prev[name] && !prev.root) return prev;
+      const newErrors = { ...prev };
+      delete newErrors[name];
+      delete newErrors.root;
+      return newErrors;
+    });
   };
 
   const handleSignupChange = (
@@ -309,6 +309,15 @@ export function LoginView() {
   ) => {
     const { name, value } = event.target;
     setSignupData((current) => ({ ...current, [name]: value }));
+
+    // Clear field-specific error and root error when user starts typing
+    setSignupErrors((prev) => {
+      if (!prev[name] && !prev.root) return prev;
+      const newErrors = { ...prev };
+      delete newErrors[name];
+      delete newErrors.root;
+      return newErrors;
+    });
   };
 
   return (
@@ -332,8 +341,8 @@ export function LoginView() {
                   </h2>
                   <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.25em] text-[#042e5c]/60">
                     {isSignUp
-                      ? "Forge your scholarly identity"
-                      : "Please sign in to your archive"}
+                      ? "Safe, guided learning begins here"
+                      : "Pick up where you left off"}
                   </p>
                   {signupSuccessMessage && !isSignUp && (
                     <div className="mt-6 p-4 bg-[#059F6D]/8 border border-[#059F6D]/20 rounded-xl animate-fade-in">

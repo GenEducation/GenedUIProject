@@ -275,6 +275,7 @@ export function SignUp({
                   }
                   setIsSendingOtp(true);
                   setOtpSentMessage("");
+                  setLocalErrors({}); // Clear any previous local errors
                   try {
                     const { sendOtp } = await import("../authService");
                     await sendOtp(signupData.email);
@@ -376,8 +377,8 @@ export function SignUp({
   const renderStep2 = () => (
     <div className="space-y-8">
       <div className="text-center mb-4">
-        <h3 className="text-xl font-bold text-[#042e5c] font-serif">Select your role</h3>
-        <p className="text-xs text-[#042e5c]/50 mt-1">Tell us who you are to customize your experience</p>
+        <h3 className="text-xl font-bold text-[#042e5c] font-serif">Let&apos;s personalize your experience</h3>
+        <p className="text-xs text-[#042e5c]/50 mt-1">Help us personalize your GenEd experience</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

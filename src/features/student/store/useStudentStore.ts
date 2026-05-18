@@ -20,9 +20,37 @@ export interface StudentProfile {
 
 export interface ChatElement {
   id: string;
-  type: "text" | "svg" | "widget" | "image" | "visual";
+  type: "text" | "svg" | "widget" | "image" | "visual" | "comprehension_widget" | "english_skill_view";
   content: string;
-  meta?: any;
+  meta?: {
+    // existing visual meta
+    engine?: string;
+    label?: string;
+    code?: string;
+    commands?: any[];
+    options?: any;
+    image?: string;
+    figure_id?: string;
+    shape?: string;
+    params?: any;
+    is_historical?: boolean;
+    isRawBackendSvg?: boolean;
+    error?: boolean;
+    message?: string;
+    fallback_text?: string;
+    // comprehension widget meta (Wave 2 §10)
+    widget_type?: "mcq" | "fill_blank" | "retell" | "free_response";
+    question?: string;
+    choices?: Array<{ id: string; label: string }>;
+    allow_retry?: boolean;
+    directive_id?: string;
+    // difficult word meta
+    word?: string;
+    syllables?: string[];
+    phonetic?: string;
+    slow_available?: boolean;
+    [key: string]: any;
+  };
 }
 
 export interface ActivityAction {
@@ -159,13 +187,13 @@ export const AVAILABLE_SUBJECTS: SubjectItem[] = [
 
 // -- Visual Tag Parser --------------------------------------------------------
 
-const SCHOLARLY_BLUEPRINT = `
+const LEARNING_BLUEPRINT = `
 <svg width="400" height="200" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="400" height="200" rx="12" fill="#F0F7FF"/>
   <path d="M0 20H400M0 40H400M0 60H400M0 80H400M0 100H400M0 120H400M0 140H400M0 160H400M0 180H400" stroke="#1A6BBF" stroke-opacity="0.04"/>
   <path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M320 0V200M340 0V200M360 0V200M380 0V200" stroke="#1A6BBF" stroke-opacity="0.04"/>
   <rect x="100" y="50" width="200" height="100" rx="8" stroke="#1A6BBF" stroke-opacity="0.15" stroke-dasharray="4 4"/>
-  <text x="200" y="105" text-anchor="middle" fill="#1A6BBF" fill-opacity="0.3" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="bold" style="text-transform: uppercase; letter-spacing: 0.1em;">Scholarly Blueprint</text>
+  <text x="200" y="105" text-anchor="middle" fill="#1A6BBF" fill-opacity="0.3" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="bold" style="text-transform: uppercase; letter-spacing: 0.1em;">Learning Blueprint</text>
   <text x="200" y="125" text-anchor="middle" fill="#1A6BBF" fill-opacity="0.2" font-family="Inter, Arial, sans-serif" font-size="10">Visualization Ready</text>
 </svg>
 `;
@@ -376,7 +404,7 @@ function generateHistoricalSVG(type: string, params: any): string {
   }
 
   if (!shapeMarkup) {
-    return SCHOLARLY_BLUEPRINT;
+    return LEARNING_BLUEPRINT;
   }
 
   return `
@@ -428,9 +456,9 @@ function parseContent(content: string): ChatElement[] {
   // Master regex to capture:
   // 1. v2 Block Visuals: <<VISUAL type="p5sketch" label="...">>code<</VISUAL>> or <...> </VISUAL>
   // 2. v2 Self-closing Desmos: <<VISUAL type="desmos" expression="..." />>
-  // 3. Legacy MATH_DRAW / MATH_WIDGET / SHOW_FIGURE
+  // 3. Legacy and Skill Modes
   // 4. Raw SVG tags
-  const masterRegex = /(?:<<VISUAL\s+type="([^"]+)"\s+label="([^"]*)"(?:[^>]*)>>?([\s\S]*?)<<?\/VISUAL>>?)|(?:<<VISUAL\s+type="desmos"\s+expression="([^"]+)"[^/]*\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)\s+([\s\S]*?)(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
+  const masterRegex = /(?:<<VISUAL\s+type="([^"]+)"\s+label="([^"]*)"(?:[^>]*)>>?([\s\S]*?)<<?\/VISUAL>>?)|(?:<<VISUAL\s+type="desmos"\s+expression="([^"]+)"[^/]*\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)(?::|\s+)([\s\S]*?)(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
   
   let elementCount = 0;
   let lastIndex = 0;
@@ -547,6 +575,34 @@ function parseContent(content: string): ChatElement[] {
             image: figureIdMatch ? figureIdMatch[1] : "",
           },
         });
+      } else if (["SPEAK_PARA", "DIFFICULT_WORD", "READ_ALOUD", "LISTEN_COMPREHENSION", "SHOW_FIGURE_DESCRIBE", "KARAOKE"].includes(type)) {
+        try {
+          const payload = JSON.parse(attrsRaw.trim());
+          if (type === "DIFFICULT_WORD" && payload.word) {
+            elements.push({
+              id: `dw-${payload.directive_id || payload.word}-${Date.now()}`,
+              type: "comprehension_widget",
+              content: payload.word,
+              meta: {
+                widget_type: "difficult_word" as any,
+                word: payload.word,
+                syllables: payload.syllables,
+                phonetic: payload.phonetic,
+                slow_available: payload.slow_available,
+                directive_id: payload.directive_id,
+              },
+            });
+          } else if (["SPEAK_PARA", "KARAOKE", "READ_ALOUD"].includes(type)) {
+            elements.push({
+              id: `sv-${payload.directive_id || Date.now()}`,
+              type: "english_skill_view",
+              content: payload.source_text || "",
+              meta: { directive_id: payload.directive_id, mode: type }
+            });
+          }
+        } catch (e) {
+          console.error("Failed to parse English skill directive in history", e);
+        }
       }
     } else if (match[7]) {
       // Raw SVG
@@ -645,6 +701,18 @@ export interface StudentState {
   onboardingStatus: OnboardingStatus | null;
   isOnboardingLoading: boolean;
 
+  // ── English Skill Mode State (Wave 1–4) ─────────────────────────────────────
+  playbackState: "idle" | "loading" | "buffering" | "playing" | "paused" | "stopped" | "completed" | "error";
+  recordingState: "idle" | "permission_request" | "ready" | "recording" | "uploading" | "processing" | "completed" | "error";
+  /** null = no prompt, 'silence' = auto-stop confirm dialog, 'cap' = duration nudge */
+  recordingPrompt: "silence" | "cap" | null;
+  recordingError: string | null;
+  activeDirectiveId: string | null;
+   highlightedWordIndex: number;
+  activeSkillDirective: any | null; 
+  oralAnalysisResult: any | null;
+  comprehensionResults: Record<string, { is_correct: boolean; answer: string }>;
+
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
   fetchSessions: () => Promise<void>;
@@ -654,7 +722,7 @@ export interface StudentState {
   fetchChatHistory: (sessionId: string) => Promise<void>;
   fetchOnboardingStatus: () => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
-  openChatById: (sessionId: string) => Promise<void>;
+  openChatById: (sessionId: string, agentId?: string) => Promise<void>;
   openNewChat: (agent: AgentItem) => string;
   initNewChat: (agentId: string) => void;
   startFocusedSession: (documentTitle: string, subject: string) => string;
@@ -672,6 +740,23 @@ export interface StudentState {
   stopVoiceSession: () => void;
   toggleMute: () => void;
   logoutStudent: () => void;
+
+  // ── English Skill Mode Actions (Wave 1–4) ────────────────────────────────────
+  playDirectiveTts: (directiveId: string, timepoints: any[]) => void;
+  stopPlayback: () => void;
+  startSkillRecording: (directiveId: string, expectedDurationMs?: number) => void;
+  stopSkillRecording: () => void;
+  dismissRecordingPrompt: () => void;
+  confirmStartRecording: () => void;
+  reportConversationAction: (type: string, directiveId: string) => Promise<void>;
+  submitOralResult: (directiveId: string, gcsUri: string) => Promise<void>;
+  submitComprehensionAnswer: (
+    directiveId: string,
+    interactionType: string,
+    answer: string
+  ) => Promise<{ is_correct: boolean; id?: string; directive_id?: string; student_response?: string } | null>;
+  clearComprehensionResult: (directiveId: string) => void;
+  setHighlightedWordIndex: (index: number) => void;
 }
 
 // -- Store --------------------------------------------------------------------─
@@ -707,6 +792,16 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   isMuted: false,
   onboardingStatus: null,
   isOnboardingLoading: false,
+  // English skill mode initial state
+  playbackState: "idle",
+  recordingState: "idle",
+  recordingPrompt: null,
+  recordingError: null,
+  activeDirectiveId: null,
+  highlightedWordIndex: -1,
+  activeSkillDirective: null,
+  oralAnalysisResult: null,
+  comprehensionResults: {},
   logoutStudent: () => {
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");
@@ -726,6 +821,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       hasFetchedSessions: false,
       hasFetchedAgents: false,
       onboardingStatus: null,
+      comprehensionResults: {},
     });
     window.location.href = "/";
   },
@@ -788,7 +884,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       const mappedChats: ChatSession[] = data.sessions.map((s: any) => ({
         id: s.session_id,
         session_id: s.session_id,
-        title: s.title || s.agent_name || "Scholarly Session",
+        title: s.title || s.agent_name || "Learning Session",
         agentType: "English Assistant",
         agentIcon: "📖",
         lastActive: s.updated_at
@@ -989,7 +1085,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
           return {
             id: `h-${i}-${Date.now()}`,
-            text: content.replace(/(?:<<|<)(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?(?:>>|>)/g, "").replace(/<svg[\s\S]*?<\/svg>/g, "").trim(),
+            text: content.replace(/(?:<<|<)(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)[\s\S]*?(?:>>|>)/g, "").replace(/<svg[\s\S]*?<\/svg>/g, "").trim(),
             elements:
               elements.length > 1 ||
               (elements.length === 1 && elements[0].type !== "text")
@@ -1052,7 +1148,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
   },
 
-  openChatById: async (sessionId) => {
+  openChatById: async (sessionId, agentId) => {
     const {
       recentChats,
       fetchSessions,
@@ -1064,12 +1160,27 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     // Handle transient 'new' state on refresh
     if (sessionId === "new") {
       fetchSessions(); // Load history in background
-      openNewChat({
-        name: "Socratic Tutor",
-        agent_id: "eng-grade-4",
-        subject: "General",
-        grade: 10,
-      });
+      const profile = get().studentProfile;
+      const agents = get().availableAgents;
+      
+      // 1. Try to find the specific agent requested in URL
+      // 2. Otherwise try to find an agent for the student's grade
+      // 3. Fallback to first available
+      const targetAgent = (agentId ? agents.find(a => a.agent_id === agentId) : null) || 
+                          agents.find(a => a.grade === profile?.grade) || 
+                          agents[0];
+
+      if (targetAgent) {
+        openNewChat(targetAgent);
+      } else {
+        // Absolute fallback only if no agents are loaded yet
+        openNewChat({
+          name: "Socratic Tutor",
+          agent_id: agentId || "eng-grade-4",
+          subject: "",
+          grade: profile?.grade || 4,
+        });
+      }
       return;
     }
 
@@ -1251,14 +1362,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       set({ activeChat: { ...effectiveChat, chatMode: "voice" } });
     }
 
-    // Enforce text mode restriction
-    if (activeChat?.chatMode === "text") return;
-
     console.log("🎙️ [StudentStore] Starting Voice Session for Chat:", effectiveChat);
     set({ voiceSessionStatus: "connecting" });
 
-    // Set chat mode to voice if not already set
-    if (activeChat && !activeChat.chatMode) {
+    // Ensure chat mode is voice
+    if (activeChat) {
       set((state) => ({
         activeChat: state.activeChat
           ? { ...state.activeChat, chatMode: "voice" }
@@ -1605,17 +1713,225 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
   },
 
+  // ── English Skill Mode Actions ─────────────────────────────────────────────
+
+  setHighlightedWordIndex: (index) => set({ highlightedWordIndex: index }),
+
+  /** Trigger TTS playback for a directive (called from SSE tts_start handler) */
+  playDirectiveTts: (directiveId, timepoints) => {
+    set({ activeDirectiveId: directiveId, playbackState: "loading", highlightedWordIndex: -1 });
+    // Lazy-import to avoid SSR issues with AudioContext
+    import("@/features/student/services/audioPlayerService").then(({ audioPlayerService }) => {
+      audioPlayerService.play(directiveId, timepoints, {
+        onStateChange: (state) => set({ playbackState: state }),
+        onTimeUpdate: (_time, wordIndex) => set({ highlightedWordIndex: wordIndex }),
+        onComplete: (dId) => {
+          // Report playback_complete to backend (Wave 1 §7.1)
+          const { activeChat } = get();
+          const sessionId = activeChat?.session_id || activeChat?.id;
+          if (sessionId && sessionId !== "new") {
+            get().reportConversationAction("playback_complete", dId);
+          }
+          set({ activeDirectiveId: null, highlightedWordIndex: -1 });
+        },
+        onError: (_dId, msg) => {
+          // Wave 4: graceful degradation — log, never crash
+          console.warn("[TTS]", msg);
+          set({ playbackState: "idle" });
+        },
+      });
+    });
+  },
+
+  /** Stop any active TTS playback */
+  stopPlayback: () => {
+    import("@/features/student/services/audioPlayerService").then(({ audioPlayerService }) => {
+      audioPlayerService.stop();
+    });
+    set({ playbackState: "idle", activeDirectiveId: null, highlightedWordIndex: -1 });
+  },
+
+  /** Prepare for recording — opens the modal but doesn't activate mic yet (Wave 2 §9) */
+  startSkillRecording: (directiveId, expectedDurationMs = 15000) => {
+    const { recordingState, activeDirectiveId } = get();
+    if (recordingState !== "idle" && recordingState !== "completed" && recordingState !== "error") {
+      if (activeDirectiveId === directiveId) return;
+    }
+
+    set({ 
+      activeDirectiveId: directiveId, 
+      recordingState: "ready", 
+      recordingPrompt: null,
+      recordingError: null
+    });
+  },
+
+  /** Actual mic activation triggered by user in the modal */
+  confirmStartRecording: () => {
+    const { activeDirectiveId, activeChat, studentProfile, recordingState } = get();
+    if (!activeDirectiveId) return;
+    
+    // Guard: Don't start if already in progress
+    if (recordingState === "permission_request" || recordingState === "recording") {
+      console.warn("[Recording] Already starting or recording, ignoring click");
+      return;
+    }
+
+    console.log("[Recording] confirmStartRecording triggered", { activeDirectiveId, currentState: recordingState });
+    set({ recordingState: "permission_request" });
+    
+    import("@/features/student/services/audioRecorderService").then(({ audioRecorderService }) => {
+      const sessionId = activeChat?.session_id || activeChat?.id || "";
+      const studentId = studentProfile?.user_id || "";
+      
+      audioRecorderService.start(activeDirectiveId, sessionId, studentId, {
+        onStateChange: (state) => {
+          set({ recordingState: state });
+          if (state === "recording") {
+            // Fixed-speed frontend text timing is disabled. Highlight speed is guided solely by backend read-aloud timepoints.
+          }
+        },
+        onSilenceDetected: () => {
+          set({ recordingPrompt: "silence" });
+          // We can also report the action if we want, but UI confirm is primary now
+          const sId = get().activeChat?.session_id || get().activeChat?.id;
+          if (sId && sId !== "new") {
+            get().reportConversationAction("silence_detected", activeDirectiveId);
+          }
+        },
+        onDurationCap: () => {
+          set({ recordingPrompt: "cap" });
+        },
+        onUploadComplete: (gcsUri, dId) => {
+          get().submitOralResult(dId, gcsUri);
+        },
+        onError: (msg) => {
+          console.warn("[Recording]", msg);
+          set({ recordingError: msg });
+          // Don't set to idle; let the error state persist so the modal shows the error UI
+        },
+      });
+    });
+  },
+
+  /** Stop active recording */
+  stopSkillRecording: () => {
+    const { activeSkillDirective, activeChat } = get();
+    if (activeSkillDirective?.type === "KARAOKE") {
+      const sessionId = activeChat?.session_id || activeChat?.id;
+      if (sessionId && sessionId !== "new") {
+        get().reportConversationAction("playback_complete", activeSkillDirective.directive_id);
+      }
+    }
+
+    import("@/features/student/services/audioRecorderService").then(({ audioRecorderService }) => {
+      audioRecorderService.stop();
+    });
+    set({ 
+      recordingState: "idle", 
+      recordingPrompt: null,
+      recordingError: null,
+      oralAnalysisResult: null
+    });
+  },
+
+  dismissRecordingPrompt: () => {
+    set({ recordingPrompt: null });
+  },
+
+  /** POST /session/{id}/conversation-action (fire-and-forget) */
+  reportConversationAction: async (type, directiveId) => {
+    const { activeChat } = get();
+    const sessionId = activeChat?.session_id || activeChat?.id;
+    if (!sessionId || sessionId === "new") return;
+    try {
+      await studentService.reportConversationAction(
+        sessionId,
+        type as any,
+        directiveId
+      );
+    } catch {
+      // Fire-and-forget — never surface to student
+    }
+  },
+
+  /** POST /session/{id}/oral-result after GCS upload */
+  submitOralResult: async (directiveId, gcsUri) => {
+    const { activeChat } = get();
+    const sessionId = activeChat?.session_id || activeChat?.id;
+    if (!sessionId || sessionId === "new") return;
+
+    set({ recordingState: "processing", oralAnalysisResult: null });
+
+    try {
+      const result = await studentService.submitOralResult(sessionId, directiveId, gcsUri);
+      set({ 
+        recordingState: "completed",
+        oralAnalysisResult: result 
+      });
+    } catch (err) {
+      console.warn("[OralResult] submission failed:", err);
+      set({ 
+        recordingState: "error", 
+        recordingError: "Failed to analyze your reading. Please try again." 
+      });
+    }
+  },
+
+  /** POST /session/{id}/comprehension-answer */
+  submitComprehensionAnswer: async (directiveId, interactionType, answer) => {
+    const { activeChat } = get();
+    const sessionId = activeChat?.session_id || activeChat?.id;
+    if (!sessionId || sessionId === "new") return null;
+    try {
+      const result = await studentService.submitComprehensionAnswer(
+        sessionId,
+        directiveId,
+        interactionType as any,
+        answer
+      );
+      if (result) {
+        set((state) => ({
+          comprehensionResults: {
+            ...state.comprehensionResults,
+            [directiveId]: {
+              is_correct: result.is_correct,
+              answer: answer
+            }
+          }
+        }));
+      }
+      return result;
+    } catch (err) {
+      console.warn("[ComprehensionAnswer] submission failed:", err);
+      return null;
+    }
+  },
+
+  clearComprehensionResult: (directiveId) => {
+    set((state) => {
+      const newResults = { ...state.comprehensionResults };
+      delete newResults[directiveId];
+      return { comprehensionResults: newResults };
+    });
+  },
+
   sendMessage: async (text?: string, activityInput?: any): Promise<void> => {
     const { studentProfile, activeChat } = get();
     if (!studentProfile) return;
 
     // Handle Hub messaging (activeChat is null) or specific new chats
     const isHubMessage = !activeChat;
+    const profile = get().studentProfile;
+    
+    // If it's a Hub message, try to find a sensible default agent for the student
+    const defaultAgent = get().availableAgents.find(a => a.grade === profile?.grade) || get().availableAgents[0];
+
     const effectiveChat: ChatSession = activeChat || {
       id: "new",
-      title: "New Session",
-      subject: "General",
-      agent_id: undefined,
+      title: defaultAgent?.name || "New Session",
+      subject: defaultAgent?.subject,
+      agent_id: defaultAgent?.agent_id,
       isFocused: false,
       agentType: "General Assistant",
       agentIcon: "🤖",
@@ -1705,18 +2021,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         {
           text,
           user_id: studentProfile.user_id,
-          grade: studentProfile.grade || 10,
+          grade: studentProfile.grade,
           activity_input: activityInput,
-          // Only send session/agent info if NOT a Hub-initiated general query
-          ...(!isHubMessage && {
-            ...(isNewFocused
-              ? {}
-              : { session_id: isNewSession ? undefined : sessionIdToSend }),
-            ...(!effectiveChat.isFocused && {
-              agent_id: effectiveChat.agent_id,
-            }),
-            subject: effectiveChat.subject || "General",
-          }),
+          // Send session/agent/subject info
+          ...(sessionIdToSend && !isNewFocused && { session_id: sessionIdToSend }),
+          ...(!effectiveChat.isFocused && effectiveChat.agent_id && { agent_id: effectiveChat.agent_id }),
+          ...(effectiveChat.subject && { subject: effectiveChat.subject }),
           ...(effectiveChat.isFocused && {
             document_title: effectiveChat.document_title || "General",
             intent: "",
@@ -1891,8 +2201,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           currentTextBuffer += event.text;
           bufferedText += event.text;
 
-          // Detect and extract embedded tags (VISUAL, MATH_DRAW, etc.) OR raw SVG blocks from the text stream
-          const tagRegex = /(?:<<VISUAL[\s\S]*?<<?\/VISUAL>>?)|(?:<<VISUAL[\s\S]*?\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?>>?)|(?:<svg[\s\S]*?<\/svg>)/g;
+          // Detect and extract embedded tags (VISUAL, MATH_DRAW, English skill directives, raw SVG)
+          // English skill directives are stripped from visible text and parsed for the audio/widget layer
+          const tagRegex = /(?:<<VISUAL[\s\S]*?<<?\/VISUAL>>?)|(?:<<VISUAL[\s\S]*?\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)[\s\S]*?>>?)|(?:<svg[\s\S]*?<\/svg>)/g;
           let match;
           while ((match = tagRegex.exec(currentTextBuffer)) !== null) {
             const tag = match[0];
@@ -1929,21 +2240,174 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             // 3. Remove the processed part (textBefore + tag) from the active buffer
             currentTextBuffer = currentTextBuffer.substring(match.index + tag.length);
             tagRegex.lastIndex = 0; // Reset for remaining text
+
+            // Handle English skill directives — strip from visible text, parse payload
+            if (match[1] && /^(SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)$/.test(match[1])) {
+              const directiveType = match[1];
+              const jsonStart = tag.indexOf(":");
+              if (jsonStart !== -1) {
+                try {
+                  const payload = JSON.parse(tag.slice(jsonStart + 1, -2).trim());
+                  // Store directive for the audio/recording layer to act on
+                  set({ activeSkillDirective: { type: directiveType, ...payload } });
+
+                  // For LISTEN_COMPREHENSION, render an inline comprehension widget
+                  if (directiveType === "LISTEN_COMPREHENSION" && payload.directive_id) {
+                    elements.push({
+                      id: `cw-${payload.directive_id}`,
+                      type: "comprehension_widget",
+                      content: payload.question || "",
+                      meta: {
+                        widget_type: payload.interaction_type || "mcq",
+                        question: payload.question || "",
+                        choices: payload.options || [],
+                        allow_retry: true,
+                        directive_id: payload.directive_id,
+                      },
+                    });
+                    if (isPlanningUIPresented) updateUI(bufferedText, elements);
+                  }
+
+                  // For DIFFICULT_WORD, render a tappable word chip
+                  if (directiveType === "DIFFICULT_WORD" && payload.word) {
+                    elements.push({
+                      id: `dw-${payload.directive_id || payload.word}-${Date.now()}`,
+                      type: "comprehension_widget",
+                      content: payload.word,
+                      meta: {
+                        widget_type: "difficult_word" as any,
+                        word: payload.word,
+                        syllables: payload.syllables,
+                        phonetic: payload.phonetic,
+                        slow_available: payload.slow_available,
+                        directive_id: payload.directive_id,
+                      },
+                    });
+                    if (isPlanningUIPresented) updateUI(bufferedText, elements);
+                  }
+                } catch {
+                  // Malformed directive — ignore, continue stream (Wave 1 §10.5)
+                }
+              }
+              continue; // don't fall through to pushTextElement
+            }
           }
 
           if (isPlanningUIPresented) {
             updateUI(bufferedText, elements, currentToolStatus);
           }
+        } else if (event.type === "skill_action") {
+          // Flush buffer before skill action to ensure chronological order
+          pushTextElement(currentTextBuffer);
+          currentTextBuffer = "";
+
+          // Mode Controller (The "What"): Prepare the UI state for a skill mode
+          const { mode, payload } = event;
+          const directiveType = (mode || "").toUpperCase();
+          
+          set({ activeSkillDirective: { type: directiveType, ...payload } });
+
+          // Add a dedicated reading block element if it's a speaking mode (Wave 1/2)
+          if ((directiveType === "SPEAK_PARA" || directiveType === "KARAOKE" || directiveType === "READ_ALOUD") && payload.directive_id) {
+            if (!elements.some(el => el.id === `sv-${payload.directive_id}`)) {
+              elements.push({
+                id: `sv-${payload.directive_id}`,
+                type: "english_skill_view",
+                content: payload.source_text || "",
+                meta: { directive_id: payload.directive_id, mode: directiveType }
+              });
+              if (isPlanningUIPresented) updateUI(bufferedText, elements);
+            }
+          }
+
+          // DIFFICULT_WORD: inject a tappable pronunciation chip
+          if (directiveType === "DIFFICULT_WORD" && payload.word) {
+            const dwId = `dw-${payload.directive_id || payload.word}-${Date.now()}`;
+            elements.push({
+              id: dwId,
+              type: "comprehension_widget",
+              content: payload.word,
+              meta: {
+                widget_type: "difficult_word" as any,
+                word: payload.word,
+                syllables: payload.syllables,
+                phonetic: payload.phonetic,
+                slow_available: payload.slow_available,
+                directive_id: payload.directive_id,
+              },
+            });
+            updateUI(bufferedText, elements);
+          }
+
+          // LISTEN_COMPREHENSION: inject inline quiz widget
+          if (directiveType === "LISTEN_COMPREHENSION" && payload.directive_id) {
+            if (!elements.some(el => el.id === `cw-${payload.directive_id}`)) {
+              elements.push({
+                id: `cw-${payload.directive_id}`,
+                type: "comprehension_widget",
+                content: payload.question || "",
+                meta: {
+                  widget_type: payload.interaction_type || "mcq",
+                  question: payload.question || "",
+                  choices: payload.options || [],
+                  allow_retry: true,
+                  directive_id: payload.directive_id,
+                },
+              });
+              updateUI(bufferedText, elements);
+            }
+          }
+
+          // SHOW_FIGURE_DESCRIBE: inject a visual card with the figure
+          if (directiveType === "SHOW_FIGURE_DESCRIBE" && payload.directive_id) {
+            if (!elements.some(el => el.id === `fig-${payload.directive_id}`)) {
+              elements.push({
+                id: `fig-${payload.directive_id}`,
+                type: "visual",
+                content: "show_figure_describe",
+                meta: {
+                  engine: "show_figure_describe",
+                  label: payload.prompt || "What do you see?",
+                  figure_id: payload.figure_id,
+                  directive_id: payload.directive_id,
+                  figure_asset_url: payload.figure_asset_url,
+                },
+              });
+              updateUI(bufferedText, elements);
+            }
+          }
+        } else if (event.type === "tts_start") {
+          // Backend generated TTS — trigger audio playback (Wave 1 §1.4)
+          get().playDirectiveTts(event.directive_id, event.timepoints || []);
+        } else if (event.type === "recording_open") {
+          // Backend wants student to read aloud (Wave 2 §1.3)
+          get().startSkillRecording(event.directive_id, event.expected_duration_ms);
+        } else if (event.type === "recording_closed") {
+          // Backend closed the recording window
+          get().stopSkillRecording();
+        } else if (event.type === "skill_result") {
+          // Oral reading / comprehension result — store for UI display
+          set((state) => {
+            const newResults = { ...state.comprehensionResults };
+            if (event.directive_id) {
+              newResults[event.directive_id] = {
+                is_correct: event.payload?.is_correct ?? false,
+                answer: event.payload?.answer ?? ""
+              };
+            }
+            return {
+              activeSkillDirective: { type: "skill_result", ...event.payload },
+              comprehensionResults: newResults
+            };
+          });
+        } else if (event.type === "skill_error") {
+          // Wave 4: graceful degradation — log only, session continues
+          console.warn("[SkillError]", event.error_type, event.message);
         } else if (event.type === "done") {
           finalSessionId = event.session_id;
           finalOptions = Array.isArray(event.options) ? event.options : [];
           finalActions = Array.isArray(event.actions) ? event.actions : [];
           if (event.response) doneResponse = event.response;
-          if (!bufferedText && typeof event.response === "string" && event.response.trim()) {
-            currentTextBuffer = event.response;
-            bufferedText = event.response;
-            if (isPlanningUIPresented) updateUI(bufferedText, elements);
-          }
         }
       };
 
@@ -2108,7 +2572,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         const finalisedMsg: ChatMessage = {
           id: streamingMsgId,
           text: bufferedText,
-          elements: elements,
+          elements: [...elements],
           sender: "ai",
           timestamp: new Date().toLocaleTimeString([], {
             hour: "2-digit",

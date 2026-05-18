@@ -19,6 +19,21 @@ export interface Subject {
   chapters?: number;
 }
 
+export interface SubjectFilters {
+  grade?: number | null;
+  subject?: string;
+  status?: string;
+  search?: string;
+  from_date?: string;
+  to_date?: string;
+}
+
+export interface SubjectPagination {
+  total_count: number;
+  limit: number;
+  offset: number;
+}
+
 interface PartnerState {
   // --- Analytics Data ---
   students: Student[];
@@ -29,6 +44,8 @@ interface PartnerState {
 
   // --- Subject Data ---
   subjects: Subject[];
+  subjectFilters: SubjectFilters;
+  subjectPagination: SubjectPagination;
 
   // --- UI State ---
   isLoading: boolean;
@@ -43,6 +60,8 @@ interface PartnerState {
 
   // Subject Actions
   fetchSubjects: () => Promise<void>;
+  setSubjectFilters: (filters: SubjectFilters) => void;
+  setSubjectOffset: (offset: number) => void;
   addSubject: (subject: Subject) => void;
   uploadCurriculum: (file: File, subjectName: string, documentTitle: string, agentName: string, grade: string, board: string, documentType: string) => Promise<void>;
   cancelIngestion: (tempId: string) => Promise<void>;
@@ -76,6 +95,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   totalEnrollments: 0,
   selectedStudent: null,
   subjects: [],
+  subjectFilters: {},
+  subjectPagination: { total_count: 0, limit: 20, offset: 0 },
   isLoading: false,
   showUploadModal: false,
 
@@ -198,32 +219,66 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   },
 
   // -- Subject actions ----------------------------------------------------
+  setSubjectFilters: (filters) => {
+    set({ subjectFilters: filters, subjectPagination: { ...get().subjectPagination, offset: 0 } });
+  },
+
+  setSubjectOffset: (offset) => {
+    set((state) => ({ subjectPagination: { ...state.subjectPagination, offset } }));
+  },
+
   fetchSubjects: async () => {
     const rawPartnerId = localStorage.getItem("gened_partner_id");
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) return;
 
-    try {
-      const res = await authFetch(`${getRagUrl()}/rag/partner/${partnerId}/ingestions`);
-      if (!res.ok) throw new Error("Failed to fetch subjects/agents");
+    const { subjectFilters, subjectPagination } = get();
 
-      const raw: any[] = await res.json();
-      console.log("FETCHED FROM BACKEND:", raw); // Added for debugging
-      
-      const mappedSubjects: Subject[] = raw.map((item) => ({
-        id: item.ingestion_id, // Map ingestion_id to id for deletion
+    const params = new URLSearchParams();
+    if (subjectFilters.grade != null) params.set("grade", String(subjectFilters.grade));
+    if (subjectFilters.subject) params.set("subject", subjectFilters.subject);
+    if (subjectFilters.status) params.set("status", subjectFilters.status);
+    if (subjectFilters.search) params.set("search", subjectFilters.search);
+    if (subjectFilters.from_date) params.set("from_date", subjectFilters.from_date);
+    if (subjectFilters.to_date) params.set("to_date", subjectFilters.to_date);
+    params.set("limit", String(subjectPagination.limit));
+    params.set("offset", String(subjectPagination.offset));
+
+    try {
+      const url = `${getRagUrl()}/partner-portal/${partnerId}/ingestions?${params.toString()}`;
+      console.log("fetchSubjects URL:", url);
+      const res = await authFetch(url);
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error(`fetchSubjects failed [${res.status}]:`, errText);
+        throw new Error(`Failed to fetch subjects/agents: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const items: any[] = data.items ?? [];
+
+      const mappedSubjects: Subject[] = items.map((item) => ({
+        id: item.ingestion_batch_id,
         subject: item.subject,
-        agent: item.document_title, // Map document_title to agent display name
+        agent: item.document_title,
         grade: item.grade,
-        status: item.status === "completed" ? "active" : item.status, // Map completed to active
-        chapters: 0, // No longer showing chapters detected in the list
+        status: item.status === "completed" ? "active" : item.status,
+        chapters: item.chunks_created ?? 0,
       }));
 
-      set({ subjects: mappedSubjects });
+      set({
+        subjects: mappedSubjects,
+        subjectPagination: {
+          total_count: data.total_count ?? 0,
+          limit: data.limit ?? subjectPagination.limit,
+          offset: data.offset ?? subjectPagination.offset,
+        },
+      });
     } catch (error) {
       console.error("fetchSubjects error:", error);
     }
   },
+
   addSubject: (subject) =>
     set((state) => ({ subjects: [subject, ...state.subjects] })),
 
@@ -397,6 +452,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       pendingRequests: [],
       numberOfPendingRequests: 0,
       subjects: [],
+      subjectFilters: {},
+      subjectPagination: { total_count: 0, limit: 20, offset: 0 },
       selectedStudent: null,
       totalEnrollments: 0,
     });

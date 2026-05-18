@@ -110,7 +110,10 @@ export function ForgotPassword() {
             <input
               name="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError(null);
+              }}
               type="email"
               required
               placeholder="e.g. scholar@geneducation.ai"
@@ -126,7 +129,10 @@ export function ForgotPassword() {
               <input
                 name="otp"
                 value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value)}
+                onChange={(e) => {
+                  setOtpCode(e.target.value);
+                  if (error) setError(null);
+                }}
                 type="text"
                 required
                 placeholder="6-digit code"
@@ -143,7 +149,10 @@ export function ForgotPassword() {
                 <input
                   name="newPassword"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    if (error) setError(null);
+                  }}
                   type={showPassword ? "text" : "password"}
                   required
                   placeholder="••••••••"
@@ -166,7 +175,10 @@ export function ForgotPassword() {
               <input
                 name="confirmPassword"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  if (error) setError(null);
+                }}
                 type={showPassword ? "text" : "password"}
                 required
                 placeholder="••••••••"
