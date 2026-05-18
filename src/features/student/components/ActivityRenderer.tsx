@@ -39,24 +39,24 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
   };
 
   const renderReading = () => (
-    <div className="flex flex-col gap-4 p-4 bg-white rounded-2xl border border-[#042E5C]/10 shadow-sm mt-3">
-      <div className="text-[16px] font-semibold text-[#042E5C] leading-relaxed italic">
-        "{action.content}"
+    <div className="flex flex-col gap-3 mt-2 mb-4">
+      <div className="text-[15px] font-medium text-[#042E5C]/90 leading-relaxed border-l-2 border-[#042E5C]/20 pl-3">
+        {action.content}
       </div>
       
       {!isCompleted && (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={handleToggleMic}
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-              isListening ? "bg-red-500 text-white animate-pulse" : "bg-[#042E5C]/5 text-[#042E5C] hover:bg-[#042E5C]/10"
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm ${
+              isListening ? "bg-red-500 text-white animate-pulse" : "bg-white text-[#042E5C] border border-[#042E5C]/10 hover:bg-[#042E5C] hover:text-white"
             }`}
           >
-            {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+            {isListening ? <MicOff size={16} /> : <Mic size={16} />}
           </button>
           
-          <div className="flex-1 px-4 py-2 bg-[#F8F9FA] rounded-xl border border-dashed border-[#042E5C]/20 min-h-[44px] text-[14px] text-[#042E5C]/60 flex items-center">
-            {localTranscript || (isListening ? "Listening..." : "Tap mic and read aloud...") }
+          <div className="flex-1 px-3 py-2 bg-white/50 rounded-xl border border-transparent min-h-[40px] text-[13px] text-[#042E5C]/60 flex items-center">
+            {localTranscript || (isListening ? "Listening..." : "Tap mic to read aloud") }
           </div>
 
           {localTranscript && (
@@ -71,8 +71,8 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
       )}
       
       {isCompleted && (
-        <div className="flex items-center gap-2 text-emerald-500 font-bold text-[13px] uppercase tracking-wider">
-          <CheckCircle2 size={16} /> Activity Completed
+        <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[12px] uppercase tracking-wider pl-3">
+          <CheckCircle2 size={14} /> Completed
         </div>
       )}
     </div>
@@ -159,30 +159,28 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
   );
 
   const renderRepeat = () => (
-    <div className="flex flex-col gap-4 p-4 bg-white rounded-2xl border border-[#042E5C]/10 shadow-sm mt-3">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-          <RotateCcw size={18} />
-        </div>
-        <p className="text-[14px] font-bold text-[#042E5C]">Repeat after me</p>
+    <div className="flex flex-col gap-3 mt-2 mb-4">
+      <div className="flex items-center gap-2 pl-1">
+        <RotateCcw size={14} className="text-[#042E5C]/50" />
+        <p className="text-[12px] font-bold text-[#042E5C]/50 uppercase tracking-wider">Repeat after me</p>
       </div>
       
-      <div className="p-4 bg-[#F8F9FA] rounded-xl border border-[#042E5C]/5 text-[15px] font-medium text-[#042E5C] italic">
+      <div className="text-[15px] font-medium text-[#042E5C]/90 leading-relaxed border-l-2 border-[#042E5C]/20 pl-3 italic">
         "{action.content}"
       </div>
 
       {!isCompleted && (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={handleToggleMic}
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-              isListening ? "bg-red-500 text-white animate-pulse" : "bg-[#042E5C]/5 text-[#042E5C] hover:bg-[#042E5C]/10"
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm ${
+              isListening ? "bg-red-500 text-white animate-pulse" : "bg-white text-[#042E5C] border border-[#042E5C]/10 hover:bg-[#042E5C] hover:text-white"
             }`}
           >
-            {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+            {isListening ? <MicOff size={16} /> : <Mic size={16} />}
           </button>
           
-          <div className="flex-1 px-4 py-2 bg-[#F8F9FA] rounded-xl border border-dashed border-[#042E5C]/20 min-h-[44px] text-[14px] text-[#042E5C]/60 flex items-center">
+          <div className="flex-1 px-3 py-2 bg-white/50 rounded-xl border border-transparent min-h-[40px] text-[13px] text-[#042E5C]/60 flex items-center">
             {localTranscript || (isListening ? "Listening..." : "Tap to record...") }
           </div>
 
@@ -198,8 +196,8 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
       )}
 
       {isCompleted && (
-        <div className="flex items-center gap-2 text-emerald-500 font-bold text-[13px] uppercase tracking-wider">
-          <CheckCircle2 size={16} /> Good Job!
+        <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[12px] uppercase tracking-wider pl-3">
+          <CheckCircle2 size={14} /> Good Job!
         </div>
       )}
     </div>

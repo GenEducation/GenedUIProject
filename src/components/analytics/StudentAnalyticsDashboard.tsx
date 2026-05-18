@@ -110,10 +110,14 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
     }
 
     // Segments calculation
+    const redMax = Math.min(0.8, denominator || 1);
+    const blueMax = Math.max(0, Math.min(1.2, denominator || 1) - 0.8);
+    const greenMax = Math.max(0, (denominator || 1) - 1.2);
+
     const segments = [
-      { color: "#EF4444", width: (0.8 / (denominator || 1)) * 100 },
-      { color: "#3B82F6", width: (0.4 / (denominator || 1)) * 100 },
-      { color: "#10B981", width: (Math.max(0, (denominator || 1) - 1.2) / (denominator || 1)) * 100 }
+      { color: "#EF4444", width: (redMax / (denominator || 1)) * 100 },
+      { color: "#3B82F6", width: (blueMax / (denominator || 1)) * 100 },
+      { color: "#10B981", width: (greenMax / (denominator || 1)) * 100 }
     ];
 
     return { denominator, status, color, progress, segments };

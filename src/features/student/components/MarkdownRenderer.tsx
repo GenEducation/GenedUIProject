@@ -12,9 +12,12 @@ import "katex/dist/katex.min.css";
 import "highlight.js/styles/github-dark.css";
 import { authFetch } from "@/utils/authFetch";
 import { FigureView } from "./FigureView";
+import { useStudentStore } from "../store/useStudentStore";
+import { Volume2, Mic, RotateCcw, Image as ImageIcon } from "lucide-react";
 
 interface MarkdownRendererProps {
   content: string;
+  showToolbar?: boolean;
 }
 
 /**
@@ -24,7 +27,20 @@ interface MarkdownRendererProps {
  * - Syntax highlighting for code blocks
  * - GenEd branded styling
  */
-const markdownComponents: any = {
+const extractTextContent = (children: any): string => {
+  if (typeof children === "string") return children;
+  if (Array.isArray(children)) {
+    return children.map(c => {
+      if (typeof c === "string") return c;
+      if (c?.props?.children) return extractTextContent(c.props.children);
+      return "";
+    }).join("");
+  }
+  if (children?.props?.children) return extractTextContent(children.props.children);
+  return "";
+};
+
+const getMarkdownComponents = (showToolbar: boolean) => ({
   // Header styles
   h1: ({ ...props }: any) => <h1 className="text-lg font-black mt-4 mb-2 text-[#1a3a2a]" {...props} />,
   h2: ({ ...props }: any) => <h2 className="text-md font-bold mt-3 mb-1 text-[#1a3a2a]" {...props} />,
@@ -75,7 +91,18 @@ const markdownComponents: any = {
   },
   
   // Paragraph styles
-  p: ({ node, ...props }: any) => <p className="mb-3 last:mb-0 leading-relaxed" {...(props as any)} />,
+  p: ({ node, children, ...props }: any) => {
+    const handleAction = (action: string) => {
+      const text = extractTextContent(children);
+      useStudentStore.getState().sendMessage(`${action}: "${text}"`);
+    };
+
+    return (
+      <div className="relative group mb-3 last:mb-0">
+        <p className="leading-relaxed" {...props}>{children}</p>
+      </div>
+    );
+  },
   
   // Image styles (supports resolved figures)
   img: ({ src, alt, ...props }: any) => {
@@ -84,21 +111,26 @@ const markdownComponents: any = {
         const uuid = src.split('/').pop() || "";
         return <FigureView uuid={uuid} />;
     }
+    const handleAction = () => {
+      useStudentStore.getState().sendMessage(`Describe this image`);
+    };
     return (
-      <motion.img 
-        initial={{ opacity: 0, scale: 0.95 }} 
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4 }}
-        src={src} 
-        alt={alt || "Illustration"} 
-        className="rounded-2xl border border-[#1a3a2a]/10 shadow-md w-full h-auto object-contain max-h-[400px] my-6 block mx-auto"
-        {...props} 
-      />
+      <div className="relative group my-6">
+        <motion.img 
+          initial={{ opacity: 0, scale: 0.95 }} 
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+          src={src} 
+          alt={alt || "Illustration"} 
+          className="rounded-2xl border border-[#1a3a2a]/10 shadow-md w-full h-auto object-contain max-h-[400px] block mx-auto"
+          {...props} 
+        />
+      </div>
     );
   },
-};
+});
 
-export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) => {
+export const MarkdownRenderer = React.memo(({ content, showToolbar }: MarkdownRendererProps) => {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
   
   // Parse history markers: <<SHOW_FIGURE(uuid)>> -> Markdown Image
@@ -110,6 +142,9 @@ export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) 
     cleaned = cleaned.replace(/`?(<<SHOW_FIGURE\((.+?)\)>>)`?/g, (_, __, uuid) => {
       return `\n\n![Figure](${API_URL}/rag/retrieve/figure/${uuid})\n\n`;
     });
+
+    // Strip raw audio skill directives so they don't render as text in the UI
+    cleaned = cleaned.replace(/<<(?:SPEAK_PARA|KARAOKE|PRONUNCIATION):[\s\S]*?>>/g, '');
 
     // Fix: Remove backticks wrapping math ($...$) to prevent them from being treated as code blocks
     // This resolves the "green box" issue where math wouldn't render properly
@@ -144,12 +179,14 @@ export const MarkdownRenderer = React.memo(({ content }: MarkdownRendererProps) 
     return cleaned;
   }, [content, API_URL]);
 
+  const components = useMemo(() => getMarkdownComponents(showToolbar || false), [showToolbar]);
+
   return (
     <div className="markdown-content">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeHighlight, rehypeKatex]}
-        components={markdownComponents}
+        components={components}
       >
         {processedContent}
       </ReactMarkdown>

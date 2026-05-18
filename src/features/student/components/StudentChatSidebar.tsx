@@ -1,6 +1,6 @@
 "use client";
 
-import { User, BarChart2, Loader2, Plus, LogOut } from "lucide-react";
+import { User, BarChart2, Loader2, Plus, LogOut, ClipboardCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import React from "react";
@@ -134,6 +134,13 @@ export const StudentChatSidebar = React.memo(({
           >
             <BarChart2 size={18} />
             <span className="text-[13px] font-bold">Analytics</span>
+          </button>
+          <button 
+            onClick={() => window.location.href = '/student/assessments'}
+            className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-[#042E5C]/50 hover:text-[#042E5C] hover:bg-[#042E5C]/5 transition-all"
+          >
+            <ClipboardCheck size={18} />
+            <span className="text-[13px] font-bold">Test</span>
           </button>
           <button 
             onClick={logoutStudent}
