@@ -105,10 +105,18 @@ function MCQWidget({ directiveId, question, choices, allowRetry }: Comprehension
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [retries, setRetries] = useState(0);
-  const { submitComprehensionAnswer } = useStudentStore();
+  const { submitComprehensionAnswer, comprehensionResults, clearComprehensionResult } = useStudentStore();
+
+  const result = comprehensionResults[directiveId];
+  const isCorrect = result?.is_correct;
+  const chosenLabel = result?.answer;
+
+  const selectedChoice = choices?.find((c) => c.label === chosenLabel);
+  const effectiveSelected = selected || selectedChoice?.id || null;
+  const effectiveSubmitted = submitted || !!result;
 
   const handleSelect = async (choiceId: string, label: string) => {
-    if (submitted && !allowRetry) return;
+    if (effectiveSubmitted && !allowRetry) return;
     setSelected(choiceId);
     setSubmitted(true);
     await submitComprehensionAnswer(directiveId, "mcq", label);
@@ -117,6 +125,7 @@ function MCQWidget({ directiveId, question, choices, allowRetry }: Comprehension
   const handleRetry = () => {
     setSelected(null);
     setSubmitted(false);
+    clearComprehensionResult(directiveId);
     setRetries(r => r + 1);
   };
 
@@ -131,17 +140,25 @@ function MCQWidget({ directiveId, question, choices, allowRetry }: Comprehension
       )}
       <div className="flex flex-col gap-2">
         {(choices || []).map((choice) => {
-          const isSelected = selected === choice.id;
+          const isSelected = effectiveSelected === choice.id;
+          
+          let buttonClass = "bg-[#F8F9FA] text-[#042E5C]/70 border-transparent hover:border-[#042E5C]/20 hover:bg-white";
+          if (isSelected) {
+            if (effectiveSubmitted && result !== undefined) {
+              buttonClass = isCorrect
+                ? "bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-600/10"
+                : "bg-rose-600 border-rose-600 text-white shadow-md shadow-rose-600/10";
+            } else {
+              buttonClass = "bg-[#042E5C] text-white border-[#042E5C]";
+            }
+          }
+
           return (
             <button
               key={choice.id}
               onClick={() => handleSelect(choice.id, choice.label)}
-              disabled={submitted && !allowRetry}
-              className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${
-                isSelected
-                  ? "bg-[#042E5C] text-white border-[#042E5C]"
-                  : "bg-[#F8F9FA] text-[#042E5C]/70 border-transparent hover:border-[#042E5C]/20 hover:bg-white"
-              }`}
+              disabled={effectiveSubmitted && !allowRetry}
+              className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${buttonClass}`}
             >
               {choice.label}
             </button>
@@ -151,7 +168,7 @@ function MCQWidget({ directiveId, question, choices, allowRetry }: Comprehension
 
       {/* Soft retry prompt — Wave 2 §10.6: never say "Wrong" or "Incorrect" */}
       <AnimatePresence>
-        {submitted && allowRetry && retries < 2 && (
+        {effectiveSubmitted && allowRetry && retries < 2 && !isCorrect && (
           <motion.button
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -163,13 +180,21 @@ function MCQWidget({ directiveId, question, choices, allowRetry }: Comprehension
             Want to try once more?
           </motion.button>
         )}
-        {submitted && !allowRetry && (
+        {effectiveSubmitted && result !== undefined && (isCorrect || !allowRetry || retries >= 2) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-1.5 text-xs font-bold text-emerald-600"
+            className={`flex items-center gap-1.5 text-xs font-bold ${isCorrect ? "text-emerald-600" : "text-rose-600"}`}
           >
-            <Check size={12} /> Noted — let&apos;s continue!
+            {isCorrect ? (
+              <>
+                <Check size={12} className="stroke-[3]" /> Brilliant! That is correct. Let&apos;s continue!
+              </>
+            ) : (
+              <>
+                Not quite, but good effort — let&apos;s keep going!
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -182,10 +207,17 @@ function MCQWidget({ directiveId, question, choices, allowRetry }: Comprehension
 function FillBlankWidget({ directiveId, question }: ComprehensionWidgetProps) {
   const [value, setValue] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const { submitComprehensionAnswer } = useStudentStore();
+  const { submitComprehensionAnswer, comprehensionResults } = useStudentStore();
+
+  const result = comprehensionResults[directiveId];
+  const isCorrect = result?.is_correct;
+  const chosenAnswer = result?.answer;
+
+  const effectiveSubmitted = submitted || !!result;
+  const effectiveValue = value || chosenAnswer || "";
 
   const handleSubmit = async () => {
-    if (!value.trim() || submitted) return;
+    if (!value.trim() || effectiveSubmitted) return;
     setSubmitted(true);
     await submitComprehensionAnswer(directiveId, "fill_blank", value.trim());
   };
@@ -202,21 +234,61 @@ function FillBlankWidget({ directiveId, question }: ComprehensionWidgetProps) {
       <div className="flex gap-2">
         <input
           type="text"
-          value={value}
-          disabled={submitted}
+          value={effectiveValue}
+          disabled={effectiveSubmitted}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           placeholder="Your answer..."
-          className="flex-1 px-4 py-2 rounded-xl border border-[#042E5C]/12 text-sm text-[#042E5C] bg-[#F8F9FA] focus:outline-none focus:border-[#042E5C]/30 focus:bg-white transition-all disabled:opacity-50"
+          className={`flex-1 px-4 py-2 rounded-xl border text-sm focus:outline-none transition-all disabled:opacity-80 ${
+            effectiveSubmitted && result !== undefined
+              ? isCorrect
+                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                : "bg-rose-50 text-rose-800 border-rose-300"
+              : "border-[#042E5C]/12 text-[#042E5C] bg-[#F8F9FA] focus:border-[#042E5C]/30 focus:bg-white"
+          }`}
         />
         <button
           onClick={handleSubmit}
-          disabled={submitted || !value.trim()}
-          className="px-4 py-2 rounded-xl bg-[#042E5C] text-white text-sm font-bold disabled:opacity-30 hover:bg-[#064282] transition-all"
+          disabled={effectiveSubmitted || !value.trim()}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+            effectiveSubmitted && result !== undefined
+              ? isCorrect
+                ? "bg-emerald-600 text-white"
+                : "bg-rose-600 text-white"
+              : "bg-[#042E5C] text-white hover:bg-[#064282] disabled:opacity-30"
+          }`}
         >
-          {submitted ? <Check size={14} /> : "Send"}
+          {effectiveSubmitted && result !== undefined ? (
+            isCorrect ? (
+              <Check size={14} className="stroke-[3]" />
+            ) : (
+              <span className="font-bold text-xs">X</span>
+            )
+          ) : (
+            "Send"
+          )}
         </button>
       </div>
+
+      {effectiveSubmitted && result !== undefined && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={`text-xs font-bold mt-1.5 flex items-center gap-1 ${
+            isCorrect ? "text-emerald-600" : "text-rose-600"
+          }`}
+        >
+          {isCorrect ? (
+            <>
+              <Check size={12} className="stroke-[3]" /> Excellent! Correct answer.
+            </>
+          ) : (
+            <>
+              Good try! Let&apos;s keep practicing together.
+            </>
+          )}
+        </motion.div>
+      )}
     </motion.div>
   );
 }

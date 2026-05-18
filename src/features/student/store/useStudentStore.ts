@@ -712,6 +712,7 @@ export interface StudentState {
   activeSkillDirective: any | null; 
   oralAnalysisResult: any | null;
   karaokeTimer: any | null;
+  comprehensionResults: Record<string, { is_correct: boolean; answer: string }>;
 
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
@@ -750,7 +751,12 @@ export interface StudentState {
   confirmStartRecording: () => void;
   reportConversationAction: (type: string, directiveId: string) => Promise<void>;
   submitOralResult: (directiveId: string, gcsUri: string) => Promise<void>;
-  submitComprehensionAnswer: (directiveId: string, interactionType: string, answer: string) => Promise<void>;
+  submitComprehensionAnswer: (
+    directiveId: string,
+    interactionType: string,
+    answer: string
+  ) => Promise<{ is_correct: boolean; id?: string; directive_id?: string; student_response?: string } | null>;
+  clearComprehensionResult: (directiveId: string) => void;
   setHighlightedWordIndex: (index: number) => void;
   startKaraokePaceTimer: (wordCount: number) => void;
   stopKaraokePaceTimer: () => void;
@@ -799,6 +805,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   activeSkillDirective: null,
   oralAnalysisResult: null,
   karaokeTimer: null,
+  comprehensionResults: {},
   logoutStudent: () => {
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");
@@ -818,6 +825,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       hasFetchedSessions: false,
       hasFetchedAgents: false,
       onboardingStatus: null,
+      comprehensionResults: {},
     });
     window.location.href = "/";
   },
@@ -1908,17 +1916,38 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   submitComprehensionAnswer: async (directiveId, interactionType, answer) => {
     const { activeChat } = get();
     const sessionId = activeChat?.session_id || activeChat?.id;
-    if (!sessionId || sessionId === "new") return;
+    if (!sessionId || sessionId === "new") return null;
     try {
-      await studentService.submitComprehensionAnswer(
+      const result = await studentService.submitComprehensionAnswer(
         sessionId,
         directiveId,
         interactionType as any,
         answer
       );
+      if (result) {
+        set((state) => ({
+          comprehensionResults: {
+            ...state.comprehensionResults,
+            [directiveId]: {
+              is_correct: result.is_correct,
+              answer: answer
+            }
+          }
+        }));
+      }
+      return result;
     } catch (err) {
       console.warn("[ComprehensionAnswer] submission failed:", err);
+      return null;
     }
+  },
+
+  clearComprehensionResult: (directiveId) => {
+    set((state) => {
+      const newResults = { ...state.comprehensionResults };
+      delete newResults[directiveId];
+      return { comprehensionResults: newResults };
+    });
   },
 
   sendMessage: async (text?: string, activityInput?: any): Promise<void> => {
@@ -2392,7 +2421,19 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           get().stopSkillRecording();
         } else if (event.type === "skill_result") {
           // Oral reading / comprehension result — store for UI display
-          set({ activeSkillDirective: { type: "skill_result", ...event.payload } });
+          set((state) => {
+            const newResults = { ...state.comprehensionResults };
+            if (event.directive_id) {
+              newResults[event.directive_id] = {
+                is_correct: event.payload?.is_correct ?? false,
+                answer: event.payload?.answer ?? ""
+              };
+            }
+            return {
+              activeSkillDirective: { type: "skill_result", ...event.payload },
+              comprehensionResults: newResults
+            };
+          });
         } else if (event.type === "skill_error") {
           // Wave 4: graceful degradation — log only, session continues
           console.warn("[SkillError]", event.error_type, event.message);
