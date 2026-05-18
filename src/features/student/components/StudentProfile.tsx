@@ -59,7 +59,7 @@ export function StudentProfile() {
     <div className="min-h-screen bg-[#F4F3EE] font-sans flex flex-col overflow-y-auto">
       {/* Top Header Logo */}
       <div className="px-4 sm:px-8 py-5 flex items-center justify-between">
-        <img src="/Logo.svg" alt="Scholarly Logo" className="h-10 w-auto" />
+        <img src="/Logo.svg" alt="GenEd Logo" className="h-10 w-auto" />
       </div>
 
       <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-8 pb-20 space-y-8 sm:space-y-12 mt-4">
@@ -86,10 +86,10 @@ export function StudentProfile() {
         {/* Title area */}
         <div className="space-y-3 max-w-2xl">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#1a3a2a] tracking-tight">
-            Student Identity
+            Learning Profile
           </h1>
           <p className="text-[#1a3a2a]/60 text-[15px] leading-relaxed font-medium">
-            Manage your academic credentials, enrollment status, and institutional connections within the Scholarly Sanctuary.
+            Manage your learning profile, school connections, and progress in one place.
           </p>
         </div>
 

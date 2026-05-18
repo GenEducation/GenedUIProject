@@ -187,13 +187,13 @@ export const AVAILABLE_SUBJECTS: SubjectItem[] = [
 
 // -- Visual Tag Parser --------------------------------------------------------
 
-const SCHOLARLY_BLUEPRINT = `
+const LEARNING_BLUEPRINT = `
 <svg width="400" height="200" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="400" height="200" rx="12" fill="#F0F7FF"/>
   <path d="M0 20H400M0 40H400M0 60H400M0 80H400M0 100H400M0 120H400M0 140H400M0 160H400M0 180H400" stroke="#1A6BBF" stroke-opacity="0.04"/>
   <path d="M20 0V200M40 0V200M60 0V200M80 0V200M100 0V200M120 0V200M140 0V200M160 0V200M180 0V200M200 0V200M220 0V200M240 0V200M260 0V200M280 0V200M300 0V200M320 0V200M340 0V200M360 0V200M380 0V200" stroke="#1A6BBF" stroke-opacity="0.04"/>
   <rect x="100" y="50" width="200" height="100" rx="8" stroke="#1A6BBF" stroke-opacity="0.15" stroke-dasharray="4 4"/>
-  <text x="200" y="105" text-anchor="middle" fill="#1A6BBF" fill-opacity="0.3" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="bold" style="text-transform: uppercase; letter-spacing: 0.1em;">Scholarly Blueprint</text>
+  <text x="200" y="105" text-anchor="middle" fill="#1A6BBF" fill-opacity="0.3" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="bold" style="text-transform: uppercase; letter-spacing: 0.1em;">Learning Blueprint</text>
   <text x="200" y="125" text-anchor="middle" fill="#1A6BBF" fill-opacity="0.2" font-family="Inter, Arial, sans-serif" font-size="10">Visualization Ready</text>
 </svg>
 `;
@@ -404,7 +404,7 @@ function generateHistoricalSVG(type: string, params: any): string {
   }
 
   if (!shapeMarkup) {
-    return SCHOLARLY_BLUEPRINT;
+    return LEARNING_BLUEPRINT;
   }
 
   return `
@@ -880,7 +880,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       const mappedChats: ChatSession[] = data.sessions.map((s: any) => ({
         id: s.session_id,
         session_id: s.session_id,
-        title: s.title || s.agent_name || "Scholarly Session",
+        title: s.title || s.agent_name || "Learning Session",
         agentType: "English Assistant",
         agentIcon: "📖",
         lastActive: s.updated_at

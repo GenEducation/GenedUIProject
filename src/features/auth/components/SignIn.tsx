@@ -161,7 +161,7 @@ export function SignIn({
           className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
         >
           <span className="relative z-10 flex items-center justify-center gap-2">
-            {isSigningIn ? "Accessing archive…" : "Enter the Sanctuary"}
+            {isSigningIn ? "Signing in…" : "Continue to GenEd"}
           </span>
         </button>
 

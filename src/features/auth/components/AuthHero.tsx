@@ -34,16 +34,15 @@ export function AuthHero() {
         {/* Hero heading — Playfair Display serif per audit */}
         <div className="space-y-5 relative z-10 mx-auto lg:mx-0 text-left max-w-md">
           <h1 className="text-4xl lg:text-5xl tracking-tight text-white leading-[1.1] font-serif">
-            <span className="block text-white/50 text-2xl lg:text-3xl font-normal italic mb-2">
-              Step into your
-            </span>
-            <span className="block font-extrabold text-white">Scholarly</span>
-            <span className="block font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#059F6D] via-[#2dcfab] to-[#4EB6BF]">
-              Sanctuary
+            <span className="block font-extrabold text-white">Where Young Minds</span>
+            <span className="block font-extrabold text-white">Meet{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#059F6D] via-[#2dcfab] to-[#4EB6BF]">
+                Smarter Learning
+              </span>
             </span>
           </h1>
           <p className="text-sm font-medium leading-relaxed text-white/45 max-w-xs">
-            An AI-powered teacher with voice and chat assistance for the next generation of learners.
+            AI-powered learning companion with voice and chat support for the next generation of learners.
           </p>
         </div>
       </div>

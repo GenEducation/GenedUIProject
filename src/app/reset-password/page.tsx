@@ -12,8 +12,8 @@ function ResetPasswordContent() {
 
   return (
     <AuthPageLayout 
-      title={<><em>Update</em> Passphrase</>} 
-      subtitle="Secure your archive with a new key"
+      title={<><em>Reset</em> Your Password</>}
+      subtitle="Set a new password to continue learning"
     >
       <ResetPassword token={token} initialEmail={email} />
     </AuthPageLayout>

@@ -22,7 +22,7 @@ export function AuthFooter() {
               />
             </button>
             <p className="text-xs font-medium text-white/30 leading-relaxed max-w-[200px] text-center md:text-left italic font-serif">
-              &ldquo;The Ceremonial Entrance to the GenEd Sanctuary.&rdquo;
+              &ldquo;Personalized AI learning for curious young minds.&rdquo;
             </p>
             <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-white/20">
               © 2026 GENED. All rights reserved.

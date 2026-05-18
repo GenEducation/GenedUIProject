@@ -21,7 +21,7 @@ interface StudentAnalyticsDashboardProps {
 }
 
 const TAB_HEADINGS: Record<TabType, string> = {
-  chapter: "Curriculum Mastery Overview",
+  chapter: "Curriculum Progress Overview",
   skill: "Skill Proficiency Mapping",
   progression: "Skill Progression Over Time",
 };

@@ -9,8 +9,8 @@ export const metadata = {
 export default function ForgotPasswordPage() {
   return (
     <AuthPageLayout 
-      title={<><em>Recover</em> Access</>} 
-      subtitle="Restore your scholarly sanctuary"
+      title={<><em>Reset</em> Your Password</>}
+      subtitle="We'll help you get back to learning in no time"
     >
       <ForgotPassword />
     </AuthPageLayout>

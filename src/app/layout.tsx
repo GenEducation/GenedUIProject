@@ -17,7 +17,7 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   title: "GenEd",
-  description: "A high-trust Socratic learning environment for the next generation.",
+  description: "A safe, AI-powered personalized learning platform for children.",
 };
 
 export default function RootLayout({
