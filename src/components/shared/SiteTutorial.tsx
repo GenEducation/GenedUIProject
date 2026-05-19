@@ -278,18 +278,16 @@ export const SiteTutorial: React.FC = () => {
                 <ChevronLeft size={18} />
               </button>
               
-              {isActionCompleted && (
-                <button
-                  onClick={nextStep}
-                  className="flex items-center gap-2 bg-[#059F6D] text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-[#059F6D]/20 hover:shadow-xl transition-all"
-                >
-                  {currentStepIndex === TUTORIAL_SEQUENCE.length - 1 ? (
-                    <>Finish <Check size={16} /></>
-                  ) : (
-                    <>Next <ChevronRight size={16} /></>
-                  )}
-                </button>
-              )}
+              <button
+                onClick={nextStep}
+                className="flex items-center gap-2 bg-[#059F6D] text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-[#059F6D]/20 hover:shadow-xl transition-all"
+              >
+                {currentStepIndex === TUTORIAL_SEQUENCE.length - 1 ? (
+                  <>Finish <Check size={16} /></>
+                ) : (
+                  <>Next <ChevronRight size={16} /></>
+                )}
+              </button>
             </div>
           </div>
         </motion.div>

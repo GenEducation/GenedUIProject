@@ -58,7 +58,7 @@ export function VisualCard({ engine, label, children }: VisualCardProps) {
         </button>
       </div>
 
-      <div className={`relative w-full ${isExpanded ? "flex-1 min-h-0" : "min-h-[320px] max-h-[480px] flex items-center justify-center"} overflow-hidden p-0 m-0`}>
+      <div className={`relative w-full ${isExpanded ? "flex-1 min-h-0" : "min-h-[240px] max-h-[420px]"} overflow-hidden p-0 m-0`}>
         {children}
       </div>
 

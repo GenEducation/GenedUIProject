@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GenEd — Design Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #042E5C;
+    --cyan: #03b1ed;
+    --green: #059F6D;
+    --amber: #D97706;
+    --amber-bg: #FFFBEB;
+    --amber-border: #FDE68A;
+    --bg: #F0EFE9;
+    --white: #FFFFFF;
+    --border: rgba(4,46,92,0.08);
+    --text-primary: #042E5C;
+    --text-secondary: rgba(4,46,92,0.60);
+    --text-tertiary: rgba(4,46,92,0.35);
+    --sidebar-w: 220px;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: #e8e8e8;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+    gap: 24px;
+  }
+
+  /* ─── MOCKUP LABEL ─── */
+  .mockup-label {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: -12px;
+  }
+
+  /* ─── PAGE SWITCHER ─── */
+  .switcher {
+    display: flex;
+    gap: 8px;
+    background: white;
+    border-radius: 14px;
+    padding: 6px;
+    border: 1px solid #ddd;
+    position: sticky;
+    top: 16px;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  .switcher button {
+    padding: 8px 18px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .switcher button.active {
+    background: var(--navy);
+    color: white;
+  }
+
+  /* ─── BROWSER SHELL ─── */
+  .browser {
+    width: 100%;
+    max-width: 1200px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.18);
+    border: 1px solid #ccc;
+  }
+  .browser-bar {
+    background: #f0f0f0;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #ddd;
+  }
+  .dots { display: flex; gap: 6px; }
+  .dot {
+    width: 12px; height: 12px; border-radius: 50%;
+  }
+  .dot.red { background: #FF5F56; }
+  .dot.yellow { background: #FFBD2E; }
+  .dot.green { background: #27C93F; }
+  .url-bar {
+    flex: 1;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 5px 12px;
+    font-size: 12px;
+    color: #555;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .url-bar span { font-size: 11px; color: #aaa; }
+
+  /* ─── APP SHELL ─── */
+  .app {
+    display: flex;
+    height: 680px;
+    background: var(--bg);
+  }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--white);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+    flex-shrink: 0;
+  }
+  .sidebar-logo {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .logo-mark {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--navy);
+  }
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: var(--navy);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 14px; font-weight: 900;
+  }
+  .new-chat-btn {
+    margin: 8px 16px 16px;
+    background: var(--navy);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 11px 16px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: calc(100% - 32px);
+  }
+  .new-chat-btn:hover { background: #064282; }
+  .sidebar-section-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    padding: 0 20px 8px;
+  }
+  .sidebar-threads {
+    padding: 0 12px;
+    flex: 1;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .thread-item {
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+  .thread-item:hover { background: var(--bg); }
+  .sidebar-nav {
+    padding: 12px 12px 0;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .nav-item:hover {
+    background: var(--bg);
+    color: var(--text-primary);
+  }
+  .nav-item.active {
+    background: rgba(4,46,92,0.06);
+    color: var(--navy);
+    font-weight: 700;
+  }
+  .nav-item .nav-icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    background: transparent;
+  }
+  .nav-item.active .nav-icon {
+    background: var(--navy);
+    color: white;
+  }
+  .nav-avatar {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: var(--navy);
+    color: white;
+    font-size: 12px;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sidebar-user {
+    margin: 8px 12px 0;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .sidebar-user-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .sidebar-user-role {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ─── MAIN CONTENT ─── */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── HUB PAGE ─── */
+  .hub-content {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 32px;
+    width: 100%;
+  }
+
+  /* Greeting */
+  .greeting-block { margin-bottom: 28px; }
+  .greeting-text {
+    font-size: 38px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    background: linear-gradient(135deg, var(--navy) 0%, #03b1ed 50%, #059F6D 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 6px;
+  }
+  .greeting-sub {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  /* Onboarding Hero CTA */
+  .onboarding-hero {
+    background: linear-gradient(135deg, #042E5C 0%, #064282 100%);
+    border-radius: 20px;
+    padding: 28px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  .onboarding-hero::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 150px; height: 150px;
+    border-radius: 50%;
+    background: rgba(3,177,237,0.15);
+  }
+  .onboarding-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -40px; right: 80px;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: rgba(5,159,109,0.12);
+  }
+  .onboarding-hero-text h2 {
+    font-size: 18px;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 6px;
+  }
+  .onboarding-hero-text p {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.65);
+    max-width: 340px;
+    line-height: 1.5;
+  }
+  .onboarding-hero-actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .btn-hero-primary {
+    padding: 11px 22px;
+    background: var(--cyan);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .btn-hero-secondary {
+    padding: 11px 22px;
+    background: rgba(255,255,255,0.12);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* Section header */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .section-link {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--cyan);
+    text-decoration: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Cards grid */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 100px;
+  }
+  .card:hover {
+    border-color: rgba(4,46,92,0.15);
+    box-shadow: 0 4px 16px rgba(4,46,92,0.08);
+    transform: translateY(-1px);
+  }
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .card-icon {
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    background: rgba(4,46,92,0.06);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    color: var(--text-secondary);
+  }
+  .card-arrow { color: var(--text-tertiary); font-size: 14px; }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.3;
+    margin-bottom: 4px;
+  }
+  .card-sub {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .card-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .card-session-time {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+  }
+
+  /* Empty state card */
+  .empty-card {
+    background: rgba(255,255,255,0.5);
+    border: 1.5px dashed rgba(4,46,92,0.12);
+    border-radius: 16px;
+    padding: 28px 16px;
+    text-align: center;
+    grid-column: 1 / -1;
+  }
+  .empty-card p {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+  }
+
+  /* Chat input */
+  .chat-input-wrap {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.15s;
+    margin-top: 4px;
+  }
+  .chat-input-wrap:focus-within {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(3,177,237,0.08);
+  }
+  .chat-input-placeholder {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(4,46,92,0.3);
+  }
+  .chat-send-btn {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--navy);
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  .chat-hint {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  /* ─── ANALYTICS PAGE ─── */
+  .analytics-header {
+    padding: 20px 32px;
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .back-btn {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+  }
+  .back-btn:hover { background: var(--bg); color: var(--text-primary); }
+  .subject-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px 14px;
+    font-size: 13px; font-weight: 700;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  .subject-pill-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--cyan);
+  }
+  .analytics-content {
+    padding: 28px 32px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .metric-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .metric-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 10px;
+  }
+  .metric-value {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .metric-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .badge-gray { background: #F3F4F6; color: #6B7280; }
+  .badge-green { background: #DCFCE7; color: #166534; }
+  .badge-blue { background: #DBEAFE; color: #1D4ED8; }
+  .skill-bar {
+    height: 6px;
+    background: #F3F4F6;
+    border-radius: 3px;
+    margin-top: 12px;
+    overflow: hidden;
+  }
+  .skill-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(to right, var(--cyan), var(--green));
+  }
+  .metric-desc {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    line-height: 1.5;
+    margin-top: 10px;
+  }
+  .curriculum-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+  }
+  .chapter-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .chapter-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .chapter-info {}
+  .chapter-seq {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 4px;
+  }
+  .chapter-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+  .chapter-coverage {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+  }
+  .chapter-pct {
+    text-align: right;
+  }
+  .chapter-pct-num {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--text-primary);
+  }
+  .chapter-pct-badge {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .chapter-bar {
+    height: 3px;
+    background: #F3F4F6;
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .chapter-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+  }
+
+  /* ─── ASSESSMENTS PAGE ─── */
+  .assess-header {
+    padding: 16px 24px;
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .assess-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .assess-page-icon {
+    width: 36px; height: 36px;
+    background: rgba(4,46,92,0.06);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    color: var(--text-secondary);
+  }
+  .assess-title-block h1 {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+  .assess-title-block p {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-tertiary);
+  }
+  .assess-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    width: 260px;
+  }
+  .assess-content {
+    padding: 24px 28px;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .assess-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .assess-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .assess-card:hover {
+    border-color: var(--cyan);
+    box-shadow: 0 4px 20px rgba(3,177,237,0.1);
+  }
+  .assess-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .assess-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+  .assess-subject-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .tag-english { background: #EFF6FF; color: #1D4ED8; }
+  .tag-math { background: #F0FDF4; color: #166534; }
+  .assess-progress-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .assess-progress-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+  }
+  .assess-start-btn {
+    width: 100%;
+    padding: 11px;
+    background: var(--navy);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.15s;
+  }
+  .assess-start-btn:hover { background: #064282; }
+  .assess-progress-bar {
+    height: 3px;
+    background: #F3F4F6;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .assess-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--cyan);
+  }
+
+  /* ─── PROFILE PAGE ─── */
+  .profile-content {
+    padding: 36px 40px;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .profile-header-block {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 36px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .profile-avatar {
+    width: 64px; height: 64px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, var(--navy), var(--cyan));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    font-weight: 900;
+    color: white;
+    flex-shrink: 0;
+  }
+  .profile-name-block {}
+  .profile-name {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+  .profile-meta {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .profile-meta-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-tertiary); }
+  .profile-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .profile-section {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .profile-section-title {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-tertiary);
+    margin-bottom: 16px;
+  }
+  .form-field { margin-bottom: 14px; }
+  .form-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+    margin-bottom: 5px;
+  }
+  .form-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: inherit;
+    outline: none;
+  }
+  .form-input:focus {
+    border-color: var(--cyan);
+    background: white;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .save-btn {
+    width: 100%;
+    margin-top: 4px;
+    padding: 10px;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .partner-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-radius: 10px;
+    margin-bottom: 8px;
+  }
+  .partner-logo {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--navy);
+    color: white;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .partner-name { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+  .partner-status {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: #DCFCE7;
+    color: #166534;
+    margin-left: auto;
+  }
+  .subscription-card {
+    background: linear-gradient(135deg, var(--navy) 0%, #064282 100%);
+    border-radius: 16px;
+    padding: 20px;
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sub-info {}
+  .sub-plan-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 4px;
+  }
+  .sub-plan-name {
+    font-size: 18px;
+    font-weight: 900;
+    color: white;
+  }
+  .sub-plan-desc {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.6);
+    margin-top: 4px;
+  }
+  .upgrade-btn {
+    padding: 10px 20px;
+    background: var(--cyan);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* ─── PAGE SECTIONS (show/hide) ─── */
+  .page { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+  .page.active { display: flex; }
+
+  /* ─── DIFF ANNOTATION ─── */
+  .diff-callout {
+    background: white;
+    border: 1.5px solid #E5E7EB;
+    border-left: 4px solid var(--green);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #374151;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 1200px;
+  }
+  .diff-callout .tag {
+    background: var(--green);
+    color: white;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+</style>
+</head>
+<body>
+
+<p class="mockup-label">GenEd Student Portal — Design Mockup (Proposed Changes)</p>
+
+<!-- Page Switcher -->
+<div class="switcher">
+  <button class="active" onclick="showPage('hub')">Hub</button>
+  <button onclick="showPage('analytics')">Analytics</button>
+  <button onclick="showPage('assessments')">Assessments</button>
+  <button onclick="showPage('profile')">Profile</button>
+</div>
+
+<!-- Change notes -->
+<div class="diff-callout" id="note-hub">
+  <span class="tag">Changes</span>
+  <span><b>Hub:</b> Onboarding CTA promoted to hero card (not a small banner). Section labels lighter weight. Sidebar has active state + user info. Empty states friendlier. Page content no longer fades in from invisible.</span>
+</div>
+<div class="diff-callout" id="note-analytics" style="display:none">
+  <span class="tag">Changes</span>
+  <span><b>Analytics:</b> "NOT STARTED" badge replaces "STRUGGLING". Segmented progress bars removed when score is 0. Metric descriptions contextual. Chapter cards have cleaner hierarchy with readable contrast.</span>
+</div>
+<div class="diff-callout" id="note-assessments" style="display:none">
+  <span class="tag">Changes</span>
+  <span><b>Assessments:</b> Subject tags color-coded (blue = English, green = Maths). Rounded pill badges. Card hover highlights border in cyan. Back button + page title consistent with analytics page header pattern.</span>
+</div>
+<div class="diff-callout" id="note-profile" style="display:none">
+  <span class="tag">Changes</span>
+  <span><b>Profile:</b> Avatar shown (gradient with initial). "Save Changes" button visible. Subscription card moved to bottom in subdued position. Profile name/grade prominent in page header. Two-column grid preserved.</span>
+</div>
+
+<!-- Browser Shell -->
+<div class="browser">
+  <div class="browser-bar">
+    <div class="dots">
+      <div class="dot red"></div>
+      <div class="dot yellow"></div>
+      <div class="dot green"></div>
+    </div>
+    <div class="url-bar">
+      <span>🔒</span>
+      <span id="url-text">localhost:3000/student</span>
+    </div>
+  </div>
+
+  <div class="app">
+    <!-- Sidebar (shared) -->
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-mark">
+          <div class="logo-icon">G</div>
+          GenEd
+        </div>
+      </div>
+
+      <button class="new-chat-btn">
+        <span>＋</span> Start New Chat
+      </button>
+
+      <div class="sidebar-section-label">Recent Chats</div>
+      <div class="sidebar-threads">
+        <div class="thread-item">English 1 — Chapter 2</div>
+        <div class="thread-item">Fractions practice</div>
+        <div class="thread-item">Be Smart Be Safe</div>
+      </div>
+
+      <div class="sidebar-nav">
+        <div class="nav-item active" id="nav-hub" onclick="showPage('hub')">
+          <div class="nav-icon">⌂</div>
+          Home
+        </div>
+        <div class="nav-item" id="nav-analytics" onclick="showPage('analytics')">
+          <div class="nav-icon">📊</div>
+          Analytics
+        </div>
+        <div class="nav-item" id="nav-assessments" onclick="showPage('assessments')">
+          <div class="nav-icon">📋</div>
+          Test
+        </div>
+        <div class="nav-item" id="nav-profile" onclick="showPage('profile')">
+          <div class="nav-icon">👤</div>
+          Profile
+        </div>
+      </div>
+
+      <div class="sidebar-user">
+        <div class="nav-avatar">T</div>
+        <div>
+          <div class="sidebar-user-name">test_1</div>
+          <div class="sidebar-user-role">Grade 4 · CBSE</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── HUB PAGE ─── -->
+    <div class="page active main" id="page-hub">
+      <div class="hub-content">
+
+        <div class="greeting-block">
+          <div class="greeting-text">Good Afternoon, test_1!</div>
+          <div class="greeting-sub">Where should we start?</div>
+        </div>
+
+        <!-- Hero Onboarding CTA (promoted from small banner) -->
+        <div class="onboarding-hero">
+          <div class="onboarding-hero-text">
+            <h2>🎓 Complete Your Setup</h2>
+            <p>Start your English and Mathematics onboarding to unlock your personal AI tutors and begin learning.</p>
+          </div>
+          <div class="onboarding-hero-actions">
+            <button class="btn-hero-primary">Start English</button>
+            <button class="btn-hero-secondary">Start Maths</button>
+          </div>
+        </div>
+
+        <!-- Recent Sessions -->
+        <div class="section-header">
+          <span class="section-title">Recent Sessions</span>
+        </div>
+        <div class="cards-grid" style="margin-bottom:28px;">
+          <div class="card">
+            <div class="card-top">
+              <div class="card-icon">🕐</div>
+              <span class="card-arrow">›</span>
+            </div>
+            <div>
+              <div class="card-title">English 1 — Chapter 2</div>
+              <div class="card-session-time">⏱ 2 hours ago</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-top">
+              <div class="card-icon">🕐</div>
+              <span class="card-arrow">›</span>
+            </div>
+            <div>
+              <div class="card-title">Fractions</div>
+              <div class="card-session-time">⏱ Yesterday</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-top">
+              <div class="card-icon">🕐</div>
+              <span class="card-arrow">›</span>
+            </div>
+            <div>
+              <div class="card-title">Be Smart Be Safe</div>
+              <div class="card-session-time">⏱ 3 days ago</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Start -->
+        <div class="section-header">
+          <span class="section-title">Quick Start</span>
+          <span class="section-link">See all agents ›</span>
+        </div>
+        <div class="cards-grid" style="margin-bottom:28px;">
+          <div class="card">
+            <div class="card-top">
+              <div class="card-icon">🤖</div>
+              <div style="display:flex;gap:4px;align-items:center;">
+                <div class="card-dot"></div>
+                <span class="card-arrow">›</span>
+              </div>
+            </div>
+            <div>
+              <div class="card-title">English 1</div>
+              <div class="card-sub">English · Grade 4</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-top">
+              <div class="card-icon">🤖</div>
+              <div style="display:flex;gap:4px;align-items:center;">
+                <div class="card-dot"></div>
+                <span class="card-arrow">›</span>
+              </div>
+            </div>
+            <div>
+              <div class="card-title">Fractions</div>
+              <div class="card-sub">Mathematics · Grade 4</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="chat-input-wrap">
+          <span style="color:var(--text-tertiary);font-size:16px;">💬</span>
+          <div class="chat-input-placeholder">Ask anything...</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:18px;color:var(--text-tertiary);">🎤</span>
+            <button class="chat-send-btn">↑</button>
+          </div>
+        </div>
+        <div class="chat-hint">Press Enter to send · Shift+Enter for new line</div>
+
+      </div>
+    </div>
+
+    <!-- ─── ANALYTICS PAGE ─── -->
+    <div class="page main" id="page-analytics">
+      <div class="analytics-header">
+        <button class="back-btn" onclick="showPage('hub')">← Back</button>
+        <div style="flex:1;"></div>
+        <div class="subject-pill">
+          <div class="subject-pill-dot"></div>
+          English
+          <span style="color:var(--text-tertiary);font-size:12px;">▾</span>
+        </div>
+      </div>
+      <div class="analytics-content">
+        <div class="metrics-row">
+          <div class="metric-card">
+            <div class="metric-label">Overall Mastery Score</div>
+            <div class="metric-value">0%</div>
+            <div class="skill-bar"><div class="skill-fill" style="width:0%"></div></div>
+            <div class="metric-desc">Complete sessions to build your mastery score across all topics.</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Skill Index</div>
+            <div class="metric-value" style="font-size:24px;">0.00</div>
+            <span class="metric-badge badge-gray">Not Started</span>
+            <div class="metric-desc">Your skill index will grow as you complete more learning sessions.</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Completed Sessions</div>
+            <div class="metric-value">0</div>
+            <div class="metric-desc" style="margin-top:4px;">Complete your first learning session to start tracking your progress here.</div>
+          </div>
+        </div>
+
+        <div class="curriculum-title">Curriculum Progress</div>
+        <div class="chapter-grid">
+          <div class="chapter-card">
+            <div class="chapter-info">
+              <div class="chapter-seq">Sec 1</div>
+              <div class="chapter-name">Be Smart Be Safe</div>
+              <div class="chapter-coverage">Content coverage: 0%</div>
+              <div class="chapter-bar"><div class="chapter-bar-fill" style="width:0%;background:var(--cyan)"></div></div>
+            </div>
+            <div class="chapter-pct">
+              <div class="chapter-pct-num">0%</div>
+              <div class="chapter-pct-badge badge-gray">Not started</div>
+            </div>
+          </div>
+          <div class="chapter-card">
+            <div class="chapter-info">
+              <div class="chapter-seq">Sec 2</div>
+              <div class="chapter-name">Shapes around us</div>
+              <div class="chapter-coverage">Content coverage: 0%</div>
+              <div class="chapter-bar"><div class="chapter-bar-fill" style="width:0%;background:var(--cyan)"></div></div>
+            </div>
+            <div class="chapter-pct">
+              <div class="chapter-pct-num">0%</div>
+              <div class="chapter-pct-badge badge-gray">Not started</div>
+            </div>
+          </div>
+          <div class="chapter-card">
+            <div class="chapter-info">
+              <div class="chapter-seq">Sec 3</div>
+              <div class="chapter-name">The Tinkling Bells</div>
+              <div class="chapter-coverage">Content coverage: 0%</div>
+              <div class="chapter-bar"><div class="chapter-bar-fill" style="width:0%;background:var(--cyan)"></div></div>
+            </div>
+            <div class="chapter-pct">
+              <div class="chapter-pct-num">0%</div>
+              <div class="chapter-pct-badge badge-gray">Not started</div>
+            </div>
+          </div>
+          <div class="chapter-card">
+            <div class="chapter-info">
+              <div class="chapter-seq">Sec 4</div>
+              <div class="chapter-name">Together We Can</div>
+              <div class="chapter-coverage">Content coverage: 0%</div>
+              <div class="chapter-bar"><div class="chapter-bar-fill" style="width:0%;background:var(--cyan)"></div></div>
+            </div>
+            <div class="chapter-pct">
+              <div class="chapter-pct-num">0%</div>
+              <div class="chapter-pct-badge badge-gray">Not started</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── ASSESSMENTS PAGE ─── -->
+    <div class="page main" id="page-assessments">
+      <div class="assess-header">
+        <div class="assess-header-left">
+          <button class="back-btn" onclick="showPage('hub')">←</button>
+          <div class="assess-page-icon">📋</div>
+          <div class="assess-title-block">
+            <h1>Test</h1>
+            <p>Select a chapter to begin</p>
+          </div>
+        </div>
+        <div class="assess-search">
+          <span>🔍</span> Search chapters or subjects...
+        </div>
+      </div>
+      <div class="assess-content">
+        <div class="assess-grid">
+          <div class="assess-card">
+            <div class="assess-card-top">
+              <div class="assess-card-title">Be Smart Be Safe</div>
+              <span class="assess-subject-tag tag-english">English</span>
+            </div>
+            <div>
+              <div class="assess-progress-row">
+                <span class="assess-progress-label">Last score: —</span>
+                <span class="assess-progress-label">Not attempted</span>
+              </div>
+              <div class="assess-progress-bar"><div class="assess-progress-fill" style="width:0%"></div></div>
+            </div>
+            <button class="assess-start-btn">Start Test →</button>
+          </div>
+          <div class="assess-card">
+            <div class="assess-card-top">
+              <div class="assess-card-title">Shapes around us</div>
+              <span class="assess-subject-tag tag-english">English</span>
+            </div>
+            <div>
+              <div class="assess-progress-row">
+                <span class="assess-progress-label">Last score: —</span>
+                <span class="assess-progress-label">Not attempted</span>
+              </div>
+              <div class="assess-progress-bar"><div class="assess-progress-fill" style="width:0%"></div></div>
+            </div>
+            <button class="assess-start-btn">Start Test →</button>
+          </div>
+          <div class="assess-card">
+            <div class="assess-card-top">
+              <div class="assess-card-title">The Tinkling Bells</div>
+              <span class="assess-subject-tag tag-english">English</span>
+            </div>
+            <div>
+              <div class="assess-progress-row">
+                <span class="assess-progress-label">Last score: —</span>
+                <span class="assess-progress-label">Not attempted</span>
+              </div>
+              <div class="assess-progress-bar"><div class="assess-progress-fill" style="width:0%"></div></div>
+            </div>
+            <button class="assess-start-btn">Start Test →</button>
+          </div>
+          <div class="assess-card">
+            <div class="assess-card-top">
+              <div class="assess-card-title">Together We Can</div>
+              <span class="assess-subject-tag tag-english">English</span>
+            </div>
+            <div>
+              <div class="assess-progress-row">
+                <span class="assess-progress-label">Last score: —</span>
+                <span class="assess-progress-label">Not attempted</span>
+              </div>
+              <div class="assess-progress-bar"><div class="assess-progress-fill" style="width:0%"></div></div>
+            </div>
+            <button class="assess-start-btn">Start Test →</button>
+          </div>
+          <div class="assess-card">
+            <div class="assess-card-top">
+              <div class="assess-card-title">Hide and Seek</div>
+              <span class="assess-subject-tag tag-math">Mathematics</span>
+            </div>
+            <div>
+              <div class="assess-progress-row">
+                <span class="assess-progress-label">Last score: —</span>
+                <span class="assess-progress-label">Not attempted</span>
+              </div>
+              <div class="assess-progress-bar"><div class="assess-progress-fill" style="width:0%"></div></div>
+            </div>
+            <button class="assess-start-btn">Start Test →</button>
+          </div>
+          <div class="assess-card">
+            <div class="assess-card-top">
+              <div class="assess-card-title">Fractions</div>
+              <span class="assess-subject-tag tag-math">Mathematics</span>
+            </div>
+            <div>
+              <div class="assess-progress-row">
+                <span class="assess-progress-label">Last score: —</span>
+                <span class="assess-progress-label">Not attempted</span>
+              </div>
+              <div class="assess-progress-bar"><div class="assess-progress-fill" style="width:0%"></div></div>
+            </div>
+            <button class="assess-start-btn">Start Test →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── PROFILE PAGE ─── -->
+    <div class="page main" id="page-profile">
+      <div class="profile-content">
+        <!-- Profile header with avatar -->
+        <div class="profile-header-block">
+          <div class="profile-avatar">T</div>
+          <div class="profile-name-block">
+            <div class="profile-name">test_1</div>
+            <div class="profile-meta">
+              Grade 4
+              <div class="profile-meta-dot"></div>
+              CBSE
+              <div class="profile-meta-dot"></div>
+              Student
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-grid">
+          <!-- Personal Information -->
+          <div class="profile-section">
+            <div class="profile-section-title">Personal Information</div>
+            <div class="form-field">
+              <div class="form-label">Full Name</div>
+              <input class="form-input" type="text" value="test_1" />
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <div class="form-label">Grade</div>
+                <input class="form-input" type="text" value="Grade 4" />
+              </div>
+              <div class="form-field">
+                <div class="form-label">Board</div>
+                <input class="form-input" type="text" value="CBSE" />
+              </div>
+            </div>
+            <button class="save-btn">Save Changes</button>
+          </div>
+
+          <!-- Partner & Parent -->
+          <div class="profile-section">
+            <div class="profile-section-title">School Partners</div>
+            <div class="partner-item">
+              <div class="partner-logo">GE</div>
+              <div>
+                <div class="partner-name">Gen-Ed</div>
+                <div style="font-size:10px;font-weight:500;color:var(--text-tertiary);">Default partner</div>
+              </div>
+              <div class="partner-status">Active</div>
+            </div>
+            <div style="margin-top:16px;">
+              <div class="form-label" style="margin-bottom:6px;">Add Institution</div>
+              <div style="display:flex;gap:8px;">
+                <select class="form-input" style="flex:1;">
+                  <option>Select institution...</option>
+                </select>
+                <button style="padding:9px 14px;background:var(--navy);color:white;border:none;border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">Send</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Parent Access -->
+          <div class="profile-section">
+            <div class="profile-section-title">Parent Access</div>
+            <div class="form-field">
+              <div class="form-label">Guardian email or phone</div>
+              <div style="display:flex;gap:8px;">
+                <input class="form-input" type="text" placeholder="guardian@email.com" />
+                <button style="padding:9px 14px;background:var(--navy);color:white;border:none;border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">Add</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Subscription (bottom, not dominant) -->
+          <div class="subscription-card">
+            <div class="sub-info">
+              <div class="sub-plan-label">Current Plan</div>
+              <div class="sub-plan-name">Free</div>
+              <div class="sub-plan-desc">Upgrade for priority support and advanced insights.</div>
+            </div>
+            <button class="upgrade-btn">Upgrade to Pro →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const pages = ['hub', 'analytics', 'assessments', 'profile'];
+  const urls = {
+    hub: 'localhost:3000/student',
+    analytics: 'localhost:3000/student/analytics',
+    assessments: 'localhost:3000/student/assessments',
+    profile: 'localhost:3000/student/profile',
+  };
+
+  function showPage(name) {
+    pages.forEach(p => {
+      document.getElementById('page-' + p).classList.toggle('active', p === name);
+      const btn = document.querySelector('.switcher button:nth-child(' + (pages.indexOf(p) + 1) + ')');
+      if (btn) btn.classList.toggle('active', p === name);
+      const navItem = document.getElementById('nav-' + p);
+      if (navItem) navItem.classList.toggle('active', p === name);
+      const note = document.getElementById('note-' + p);
+      if (note) note.style.display = p === name ? 'flex' : 'none';
+    });
+    document.getElementById('url-text').textContent = urls[name];
+  }
+</script>
+</body>
+</html>

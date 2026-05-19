@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot, User, Clock, AlertCircle } from "lucide-react";
 import { useParentStore } from "../store/useParentStore";
+import { MarkdownRenderer } from "@/features/student/components/MarkdownRenderer";
 
 export function ParentChatHistoryView() {
   const { 
@@ -72,7 +73,11 @@ export function ParentChatHistoryView() {
                       ? "bg-[#1a3a2a] text-white rounded-tr-none" 
                       : "bg-white text-[#1a3a2a] rounded-tl-none border border-[#1a3a2a]/5"
                   }`}>
-                    {msg.content}
+                    {msg.role === "user" ? (
+                      msg.content
+                    ) : (
+                      <MarkdownRenderer content={msg.content} />
+                    )}
                   </div>
                   <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest opacity-30 ${
                     msg.role === "user" ? "justify-end" : "justify-start"
