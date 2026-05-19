@@ -4,7 +4,8 @@ import React, { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot, User, Clock, AlertCircle } from "lucide-react";
 import { useParentStore } from "../store/useParentStore";
-import { MarkdownRenderer } from "@/features/student/components/MarkdownRenderer";
+import { parseContent } from "@/features/student/utils/parseContent";
+import { ChatElementRenderer } from "@/features/student/components/ChatElementRenderer";
 
 export function ParentChatHistoryView() {
   const { 
@@ -76,7 +77,7 @@ export function ParentChatHistoryView() {
                     {msg.role === "user" ? (
                       msg.content
                     ) : (
-                      <MarkdownRenderer content={msg.content} />
+                      <ChatElementRenderer elements={parseContent(msg.content)} isReadOnly />
                     )}
                   </div>
                   <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest opacity-30 ${
