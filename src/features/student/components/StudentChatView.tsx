@@ -84,7 +84,7 @@ export function StudentChatView() {
     ) {
       // Small delay to ensure UI transition is smooth
       const timer = setTimeout(() => {
-        sendMessage("hello, let's start studying");
+        sendMessage("");
       }, 500);
       return () => clearTimeout(timer);
     }

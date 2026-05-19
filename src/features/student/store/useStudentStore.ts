@@ -1987,7 +1987,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
-      text: text || activityInput?.transcript || "Completing activity...",
+      text: text !== undefined ? text : (activityInput?.transcript || "Completing activity..."),
       sender: "user",
       timestamp: new Date().toLocaleTimeString([], {
         hour: "2-digit",

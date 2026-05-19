@@ -464,14 +464,16 @@ export function StudentChatMain({
               <div className="flex-1 flex flex-col">
                 {/* Messages List */}
                 <div className="flex-1 px-6 md:px-12 py-8 space-y-8 max-w-5xl mx-auto w-full">
-                  {messages.map((msg) => (
-                    <ChatMessageBubble
-                      key={msg.id}
-                      message={msg}
-                      isStreaming={msg.id === streamingMessageId}
-                      onOptionSelect={handleOptionSelect}
-                    />
-                  ))}
+                  {messages
+                    .filter((msg, idx) => !(idx === 0 && msg.sender === "user"))
+                    .map((msg) => (
+                      <ChatMessageBubble
+                        key={msg.id}
+                        message={msg}
+                        isStreaming={msg.id === streamingMessageId}
+                        onOptionSelect={handleOptionSelect}
+                      />
+                    ))}
                   <div ref={messagesEndRef} />
                 </div>
               </div>
