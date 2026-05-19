@@ -3,7 +3,7 @@
 import { PartnerRequestModal } from "@/features/student/components/PartnerRequestModal";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
-import { OnboardingSliderView } from "@/features/onboarding/components/OnboardingSliderView";
+import { GeneralOnboardingWizard } from "@/features/onboarding/components/GeneralOnboarding/GeneralOnboardingWizard";
 import { useEffect } from "react";
 
 export default function StudentLayout({
@@ -27,9 +27,9 @@ export default function StudentLayout({
       {/* Global Student Modals */}
       <PartnerRequestModal />
 
-      {/* Onboarding Slider Overlay */}
+      {/* General Onboarding Wizard */}
       {dnaStatus === "PENDING" && studentProfile && (
-        <OnboardingSliderView
+        <GeneralOnboardingWizard
           studentProfile={studentProfile}
           onComplete={() => checkDNAStatus(studentProfile.user_id)}
         />

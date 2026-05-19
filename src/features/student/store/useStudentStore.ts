@@ -711,7 +711,6 @@ export interface StudentState {
    highlightedWordIndex: number;
   activeSkillDirective: any | null; 
   oralAnalysisResult: any | null;
-  karaokeTimer: any | null;
   comprehensionResults: Record<string, { is_correct: boolean; answer: string }>;
 
   // Actions
@@ -758,8 +757,6 @@ export interface StudentState {
   ) => Promise<{ is_correct: boolean; id?: string; directive_id?: string; student_response?: string } | null>;
   clearComprehensionResult: (directiveId: string) => void;
   setHighlightedWordIndex: (index: number) => void;
-  startKaraokePaceTimer: (wordCount: number) => void;
-  stopKaraokePaceTimer: () => void;
 }
 
 // -- Store --------------------------------------------------------------------─
@@ -804,7 +801,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   highlightedWordIndex: -1,
   activeSkillDirective: null,
   oralAnalysisResult: null,
-  karaokeTimer: null,
   comprehensionResults: {},
   logoutStudent: () => {
     localStorage.removeItem("gened_user_role");
@@ -1721,31 +1717,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   setHighlightedWordIndex: (index) => set({ highlightedWordIndex: index }),
 
-  startKaraokePaceTimer: (wordCount: number) => {
-    const { karaokeTimer } = get();
-    if (karaokeTimer) clearInterval(karaokeTimer);
-    
-    set({ highlightedWordIndex: 0 });
-    
-    // 150 WPM = 400ms per word
-    const interval = setInterval(() => {
-      const { highlightedWordIndex } = get();
-      if (highlightedWordIndex < wordCount - 1) {
-        set({ highlightedWordIndex: highlightedWordIndex + 1 });
-      } else {
-        get().stopKaraokePaceTimer();
-      }
-    }, 400);
-
-    set({ karaokeTimer: interval });
-  },
-
-  stopKaraokePaceTimer: () => {
-    const { karaokeTimer } = get();
-    if (karaokeTimer) clearInterval(karaokeTimer);
-    set({ karaokeTimer: null });
-  },
-
   /** Trigger TTS playback for a directive (called from SSE tts_start handler) */
   playDirectiveTts: (directiveId, timepoints) => {
     set({ activeDirectiveId: directiveId, playbackState: "loading", highlightedWordIndex: -1 });
@@ -1817,11 +1788,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         onStateChange: (state) => {
           set({ recordingState: state });
           if (state === "recording") {
-            const { activeSkillDirective } = get();
-            if (activeSkillDirective?.type === "KARAOKE" && activeSkillDirective.source_text) {
-              const wordCount = activeSkillDirective.source_text.trim().split(/\s+/).length;
-              get().startKaraokePaceTimer(wordCount);
-            }
+            // Fixed-speed frontend text timing is disabled. Highlight speed is guided solely by backend read-aloud timepoints.
           }
         },
         onSilenceDetected: () => {
@@ -1860,7 +1827,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     import("@/features/student/services/audioRecorderService").then(({ audioRecorderService }) => {
       audioRecorderService.stop();
     });
-    get().stopKaraokePaceTimer();
     set({ 
       recordingState: "idle", 
       recordingPrompt: null,
