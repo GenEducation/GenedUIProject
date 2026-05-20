@@ -93,7 +93,7 @@ export function GeoGebraVisual({ id, commands, options = {} }: GeoGebraVisualPro
   }, [commands, options, containerId]);
 
   return (
-    <div className="w-full min-h-[260px] relative flex items-center justify-center overflow-hidden geogebra-container">
+    <div className="w-full min-h-[200px] relative flex items-center justify-center overflow-hidden geogebra-container">
       {loading && (
         <div className="absolute inset-0 z-10" style={{ background: "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }}>
           <style>{`

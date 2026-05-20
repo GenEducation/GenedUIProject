@@ -23,6 +23,7 @@ interface ComprehensionWidgetProps {
   question?: string;
   choices?: Array<{ id: string; label: string }>;
   allowRetry?: boolean;
+  disabled?: boolean;
   // difficult_word props
   word?: string;
   syllables?: string[];
@@ -32,12 +33,12 @@ interface ComprehensionWidgetProps {
 
 // ── Difficult Word Chip ───────────────────────────────────────────────────────
 
-function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailable }: ComprehensionWidgetProps) {
+function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailable, disabled }: ComprehensionWidgetProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSlow, setIsSlow] = useState(false);
 
   const handlePlay = (slow: boolean) => {
-    if (isPlaying) return;
+    if (isPlaying || disabled) return;
     setIsPlaying(true);
     setIsSlow(slow);
     import("@/features/student/services/audioPlayerService").then(({ audioPlayerService }) => {
@@ -101,7 +102,7 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailab
 
 // ── MCQ Widget ────────────────────────────────────────────────────────────────
 
-function MCQWidget({ directiveId, question, choices, allowRetry }: ComprehensionWidgetProps) {
+function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: ComprehensionWidgetProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [retries, setRetries] = useState(0);
@@ -157,7 +158,7 @@ function MCQWidget({ directiveId, question, choices, allowRetry }: Comprehension
             <button
               key={choice.id}
               onClick={() => handleSelect(choice.id, choice.label)}
-              disabled={effectiveSubmitted && !allowRetry}
+              disabled={disabled || (effectiveSubmitted && !allowRetry)}
               className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${buttonClass}`}
             >
               {choice.label}
@@ -204,7 +205,7 @@ function MCQWidget({ directiveId, question, choices, allowRetry }: Comprehension
 
 // ── Fill-blank Widget ─────────────────────────────────────────────────────────
 
-function FillBlankWidget({ directiveId, question }: ComprehensionWidgetProps) {
+function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidgetProps) {
   const [value, setValue] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const { submitComprehensionAnswer, comprehensionResults } = useStudentStore();
@@ -235,7 +236,7 @@ function FillBlankWidget({ directiveId, question }: ComprehensionWidgetProps) {
         <input
           type="text"
           value={effectiveValue}
-          disabled={effectiveSubmitted}
+          disabled={disabled || effectiveSubmitted}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           placeholder="Your answer..."
@@ -249,7 +250,7 @@ function FillBlankWidget({ directiveId, question }: ComprehensionWidgetProps) {
         />
         <button
           onClick={handleSubmit}
-          disabled={effectiveSubmitted || !value.trim()}
+          disabled={disabled || effectiveSubmitted || !value.trim()}
           className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
             effectiveSubmitted && result !== undefined
               ? isCorrect

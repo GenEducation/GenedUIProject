@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 interface SageBubbleProps {
   text: string;
@@ -22,7 +22,16 @@ export function SageBubble({
   const [displayed, setDisplayed] = useState(typing ? "" : text);
   const [done, setDone] = useState(!typing);
   const onDoneRef = useRef(onDone);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   onDoneRef.current = onDone;
+
+  const revealAll = useCallback(() => {
+    if (done) return;
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setDisplayed(text);
+    setDone(true);
+    onDoneRef.current?.();
+  }, [done, text]);
 
   useEffect(() => {
     if (!typing) {
@@ -46,18 +55,21 @@ export function SageBubble({
           setDone(true);
           onDoneRef.current?.();
         }
-      }, 16);
+      }, 8);
+      intervalRef.current = iv;
     }, delay);
 
     return () => {
       clearTimeout(timer);
       clearInterval(iv);
+      intervalRef.current = null;
     };
   }, [text, delay, typing]);
 
   return (
     <div
       className="inline-block max-w-full animate-[bubbleIn_0.35s_cubic-bezier(.34,1.56,.64,1)_both]"
+      onClick={!done ? revealAll : undefined}
       style={{
         padding: "11px 15px",
         borderRadius: "14px 14px 14px 4px",
@@ -66,6 +78,7 @@ export function SageBubble({
         lineHeight: 1.5,
         color: "#0B2447",
         fontFamily: "'Plus Jakarta Sans', sans-serif",
+        cursor: !done ? "pointer" : "default",
       }}
       dangerouslySetInnerHTML={{
         __html:

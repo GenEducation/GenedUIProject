@@ -104,7 +104,7 @@ export function P5Visual({ code }: P5VisualProps) {
     const scaleY = window.innerHeight / h;
     
     // Use 0.8 multiplier to ensure a generous "Safe Zone" for animations
-    const scale = Math.min(scaleX, scaleY) * 0.8;
+    const scale = Math.min(scaleX, scaleY) * 0.9;
     
     container.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
   }

@@ -130,8 +130,9 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
         {/* 1. Greeting & Onboarding Alert */}
         <div className="relative space-y-6">
           <motion.header
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
             className="space-y-4"
           >
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight animate-gradient-text">
@@ -178,9 +179,9 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
         {/* 2. Recent Chats */}
         {(isAgentsLoading || hasAgents) && (
           <motion.section
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            transition={{ duration: 0.2 }}
             className="space-y-4"
           >
             <div className="flex items-center justify-between px-2">
@@ -216,9 +217,9 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
 
         {/* 3. Quick Start Agents */}
         <motion.section
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ duration: 0.2 }}
           className="space-y-4"
         >
           <div className="flex items-center justify-between px-2">
@@ -253,8 +254,12 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
               <div className="col-span-full py-12 text-center bg-white/20 rounded-3xl border-2 border-dashed border-[#042E5C]/5">
                 <div className="max-w-xs mx-auto space-y-3">
                   <Bot size={32} className="mx-auto text-[#042E5C]/20" />
-                  <p className="text-sm font-bold text-[#042E5C]/40 uppercase tracking-widest">No agents assigned yet</p>
-                  <p className="text-xs text-[#042E5C]/30 leading-relaxed px-4">Complete your initial onboarding to unlock your personalized learning agents.</p>
+                  <p className="text-sm font-bold text-[#042E5C]/60">Meet your AI tutors</p>
+                  <p className="text-xs text-[#042E5C]/40 leading-relaxed px-4">
+                    {onboardingSubjects.length > 0
+                      ? `Complete your ${onboardingSubjects.map(s => s.subject).join(" & ")} onboarding above to unlock your personalized learning agents.`
+                      : "Complete your subject onboarding to unlock your personalized learning agents."}
+                  </p>
                 </div>
               </div>
             )}
@@ -264,9 +269,9 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
         {/* 4. Primary Input (Unified with Chat) */}
         {(isAgentsLoading || hasAgents) && (
           <motion.section
-            initial={{ opacity: 0, scale: 0.98 }}
+            initial={{ opacity: 0, scale: 0.99 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4 }}
+            transition={{ duration: 0.2 }}
             className="relative z-10 max-w-3xl mx-auto w-full"
           >
             <RateLimitPrompt 
