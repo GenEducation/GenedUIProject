@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(name-ui-ux-pro-max)",
+      "Skill(name-ui-ux-pro-max:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(cp /tmp/subject-icons-preview.html /tmp/hub-mockup/subject-icons-preview.html)"
+    ]
+  }
+}

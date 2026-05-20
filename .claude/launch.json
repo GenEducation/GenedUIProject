@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hub-mockup",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-s", "/tmp/hub-mockup", "-l", "4321", "--no-clipboard"],
+      "port": 4321
+    },
+    {
+      "name": "nextjs-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "-p", "3001"],
+      "port": 3001
+    }
+  ]
+}

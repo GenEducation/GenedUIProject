@@ -105,6 +105,7 @@ export interface AgentItem {
   name: string;
   subject: string;
   grade: number;
+  is_onboarding_complete?: boolean;
 }
 
 export interface PartnerItem {
@@ -254,6 +255,8 @@ export interface StudentState {
   activeActivity: ActivityAction | null;
   onboardingStatus: OnboardingStatus | null;
   isOnboardingLoading: boolean;
+  studentStats: { currentStreak: number; longestStreak: number; totalSessions: number } | null;
+  isStatsLoading: boolean;
 
   // ── English Skill Mode State (Wave 1–4) ─────────────────────────────────────
   playbackState: "idle" | "loading" | "buffering" | "playing" | "paused" | "stopped" | "completed" | "error";
@@ -271,6 +274,7 @@ export interface StudentState {
   setStudentProfile: (profile: StudentProfile) => void;
   fetchSessions: () => Promise<void>;
   fetchAvailableAgents: () => Promise<void>;
+  fetchStudentStats: () => Promise<void>;
   fetchAvailablePartners: () => Promise<void>;
   fetchEnrolledPartners: () => Promise<void>;
   fetchChatHistory: (sessionId: string) => Promise<void>;
@@ -346,6 +350,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   isMuted: false,
   onboardingStatus: null,
   isOnboardingLoading: false,
+  studentStats: null,
+  isStatsLoading: false,
   // English skill mode initial state
   playbackState: "idle",
   recordingState: "idle",
@@ -415,6 +421,27 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
   },
 
+  fetchStudentStats: async () => {
+    const { studentProfile, isStatsLoading } = get();
+    if (!studentProfile || isStatsLoading) return;
+
+    set({ isStatsLoading: true });
+    try {
+      const data = await studentService.fetchStudentStreak(studentProfile.user_id);
+      set({
+        studentStats: {
+          currentStreak: data.current_streak ?? 0,
+          longestStreak: data.longest_streak ?? 0,
+          totalSessions: data.total_sessions ?? 0,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to fetch student stats:", error);
+    } finally {
+      set({ isStatsLoading: false });
+    }
+  },
+
   submitActivityResult: async (activityId, activityType, transcript) => {
     set({ activeActivity: null });
     await get().sendMessage(undefined, {
@@ -474,7 +501,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           if (partner.subjects && Array.isArray(partner.subjects)) {
             partner.subjects.forEach((subject: any) => {
               if (subject.agents && Array.isArray(subject.agents)) {
-                agents.push(...subject.agents);
+                subject.agents.forEach((agent: any) => {
+                  agents.push({
+                    ...agent,
+                    is_onboarding_complete: subject.is_onboarding_complete,
+                  });
+                });
               }
             });
           }
