@@ -1,17 +1,5 @@
 "use client";
 
-/**
- * ComprehensionWidget.tsx
- * Renders inline listening comprehension interactions inside the chat.
- * Follows Wave 2 §10 (widget philosophy: inline, lightweight, NOT full-screen modal).
- *
- * Supported widget_type values:
- *   mcq               — multiple choice
- *   fill_blank        — short text answer
- *   retell / free_response — open spoken/typed answer
- *   difficult_word    — tappable word chip with pronunciation
- */
-
 import { motion, AnimatePresence } from "framer-motion";
 import { Volume2, Check, RefreshCw } from "lucide-react";
 import { useState } from "react";
@@ -24,7 +12,6 @@ interface ComprehensionWidgetProps {
   choices?: Array<{ id: string; label: string }>;
   allowRetry?: boolean;
   disabled?: boolean;
-  // difficult_word props
   word?: string;
   syllables?: string[];
   phonetic?: string;
@@ -53,22 +40,31 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailab
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="inline-flex flex-col px-5 py-3.5 rounded-2xl bg-blue-50/80 border border-blue-200 select-none"
+      className="inline-flex flex-col select-none"
+      style={{
+        padding: "12px 18px",
+        borderRadius: 18,
+        background: "#EDE9FE",
+        border: "1px solid #C4B5FD40",
+      }}
     >
       <div className="flex items-center gap-6 justify-between">
-        <span className="font-bold text-blue-800 text-lg leading-tight">{word}</span>
-        
+        <span style={{ fontWeight: 800, fontSize: 18, color: "#5B4DC7", lineHeight: 1.3, fontFamily: "'DM Sans', sans-serif" }}>
+          {word}
+        </span>
+
         <div className="flex items-center gap-2">
           {slowAvailable && (
             <button
               onClick={() => handlePlay(true)}
               disabled={isPlaying}
               title="Slower pronunciation"
-              className={`text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all ${
-                isPlaying && isSlow
-                  ? "bg-blue-200 text-blue-700 border-blue-300"
-                  : "bg-white text-blue-500 border-blue-200 hover:bg-blue-100"
-              }`}
+              style={{
+                fontSize: 10, fontWeight: 800, padding: "3px 10px",
+                borderRadius: 20, border: "1px solid #5B4DC730",
+                background: isPlaying && isSlow ? "#5B4DC720" : "#FFFFFF",
+                color: "#5B4DC7", cursor: "pointer", transition: "all 0.15s",
+              }}
             >
               slow
             </button>
@@ -77,7 +73,12 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailab
             onClick={() => handlePlay(false)}
             disabled={isPlaying}
             title="Tap to hear pronunciation"
-            className={`flex-shrink-0 transition-colors hover:opacity-70 ${isPlaying && !isSlow ? "text-blue-600 animate-pulse" : "text-blue-500"}`}
+            style={{
+              background: "none", border: "none", cursor: "pointer", padding: 4,
+              color: isPlaying && !isSlow ? "#5B4DC7" : "#8B7FE8",
+              transition: "all 0.15s",
+              animation: isPlaying && !isSlow ? "pulse 1s infinite" : "none",
+            }}
           >
             <Volume2 size={20} />
           </button>
@@ -85,14 +86,14 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailab
       </div>
 
       {((syllables && syllables.length > 0) || phonetic) && (
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2 mt-1.5">
           {syllables && syllables.length > 0 && (
-            <span className="text-blue-500 text-[15px] font-medium tracking-wide">
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#8B7FE8", letterSpacing: "0.05em" }}>
               {syllables.join(" · ")}
             </span>
           )}
           {phonetic && (
-            <span className="text-blue-400 text-xs italic">{phonetic}</span>
+            <span style={{ fontSize: 12, color: "#94A3B8", fontStyle: "italic" }}>{phonetic}</span>
           )}
         </div>
       )}
@@ -130,44 +131,52 @@ function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: Com
     setRetries(r => r + 1);
   };
 
+  const getChoiceStyle = (choice: { id: string; label: string }) => {
+    const isSelected = effectiveSelected === choice.id;
+    if (isSelected && effectiveSubmitted && result !== undefined) {
+      return isCorrect
+        ? { background: "#00B894", border: "1px solid #00B894", color: "#FFFFFF", boxShadow: "0 2px 8px rgba(0,184,148,0.25)" }
+        : { background: "#E53E3E", border: "1px solid #E53E3E", color: "#FFFFFF", boxShadow: "0 2px 8px rgba(229,62,62,0.2)" };
+    }
+    if (isSelected) {
+      return { background: "#5B4DC7", border: "1px solid #5B4DC7", color: "#FFFFFF", boxShadow: "0 2px 8px rgba(91,77,199,0.2)" };
+    }
+    return { background: "#F8F9FA", border: "1px solid #E2E8F0", color: "#1A202C" };
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-3 p-4 bg-white rounded-2xl border border-[#042E5C]/8 space-y-3"
+      style={{
+        marginTop: 12, padding: 16, borderRadius: 20,
+        background: "#F0F9FF", border: "1px solid #5DADE225",
+      }}
     >
       {question && (
-        <p className="text-sm font-semibold text-[#042E5C]/80 leading-snug">{question}</p>
+        <p style={{ fontSize: 14, fontWeight: 700, color: "#1A202C", lineHeight: 1.5, marginBottom: 12, fontFamily: "'DM Sans', sans-serif" }}>
+          {question}
+        </p>
       )}
       <div className="flex flex-col gap-2">
-        {(choices || []).map((choice) => {
-          const isSelected = effectiveSelected === choice.id;
-          
-          let buttonClass = "bg-[#F8F9FA] text-[#042E5C]/70 border-transparent hover:border-[#042E5C]/20 hover:bg-white";
-          if (isSelected) {
-            if (effectiveSubmitted && result !== undefined) {
-              buttonClass = isCorrect
-                ? "bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-600/10"
-                : "bg-rose-600 border-rose-600 text-white shadow-md shadow-rose-600/10";
-            } else {
-              buttonClass = "bg-[#042E5C] text-white border-[#042E5C]";
-            }
-          }
-
-          return (
-            <button
-              key={choice.id}
-              onClick={() => handleSelect(choice.id, choice.label)}
-              disabled={disabled || (effectiveSubmitted && !allowRetry)}
-              className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${buttonClass}`}
-            >
-              {choice.label}
-            </button>
-          );
-        })}
+        {(choices || []).map((choice) => (
+          <button
+            key={choice.id}
+            onClick={() => handleSelect(choice.id, choice.label)}
+            disabled={disabled || (effectiveSubmitted && !allowRetry)}
+            style={{
+              width: "100%", textAlign: "left", padding: "10px 16px",
+              borderRadius: 14, fontSize: 14, fontWeight: 600,
+              cursor: disabled || (effectiveSubmitted && !allowRetry) ? "default" : "pointer",
+              transition: "all 0.18s", fontFamily: "'DM Sans', sans-serif",
+              ...getChoiceStyle(choice),
+            }}
+          >
+            {choice.label}
+          </button>
+        ))}
       </div>
 
-      {/* Soft retry prompt — Wave 2 §10.6: never say "Wrong" or "Incorrect" */}
       <AnimatePresence>
         {effectiveSubmitted && allowRetry && retries < 2 && !isCorrect && (
           <motion.button
@@ -175,7 +184,13 @@ function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: Com
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleRetry}
-            className="flex items-center gap-1.5 text-xs font-bold text-[#042E5C]/40 hover:text-[#042E5C]/70 transition-colors mt-1"
+            style={{
+              display: "flex", alignItems: "center", gap: 5, marginTop: 10,
+              fontSize: 12, fontWeight: 700, color: "#94A3B8", background: "none",
+              border: "none", cursor: "pointer", transition: "color 0.15s",
+            }}
+            onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = "#5B4DC7"}
+            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = "#94A3B8"}
           >
             <RefreshCw size={11} />
             Want to try once more?
@@ -185,16 +200,16 @@ function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: Com
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={`flex items-center gap-1.5 text-xs font-bold ${isCorrect ? "text-emerald-600" : "text-rose-600"}`}
+            style={{
+              display: "flex", alignItems: "center", gap: 5, marginTop: 10,
+              fontSize: 12, fontWeight: 700,
+              color: isCorrect ? "#00B894" : "#E53E3E",
+            }}
           >
             {isCorrect ? (
-              <>
-                <Check size={12} className="stroke-[3]" /> Brilliant! That is correct. Let&apos;s continue!
-              </>
+              <><Check size={12} style={{ strokeWidth: 3 }} /> Brilliant! That is correct. Let&apos;s continue!</>
             ) : (
-              <>
-                Not quite, but good effort — let&apos;s keep going!
-              </>
+              <>Not quite, but good effort — let&apos;s keep going!</>
             )}
           </motion.div>
         )}
@@ -223,14 +238,31 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
     await submitComprehensionAnswer(directiveId, "fill_blank", value.trim());
   };
 
+  const inputStyle = effectiveSubmitted && result !== undefined
+    ? isCorrect
+      ? { background: "#F0FFF8", color: "#1A202C", border: "1px solid #00B89440" }
+      : { background: "#FFF5F5", color: "#1A202C", border: "1px solid #E53E3E40" }
+    : { background: "#F8F9FA", color: "#1A202C", border: "1px solid #E2E8F0" };
+
+  const btnStyle = effectiveSubmitted && result !== undefined
+    ? isCorrect
+      ? { background: "#00B894", color: "#FFFFFF" }
+      : { background: "#E53E3E", color: "#FFFFFF" }
+    : { background: "#5B4DC7", color: "#FFFFFF" };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-3 p-4 bg-white rounded-2xl border border-[#042E5C]/8 space-y-3"
+      style={{
+        marginTop: 12, padding: 16, borderRadius: 20,
+        background: "#ECFDF5", border: "1px solid #00B89420",
+      }}
     >
       {question && (
-        <p className="text-sm font-semibold text-[#042E5C]/80 leading-snug">{question}</p>
+        <p style={{ fontSize: 14, fontWeight: 700, color: "#1A202C", lineHeight: 1.5, marginBottom: 12, fontFamily: "'DM Sans', sans-serif" }}>
+          {question}
+        </p>
       )}
       <div className="flex gap-2">
         <input
@@ -240,34 +272,37 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           placeholder="Your answer..."
-          className={`flex-1 px-4 py-2 rounded-xl border text-sm focus:outline-none transition-all disabled:opacity-80 ${
-            effectiveSubmitted && result !== undefined
-              ? isCorrect
-                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                : "bg-rose-50 text-rose-800 border-rose-300"
-              : "border-[#042E5C]/12 text-[#042E5C] bg-[#F8F9FA] focus:border-[#042E5C]/30 focus:bg-white"
-          }`}
+          style={{
+            flex: 1, padding: "10px 16px", borderRadius: 14,
+            fontSize: 14, fontWeight: 600, outline: "none",
+            fontFamily: "'DM Sans', sans-serif", transition: "all 0.18s",
+            ...inputStyle,
+          }}
+          onFocus={e => {
+            if (!effectiveSubmitted) {
+              (e.target as HTMLInputElement).style.borderColor = "#5B4DC750";
+              (e.target as HTMLInputElement).style.boxShadow = "0 0 0 3px rgba(91,77,199,0.08)";
+            }
+          }}
+          onBlur={e => {
+            (e.target as HTMLInputElement).style.boxShadow = "none";
+          }}
         />
         <button
           onClick={handleSubmit}
           disabled={disabled || effectiveSubmitted || !value.trim()}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-            effectiveSubmitted && result !== undefined
-              ? isCorrect
-                ? "bg-emerald-600 text-white"
-                : "bg-rose-600 text-white"
-              : "bg-[#042E5C] text-white hover:bg-[#064282] disabled:opacity-30"
-          }`}
+          style={{
+            padding: "10px 18px", borderRadius: 14, fontSize: 14, fontWeight: 700,
+            border: "none", cursor: disabled || effectiveSubmitted || !value.trim() ? "default" : "pointer",
+            opacity: disabled || (!effectiveSubmitted && !value.trim()) ? 0.35 : 1,
+            transition: "all 0.18s", fontFamily: "'DM Sans', sans-serif",
+            minWidth: 64, display: "flex", alignItems: "center", justifyContent: "center",
+            ...btnStyle,
+          }}
         >
           {effectiveSubmitted && result !== undefined ? (
-            isCorrect ? (
-              <Check size={14} className="stroke-[3]" />
-            ) : (
-              <span className="font-bold text-xs">X</span>
-            )
-          ) : (
-            "Send"
-          )}
+            isCorrect ? <Check size={14} style={{ strokeWidth: 3 }} /> : <span style={{ fontWeight: 800 }}>✕</span>
+          ) : "Send"}
         </button>
       </div>
 
@@ -275,18 +310,16 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className={`text-xs font-bold mt-1.5 flex items-center gap-1 ${
-            isCorrect ? "text-emerald-600" : "text-rose-600"
-          }`}
+          style={{
+            display: "flex", alignItems: "center", gap: 5, marginTop: 10,
+            fontSize: 12, fontWeight: 700,
+            color: isCorrect ? "#00B894" : "#E53E3E",
+          }}
         >
           {isCorrect ? (
-            <>
-              <Check size={12} className="stroke-[3]" /> Excellent! Correct answer.
-            </>
+            <><Check size={12} style={{ strokeWidth: 3 }} /> Excellent! Correct answer.</>
           ) : (
-            <>
-              Good try! Let&apos;s keep practicing together.
-            </>
+            <>Good try! Let&apos;s keep practicing together.</>
           )}
         </motion.div>
       )}
@@ -297,15 +330,8 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
 // ── Main Export ───────────────────────────────────────────────────────────────
 
 export function ComprehensionWidget(props: ComprehensionWidgetProps) {
-  if (props.widgetType === "difficult_word") {
-    return <DifficultWordChip {...props} />;
-  }
-  if (props.widgetType === "mcq") {
-    return <MCQWidget {...props} />;
-  }
-  if (props.widgetType === "fill_blank") {
-    return <FillBlankWidget {...props} />;
-  }
-  // retell / free_response — fallback to fill blank for MVP
+  if (props.widgetType === "difficult_word") return <DifficultWordChip {...props} />;
+  if (props.widgetType === "mcq") return <MCQWidget {...props} />;
+  if (props.widgetType === "fill_blank") return <FillBlankWidget {...props} />;
   return <FillBlankWidget {...props} />;
 }
