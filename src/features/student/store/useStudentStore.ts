@@ -599,6 +599,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         partnerRequestStatus: "success",
         partnerRequestMessage: String(message),
       });
+
+      // Refresh the enrolled partners list so the UI reflects the new connection
+      await get().fetchEnrolledPartners();
     } catch (error: any) {
       console.error("Partner Request Error:", error);
       let errorMessage =

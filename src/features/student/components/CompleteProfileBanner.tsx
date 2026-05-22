@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { updateProfile } from "@/features/auth/authService";
 import { useStudentStore, StudentProfile } from "../store/useStudentStore";
+import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 
 interface CompleteProfileBannerProps {
   studentProfile: StudentProfile;
@@ -20,13 +21,24 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const setStudentProfile = useStudentStore((s) => s.setStudentProfile);
+  const { startTutorial } = useTutorialStore();
 
   if (skipped) return null;
+
+  const maybeLaunchTutorial = () => {
+    const isNewUser = localStorage.getItem("gened_new_user") === "true";
+    if (isNewUser) {
+      localStorage.removeItem("gened_new_user");
+      localStorage.removeItem("start_tutorial_after_onboarding");
+      startTutorial();
+    }
+  };
 
   const handleDismiss = () => {
     // Key by user_id so a different user on the same device isn't affected
     localStorage.setItem(`gened_profile_banner_skipped_${studentProfile.user_id}`, "true");
     setSkipped(true);
+    maybeLaunchTutorial();
   };
 
   const handleSave = async () => {
@@ -64,7 +76,9 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
       if (response.access_token) {
         localStorage.setItem("gened_auth_token", response.access_token);
       }
-      handleDismiss();
+      localStorage.setItem(`gened_profile_banner_skipped_${studentProfile.user_id}`, "true");
+      setSkipped(true);
+      maybeLaunchTutorial();
     } catch (err: any) {
       setError(err.message || "Failed to update profile");
     } finally {

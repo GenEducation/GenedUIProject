@@ -149,11 +149,11 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                   color: C.sparkle,
                 }}
               >
-                {(studentProfile?.username ?? "U").charAt(0).toUpperCase()}
+                {(studentProfile?.name || studentProfile?.username || "U").charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-semibold truncate" style={{ color: C.sidebarActive }}>
-                  {studentProfile?.username ?? "Student"}
+                  {studentProfile?.name || studentProfile?.username || "Student"}
                 </div>
                 <div className="text-[10px]" style={{ color: C.sidebarText, opacity: 0.6 }}>
                   Grade {studentProfile?.grade ?? "—"} · {studentProfile?.school_board ?? "CBSE"}

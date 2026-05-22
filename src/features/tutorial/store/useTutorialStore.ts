@@ -122,10 +122,13 @@ interface TutorialState {
   completedActions: Record<string, boolean>;
   hasEnded: boolean;
   hasDismissedCelebration: boolean;
-  
+
   startTutorial: () => void;
   nextStep: () => void;
   prevStep: () => void;
+  /** User watched the video to the end and deliberately closed it — show confetti. */
+  completeTutorial: () => void;
+  /** User dismissed the tutorial early (header X) — no confetti. */
   skipTutorial: () => void;
   completeAction: (actionId: string) => void;
   getCurrentStep: () => TutorialStepDef | null;
@@ -172,12 +175,14 @@ export const useTutorialStore = create<TutorialState>()(
         }
       },
 
+      completeTutorial: () => {
+        // Watched the whole video → reward with confetti on home screen
+        set({ isActive: false, hasEnded: true, hasDismissedCelebration: false });
+      },
+
       skipTutorial: () => {
-        set({ 
-          isActive: false, 
-          hasEnded: true,
-          hasDismissedCelebration: true // Don't show celebration on skip
-        });
+        // Early dismiss via header X → no confetti
+        set({ isActive: false, hasEnded: true, hasDismissedCelebration: true });
       },
 
       completeAction: (actionId: string) => {

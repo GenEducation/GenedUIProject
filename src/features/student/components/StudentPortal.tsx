@@ -22,14 +22,11 @@ export function StudentPortal() {
   const { startTutorial } = useTutorialStore();
 
   useEffect(() => {
-    const isNewUser = localStorage.getItem("gened_new_user") === "true";
+    // New-user tutorial is now launched by CompleteProfileBanner after the
+    // "Tell us about yourself" form is saved or skipped.
     const justFinishedOnboarding = localStorage.getItem("start_tutorial_after_onboarding") === "true";
 
-    if (isNewUser) {
-      startTutorial();
-      localStorage.removeItem("gened_new_user");
-      localStorage.removeItem("start_tutorial_after_onboarding");
-    } else if (justFinishedOnboarding && dnaStatus && dnaStatus !== "PENDING") {
+    if (justFinishedOnboarding && dnaStatus && dnaStatus !== "PENDING") {
       startTutorial();
       localStorage.removeItem("start_tutorial_after_onboarding");
     }

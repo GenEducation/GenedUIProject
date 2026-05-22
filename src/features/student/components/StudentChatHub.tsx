@@ -1,8 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 import {
   useStudentStore,
 } from "../store/useStudentStore";
@@ -75,6 +76,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
   } = useStudentStore();
 
   const { dnaStatus, checkDNAStatus } = useOnboardingStore();
+  const [onboardingModal, setOnboardingModal] = useState<{ subject: string; grade: number } | null>(null);
 
   useEffect(() => {
     if (studentProfile) {
@@ -258,7 +260,10 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                         router.push(`/student/chat/new?agentId=${agent.agent_id}`);
                       }}
                       onOnboarding={() => {
-                        router.push(`/student/onboarding/${subjectKey || agent.subject.toLowerCase()}`);
+                        setOnboardingModal({
+                          subject: agent.subject,
+                          grade: agent.grade ?? studentProfile?.grade ?? 9,
+                        });
                       }}
                       delay={0.3 + i * 0.05}
                     />
@@ -293,6 +298,17 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
           </div>
         </div>
       )}
+
+      {/* Onboarding Modal */}
+      <AnimatePresence>
+        {onboardingModal && (
+          <OnboardingModal
+            subject={onboardingModal.subject}
+            grade={onboardingModal.grade}
+            onClose={() => setOnboardingModal(null)}
+          />
+        )}
+      </AnimatePresence>
 
     </div>
   );

@@ -322,7 +322,12 @@ export function StudentProfile() {
                   <div style={{ position: "absolute" as const, right: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: C.textMuted, fontSize: 12 }}>▾</div>
                 </div>
                 <button
-                  onClick={() => { if (selectedPartner) { sendPartnerRequest(selectedPartner); completeAction("send_admin_request"); } }}
+                  onClick={async () => {
+                    if (!selectedPartner) return;
+                    await sendPartnerRequest(selectedPartner);
+                    completeAction("send_admin_request");
+                    setSelectedPartner("");
+                  }}
                   disabled={!selectedPartner || isLoading}
                   style={{
                     marginTop: 10, width: "100%", padding: "11px", borderRadius: 12,
