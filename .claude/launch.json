@@ -1,0 +1,24 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hub-mockup",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-s", "/tmp/hub-mockup", "-l", "4321", "--no-clipboard"],
+      "port": 4321
+    },
+    {
+      "name": "nextjs-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000,
+      "autoPort": false
+    },
+    {
+      "name": "pixel-avatar",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "public", "-l", "4322", "--no-clipboard"],
+      "port": 4322
+    }
+  ]
+}

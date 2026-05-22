@@ -84,7 +84,7 @@ export function StudentChatView() {
     ) {
       // Small delay to ensure UI transition is smooth
       const timer = setTimeout(() => {
-        sendMessage("");
+        sendMessage("Hello");
       }, 500);
       return () => clearTimeout(timer);
     }
@@ -96,10 +96,10 @@ export function StudentChatView() {
   // 4. Safety Guard: If we have a sessionId but no activeChat yet (history loading), show loading
   if (sessionId && !activeChat) {
     return (
-      <div className="h-screen flex items-center justify-center bg-white font-sans">
+      <div className="h-screen flex items-center justify-center font-sans" style={{ background: "#F7F8FC" }}>
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-[#042E5C]/10 border-t-[#042E5C] rounded-full animate-spin" />
-          <p className="text-sm font-bold text-[#042E5C]/40 tracking-widest uppercase">Loading Chat...</p>
+          <div className="w-10 h-10 border-4 rounded-full animate-spin" style={{ borderColor: "#E2E8F0", borderTopColor: "#5B4DC7" }} />
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#94A3B8", letterSpacing: "0.15em", textTransform: "uppercase" }}>Loading Chat...</p>
         </div>
       </div>
     );
@@ -107,17 +107,17 @@ export function StudentChatView() {
 
   if (isSessionsLoading && !studentProfile) {
     return (
-      <div className="h-screen flex items-center justify-center bg-white font-sans">
+      <div className="h-screen flex items-center justify-center font-sans" style={{ background: "#F7F8FC" }}>
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-[#042E5C]/10 border-t-[#042E5C] rounded-full animate-spin" />
-          <p className="text-sm font-bold text-[#042E5C]/40 tracking-widest uppercase">Initializing Portal...</p>
+          <div className="w-10 h-10 border-4 rounded-full animate-spin" style={{ borderColor: "#E2E8F0", borderTopColor: "#5B4DC7" }} />
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#94A3B8", letterSpacing: "0.15em", textTransform: "uppercase" }}>Initializing Portal...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex bg-white font-sans overflow-hidden">
+    <div className="h-screen flex font-sans overflow-hidden" style={{ background: "#F7F8FC" }}>
       {/* -- LEFT SIDEBAR (Always present for consistency) ---------------- */}
       <StudentChatSidebar 
         activeChatId={activeChat?.id || "none"} 

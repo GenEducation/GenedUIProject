@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
 import { StudentChatView } from "./StudentChatView";
+import { StudentHome } from "./StudentHome";
 import { StudentProfile } from "./StudentProfile";
 import { AssessmentsPage } from "@/features/student/components/AssessmentsPage";
 import { StudentAnalyticsDashboard } from "@/components/analytics/StudentAnalyticsDashboard";
@@ -34,6 +35,7 @@ export function StudentPortal() {
   const isProfileRoute = pathname === "/student/profile";
   const isAssessmentsRoute = pathname === "/student/assessments";
   const isAnalyticsRoute = pathname === "/student/analytics";
+  const isChatRoute = pathname?.startsWith("/student/chat");
 
   return (
     <div className="h-screen overflow-hidden">
@@ -67,9 +69,9 @@ export function StudentPortal() {
           >
             <AssessmentsPage />
           </motion.div>
-        ) : (
+        ) : isChatRoute ? (
           <motion.div
-            key="chat-hub-portal"
+            key="chat-portal"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -77,6 +79,17 @@ export function StudentPortal() {
             className="h-full"
           >
             <StudentChatView />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="home-portal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="h-full"
+          >
+            <StudentHome />
           </motion.div>
         )}
       </AnimatePresence>

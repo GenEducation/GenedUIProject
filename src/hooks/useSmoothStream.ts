@@ -75,7 +75,21 @@ export function useSmoothStream(targetText: string, isStreaming: boolean, baseSp
     }
 
     const timeout = setTimeout(() => {
-      setDisplayedText((prev) => targetText.slice(0, prev.length + stepSize));
+      setDisplayedText((prev) => {
+        const nextPos = Math.min(prev.length + stepSize, targetText.length);
+        // Snap to a whitespace boundary so incomplete markdown tokens
+        // (e.g. "**bol") don't reach ReactMarkdown mid-word.
+        let safePos = nextPos;
+        if (nextPos < targetText.length) {
+          const searchStart = Math.max(prev.length, nextPos - 30);
+          for (let i = nextPos; i >= searchStart; i--) {
+            if (/\s/.test(targetText[i])) { safePos = i + 1; break; }
+          }
+          // If no whitespace found (very long word), just use nextPos
+          if (safePos <= prev.length) safePos = nextPos;
+        }
+        return targetText.slice(0, safePos);
+      });
     }, baseSpeedMs);
 
     return () => clearTimeout(timeout);

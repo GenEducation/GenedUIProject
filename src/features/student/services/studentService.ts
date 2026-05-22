@@ -36,6 +36,12 @@ export const studentService = {
     return response.json();
   },
 
+  fetchStudentStreak: async (studentId: string) => {
+    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/streak`);
+    if (!response.ok) throw new Error("Failed to fetch student streak");
+    return response.json();
+  },
+
   fetchAvailablePartners: async () => {
     const response = await authFetch(`${API_BASE_URL}/partners`);
     if (!response.ok) throw new Error("Failed to fetch partners");

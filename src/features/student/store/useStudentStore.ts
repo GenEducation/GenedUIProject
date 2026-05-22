@@ -90,6 +90,8 @@ export interface ChatSession {
   document_title?: string;
   subject?: string;
   chatMode?: "text" | "voice";
+  chapter_completion_percentage?: number;
+  chapter_name?: string;
 }
 
 export interface SubjectItem {
@@ -105,6 +107,8 @@ export interface AgentItem {
   name: string;
   subject: string;
   grade: number;
+  is_onboarding_complete?: boolean;
+  subject_coverage_percentage?: number;
 }
 
 export interface PartnerItem {
@@ -254,6 +258,8 @@ export interface StudentState {
   activeActivity: ActivityAction | null;
   onboardingStatus: OnboardingStatus | null;
   isOnboardingLoading: boolean;
+  studentStats: { currentStreak: number; longestStreak: number; totalSessions: number } | null;
+  isStatsLoading: boolean;
 
   // ── English Skill Mode State (Wave 1–4) ─────────────────────────────────────
   playbackState: "idle" | "loading" | "buffering" | "playing" | "paused" | "stopped" | "completed" | "error";
@@ -271,6 +277,7 @@ export interface StudentState {
   setStudentProfile: (profile: StudentProfile) => void;
   fetchSessions: () => Promise<void>;
   fetchAvailableAgents: () => Promise<void>;
+  fetchStudentStats: () => Promise<void>;
   fetchAvailablePartners: () => Promise<void>;
   fetchEnrolledPartners: () => Promise<void>;
   fetchChatHistory: (sessionId: string) => Promise<void>;
@@ -346,6 +353,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   isMuted: false,
   onboardingStatus: null,
   isOnboardingLoading: false,
+  studentStats: null,
+  isStatsLoading: false,
   // English skill mode initial state
   playbackState: "idle",
   recordingState: "idle",
@@ -415,6 +424,27 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
   },
 
+  fetchStudentStats: async () => {
+    const { studentProfile, isStatsLoading } = get();
+    if (!studentProfile || isStatsLoading) return;
+
+    set({ isStatsLoading: true });
+    try {
+      const data = await studentService.fetchStudentStreak(studentProfile.user_id);
+      set({
+        studentStats: {
+          currentStreak: data.current_streak ?? 0,
+          longestStreak: data.longest_streak ?? 0,
+          totalSessions: data.total_sessions ?? 0,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to fetch student stats:", error);
+    } finally {
+      set({ isStatsLoading: false });
+    }
+  },
+
   submitActivityResult: async (activityId, activityType, transcript) => {
     set({ activeActivity: null });
     await get().sendMessage(undefined, {
@@ -435,20 +465,31 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       const data = await studentService.fetchSessions(studentProfile.user_id);
       console.log("📂 [StudentStore] Raw Sessions Data:", data);
 
-      const mappedChats: ChatSession[] = data.sessions.map((s: any) => ({
-        id: s.session_id,
-        session_id: s.session_id,
-        title: s.title || s.agent_name || "Learning Session",
-        agentType: "English Assistant",
-        agentIcon: "📖",
-        lastActive: s.updated_at
-          ? new Date(s.updated_at).toLocaleDateString()
-          : "Recently",
-        lastTopic: "Continued Learning",
-        grade: "", // Grade is handled via student profile
-        agent_id: s.subject_agent, // Mapping backend agent field
-        subject: s.subject || "", 
-      }));
+      const mappedChats: ChatSession[] = data.sessions.map((s: any) => {
+        const raw = (s.subject_agent || "").toLowerCase();
+        const derivedSubject = raw.includes("math") ? "mathematics"
+          : raw.includes("english") ? "english"
+          : raw.includes("science") ? "science"
+          : raw.includes("hindi") ? "hindi"
+          : (s.subject || "");
+
+        return {
+          id: s.session_id,
+          session_id: s.session_id,
+          title: s.title || s.agent_name || "Learning Session",
+          agentType: "English Assistant",
+          agentIcon: "📖",
+          lastActive: s.updated_at || s.created_at || "",
+          lastTopic: s.chapter_name || "Continued Learning",
+          grade: "",
+          agent_id: s.subject_agent,
+          subject: derivedSubject,
+          chapter_completion_percentage: typeof s.chapter_completion_percentage === "number"
+            ? s.chapter_completion_percentage
+            : undefined,
+          chapter_name: s.chapter_name || "",
+        };
+      });
 
       set({ recentChats: mappedChats, isSessionsLoading: false, hasFetchedSessions: true });
     } catch (error) {
@@ -474,7 +515,16 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           if (partner.subjects && Array.isArray(partner.subjects)) {
             partner.subjects.forEach((subject: any) => {
               if (subject.agents && Array.isArray(subject.agents)) {
-                agents.push(...subject.agents);
+                subject.agents.forEach((agent: any) => {
+                  agents.push({
+                    ...agent,
+                    is_onboarding_complete: subject.is_onboarding_complete,
+                    subject_coverage_percentage:
+                      typeof subject.subject_coverage_percentage === "number"
+                        ? subject.subject_coverage_percentage
+                        : undefined,
+                  });
+                });
               }
             });
           }
