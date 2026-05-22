@@ -124,9 +124,11 @@ export function StudentProfile() {
   const isLoading = partnerRequestStatus === "loading";
 
   const username      = studentProfile?.username      ?? "Student";
+  const displayName   = studentProfile?.name || username;
   const grade         = studentProfile?.grade         ? `Grade ${studentProfile.grade}` : "—";
   const board         = studentProfile?.school_board  ?? "CBSE";
-  const initials      = username.charAt(0).toUpperCase();
+  const initials      = displayName.charAt(0).toUpperCase();
+  const aiTutorName   = studentProfile?.ai_name || "Nia";
   const streakCount   = studentStats?.currentStreak ?? 0;
   const totalSessions = studentStats?.totalSessions  ?? 0;
   const longestStreak = studentStats?.longestStreak  ?? 0;
@@ -219,8 +221,9 @@ export function StudentProfile() {
                 ))}
               </div>
 
-              <h1 style={{ fontSize: "clamp(22px,4vw,28px)", fontWeight: 800, color: C.text, marginTop: 14, fontFamily: "'Nunito',sans-serif" }}>{username}</h1>
+              <h1 style={{ fontSize: "clamp(22px,4vw,28px)", fontWeight: 800, color: C.text, marginTop: 14, fontFamily: "'Nunito',sans-serif" }}>{displayName}</h1>
               <p style={{ fontSize: 13, color: C.textMid, fontWeight: 600, marginTop: 4 }}>{grade} · {board}</p>
+              <p style={{ fontSize: 12, color: C.textMuted, fontWeight: 600, marginTop: 4 }}>AI Tutor: {aiTutorName}</p>
 
               {/* Stat strip */}
               <div style={{ display: "flex", gap: 0, marginTop: 18, paddingTop: 18, borderTop: `1px solid ${C.border}`, width: "100%", justifyContent: "space-around" }}>
@@ -241,7 +244,7 @@ export function StudentProfile() {
             <div style={{ background: `linear-gradient(135deg, ${C.genPurple}06, ${C.genBlue}06)`, borderRadius: 24, padding: "22px 24px", border: `1px solid ${C.genPurple}12`, marginBottom: 16, ...fade(0.14) }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
                 <span style={{ fontSize: 15 }}>🧠</span>
-                <span style={{ fontSize: 11, fontWeight: 800, color: C.genPurple, textTransform: "uppercase" as const, letterSpacing: 1.2, fontFamily: "'DM Sans',sans-serif" }}>How April Sees You</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: C.genPurple, textTransform: "uppercase" as const, letterSpacing: 1.2, fontFamily: "'DM Sans',sans-serif" }}>{`How ${aiTutorName} Sees You`}</span>
               </div>
               <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
                 {learningTraits.map((t, i) => (

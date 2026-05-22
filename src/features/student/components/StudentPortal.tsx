@@ -24,10 +24,13 @@ export function StudentPortal() {
   useEffect(() => {
     const isNewUser = localStorage.getItem("gened_new_user") === "true";
     const justFinishedOnboarding = localStorage.getItem("start_tutorial_after_onboarding") === "true";
-    
-    if ((isNewUser || justFinishedOnboarding) && dnaStatus && dnaStatus !== "PENDING") {
+
+    if (isNewUser) {
       startTutorial();
       localStorage.removeItem("gened_new_user");
+      localStorage.removeItem("start_tutorial_after_onboarding");
+    } else if (justFinishedOnboarding && dnaStatus && dnaStatus !== "PENDING") {
+      startTutorial();
       localStorage.removeItem("start_tutorial_after_onboarding");
     }
   }, [dnaStatus, startTutorial]);

@@ -14,6 +14,7 @@ interface GeneralOnboardingWizardProps {
     username: string;
     age?: number;
     grade?: number;
+    ai_name?: string;
   };
   onComplete: () => void;
 }
@@ -161,6 +162,7 @@ export function GeneralOnboardingWizard({
             {step === 0 && (
               <StepWelcome
                 name={studentProfile.username}
+                aiName={studentProfile.ai_name || "Nia"}
                 onNext={next}
               />
             )}
@@ -182,6 +184,7 @@ export function GeneralOnboardingWizard({
               <StepDone
                 name={studentProfile.username}
                 age={studentProfile.age}
+                aiName={studentProfile.ai_name || "Nia"}
                 isSubmitting={isSubmitting}
                 onFinish={handleSubmit}
               />

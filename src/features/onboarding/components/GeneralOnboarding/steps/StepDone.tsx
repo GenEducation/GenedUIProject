@@ -9,11 +9,12 @@ import { Confetti } from "../Confetti";
 interface StepDoneProps {
   name: string;
   age?: number;
+  aiName: string;
   isSubmitting: boolean;
   onFinish: () => void;
 }
 
-export function StepDone({ name, age, isSubmitting, onFinish }: StepDoneProps) {
+export function StepDone({ name, age, aiName, isSubmitting, onFinish }: StepDoneProps) {
   const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
@@ -56,7 +57,7 @@ export function StepDone({ name, age, isSubmitting, onFinish }: StepDoneProps) {
           color: "rgba(11,36,71,0.6)",
         }}
       >
-        Sage has tuned your space just for you. Let&apos;s start learning.
+        {aiName} has tuned your space just for you. Let&apos;s start learning.
       </p>
 
       {/* App preview card */}

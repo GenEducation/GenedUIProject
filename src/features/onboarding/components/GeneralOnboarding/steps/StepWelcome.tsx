@@ -5,10 +5,11 @@ import { SageAvatar } from "../SageAvatar";
 import { SageBubble } from "../SageBubble";
 interface StepWelcomeProps {
   name: string;
+  aiName: string;
   onNext: () => void;
 }
 
-export function StepWelcome({ name, onNext }: StepWelcomeProps) {
+export function StepWelcome({ name, aiName, onNext }: StepWelcomeProps) {
   const [showSecond, setShowSecond] = useState(false);
 
   return (
@@ -18,7 +19,7 @@ export function StepWelcome({ name, onNext }: StepWelcomeProps) {
         <SageAvatar />
         <div className="flex flex-col gap-2 flex-1 pt-0.5">
           <SageBubble
-            text={`Hi there, **${name}**! I'm **Sage**, your personal AI tutor. 👋`}
+            text={`Hi there, **${name}**! I'm **${aiName}**, your personal AI tutor. 👋`}
             onDone={() => setTimeout(() => setShowSecond(true), 300)}
           />
           {showSecond && (

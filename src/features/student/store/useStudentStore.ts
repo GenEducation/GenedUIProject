@@ -12,9 +12,11 @@ export interface StudentProfile {
   username: string;
   email?: string;
   role: string;
+  name?: string;
   age?: number;
   grade?: number;
   school_board?: string;
+  ai_name?: string;
   plan?: "FREE" | "PRO";
   plan_expires_at?: string | null;
 }
@@ -534,7 +536,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       set({ availableAgents: agents, isAgentsLoading: false, hasFetchedAgents: true });
     } catch (error) {
       console.error("Fetch Agents Error:", error);
-      set({ availableAgents: [], isAgentsLoading: false });
+      set({ availableAgents: [], isAgentsLoading: false, hasFetchedAgents: false });
     }
   },
 

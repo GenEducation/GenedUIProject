@@ -17,24 +17,29 @@ export function StudentChatView() {
   const params = useParams();
   const searchParams = useSearchParams();
   const sessionIdRaw = params?.sessionId;
-  const sessionId = Array.isArray(sessionIdRaw) ? sessionIdRaw[0] : (sessionIdRaw as string | undefined);
+  const sessionId = Array.isArray(sessionIdRaw)
+    ? sessionIdRaw[0]
+    : (sessionIdRaw as string | undefined);
   const agentId = searchParams.get("agentId");
-  
-  const { 
-    activeChat, 
-    messages, 
-    isAITyping, 
-    openChatById, 
-    studentProfile, 
-    isSessionsLoading, 
+
+  const {
+    activeChat,
+    messages,
+    isAITyping,
+    openChatById,
+    studentProfile,
+    isSessionsLoading,
     closeChat,
     isAgentPickerOpen,
-    sendMessage
+    sendMessage,
   } = useStudentStore();
 
   // Sidebar toggle state
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
+  const toggleSidebar = useCallback(
+    () => setIsSidebarOpen((prev) => !prev),
+    [],
+  );
 
   // Handle responsive auto-hide
   useEffect(() => {
@@ -45,12 +50,12 @@ export function StudentChatView() {
         setIsSidebarOpen(true);
       }
     };
-    
+
     handleResize(); // Init
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
-  
+
   // Guard & Hydration: if user lands on /student/chat/[id] but state is empty (refresh).
   useEffect(() => {
     if (!studentProfile) return; // wait for auth hydration
@@ -65,21 +70,23 @@ export function StudentChatView() {
 
   // URL sync logic...
   useEffect(() => {
-    const isNewPath = !sessionId || sessionId === "new" || sessionId === "new-focused";
-    const hasRealId = activeChat && activeChat.id !== "new" && activeChat.id !== "new-focused";
+    const isNewPath =
+      !sessionId || sessionId === "new" || sessionId === "new-focused";
+    const hasRealId =
+      activeChat && activeChat.id !== "new" && activeChat.id !== "new-focused";
 
     if (isNewPath && hasRealId) {
       router.replace(`/student/chat/${activeChat.id}`);
     }
   }, [activeChat?.id, sessionId, router]);
-  
+
   // 3. Auto-start logic for new chats
   useEffect(() => {
     // Only trigger if we have an active "new" chat with no messages and AI isn't already typing
     if (
-      activeChat && 
-      (activeChat.id === "new" || activeChat.id === "new-focused") && 
-      messages.length === 0 && 
+      activeChat &&
+      (activeChat.id === "new" || activeChat.id === "new-focused") &&
+      messages.length === 0 &&
       !isAITyping
     ) {
       // Small delay to ensure UI transition is smooth
@@ -91,7 +98,8 @@ export function StudentChatView() {
   }, [activeChat?.id, messages.length, isAITyping, sendMessage]);
 
   // 4. Determine if we are in the "Hub" state (Discovery) or "Chat" state (Active)
-  const isHubState = !sessionId && !activeChat && messages.length === 0 && !isAITyping;
+  const isHubState =
+    !sessionId && !activeChat && messages.length === 0 && !isAITyping;
 
   // 4. Safety Guard: If we have a sessionId but no activeChat yet (history loading), show loading
   if (sessionId && !activeChat) {
@@ -119,10 +127,10 @@ export function StudentChatView() {
   return (
     <div className="h-screen flex font-sans overflow-hidden" style={{ background: "#F7F8FC" }}>
       {/* -- LEFT SIDEBAR (Always present for consistency) ---------------- */}
-      <StudentChatSidebar 
-        activeChatId={activeChat?.id || "none"} 
-        isOpen={isSidebarOpen} 
-        onClose={() => setIsSidebarOpen(false)} 
+      <StudentChatSidebar
+        activeChatId={activeChat?.id || "none"}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
       {/* Main Area: Hub vs Chat */}

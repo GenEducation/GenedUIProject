@@ -6,7 +6,7 @@ import { GoogleLogin } from "@react-oauth/google";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface SignUpData {
-  username: string;
+  username?: string;
   email: string;
   password: string;
   confirmPassword?: string;
@@ -415,6 +415,13 @@ export function SignUp({
     </div>
   );
 
+  const handleGradeSelect = (grade: number) => {
+    const event = {
+      target: { name: "grade", value: String(grade) },
+    } as any;
+    onChange(event);
+  };
+
   const renderStep3 = () => (
     <div className="space-y-6">
       <div className="flex items-center gap-4 mb-2">
@@ -426,64 +433,34 @@ export function SignUp({
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h3 className="text-lg font-bold text-[#042e5c] font-serif">Complete Profile</h3>
-          <p className="text-[10px] uppercase tracking-widest text-[#059F6D] font-bold">{signupData.role} details</p>
+          <h3 className="text-lg font-bold text-[#042e5c] font-serif">
+            {signupData.role === "student" ? "What grade are you in?" : "Complete Profile"}
+          </h3>
+          <p className="text-[10px] uppercase tracking-widest text-[#059F6D] font-bold">
+            {signupData.role === "student" ? "Tap to select" : `${signupData.role} details`}
+          </p>
         </div>
-      </div>
-
-      <div>
-        <label className={labelCls}>Username (Required)</label>
-        <input
-          name="username"
-          value={signupData.username}
-          onChange={onChange}
-          type="text"
-          placeholder="Choose a unique name"
-          className={inputCls(!!errors.username)}
-        />
-        {errors.username && <p className={errorCls}>{errors.username}</p>}
       </div>
 
       {signupData.role === "student" && (
         <>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls}>Age</label>
-              <input
-                name="age"
-                value={signupData.age || ""}
-                onChange={onChange}
-                type="number"
-                placeholder="e.g. 14"
-                className={inputCls(!!errors.age)}
-              />
-              {errors.age && <p className={errorCls}>{errors.age}</p>}
-            </div>
-            <div>
-              <label className={labelCls}>Grade</label>
-              <input
-                name="grade"
-                value={signupData.grade || ""}
-                onChange={onChange}
-                type="number"
-                placeholder="e.g. 8"
-                className={inputCls(!!errors.grade)}
-              />
-              {errors.grade && <p className={errorCls}>{errors.grade}</p>}
-            </div>
+          <div className="grid grid-cols-4 gap-3">
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((grade) => (
+              <button
+                key={grade}
+                type="button"
+                onClick={() => handleGradeSelect(grade)}
+                className={`py-4 rounded-xl text-sm font-bold transition-all duration-200 ${
+                  signupData.grade === String(grade)
+                    ? "bg-[#059F6D] text-white shadow-lg shadow-[#059F6D]/30 scale-105"
+                    : "bg-[#042e5c]/5 text-[#042e5c] hover:bg-[#059F6D]/10 hover:text-[#059F6D]"
+                }`}
+              >
+                {grade}
+              </button>
+            ))}
           </div>
-          <div>
-            <label className={labelCls}>School Board</label>
-            <input
-              name="school_board"
-              value={signupData.school_board || ""}
-              onChange={onChange}
-              type="text"
-              placeholder="e.g. CBSE, ICSE"
-              className={inputCls(!!errors.school_board)}
-            />
-            {errors.school_board && <p className={errorCls}>{errors.school_board}</p>}
-          </div>
+          {errors.grade && <p className={errorCls}>{errors.grade}</p>}
         </>
       )}
 
@@ -530,7 +507,6 @@ export function SignUp({
         </>
       )}
 
-      {/* Summary of hidden errors (e.g. from Step 1) */}
       {!googleToken && (errors.email || errors.password || errors.confirmPassword) && (
         <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold flex items-center gap-2 animate-pulse">
           <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
@@ -546,11 +522,11 @@ export function SignUp({
 
       <button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isSubmitting || (signupData.role === "student" && !signupData.grade)}
         className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
       >
         <span className="relative z-10 flex items-center justify-center gap-2">
-          {isSubmitting ? "Forging credentials…" : "Create Account"}
+          {isSubmitting ? "Creating account…" : "Create Account"}
           {!isSubmitting && <ArrowRight size={16} />}
         </span>
       </button>
