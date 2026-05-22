@@ -158,20 +158,9 @@ export function LoginView() {
       router.replace(`/${role}`);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
-      let rawMsg = error instanceof Error ? error.message : "Unable to complete signin.";
+      const rawMsg = error instanceof Error ? error.message : "Unable to complete signin.";
       console.error("Detailed Signin Error:", rawMsg);
-
-      const lowMsg = rawMsg.toLowerCase();
-      const mappedErrors: Record<string, string> = {};
-      
-      if (lowMsg.includes("password")) {
-        mappedErrors.password = "The password you entered is incorrect.";
-      } else if (lowMsg.includes("username") || lowMsg.includes("user") || lowMsg.includes("credentials") || lowMsg.includes("invalid")) {
-        mappedErrors.username = "Invalid username or password.";
-      } else {
-        mappedErrors.username = "Sign-in failed. Please try again later.";
-      }
-      setSigninErrors(mappedErrors);
+      setSigninErrors({ root: rawMsg });
     } finally {
       setIsSigningIn(false);
     }
@@ -239,22 +228,9 @@ export function LoginView() {
       router.replace(`/${role}`);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
-      let rawMsg = error instanceof Error ? error.message : "Unable to complete signup.";
+      const rawMsg = error instanceof Error ? error.message : "Unable to complete signup.";
       console.error("Detailed Signup Error:", rawMsg);
-
-      const lowMsg = rawMsg.toLowerCase();
-      const mappedErrors: Record<string, string> = {};
-      
-      if (lowMsg.includes("email already used") || lowMsg.includes("email")) {
-        mappedErrors.email = "This email address is already in use.";
-      } else if (lowMsg.includes("username")) {
-        mappedErrors.username = "This username is already taken.";
-      } else if (lowMsg.includes("token") || lowMsg.includes("google")) {
-        mappedErrors.root = "Google authentication failed. Please try again or use standard registration.";
-      } else {
-        mappedErrors.root = "Registration failed. Please check your information and try again.";
-      }
-      setSignupErrors(mappedErrors);
+      setSignupErrors({ root: rawMsg });
     } finally {
       setIsSubmitting(false);
     }

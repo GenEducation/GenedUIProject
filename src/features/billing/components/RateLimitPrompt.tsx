@@ -12,7 +12,7 @@ interface RateLimitPromptProps {
 }
 
 export const RateLimitPrompt: React.FC<RateLimitPromptProps> = ({ isVisible, onClose }) => {
-  const { studentProfile } = useStudentStore();
+  const { studentProfile, rateLimitMessage } = useStudentStore();
 
   if (!studentProfile) return null;
 
@@ -47,23 +47,27 @@ export const RateLimitPrompt: React.FC<RateLimitPromptProps> = ({ isVisible, onC
                     Daily Limit Reached
                   </h4>
                   <p className="text-[13px] text-white/70 mt-1 font-medium leading-relaxed max-w-md">
-                    You've reached your 15-message limit on the Free plan.
+                    {rateLimitMessage || "You've reached your daily message limit."}
                   </p>
                 </div>
               </div>
 
-              <div className="w-px h-12 bg-white/10 shrink-0" />
+              {studentProfile.plan !== "PRO" && (
+                <>
+                  <div className="w-px h-12 bg-white/10 shrink-0" />
 
-              <div className="shrink-0 min-w-[200px]">
-                <UpgradeButton
-                  userId={studentProfile.user_id}
-                  userName={studentProfile.username}
-                  userEmail={studentProfile.email}
-                  className="w-full justify-center py-4 bg-[#059F6D] hover:bg-[#048b5f] text-white text-[13px] font-black uppercase tracking-[0.15em] rounded-2xl shadow-xl shadow-[#059F6D]/30 transition-all active:scale-[0.96] border border-white/10"
-                >
-                  Unlock Pro
-                </UpgradeButton>
-              </div>
+                  <div className="shrink-0 min-w-[200px]">
+                    <UpgradeButton
+                      userId={studentProfile.user_id}
+                      userName={studentProfile.username}
+                      userEmail={studentProfile.email}
+                      className="w-full justify-center py-4 bg-[#059F6D] hover:bg-[#048b5f] text-white text-[13px] font-black uppercase tracking-[0.15em] rounded-2xl shadow-xl shadow-[#059F6D]/30 transition-all active:scale-[0.96] border border-white/10"
+                    >
+                      Unlock Pro
+                    </UpgradeButton>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </motion.div>

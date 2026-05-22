@@ -104,8 +104,8 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       if (subjects.length > 0 && !get().selectedAnalyticsSubject) {
         set({ selectedAnalyticsSubject: subjects[0] });
       }
-    } catch (error) {
-      console.error("Fetch Analytics Subjects Error:", error);
+    } catch (error: any) {
+      console.error("Fetch Analytics Subjects Error:", error?.request_id, error?.message ?? error);
     }
   },
 
@@ -142,8 +142,8 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
         if (subjects.length > 0) {
           get().fetchAnalyticsData(subjects[0], studentIdOverride);
         }
-      } catch (error) {
-        console.error("Fetch Analytics Subjects Error:", error);
+      } catch (error: any) {
+        console.error("Fetch Analytics Subjects Error:", error?.request_id, error?.message ?? error);
       }
       return;
     }
@@ -175,12 +175,12 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       results.forEach((res, idx) => {
         if (res.status === "rejected") {
           const endpoints = ["Skill Summary", "CG Scores", "Skill Tree", "Chapter Mastery"];
-          console.error(`${endpoints[idx]} fetch failed:`, res.reason);
+          console.error(`${endpoints[idx]} fetch failed:`, res.reason?.request_id, res.reason?.message ?? res.reason);
         }
       });
 
-    } catch (error) {
-      console.error("Fetch Analytics Data Critical Error:", error);
+    } catch (error: any) {
+      console.error("Fetch Analytics Data Critical Error:", error?.request_id, error?.message ?? error);
       set({ isAnalyticsLoading: false });
     }
   },
@@ -214,13 +214,13 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       });
 
       if (progressionRes.status === "rejected") {
-        console.error("Skill Progression fetch failed:", progressionRes.reason);
+        console.error("Skill Progression fetch failed:", progressionRes.reason?.request_id, progressionRes.reason?.message ?? progressionRes.reason);
       }
       if (profileRes.status === "rejected") {
-        console.error("Skill Profile History fetch failed:", profileRes.reason);
+        console.error("Skill Profile History fetch failed:", profileRes.reason?.request_id, profileRes.reason?.message ?? profileRes.reason);
       }
-    } catch (error) {
-      console.error("fetchSkillProgressionData Critical Error:", error);
+    } catch (error: any) {
+      console.error("fetchSkillProgressionData Critical Error:", error?.request_id, error?.message ?? error);
       set({ isProgressionLoading: false });
     }
   },

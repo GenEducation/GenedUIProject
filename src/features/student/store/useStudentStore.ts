@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { studentService } from "../services/studentService";
-import { authFetch } from "@/utils/authFetch";
+import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import { parseContent, generateHistoricalSVG, normalizeSvg } from "../utils/parseContent";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
@@ -257,6 +257,7 @@ export interface StudentState {
   hasFetchedAgents: boolean;
   isMuted: boolean;
   isRateLimitHit: boolean;
+  rateLimitMessage: string | null;
   activeActivity: ActivityAction | null;
   onboardingStatus: OnboardingStatus | null;
   isOnboardingLoading: boolean;
@@ -293,6 +294,7 @@ export interface StudentState {
   setProfileOpen: (open: boolean) => void;
   setAgentPickerOpen: (open: boolean) => void;
   setRateLimitHit: (hit: boolean) => void;
+  setRateLimitMessage: (message: string | null) => void;
   setPartnerModalOpen: (open: boolean) => void;
   stopMessageGeneration: () => void;
   submitActivityResult: (activityId: string, activityType: string, transcript: string) => Promise<void>;
@@ -353,6 +355,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   hasFetchedSessions: false,
   hasFetchedAgents: false,
   isMuted: false,
+  rateLimitMessage: null,
   onboardingStatus: null,
   isOnboardingLoading: false,
   studentStats: null,
@@ -386,6 +389,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       hasFetchedSessions: false,
       hasFetchedAgents: false,
       onboardingStatus: null,
+      isRateLimitHit: false,
+      rateLimitMessage: null,
       comprehensionResults: {},
     });
     window.location.href = "/";
@@ -393,7 +398,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   activeActivity: null,
   setProfileOpen: (open) => set({ isProfileOpen: open }),
   setAgentPickerOpen: (open) => set({ isAgentPickerOpen: open }),
-  setRateLimitHit: (hit) => set({ isRateLimitHit: hit }),
+  setRateLimitHit: (hit) => set({ isRateLimitHit: hit, ...(!hit && { rateLimitMessage: null }) }),
+  setRateLimitMessage: (message) => set({ rateLimitMessage: message }),
   setPartnerModalOpen: (open) =>
     set({
       isPartnerModalOpen: open,
@@ -419,8 +425,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     try {
       const status = await studentService.fetchOnboardingStatus(studentProfile.user_id);
       set({ onboardingStatus: status });
-    } catch (error) {
-      console.error("Failed to fetch onboarding status:", error);
+    } catch (error: any) {
+      console.error("Failed to fetch onboarding status:", error?.request_id, error?.message ?? error);
     } finally {
       set({ isOnboardingLoading: false });
     }
@@ -440,8 +446,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           totalSessions: data.total_sessions ?? 0,
         },
       });
-    } catch (error) {
-      console.error("Failed to fetch student stats:", error);
+    } catch (error: any) {
+      console.error("Failed to fetch student stats:", error?.request_id, error?.message ?? error);
     } finally {
       set({ isStatsLoading: false });
     }
@@ -494,8 +500,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       });
 
       set({ recentChats: mappedChats, isSessionsLoading: false, hasFetchedSessions: true });
-    } catch (error) {
-      console.error("Fetch Sessions Error:", error);
+    } catch (error: any) {
+      console.error("Fetch Sessions Error:", error?.request_id, error?.message ?? error);
       set({ isSessionsLoading: false, hasFetchedSessions: true });
     }
   },
@@ -534,8 +540,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       }
 
       set({ availableAgents: agents, isAgentsLoading: false, hasFetchedAgents: true });
-    } catch (error) {
-      console.error("Fetch Agents Error:", error);
+    } catch (error: any) {
+      console.error("Fetch Agents Error:", error?.request_id, error?.message ?? error);
       set({ availableAgents: [], isAgentsLoading: false, hasFetchedAgents: false });
     }
   },
@@ -544,8 +550,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     try {
       const data: PartnerItem[] = await studentService.fetchAvailablePartners();
       set({ availablePartners: data });
-    } catch (error) {
-      console.error("Fetch Partners Error:", error);
+    } catch (error: any) {
+      console.error("Fetch Partners Error:", error?.request_id, error?.message ?? error);
     }
   },
 
@@ -562,8 +568,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         enrolledPartners: data.partners || [],
         isEnrolledPartnersLoading: false,
       });
-    } catch (error) {
-      console.error("Fetch Enrolled Partners Error:", error);
+    } catch (error: any) {
+      console.error("Fetch Enrolled Partners Error:", error?.request_id, error?.message ?? error);
       set({ isEnrolledPartnersLoading: false });
     }
   },
@@ -603,15 +609,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       // Refresh the enrolled partners list so the UI reflects the new connection
       await get().fetchEnrolledPartners();
     } catch (error: any) {
-      console.error("Partner Request Error:", error);
-      let errorMessage =
-        error?.message || "Failed to send partner request. Please try again.";
-      if (typeof errorMessage !== "string") {
-        errorMessage = JSON.stringify(errorMessage);
-      }
+      console.error("Partner Request Error:", error?.request_id, error?.message ?? error);
       set({
         partnerRequestStatus: "error",
-        partnerRequestMessage: errorMessage,
+        partnerRequestMessage: error?.message || "Failed to send partner request. Please try again.",
       });
     }
   },
@@ -643,17 +644,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         partnerRequestMessage: "Parent successfully linked to your profile.",
       });
     } catch (error: any) {
-      console.error("Link Parent Error:", error);
-      let errorMessage =
-        error?.message ||
-        "Failed to link parent. Please check the ID and try again.";
-      if (typeof errorMessage !== "string") {
-        errorMessage = JSON.stringify(errorMessage);
-      }
-
+      console.error("Link Parent Error:", error?.request_id, error?.message ?? error);
       set({
         partnerRequestStatus: "error",
-        partnerRequestMessage: errorMessage,
+        partnerRequestMessage: error?.message || "Failed to link parent. Please check the ID and try again.",
       });
     }
   },
@@ -681,7 +675,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         signal: controller.signal,
       });
 
-      if (!response.ok) throw new Error("Failed to fetch history");
       const data = await response.json();
 
       // Extract subject from history if activeChat is missing it or has "General"
@@ -734,7 +727,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       if (error.name === "AbortError") {
         console.debug("History fetch aborted for session:", sessionId);
       } else {
-        console.error("Fetch History Error:", error);
+        console.error("Fetch History Error:", error?.request_id, error?.message ?? error);
       }
       set({ isHistoryLoading: false, historyAbortController: null });
     }
@@ -1644,11 +1637,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         abortController.signal,
       );
 
-      if (response.status === 429) {
-        set({ isRateLimitHit: true });
-        return;
-      }
-
       if (!response.body) throw new Error("No response body for streaming");
 
       const reader = response.body.getReader();
@@ -1657,6 +1645,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       let finalSessionId: string | undefined;
       let finalOptions: string[] = [];
       let finalActions: ActivityAction[] = [];
+      let streamErrorMessage = "";
+      let isStreamError = false;
 
       // -- Reactive Streaming State -------------------------------------------
       let isPlanningUIPresented = false;
@@ -1744,6 +1734,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           if (status && !planningQueue.includes(status)) {
             planningQueue.push(status);
           }
+        } else if (event.type === "error") {
+          // Mid-stream error from backend (e.g. CORE_2010)
+          console.error("Stream error:", event.error_code, event.message);
+          // The done event follows immediately after, which triggers finalization.
+          // Store the error message so the done handler can use it.
+          streamErrorMessage = event.message || "Something went wrong.";
+          isStreamError = true;
         } else if (event.type === "tool_status") {
           currentToolStatus = event.message || "Drawing...";
           if (isPlanningUIPresented) updateUI(bufferedText, elements, currentToolStatus);
@@ -2017,6 +2014,16 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           finalOptions = Array.isArray(event.options) ? event.options : [];
           finalActions = Array.isArray(event.actions) ? event.actions : [];
           if (event.response) doneResponse = event.response;
+          if (event.status === "error") {
+            bufferedText = streamErrorMessage || "Please tell me more.";
+            elements.length = 0;
+            elements.push({
+              id: `err-el-${Date.now()}`,
+              type: "text",
+              content: bufferedText
+            });
+            isStreamError = true;
+          }
         }
       };
 
@@ -2145,7 +2152,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       // parseContent converts to properly themed SVGs via generateHistoricalSVG.
       // This replaces any raw backend SVG placeholders (isRawBackendSvg: true)
       // that arrived in chunk events, ensuring streaming and history renders match.
-      if (doneResponse) {
+      if (doneResponse && !isStreamError) {
         const finalParsed = parseContent(doneResponse);
         const finalVisuals = finalParsed.filter((el) => el.type !== "text");
         if (finalVisuals.length > 0) {
@@ -2171,7 +2178,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       // Flush any remaining text in the buffer into elements before finalizing.
       // Without this, text that arrives after the last visual block is only shown
       // transiently as a stream-tail and is lost from the final elements array.
-      if (currentTextBuffer.trim()) {
+      if (currentTextBuffer.trim() && !isStreamError) {
         pushTextElement(currentTextBuffer);
         currentTextBuffer = "";
       }
@@ -2272,20 +2279,24 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       });
     } catch (error: any) {
       const isAbort = error.name === "AbortError";
-      const isRateLimit = error.status === 429;
+      const isRateLimit = error instanceof ApiRequestError && error.status === 429;
+      const isRetryable = error instanceof ApiRequestError && error.retryable;
 
       if (isAbort) {
         console.debug("Chat generation aborted by user");
       } else if (isRateLimit) {
-        set({ isRateLimitHit: true });
+        set({ isRateLimitHit: true, rateLimitMessage: error.message || null });
       } else {
-        console.error("Chat API Error:", error);
+        console.error("Chat API Error:", error?.request_id, error?.message ?? error);
       }
+
+      const baseErrorText = error?.message || "Sorry, I encountered an error connecting to the knowledge base.";
+      const errorText = isRetryable ? `${baseErrorText} Please try again.` : baseErrorText;
 
       set((state) => {
         const errorMsg: ChatMessage = {
           id: `err-${Date.now()}`,
-          text: error.detail || "Sorry, I encountered an error connecting to the knowledge base. Please try again.",
+          text: errorText,
           sender: "ai",
           timestamp: new Date().toLocaleTimeString([], {
             hour: "2-digit",

@@ -26,15 +26,6 @@ export const createOrder = async (userId: string, billingCycle: "monthly" | "ann
     body: JSON.stringify({ user_id: userId, billing_cycle: billingCycle }),
   });
   
-  if (!response.ok) {
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      const error = await response.json();
-      throw new Error(error.detail || "Failed to create order");
-    }
-    throw new Error(`Order creation failed (${response.status})`);
-  }
-  
   return response.json();
 };
 
@@ -49,15 +40,6 @@ export const verifyPayment = async (data: {
     method: "POST",
     body: JSON.stringify(data),
   });
-  
-  if (!response.ok) {
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      const error = await response.json();
-      throw new Error(error.detail || "Payment verification failed");
-    }
-    throw new Error(`Payment verification failed (${response.status})`);
-  }
   
   return response.json();
 };

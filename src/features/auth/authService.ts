@@ -49,10 +49,15 @@ async function handleAuthError(response: Response, defaultMsg: string): Promise<
   let errorMessage = defaultMsg;
   try {
     const errorData = await response.json();
-    if (Array.isArray(errorData.detail)) {
+    // Prefer the top-level `message` from the structured error shape
+    if (typeof errorData.message === "string") {
+      errorMessage = errorData.message;
+    } else if (Array.isArray(errorData.detail)) {
+      // Legacy: FastAPI validation error shape — remove once all endpoints migrated
       errorMessage = errorData.detail.map((err: any) => err.msg).join(", ");
-    } else {
-      errorMessage = errorData.detail || errorData.message || errorMessage;
+    } else if (typeof errorData.detail === "string") {
+      // Legacy: old ad-hoc shape — remove once all endpoints migrated
+      errorMessage = errorData.detail;
     }
   } catch (e) {
     const errorText = await response.text().catch(() => "");
