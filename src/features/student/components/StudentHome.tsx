@@ -6,7 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useStudentStore } from "../store/useStudentStore";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
+import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
+import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 
 /* ═══ DESIGN TOKENS ═══ */
 const C = {
@@ -154,40 +156,6 @@ function Confetti({ active, onDone }: { active: boolean; onDone?: () => void }) 
   return <canvas ref={ref} className="absolute inset-0 z-50 pointer-events-none w-full h-full" />;
 }
 
-/* ═══ ONBOARDING MODAL ═══ */
-function OnboardingModal({ subject, onClose, onStart }: { subject: string; onClose: () => void; onStart: () => void }) {
-  const vis = SUBJECTS_VISUAL[subject.toLowerCase()] ?? SUBJECTS_VISUAL.english;
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.92, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.92, y: 20 }} transition={{ duration: 0.25 }}
-        className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center"
-      >
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-5" style={{ background: vis.bg }}>
-          {vis.icon}
-        </div>
-        <h3 className="text-xl font-extrabold mb-2" style={{ color: C.text, fontFamily: "'Nunito', sans-serif" }}>
-          {vis.label} Onboarding
-        </h3>
-        <p className="text-sm mb-6 leading-relaxed" style={{ color: C.textMid }}>
-          Let&apos;s personalize your {vis.label} learning experience. This quick setup helps us understand your level and learning style.
-        </p>
-        <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-3 rounded-xl font-semibold text-sm cursor-pointer transition-all"
-            style={{ border: `1px solid ${C.border}`, background: "transparent", color: C.textMid }}>
-            Later
-          </button>
-          <button onClick={onStart} className="flex-1 py-3 rounded-xl font-bold text-sm cursor-pointer transition-all text-white"
-            style={{ background: vis.color, border: "none" }}>
-            Start Onboarding →
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
 /* ═══ HELPERS ═══ */
 function normalizeSubjectKey(subject: string): string {
   const lower = (subject ?? "").toLowerCase();
@@ -208,13 +176,14 @@ export function StudentHome() {
     studentStats, isAgentsLoading, isSessionsLoading,
   } = useStudentStore();
   const { checkDNAStatus } = useOnboardingStore();
+  const { hasEnded, hasDismissedCelebration, dismissCelebration } = useTutorialStore();
 
   const [sidebarOpen,    setSidebarOpen]    = useState(true);
   const [showConfetti,   setShowConfetti]   = useState(false);
   const [aprilState,     setAprilState]     = useState<AprilState>("idle");
   const [hoveredAgent,   setHoveredAgent]   = useState<string | null>(null);
   const [mounted,        setMounted]        = useState(false);
-  const [onboardingModal,setOnboardingModal]= useState<{ subject: string; agentId: string } | null>(null);
+  const [onboardingModal,setOnboardingModal]= useState<{ originalSubject: string; grade: number } | null>(null);
   const [showAllSessions,setShowAllSessions]= useState(false);
   const [showAllSubjects,setShowAllSubjects]= useState(false);
 
@@ -237,13 +206,19 @@ export function StudentHome() {
     }
   }, [studentProfile]);
 
-  /* mount + celebration */
+  /* Mount */
+  useEffect(() => { setMounted(true); }, []);
+
+  /* One-shot confetti — only fires once, right after the student closes the tutorial video */
   useEffect(() => {
-    setMounted(true);
-    const t1 = setTimeout(() => { setAprilState("celebrating"); setShowConfetti(true); }, 3000);
-    const t2 = setTimeout(() => setAprilState("idle"), 6000);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, []);
+    if (!hasEnded || hasDismissedCelebration) return;
+    setAprilState("celebrating");
+    setShowConfetti(true);
+    const t = setTimeout(() => setAprilState("idle"), 3000);
+    // Mark as seen so it never fires again (persisted in localStorage via Zustand)
+    dismissCelebration();
+    return () => clearTimeout(t);
+  }, [hasEnded, hasDismissedCelebration, dismissCelebration]);
 
   const streakCount   = studentStats?.currentStreak  ?? 0;
   const totalSessions = studentStats?.totalSessions   ?? 0;
@@ -277,17 +252,20 @@ export function StudentHome() {
 
   const getGreeting = () => {
     const h = new Date().getHours();
-    if (h >= 5  && h < 12) return "Good morning";
-    if (h >= 12 && h < 17) return "Good afternoon";
-    if (h >= 17 && h < 21) return "Good evening";
+    if (h >= 5  && h < 12) return "Morning";
+    if (h >= 12 && h < 17) return "Afternoon";
+    if (h >= 17 && h < 21) return "Evening";
     return "Hey";
   };
 
-  const username = studentProfile?.username ?? "Scholar";
+  const username = studentProfile?.name || studentProfile?.username || "Scholar";
 
   const handleAgentClick = (agent: typeof agents[0]) => {
     if (agent.is_onboarding_complete === false) {
-      setOnboardingModal({ subject: agent.subjectKey, agentId: agent.agent_id });
+      setOnboardingModal({
+        originalSubject: agent.subject,
+        grade:           agent.grade ?? studentProfile?.grade ?? 9,
+      });
     } else {
       openNewChat(agent);
       router.push(`/student/chat/new?agentId=${agent.agent_id}`);
@@ -626,9 +604,9 @@ export function StudentHome() {
       <AnimatePresence>
         {onboardingModal && (
           <OnboardingModal
-            subject={onboardingModal.subject}
+            subject={onboardingModal.originalSubject}
+            grade={onboardingModal.grade}
             onClose={() => setOnboardingModal(null)}
-            onStart={() => { setOnboardingModal(null); router.push(`/student/onboarding/${onboardingModal.subject}`); }}
           />
         )}
       </AnimatePresence>

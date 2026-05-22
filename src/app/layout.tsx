@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display, Space_Grotesk, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { GlobalLoader } from "@/components/shared/loaders/GlobalLoader";
-import { SiteTutorial } from "@/components/shared/SiteTutorial";
+import { TutorialVideoModal } from "@/components/shared/TutorialVideoModal";
 import Script from "next/script";
 
 const inter = Inter({
@@ -40,7 +40,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${playfair.variable} ${spaceGrotesk.variable} ${plusJakarta.variable} antialiased font-sans`}>
         <GlobalLoader />
         {children}
-        <SiteTutorial />
+        <TutorialVideoModal />
         <Script 
           src="https://checkout.razorpay.com/v1/checkout.js" 
           strategy="lazyOnload"
