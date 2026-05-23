@@ -79,7 +79,8 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
   const getSkillIndexConfig = () => {
     const grade = studentProfile?.grade ?? 5;
     const index = skillSummary?.skill_index ?? 0;
-    
+    const hasData = skillSummary !== null && skillSummary !== undefined;
+
     // Prefer backend provided values, fallback to client-side logic
     let denominator = skillSummary?.skill_index_max;
     if (denominator === undefined) {
@@ -92,14 +93,20 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
     let status = skillSummary?.skill_index_status;
     let color = "#3B82F6"; // Blue
 
-    if (!status) {
+    const sessionCount = skillSummary?.session_count ?? 0;
+    // Don't show Struggling to students who haven't started yet
+    if (!hasData || (sessionCount === 0 && index === 0)) {
+      status = "Not Started";
+      color = "#9CA3AF"; // Gray
+    } else if (!status) {
       if (index < 0.8) status = "Struggling";
       else if (index > 1.2) status = "Outperforming";
       else status = "At Grade Level";
     }
 
     // Assign color based on status (regardless of where status came from)
-    if (status === "Struggling") color = "#EF4444";
+    if (status === "Not Started") color = "#9CA3AF";
+    else if (status === "Struggling") color = "#EF4444";
     else if (status === "Outperforming") color = "#10B981";
     else color = "#3B82F6";
 
@@ -128,7 +135,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
   const metrics = [
     {
       label: "Overall Mastery Score",
-      value: skillSummary ? `${Math.round(skillSummary.overall_score * 100)}%` : "0%",
+      value: skillSummary?.overall_score != null ? `${Math.round(skillSummary.overall_score * 100)}%` : "0%",
       icon: <Target size={18} />,
       description: "Based on content coverage and session performance across all active subjects.",
       showProgress: true,
@@ -154,7 +161,9 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
       value: skillSummary?.session_count || 0,
       subValue: "this month",
       icon: <CheckCircle2 size={18} />,
-      description: "Your engagement is significantly contributing to your progress. Keep the momentum!",
+      description: (skillSummary?.session_count ?? 0) > 0
+        ? "Your engagement is significantly contributing to your progress. Keep the momentum!"
+        : "Complete your first learning session to start tracking your progress here.",
       showProgress: false
     }
   ];
@@ -233,7 +242,27 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
 
       {/* -- DASHBOARD CONTENT ------------------------------------------------ */}
       <main className="flex-1 px-8 py-10 max-w-7xl mx-auto w-full space-y-12 pb-20">
-        <section className="space-y-4">
+        {/* Empty state for students who haven't completed subject onboarding */}
+        {analyticsSubjects.length === 0 && !isAnalyticsLoading && (
+          <div className="flex flex-col items-center justify-center py-24 space-y-6 text-center">
+            <div className="w-20 h-20 rounded-full bg-[#E5F2E9] flex items-center justify-center text-[#059669]">
+              <BarChart2 size={36} />
+            </div>
+            <div className="space-y-2 max-w-sm">
+              <h3 className="text-xl font-bold text-[#1a3a2a]">No data yet</h3>
+              <p className="text-sm text-[#1a3a2a]/50 leading-relaxed">
+                Complete your English or Mathematics onboarding to start tracking your progress here.
+              </p>
+            </div>
+            <a
+              href="/student"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#059F6D] text-white rounded-2xl text-sm font-bold shadow-lg shadow-[#059F6D]/20 hover:bg-[#048055] transition-colors"
+            >
+              Go to Onboarding
+            </a>
+          </div>
+        )}
+        <section className="space-y-4" style={{ display: analyticsSubjects.length === 0 && !isAnalyticsLoading ? "none" : undefined }}>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {metrics.map((metric, idx) => (
@@ -311,7 +340,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
         </section>
 
         {/* Tab Switcher */}
-        <section className="space-y-8">
+        <section className="space-y-8" style={{ display: analyticsSubjects.length === 0 && !isAnalyticsLoading ? "none" : undefined }}>
           <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-bold text-[#1a3a2a]">

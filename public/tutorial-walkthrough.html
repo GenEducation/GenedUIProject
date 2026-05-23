@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GenEd – How It Works</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  /* ── Reset & Base ─────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #0d1117;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Outer wrapper ───────────────────────────── */
+  .stage-scaler {
+    /* Scales the 900×560 stage to always fit the viewport with 24px padding */
+    width: min(900px, calc(100vw - 24px));
+    aspect-ratio: 900 / 560;
+    position: relative;
+  }
+  .stage {
+    position: absolute; inset: 0;
+    width: 900px; height: 560px;
+    background: #F7F8FC;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,0.7);
+    transform-origin: top left;
+  }
+
+  /* ── Browser chrome bar ──────────────────────── */
+  .chrome {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 36px;
+    background: #1e1e1e;
+    display: flex; align-items: center;
+    padding: 0 14px; gap: 8px;
+    z-index: 1000;
+    border-radius: 16px 16px 0 0;
+  }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; }
+  .dot.y { background: #febc2e; }
+  .dot.g { background: #28c840; }
+  .url-bar {
+    flex: 1; height: 22px; background: #2d2d2d; border-radius: 5px;
+    display: flex; align-items: center; padding: 0 10px;
+    color: #aaa; font-size: 11px; font-family: 'DM Sans', sans-serif;
+    margin: 0 60px;
+    transition: color 0.3s;
+  }
+  .url-bar span { color: #7c9cf5; }
+
+  /* ── App shell ───────────────────────────────── */
+  .app {
+    position: absolute; top: 36px; left: 0; right: 0; bottom: 0;
+    display: flex; overflow: hidden;
+  }
+
+  /* ── Sidebar ─────────────────────────────────── */
+  .sidebar {
+    width: 220px; min-width: 220px;
+    background: #1C2333;
+    display: flex; flex-direction: column;
+    padding: 16px 12px;
+    transition: transform 0.4s cubic-bezier(.4,0,.2,1);
+    flex-shrink: 0;
+  }
+  .sidebar.hidden { transform: translateX(-100%); margin-left: -220px; }
+  .sidebar-logo {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; padding: 0 2px;
+  }
+  .sidebar-ham { color: #c8d1dc; font-size: 16px; cursor: pointer; opacity: 0.7; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 12px;
+    color: #c8d1dc; font-size: 13.5px; font-weight: 500;
+    margin-bottom: 2px; cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .nav-item.active { background: rgba(255,255,255,0.1); color: #fff; font-weight: 700; }
+  .nav-item .dot-active {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #8B7FE8; margin-left: auto;
+  }
+  .nav-icon { font-size: 17px; width: 22px; text-align: center; }
+  .sidebar-bottom {
+    margin-top: auto; padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .student-chip {
+    display: flex; align-items: center; gap: 10px; padding: 4px 4px;
+  }
+  .avatar-chip {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: linear-gradient(135deg, rgba(91,77,199,0.3), rgba(74,144,217,0.3));
+    display: flex; align-items: center; justify-content: center;
+    color: #8B7FE8; font-weight: 800; font-size: 14px;
+  }
+  .chip-info { flex: 1; }
+  .chip-name { color: #fff; font-size: 13px; font-weight: 600; }
+  .chip-sub { color: #c8d1dc; font-size: 10px; opacity: 0.6; }
+
+  /* ── Main content area ───────────────────────── */
+  .main { flex: 1; overflow: hidden; position: relative; background: #F7F8FC; }
+  .page { position: absolute; inset: 0; overflow-y: auto; padding: 32px 36px 40px; opacity: 1; transition: opacity 0.35s; }
+  .page.hidden { opacity: 0; pointer-events: none; }
+
+  /* ── Page: Home ──────────────────────────────── */
+  .greeting { margin-bottom: 26px; }
+  .greeting h1 {
+    font-family: 'Nunito', sans-serif;
+    font-size: 26px; font-weight: 900; color: #1a2332;
+  }
+  .greeting p { color: #4a5568; font-size: 14px; margin-top: 6px; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 16px;
+    padding: 16px; display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .stat-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .stat-val { font-family: 'Nunito',sans-serif; font-size: 22px; font-weight: 900; color: #1a2332; }
+  .stat-lbl { font-size: 10px; font-weight: 600; color: #94a3b8; margin-top: 2px; }
+
+  .section-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .section-hdr h2 {
+    font-size: 10.5px; font-weight: 800; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: 1.6px;
+  }
+  .section-hdr .see-all { font-size: 12px; color: #5B4DC7; font-weight: 600; cursor: pointer; }
+
+  .subjects-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .subject-card {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 18px;
+    padding: 18px; cursor: pointer; transition: all 0.25s;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.04);
+  }
+  .subject-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(91,77,199,0.1); }
+  .subject-card.highlight { border-color: rgba(91,77,199,0.5); box-shadow: 0 8px 28px rgba(91,77,199,0.18); transform: translateY(-2px); }
+  .subj-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .subj-icon {
+    width: 44px; height: 44px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+  }
+  .subj-name { font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 800; color: #1a2332; }
+  .subj-meta { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .progress-bar {
+    height: 7px; border-radius: 10px; background: #e2e8f0; overflow: hidden; margin-bottom: 12px;
+  }
+  .progress-fill { height: 100%; border-radius: 10px; transition: width 1s ease; }
+  .subj-btn {
+    width: 100%; padding: 9px 0; border-radius: 11px;
+    border: 1px solid rgba(91,77,199,0.25); background: transparent;
+    color: #5B4DC7; font-size: 12.5px; font-weight: 700;
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+  }
+  .subj-btn:hover { background: #5B4DC7; color: #fff; border-color: transparent; }
+  .subj-btn.active { background: #5B4DC7; color: #fff; border-color: transparent; }
+
+  /* ── Page: Profile ───────────────────────────── */
+  .profile-header-row {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 28px;
+  }
+  .back-btn {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: #fff; border: 1px solid #e2e8f0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px; color: #4a5568;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04); transition: all 0.2s;
+  }
+  .back-btn:hover { background: #f0f0f0; }
+  .profile-title { font-family: 'Nunito', sans-serif; font-size: 22px; font-weight: 900; color: #1a2332; }
+
+  .profile-card {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 22px;
+    padding: 22px 24px; margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  }
+  .card-section-hdr {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+  }
+  .card-section-hdr span { font-size: 13px; }
+  .card-section-hdr h3 {
+    font-size: 10px; font-weight: 800; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: 1.4px;
+  }
+
+  .partner-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+  }
+  .partner-row:last-child { border-bottom: none; }
+  .partner-logo {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, #042E5C, #0a4a8a);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 10px; font-weight: 800;
+  }
+  .partner-name { font-size: 13px; font-weight: 600; color: #1a2332; }
+  .partner-sub { font-size: 10px; color: #94a3b8; }
+  .partner-status {
+    margin-left: auto; font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .status-pending { background: #fff7ed; color: #f97316; }
+  .status-approved { background: #ecfdf5; color: #059669; }
+
+  .add-partner-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 12px;
+  }
+  .partner-select {
+    flex: 1; padding: 10px 14px; border-radius: 12px;
+    border: 1px solid #e2e8f0; background: #f8fafc;
+    font-size: 13px; color: #1a2332; font-family: 'DM Sans', sans-serif;
+    outline: none; transition: border-color 0.2s;
+  }
+  .partner-select:focus { border-color: #5B4DC7; }
+  .send-btn {
+    padding: 10px 20px; border-radius: 12px;
+    background: #5B4DC7; color: #fff;
+    font-size: 13px; font-weight: 700; border: none;
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .send-btn:hover { background: #4a3db0; }
+  .send-btn.sending { background: #94a3b8; }
+  .send-btn.sent { background: #059F6D; }
+
+  .parent-input-row {
+    display: flex; align-items: center; gap: 10px; margin-top: 8px;
+  }
+  .parent-input {
+    flex: 1; padding: 10px 14px; border-radius: 12px;
+    border: 1px solid #e2e8f0; background: #f8fafc;
+    font-size: 13px; color: #1a2332; font-family: 'DM Sans', sans-serif;
+    outline: none;
+  }
+  .add-btn {
+    padding: 10px 16px; border-radius: 12px;
+    background: #2D6A4F; color: #fff;
+    font-size: 13px; font-weight: 700; border: none;
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Page: Chat ──────────────────────────────── */
+  .chat-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 24px; background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .chat-subj-icon {
+    width: 38px; height: 38px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+  }
+  .chat-title { font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 800; color: #1a2332; }
+  .chat-sub { font-size: 11px; color: #94a3b8; }
+
+  .chat-page { padding: 0; display: flex; flex-direction: column; height: 100%; }
+  .chat-messages { flex: 1; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+
+  .msg { display: flex; gap: 10px; max-width: 80%; }
+  .msg.ai { align-self: flex-start; }
+  .msg.student { align-self: flex-end; flex-direction: row-reverse; }
+  .msg-avatar {
+    width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .msg-avatar.ai-av { background: linear-gradient(135deg, #EBF3FB, #D4E6F7); }
+  .msg-avatar.stu-av { background: linear-gradient(135deg, rgba(91,77,199,0.2), rgba(74,144,217,0.2)); color: #8B7FE8; font-weight: 800; font-size: 13px; }
+  .bubble {
+    padding: 12px 16px; border-radius: 16px;
+    font-size: 13.5px; line-height: 1.6; color: #1a2332;
+  }
+  .bubble.ai-bubble {
+    background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 4px 16px 16px 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .bubble.stu-bubble {
+    background: linear-gradient(135deg, #5B4DC7, #4A90D9);
+    color: #fff; border-radius: 16px 4px 16px 16px;
+  }
+  .bubble .hi { font-weight: 700; }
+  .bubble .chapter-pill {
+    display: inline-block; margin-top: 8px;
+    background: #EBF3FB; color: #4A90D9;
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .bubble .chapter-pill:hover { background: #4A90D9; color: #fff; }
+  .bubble .chapter-pill.selected { background: #5B4DC7; color: #fff; }
+
+  .chat-input-area {
+    padding: 14px 24px; background: #fff;
+    border-top: 1px solid #e2e8f0;
+    display: flex; gap: 10px; align-items: flex-end;
+  }
+  .chat-input {
+    flex: 1; padding: 11px 16px; border-radius: 14px;
+    border: 1.5px solid #e2e8f0; background: #f8fafc;
+    font-size: 13.5px; color: #1a2332; font-family: 'DM Sans', sans-serif;
+    outline: none; resize: none; transition: border-color 0.2s;
+    min-height: 44px; max-height: 100px;
+  }
+  .chat-input:focus { border-color: #5B4DC7; }
+  .send-icon-btn {
+    width: 44px; height: 44px; border-radius: 14px;
+    background: linear-gradient(135deg, #5B4DC7, #4A90D9);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 18px; transition: all 0.2s;
+  }
+  .send-icon-btn:hover { transform: scale(1.06); }
+
+  /* ── Cursor ──────────────────────────────────── */
+  .cursor {
+    position: absolute; width: 20px; height: 20px; pointer-events: none;
+    z-index: 9999; transition: top 0.5s cubic-bezier(.4,0,.2,1), left 0.5s cubic-bezier(.4,0,.2,1);
+  }
+  .cursor svg { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
+  .cursor-ring {
+    position: absolute; inset: -6px;
+    border: 2px solid rgba(91,77,199,0.5); border-radius: 50%;
+    animation: ring-pulse 1s ease-in-out infinite;
+    opacity: 0;
+  }
+  @keyframes ring-pulse {
+    0%   { transform: scale(0.7); opacity: 0.8; }
+    100% { transform: scale(2);   opacity: 0; }
+  }
+  .cursor-click .cursor-ring { animation: none; opacity: 0; }
+  .cursor.clicking { animation: cursor-click-anim 0.2s ease; }
+  @keyframes cursor-click-anim {
+    0%  { transform: scale(1); }
+    40% { transform: scale(0.78); }
+    100%{ transform: scale(1); }
+  }
+
+  /* ── Tooltip label ───────────────────────────── */
+  .tooltip-label {
+    position: absolute; z-index: 9998;
+    background: #1C2333; color: #fff;
+    font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+    padding: 6px 12px; border-radius: 8px; white-space: nowrap;
+    opacity: 0; transform: translateY(4px);
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+  }
+  .tooltip-label.show { opacity: 1; transform: translateY(0); }
+  .tooltip-label::before {
+    content: ''; position: absolute; top: -5px; left: 14px;
+    border: 5px solid transparent; border-bottom-color: #1C2333;
+    border-top: none;
+  }
+
+  /* ── Progress dots ───────────────────────────── */
+  .progress-dots {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px; z-index: 500;
+  }
+  .pdot {
+    width: 6px; height: 6px; border-radius: 3px;
+    background: rgba(91,77,199,0.2); transition: all 0.3s;
+  }
+  .pdot.active { background: #5B4DC7; width: 20px; }
+
+  /* ── Modal overlay ───────────────────────────── */
+  .modal-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.3); backdrop-filter: blur(4px);
+    z-index: 800; display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: all; }
+  .modal-box {
+    background: #fff; border-radius: 24px; padding: 36px 32px;
+    width: 340px; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.35s cubic-bezier(.4,0,.2,1);
+  }
+  .modal-overlay.show .modal-box { transform: scale(1) translateY(0); }
+  .modal-icon {
+    width: 60px; height: 60px; border-radius: 18px; margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: center; font-size: 28px;
+  }
+  .modal-title { font-family: 'Nunito', sans-serif; font-size: 18px; font-weight: 900; color: #1a2332; margin-bottom: 8px; }
+  .modal-body { font-size: 13px; color: #4a5568; line-height: 1.6; margin-bottom: 24px; }
+  .modal-cta {
+    width: 100%; padding: 13px; border-radius: 14px;
+    background: #059F6D; color: #fff; font-weight: 800; font-size: 14px;
+    border: none; cursor: pointer; font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Typing indicator ────────────────────────── */
+  .typing-dots { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
+  .typing-dots span {
+    width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;
+    animation: typing 1.2s ease-in-out infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing {
+    0%,60%,100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-5px); opacity: 1; }
+  }
+
+  /* ── Highlight ring ──────────────────────────── */
+  .highlight-ring {
+    position: absolute; border-radius: 12px; pointer-events: none;
+    border: 2px solid #5B4DC7; z-index: 900;
+    opacity: 0; transition: opacity 0.3s;
+    box-shadow: 0 0 0 4px rgba(91,77,199,0.15);
+  }
+  .highlight-ring.show { opacity: 1; }
+
+  /* ── Scroll indicator ────────────────────────── */
+  .scroll-hint {
+    position: absolute; right: 14px;
+    background: #5B4DC7; color: #fff;
+    font-size: 11px; font-weight: 700;
+    padding: 6px 12px; border-radius: 20px;
+    display: flex; align-items: center; gap: 6px;
+    z-index: 900; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .scroll-hint.show { opacity: 1; }
+
+  /* ── Chapter select pills ────────────────────── */
+  .chapter-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .ch-pill {
+    padding: 6px 14px; border-radius: 20px;
+    border: 1.5px solid #e2e8f0; background: #f8fafc;
+    font-size: 12px; font-weight: 600; color: #4a5568;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .ch-pill:hover { border-color: #5B4DC7; color: #5B4DC7; }
+  .ch-pill.chosen { background: #5B4DC7; border-color: #5B4DC7; color: #fff; }
+
+  /* ── End screen ──────────────────────────────── */
+  .end-screen {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, #042E5C, #0a4a8a);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 2000; opacity: 0; pointer-events: none;
+    transition: opacity 0.6s;
+  }
+  .end-screen.show { opacity: 1; pointer-events: all; }
+  .end-logo { font-family: 'Nunito', sans-serif; font-size: 36px; font-weight: 900; color: #fff; margin-bottom: 10px; }
+  .end-sub { color: rgba(255,255,255,0.65); font-size: 15px; margin-bottom: 36px; }
+  .end-restart {
+    padding: 14px 36px; border-radius: 16px;
+    background: #059F6D; color: #fff;
+    font-weight: 800; font-size: 15px; border: none;
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s; box-shadow: 0 8px 24px rgba(5,159,109,0.35);
+  }
+  .end-restart:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(5,159,109,0.4); }
+
+  /* ── Captions ────────────────────────────────── */
+  .caption-bar {
+    position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%);
+    background: rgba(28,35,51,0.92); color: #fff;
+    font-size: 13px; font-weight: 500; line-height: 1.5;
+    padding: 8px 20px; border-radius: 20px; white-space: nowrap;
+    z-index: 3000; opacity: 0; transition: opacity 0.4s;
+    pointer-events: none;
+    backdrop-filter: blur(6px);
+    max-width: 700px; text-align: center; white-space: normal;
+  }
+  .caption-bar.show { opacity: 1; }
+
+  /* ── Scrollable profile area ─────────────────── */
+  .profile-scroll { overflow-y: auto; height: 100%; }
+</style>
+</head>
+<body>
+
+<div class="stage-scaler" id="stageScaler"><div class="stage" id="stage">
+  <!-- Browser chrome -->
+  <div class="chrome">
+    <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+    <div class="url-bar" id="urlBar"><span>gened.app</span>/student</div>
+  </div>
+
+  <!-- App shell -->
+  <div class="app">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <img src="/Logo.svg" alt="GenEd" style="height:28px;width:auto;filter:brightness(0) invert(1);" />
+        <div class="sidebar-ham">☰</div>
+      </div>
+      <nav>
+        <div class="nav-item active" id="navHome"><span class="nav-icon">🏠</span> Home <div class="dot-active"></div></div>
+        <div class="nav-item" id="navPractice"><span class="nav-icon">🎯</span> Practice</div>
+        <div class="nav-item" id="navMe"><span class="nav-icon">😊</span> Me</div>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="student-chip">
+          <div class="avatar-chip">A</div>
+          <div class="chip-info">
+            <div class="chip-name">Aryan</div>
+            <div class="chip-sub">Grade 9 · CBSE</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="main" id="main">
+
+      <!-- ════ PAGE: HOME ════ -->
+      <div class="page" id="pageHome">
+        <div class="greeting">
+          <h1>Good morning, Aryan! 👋</h1>
+          <p>What would you like to learn today?</p>
+        </div>
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#FFF3DC;">🔥</div>
+            <div><div class="stat-val">3</div><div class="stat-lbl">Day Streak</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#EBF3FB;">📚</div>
+            <div><div class="stat-val">12</div><div class="stat-lbl">Sessions</div></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#E8F5EF;">⭐</div>
+            <div><div class="stat-val">7</div><div class="stat-lbl">Best Streak</div></div>
+          </div>
+        </div>
+        <div class="section-hdr">
+          <h2>My Subjects</h2>
+          <span class="see-all">See all (4) →</span>
+        </div>
+        <div class="subjects-grid">
+          <div class="subject-card" id="subjectMath">
+            <div class="subj-header">
+              <div class="subj-icon" style="background:#E8F5EF;">🧮</div>
+              <div>
+                <div class="subj-name">Mathematics</div>
+                <div class="subj-meta">Grade 9 · 6 chapters</div>
+              </div>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:42%;background:linear-gradient(90deg,rgba(45,106,79,0.7),#2D6A4F)"></div></div>
+            <button class="subj-btn" id="mathBtn">Start learning →</button>
+          </div>
+          <div class="subject-card" id="subjectEnglish">
+            <div class="subj-header">
+              <div class="subj-icon" style="background:#EBF3FB;">📖</div>
+              <div>
+                <div class="subj-name">English</div>
+                <div class="subj-meta">Grade 9 · 5 chapters</div>
+              </div>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:65%;background:linear-gradient(90deg,rgba(74,144,217,0.7),#4A90D9)"></div></div>
+            <button class="subj-btn" style="color:#4A90D9;border-color:rgba(74,144,217,0.25);">Start learning →</button>
+          </div>
+        </div>
+        <div class="section-hdr">
+          <h2>Recent Sessions</h2>
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+          <div class="subj-icon" style="background:#E8F5EF;width:38px;height:38px;font-size:18px;border-radius:11px;flex-shrink:0;">🧮</div>
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:14px;color:#1a2332;">Triangles &amp; Congruence</div>
+            <div style="font-size:11px;color:#94a3b8;">Mathematics · 2h ago</div>
+          </div>
+          <div style="color:#cbd5e1;font-size:20px;">›</div>
+        </div>
+      </div>
+
+      <!-- ════ PAGE: PROFILE ════ -->
+      <div class="page hidden" id="pageProfile">
+        <div class="profile-scroll" id="profileScroll">
+          <div class="profile-header-row">
+            <div class="back-btn" id="backBtn">←</div>
+            <div class="profile-title">My Profile</div>
+          </div>
+
+          <!-- Profile card -->
+          <div class="profile-card">
+            <div class="card-section-hdr"><span>👤</span><h3>Account</h3></div>
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div style="width:54px;height:54px;border-radius:16px;background:linear-gradient(135deg,rgba(91,77,199,0.2),rgba(74,144,217,0.2));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#8B7FE8;font-family:'Nunito',sans-serif;">A</div>
+              <div>
+                <div style="font-weight:700;font-size:15px;color:#1a2332;">Aryan Sharma</div>
+                <div style="font-size:12px;color:#94a3b8;margin-top:3px;">aryan@student.com · Grade 9 · CBSE</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Partners card -->
+          <div class="profile-card" id="partnersCard">
+            <div class="card-section-hdr"><span>🏫</span><h3>School Partners</h3></div>
+            <div class="partner-row">
+              <div class="partner-logo">GA</div>
+              <div>
+                <div class="partner-name">GenEd Admin</div>
+                <div class="partner-sub">Default curriculum partner</div>
+              </div>
+              <div class="partner-status status-approved">✓ Approved</div>
+            </div>
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9;">
+              <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;">Add a School Partner</div>
+              <div class="add-partner-row" id="addPartnerRow">
+                <select class="partner-select" id="partnerSelectEl">
+                  <option value="">Select your school…</option>
+                  <option value="delhi">Delhi Public School</option>
+                  <option value="kendriya">Kendriya Vidyalaya</option>
+                  <option value="ryan">Ryan International</option>
+                </select>
+                <button class="send-btn" id="sendRequestBtn">Send Request</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Guardian card -->
+          <div class="profile-card">
+            <div class="card-section-hdr"><span>👨‍👩‍👧</span><h3>Guardian Access</h3></div>
+            <p style="font-size:12.5px;color:#4a5568;margin-bottom:12px;">Add your parent's email so they can track your progress.</p>
+            <div class="parent-input-row">
+              <input class="parent-input" type="email" placeholder="parent@email.com" />
+              <button class="add-btn">+ Add</button>
+            </div>
+          </div>
+
+          <!-- Badges card -->
+          <div class="profile-card">
+            <div class="card-section-hdr"><span>🏅</span><h3>Achievements</h3></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+              <div style="text-align:center;padding:12px 6px;border-radius:14px;background:rgba(91,77,199,0.06);border:1.5px solid rgba(91,77,199,0.15);">
+                <div style="font-size:22px;margin-bottom:6px;">🎯</div>
+                <div style="font-size:10px;font-weight:700;color:#5B4DC7;">First Session</div>
+              </div>
+              <div style="text-align:center;padding:12px 6px;border-radius:14px;background:rgba(240,173,78,0.08);border:1.5px solid rgba(240,173,78,0.2);">
+                <div style="font-size:22px;margin-bottom:6px;">🔥</div>
+                <div style="font-size:10px;font-weight:700;color:#F0AD4E;">3-Day Streak</div>
+              </div>
+              <div style="text-align:center;padding:12px 6px;border-radius:14px;background:#f8fafc;border:1.5px solid #e2e8f0;opacity:0.55;filter:grayscale(0.7);">
+                <div style="font-size:22px;margin-bottom:6px;">🏆</div>
+                <div style="font-size:10px;font-weight:700;color:#94a3b8;">Quiz Champ 🔒</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ PAGE: CHAT ════ -->
+      <div class="page hidden" id="pageChat" style="padding:0;display:flex;flex-direction:column;">
+        <div class="chat-header">
+          <div class="back-btn" id="chatBackBtn">←</div>
+          <div class="chat-subj-icon" style="background:#E8F5EF;">🧮</div>
+          <div>
+            <div class="chat-title">Mathematics Agent</div>
+            <div class="chat-sub">Grade 9 · Chapter selection</div>
+          </div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+          <!-- AI welcome message – injected by JS -->
+        </div>
+        <div class="chat-input-area">
+          <textarea class="chat-input" id="chatInputField" placeholder="Type a chapter or topic…" rows="1"></textarea>
+          <button class="send-icon-btn">➤</button>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /app -->
+
+  <!-- Cursor -->
+  <div class="cursor" id="cursor" style="top:220px;left:450px;">
+    <div class="cursor-ring"></div>
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M4 2L16 10L10 11.5L7 17L4 2Z" fill="white" stroke="#1C2333" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>
+  </div>
+
+  <!-- Tooltip label -->
+  <div class="tooltip-label" id="tooltip">Click here</div>
+
+  <!-- Progress dots -->
+  <div class="progress-dots" id="progressDots">
+    <div class="pdot active" id="pd0"></div>
+    <div class="pdot" id="pd1"></div>
+    <div class="pdot" id="pd2"></div>
+    <div class="pdot" id="pd3"></div>
+    <div class="pdot" id="pd4"></div>
+    <div class="pdot" id="pd5"></div>
+  </div>
+
+  <!-- Modal overlay -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box">
+      <div class="modal-icon" style="background:#ecfdf5;"><span>✅</span></div>
+      <div class="modal-title">Request Sent!</div>
+      <div class="modal-body">Your partner request has been sent successfully. Once approved, their subjects will appear in your Home screen.</div>
+      <button class="modal-cta" id="modalCta">Got it 🎉</button>
+    </div>
+  </div>
+
+  <!-- Caption bar -->
+  <div class="caption-bar" id="caption"></div>
+
+  <!-- End screen -->
+  <div class="end-screen" id="endScreen">
+    <img src="/Favicon1.jpg" alt="GenEd" style="width:72px;height:72px;border-radius:18px;margin-bottom:16px;object-fit:cover;" />
+    <div class="end-logo">You're all set!</div>
+    <div class="end-sub">Start your learning journey with GenEd</div>
+    <div style="display:flex;gap:12px;align-items:center;">
+      <button class="end-restart" id="restartBtn">Watch Again ↺</button>
+      <button id="endCloseBtn" style="padding:14px 28px;border-radius:16px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);font-weight:700;font-size:15px;border:1.5px solid rgba(255,255,255,0.2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;backdrop-filter:blur(4px);"
+        onmouseover="this.style.background='rgba(255,255,255,0.18)';this.style.color='#fff'"
+        onmouseout="this.style.background='rgba(255,255,255,0.1)';this.style.color='rgba(255,255,255,0.75)'">
+        Close ✕
+      </button>
+    </div>
+  </div>
+</div><!-- /stage --></div><!-- /stage-scaler -->
+
+<script>
+/* ═════════════════════════════════════════════
+   ANIMATION ENGINE
+   Each "scene" describes what to do and when.
+   ═════════════════════════════════════════════ */
+
+/* ── Responsive scaler ──────────────────────────── */
+function scaleStage() {
+  const scaler = document.getElementById('stageScaler');
+  const stage  = document.getElementById('stage');
+  const scale  = scaler.offsetWidth / 900;
+  stage.style.transform = `scale(${scale})`;
+}
+scaleStage();
+window.addEventListener('resize', scaleStage);
+
+const $ = id => document.getElementById(id);
+const cursor  = $('cursor');
+const tooltip = $('tooltip');
+const caption = $('caption');
+
+let currentScene = 0;
+let sceneTimer = null;
+
+/* ── Helpers ──────────────────────────────────── */
+function moveCursor(top, left, cb, duration=550) {
+  cursor.style.transition = `top ${duration}ms cubic-bezier(.4,0,.2,1), left ${duration}ms cubic-bezier(.4,0,.2,1)`;
+  cursor.style.top  = top  + 'px';
+  cursor.style.left = left + 'px';
+  if (cb) setTimeout(cb, duration + 60);
+}
+
+function clickCursor() {
+  cursor.classList.add('clicking');
+  showRing();
+  setTimeout(() => cursor.classList.remove('clicking'), 220);
+}
+
+function showRing() {
+  const ring = cursor.querySelector('.cursor-ring');
+  ring.style.animation = 'none';
+  void ring.offsetWidth;
+  ring.style.animation = 'ring-pulse 0.5s ease-out forwards';
+}
+
+function showTooltip(text, top, left) {
+  tooltip.textContent = text;
+  tooltip.style.top  = top  + 'px';
+  tooltip.style.left = left + 'px';
+  tooltip.classList.add('show');
+}
+function hideTooltip() { tooltip.classList.remove('show'); }
+
+function showCaption(text, dur) {
+  caption.textContent = text;
+  caption.classList.add('show');
+  if (dur) setTimeout(hideCaption, dur);
+}
+function hideCaption() { caption.classList.remove('show'); }
+
+function setDot(n) {
+  document.querySelectorAll('.pdot').forEach((d,i) => {
+    d.classList.toggle('active', i===n);
+  });
+}
+
+function showPage(id) {
+  ['pageHome','pageProfile','pageChat'].forEach(p => {
+    $(p).classList.toggle('hidden', p !== id);
+  });
+}
+
+function setUrl(path) {
+  $('urlBar').innerHTML = `<span>gened.app</span>${path}`;
+}
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ── Typing simulation ──────────────────────── */
+async function typeInto(el, text, speed=55) {
+  el.value = '';
+  el.focus();
+  for(let ch of text) {
+    el.value += ch;
+    await wait(speed);
+  }
+}
+
+/* ── Chat message inject ────────────────────── */
+function addMessage(type, html, delay=0) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const msgs = $('chatMessages');
+      const div = document.createElement('div');
+      div.className = `msg ${type}`;
+      if(type === 'ai') {
+        div.innerHTML = `
+          <div class="msg-avatar ai-av"><img src="/Favicon1.jpg" alt="AI" style="width:22px;height:22px;border-radius:6px;object-fit:cover;" /></div>
+          <div class="bubble ai-bubble">${html}</div>`;
+      } else {
+        div.innerHTML = `
+          <div class="bubble stu-bubble">${html}</div>
+          <div class="msg-avatar stu-av">A</div>`;
+      }
+      div.style.opacity = '0';
+      div.style.transform = 'translateY(10px)';
+      div.style.transition = 'all 0.4s ease';
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+      setTimeout(() => { div.style.opacity='1'; div.style.transform='translateY(0)'; }, 30);
+      resolve(div);
+    }, delay);
+  });
+}
+
+function showTypingIndicator() {
+  const msgs = $('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.id = 'typingIndicator';
+  div.innerHTML = `<div class="msg-avatar ai-av"><img src="/Favicon1.jpg" alt="AI" style="width:22px;height:22px;border-radius:6px;object-fit:cover;" /></div><div class="bubble ai-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function removeTypingIndicator() {
+  const el = $('typingIndicator');
+  if(el) el.remove();
+}
+
+/* ══════════════════════════════════════════════
+   SCENE SEQUENCE
+   ══════════════════════════════════════════════ */
+async function runAnimation() {
+  // ─── SCENE 0: Intro – home page loaded ───
+  setDot(0);
+  showPage('pageHome');
+  setUrl('/student');
+  cursor.style.top  = '320px';
+  cursor.style.left = '500px';
+  await wait(600);
+  showCaption('Welcome to GenEd! Let\'s explore your student portal.', 2800);
+  await wait(3200);
+
+  // ─── SCENE 1: Move cursor to "Me" nav ───
+  setDot(1);
+  hideCaption();
+  showCaption('First, click on your Profile (Me) in the sidebar.');
+  moveCursor(217, 110);  // exact centre of "Me" nav item
+  await wait(600);
+  showTooltip('Click "Me"', 183, 90);
+  await wait(700);
+
+  // Highlight nav item
+  $('navMe').style.background = 'rgba(91,77,199,0.18)';
+  $('navMe').style.color = '#8B7FE8';
+  await wait(400);
+  clickCursor();
+  await wait(200);
+
+  // Switch active nav
+  $('navHome').classList.remove('active');
+  $('navMe').classList.add('active');
+  $('navMe').querySelector('.dot-active') || ($('navMe').innerHTML += '<div class="dot-active"></div>');
+  hideTooltip();
+
+  await wait(350);
+
+  // ─── Navigate to Profile ───
+  showPage('pageProfile');
+  setUrl('/student/profile');
+  showCaption('Your Profile page — manage settings, school partners, and guardian access.');
+  cursor.style.transition = 'none';
+  cursor.style.top  = '300px';
+  cursor.style.left = '600px';
+  await wait(2800);
+  hideCaption();
+
+  // ─── SCENE 2: Scroll down to partners section ───
+  setDot(2);
+  showCaption('Scroll down to find the "Add School Partner" section.');
+  await wait(400);
+  moveCursor(350, 552);  // centre of main content area — just sweeping down visually
+  await wait(700);
+
+  // Animate scroll
+  const ps = $('profileScroll');
+  const scrollTarget = $('partnersCard').offsetTop - 40;
+  let scrollStart = ps.scrollTop;
+  const scrollDur = 900;
+  const startTime = performance.now();
+
+  function animateScroll(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / scrollDur, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    ps.scrollTop = scrollStart + (scrollTarget - scrollStart) * ease;
+    if(progress < 1) requestAnimationFrame(animateScroll);
+  }
+  requestAnimationFrame(animateScroll);
+  await wait(1100);
+  hideCaption();
+
+  // ─── SCENE 3: Select school and send request ───
+  setDot(2);
+  showCaption('Select your school and send a partner request to get access to the curriculum.');
+  moveCursor(262, 483);  // exact centre of partnerSelect dropdown
+  await wait(500);
+
+  // Click on select
+  const sel = $('partnerSelectEl');
+  await wait(400);
+  clickCursor();
+  await wait(250);
+
+  // Simulate selecting an option
+  sel.style.borderColor = '#5B4DC7';
+  sel.value = 'delhi';
+  await wait(400);
+  sel.style.borderColor = '#e2e8f0';
+
+  showCaption('Click "Send Request" to connect with your school.');
+  await wait(500);
+
+  // Move to send button — exact centre of sendRequestBtn
+  moveCursor(262, 760);
+  showTooltip('Send Request', 228, 700);
+  await wait(700);
+  clickCursor();
+  hideTooltip();
+
+  // Button state: sending
+  const sendBtn = $('sendRequestBtn');
+  sendBtn.textContent = 'Sending…';
+  sendBtn.classList.add('sending');
+  hideCaption();
+  await wait(1100);
+
+  // Show success modal
+  sendBtn.textContent = 'Sent ✓';
+  sendBtn.classList.remove('sending');
+  sendBtn.classList.add('sent');
+  $('modalOverlay').classList.add('show');
+  await wait(2200);
+  showCaption('Request sent! Once approved, subjects appear on your Home screen.');
+  await wait(2000);
+  hideCaption();
+
+  // Close modal
+  $('modalOverlay').classList.remove('show');
+  await wait(400);
+
+  // ─── SCENE 4: Navigate back to Home ───
+  setDot(3);
+  showCaption('Now let\'s go back to the Home screen.');
+  // Scroll profile back to top first so the back button is visible
+  const scrollBackDur = 500;
+  const scrollBackStart = ps.scrollTop;
+  const scrollBackStartTime = performance.now();
+  await new Promise(resolve => {
+    function scrollBack(now) {
+      const elapsed = now - scrollBackStartTime;
+      const t = Math.min(elapsed / scrollBackDur, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      ps.scrollTop = scrollBackStart * (1 - ease);
+      if(t < 1) requestAnimationFrame(scrollBack);
+      else resolve();
+    }
+    requestAnimationFrame(scrollBack);
+  });
+  moveCursor(86, 274);  // exact centre of backBtn
+  await wait(500);
+  showTooltip('Go back', 52, 244);
+  await wait(500);
+  clickCursor();
+  hideTooltip();
+  await wait(350);
+
+  // Switch nav back
+  $('navMe').classList.remove('active');
+  $('navHome').classList.add('active');
+  showPage('pageHome');
+  setUrl('/student');
+  ps.scrollTop = 0; // reset profile scroll
+  sendBtn.textContent = 'Send Request';
+  sendBtn.classList.remove('sent');
+  sel.value = '';
+
+  cursor.style.transition = 'none';
+  cursor.style.top  = '300px';
+  cursor.style.left = '600px';
+  await wait(300);
+
+  showCaption('Back on the Home screen. Now let\'s start learning!');
+  await wait(2200);
+  hideCaption();
+
+  // ─── SCENE 5: Click first subject (Mathematics) ───
+  setDot(4);
+  showCaption('Click on Mathematics to open your subject agent.');
+
+  // Scroll home to subjects if needed
+  $('pageHome').scrollTop = 0;
+  await wait(300);
+
+  // Move cursor to "Start learning →" button inside Math card
+  moveCursor(402, 401);  // exact centre of mathBtn
+  await wait(600);
+  $('subjectMath').classList.add('highlight');
+  $('mathBtn').classList.add('active');
+  showTooltip('Open Mathematics', 368, 320);
+  await wait(700);
+  clickCursor();
+  hideTooltip();
+  await wait(300);
+
+  $('subjectMath').classList.remove('highlight');
+
+  // ─── Navigate to chat ───
+  setDot(5);
+  showPage('pageChat');
+  setUrl('/student/chat/new?agent=math');
+
+  // Clear chat
+  $('chatMessages').innerHTML = '';
+  cursor.style.transition = 'none';
+  cursor.style.top  = '380px';
+  cursor.style.left = '600px';
+  await wait(400);
+
+  // ─── SCENE 6: AI welcome message ───
+  showCaption('Your Mathematics Agent greets you and asks what you want to learn!');
+  showTypingIndicator();
+  await wait(1600);
+  removeTypingIndicator();
+
+  await addMessage('ai',
+    `<span class="hi">👋 Hello Aryan, welcome back!</span><br><br>
+    I'm your <strong>Mathematics AI tutor</strong> for Grade 9. I'm here to make learning engaging, clear, and enjoyable for you.<br><br>
+    To get started, which chapter or topic would you like to explore today? You can pick one below or type your own:
+    <div class="chapter-pills" id="chapterPills">
+      <span class="ch-pill" id="pill1">📐 Triangles</span>
+      <span class="ch-pill" id="pill2">📊 Statistics</span>
+      <span class="ch-pill" id="pill3">🔢 Polynomials</span>
+      <span class="ch-pill" id="pill4">📏 Coordinate Geometry</span>
+    </div>`
+  );
+
+  await wait(1000);
+  hideCaption();
+
+  // ─── SCENE 7: Student selects a chapter ───
+  setDot(5);
+  showCaption('The student can tap a chapter pill or type a chapter name.');
+  await wait(600);
+
+  // Move cursor to "Triangles" pill — divide by scale to get unscaled stage coords
+  const pill1 = $('pill1');
+  if(pill1) {
+    const scale = $('stageScaler').offsetWidth / 900;
+    const rect = pill1.getBoundingClientRect();
+    const stageRect = $('stage').getBoundingClientRect();
+    const pillCx = (rect.left + rect.width  / 2 - stageRect.left) / scale;
+    const pillCy = (rect.top  + rect.height / 2 - stageRect.top)  / scale;
+    moveCursor(pillCy, pillCx, null, 700);
+  }
+  await wait(900);
+  // Position tooltip just above wherever the cursor ended up
+  showTooltip('Select chapter', 0, 0);
+  tooltip.style.top  = (parseFloat(cursor.style.top)  - 34) + 'px';
+  tooltip.style.left = (parseFloat(cursor.style.left) - 20) + 'px';
+  await wait(600);
+  clickCursor();
+  hideTooltip();
+
+  if(pill1) {
+    pill1.classList.add('chosen');
+  }
+  await wait(400);
+
+  // Student message bubble
+  await addMessage('student', 'Triangles 📐');
+  await wait(500);
+
+  hideCaption();
+  showCaption('The agent confirms and starts the session on Triangles!');
+
+  showTypingIndicator();
+  await wait(1500);
+  removeTypingIndicator();
+
+  await addMessage('ai',
+    `<strong>Triangles</strong> — great choice! 🎉<br><br>
+    We'll cover <em>congruence criteria, similarity, and the Pythagoras theorem</em>. Shall we start with a quick concept overview, or jump straight into practice problems?`
+  );
+
+  $('chatMessages').scrollTop = $('chatMessages').scrollHeight;
+  await wait(2000);
+  hideCaption();
+
+  // ─── END ───
+  await wait(500);
+  $('endScreen').classList.add('show');
+}
+
+// Close button — notify parent iframe if embedded, otherwise just hide end screen
+$('endCloseBtn').addEventListener('click', () => {
+  // If embedded in the React TutorialVideoModal, tell it to close
+  try { window.parent.postMessage('tutorial:close', '*'); } catch(e) {}
+  // In standalone mode just hide the end screen
+  $('endScreen').classList.remove('show');
+});
+
+// Restart
+$('restartBtn').addEventListener('click', () => {
+  $('endScreen').classList.remove('show');
+  $('navMe').classList.remove('active');
+  const dotEl = $('navMe').querySelector('.dot-active');
+  if(dotEl) dotEl.remove();
+  $('navHome').classList.add('active');
+  $('mathBtn').classList.remove('active');
+  hideCaption(); hideTooltip();
+  setTimeout(() => runAnimation(), 300);
+});
+
+// Start on load
+window.addEventListener('load', () => {
+  setTimeout(runAnimation, 600);
+});
+</script>
+</body>
+</html>

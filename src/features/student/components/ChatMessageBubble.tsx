@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ThumbsUp, ThumbsDown, Share2, Copy, Check } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import Image from "next/image";
 import { ChatMessage } from "../store/useStudentStore";
 import React, { useState, useEffect } from "react";
@@ -42,15 +42,15 @@ function FigureDescribeBlock({ figureAssetUrl, prompt, directiveId }: {
   return (
     <div className="flex flex-col items-center gap-3 w-full">
       {loading ? (
-        <div className="w-full h-32 bg-[#F0F7FF] rounded-xl animate-pulse" />
+        <div className="w-full h-32 rounded-xl animate-pulse" style={{ background: "#F0EEFF" }} />
       ) : imageUrl ? (
-        <img src={imageUrl} alt="Scene" className="max-w-full rounded-xl shadow-sm" />
+        <img src={imageUrl} alt="Scene" className="max-w-full rounded-xl" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }} />
       ) : (
-        <div className="w-full p-4 bg-[#FFF8E1] text-[#F57F17] rounded-xl text-xs font-medium text-center">
+        <div className="w-full p-4 rounded-xl text-xs font-medium text-center" style={{ background: "#FFF8E1", color: "#D4820A" }}>
           🖼️ Image unavailable
         </div>
       )}
-      <p className="text-sm font-semibold text-[#042E5C]/80 text-center">{prompt}</p>
+      <p style={{ fontSize: 13, fontWeight: 700, color: "#4A5568", textAlign: "center" }}>{prompt}</p>
     </div>
   );
 }
@@ -95,11 +95,10 @@ export const ChatMessageBubble = React.memo(
         {/* AI avatar */}
         {!isUser && (
           <div className="relative flex-shrink-0 mt-0.5">
-            {/* The Gemini-style spinner ring */}
             {isStreaming && (
-              <div className="absolute -inset-[3px] rounded-full border-[2px] border-transparent border-t-emerald-500 border-r-emerald-500/20 animate-spin" style={{ animationDuration: '1s' }} />
+              <div className="absolute -inset-[3px] rounded-full border-[2px] border-transparent border-t-[#5B4DC7] border-r-[#5B4DC7]/20 animate-spin" style={{ animationDuration: '1s' }} />
             )}
-            <div className="w-10 h-10 rounded-full overflow-hidden relative z-10 bg-white border border-[#042E5C]/10">
+            <div className="w-10 h-10 rounded-full overflow-hidden relative z-10 bg-white" style={{ border: "1px solid #E2E8F0" }}>
               <Image src="/Favicon1.jpg" alt="AI Agent" width={40} height={40} className="object-cover" />
             </div>
           </div>
@@ -109,16 +108,21 @@ export const ChatMessageBubble = React.memo(
           {/* Message Content Bin */}
           {(isStreaming || message.statusText || message.text.length > 0 || (message.elements && message.elements.length > 0)) && (
             <div
-              className={`px-6 py-5 rounded-[2rem] leading-relaxed text-[15px] transition-all duration-300 w-full ${
-                isUser
-                  ? "bg-[#042E5C] text-white rounded-tr-md shadow-md shadow-[#042E5C]/5"
-                  : "bg-[#F8F9FA] text-[#042E5C] rounded-tl-md border border-[#042E5C]/6"
-              }`}
+              className="px-4 py-3 sm:px-6 sm:py-5 leading-relaxed text-[13px] sm:text-[15px] transition-all duration-300 w-full"
+              style={{
+                borderRadius: "1.75rem",
+                borderTopRightRadius: isUser ? 6 : undefined,
+                borderTopLeftRadius: !isUser ? 6 : undefined,
+                background: isUser ? "#5B4DC7" : "#FFFFFF",
+                color: isUser ? "#FFFFFF" : "#1A202C",
+                border: isUser ? "none" : "1px solid #E2E8F0",
+                boxShadow: isUser ? "0 2px 10px rgba(91,77,199,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
+              }}
             >
               {message.text.length === 0 && !message.statusText && !message.elements && isStreaming ? (
-                <span className="text-[#042E5C]/40 animate-pulse font-medium">Processing...</span>
+                <span style={{ color: "#94A3B8", fontWeight: 500 }} className="animate-pulse">Processing...</span>
               ) : message.statusText && message.text.length === 0 && (!message.elements || message.elements.length === 0) ? (
-                <span className="text-[#042E5C]/40 animate-pulse font-medium">
+                <span style={{ color: "#94A3B8", fontWeight: 500 }} className="animate-pulse">
                   {message.statusText}
                 </span>
               ) : message.elements && message.elements.length > 0 ? (
@@ -218,8 +222,8 @@ export const ChatMessageBubble = React.memo(
                     return null;
                   })}
                   {message.toolStatus && isStreaming && (
-                    <div className="flex items-center gap-3 px-4 py-3 bg-[#042E5C]/5 text-[#042E5C]/60 text-[12px] font-bold rounded-2xl animate-pulse mt-3 border border-[#042E5C]/5">
-                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" />
+                    <div className="flex items-center gap-3 animate-pulse mt-3" style={{ padding: "10px 16px", background: "#5B4DC708", border: "1px solid #5B4DC715", borderRadius: 16, fontSize: 12, fontWeight: 700, color: "#5B4DC7" }}>
+                      <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#00B894", animation: "bounce 1s infinite" }} />
                       {message.toolStatus}
                     </div>
                   )}
@@ -232,10 +236,10 @@ export const ChatMessageBubble = React.memo(
               {message.actions && message.actions.length > 0 && (
                 <div className="mt-4">
                   {message.actions.map((action, idx) => (
-                    <ActivityRenderer 
-                      key={`${action.activity_id}-${idx}`} 
-                      action={action} 
-                      isCompleted={!isStreaming && idx === 0 && !!(message.text && message.sender === 'ai')} 
+                    <ActivityRenderer
+                      key={`${action.activity_id}-${idx}`}
+                      action={action}
+                      isCompleted={!isStreaming && idx === 0 && !!(message.text && message.sender === 'ai')}
                     />
                   ))}
                 </div>
@@ -244,13 +248,14 @@ export const ChatMessageBubble = React.memo(
           )}
 
           <div className="flex items-center gap-3 px-2">
-            <span className="text-[11px] font-bold text-[#042E5C]/20 uppercase tracking-wider">{message.timestamp}</span>
+            <span style={{ fontSize: "clamp(9px, 2vw, 11px)", fontWeight: 700, color: "#CBD5E1", textTransform: "uppercase", letterSpacing: "0.06em" }}>{message.timestamp}</span>
             {isUser && (
-              <button 
+              <button
                 onClick={handleCopy}
-                className="w-7 h-7 rounded-lg hover:bg-[#F8F9FA] flex items-center justify-center text-[#042E5C]/30 hover:text-[#042E5C] transition-all"
+                style={{ width: 28, height: 28, borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8" }}
+                className="transition-all hover:bg-[#F7F8FC] hover:text-[#5B4DC7]"
               >
-                {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                {copied ? <Check size={14} className="text-[#00B894]" /> : <Copy size={14} />}
               </button>
             )}
           </div>
@@ -265,7 +270,9 @@ export const ChatMessageBubble = React.memo(
                     <button
                       key={opt}
                       onClick={() => onOptionSelect?.(opt)}
-                      className="text-[13px] font-bold text-[#042E5C] bg-white border border-[#042E5C]/12 rounded-full px-5 py-2 hover:bg-[#042E5C] hover:text-white hover:border-[#042E5C] transition-all shadow-sm"
+                      style={{ fontSize: "clamp(11px, 2.5vw, 13px)", fontWeight: 700, color: "#5B4DC7", background: "#FFFFFF", border: "1.5px solid #5B4DC720", borderRadius: 20, padding: "5px 14px", cursor: "pointer", transition: "all 0.2s", fontFamily: "'DM Sans', sans-serif" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#5B4DC7"; (e.currentTarget as HTMLButtonElement).style.color = "#FFFFFF"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#FFFFFF"; (e.currentTarget as HTMLButtonElement).style.color = "#5B4DC7"; }}
                     >
                       {opt}
                     </button>
@@ -273,22 +280,14 @@ export const ChatMessageBubble = React.memo(
                 </div>
               )}
 
-              {/* Feedback row */}
+              {/* Feedback row — clipboard only */}
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={handleCopy}
-                  className="w-8 h-8 rounded-xl hover:bg-[#F4F3EE] flex items-center justify-center text-[#042E5C]/30 hover:text-[#042E5C] transition-all"
+                  style={{ width: 32, height: 32, borderRadius: 10, background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", transition: "all 0.2s" }}
+                  className="hover:bg-[#F7F8FC] hover:text-[#5B4DC7]"
                 >
-                  {copied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
-                </button>
-                <button className="w-8 h-8 rounded-xl hover:bg-[#F4F3EE] flex items-center justify-center text-[#042E5C]/30 hover:text-[#042E5C] transition-all">
-                  <ThumbsUp size={15} />
-                </button>
-                <button className="w-8 h-8 rounded-xl hover:bg-[#F4F3EE] flex items-center justify-center text-[#042E5C]/30 hover:text-[#042E5C] transition-all">
-                  <ThumbsDown size={15} />
-                </button>
-                <button className="w-8 h-8 rounded-xl hover:bg-[#F4F3EE] flex items-center justify-center text-[#042E5C]/30 hover:text-[#042E5C] transition-all">
-                  <Share2 size={15} />
+                  {copied ? <Check size={15} className="text-[#00B894]" /> : <Copy size={15} />}
                 </button>
               </div>
             </div>

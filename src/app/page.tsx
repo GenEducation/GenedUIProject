@@ -31,8 +31,12 @@ export default function HomePage() {
             username: profile.username,
             email: profile.email,
             role: profile.role,
+            name: profile.name,
             grade: profile.grade,
             school_board: profile.school_board,
+            ai_name: profile.ai_name,
+            plan: profile.plan,
+            plan_expires_at: profile.plan_expires_at,
           });
         } else if (role === "parent") {
           useParentStore.getState().setParentProfile({

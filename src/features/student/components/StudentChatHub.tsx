@@ -3,15 +3,51 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  useStudentStore, 
+import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
+import {
+  useStudentStore,
 } from "../store/useStudentStore";
 import { StudentChatInput } from "./StudentChatInput";
-import { AlertCircle, ChevronRight, Clock, Bot, Menu, Info } from "lucide-react";
+import { ChevronRight, Clock, Bot, Menu, Flame, BarChart2 } from "lucide-react";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
-import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
+import { ActivityHeatmap } from "./ActivityHeatmap";
+import { SUBJECT_CONFIG, Subject } from "@/constants/subjectConfig";
+import { EnglishIcon } from "@/components/icons/EnglishIcon";
+import { MathematicsIcon } from "@/components/icons/MathematicsIcon";
+import { ScienceIcon } from "@/components/icons/ScienceIcon";
+import { HindiIcon } from "@/components/icons/HindiIcon";
+
+
+type SubjectKey = "english" | "mathematics" | "science" | "hindi";
+
+const SUBJECT_ICON_MAP: Record<SubjectKey, React.ComponentType<{ size: number; style?: React.CSSProperties }>> = {
+  english: EnglishIcon,
+  mathematics: MathematicsIcon,
+  science: ScienceIcon,
+  hindi: HindiIcon,
+};
+
+function normalizeSubject(subject: string): SubjectKey | null {
+  const lower = (subject ?? "").toLowerCase();
+  if (lower.includes("english")) return "english";
+  if (lower.includes("math")) return "mathematics";
+  if (lower.includes("science")) return "science";
+  if (lower.includes("hindi")) return "hindi";
+  return null;
+}
+
+function resolveSubjectLabel(chat: { subject?: string; title?: string }): string {
+  if (chat.subject) return chat.subject;
+  // Extract from title as fallback
+  const hay = (chat.title ?? "").toLowerCase();
+  if (hay.includes("english")) return "English";
+  if (hay.includes("math")) return "Mathematics";
+  if (hay.includes("science")) return "Science";
+  if (hay.includes("hindi")) return "Hindi";
+  return "Session";
+}
 
 interface StudentChatHubProps {
   toggleSidebar: () => void;
@@ -19,10 +55,9 @@ interface StudentChatHubProps {
 
 export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
   const router = useRouter();
-  const [activeOnboarding, setActiveOnboarding] = useState<{ subject: string; grade: number } | null>(null);
-  const { 
-    studentProfile, 
-    recentChats, 
+  const {
+    studentProfile,
+    recentChats,
     availableAgents,
     fetchSessions,
     fetchAvailableAgents,
@@ -35,37 +70,39 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
     isAgentsLoading,
     logoutStudent,
     onboardingStatus,
-    fetchOnboardingStatus
+    fetchOnboardingStatus,
+    studentStats,
+    fetchStudentStats
   } = useStudentStore();
 
   const { dnaStatus, checkDNAStatus } = useOnboardingStore();
+  const [onboardingModal, setOnboardingModal] = useState<{ subject: string; grade: number } | null>(null);
 
   useEffect(() => {
     if (studentProfile) {
       fetchSessions();
       fetchAvailableAgents();
       fetchOnboardingStatus();
+      fetchStudentStats();
       checkDNAStatus(studentProfile.user_id);
     }
   }, [studentProfile, fetchSessions, fetchAvailableAgents, fetchOnboardingStatus, checkDNAStatus]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return "Good Morning";
-    if (hour >= 12 && hour < 17) return "Good Afternoon";
-    if (hour >= 17 && hour < 21) return "Good Evening";
+    if (hour >= 5 && hour < 12) return "Morning";
+    if (hour >= 12 && hour < 17) return "Afternoon";
+    if (hour >= 17 && hour < 21) return "Evening";
     return "Hi";
   };
 
   const username = studentProfile?.username ?? "Scholar";
   const greeting = getGreeting();
 
-  // Filter for onboarding subjects that are actually PENDING from the API
   const onboardingSubjects = onboardingStatus?.subjects
     ? onboardingStatus.subjects
         .filter(s => s.status === "PENDING")
         .map(s => {
-          // Find the corresponding agent in availableAgents to get icons/details if needed
           const agent = availableAgents.find(a => a.subject === s.subject);
           return agent || { subject: s.subject, agent_id: s.subject, grade: studentProfile?.grade };
         })
@@ -79,9 +116,9 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
     }
     .animate-gradient-text {
       background: linear-gradient(
-        to right, 
+        to right,
         #042E5C,
-        #03b1ed, 
+        #03b1ed,
         #00a866,
         #430163,
         #042E5C
@@ -101,11 +138,11 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
   const { isActive, nextStep, completeAction, getCurrentStep } = useTutorialStore();
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#F4F3EE]/30 overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
       <style>{animateGradientStyle}</style>
-      
-      {/* Mobile-friendly Header */}
-      <header className="lg:hidden flex items-center justify-between px-6 py-4 bg-white border-b border-[#042E5C]/8 flex-shrink-0">
+
+      {/* Mobile header */}
+      <header className="lg:hidden flex items-center px-6 py-4 bg-white flex-shrink-0">
         <button
           onClick={() => {
             toggleSidebar();
@@ -120,209 +157,249 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
         >
           <Menu size={20} />
         </button>
-        <img src="/Logo.svg" alt="GenEd Logo" className="h-6 w-auto" />
-        <div className="w-10" /> {/* Spacer for balance */}
       </header>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-10 sm:space-y-12">
-        
-        {/* 1. Greeting & Onboarding Alert */}
-        <div className="relative space-y-6">
-          <motion.header
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-5 sm:pt-6 pb-24 space-y-8 sm:space-y-10">
+
+          {/* 1. Greeting */}
+          <div className="relative space-y-6">
+            <motion.header
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-3"
+            >
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight animate-gradient-text">
+                {greeting}, {username}!
+              </h1>
+              <p className="text-sm sm:text-base font-bold text-[#042E5C]/50 tracking-tight">
+                You&apos;re on a <span className="text-[#00B894] font-extrabold">{studentStats?.currentStreak ?? 0}-day streak</span>. Ready to keep going?
+              </p>
+            </motion.header>
+
+          </div>
+
+          {/* 2. Stats Row */}
+          <motion.section
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
+            transition={{ duration: 0.2, delay: 0.05 }}
+            className="grid grid-cols-3 gap-3 sm:gap-4"
           >
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight animate-gradient-text">
-              {greeting}, {username}!
-            </h1>
-            <p className="text-base sm:text-xl md:text-2xl font-bold text-[#042E5C]/60 tracking-tight">
-              Where should we start?
-            </p>
-          </motion.header>
+            <StatCard
+              icon={<Flame size={18} />}
+              label="Current Streak"
+              value={`${studentStats?.currentStreak ?? 0} days`}
+              accentColor="#FDCB6E"
+            />
+            <StatCard
+              icon={<BarChart2 size={18} />}
+              label="Total Sessions"
+              value={studentStats?.totalSessions ?? 0}
+              accentColor="#74B9FF"
+            />
+            <StatCard
+              icon={<Flame size={18} />}
+              label="Longest Streak"
+              value={`${studentStats?.longestStreak ?? 0} days`}
+              accentColor="#00B894"
+            />
+          </motion.section>
 
-          {/* Reserved space for onboarding alert to prevent layout shift */}
-          <div className="min-h-[84px] flex flex-col justify-center">
-            {onboardingSubjects.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
-                    <AlertCircle size={20} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-amber-900">Pending Onboarding</p>
-                    <p className="text-xs text-amber-700/70">Complete your onboarding for {onboardingSubjects.map(s => s.subject).join(" & ")}.</p>
-                  </div>
-                </div>
-                <div className="flex gap-2 flex-shrink-0 flex-wrap">
-                  {onboardingSubjects.map(agent => (
-                    <button
-                      key={agent.agent_id}
-                      onClick={() => setActiveOnboarding({ subject: agent.subject, grade: Number(agent.grade) || studentProfile?.grade || 1 })}
-                      className="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition-colors"
-                    >
-                      Start {agent.subject}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </div>
-        </div>
-
-        {/* 2. Recent Chats */}
-        {(isAgentsLoading || hasAgents) && (
+          {/* 3. Activity Heatmap */}
           <motion.section
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            transition={{ duration: 0.2, delay: 0.1 }}
+            className="space-y-3"
+          >
+            <h2 className="text-sm font-extrabold text-[#042E5C]/40 uppercase tracking-widest px-2">
+              Activity
+            </h2>
+            <div className="bg-white rounded-2xl p-5 border border-[#042E5C]/5 shadow-sm">
+              <ActivityHeatmap />
+            </div>
+          </motion.section>
+
+          {/* 4. Quick Start Agents */}
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, delay: 0.15 }}
             className="space-y-4"
           >
             <div className="flex items-center justify-between px-2">
-              <h2 className="text-sm font-extrabold text-[#042E5C]/40 uppercase tracking-widest">Recent Sessions</h2>
+              <h2 className="text-sm font-extrabold text-[#042E5C]/40 uppercase tracking-widest">Quick Start</h2>
+              <button
+                onClick={() => setAgentPickerOpen(true)}
+                className="text-[10px] font-bold text-[#042E5C]/40 hover:text-[#042E5C] uppercase tracking-widest flex items-center gap-1 transition-colors"
+              >
+                All Subjects <ChevronRight size={12} />
+              </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {isSessionsLoading ? (
+            <div className="flex flex-wrap gap-3">
+              {isAgentsLoading ? (
                 [1, 2, 3].map(n => (
-                  <div key={n} className="h-32 bg-white/50 rounded-2xl animate-pulse border border-[#042E5C]/5" />
+                  <div key={n} className="h-14 w-52 bg-white/50 rounded-2xl animate-pulse border border-[#042E5C]/5" />
                 ))
-              ) : recentChats.length > 0 ? (
-                recentChats.slice(0, 3).map((chat, i) => (
-                  <HubCard 
-                    key={chat.id}
-                    title={chat.title || "Untitled Session"}
-                    subtitle={`Last active ${chat.lastActive || "Recently"}`}
-                    icon={<Clock size={18} />}
-                    onClick={() => {
-                      openExistingChat(chat);
-                      router.push(`/student/chat/${chat.id}`);
-                    }}
-                    delay={0.2 + i * 0.05}
-                  />
-                ))
+              ) : availableAgents.length > 0 ? (
+                availableAgents.slice(0, 3).map((agent, i) => {
+                  const subjectKey = normalizeSubject(agent.subject);
+                  const isOnboardingComplete = agent.is_onboarding_complete !== false;
+                  return (
+                    <HubCard
+                      key={agent.agent_id}
+                      title={agent.subject || agent.name}
+                      subtitle={`Grade ${agent.grade}`}
+                      icon={<Bot size={18} />}
+                      subjectKey={subjectKey}
+                      isOnboardingComplete={isOnboardingComplete}
+                      onClick={() => {
+                        openNewChat(agent);
+                        router.push(`/student/chat/new?agentId=${agent.agent_id}`);
+                      }}
+                      onOnboarding={() => {
+                        setOnboardingModal({
+                          subject: agent.subject,
+                          grade: agent.grade ?? studentProfile?.grade ?? 9,
+                        });
+                      }}
+                      delay={0.3 + i * 0.05}
+                    />
+                  );
+                })
               ) : (
-                <div className="col-span-full py-8 text-center bg-white/40 rounded-2xl border border-dashed border-[#042E5C]/10">
-                  <p className="text-xs font-bold text-[#042E5C]/30 uppercase tracking-widest">No recent sessions</p>
+                <div className="col-span-full py-10 text-center bg-white/20 rounded-3xl border-2 border-dashed border-[#042E5C]/5 w-full">
+                  <div className="max-w-xs mx-auto space-y-3">
+                    <Bot size={32} className="mx-auto text-[#042E5C]/20" />
+                    <p className="text-sm font-bold text-[#042E5C]/60">No subjects yet</p>
+                    <p className="text-xs text-[#042E5C]/40 leading-relaxed px-4">
+                      Connect to a school from your <button onClick={() => router.push("/student/profile")} className="underline underline-offset-2 hover:text-[#042E5C]/70 transition-colors">Profile</button> to see your subjects here.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
           </motion.section>
-        )}
-
-        {/* 3. Quick Start Agents */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-4"
-        >
-          <div className="flex items-center justify-between px-2">
-            <h2 className="text-sm font-extrabold text-[#042E5C]/40 uppercase tracking-widest">Quick Start</h2>
-            <button 
-              onClick={() => setAgentPickerOpen(true)}
-              className="text-[10px] font-bold text-[#042E5C]/40 hover:text-[#042E5C] uppercase tracking-widest flex items-center gap-1 transition-colors"
-            >
-              See all agents <ChevronRight size={12} />
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {isAgentsLoading ? (
-              [1, 2, 3].map(n => (
-                <div key={n} className="h-24 bg-white/50 rounded-2xl animate-pulse border border-[#042E5C]/5" />
-              ))
-            ) : availableAgents.length > 0 ? (
-              availableAgents.slice(0, 3).map((agent, i) => (
-                <HubCard 
-                  key={agent.agent_id}
-                  title={agent.name}
-                  subtitle={`${agent.subject} • Grade ${agent.grade}`}
-                  icon={<Bot size={18} />}
-                  onClick={() => {
-                    openNewChat(agent);
-                    router.push(`/student/chat/new?agentId=${agent.agent_id}`);
-                  }}
-                  delay={0.3 + i * 0.05}
-                />
-              ))
-            ) : (
-              <div className="col-span-full py-12 text-center bg-white/20 rounded-3xl border-2 border-dashed border-[#042E5C]/5">
-                <div className="max-w-xs mx-auto space-y-3">
-                  <Bot size={32} className="mx-auto text-[#042E5C]/20" />
-                  <p className="text-sm font-bold text-[#042E5C]/40 uppercase tracking-widest">No agents assigned yet</p>
-                  <p className="text-xs text-[#042E5C]/30 leading-relaxed px-4">Complete your initial onboarding to unlock your personalized learning agents.</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </motion.section>
-
-        {/* 4. Primary Input (Unified with Chat) */}
-        {(isAgentsLoading || hasAgents) && (
-          <motion.section
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4 }}
-            className="relative z-10 max-w-3xl mx-auto w-full"
-          >
-            <RateLimitPrompt 
-              isVisible={isRateLimitHit} 
-              onClose={() => setRateLimitHit(false)} 
-            />
-            <StudentChatInput chatTitle="New Session" isHub={true} />
-          </motion.section>
-        )}
 
         </div>
       </div>
 
-      {/* Subject Onboarding Modal */}
+      {/* Sticky bottom input */}
+      {(isAgentsLoading || hasAgents) && (
+        <div className="flex-shrink-0 px-4 sm:px-6 pb-6 pt-10" style={{ background: "linear-gradient(to bottom, transparent 0%, #ffffff 40%)" }}>
+          <div className="max-w-3xl mx-auto w-full">
+            <RateLimitPrompt
+              isVisible={isRateLimitHit}
+              onClose={() => setRateLimitHit(false)}
+            />
+            <StudentChatInput chatTitle="New Session" isHub={true} />
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding Modal */}
       <AnimatePresence>
-        {activeOnboarding && (
+        {onboardingModal && (
           <OnboardingModal
-            subject={activeOnboarding.subject}
-            grade={activeOnboarding.grade}
-            onClose={() => setActiveOnboarding(null)}
+            subject={onboardingModal.subject}
+            grade={onboardingModal.grade}
+            onClose={() => setOnboardingModal(null)}
           />
         )}
       </AnimatePresence>
+
     </div>
   );
 }
+
+// ── StatCard ──────────────────────────────────────────────────────────────────
+
+interface StatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  accentColor: string;
+}
+
+function StatCard({ icon, label, value, accentColor }: StatCardProps) {
+  return (
+    <div
+      className="bg-white rounded-2xl px-4 py-3 border border-[#042E5C]/5 shadow-sm hover:shadow-md transition-all border-l-4 flex items-center justify-between gap-3"
+      style={{ borderLeftColor: accentColor }}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div
+          className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center"
+          style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
+        >
+          {icon}
+        </div>
+        <p className="text-[10px] font-extrabold text-[#042E5C]/40 uppercase tracking-widest leading-none truncate">{label}</p>
+      </div>
+      <p className="text-lg sm:text-xl font-extrabold text-[#042E5C] leading-none flex-shrink-0">{value}</p>
+    </div>
+  );
+}
+
+// ── HubCard ───────────────────────────────────────────────────────────────────
 
 interface HubCardProps {
   title: string;
   subtitle: string;
   icon: React.ReactNode;
+  subjectKey: SubjectKey | null;
   onClick: () => void;
   delay: number;
+  isOnboardingComplete?: boolean;
+  onOnboarding?: () => void;
 }
 
-function HubCard({ title, subtitle, icon, onClick, delay }: HubCardProps) {
+function HubCard({ title, subtitle, icon, subjectKey, onClick, delay, isOnboardingComplete = true, onOnboarding }: HubCardProps) {
+  const config = subjectKey ? SUBJECT_CONFIG[subjectKey] : null;
+  const IconComponent = subjectKey ? SUBJECT_ICON_MAP[subjectKey] : null;
+
   return (
-    <motion.button
+    <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      onClick={onClick}
-      className="bg-white p-5 rounded-2xl border border-[#042E5C]/5 shadow-sm hover:shadow-md hover:border-[#042E5C]/10 transition-all text-left group flex flex-col justify-between h-full min-h-[100px]"
+      className="bg-white px-5 py-4 rounded-2xl border border-[#042E5C]/5 shadow-sm hover:shadow-md hover:border-[#042E5C]/10 transition-all text-left border-l-4 flex flex-col gap-3 flex-1 min-w-[280px] max-w-[340px]"
+      style={{ borderLeftColor: config?.color ?? "#042E5C20" }}
     >
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="w-8 h-8 rounded-lg bg-[#042E5C]/5 flex items-center justify-center text-[#042E5C]/60 group-hover:bg-[#03b1ed]/10 group-hover:text-[#03b1ed] transition-colors">
-            {icon}
-          </div>
-          <ChevronRight size={14} className="text-[#042E5C]/20 group-hover:text-[#042E5C]/40 transition-colors" />
+      <div className="flex items-start gap-3">
+        <div
+          className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center"
+          style={{ backgroundColor: config ? config.bgColor : "rgba(4,46,92,0.05)" }}
+        >
+          {IconComponent ? (
+            <IconComponent
+              size={20}
+              style={{ "--icon-color": config?.color ?? "#042E5C" } as React.CSSProperties}
+            />
+          ) : (
+            <span style={{ color: "#042E5C60" }}>{icon}</span>
+          )}
         </div>
-        <div className="space-y-1">
-          <h3 className="font-bold text-[#042E5C] text-sm group-hover:text-[#03b1ed] transition-colors line-clamp-1">{title}</h3>
-          <p className="text-[10px] font-bold text-[#042E5C]/40 uppercase tracking-widest leading-none">{subtitle}</p>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-[#042E5C] text-sm line-clamp-1">{title}</h3>
+          <p className="text-[10px] font-bold text-[#042E5C]/40 uppercase tracking-widest leading-none mt-1">
+            {isOnboardingComplete ? subtitle : "Complete Onboarding"}
+          </p>
         </div>
       </div>
-    </motion.button>
+
+      <button
+        onClick={isOnboardingComplete ? onClick : onOnboarding}
+        className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all w-full ${
+          isOnboardingComplete
+            ? "bg-[#00B894] text-white hover:bg-[#00B894]/90"
+            : "bg-[#00B894]/15 text-[#00B894] hover:bg-[#00B894]/25"
+        }`}
+      >
+        {isOnboardingComplete ? "Start Chat" : "Start Onboarding"}
+      </button>
+    </motion.div>
   );
 }

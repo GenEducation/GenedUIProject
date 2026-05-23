@@ -7,7 +7,7 @@ if (!AUTH_API_BASE_URL) {
 }
 
 export interface SignUpFields {
-  username: string;
+  username?: string;
   email: string;
   password: string;
   confirmPassword?: string;
@@ -34,6 +34,8 @@ export interface AuthTokenResponse {
   website?: string | null;
   school_board?: string;
   age?: number;
+  name?: string;
+  ai_name?: string;
   plan?: "FREE" | "PRO";
   plan_expires_at?: string | null;
 }
@@ -47,10 +49,15 @@ async function handleAuthError(response: Response, defaultMsg: string): Promise<
   let errorMessage = defaultMsg;
   try {
     const errorData = await response.json();
-    if (Array.isArray(errorData.detail)) {
+    // Prefer the top-level `message` from the structured error shape
+    if (typeof errorData.message === "string") {
+      errorMessage = errorData.message;
+    } else if (Array.isArray(errorData.detail)) {
+      // Legacy: FastAPI validation error shape — remove once all endpoints migrated
       errorMessage = errorData.detail.map((err: any) => err.msg).join(", ");
-    } else {
-      errorMessage = errorData.detail || errorData.message || errorMessage;
+    } else if (typeof errorData.detail === "string") {
+      // Legacy: old ad-hoc shape — remove once all endpoints migrated
+      errorMessage = errorData.detail;
     }
   } catch (e) {
     const errorText = await response.text().catch(() => "");
@@ -80,17 +87,16 @@ export async function signIn(data: SignInFields): Promise<AuthTokenResponse> {
 
 export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
   const body: any = {
-    username: data.username,
     email_id: data.email,
     password: data.password,
     role: data.role.toUpperCase(),
     otp_code: data.otp_code,
   };
 
+  if (data.username) body.username = data.username;
+
   if (data.role === "student") {
-    if (data.age) body.age = Number(data.age);
     if (data.grade) body.grade = Number(data.grade);
-    if (data.school_board) body.school_board = data.school_board;
   } else if (data.role === "parent") {
     if (data.phone) body.phone = data.phone;
   } else if (data.role === "partner") {
@@ -132,14 +138,13 @@ export async function googleSignIn(token: string): Promise<AuthTokenResponse> {
 export async function googleSignUp(token: string, data: Partial<SignUpFields>): Promise<AuthTokenResponse> {
   const body: any = {
     token,
-    username: data.username,
     role: data.role?.toUpperCase(),
   };
 
+  if (data.username) body.username = data.username;
+
   if (data.role === "student") {
-    if (data.age) body.age = Number(data.age);
     if (data.grade) body.grade = Number(data.grade);
-    if (data.school_board) body.school_board = data.school_board;
   } else if (data.role === "parent") {
     if (data.phone) body.phone = data.phone;
   } else if (data.role === "partner") {
@@ -208,5 +213,27 @@ export async function resetPassword(data: {
     await handleAuthError(response, "Failed to reset password");
   }
 
+  return response.json();
+}
+
+export async function updateProfile(data: {
+  user_id: string;
+  name?: string;
+  age?: number;
+  school_board?: string;
+  ai_name?: string;
+}): Promise<AuthTokenResponse> {
+  const token = localStorage.getItem("gened_auth_token");
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/profile`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    await handleAuthError(response, "Profile update failed.");
+  }
   return response.json();
 }

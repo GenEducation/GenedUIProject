@@ -15,14 +15,11 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 
 const initialSignUpData: SignUpFields = {
-  username: "",
   email: "",
   password: "",
   confirmPassword: "",
   role: "student",
-  age: "",
   grade: "",
-  school_board: "",
   phone: "",
   organization: "",
   website: "",
@@ -60,12 +57,6 @@ export function LoginView() {
     const errors: Record<string, string> = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!signupData.username.trim()) {
-      errors.username = "Username is compulsory";
-    } else if (signupData.username.length < 3) {
-      errors.username = "Username must be at least 3 characters";
-    }
-
     if (!googleSignUpToken) {
       if (!signupData.email.trim()) {
         errors.email = "Email is compulsory";
@@ -87,29 +78,12 @@ export function LoginView() {
     }
 
     if (signupData.role === "student") {
-      const ageNum = Number(signupData.age);
-      if (!signupData.age?.trim()) {
-        errors.age = "Age is compulsory";
-      } else if (isNaN(ageNum)) {
-        errors.age = "Age must be a numeric value";
-      } else if (ageNum <= 0) {
-        errors.age = "Age must be a positive number";
-      } else if (ageNum > 50) {
-        errors.age = "Age must be 50 or less";
-      }
-
       const gradeNum = Number(signupData.grade);
       if (!signupData.grade?.trim()) {
-        errors.grade = "Grade is compulsory";
-      } else if (isNaN(gradeNum)) {
-        errors.grade = "Grade must be a numeric value";
-      } else if (gradeNum <= 0) {
-        errors.grade = "Grade must be a positive number";
-      } else if (gradeNum > 12) {
-        errors.grade = "Grade must be 12 or less";
+        errors.grade = "Please select your grade";
+      } else if (isNaN(gradeNum) || gradeNum <= 0 || gradeNum > 12) {
+        errors.grade = "Grade must be between 1 and 12";
       }
-
-      if (!signupData.school_board?.trim()) errors.school_board = "Board is compulsory";
     } else if (signupData.role === "parent") {
       if (!signupData.phone?.trim()) {
         errors.phone = "Phone is compulsory";
@@ -165,8 +139,10 @@ export function LoginView() {
           username: token.username,
           email: token.email,
           role: token.role,
+          name: token.name,
           grade: token.grade,
           school_board: token.school_board,
+          ai_name: token.ai_name,
           plan: token.plan,
           plan_expires_at: token.plan_expires_at,
         });
@@ -182,20 +158,9 @@ export function LoginView() {
       router.replace(`/${role}`);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
-      let rawMsg = error instanceof Error ? error.message : "Unable to complete signin.";
+      const rawMsg = error instanceof Error ? error.message : "Unable to complete signin.";
       console.error("Detailed Signin Error:", rawMsg);
-
-      const lowMsg = rawMsg.toLowerCase();
-      const mappedErrors: Record<string, string> = {};
-      
-      if (lowMsg.includes("password")) {
-        mappedErrors.password = "The password you entered is incorrect.";
-      } else if (lowMsg.includes("username") || lowMsg.includes("user") || lowMsg.includes("credentials") || lowMsg.includes("invalid")) {
-        mappedErrors.username = "Invalid username or password.";
-      } else {
-        mappedErrors.username = "Sign-in failed. Please try again later.";
-      }
-      setSigninErrors(mappedErrors);
+      setSigninErrors({ root: rawMsg });
     } finally {
       setIsSigningIn(false);
     }
@@ -249,9 +214,11 @@ export function LoginView() {
           username: authResponse.username,
           email: authResponse.email,
           role: authResponse.role,
+          name: authResponse.name,
           grade: authResponse.grade,
           school_board: authResponse.school_board,
           age: authResponse.age,
+          ai_name: authResponse.ai_name,
           plan: authResponse.plan,
           plan_expires_at: authResponse.plan_expires_at,
         });
@@ -261,22 +228,9 @@ export function LoginView() {
       router.replace(`/${role}`);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
-      let rawMsg = error instanceof Error ? error.message : "Unable to complete signup.";
+      const rawMsg = error instanceof Error ? error.message : "Unable to complete signup.";
       console.error("Detailed Signup Error:", rawMsg);
-
-      const lowMsg = rawMsg.toLowerCase();
-      const mappedErrors: Record<string, string> = {};
-      
-      if (lowMsg.includes("email already used") || lowMsg.includes("email")) {
-        mappedErrors.email = "This email address is already in use.";
-      } else if (lowMsg.includes("username")) {
-        mappedErrors.username = "This username is already taken.";
-      } else if (lowMsg.includes("token") || lowMsg.includes("google")) {
-        mappedErrors.root = "Google authentication failed. Please try again or use standard registration.";
-      } else {
-        mappedErrors.root = "Registration failed. Please check your information and try again.";
-      }
-      setSignupErrors(mappedErrors);
+      setSignupErrors({ root: rawMsg });
     } finally {
       setIsSubmitting(false);
     }
@@ -412,8 +366,10 @@ export function LoginView() {
                             username: res.username,
                             email: res.email,
                             role: res.role,
+                            name: res.name,
                             grade: res.grade,
                             school_board: res.school_board,
+                            ai_name: res.ai_name,
                           });
                         } else if (role === "parent") {
                           useParentStore.getState().setParentProfile({

@@ -1,10 +1,12 @@
 "use client";
 
 import { PartnerRequestModal } from "@/features/student/components/PartnerRequestModal";
+import { CompleteProfileBanner } from "@/features/student/components/CompleteProfileBanner";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { GeneralOnboardingWizard } from "@/features/onboarding/components/GeneralOnboarding/GeneralOnboardingWizard";
-import { useEffect } from "react";
+import { OnboardingPromptCard } from "@/features/onboarding/components/OnboardingPromptCard";
+import { useEffect, useState } from "react";
 
 export default function StudentLayout({
   children,
@@ -13,6 +15,7 @@ export default function StudentLayout({
 }) {
   const { studentProfile } = useStudentStore();
   const { dnaStatus, checkDNAStatus } = useOnboardingStore();
+  const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
 
   useEffect(() => {
     if (studentProfile?.user_id) {
@@ -20,18 +23,36 @@ export default function StudentLayout({
     }
   }, [studentProfile, checkDNAStatus]);
 
+  const isProfileIncomplete = studentProfile && !studentProfile.name;
+
   return (
     <>
       {children}
-      
+
       {/* Global Student Modals */}
       <PartnerRequestModal />
 
-      {/* General Onboarding Wizard */}
-      {dnaStatus === "PENDING" && studentProfile && (
+      {/* Profile completion prompt for new users */}
+      {isProfileIncomplete && (
+        <CompleteProfileBanner studentProfile={studentProfile} />
+      )}
+
+      {/* Optional onboarding — non-blocking prompt card */}
+      {dnaStatus === "PENDING" && studentProfile && !showOnboardingWizard && !isProfileIncomplete && (
+        <OnboardingPromptCard
+          onStart={() => setShowOnboardingWizard(true)}
+          userId={studentProfile.user_id}
+        />
+      )}
+
+      {/* Onboarding wizard — only shown when user clicks "Start" */}
+      {showOnboardingWizard && studentProfile && (
         <GeneralOnboardingWizard
           studentProfile={studentProfile}
-          onComplete={() => checkDNAStatus(studentProfile.user_id)}
+          onComplete={() => {
+            checkDNAStatus(studentProfile.user_id);
+            setShowOnboardingWizard(false);
+          }}
         />
       )}
     </>

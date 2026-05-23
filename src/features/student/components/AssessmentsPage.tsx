@@ -203,8 +203,14 @@ export function AssessmentsPage() {
                 <Search size={40} />
               </div>
               <div className="text-center space-y-2">
-                <h3 className="text-xl font-black text-[#042E5C]">No chapters found</h3>
-                <p className="text-sm font-medium text-[#042E5C]/40">Try adjusting your search or select a different subject</p>
+                <h3 className="text-xl font-black text-[#042E5C]">
+                  {searchQuery ? "No chapters found" : "No chapters available yet"}
+                </h3>
+                <p className="text-sm font-medium text-[#042E5C]/40">
+                  {searchQuery
+                    ? "Try adjusting your search or select a different subject"
+                    : "Complete your English or Mathematics onboarding to unlock assessments."}
+                </p>
               </div>
             </div>
           )}
