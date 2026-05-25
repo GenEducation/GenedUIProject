@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import { useStudentStore } from "../store/useStudentStore";
+import { Loader2, Play, Pause, Check } from "lucide-react";
+import { useStudentStore, StudentProfile as StudentProfileType } from "../store/useStudentStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { PartnerRequestModal } from "./PartnerRequestModal";
+import { updateProfile, fetchProfile } from "@/features/auth/authService";
+import { GEMINI_VOICES, DEFAULT_GEMINI_VOICE } from "@/constants/geminiVoices";
 
 /* ─── Design Tokens (matches home screen) ────────────────────────────────── */
 const C = {
@@ -87,6 +89,112 @@ function Card({ children, style = {} }: { children: React.ReactNode; style?: Rea
   );
 }
 
+/* ─── Voice picker ───────────────────────────────────────────────────────── */
+function VoicePicker({
+  currentVoice,
+  onSelect,
+  saving,
+  savedVoice,
+}: {
+  currentVoice: string;
+  onSelect: (id: string) => void;
+  saving: boolean;
+  savedVoice: string;
+}) {
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const stop = () => {
+    audioRef.current?.pause();
+    if (audioRef.current) audioRef.current.currentTime = 0;
+    setPlayingId(null);
+  };
+
+  const play = (id: string, src: string) => {
+    if (playingId === id) { stop(); return; }
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    const audio = new Audio(src);
+    audioRef.current = audio;
+    audio.onended = () => setPlayingId(p => (p === id ? null : p));
+    audio.onerror = () => setPlayingId(p => (p === id ? null : p));
+    audio.play().catch(() => setPlayingId(null));
+    setPlayingId(id);
+  };
+
+  useEffect(() => () => { audioRef.current?.pause(); }, []);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+      {GEMINI_VOICES.map(v => {
+        const isSelected = currentVoice === v.id;
+        const isPlaying  = playingId === v.id;
+        const isSaved    = savedVoice === v.id;
+        return (
+          <div
+            key={v.id}
+            onClick={() => onSelect(v.id)}
+            style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "12px 14px", borderRadius: 14, cursor: "pointer",
+              background: isSelected ? `${C.genPurple}08` : C.pageBg,
+              border: `1.5px solid ${isSelected ? `${C.genPurple}40` : C.border}`,
+              transition: "all 0.18s",
+            }}
+          >
+            {/* Play / pause sample */}
+            <button
+              onClick={(e) => { e.stopPropagation(); play(v.id, v.sample); }}
+              aria-label={isPlaying ? `Pause ${v.label} sample` : `Play ${v.label} sample`}
+              style={{
+                width: 36, height: 36, borderRadius: "50%",
+                border: "none", cursor: "pointer", flexShrink: 0,
+                background: isPlaying ? C.genPurple : `${C.genPurple}15`,
+                color: isPlaying ? "white" : C.genPurple,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all 0.18s",
+              }}
+            >
+              {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" style={{ marginLeft: 1 }} />}
+            </button>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>
+                {v.label}
+                {isSaved && (
+                  <span style={{
+                    marginLeft: 8, fontSize: 9, fontWeight: 800, color: C.growth,
+                    background: `${C.growth}15`, padding: "2px 6px", borderRadius: 6,
+                    textTransform: "uppercase" as const, letterSpacing: 0.5,
+                  }}>Current</span>
+                )}
+              </div>
+              <div style={{ fontSize: 11, color: C.textMid, marginTop: 2 }}>{v.description}</div>
+            </div>
+
+            {/* Selected indicator */}
+            <div style={{
+              width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
+              border: `2px solid ${isSelected ? C.genPurple : C.border}`,
+              background: isSelected ? C.genPurple : "transparent",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "all 0.18s",
+            }}>
+              {isSelected && <Check size={12} color="white" strokeWidth={3} />}
+            </div>
+          </div>
+        );
+      })}
+      {saving && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, color: C.textMuted, fontSize: 11, fontWeight: 600, marginTop: 4 }}>
+          <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> Saving voice…
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Main ───────────────────────────────────────────────────────────────── */
 export function StudentProfile() {
   const router = useRouter();
@@ -96,6 +204,7 @@ export function StudentProfile() {
     sendPartnerRequest, partnerRequestStatus,
     enrolledPartners, fetchEnrolledPartners, isEnrolledPartnersLoading,
     linkParent, studentStats, fetchStudentStats,
+    setStudentProfile,
   } = useStudentStore();
   const { completeAction } = useTutorialStore();
 
@@ -105,6 +214,9 @@ export function StudentProfile() {
   const [parentInput,      setParentInput]       = useState("");
   const [selectedPartner,  setSelectedPartner]   = useState("");
   const [mounted,          setMounted]           = useState(false);
+  const [pendingVoice,     setPendingVoice]      = useState<string>(studentProfile?.preferred_voice || DEFAULT_GEMINI_VOICE);
+  const [savingVoice,      setSavingVoice]       = useState(false);
+  const [voiceError,       setVoiceError]        = useState<string | null>(null);
 
   /* responsive sidebar */
   useEffect(() => {
@@ -120,6 +232,79 @@ export function StudentProfile() {
     fetchEnrolledPartners();
     fetchStudentStats();
   }, [fetchAvailablePartners, fetchEnrolledPartners, fetchStudentStats]);
+
+  /**
+   * Heal a stale localStorage profile by pulling the latest from auth-service
+   * once on mount. Needed because pre-feature logins persisted a profile that
+   * had no `preferred_voice` field at all — without this refresh, the picker
+   * shows the default voice as "Current" even when the DB has a real choice
+   * saved.
+   */
+  useEffect(() => {
+    if (!studentProfile?.user_id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const fresh = await fetchProfile(studentProfile.user_id);
+        if (cancelled) return;
+        const merged: StudentProfileType = {
+          ...studentProfile,
+          name: fresh.name ?? studentProfile.name,
+          age: fresh.age ?? studentProfile.age,
+          grade: fresh.grade ?? studentProfile.grade,
+          school_board: fresh.school_board ?? studentProfile.school_board,
+          ai_name: fresh.ai_name ?? studentProfile.ai_name,
+          preferred_voice: fresh.preferred_voice ?? studentProfile.preferred_voice,
+          plan: fresh.plan ?? studentProfile.plan,
+          plan_expires_at: fresh.plan_expires_at ?? studentProfile.plan_expires_at,
+        };
+        setStudentProfile(merged);
+        localStorage.setItem("gened_user_profile", JSON.stringify({ ...fresh }));
+        if (fresh.access_token) {
+          localStorage.setItem("gened_auth_token", fresh.access_token);
+        }
+      } catch (err) {
+        // Non-fatal: the picker just falls back to whatever's in localStorage.
+        console.warn("[StudentProfile] Failed to refresh profile:", err);
+      }
+    })();
+    return () => { cancelled = true; };
+    // Intentionally only on user_id change (i.e. once per logged-in user).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentProfile?.user_id]);
+
+  // Keep pending voice in sync if profile loads/changes after mount
+  useEffect(() => {
+    if (studentProfile?.preferred_voice) {
+      setPendingVoice(studentProfile.preferred_voice);
+    }
+  }, [studentProfile?.preferred_voice]);
+
+  const savedVoice = studentProfile?.preferred_voice || DEFAULT_GEMINI_VOICE;
+
+  const handleSelectVoice = async (voiceId: string) => {
+    if (!studentProfile || voiceId === savedVoice || savingVoice) {
+      setPendingVoice(voiceId);
+      return;
+    }
+    setPendingVoice(voiceId);
+    setSavingVoice(true);
+    setVoiceError(null);
+    try {
+      const response = await updateProfile({ user_id: studentProfile.user_id, preferred_voice: voiceId });
+      const updated: StudentProfileType = { ...studentProfile, preferred_voice: response.preferred_voice ?? voiceId };
+      setStudentProfile(updated);
+      localStorage.setItem("gened_user_profile", JSON.stringify({ ...response, preferred_voice: updated.preferred_voice }));
+      if (response.access_token) {
+        localStorage.setItem("gened_auth_token", response.access_token);
+      }
+    } catch (err: any) {
+      setPendingVoice(savedVoice);
+      setVoiceError(err?.message || "Couldn't save voice. Please try again.");
+    } finally {
+      setSavingVoice(false);
+    }
+  };
 
   const isLoading = partnerRequestStatus === "loading";
 
@@ -259,6 +444,23 @@ export function StudentProfile() {
               </div>
               <p style={{ fontSize: 10, color: C.textMuted, marginTop: 12, fontStyle: "italic", textAlign: "center" as const }}>Based on your onboarding and learning patterns</p>
             </div>
+
+            {/* ── TUTOR VOICE ── */}
+            <Card style={{ ...fade(0.17) }}>
+              <SectionHeader icon="🎙️" label="Tutor Voice" />
+              <p style={{ fontSize: 11, color: C.textMid, marginTop: -8, marginBottom: 14, lineHeight: 1.5 }}>
+                Tap any voice to preview it. The voice you pick applies to every AI tutor across all your subjects.
+              </p>
+              <VoicePicker
+                currentVoice={pendingVoice}
+                onSelect={handleSelectVoice}
+                saving={savingVoice}
+                savedVoice={savedVoice}
+              />
+              {voiceError && (
+                <p style={{ marginTop: 10, fontSize: 11, color: C.coral, fontWeight: 600 }}>{voiceError}</p>
+              )}
+            </Card>
 
             {/* ── BADGES ── */}
             <Card style={{ ...fade(0.20) }}>

@@ -17,6 +17,7 @@ export interface StudentProfile {
   grade?: number;
   school_board?: string;
   ai_name?: string;
+  preferred_voice?: string;
   plan?: "FREE" | "PRO";
   plan_expires_at?: string | null;
 }
@@ -1283,7 +1284,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           });
         },
         effectiveChat.session_id,
-        effectiveChat.subject
+        effectiveChat.subject,
+        undefined,
+        studentProfile.preferred_voice
       );
     } catch (error) {
       console.error("Failed to start voice session:", error);

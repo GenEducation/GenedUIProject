@@ -36,6 +36,7 @@ export interface AuthTokenResponse {
   age?: number;
   name?: string;
   ai_name?: string;
+  preferred_voice?: string;
   plan?: "FREE" | "PRO";
   plan_expires_at?: string | null;
 }
@@ -216,12 +217,32 @@ export async function resetPassword(data: {
   return response.json();
 }
 
+/**
+ * Pull a fresh profile from the auth-service. Used by the profile page to
+ * heal stale localStorage entries written before newer fields (like
+ * `preferred_voice`) existed.
+ */
+export async function fetchProfile(userId: string): Promise<AuthTokenResponse> {
+  const token = localStorage.getItem("gened_auth_token");
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/profile/${userId}`, {
+    method: "GET",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!response.ok) {
+    await handleAuthError(response, "Failed to load profile.");
+  }
+  return response.json();
+}
+
 export async function updateProfile(data: {
   user_id: string;
   name?: string;
   age?: number;
   school_board?: string;
   ai_name?: string;
+  preferred_voice?: string;
 }): Promise<AuthTokenResponse> {
   const token = localStorage.getItem("gened_auth_token");
   const response = await fetch(`${AUTH_API_BASE_URL}/auth/profile`, {
