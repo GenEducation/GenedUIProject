@@ -106,7 +106,7 @@ export function ParentProfileView({ profile }: { profile: any }) {
                       <User size={20} />
                     </div>
                     <div>
-                      <p className="text-sm font-black text-[#1a3a2a] leading-none">{request.username || `ID: ${request.student_id.slice(-8)}`}</p>
+                      <p className="text-sm font-black text-[#1a3a2a] leading-none">{request.name || `ID: ${request.student_id.slice(-8)}`}</p>
                       <p className="text-[11px] font-bold text-[#1a3a2a]/30 mt-1 uppercase tracking-tight">Requested Connection</p>
                     </div>
                   </div>
