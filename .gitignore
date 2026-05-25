@@ -42,4 +42,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# VAD / onnxruntime-web runtime assets — copied from node_modules into public/
+# by scripts/copy-vad-assets.mjs on `npm install`. Don't commit (~40 MB).
+/public/silero_vad_*.onnx
+/public/vad.worklet.bundle.min.js
+/public/ort-wasm-*.wasm
+/public/ort-wasm-*.mjs
+
 
