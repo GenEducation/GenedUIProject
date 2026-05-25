@@ -132,7 +132,7 @@ export function ParentHome() {
                         <User size={18} />
                       </div>
                       <div className="text-left flex-1 min-w-0">
-                        <p className="text-sm font-bold truncate">{student.username || `Student ID: ...${student.student_id.slice(-4)}`}</p>
+                        <p className="text-sm font-bold truncate">{student.name || `Student ID: ...${student.student_id.slice(-4)}`}</p>
                       </div>
                       {selectedStudentId === student.student_id && <ChevronRight size={14} />}
                     </button>
