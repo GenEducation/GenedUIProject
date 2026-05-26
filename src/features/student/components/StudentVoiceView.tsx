@@ -9,6 +9,7 @@ import { VoiceTranscript } from "./VoiceTranscript";
 import { VoiceControls } from "./VoiceControls";
 import { PushToTalkButton } from "./PushToTalkButton";
 import { PttHotkeyConfig } from "./PttHotkeyConfig";
+import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 
 const STATUS_CAPTION: Record<string, string> = {
   idle: "Tap to start",
@@ -38,6 +39,9 @@ export function StudentVoiceView() {
     beginPttUtterance,
     endPttUtterance,
     studentProfile,
+    isRateLimitHit,
+    rateLimitMessage,
+    setRateLimitHit,
   } = useStudentStore();
 
   // Auto-start voice session. Relies on voiceSessionStatus ("idle" → start).
@@ -89,13 +93,15 @@ export function StudentVoiceView() {
 
   const isPtt = voicePrefs.listenMode === "ptt";
   const reactive = isPtt ? pttHeld : voiceSessionStatus === "active";
-  const caption = isPtt
-    ? pttHeld
-      ? "Listening…"
-      : voiceSessionStatus === "active"
-        ? "Hold to talk"
-        : STATUS_CAPTION[voiceSessionStatus] || "—"
-    : STATUS_CAPTION[voiceSessionStatus] || "—";
+  const caption = isRateLimitHit
+    ? (rateLimitMessage || "Daily limit reached. Upgrade to Pro for more.")
+    : isPtt
+      ? pttHeld
+        ? "Listening…"
+        : voiceSessionStatus === "active"
+          ? "Hold to talk"
+          : STATUS_CAPTION[voiceSessionStatus] || "—"
+      : STATUS_CAPTION[voiceSessionStatus] || "—";
 
   const agentName = activeChat?.title || "April";
   const subjectLabel = activeChat?.subject ? activeChat.subject : "Voice Session";
@@ -136,7 +142,11 @@ export function StudentVoiceView() {
       </section>
 
       {/* Bottom — Controls */}
-      <section className="px-6 pt-5 pb-7 flex flex-col items-center gap-5">
+      <section className="relative px-6 pt-5 pb-7 flex flex-col items-center gap-5">
+        <RateLimitPrompt
+          isVisible={isRateLimitHit}
+          onClose={() => setRateLimitHit(false)}
+        />
         {isPtt && (
           <>
             <PushToTalkButton />

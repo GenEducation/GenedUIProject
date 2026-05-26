@@ -1002,7 +1002,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
 
     console.log("🎙️ [StudentStore] Starting Voice Session for Chat:", effectiveChat);
-    set({ voiceSessionStatus: "connecting" });
+    set({ voiceSessionStatus: "connecting", isRateLimitHit: false, rateLimitMessage: null });
 
     // Ensure chat mode is voice
     if (activeChat) {
@@ -1029,7 +1029,15 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         } else if (event.type === "disconnected") {
           set({ voiceSessionStatus: "idle" });
         } else if (event.type === "error") {
-          set({ voiceSessionStatus: "error" });
+          if (event.error === "rate_limit_exceeded") {
+            set({ 
+              voiceSessionStatus: "error",
+              isRateLimitHit: true,
+              rateLimitMessage: "Daily limit reached. Please upgrade to Pro for more."
+            });
+          } else {
+            set({ voiceSessionStatus: "error" });
+          }
         } else if (event.type === "session_id") {
           // Update activeChat with the real session_id from backend
           const { activeChat, fetchSessions } = get();

@@ -140,54 +140,31 @@ class VoiceService {
       this.processor = this.micCtx.createScriptProcessor(4096, 1, 1);
 
       this.processor.onaudioprocess = (e) => {
-        if (this.isMuted) return;
         if (this.ws?.readyState !== WebSocket.OPEN) return;
 
         const input = e.inputBuffer.getChannelData(0);
-
-        // ── Cheap RMS energy floor. Skips frames that are obviously below
-        // the noise floor regardless of what VAD thinks. Catches the long
-        // tail of low-energy hum that Silero sometimes lets through.
-        let sumSq = 0;
-        for (let i = 0; i < input.length; i++) sumSq += input[i] * input[i];
-        const rms = Math.sqrt(sumSq / input.length);
-        if (rms < RMS_NOISE_FLOOR) {
-          // Push silence into the pre-roll ring so a VAD-triggered flush
-          // doesn't replay stale loud audio.
-          return;
-        }
-
-        // Convert to Int16 PCM once.
         const i16 = new Int16Array(input.length);
-        for (let i = 0; i < input.length; i++) {
-          i16[i] = Math.max(-1, Math.min(1, input[i])) * 0x7fff;
-        }
-        const buf = i16.buffer;
 
-        if (this.vadReady) {
-          // VAD path: only send during speech (+ post-roll). Otherwise hold
-          // the most recent frame as pre-roll so we don't clip word onsets
-          // when VAD flips to "speaking".
-          if (this.vadSpeaking) {
-            // Flush any pre-roll frames we held back from before speech started.
-            while (this.prerollBuffer.length > 0) {
-              this.ws.send(this.prerollBuffer.shift()!);
-            }
-            this.ws.send(buf);
-          } else if (this.vadPostrollRemaining > 0) {
-            this.ws.send(buf);
-            this.vadPostrollRemaining--;
+        if (this.isMuted) {
+          // Send zeroed-out PCM bytes (silence) when muted to keep the connection active
+          i16.fill(0);
+        } else {
+          // ── Cheap RMS energy floor. Gating when below the noise floor.
+          let sumSq = 0;
+          for (let i = 0; i < input.length; i++) sumSq += input[i] * input[i];
+          const rms = Math.sqrt(sumSq / input.length);
+          if (rms < RMS_NOISE_FLOOR) {
+            // Send silence (zero bytes) when below noise floor instead of returning early
+            i16.fill(0);
           } else {
-            // Maintain a tiny rolling pre-roll buffer.
-            this.prerollBuffer.push(buf);
-            while (this.prerollBuffer.length > VAD_PREROLL_FRAMES) {
-              this.prerollBuffer.shift();
+            // Convert to Int16 PCM once
+            for (let i = 0; i < input.length; i++) {
+              i16[i] = Math.max(-1, Math.min(1, input[i])) * 0x7fff;
             }
           }
-        } else {
-          // No VAD available — RMS floor alone decides. We already passed it.
-          this.ws.send(buf);
         }
+
+        this.ws.send(i16.buffer);
       };
 
       source.connect(this.processor);
@@ -323,6 +300,18 @@ class VoiceService {
         try {
           const data = JSON.parse(event.data);
           
+          if (data.error === "rate_limit_exceeded") {
+            console.warn("🎙️ [VoiceService] Rate limit exceeded. Stopping session.");
+            const callback = this.onEventCallback;
+            this.stopSession();
+            callback?.({
+              type: "error",
+              error: "rate_limit_exceeded",
+              message: "Daily rate limit reached. Upgrade to Pro for more."
+            });
+            return;
+          }
+
           if (data.type === "session_id" && data.session_id) {
             this.currentSessionId = data.session_id;
           }
