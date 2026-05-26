@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Play, Pause, Check } from "lucide-react";
+import { Loader2, Play, Pause, Check, ChevronDown } from "lucide-react";
 import { useStudentStore, StudentProfile as StudentProfileType } from "../store/useStudentStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { PartnerRequestModal } from "./PartnerRequestModal";
 import { updateProfile, fetchProfile } from "@/features/auth/authService";
-import { GEMINI_VOICES, DEFAULT_GEMINI_VOICE } from "@/constants/geminiVoices";
+import { fetchVoices } from "@/features/student/services/voiceCatalogService";
+import { DEFAULT_GEMINI_VOICE, type GeminiVoice } from "@/constants/geminiVoices";
 
 /* ─── Design Tokens (matches home screen) ────────────────────────────────── */
 const C = {
@@ -91,45 +92,108 @@ function Card({ children, style = {} }: { children: React.ReactNode; style?: Rea
 
 /* ─── Voice picker ───────────────────────────────────────────────────────── */
 function VoicePicker({
+  voices,
+  loading,
+  loadError,
   currentVoice,
   onSelect,
   saving,
   savedVoice,
 }: {
+  voices: GeminiVoice[];
+  loading: boolean;
+  loadError: string | null;
   currentVoice: string;
   onSelect: (id: string) => void;
   saving: boolean;
   savedVoice: string;
 }) {
   const [playingId, setPlayingId] = useState<string | null>(null);
+  // Tracks which voice's sample is being fetched-and-rendered for the first
+  // time — that round-trip is ~5s on a cache miss, so we surface a spinner
+  // instead of leaving the play button frozen.
+  const [loadingSampleId, setLoadingSampleId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const stop = () => {
     audioRef.current?.pause();
     if (audioRef.current) audioRef.current.currentTime = 0;
     setPlayingId(null);
+    setLoadingSampleId(null);
   };
 
   const play = (id: string, src: string) => {
-    if (playingId === id) { stop(); return; }
+    if (playingId === id || loadingSampleId === id) { stop(); return; }
     if (audioRef.current) {
       audioRef.current.pause();
     }
     const audio = new Audio(src);
     audioRef.current = audio;
+    setLoadingSampleId(id);
+    audio.oncanplay = () => {
+      setLoadingSampleId(p => (p === id ? null : p));
+      setPlayingId(id);
+    };
     audio.onended = () => setPlayingId(p => (p === id ? null : p));
-    audio.onerror = () => setPlayingId(p => (p === id ? null : p));
-    audio.play().catch(() => setPlayingId(null));
-    setPlayingId(id);
+    audio.onerror = () => {
+      setLoadingSampleId(p => (p === id ? null : p));
+      setPlayingId(p => (p === id ? null : p));
+    };
+    audio.play().catch(() => {
+      setLoadingSampleId(null);
+      setPlayingId(null);
+    });
   };
 
   useEffect(() => () => { audioRef.current?.pause(); }, []);
 
+  if (loading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} style={{
+            display: "flex", alignItems: "center", gap: 12,
+            padding: "12px 14px", borderRadius: 14,
+            background: C.pageBg, border: `1.5px solid ${C.border}`,
+          }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#EDF2F7" }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ width: "30%", height: 12, borderRadius: 6, background: "#EDF2F7", marginBottom: 6 }} />
+              <div style={{ width: "55%", height: 10, borderRadius: 5, background: "#F1F5F9" }} />
+            </div>
+            <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#EDF2F7" }} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div style={{
+        padding: "14px 16px", borderRadius: 14,
+        background: `${C.coral}08`, border: `1.5px solid ${C.coral}30`,
+        fontSize: 12, color: C.coral, fontWeight: 600,
+      }}>
+        Couldn't load voices: {loadError}
+      </div>
+    );
+  }
+
+  if (voices.length === 0) {
+    return (
+      <p style={{ fontSize: 12, color: C.textMuted, textAlign: "center" as const, padding: "8px 0" }}>
+        No voices available right now.
+      </p>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
-      {GEMINI_VOICES.map(v => {
+      {voices.map(v => {
         const isSelected = currentVoice === v.id;
         const isPlaying  = playingId === v.id;
+        const isLoadingSample = loadingSampleId === v.id;
         const isSaved    = savedVoice === v.id;
         return (
           <div
@@ -145,7 +209,7 @@ function VoicePicker({
           >
             {/* Play / pause sample */}
             <button
-              onClick={(e) => { e.stopPropagation(); play(v.id, v.sample); }}
+              onClick={(e) => { e.stopPropagation(); play(v.id, v.sample_url); }}
               aria-label={isPlaying ? `Pause ${v.label} sample` : `Play ${v.label} sample`}
               style={{
                 width: 36, height: 36, borderRadius: "50%",
@@ -156,7 +220,11 @@ function VoicePicker({
                 transition: "all 0.18s",
               }}
             >
-              {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" style={{ marginLeft: 1 }} />}
+              {isLoadingSample
+                ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />
+                : isPlaying
+                  ? <Pause size={14} fill="currentColor" />
+                  : <Play size={14} fill="currentColor" style={{ marginLeft: 1 }} />}
             </button>
 
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -217,6 +285,13 @@ export function StudentProfile() {
   const [pendingVoice,     setPendingVoice]      = useState<string>(studentProfile?.preferred_voice || DEFAULT_GEMINI_VOICE);
   const [savingVoice,      setSavingVoice]       = useState(false);
   const [voiceError,       setVoiceError]        = useState<string | null>(null);
+  const [voices,           setVoices]            = useState<GeminiVoice[]>([]);
+  // `voicesLoading` starts false so we don't show a spinner until the user
+  // actually expands the section and triggers the fetch.
+  const [voicesLoading,    setVoicesLoading]     = useState(false);
+  const [voicesLoadError,  setVoicesLoadError]   = useState<string | null>(null);
+  const [voicesFetched,    setVoicesFetched]     = useState(false);
+  const [voiceExpanded,    setVoiceExpanded]     = useState(false);
 
   /* responsive sidebar */
   useEffect(() => {
@@ -279,6 +354,42 @@ export function StudentProfile() {
       setPendingVoice(studentProfile.preferred_voice);
     }
   }, [studentProfile?.preferred_voice]);
+
+  /**
+   * Lazy-load the voice catalog the first time the user opens the section.
+   *
+   * Most students never touch this — keeping the network + audio assets out
+   * of the profile-page critical path saves them a needless round-trip.
+   * Once fetched, the result is kept in component state for the rest of the
+   * session, so re-opening the panel is instant.
+   *
+   * Guard pattern: a ref (not state) tracks "fetch in flight" so the effect
+   * doesn't re-run when we flip `voicesLoading`, which would otherwise
+   * trigger our own cleanup and cancel the in-flight request.
+   */
+  const voicesInFlightRef = useRef(false);
+  useEffect(() => {
+    if (!voiceExpanded || voicesFetched || voicesInFlightRef.current) return;
+    voicesInFlightRef.current = true;
+    let cancelled = false;
+    setVoicesLoading(true);
+    setVoicesLoadError(null);
+    (async () => {
+      try {
+        const list = await fetchVoices();
+        if (cancelled) return;
+        setVoices(list);
+        setVoicesFetched(true);
+      } catch (err: any) {
+        if (cancelled) return;
+        setVoicesLoadError(err?.message || "Network error");
+      } finally {
+        voicesInFlightRef.current = false;
+        if (!cancelled) setVoicesLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [voiceExpanded, voicesFetched]);
 
   const savedVoice = studentProfile?.preferred_voice || DEFAULT_GEMINI_VOICE;
 
@@ -445,21 +556,74 @@ export function StudentProfile() {
               <p style={{ fontSize: 10, color: C.textMuted, marginTop: 12, fontStyle: "italic", textAlign: "center" as const }}>Based on your onboarding and learning patterns</p>
             </div>
 
-            {/* ── TUTOR VOICE ── */}
-            <Card style={{ ...fade(0.17) }}>
-              <SectionHeader icon="🎙️" label="Tutor Voice" />
-              <p style={{ fontSize: 11, color: C.textMid, marginTop: -8, marginBottom: 14, lineHeight: 1.5 }}>
-                Tap any voice to preview it. The voice you pick applies to every AI tutor across all your subjects.
-              </p>
-              <VoicePicker
-                currentVoice={pendingVoice}
-                onSelect={handleSelectVoice}
-                saving={savingVoice}
-                savedVoice={savedVoice}
-              />
-              {voiceError && (
-                <p style={{ marginTop: 10, fontSize: 11, color: C.coral, fontWeight: 600 }}>{voiceError}</p>
-              )}
+            {/* ── TUTOR VOICE (collapsible — lazy-loads catalog on first open) ── */}
+            <Card style={{ ...fade(0.17), padding: voiceExpanded ? "22px 24px" : "18px 24px", transition: "padding 0.22s ease" }}>
+              <button
+                onClick={() => setVoiceExpanded(v => !v)}
+                aria-expanded={voiceExpanded}
+                aria-controls="voice-picker-panel"
+                style={{
+                  display: "flex", alignItems: "center", gap: 10, width: "100%",
+                  padding: 0, background: "transparent", border: "none", cursor: "pointer",
+                  textAlign: "left", color: "inherit", fontFamily: "inherit",
+                }}
+              >
+                <span style={{ fontSize: 17 }}>🎙️</span>
+                <span style={{
+                  flex: 1,
+                  fontSize: 13, fontWeight: 800, color: C.textMuted,
+                  textTransform: "uppercase" as const, letterSpacing: 1.4,
+                  fontFamily: "'DM Sans',sans-serif",
+                }}>
+                  Tutor Voice
+                </span>
+                {savedVoice && (
+                  <span style={{
+                    fontSize: 14, fontWeight: 700, color: C.genPurple,
+                    fontFamily: "'DM Sans',sans-serif",
+                  }}>
+                    {savedVoice}
+                  </span>
+                )}
+                <ChevronDown
+                  size={16}
+                  style={{
+                    color: C.textMuted,
+                    transition: "transform 0.22s ease",
+                    transform: voiceExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                  }}
+                />
+              </button>
+
+              <div
+                id="voice-picker-panel"
+                style={{
+                  overflow: "hidden",
+                  transition: "grid-template-rows 0.28s ease, margin-top 0.22s ease, opacity 0.22s ease",
+                  display: "grid",
+                  gridTemplateRows: voiceExpanded ? "1fr" : "0fr",
+                  marginTop: voiceExpanded ? 16 : 0,
+                  opacity: voiceExpanded ? 1 : 0,
+                }}
+              >
+                <div style={{ minHeight: 0 }}>
+                  <p style={{ fontSize: 11, color: C.textMid, marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
+                    Tap any voice to preview it. The voice you pick applies to every AI tutor across all your subjects.
+                  </p>
+                  <VoicePicker
+                    voices={voices}
+                    loading={voicesLoading}
+                    loadError={voicesLoadError}
+                    currentVoice={pendingVoice}
+                    onSelect={handleSelectVoice}
+                    saving={savingVoice}
+                    savedVoice={savedVoice}
+                  />
+                  {voiceError && (
+                    <p style={{ marginTop: 10, fontSize: 11, color: C.coral, fontWeight: 600 }}>{voiceError}</p>
+                  )}
+                </div>
+              </div>
             </Card>
 
             {/* ── BADGES ── */}
