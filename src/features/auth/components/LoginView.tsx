@@ -201,7 +201,6 @@ export function LoginView() {
           : ("student" as const);
       
       localStorage.setItem("gened_user_role", role);
-      localStorage.setItem("gened_new_user", "true"); // Flag for tutorial
 
       if (role === "partner") {
         localStorage.setItem("gened_partner_id", authResponse.user_id);
@@ -222,6 +221,12 @@ export function LoginView() {
           plan: authResponse.plan,
           plan_expires_at: authResponse.plan_expires_at,
         });
+      }
+
+      // Trigger tutorial walkthrough for new student signups
+      if (role === "student") {
+        const { useTutorialStore } = await import("@/features/tutorial/store/useTutorialStore");
+        useTutorialStore.getState().startTutorial();
       }
 
       // Redirect immediately
