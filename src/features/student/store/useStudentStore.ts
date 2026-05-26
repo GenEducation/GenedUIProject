@@ -75,6 +75,7 @@ export interface ChatMessage {
   options?: string[];
   statusText?: string;
   toolStatus?: string;
+  phase?: string;
   actions?: ActivityAction[];
 }
 
@@ -1651,16 +1652,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       // -- Reactive Streaming State -------------------------------------------
       let isPlanningUIPresented = false;
       let streamDone = false;
-      const planningQueue: string[] = [];
+      const planningQueue: Array<{ text: string; phase?: string }> = [];
       const bufferedEvents: any[] = [];
       const elements: ChatElement[] = [];
       let bufferedText = "";
       let currentTextBuffer = "";
       let currentToolStatus: string | undefined;
       let currentStatusText: string | undefined = "Processing...";
+      let currentPhase: string | undefined = "understanding";
       let doneResponse = ""; // Stores the full response from the done event for post-stream SVG upgrade
 
-      const updateUI = (text: string, els: ChatElement[], toolStatus?: string, statusText?: string) => {
+      const updateUI = (text: string, els: ChatElement[], toolStatus?: string, statusText?: string, phase?: string) => {
         // Create a transient display list that includes the current buffer tail
         // this ensures words appearing after a visual block are visible immediately
         const displayElements = [...els];
@@ -1684,7 +1686,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                     text: text.replace(tags, "").trim(),
                     elements: displayElements.length > 0 ? displayElements : undefined,
                     toolStatus,
-                    statusText: statusText !== undefined ? statusText : currentStatusText
+                    statusText: statusText !== undefined ? statusText : currentStatusText,
+                    phase: phase !== undefined ? phase : currentPhase
                   } 
                 : m
             );
@@ -1731,8 +1734,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       const handleEvent = (event: any) => {
         if (event.type === "planning") {
           const status = event.text || event.message || "";
-          if (status && !planningQueue.includes(status)) {
-            planningQueue.push(status);
+          const phase = event.phase || "thinking";
+          if (status && !planningQueue.some(item => item.text === status)) {
+            planningQueue.push({ text: status, phase });
           }
         } else if (event.type === "error") {
           // Mid-stream error from backend (e.g. CORE_2010)
@@ -2033,10 +2037,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         
         while (!streamDone || planningQueue.length > shownStatuses) {
           if (planningQueue.length > shownStatuses) {
-            const status = planningQueue[shownStatuses];
+            const item = planningQueue[shownStatuses];
             shownStatuses++;
-            currentStatusText = status;
-            updateUI(bufferedText, elements, currentToolStatus, status);
+            currentStatusText = item.text;
+            currentPhase = item.phase;
+            updateUI(bufferedText, elements, currentToolStatus, item.text, item.phase);
             await new Promise((r) => setTimeout(r, 1200));
           } else if (streamDone) {
             break;
@@ -2123,8 +2128,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           // Standardize planning/tool updates for batching
           if (event.type === "planning") {
             const status = event.text || event.message || "";
-            if (status && status !== currentStatusText) {
+            const phase = event.phase || "thinking";
+            if (status && (status !== currentStatusText || phase !== currentPhase)) {
               currentStatusText = status;
+              currentPhase = phase;
               shouldUpdate = true;
             }
           } else if (event.type === "tool_status") {
@@ -2140,7 +2147,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           }
 
           if (shouldUpdate && isPlanningUIPresented) {
-            updateUI(bufferedText, elements, currentToolStatus, currentStatusText);
+            updateUI(bufferedText, elements, currentToolStatus, currentStatusText, currentPhase);
           }
         }
       }
