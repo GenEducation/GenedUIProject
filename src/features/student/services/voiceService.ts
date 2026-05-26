@@ -34,6 +34,7 @@ class VoiceService {
   private currentStudentId: string | null = null;
   private currentSessionId: string | null = null;
   private currentSubject: string | null = null;
+  private currentVoice: string | null = null;
   private wsEndpoint: string = "/ws/april-live";
   private onEventCallback: ((event: any) => void) | null = null;
   private onTextRevealCallback: ((text: string, role: "user" | "assistant") => void) | null = null;
@@ -64,16 +65,18 @@ class VoiceService {
   private isTypewriterRunning = false;
 
   async startSession(
-    studentId: string, 
-    onEvent: (event: any) => void, 
+    studentId: string,
+    onEvent: (event: any) => void,
     onTextReveal: (text: string, role: "user" | "assistant") => void,
-    sessionId?: string, 
+    sessionId?: string,
     subject?: string,
-    wsEndpoint: string = "/ws/april-live-graph"
+    wsEndpoint: string = "/ws/april-live-graph",
+    voice?: string
   ) {
     this.currentStudentId = studentId;
     this.currentSessionId = sessionId || null;
     this.currentSubject = subject ?? null;
+    this.currentVoice = voice ?? null;
     this.wsEndpoint = wsEndpoint;
     this.onEventCallback = onEvent;
     this.onTextRevealCallback = onTextReveal;
@@ -348,6 +351,7 @@ class VoiceService {
         student_id: this.currentStudentId,
         session_id: this.currentSessionId,
         subject: this.currentSubject,
+        voice: this.currentVoice,
         token: getAuthToken(),
       })
     );
@@ -434,6 +438,7 @@ class VoiceService {
     this.currentStudentId = null;
     this.currentSessionId = null;
     this.currentSubject = null;
+    this.currentVoice = null;
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
     

@@ -35,6 +35,7 @@ export default function HomePage() {
             grade: profile.grade,
             school_board: profile.school_board,
             ai_name: profile.ai_name,
+            preferred_voice: profile.preferred_voice,
             plan: profile.plan,
             plan_expires_at: profile.plan_expires_at,
           });
