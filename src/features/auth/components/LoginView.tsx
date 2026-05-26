@@ -143,6 +143,7 @@ export function LoginView() {
           grade: token.grade,
           school_board: token.school_board,
           ai_name: token.ai_name,
+          preferred_voice: token.preferred_voice,
           plan: token.plan,
           plan_expires_at: token.plan_expires_at,
         });
@@ -219,6 +220,7 @@ export function LoginView() {
           school_board: authResponse.school_board,
           age: authResponse.age,
           ai_name: authResponse.ai_name,
+          preferred_voice: authResponse.preferred_voice,
           plan: authResponse.plan,
           plan_expires_at: authResponse.plan_expires_at,
         });
@@ -370,6 +372,7 @@ export function LoginView() {
                             grade: res.grade,
                             school_board: res.school_board,
                             ai_name: res.ai_name,
+                            preferred_voice: res.preferred_voice,
                           });
                         } else if (role === "parent") {
                           useParentStore.getState().setParentProfile({
