@@ -28,12 +28,18 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
     const profileStr = localStorage.getItem("gened_user_profile");
 
     if (!token || !role || !profileStr) {
-      router.replace("/");
+      const currentPath = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/";
+      router.replace(`/?redirect=${encodeURIComponent(currentPath)}`);
       return;
     }
 
     if (role !== requiredRole) {
-      // User is logged in but accessing the wrong portal — redirect to their correct one
+      if (requiredRole === "parent" && role === "student") {
+        localStorage.clear();
+        const currentPath = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/";
+        router.replace(`/?redirect=${encodeURIComponent(currentPath)}`);
+        return;
+      }
       router.replace(`/${role}`);
       return;
     }
