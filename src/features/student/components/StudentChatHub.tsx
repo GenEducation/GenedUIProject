@@ -63,6 +63,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
     fetchAvailableAgents,
     openExistingChat,
     openNewChat,
+    openNewSession,
     setAgentPickerOpen,
     isRateLimitHit,
     setRateLimitHit,
@@ -255,9 +256,13 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                       icon={<Bot size={18} />}
                       subjectKey={subjectKey}
                       isOnboardingComplete={isOnboardingComplete}
-                      onClick={() => {
-                        openNewChat(agent);
+                      onStartChat={() => {
+                        openNewSession(agent, "chat");
                         router.push(`/student/chat/new?agentId=${agent.agent_id}`);
+                      }}
+                      onStartVoice={() => {
+                        openNewSession(agent, "voice");
+                        router.push(`/student/voice?agent=${agent.agent_id}`);
                       }}
                       onOnboarding={() => {
                         setOnboardingModal({
@@ -350,13 +355,14 @@ interface HubCardProps {
   subtitle: string;
   icon: React.ReactNode;
   subjectKey: SubjectKey | null;
-  onClick: () => void;
+  onStartChat: () => void;
+  onStartVoice: () => void;
   delay: number;
   isOnboardingComplete?: boolean;
   onOnboarding?: () => void;
 }
 
-function HubCard({ title, subtitle, icon, subjectKey, onClick, delay, isOnboardingComplete = true, onOnboarding }: HubCardProps) {
+function HubCard({ title, subtitle, icon, subjectKey, onStartChat, onStartVoice, delay, isOnboardingComplete = true, onOnboarding }: HubCardProps) {
   const config = subjectKey ? SUBJECT_CONFIG[subjectKey] : null;
   const IconComponent = subjectKey ? SUBJECT_ICON_MAP[subjectKey] : null;
 
@@ -390,16 +396,29 @@ function HubCard({ title, subtitle, icon, subjectKey, onClick, delay, isOnboardi
         </div>
       </div>
 
-      <button
-        onClick={isOnboardingComplete ? onClick : onOnboarding}
-        className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all w-full ${
-          isOnboardingComplete
-            ? "bg-[#00B894] text-white hover:bg-[#00B894]/90"
-            : "bg-[#00B894]/15 text-[#00B894] hover:bg-[#00B894]/25"
-        }`}
-      >
-        {isOnboardingComplete ? "Start Chat" : "Start Onboarding"}
-      </button>
+      {isOnboardingComplete ? (
+        <div className="flex gap-2 w-full">
+          <button
+            onClick={onStartChat}
+            className="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-[#00B894]/10 text-[#00B894] hover:bg-[#00B894]/20 border border-[#00B894]/20 cursor-pointer"
+          >
+            Chat
+          </button>
+          <button
+            onClick={onStartVoice}
+            className="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-[#00B894] text-white hover:bg-[#00B894]/90 cursor-pointer"
+          >
+            Voice
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={onOnboarding}
+          className="px-4 py-2 rounded-lg font-semibold text-sm transition-all w-full bg-[#00B894]/15 text-[#00B894] hover:bg-[#00B894]/25 cursor-pointer"
+        >
+          Start Onboarding
+        </button>
+      )}
     </motion.div>
   );
 }

@@ -125,11 +125,11 @@ class VoiceService {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          // @ts-expect-error — Chromium-only, but harmless on other UAs.
+          // @ts-ignore — Chromium-only, but harmless on other UAs.
           googHighpassFilter: true,
-          // @ts-expect-error — Chromium-only.
+          // @ts-ignore — Chromium-only.
           googNoiseSuppression2: true,
-          // @ts-expect-error — Chromium-only.
+          // @ts-ignore — Chromium-only.
           googEchoCancellation2: true,
         },
       });
@@ -190,9 +190,8 @@ class VoiceService {
       source.connect(this.processor);
       this.processor.connect(this.micCtx.destination);
 
-      // Set up Silero VAD lazily so SSR builds don't trip and so a missing
-      // model file in dev never blocks the live session.
-      await this.initVad(source);
+      // Set up Silero VAD lazily as fire-and-forget so startup is instant.
+      this.initVad(source);
     } catch (err) {
       console.error("[VoiceService] Mic Error:", err);
       this.onEventCallback?.({ type: "error", error: err });
@@ -209,16 +208,21 @@ class VoiceService {
   private async initVad(source: MediaStreamAudioSourceNode) {
     if (!this.micCtx) return;
     try {
+      console.log("🎙️ [VoiceService] Loading VAD package dynamically...");
       // Dynamic import: avoids pulling the ONNX runtime into the SSR bundle
       // and lets the page load even if the package isn't yet installed.
       const vadMod: any = await import(
         /* webpackChunkName: "vad" */ "@ricky0123/vad-web"
       ).catch((err) => {
-        console.warn("[VoiceService] VAD package not available, falling back to RMS-only gating:", err);
+        console.warn("🎙️ [VoiceService] VAD package not available, falling back to RMS-only gating:", err);
         return null;
       });
       if (!vadMod || !vadMod.AudioNodeVAD) return;
 
+      // STALENESS GUARD: Check if session was stopped during import
+      if (!this.isSessionActive || !this.micCtx) return;
+
+      console.log("🎙️ [VoiceService] VAD package loaded. Fetching & compiling ONNX model + WASM assets in background...");
       const vad = await vadMod.AudioNodeVAD.new(this.micCtx, {
         // Silero defaults are well-tuned for 16k mono; just wire up callbacks.
         // Assets (silero_vad_legacy.onnx, vad.worklet.bundle.min.js, ort
@@ -243,27 +247,37 @@ class VoiceService {
           }
         },
         onSpeechStart: () => {
+          console.log("🗣️ [VoiceService] VAD: Speech Started");
           this.vadSpeaking = true;
           this.vadPostrollRemaining = 0;
         },
         onSpeechEnd: () => {
+          console.log("🤫 [VoiceService] VAD: Speech Ended");
           this.vadSpeaking = false;
           this.vadPostrollRemaining = VAD_POSTROLL_FRAMES;
         },
         onVADMisfire: () => {
+          console.log("⚠️ [VoiceService] VAD: Speech Misfired (false alarm)");
           // Speech start was a false alarm — make sure we don't keep streaming.
           this.vadSpeaking = false;
           this.vadPostrollRemaining = 0;
         },
       });
+
+      // STALENESS GUARD: Check if session was stopped during AudioNodeVAD.new()
+      if (!this.isSessionActive || !this.micCtx) {
+        vad.destroy();
+        return;
+      }
+
       vad.receive(source);
       vad.start();
 
       this.vad = { destroy: () => vad.destroy?.() };
       this.vadReady = true;
-      console.log("[VoiceService] Silero VAD gate active");
+      console.log("✅ [VoiceService] Silero VAD gate active and monitoring microphone input.");
     } catch (err) {
-      console.warn("[VoiceService] VAD init failed, falling back to RMS-only:", err);
+      console.warn("🎙️ [VoiceService] VAD init failed, falling back to RMS-only:", err);
       this.vadReady = false;
     }
   }
@@ -358,6 +372,7 @@ class VoiceService {
   }
 
   private handleIncomingAudio(buffer: ArrayBuffer) {
+    if (!this.isSessionActive || !this.audioCtx) return;
     if (this.isBuffering) {
       this.bufferQueue.push(buffer);
       if (this.bufferQueue.length >= this.TARGET_BUFFER_SIZE) {
@@ -468,6 +483,16 @@ class VoiceService {
       this.micCtx.close();
       this.micCtx = null;
     }
+
+    if (this.audioCtx) {
+      try {
+        this.audioCtx.close();
+      } catch (err) {
+        console.warn("[VoiceService] Error closing audioCtx:", err);
+      }
+      this.audioCtx = null;
+    }
+    this.nextStartTime = 0;
     
     this.isBuffering = true;
     this.bufferQueue = [];
