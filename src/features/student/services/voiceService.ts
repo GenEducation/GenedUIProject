@@ -51,12 +51,13 @@ class VoiceService {
   // Connection & Retry State
   private retryCount = 0;
   private readonly MAX_RETRIES = 5;
+  private currentConnectionId: string | null = null;
   
   // Jitter Buffer & Sync State
   private nextStartTime = 0;
   private bufferQueue: ArrayBuffer[] = [];
   private isBuffering = true;
-  private readonly TARGET_BUFFER_SIZE = 3;
+  private readonly TARGET_BUFFER_SIZE = 6;
 
   // Typewriter Sync State
   private pendingAssistantText = "";
@@ -95,20 +96,22 @@ class VoiceService {
       this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
         sampleRate: 24000,
       });
-    } else if (this.audioCtx.state === "suspended") {
+    }
+    // Autoplay safety: Always check and explicitly resume the context
+    if (this.audioCtx.state === "suspended") {
       await this.audioCtx.resume();
     }
 
     this.nextStartTime = this.audioCtx.currentTime;
-    this.bufferQueue = [];
-    this.isBuffering = true;
+    const connId = Math.random().toString(36).substring(7);
+    this.currentConnectionId = connId;
 
-    await this.initMicrophone();
-    this.connect();
+    await this.initMicrophone(connId);
+    this.connect(connId);
     this.startTypewriterLoop();
   }
 
-  private async initMicrophone() {
+  private async initMicrophone(connId: string) {
     if (this.mediaStream) return;
     try {
       this.micCtx = new AudioContext({ sampleRate: 16000 });
@@ -190,8 +193,9 @@ class VoiceService {
       source.connect(this.processor);
       this.processor.connect(this.micCtx.destination);
 
-      // Set up Silero VAD lazily as fire-and-forget so startup is instant.
-      this.initVad(source);
+      // Disable VAD model loading as requested. Speech gating uses the lightweight RMS-energy noise floor.
+      console.log("🎙️ [VoiceService] VAD model disabled by request. Gating via local RMS-energy floor.");
+      this.vadReady = false;
     } catch (err) {
       console.error("[VoiceService] Mic Error:", err);
       this.onEventCallback?.({ type: "error", error: err });
@@ -282,8 +286,11 @@ class VoiceService {
     }
   }
 
-  private connect() {
-    if (!this.isSessionActive || !this.currentStudentId) return;
+  private connect(connId: string) {
+    if (!this.isSessionActive || !this.currentStudentId || this.currentConnectionId !== connId) {
+      console.log("🎙️ [VoiceService] Aborting connection attempt (newer connection is active or session was stopped).");
+      return;
+    }
 
     // Robustly construct the WebSocket URL
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "");
@@ -340,11 +347,11 @@ class VoiceService {
     };
 
     this.ws.onclose = () => {
-      if (this.isSessionActive && this.retryCount < this.MAX_RETRIES) {
+      if (this.isSessionActive && this.retryCount < this.MAX_RETRIES && this.currentConnectionId === connId) {
         this.retryCount++;
         const delay = Math.pow(2, this.retryCount - 1) * 1000;
         console.log(`[VoiceService] Reconnecting in ${delay}ms (Attempt ${this.retryCount}/${this.MAX_RETRIES})...`);
-        setTimeout(() => this.connect(), delay);
+        setTimeout(() => this.connect(connId), delay);
       } else {
         if (this.retryCount >= this.MAX_RETRIES) {
           console.error("[VoiceService] Max retries reached. Connection failed.");
@@ -373,6 +380,19 @@ class VoiceService {
 
   private handleIncomingAudio(buffer: ArrayBuffer) {
     if (!this.isSessionActive || !this.audioCtx) return;
+
+    const currentTime = this.audioCtx.currentTime;
+
+    // Jitter Buffer Starvation Recovery:
+    // If the playhead has already passed our scheduled play time by more than 50ms,
+    // it means network lag/jitter starved our queue. We immediately re-engage buffering
+    // to build a 6-frame (120ms) cushion for smooth playback instead of crackling.
+    if (!this.isBuffering && this.nextStartTime < currentTime - 0.05) {
+      console.warn(`[VoiceService] Jitter buffer starved (offset: ${(currentTime - this.nextStartTime).toFixed(3)}s). Re-buffering...`);
+      this.isBuffering = true;
+      this.nextStartTime = currentTime;
+    }
+
     if (this.isBuffering) {
       this.bufferQueue.push(buffer);
       if (this.bufferQueue.length >= this.TARGET_BUFFER_SIZE) {
