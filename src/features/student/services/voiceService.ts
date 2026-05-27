@@ -5,25 +5,6 @@ import { getAuthToken } from "@/utils/authFetch";
  * Now includes a Synchronized Typewriter to align text display with audio playback.
  */
 
-// ─── Noise-suppression tuning ────────────────────────────────────────────────
-// These thresholds gate which microphone frames are forwarded to Gemini Live.
-// They sit on top of the browser's built-in noise suppression (echo / NS / AGC
-// constraints below) and Gemini's tightened server-side VAD.
-
-// Frames below this RMS are treated as ambient noise and dropped. -50 dBFS ≈
-// breathing / fan noise; real speech sits well above this. Float32 samples
-// are in [-1, 1], so RMS units are the same.
-const RMS_NOISE_FLOOR = 0.008;
-
-// When Silero VAD flips to "speech", we flush this many cached frames before
-// it so word onsets aren't clipped. 1 frame ≈ 256 ms at 4096 samples / 16 kHz.
-const VAD_PREROLL_FRAMES = 1;
-
-// After VAD declares end-of-speech we keep streaming this many more frames so
-// trailing syllables aren't cut. Gemini's own end-of-speech sensitivity still
-// closes the turn.
-const VAD_POSTROLL_FRAMES = 1;
-
 /**
  * Resamples floating point audio data to a target rate using linear interpolation.
  */
@@ -58,13 +39,6 @@ class VoiceService {
   private onTextRevealCallback: ((text: string, role: "user" | "assistant") => void) | null = null;
   private isMuted = false;
 
-  // VAD state — set up lazily in initMicrophone(). If init fails we fall back
-  // to the RMS floor only.
-  private vad: { destroy: () => void } | null = null;
-  private vadReady = false;
-  private vadSpeaking = false;
-  private vadPostrollRemaining = 0;
-  private prerollBuffer: ArrayBuffer[] = [];
   
   // Connection & Retry State
   private retryCount = 0;
@@ -155,6 +129,14 @@ class VoiceService {
           googEchoCancellation2: true,
         },
       });
+
+      // Staleness guard: session may have been stopped while getUserMedia was awaiting
+      if (!this.isSessionActive || !this.micCtx || this.currentConnectionId !== connId) {
+        this.mediaStream?.getTracks().forEach((t) => t.stop());
+        this.mediaStream = null;
+        return;
+      }
+
       const source = this.micCtx.createMediaStreamSource(this.mediaStream);
       this.processor = this.micCtx.createScriptProcessor(4096, 1, 1);
 
@@ -170,21 +152,10 @@ class VoiceService {
         const i16 = new Int16Array(input.length);
 
         if (this.isMuted) {
-          // Send zeroed-out PCM bytes (silence) when muted to keep the connection active
           i16.fill(0);
         } else {
-          // ── Cheap RMS energy floor. Gating when below the noise floor.
-          let sumSq = 0;
-          for (let i = 0; i < input.length; i++) sumSq += input[i] * input[i];
-          const rms = Math.sqrt(sumSq / input.length);
-          if (rms < RMS_NOISE_FLOOR) {
-            // Send silence (zero bytes) when below noise floor instead of returning early
-            i16.fill(0);
-          } else {
-            // Convert to Int16 PCM once
-            for (let i = 0; i < input.length; i++) {
-              i16[i] = Math.max(-1, Math.min(1, input[i])) * 0x7fff;
-            }
+          for (let i = 0; i < input.length; i++) {
+            i16[i] = Math.max(-1, Math.min(1, input[i])) * 0x7fff;
           }
         }
 
@@ -194,96 +165,9 @@ class VoiceService {
       source.connect(this.processor);
       this.processor.connect(this.micCtx.destination);
 
-      // Disable VAD model loading as requested. Speech gating uses the lightweight RMS-energy noise floor.
-      console.log("🎙️ [VoiceService] VAD model disabled by request. Gating via local RMS-energy floor.");
-      this.vadReady = false;
     } catch (err) {
       console.error("[VoiceService] Mic Error:", err);
       this.onEventCallback?.({ type: "error", error: err });
-    }
-  }
-
-  /**
-   * Boots Silero VAD against the same AudioContext / source node we already
-   * use for streaming. On success, vadReady flips on and the processor begins
-   * gating frames by speech presence. On failure (lib not installed, WASM
-   * fetch blocked, etc.) we silently fall back to the RMS-only path — the
-   * user still gets noise suppression, just less aggressive.
-   */
-  private async initVad(source: MediaStreamAudioSourceNode) {
-    if (!this.micCtx) return;
-    try {
-      console.log("🎙️ [VoiceService] Loading VAD package dynamically...");
-      // Dynamic import: avoids pulling the ONNX runtime into the SSR bundle
-      // and lets the page load even if the package isn't yet installed.
-      const vadMod: any = await import(
-        /* webpackChunkName: "vad" */ "@ricky0123/vad-web"
-      ).catch((err) => {
-        console.warn("🎙️ [VoiceService] VAD package not available, falling back to RMS-only gating:", err);
-        return null;
-      });
-      if (!vadMod || !vadMod.AudioNodeVAD) return;
-
-      // STALENESS GUARD: Check if session was stopped during import
-      if (!this.isSessionActive || !this.micCtx) return;
-
-      console.log("🎙️ [VoiceService] VAD package loaded. Fetching & compiling ONNX model + WASM assets in background...");
-      const vad = await vadMod.AudioNodeVAD.new(this.micCtx, {
-        // Silero defaults are well-tuned for 16k mono; just wire up callbacks.
-        // Assets (silero_vad_legacy.onnx, vad.worklet.bundle.min.js, ort
-        // wasm files) are served from /public, so basePath is the site root.
-        // v5 is the newer Silero model — better compatibility with the
-        // onnxruntime-web 1.26 that npm installs (the VAD lib targets ^1.17
-        // but doesn't pin, and the legacy model has triggered op-set errors
-        // on newer ORT builds).
-        model: "v5",
-        baseAssetPath: "/",
-        onnxWASMBasePath: "/",
-        // Force ONNX Runtime to single-threaded WASM. The multi-threaded
-        // variant needs SharedArrayBuffer, which only works on pages served
-        // with COOP/COEP headers — and setting those globally breaks Google
-        // OAuth popups + any third-party iframe. Single-thread is plenty fast
-        // for a 256 ms frame and avoids the whole cross-origin-isolation
-        // requirement.
-        ortConfig: (ort: any) => {
-          if (ort?.env?.wasm) {
-            ort.env.wasm.numThreads = 1;
-            ort.env.wasm.proxy = false;
-          }
-        },
-        onSpeechStart: () => {
-          console.log("🗣️ [VoiceService] VAD: Speech Started");
-          this.vadSpeaking = true;
-          this.vadPostrollRemaining = 0;
-        },
-        onSpeechEnd: () => {
-          console.log("🤫 [VoiceService] VAD: Speech Ended");
-          this.vadSpeaking = false;
-          this.vadPostrollRemaining = VAD_POSTROLL_FRAMES;
-        },
-        onVADMisfire: () => {
-          console.log("⚠️ [VoiceService] VAD: Speech Misfired (false alarm)");
-          // Speech start was a false alarm — make sure we don't keep streaming.
-          this.vadSpeaking = false;
-          this.vadPostrollRemaining = 0;
-        },
-      });
-
-      // STALENESS GUARD: Check if session was stopped during AudioNodeVAD.new()
-      if (!this.isSessionActive || !this.micCtx) {
-        vad.destroy();
-        return;
-      }
-
-      vad.receive(source);
-      vad.start();
-
-      this.vad = { destroy: () => vad.destroy?.() };
-      this.vadReady = true;
-      console.log("✅ [VoiceService] Silero VAD gate active and monitoring microphone input.");
-    } catch (err) {
-      console.warn("🎙️ [VoiceService] VAD init failed, falling back to RMS-only:", err);
-      this.vadReady = false;
     }
   }
 
@@ -495,15 +379,6 @@ class VoiceService {
       this.ws = null;
     }
     
-    if (this.vad) {
-      try { this.vad.destroy(); } catch { /* ignore */ }
-      this.vad = null;
-    }
-    this.vadReady = false;
-    this.vadSpeaking = false;
-    this.vadPostrollRemaining = 0;
-    this.prerollBuffer = [];
-
     this.mediaStream?.getTracks().forEach((t) => t.stop());
     this.mediaStream = null;
 

@@ -7,8 +7,6 @@ import { useStudentStore } from "../store/useStudentStore";
 import { VoiceStage } from "./VoiceStage";
 import { VoiceTranscript } from "./VoiceTranscript";
 import { VoiceControls } from "./VoiceControls";
-import { PushToTalkButton } from "./PushToTalkButton";
-import { PttHotkeyConfig } from "./PttHotkeyConfig";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 
 const STATUS_CAPTION: Record<string, string> = {
@@ -18,14 +16,6 @@ const STATUS_CAPTION: Record<string, string> = {
   error: "Connection error",
 };
 
-function isTypingTarget(target: EventTarget | null): boolean {
-  if (!target || !(target instanceof HTMLElement)) return false;
-  const tag = target.tagName;
-  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
-  if (target.isContentEditable) return true;
-  return false;
-}
-
 export function StudentVoiceView() {
   const router = useRouter();
   const {
@@ -34,8 +24,8 @@ export function StudentVoiceView() {
     voiceSessionStatus,
     startVoiceSession,
     stopVoiceSession,
-    voicePrefs,
-    pttHeld,
+    isMuted,
+    toggleMute,
     beginPttUtterance,
     endPttUtterance,
     studentProfile,
@@ -43,15 +33,6 @@ export function StudentVoiceView() {
     rateLimitMessage,
     setRateLimitHit,
   } = useStudentStore();
-
-  // Auto-start voice session. Relies on voiceSessionStatus ("idle" → start).
-  // No ref guard: stopVoiceSession() resets status to "idle" on cleanup, so
-  // React Strict Mode's double-mount naturally retries without getting stuck.
-  useEffect(() => {
-    if (!studentProfile || !activeChat) return;
-    if (voiceSessionStatus !== "idle") return;
-    startVoiceSession();
-  }, [studentProfile, activeChat, voiceSessionStatus, startVoiceSession]);
 
   // Stop voice session on unmount.
   useEffect(() => {
@@ -61,20 +42,23 @@ export function StudentVoiceView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // PTT global hotkey: keydown/keyup scoped to voice view + ptt mode.
+  // Space bar hold-to-speak when mic is muted.
   useEffect(() => {
-    if (voicePrefs.listenMode !== "ptt") return;
-    const targetCode = voicePrefs.pttHotkey;
     const onDown = (e: KeyboardEvent) => {
-      if (e.repeat) return;
-      if (e.code !== targetCode) return;
-      if (isTypingTarget(e.target)) return;
+      if (e.code !== "Space" || e.repeat) return;
+      if (voiceSessionStatus !== "active") return;
+      const { isMuted } = useStudentStore.getState();
+      if (!isMuted) return;
       e.preventDefault();
       beginPttUtterance();
     };
     const onUp = (e: KeyboardEvent) => {
-      if (e.code !== targetCode) return;
-      if (isTypingTarget(e.target)) return;
+      if (e.code !== "Space") return;
+      if (voiceSessionStatus !== "active") return;
+      const { isMuted } = useStudentStore.getState();
+      // end PTT if we were holding (pttHeld will be true)
+      const { pttHeld } = useStudentStore.getState();
+      if (!pttHeld) return;
       e.preventDefault();
       endPttUtterance();
     };
@@ -84,35 +68,31 @@ export function StudentVoiceView() {
       window.removeEventListener("keydown", onDown);
       window.removeEventListener("keyup", onUp);
     };
-  }, [voicePrefs.listenMode, voicePrefs.pttHotkey, beginPttUtterance, endPttUtterance]);
+  }, [voiceSessionStatus, beginPttUtterance, endPttUtterance]);
 
   const handleEnd = () => {
     stopVoiceSession();
     router.push("/student");
   };
 
-  const isPtt = voicePrefs.listenMode === "ptt";
-  const reactive = isPtt ? pttHeld : voiceSessionStatus === "active";
+  // Orb tap: only starts session when idle
+  const handleOrbTap = voiceSessionStatus === "idle" ? startVoiceSession : undefined;
+
+  // Orb press-and-hold: PTT when mic is muted during an active session
+  const handleOrbPressStart = voiceSessionStatus === "active" && isMuted ? beginPttUtterance : undefined;
+  const handleOrbPressEnd = voiceSessionStatus === "active" && isMuted ? endPttUtterance : undefined;
+
+  const reactive = voiceSessionStatus === "active" && !isMuted;
+
   const caption = isRateLimitHit
     ? (rateLimitMessage || "Daily limit reached. Upgrade to Pro for more.")
-    : isPtt
-      ? pttHeld
-        ? "Listening…"
-        : voiceSessionStatus === "active"
-          ? "Hold to talk"
-          : STATUS_CAPTION[voiceSessionStatus] || "—"
+    : isMuted && voiceSessionStatus === "active"
+      ? "Muted"
       : STATUS_CAPTION[voiceSessionStatus] || "—";
 
   const agentName = activeChat?.title || "April";
   const subjectLabel = activeChat?.subject ? activeChat.subject : "Voice Session";
   const gradeLabel = activeChat?.grade ? ` · ${activeChat.grade}` : "";
-
-  console.log("🎙️ [StudentVoiceView] Rendering state:", {
-    voiceSessionStatus,
-    isRateLimitHit,
-    rateLimitMessage,
-    caption,
-  });
 
   return (
     <div
@@ -140,7 +120,13 @@ export function StudentVoiceView() {
 
       {/* Top — Avatar / orb */}
       <section className="flex flex-col items-center justify-center pt-10 pb-6">
-        <VoiceStage caption={caption} reactive={reactive} />
+        <VoiceStage
+          caption={caption}
+          reactive={reactive}
+          onTap={handleOrbTap}
+          onPressStart={handleOrbPressStart}
+          onPressEnd={handleOrbPressEnd}
+        />
       </section>
 
       {/* Middle — Transcript (fills remaining space) */}
@@ -154,12 +140,6 @@ export function StudentVoiceView() {
           isVisible={isRateLimitHit}
           onClose={() => setRateLimitHit(false)}
         />
-        {isPtt && (
-          <>
-            <PushToTalkButton />
-            <PttHotkeyConfig />
-          </>
-        )}
         <VoiceControls onEnd={handleEnd} />
       </section>
     </div>

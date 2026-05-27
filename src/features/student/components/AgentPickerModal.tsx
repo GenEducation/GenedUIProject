@@ -32,7 +32,7 @@ function normalizeSubject(subject: string): SubjectKey | null {
 
 export function AgentPickerModal() {
   const router = useRouter();
-  const { setAgentPickerOpen, openNewSession, availableAgents } = useStudentStore();
+  const { setAgentPickerOpen, openNewSession, startVoiceSession, availableAgents } = useStudentStore();
   const [query, setQuery] = useState("");
 
   const filtered = query.trim()
@@ -145,6 +145,7 @@ export function AgentPickerModal() {
                       onClick={() => {
                         openNewSession(agent, "voice");
                         setAgentPickerOpen(false);
+                        startVoiceSession();
                         router.push(`/student/voice?agent=${agent.agent_id}`);
                       }}
                       className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[#5B4DC7] text-white hover:bg-[#5B4DC7]/90 shadow-sm transition-all cursor-pointer"
