@@ -14,6 +14,12 @@ interface RateLimitPromptProps {
 export const RateLimitPrompt: React.FC<RateLimitPromptProps> = ({ isVisible, onClose }) => {
   const { studentProfile, rateLimitMessage } = useStudentStore();
 
+  console.log("🎙️ [RateLimitPrompt] Rendering:", {
+    isVisible,
+    hasProfile: !!studentProfile,
+    rateLimitMessage,
+  });
+
   if (!studentProfile) return null;
 
   return (

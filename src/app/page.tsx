@@ -24,6 +24,46 @@ export default function HomePage() {
       try {
         const profile = JSON.parse(profileStr);
 
+        // Check if there is a pending redirect path
+        const searchParams = new URLSearchParams(window.location.search);
+        const redirectPath = searchParams.get("redirect");
+
+        if (redirectPath) {
+          // If parent link path is requested but currently logged in user is a student,
+          // clear session so parent can authenticate
+          if (redirectPath.startsWith("/parent") && role !== "parent") {
+            localStorage.clear();
+            setIsChecking(false);
+            return;
+          }
+
+          // Hydrate stores if redirect matches role
+          if (role === "student") {
+            useStudentStore.getState().setStudentProfile({
+              user_id: profile.user_id,
+              username: profile.username,
+              email: profile.email,
+              role: profile.role,
+              name: profile.name,
+              grade: profile.grade,
+              school_board: profile.school_board,
+              ai_name: profile.ai_name,
+              plan: profile.plan,
+              plan_expires_at: profile.plan_expires_at,
+            });
+          } else if (role === "parent") {
+            useParentStore.getState().setParentProfile({
+              user_id: profile.user_id || "",
+              username: profile.username || "",
+              email: profile.email || "",
+              role: profile.role || "parent",
+            });
+          }
+
+          router.replace(redirectPath);
+          return;
+        }
+
         // Hydrate stores so the destination portal loads instantly
         if (role === "student") {
           useStudentStore.getState().setStudentProfile({

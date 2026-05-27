@@ -10,6 +10,7 @@ import { PartnerRequestModal } from "./PartnerRequestModal";
 import { updateProfile, fetchProfile } from "@/features/auth/authService";
 import { fetchVoices } from "@/features/student/services/voiceCatalogService";
 import { DEFAULT_GEMINI_VOICE, type GeminiVoice } from "@/constants/geminiVoices";
+import { PttHotkeyConfig } from "./PttHotkeyConfig";
 
 /* ─── Design Tokens (matches home screen) ────────────────────────────────── */
 const C = {
@@ -273,6 +274,7 @@ export function StudentProfile() {
     enrolledPartners, fetchEnrolledPartners, isEnrolledPartnersLoading,
     linkParent, studentStats, fetchStudentStats,
     setStudentProfile,
+    voicePrefs, setListenMode,
   } = useStudentStore();
   const { completeAction } = useTutorialStore();
 
@@ -755,6 +757,53 @@ export function StudentProfile() {
                   >
                     <div style={{ width: 20, height: 20, borderRadius: "50%", background: "white", position: "absolute" as const, top: 3, left: soundEnabled ? 21 : 3, transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }} />
                   </button>
+                </div>
+
+                {/* Voice Settings */}
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 10, borderTop: `1px solid ${C.border}`, paddingTop: 14, marginTop: 4 }}>
+                  <SectionHeader icon="🎙️" label="Voice Settings" />
+                  
+                  {/* Mode Selector */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 14, background: C.pageBg, border: `1px solid ${C.border}` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 16 }}>🎙️</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>Voice Activation</span>
+                    </div>
+                    
+                    <div className="inline-flex p-1 rounded-lg bg-white border border-[#E2E8F0] shadow-sm">
+                      <button
+                        onClick={() => setListenMode("continuous")}
+                        className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                          voicePrefs.listenMode === "continuous"
+                            ? "bg-[#5B4DC7] text-white shadow"
+                            : "text-[#94A3B8] hover:text-[#042E5C]"
+                        }`}
+                      >
+                        Continuous
+                      </button>
+                      <button
+                        onClick={() => setListenMode("ptt")}
+                        className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                          voicePrefs.listenMode === "ptt"
+                            ? "bg-[#5B4DC7] text-white shadow"
+                            : "text-[#94A3B8] hover:text-[#042E5C]"
+                        }`}
+                      >
+                        Push to talk
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Hotkey Capture (only if PTT mode) */}
+                  {voicePrefs.listenMode === "ptt" && (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 14, background: C.pageBg, border: `1px solid ${C.border}` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 16 }}>⌨️</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>PTT Hotkey</span>
+                      </div>
+                      <PttHotkeyConfig compact={true} />
+                    </div>
+                  )}
                 </div>
 
                 {/* Logout */}

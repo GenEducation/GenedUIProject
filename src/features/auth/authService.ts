@@ -19,6 +19,7 @@ export interface SignUpFields {
   organization?: string;
   website?: string;
   otp_code?: string;
+  parent_email?: string;
 }
 
 export interface AuthTokenResponse {
@@ -88,21 +89,26 @@ export async function signIn(data: SignInFields): Promise<AuthTokenResponse> {
 
 export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
   const body: any = {
-    email_id: data.email,
     password: data.password,
     role: data.role.toUpperCase(),
-    otp_code: data.otp_code,
   };
 
   if (data.username) body.username = data.username;
 
   if (data.role === "student") {
+    if (data.parent_email) body.parent_email = data.parent_email;
+    if (data.email) body.email_id = data.email;
+    if (data.otp_code) body.otp_code = data.otp_code;
     if (data.grade) body.grade = Number(data.grade);
-  } else if (data.role === "parent") {
-    if (data.phone) body.phone = data.phone;
-  } else if (data.role === "partner") {
-    if (data.organization) body.organization = data.organization;
-    if (data.website) body.website = data.website;
+  } else {
+    body.email_id = data.email;
+    body.otp_code = data.otp_code;
+    if (data.role === "parent") {
+      if (data.phone) body.phone = data.phone;
+    } else if (data.role === "partner") {
+      if (data.organization) body.organization = data.organization;
+      if (data.website) body.website = data.website;
+    }
   }
 
   const response = await fetch(`${AUTH_API_BASE_URL}/auth/sign-up`, {
