@@ -129,6 +129,30 @@ export const studentService = {
     return response.json();
   },
 
+  fetchEnglishSkillsSummary: async (studentId: string) => {
+    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/english-skills-summary`, {
+      headers: { "accept": "application/json" }
+    });
+    return response.json();
+  },
+
+  fetchTestSubmissions: async (studentId: string, subject?: string) => {
+    const url = subject
+      ? `${API_BASE_URL}/students/${studentId}/test-submissions?subject=${encodeURIComponent(subject)}`
+      : `${API_BASE_URL}/students/${studentId}/test-submissions`;
+    const response = await authFetch(url, {
+      headers: { "accept": "application/json" }
+    });
+    return response.json();
+  },
+
+  fetchDashboardProfile: async (studentId: string) => {
+    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/profile`, {
+      headers: { "accept": "application/json" }
+    });
+    return response.json();
+  },
+
   linkParent: async (studentId: string, parentEmailOrPhone: string) => {
     const response = await authFetch(`${API_BASE_URL}/parent/link`, {
       method: "POST",
@@ -219,6 +243,32 @@ export const studentService = {
   fetchFigureSignedUrl: async (sessionId: string, directiveId: string) => {
     const response = await authFetch(
       `${API_BASE_URL}/english/session/${sessionId}/figure/${directiveId}/signed-url`
+    );
+    return response.json();
+  },
+
+  // ── AI Analysis Reports ─────────────────────────────────────────────────────
+
+  fetchProgressReport: async (studentId: string) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/students/${studentId}/progress-report`,
+      { headers: { accept: "application/json" } }
+    );
+    return response.json();
+  },
+
+  fetchSubjectEvolution: async (studentId: string, subject: string) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/students/${studentId}/subject-evolution-analysis?subject=${encodeURIComponent(subject)}`,
+      { headers: { accept: "application/json" } }
+    );
+    return response.json();
+  },
+
+  fetchChapterEvolution: async (studentId: string, subject: string, documentTitle: string) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/students/${studentId}/evolution-analysis?subject=${encodeURIComponent(subject)}&document_title=${encodeURIComponent(documentTitle)}`,
+      { headers: { accept: "application/json" } }
     );
     return response.json();
   },
