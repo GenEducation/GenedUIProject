@@ -13,7 +13,7 @@ import { getAuthToken } from "@/utils/authFetch";
 // Frames below this RMS are treated as ambient noise and dropped. -50 dBFS ≈
 // breathing / fan noise; real speech sits well above this. Float32 samples
 // are in [-1, 1], so RMS units are the same.
-const RMS_NOISE_FLOOR = 0.0035;
+const RMS_NOISE_FLOOR = 0.008;
 
 // When Silero VAD flips to "speech", we flush this many cached frames before
 // it so word onsets aren't clipped. 1 frame ≈ 256 ms at 4096 samples / 16 kHz.
@@ -23,6 +23,24 @@ const VAD_PREROLL_FRAMES = 1;
 // trailing syllables aren't cut. Gemini's own end-of-speech sensitivity still
 // closes the turn.
 const VAD_POSTROLL_FRAMES = 1;
+
+/**
+ * Resamples floating point audio data to a target rate using linear interpolation.
+ */
+function resample(input: any, fromRate: number, toRate: number): any {
+  if (fromRate === toRate) return input;
+  const ratio = fromRate / toRate;
+  const newLength = Math.round(input.length / ratio);
+  const result = new Float32Array(newLength);
+  for (let i = 0; i < newLength; i++) {
+    const nextIndex = i * ratio;
+    const index = Math.floor(nextIndex);
+    const interpolation = nextIndex - index;
+    const nextValue = index + 1 < input.length ? input[index + 1] : input[index];
+    result[i] = input[index] + interpolation * (nextValue - input[index]);
+  }
+  return result;
+}
 
 class VoiceService {
   private ws: WebSocket | null = null;
@@ -115,6 +133,7 @@ class VoiceService {
     if (this.mediaStream) return;
     try {
       this.micCtx = new AudioContext({ sampleRate: 16000 });
+      console.log(`🎙️ [VoiceService] micCtx sample rate: ${this.micCtx.sampleRate} Hz`);
 
       // ── Mic constraints: lean on the browser's built-in DSP before audio
       // ever reaches us. echoCancellation + noiseSuppression + autoGainControl
@@ -142,7 +161,12 @@ class VoiceService {
       this.processor.onaudioprocess = (e) => {
         if (this.ws?.readyState !== WebSocket.OPEN) return;
 
-        const input = e.inputBuffer.getChannelData(0);
+        let input = e.inputBuffer.getChannelData(0);
+        const bufferSampleRate = e.inputBuffer.sampleRate;
+        if (bufferSampleRate !== 16000) {
+          input = resample(input, bufferSampleRate, 16000);
+        }
+
         const i16 = new Int16Array(input.length);
 
         if (this.isMuted) {

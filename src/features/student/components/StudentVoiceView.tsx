@@ -107,6 +107,13 @@ export function StudentVoiceView() {
   const subjectLabel = activeChat?.subject ? activeChat.subject : "Voice Session";
   const gradeLabel = activeChat?.grade ? ` · ${activeChat.grade}` : "";
 
+  console.log("🎙️ [StudentVoiceView] Rendering state:", {
+    voiceSessionStatus,
+    isRateLimitHit,
+    rateLimitMessage,
+    caption,
+  });
+
   return (
     <div
       className="h-screen flex flex-col font-sans overflow-hidden"

@@ -1029,7 +1029,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         } else if (event.type === "disconnected") {
           set({ voiceSessionStatus: "idle" });
         } else if (event.type === "error") {
+          console.log("🎙️ [StudentStore] Voice session error event received:", event);
           if (event.error === "rate_limit_exceeded") {
+            console.log("🎙️ [StudentStore] Setting isRateLimitHit to true");
             set({ 
               voiceSessionStatus: "error",
               isRateLimitHit: true,
