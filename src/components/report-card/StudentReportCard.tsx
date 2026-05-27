@@ -1971,6 +1971,12 @@ export function StudentReportCard() {
   const toggle = (key: keyof typeof sections) =>
     setSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
+  const handlePrint = () => {
+    // The print document (.print-doc) is always fully rendered in the DOM —
+    // no sections to expand, no animations to wait for. Call directly.
+    window.print();
+  };
+
   // ── Data Fetching ─────────────────────────────────────
   const studentId = studentProfile?.user_id;
 
@@ -2141,71 +2147,112 @@ export function StudentReportCard() {
 
   // ── Render ─────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
+    <>
       {/* ── PRINT STYLES ── */}
       <style>{`
         @media print {
-          @page {
-            size: A4 portrait;
-            margin: 1.4cm 1.6cm;
+          @page { size: A4 portrait; margin: 1.2cm 1.5cm; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+          body { background: white !important; margin: 0; }
+          .screen-ui { display: none !important; }
+          .print-doc { display: block !important; font-family: -apple-system, 'Segoe UI', sans-serif; }
+
+          /* Section header bar — same style as screen */
+          .pd-section-header {
+            display: flex; align-items: center; gap: 8pt;
+            padding: 10pt 14pt; border-radius: 10pt 10pt 0 0;
+            margin-bottom: 0;
           }
+          .pd-section-header-title { font-size: 11pt; font-weight: 700; }
+          .pd-section-header-sub { font-size: 8pt; opacity: 0.8; margin-top: 1pt; }
 
-          /* Ensure colours print */
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            animation: none !important;
-            transition: none !important;
-          }
-
-          body { background: white !important; }
-
-          /* Hide interactive chrome */
-          .print-hide { display: none !important; }
-
-          /* Header stays on page 1 — subsequent sections each get a new page */
-          .report-header {
+          /* Card wrapper */
+          .pd-card {
+            border-radius: 10pt; border: 1pt solid #E2E8F0;
+            margin-bottom: 10pt; overflow: hidden;
             break-inside: avoid;
-            break-after: page;
+          }
+          .pd-card-body { padding: 12pt 14pt; background: white; }
+
+          /* Sub-card inside a section */
+          .pd-sub-card {
+            border: 1pt solid #E2E8F0; border-radius: 8pt;
+            padding: 9pt 11pt; margin-bottom: 7pt;
+            break-inside: avoid; background: white;
           }
 
-          /* Every section starts on its own fresh page */
-          .report-section {
-            break-before: page !important;
-            break-inside: avoid-page;
+          /* Headline callout */
+          .pd-headline {
+            font-size: 10pt; font-weight: 600; font-style: italic;
+            padding: 6pt 10pt; border-radius: 6pt;
+            margin-bottom: 8pt; border-left: 3pt solid;
           }
 
-          /* Force collapsed section bodies to show at full height */
-          .section-body {
-            height: auto !important;
-            overflow: visible !important;
-            opacity: 1 !important;
+          /* Tag/badge */
+          .pd-tag {
+            display: inline-block; font-size: 7.5pt; font-weight: 700;
+            padding: 1.5pt 6pt; border-radius: 20pt;
+            letter-spacing: 0.02em;
           }
 
-          /* Keep individual rows / cards together — never split mid-card */
-          .no-break {
-            break-inside: avoid !important;
+          /* Prose content from markdown */
+          .pd-prose { font-size: 9.5pt; line-height: 1.65; color: #334155; }
+          .pd-prose h2 { font-size: 11pt; font-weight: 700; color: #042E5C; margin: 10pt 0 4pt; padding-bottom: 3pt; border-bottom: 1pt solid #E2E8F0; }
+          .pd-prose h3 { font-size: 10pt; font-weight: 700; color: #1E3A5F; margin: 8pt 0 3pt; }
+          .pd-prose h4 { font-size: 9pt; font-weight: 700; color: #334155; margin: 6pt 0 2pt; text-transform: uppercase; letter-spacing: 0.06em; }
+          .pd-prose p { margin: 3pt 0 5pt; }
+          .pd-prose ul, .pd-prose ol { padding-left: 14pt; margin: 3pt 0; }
+          .pd-prose li { margin: 2pt 0; }
+          .pd-prose strong { color: #042E5C; }
+
+          /* Stat chips */
+          .pd-stat { display: inline-flex; align-items: center; gap: 4pt; font-size: 8.5pt; color: #64748b; margin-right: 10pt; }
+          .pd-stat-val { font-weight: 700; color: #1e293b; }
+
+          /* Two-column grid for strength/weakness */
+          .pd-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6pt; margin-top: 6pt; }
+
+          /* Strength/weakness item */
+          .pd-bullet { display: flex; align-items: flex-start; gap: 5pt; font-size: 9pt; padding: 4pt 0; border-bottom: 0.5pt solid #F1F5F9; }
+          .pd-bullet:last-child { border-bottom: none; }
+          .pd-bullet-icon { width: 14pt; text-align: center; flex-shrink: 0; font-size: 9pt; margin-top: 1pt; }
+
+          /* Focus area row */
+          .pd-focus { display: flex; align-items: flex-start; gap: 8pt; padding: 6pt 8pt; border-radius: 6pt; margin-bottom: 5pt; break-inside: avoid; }
+          .pd-focus-priority { font-size: 7.5pt; font-weight: 700; padding: 1pt 5pt; border-radius: 3pt; white-space: nowrap; flex-shrink: 0; margin-top: 1pt; }
+
+          /* Pattern row */
+          .pd-pattern { padding: 7pt 10pt; border-radius: 7pt; margin-bottom: 6pt; break-inside: avoid; }
+
+          /* Two-col layout for the doc */
+          .pd-meta-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12pt; }
+
+          /* Progress bars — plain divs so they render in print */
+          .pd-bar-track {
+            width: 100%; height: 4pt; background: #E2E8F0;
+            border-radius: 2pt; overflow: hidden;
+          }
+          .pd-bar-fill {
+            height: 4pt; border-radius: 2pt;
           }
 
-          /* Clean up shadows/backgrounds for print */
-          .shadow-sm { box-shadow: none !important; }
-
-          /* Widen to fill the page */
-          .max-w-4xl {
-            max-width: 100% !important;
-            padding: 0 !important;
+          /* Subject card grid — 3 columns */
+          .pd-subject-grid {
+            display: grid; grid-template-columns: 1fr 1fr 1fr;
+            gap: 6pt;
           }
 
-          /* Remove outer page padding */
-          .min-h-screen { min-height: unset !important; }
-
-          /* Expand all grids to 3 cols */
-          .md\\:grid-cols-3 { grid-template-columns: repeat(3, 1fr) !important; }
-
-          /* Widen hidden progress bars that are sm:block */
-          .hidden { display: block !important; }
+          /* English metric tiles — 5 columns */
+          .pd-metric-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 4pt;
+          }
         }
+        @media screen { .print-doc { display: none; } }
       `}</style>
+
+    {/* ── INTERACTIVE UI (screen only) ── */}
+    <div className="screen-ui min-h-screen bg-[#F8F9FA]">
 
       <div className="max-w-4xl mx-auto px-4 py-8">
 
@@ -2305,7 +2352,7 @@ export function StudentReportCard() {
             </span>
             <div className="flex gap-2 print-hide">
               <button
-                onClick={() => window.print()}
+                onClick={handlePrint}
                 className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-[#042E5C] transition-colors px-3 py-1.5 rounded-lg hover:bg-white border border-transparent hover:border-slate-200"
               >
                 <Download size={13} />
@@ -2479,6 +2526,643 @@ export function StudentReportCard() {
           interactions
         </div>
       </div>
-    </div>
+    </div>{/* end screen-ui */}
+
+    {/* ── PRINT DOCUMENT (print only) ── */}
+    <div className="print-doc">
+
+      {/* ── DOC HEADER ── */}
+      <div style={{ background: "linear-gradient(135deg,#042E5C 0%,#0f4c85 100%)", borderRadius: "10pt", padding: "14pt 18pt", marginBottom: "12pt", color: "white" }}>
+        <div className="pd-meta-row" style={{ marginBottom: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10pt" }}>
+            <div style={{ width: "32pt", height: "32pt", borderRadius: "8pt", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13pt", fontWeight: 800 }}>
+              {displayInitials}
+            </div>
+            <div>
+              <div style={{ fontSize: "8pt", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.7, marginBottom: "2pt" }}>GenEducation Report Card</div>
+              <div style={{ fontSize: "15pt", fontWeight: 800, lineHeight: 1.15 }}>{displayName}</div>
+              <div style={{ fontSize: "8.5pt", opacity: 0.85, marginTop: "1pt" }}>
+                {displayGrade ? `Grade ${displayGrade}` : ""}{displayGrade && displayBoard ? " · " : ""}{displayBoard ?? ""}
+              </div>
+            </div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: "8pt", opacity: 0.7, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "2pt" }}>Overall Average</div>
+            <div style={{ fontSize: "18pt", fontWeight: 800, lineHeight: 1 }}>{Math.round(overallAvg * 100)}%</div>
+            <div style={{ fontSize: "7.5pt", opacity: 0.7, marginTop: "3pt" }}>{generatedAt}</div>
+            <div style={{ fontSize: "7.5pt", opacity: 0.7 }}>{totalSessions} sessions · {subjects.length} subjects</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ═════════ SECTION 1: SUBJECT-WISE PERFORMANCE ═════════ */}
+      {subjects.length > 0 && (
+        <div className="pd-card">
+          <div className="pd-section-header" style={{ background: "#EFF6FF", borderBottom: "1pt solid #BFDBFE" }}>
+            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#042E5C", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>1</div>
+            <div>
+              <div className="pd-section-header-title" style={{ color: "#042E5C" }}>Subject-wise Performance</div>
+              <div className="pd-section-header-sub" style={{ color: "#1E40AF" }}>Overall score, skill index &amp; adaptive mode per subject</div>
+            </div>
+          </div>
+          <div className="pd-card-body">
+            <div className="pd-subject-grid">
+              {subjects.map((s, idx) => {
+                const accent = SUBJECT_ACCENTS[idx % SUBJECT_ACCENTS.length];
+                const modeCfg: Record<string, { bg: string; text: string; label: string }> = {
+                  CHALLENGE: { bg: "#DBEAFE", text: "#1E40AF", label: "Challenge" },
+                  PRACTICE:  { bg: "#FEF3C7", text: "#92400E", label: "Practice" },
+                  REMEDIAL:  { bg: "#FEE2E2", text: "#991B1B", label: "Remedial" },
+                };
+                const mc = modeCfg[s.adaptive_mode] ?? modeCfg.PRACTICE;
+                return (
+                  <div key={s.subject} style={{ border: `1pt solid ${accent}33`, background: `${accent}0D`, borderRadius: "8pt", padding: "9pt 11pt", breakInside: "avoid" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "7pt" }}>
+                      <div style={{ fontSize: "10pt", fontWeight: 800, color: "#042E5C" }}>{s.subject}</div>
+                      <span className="pd-tag" style={{ background: mc.bg, color: mc.text }}>{mc.label}</span>
+                    </div>
+                    {/* Overall Score */}
+                    <div style={{ marginBottom: "6pt" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "7.5pt", color: "#64748b", marginBottom: "2pt" }}>
+                        <span>Overall Score</span>
+                        <span style={{ fontWeight: 800, color: masteryColor(s.overall_score) }}>{pct(s.overall_score)}</span>
+                      </div>
+                      <div className="pd-bar-track"><div className="pd-bar-fill" style={{ width: `${Math.round(s.overall_score * 100)}%`, background: masteryColor(s.overall_score) }} /></div>
+                    </div>
+                    {/* Skill Index */}
+                    <div style={{ marginBottom: "6pt" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "7.5pt", color: "#64748b", marginBottom: "2pt" }}>
+                        <span>Skill Index</span>
+                        <span style={{ fontWeight: 800, color: masteryColor(s.skill_index) }}>{pct(s.skill_index)}</span>
+                      </div>
+                      <div className="pd-bar-track"><div className="pd-bar-fill" style={{ width: `${Math.round(s.skill_index * 100)}%`, background: masteryColor(s.skill_index) }} /></div>
+                    </div>
+                    <div style={{ fontSize: "7.5pt", color: "#64748b" }}>⏱ {s.session_count} learning sessions</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════ SECTION 2: CURRICULUM COVERAGE ═════════ */}
+      {chapters.length > 0 && (
+        <div className="pd-card">
+          <div className="pd-section-header" style={{ background: "#F5F3FF", borderBottom: "1pt solid #DDD6FE" }}>
+            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#7C3AED", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>2</div>
+            <div>
+              <div className="pd-section-header-title" style={{ color: "#5B21B6" }}>Curriculum Coverage</div>
+              <div className="pd-section-header-sub" style={{ color: "#7C3AED" }}>Chapter-by-chapter completion and mastery</div>
+            </div>
+          </div>
+          <div className="pd-card-body">
+            {subjects.map((subj) => {
+              const subjChapters = chapters.filter((c) => c.subject === subj.subject);
+              if (subjChapters.length === 0) return null;
+              return (
+                <div key={subj.subject} style={{ marginBottom: "10pt", breakInside: "avoid" }}>
+                  <div style={{ fontSize: "9.5pt", fontWeight: 800, color: "#5B21B6", marginBottom: "5pt", padding: "3pt 8pt", background: "#F5F3FF", borderRadius: "4pt", borderLeft: "2pt solid #7C3AED" }}>
+                    {subj.subject}
+                    <span style={{ fontSize: "7.5pt", fontWeight: 600, color: "#7C3AED", marginLeft: "6pt" }}>({subjChapters.length} chapter{subjChapters.length !== 1 ? "s" : ""})</span>
+                  </div>
+                  {subjChapters.map((ch) => (
+                    <div key={ch.document_title} style={{ marginBottom: "5pt", padding: "4pt 0" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2pt" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "5pt", flex: 1, minWidth: 0 }}>
+                          <span style={{ width: "5pt", height: "5pt", borderRadius: "50%", background: masteryColor(ch.mastery_score), display: "inline-block", flexShrink: 0 }} />
+                          <span style={{ fontSize: "8.5pt", color: "#1e293b", fontWeight: 500 }}>{ch.document_title}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6pt", flexShrink: 0 }}>
+                          <span style={{ fontSize: "7.5pt", color: "#94A3B8" }}>{ch.study_count} sessions</span>
+                          <span style={{ fontSize: "7.5pt", fontWeight: 700, padding: "1pt 5pt", borderRadius: "10pt", background: `${masteryColor(ch.mastery_score)}1A`, color: masteryColor(ch.mastery_score) }}>{pct(ch.mastery_score)}</span>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "5pt" }}>
+                        <div className="pd-bar-track" style={{ flex: 1 }}><div className="pd-bar-fill" style={{ width: `${Math.round(ch.completion_percentage)}%`, background: masteryColor(ch.mastery_score) }} /></div>
+                        <span style={{ fontSize: "7pt", fontWeight: 700, color: "#64748b", width: "22pt", textAlign: "right" }}>{Math.round(ch.completion_percentage)}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+            {/* Legend */}
+            <div style={{ marginTop: "8pt", paddingTop: "6pt", borderTop: "0.5pt solid #E2E8F0", display: "flex", gap: "10pt", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "7pt", color: "#94A3B8", fontWeight: 700 }}>MASTERY:</span>
+              {[
+                { label: "Advanced (≥80%)", color: "#059F6D" },
+                { label: "Proficient (60–79%)", color: "#10B981" },
+                { label: "Approaching (40–59%)", color: "#F59E0B" },
+                { label: "Developing (<40%)", color: "#EF4444" },
+              ].map((l) => (
+                <div key={l.label} style={{ display: "flex", alignItems: "center", gap: "3pt" }}>
+                  <span style={{ width: "6pt", height: "6pt", borderRadius: "50%", background: l.color, display: "inline-block" }} />
+                  <span style={{ fontSize: "7pt", color: "#64748b" }}>{l.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════ SECTION 3: SKILL MASTERY BREAKDOWN ═════════ */}
+      {skillTree.length > 0 && (
+        <div className="pd-card">
+          <div className="pd-section-header" style={{ background: "#ECFDF5", borderBottom: "1pt solid #A7F3D0" }}>
+            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#059F6D", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>3</div>
+            <div>
+              <div className="pd-section-header-title" style={{ color: "#047857" }}>Skill Mastery Breakdown</div>
+              <div className="pd-section-header-sub" style={{ color: "#059F6D" }}>Concept Groups → Concepts → Learning Outcomes</div>
+            </div>
+          </div>
+          <div className="pd-card-body">
+            {subjects.map((subj) => {
+              const subjCGs = skillTree.filter((cg) => cg.subject === subj.subject);
+              if (subjCGs.length === 0) return null;
+              return (
+                <div key={subj.subject} style={{ marginBottom: "10pt" }}>
+                  <div style={{ fontSize: "9.5pt", fontWeight: 800, color: "#047857", marginBottom: "5pt", padding: "3pt 8pt", background: "#ECFDF5", borderRadius: "4pt", borderLeft: "2pt solid #059F6D" }}>
+                    {subj.subject}
+                  </div>
+                  {subjCGs.map((cg) => (
+                    <div key={cg.cg_id} style={{ border: "0.5pt solid #E2E8F0", borderRadius: "5pt", padding: "5pt 8pt", marginBottom: "4pt", breakInside: "avoid", background: "white" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3pt" }}>
+                        <span style={{ fontSize: "8.5pt", fontWeight: 700, color: "#042E5C", flex: 1 }}>{cg.cg_name}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "5pt", flexShrink: 0 }}>
+                          <div className="pd-bar-track" style={{ width: "60pt" }}><div className="pd-bar-fill" style={{ width: `${Math.round(cg.avg_mastery * 100)}%`, background: masteryColor(cg.avg_mastery) }} /></div>
+                          <span style={{ fontSize: "8pt", fontWeight: 800, color: masteryColor(cg.avg_mastery), minWidth: "20pt", textAlign: "right" }}>{pct(cg.avg_mastery)}</span>
+                          <span style={{ fontSize: "6.5pt", fontWeight: 700, padding: "1pt 4pt", borderRadius: "8pt", background: `${masteryColor(cg.avg_mastery)}1A`, color: masteryColor(cg.avg_mastery) }}>{masteryLabel(cg.avg_mastery)}</span>
+                        </div>
+                      </div>
+                      {cg.concepts.length > 0 && (
+                        <div style={{ paddingLeft: "10pt", borderLeft: "1pt solid #E2E8F0", marginTop: "3pt" }}>
+                          {cg.concepts.map((concept) => (
+                            <div key={concept.c_id} style={{ marginBottom: "2pt" }}>
+                              <div style={{ fontSize: "7.5pt", fontWeight: 600, color: "#475569" }}>
+                                {concept.c_name} <span style={{ color: "#94A3B8", fontWeight: 400 }}>({concept.los.length} LOs)</span>
+                              </div>
+                              {concept.los.slice(0, 4).map((lo) => (
+                                <div key={lo.skill_id} style={{ display: "flex", alignItems: "center", gap: "4pt", padding: "1pt 0 1pt 8pt" }}>
+                                  <span style={{ width: "3pt", height: "3pt", borderRadius: "50%", background: masteryColor(lo.mastery_level), display: "inline-block", flexShrink: 0 }} />
+                                  <span style={{ fontSize: "7pt", color: "#64748b", flex: 1 }}>{lo.skill_name}</span>
+                                  <div className="pd-bar-track" style={{ width: "40pt", height: "3pt" }}><div className="pd-bar-fill" style={{ width: `${Math.round(lo.mastery_level * 100)}%`, background: masteryColor(lo.mastery_level) }} /></div>
+                                  <span style={{ fontSize: "6.5pt", fontWeight: 700, color: masteryColor(lo.mastery_level), width: "18pt", textAlign: "right" }}>{pct(lo.mastery_level)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ═════════ SECTION 4: ENGLISH SKILLS PROFILE ═════════ */}
+      {englishSkills && englishSkills.total_sessions > 0 && (
+        <div className="pd-card">
+          <div className="pd-section-header" style={{ background: "#F0F9FF", borderBottom: "1pt solid #BAE6FD" }}>
+            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#0EA5E9", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>4</div>
+            <div>
+              <div className="pd-section-header-title" style={{ color: "#0C4A6E" }}>English Skills Profile</div>
+              <div className="pd-section-header-sub" style={{ color: "#0369A1" }}>Oral reading, fluency, comprehension across session modes</div>
+            </div>
+          </div>
+          <div className="pd-card-body">
+            {/* Metric tiles */}
+            <div className="pd-metric-grid" style={{ marginBottom: "9pt" }}>
+              {[
+                { label: "Accuracy", val: englishSkills.avg_accuracy },
+                { label: "Fluency", val: englishSkills.avg_fluency },
+                { label: "Expression", val: englishSkills.avg_expression },
+                { label: "Comprehension", val: englishSkills.avg_comprehension },
+                { label: "WPM", val: null, wpm: englishSkills.avg_wpm ? Math.round(englishSkills.avg_wpm) : null },
+              ].map((m) => (
+                <div key={m.label} style={{ background: "#F0F9FF", border: "1pt solid #BAE6FD", borderRadius: "6pt", padding: "6pt 4pt", textAlign: "center" }}>
+                  <div style={{ fontSize: "14pt", fontWeight: 800, color: m.val != null ? masteryColor(m.val) : "#0EA5E9", lineHeight: 1 }}>
+                    {"wpm" in m && m.wpm != null ? m.wpm : m.val != null ? pct(m.val) : "—"}
+                  </div>
+                  <div style={{ fontSize: "7pt", color: "#64748b", fontWeight: 600, marginTop: "2pt" }}>{m.label}</div>
+                  {m.val != null && (
+                    <div className="pd-bar-track" style={{ marginTop: "3pt", height: "2.5pt" }}>
+                      <div className="pd-bar-fill" style={{ width: `${Math.round(m.val * 100)}%`, background: masteryColor(m.val), height: "2.5pt" }} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {/* Per-mode breakdown */}
+            {englishSkills.by_mode.length > 0 && (
+              <>
+                <div style={{ fontSize: "8pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "4pt" }}>Session Mode Breakdown</div>
+                {englishSkills.by_mode.map((mode) => (
+                  <div key={mode.mode} style={{ background: "#F8FAFC", borderRadius: "5pt", padding: "5pt 8pt", marginBottom: "3pt", breakInside: "avoid" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2pt" }}>
+                      <span style={{ fontSize: "8.5pt", fontWeight: 600, color: "#042E5C" }}>{MODE_LABELS[mode.mode] ?? mode.mode}</span>
+                      <span style={{ fontSize: "7pt", color: "#94A3B8" }}>{mode.session_count} sessions</span>
+                    </div>
+                    <div style={{ display: "flex", gap: "8pt", flexWrap: "wrap", fontSize: "7.5pt", color: "#64748b" }}>
+                      {mode.avg_accuracy != null && <span>Accuracy: <strong style={{ color: masteryColor(mode.avg_accuracy) }}>{pct(mode.avg_accuracy)}</strong></span>}
+                      {mode.avg_fluency != null && <span>Fluency: <strong style={{ color: masteryColor(mode.avg_fluency) }}>{pct(mode.avg_fluency)}</strong></span>}
+                      {mode.avg_comprehension != null && <span>Comp: <strong style={{ color: masteryColor(mode.avg_comprehension) }}>{pct(mode.avg_comprehension)}</strong></span>}
+                      {mode.avg_wpm != null && <span>WPM: <strong style={{ color: "#0369A1" }}>{Math.round(mode.avg_wpm)}</strong></span>}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═════════ SECTION 5: CHAPTER TEST RESULTS ═════════ */}
+      {testSubmissions.length > 0 && (
+        <div className="pd-card">
+          <div className="pd-section-header" style={{ background: "#FFFBEB", borderBottom: "1pt solid #FDE68A" }}>
+            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#F59E0B", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>5</div>
+            <div>
+              <div className="pd-section-header-title" style={{ color: "#92400E" }}>Chapter Test Results</div>
+              <div className="pd-section-header-sub" style={{ color: "#B45309" }}>ZPD-calibrated tests: scores and section-wise breakdown</div>
+            </div>
+          </div>
+          <div className="pd-card-body">
+            {testSubmissions.map((test) => {
+              const passed = (test.overall_verdict ?? "").toLowerCase() === "pass";
+              return (
+                <div key={test.submission_id} style={{ border: "0.5pt solid #E2E8F0", borderRadius: "6pt", padding: "6pt 9pt", marginBottom: "5pt", breakInside: "avoid", background: "white" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4pt" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "5pt", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: "9pt", fontWeight: 700, color: "#042E5C" }}>{test.document_title}</span>
+                        <span className="pd-tag" style={{ background: "#F1F5F9", color: "#64748b" }}>{test.subject}</span>
+                      </div>
+                      <div style={{ fontSize: "7pt", color: "#94A3B8", marginTop: "1pt" }}>{formatDate(test.submitted_at)}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "5pt", flexShrink: 0 }}>
+                      <div className="pd-bar-track" style={{ width: "50pt" }}><div className="pd-bar-fill" style={{ width: `${Math.round(test.overall_score * 100)}%`, background: masteryColor(test.overall_score) }} /></div>
+                      <span style={{ fontSize: "10pt", fontWeight: 800, color: masteryColor(test.overall_score) }}>{pct(test.overall_score)}</span>
+                      <span style={{ fontSize: "7pt", fontWeight: 800, padding: "1pt 5pt", borderRadius: "10pt", background: passed ? "#D1FAE5" : "#FEE2E2", color: passed ? "#065F46" : "#991B1B" }}>
+                        {(test.overall_verdict ?? "—").toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  {Object.keys(test.section_results ?? {}).length > 0 && (
+                    <div style={{ paddingLeft: "8pt", borderLeft: "1pt solid #FDE68A", marginTop: "4pt" }}>
+                      <div style={{ fontSize: "6.5pt", fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", marginBottom: "2pt" }}>Section Results</div>
+                      {Object.entries(test.section_results).map(([section, data]) => {
+                        const score = typeof data.score === "number" ? data.score : (data.correct ?? 0) / (data.total ?? 1);
+                        return (
+                          <div key={section} style={{ display: "flex", alignItems: "center", gap: "5pt", padding: "1pt 0" }}>
+                            <span style={{ fontSize: "7.5pt", color: "#475569", flex: 1 }}>{section}</span>
+                            {data.correct != null && data.total != null && (
+                              <span style={{ fontSize: "7pt", color: "#94A3B8" }}>{data.correct}/{data.total}</span>
+                            )}
+                            <div className="pd-bar-track" style={{ width: "40pt", height: "3pt" }}><div className="pd-bar-fill" style={{ width: `${Math.round(score * 100)}%`, background: masteryColor(score), height: "3pt" }} /></div>
+                            <span style={{ fontSize: "7pt", fontWeight: 700, color: masteryColor(score), width: "18pt", textAlign: "right" }}>{pct(score)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ═════════ SECTION 6: AI LEARNING INSIGHTS ═════════ */}
+      {progressReport && (() => {
+        const rj = progressReport.report_json ?? {} as any;
+        const strengths: string[] = rj.universal_strengths ?? [];
+        const weaknesses: string[] = rj.universal_weaknesses ?? [];
+        const focusAreas: any[] = rj.focus_areas ?? [];
+        const patterns: any[] = rj.cross_subject_patterns ?? [];
+        return (
+          <div className="pd-card">
+            <div className="pd-section-header" style={{ background: "#FAF5FF", borderBottom: "1pt solid #E9D5FF" }}>
+              <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#7C2D96", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>6</div>
+              <div>
+                <div className="pd-section-header-title" style={{ color: "#6B21A8" }}>AI Learning Insights</div>
+                <div className="pd-section-header-sub" style={{ color: "#7C2D96" }}>Holistic progress analysis across all subjects and sessions</div>
+              </div>
+            </div>
+            <div className="pd-card-body">
+              {progressReport.headline && (
+                <div className="pd-headline" style={{ background: "#FAF5FF", borderLeftColor: "#7C2D96", color: "#6B21A8" }}>
+                  {progressReport.headline}
+                </div>
+              )}
+              {progressReport.overall_assessment && (
+                <div style={{ marginBottom: "8pt" }}>
+                  <div style={{ fontSize: "8pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "3pt" }}>Overall Assessment</div>
+                  <p style={{ fontSize: "9pt", lineHeight: 1.6, color: "#334155" }}>{progressReport.overall_assessment}</p>
+                </div>
+              )}
+              {(strengths.length > 0 || weaknesses.length > 0) && (
+                <div className="pd-grid-2" style={{ marginBottom: "8pt" }}>
+                  {strengths.length > 0 && (
+                    <div style={{ background: "#F0FDF4", border: "1pt solid #BBF7D0", borderRadius: "6pt", padding: "6pt 9pt" }}>
+                      <div style={{ fontSize: "7.5pt", fontWeight: 700, color: "#166534", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "3pt" }}>★ Strengths</div>
+                      {strengths.map((s, i) => (
+                        <div key={i} style={{ display: "flex", gap: "4pt", padding: "2pt 0", fontSize: "8pt" }}>
+                          <span style={{ color: "#22C55E", fontWeight: 700, flexShrink: 0 }}>✓</span>
+                          <span style={{ color: "#166534" }}>{s}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {weaknesses.length > 0 && (
+                    <div style={{ background: "#FFFBEB", border: "1pt solid #FDE68A", borderRadius: "6pt", padding: "6pt 9pt" }}>
+                      <div style={{ fontSize: "7.5pt", fontWeight: 700, color: "#92400E", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "3pt" }}>⚠ Areas to Improve</div>
+                      {weaknesses.map((w, i) => (
+                        <div key={i} style={{ display: "flex", gap: "4pt", padding: "2pt 0", fontSize: "8pt" }}>
+                          <span style={{ color: "#F59E0B", fontWeight: 700, flexShrink: 0 }}>→</span>
+                          <span style={{ color: "#78350F" }}>{w}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {focusAreas.length > 0 && (
+                <div style={{ marginBottom: "8pt" }}>
+                  <div style={{ fontSize: "8pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "3pt" }}>Recommended Focus Areas</div>
+                  {focusAreas.map((fa: any, i: number) => {
+                    const pri = (fa.priority ?? "medium").toLowerCase();
+                    const cfg = pri === "high"
+                      ? { bg: "#FEF2F2", border: "#FECACA", chip: "#FEE2E2", text: "#991B1B" }
+                      : pri === "low"
+                      ? { bg: "#F0FDF4", border: "#BBF7D0", chip: "#D1FAE5", text: "#166534" }
+                      : { bg: "#FFFBEB", border: "#FDE68A", chip: "#FEF3C7", text: "#92400E" };
+                    return (
+                      <div key={i} style={{ display: "flex", gap: "6pt", padding: "5pt 7pt", borderRadius: "5pt", background: cfg.bg, border: `0.5pt solid ${cfg.border}`, marginBottom: "3pt", breakInside: "avoid" }}>
+                        <span style={{ fontSize: "6.5pt", fontWeight: 800, padding: "1pt 4pt", borderRadius: "8pt", background: cfg.chip, color: cfg.text, height: "fit-content", flexShrink: 0, textTransform: "uppercase" }}>{pri}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "4pt", flexWrap: "wrap" }}>
+                            <span style={{ fontSize: "8.5pt", fontWeight: 700, color: cfg.text }}>{fa.area}</span>
+                            {fa.subject && <span className="pd-tag" style={{ background: "white", color: "#64748b", border: `0.5pt solid ${cfg.border}` }}>{fa.subject}</span>}
+                          </div>
+                          {fa.suggested_approach && <div style={{ fontSize: "7.5pt", color: "#64748b", marginTop: "1pt", lineHeight: 1.4 }}>{fa.suggested_approach}</div>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {patterns.length > 0 && (
+                <div>
+                  <div style={{ fontSize: "8pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "3pt" }}>Cross-Subject Patterns</div>
+                  {patterns.map((p: any, i: number) => (
+                    <div key={i} style={{ display: "flex", gap: "5pt", padding: "4pt 7pt", background: "#F8FAFC", borderRadius: "5pt", border: "0.5pt solid #E2E8F0", marginBottom: "3pt", breakInside: "avoid" }}>
+                      <span style={{ width: "4pt", height: "4pt", borderRadius: "50%", background: "#A855F7", marginTop: "5pt", flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: "8.5pt", fontWeight: 700, color: "#042E5C" }}>{p.pattern_name}</div>
+                        {p.description && <div style={{ fontSize: "7.5pt", color: "#64748b", marginTop: "1pt" }}>{p.description}</div>}
+                        {p.subjects_involved?.length > 0 && (
+                          <div style={{ display: "flex", gap: "3pt", flexWrap: "wrap", marginTop: "2pt" }}>
+                            {p.subjects_involved.map((s: string) => <span key={s} className="pd-tag" style={{ background: "#F3E8FF", color: "#6B21A8", fontSize: "6.5pt" }}>{s}</span>)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Full AI report markdown — always shown in print */}
+              {progressReport.report_markdown && (
+                <div style={{ marginTop: "10pt", padding: "8pt 10pt", background: "#FAF5FF", border: "0.5pt solid #E9D5FF", borderRadius: "6pt", breakInside: "auto" }}>
+                  <div style={{ fontSize: "8pt", fontWeight: 700, color: "#6B21A8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "5pt" }}>Full AI Report</div>
+                  <div className="pd-prose"><ReactMarkdown>{progressReport.report_markdown}</ReactMarkdown></div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ═════════ SECTION 7: SUBJECT LEARNING TRENDS ═════════ */}
+      {subjectEvolutions.length > 0 && (
+        <div className="pd-card">
+          <div className="pd-section-header" style={{ background: "#ECFEFF", borderBottom: "1pt solid #A5F3FC" }}>
+            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#0891B2", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>7</div>
+            <div>
+              <div className="pd-section-header-title" style={{ color: "#0E7490" }}>Subject Learning Trends</div>
+              <div className="pd-section-header-sub" style={{ color: "#0891B2" }}>How learning evolved across chapters within each subject</div>
+            </div>
+          </div>
+          <div className="pd-card-body">
+            {subjectEvolutions.map((evo) => {
+              const sj = evo.analysis_json ?? {} as any;
+              const strengths: string[] = sj.universal_strengths ?? sj.subject_strengths ?? [];
+              const weaknesses: string[] = sj.universal_weaknesses ?? sj.subject_weaknesses ?? [];
+              const patterns: any[] = sj.cross_chapter_patterns ?? [];
+              const recommendations: any[] = sj.recommendations ?? [];
+              return (
+                <div key={evo.subject} style={{ borderLeft: "3pt solid #0891B2", background: "#F0FDFF", padding: "8pt 10pt", borderRadius: "5pt", marginBottom: "6pt", breakInside: "avoid" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4pt" }}>
+                    <span style={{ fontSize: "10pt", fontWeight: 800, color: "#0E7490" }}>{evo.subject}</span>
+                    <span className="pd-tag" style={{ background: "#CFFAFE", color: "#0E7490" }}>{evo.chapter_count} chapter{evo.chapter_count !== 1 ? "s" : ""}</span>
+                  </div>
+                  {evo.headline && <div style={{ fontSize: "9pt", fontWeight: 600, fontStyle: "italic", color: "#0891B2", marginBottom: "4pt" }}>{evo.headline}</div>}
+                  {evo.subject_skill_trajectory && (
+                    <div style={{ marginBottom: "5pt" }}>
+                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: "1pt" }}>Skill Trajectory</div>
+                      <p style={{ fontSize: "8pt", lineHeight: 1.5, color: "#334155" }}>{evo.subject_skill_trajectory}</p>
+                    </div>
+                  )}
+                  {(strengths.length > 0 || weaknesses.length > 0) && (
+                    <div className="pd-grid-2" style={{ marginBottom: "4pt" }}>
+                      {strengths.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: "7pt", fontWeight: 700, color: "#166534", textTransform: "uppercase", marginBottom: "2pt" }}>Strengths</div>
+                          {strengths.slice(0, 4).map((s, j) => <div key={j} style={{ fontSize: "7.5pt", color: "#166534", padding: "1pt 0" }}>✓ {s}</div>)}
+                        </div>
+                      )}
+                      {weaknesses.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: "7pt", fontWeight: 700, color: "#92400E", textTransform: "uppercase", marginBottom: "2pt" }}>Areas to Improve</div>
+                          {weaknesses.slice(0, 4).map((w, j) => <div key={j} style={{ fontSize: "7.5pt", color: "#92400E", padding: "1pt 0" }}>→ {w}</div>)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {patterns.length > 0 && (
+                    <div style={{ marginTop: "3pt" }}>
+                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: "2pt" }}>Patterns Across Chapters</div>
+                      {patterns.slice(0, 3).map((p: any, j: number) => (
+                        <div key={j} style={{ fontSize: "7.5pt", color: "#334155", padding: "2pt 0", borderBottom: "0.5pt solid #CFFAFE" }}>
+                          <strong style={{ color: "#0E7490" }}>{p.pattern_name}</strong>{p.summary ? ` — ${p.summary}` : ""}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {recommendations.length > 0 && (
+                    <div style={{ marginTop: "3pt" }}>
+                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: "2pt" }}>Recommendations</div>
+                      {recommendations.slice(0, 3).map((r: any, j: number) => (
+                        <div key={j} style={{ fontSize: "7.5pt", color: "#475569", padding: "1pt 0 1pt 8pt", borderLeft: "1pt solid #67E8F9" }}>
+                          › {typeof r === "string" ? r : (r.action ?? r.text ?? JSON.stringify(r))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Full subject analysis markdown */}
+                  {evo.analysis_markdown && (
+                    <div style={{ marginTop: "6pt", padding: "6pt 8pt", background: "white", border: "0.5pt solid #A5F3FC", borderRadius: "5pt" }}>
+                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#0E7490", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "3pt" }}>Full Analysis</div>
+                      <div className="pd-prose" style={{ fontSize: "8.5pt" }}><ReactMarkdown>{evo.analysis_markdown}</ReactMarkdown></div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ═════════ SECTION 8: CHAPTER LEARNING EVOLUTION ═════════ */}
+      {chapterEvolutions.length > 0 && (
+        <div className="pd-card">
+          <div className="pd-section-header" style={{ background: "#FFF7ED", borderBottom: "1pt solid #FDBA74" }}>
+            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#EA580C", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>8</div>
+            <div>
+              <div className="pd-section-header-title" style={{ color: "#C2410C" }}>Chapter Learning Evolution</div>
+              <div className="pd-section-header-sub" style={{ color: "#EA580C" }}>AI analysis of how learning progressed across sessions for each chapter</div>
+            </div>
+          </div>
+          <div className="pd-card-body">
+            {chapterEvolutions.map((evo) => {
+              const cj = evo.analysis_json ?? {} as any;
+              const dimensions: any[] = cj.dimension_analyses ?? cj.dimensions ?? [];
+              const recommendations: any[] = cj.recommendations ?? [];
+              const perConv: any[] = cj.per_conversation ?? [];
+              return (
+                <div key={`${evo.subject}-${evo.document_title}`} style={{ borderLeft: "3pt solid #EA580C", background: "#FFF7ED", padding: "8pt 10pt", borderRadius: "5pt", marginBottom: "6pt", breakInside: "avoid" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "3pt", gap: "8pt" }}>
+                    <span style={{ fontSize: "10pt", fontWeight: 800, color: "#C2410C", flex: 1 }}>{evo.document_title}</span>
+                    <div style={{ display: "flex", gap: "4pt", flexShrink: 0 }}>
+                      <span className="pd-tag" style={{ background: "#FFEDD5", color: "#C2410C" }}>{evo.subject}</span>
+                      <span className="pd-tag" style={{ background: "#FEF9C3", color: "#854D0E" }}>{evo.conversation_count} session{evo.conversation_count !== 1 ? "s" : ""}</span>
+                    </div>
+                  </div>
+                  {evo.headline && <div style={{ fontSize: "9pt", fontWeight: 600, fontStyle: "italic", color: "#9A3412", marginBottom: "4pt" }}>{evo.headline}</div>}
+                  {evo.skill_score_trajectory && (
+                    <div style={{ marginBottom: "5pt" }}>
+                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: "1pt" }}>Skill Trajectory</div>
+                      <p style={{ fontSize: "8pt", lineHeight: 1.5, color: "#334155" }}>{evo.skill_score_trajectory}</p>
+                    </div>
+                  )}
+                  {/* Dimension bars */}
+                  {dimensions.length > 0 && (
+                    <div style={{ marginBottom: "5pt" }}>
+                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: "2pt" }}>Skill Dimension Analysis</div>
+                      {dimensions.map((dim: any, i: number) => {
+                        const afterScore = typeof dim.after_score === "number" ? dim.after_score : (typeof dim.score === "number" ? dim.score : null);
+                        const delta = typeof dim.delta === "number" ? dim.delta : 0;
+                        const name = dim.dimension_name ?? dim.dimension ?? "";
+                        return (
+                          <div key={i} style={{ marginBottom: "3pt" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1pt" }}>
+                              <span style={{ fontSize: "8pt", color: "#334155", fontWeight: 500, flex: 1 }}>{name}</span>
+                              <div style={{ display: "flex", alignItems: "center", gap: "3pt", flexShrink: 0 }}>
+                                {afterScore != null && <span style={{ fontSize: "8pt", fontWeight: 800, color: masteryColor(afterScore) }}>{pct(afterScore)}</span>}
+                                {delta !== 0 && (
+                                  <span style={{ fontSize: "6.5pt", fontWeight: 800, padding: "1pt 4pt", borderRadius: "8pt", background: delta > 0 ? "#D1FAE5" : "#FEE2E2", color: delta > 0 ? "#065F46" : "#991B1B" }}>
+                                    {delta > 0 ? "+" : ""}{Math.round(delta * 100)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {afterScore != null && (
+                              <div className="pd-bar-track" style={{ height: "3pt" }}><div className="pd-bar-fill" style={{ width: `${Math.round(afterScore * 100)}%`, background: masteryColor(afterScore), height: "3pt" }} /></div>
+                            )}
+                            {(dim.key_observation || dim.summary) && <div style={{ fontSize: "7pt", color: "#64748b", marginTop: "1pt" }}>{dim.key_observation ?? dim.summary}</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* Per-conversation progress */}
+                  {perConv.length > 0 && (
+                    <div style={{ marginBottom: "5pt" }}>
+                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: "2pt" }}>Session-by-Session Progress</div>
+                      {perConv.map((c: any, i: number) => (
+                        <div key={i} style={{ fontSize: "7.5pt", marginBottom: "3pt" }}>
+                          <div style={{ fontWeight: 700, color: "#C2410C", marginBottom: "1pt" }}>Session {c.conversation_number}{c.stage_label ? ` — ${c.stage_label}` : ""}</div>
+                          {(c.tutor_observations ?? []).slice(0, 3).map((obs: string, j: number) => (
+                            <div key={j} style={{ color: "#475569", padding: "1pt 0 1pt 7pt", borderLeft: "1pt solid #FDBA74" }}>› {obs}</div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Recommendations */}
+                  {recommendations.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: "2pt" }}>Recommendations</div>
+                      {recommendations.slice(0, 4).map((r: any, j: number) => (
+                        <div key={j} style={{ fontSize: "7.5pt", color: "#475569", padding: "1pt 0 1pt 7pt", borderLeft: "1pt solid #FDBA74" }}>
+                          › {typeof r === "string" ? r : (r.action ?? r.text ?? JSON.stringify(r))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Full chapter analysis markdown */}
+                  {evo.analysis_markdown && (
+                    <div style={{ marginTop: "6pt", padding: "6pt 8pt", background: "white", border: "0.5pt solid #FDBA74", borderRadius: "5pt" }}>
+                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#C2410C", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "3pt" }}>Full Analysis</div>
+                      <div className="pd-prose" style={{ fontSize: "8.5pt" }}><ReactMarkdown>{evo.analysis_markdown}</ReactMarkdown></div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ═════════ SECTION 9: AI CHAPTER REPORTS ═════════ */}
+      {chapters.some((ch) => ch.chapter_report) && (
+        <div className="pd-card">
+          <div className="pd-section-header" style={{ background: "#EEF2FF", borderBottom: "1pt solid #C7D2FE" }}>
+            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#6366F1", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>9</div>
+            <div>
+              <div className="pd-section-header-title" style={{ color: "#4338CA" }}>AI Chapter Reports</div>
+              <div className="pd-section-header-sub" style={{ color: "#6366F1" }}>AI-generated pedagogical analysis per chapter</div>
+            </div>
+          </div>
+          <div className="pd-card-body">
+            {chapters.filter((ch) => ch.chapter_report).map((ch) => (
+              <div key={`${ch.subject}-${ch.document_title}`} style={{ borderLeft: "3pt solid #6366F1", background: "#EEF2FF", padding: "8pt 10pt", borderRadius: "5pt", marginBottom: "6pt", breakInside: "avoid" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4pt", flexWrap: "wrap", gap: "5pt" }}>
+                  <span style={{ fontSize: "10pt", fontWeight: 800, color: "#4338CA" }}>{ch.document_title}</span>
+                  <div style={{ display: "flex", gap: "4pt", alignItems: "center" }}>
+                    <span className="pd-tag" style={{ background: "#E0E7FF", color: "#4338CA" }}>{ch.subject}</span>
+                    <span style={{ fontSize: "7.5pt", fontWeight: 700, padding: "1pt 5pt", borderRadius: "10pt", background: `${masteryColor(ch.mastery_score)}1A`, color: masteryColor(ch.mastery_score) }}>{pct(ch.mastery_score)}</span>
+                    <span style={{ fontSize: "7pt", color: "#94A3B8" }}>{ch.study_count} sessions · {Math.round(ch.completion_percentage)}% complete</span>
+                  </div>
+                </div>
+                <div style={{ marginTop: "4pt", padding: "6pt 8pt", background: "white", border: "0.5pt solid #C7D2FE", borderRadius: "5pt" }}>
+                  <div className="pd-prose" style={{ fontSize: "8.5pt" }}><ReactMarkdown>{ch.chapter_report!}</ReactMarkdown></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── DOCUMENT FOOTER ── */}
+      <div style={{ marginTop: "12pt", padding: "8pt 12pt", background: "#F8FAFC", borderRadius: "7pt", border: "1pt solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: "7.5pt", color: "#94A3B8" }}>GenEducation AI · All scores are AI-computed based on learning interactions</span>
+        <span style={{ fontSize: "7.5pt", color: "#94A3B8" }}>{generatedAt}</span>
+      </div>
+    </div>{/* end print-doc */}
+    </>
   );
 }
