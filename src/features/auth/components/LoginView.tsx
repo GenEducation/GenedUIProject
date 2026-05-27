@@ -244,7 +244,6 @@ export function LoginView() {
           : ("student" as const);
       
       localStorage.setItem("gened_user_role", role);
-      localStorage.setItem("gened_new_user", "true"); // Flag for tutorial
 
       if (role === "partner") {
         localStorage.setItem("gened_partner_id", authResponse.user_id);
@@ -268,8 +267,14 @@ export function LoginView() {
         });
       }
 
-      const redirectPath = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("redirect") : null;
-      router.replace(redirectPath || `/${role}`);
+      // Trigger tutorial walkthrough for new student signups
+      if (role === "student") {
+        const { useTutorialStore } = await import("@/features/tutorial/store/useTutorialStore");
+        useTutorialStore.getState().startTutorial();
+      }
+
+      // Redirect immediately
+      router.replace(`/${role}`);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
       const rawMsg = error instanceof Error ? error.message : "Unable to complete signup.";

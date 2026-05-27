@@ -88,7 +88,6 @@ export const OnboardingSliderView: React.FC<OnboardingSliderViewProps> = ({
       };
       console.log("Submitting onboarding data:", payload);
       await onboardingService.completeGeneralOnboarding(payload);
-      localStorage.setItem("start_tutorial_after_onboarding", "true");
       onComplete();
     } catch (err) {
       console.error("Onboarding submission failed:", err);

@@ -8,6 +8,7 @@ import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingSto
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { WavingStudentCharacter } from "@/components/shared/loaders/StudentLoader/WavingStudentCharacter";
 import { MarkdownRenderer } from "@/features/student/components/MarkdownRenderer";
+import { SubjectOnboardingCelebration } from "@/features/onboarding/components/SubjectOnboardingCelebration";
 
 const SUBJECT_ICONS: Record<string, string> = {
   Mathematics: "📐",
@@ -52,6 +53,7 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
   const { messages, isAITyping, isVoiceOnly, sendVoiceMessage, sendMessage, streamingMessageId, startOnboarding, isComplete, clearSession, type, subject: storeSubject } = useOnboardingStore();
   const { studentProfile } = useStudentStore();
 
+  const [showCelebration, setShowCelebration] = useState(false);
   const [input, setInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
@@ -68,18 +70,21 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
     }
   }, [studentProfile, subject, grade, startOnboarding, type, storeSubject]);
 
-  // Close when onboarding completes
+  // Show celebration when onboarding completes, then close on dismiss
   useEffect(() => {
-    if (isComplete) {
+    if (isComplete && !showCelebration) {
       if (studentProfile?.user_id) {
         useOnboardingStore.getState().checkDNAStatus(studentProfile.user_id);
       }
       clearSession();
-      onClose();
-      // Ensure the dashboard/parent page is fresh after onboarding
-      window.location.reload();
+      setShowCelebration(true);
     }
-  }, [isComplete, clearSession, onClose, studentProfile?.user_id]);
+  }, [isComplete, showCelebration, clearSession, studentProfile?.user_id]);
+
+  const handleCelebrationDismiss = () => {
+    onClose();
+    window.location.reload();
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -163,8 +168,16 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 16 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full max-w-4xl h-[92vh] sm:max-h-[90vh] overflow-hidden sm:rounded-[2rem] rounded-t-[2rem] border border-white/20 bg-white shadow-[0_32px_80px_rgba(4,46,92,0.18)] flex flex-col md:flex-row"
+        className="relative w-full max-w-4xl h-[92vh] sm:max-h-[90vh] overflow-hidden sm:rounded-[2rem] rounded-t-[2rem] border border-white/20 bg-white shadow-[0_32px_80px_rgba(4,46,92,0.18)] flex flex-col md:flex-row"
       >
+        {/* Subject onboarding celebration overlay */}
+        {showCelebration && (
+          <SubjectOnboardingCelebration
+            subject={subject}
+            onDismiss={handleCelebrationDismiss}
+          />
+        )}
+
         {/* Left Panel */}
         <div className="hidden md:flex w-[320px] shrink-0 flex-col bg-gradient-to-br from-[#059F6D] to-[#042e5c] text-white relative overflow-hidden p-8">
           {/* Decorative sparks to match signup flow */}

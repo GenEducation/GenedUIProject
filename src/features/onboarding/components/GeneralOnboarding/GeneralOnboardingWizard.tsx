@@ -71,7 +71,6 @@ export function GeneralOnboardingWizard({
         strengths: [answers.strengths],
         weaknesses: [answers.weaknesses],
       });
-      localStorage.setItem("start_tutorial_after_onboarding", "true");
       onComplete();
     } catch {
       setError("Failed to save your preferences. Please try again.");

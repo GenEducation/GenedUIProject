@@ -496,7 +496,7 @@ export function StudentHome() {
                               {vis.label}
                             </div>
                             <div className="font-medium mt-0.5" style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>
-                              Grade {agent.grade} · 6 chapters
+                              Grade {agent.grade} · {agent.document_titles?.length ?? 0} chapters
                             </div>
                           </div>
                         </div>

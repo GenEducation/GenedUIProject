@@ -2,14 +2,11 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect } from "react";
 import { StudentChatView } from "./StudentChatView";
 import { StudentHome } from "./StudentHome";
 import { StudentProfile } from "./StudentProfile";
 import { AssessmentsPage } from "@/features/student/components/AssessmentsPage";
 import { StudentAnalyticsDashboard } from "@/components/analytics/StudentAnalyticsDashboard";
-import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
-import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 
 /**
  * StudentPortal renders the correct sub-view based on the current URL path.
@@ -17,20 +14,6 @@ import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
  */
 export function StudentPortal() {
   const pathname = usePathname();
-  
-  const { dnaStatus } = useOnboardingStore();
-  const { startTutorial } = useTutorialStore();
-
-  useEffect(() => {
-    // New-user tutorial is now launched by CompleteProfileBanner after the
-    // "Tell us about yourself" form is saved or skipped.
-    const justFinishedOnboarding = localStorage.getItem("start_tutorial_after_onboarding") === "true";
-
-    if (justFinishedOnboarding && dnaStatus && dnaStatus !== "PENDING") {
-      startTutorial();
-      localStorage.removeItem("start_tutorial_after_onboarding");
-    }
-  }, [dnaStatus, startTutorial]);
   
   const isProfileRoute = pathname === "/student/profile";
   const isAssessmentsRoute = pathname === "/student/assessments";
