@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Menu, Loader2, Volume2, VolumeX, Mic, MicOff, Square, Check } from "lucide-react";
+import { ArrowLeft, Menu, Loader2, Volume2, VolumeX, Mic, MicOff, Square, Check, BookOpen } from "lucide-react";
 import React, { useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -314,24 +314,26 @@ export function StudentChatMain({
   toggleSidebar
 }: StudentChatMainProps) {
   const router = useRouter();
-  const { 
-    closeChat, 
-    isHistoryLoading, 
-    sendMessage, 
+  const {
+    closeChat,
+    isHistoryLoading,
+    sendMessage,
     streamingMessageId,
     isRateLimitHit,
     setRateLimitHit,
-    recordingState, 
-    recordingPrompt, 
+    recordingState,
+    recordingPrompt,
     recordingError,
     activeSkillDirective,
     oralAnalysisResult,
     playbackState,
     playDirectiveTts,
-    stopSkillRecording, 
+    stopSkillRecording,
     confirmStartRecording,
     dismissRecordingPrompt,
-    stopPlayback
+    stopPlayback,
+    openChapterPdf,
+    isPdfViewerOpen,
   } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -412,8 +414,29 @@ export function StudentChatMain({
             </div>
           </div>
 
-          {/* Right side: active dot + audio status + grade badge */}
+          {/* Right side: textbook pill + audio status + active dot + grade badge */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            {activeChat.chapter_name && (
+              <button
+                onClick={openChapterPdf}
+                className="flex items-center gap-1.5 transition-all"
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: 20,
+                  border: isPdfViewerOpen ? "1.5px solid #5B4DC7" : "1.5px solid #D6D3F0",
+                  background: isPdfViewerOpen ? "#5B4DC7" : "#EDE9FE",
+                  color: isPdfViewerOpen ? "#FFFFFF" : "#5B4DC7",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  fontFamily: "'DM Sans', sans-serif",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <BookOpen size={12} />
+                Textbook
+              </button>
+            )}
             <AnimatePresence>
               <AudioStatusPill key="audio-pill" state={playbackState} onStop={stopPlayback} />
             </AnimatePresence>

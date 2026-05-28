@@ -222,4 +222,18 @@ export const studentService = {
     );
     return response.json();
   },
+
+  fetchChapterPdfUrl: async (
+    grade: number,
+    subject: string,
+    chapterName: string
+  ): Promise<{ pdf_url: string; chapter_name: string; grade: number; subject: string; ttl_seconds: number }> => {
+    const params = new URLSearchParams({
+      grade: String(grade),
+      subject: subject.toLowerCase(),
+      chapter_name: chapterName,
+    });
+    const response = await authFetch(`${API_BASE_URL}/rag/api/ncert/pdf-url?${params}`);
+    return response.json();
+  },
 };

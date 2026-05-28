@@ -266,6 +266,11 @@ export interface StudentState {
   studentStats: { currentStreak: number; longestStreak: number; totalSessions: number } | null;
   isStatsLoading: boolean;
 
+  // ── Chapter PDF Viewer State ─────────────────────────────────────────────────
+  chapterPdfUrl: string | null;
+  chapterPdfFetchedAt: number | null;
+  isPdfViewerOpen: boolean;
+
   // ── English Skill Mode State (Wave 1–4) ─────────────────────────────────────
   playbackState: "idle" | "loading" | "buffering" | "playing" | "paused" | "stopped" | "completed" | "error";
   recordingState: "idle" | "permission_request" | "ready" | "recording" | "uploading" | "processing" | "completed" | "error";
@@ -307,6 +312,10 @@ export interface StudentState {
   stopVoiceSession: () => void;
   toggleMute: () => void;
   logoutStudent: () => void;
+
+  // ── Chapter PDF Viewer Actions ───────────────────────────────────────────────
+  openChapterPdf: () => Promise<void>;
+  closePdfViewer: () => void;
 
   // ── English Skill Mode Actions (Wave 1–4) ────────────────────────────────────
   playDirectiveTts: (directiveId: string, timepoints: any[]) => void;
@@ -362,6 +371,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   isOnboardingLoading: false,
   studentStats: null,
   isStatsLoading: false,
+  // Chapter PDF viewer initial state
+  chapterPdfUrl: null,
+  chapterPdfFetchedAt: null,
+  isPdfViewerOpen: false,
+
   // English skill mode initial state
   playbackState: "idle",
   recordingState: "idle",
@@ -939,8 +953,44 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       isAITyping: false,
       isHistoryLoading: false,
       historyAbortController: null,
+      isPdfViewerOpen: false,
+      chapterPdfUrl: null,
+      chapterPdfFetchedAt: null,
     });
   },
+
+  openChapterPdf: async () => {
+    const { activeChat, studentProfile, chapterPdfUrl, chapterPdfFetchedAt, isPdfViewerOpen } = get();
+    if (!activeChat?.chapter_name || !studentProfile?.grade || !activeChat?.subject) return;
+
+    if (isPdfViewerOpen) {
+      set({ isPdfViewerOpen: false });
+      return;
+    }
+
+    const CACHE_TTL_MS = 12 * 60 * 1000;
+    if (chapterPdfUrl && chapterPdfFetchedAt && Date.now() - chapterPdfFetchedAt < CACHE_TTL_MS) {
+      set({ isPdfViewerOpen: true });
+      return;
+    }
+
+    try {
+      const data = await studentService.fetchChapterPdfUrl(
+        studentProfile.grade,
+        activeChat.subject,
+        activeChat.chapter_name
+      );
+      if (!data.pdf_url.startsWith("https://")) {
+        console.error("[openChapterPdf] Received non-HTTPS URL, ignoring.");
+        return;
+      }
+      set({ chapterPdfUrl: data.pdf_url, chapterPdfFetchedAt: Date.now(), isPdfViewerOpen: true });
+    } catch (error) {
+      console.error("[openChapterPdf] Failed to fetch chapter PDF URL:", (error as any)?.status, (error as any)?.message);
+    }
+  },
+
+  closePdfViewer: () => set({ isPdfViewerOpen: false }),
 
   startVoiceSession: async () => {
     const { activeChat, studentProfile } = get();
