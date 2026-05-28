@@ -34,6 +34,9 @@ class VoiceService {
   private currentSessionId: string | null = null;
   private currentSubject: string | null = null;
   private currentVoice: string | null = null;
+  private currentDocumentTitle: string | null = null;
+  private currentAgentId: string | null = null;
+  private currentGrade: number | null = null;
   private wsEndpoint: string = "/ws/april-live";
   private onEventCallback: ((event: any) => void) | null = null;
   private onTextRevealCallback: ((text: string, role: "user" | "assistant") => void) | null = null;
@@ -64,12 +67,18 @@ class VoiceService {
     sessionId?: string,
     subject?: string,
     wsEndpoint: string = "/ws/april-live-graph",
-    voice?: string
+    voice?: string,
+    documentTitle?: string,
+    agentId?: string,
+    grade?: number,
   ) {
     this.currentStudentId = studentId;
     this.currentSessionId = sessionId || null;
     this.currentSubject = subject ?? null;
     this.currentVoice = voice ?? null;
+    this.currentDocumentTitle = documentTitle ?? null;
+    this.currentAgentId = agentId ?? null;
+    this.currentGrade = grade ?? null;
     this.wsEndpoint = wsEndpoint;
     this.onEventCallback = onEvent;
     this.onTextRevealCallback = onTextReveal;
@@ -263,16 +272,18 @@ class VoiceService {
 
   private sendInitMessage() {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    this.ws.send(
-      JSON.stringify({
-        type: "init",
-        student_id: this.currentStudentId,
-        session_id: this.currentSessionId,
-        subject: this.currentSubject,
-        voice: this.currentVoice,
-        token: getAuthToken(),
-      })
-    );
+    const payload: Record<string, any> = {
+      type: "init",
+      student_id: this.currentStudentId,
+      session_id: this.currentSessionId,
+      subject: this.currentSubject,
+      voice: this.currentVoice,
+      token: getAuthToken(),
+    };
+    if (this.currentDocumentTitle) payload.document_title = this.currentDocumentTitle;
+    if (this.currentAgentId) payload.agent_id = this.currentAgentId;
+    if (this.currentGrade != null) payload.grade = this.currentGrade;
+    this.ws.send(JSON.stringify(payload));
   }
 
   private handleIncomingAudio(buffer: ArrayBuffer) {
@@ -371,6 +382,9 @@ class VoiceService {
     this.currentSessionId = null;
     this.currentSubject = null;
     this.currentVoice = null;
+    this.currentDocumentTitle = null;
+    this.currentAgentId = null;
+    this.currentGrade = null;
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
     
