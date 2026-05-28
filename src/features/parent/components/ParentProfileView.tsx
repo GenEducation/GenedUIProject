@@ -106,7 +106,7 @@ export function ParentProfileView({ profile }: { profile: any }) {
                       <User size={20} />
                     </div>
                     <div>
-                      <p className="text-sm font-black text-[#1a3a2a] leading-none">{request.username || `ID: ${request.student_id.slice(-8)}`}</p>
+                      <p className="text-sm font-black text-[#1a3a2a] leading-none">{request.name || `ID: ${request.student_id.slice(-8)}`}</p>
                       <p className="text-[11px] font-bold text-[#1a3a2a]/30 mt-1 uppercase tracking-tight">Requested Connection</p>
                     </div>
                   </div>
@@ -155,7 +155,7 @@ export function ParentProfileView({ profile }: { profile: any }) {
                         <User size={24} />
                       </div>
                       <div>
-                        <h4 className="text-lg font-black text-[#1a3a2a] leading-none mb-1">{student.username}</h4>
+                        <h4 className="text-lg font-black text-[#1a3a2a] leading-none mb-1">{student.name}</h4>
                         <div className="flex flex-col gap-1">
                           <span className="text-[10px] font-bold text-[#1a3a2a]/30 uppercase tracking-[0.05em]">Linked Scholar</span>
                           <span className="text-[8px] font-mono text-[#1a3a2a]/20 uppercase tracking-tight">{student.student_id}</span>
@@ -167,7 +167,7 @@ export function ParentProfileView({ profile }: { profile: any }) {
                         setUnlinkModal({
                           isOpen: true,
                           studentId: student.student_id,
-                          studentName: student.username || "Unknown Student"
+                          studentName: student.name || "Unknown Student"
                         });
                       }}
                       className="p-2.5 rounded-xl bg-[#FBFBFA] text-[#1a3a2a]/20 hover:bg-red-50 hover:text-red-500 transition-all border border-transparent hover:border-red-500/10"

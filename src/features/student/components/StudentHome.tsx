@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { useStudentStore } from "../store/useStudentStore";
+import { useStudentStore, type AgentItem } from "../store/useStudentStore";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
@@ -172,7 +172,7 @@ export function StudentHome() {
   const {
     studentProfile, recentChats, availableAgents,
     fetchSessions, fetchAvailableAgents, fetchStudentStats, fetchOnboardingStatus,
-    openNewChat, openExistingChat,
+    openNewChat, openExistingChat, openNewSession,
     studentStats, isAgentsLoading, isSessionsLoading,
   } = useStudentStore();
   const { checkDNAStatus } = useOnboardingStore();
@@ -224,9 +224,9 @@ export function StudentHome() {
   const totalSessions = studentStats?.totalSessions   ?? 0;
   const longestStreak = studentStats?.longestStreak   ?? 0;
 
-  const agents = availableAgents.map(agent => {
+  const agents = availableAgents.map((agent: AgentItem) => {
     const key = normalizeSubjectKey(agent.subject);
-    return { ...agent, subjectKey: key, vis: SUBJECTS_VISUAL[key] ?? SUBJECTS_VISUAL.english };
+    return { ...agent, subjectKey: key, vis: SUBJECTS_VISUAL[key] ?? SUBJECTS_VISUAL.english } as AgentItem & { subjectKey: string; vis: { color: string; bg: string; icon: string; label: string } };
   });
 
   /* All sessions mapped with relative time */
@@ -260,15 +260,27 @@ export function StudentHome() {
 
   const username = studentProfile?.name || studentProfile?.username || "Scholar";
 
-  const handleAgentClick = (agent: typeof agents[0]) => {
+  const handleAgentChatClick = (agent: typeof agents[0]) => {
     if (agent.is_onboarding_complete === false) {
       setOnboardingModal({
         originalSubject: agent.subject,
         grade:           agent.grade ?? studentProfile?.grade ?? 9,
       });
     } else {
-      openNewChat(agent);
+      openNewSession(agent, "chat");
       router.push(`/student/chat/new?agentId=${agent.agent_id}`);
+    }
+  };
+
+  const handleAgentVoiceClick = (agent: typeof agents[0]) => {
+    if (agent.is_onboarding_complete === false) {
+      setOnboardingModal({
+        originalSubject: agent.subject,
+        grade:           agent.grade ?? studentProfile?.grade ?? 9,
+      });
+    } else {
+      openNewSession(agent, "voice");
+      router.push(`/student/voice?agent=${agent.agent_id}`);
     }
   };
 
@@ -484,7 +496,7 @@ export function StudentHome() {
                               {vis.label}
                             </div>
                             <div className="font-medium mt-0.5" style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>
-                              Grade {agent.grade} · 6 chapters
+                              Grade {agent.grade} · {agent.document_titles?.length ?? 0} chapters
                             </div>
                           </div>
                         </div>
@@ -495,18 +507,35 @@ export function StudentHome() {
                           </div>
                           <span className="font-bold flex-shrink-0" style={{ color: vis.color, fontSize: "clamp(12px, 1.2vw, 14px)" }}>{mastery}%</span>
                         </div>
-                        <button onClick={() => handleAgentClick(agent)}
-                          className="w-full rounded-[11px] font-bold cursor-pointer transition-all"
-                          style={{
-                            padding: "clamp(8px, 1vw, 11px) 0",
-                            border: hov ? "none" : `1px solid ${vis.color}30`,
-                            background: hov ? vis.color : "transparent",
-                            color: hov ? "white" : vis.color,
-                            fontFamily: "'DM Sans',sans-serif",
-                            fontSize: "clamp(12px, 1.2vw, 14px)",
-                          }}>
-                          Start learning →
-                        </button>
+                        <div className="flex gap-2 w-full mt-2">
+                          <button
+                            onClick={() => handleAgentChatClick(agent)}
+                            className="flex-1 rounded-[11px] font-bold cursor-pointer transition-all py-2 text-center"
+                            style={{
+                              border: `1.5px solid ${vis.color}40`,
+                              background: hov ? `${vis.color}10` : "transparent",
+                              color: vis.color,
+                              fontFamily: "'DM Sans',sans-serif",
+                              fontSize: "clamp(11px, 1.1vw, 13px)",
+                            }}
+                          >
+                            Chat
+                          </button>
+                          <button
+                            onClick={() => handleAgentVoiceClick(agent)}
+                            className="flex-1 rounded-[11px] font-bold cursor-pointer transition-all py-2 text-center"
+                            style={{
+                              background: vis.color,
+                              color: "white",
+                              border: "none",
+                              fontFamily: "'DM Sans',sans-serif",
+                              fontSize: "clamp(11px, 1.1vw, 13px)",
+                              boxShadow: hov ? `0 4px 12px ${vis.color}30` : "none",
+                            }}
+                          >
+                            Voice
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

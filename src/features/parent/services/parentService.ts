@@ -11,7 +11,7 @@ export interface LinkedStudent {
   parent_id: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   requested_at: string;
-  username?: string; // Returned by backend as the student's name
+  name?: string;
 }
 
 export const parentService = {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Users, 
@@ -31,6 +31,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 export function ParentHome() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const { 
     parentProfile, 
@@ -51,6 +52,70 @@ export function ParentHome() {
   } = useAnalyticsStore();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLinking, setIsLinking] = useState(false);
+  const [linkingError, setLinkingError] = useState<string | null>(null);
+  const [linkingSuccess, setLinkingSuccess] = useState<string | null>(null);
+
+  // Auto parent linking if search query parameters are present
+  useEffect(() => {
+    const token = searchParams.get("token");
+    const studentId = searchParams.get("student_id");
+
+    if (!token || !studentId || !parentProfile?.user_id) return;
+
+    async function autoLink() {
+      setIsLinking(true);
+      setLinkingError(null);
+      setLinkingSuccess(null);
+      try {
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+        
+        // 1. Verify token first
+        const verifyResp = await fetch(
+          `${API_BASE_URL}/parent/verify-token?student_id=${studentId}&token=${token}`
+        );
+        if (!verifyResp.ok) {
+          const errData = await verifyResp.json().catch(() => ({}));
+          throw new Error(errData.message || "Failed to verify parent token.");
+        }
+        const verifyData = await verifyResp.json();
+
+        // 2. Confirm link
+        const confirmResp = await fetch(`${API_BASE_URL}/parent/confirm-link`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("gened_auth_token")}`,
+          },
+          body: JSON.stringify({
+            student_id: studentId,
+            parent_id: parentProfile!.user_id,
+            token: token,
+          }),
+        });
+
+        if (!confirmResp.ok) {
+          const errData = await confirmResp.json().catch(() => ({}));
+          throw new Error(errData.message || "Failed to link account.");
+        }
+
+        setLinkingSuccess(`Successfully linked with student "${verifyData.student_username}"!`);
+        
+        // Refresh students list in parent store
+        await fetchLinkedStudents();
+        
+        // Clean URL params without page reload
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, "", newUrl);
+      } catch (err: any) {
+        setLinkingError(err.message || "Failed to establish parent-student link.");
+      } finally {
+        setIsLinking(false);
+      }
+    }
+
+    autoLink();
+  }, [searchParams, parentProfile, fetchLinkedStudents]);
 
   // Sync URL → state on mount / pathname change
   useEffect(() => {
@@ -132,7 +197,7 @@ export function ParentHome() {
                         <User size={18} />
                       </div>
                       <div className="text-left flex-1 min-w-0">
-                        <p className="text-sm font-bold truncate">{student.username || `Student ID: ...${student.student_id.slice(-4)}`}</p>
+                        <p className="text-sm font-bold truncate">{student.name || `Student ID: ...${student.student_id.slice(-4)}`}</p>
                       </div>
                       {selectedStudentId === student.student_id && <ChevronRight size={14} />}
                     </button>
@@ -266,6 +331,26 @@ export function ParentHome() {
             </button>
           </div>
         </header>
+
+        {/* Auto-linking status banner */}
+        {isLinking && (
+          <div className="bg-[#eff6ff] border-b border-blue-100 px-8 py-3.5 text-xs font-bold text-blue-700 flex items-center gap-2.5 animate-pulse">
+            <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-ping" />
+            Verifying and establishing link with your child...
+          </div>
+        )}
+        {linkingSuccess && (
+          <div className="bg-emerald-50 border-b border-emerald-100 px-8 py-3.5 text-xs font-bold text-emerald-700 flex items-center justify-between">
+            <span>🎉 {linkingSuccess}</span>
+            <button onClick={() => setLinkingSuccess(null)} className="hover:text-emerald-950 font-black px-2 py-1">Dismiss</button>
+          </div>
+        )}
+        {linkingError && (
+          <div className="bg-rose-50 border-b border-rose-100 px-8 py-3.5 text-xs font-bold text-rose-700 flex items-center justify-between">
+            <span>⚠️ {linkingError}</span>
+            <button onClick={() => setLinkingError(null)} className="hover:text-rose-950 font-black px-2 py-1">Dismiss</button>
+          </div>
+        )}
 
         {isFetchingStudents ? (
           <div className="flex-1 flex items-center justify-center">

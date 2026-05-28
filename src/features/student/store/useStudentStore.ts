@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { studentService } from "../services/studentService";
 import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import { parseContent, generateHistoricalSVG, normalizeSvg } from "../utils/parseContent";
+import { voiceService } from "../services/voiceService";
+
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
@@ -17,6 +19,7 @@ export interface StudentProfile {
   grade?: number;
   school_board?: string;
   ai_name?: string;
+  preferred_voice?: string;
   plan?: "FREE" | "PRO";
   plan_expires_at?: string | null;
 }
@@ -75,6 +78,7 @@ export interface ChatMessage {
   options?: string[];
   statusText?: string;
   toolStatus?: string;
+  phase?: string;
   actions?: ActivityAction[];
 }
 
@@ -111,6 +115,7 @@ export interface AgentItem {
   grade: number;
   is_onboarding_complete?: boolean;
   subject_coverage_percentage?: number;
+  document_titles?: string[];
 }
 
 export interface PartnerItem {
@@ -263,6 +268,17 @@ export interface StudentState {
   isOnboardingLoading: boolean;
   studentStats: { currentStreak: number; longestStreak: number; totalSessions: number } | null;
   isStatsLoading: boolean;
+  sessionMode: "chat" | "voice" | null;
+  voicePrefs: { listenMode: "continuous" | "ptt"; pttHotkey: string; };
+  pttHeld: boolean;
+
+  // ── Chapter PDF Viewer State ─────────────────────────────────────────────────
+  chapterPdfUrl: string | null;
+  chapterPdfFetchedAt: number | null;
+  chapterPdfCachedFor: string | null; // chapter_name the cached URL belongs to
+  isPdfViewerOpen: boolean;
+  isPdfLoading: boolean;
+  chapterPdfError: string | null;
 
   // ── English Skill Mode State (Wave 1–4) ─────────────────────────────────────
   playbackState: "idle" | "loading" | "buffering" | "playing" | "paused" | "stopped" | "completed" | "error";
@@ -305,6 +321,17 @@ export interface StudentState {
   stopVoiceSession: () => void;
   toggleMute: () => void;
   logoutStudent: () => void;
+  beginPttUtterance: () => void;
+  endPttUtterance: () => void;
+  openNewSession: (agent: AgentItem, mode: "chat" | "voice") => void;
+  initNewVoiceSession: (agentId: string) => void;
+  setListenMode: (mode: "continuous" | "ptt") => void;
+  setPttHotkey: (key: string) => void;
+
+  // ── Chapter PDF Viewer Actions ───────────────────────────────────────────────
+  openChapterPdf: () => Promise<void>;
+  closePdfViewer: () => void;
+  clearPdfError: () => void;
 
   // ── English Skill Mode Actions (Wave 1–4) ────────────────────────────────────
   playDirectiveTts: (directiveId: string, timepoints: any[]) => void;
@@ -325,6 +352,25 @@ export interface StudentState {
 }
 
 // -- Store --------------------------------------------------------------------─
+
+const getInitialVoicePrefs = () => {
+  if (typeof window === "undefined") {
+    return { listenMode: "continuous" as const, pttHotkey: "Space" };
+  }
+  try {
+    const saved = localStorage.getItem("voice_prefs");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        listenMode: parsed.listenMode === "ptt" ? ("ptt" as const) : ("continuous" as const),
+        pttHotkey: parsed.pttHotkey || "Space",
+      };
+    }
+  } catch (e) {
+    console.error("Failed to load voice prefs", e);
+  }
+  return { listenMode: "continuous" as const, pttHotkey: "Space" };
+};
 
 export const useStudentStore = create<StudentState>()((set, get) => ({
   studentProfile: null,
@@ -360,6 +406,16 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   isOnboardingLoading: false,
   studentStats: null,
   isStatsLoading: false,
+  sessionMode: null,
+  voicePrefs: getInitialVoicePrefs(),
+  pttHeld: false,
+  // Chapter PDF viewer initial state
+  chapterPdfUrl: null,
+  chapterPdfFetchedAt: null,
+  chapterPdfCachedFor: null,
+  isPdfViewerOpen: false,
+  isPdfLoading: false,
+  chapterPdfError: null,
   // English skill mode initial state
   playbackState: "idle",
   recordingState: "idle",
@@ -388,6 +444,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       typingChatIds: [],
       hasFetchedSessions: false,
       hasFetchedAgents: false,
+      sessionMode: null,
+      pttHeld: false,
       onboardingStatus: null,
       isRateLimitHit: false,
       rateLimitMessage: null,
@@ -499,7 +557,24 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         };
       });
 
-      set({ recentChats: mappedChats, isSessionsLoading: false, hasFetchedSessions: true });
+      set((state) => {
+        // Merge chapter_name (and completion %) back into activeChat if it matches
+        // This ensures the "View textbook" button appears without needing a page refresh
+        let updatedActiveChat = state.activeChat;
+        if (state.activeChat) {
+          const matching = mappedChats.find(
+            (c) => c.id === state.activeChat!.id || c.session_id === state.activeChat!.id
+          );
+          if (matching?.chapter_name) {
+            updatedActiveChat = {
+              ...state.activeChat,
+              chapter_name: matching.chapter_name,
+              chapter_completion_percentage: matching.chapter_completion_percentage ?? state.activeChat.chapter_completion_percentage,
+            };
+          }
+        }
+        return { recentChats: mappedChats, activeChat: updatedActiveChat, isSessionsLoading: false, hasFetchedSessions: true };
+      });
     } catch (error: any) {
       console.error("Fetch Sessions Error:", error?.request_id, error?.message ?? error);
       set({ isSessionsLoading: false, hasFetchedSessions: true });
@@ -748,6 +823,14 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     if (!get().typingChatIds.includes(chat.id)) {
       await get().fetchChatHistory(chat.id);
     }
+
+    // If chapter_name is missing, re-fetch sessions in the background so the
+    // textbook pill appears without requiring a full page refresh.
+    if (!chat.chapter_name) {
+      const { fetchSessions } = get();
+      set({ hasFetchedSessions: false });
+      fetchSessions();
+    }
   },
 
   openChatById: async (sessionId, agentId) => {
@@ -820,6 +903,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         isChatOpen: true,
         isAITyping: state.typingChatIds.includes(sessionId),
         messages: state.chatMessagesCache[sessionId] || [],
+        // Reset PDF state when switching sessions so stale URL/state from previous session doesn't bleed in
+        isPdfViewerOpen: false,
+        chapterPdfUrl: null,
+        chapterPdfFetchedAt: null,
+        chapterPdfCachedFor: null,
+        isPdfLoading: false,
+        chapterPdfError: null,
       }));
 
       // Trigger history fetch if not cached
@@ -937,11 +1027,83 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       isAITyping: false,
       isHistoryLoading: false,
       historyAbortController: null,
+      isPdfViewerOpen: false,
+      chapterPdfUrl: null,
+      chapterPdfFetchedAt: null,
+      chapterPdfCachedFor: null,
+      isPdfLoading: false,
+      chapterPdfError: null,
     });
   },
 
+  openChapterPdf: async () => {
+    const { activeChat, studentProfile, chapterPdfUrl, chapterPdfFetchedAt, chapterPdfCachedFor, isPdfViewerOpen, isPdfLoading } = get();
+
+    // Toggle closed if already open
+    if (isPdfViewerOpen) {
+      set({ isPdfViewerOpen: false });
+      return;
+    }
+
+    // Guard: need chapter name, grade, and subject
+    if (!activeChat?.chapter_name || !studentProfile?.grade || !activeChat?.subject) {
+      console.warn("[openChapterPdf] Missing required fields:", {
+        chapter_name: activeChat?.chapter_name,
+        grade: studentProfile?.grade,
+        subject: activeChat?.subject,
+      });
+      return;
+    }
+
+    // Prevent double-click while loading
+    if (isPdfLoading) return;
+
+    const CACHE_TTL_MS = 12 * 60 * 1000;
+    // Cache hit: same chapter, fresh URL
+    if (
+      chapterPdfUrl &&
+      chapterPdfFetchedAt &&
+      chapterPdfCachedFor === activeChat.chapter_name &&
+      Date.now() - chapterPdfFetchedAt < CACHE_TTL_MS
+    ) {
+      set({ isPdfViewerOpen: true });
+      return;
+    }
+
+    set({ isPdfLoading: true, chapterPdfError: null });
+    try {
+      const data = await studentService.fetchChapterPdfUrl(
+        studentProfile.grade,
+        activeChat.subject,
+        activeChat.chapter_name
+      );
+      if (!data.pdf_url.startsWith("https://")) {
+        console.error("[openChapterPdf] Received non-HTTPS URL, ignoring.");
+        set({ isPdfLoading: false, chapterPdfError: "Textbook not available for this chapter." });
+        return;
+      }
+      set({
+        chapterPdfUrl: data.pdf_url,
+        chapterPdfFetchedAt: Date.now(),
+        chapterPdfCachedFor: activeChat.chapter_name,
+        isPdfViewerOpen: true,
+        isPdfLoading: false,
+        chapterPdfError: null,
+      });
+    } catch (error: any) {
+      console.error("[openChapterPdf] Failed to fetch chapter PDF URL:", error?.status, error?.message);
+      const msg = error?.status === 404
+        ? "Textbook not available for this chapter."
+        : "Could not load textbook. Please try again.";
+      set({ isPdfLoading: false, chapterPdfError: msg });
+    }
+  },
+
+  closePdfViewer: () => set({ isPdfViewerOpen: false }),
+  clearPdfError: () => set({ chapterPdfError: null }),
+
   startVoiceSession: async () => {
-    const { activeChat, studentProfile } = get();
+    const { activeChat, studentProfile, voicePrefs } = get();
     if (!studentProfile) return;
 
     // Handle Hub start
@@ -965,7 +1127,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
 
     console.log("🎙️ [StudentStore] Starting Voice Session for Chat:", effectiveChat);
-    set({ voiceSessionStatus: "connecting" });
+    set({ voiceSessionStatus: "connecting", isRateLimitHit: false, rateLimitMessage: null });
 
     // Ensure chat mode is voice
     if (activeChat) {
@@ -976,13 +1138,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       }));
     }
 
-    // Reset mute state on new session
-    set({ isMuted: false });
+    // Reset mute state on new session based on listenMode
+    const isPtt = voicePrefs.listenMode === "ptt";
+    set({ isMuted: isPtt, pttHeld: false });
 
     try {
-      // Lazy load voice service to avoid SSR issues
-      const { voiceService } =
-        await import("@/features/student/services/voiceService");
+      // Initialize the mute state in voiceService as well
+      voiceService.setMuted(isPtt);
 
       await voiceService.startSession(
         studentProfile.user_id,
@@ -992,7 +1154,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         } else if (event.type === "disconnected") {
           set({ voiceSessionStatus: "idle" });
         } else if (event.type === "error") {
-          set({ voiceSessionStatus: "error" });
+          console.log("🎙️ [StudentStore] Voice session error event received:", event);
+          if (event.error === "rate_limit_exceeded") {
+            console.log("🎙️ [StudentStore] Setting isRateLimitHit to true");
+            set({ 
+              voiceSessionStatus: "error",
+              isRateLimitHit: true,
+              rateLimitMessage: "Daily limit reached. Please upgrade to Pro for more."
+            });
+          } else {
+            set({ voiceSessionStatus: "error" });
+          }
         } else if (event.type === "session_id") {
           // Update activeChat with the real session_id from backend
           const { activeChat, fetchSessions } = get();
@@ -1016,20 +1188,28 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
               `/student?session=${newSessionId}`,
             );
 
-            // 3. Refresh sidebar to show the new chat
+            // 3. Refresh sidebar to show the new chat (reset guard so chapter_name gets populated)
+            set({ hasFetchedSessions: false });
             fetchSessions();
           }
         } else if (event.type === "entry_resolved") {
-          // Update chat metadata when entry phase completes
+          // Update chat metadata when entry phase completes.
+          // chapter_name (not just lastTopic) must be set so the "View textbook" button activates.
           set((state) => ({
             activeChat: state.activeChat
               ? {
                   ...state.activeChat,
                   subject: event.subject,
                   lastTopic: event.chapter,
+                  // Preserve existing chapter_name on resume; set from event on new/entry-phase sessions.
+                  chapter_name: state.activeChat.chapter_name || event.chapter || state.activeChat.chapter_name,
                 }
               : null,
           }));
+          // Refresh sessions so DB-persisted chapter_name merges back into the sidebar entry.
+          const { fetchSessions: refreshSessions } = get();
+          set({ hasFetchedSessions: false });
+          refreshSessions();
         } else if (event.type === "planning") {
           const { text } = event;
           set((state) => {
@@ -1283,7 +1463,14 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           });
         },
         effectiveChat.session_id,
-        effectiveChat.subject
+        effectiveChat.subject,
+        undefined,
+        studentProfile.preferred_voice,
+        // Pass chapter context so backend can bypass entry phase when chapter is pre-selected
+        // and resolve document access in both new and resumed sessions.
+        effectiveChat.chapter_name || effectiveChat.document_title || undefined,
+        effectiveChat.agent_id || undefined,
+        studentProfile.grade ? Number(studentProfile.grade) : undefined,
       );
     } catch (error) {
       console.error("Failed to start voice session:", error);
@@ -1291,28 +1478,103 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
   },
 
-  stopVoiceSession: async () => {
+  stopVoiceSession: () => {
     try {
-      const { voiceService } =
-        await import("@/features/student/services/voiceService");
       voiceService.stopSession();
     } catch (error) {
       console.error("Failed to stop voice session:", error);
     }
-    set({ voiceSessionStatus: "idle", isMuted: false });
+    set({ voiceSessionStatus: "idle", isMuted: false, pttHeld: false });
   },
 
-  toggleMute: async () => {
+  toggleMute: () => {
     const { isMuted } = get();
     const newMutedState = !isMuted;
     
     try {
-      const { voiceService } = await import("@/features/student/services/voiceService");
       voiceService.setMuted(newMutedState);
       set({ isMuted: newMutedState });
     } catch (error) {
       console.error("Failed to toggle mute:", error);
     }
+  },
+
+  beginPttUtterance: () => {
+    set({ pttHeld: true });
+    voiceService.setMuted(false);
+  },
+
+  endPttUtterance: () => {
+    set({ pttHeld: false });
+    voiceService.setMuted(true);
+  },
+
+  openNewSession: (agent: AgentItem, mode: "chat" | "voice") => {
+    set({ sessionMode: mode });
+    const newSession: ChatSession = {
+      id: "new",
+      title: agent.name,
+      subject: agent.subject,
+      agentType: "Socratic Tutor",
+      agentIcon: "🤖",
+      lastActive: "Just now",
+      lastTopic: "New Session",
+      grade: `Grade ${agent.grade}`,
+      agent_id: agent.agent_id,
+      chatMode: mode === "chat" ? "text" : "voice",
+    };
+    set((state) => ({
+      activeChat: newSession,
+      messages: [],
+      chatMessagesCache: { ...state.chatMessagesCache, ["new"]: [] },
+      isChatOpen: true,
+      isAgentPickerOpen: false,
+      isAITyping: false,
+    }));
+  },
+
+  initNewVoiceSession: (agentId: string) => {
+    const { availableAgents } = get();
+    const agent = availableAgents.find((a) => a.agent_id === agentId);
+    if (agent) {
+      set({ sessionMode: "voice" });
+      const newSession: ChatSession = {
+        id: "new",
+        title: agent.name,
+        subject: agent.subject,
+        agentType: "Socratic Tutor",
+        agentIcon: "🤖",
+        lastActive: "Just now",
+        lastTopic: "New Session",
+        grade: `Grade ${agent.grade}`,
+        agent_id: agent.agent_id,
+        chatMode: "voice",
+      };
+      set({ activeChat: newSession, isChatOpen: true });
+    }
+  },
+
+  setListenMode: (mode) => {
+    set((state) => {
+      const newPrefs = { ...state.voicePrefs, listenMode: mode };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("voice_prefs", JSON.stringify(newPrefs));
+      }
+      // If we switch to Continuous, start unmuted; if we switch to PTT, start muted
+      const isPtt = mode === "ptt";
+      voiceService.setMuted(isPtt);
+      return { voicePrefs: newPrefs, isMuted: isPtt, pttHeld: false };
+    });
+  },
+
+  setPttHotkey: (key) => {
+    set((state) => {
+      const newPrefs = { ...state.voicePrefs, pttHotkey: key };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("voice_prefs", JSON.stringify(newPrefs));
+      }
+      return { voicePrefs: newPrefs };
+    });
   },
 
   // ── English Skill Mode Actions ─────────────────────────────────────────────
@@ -1651,16 +1913,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       // -- Reactive Streaming State -------------------------------------------
       let isPlanningUIPresented = false;
       let streamDone = false;
-      const planningQueue: string[] = [];
+      const planningQueue: Array<{ text: string; phase?: string }> = [];
       const bufferedEvents: any[] = [];
       const elements: ChatElement[] = [];
       let bufferedText = "";
       let currentTextBuffer = "";
       let currentToolStatus: string | undefined;
       let currentStatusText: string | undefined = "Processing...";
+      let currentPhase: string | undefined = "understanding";
       let doneResponse = ""; // Stores the full response from the done event for post-stream SVG upgrade
 
-      const updateUI = (text: string, els: ChatElement[], toolStatus?: string, statusText?: string) => {
+      const updateUI = (text: string, els: ChatElement[], toolStatus?: string, statusText?: string, phase?: string) => {
         // Create a transient display list that includes the current buffer tail
         // this ensures words appearing after a visual block are visible immediately
         const displayElements = [...els];
@@ -1684,7 +1947,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                     text: text.replace(tags, "").trim(),
                     elements: displayElements.length > 0 ? displayElements : undefined,
                     toolStatus,
-                    statusText: statusText !== undefined ? statusText : currentStatusText
+                    statusText: statusText !== undefined ? statusText : currentStatusText,
+                    phase: phase !== undefined ? phase : currentPhase
                   } 
                 : m
             );
@@ -1731,8 +1995,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       const handleEvent = (event: any) => {
         if (event.type === "planning") {
           const status = event.text || event.message || "";
-          if (status && !planningQueue.includes(status)) {
-            planningQueue.push(status);
+          const phase = event.phase || "thinking";
+          if (status && !planningQueue.some(item => item.text === status)) {
+            planningQueue.push({ text: status, phase });
           }
         } else if (event.type === "error") {
           // Mid-stream error from backend (e.g. CORE_2010)
@@ -2014,6 +2279,15 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           finalOptions = Array.isArray(event.options) ? event.options : [];
           finalActions = Array.isArray(event.actions) ? event.actions : [];
           if (event.response) doneResponse = event.response;
+          // Propagate chapter_name immediately so the "View textbook" button
+          // appears after the first response without waiting for fetchSessions().
+          if (event.chapter_name) {
+            set((state) => ({
+              activeChat: state.activeChat
+                ? { ...state.activeChat, chapter_name: state.activeChat.chapter_name || event.chapter_name }
+                : null,
+            }));
+          }
           if (event.status === "error") {
             bufferedText = streamErrorMessage || "Please tell me more.";
             elements.length = 0;
@@ -2033,10 +2307,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         
         while (!streamDone || planningQueue.length > shownStatuses) {
           if (planningQueue.length > shownStatuses) {
-            const status = planningQueue[shownStatuses];
+            const item = planningQueue[shownStatuses];
             shownStatuses++;
-            currentStatusText = status;
-            updateUI(bufferedText, elements, currentToolStatus, status);
+            currentStatusText = item.text;
+            currentPhase = item.phase;
+            updateUI(bufferedText, elements, currentToolStatus, item.text, item.phase);
             await new Promise((r) => setTimeout(r, 1200));
           } else if (streamDone) {
             break;
@@ -2114,7 +2389,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
               set({ activeChat: updatedChat });
               window.history.pushState(null, "", `/student/chat/${newSessionId}`);
-              fetchSessions(); // Refresh sidebar history
+              // Reset guard so fetchSessions actually runs and populates chapter_name on activeChat
+              set({ hasFetchedSessions: false });
+              fetchSessions();
             }
           }
 
@@ -2123,8 +2400,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           // Standardize planning/tool updates for batching
           if (event.type === "planning") {
             const status = event.text || event.message || "";
-            if (status && status !== currentStatusText) {
+            const phase = event.phase || "thinking";
+            if (status && (status !== currentStatusText || phase !== currentPhase)) {
               currentStatusText = status;
+              currentPhase = phase;
               shouldUpdate = true;
             }
           } else if (event.type === "tool_status") {
@@ -2140,7 +2419,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           }
 
           if (shouldUpdate && isPlanningUIPresented) {
-            updateUI(bufferedText, elements, currentToolStatus, currentStatusText);
+            updateUI(bufferedText, elements, currentToolStatus, currentStatusText, currentPhase);
           }
         }
       }
@@ -2229,10 +2508,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             finalActiveChat = updatedChat;
           }
         } else if (chatInList) {
+          // Merge chapter_name from activeChat (set by done handler) into the stale chatInList entry
+          const mergedChapterName = state.activeChat?.chapter_name || chatInList.chapter_name;
           const updatedChat: ChatSession = {
             ...chatInList,
             id: realId,
             session_id: finalSessionId || chatInList.session_id,
+            chapter_name: mergedChapterName,
           };
           // Replace the temp entry and remove any duplicate with the same realId
           newRecentChats = state.recentChats

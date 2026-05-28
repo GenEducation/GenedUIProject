@@ -114,9 +114,8 @@ export const TutorialVideoModal: React.FC = () => {
 
               {/* ── Video / iframe ── */}
               <div
-                className="relative w-full"
+                className="relative w-full aspect-[380/680] sm:aspect-[900/560]"
                 style={{
-                  aspectRatio: "900 / 560",
                   background: "#0d1117",
                 }}
               >

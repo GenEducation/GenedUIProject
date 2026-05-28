@@ -125,7 +125,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       const pendingCount = metaObj?.pending_count ?? 0;
 
       // Filter out the metadata trailer to parse strictly students
-      const studentItems = raw.filter((item) => "id" in item && "username" in item);
+      const studentItems = raw.filter((item) => "id" in item && "name" in item);
 
       const approved: Student[] = [];
       const pending: Student[] = [];
@@ -133,9 +133,9 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       for (const item of studentItems) {
         const student: Student = {
           id: item.id,
-          name: item.username,
+          name: item.name,
           grade: String(item.grade),
-          initials: getInitials(item.username),
+          initials: getInitials(item.name),
           status: item.status,
         };
         if (item.status === "APPROVED") {

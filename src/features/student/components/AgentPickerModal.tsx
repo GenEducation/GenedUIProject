@@ -32,7 +32,7 @@ function normalizeSubject(subject: string): SubjectKey | null {
 
 export function AgentPickerModal() {
   const router = useRouter();
-  const { setAgentPickerOpen, openNewChat, availableAgents } = useStudentStore();
+  const { setAgentPickerOpen, openNewSession, startVoiceSession, availableAgents } = useStudentStore();
   const [query, setQuery] = useState("");
 
   const filtered = query.trim()
@@ -42,11 +42,6 @@ export function AgentPickerModal() {
           `grade ${a.grade}`.toLowerCase().includes(query.toLowerCase())
       ) : [])
     : (Array.isArray(availableAgents) ? availableAgents : []);
-
-  const handleSelect = (agent: AgentItem) => {
-    openNewChat(agent);
-    router.push(`/student/chat?agent=${agent.agent_id}`);
-  };
 
   return (
     <AnimatePresence>
@@ -110,13 +105,12 @@ export function AgentPickerModal() {
               const IconComp = subjectKey ? SUBJECT_ICON_MAP[subjectKey] : null;
 
               return (
-                <motion.button
+                <motion.div
                   key={agent.agent_id}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.035 }}
-                  onClick={() => handleSelect(agent)}
-                  className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-left hover:bg-[#F4F3EE] transition-all group border-l-4"
+                  className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-left hover:bg-[#F4F3EE]/50 transition-all border-l-4"
                   style={{ borderLeftColor: config?.color ?? "transparent" }}
                 >
                   <div
@@ -136,8 +130,30 @@ export function AgentPickerModal() {
                     <p className="font-bold text-[#042E5C] text-sm">{agent.subject}</p>
                     <p className="text-xs text-[#042E5C]/45 mt-1">Grade {agent.grade}</p>
                   </div>
-                  <ChevronRight size={16} className="text-[#042E5C]/20 group-hover:text-[#042E5C]/50 transition-colors flex-shrink-0" />
-                </motion.button>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => {
+                        openNewSession(agent, "chat");
+                        setAgentPickerOpen(false);
+                        router.push(`/student/chat/new?agentId=${agent.agent_id}`);
+                      }}
+                      className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[#042E5C]/8 text-[#042E5C] hover:bg-[#042E5C]/15 transition-all cursor-pointer"
+                    >
+                      Chat
+                    </button>
+                    <button
+                      onClick={() => {
+                        openNewSession(agent, "voice");
+                        setAgentPickerOpen(false);
+                        startVoiceSession();
+                        router.push(`/student/voice?agent=${agent.agent_id}`);
+                      }}
+                      className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[#5B4DC7] text-white hover:bg-[#5B4DC7]/90 shadow-sm transition-all cursor-pointer"
+                    >
+                      Voice
+                    </button>
+                  </div>
+                </motion.div>
               );
             })
           )}

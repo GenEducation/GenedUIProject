@@ -7,6 +7,8 @@ import { StudentChatSidebar } from "./StudentChatSidebar";
 import { StudentChatMain } from "./StudentChatMain";
 import { StudentChatHub } from "./StudentChatHub";
 import { AgentPickerModal } from "./AgentPickerModal";
+import { ResizableSplitPane } from "./ResizableSplitPane";
+import { ChapterPdfViewer } from "./ChapterPdfViewer";
 
 /**
  * StudentChatView acts as a container for the modular chat layout.
@@ -32,6 +34,9 @@ export function StudentChatView() {
     closeChat,
     isAgentPickerOpen,
     sendMessage,
+    isPdfViewerOpen,
+    chapterPdfUrl,
+    closePdfViewer,
   } = useStudentStore();
 
   // Sidebar toggle state
@@ -133,18 +138,45 @@ export function StudentChatView() {
         onClose={() => setIsSidebarOpen(false)}
       />
 
-      {/* Main Area: Hub vs Chat */}
-      <div className="flex-1 flex flex-col overflow-hidden relative">
+      {/* Main Area: Hub vs Chat (with optional PDF split pane) */}
+      <div className="flex-1 flex overflow-hidden relative">
         {isHubState ? (
-          <StudentChatHub toggleSidebar={toggleSidebar} />
-        ) : (
-          <StudentChatMain
-            activeChat={activeChat!}
-            messages={messages}
-            isAITyping={isAITyping}
-            isSidebarOpen={isSidebarOpen}
-            toggleSidebar={toggleSidebar}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <StudentChatHub toggleSidebar={toggleSidebar} />
+          </div>
+        ) : isPdfViewerOpen && chapterPdfUrl && activeChat ? (
+          <ResizableSplitPane
+            left={
+              <StudentChatMain
+                activeChat={activeChat}
+                messages={messages}
+                isAITyping={isAITyping}
+                isSidebarOpen={isSidebarOpen}
+                toggleSidebar={toggleSidebar}
+              />
+            }
+            right={
+              <ChapterPdfViewer
+                pdfUrl={chapterPdfUrl}
+                chapterName={activeChat.chapter_name || activeChat.title}
+                onClose={closePdfViewer}
+              />
+            }
+            defaultLeftPercent={55}
+            minLeftPx={300}
+            minRightPx={240}
+            storageKey="pdf_split_chat"
           />
+        ) : (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <StudentChatMain
+              activeChat={activeChat!}
+              messages={messages}
+              isAITyping={isAITyping}
+              isSidebarOpen={isSidebarOpen}
+              toggleSidebar={toggleSidebar}
+            />
+          </div>
         )}
       </div>
 

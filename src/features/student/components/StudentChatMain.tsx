@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Menu, Loader2, Volume2, VolumeX, Mic, MicOff, Square, Check } from "lucide-react";
+import { ArrowLeft, Menu, Loader2, Volume2, VolumeX, Mic, MicOff, Square, Check, BookOpen } from "lucide-react";
 import React, { useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -314,24 +314,30 @@ export function StudentChatMain({
   toggleSidebar
 }: StudentChatMainProps) {
   const router = useRouter();
-  const { 
-    closeChat, 
-    isHistoryLoading, 
-    sendMessage, 
+  const {
+    closeChat,
+    isHistoryLoading,
+    sendMessage,
     streamingMessageId,
     isRateLimitHit,
     setRateLimitHit,
-    recordingState, 
-    recordingPrompt, 
+    recordingState,
+    recordingPrompt,
     recordingError,
     activeSkillDirective,
     oralAnalysisResult,
     playbackState,
     playDirectiveTts,
-    stopSkillRecording, 
+    stopSkillRecording,
     confirmStartRecording,
     dismissRecordingPrompt,
-    stopPlayback
+    stopPlayback,
+    openChapterPdf,
+    isPdfViewerOpen,
+    isPdfLoading,
+    chapterPdfError,
+    clearPdfError,
+    studentProfile,
   } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -412,8 +418,53 @@ export function StudentChatMain({
             </div>
           </div>
 
-          {/* Right side: active dot + audio status + grade badge */}
+          {/* Right side: textbook pill + audio status + active dot + grade badge */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            {activeChat.chapter_name && (
+              <div className="flex flex-col items-end gap-0.5">
+                <button
+                  onClick={openChapterPdf}
+                  disabled={isPdfLoading}
+                  className="flex items-center gap-1.5 transition-all"
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: 20,
+                    border: isPdfViewerOpen ? "1.5px solid #5B4DC7" : "1.5px solid #D6D3F0",
+                    background: isPdfViewerOpen ? "#5B4DC7" : "#EDE9FE",
+                    color: isPdfViewerOpen ? "#FFFFFF" : "#5B4DC7",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    fontFamily: "'DM Sans', sans-serif",
+                    cursor: isPdfLoading ? "default" : "pointer",
+                    whiteSpace: "nowrap",
+                    opacity: isPdfLoading ? 0.7 : 1,
+                  }}
+                >
+                  {isPdfLoading ? (
+                    <span style={{
+                      display: "inline-block",
+                      width: 10,
+                      height: 10,
+                      border: `2px solid ${isPdfViewerOpen ? "rgba(255,255,255,0.4)" : "#C4B8F5"}`,
+                      borderTopColor: isPdfViewerOpen ? "#fff" : "#5B4DC7",
+                      borderRadius: "50%",
+                      animation: "spin 0.7s linear infinite",
+                    }} />
+                  ) : (
+                    <BookOpen size={12} />
+                  )}
+                  Textbook
+                </button>
+                {chapterPdfError && (
+                  <button
+                    onClick={clearPdfError}
+                    style={{ fontSize: 10, color: "#EF4444", background: "none", border: "none", cursor: "pointer", padding: 0, whiteSpace: "nowrap" }}
+                  >
+                    {chapterPdfError} ✕
+                  </button>
+                )}
+              </div>
+            )}
             <AnimatePresence>
               <AudioStatusPill key="audio-pill" state={playbackState} onStop={stopPlayback} />
             </AnimatePresence>
@@ -475,7 +526,7 @@ export function StudentChatMain({
                     New session: {activeChat.title}
                   </h1>
                   <p style={{ fontSize: 16, color: "#4A5568", maxWidth: 400, margin: "0 auto", lineHeight: 1.6 }}>
-                    Ask anything about {activeChat.title}. Your Socratic guide is ready.
+                    Ask anything about {activeChat.title}. {studentProfile?.ai_name || "Your Socratic guide"} is ready.
                   </p>
                 </div>
 

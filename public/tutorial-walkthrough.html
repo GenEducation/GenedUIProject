@@ -4,6 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>GenEd – How It Works</title>
+<script>
+  // Prevent direct access — only allow when loaded inside an iframe
+  if (window === window.top) { window.location.replace('/'); }
+</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
 <style>
   /* ── Reset & Base ─────────────────────────────── */
@@ -18,7 +22,6 @@
 
   /* ── Outer wrapper ───────────────────────────── */
   .stage-scaler {
-    /* Scales the 900×560 stage to always fit the viewport with 24px padding */
     width: min(900px, calc(100vw - 24px));
     aspect-ratio: 900 / 560;
     position: relative;
@@ -373,7 +376,7 @@
     border-top: none;
   }
 
-  /* ── Progress dots ───────────────────────────── */
+  /* ── Progress dots (3 steps) ─────────────────── */
   .progress-dots {
     position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
     display: flex; gap: 6px; z-index: 500;
@@ -479,19 +482,184 @@
 
   /* ── Captions ────────────────────────────────── */
   .caption-bar {
-    position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%);
-    background: rgba(28,35,51,0.92); color: #fff;
-    font-size: 13px; font-weight: 500; line-height: 1.5;
-    padding: 8px 20px; border-radius: 20px; white-space: nowrap;
+    position: absolute; top: 44px; left: 50%; transform: translateX(-50%);
+    background: rgba(28,35,51,0.95); color: #fff;
+    font-size: 15px; font-weight: 600; line-height: 1.6;
+    padding: 12px 28px; border-radius: 16px;
     z-index: 3000; opacity: 0; transition: opacity 0.4s;
     pointer-events: none;
-    backdrop-filter: blur(6px);
-    max-width: 700px; text-align: center; white-space: normal;
+    backdrop-filter: blur(8px);
+    max-width: 720px; text-align: center; white-space: normal;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
   }
   .caption-bar.show { opacity: 1; }
 
+  /* ── Step card (scene transition overlay) ────── */
+  .step-card {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: linear-gradient(135deg, #5B4DC7, #4A3DB0); color: #fff;
+    font-family: 'Nunito', sans-serif;
+    border-radius: 24px;
+    z-index: 4000; opacity: 0;
+    transition: opacity 0.4s, transform 0.4s;
+    pointer-events: none;
+    box-shadow: 0 16px 48px rgba(91,77,199,0.5);
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+    padding: 28px 44px;
+    text-align: center;
+  }
+  .step-card.show { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: all; }
+  .step-card-title {
+    font-size: 22px; font-weight: 900;
+    white-space: nowrap;
+  }
+  .step-card-sub {
+    font-size: 13px; font-weight: 500;
+    color: rgba(255,255,255,0.65);
+    margin-top: -8px;
+  }
+  .step-next-btn {
+    background: #059F6D; color: #fff;
+    border: none; cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px; font-weight: 800;
+    padding: 12px 36px; border-radius: 14px;
+    transition: all 0.2s;
+    box-shadow: 0 6px 20px rgba(5,159,109,0.35);
+  }
+  .step-next-btn:hover { background: #048055; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(5,159,109,0.45); }
+
+  @media (max-width: 600px) {
+    .step-card { padding: 22px 28px; gap: 12px; border-radius: 20px; }
+    .step-card-title { font-size: 17px; }
+    .step-card-sub { font-size: 11px; }
+    .step-next-btn { font-size: 13px; padding: 10px 28px; }
+  }
+
   /* ── Scrollable profile area ─────────────────── */
   .profile-scroll { overflow-y: auto; height: 100%; }
+
+  /* ══════════════════════════════════════════════
+     MOBILE RESPONSIVE — phone frame for ≤ 600px
+     ══════════════════════════════════════════════ */
+  @media (max-width: 600px) {
+    .stage-scaler {
+      width: min(380px, calc(100vw - 16px));
+      aspect-ratio: 380 / 680;
+    }
+    .stage {
+      width: 380px; height: 680px;
+      border-radius: 32px;
+      border: 4px solid #2d2d2d;
+    }
+
+    /* Hide desktop chrome bar — show a mobile status bar instead */
+    .chrome {
+      height: 32px; border-radius: 28px 28px 0 0;
+      justify-content: center; padding: 0;
+    }
+    .chrome .dot { display: none; }
+    .url-bar {
+      margin: 0 16px; font-size: 10px; height: 18px;
+      border-radius: 9px; justify-content: center;
+    }
+
+    /* Hide sidebar on mobile — show bottom nav instead */
+    .sidebar { display: none; }
+
+    /* Bottom nav bar for mobile */
+    .mobile-nav {
+      display: flex !important;
+    }
+
+    .app { flex-direction: column; }
+    .main { flex: 1; }
+
+    /* Pages need tighter padding */
+    .page { padding: 16px 14px 80px; }
+
+    /* Shrink all card elements */
+    .greeting h1 { font-size: 20px; }
+    .greeting p { font-size: 12px; }
+    .stats-row { grid-template-columns: repeat(3,1fr); gap: 6px; margin-bottom: 16px; }
+    .stat-card { padding: 10px 8px; gap: 6px; border-radius: 12px; }
+    .stat-icon { width: 30px; height: 30px; font-size: 14px; border-radius: 8px; }
+    .stat-val { font-size: 16px; }
+    .stat-lbl { font-size: 8px; }
+    .section-hdr h2 { font-size: 9px; }
+    .section-hdr .see-all { font-size: 10px; }
+
+    .subjects-grid { grid-template-columns: 1fr; gap: 10px; }
+    .subject-card { padding: 14px; border-radius: 14px; }
+    .subj-icon { width: 36px; height: 36px; font-size: 18px; border-radius: 10px; }
+    .subj-name { font-size: 14px; }
+    .subj-meta { font-size: 10px; }
+    .subj-btn { font-size: 11px; padding: 8px 0; border-radius: 10px; }
+
+    /* Profile page mobile */
+    .profile-title { font-size: 18px; }
+    .profile-card { padding: 14px 16px; border-radius: 16px; }
+    .partner-select { font-size: 11px; padding: 8px 10px; }
+    .send-btn { font-size: 11px; padding: 8px 14px; }
+    .add-partner-row { flex-direction: column; }
+    .parent-input { font-size: 11px; }
+
+    /* Chat page mobile */
+    .chat-header { padding: 12px 14px; gap: 10px; }
+    .chat-title { font-size: 14px; }
+    .chat-messages { padding: 12px 14px; gap: 10px; }
+    .msg { max-width: 90%; }
+    .bubble { font-size: 12px; padding: 10px 12px; }
+    .chat-input-area { padding: 10px 14px; }
+    .chat-input { font-size: 12px; padding: 8px 12px; min-height: 38px; }
+    .send-icon-btn { width: 38px; height: 38px; font-size: 14px; border-radius: 12px; }
+    .ch-pill { font-size: 10px; padding: 4px 10px; }
+
+    /* Caption bar — bigger on mobile, still at top */
+    .caption-bar {
+      top: 36px; left: 8px; right: 8px;
+      transform: none;
+      max-width: none;
+      font-size: 13px; padding: 10px 16px;
+      border-radius: 12px;
+    }
+
+    /* Step card smaller */
+    .step-card { font-size: 16px; padding: 12px 24px; }
+
+    /* Progress dots */
+    .progress-dots { bottom: 8px; }
+
+    /* Tooltip */
+    .tooltip-label { font-size: 10px; padding: 4px 8px; }
+
+    /* End screen */
+    .end-logo { font-size: 24px; }
+    .end-sub { font-size: 13px; }
+    .end-restart { font-size: 13px; padding: 12px 24px; }
+
+    /* Modal */
+    .modal-box { width: 280px; padding: 24px 20px; border-radius: 20px; }
+    .modal-title { font-size: 16px; }
+    .modal-body { font-size: 11px; }
+  }
+
+  /* Mobile bottom nav — hidden on desktop */
+  .mobile-nav {
+    display: none;
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 56px; background: #1C2333;
+    align-items: center; justify-content: space-around;
+    z-index: 100; border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .mobile-nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    color: #c8d1dc; font-size: 9px; font-weight: 600;
+    opacity: 0.5; transition: all 0.2s; cursor: pointer;
+  }
+  .mobile-nav-item.active { opacity: 1; color: #8B7FE8; }
+  .mobile-nav-item .mnav-icon { font-size: 18px; }
 </style>
 </head>
 <body>
@@ -521,7 +689,7 @@
           <div class="avatar-chip">A</div>
           <div class="chip-info">
             <div class="chip-name">Aryan</div>
-            <div class="chip-sub">Grade 9 · CBSE</div>
+            <div class="chip-sub">Grade 4 · CBSE</div>
           </div>
         </div>
       </div>
@@ -560,7 +728,7 @@
               <div class="subj-icon" style="background:#E8F5EF;">🧮</div>
               <div>
                 <div class="subj-name">Mathematics</div>
-                <div class="subj-meta">Grade 9 · 6 chapters</div>
+                <div class="subj-meta">Grade 4 · 6 chapters</div>
               </div>
             </div>
             <div class="progress-bar"><div class="progress-fill" style="width:42%;background:linear-gradient(90deg,rgba(45,106,79,0.7),#2D6A4F)"></div></div>
@@ -571,7 +739,7 @@
               <div class="subj-icon" style="background:#EBF3FB;">📖</div>
               <div>
                 <div class="subj-name">English</div>
-                <div class="subj-meta">Grade 9 · 5 chapters</div>
+                <div class="subj-meta">Grade 4 · 5 chapters</div>
               </div>
             </div>
             <div class="progress-bar"><div class="progress-fill" style="width:65%;background:linear-gradient(90deg,rgba(74,144,217,0.7),#4A90D9)"></div></div>
@@ -584,7 +752,7 @@
         <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 4px rgba(0,0,0,0.03);">
           <div class="subj-icon" style="background:#E8F5EF;width:38px;height:38px;font-size:18px;border-radius:11px;flex-shrink:0;">🧮</div>
           <div style="flex:1;">
-            <div style="font-weight:600;font-size:14px;color:#1a2332;">Triangles &amp; Congruence</div>
+            <div style="font-weight:600;font-size:14px;color:#1a2332;">Triangles &amp; Shapes</div>
             <div style="font-size:11px;color:#94a3b8;">Mathematics · 2h ago</div>
           </div>
           <div style="color:#cbd5e1;font-size:20px;">›</div>
@@ -606,7 +774,7 @@
               <div style="width:54px;height:54px;border-radius:16px;background:linear-gradient(135deg,rgba(91,77,199,0.2),rgba(74,144,217,0.2));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#8B7FE8;font-family:'Nunito',sans-serif;">A</div>
               <div>
                 <div style="font-weight:700;font-size:15px;color:#1a2332;">Aryan Sharma</div>
-                <div style="font-size:12px;color:#94a3b8;margin-top:3px;">aryan@student.com · Grade 9 · CBSE</div>
+                <div style="font-size:12px;color:#94a3b8;margin-top:3px;">aryan@student.com · Grade 4 · CBSE</div>
               </div>
             </div>
           </div>
@@ -674,7 +842,7 @@
           <div class="chat-subj-icon" style="background:#E8F5EF;">🧮</div>
           <div>
             <div class="chat-title">Mathematics Agent</div>
-            <div class="chat-sub">Grade 9 · Chapter selection</div>
+            <div class="chat-sub">Grade 4 · Chapter selection</div>
           </div>
         </div>
         <div class="chat-messages" id="chatMessages">
@@ -687,6 +855,13 @@
       </div>
 
     </div><!-- /main -->
+
+    <!-- Mobile bottom nav (visible only on small screens via CSS) -->
+    <div class="mobile-nav" id="mobileNav">
+      <div class="mobile-nav-item active" id="mnavHome"><span class="mnav-icon">🏠</span>Home</div>
+      <div class="mobile-nav-item" id="mnavPractice"><span class="mnav-icon">🎯</span>Practice</div>
+      <div class="mobile-nav-item" id="mnavMe"><span class="mnav-icon">😊</span>Me</div>
+    </div>
   </div><!-- /app -->
 
   <!-- Cursor -->
@@ -700,22 +875,26 @@
   <!-- Tooltip label -->
   <div class="tooltip-label" id="tooltip">Click here</div>
 
-  <!-- Progress dots -->
+  <!-- Progress dots — 3 steps -->
   <div class="progress-dots" id="progressDots">
     <div class="pdot active" id="pd0"></div>
     <div class="pdot" id="pd1"></div>
     <div class="pdot" id="pd2"></div>
-    <div class="pdot" id="pd3"></div>
-    <div class="pdot" id="pd4"></div>
-    <div class="pdot" id="pd5"></div>
+  </div>
+
+  <!-- Step card -->
+  <div class="step-card" id="stepCard">
+    <div class="step-card-title" id="stepCardTitle"></div>
+    <div class="step-card-sub" id="stepCardSub"></div>
+    <button class="step-next-btn" id="stepNextBtn">Next →</button>
   </div>
 
   <!-- Modal overlay -->
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal-box">
       <div class="modal-icon" style="background:#ecfdf5;"><span>✅</span></div>
-      <div class="modal-title">Request Sent!</div>
-      <div class="modal-body">Your partner request has been sent successfully. Once approved, their subjects will appear in your Home screen.</div>
+      <div class="modal-title">Request Sent! 🎉</div>
+      <div class="modal-body">Your school request was sent! Once approved, your subjects will show up on the Home screen.</div>
       <button class="modal-cta" id="modalCta">Got it 🎉</button>
     </div>
   </div>
@@ -726,7 +905,7 @@
   <!-- End screen -->
   <div class="end-screen" id="endScreen">
     <img src="/Favicon1.jpg" alt="GenEd" style="width:72px;height:72px;border-radius:18px;margin-bottom:16px;object-fit:cover;" />
-    <div class="end-logo">You're all set!</div>
+    <div class="end-logo">You're all set! 🎉</div>
     <div class="end-sub">Start your learning journey with GenEd</div>
     <div style="display:flex;gap:12px;align-items:center;">
       <button class="end-restart" id="restartBtn">Watch Again ↺</button>
@@ -742,14 +921,16 @@
 <script>
 /* ═════════════════════════════════════════════
    ANIMATION ENGINE
-   Each "scene" describes what to do and when.
    ═════════════════════════════════════════════ */
 
 /* ── Responsive scaler ──────────────────────────── */
+const isMobile = () => window.innerWidth <= 600;
+
 function scaleStage() {
   const scaler = document.getElementById('stageScaler');
   const stage  = document.getElementById('stage');
-  const scale  = scaler.offsetWidth / 900;
+  const baseW = isMobile() ? 380 : 900;
+  const scale  = scaler.offsetWidth / baseW;
   stage.style.transform = `scale(${scale})`;
 }
 scaleStage();
@@ -760,11 +941,8 @@ const cursor  = $('cursor');
 const tooltip = $('tooltip');
 const caption = $('caption');
 
-let currentScene = 0;
-let sceneTimer = null;
-
 /* ── Helpers ──────────────────────────────────── */
-function moveCursor(top, left, cb, duration=550) {
+function moveCursor(top, left, cb, duration=650) {
   cursor.style.transition = `top ${duration}ms cubic-bezier(.4,0,.2,1), left ${duration}ms cubic-bezier(.4,0,.2,1)`;
   cursor.style.top  = top  + 'px';
   cursor.style.left = left + 'px';
@@ -811,11 +989,38 @@ function showPage(id) {
   });
 }
 
+/* ── Mobile nav helpers ──────────────────────── */
+function setMobileNav(active) {
+  ['mnavHome','mnavPractice','mnavMe'].forEach(id => {
+    const el = $(id);
+    if(el) el.classList.toggle('active', id === active);
+  });
+}
+
 function setUrl(path) {
   $('urlBar').innerHTML = `<span>gened.app</span>${path}`;
 }
 
 function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ── Step card helper — waits for user to click Next ── */
+function showStep(title, subtitle) {
+  return new Promise(resolve => {
+    const card = $('stepCard');
+    $('stepCardTitle').textContent = title;
+    $('stepCardSub').textContent = subtitle || '';
+    $('stepCardSub').style.display = subtitle ? 'block' : 'none';
+    card.classList.add('show');
+
+    const btn = $('stepNextBtn');
+    const handler = () => {
+      btn.removeEventListener('click', handler);
+      card.classList.remove('show');
+      setTimeout(resolve, 400); // wait for fade-out
+    };
+    btn.addEventListener('click', handler);
+  });
+}
 
 /* ── Typing simulation ──────────────────────── */
 async function typeInto(el, text, speed=55) {
@@ -876,52 +1081,71 @@ async function runAnimation() {
   setDot(0);
   showPage('pageHome');
   setUrl('/student');
-  cursor.style.top  = '320px';
-  cursor.style.left = '500px';
-  await wait(600);
-  showCaption('Welcome to GenEd! Let\'s explore your student portal.', 2800);
-  await wait(3200);
+  setMobileNav('mnavHome');
+  cursor.style.top  = isMobile() ? '300px' : '320px';
+  cursor.style.left = isMobile() ? '190px' : '500px';
+  await wait(800);
+  showCaption('Welcome to GenEd! Let\'s see how it works. 😊', 4500);
+  await wait(5000);
+
+  // ─── STEP 1 card ───
+  await showStep('Step 1: Your Profile 👤', 'See your info and settings');
 
   // ─── SCENE 1: Move cursor to "Me" nav ───
-  setDot(1);
-  hideCaption();
-  showCaption('First, click on your Profile (Me) in the sidebar.');
-  moveCursor(217, 110);  // exact centre of "Me" nav item
-  await wait(600);
-  showTooltip('Click "Me"', 183, 90);
-  await wait(700);
+  setDot(0);
+  showCaption('Let\'s click on "Me" to see your profile!');
+  await wait(3500);
+
+  if (isMobile()) {
+    // Mobile: tap bottom nav "Me"
+    moveCursor(645, 320);
+    await wait(800);
+    showTooltip('Tap "Me"', 618, 280);
+  } else {
+    moveCursor(217, 110);
+    await wait(800);
+    showTooltip('Click "Me"', 183, 90);
+  }
+  await wait(900);
 
   // Highlight nav item
-  $('navMe').style.background = 'rgba(91,77,199,0.18)';
-  $('navMe').style.color = '#8B7FE8';
-  await wait(400);
+  if (!isMobile()) {
+    $('navMe').style.background = 'rgba(91,77,199,0.18)';
+    $('navMe').style.color = '#8B7FE8';
+  }
+  await wait(500);
   clickCursor();
-  await wait(200);
+  await wait(250);
 
   // Switch active nav
   $('navHome').classList.remove('active');
   $('navMe').classList.add('active');
   $('navMe').querySelector('.dot-active') || ($('navMe').innerHTML += '<div class="dot-active"></div>');
+  setMobileNav('mnavMe');
   hideTooltip();
-
-  await wait(350);
+  await wait(400);
 
   // ─── Navigate to Profile ───
   showPage('pageProfile');
   setUrl('/student/profile');
-  showCaption('Your Profile page — manage settings, school partners, and guardian access.');
+  setMobileNav('mnavMe');
+  hideCaption();
+  showCaption('This is your profile page! You can see your info here. 😊');
   cursor.style.transition = 'none';
-  cursor.style.top  = '300px';
-  cursor.style.left = '600px';
-  await wait(2800);
+  cursor.style.top  = isMobile() ? '300px' : '300px';
+  cursor.style.left = isMobile() ? '190px' : '600px';
+  await wait(4500);
   hideCaption();
 
+  // ─── STEP 2 card ───
+  await showStep('Step 2: Add Your School 🏫', 'Connect with your school to get subjects');
+
   // ─── SCENE 2: Scroll down to partners section ───
-  setDot(2);
-  showCaption('Scroll down to find the "Add School Partner" section.');
-  await wait(400);
-  moveCursor(350, 552);  // centre of main content area — just sweeping down visually
-  await wait(700);
+  setDot(1);
+  showCaption('Let\'s scroll down to add your school!');
+  await wait(1500);
+  moveCursor(isMobile() ? 350 : 350, isMobile() ? 190 : 552);
+  await wait(800);
 
   // Animate scroll
   const ps = $('profileScroll');
@@ -938,34 +1162,40 @@ async function runAnimation() {
     if(progress < 1) requestAnimationFrame(animateScroll);
   }
   requestAnimationFrame(animateScroll);
-  await wait(1100);
+  await wait(1200);
   hideCaption();
 
   // ─── SCENE 3: Select school and send request ───
-  setDot(2);
-  showCaption('Select your school and send a partner request to get access to the curriculum.');
-  moveCursor(262, 483);  // exact centre of partnerSelect dropdown
-  await wait(500);
+  showCaption('Pick your school from this list!');
+  await wait(2000);
+  moveCursor(isMobile() ? 310 : 262, isMobile() ? 190 : 483);
+  await wait(700);
 
   // Click on select
   const sel = $('partnerSelectEl');
-  await wait(400);
+  await wait(500);
   clickCursor();
-  await wait(250);
+  await wait(350);
 
   // Simulate selecting an option
   sel.style.borderColor = '#5B4DC7';
   sel.value = 'delhi';
-  await wait(400);
+  await wait(600);
   sel.style.borderColor = '#e2e8f0';
 
-  showCaption('Click "Send Request" to connect with your school.');
-  await wait(500);
+  hideCaption();
+  showCaption('Now tap "Send Request"! ✅');
+  await wait(2000);
 
-  // Move to send button — exact centre of sendRequestBtn
-  moveCursor(262, 760);
-  showTooltip('Send Request', 228, 700);
-  await wait(700);
+  // Move to send button
+  if (isMobile()) {
+    moveCursor(360, 190);
+    showTooltip('Send Request', 330, 140);
+  } else {
+    moveCursor(262, 760);
+    showTooltip('Send Request', 228, 700);
+  }
+  await wait(900);
   clickCursor();
   hideTooltip();
 
@@ -974,26 +1204,27 @@ async function runAnimation() {
   sendBtn.textContent = 'Sending…';
   sendBtn.classList.add('sending');
   hideCaption();
-  await wait(1100);
+  await wait(1200);
 
   // Show success modal
   sendBtn.textContent = 'Sent ✓';
   sendBtn.classList.remove('sending');
   sendBtn.classList.add('sent');
   $('modalOverlay').classList.add('show');
-  await wait(2200);
-  showCaption('Request sent! Once approved, subjects appear on your Home screen.');
-  await wait(2000);
+  await wait(3000);
+  showCaption('Done! Your school will add your subjects soon. 🎉');
+  await wait(3000);
   hideCaption();
 
   // Close modal
   $('modalOverlay').classList.remove('show');
-  await wait(400);
+  await wait(500);
 
   // ─── SCENE 4: Navigate back to Home ───
-  setDot(3);
-  showCaption('Now let\'s go back to the Home screen.');
-  // Scroll profile back to top first so the back button is visible
+  showCaption('Let\'s go back to the Home screen!');
+  await wait(2500);
+
+  // Scroll profile back to top first
   const scrollBackDur = 500;
   const scrollBackStart = ps.scrollTop;
   const scrollBackStartTime = performance.now();
@@ -1008,93 +1239,107 @@ async function runAnimation() {
     }
     requestAnimationFrame(scrollBack);
   });
-  moveCursor(86, 274);  // exact centre of backBtn
-  await wait(500);
-  showTooltip('Go back', 52, 244);
-  await wait(500);
+  moveCursor(isMobile() ? 52 : 86, isMobile() ? 50 : 274);
+  await wait(600);
+  showTooltip('Go back', isMobile() ? 22 : 52, isMobile() ? 20 : 244);
+  await wait(700);
   clickCursor();
   hideTooltip();
-  await wait(350);
+  await wait(400);
 
   // Switch nav back
   $('navMe').classList.remove('active');
   $('navHome').classList.add('active');
+  setMobileNav('mnavHome');
   showPage('pageHome');
   setUrl('/student');
-  ps.scrollTop = 0; // reset profile scroll
+  ps.scrollTop = 0;
   sendBtn.textContent = 'Send Request';
   sendBtn.classList.remove('sent');
   sel.value = '';
 
   cursor.style.transition = 'none';
-  cursor.style.top  = '300px';
-  cursor.style.left = '600px';
-  await wait(300);
+  cursor.style.top  = isMobile() ? '300px' : '300px';
+  cursor.style.left = isMobile() ? '190px' : '600px';
+  await wait(400);
 
-  showCaption('Back on the Home screen. Now let\'s start learning!');
-  await wait(2200);
   hideCaption();
 
+  // ─── STEP 3 card ───
+  await showStep('Step 3: Start Learning! 🚀', 'Pick a subject and chat with your helper');
+
   // ─── SCENE 5: Click first subject (Mathematics) ───
-  setDot(4);
-  showCaption('Click on Mathematics to open your subject agent.');
+  setDot(2);
+  showCaption('Here are your subjects! Let\'s try one. 🎉');
+  await wait(3500);
+
+  hideCaption();
+  showCaption('Tap on Mathematics to start learning!');
+  await wait(1500);
 
   // Scroll home to subjects if needed
   $('pageHome').scrollTop = 0;
   await wait(300);
 
   // Move cursor to "Start learning →" button inside Math card
-  moveCursor(402, 401);  // exact centre of mathBtn
-  await wait(600);
-  $('subjectMath').classList.add('highlight');
-  $('mathBtn').classList.add('active');
-  showTooltip('Open Mathematics', 368, 320);
-  await wait(700);
+  if (isMobile()) {
+    moveCursor(360, 190);
+    await wait(800);
+    $('subjectMath').classList.add('highlight');
+    $('mathBtn').classList.add('active');
+    showTooltip('Open Mathematics', 330, 100);
+  } else {
+    moveCursor(402, 401);
+    await wait(800);
+    $('subjectMath').classList.add('highlight');
+    $('mathBtn').classList.add('active');
+    showTooltip('Open Mathematics', 368, 320);
+  }
+  await wait(900);
   clickCursor();
   hideTooltip();
-  await wait(300);
+  await wait(400);
 
   $('subjectMath').classList.remove('highlight');
 
   // ─── Navigate to chat ───
-  setDot(5);
   showPage('pageChat');
   setUrl('/student/chat/new?agent=math');
 
   // Clear chat
   $('chatMessages').innerHTML = '';
   cursor.style.transition = 'none';
-  cursor.style.top  = '380px';
-  cursor.style.left = '600px';
-  await wait(400);
+  cursor.style.top  = isMobile() ? '400px' : '380px';
+  cursor.style.left = isMobile() ? '190px' : '600px';
+  await wait(500);
 
   // ─── SCENE 6: AI welcome message ───
-  showCaption('Your Mathematics Agent greets you and asks what you want to learn!');
+  hideCaption();
+  showCaption('Meet your Maths helper! It asks what you\'d like to learn. 🤖');
   showTypingIndicator();
-  await wait(1600);
+  await wait(2200);
   removeTypingIndicator();
 
   await addMessage('ai',
-    `<span class="hi">👋 Hello Aryan, welcome back!</span><br><br>
-    I'm your <strong>Mathematics AI tutor</strong> for Grade 9. I'm here to make learning engaging, clear, and enjoyable for you.<br><br>
-    To get started, which chapter or topic would you like to explore today? You can pick one below or type your own:
+    `<span class="hi">👋 Hello Aryan, welcome!</span><br><br>
+    I'm your <strong>Mathematics helper</strong> for Grade 4. I'm here to make learning fun and easy!<br><br>
+    Which chapter would you like to explore today? Pick one below or type your own:
     <div class="chapter-pills" id="chapterPills">
       <span class="ch-pill" id="pill1">📐 Triangles</span>
       <span class="ch-pill" id="pill2">📊 Statistics</span>
       <span class="ch-pill" id="pill3">🔢 Polynomials</span>
-      <span class="ch-pill" id="pill4">📏 Coordinate Geometry</span>
+      <span class="ch-pill" id="pill4">📏 Geometry</span>
     </div>`
   );
 
-  await wait(1000);
+  await wait(3000);
   hideCaption();
 
   // ─── SCENE 7: Student selects a chapter ───
-  setDot(5);
-  showCaption('The student can tap a chapter pill or type a chapter name.');
-  await wait(600);
+  showCaption('You can pick any chapter you like! 📚');
+  await wait(2000);
 
-  // Move cursor to "Triangles" pill — divide by scale to get unscaled stage coords
+  // Move cursor to "Triangles" pill
   const pill1 = $('pill1');
   if(pill1) {
     const scale = $('stageScaler').offsetWidth / 900;
@@ -1102,52 +1347,49 @@ async function runAnimation() {
     const stageRect = $('stage').getBoundingClientRect();
     const pillCx = (rect.left + rect.width  / 2 - stageRect.left) / scale;
     const pillCy = (rect.top  + rect.height / 2 - stageRect.top)  / scale;
-    moveCursor(pillCy, pillCx, null, 700);
+    moveCursor(pillCy, pillCx, null, 800);
   }
-  await wait(900);
-  // Position tooltip just above wherever the cursor ended up
+  await wait(1000);
   showTooltip('Select chapter', 0, 0);
   tooltip.style.top  = (parseFloat(cursor.style.top)  - 34) + 'px';
   tooltip.style.left = (parseFloat(cursor.style.left) - 20) + 'px';
-  await wait(600);
+  await wait(800);
   clickCursor();
   hideTooltip();
 
   if(pill1) {
     pill1.classList.add('chosen');
   }
-  await wait(400);
+  await wait(500);
 
   // Student message bubble
   await addMessage('student', 'Triangles 📐');
-  await wait(500);
+  await wait(600);
 
   hideCaption();
-  showCaption('The agent confirms and starts the session on Triangles!');
+  showCaption('Your helper is ready to teach you! 🎉');
 
   showTypingIndicator();
-  await wait(1500);
+  await wait(2000);
   removeTypingIndicator();
 
   await addMessage('ai',
     `<strong>Triangles</strong> — great choice! 🎉<br><br>
-    We'll cover <em>congruence criteria, similarity, and the Pythagoras theorem</em>. Shall we start with a quick concept overview, or jump straight into practice problems?`
+    We'll learn about <em>shapes, sides, and angles</em>. Shall we start with a fun overview, or jump into some practice?`
   );
 
   $('chatMessages').scrollTop = $('chatMessages').scrollHeight;
-  await wait(2000);
+  await wait(3500);
   hideCaption();
 
   // ─── END ───
-  await wait(500);
+  await wait(600);
   $('endScreen').classList.add('show');
 }
 
-// Close button — notify parent iframe if embedded, otherwise just hide end screen
+// Close button — notify parent iframe if embedded
 $('endCloseBtn').addEventListener('click', () => {
-  // If embedded in the React TutorialVideoModal, tell it to close
   try { window.parent.postMessage('tutorial:close', '*'); } catch(e) {}
-  // In standalone mode just hide the end screen
   $('endScreen').classList.remove('show');
 });
 
@@ -1158,6 +1400,7 @@ $('restartBtn').addEventListener('click', () => {
   const dotEl = $('navMe').querySelector('.dot-active');
   if(dotEl) dotEl.remove();
   $('navHome').classList.add('active');
+  setMobileNav('mnavHome');
   $('mathBtn').classList.remove('active');
   hideCaption(); hideTooltip();
   setTimeout(() => runAnimation(), 300);
@@ -1165,7 +1408,7 @@ $('restartBtn').addEventListener('click', () => {
 
 // Start on load
 window.addEventListener('load', () => {
-  setTimeout(runAnimation, 600);
+  setTimeout(runAnimation, 800);
 });
 </script>
 </body>
