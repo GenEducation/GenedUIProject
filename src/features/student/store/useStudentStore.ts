@@ -115,6 +115,7 @@ export interface AgentItem {
   grade: number;
   is_onboarding_complete?: boolean;
   subject_coverage_percentage?: number;
+  document_titles?: string[];
 }
 
 export interface PartnerItem {
