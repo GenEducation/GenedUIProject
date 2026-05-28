@@ -395,6 +395,71 @@ export function StudentHome() {
               ))}
             </div>
 
+            {/* ── REPORT CARD BANNER ── */}
+            <div
+              className="rounded-[18px] flex items-center cursor-pointer mb-8"
+              style={{
+                background: `linear-gradient(135deg, #042E5C 0%, #0a4a8f 60%, #059F6D 100%)`,
+                padding: "clamp(14px, 1.8vw, 20px) clamp(16px, 2vw, 24px)",
+                gap: "clamp(12px, 1.6vw, 18px)",
+                boxShadow: "0 4px 20px rgba(4,46,92,0.18)",
+                transition: "all 0.22s ease",
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 30px rgba(4,46,92,0.28)";
+                (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 20px rgba(4,46,92,0.18)";
+                (e.currentTarget as HTMLDivElement).style.transform = "none";
+              }}
+              onClick={() => router.push("/student/report-card")}
+              role="button"
+            >
+              <div
+                className="rounded-[14px] flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: "rgba(255,255,255,0.15)",
+                  width: "clamp(40px, 4vw, 50px)",
+                  height: "clamp(40px, 4vw, 50px)",
+                  fontSize: "clamp(18px, 2vw, 24px)",
+                }}
+              >
+                📋
+              </div>
+              <div className="flex-1 min-w-0">
+                <div
+                  className="font-bold"
+                  style={{
+                    color: "#ffffff",
+                    fontFamily: "'Nunito',sans-serif",
+                    fontSize: "clamp(14px, 1.5vw, 17px)",
+                    letterSpacing: "-0.2px",
+                  }}
+                >
+                  Your Report Card
+                </div>
+                <div
+                  className="mt-0.5 font-medium"
+                  style={{ color: "rgba(255,255,255,0.7)", fontSize: "clamp(11px, 1vw, 13px)" }}
+                >
+                  Subject scores, skill mastery, chapter progress & AI analysis
+                </div>
+              </div>
+              <div
+                className="rounded-xl flex-shrink-0 flex items-center justify-center font-bold"
+                style={{
+                  background: "rgba(255,255,255,0.18)",
+                  color: "#ffffff",
+                  width: "clamp(32px, 3vw, 40px)",
+                  height: "clamp(32px, 3vw, 40px)",
+                  fontSize: "clamp(14px, 1.4vw, 18px)",
+                }}
+              >
+                →
+              </div>
+            </div>
+
             {/* ── CONTINUE LEARNING ── */}
             {continueSession && (
               <div

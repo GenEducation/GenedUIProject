@@ -85,6 +85,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
     if (pathname === "/student" || pathname === "/student/") return "home";
     if (pathname?.startsWith("/student/analytics")) return "progress";
     if (pathname?.startsWith("/student/assessments")) return "practice";
+    if (pathname?.startsWith("/student/report-card")) return "report";
     if (pathname?.startsWith("/student/profile")) return "me";
     return "home";
   };
@@ -136,6 +137,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
           <nav className="flex flex-col gap-1">
             <NavItem icon="🏠" label="Home" active={activeNav === "home"} onClick={() => navigate("/student")} />
             <NavItem icon="🎯" label="Practice" active={activeNav === "practice"} onClick={() => navigate("/student/assessments")} />
+            <NavItem icon="📋" label="Report Card" active={activeNav === "report"} onClick={() => navigate("/student/report-card")} />
             <NavItem icon="😊" label="Me" active={activeNav === "me"} onClick={() => navigate("/student/profile")} />
           </nav>
 
