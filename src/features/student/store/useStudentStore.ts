@@ -277,6 +277,7 @@ export interface StudentState {
   chapterPdfCachedFor: string | null; // chapter_name the cached URL belongs to
   isPdfViewerOpen: boolean;
   isPdfLoading: boolean;
+  chapterPdfError: string | null;
 
   // ── English Skill Mode State (Wave 1–4) ─────────────────────────────────────
   playbackState: "idle" | "loading" | "buffering" | "playing" | "paused" | "stopped" | "completed" | "error";
@@ -329,6 +330,7 @@ export interface StudentState {
   // ── Chapter PDF Viewer Actions ───────────────────────────────────────────────
   openChapterPdf: () => Promise<void>;
   closePdfViewer: () => void;
+  clearPdfError: () => void;
 
   // ── English Skill Mode Actions (Wave 1–4) ────────────────────────────────────
   playDirectiveTts: (directiveId: string, timepoints: any[]) => void;
@@ -412,6 +414,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   chapterPdfCachedFor: null,
   isPdfViewerOpen: false,
   isPdfLoading: false,
+  chapterPdfError: null,
   // English skill mode initial state
   playbackState: "idle",
   recordingState: "idle",
@@ -819,6 +822,14 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     if (!get().typingChatIds.includes(chat.id)) {
       await get().fetchChatHistory(chat.id);
     }
+
+    // If chapter_name is missing, re-fetch sessions in the background so the
+    // textbook pill appears without requiring a full page refresh.
+    if (!chat.chapter_name) {
+      const { fetchSessions } = get();
+      set({ hasFetchedSessions: false });
+      fetchSessions();
+    }
   },
 
   openChatById: async (sessionId, agentId) => {
@@ -897,6 +908,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         chapterPdfFetchedAt: null,
         chapterPdfCachedFor: null,
         isPdfLoading: false,
+        chapterPdfError: null,
       }));
 
       // Trigger history fetch if not cached
@@ -1019,6 +1031,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       chapterPdfFetchedAt: null,
       chapterPdfCachedFor: null,
       isPdfLoading: false,
+      chapterPdfError: null,
     });
   },
 
@@ -1056,7 +1069,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       return;
     }
 
-    set({ isPdfLoading: true });
+    set({ isPdfLoading: true, chapterPdfError: null });
     try {
       const data = await studentService.fetchChapterPdfUrl(
         studentProfile.grade,
@@ -1065,7 +1078,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       );
       if (!data.pdf_url.startsWith("https://")) {
         console.error("[openChapterPdf] Received non-HTTPS URL, ignoring.");
-        set({ isPdfLoading: false });
+        set({ isPdfLoading: false, chapterPdfError: "Textbook not available for this chapter." });
         return;
       }
       set({
@@ -1074,14 +1087,19 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         chapterPdfCachedFor: activeChat.chapter_name,
         isPdfViewerOpen: true,
         isPdfLoading: false,
+        chapterPdfError: null,
       });
-    } catch (error) {
-      console.error("[openChapterPdf] Failed to fetch chapter PDF URL:", (error as any)?.status, (error as any)?.message);
-      set({ isPdfLoading: false });
+    } catch (error: any) {
+      console.error("[openChapterPdf] Failed to fetch chapter PDF URL:", error?.status, error?.message);
+      const msg = error?.status === 404
+        ? "Textbook not available for this chapter."
+        : "Could not load textbook. Please try again.";
+      set({ isPdfLoading: false, chapterPdfError: msg });
     }
   },
 
   closePdfViewer: () => set({ isPdfViewerOpen: false }),
+  clearPdfError: () => set({ chapterPdfError: null }),
 
   startVoiceSession: async () => {
     const { activeChat, studentProfile, voicePrefs } = get();
@@ -1174,16 +1192,23 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             fetchSessions();
           }
         } else if (event.type === "entry_resolved") {
-          // Update chat metadata when entry phase completes
+          // Update chat metadata when entry phase completes.
+          // chapter_name (not just lastTopic) must be set so the "View textbook" button activates.
           set((state) => ({
             activeChat: state.activeChat
               ? {
                   ...state.activeChat,
                   subject: event.subject,
                   lastTopic: event.chapter,
+                  // Preserve existing chapter_name on resume; set from event on new/entry-phase sessions.
+                  chapter_name: state.activeChat.chapter_name || event.chapter || state.activeChat.chapter_name,
                 }
               : null,
           }));
+          // Refresh sessions so DB-persisted chapter_name merges back into the sidebar entry.
+          const { fetchSessions: refreshSessions } = get();
+          set({ hasFetchedSessions: false });
+          refreshSessions();
         } else if (event.type === "planning") {
           const { text } = event;
           set((state) => {
@@ -1439,7 +1464,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         effectiveChat.session_id,
         effectiveChat.subject,
         undefined,
-        studentProfile.preferred_voice
+        studentProfile.preferred_voice,
+        // Pass chapter context so backend can bypass entry phase when chapter is pre-selected
+        // and resolve document access in both new and resumed sessions.
+        effectiveChat.chapter_name || effectiveChat.document_title || undefined,
+        effectiveChat.agent_id || undefined,
+        studentProfile.grade ? Number(studentProfile.grade) : undefined,
       );
     } catch (error) {
       console.error("Failed to start voice session:", error);
@@ -2248,6 +2278,15 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           finalOptions = Array.isArray(event.options) ? event.options : [];
           finalActions = Array.isArray(event.actions) ? event.actions : [];
           if (event.response) doneResponse = event.response;
+          // Propagate chapter_name immediately so the "View textbook" button
+          // appears after the first response without waiting for fetchSessions().
+          if (event.chapter_name) {
+            set((state) => ({
+              activeChat: state.activeChat
+                ? { ...state.activeChat, chapter_name: state.activeChat.chapter_name || event.chapter_name }
+                : null,
+            }));
+          }
           if (event.status === "error") {
             bufferedText = streamErrorMessage || "Please tell me more.";
             elements.length = 0;
@@ -2468,10 +2507,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             finalActiveChat = updatedChat;
           }
         } else if (chatInList) {
+          // Merge chapter_name from activeChat (set by done handler) into the stale chatInList entry
+          const mergedChapterName = state.activeChat?.chapter_name || chatInList.chapter_name;
           const updatedChat: ChatSession = {
             ...chatInList,
             id: realId,
             session_id: finalSessionId || chatInList.session_id,
+            chapter_name: mergedChapterName,
           };
           // Replace the temp entry and remove any duplicate with the same realId
           newRecentChats = state.recentChats

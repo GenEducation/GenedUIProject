@@ -39,6 +39,8 @@ export function StudentVoiceView() {
     isPdfViewerOpen,
     isPdfLoading,
     chapterPdfUrl,
+    chapterPdfError,
+    clearPdfError,
   } = useStudentStore();
 
   // Stop voice session on unmount.
@@ -137,7 +139,7 @@ export function StudentVoiceView() {
 
       {/* Textbook pill — between orb and transcript */}
       {activeChat?.chapter_name && (
-        <div className="flex justify-center pb-3">
+        <div className="flex flex-col items-center gap-1.5 pb-3">
           <button
             onClick={openChapterPdf}
             disabled={isPdfLoading}
@@ -170,6 +172,21 @@ export function StudentVoiceView() {
             )}
             View textbook
           </button>
+          {chapterPdfError && (
+            <button
+              onClick={clearPdfError}
+              style={{
+                fontSize: 11,
+                color: "#EF4444",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
+              {chapterPdfError} ✕
+            </button>
+          )}
         </div>
       )}
 
