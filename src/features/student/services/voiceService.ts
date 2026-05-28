@@ -5,24 +5,23 @@ import { getAuthToken } from "@/utils/authFetch";
  * Now includes a Synchronized Typewriter to align text display with audio playback.
  */
 
-// ─── Noise-suppression tuning ────────────────────────────────────────────────
-// These thresholds gate which microphone frames are forwarded to Gemini Live.
-// They sit on top of the browser's built-in noise suppression (echo / NS / AGC
-// constraints below) and Gemini's tightened server-side VAD.
-
-// Frames below this RMS are treated as ambient noise and dropped. -50 dBFS ≈
-// breathing / fan noise; real speech sits well above this. Float32 samples
-// are in [-1, 1], so RMS units are the same.
-const RMS_NOISE_FLOOR = 0.0035;
-
-// When Silero VAD flips to "speech", we flush this many cached frames before
-// it so word onsets aren't clipped. 1 frame ≈ 256 ms at 4096 samples / 16 kHz.
-const VAD_PREROLL_FRAMES = 1;
-
-// After VAD declares end-of-speech we keep streaming this many more frames so
-// trailing syllables aren't cut. Gemini's own end-of-speech sensitivity still
-// closes the turn.
-const VAD_POSTROLL_FRAMES = 1;
+/**
+ * Resamples floating point audio data to a target rate using linear interpolation.
+ */
+function resample(input: any, fromRate: number, toRate: number): any {
+  if (fromRate === toRate) return input;
+  const ratio = fromRate / toRate;
+  const newLength = Math.round(input.length / ratio);
+  const result = new Float32Array(newLength);
+  for (let i = 0; i < newLength; i++) {
+    const nextIndex = i * ratio;
+    const index = Math.floor(nextIndex);
+    const interpolation = nextIndex - index;
+    const nextValue = index + 1 < input.length ? input[index + 1] : input[index];
+    result[i] = input[index] + interpolation * (nextValue - input[index]);
+  }
+  return result;
+}
 
 class VoiceService {
   private ws: WebSocket | null = null;
@@ -40,23 +39,17 @@ class VoiceService {
   private onTextRevealCallback: ((text: string, role: "user" | "assistant") => void) | null = null;
   private isMuted = false;
 
-  // VAD state — set up lazily in initMicrophone(). If init fails we fall back
-  // to the RMS floor only.
-  private vad: { destroy: () => void } | null = null;
-  private vadReady = false;
-  private vadSpeaking = false;
-  private vadPostrollRemaining = 0;
-  private prerollBuffer: ArrayBuffer[] = [];
   
   // Connection & Retry State
   private retryCount = 0;
   private readonly MAX_RETRIES = 5;
+  private currentConnectionId: string | null = null;
   
   // Jitter Buffer & Sync State
   private nextStartTime = 0;
   private bufferQueue: ArrayBuffer[] = [];
   private isBuffering = true;
-  private readonly TARGET_BUFFER_SIZE = 3;
+  private readonly TARGET_BUFFER_SIZE = 6;
 
   // Typewriter Sync State
   private pendingAssistantText = "";
@@ -95,23 +88,26 @@ class VoiceService {
       this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
         sampleRate: 24000,
       });
-    } else if (this.audioCtx.state === "suspended") {
+    }
+    // Autoplay safety: Always check and explicitly resume the context
+    if (this.audioCtx.state === "suspended") {
       await this.audioCtx.resume();
     }
 
     this.nextStartTime = this.audioCtx.currentTime;
-    this.bufferQueue = [];
-    this.isBuffering = true;
+    const connId = Math.random().toString(36).substring(7);
+    this.currentConnectionId = connId;
 
-    await this.initMicrophone();
-    this.connect();
+    await this.initMicrophone(connId);
+    this.connect(connId);
     this.startTypewriterLoop();
   }
 
-  private async initMicrophone() {
+  private async initMicrophone(connId: string) {
     if (this.mediaStream) return;
     try {
       this.micCtx = new AudioContext({ sampleRate: 16000 });
+      console.log(`🎙️ [VoiceService] micCtx sample rate: ${this.micCtx.sampleRate} Hz`);
 
       // ── Mic constraints: lean on the browser's built-in DSP before audio
       // ever reaches us. echoCancellation + noiseSuppression + autoGainControl
@@ -125,151 +121,61 @@ class VoiceService {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          // @ts-expect-error — Chromium-only, but harmless on other UAs.
+          // @ts-ignore — Chromium-only, but harmless on other UAs.
           googHighpassFilter: true,
-          // @ts-expect-error — Chromium-only.
+          // @ts-ignore — Chromium-only.
           googNoiseSuppression2: true,
-          // @ts-expect-error — Chromium-only.
+          // @ts-ignore — Chromium-only.
           googEchoCancellation2: true,
         },
       });
+
+      // Staleness guard: session may have been stopped while getUserMedia was awaiting
+      if (!this.isSessionActive || !this.micCtx || this.currentConnectionId !== connId) {
+        this.mediaStream?.getTracks().forEach((t) => t.stop());
+        this.mediaStream = null;
+        return;
+      }
+
       const source = this.micCtx.createMediaStreamSource(this.mediaStream);
       this.processor = this.micCtx.createScriptProcessor(4096, 1, 1);
 
       this.processor.onaudioprocess = (e) => {
-        if (this.isMuted) return;
         if (this.ws?.readyState !== WebSocket.OPEN) return;
 
-        const input = e.inputBuffer.getChannelData(0);
-
-        // ── Cheap RMS energy floor. Skips frames that are obviously below
-        // the noise floor regardless of what VAD thinks. Catches the long
-        // tail of low-energy hum that Silero sometimes lets through.
-        let sumSq = 0;
-        for (let i = 0; i < input.length; i++) sumSq += input[i] * input[i];
-        const rms = Math.sqrt(sumSq / input.length);
-        if (rms < RMS_NOISE_FLOOR) {
-          // Push silence into the pre-roll ring so a VAD-triggered flush
-          // doesn't replay stale loud audio.
-          return;
+        let input = e.inputBuffer.getChannelData(0);
+        const bufferSampleRate = e.inputBuffer.sampleRate;
+        if (bufferSampleRate !== 16000) {
+          input = resample(input, bufferSampleRate, 16000);
         }
 
-        // Convert to Int16 PCM once.
         const i16 = new Int16Array(input.length);
-        for (let i = 0; i < input.length; i++) {
-          i16[i] = Math.max(-1, Math.min(1, input[i])) * 0x7fff;
-        }
-        const buf = i16.buffer;
 
-        if (this.vadReady) {
-          // VAD path: only send during speech (+ post-roll). Otherwise hold
-          // the most recent frame as pre-roll so we don't clip word onsets
-          // when VAD flips to "speaking".
-          if (this.vadSpeaking) {
-            // Flush any pre-roll frames we held back from before speech started.
-            while (this.prerollBuffer.length > 0) {
-              this.ws.send(this.prerollBuffer.shift()!);
-            }
-            this.ws.send(buf);
-          } else if (this.vadPostrollRemaining > 0) {
-            this.ws.send(buf);
-            this.vadPostrollRemaining--;
-          } else {
-            // Maintain a tiny rolling pre-roll buffer.
-            this.prerollBuffer.push(buf);
-            while (this.prerollBuffer.length > VAD_PREROLL_FRAMES) {
-              this.prerollBuffer.shift();
-            }
-          }
+        if (this.isMuted) {
+          i16.fill(0);
         } else {
-          // No VAD available — RMS floor alone decides. We already passed it.
-          this.ws.send(buf);
+          for (let i = 0; i < input.length; i++) {
+            i16[i] = Math.max(-1, Math.min(1, input[i])) * 0x7fff;
+          }
         }
+
+        this.ws.send(i16.buffer);
       };
 
       source.connect(this.processor);
       this.processor.connect(this.micCtx.destination);
 
-      // Set up Silero VAD lazily so SSR builds don't trip and so a missing
-      // model file in dev never blocks the live session.
-      await this.initVad(source);
     } catch (err) {
       console.error("[VoiceService] Mic Error:", err);
       this.onEventCallback?.({ type: "error", error: err });
     }
   }
 
-  /**
-   * Boots Silero VAD against the same AudioContext / source node we already
-   * use for streaming. On success, vadReady flips on and the processor begins
-   * gating frames by speech presence. On failure (lib not installed, WASM
-   * fetch blocked, etc.) we silently fall back to the RMS-only path — the
-   * user still gets noise suppression, just less aggressive.
-   */
-  private async initVad(source: MediaStreamAudioSourceNode) {
-    if (!this.micCtx) return;
-    try {
-      // Dynamic import: avoids pulling the ONNX runtime into the SSR bundle
-      // and lets the page load even if the package isn't yet installed.
-      const vadMod: any = await import(
-        /* webpackChunkName: "vad" */ "@ricky0123/vad-web"
-      ).catch((err) => {
-        console.warn("[VoiceService] VAD package not available, falling back to RMS-only gating:", err);
-        return null;
-      });
-      if (!vadMod || !vadMod.AudioNodeVAD) return;
-
-      const vad = await vadMod.AudioNodeVAD.new(this.micCtx, {
-        // Silero defaults are well-tuned for 16k mono; just wire up callbacks.
-        // Assets (silero_vad_legacy.onnx, vad.worklet.bundle.min.js, ort
-        // wasm files) are served from /public, so basePath is the site root.
-        // v5 is the newer Silero model — better compatibility with the
-        // onnxruntime-web 1.26 that npm installs (the VAD lib targets ^1.17
-        // but doesn't pin, and the legacy model has triggered op-set errors
-        // on newer ORT builds).
-        model: "v5",
-        baseAssetPath: "/",
-        onnxWASMBasePath: "/",
-        // Force ONNX Runtime to single-threaded WASM. The multi-threaded
-        // variant needs SharedArrayBuffer, which only works on pages served
-        // with COOP/COEP headers — and setting those globally breaks Google
-        // OAuth popups + any third-party iframe. Single-thread is plenty fast
-        // for a 256 ms frame and avoids the whole cross-origin-isolation
-        // requirement.
-        ortConfig: (ort: any) => {
-          if (ort?.env?.wasm) {
-            ort.env.wasm.numThreads = 1;
-            ort.env.wasm.proxy = false;
-          }
-        },
-        onSpeechStart: () => {
-          this.vadSpeaking = true;
-          this.vadPostrollRemaining = 0;
-        },
-        onSpeechEnd: () => {
-          this.vadSpeaking = false;
-          this.vadPostrollRemaining = VAD_POSTROLL_FRAMES;
-        },
-        onVADMisfire: () => {
-          // Speech start was a false alarm — make sure we don't keep streaming.
-          this.vadSpeaking = false;
-          this.vadPostrollRemaining = 0;
-        },
-      });
-      vad.receive(source);
-      vad.start();
-
-      this.vad = { destroy: () => vad.destroy?.() };
-      this.vadReady = true;
-      console.log("[VoiceService] Silero VAD gate active");
-    } catch (err) {
-      console.warn("[VoiceService] VAD init failed, falling back to RMS-only:", err);
-      this.vadReady = false;
+  private connect(connId: string) {
+    if (!this.isSessionActive || !this.currentStudentId || this.currentConnectionId !== connId) {
+      console.log("🎙️ [VoiceService] Aborting connection attempt (newer connection is active or session was stopped).");
+      return;
     }
-  }
-
-  private connect() {
-    if (!this.isSessionActive || !this.currentStudentId) return;
 
     // Robustly construct the WebSocket URL
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "");
@@ -302,6 +208,18 @@ class VoiceService {
         try {
           const data = JSON.parse(event.data);
           
+          if (data.error === "rate_limit_exceeded") {
+            console.warn("🎙️ [VoiceService] Rate limit exceeded. Stopping session.");
+            const callback = this.onEventCallback;
+            this.stopSession();
+            callback?.({
+              type: "error",
+              error: "rate_limit_exceeded",
+              message: "Daily rate limit reached. Upgrade to Pro for more."
+            });
+            return;
+          }
+
           if (data.type === "session_id" && data.session_id) {
             this.currentSessionId = data.session_id;
           }
@@ -326,11 +244,11 @@ class VoiceService {
     };
 
     this.ws.onclose = () => {
-      if (this.isSessionActive && this.retryCount < this.MAX_RETRIES) {
+      if (this.isSessionActive && this.retryCount < this.MAX_RETRIES && this.currentConnectionId === connId) {
         this.retryCount++;
         const delay = Math.pow(2, this.retryCount - 1) * 1000;
         console.log(`[VoiceService] Reconnecting in ${delay}ms (Attempt ${this.retryCount}/${this.MAX_RETRIES})...`);
-        setTimeout(() => this.connect(), delay);
+        setTimeout(() => this.connect(connId), delay);
       } else {
         if (this.retryCount >= this.MAX_RETRIES) {
           console.error("[VoiceService] Max retries reached. Connection failed.");
@@ -358,6 +276,20 @@ class VoiceService {
   }
 
   private handleIncomingAudio(buffer: ArrayBuffer) {
+    if (!this.isSessionActive || !this.audioCtx) return;
+
+    const currentTime = this.audioCtx.currentTime;
+
+    // Jitter Buffer Starvation Recovery:
+    // If the playhead has already passed our scheduled play time by more than 50ms,
+    // it means network lag/jitter starved our queue. We immediately re-engage buffering
+    // to build a 6-frame (120ms) cushion for smooth playback instead of crackling.
+    if (!this.isBuffering && this.nextStartTime < currentTime - 0.05) {
+      console.warn(`[VoiceService] Jitter buffer starved (offset: ${(currentTime - this.nextStartTime).toFixed(3)}s). Re-buffering...`);
+      this.isBuffering = true;
+      this.nextStartTime = currentTime;
+    }
+
     if (this.isBuffering) {
       this.bufferQueue.push(buffer);
       if (this.bufferQueue.length >= this.TARGET_BUFFER_SIZE) {
@@ -447,15 +379,6 @@ class VoiceService {
       this.ws = null;
     }
     
-    if (this.vad) {
-      try { this.vad.destroy(); } catch { /* ignore */ }
-      this.vad = null;
-    }
-    this.vadReady = false;
-    this.vadSpeaking = false;
-    this.vadPostrollRemaining = 0;
-    this.prerollBuffer = [];
-
     this.mediaStream?.getTracks().forEach((t) => t.stop());
     this.mediaStream = null;
 
@@ -468,6 +391,16 @@ class VoiceService {
       this.micCtx.close();
       this.micCtx = null;
     }
+
+    if (this.audioCtx) {
+      try {
+        this.audioCtx.close();
+      } catch (err) {
+        console.warn("[VoiceService] Error closing audioCtx:", err);
+      }
+      this.audioCtx = null;
+    }
+    this.nextStartTime = 0;
     
     this.isBuffering = true;
     this.bufferQueue = [];

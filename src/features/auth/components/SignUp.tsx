@@ -18,6 +18,7 @@ interface SignUpData {
   organization?: string;
   website?: string;
   otp_code?: string;
+  parent_email?: string;
 }
 
 interface SignUpProps {
@@ -131,6 +132,7 @@ export function SignUp({
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [otpSentMessage, setOtpSentMessage] = useState("");
+  const [hasPersonalEmail, setHasPersonalEmail] = useState(false);
   const isSignupEnabled = process.env.NEXT_PUBLIC_ENABLE_SIGNUP !== "false";
 
   // -- Signup disabled state --------------------------------------------------
@@ -181,27 +183,68 @@ export function SignUp({
   const nextStep = () => {
     setLocalErrors({});
     if (step === 1) {
+      setStep(2);
+    } else if (step === 2) {
       const errors: Record<string, string> = {};
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       
-      if (!googleToken) {
-        if (!signupData.email.trim()) {
-          errors.email = "Email is required";
-        } else if (!emailRegex.test(signupData.email)) {
-          errors.email = "Invalid email format";
+      if (signupData.role === "student") {
+        if (hasPersonalEmail) {
+          if (!signupData.email?.trim()) {
+            errors.email = "Personal email is required";
+          } else if (!emailRegex.test(signupData.email)) {
+            errors.email = "Invalid email format";
+          }
+          if (signupData.username?.trim() && signupData.username.trim().length < 3) {
+            errors.username = "Username must be at least 3 characters";
+          }
+          if (signupData.parent_email?.trim() && !emailRegex.test(signupData.parent_email)) {
+            errors.parent_email = "Invalid parent email format";
+          }
+          if (isOtpSent && !signupData.otp_code?.trim()) {
+            errors.email = "Please enter the OTP code sent to your email";
+          }
+        } else {
+          if (!signupData.username?.trim()) {
+            errors.username = "Username is required";
+          } else if (signupData.username.trim().length < 3) {
+            errors.username = "Username must be at least 3 characters";
+          }
+          if (!signupData.parent_email?.trim()) {
+            errors.parent_email = "Parent email is required";
+          } else if (!emailRegex.test(signupData.parent_email)) {
+            errors.parent_email = "Invalid parent email format";
+          }
         }
-        
         if (!signupData.password.trim()) {
           errors.password = "Password is required";
         } else if (signupData.password.length < 6) {
           errors.password = "Password must be at least 6 characters";
         }
-        
         if (signupData.password !== signupData.confirmPassword) {
           errors.confirmPassword = "Passwords do not match";
         }
-        if (isOtpSent && !signupData.otp_code?.trim()) {
-          errors.email = "Please enter the OTP code sent to your email";
+        if (!signupData.grade) {
+          errors.grade = "Please select your grade";
+        }
+      } else {
+        if (!googleToken) {
+          if (!signupData.email.trim()) {
+            errors.email = "Email is required";
+          } else if (!emailRegex.test(signupData.email)) {
+            errors.email = "Invalid email format";
+          }
+          if (!signupData.password.trim()) {
+            errors.password = "Password is required";
+          } else if (signupData.password.length < 6) {
+            errors.password = "Password must be at least 6 characters";
+          }
+          if (signupData.password !== signupData.confirmPassword) {
+            errors.confirmPassword = "Passwords do not match";
+          }
+          if (isOtpSent && !signupData.otp_code?.trim()) {
+            errors.email = "Please enter the OTP code sent to your email";
+          }
         }
       }
 
@@ -209,8 +252,11 @@ export function SignUp({
         setLocalErrors(errors);
         return;
       }
+
+      if (signupData.role !== "student") {
+        setStep(3);
+      }
     }
-    setStep((s) => s + 1);
   };
 
   const prevStep = () => setStep((s) => s - 1);
@@ -220,105 +266,221 @@ export function SignUp({
       target: { name: "role", value: role },
     } as any;
     onChange(event);
-    setStep(3);
+    setStep(2);
   };
 
   const renderStep1 = () => (
-    <div className="space-y-6">
-      {!googleToken && (
-        <>
-          <div className="flex justify-center w-full">
-            <GoogleLogin
-              onSuccess={(credentialResponse) => {
-                if (credentialResponse.credential) {
-                  setGoogleToken(credentialResponse.credential);
-                  onGoogleSuccess(credentialResponse.credential);
-                  setStep(2); // Auto advance for Google sign-up
-                }
+    <div className="space-y-8">
+      <div className="text-center mb-4">
+        <h3 className="text-xl font-bold text-[#042e5c] font-serif">Let&apos;s personalize your experience</h3>
+        <p className="text-xs text-[#042e5c]/50 mt-1">Select your role to get started</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { id: "student", label: "Student", icon: <StudentSVG /> },
+          { id: "parent", label: "Parent", icon: <ParentSVG /> },
+          { id: "partner", label: "Partner", icon: <PartnerSVG /> },
+        ].map((role) => (
+          <button
+            key={role.id}
+            type="button"
+            onClick={() => handleRoleSelect(role.id as any)}
+            className={`group relative flex flex-col items-center p-6 rounded-2xl border-2 transition-all duration-300 ${
+              signupData.role === role.id
+                ? "border-[#059F6D] bg-[#059F6D]/5 shadow-lg shadow-[#059F6D]/10 animate-pulse-subtle"
+                : "border-[#042e5c]/10 bg-white hover:border-[#059F6D]/40 hover:bg-[#059F6D]/5"
+            }`}
+          >
+            <div className="w-full aspect-square mb-4 transition-transform duration-300 group-hover:scale-110">
+              {role.icon}
+            </div>
+            <span className="text-sm font-bold text-[#042e5c]">{role.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const handleGradeSelect = (grade: number) => {
+    const event = {
+      target: { name: "grade", value: String(grade) },
+    } as any;
+    onChange(event);
+  };
+
+  const renderStep2 = () => {
+    if (signupData.role === "student") {
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center gap-4 mb-2">
+            <button
+              type="button"
+              onClick={prevStep}
+              className="p-2 rounded-full hover:bg-[#042e5c]/5 text-[#042e5c]/40 transition-colors"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h3 className="text-lg font-bold text-[#042e5c] font-serif">Student Details</h3>
+              <p className="text-[10px] uppercase tracking-widest text-[#059F6D] font-bold">Step 2 of 2</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 bg-[#042e5c]/5 p-4 rounded-xl border border-[#042e5c]/10">
+            <input
+              type="checkbox"
+              id="hasPersonalEmail"
+              checked={hasPersonalEmail}
+              onChange={(e) => {
+                setHasPersonalEmail(e.target.checked);
+                setLocalErrors({});
               }}
-              onError={() => console.error("Google Sign-up Failed")}
-              width="320"
-              theme="outline"
-              text="signup_with"
-              shape="rectangular"
+              className="w-4 h-4 accent-[#059F6D] cursor-pointer"
             />
+            <label htmlFor="hasPersonalEmail" className="text-xs font-bold text-[#042e5c] cursor-pointer select-none">
+              I want to sign up with my personal email address
+            </label>
           </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
-            </div>
-            <div className="relative flex justify-center text-[10px]">
-              <span className="bg-white px-3 text-gray-400 font-bold uppercase tracking-widest">Or continue with</span>
-            </div>
-          </div>
+          {hasPersonalEmail ? (
+            <>
+              <div>
+                <label className={labelCls}>Personal Email Address</label>
+                <div className="flex gap-3">
+                  <div className="relative flex-1">
+                    <input
+                      name="email"
+                      value={signupData.email}
+                      onChange={onChange}
+                      type="email"
+                      placeholder="scholar@example.com"
+                      className={inputCls(!!errors.email || !!localErrors.email)}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!signupData.email) {
+                        setLocalErrors({ email: "Email is required to send OTP" });
+                        return;
+                      }
+                      setIsSendingOtp(true);
+                      setOtpSentMessage("");
+                      setLocalErrors({});
+                      try {
+                        const { sendOtp } = await import("../authService");
+                        await sendOtp(signupData.email);
+                        setIsOtpSent(true);
+                        setOtpSentMessage("OTP sent to your email!");
+                      } catch (err: any) {
+                        setLocalErrors({ email: err.message || "Failed to send OTP" });
+                      } finally {
+                        setIsSendingOtp(false);
+                      }
+                    }}
+                    disabled={isSendingOtp || !signupData.email}
+                    className="px-6 py-3.5 rounded-xl bg-[#042e5c]/5 text-[#042e5c] text-xs font-bold transition-all hover:bg-[#042e5c]/10 active:scale-95 disabled:opacity-50"
+                  >
+                    {isSendingOtp ? "Sending..." : isOtpSent ? "Resend" : "Verify"}
+                  </button>
+                </div>
+                {otpSentMessage && (
+                  <p className="text-[#059F6D] text-[10px] font-bold mt-1.5 ml-0.5 tracking-tight animate-in fade-in">
+                    {otpSentMessage}
+                  </p>
+                )}
+                {(errors.email || localErrors.email) && (
+                  <p className={errorCls}>{errors.email || localErrors.email}</p>
+                )}
+              </div>
 
-          <div>
-            <label className={labelCls}>Email Address</label>
-            <div className="flex gap-3">
-              <div className="relative flex-1">
+              {isOtpSent && (
+                <div className="animate-in fade-in slide-in-from-top-2">
+                  <label className={labelCls}>OTP Code</label>
+                  <input
+                    name="otp_code"
+                    value={signupData.otp_code || ""}
+                    onChange={onChange}
+                    type="text"
+                    placeholder="Enter 6-digit code"
+                    className={inputCls(false)}
+                    maxLength={6}
+                  />
+                  <p className="text-[#042e5c]/40 text-[9px] mt-1.5 ml-0.5 font-medium">
+                    Check your inbox for the verification code
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className={labelCls}>Choose a Username (Optional)</label>
                 <input
-                  name="email"
-                  value={signupData.email}
+                  name="username"
+                  value={signupData.username || ""}
+                  onChange={onChange}
+                  type="text"
+                  placeholder="e.g. creative_coder"
+                  className={inputCls(!!errors.username || !!localErrors.username)}
+                />
+                {(errors.username || localErrors.username) && (
+                  <p className={errorCls}>{errors.username || localErrors.username}</p>
+                )}
+              </div>
+
+              <div>
+                <label className={labelCls}>Parent or Guardian's Email Address (Optional)</label>
+                <input
+                  name="parent_email"
+                  value={signupData.parent_email || ""}
                   onChange={onChange}
                   type="email"
-                  placeholder="scholar@gened.edu"
-                  className={inputCls(!!errors.email || !!localErrors.email)}
+                  placeholder="parent@example.com"
+                  className={inputCls(!!errors.parent_email || !!localErrors.parent_email)}
                 />
+                <p className="text-[#042e5c]/40 text-[9px] mt-1.5 ml-0.5 font-medium leading-relaxed">
+                  Optional. Link parent now to grant them dashboard access.
+                </p>
+                {(errors.parent_email || localErrors.parent_email) && (
+                  <p className={errorCls}>{errors.parent_email || localErrors.parent_email}</p>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!signupData.email) {
-                    setLocalErrors({ email: "Email is required to send OTP" });
-                    return;
-                  }
-                  setIsSendingOtp(true);
-                  setOtpSentMessage("");
-                  setLocalErrors({}); // Clear any previous local errors
-                  try {
-                    const { sendOtp } = await import("../authService");
-                    await sendOtp(signupData.email);
-                    setIsOtpSent(true);
-                    setOtpSentMessage("OTP sent to your email!");
-                  } catch (err: any) {
-                    setLocalErrors({ email: err.message || "Failed to send OTP" });
-                  } finally {
-                    setIsSendingOtp(false);
-                  }
-                }}
-                disabled={isSendingOtp || !signupData.email}
-                className="px-6 py-3.5 rounded-xl bg-[#042e5c]/5 text-[#042e5c] text-xs font-bold transition-all hover:bg-[#042e5c]/10 active:scale-95 disabled:opacity-50"
-              >
-                {isSendingOtp ? "Sending..." : isOtpSent ? "Resend" : "Verify"}
-              </button>
-            </div>
-            {otpSentMessage && (
-              <p className="text-[#059F6D] text-[10px] font-bold mt-1.5 ml-0.5 tracking-tight animate-in fade-in">
-                {otpSentMessage}
-              </p>
-            )}
-            {(errors.email || localErrors.email) && (
-              <p className={errorCls}>{errors.email || localErrors.email}</p>
-            )}
-          </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className={labelCls}>Choose a Username</label>
+                <input
+                  name="username"
+                  value={signupData.username || ""}
+                  onChange={onChange}
+                  type="text"
+                  placeholder="e.g. creative_coder"
+                  className={inputCls(!!errors.username || !!localErrors.username)}
+                />
+                {(errors.username || localErrors.username) && (
+                  <p className={errorCls}>{errors.username || localErrors.username}</p>
+                )}
+              </div>
 
-          {isOtpSent && (
-            <div className="animate-in fade-in slide-in-from-top-2">
-              <label className={labelCls}>OTP Code</label>
-              <input
-                name="otp_code"
-                value={signupData.otp_code || ""}
-                onChange={onChange}
-                type="text"
-                placeholder="Enter 6-digit code"
-                className={inputCls(false)}
-                maxLength={6}
-              />
-              <p className="text-[#042e5c]/40 text-[9px] mt-1.5 ml-0.5 font-medium">
-                Check your inbox for the verification code
-              </p>
-            </div>
+              <div>
+                <label className={labelCls}>Parent or Guardian's Email Address</label>
+                <input
+                  name="parent_email"
+                  value={signupData.parent_email || ""}
+                  onChange={onChange}
+                  type="email"
+                  placeholder="parent@example.com"
+                  className={inputCls(!!errors.parent_email || !!localErrors.parent_email)}
+                />
+                <p className="text-[#042e5c]/40 text-[9px] mt-1.5 ml-0.5 font-medium leading-relaxed">
+                  Required for account confirmation. Your parent will receive an email to confirm and link accounts.
+                </p>
+                {(errors.parent_email || localErrors.parent_email) && (
+                  <p className={errorCls}>{errors.parent_email || localErrors.parent_email}</p>
+                )}
+              </div>
+            </>
           )}
 
           <div>
@@ -353,73 +515,220 @@ export function SignUp({
               onChange={onChange}
               type="password"
               placeholder="••••••••"
-              className={`${inputCls(!!errors.confirmPassword || !!localErrors.confirmPassword)}`}
+              className={inputCls(!!errors.confirmPassword || !!localErrors.confirmPassword)}
             />
             {(errors.confirmPassword || localErrors.confirmPassword) && (
               <p className={errorCls}>{errors.confirmPassword || localErrors.confirmPassword}</p>
             )}
           </div>
-        </>
-      )}
 
-      <button
-        type="button"
-        onClick={nextStep}
-        className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
-      >
-        <span className="relative z-10 flex items-center justify-center gap-2">
-          Continue <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-        </span>
-      </button>
-    </div>
-  );
-
-  const renderStep2 = () => (
-    <div className="space-y-8">
-      <div className="text-center mb-4">
-        <h3 className="text-xl font-bold text-[#042e5c] font-serif">Let&apos;s personalize your experience</h3>
-        <p className="text-xs text-[#042e5c]/50 mt-1">Help us personalize your GenEd experience</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          { id: "student", label: "Student", icon: <StudentSVG /> },
-          { id: "parent", label: "Parent", icon: <ParentSVG /> },
-          { id: "partner", label: "Partner", icon: <PartnerSVG /> },
-        ].map((role) => (
-          <button
-            key={role.id}
-            type="button"
-            onClick={() => handleRoleSelect(role.id as any)}
-            className={`group relative flex flex-col items-center p-6 rounded-2xl border-2 transition-all duration-300 ${
-              signupData.role === role.id
-                ? "border-[#059F6D] bg-[#059F6D]/5 shadow-lg shadow-[#059F6D]/10"
-                : "border-[#042e5c]/10 bg-white hover:border-[#059F6D]/40 hover:bg-[#059F6D]/5"
-            }`}
-          >
-            <div className="w-full aspect-square mb-4 transition-transform duration-300 group-hover:scale-110">
-              {role.icon}
+          <div>
+            <label className={labelCls}>What grade are you in?</label>
+            <div className="grid grid-cols-4 gap-3">
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((grade) => (
+                <button
+                  key={grade}
+                  type="button"
+                  onClick={() => handleGradeSelect(grade)}
+                  className={`py-3.5 rounded-xl text-sm font-bold transition-all duration-200 ${
+                    signupData.grade === String(grade)
+                      ? "bg-[#059F6D] text-white shadow-lg shadow-[#059F6D]/30 scale-105"
+                      : "bg-[#042e5c]/5 text-[#042e5c] hover:bg-[#059F6D]/10 hover:text-[#059F6D]"
+                  }`}
+                >
+                  {grade}
+                </button>
+              ))}
             </div>
-            <span className="text-sm font-bold text-[#042e5c]">{role.label}</span>
+            {(errors.grade || localErrors.grade) && (
+              <p className={errorCls}>{errors.grade || localErrors.grade}</p>
+            )}
+          </div>
+
+          {errors.root && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-700">
+              {errors.root}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isSubmitting || !signupData.grade}
+            className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
+          >
+            <span className="relative z-10 flex items-center justify-center gap-2">
+              {isSubmitting ? "Creating account…" : "Create Account"}
+              {!isSubmitting && <ArrowRight size={16} />}
+            </span>
           </button>
-        ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4 mb-2">
+          <button
+            type="button"
+            onClick={prevStep}
+            className="p-2 rounded-full hover:bg-[#042e5c]/5 text-[#042e5c]/40 transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h3 className="text-lg font-bold text-[#042e5c] font-serif">Account Credentials</h3>
+            <p className="text-[10px] uppercase tracking-widest text-[#059F6D] font-bold">Step 2 of 3</p>
+          </div>
+        </div>
+
+        {!googleToken && (
+          <>
+            <div className="flex justify-center w-full">
+              <GoogleLogin
+                onSuccess={(credentialResponse) => {
+                  if (credentialResponse.credential) {
+                    setGoogleToken(credentialResponse.credential);
+                    onGoogleSuccess(credentialResponse.credential);
+                    setStep(3);
+                  }
+                }}
+                onError={() => console.error("Google Sign-up Failed")}
+                width="320"
+                theme="outline"
+                text="signup_with"
+                shape="rectangular"
+              />
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-[10px]">
+                <span className="bg-white px-3 text-gray-400 font-bold uppercase tracking-widest">Or continue with</span>
+              </div>
+            </div>
+
+            <div>
+              <label className={labelCls}>Email Address</label>
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <input
+                    name="email"
+                    value={signupData.email}
+                    onChange={onChange}
+                    type="email"
+                    placeholder="scholar@gened.edu"
+                    className={inputCls(!!errors.email || !!localErrors.email)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!signupData.email) {
+                      setLocalErrors({ email: "Email is required to send OTP" });
+                      return;
+                    }
+                    setIsSendingOtp(true);
+                    setOtpSentMessage("");
+                    setLocalErrors({});
+                    try {
+                      const { sendOtp } = await import("../authService");
+                      await sendOtp(signupData.email);
+                      setIsOtpSent(true);
+                      setOtpSentMessage("OTP sent to your email!");
+                    } catch (err: any) {
+                      setLocalErrors({ email: err.message || "Failed to send OTP" });
+                    } finally {
+                      setIsSendingOtp(false);
+                    }
+                  }}
+                  disabled={isSendingOtp || !signupData.email}
+                  className="px-6 py-3.5 rounded-xl bg-[#042e5c]/5 text-[#042e5c] text-xs font-bold transition-all hover:bg-[#042e5c]/10 active:scale-95 disabled:opacity-50"
+                >
+                  {isSendingOtp ? "Sending..." : isOtpSent ? "Resend" : "Verify"}
+                </button>
+              </div>
+              {otpSentMessage && (
+                <p className="text-[#059F6D] text-[10px] font-bold mt-1.5 ml-0.5 tracking-tight animate-in fade-in">
+                  {otpSentMessage}
+                </p>
+              )}
+              {(errors.email || localErrors.email) && (
+                <p className={errorCls}>{errors.email || localErrors.email}</p>
+              )}
+            </div>
+
+            {isOtpSent && (
+              <div className="animate-in fade-in slide-in-from-top-2">
+                <label className={labelCls}>OTP Code</label>
+                <input
+                  name="otp_code"
+                  value={signupData.otp_code || ""}
+                  onChange={onChange}
+                  type="text"
+                  placeholder="Enter 6-digit code"
+                  className={inputCls(false)}
+                  maxLength={6}
+                />
+                <p className="text-[#042e5c]/40 text-[9px] mt-1.5 ml-0.5 font-medium">
+                  Check your inbox for the verification code
+                </p>
+              </div>
+            )}
+
+            <div>
+              <label className={labelCls}>Password</label>
+              <div className="relative">
+                <input
+                  name="password"
+                  value={signupData.password}
+                  onChange={onChange}
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  className={`${inputCls(!!errors.password || !!localErrors.password)} pr-12`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {(errors.password || localErrors.password) && (
+                <p className={errorCls}>{errors.password || localErrors.password}</p>
+              )}
+            </div>
+
+            <div>
+              <label className={labelCls}>Confirm Password</label>
+              <input
+                name="confirmPassword"
+                value={signupData.confirmPassword || ""}
+                onChange={onChange}
+                type="password"
+                placeholder="••••••••"
+                className={`${inputCls(!!errors.confirmPassword || !!localErrors.confirmPassword)}`}
+              />
+              {(errors.confirmPassword || localErrors.confirmPassword) && (
+                <p className={errorCls}>{errors.confirmPassword || localErrors.confirmPassword}</p>
+              )}
+            </div>
+          </>
+        )}
+
+        <button
+          type="button"
+          onClick={nextStep}
+          className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
+        >
+          <span className="relative z-10 flex items-center justify-center gap-2">
+            Continue <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+          </span>
+        </button>
       </div>
-
-      <button
-        type="button"
-        onClick={prevStep}
-        className="flex items-center justify-center gap-2 w-full py-3 text-sm font-bold text-[#042e5c]/50 hover:text-[#042e5c] transition-colors"
-      >
-        <ArrowLeft size={16} /> Back to Credentials
-      </button>
-    </div>
-  );
-
-  const handleGradeSelect = (grade: number) => {
-    const event = {
-      target: { name: "grade", value: String(grade) },
-    } as any;
-    onChange(event);
+    );
   };
 
   const renderStep3 = () => (
@@ -433,36 +742,10 @@ export function SignUp({
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h3 className="text-lg font-bold text-[#042e5c] font-serif">
-            {signupData.role === "student" ? "What grade are you in?" : "Complete Profile"}
-          </h3>
-          <p className="text-[10px] uppercase tracking-widest text-[#059F6D] font-bold">
-            {signupData.role === "student" ? "Tap to select" : `${signupData.role} details`}
-          </p>
+          <h3 className="text-lg font-bold text-[#042e5c] font-serif">Complete Profile</h3>
+          <p className="text-[10px] uppercase tracking-widest text-[#059F6D] font-bold">Step 3 of 3</p>
         </div>
       </div>
-
-      {signupData.role === "student" && (
-        <>
-          <div className="grid grid-cols-4 gap-3">
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((grade) => (
-              <button
-                key={grade}
-                type="button"
-                onClick={() => handleGradeSelect(grade)}
-                className={`py-4 rounded-xl text-sm font-bold transition-all duration-200 ${
-                  signupData.grade === String(grade)
-                    ? "bg-[#059F6D] text-white shadow-lg shadow-[#059F6D]/30 scale-105"
-                    : "bg-[#042e5c]/5 text-[#042e5c] hover:bg-[#059F6D]/10 hover:text-[#059F6D]"
-                }`}
-              >
-                {grade}
-              </button>
-            ))}
-          </div>
-          {errors.grade && <p className={errorCls}>{errors.grade}</p>}
-        </>
-      )}
 
       {signupData.role === "parent" && (
         <div>
@@ -510,7 +793,7 @@ export function SignUp({
       {!googleToken && (errors.email || errors.password || errors.confirmPassword) && (
         <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold flex items-center gap-2 animate-pulse">
           <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
-          There are errors in your account credentials. Please go back to Step 1.
+          There are errors in your account credentials. Please go back to Step 2.
         </div>
       )}
 
@@ -522,7 +805,7 @@ export function SignUp({
 
       <button
         type="submit"
-        disabled={isSubmitting || (signupData.role === "student" && !signupData.grade)}
+        disabled={isSubmitting}
         className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
       >
         <span className="relative z-10 flex items-center justify-center gap-2">
@@ -538,7 +821,10 @@ export function SignUp({
       onSubmit={(e) => {
         e.preventDefault();
         console.log("Form submission triggered at step", step);
-        if (step === 3) {
+        if (signupData.role === "student" && step === 2) {
+          console.log("Calling student onSubmit with data:", signupData);
+          onSubmit(e);
+        } else if (step === 3) {
           console.log("Calling onSubmit with data:", signupData);
           onSubmit(e);
         }
@@ -547,14 +833,18 @@ export function SignUp({
     >
       {/* Progress Bar */}
       <div className="absolute top-0 left-0 w-full h-1.5 flex gap-1 px-1">
-        {[1, 2, 3].map((s) => (
-          <div
-            key={s}
-            className={`h-full flex-1 transition-all duration-500 rounded-full ${
-              s <= step ? "bg-[#059F6D]" : "bg-[#042e5c]/5"
-            }`}
-          />
-        ))}
+        {[1, 2, 3].map((s) => {
+          // If role is student, only show 2 progress bars
+          if (signupData.role === "student" && s === 3) return null;
+          return (
+            <div
+              key={s}
+              className={`h-full flex-1 transition-all duration-500 rounded-full ${
+                s <= step ? "bg-[#059F6D]" : "bg-[#042e5c]/5"
+              }`}
+            />
+          );
+        })}
       </div>
 
       <div className="pt-2">

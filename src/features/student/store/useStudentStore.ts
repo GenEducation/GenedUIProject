@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { studentService } from "../services/studentService";
 import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import { parseContent, generateHistoricalSVG, normalizeSvg } from "../utils/parseContent";
+import { voiceService } from "../services/voiceService";
+
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
@@ -265,6 +267,9 @@ export interface StudentState {
   isOnboardingLoading: boolean;
   studentStats: { currentStreak: number; longestStreak: number; totalSessions: number } | null;
   isStatsLoading: boolean;
+  sessionMode: "chat" | "voice" | null;
+  voicePrefs: { listenMode: "continuous" | "ptt"; pttHotkey: string; };
+  pttHeld: boolean;
 
   // ── Chapter PDF Viewer State ─────────────────────────────────────────────────
   chapterPdfUrl: string | null;
@@ -312,6 +317,12 @@ export interface StudentState {
   stopVoiceSession: () => void;
   toggleMute: () => void;
   logoutStudent: () => void;
+  beginPttUtterance: () => void;
+  endPttUtterance: () => void;
+  openNewSession: (agent: AgentItem, mode: "chat" | "voice") => void;
+  initNewVoiceSession: (agentId: string) => void;
+  setListenMode: (mode: "continuous" | "ptt") => void;
+  setPttHotkey: (key: string) => void;
 
   // ── Chapter PDF Viewer Actions ───────────────────────────────────────────────
   openChapterPdf: () => Promise<void>;
@@ -336,6 +347,25 @@ export interface StudentState {
 }
 
 // -- Store --------------------------------------------------------------------─
+
+const getInitialVoicePrefs = () => {
+  if (typeof window === "undefined") {
+    return { listenMode: "continuous" as const, pttHotkey: "Space" };
+  }
+  try {
+    const saved = localStorage.getItem("voice_prefs");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        listenMode: parsed.listenMode === "ptt" ? ("ptt" as const) : ("continuous" as const),
+        pttHotkey: parsed.pttHotkey || "Space",
+      };
+    }
+  } catch (e) {
+    console.error("Failed to load voice prefs", e);
+  }
+  return { listenMode: "continuous" as const, pttHotkey: "Space" };
+};
 
 export const useStudentStore = create<StudentState>()((set, get) => ({
   studentProfile: null,
@@ -371,11 +401,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   isOnboardingLoading: false,
   studentStats: null,
   isStatsLoading: false,
+  sessionMode: null,
+  voicePrefs: getInitialVoicePrefs(),
+  pttHeld: false,
   // Chapter PDF viewer initial state
   chapterPdfUrl: null,
   chapterPdfFetchedAt: null,
   isPdfViewerOpen: false,
-
   // English skill mode initial state
   playbackState: "idle",
   recordingState: "idle",
@@ -404,6 +436,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       typingChatIds: [],
       hasFetchedSessions: false,
       hasFetchedAgents: false,
+      sessionMode: null,
+      pttHeld: false,
       onboardingStatus: null,
       isRateLimitHit: false,
       rateLimitMessage: null,
@@ -993,7 +1027,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   closePdfViewer: () => set({ isPdfViewerOpen: false }),
 
   startVoiceSession: async () => {
-    const { activeChat, studentProfile } = get();
+    const { activeChat, studentProfile, voicePrefs } = get();
     if (!studentProfile) return;
 
     // Handle Hub start
@@ -1017,7 +1051,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
 
     console.log("🎙️ [StudentStore] Starting Voice Session for Chat:", effectiveChat);
-    set({ voiceSessionStatus: "connecting" });
+    set({ voiceSessionStatus: "connecting", isRateLimitHit: false, rateLimitMessage: null });
 
     // Ensure chat mode is voice
     if (activeChat) {
@@ -1028,13 +1062,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       }));
     }
 
-    // Reset mute state on new session
-    set({ isMuted: false });
+    // Reset mute state on new session based on listenMode
+    const isPtt = voicePrefs.listenMode === "ptt";
+    set({ isMuted: isPtt, pttHeld: false });
 
     try {
-      // Lazy load voice service to avoid SSR issues
-      const { voiceService } =
-        await import("@/features/student/services/voiceService");
+      // Initialize the mute state in voiceService as well
+      voiceService.setMuted(isPtt);
 
       await voiceService.startSession(
         studentProfile.user_id,
@@ -1044,7 +1078,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         } else if (event.type === "disconnected") {
           set({ voiceSessionStatus: "idle" });
         } else if (event.type === "error") {
-          set({ voiceSessionStatus: "error" });
+          console.log("🎙️ [StudentStore] Voice session error event received:", event);
+          if (event.error === "rate_limit_exceeded") {
+            console.log("🎙️ [StudentStore] Setting isRateLimitHit to true");
+            set({ 
+              voiceSessionStatus: "error",
+              isRateLimitHit: true,
+              rateLimitMessage: "Daily limit reached. Please upgrade to Pro for more."
+            });
+          } else {
+            set({ voiceSessionStatus: "error" });
+          }
         } else if (event.type === "session_id") {
           // Update activeChat with the real session_id from backend
           const { activeChat, fetchSessions } = get();
@@ -1345,28 +1389,103 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
   },
 
-  stopVoiceSession: async () => {
+  stopVoiceSession: () => {
     try {
-      const { voiceService } =
-        await import("@/features/student/services/voiceService");
       voiceService.stopSession();
     } catch (error) {
       console.error("Failed to stop voice session:", error);
     }
-    set({ voiceSessionStatus: "idle", isMuted: false });
+    set({ voiceSessionStatus: "idle", isMuted: false, pttHeld: false });
   },
 
-  toggleMute: async () => {
+  toggleMute: () => {
     const { isMuted } = get();
     const newMutedState = !isMuted;
     
     try {
-      const { voiceService } = await import("@/features/student/services/voiceService");
       voiceService.setMuted(newMutedState);
       set({ isMuted: newMutedState });
     } catch (error) {
       console.error("Failed to toggle mute:", error);
     }
+  },
+
+  beginPttUtterance: () => {
+    set({ pttHeld: true });
+    voiceService.setMuted(false);
+  },
+
+  endPttUtterance: () => {
+    set({ pttHeld: false });
+    voiceService.setMuted(true);
+  },
+
+  openNewSession: (agent: AgentItem, mode: "chat" | "voice") => {
+    set({ sessionMode: mode });
+    const newSession: ChatSession = {
+      id: "new",
+      title: agent.name,
+      subject: agent.subject,
+      agentType: "Socratic Tutor",
+      agentIcon: "🤖",
+      lastActive: "Just now",
+      lastTopic: "New Session",
+      grade: `Grade ${agent.grade}`,
+      agent_id: agent.agent_id,
+      chatMode: mode === "chat" ? "text" : "voice",
+    };
+    set((state) => ({
+      activeChat: newSession,
+      messages: [],
+      chatMessagesCache: { ...state.chatMessagesCache, ["new"]: [] },
+      isChatOpen: true,
+      isAgentPickerOpen: false,
+      isAITyping: false,
+    }));
+  },
+
+  initNewVoiceSession: (agentId: string) => {
+    const { availableAgents } = get();
+    const agent = availableAgents.find((a) => a.agent_id === agentId);
+    if (agent) {
+      set({ sessionMode: "voice" });
+      const newSession: ChatSession = {
+        id: "new",
+        title: agent.name,
+        subject: agent.subject,
+        agentType: "Socratic Tutor",
+        agentIcon: "🤖",
+        lastActive: "Just now",
+        lastTopic: "New Session",
+        grade: `Grade ${agent.grade}`,
+        agent_id: agent.agent_id,
+        chatMode: "voice",
+      };
+      set({ activeChat: newSession, isChatOpen: true });
+    }
+  },
+
+  setListenMode: (mode) => {
+    set((state) => {
+      const newPrefs = { ...state.voicePrefs, listenMode: mode };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("voice_prefs", JSON.stringify(newPrefs));
+      }
+      // If we switch to Continuous, start unmuted; if we switch to PTT, start muted
+      const isPtt = mode === "ptt";
+      voiceService.setMuted(isPtt);
+      return { voicePrefs: newPrefs, isMuted: isPtt, pttHeld: false };
+    });
+  },
+
+  setPttHotkey: (key) => {
+    set((state) => {
+      const newPrefs = { ...state.voicePrefs, pttHotkey: key };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("voice_prefs", JSON.stringify(newPrefs));
+      }
+      return { voicePrefs: newPrefs };
+    });
   },
 
   // ── English Skill Mode Actions ─────────────────────────────────────────────

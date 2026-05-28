@@ -24,6 +24,7 @@ const initialSignUpData: SignUpFields = {
   organization: "",
   website: "",
   otp_code: "",
+  parent_email: "",
 };
 
 export function LoginView() {
@@ -57,11 +58,31 @@ export function LoginView() {
     const errors: Record<string, string> = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!googleSignUpToken) {
-      if (!signupData.email.trim()) {
-        errors.email = "Email is compulsory";
-      } else if (!emailRegex.test(signupData.email)) {
-        errors.email = "Please enter a valid email address";
+    if (signupData.role === "student") {
+      const hasPersonalEmail = !!signupData.email?.trim();
+
+      if (hasPersonalEmail) {
+        if (!emailRegex.test(signupData.email)) {
+          errors.email = "Please enter a valid email address";
+        }
+        if (signupData.username?.trim() && signupData.username.trim().length < 3) {
+          errors.username = "Username must be at least 3 characters";
+        }
+        if (signupData.parent_email?.trim() && !emailRegex.test(signupData.parent_email)) {
+          errors.parent_email = "Please enter a valid parent email address";
+        }
+      } else {
+        if (!signupData.username?.trim()) {
+          errors.username = "Username is compulsory";
+        } else if (signupData.username.trim().length < 3) {
+          errors.username = "Username must be at least 3 characters";
+        }
+
+        if (!signupData.parent_email?.trim()) {
+          errors.parent_email = "Parent or Guardian email is compulsory";
+        } else if (!emailRegex.test(signupData.parent_email)) {
+          errors.parent_email = "Please enter a valid parent email address";
+        }
       }
 
       if (!signupData.password.trim()) {
@@ -75,23 +96,43 @@ export function LoginView() {
       } else if (signupData.password !== signupData.confirmPassword) {
         errors.confirmPassword = "Passwords do not match";
       }
-    }
 
-    if (signupData.role === "student") {
       const gradeNum = Number(signupData.grade);
       if (!signupData.grade?.trim()) {
         errors.grade = "Please select your grade";
       } else if (isNaN(gradeNum) || gradeNum <= 0 || gradeNum > 12) {
         errors.grade = "Grade must be between 1 and 12";
       }
-    } else if (signupData.role === "parent") {
-      if (!signupData.phone?.trim()) {
-        errors.phone = "Phone is compulsory";
-      } else if (!/^\d{10}$/.test(signupData.phone.trim())) {
-        errors.phone = "Phone must be a 10-digit number";
+    } else {
+      if (!googleSignUpToken) {
+        if (!signupData.email.trim()) {
+          errors.email = "Email is compulsory";
+        } else if (!emailRegex.test(signupData.email)) {
+          errors.email = "Please enter a valid email address";
+        }
+
+        if (!signupData.password.trim()) {
+          errors.password = "Password is compulsory";
+        } else if (signupData.password.length < 6) {
+          errors.password = "Password must be at least 6 characters";
+        }
+
+        if (!signupData.confirmPassword?.trim()) {
+          errors.confirmPassword = "Confirm Password is compulsory";
+        } else if (signupData.password !== signupData.confirmPassword) {
+          errors.confirmPassword = "Passwords do not match";
+        }
       }
-    } else if (signupData.role === "partner") {
-      if (!signupData.organization?.trim()) errors.organization = "Organization is compulsory";
+
+      if (signupData.role === "parent") {
+        if (!signupData.phone?.trim()) {
+          errors.phone = "Phone is compulsory";
+        } else if (!/^\d{10}$/.test(signupData.phone.trim())) {
+          errors.phone = "Phone must be a 10-digit number";
+        }
+      } else if (signupData.role === "partner") {
+        if (!signupData.organization?.trim()) errors.organization = "Organization is compulsory";
+      }
     }
 
     return errors;
@@ -156,7 +197,8 @@ export function LoginView() {
         });
       }
 
-      router.replace(`/${role}`);
+      const redirectPath = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("redirect") : null;
+      router.replace(redirectPath || `/${role}`);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
       const rawMsg = error instanceof Error ? error.message : "Unable to complete signin.";
@@ -388,7 +430,8 @@ export function LoginView() {
                           });
                         }
 
-                        router.push(`/${role}`);
+                        const redirectPath = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("redirect") : null;
+                        router.push(redirectPath || `/${role}`);
                       } catch (err: any) {
                         console.error("Detailed Google Sign-in Error:", err.message);
                         setSigninErrors({ root: "Google Sign-In failed. Please try again or use your username/password." });
