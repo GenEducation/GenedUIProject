@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "copy-vad-assets": "node scripts/copy-vad-assets.mjs",
-    "postinstall": "node scripts/copy-vad-assets.mjs"
+    "postinstall": "node scripts/copy-vad-assets.mjs && node -e \"require('fs').copyFileSync('node_modules/pdfjs-dist/build/pdf.worker.min.mjs', 'public/pdf.worker.min.mjs')\" "
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

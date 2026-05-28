@@ -37,6 +37,7 @@ export function StudentVoiceView() {
     openChapterPdf,
     closePdfViewer,
     isPdfViewerOpen,
+    isPdfLoading,
     chapterPdfUrl,
   } = useStudentStore();
 
@@ -139,6 +140,7 @@ export function StudentVoiceView() {
         <div className="flex justify-center pb-3">
           <button
             onClick={openChapterPdf}
+            disabled={isPdfLoading}
             className="flex items-center gap-1.5 transition-all"
             style={{
               padding: "5px 14px",
@@ -149,10 +151,23 @@ export function StudentVoiceView() {
               fontSize: 12,
               fontWeight: 700,
               fontFamily: "'DM Sans', sans-serif",
-              cursor: "pointer",
+              cursor: isPdfLoading ? "default" : "pointer",
+              opacity: isPdfLoading ? 0.7 : 1,
             }}
           >
-            <BookOpen size={13} />
+            {isPdfLoading ? (
+              <span style={{
+                display: "inline-block",
+                width: 11,
+                height: 11,
+                border: `2px solid ${isPdfViewerOpen ? "rgba(255,255,255,0.4)" : "#C4B8F5"}`,
+                borderTopColor: isPdfViewerOpen ? "#fff" : "#5B4DC7",
+                borderRadius: "50%",
+                animation: "spin 0.7s linear infinite",
+              }} />
+            ) : (
+              <BookOpen size={13} />
+            )}
             View textbook
           </button>
         </div>

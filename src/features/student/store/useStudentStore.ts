@@ -274,7 +274,9 @@ export interface StudentState {
   // ── Chapter PDF Viewer State ─────────────────────────────────────────────────
   chapterPdfUrl: string | null;
   chapterPdfFetchedAt: number | null;
+  chapterPdfCachedFor: string | null; // chapter_name the cached URL belongs to
   isPdfViewerOpen: boolean;
+  isPdfLoading: boolean;
 
   // ── English Skill Mode State (Wave 1–4) ─────────────────────────────────────
   playbackState: "idle" | "loading" | "buffering" | "playing" | "paused" | "stopped" | "completed" | "error";
@@ -407,7 +409,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   // Chapter PDF viewer initial state
   chapterPdfUrl: null,
   chapterPdfFetchedAt: null,
+  chapterPdfCachedFor: null,
   isPdfViewerOpen: false,
+  isPdfLoading: false,
   // English skill mode initial state
   playbackState: "idle",
   recordingState: "idle",
@@ -549,7 +553,24 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         };
       });
 
-      set({ recentChats: mappedChats, isSessionsLoading: false, hasFetchedSessions: true });
+      set((state) => {
+        // Merge chapter_name (and completion %) back into activeChat if it matches
+        // This ensures the "View textbook" button appears without needing a page refresh
+        let updatedActiveChat = state.activeChat;
+        if (state.activeChat) {
+          const matching = mappedChats.find(
+            (c) => c.id === state.activeChat!.id || c.session_id === state.activeChat!.id
+          );
+          if (matching?.chapter_name) {
+            updatedActiveChat = {
+              ...state.activeChat,
+              chapter_name: matching.chapter_name,
+              chapter_completion_percentage: matching.chapter_completion_percentage ?? state.activeChat.chapter_completion_percentage,
+            };
+          }
+        }
+        return { recentChats: mappedChats, activeChat: updatedActiveChat, isSessionsLoading: false, hasFetchedSessions: true };
+      });
     } catch (error: any) {
       console.error("Fetch Sessions Error:", error?.request_id, error?.message ?? error);
       set({ isSessionsLoading: false, hasFetchedSessions: true });
@@ -870,6 +891,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         isChatOpen: true,
         isAITyping: state.typingChatIds.includes(sessionId),
         messages: state.chatMessagesCache[sessionId] || [],
+        // Reset PDF state when switching sessions so stale URL/state from previous session doesn't bleed in
+        isPdfViewerOpen: false,
+        chapterPdfUrl: null,
+        chapterPdfFetchedAt: null,
+        chapterPdfCachedFor: null,
+        isPdfLoading: false,
       }));
 
       // Trigger history fetch if not cached
@@ -990,24 +1017,46 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       isPdfViewerOpen: false,
       chapterPdfUrl: null,
       chapterPdfFetchedAt: null,
+      chapterPdfCachedFor: null,
+      isPdfLoading: false,
     });
   },
 
   openChapterPdf: async () => {
-    const { activeChat, studentProfile, chapterPdfUrl, chapterPdfFetchedAt, isPdfViewerOpen } = get();
-    if (!activeChat?.chapter_name || !studentProfile?.grade || !activeChat?.subject) return;
+    const { activeChat, studentProfile, chapterPdfUrl, chapterPdfFetchedAt, chapterPdfCachedFor, isPdfViewerOpen, isPdfLoading } = get();
 
+    // Toggle closed if already open
     if (isPdfViewerOpen) {
       set({ isPdfViewerOpen: false });
       return;
     }
 
+    // Guard: need chapter name, grade, and subject
+    if (!activeChat?.chapter_name || !studentProfile?.grade || !activeChat?.subject) {
+      console.warn("[openChapterPdf] Missing required fields:", {
+        chapter_name: activeChat?.chapter_name,
+        grade: studentProfile?.grade,
+        subject: activeChat?.subject,
+      });
+      return;
+    }
+
+    // Prevent double-click while loading
+    if (isPdfLoading) return;
+
     const CACHE_TTL_MS = 12 * 60 * 1000;
-    if (chapterPdfUrl && chapterPdfFetchedAt && Date.now() - chapterPdfFetchedAt < CACHE_TTL_MS) {
+    // Cache hit: same chapter, fresh URL
+    if (
+      chapterPdfUrl &&
+      chapterPdfFetchedAt &&
+      chapterPdfCachedFor === activeChat.chapter_name &&
+      Date.now() - chapterPdfFetchedAt < CACHE_TTL_MS
+    ) {
       set({ isPdfViewerOpen: true });
       return;
     }
 
+    set({ isPdfLoading: true });
     try {
       const data = await studentService.fetchChapterPdfUrl(
         studentProfile.grade,
@@ -1016,11 +1065,19 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       );
       if (!data.pdf_url.startsWith("https://")) {
         console.error("[openChapterPdf] Received non-HTTPS URL, ignoring.");
+        set({ isPdfLoading: false });
         return;
       }
-      set({ chapterPdfUrl: data.pdf_url, chapterPdfFetchedAt: Date.now(), isPdfViewerOpen: true });
+      set({
+        chapterPdfUrl: data.pdf_url,
+        chapterPdfFetchedAt: Date.now(),
+        chapterPdfCachedFor: activeChat.chapter_name,
+        isPdfViewerOpen: true,
+        isPdfLoading: false,
+      });
     } catch (error) {
       console.error("[openChapterPdf] Failed to fetch chapter PDF URL:", (error as any)?.status, (error as any)?.message);
+      set({ isPdfLoading: false });
     }
   },
 
@@ -1112,7 +1169,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
               `/student?session=${newSessionId}`,
             );
 
-            // 3. Refresh sidebar to show the new chat
+            // 3. Refresh sidebar to show the new chat (reset guard so chapter_name gets populated)
+            set({ hasFetchedSessions: false });
             fetchSessions();
           }
         } else if (event.type === "entry_resolved") {
@@ -2291,7 +2349,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
               set({ activeChat: updatedChat });
               window.history.pushState(null, "", `/student/chat/${newSessionId}`);
-              fetchSessions(); // Refresh sidebar history
+              // Reset guard so fetchSessions actually runs and populates chapter_name on activeChat
+              set({ hasFetchedSessions: false });
+              fetchSessions();
             }
           }
 

@@ -334,6 +334,7 @@ export function StudentChatMain({
     stopPlayback,
     openChapterPdf,
     isPdfViewerOpen,
+    isPdfLoading,
   } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -419,6 +420,7 @@ export function StudentChatMain({
             {activeChat.chapter_name && (
               <button
                 onClick={openChapterPdf}
+                disabled={isPdfLoading}
                 className="flex items-center gap-1.5 transition-all"
                 style={{
                   padding: "4px 10px",
@@ -429,11 +431,24 @@ export function StudentChatMain({
                   fontSize: 11,
                   fontWeight: 700,
                   fontFamily: "'DM Sans', sans-serif",
-                  cursor: "pointer",
+                  cursor: isPdfLoading ? "default" : "pointer",
                   whiteSpace: "nowrap",
+                  opacity: isPdfLoading ? 0.7 : 1,
                 }}
               >
-                <BookOpen size={12} />
+                {isPdfLoading ? (
+                  <span style={{
+                    display: "inline-block",
+                    width: 10,
+                    height: 10,
+                    border: `2px solid ${isPdfViewerOpen ? "rgba(255,255,255,0.4)" : "#C4B8F5"}`,
+                    borderTopColor: isPdfViewerOpen ? "#fff" : "#5B4DC7",
+                    borderRadius: "50%",
+                    animation: "spin 0.7s linear infinite",
+                  }} />
+                ) : (
+                  <BookOpen size={12} />
+                )}
                 Textbook
               </button>
             )}
