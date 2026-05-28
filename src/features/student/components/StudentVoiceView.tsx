@@ -99,7 +99,8 @@ export function StudentVoiceView() {
       ? "Muted"
       : STATUS_CAPTION[voiceSessionStatus] || "—";
 
-  const agentName = activeChat?.title || "April";
+  const aiName = studentProfile?.ai_name || "Nia";
+  const agentName = aiName;
   const subjectLabel = activeChat?.subject ? activeChat.subject : "Voice Session";
   const gradeLabel = activeChat?.grade ? ` · ${activeChat.grade}` : "";
 

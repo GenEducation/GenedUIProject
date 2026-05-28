@@ -337,6 +337,7 @@ export function StudentChatMain({
     isPdfLoading,
     chapterPdfError,
     clearPdfError,
+    studentProfile,
   } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -525,7 +526,7 @@ export function StudentChatMain({
                     New session: {activeChat.title}
                   </h1>
                   <p style={{ fontSize: 16, color: "#4A5568", maxWidth: 400, margin: "0 auto", lineHeight: 1.6 }}>
-                    Ask anything about {activeChat.title}. Your Socratic guide is ready.
+                    Ask anything about {activeChat.title}. {studentProfile?.ai_name || "Your Socratic guide"} is ready.
                   </p>
                 </div>
 

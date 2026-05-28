@@ -5,8 +5,9 @@ import { Mic } from "lucide-react";
 import { useStudentStore } from "../store/useStudentStore";
 
 export function PushToTalkButton() {
-  const { pttHeld, beginPttUtterance, endPttUtterance, voiceSessionStatus, isAITyping } =
+  const { pttHeld, beginPttUtterance, endPttUtterance, voiceSessionStatus, isAITyping, studentProfile } =
     useStudentStore();
+  const aiName = studentProfile?.ai_name || "Nia";
   const disabled = voiceSessionStatus !== "active";
 
   return (
@@ -71,7 +72,7 @@ export function PushToTalkButton() {
           : pttHeld
             ? "Listening…"
             : isAITyping
-              ? "April is speaking"
+              ? `${aiName} is speaking`
               : "Hold to talk"}
       </p>
     </div>

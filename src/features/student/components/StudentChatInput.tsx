@@ -18,6 +18,7 @@ interface StudentChatInputProps {
 export function StudentChatInput({ chatTitle, isCentered = false, isHub = false }: StudentChatInputProps) {
   const {
     sendMessage,
+    studentProfile,
     isAITyping,
     stopMessageGeneration,
     activeActivity,
@@ -123,7 +124,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
                 ? "Complete the activity above..."
                 : isHub
                   ? "Ask Anything..."
-                  : `Ask anything to ${chatTitle}...`
+                  : `Ask anything to ${studentProfile?.ai_name || chatTitle}...`
           }
           rows={1}
           className="flex-1 bg-transparent text-[15px] font-medium focus:outline-none resize-none overflow-y-auto min-h-[28px] max-h-[120px] md:max-h-[200px] leading-relaxed py-1"
