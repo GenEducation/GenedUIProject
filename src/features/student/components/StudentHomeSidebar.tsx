@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { LogOut } from "lucide-react";
+import { UpgradeButton } from "@/features/billing/UpgradeButton";
 
 /* ═══ TOKENS (from design) ═══ */
 const C = {
@@ -81,6 +82,9 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
   const pathname = usePathname();
   const { studentProfile, logoutStudent } = useStudentStore();
 
+  const plan   = studentProfile?.plan ?? "FREE";
+  const isPro  = plan === "PRO";
+
   const getActiveNav = () => {
     if (pathname === "/student" || pathname === "/student/") return "home";
     if (pathname?.startsWith("/student/analytics")) return "progress";
@@ -154,14 +158,55 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                 {(studentProfile?.name || studentProfile?.username || "U").charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-semibold truncate" style={{ color: C.sidebarActive }}>
-                  {studentProfile?.name || studentProfile?.username || "Student"}
+                {/* Name + plan badge */}
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="text-[13px] font-semibold truncate" style={{ color: C.sidebarActive }}>
+                    {studentProfile?.name || studentProfile?.username || "Student"}
+                  </div>
+                  <span style={{
+                    flexShrink: 0,
+                    padding: "1px 6px",
+                    borderRadius: 5,
+                    fontSize: 9,
+                    fontWeight: 800,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    background: isPro ? "#00B89420" : `${C.genPurple}25`,
+                    color:      isPro ? "#00B894"   : C.sparkle,
+                    border:     `1px solid ${isPro ? "#00B89440" : C.sparkle + "40"}`,
+                  }}>
+                    {plan}
+                  </span>
                 </div>
                 <div className="text-[10px]" style={{ color: C.sidebarText, opacity: 0.6 }}>
                   Grade {studentProfile?.grade ?? "—"} · {studentProfile?.school_board ?? "CBSE"}
                 </div>
               </div>
             </div>
+
+            {/* PRO: renewal date */}
+            {isPro && studentProfile?.plan_expires_at && (() => {
+              try {
+                const d = new Date(studentProfile.plan_expires_at!);
+                if (isNaN(d.getTime())) return null;
+                return (
+                  <div className="text-[10px] mt-2 px-1" style={{ color: C.sidebarText, opacity: 0.55 }}>
+                    Renews {d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
+                  </div>
+                );
+              } catch { return null; }
+            })()}
+
+            {/* FREE: upgrade button */}
+            {!isPro && studentProfile?.user_id && (
+              <UpgradeButton
+                userId={studentProfile.user_id}
+                userName={studentProfile.name || studentProfile.username || "Student"}
+                userEmail={studentProfile.email}
+                billingCycle="monthly"
+                className="w-full justify-center mt-3 text-[12px] py-2"
+              />
+            )}
 
             {/* Logout */}
             <button
