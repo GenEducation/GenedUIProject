@@ -1942,6 +1942,7 @@ export function StudentReportCard() {
   // ── State ──────────────────────────────────────────────
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
   const [dashboardProfile, setDashboardProfile] = useState<DashboardProfile | null>(null);
   const [subjects, setSubjects] = useState<SubjectData[]>([]);
@@ -1971,10 +1972,63 @@ export function StudentReportCard() {
   const toggle = (key: keyof typeof sections) =>
     setSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const handlePrint = () => {
-    // The print document (.print-doc) is always fully rendered in the DOM —
-    // no sections to expand, no animations to wait for. Call directly.
-    window.print();
+  const handlePrint = async () => {
+    if (isPdfGenerating) return;
+    setIsPdfGenerating(true);
+
+    try {
+      // ═══════════════════════════════════════════════════════════
+      // Server-side PDF generation via Puppeteer
+      //
+      // We POST the user's auth context to /api/student/report-card/pdf.
+      // The route launches headless Chromium, seeds localStorage with
+      // the token, navigates to /student/report-card?print=1, waits for
+      // data to hydrate, and uses Chromium's native paginator to produce
+      // a perfect, selectable-text PDF. The user just gets a download.
+      // ═══════════════════════════════════════════════════════════
+
+      // Pull the auth context the same way authFetch does
+      const token = typeof window !== "undefined" ? localStorage.getItem("gened_auth_token") ?? "" : "";
+      const profileStr = typeof window !== "undefined" ? localStorage.getItem("gened_user_profile") ?? "{}" : "{}";
+      const role = typeof window !== "undefined" ? localStorage.getItem("gened_user_role") ?? "student" : "student";
+
+      let userProfile: Record<string, unknown> = {};
+      try { userProfile = JSON.parse(profileStr); } catch { /* empty */ }
+
+      if (!token) {
+        alert("You must be logged in to download the report card.");
+        return;
+      }
+
+      const response = await fetch("/api/student/report-card/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, userProfile, role }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => "PDF generation failed");
+        throw new Error(errText);
+      }
+
+      const blob = await response.blob();
+      const safeName = (displayName || "Student").replace(/[^a-z0-9]/gi, "_");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${safeName}_Report_Card.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return;
+
+    } catch (err) {
+      console.error("[PDF] Generation failed:", err);
+      alert("PDF generation failed — please try again.");
+    } finally {
+      setIsPdfGenerating(false);
+    }
   };
 
   // ── Data Fetching ─────────────────────────────────────
@@ -2146,1023 +2200,1004 @@ export function StudentReportCard() {
   }
 
   // ── Render ─────────────────────────────────────────────
+  
+  // Derived data for the new layout
+  const aiInsights = progressReport?.report_json || {};
+  const ep: Partial<EnglishSkillsSummary> = englishSkills || {};
+
+  const bandFor = (score: number) => {
+    if (score >= 80) return "Advanced";
+    if (score >= 60) return "Proficient";
+    if (score >= 40) return "Approaching";
+    return "Developing";
+  };
+  
+  const levels = { beginning:1, developing:2, approaching:3, proficient:4, advanced:5 };
+  const colors = { beginning: "#94a3b8", developing: "#be123c", approaching: "#b45309", proficient: "#1d4ed8", advanced: "#047857" };
+
   return (
-    <>
+    <div
+      className="report-root"
+      data-ready={isLoading ? undefined : "true"}
+      style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "Inter, sans-serif" }}
+    >
       {/* ── PRINT STYLES ── */}
       <style>{`
+        :root {
+          --navy:    #042E5C;
+          --emerald: #059F6D;
+          --bg:      #F8F9FA;
+          --border:  #E2E8F0;
+          --text:    #042E5C;
+          --muted:   #64748B;
+          --light:   #F1F5F9;
+          
+          /* New Theme vars */
+          --surface: #ffffff;
+          --surface-2: #f8fafc;
+          --rule-faint: #f1f5f9;
+          --ink: #0f172a;
+          --ink-2: #334155;
+          --r: 8px;
+          --r-sm: 4px;
+          --r-lg: 12px;
+          --sans: 'Inter', sans-serif;
+          --mono: 'JetBrains Mono', monospace;
+          --display: 'Source Serif 4', 'Charter', Georgia, 'Times New Roman', serif;
+
+          --advanced: #047857;
+          --advanced-bg: #ecfdf5;
+          --advanced-bd: #a7f3d0;
+          --proficient: #1d4ed8;
+          --proficient-bg: #eff6ff;
+          --proficient-bd: #bfdbfe;
+          --approaching: #b45309;
+          --approaching-bg: #fffbeb;
+          --approaching-bd: #fde68a;
+          --developing: #be123c;
+          --developing-bg: #fff1f2;
+          --developing-bd: #fecdd3;
+        }
+
+        .report-root { max-width: 1080px; margin: 0 auto; padding: 32px 28px 80px; }
+
+        .head { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 26px 32px; margin-bottom: 24px; }
+        .head-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+        .head-pre { font: 600 11px/1 var(--mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--proficient); margin-bottom: 10px; }
+        .head-title { font-family: var(--display); font-size: 42px; font-weight: 500; line-height: 1.05; letter-spacing: -0.018em; margin: 0 0 8px; max-width: 26ch; }
+        .head-title em { font-style: italic; color: var(--proficient); }
+        .head-deck { color: var(--ink-2); font-size: 15px; max-width: 56ch; margin: 0 0 18px; }
+        .head-meta { display: flex; gap: 26px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--border); font-size: 13px; }
+        .head-meta span { color: var(--muted); }
+        .head-meta b { color: var(--ink); font-weight: 600; margin-left: 4px; }
+
+        .section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 18px; overflow: hidden; }
+        .s-head { padding: 20px 32px 18px; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 36px 1fr auto; gap: 14px; align-items: baseline; }
+        .s-head .n { width: 28px; height: 28px; background: var(--ink); color: #fff; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font: 600 13px/1 var(--sans); }
+        .s-head h2 { margin: 0; font-family: var(--display); font-size: 22px; font-weight: 500; letter-spacing: -0.012em; }
+        .s-head .sub { color: var(--muted); font-size: 13px; max-width: 50ch; }
+        .s-head .trail { font: 500 11px/1 var(--mono); color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+        .s-body { padding: 28px 32px 32px; }
+
+        .split { display: grid; grid-template-columns: 1.45fr 1fr; gap: 40px; align-items: start; }
+        .split-narrow { grid-template-columns: 1.8fr 1fr; }
+        .narrative h3 { font-family: var(--display); font-size: 24px; font-weight: 500; line-height: 1.25; letter-spacing: -0.01em; margin: 0 0 12px; max-width: 32ch; }
+        .narrative p { font-size: 15px; line-height: 1.7; color: var(--ink-2); margin: 0 0 14px; max-width: 56ch; }
+        .narrative p.lead { font-family: var(--display); font-size: 19px; line-height: 1.5; color: var(--ink); margin-bottom: 16px; max-width: 50ch; }
+
+        .rail { border-left: 1px solid var(--border); padding-left: 28px; }
+        .rail h4 { margin: 0 0 10px; font: 600 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+        .rail h4.accent { color: var(--proficient); }
+
+        .rail-kpi { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 16px; }
+        .rail-kpi > div { padding: 14px 16px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .rail-kpi > div:nth-child(2n) { border-right: 0; }
+        .rail-kpi > div:nth-last-child(-n+2) { border-bottom: 0; }
+        .rail-kpi .k { font: 600 10.5px/1 var(--mono); color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+        .rail-kpi .v { font-size: 24px; font-weight: 600; line-height: 1; margin-top: 6px; font-variant-numeric: tabular-nums; letter-spacing: -0.012em; }
+        .rail-kpi .v small { font-size: 12px; color: var(--muted); font-weight: 500; }
+        .rail-kpi .sub { margin-top: 4px; font-size: 12px; color: var(--muted); }
+
+        .chap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .chap { border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; }
+        .chap .ctop { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+        .chap .title { font-size: 16px; font-weight: 600; }
+        .chap .subj { font: 500 11px/1 var(--mono); color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+        .chap .row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 13px; }
+        .chap .row b { font-size: 18px; font-variant-numeric: tabular-nums; font-weight: 600; }
+        .chap .row .l { color: var(--muted); font: 600 10.5px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; }
+        .chap .progress { margin-top: 10px; }
+        .bar { height: 4px; background: var(--border); border-radius: 2px; width: 100%; overflow: hidden; display: flex; }
+        .bar i { height: 100%; display: block; border-radius: 2px; }
+        .bar.advanced i { background: var(--advanced); }
+        .bar.proficient i { background: var(--proficient); }
+        .bar.approaching i { background: var(--approaching); }
+        .bar.developing i { background: var(--developing); }
+
+        .chip { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid transparent; }
+        .chip.advanced { background: var(--advanced-bg); color: var(--advanced); border-color: var(--advanced-bd); }
+        .chip.proficient { background: var(--proficient-bg); color: var(--proficient); border-color: var(--proficient-bd); }
+        .chip.approaching { background: var(--approaching-bg); color: var(--approaching); border-color: var(--approaching-bd); }
+        .chip.developing { background: var(--developing-bg); color: var(--developing); border-color: var(--developing-bd); }
+
+        .ep-feature { display: grid; grid-template-columns: 1.4fr 1fr; gap: 36px; align-items: start; }
+        .ep-rings { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+        .ring { border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px 12px; }
+        .ring .k { font: 600 10.5px/1 var(--mono); color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+        .ring .v { font-size: 30px; font-weight: 600; line-height: 1; margin: 8px 0 8px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+        .ring .v small { font-size: 12px; color: var(--muted); font-weight: 500; }
+        .wpm-card { grid-column: 1 / -1; margin-top: 6px; background: var(--ink); color: #fff; border-radius: var(--r); padding: 14px 18px; display: flex; align-items: baseline; justify-content: space-between; }
+        .wpm-card .k { font: 600 10.5px/1 var(--mono); color: rgba(255,255,255,0.65); letter-spacing: 0.12em; text-transform: uppercase; }
+        .wpm-card .v { font-size: 32px; font-weight: 600; letter-spacing: -0.02em; }
+        .wpm-card .v small { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.65); margin-left: 4px; }
+
+        .test-feature { border: 1px solid var(--border); border-radius: var(--r); padding: 20px 24px; margin-top: 14px; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
+        .test-feature .tt { font-family: var(--display); font-size: 22px; font-weight: 500; margin: 0 0 4px; }
+        .test-feature .tt .subj { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: 8px; letter-spacing: 0.08em; text-transform: uppercase; }
+        .test-feature .narr { color: var(--ink-2); font-size: 14px; line-height: 1.55; margin: 0 0 14px; }
+        .test-feature .secs { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; }
+        .test-feature .secs > div { padding: 6px 12px; background: var(--surface-2); border-radius: var(--r-sm); }
+        .test-feature .secs b { font-weight: 600; font-variant-numeric: tabular-nums; margin-left: 4px; }
+        .test-feature .right .score { font-size: 48px; font-weight: 600; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; line-height: 1; text-align: center; }
+        .test-feature .right .score small { font-size: 16px; color: var(--muted); font-weight: 500; }
+        .test-feature .right .pass { display: block; text-align: center; margin-top: 8px; font: 700 11px/1 var(--mono); letter-spacing: 0.16em; background: var(--advanced-bg); color: var(--advanced); border: 1px solid var(--advanced-bd); padding: 5px 10px; border-radius: var(--r-sm); }
+
+        .feature-hero { display: grid; grid-template-columns: 1.5fr 1fr; gap: 40px; }
+        .feature-hero .lead-quote { font-family: var(--display); font-size: 30px; line-height: 1.22; letter-spacing: -0.015em; color: var(--ink); margin: 0 0 22px; font-weight: 500; }
+        .feature-hero .lead-quote em { font-style: italic; color: var(--proficient); }
+
+        .pat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 8px; }
+        .pat { border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; background: var(--surface); }
+        .pat.warn { border-color: var(--approaching-bd); background: var(--approaching-bg); }
+        .pat.good { border-color: var(--advanced-bd); background: var(--advanced-bg); }
+        .pat .tg { font: 600 10.5px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; }
+        .pat.warn .tg { color: var(--approaching); }
+        .pat.good .tg { color: var(--advanced); }
+        .pat h5 { font-family: var(--display); font-size: 18px; font-weight: 500; margin: 8px 0 8px; line-height: 1.25; }
+
+        .focus { display: grid; grid-template-columns: 64px 1fr 120px; gap: 14px; padding: 14px 0; border-top: 1px solid var(--rule-faint); align-items: start; }
+        .focus:first-of-type { border-top: 1px solid var(--border); }
+        .focus .area { font-size: 15px; font-weight: 500; }
+        .focus .rat { font-size: 13px; color: var(--muted); line-height: 1.55; margin-top: 4px; max-width: 60ch; }
+        .focus .stag { text-align: right; font: 600 11px/1 var(--mono); color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+        .pri { font: 600 10px/1 var(--mono); padding: 3px 6px; border-radius: 4px; }
+        .pri.HIGH { background: var(--developing-bg); color: var(--developing); }
+        .pri.MEDIUM { background: var(--approaching-bg); color: var(--approaching); }
+
+        .arc { border-top: 1px solid var(--border); margin-top: 10px; }
+        .arc-row { display: grid; grid-template-columns: 50px 100px 1fr; gap: 16px; padding: 14px 0; border-bottom: 1px dashed var(--border); align-items: start; }
+        .arc-row .n { font-family: var(--display); font-size: 24px; font-weight: 500; color: var(--proficient); line-height: 1; }
+        .arc-row .lvl { font: 600 10.5px/1.4 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: var(--r-sm); display: inline-block; }
+        .lvl-beginning  { background: var(--surface-2); color: var(--muted); }
+        .lvl-developing { background: var(--developing-bg); color: var(--developing); }
+        .lvl-approaching{ background: var(--approaching-bg); color: var(--approaching); }
+        .lvl-proficient { background: var(--proficient-bg); color: var(--proficient); }
+        .lvl-advanced   { background: var(--advanced-bg); color: var(--advanced); }
+
+        .arc-spark { border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; margin: 8px 0 18px; }
+        .arc-spark .h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+        .arc-spark .h .l { font: 600 11px/1 var(--mono); color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; }
+        .arc-spark svg { display: block; width: 100%; height: 80px; }
+
+        .level-key { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; font: 500 11px/1 var(--mono); color: var(--muted); letter-spacing: 0.06em; }
+        .level-key span { display: inline-flex; align-items: center; gap: 4px; }
+        .level-key i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+        .dim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+        .dim { padding: 14px 16px; background: var(--surface-2); border-radius: var(--r); }
+        .dim .dn { font-size: 14.5px; font-weight: 600; margin-bottom: 4px; }
+        .dim .dd { font-size: 13px; color: var(--ink-2); line-height: 1.55; }
+
+        .cr { border-top: 1px solid var(--border); padding-top: 20px; margin-top: 24px; }
+        .cr:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+        .cr-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; gap: 12px; }
+        .cr-h .name { font-family: var(--display); font-size: 24px; font-weight: 500; }
+        .cr-summary { font-size: 15px; line-height: 1.65; color: var(--ink-2); margin: 0 0 18px; max-width: 70ch; }
+        
+        .kp-grid { display: grid; grid-template-columns: 240px 1fr 1fr; gap: 14px; padding: 12px 0; border-top: 1px solid var(--rule-faint); }
+        .kp-area { font-size: 14.5px; font-weight: 600; }
+
+        /* Page-break sentinel — invisible on screen, hard break in print */
+        .pb { display: none; }
+
         @media print {
-          @page { size: A4 portrait; margin: 1.2cm 1.5cm; }
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
-          body { background: white !important; margin: 0; }
-          .screen-ui { display: none !important; }
-          .print-doc { display: block !important; font-family: -apple-system, 'Segoe UI', sans-serif; }
+          /* Hide chrome */
+          .toolbar, .subnav, .print-btn { display: none !important; }
 
-          /* Section header bar — same style as screen */
-          .pd-section-header {
-            display: flex; align-items: center; gap: 8pt;
-            padding: 10pt 14pt; border-radius: 10pt 10pt 0 0;
-            margin-bottom: 0;
+          /* Reset page chrome */
+          html, body {
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
           }
-          .pd-section-header-title { font-size: 11pt; font-weight: 700; }
-          .pd-section-header-sub { font-size: 8pt; opacity: 0.8; margin-top: 1pt; }
 
-          /* Card wrapper */
-          .pd-card {
-            border-radius: 10pt; border: 1pt solid #E2E8F0;
-            margin-bottom: 10pt; overflow: hidden;
+          /* Report takes full page width */
+          .report-root {
+            max-width: 100% !important;
+            padding: 16px 24px 32px !important;
+            margin: 0 !important;
+          }
+
+          /* Ensure all backgrounds and colors print */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
+          /* ── Page-break sentinels (DOM nodes, most reliable in Chromium) ── */
+          .pb {
+            display: block !important;
+            break-before: page !important;
+            page-break-before: always !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            background: none !important;
+          }
+
+          /* ── Sections: unlock overflow so content flows across pages ── */
+          .section {
+            overflow: visible !important;
+            border-radius: 0 !important;
+          }
+          .s-body {
+            overflow: visible !important;
+          }
+
+          /* ── Two-column grids → vertical stack in print ────────────────
+             Chromium's print engine treats a CSS grid containing
+             break-inside:avoid children as a single atomic block and
+             defers the ENTIRE grid to the next page when it doesn't
+             predict it'll fit — leaving a huge blank gap after the
+             section heading. Collapsing to block flow fixes this
+             permanently. Content stacks: narrative first, rail below. */
+          .split {
+            display: block !important;
+          }
+          .split .narrative {
+            max-width: 100% !important;
+            margin-bottom: 24px !important;
+          }
+          .split .rail {
+            border-left: none !important;
+            padding-left: 0 !important;
+            border-top: 1px solid var(--border) !important;
+            padding-top: 20px !important;
+          }
+          .split .rail h4 {
+            margin-top: 0 !important;
+          }
+
+          /* Small atomic cards stay intact */
+          .chap, .ring, .test-feature, .pat, .dim,
+          .arc-spark, .focus, .cr, .wpm-card {
             break-inside: avoid;
-          }
-          .pd-card-body { padding: 12pt 14pt; background: white; }
-
-          /* Sub-card inside a section */
-          .pd-sub-card {
-            border: 1pt solid #E2E8F0; border-radius: 8pt;
-            padding: 9pt 11pt; margin-bottom: 7pt;
-            break-inside: avoid; background: white;
-          }
-
-          /* Headline callout */
-          .pd-headline {
-            font-size: 10pt; font-weight: 600; font-style: italic;
-            padding: 6pt 10pt; border-radius: 6pt;
-            margin-bottom: 8pt; border-left: 3pt solid;
-          }
-
-          /* Tag/badge */
-          .pd-tag {
-            display: inline-block; font-size: 7.5pt; font-weight: 700;
-            padding: 1.5pt 6pt; border-radius: 20pt;
-            letter-spacing: 0.02em;
-          }
-
-          /* Prose content from markdown */
-          .pd-prose { font-size: 9.5pt; line-height: 1.65; color: #334155; }
-          .pd-prose h2 { font-size: 11pt; font-weight: 700; color: #042E5C; margin: 10pt 0 4pt; padding-bottom: 3pt; border-bottom: 1pt solid #E2E8F0; }
-          .pd-prose h3 { font-size: 10pt; font-weight: 700; color: #1E3A5F; margin: 8pt 0 3pt; }
-          .pd-prose h4 { font-size: 9pt; font-weight: 700; color: #334155; margin: 6pt 0 2pt; text-transform: uppercase; letter-spacing: 0.06em; }
-          .pd-prose p { margin: 3pt 0 5pt; }
-          .pd-prose ul, .pd-prose ol { padding-left: 14pt; margin: 3pt 0; }
-          .pd-prose li { margin: 2pt 0; }
-          .pd-prose strong { color: #042E5C; }
-
-          /* Stat chips */
-          .pd-stat { display: inline-flex; align-items: center; gap: 4pt; font-size: 8.5pt; color: #64748b; margin-right: 10pt; }
-          .pd-stat-val { font-weight: 700; color: #1e293b; }
-
-          /* Two-column grid for strength/weakness */
-          .pd-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6pt; margin-top: 6pt; }
-
-          /* Strength/weakness item */
-          .pd-bullet { display: flex; align-items: flex-start; gap: 5pt; font-size: 9pt; padding: 4pt 0; border-bottom: 0.5pt solid #F1F5F9; }
-          .pd-bullet:last-child { border-bottom: none; }
-          .pd-bullet-icon { width: 14pt; text-align: center; flex-shrink: 0; font-size: 9pt; margin-top: 1pt; }
-
-          /* Focus area row */
-          .pd-focus { display: flex; align-items: flex-start; gap: 8pt; padding: 6pt 8pt; border-radius: 6pt; margin-bottom: 5pt; break-inside: avoid; }
-          .pd-focus-priority { font-size: 7.5pt; font-weight: 700; padding: 1pt 5pt; border-radius: 3pt; white-space: nowrap; flex-shrink: 0; margin-top: 1pt; }
-
-          /* Pattern row */
-          .pd-pattern { padding: 7pt 10pt; border-radius: 7pt; margin-bottom: 6pt; break-inside: avoid; }
-
-          /* Two-col layout for the doc */
-          .pd-meta-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12pt; }
-
-          /* Progress bars — plain divs so they render in print */
-          .pd-bar-track {
-            width: 100%; height: 4pt; background: #E2E8F0;
-            border-radius: 2pt; overflow: hidden;
-          }
-          .pd-bar-fill {
-            height: 4pt; border-radius: 2pt;
-          }
-
-          /* Subject card grid — 3 columns */
-          .pd-subject-grid {
-            display: grid; grid-template-columns: 1fr 1fr 1fr;
-            gap: 6pt;
-          }
-
-          /* English metric tiles — 5 columns */
-          .pd-metric-grid {
-            display: grid; grid-template-columns: repeat(5, 1fr);
-            gap: 4pt;
+            page-break-inside: avoid;
+            overflow: visible !important;
           }
         }
-        @media screen { .print-doc { display: none; } }
       `}</style>
 
-    {/* ── INTERACTIVE UI (screen only) ── */}
-    <div className="screen-ui min-h-screen bg-[#F8F9FA]">
+      {/* HEADER */}
+      <header className="head">
+        <div className="head-top">
+          <span className="brand" style={{ fontWeight: 700 }}><span className="brand-mark">G</span><span>GenEducation</span></span>
+          <span className="label" style={{ fontSize: '12px', color: 'var(--muted)' }}>Report No. AR-{generatedAt.replace(/\s/g,"").toUpperCase()}</span>
+        </div>
+        <div className="head-pre">Learner Report · May 2026</div>
+        <h1 className="head-title">{displayName}, reading — <em>a year in twelve sessions.</em></h1>
+        <p className="head-deck">A hesitant, audio-reliant student becomes an independent, highly analytical thinker. A short narrative of his progress through May 2026, with the numbers that back it up.</p>
+        <div className="head-meta">
+          <span>Student<b>{displayName}</b></span>
+          <span>Grade<b>{displayGrade} · {displayBoard}</b></span>
+          <span>Sessions<b>{totalSessions}</b></span>
+          <span>Issued<b>{generatedAt}</b></span>
+        </div>
+      </header>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
-
-        {/* ── REPORT HEADER ── */}
-        <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="report-header bg-white rounded-2xl border border-slate-200 shadow-sm mb-5 overflow-hidden"
-        >
-          {/* Accent stripe */}
-          <div className="h-1.5 w-full bg-gradient-to-r from-[#042E5C] via-[#059F6D] to-[#7C3AED]" />
-
-          <div className="px-6 py-6">
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-              {/* Student info */}
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-[#042E5C] flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-                  {displayInitials}
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-[#042E5C]">
-                    {displayName}
-                  </h1>
-                  <p className="text-sm text-slate-500">
-                    {displayGrade ? `Grade ${displayGrade}` : ""}
-                    {displayGrade && displayBoard ? " · " : ""}
-                    {displayBoard ?? ""}
-                  </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Cumulative Learning Report
-                  </p>
-                </div>
+      {/* 1. SUBJECTS */}
+      <section className="section">
+        <div className="s-head">
+          <span className="n">1</span>
+          <div>
+            <h2>Two subjects, two stories.</h2>
+            <div className="sub">Where {displayName.split(' ')[0]} stands at the end of May.</div>
+          </div>
+        </div>
+        <div className="s-body">
+          <div className="split">
+            <div className="narrative">
+              <p className="lead">English is in motion. He logged nineteen sessions across two chapters this month, shifting from passive listening to fluent, independent reading — and arriving at a proficient overall band.</p>
+              <p>Mathematics, meanwhile, was assessed only through the diagnostic. The numbers below reflect baseline measurement, not active learning. Foundational gaps appear in measurement, problem solving, and geometry — natural starting points for next month.</p>
+              <p>Both subjects share the same adaptive grading: every score is computed from interactions during sessions, not from a single end-of-term test.</p>
+            </div>
+            <aside className="rail">
+              <h4 className="accent">At a glance</h4>
+              <div className="rail-kpi">
+                {subjects.map(s => (
+                  <div key={s.subject}>
+                    <div className="k">{s.subject}</div>
+                    <div className="v">{Math.round(s.overall_score * 100)}<small>%</small></div>
+                    <div className="sub">{bandFor(s.overall_score * 100)}</div>
+                  </div>
+                ))}
               </div>
+            </aside>
+          </div>
+        </div>
+      </section>
 
-              {/* Overall score */}
-              <div className="flex flex-col items-start sm:items-end gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500 font-medium">
-                    Cumulative Score
-                  </span>
-                </div>
-                {overallAvg > 0 ? (
-                  <>
-                    <div className="flex items-end gap-1">
-                      <span
-                        className="text-4xl font-bold"
-                        style={{ color: masteryColor(overallAvg) }}
-                      >
-                        {Math.round(overallAvg * 100)}
-                      </span>
-                      <span className="text-slate-400 text-lg mb-1">/100</span>
+      {/* 2. COVERAGE */}
+      <div className="pb" />
+      <section className="section">
+        <div className="s-head">
+          <span className="n">2</span>
+          <div>
+            <h2>What he is reading and learning.</h2>
+            <div className="sub">Chapter-by-chapter completion and mastery.</div>
+          </div>
+        </div>
+        <div className="s-body">
+          <div className="split">
+            <div className="narrative">
+              <p className="lead">Two English chapters — one finished, one mid-way — and two mathematics units measured by diagnostic. Each chapter sets its own ZPD; completion percentages reflect how far through the calibrated path {displayName.split(' ')[0]} has worked, not raw page count.</p>
+            </div>
+            <aside className="rail">
+              <h4 className="accent">Coverage</h4>
+              <div className="chap-grid" style={{ gridTemplateColumns: "1fr" }}>
+                {chapters.map(c => {
+                  const score = Math.round(c.mastery_score * 100);
+                  const band = bandFor(score).toLowerCase();
+                  return (
+                    <div className="chap" key={c.document_title}>
+                      <div className="ctop">
+                        <div><div className="title">{c.document_title}</div><div className="meta">{c.subject} · {c.study_count} sessions</div></div>
+                        <span className={`chip ${band}`}>{bandFor(score)}</span>
+                      </div>
+                      <div className="row"><span className="l">Score</span><b>{score}%</b></div>
+                      <div className="progress">
+                        <div style={{ display:"flex", justifyContent: "space-between", fontSize: "12px", color: "var(--muted)", marginBottom: "4px" }}>
+                          <span>Completion</span><span style={{ color: "var(--ink)", fontWeight: 600 }}>{Math.round(c.completion_percentage)}%</span>
+                        </div>
+                        <div className={`bar ${band}`}><i style={{ width: `${c.completion_percentage}%` }}></i></div>
+                      </div>
                     </div>
-                    <div
-                      className={`text-xs font-bold px-3 py-1 rounded-full border ${masteryBg(overallAvg)}`}
-                    >
-                      {masteryLabel(overallAvg)} Level
-                    </div>
-                  </>
-                ) : (
-                  <span className="text-sm text-slate-400">
-                    No score data yet
-                  </span>
-                )}
+                  );
+                })}
               </div>
-            </div>
-
-            {/* Quick stats row */}
-            <div className="mt-5 pt-4 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { label: "Subjects", value: subjects.length, sub: "active" },
-                { label: "Sessions", value: totalSessions, sub: "total" },
-                { label: "Chapters", value: chapters.length, sub: "covered" },
-                {
-                  label: "Tests Taken",
-                  value: testSubmissions.length,
-                  sub: "completed",
-                },
-              ].map((s) => (
-                <div key={s.label} className="text-center">
-                  <div className="text-2xl font-bold text-[#042E5C]">
-                    {s.value}
-                  </div>
-                  <div className="text-xs text-slate-400">
-                    {s.label}{" "}
-                    <span className="text-slate-300">({s.sub})</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs text-slate-400">
-              Generated {generatedAt} · AI Tutor: {displayAiName}
-            </span>
-            <div className="flex gap-2 print-hide">
-              <button
-                onClick={handlePrint}
-                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-[#042E5C] transition-colors px-3 py-1.5 rounded-lg hover:bg-white border border-transparent hover:border-slate-200"
-              >
-                <Download size={13} />
-                Print / PDF
-              </button>
-              <button
-                onClick={fetchAll}
-                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-[#042E5C] transition-colors px-3 py-1.5 rounded-lg hover:bg-white border border-transparent hover:border-slate-200"
-              >
-                <RefreshCw size={13} />
-                Refresh
-              </button>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ── EXPAND ALL/COLLAPSE ── */}
-        <div className="flex justify-end mb-3 print-hide">
-          <button
-            onClick={() => {
-              const allOpen = Object.values(sections).every(Boolean);
-              const newVal = !allOpen;
-              setSections({
-                subjects: newVal,
-                curriculum: newVal,
-                skills: newVal,
-                english: newVal,
-                tests: newVal,
-                reports: newVal,
-                aiInsights: newVal,
-                subjectEvolution: newVal,
-                chapterEvolution: newVal,
-              });
-            }}
-            className="text-xs text-slate-500 hover:text-[#042E5C] transition-colors font-medium"
-          >
-            {Object.values(sections).every(Boolean)
-              ? "Collapse all sections"
-              : "Expand all sections"}
-          </button>
-        </div>
-
-        {/* ── SECTIONS ── */}
-        <div className="space-y-3">
-          {/* ── AI Insights first — holistic summary at a glance ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="report-section"
-          >
-            <AIInsightsSection
-              progressReport={progressReport}
-              expanded={sections.aiInsights}
-              onToggle={() => toggle("aiInsights")}
-            />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="report-section"
-          >
-            <SubjectEvolutionSection
-              subjects={subjects}
-              subjectEvolutions={subjectEvolutions}
-              expanded={sections.subjectEvolution}
-              onToggle={() => toggle("subjectEvolution")}
-            />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="report-section"
-          >
-            <ChapterEvolutionSection
-              subjects={subjects}
-              chapterEvolutions={chapterEvolutions}
-              expanded={sections.chapterEvolution}
-              onToggle={() => toggle("chapterEvolution")}
-            />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="report-section"
-          >
-            <SubjectSummarySection
-              subjects={subjects}
-              expanded={sections.subjects}
-              onToggle={() => toggle("subjects")}
-            />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            className="report-section"
-          >
-            <CurriculumSection
-              subjects={subjects}
-              chapters={chapters}
-              expanded={sections.curriculum}
-              onToggle={() => toggle("curriculum")}
-            />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="report-section"
-          >
-            <SkillMasterySection
-              subjects={subjects}
-              skillTree={skillTree}
-              expanded={sections.skills}
-              onToggle={() => toggle("skills")}
-            />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-            className="report-section"
-          >
-            <EnglishSkillsSection
-              englishSkills={englishSkills}
-              expanded={sections.english}
-              onToggle={() => toggle("english")}
-            />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="report-section"
-          >
-            <TestPerformanceSection
-              testSubmissions={testSubmissions}
-              expanded={sections.tests}
-              onToggle={() => toggle("tests")}
-            />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
-            className="report-section"
-          >
-            <ChapterReportsSection
-              chapters={chapters}
-              expanded={sections.reports}
-              onToggle={() => toggle("reports")}
-            />
-          </motion.div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-6 text-center text-xs text-slate-400">
-          GenEducation AI Report · All scores are AI-computed based on learning
-          interactions
-        </div>
-      </div>
-    </div>{/* end screen-ui */}
-
-    {/* ── PRINT DOCUMENT (print only) ── */}
-    <div className="print-doc">
-
-      {/* ── DOC HEADER ── */}
-      <div style={{ background: "linear-gradient(135deg,#042E5C 0%,#0f4c85 100%)", borderRadius: "10pt", padding: "14pt 18pt", marginBottom: "12pt", color: "white" }}>
-        <div className="pd-meta-row" style={{ marginBottom: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10pt" }}>
-            <div style={{ width: "32pt", height: "32pt", borderRadius: "8pt", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13pt", fontWeight: 800 }}>
-              {displayInitials}
-            </div>
-            <div>
-              <div style={{ fontSize: "8pt", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.7, marginBottom: "2pt" }}>GenEducation Report Card</div>
-              <div style={{ fontSize: "15pt", fontWeight: 800, lineHeight: 1.15 }}>{displayName}</div>
-              <div style={{ fontSize: "8.5pt", opacity: 0.85, marginTop: "1pt" }}>
-                {displayGrade ? `Grade ${displayGrade}` : ""}{displayGrade && displayBoard ? " · " : ""}{displayBoard ?? ""}
-              </div>
-            </div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "8pt", opacity: 0.7, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "2pt" }}>Overall Average</div>
-            <div style={{ fontSize: "18pt", fontWeight: 800, lineHeight: 1 }}>{Math.round(overallAvg * 100)}%</div>
-            <div style={{ fontSize: "7.5pt", opacity: 0.7, marginTop: "3pt" }}>{generatedAt}</div>
-            <div style={{ fontSize: "7.5pt", opacity: 0.7 }}>{totalSessions} sessions · {subjects.length} subjects</div>
+            </aside>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* ═════════ SECTION 1: SUBJECT-WISE PERFORMANCE ═════════ */}
-      {subjects.length > 0 && (
-        <div className="pd-card">
-          <div className="pd-section-header" style={{ background: "#EFF6FF", borderBottom: "1pt solid #BFDBFE" }}>
-            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#042E5C", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>1</div>
-            <div>
-              <div className="pd-section-header-title" style={{ color: "#042E5C" }}>Subject-wise Performance</div>
-              <div className="pd-section-header-sub" style={{ color: "#1E40AF" }}>Overall score, skill index &amp; adaptive mode per subject</div>
-            </div>
-          </div>
-          <div className="pd-card-body">
-            <div className="pd-subject-grid">
-              {subjects.map((s, idx) => {
-                const accent = SUBJECT_ACCENTS[idx % SUBJECT_ACCENTS.length];
-                const modeCfg: Record<string, { bg: string; text: string; label: string }> = {
-                  CHALLENGE: { bg: "#DBEAFE", text: "#1E40AF", label: "Challenge" },
-                  PRACTICE:  { bg: "#FEF3C7", text: "#92400E", label: "Practice" },
-                  REMEDIAL:  { bg: "#FEE2E2", text: "#991B1B", label: "Remedial" },
-                };
-                const mc = modeCfg[s.adaptive_mode] ?? modeCfg.PRACTICE;
-                return (
-                  <div key={s.subject} style={{ border: `1pt solid ${accent}33`, background: `${accent}0D`, borderRadius: "8pt", padding: "9pt 11pt", breakInside: "avoid" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "7pt" }}>
-                      <div style={{ fontSize: "10pt", fontWeight: 800, color: "#042E5C" }}>{s.subject}</div>
-                      <span className="pd-tag" style={{ background: mc.bg, color: mc.text }}>{mc.label}</span>
-                    </div>
-                    {/* Overall Score */}
-                    <div style={{ marginBottom: "6pt" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "7.5pt", color: "#64748b", marginBottom: "2pt" }}>
-                        <span>Overall Score</span>
-                        <span style={{ fontWeight: 800, color: masteryColor(s.overall_score) }}>{pct(s.overall_score)}</span>
-                      </div>
-                      <div className="pd-bar-track"><div className="pd-bar-fill" style={{ width: `${Math.round(s.overall_score * 100)}%`, background: masteryColor(s.overall_score) }} /></div>
-                    </div>
-                    {/* Skill Index */}
-                    <div style={{ marginBottom: "6pt" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "7.5pt", color: "#64748b", marginBottom: "2pt" }}>
-                        <span>Skill Index</span>
-                        <span style={{ fontWeight: 800, color: masteryColor(s.skill_index) }}>{pct(s.skill_index)}</span>
-                      </div>
-                      <div className="pd-bar-track"><div className="pd-bar-fill" style={{ width: `${Math.round(s.skill_index * 100)}%`, background: masteryColor(s.skill_index) }} /></div>
-                    </div>
-                    <div style={{ fontSize: "7.5pt", color: "#64748b" }}>⏱ {s.session_count} learning sessions</div>
-                  </div>
-                );
-              })}
-            </div>
+      {/* 3. ENGLISH PROFILE */}
+      {englishSkills && (<>
+      <div className="pb" />
+      <section className="section">
+        <div className="s-head">
+          <span className="n">3</span>
+          <div>
+            <h2>How he reads aloud.</h2>
+            <div className="sub">Oral reading, fluency, comprehension across session modes.</div>
           </div>
         </div>
-      )}
-
-      {/* ═════════ SECTION 2: CURRICULUM COVERAGE ═════════ */}
-      {chapters.length > 0 && (
-        <div className="pd-card">
-          <div className="pd-section-header" style={{ background: "#F5F3FF", borderBottom: "1pt solid #DDD6FE" }}>
-            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#7C3AED", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>2</div>
-            <div>
-              <div className="pd-section-header-title" style={{ color: "#5B21B6" }}>Curriculum Coverage</div>
-              <div className="pd-section-header-sub" style={{ color: "#7C3AED" }}>Chapter-by-chapter completion and mastery</div>
+        <div className="s-body">
+          <div className="ep-feature">
+            <div className="ep-rings">
+              <div className="ring"><div className="k">Accuracy</div><div className="v">{Math.round(ep.avg_accuracy || 0)}<small>%</small></div><div className="bar proficient"><i style={{width: `${ep.avg_accuracy || 0}%`}}></i></div></div>
+              <div className="ring"><div className="k">Fluency</div><div className="v">{Math.round(ep.avg_fluency || 0)}<small>%</small></div><div className="bar proficient"><i style={{width: `${ep.avg_fluency || 0}%`}}></i></div></div>
+              <div className="ring"><div className="k">Expression</div><div className="v">{Math.round(ep.avg_expression || 0)}<small>%</small></div><div className="bar approaching"><i style={{width: `${ep.avg_expression || 0}%`}}></i></div></div>
+              <div className="ring"><div className="k">Comprehension</div><div className="v">{Math.round(ep.avg_comprehension || 0)}<small>%</small></div><div className="bar proficient"><i style={{width: `${ep.avg_comprehension || 0}%`}}></i></div></div>
+              <div className="wpm-card"><span className="k">Reading speed</span><span className="v">{Math.round(ep.avg_wpm || 0)}<small>wpm</small></span></div>
             </div>
-          </div>
-          <div className="pd-card-body">
-            {subjects.map((subj) => {
-              const subjChapters = chapters.filter((c) => c.subject === subj.subject);
-              if (subjChapters.length === 0) return null;
-              return (
-                <div key={subj.subject} style={{ marginBottom: "10pt", breakInside: "avoid" }}>
-                  <div style={{ fontSize: "9.5pt", fontWeight: 800, color: "#5B21B6", marginBottom: "5pt", padding: "3pt 8pt", background: "#F5F3FF", borderRadius: "4pt", borderLeft: "2pt solid #7C3AED" }}>
-                    {subj.subject}
-                    <span style={{ fontSize: "7.5pt", fontWeight: 600, color: "#7C3AED", marginLeft: "6pt" }}>({subjChapters.length} chapter{subjChapters.length !== 1 ? "s" : ""})</span>
-                  </div>
-                  {subjChapters.map((ch) => (
-                    <div key={ch.document_title} style={{ marginBottom: "5pt", padding: "4pt 0" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2pt" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "5pt", flex: 1, minWidth: 0 }}>
-                          <span style={{ width: "5pt", height: "5pt", borderRadius: "50%", background: masteryColor(ch.mastery_score), display: "inline-block", flexShrink: 0 }} />
-                          <span style={{ fontSize: "8.5pt", color: "#1e293b", fontWeight: 500 }}>{ch.document_title}</span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6pt", flexShrink: 0 }}>
-                          <span style={{ fontSize: "7.5pt", color: "#94A3B8" }}>{ch.study_count} sessions</span>
-                          <span style={{ fontSize: "7.5pt", fontWeight: 700, padding: "1pt 5pt", borderRadius: "10pt", background: `${masteryColor(ch.mastery_score)}1A`, color: masteryColor(ch.mastery_score) }}>{pct(ch.mastery_score)}</span>
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "5pt" }}>
-                        <div className="pd-bar-track" style={{ flex: 1 }}><div className="pd-bar-fill" style={{ width: `${Math.round(ch.completion_percentage)}%`, background: masteryColor(ch.mastery_score) }} /></div>
-                        <span style={{ fontSize: "7pt", fontWeight: 700, color: "#64748b", width: "22pt", textAlign: "right" }}>{Math.round(ch.completion_percentage)}%</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-            {/* Legend */}
-            <div style={{ marginTop: "8pt", paddingTop: "6pt", borderTop: "0.5pt solid #E2E8F0", display: "flex", gap: "10pt", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "7pt", color: "#94A3B8", fontWeight: 700 }}>MASTERY:</span>
-              {[
-                { label: "Advanced (≥80%)", color: "#059F6D" },
-                { label: "Proficient (60–79%)", color: "#10B981" },
-                { label: "Approaching (40–59%)", color: "#F59E0B" },
-                { label: "Developing (<40%)", color: "#EF4444" },
-              ].map((l) => (
-                <div key={l.label} style={{ display: "flex", alignItems: "center", gap: "3pt" }}>
-                  <span style={{ width: "6pt", height: "6pt", borderRadius: "50%", background: l.color, display: "inline-block" }} />
-                  <span style={{ fontSize: "7pt", color: "#64748b" }}>{l.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═════════ SECTION 3: SKILL MASTERY BREAKDOWN ═════════ */}
-      {skillTree.length > 0 && (
-        <div className="pd-card">
-          <div className="pd-section-header" style={{ background: "#ECFDF5", borderBottom: "1pt solid #A7F3D0" }}>
-            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#059F6D", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>3</div>
-            <div>
-              <div className="pd-section-header-title" style={{ color: "#047857" }}>Skill Mastery Breakdown</div>
-              <div className="pd-section-header-sub" style={{ color: "#059F6D" }}>Concept Groups → Concepts → Learning Outcomes</div>
-            </div>
-          </div>
-          <div className="pd-card-body">
-            {subjects.map((subj) => {
-              const subjCGs = skillTree.filter((cg) => cg.subject === subj.subject);
-              if (subjCGs.length === 0) return null;
-              return (
-                <div key={subj.subject} style={{ marginBottom: "10pt" }}>
-                  <div style={{ fontSize: "9.5pt", fontWeight: 800, color: "#047857", marginBottom: "5pt", padding: "3pt 8pt", background: "#ECFDF5", borderRadius: "4pt", borderLeft: "2pt solid #059F6D" }}>
-                    {subj.subject}
-                  </div>
-                  {subjCGs.map((cg) => (
-                    <div key={cg.cg_id} style={{ border: "0.5pt solid #E2E8F0", borderRadius: "5pt", padding: "5pt 8pt", marginBottom: "4pt", breakInside: "avoid", background: "white" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3pt" }}>
-                        <span style={{ fontSize: "8.5pt", fontWeight: 700, color: "#042E5C", flex: 1 }}>{cg.cg_name}</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: "5pt", flexShrink: 0 }}>
-                          <div className="pd-bar-track" style={{ width: "60pt" }}><div className="pd-bar-fill" style={{ width: `${Math.round(cg.avg_mastery * 100)}%`, background: masteryColor(cg.avg_mastery) }} /></div>
-                          <span style={{ fontSize: "8pt", fontWeight: 800, color: masteryColor(cg.avg_mastery), minWidth: "20pt", textAlign: "right" }}>{pct(cg.avg_mastery)}</span>
-                          <span style={{ fontSize: "6.5pt", fontWeight: 700, padding: "1pt 4pt", borderRadius: "8pt", background: `${masteryColor(cg.avg_mastery)}1A`, color: masteryColor(cg.avg_mastery) }}>{masteryLabel(cg.avg_mastery)}</span>
-                        </div>
-                      </div>
-                      {cg.concepts.length > 0 && (
-                        <div style={{ paddingLeft: "10pt", borderLeft: "1pt solid #E2E8F0", marginTop: "3pt" }}>
-                          {cg.concepts.map((concept) => (
-                            <div key={concept.c_id} style={{ marginBottom: "2pt" }}>
-                              <div style={{ fontSize: "7.5pt", fontWeight: 600, color: "#475569" }}>
-                                {concept.c_name} <span style={{ color: "#94A3B8", fontWeight: 400 }}>({concept.los.length} LOs)</span>
-                              </div>
-                              {concept.los.slice(0, 4).map((lo) => (
-                                <div key={lo.skill_id} style={{ display: "flex", alignItems: "center", gap: "4pt", padding: "1pt 0 1pt 8pt" }}>
-                                  <span style={{ width: "3pt", height: "3pt", borderRadius: "50%", background: masteryColor(lo.mastery_level), display: "inline-block", flexShrink: 0 }} />
-                                  <span style={{ fontSize: "7pt", color: "#64748b", flex: 1 }}>{lo.skill_name}</span>
-                                  <div className="pd-bar-track" style={{ width: "40pt", height: "3pt" }}><div className="pd-bar-fill" style={{ width: `${Math.round(lo.mastery_level * 100)}%`, background: masteryColor(lo.mastery_level) }} /></div>
-                                  <span style={{ fontSize: "6.5pt", fontWeight: 700, color: masteryColor(lo.mastery_level), width: "18pt", textAlign: "right" }}>{pct(lo.mastery_level)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ═════════ SECTION 4: ENGLISH SKILLS PROFILE ═════════ */}
-      {englishSkills && englishSkills.total_sessions > 0 && (
-        <div className="pd-card">
-          <div className="pd-section-header" style={{ background: "#F0F9FF", borderBottom: "1pt solid #BAE6FD" }}>
-            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#0EA5E9", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>4</div>
-            <div>
-              <div className="pd-section-header-title" style={{ color: "#0C4A6E" }}>English Skills Profile</div>
-              <div className="pd-section-header-sub" style={{ color: "#0369A1" }}>Oral reading, fluency, comprehension across session modes</div>
-            </div>
-          </div>
-          <div className="pd-card-body">
-            {/* Metric tiles */}
-            <div className="pd-metric-grid" style={{ marginBottom: "9pt" }}>
-              {[
-                { label: "Accuracy", val: englishSkills.avg_accuracy },
-                { label: "Fluency", val: englishSkills.avg_fluency },
-                { label: "Expression", val: englishSkills.avg_expression },
-                { label: "Comprehension", val: englishSkills.avg_comprehension },
-                { label: "WPM", val: null, wpm: englishSkills.avg_wpm ? Math.round(englishSkills.avg_wpm) : null },
-              ].map((m) => (
-                <div key={m.label} style={{ background: "#F0F9FF", border: "1pt solid #BAE6FD", borderRadius: "6pt", padding: "6pt 4pt", textAlign: "center" }}>
-                  <div style={{ fontSize: "14pt", fontWeight: 800, color: m.val != null ? masteryColor(m.val) : "#0EA5E9", lineHeight: 1 }}>
-                    {"wpm" in m && m.wpm != null ? m.wpm : m.val != null ? pct(m.val) : "—"}
-                  </div>
-                  <div style={{ fontSize: "7pt", color: "#64748b", fontWeight: 600, marginTop: "2pt" }}>{m.label}</div>
-                  {m.val != null && (
-                    <div className="pd-bar-track" style={{ marginTop: "3pt", height: "2.5pt" }}>
-                      <div className="pd-bar-fill" style={{ width: `${Math.round(m.val * 100)}%`, background: masteryColor(m.val), height: "2.5pt" }} />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            {/* Per-mode breakdown */}
-            {englishSkills.by_mode.length > 0 && (
-              <>
-                <div style={{ fontSize: "8pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "4pt" }}>Session Mode Breakdown</div>
-                {englishSkills.by_mode.map((mode) => (
-                  <div key={mode.mode} style={{ background: "#F8FAFC", borderRadius: "5pt", padding: "5pt 8pt", marginBottom: "3pt", breakInside: "avoid" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2pt" }}>
-                      <span style={{ fontSize: "8.5pt", fontWeight: 600, color: "#042E5C" }}>{MODE_LABELS[mode.mode] ?? mode.mode}</span>
-                      <span style={{ fontSize: "7pt", color: "#94A3B8" }}>{mode.session_count} sessions</span>
-                    </div>
-                    <div style={{ display: "flex", gap: "8pt", flexWrap: "wrap", fontSize: "7.5pt", color: "#64748b" }}>
-                      {mode.avg_accuracy != null && <span>Accuracy: <strong style={{ color: masteryColor(mode.avg_accuracy) }}>{pct(mode.avg_accuracy)}</strong></span>}
-                      {mode.avg_fluency != null && <span>Fluency: <strong style={{ color: masteryColor(mode.avg_fluency) }}>{pct(mode.avg_fluency)}</strong></span>}
-                      {mode.avg_comprehension != null && <span>Comp: <strong style={{ color: masteryColor(mode.avg_comprehension) }}>{pct(mode.avg_comprehension)}</strong></span>}
-                      {mode.avg_wpm != null && <span>WPM: <strong style={{ color: "#0369A1" }}>{Math.round(mode.avg_wpm)}</strong></span>}
+            <aside>
+              <h4 style={{ margin: "0 0 10px", font: "600 11px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Session mode breakdown</h4>
+              <div className="modes-list">
+                {(ep.by_mode || []).map((m: any) => (
+                  <div className="mode-row" key={m.mode}>
+                    <div><div className="nm">{m.mode.replace('_', ' ')}</div><div className="sub">{m.session_count} sessions</div></div>
+                    <div className="mt">
+                      <span style={{ color: "var(--muted)" }}>Acc <b>{Math.round(m.avg_accuracy || 0)}%</b></span>
+                      <span style={{ color: "var(--muted)" }}>Flu <b>{Math.round(m.avg_fluency || 0)}%</b></span>
                     </div>
                   </div>
                 ))}
-              </>
-            )}
+              </div>
+            </aside>
           </div>
         </div>
-      )}
+      </section>
+      </>)}
 
-      {/* ═════════ SECTION 5: CHAPTER TEST RESULTS ═════════ */}
-      {testSubmissions.length > 0 && (
-        <div className="pd-card">
-          <div className="pd-section-header" style={{ background: "#FFFBEB", borderBottom: "1pt solid #FDE68A" }}>
-            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#F59E0B", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>5</div>
-            <div>
-              <div className="pd-section-header-title" style={{ color: "#92400E" }}>Chapter Test Results</div>
-              <div className="pd-section-header-sub" style={{ color: "#B45309" }}>ZPD-calibrated tests: scores and section-wise breakdown</div>
-            </div>
-          </div>
-          <div className="pd-card-body">
-            {testSubmissions.map((test) => {
-              const passed = (test.overall_verdict ?? "").toLowerCase() === "pass";
-              return (
-                <div key={test.submission_id} style={{ border: "0.5pt solid #E2E8F0", borderRadius: "6pt", padding: "6pt 9pt", marginBottom: "5pt", breakInside: "avoid", background: "white" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4pt" }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "5pt", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "9pt", fontWeight: 700, color: "#042E5C" }}>{test.document_title}</span>
-                        <span className="pd-tag" style={{ background: "#F1F5F9", color: "#64748b" }}>{test.subject}</span>
-                      </div>
-                      <div style={{ fontSize: "7pt", color: "#94A3B8", marginTop: "1pt" }}>{formatDate(test.submitted_at)}</div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "5pt", flexShrink: 0 }}>
-                      <div className="pd-bar-track" style={{ width: "50pt" }}><div className="pd-bar-fill" style={{ width: `${Math.round(test.overall_score * 100)}%`, background: masteryColor(test.overall_score) }} /></div>
-                      <span style={{ fontSize: "10pt", fontWeight: 800, color: masteryColor(test.overall_score) }}>{pct(test.overall_score)}</span>
-                      <span style={{ fontSize: "7pt", fontWeight: 800, padding: "1pt 5pt", borderRadius: "10pt", background: passed ? "#D1FAE5" : "#FEE2E2", color: passed ? "#065F46" : "#991B1B" }}>
-                        {(test.overall_verdict ?? "—").toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                  {Object.keys(test.section_results ?? {}).length > 0 && (
-                    <div style={{ paddingLeft: "8pt", borderLeft: "1pt solid #FDE68A", marginTop: "4pt" }}>
-                      <div style={{ fontSize: "6.5pt", fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", marginBottom: "2pt" }}>Section Results</div>
-                      {Object.entries(test.section_results).map(([section, data]) => {
-                        const score = typeof data.score === "number" ? data.score : (data.correct ?? 0) / (data.total ?? 1);
-                        return (
-                          <div key={section} style={{ display: "flex", alignItems: "center", gap: "5pt", padding: "1pt 0" }}>
-                            <span style={{ fontSize: "7.5pt", color: "#475569", flex: 1 }}>{section}</span>
-                            {data.correct != null && data.total != null && (
-                              <span style={{ fontSize: "7pt", color: "#94A3B8" }}>{data.correct}/{data.total}</span>
-                            )}
-                            <div className="pd-bar-track" style={{ width: "40pt", height: "3pt" }}><div className="pd-bar-fill" style={{ width: `${Math.round(score * 100)}%`, background: masteryColor(score), height: "3pt" }} /></div>
-                            <span style={{ fontSize: "7pt", fontWeight: 700, color: masteryColor(score), width: "18pt", textAlign: "right" }}>{pct(score)}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+      {/* 4. CHAPTER TESTS */}
+      {testSubmissions.length > 0 && (<>
+      <div className="pb" />
+      <section className="section">
+        <div className="s-head">
+          <span className="n">4</span>
+          <div>
+            <h2>Chapter Test Results</h2>
+            <div className="sub">ZPD-calibrated tests.</div>
           </div>
         </div>
-      )}
-
-      {/* ═════════ SECTION 6: AI LEARNING INSIGHTS ═════════ */}
-      {progressReport && (() => {
-        const rj = progressReport.report_json ?? {} as any;
-        const strengths: string[] = rj.universal_strengths ?? [];
-        const weaknesses: string[] = rj.universal_weaknesses ?? [];
-        const focusAreas: any[] = rj.focus_areas ?? [];
-        const patterns: any[] = rj.cross_subject_patterns ?? [];
-        return (
-          <div className="pd-card">
-            <div className="pd-section-header" style={{ background: "#FAF5FF", borderBottom: "1pt solid #E9D5FF" }}>
-              <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#7C2D96", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>6</div>
+        <div className="s-body">
+          {testSubmissions.map((t, idx) => (
+            <div className="test-feature" key={idx}>
               <div>
-                <div className="pd-section-header-title" style={{ color: "#6B21A8" }}>AI Learning Insights</div>
-                <div className="pd-section-header-sub" style={{ color: "#7C2D96" }}>Holistic progress analysis across all subjects and sessions</div>
+                <h3 className="tt">{t.document_title}<span className="subj">{t.subject}</span></h3>
+                <div className="secs">
+                  {Object.entries(t.section_results).map(([sName, res]) => (
+                    <div key={sName}>{sName} <b>{res.correct}/{res.total}</b> · <b>{res.score ? Math.round(res.score * 100) : 0}%</b></div>
+                  ))}
+                </div>
+              </div>
+              <div className="right">
+                <div className="score">{Math.round(t.overall_score * 100)}<small>%</small></div>
+                <span className="pass" style={{ color: t.overall_verdict === "PASS" ? "var(--advanced)" : "var(--developing)", background: t.overall_verdict === "PASS" ? "var(--advanced-bg)" : "var(--developing-bg)" }}>{t.overall_verdict}</span>
+                <div className="date">{formatDate(t.submitted_at)}</div>
               </div>
             </div>
-            <div className="pd-card-body">
-              {progressReport.headline && (
-                <div className="pd-headline" style={{ background: "#FAF5FF", borderLeftColor: "#7C2D96", color: "#6B21A8" }}>
-                  {progressReport.headline}
+          ))}
+        </div>
+      </section>
+      </>)}
+
+      {/* 5. EVOLUTION LINE CHART */}
+      {chapterEvolutions.length > 0 && (<>
+      <div className="pb" />
+      <section className="section">
+        <div className="s-head">
+          <span className="n">5</span>
+          <div>
+            <h2>Chapter Learning Evolution</h2>
+            <div className="sub">Session-by-session arc with skill dimensions.</div>
+          </div>
+        </div>
+        <div className="s-body">
+          {chapterEvolutions.map((c, ci) => {
+            const analysis = c.analysis_json || {};
+            const dimensions = analysis.dimension_analyses || [];
+            const sessionLog = analysis.per_conversation || [];
+            const mappedLog = sessionLog.map((s: any, idx: number) => {
+               // Assign a mock level based on score/progression if not strictly available
+               const score = s.overall_score || (idx / sessionLog.length);
+               let level = "beginning";
+               if (score > 0.8) level = "advanced";
+               else if (score > 0.6) level = "proficient";
+               else if (score > 0.4) level = "approaching";
+               else if (score > 0.2) level = "developing";
+               return { n: idx + 1, level, notes: s.observations || [] };
+            });
+
+            const W2 = 720, H2 = 100, pad2 = 18;
+            const xs2 = (i: number, n: number) => pad2 + i * ((W2 - pad2*2) / (n > 1 ? n - 1 : 1));
+            const ys2 = (lvl: string) => H2 - pad2 - ((levels[lvl as keyof typeof levels] || 1) - 1) * ((H2 - pad2*2) / 4);
+            const path = mappedLog.map((s: any, i: number) => `${i === 0 ? "M" : "L"} ${xs2(i, mappedLog.length).toFixed(1)} ${ys2(s.level).toFixed(1)}`).join(" ");
+
+            return (
+              <div key={c.document_title} style={{ marginTop: ci > 0 ? '32px' : '0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div><span style={{ fontSize: '24px', fontFamily: 'var(--display)' }}>{c.document_title}</span></div>
+                  <div style={{ fontSize: '13px', color: 'var(--muted)' }}>{c.conversation_count} sessions</div>
                 </div>
-              )}
-              {progressReport.overall_assessment && (
-                <div style={{ marginBottom: "8pt" }}>
-                  <div style={{ fontSize: "8pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "3pt" }}>Overall Assessment</div>
-                  <p style={{ fontSize: "9pt", lineHeight: 1.6, color: "#334155" }}>{progressReport.overall_assessment}</p>
+                <h3 style={{ fontFamily: 'var(--display)', fontSize: '20px', margin: '6px 0 14px' }}>{c.headline}</h3>
+
+                {mappedLog.length > 0 && (
+                <div className="arc-spark">
+                  <div className="h"><span className="l">Session arc</span></div>
+                  <svg viewBox={`0 0 ${W2} ${H2}`} preserveAspectRatio="none">
+                    {[1,2,3,4,5].map(l => (
+                       <line key={l} x1={pad2} x2={W2-pad2} y1={H2 - pad2 - (l-1)*((H2-pad2*2)/4)} y2={H2 - pad2 - (l-1)*((H2-pad2*2)/4)} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="2 3" />
+                    ))}
+                    <path d={path} fill="none" stroke="#0f172a" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+                    {mappedLog.map((s: any, i: number) => (
+                      <g key={i}>
+                        <circle cx={xs2(i, mappedLog.length)} cy={ys2(s.level)} r="4" fill={colors[s.level as keyof typeof colors] || colors.beginning} stroke="#fff" strokeWidth="2" />
+                        <text x={xs2(i, mappedLog.length)} y={H2 - 4} textAnchor="middle" fontFamily="JetBrains Mono" fontSize="9" fill="#94a3b8">{s.n}</text>
+                      </g>
+                    ))}
+                  </svg>
                 </div>
-              )}
-              {(strengths.length > 0 || weaknesses.length > 0) && (
-                <div className="pd-grid-2" style={{ marginBottom: "8pt" }}>
-                  {strengths.length > 0 && (
-                    <div style={{ background: "#F0FDF4", border: "1pt solid #BBF7D0", borderRadius: "6pt", padding: "6pt 9pt" }}>
-                      <div style={{ fontSize: "7.5pt", fontWeight: 700, color: "#166534", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "3pt" }}>★ Strengths</div>
-                      {strengths.map((s, i) => (
-                        <div key={i} style={{ display: "flex", gap: "4pt", padding: "2pt 0", fontSize: "8pt" }}>
-                          <span style={{ color: "#22C55E", fontWeight: 700, flexShrink: 0 }}>✓</span>
-                          <span style={{ color: "#166534" }}>{s}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {weaknesses.length > 0 && (
-                    <div style={{ background: "#FFFBEB", border: "1pt solid #FDE68A", borderRadius: "6pt", padding: "6pt 9pt" }}>
-                      <div style={{ fontSize: "7.5pt", fontWeight: 700, color: "#92400E", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "3pt" }}>⚠ Areas to Improve</div>
-                      {weaknesses.map((w, i) => (
-                        <div key={i} style={{ display: "flex", gap: "4pt", padding: "2pt 0", fontSize: "8pt" }}>
-                          <span style={{ color: "#F59E0B", fontWeight: 700, flexShrink: 0 }}>→</span>
-                          <span style={{ color: "#78350F" }}>{w}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                )}
+
+                <div className="dim-grid">
+                  {dimensions.map((d: any, i: number) => (
+                    <div className="dim" key={i}><div className="dn">{d.dimension || d.name}</div><div className="dd">{d.analysis || d.desc}</div></div>
+                  ))}
                 </div>
-              )}
-              {focusAreas.length > 0 && (
-                <div style={{ marginBottom: "8pt" }}>
-                  <div style={{ fontSize: "8pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "3pt" }}>Recommended Focus Areas</div>
-                  {focusAreas.map((fa: any, i: number) => {
-                    const pri = (fa.priority ?? "medium").toLowerCase();
-                    const cfg = pri === "high"
-                      ? { bg: "#FEF2F2", border: "#FECACA", chip: "#FEE2E2", text: "#991B1B" }
-                      : pri === "low"
-                      ? { bg: "#F0FDF4", border: "#BBF7D0", chip: "#D1FAE5", text: "#166534" }
-                      : { bg: "#FFFBEB", border: "#FDE68A", chip: "#FEF3C7", text: "#92400E" };
-                    return (
-                      <div key={i} style={{ display: "flex", gap: "6pt", padding: "5pt 7pt", borderRadius: "5pt", background: cfg.bg, border: `0.5pt solid ${cfg.border}`, marginBottom: "3pt", breakInside: "avoid" }}>
-                        <span style={{ fontSize: "6.5pt", fontWeight: 800, padding: "1pt 4pt", borderRadius: "8pt", background: cfg.chip, color: cfg.text, height: "fit-content", flexShrink: 0, textTransform: "uppercase" }}>{pri}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "4pt", flexWrap: "wrap" }}>
-                            <span style={{ fontSize: "8.5pt", fontWeight: 700, color: cfg.text }}>{fa.area}</span>
-                            {fa.subject && <span className="pd-tag" style={{ background: "white", color: "#64748b", border: `0.5pt solid ${cfg.border}` }}>{fa.subject}</span>}
-                          </div>
-                          {fa.suggested_approach && <div style={{ fontSize: "7.5pt", color: "#64748b", marginTop: "1pt", lineHeight: 1.4 }}>{fa.suggested_approach}</div>}
-                        </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+      </>)}
+
+      {/* 6. AI LEARNING INSIGHTS */}
+      {progressReport && (<>
+      <div className="pb" />
+      <section className="section">
+        <div className="s-head">
+          <span className="n">6</span>
+          <div>
+            <h2>AI Learning Insights</h2>
+            <div className="sub">Holistic progress analysis across all subjects and sessions.</div>
+          </div>
+        </div>
+        <div className="s-body">
+          {progressReport.headline && (
+            <div className="feature-hero" style={{ marginBottom: "28px" }}>
+              <div>
+                <p className="lead-quote">"{progressReport.headline}"</p>
+                {progressReport.overall_assessment && (
+                  <p style={{ fontSize: "15px", lineHeight: 1.7, color: "var(--ink-2)", maxWidth: "60ch" }}>
+                    {progressReport.overall_assessment}
+                  </p>
+                )}
+              </div>
+              {/* Strengths & Weaknesses */}
+              {(() => {
+                const strengths: string[] = (progressReport.report_json as any)?.universal_strengths ?? [];
+                const weaknesses: string[] = (progressReport.report_json as any)?.universal_weaknesses ?? [];
+                return (strengths.length > 0 || weaknesses.length > 0) ? (
+                  <aside className="rail">
+                    {strengths.length > 0 && (
+                      <div style={{ marginBottom: "16px" }}>
+                        <h4 style={{ margin: "0 0 8px", font: "600 11px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--advanced)" }}>Strengths</h4>
+                        <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.65 }}>
+                          {strengths.map((s, i) => <li key={i}>{s}</li>)}
+                        </ul>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-              {patterns.length > 0 && (
-                <div>
-                  <div style={{ fontSize: "8pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "3pt" }}>Cross-Subject Patterns</div>
-                  {patterns.map((p: any, i: number) => (
-                    <div key={i} style={{ display: "flex", gap: "5pt", padding: "4pt 7pt", background: "#F8FAFC", borderRadius: "5pt", border: "0.5pt solid #E2E8F0", marginBottom: "3pt", breakInside: "avoid" }}>
-                      <span style={{ width: "4pt", height: "4pt", borderRadius: "50%", background: "#A855F7", marginTop: "5pt", flexShrink: 0 }} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: "8.5pt", fontWeight: 700, color: "#042E5C" }}>{p.pattern_name}</div>
-                        {p.description && <div style={{ fontSize: "7.5pt", color: "#64748b", marginTop: "1pt" }}>{p.description}</div>}
-                        {p.subjects_involved?.length > 0 && (
-                          <div style={{ display: "flex", gap: "3pt", flexWrap: "wrap", marginTop: "2pt" }}>
-                            {p.subjects_involved.map((s: string) => <span key={s} className="pd-tag" style={{ background: "#F3E8FF", color: "#6B21A8", fontSize: "6.5pt" }}>{s}</span>)}
-                          </div>
+                    )}
+                    {weaknesses.length > 0 && (
+                      <div>
+                        <h4 style={{ margin: "0 0 8px", font: "600 11px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--approaching)" }}>Areas to Improve</h4>
+                        <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.65 }}>
+                          {weaknesses.map((w, i) => <li key={i}>{w}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </aside>
+                ) : null;
+              })()}
+            </div>
+          )}
+
+          {/* Focus Areas */}
+          {(() => {
+            const focusAreas: any[] = (progressReport.report_json as any)?.focus_areas ?? [];
+            return focusAreas.length > 0 ? (
+              <div style={{ marginBottom: "28px" }}>
+                <h4 style={{ margin: "0 0 4px", font: "600 11px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Recommended Focus Areas</h4>
+                {focusAreas.map((fa, i) => {
+                  const pri = (fa.priority ?? "medium").toUpperCase();
+                  return (
+                    <div className="focus" key={i}>
+                      <span className={`pri ${pri}`}>{pri}</span>
+                      <div>
+                        <div className="area">{fa.area}</div>
+                        {(fa.suggested_approach || fa.rationale) && (
+                          <div className="rat">{fa.suggested_approach ?? fa.rationale}</div>
                         )}
                       </div>
+                      {fa.subject && <div className="stag">{fa.subject}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null;
+          })()}
+
+          {/* Cross-subject patterns */}
+          {(() => {
+            const patterns: any[] = (progressReport.report_json as any)?.cross_subject_patterns ?? [];
+            return patterns.length > 0 ? (
+              <div>
+                <h4 style={{ margin: "0 0 10px", font: "600 11px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Cross-Subject Patterns</h4>
+                <div className="pat-grid">
+                  {patterns.map((p, i) => (
+                    <div key={i} className={`pat ${p.is_positive ? "good" : "warn"}`}>
+                      <div className="tg">{p.is_positive ? "Strength" : "Watch"}</div>
+                      <h5>{p.pattern_name}</h5>
+                      <p style={{ fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.55, margin: 0 }}>{p.summary ?? p.description}</p>
                     </div>
                   ))}
                 </div>
-              )}
-              {/* Full AI report markdown — always shown in print */}
-              {progressReport.report_markdown && (
-                <div style={{ marginTop: "10pt", padding: "8pt 10pt", background: "#FAF5FF", border: "0.5pt solid #E9D5FF", borderRadius: "6pt", breakInside: "auto" }}>
-                  <div style={{ fontSize: "8pt", fontWeight: 700, color: "#6B21A8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "5pt" }}>Full AI Report</div>
-                  <div className="pd-prose"><ReactMarkdown>{progressReport.report_markdown}</ReactMarkdown></div>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
+              </div>
+            ) : null;
+          })()}
+        </div>
+      </section>
+      </>)}
 
-      {/* ═════════ SECTION 7: SUBJECT LEARNING TRENDS ═════════ */}
-      {subjectEvolutions.length > 0 && (
-        <div className="pd-card">
-          <div className="pd-section-header" style={{ background: "#ECFEFF", borderBottom: "1pt solid #A5F3FC" }}>
-            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#0891B2", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>7</div>
-            <div>
-              <div className="pd-section-header-title" style={{ color: "#0E7490" }}>Subject Learning Trends</div>
-              <div className="pd-section-header-sub" style={{ color: "#0891B2" }}>How learning evolved across chapters within each subject</div>
-            </div>
-          </div>
-          <div className="pd-card-body">
-            {subjectEvolutions.map((evo) => {
-              const sj = evo.analysis_json ?? {} as any;
-              const strengths: string[] = sj.universal_strengths ?? sj.subject_strengths ?? [];
-              const weaknesses: string[] = sj.universal_weaknesses ?? sj.subject_weaknesses ?? [];
-              const patterns: any[] = sj.cross_chapter_patterns ?? [];
-              const recommendations: any[] = sj.recommendations ?? [];
-              return (
-                <div key={evo.subject} style={{ borderLeft: "3pt solid #0891B2", background: "#F0FDFF", padding: "8pt 10pt", borderRadius: "5pt", marginBottom: "6pt", breakInside: "avoid" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4pt" }}>
-                    <span style={{ fontSize: "10pt", fontWeight: 800, color: "#0E7490" }}>{evo.subject}</span>
-                    <span className="pd-tag" style={{ background: "#CFFAFE", color: "#0E7490" }}>{evo.chapter_count} chapter{evo.chapter_count !== 1 ? "s" : ""}</span>
-                  </div>
-                  {evo.headline && <div style={{ fontSize: "9pt", fontWeight: 600, fontStyle: "italic", color: "#0891B2", marginBottom: "4pt" }}>{evo.headline}</div>}
-                  {evo.subject_skill_trajectory && (
-                    <div style={{ marginBottom: "5pt" }}>
-                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: "1pt" }}>Skill Trajectory</div>
-                      <p style={{ fontSize: "8pt", lineHeight: 1.5, color: "#334155" }}>{evo.subject_skill_trajectory}</p>
-                    </div>
-                  )}
-                  {(strengths.length > 0 || weaknesses.length > 0) && (
-                    <div className="pd-grid-2" style={{ marginBottom: "4pt" }}>
-                      {strengths.length > 0 && (
-                        <div>
-                          <div style={{ fontSize: "7pt", fontWeight: 700, color: "#166534", textTransform: "uppercase", marginBottom: "2pt" }}>Strengths</div>
-                          {strengths.slice(0, 4).map((s, j) => <div key={j} style={{ fontSize: "7.5pt", color: "#166534", padding: "1pt 0" }}>✓ {s}</div>)}
-                        </div>
-                      )}
-                      {weaknesses.length > 0 && (
-                        <div>
-                          <div style={{ fontSize: "7pt", fontWeight: 700, color: "#92400E", textTransform: "uppercase", marginBottom: "2pt" }}>Areas to Improve</div>
-                          {weaknesses.slice(0, 4).map((w, j) => <div key={j} style={{ fontSize: "7.5pt", color: "#92400E", padding: "1pt 0" }}>→ {w}</div>)}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {patterns.length > 0 && (
-                    <div style={{ marginTop: "3pt" }}>
-                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: "2pt" }}>Patterns Across Chapters</div>
-                      {patterns.slice(0, 3).map((p: any, j: number) => (
-                        <div key={j} style={{ fontSize: "7.5pt", color: "#334155", padding: "2pt 0", borderBottom: "0.5pt solid #CFFAFE" }}>
-                          <strong style={{ color: "#0E7490" }}>{p.pattern_name}</strong>{p.summary ? ` — ${p.summary}` : ""}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {recommendations.length > 0 && (
-                    <div style={{ marginTop: "3pt" }}>
-                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: "2pt" }}>Recommendations</div>
-                      {recommendations.slice(0, 3).map((r: any, j: number) => (
-                        <div key={j} style={{ fontSize: "7.5pt", color: "#475569", padding: "1pt 0 1pt 8pt", borderLeft: "1pt solid #67E8F9" }}>
-                          › {typeof r === "string" ? r : (r.action ?? r.text ?? JSON.stringify(r))}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {/* Full subject analysis markdown */}
-                  {evo.analysis_markdown && (
-                    <div style={{ marginTop: "6pt", padding: "6pt 8pt", background: "white", border: "0.5pt solid #A5F3FC", borderRadius: "5pt" }}>
-                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#0E7490", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "3pt" }}>Full Analysis</div>
-                      <div className="pd-prose" style={{ fontSize: "8.5pt" }}><ReactMarkdown>{evo.analysis_markdown}</ReactMarkdown></div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+      {/* 7. SUBJECT LEARNING TRENDS */}
+      {subjectEvolutions.length > 0 && (<>
+      <div className="pb" />
+      <section className="section">
+        <div className="s-head">
+          <span className="n">7</span>
+          <div>
+            <h2>Subject Learning Trends</h2>
+            <div className="sub">How learning evolved across chapters within each subject.</div>
           </div>
         </div>
-      )}
-
-      {/* ═════════ SECTION 8: CHAPTER LEARNING EVOLUTION ═════════ */}
-      {chapterEvolutions.length > 0 && (
-        <div className="pd-card">
-          <div className="pd-section-header" style={{ background: "#FFF7ED", borderBottom: "1pt solid #FDBA74" }}>
-            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#EA580C", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>8</div>
-            <div>
-              <div className="pd-section-header-title" style={{ color: "#C2410C" }}>Chapter Learning Evolution</div>
-              <div className="pd-section-header-sub" style={{ color: "#EA580C" }}>AI analysis of how learning progressed across sessions for each chapter</div>
-            </div>
-          </div>
-          <div className="pd-card-body">
-            {chapterEvolutions.map((evo) => {
-              const cj = evo.analysis_json ?? {} as any;
-              const dimensions: any[] = cj.dimension_analyses ?? cj.dimensions ?? [];
-              const recommendations: any[] = cj.recommendations ?? [];
-              const perConv: any[] = cj.per_conversation ?? [];
-              return (
-                <div key={`${evo.subject}-${evo.document_title}`} style={{ borderLeft: "3pt solid #EA580C", background: "#FFF7ED", padding: "8pt 10pt", borderRadius: "5pt", marginBottom: "6pt", breakInside: "avoid" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "3pt", gap: "8pt" }}>
-                    <span style={{ fontSize: "10pt", fontWeight: 800, color: "#C2410C", flex: 1 }}>{evo.document_title}</span>
-                    <div style={{ display: "flex", gap: "4pt", flexShrink: 0 }}>
-                      <span className="pd-tag" style={{ background: "#FFEDD5", color: "#C2410C" }}>{evo.subject}</span>
-                      <span className="pd-tag" style={{ background: "#FEF9C3", color: "#854D0E" }}>{evo.conversation_count} session{evo.conversation_count !== 1 ? "s" : ""}</span>
+        <div className="s-body">
+          {subjectEvolutions.map((evo, idx) => {
+            const sj = evo.analysis_json ?? ({} as any);
+            const strengths: string[] = sj.universal_strengths ?? sj.subject_strengths ?? [];
+            const weaknesses: string[] = sj.universal_weaknesses ?? sj.subject_weaknesses ?? [];
+            const patterns: any[] = sj.cross_chapter_patterns ?? [];
+            const recommendations: any[] = sj.recommendations ?? [];
+            return (
+              <div key={evo.subject} style={{ borderTop: idx > 0 ? "1px solid var(--border)" : "none", paddingTop: idx > 0 ? "28px" : "0", marginTop: idx > 0 ? "28px" : "0" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
+                  <h3 style={{ fontFamily: "var(--display)", fontSize: "24px", fontWeight: 500, margin: 0 }}>{evo.subject}</h3>
+                  <span style={{ font: "500 11px/1 var(--mono)", color: "var(--muted)", letterSpacing: "0.1em" }}>
+                    {evo.chapter_count} chapter{evo.chapter_count !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                {evo.headline && (
+                  <p style={{ fontFamily: "var(--display)", fontSize: "18px", color: "var(--proficient)", margin: "0 0 10px", fontStyle: "italic" }}>{evo.headline}</p>
+                )}
+                {evo.subject_skill_trajectory && (
+                  <p style={{ fontSize: "15px", lineHeight: 1.7, color: "var(--ink-2)", margin: "0 0 16px", maxWidth: "70ch" }}>{evo.subject_skill_trajectory}</p>
+                )}
+                {(strengths.length > 0 || weaknesses.length > 0) && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "16px" }}>
+                    {strengths.length > 0 && (
+                      <div>
+                        <h4 style={{ margin: "0 0 6px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--advanced)" }}>Strengths</h4>
+                        <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.65 }}>
+                          {strengths.map((s, i) => <li key={i}>{s}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {weaknesses.length > 0 && (
+                      <div>
+                        <h4 style={{ margin: "0 0 6px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--approaching)" }}>Areas to Improve</h4>
+                        <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.65 }}>
+                          {weaknesses.map((w, i) => <li key={i}>{w}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {patterns.length > 0 && (
+                  <div style={{ marginBottom: "12px" }}>
+                    <h4 style={{ margin: "0 0 8px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Patterns Across Chapters</h4>
+                    <div className="dim-grid">
+                      {patterns.slice(0, 4).map((p: any, i: number) => (
+                        <div className="dim" key={i}>
+                          <div className="dn">{p.pattern_name}</div>
+                          <div className="dd">{p.summary ?? p.description}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  {evo.headline && <div style={{ fontSize: "9pt", fontWeight: 600, fontStyle: "italic", color: "#9A3412", marginBottom: "4pt" }}>{evo.headline}</div>}
-                  {evo.skill_score_trajectory && (
-                    <div style={{ marginBottom: "5pt" }}>
-                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: "1pt" }}>Skill Trajectory</div>
-                      <p style={{ fontSize: "8pt", lineHeight: 1.5, color: "#334155" }}>{evo.skill_score_trajectory}</p>
-                    </div>
-                  )}
-                  {/* Dimension bars */}
-                  {dimensions.length > 0 && (
-                    <div style={{ marginBottom: "5pt" }}>
-                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: "2pt" }}>Skill Dimension Analysis</div>
-                      {dimensions.map((dim: any, i: number) => {
-                        const afterScore = typeof dim.after_score === "number" ? dim.after_score : (typeof dim.score === "number" ? dim.score : null);
-                        const delta = typeof dim.delta === "number" ? dim.delta : 0;
-                        const name = dim.dimension_name ?? dim.dimension ?? "";
-                        return (
-                          <div key={i} style={{ marginBottom: "3pt" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1pt" }}>
-                              <span style={{ fontSize: "8pt", color: "#334155", fontWeight: 500, flex: 1 }}>{name}</span>
-                              <div style={{ display: "flex", alignItems: "center", gap: "3pt", flexShrink: 0 }}>
-                                {afterScore != null && <span style={{ fontSize: "8pt", fontWeight: 800, color: masteryColor(afterScore) }}>{pct(afterScore)}</span>}
-                                {delta !== 0 && (
-                                  <span style={{ fontSize: "6.5pt", fontWeight: 800, padding: "1pt 4pt", borderRadius: "8pt", background: delta > 0 ? "#D1FAE5" : "#FEE2E2", color: delta > 0 ? "#065F46" : "#991B1B" }}>
-                                    {delta > 0 ? "+" : ""}{Math.round(delta * 100)}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            {afterScore != null && (
-                              <div className="pd-bar-track" style={{ height: "3pt" }}><div className="pd-bar-fill" style={{ width: `${Math.round(afterScore * 100)}%`, background: masteryColor(afterScore), height: "3pt" }} /></div>
-                            )}
-                            {(dim.key_observation || dim.summary) && <div style={{ fontSize: "7pt", color: "#64748b", marginTop: "1pt" }}>{dim.key_observation ?? dim.summary}</div>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {/* Per-conversation progress */}
-                  {perConv.length > 0 && (
-                    <div style={{ marginBottom: "5pt" }}>
-                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: "2pt" }}>Session-by-Session Progress</div>
-                      {perConv.map((c: any, i: number) => (
-                        <div key={i} style={{ fontSize: "7.5pt", marginBottom: "3pt" }}>
-                          <div style={{ fontWeight: 700, color: "#C2410C", marginBottom: "1pt" }}>Session {c.conversation_number}{c.stage_label ? ` — ${c.stage_label}` : ""}</div>
-                          {(c.tutor_observations ?? []).slice(0, 3).map((obs: string, j: number) => (
-                            <div key={j} style={{ color: "#475569", padding: "1pt 0 1pt 7pt", borderLeft: "1pt solid #FDBA74" }}>› {obs}</div>
-                          ))}
-                        </div>
+                )}
+                {recommendations.length > 0 && (
+                  <div>
+                    <h4 style={{ margin: "0 0 6px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Recommendations</h4>
+                    <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.65 }}>
+                      {recommendations.slice(0, 4).map((r: any, i: number) => (
+                        <li key={i}>{typeof r === "string" ? r : (r.action ?? r.text ?? "")}</li>
                       ))}
-                    </div>
-                  )}
-                  {/* Recommendations */}
-                  {recommendations.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#475569", textTransform: "uppercase", marginBottom: "2pt" }}>Recommendations</div>
-                      {recommendations.slice(0, 4).map((r: any, j: number) => (
-                        <div key={j} style={{ fontSize: "7.5pt", color: "#475569", padding: "1pt 0 1pt 7pt", borderLeft: "1pt solid #FDBA74" }}>
-                          › {typeof r === "string" ? r : (r.action ?? r.text ?? JSON.stringify(r))}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {/* Full chapter analysis markdown */}
-                  {evo.analysis_markdown && (
-                    <div style={{ marginTop: "6pt", padding: "6pt 8pt", background: "white", border: "0.5pt solid #FDBA74", borderRadius: "5pt" }}>
-                      <div style={{ fontSize: "7pt", fontWeight: 700, color: "#C2410C", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "3pt" }}>Full Analysis</div>
-                      <div className="pd-prose" style={{ fontSize: "8.5pt" }}><ReactMarkdown>{evo.analysis_markdown}</ReactMarkdown></div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+      </>)}
+
+      {/* 8. AI CHAPTER REPORTS */}
+      {chapters.some((ch) => ch.chapter_report) && (<>
+      <div className="pb" />
+      <section className="section">
+        <div className="s-head">
+          <span className="n">8</span>
+          <div>
+            <h2>AI Chapter Reports</h2>
+            <div className="sub">AI-generated pedagogical analysis per chapter — session summary, traits, concept trajectory.</div>
           </div>
         </div>
-      )}
-
-      {/* ═════════ SECTION 9: AI CHAPTER REPORTS ═════════ */}
-      {chapters.some((ch) => ch.chapter_report) && (
-        <div className="pd-card">
-          <div className="pd-section-header" style={{ background: "#EEF2FF", borderBottom: "1pt solid #C7D2FE" }}>
-            <div style={{ width: "20pt", height: "20pt", borderRadius: "5pt", background: "#6366F1", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10pt", fontWeight: 700 }}>9</div>
-            <div>
-              <div className="pd-section-header-title" style={{ color: "#4338CA" }}>AI Chapter Reports</div>
-              <div className="pd-section-header-sub" style={{ color: "#6366F1" }}>AI-generated pedagogical analysis per chapter</div>
-            </div>
-          </div>
-          <div className="pd-card-body">
-            {chapters.filter((ch) => ch.chapter_report).map((ch) => (
-              <div key={`${ch.subject}-${ch.document_title}`} style={{ borderLeft: "3pt solid #6366F1", background: "#EEF2FF", padding: "8pt 10pt", borderRadius: "5pt", marginBottom: "6pt", breakInside: "avoid" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4pt", flexWrap: "wrap", gap: "5pt" }}>
-                  <span style={{ fontSize: "10pt", fontWeight: 800, color: "#4338CA" }}>{ch.document_title}</span>
-                  <div style={{ display: "flex", gap: "4pt", alignItems: "center" }}>
-                    <span className="pd-tag" style={{ background: "#E0E7FF", color: "#4338CA" }}>{ch.subject}</span>
-                    <span style={{ fontSize: "7.5pt", fontWeight: 700, padding: "1pt 5pt", borderRadius: "10pt", background: `${masteryColor(ch.mastery_score)}1A`, color: masteryColor(ch.mastery_score) }}>{pct(ch.mastery_score)}</span>
-                    <span style={{ fontSize: "7pt", color: "#94A3B8" }}>{ch.study_count} sessions · {Math.round(ch.completion_percentage)}% complete</span>
-                  </div>
-                </div>
-                <div style={{ marginTop: "4pt", padding: "6pt 8pt", background: "white", border: "0.5pt solid #C7D2FE", borderRadius: "5pt" }}>
-                  <div className="pd-prose" style={{ fontSize: "8.5pt" }}><ReactMarkdown>{ch.chapter_report!}</ReactMarkdown></div>
+        <div className="s-body">
+          {chapters.filter((ch) => ch.chapter_report).map((ch, idx) => (
+            <div key={`${ch.subject}-${ch.document_title}`} className="cr">
+              <div className="cr-h">
+                <span className="name">{ch.document_title}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+                  <span style={{ font: "500 11px/1 var(--mono)", color: "var(--muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>{ch.subject}</span>
+                  <span className={`chip ${bandFor(ch.mastery_score * 100).toLowerCase()}`}>{bandFor(ch.mastery_score * 100)}</span>
+                  <span style={{ font: "500 11px/1 var(--mono)", color: "var(--muted)" }}>{ch.study_count} sessions · {Math.round(ch.completion_percentage)}% complete</span>
                 </div>
               </div>
-            ))}
+              <div
+                className="cr-summary prose prose-sm max-w-none
+                  prose-h3:font-display prose-h3:text-[var(--ink)] prose-h3:font-medium prose-h3:text-lg prose-h3:mt-5 prose-h3:mb-2 prose-h3:first:mt-0
+                  prose-h4:text-[var(--ink)] prose-h4:font-semibold prose-h4:text-sm prose-h4:mt-3 prose-h4:mb-1
+                  prose-p:text-[var(--ink-2)] prose-p:leading-relaxed prose-p:my-1
+                  prose-li:text-[var(--ink-2)] prose-li:my-0.5
+                  prose-strong:text-[var(--ink)] prose-ul:my-1 prose-ul:pl-4"
+              >
+                <ReactMarkdown>{ch.chapter_report!}</ReactMarkdown>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+      </>)}
+
+      {/* 9. SUBJECT-WISE CHAPTER REPORTS */}
+      {subjects.length > 0 && (<>
+      <div className="pb" />
+      <section className="section">
+        <div className="s-head">
+          <span className="n">9</span>
+          <div>
+            <h2>Chapter-by-Chapter Breakdown</h2>
+            <div className="sub">Full analysis for every chapter, grouped by subject — mastery, session arc, skill dimensions, and AI report.</div>
           </div>
         </div>
-      )}
+        <div className="s-body">
+          {subjects.map((subj, si) => {
+            const subjChapters = chapters.filter((c) => c.subject === subj.subject);
+            if (subjChapters.length === 0) return null;
+            return (
+              <div key={subj.subject} style={{ borderTop: si > 0 ? "2px solid var(--border)" : "none", paddingTop: si > 0 ? "36px" : "0", marginTop: si > 0 ? "36px" : "0" }}>
+                {/* Subject heading */}
+                <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginBottom: "20px" }}>
+                  <h3 style={{ fontFamily: "var(--display)", fontSize: "28px", fontWeight: 500, margin: 0, letterSpacing: "-0.01em" }}>{subj.subject}</h3>
+                  <span style={{ font: "500 11px/1 var(--mono)", color: "var(--muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                    {subjChapters.length} chapter{subjChapters.length !== 1 ? "s" : ""} · {subj.session_count} sessions
+                  </span>
+                  <span className={`chip ${bandFor(subj.overall_score * 100).toLowerCase()}`}>{bandFor(subj.overall_score * 100)}</span>
+                </div>
 
-      {/* ── DOCUMENT FOOTER ── */}
-      <div style={{ marginTop: "12pt", padding: "8pt 12pt", background: "#F8FAFC", borderRadius: "7pt", border: "1pt solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: "7.5pt", color: "#94A3B8" }}>GenEducation AI · All scores are AI-computed based on learning interactions</span>
-        <span style={{ fontSize: "7.5pt", color: "#94A3B8" }}>{generatedAt}</span>
+                {/* Each chapter */}
+                {subjChapters.map((ch, chi) => {
+                  const evo = chapterEvolutions.find(
+                    (e) => e.subject === subj.subject && e.document_title === ch.document_title
+                  );
+                  const analysis = evo?.analysis_json ?? ({} as any);
+                  const dimensions: any[] = analysis.dimension_analyses ?? analysis.dimensions ?? [];
+                  const sessionLog: any[] = analysis.per_conversation ?? [];
+                  const recommendations: any[] = analysis.recommendations ?? [];
+
+                  // Build sparkline path from session log
+                  const mappedLog = sessionLog.map((s: any, idx: number) => {
+                    const rawScore = s.overall_score ?? (idx / Math.max(sessionLog.length - 1, 1));
+                    let level = "beginning";
+                    if (rawScore > 0.8) level = "advanced";
+                    else if (rawScore > 0.6) level = "proficient";
+                    else if (rawScore > 0.4) level = "approaching";
+                    else if (rawScore > 0.2) level = "developing";
+                    return { n: idx + 1, level, obs: s.tutor_observations ?? s.observations ?? [] };
+                  });
+
+                  const W = 680, H = 80, pad = 16;
+                  const xs = (i: number, n: number) => pad + i * ((W - pad * 2) / (n > 1 ? n - 1 : 1));
+                  const ys = (lvl: string) => H - pad - ((levels[lvl as keyof typeof levels] || 1) - 1) * ((H - pad * 2) / 4);
+                  const sparkPath = mappedLog.length > 1
+                    ? mappedLog.map((s: any, i: number) => `${i === 0 ? "M" : "L"} ${xs(i, mappedLog.length).toFixed(1)} ${ys(s.level).toFixed(1)}`).join(" ")
+                    : "";
+
+                  return (
+                    <div key={ch.document_title} style={{ borderTop: chi === 0 ? "1px solid var(--rule-faint)" : "1px solid var(--border)", paddingTop: "20px", marginTop: "20px" }}>
+                      {/* Chapter header row */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px", gap: "16px" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "4px" }}>
+                            <span style={{ fontFamily: "var(--display)", fontSize: "20px", fontWeight: 500 }}>{ch.document_title}</span>
+                            <span className={`chip ${bandFor(ch.mastery_score * 100).toLowerCase()}`}>{bandFor(ch.mastery_score * 100)}</span>
+                          </div>
+                          <div style={{ font: "500 11px/1 var(--mono)", color: "var(--muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                            {ch.study_count} session{ch.study_count !== 1 ? "s" : ""}
+                          </div>
+                        </div>
+                        {/* Mastery + completion stats */}
+                        <div style={{ display: "flex", gap: "24px", flexShrink: 0 }}>
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ font: "600 10.5px/1 var(--mono)", color: "var(--muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "4px" }}>Mastery</div>
+                            <div style={{ fontSize: "24px", fontWeight: 600, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em", color: masteryColor(ch.mastery_score) }}>
+                              {Math.round(ch.mastery_score * 100)}<small style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 500 }}>%</small>
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ font: "600 10.5px/1 var(--mono)", color: "var(--muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "4px" }}>Complete</div>
+                            <div style={{ fontSize: "24px", fontWeight: 600, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>
+                              {Math.round(ch.completion_percentage)}<small style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 500 }}>%</small>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Completion bar */}
+                      <div className={`bar ${bandFor(ch.mastery_score * 100).toLowerCase()}`} style={{ marginBottom: "20px" }}>
+                        <i style={{ width: `${Math.round(ch.completion_percentage)}%` }} />
+                      </div>
+
+                      {/* Evolution headline + sparkline */}
+                      {evo && (
+                        <div style={{ marginBottom: "18px" }}>
+                          {evo.headline && (
+                            <p style={{ fontFamily: "var(--display)", fontSize: "17px", fontStyle: "italic", color: "var(--proficient)", margin: "0 0 10px" }}>{evo.headline}</p>
+                          )}
+                          {evo.skill_score_trajectory && (
+                            <p style={{ fontSize: "14px", lineHeight: 1.65, color: "var(--ink-2)", margin: "0 0 12px", maxWidth: "65ch" }}>{evo.skill_score_trajectory}</p>
+                          )}
+                          {/* Sparkline */}
+                          {mappedLog.length > 1 && (
+                            <div className="arc-spark">
+                              <div className="h">
+                                <span className="l">Session arc — {evo.conversation_count} session{evo.conversation_count !== 1 ? "s" : ""}</span>
+                                <div className="level-key">
+                                  {(["advanced","proficient","approaching","developing","beginning"] as const).map((l) => (
+                                    <span key={l}><i style={{ background: colors[l] }} />{l}</span>
+                                  ))}
+                                </div>
+                              </div>
+                              <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+                                {[1,2,3,4,5].map((l) => (
+                                  <line key={l} x1={pad} x2={W-pad} y1={ys(["beginning","developing","approaching","proficient","advanced"][l-1])} y2={ys(["beginning","developing","approaching","proficient","advanced"][l-1])} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="2 3" />
+                                ))}
+                                <path d={sparkPath} fill="none" stroke="#0f172a" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+                                {mappedLog.map((s: any, i: number) => (
+                                  <g key={i}>
+                                    <circle cx={xs(i, mappedLog.length)} cy={ys(s.level)} r="4" fill={colors[s.level as keyof typeof colors] || colors.beginning} stroke="#fff" strokeWidth="2" />
+                                    <text x={xs(i, mappedLog.length)} y={H - 2} textAnchor="middle" fontFamily="JetBrains Mono" fontSize="9" fill="#94a3b8">{s.n}</text>
+                                  </g>
+                                ))}
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Skill dimensions grid */}
+                      {dimensions.length > 0 && (
+                        <div style={{ marginBottom: "18px" }}>
+                          <h4 style={{ margin: "0 0 8px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Skill Dimensions</h4>
+                          <div className="dim-grid">
+                            {dimensions.map((d: any, i: number) => {
+                              const afterScore = typeof d.after_score === "number" ? d.after_score : (typeof d.score === "number" ? d.score : null);
+                              const delta = typeof d.delta === "number" ? d.delta : null;
+                              const name = d.dimension_name ?? d.dimension ?? d.name ?? "";
+                              const obs = d.key_observation ?? d.analysis ?? d.desc ?? "";
+                              return (
+                                <div className="dim" key={i}>
+                                  <div className="dn" style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                                    <span>{name}</span>
+                                    {afterScore != null && (
+                                      <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                                        <span style={{ fontSize: "14px", fontWeight: 700, color: masteryColor(afterScore), fontVariantNumeric: "tabular-nums" }}>{Math.round(afterScore * 100)}%</span>
+                                        {delta != null && delta !== 0 && (
+                                          <span style={{ fontSize: "11px", fontWeight: 700, padding: "1px 5px", borderRadius: "4px", background: delta > 0 ? "var(--advanced-bg)" : "var(--developing-bg)", color: delta > 0 ? "var(--advanced)" : "var(--developing)" }}>
+                                            {delta > 0 ? "+" : ""}{Math.round(delta * 100)}
+                                          </span>
+                                        )}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {afterScore != null && (
+                                    <div className={`bar ${bandFor(afterScore * 100).toLowerCase()}`} style={{ height: "3px", marginBottom: "6px" }}>
+                                      <i style={{ width: `${Math.round(afterScore * 100)}%` }} />
+                                    </div>
+                                  )}
+                                  {obs && <div className="dd">{obs}</div>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Session-by-session observations */}
+                      {sessionLog.length > 0 && (
+                        <div style={{ marginBottom: "18px" }}>
+                          <h4 style={{ margin: "0 0 8px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Session Log</h4>
+                          <div className="arc">
+                            {sessionLog.map((s: any, i: number) => {
+                              const obs: string[] = s.tutor_observations ?? s.observations ?? [];
+                              const stageLabel: string = s.stage_label ?? `Session ${i + 1}`;
+                              const lvl = mappedLog[i]?.level ?? "beginning";
+                              return (
+                                <div className="arc-row" key={i}>
+                                  <div className="n">{i + 1}</div>
+                                  <div><span className={`lvl lvl-${lvl}`}>{stageLabel}</span></div>
+                                  <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.6 }}>
+                                    {obs.slice(0, 3).map((o: string, j: number) => <li key={j}>{o}</li>)}
+                                  </ul>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Recommendations */}
+                      {recommendations.length > 0 && (
+                        <div style={{ marginBottom: "18px" }}>
+                          <h4 style={{ margin: "0 0 6px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Recommendations</h4>
+                          <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.65 }}>
+                            {recommendations.map((r: any, i: number) => (
+                              <li key={i}>{typeof r === "string" ? r : (r.action ?? r.text ?? "")}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Chapter AI report markdown */}
+                      {ch.chapter_report && (
+                        <div style={{ marginTop: "16px", padding: "20px 24px", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--r)" }}>
+                          <div style={{ font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "12px" }}>AI Chapter Report</div>
+                          <div
+                            className="prose prose-sm max-w-none
+                              prose-h3:font-serif prose-h3:text-[var(--ink)] prose-h3:font-medium prose-h3:text-lg prose-h3:mt-5 prose-h3:mb-2 prose-h3:first:mt-0
+                              prose-h4:text-[var(--ink)] prose-h4:font-semibold prose-h4:text-sm prose-h4:mt-3 prose-h4:mb-1
+                              prose-p:text-[var(--ink-2)] prose-p:text-sm prose-p:leading-relaxed prose-p:my-1.5
+                              prose-li:text-sm prose-li:text-[var(--ink-2)] prose-li:my-0.5
+                              prose-strong:text-[var(--ink)] prose-ul:my-1 prose-ul:pl-4"
+                          >
+                            <ReactMarkdown>{ch.chapter_report}</ReactMarkdown>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+      </>)}
+
+      {/* Download PDF button */}
+      <div className="print-btn" style={{ textAlign: "center", marginTop: "24px", paddingBottom: "40px" }}>
+        <button
+          onClick={handlePrint}
+          disabled={isPdfGenerating}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "10px 24px",
+            background: isPdfGenerating ? "#8899aa" : "var(--navy)",
+            color: "white",
+            borderRadius: "8px",
+            border: "none",
+            cursor: isPdfGenerating ? "not-allowed" : "pointer",
+            fontWeight: 600,
+            fontSize: "14px",
+            transition: "background 0.2s",
+          }}
+        >
+          {isPdfGenerating ? (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "spin 1s linear infinite" }}>
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+              Generating PDF…
+            </>
+          ) : (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download PDF
+            </>
+          )}
+        </button>
       </div>
-    </div>{/* end print-doc */}
-    </>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+    </div>
   );
 }
