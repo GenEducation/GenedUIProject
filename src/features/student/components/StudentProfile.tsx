@@ -8,6 +8,7 @@ import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { PartnerRequestModal } from "./PartnerRequestModal";
 import { updateProfile, fetchProfile } from "@/features/auth/authService";
+import { studentService } from "@/features/student/services/studentService";
 import { fetchVoices } from "@/features/student/services/voiceCatalogService";
 import { DEFAULT_GEMINI_VOICE, type GeminiVoice } from "@/constants/geminiVoices";
 import { PttHotkeyConfig } from "./PttHotkeyConfig";
@@ -31,6 +32,36 @@ const C = {
 };
 
 const AVATAR_COLORS = [C.genPurple, C.genBlue, C.edGreen, C.sky, C.coral, C.sun, C.sparkle, "#55EFC4"];
+
+/* ─── "How {tutor} sees you" — derived from the profile API ─────────────────
+ * The /students/{id}/profile endpoint returns a `general_onboarding` block
+ * with the student's self-reported preferences. We turn each non-empty list
+ * into a trait card instead of hardcoding generic learner archetypes. */
+interface GeneralOnboarding {
+  learning_preferences?: string[];
+  interests?: string[];
+  strengths?: string[];
+  weaknesses?: string[];
+  completed?: boolean;
+}
+
+const TRAIT_GROUPS: { key: keyof GeneralOnboarding; icon: string; title: string }[] = [
+  { key: "learning_preferences", icon: "🎧", title: "Learning Style" },
+  { key: "interests",            icon: "✨", title: "Interests"      },
+  { key: "strengths",            icon: "💪", title: "Strengths"      },
+  { key: "weaknesses",           icon: "🎯", title: "Growing On"     },
+];
+
+const sentenceCase = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
+function buildTraits(onboarding: GeneralOnboarding | null) {
+  if (!onboarding) return [];
+  return TRAIT_GROUPS.flatMap(({ key, icon, title }) => {
+    const values = (onboarding[key] as string[] | undefined)?.filter(Boolean) ?? [];
+    if (values.length === 0) return [];
+    return [{ icon, title, description: values.map(sentenceCase).join(", ") }];
+  });
+}
 
 /* ─── Badge computation ──────────────────────────────────────────────────── */
 function computeBadges(totalSessions: number, currentStreak: number) {
@@ -294,6 +325,8 @@ export function StudentProfile() {
   const [voicesLoadError,  setVoicesLoadError]   = useState<string | null>(null);
   const [voicesFetched,    setVoicesFetched]     = useState(false);
   const [voiceExpanded,    setVoiceExpanded]     = useState(false);
+  const [onboarding,       setOnboarding]         = useState<GeneralOnboarding | null>(null);
+  const [onboardingLoading,setOnboardingLoading]  = useState(true);
 
   /* responsive sidebar */
   useEffect(() => {
@@ -348,6 +381,29 @@ export function StudentProfile() {
     return () => { cancelled = true; };
     // Intentionally only on user_id change (i.e. once per logged-in user).
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentProfile?.user_id]);
+
+  /* Pull the student's onboarding profile so "How {tutor} sees you" reflects
+   * their actual self-reported preferences rather than hardcoded archetypes. */
+  useEffect(() => {
+    if (!studentProfile?.user_id) return;
+    let cancelled = false;
+    setOnboardingLoading(true);
+    (async () => {
+      try {
+        const data = await studentService.fetchDashboardProfile(studentProfile.user_id);
+        if (cancelled) return;
+        setOnboarding(data?.general_onboarding ?? null);
+      } catch (err) {
+        if (!cancelled) {
+          console.warn("[StudentProfile] Failed to load onboarding profile:", err);
+          setOnboarding(null);
+        }
+      } finally {
+        if (!cancelled) setOnboardingLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [studentProfile?.user_id]);
 
   // Keep pending voice in sync if profile loads/changes after mount
@@ -432,11 +488,7 @@ export function StudentProfile() {
   const longestStreak = studentStats?.longestStreak  ?? 0;
   const badges        = computeBadges(totalSessions, streakCount);
 
-  const learningTraits = [
-    { icon: "👁️", title: "Visual Learner",    description: "You understand best with pictures, diagrams, and colors." },
-    { icon: "📖", title: "Story Lover",        description: "You remember things better when told as stories." },
-    { icon: "🎮", title: "Likes Challenges",   description: "You enjoy puzzles and tricky questions!" },
-  ];
+  const learningTraits = buildTraits(onboarding);
 
   const handleLinkParent = async () => {
     if (parentInput.trim()) {
@@ -544,18 +596,38 @@ export function StudentProfile() {
                 <span style={{ fontSize: 15 }}>🧠</span>
                 <span style={{ fontSize: 11, fontWeight: 800, color: C.genPurple, textTransform: "uppercase" as const, letterSpacing: 1.2, fontFamily: "'DM Sans',sans-serif" }}>{`How ${aiTutorName} Sees You`}</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
-                {learningTraits.map((t, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 14px", background: "white", borderRadius: 14, border: `1px solid ${C.border}` }}>
-                    <span style={{ fontSize: 18, flexShrink: 0 }}>{t.icon}</span>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>{t.title}</div>
-                      <div style={{ fontSize: 11, color: C.textMid, marginTop: 2, lineHeight: 1.5 }}>{t.description}</div>
+              {onboardingLoading ? (
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+                  {[0, 1, 2].map(i => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "white", borderRadius: 14, border: `1px solid ${C.border}` }}>
+                      <div style={{ width: 22, height: 22, borderRadius: 7, background: "#EDF2F7", flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ width: "35%", height: 11, borderRadius: 6, background: "#EDF2F7", marginBottom: 6 }} />
+                        <div style={{ width: "65%", height: 9, borderRadius: 5, background: "#F1F5F9" }} />
+                      </div>
                     </div>
+                  ))}
+                </div>
+              ) : learningTraits.length > 0 ? (
+                <>
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+                    {learningTraits.map((t, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 14px", background: "white", borderRadius: 14, border: `1px solid ${C.border}` }}>
+                        <span style={{ fontSize: 18, flexShrink: 0 }}>{t.icon}</span>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>{t.title}</div>
+                          <div style={{ fontSize: 11, color: C.textMid, marginTop: 2, lineHeight: 1.5 }}>{t.description}</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <p style={{ fontSize: 10, color: C.textMuted, marginTop: 12, fontStyle: "italic", textAlign: "center" as const }}>Based on your onboarding and learning patterns</p>
+                  <p style={{ fontSize: 10, color: C.textMuted, marginTop: 12, fontStyle: "italic", textAlign: "center" as const }}>Based on your onboarding and learning patterns</p>
+                </>
+              ) : (
+                <p style={{ fontSize: 12, color: C.textMuted, textAlign: "center" as const, padding: "8px 0" }}>
+                  Complete onboarding to see how {aiTutorName} understands your learning style.
+                </p>
+              )}
             </div>
 
             {/* ── TUTOR VOICE (collapsible — lazy-loads catalog on first open) ── */}
