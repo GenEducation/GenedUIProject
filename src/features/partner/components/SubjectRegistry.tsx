@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { usePartnerStore, SubjectFilters } from "../store/usePartnerStore";
+import { usePartnerStore, SubjectFilters, restorePendingIngestions } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
 interface SubjectRegistryProps {
@@ -40,6 +40,10 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
   useEffect(() => {
     fetchSubjects();
+    restorePendingIngestions(
+      (updater) => usePartnerStore.setState((state) => ({ subjects: updater(state.subjects) })),
+      fetchSubjects,
+    );
   }, [fetchSubjects]);
 
   // Re-fetch whenever offset changes (pagination)
