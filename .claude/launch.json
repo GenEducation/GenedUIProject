@@ -19,6 +19,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "public", "-l", "4322", "--no-clipboard"],
       "port": 4322
+    },
+    {
+      "name": "gened-landing-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-s", "C:/tmp/gened-preview", "-l", "4400", "--no-clipboard"],
+      "port": 4400
     }
   ]
 }
