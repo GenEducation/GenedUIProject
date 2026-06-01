@@ -197,13 +197,15 @@ export function StudentHome() {
 
   /* data fetch */
   useEffect(() => {
-    if (studentProfile) {
+    let cancelled = false;
+    if (studentProfile && !cancelled) {
       fetchSessions();
       fetchAvailableAgents();
       fetchStudentStats();
       fetchOnboardingStatus();
       checkDNAStatus(studentProfile.user_id);
     }
+    return () => { cancelled = true; };
   }, [studentProfile]);
 
   /* Mount */

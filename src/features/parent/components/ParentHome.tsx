@@ -63,16 +63,20 @@ export function ParentHome() {
 
     if (!token || !studentId || !parentProfile?.user_id) return;
 
+    let cancelled = false;
+    const controller = new AbortController();
+
     async function autoLink() {
       setIsLinking(true);
       setLinkingError(null);
       setLinkingSuccess(null);
       try {
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
-        
+
         // 1. Verify token first
         const verifyResp = await fetch(
-          `${API_BASE_URL}/parent/verify-token?student_id=${studentId}&token=${token}`
+          `${API_BASE_URL}/parent/verify-token?student_id=${studentId}&token=${token}`,
+          { signal: controller.signal }
         );
         if (!verifyResp.ok) {
           const errData = await verifyResp.json().catch(() => ({}));
@@ -92,6 +96,7 @@ export function ParentHome() {
             parent_id: parentProfile!.user_id,
             token: token,
           }),
+          signal: controller.signal,
         });
 
         if (!confirmResp.ok) {
@@ -99,22 +104,27 @@ export function ParentHome() {
           throw new Error(errData.message || "Failed to link account.");
         }
 
-        setLinkingSuccess(`Successfully linked with student "${verifyData.student_username}"!`);
-        
-        // Refresh students list in parent store
-        await fetchLinkedStudents();
-        
-        // Clean URL params without page reload
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, "", newUrl);
+        if (!cancelled) {
+          setLinkingSuccess(`Successfully linked with student "${verifyData.student_username}"!`);
+
+          // Refresh students list in parent store
+          await fetchLinkedStudents();
+
+          // Clean URL params without page reload
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, "", newUrl);
+        }
       } catch (err: any) {
-        setLinkingError(err.message || "Failed to establish parent-student link.");
+        if (!cancelled && err?.name !== "AbortError") {
+          setLinkingError(err.message || "Failed to establish parent-student link.");
+        }
       } finally {
-        setIsLinking(false);
+        if (!cancelled) setIsLinking(false);
       }
     }
 
     autoLink();
+    return () => { cancelled = true; controller.abort(); };
   }, [searchParams, parentProfile, fetchLinkedStudents]);
 
   // Sync URL → state on mount / pathname change

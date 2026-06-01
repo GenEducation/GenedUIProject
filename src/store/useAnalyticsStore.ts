@@ -53,7 +53,7 @@ interface AnalyticsState {
   // Actions
   setAnalyticsOpen: (open: boolean) => void;
   setSelectedAnalyticsSubject: (subject: string) => void;
-  fetchAnalyticsSubjects: (studentId: string) => Promise<void>;
+  fetchAnalyticsSubjects: (studentId: string, signal?: AbortSignal) => Promise<void>;
   fetchAnalyticsData: (subject?: string, studentIdOverride?: string) => Promise<void>;
   fetchSkillProgressionData: (subject?: string, studentIdOverride?: string) => Promise<void>;
 }
@@ -79,9 +79,9 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
 
   setSelectedAnalyticsSubject: (subject) => set({ selectedAnalyticsSubject: subject }),
 
-  fetchAnalyticsSubjects: async (studentId) => {
+  fetchAnalyticsSubjects: async (studentId, signal?) => {
     try {
-      const data = await studentService.fetchAvailableAgents(studentId);
+      const data = await studentService.fetchAvailableAgents(studentId, signal);
       
       const subjectNames = new Set<string>();
       if (data.partners && Array.isArray(data.partners)) {

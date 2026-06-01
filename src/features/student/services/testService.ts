@@ -9,11 +9,12 @@ import {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
 export const testService = {
-  createChapterTest: async (request: CreateChapterTestRequest): Promise<CreateChapterTestResponse> => {
+  createChapterTest: async (request: CreateChapterTestRequest, signal?: AbortSignal): Promise<CreateChapterTestResponse> => {
     const response = await authFetch(`${API_BASE_URL}/create-chapter-test`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
+      signal,
     });
 
     if (!response.ok) {

@@ -60,6 +60,10 @@ class VoiceService {
   private lastTypeTime = 0;
   private isTypewriterRunning = false;
 
+  // Connection Quality State
+  private starvationTimes: number[] = [];
+  private onConnectionQualityCallback: ((q: "good" | "poor" | "reconnecting") => void) | null = null;
+
   async startSession(
     studentId: string,
     onEvent: (event: any) => void,
@@ -71,6 +75,7 @@ class VoiceService {
     documentTitle?: string,
     agentId?: string,
     grade?: number,
+    onConnectionQuality?: (q: "good" | "poor" | "reconnecting") => void,
   ) {
     this.currentStudentId = studentId;
     this.currentSessionId = sessionId || null;
@@ -82,6 +87,7 @@ class VoiceService {
     this.wsEndpoint = wsEndpoint;
     this.onEventCallback = onEvent;
     this.onTextRevealCallback = onTextReveal;
+    this.onConnectionQualityCallback = onConnectionQuality || null;
 
     if (this.isSessionActive) {
       this.sendInitMessage();
@@ -90,6 +96,7 @@ class VoiceService {
 
     this.isSessionActive = true;
     this.retryCount = 0;
+    this.starvationTimes = [];
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
 
@@ -207,9 +214,12 @@ class VoiceService {
     this.ws.binaryType = "arraybuffer";
 
     this.ws.onopen = () => {
+      const wasReconnecting = this.retryCount > 0;
       this.retryCount = 0;
+      this.starvationTimes = [];
       this.sendInitMessage();
       this.onEventCallback?.({ type: "connected" });
+      if (wasReconnecting) this.onConnectionQualityCallback?.("good");
     };
 
     this.ws.onmessage = (event) => {
@@ -257,6 +267,7 @@ class VoiceService {
         this.retryCount++;
         const delay = Math.pow(2, this.retryCount - 1) * 1000;
         console.log(`[VoiceService] Reconnecting in ${delay}ms (Attempt ${this.retryCount}/${this.MAX_RETRIES})...`);
+        this.onConnectionQualityCallback?.("reconnecting");
         setTimeout(() => this.connect(connId), delay);
       } else {
         if (this.retryCount >= this.MAX_RETRIES) {
@@ -299,6 +310,11 @@ class VoiceService {
       console.warn(`[VoiceService] Jitter buffer starved (offset: ${(currentTime - this.nextStartTime).toFixed(3)}s). Re-buffering...`);
       this.isBuffering = true;
       this.nextStartTime = currentTime;
+      // Track starvation events in a 10s rolling window; ≥2 = poor connection
+      const now = Date.now();
+      this.starvationTimes = this.starvationTimes.filter(t => now - t < 10_000);
+      this.starvationTimes.push(now);
+      if (this.starvationTimes.length >= 2) this.onConnectionQualityCallback?.("poor");
     }
 
     if (this.isBuffering) {
@@ -418,8 +434,10 @@ class VoiceService {
     
     this.isBuffering = true;
     this.bufferQueue = [];
+    this.starvationTimes = [];
     this.onEventCallback = null;
     this.onTextRevealCallback = null;
+    this.onConnectionQualityCallback = null;
   }
 
   setMuted(muted: boolean) {

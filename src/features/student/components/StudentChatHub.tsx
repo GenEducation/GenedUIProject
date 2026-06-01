@@ -80,13 +80,15 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
   const [onboardingModal, setOnboardingModal] = useState<{ subject: string; grade: number } | null>(null);
 
   useEffect(() => {
-    if (studentProfile) {
+    let cancelled = false;
+    if (studentProfile && !cancelled) {
       fetchSessions();
       fetchAvailableAgents();
       fetchOnboardingStatus();
       fetchStudentStats();
       checkDNAStatus(studentProfile.user_id);
     }
+    return () => { cancelled = true; };
   }, [studentProfile, fetchSessions, fetchAvailableAgents, fetchOnboardingStatus, checkDNAStatus]);
 
   const getGreeting = () => {

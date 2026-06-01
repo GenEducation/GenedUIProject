@@ -23,8 +23,8 @@ export const studentService = {
     }
   },
 
-  fetchAvailableAgents: async (userId: string) => {
-    const response = await authFetch(`${API_BASE_URL}/api/students/${userId}/available-agents`);
+  fetchAvailableAgents: async (userId: string, signal?: AbortSignal) => {
+    const response = await authFetch(`${API_BASE_URL}/api/students/${userId}/available-agents`, { signal });
     return response.json();
   },
 
@@ -122,9 +122,10 @@ export const studentService = {
     return response.json();
   },
 
-  fetchChapterMastery: async (studentId: string, subject: string) => {
+  fetchChapterMastery: async (studentId: string, subject: string, signal?: AbortSignal) => {
     const response = await authFetch(`${API_BASE_URL}/students/${studentId}/chapter-mastery?subject=${encodeURIComponent(subject)}`, {
-      headers: { "accept": "application/json" }
+      headers: { "accept": "application/json" },
+      signal,
     });
     return response.json();
   },

@@ -15,19 +15,18 @@ export function ActivityHeatmap() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    console.log("[ActivityHeatmap] studentProfile:", studentProfile);
-    if (!studentProfile) {
-      console.log("[ActivityHeatmap] No studentProfile, returning early");
-      return;
-    }
+    if (!studentProfile) return;
+    let cancelled = false;
     const loadActivity = async () => {
       setIsLoading(true);
       const data = await fetchActivityData(studentProfile.user_id);
-      console.log("[ActivityHeatmap] Loaded activity data:", data);
-      setActivityData(data);
-      setIsLoading(false);
+      if (!cancelled) {
+        setActivityData(data);
+        setIsLoading(false);
+      }
     };
     loadActivity();
+    return () => { cancelled = true; };
   }, [studentProfile]);
 
   const months = useMemo(() => buildHeatmapMonths(activityData), [activityData]);
