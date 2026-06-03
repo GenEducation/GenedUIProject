@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
@@ -35,39 +35,50 @@ export function AssessmentsPage() {
   const [allChapters, setAllChapters] = useState<any[]>([]);
   const [isLoadingAll, setIsLoadingAll] = useState(false);
   const [isStartingTest, setIsStartingTest] = useState(false);
+  const testNavTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   useEffect(() => {
+    return () => { if (testNavTimerRef.current) clearTimeout(testNavTimerRef.current); };
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
     if (studentProfile?.user_id) {
-      fetchAnalyticsSubjects(studentProfile.user_id);
+      fetchAnalyticsSubjects(studentProfile.user_id, controller.signal);
     }
+    return () => controller.abort();
   }, [studentProfile, fetchAnalyticsSubjects]);
 
   useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
     const fetchAllData = async () => {
       if (!studentProfile?.user_id || analyticsSubjects.length === 0) return;
-      
+
       setIsLoadingAll(true);
       try {
         const results = await Promise.all(
           analyticsSubjects.map(async (subject) => {
             try {
-              const chapters = await studentService.fetchChapterMastery(studentProfile.user_id, subject);
+              const chapters = await studentService.fetchChapterMastery(studentProfile.user_id, subject, controller.signal);
               return chapters.map((c: any) => ({ ...c, subject }));
-            } catch (e) {
-              console.error(`Failed to fetch chapters for ${subject}:`, e);
+            } catch (e: any) {
+              if (e?.name !== "AbortError") console.error(`Failed to fetch chapters for ${subject}:`, e);
               return [];
             }
           })
         );
-        setAllChapters(results.flat());
-      } catch (error) {
-        console.error("Error fetching all chapters:", error);
+        if (!cancelled) setAllChapters(results.flat());
+      } catch (error: any) {
+        if (!cancelled && error?.name !== "AbortError") console.error("Error fetching all chapters:", error);
       } finally {
-        setIsLoadingAll(false);
+        if (!cancelled) setIsLoadingAll(false);
       }
     };
 
     fetchAllData();
+    return () => { cancelled = true; controller.abort(); };
   }, [studentProfile, analyticsSubjects]);
 
   const filteredChapters = allChapters.filter(chapter => 
@@ -87,8 +98,7 @@ export function AssessmentsPage() {
           questions_per_section: 3
         });
         
-        // Give the user a moment to see the animation
-        setTimeout(() => {
+        testNavTimerRef.current = setTimeout(() => {
           router.push("/student/test?from=assessments");
         }, 2000);
       } catch (error) {

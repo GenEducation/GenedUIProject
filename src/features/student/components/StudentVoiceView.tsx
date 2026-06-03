@@ -10,9 +10,10 @@ import { VoiceControls } from "./VoiceControls";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { ResizableSplitPane } from "./ResizableSplitPane";
 import { ChapterPdfViewer } from "./ChapterPdfViewer";
+import { ConnectionQualityBanner } from "./ConnectionQualityBanner";
 
 const STATUS_CAPTION: Record<string, string> = {
-  idle: "Tap to start",
+  idle: "Tap anywhere on the screen to start",
   connecting: "Connecting…",
   active: "Listening…",
   error: "Connection error",
@@ -24,6 +25,7 @@ export function StudentVoiceView() {
     activeChat,
     messages,
     voiceSessionStatus,
+    connectionQuality,
     startVoiceSession,
     stopVoiceSession,
     isMuted,
@@ -96,7 +98,7 @@ export function StudentVoiceView() {
   const caption = isRateLimitHit
     ? (rateLimitMessage || "Daily limit reached. Upgrade to Pro for more.")
     : isMuted && voiceSessionStatus === "active"
-      ? "Muted"
+      ? ""
       : STATUS_CAPTION[voiceSessionStatus] || "—";
 
   const aiName = studentProfile?.ai_name || "Nia";
@@ -112,23 +114,25 @@ export function StudentVoiceView() {
   const voiceContent = (
     <div className="h-full flex flex-col font-sans overflow-hidden" style={bgStyle}>
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-[#042E5C]/8 bg-white/50 backdrop-blur-sm">
+      <header className="flex items-center justify-between px-4 py-4 border-b border-[#042E5C]/8 bg-white/50 backdrop-blur-sm">
         <button
           onClick={handleEnd}
-          className="flex items-center gap-2 text-[13px] font-bold text-[#042E5C]/60 hover:text-[#042E5C] transition-colors"
+          className="flex items-center gap-2 text-[13px] font-bold text-[#042E5C]/60 hover:text-[#042E5C] transition-colors shrink-0"
         >
           <ArrowLeft size={16} />
           Back to subjects
         </button>
-        <div className="text-[13px] font-bold text-[#042E5C]">
+        <div className="text-[13px] font-bold text-[#042E5C] text-right">
           <span className="capitalize">{subjectLabel}</span>
           <span className="text-[#042E5C]/40 font-medium">{gradeLabel}</span>
         </div>
-        <div className="w-[140px]" />
       </header>
 
+      {/* Connection quality alert — slides in below header */}
+      <ConnectionQualityBanner quality={connectionQuality} />
+
       {/* Top — Avatar / orb */}
-      <section className="flex flex-col items-center justify-center pt-10 pb-4">
+      <section className="flex flex-col items-center justify-center pt-6 pb-2">
         <VoiceStage
           caption={caption}
           reactive={reactive}
@@ -229,7 +233,11 @@ export function StudentVoiceView() {
   }
 
   return (
-    <div className="h-screen font-sans overflow-hidden">
+    <div
+      className="h-screen font-sans overflow-hidden"
+      onClick={voiceSessionStatus === "idle" ? startVoiceSession : undefined}
+      style={{ cursor: voiceSessionStatus === "idle" ? "pointer" : "default" }}
+    >
       {voiceContent}
     </div>
   );

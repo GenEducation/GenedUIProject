@@ -195,3 +195,11 @@ function ReportCardPageInner() {
     </div>
   );
 }
+
+export default function ReportCardPage() {
+  return (
+    <Suspense>
+      <ReportCardContent />
+    </Suspense>
+  );
+}

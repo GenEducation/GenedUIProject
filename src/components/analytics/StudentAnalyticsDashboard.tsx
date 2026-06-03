@@ -51,16 +51,20 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
 
   // -- Initial data load -------------------------------------------------------
   useEffect(() => {
-    if (effectiveStudentId) {
+    let cancelled = false;
+    if (effectiveStudentId && !cancelled) {
       fetchAnalyticsData(undefined, effectiveStudentId);
     }
+    return () => { cancelled = true; };
   }, [fetchAnalyticsData, effectiveStudentId]);
 
   // -- Progression tab: lazy-load on first visit, then reload on subject change --
   useEffect(() => {
-    if (activeTab === "progression" && effectiveStudentId) {
+    let cancelled = false;
+    if (activeTab === "progression" && effectiveStudentId && !cancelled) {
       fetchSkillProgressionData(undefined, effectiveStudentId);
     }
+    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, selectedAnalyticsSubject, effectiveStudentId]);
 

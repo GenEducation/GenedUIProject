@@ -32,8 +32,26 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd 
         onMouseDown={onPressStart}
         onMouseUp={onPressEnd}
         onMouseLeave={onPressEnd}
-        onTouchStart={(e) => { e.preventDefault(); onPressStart?.(); }}
-        onTouchEnd={(e) => { e.preventDefault(); onPressEnd?.(); }}
+        onTouchStart={(e) => {
+          // Only hijack the touch for press-and-hold (PTT). For a plain tap
+          // (idle → start), let the normal click fire instead — calling
+          // preventDefault here would suppress the synthetic click on mobile.
+          if (onPressStart) {
+            e.preventDefault();
+            onPressStart();
+          }
+        }}
+        onTouchEnd={(e) => {
+          if (onPressEnd) {
+            e.preventDefault();
+            onPressEnd();
+          } else if (onTap) {
+            // Fire tap-to-start directly so it doesn't rely on the synthetic
+            // click, which some mobile/tablet browsers drop after a touch.
+            e.preventDefault();
+            onTap();
+          }
+        }}
         animate={{ scale: pulseScale }}
         transition={{ duration: pulseDuration, repeat: Infinity, ease: "easeInOut" }}
         style={{ width: 220, height: 220 }}
@@ -86,18 +104,13 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd 
       </motion.div>
 
       {/* Caption */}
-      <div className="mt-7 text-center min-h-[40px] flex flex-col items-center gap-1">
+      <div className={`text-center flex flex-col items-center gap-1 px-4 ${caption ? "mt-5 min-h-[24px]" : "mt-0 min-h-0"}`}>
         <p
-          className="text-[13px] font-bold tracking-[0.18em] uppercase"
+          className="text-[13px] font-bold tracking-[0.12em] uppercase text-center"
           style={{ color: "#5B4DC7", opacity: voiceSessionStatus === "active" ? 0.9 : 0.45 }}
         >
           {caption}
         </p>
-        {isMuted && voiceSessionStatus === "active" && (
-          <p className="text-[11px] text-[#E8635A]/80 font-medium tracking-wide">
-            Hold orb to speak &nbsp;·&nbsp; or hold <kbd className="px-1 py-0.5 rounded bg-[#E8635A]/10 text-[#E8635A] font-mono text-[10px]">Space</kbd>
-          </p>
-        )}
       </div>
     </div>
   );

@@ -19,16 +19,17 @@ export function EnrollmentAdmin() {
   const unreadCount = useNotificationStore((state) => state.unreadCount);
 
   useEffect(() => {
-    fetchStudents();
+    let cancelled = false;
+    if (!cancelled) fetchStudents();
+    return () => { cancelled = true; };
   }, [fetchStudents]);
 
-  // Live Refresh: Whenever a new notification arrives, re-fetch the student list
-  // to ensure the "Pending Requests" and "Student Registry" are up to date.
   useEffect(() => {
-    if (unreadCount > 0) {
-      console.log("🔄 Live Sync: New notification detected, refreshing enrollment data...");
+    let cancelled = false;
+    if (unreadCount > 0 && !cancelled) {
       fetchStudents();
     }
+    return () => { cancelled = true; };
   }, [unreadCount, fetchStudents]);
 
   return (

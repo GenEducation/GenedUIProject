@@ -258,6 +258,7 @@ export interface StudentState {
   streamingMessageId: string | null;
   chatAbortController: AbortController | null;
   voiceSessionStatus: "idle" | "connecting" | "active" | "error";
+  connectionQuality: "good" | "poor" | "reconnecting" | null;
   hasFetchedSessions: boolean;
   hasFetchedAgents: boolean;
   isMuted: boolean;
@@ -309,6 +310,7 @@ export interface StudentState {
   closeChat: () => void;
   setProfileOpen: (open: boolean) => void;
   setAgentPickerOpen: (open: boolean) => void;
+  setConnectionQuality: (q: "good" | "poor" | "reconnecting" | null) => void;
   setRateLimitHit: (hit: boolean) => void;
   setRateLimitMessage: (message: string | null) => void;
   setPartnerModalOpen: (open: boolean) => void;
@@ -398,6 +400,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   streamingMessageId: null,
   chatAbortController: null,
   voiceSessionStatus: "idle",
+  connectionQuality: null,
   hasFetchedSessions: false,
   hasFetchedAgents: false,
   isMuted: false,
@@ -456,6 +459,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   activeActivity: null,
   setProfileOpen: (open) => set({ isProfileOpen: open }),
   setAgentPickerOpen: (open) => set({ isAgentPickerOpen: open }),
+  setConnectionQuality: (q) => set({ connectionQuality: q }),
   setRateLimitHit: (hit) => set({ isRateLimitHit: hit, ...(!hit && { rateLimitMessage: null }) }),
   setRateLimitMessage: (message) => set({ rateLimitMessage: message }),
   setPartnerModalOpen: (open) =>
@@ -1471,6 +1475,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         effectiveChat.chapter_name || effectiveChat.document_title || undefined,
         effectiveChat.agent_id || undefined,
         studentProfile.grade ? Number(studentProfile.grade) : undefined,
+        (q) => set({ connectionQuality: q }),
       );
     } catch (error) {
       console.error("Failed to start voice session:", error);
@@ -1484,7 +1489,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     } catch (error) {
       console.error("Failed to stop voice session:", error);
     }
-    set({ voiceSessionStatus: "idle", isMuted: false, pttHeld: false });
+    set({ voiceSessionStatus: "idle", connectionQuality: null, isMuted: false, pttHeld: false });
   },
 
   toggleMute: () => {

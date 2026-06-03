@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/apps/android/node_modules
 /.pnp
 .pnp.*
 .yarn/*

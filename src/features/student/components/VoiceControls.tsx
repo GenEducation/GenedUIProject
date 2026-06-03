@@ -8,11 +8,13 @@ interface VoiceControlsProps {
 }
 
 export function VoiceControls({ onEnd }: VoiceControlsProps) {
-  const { isMuted, toggleMute, voiceSessionStatus } = useStudentStore();
+  const { isMuted, toggleMute, voiceSessionStatus, beginPttUtterance, endPttUtterance, pttHeld } = useStudentStore();
   const sessionActive = voiceSessionStatus === "active";
+  const showPtt = sessionActive && isMuted;
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-3">
+      {/* Mute toggle — compact circle, left */}
       <button
         onClick={toggleMute}
         disabled={!sessionActive}
@@ -28,6 +30,35 @@ export function VoiceControls({ onEnd }: VoiceControlsProps) {
         {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
       </button>
 
+      {/* Push to Talk — center, dominant, only when muted */}
+      {showPtt && (
+        <button
+          onMouseDown={beginPttUtterance}
+          onMouseUp={endPttUtterance}
+          onMouseLeave={endPttUtterance}
+          onTouchStart={(e) => { e.preventDefault(); beginPttUtterance(); }}
+          onTouchEnd={(e) => { e.preventDefault(); endPttUtterance(); }}
+          className="flex items-center gap-2 px-7 h-12 rounded-full font-bold text-[13px] select-none transition-all"
+          style={{
+            background: pttHeld
+              ? "linear-gradient(135deg, #34C759, #30d158)"
+              : "linear-gradient(135deg, #5B4DC7, #4A90D9)",
+            color: "white",
+            boxShadow: pttHeld
+              ? "0 6px 20px rgba(52,199,89,0.45)"
+              : "0 6px 20px rgba(91,77,199,0.35)",
+            transform: pttHeld ? "scale(0.97)" : "scale(1)",
+          }}
+        >
+          <Mic size={16} />
+          {pttHeld ? "Speaking…" : "Hold to Talk"}
+        </button>
+      )}
+
+      {/* Spacer between PTT and End to prevent accidental taps */}
+      {showPtt && <div className="w-2" />}
+
+      {/* End — destructive, right */}
       <button
         onClick={onEnd}
         className="flex items-center gap-2 px-5 h-12 rounded-full bg-red-500 text-white font-bold text-[13px] hover:bg-red-600 transition-all shadow-lg"
