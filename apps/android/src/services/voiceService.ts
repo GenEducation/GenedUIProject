@@ -1,86 +1,38 @@
 /**
- * VoiceService — real-time bidirectional audio streaming over WebSocket.
+ * VoiceService — real-time bidirectional audio over WebSocket.
  *
- * Ported from the web's voiceService.ts. Handles:
- *  - WebSocket connection to /ws/april-live-graph
- *  - Microphone capture via react-native-live-audio-stream → raw 16kHz PCM
- *  - Incoming audio playback via expo-av (PCM→WAV conversion)
- *  - Jitter buffer, reconnection, mute/unmute, typewriter text sync
+ * Uses react-native-audio-api (Web Audio API port by Software Mansion) for
+ * both directions — a near-verbatim port of the website's voiceService.ts:
+ *
+ *   INPUT:  AudioRecorder → 16kHz mono Float32 → Int16 → ws.send(binary)
+ *   OUTPUT: ws binary → Int16 → Float32 → AudioContext.createBuffer →
+ *           AudioBufferSourceNode.start(scheduledTime)  [gapless jitter buffer]
+ *
+ * This replaces the previous expo-audio / temp-WAV-file approach which was
+ * too slow for realtime PCM streaming.
  */
-import LiveAudioStream from "react-native-live-audio-stream";
-import { Audio } from "expo-av";
+import {
+  AudioContext,
+  AudioRecorder,
+  AudioManager,
+} from "react-native-audio-api";
 import { getToken } from "./storage";
-import { Buffer } from "buffer";
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface VoiceEvent {
   type: string;
   [key: string]: any;
 }
 
-type EventCallback = (event: VoiceEvent) => void;
+type EventCallback      = (event: VoiceEvent) => void;
 type TextRevealCallback = (text: string, role: "user" | "assistant") => void;
-type QualityCallback = (q: "good" | "poor" | "reconnecting") => void;
+type QualityCallback    = (q: "good" | "poor" | "reconnecting") => void;
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function resample(input: Float32Array, fromRate: number, toRate: number): Float32Array {
-  if (fromRate === toRate) return input;
-  const ratio = fromRate / toRate;
-  const newLength = Math.round(input.length / ratio);
-  const result = new Float32Array(newLength);
-  for (let i = 0; i < newLength; i++) {
-    const nextIndex = i * ratio;
-    const index = Math.floor(nextIndex);
-    const interpolation = nextIndex - index;
-    const nextValue = index + 1 < input.length ? input[index + 1] : input[index];
-    result[i] = input[index] + interpolation * (nextValue - input[index]);
-  }
-  return result;
-}
-
-/** Convert Int16 PCM data to a playable WAV ArrayBuffer */
-function pcmToWav(pcmData: Int16Array, sampleRate: number): ArrayBuffer {
-  const numChannels = 1;
-  const bitsPerSample = 16;
-  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-  const blockAlign = numChannels * (bitsPerSample / 8);
-  const dataSize = pcmData.byteLength;
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
-
-  // RIFF header
-  writeString(view, 0, "RIFF");
-  view.setUint32(4, 36 + dataSize, true);
-  writeString(view, 8, "WAVE");
-  // fmt chunk
-  writeString(view, 12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true); // PCM
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, byteRate, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, bitsPerSample, true);
-  // data chunk
-  writeString(view, 36, "data");
-  view.setUint32(40, dataSize, true);
-
-  const output = new Uint8Array(buffer);
-  output.set(new Uint8Array(pcmData.buffer, pcmData.byteOffset, pcmData.byteLength), 44);
-  return buffer;
-}
-
-function writeString(view: DataView, offset: number, str: string) {
-  for (let i = 0; i < str.length; i++) {
-    view.setUint8(offset + i, str.charCodeAt(i));
-  }
-}
-
-// ── VoiceService Class ───────────────────────────────────────────────────────
+// ── VoiceService ──────────────────────────────────────────────────────────────
 
 class VoiceService {
+  // WebSocket
   private ws: WebSocket | null = null;
   private isSessionActive = false;
   private currentStudentId: string | null = null;
@@ -94,30 +46,32 @@ class VoiceService {
   private onEventCallback: EventCallback | null = null;
   private onTextRevealCallback: TextRevealCallback | null = null;
   private onConnectionQualityCallback: QualityCallback | null = null;
+
+  // Microphone
+  private recorder: AudioRecorder | null = null;
   private isMuted = true;
-  private micStarted = false;
 
-  // Connection & Retry
-  private retryCount = 0;
-  private readonly MAX_RETRIES = 5;
-  private currentConnectionId: string | null = null;
-
-  // Jitter Buffer
+  // Playback (Web Audio API — mirrors web jitter buffer exactly)
+  private audioCtx: AudioContext | null = null;
+  private nextStartTime = 0;
   private bufferQueue: ArrayBuffer[] = [];
   private isBuffering = true;
   private readonly TARGET_BUFFER_SIZE = 6;
-  private playbackQueue: ArrayBuffer[] = [];
-  private isPlaying = false;
 
-  // Typewriter Sync
+  // Typewriter sync
   private pendingAssistantText = "";
   private revealedAssistantText = "";
   private typewriterInterval: ReturnType<typeof setInterval> | null = null;
 
-  // Connection Quality
+  // Connection & retry
+  private retryCount = 0;
+  private readonly MAX_RETRIES = 5;
+  private currentConnectionId: string | null = null;
+
+  // Connection quality
   private starvationTimes: number[] = [];
 
-  // ── Public API ─────────────────────────────────────────────────────────────
+  // ── Public API ────────────────────────────────────────────────────────────
 
   async startSession(
     studentId: string,
@@ -142,10 +96,7 @@ class VoiceService {
     this.onTextRevealCallback = onTextReveal;
     this.onConnectionQualityCallback = onConnectionQuality || null;
 
-    if (this.isSessionActive) {
-      this.sendInitMessage();
-      return;
-    }
+    if (this.isSessionActive) { this.sendInitMessage(); return; }
 
     this.isSessionActive = true;
     this.retryCount = 0;
@@ -153,22 +104,51 @@ class VoiceService {
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
 
-    // Configure audio session for playback + recording
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: true,
-    });
+    // Request microphone permission
+    const perm = await AudioManager.requestRecordingPermissions();
+    if (perm !== "granted") {
+      this.isSessionActive = false;
+      this.onEventCallback?.({ type: "error", error: "mic_permission_denied", message: "Microphone permission denied." });
+      return;
+    }
+
+    // Set audio session for recording + playback
+    AudioManager.setAudioSessionOptions({
+      allowsRecording: true,
+      mixWithOthers: false,
+    } as any);
+
+    // Create AudioContext for 24kHz playback (matches backend output)
+    this.audioCtx = new AudioContext({ sampleRate: 24000 });
+    this.nextStartTime = this.audioCtx.currentTime;
+
+    // Start microphone recorder (16kHz → backend input)
+    this.recorder = new AudioRecorder();
+    this.recorder.onAudioReady(
+      { sampleRate: 16000, channelCount: 1, bufferLength: 4096 },
+      ({ buffer }) => {
+        if (!this.isSessionActive || this.ws?.readyState !== WebSocket.OPEN) return;
+
+        const float32 = buffer.getChannelData(0);
+
+        if (this.isMuted) {
+          // Send silence when muted (keeps backend VAD timing)
+          const silence = new Int16Array(float32.length);
+          this.ws!.send(silence.buffer);
+        } else {
+          // Float32 [-1,1] → Int16 [-32767,32767]
+          const i16 = new Int16Array(float32.length);
+          for (let i = 0; i < float32.length; i++) {
+            i16[i] = Math.max(-1, Math.min(1, float32[i])) * 0x7fff;
+          }
+          this.ws!.send(i16.buffer);
+        }
+      },
+    );
+    this.recorder.start();
 
     const connId = Math.random().toString(36).substring(7);
     this.currentConnectionId = connId;
-
-    const micOk = await this.initMicrophone();
-    if (!micOk) {
-      // Mic init failed — abort cleanly, no WebSocket, no retries
-      this.isSessionActive = false;
-      return;
-    }
     this.connect(connId);
     this.startTypewriterLoop();
   }
@@ -185,92 +165,41 @@ class VoiceService {
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
 
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
+    if (this.ws) { this.ws.close(); this.ws = null; }
+
+    // Stop recorder
+    if (this.recorder) {
+      try { this.recorder.stop(); } catch {}
+      this.recorder = null;
     }
 
-    this.stopMicrophone();
-
-    if (this.typewriterInterval) {
-      clearInterval(this.typewriterInterval);
-      this.typewriterInterval = null;
+    // Close AudioContext
+    if (this.audioCtx) {
+      try { this.audioCtx.close(); } catch {}
+      this.audioCtx = null;
     }
+
+    if (this.typewriterInterval) { clearInterval(this.typewriterInterval); this.typewriterInterval = null; }
 
     this.isBuffering = true;
     this.bufferQueue = [];
-    this.playbackQueue = [];
-    this.isPlaying = false;
+    this.nextStartTime = 0;
     this.starvationTimes = [];
     this.onEventCallback = null;
     this.onTextRevealCallback = null;
     this.onConnectionQualityCallback = null;
   }
 
-  setMuted(muted: boolean) {
+  async setMuted(muted: boolean) {
     this.isMuted = muted;
+    // isMuted flag is read inside onAudioReady — no need to stop/start recorder.
+    // When muted, we send silence frames; when unmuted, real PCM.
+    // This avoids all start/stop races on Android MediaRecorder.
   }
 
-  getSessionId(): string | null {
-    return this.currentSessionId;
-  }
+  getSessionId() { return this.currentSessionId; }
 
-  // ── Microphone ─────────────────────────────────────────────────────────────
-
-  /** Returns true on success, false on any failure (caller should abort session). */
-  private async initMicrophone(): Promise<boolean> {
-    if (this.micStarted) return true;
-
-    try {
-      const { granted } = await Audio.requestPermissionsAsync();
-      if (!granted) {
-        this.onEventCallback?.({ type: "error", error: "mic_permission_denied", message: "Microphone permission denied." });
-        return false;
-      }
-
-      LiveAudioStream.init({
-        sampleRate: 16000,
-        channels: 1,
-        bitsPerSample: 16,
-        audioSource: 6, // VOICE_COMMUNICATION — enables echo cancellation on Android
-        bufferSize: 4096,
-      });
-
-      LiveAudioStream.on("data", (base64: string) => {
-        if (!this.isSessionActive || this.ws?.readyState !== WebSocket.OPEN) return;
-
-        // Decode base64 → Int16 PCM
-        const raw = Buffer.from(base64, "base64");
-        const i16 = new Int16Array(raw.buffer, raw.byteOffset, raw.byteLength / 2);
-
-        if (this.isMuted) {
-          // Send silence when muted
-          const silence = new Int16Array(i16.length);
-          this.ws!.send(silence.buffer);
-        } else {
-          this.ws!.send(i16.buffer);
-        }
-      });
-
-      LiveAudioStream.start();
-      this.micStarted = true;
-      return true;
-    } catch (err) {
-      console.error("[VoiceService] Mic init error:", err);
-      this.onEventCallback?.({ type: "error", error: "mic_init_failed", message: "Could not start microphone. Please check permissions and try again." });
-      return false;
-    }
-  }
-
-  private stopMicrophone() {
-    if (!this.micStarted) return;
-    try {
-      LiveAudioStream.stop();
-    } catch {}
-    this.micStarted = false;
-  }
-
-  // ── WebSocket ──────────────────────────────────────────────────────────────
+  // ── WebSocket ─────────────────────────────────────────────────────────────
 
   private async connect(connId: string) {
     if (!this.isSessionActive || !this.currentStudentId || this.currentConnectionId !== connId) return;
@@ -288,6 +217,10 @@ class VoiceService {
       const wasReconnecting = this.retryCount > 0;
       this.retryCount = 0;
       this.starvationTimes = [];
+      // Reset jitter buffer on reconnect
+      this.isBuffering = true;
+      this.bufferQueue = [];
+      if (this.audioCtx) this.nextStartTime = this.audioCtx.currentTime;
       this.sendInitMessage();
       this.onEventCallback?.({ type: "connected" });
       if (wasReconnecting) this.onConnectionQualityCallback?.("good");
@@ -299,19 +232,13 @@ class VoiceService {
           const data = JSON.parse(event.data);
 
           if (data.error === "rate_limit_exceeded") {
-            const callback = this.onEventCallback;
+            const cb = this.onEventCallback;
             this.stopSession();
-            callback?.({
-              type: "error",
-              error: "rate_limit_exceeded",
-              message: "Daily rate limit reached. Upgrade to Pro for more.",
-            });
+            cb?.({ type: "error", error: "rate_limit_exceeded", message: "Daily rate limit reached. Upgrade to Pro for more." });
             return;
           }
 
-          if (data.type === "session_id" && data.session_id) {
-            this.currentSessionId = data.session_id;
-          }
+          if (data.type === "session_id" && data.session_id) this.currentSessionId = data.session_id;
 
           if (data.type === "transcript") {
             if (data.role === "user") {
@@ -322,11 +249,16 @@ class VoiceService {
           }
 
           this.onEventCallback?.(data);
-        } catch (err) {
-          console.error("[VoiceService] JSON parse error:", event.data);
+        } catch { console.warn("[VoiceService] JSON parse error"); }
+
+      } else {
+        // Binary frame — handle as ArrayBuffer or Blob
+        if (event.data instanceof ArrayBuffer) {
+          this.handleIncomingAudio(event.data);
+        } else if (typeof (event.data as any)?.arrayBuffer === "function") {
+          // React Native may deliver Blob on some devices
+          (event.data as Blob).arrayBuffer().then((buf) => this.handleIncomingAudio(buf));
         }
-      } else if (event.data instanceof ArrayBuffer) {
-        this.handleIncomingAudio(event.data);
       }
     };
 
@@ -336,19 +268,15 @@ class VoiceService {
         const delay = Math.pow(2, this.retryCount - 1) * 1000;
         this.onConnectionQualityCallback?.("reconnecting");
         setTimeout(() => this.connect(connId), delay);
+      } else if (this.retryCount >= this.MAX_RETRIES) {
+        this.onEventCallback?.({ type: "error", error: "max_retries", message: "Connection lost. Please try again." });
+        this.stopSession();
       } else {
-        if (this.retryCount >= this.MAX_RETRIES) {
-          this.onEventCallback?.({ type: "error", error: "Connection lost. Please try again." });
-          this.stopSession();
-        } else {
-          this.onEventCallback?.({ type: "disconnected" });
-        }
+        this.onEventCallback?.({ type: "disconnected" });
       }
     };
 
-    this.ws.onerror = (err) => {
-      console.error("[VoiceService] WS error:", err);
-    };
+    this.ws.onerror = () => console.warn("[VoiceService] WS error");
   }
 
   private async sendInitMessage() {
@@ -368,10 +296,23 @@ class VoiceService {
     this.ws.send(JSON.stringify(payload));
   }
 
-  // ── Audio Playback ─────────────────────────────────────────────────────────
+  // ── Audio Playback (mirrors web voiceService.ts lines ~300-345) ───────────
 
   private handleIncomingAudio(buffer: ArrayBuffer) {
-    if (!this.isSessionActive) return;
+    if (!this.isSessionActive || !this.audioCtx) return;
+
+    const currentTime = this.audioCtx.currentTime;
+
+    // Jitter buffer starvation recovery (same as web)
+    if (!this.isBuffering && this.nextStartTime < currentTime - 0.05) {
+      console.warn(`[VoiceService] Jitter buffer starved. Re-buffering...`);
+      this.isBuffering = true;
+      this.nextStartTime = currentTime;
+      const now = Date.now();
+      this.starvationTimes = this.starvationTimes.filter((t) => now - t < 10_000);
+      this.starvationTimes.push(now);
+      if (this.starvationTimes.length >= 2) this.onConnectionQualityCallback?.("poor");
+    }
 
     if (this.isBuffering) {
       this.bufferQueue.push(buffer);
@@ -382,102 +323,54 @@ class VoiceService {
       return;
     }
 
-    this.enqueuePlayback(buffer);
+    this.scheduleAudioFrame(buffer);
   }
 
   private flushBuffer() {
-    while (this.bufferQueue.length > 0) {
-      this.enqueuePlayback(this.bufferQueue.shift()!);
-    }
+    while (this.bufferQueue.length > 0) this.scheduleAudioFrame(this.bufferQueue.shift()!);
   }
 
-  private enqueuePlayback(buffer: ArrayBuffer) {
-    this.playbackQueue.push(buffer);
-    if (!this.isPlaying) {
-      this.playNext();
+  private scheduleAudioFrame(buffer: ArrayBuffer) {
+    if (!this.audioCtx) return;
+
+    // Int16 → Float32  (mirrors web: int16[i] / 0x7FFF)
+    const int16 = new Int16Array(buffer);
+    const float32 = new Float32Array(int16.length);
+    for (let i = 0; i < int16.length; i++) {
+      float32[i] = int16[i] / 0x7fff;
     }
+
+    // Create AudioBuffer at 24kHz (server output rate)
+    const audioBuf = this.audioCtx.createBuffer(1, float32.length, 24000);
+    audioBuf.getChannelData(0).set(float32);
+
+    // Schedule gapless playback (same as web)
+    const src = this.audioCtx.createBufferSource();
+    src.buffer = audioBuf;
+    src.connect(this.audioCtx.destination);
+
+    const startTime = Math.max(this.audioCtx.currentTime, this.nextStartTime);
+    src.start(startTime);
+    this.nextStartTime = startTime + audioBuf.duration;
   }
 
-  private async playNext() {
-    if (this.playbackQueue.length === 0) {
-      this.isPlaying = false;
-      return;
-    }
-
-    this.isPlaying = true;
-
-    // Concatenate several frames for smoother playback (fewer Sound objects)
-    const frames: ArrayBuffer[] = [];
-    const maxFrames = Math.min(this.playbackQueue.length, 10);
-    for (let i = 0; i < maxFrames; i++) {
-      frames.push(this.playbackQueue.shift()!);
-    }
-
-    // Merge into single Int16Array
-    const totalLength = frames.reduce((sum, f) => sum + f.byteLength / 2, 0);
-    const merged = new Int16Array(totalLength);
-    let offset = 0;
-    for (const frame of frames) {
-      const chunk = new Int16Array(frame);
-      merged.set(chunk, offset);
-      offset += chunk.length;
-    }
-
-    // Convert to WAV and play
-    const wavBuffer = pcmToWav(merged, 24000);
-    const base64Wav = arrayBufferToBase64(wavBuffer);
-    const uri = `data:audio/wav;base64,${base64Wav}`;
-
-    try {
-      const { sound } = await Audio.Sound.createAsync(
-        { uri },
-        { shouldPlay: true }
-      );
-
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync();
-          this.playNext();
-        }
-      });
-    } catch (err) {
-      console.error("[VoiceService] Playback error:", err);
-      this.playNext();
-    }
-  }
-
-  // ── Typewriter Sync ────────────────────────────────────────────────────────
+  // ── Typewriter Sync ───────────────────────────────────────────────────────
 
   private startTypewriterLoop() {
     if (this.typewriterInterval) return;
-
     this.typewriterInterval = setInterval(() => {
-      if (!this.isSessionActive) {
-        if (this.typewriterInterval) clearInterval(this.typewriterInterval);
-        this.typewriterInterval = null;
-        return;
-      }
-
+      if (!this.isSessionActive) { clearInterval(this.typewriterInterval!); this.typewriterInterval = null; return; }
       const remaining = this.pendingAssistantText.substring(this.revealedAssistantText.length);
-      if (remaining.length === 0) return;
-
-      // Reveal ~40 chars/sec when audio is playing, burst all if no audio queued
-      const hasAudio = this.isPlaying || this.playbackQueue.length > 0 || this.isBuffering;
-      const charsToReveal = hasAudio ? Math.max(1, Math.ceil(40 * 0.05)) : remaining.length;
-      const nextChars = remaining.substring(0, charsToReveal);
-      this.revealedAssistantText += nextChars;
-      this.onTextRevealCallback?.(nextChars, "assistant");
-    }, 50); // 20 fps
+      if (!remaining.length) return;
+      // Sync text reveal with audio: ~40 chars/s when audio queued, burst otherwise
+      const count = (this.bufferQueue.length > 0 || !this.isBuffering)
+        ? Math.max(1, Math.ceil(40 * 0.05))
+        : remaining.length;
+      const next = remaining.substring(0, count);
+      this.revealedAssistantText += next;
+      this.onTextRevealCallback?.(next, "assistant");
+    }, 50);
   }
-}
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
 }
 
 export const voiceService = new VoiceService();

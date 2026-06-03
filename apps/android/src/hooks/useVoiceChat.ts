@@ -183,20 +183,20 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
   const toggleMute = useCallback(() => {
     setIsMuted((prev) => {
       const next = !prev;
-      voiceService.setMuted(next);
+      void voiceService.setMuted(next);
       if (next) setPttHeld(false);
       return next;
     });
   }, []);
 
   const beginPtt = useCallback(() => {
-    voiceService.setMuted(false);
     setPttHeld(true);
+    voiceService.setMuted(false);
   }, []);
 
   const endPtt = useCallback(() => {
-    voiceService.setMuted(true);
     setPttHeld(false);
+    voiceService.setMuted(true);
   }, []);
 
   // Cleanup on unmount

@@ -19,7 +19,10 @@
       "adaptiveIcon": {
         "backgroundColor": "#042E5C"
       },
-      "permissions": ["RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS"]
+      "permissions": [
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -30,7 +33,8 @@
       "expo-font",
       "expo-asset",
       "expo-secure-store",
-      ["expo-av", { "microphonePermission": "GenEd needs microphone access for voice chat with your AI tutor." }]
+      "expo-audio",
+      "react-native-audio-api"
     ],
     "experiments": {
       "typedRoutes": true
