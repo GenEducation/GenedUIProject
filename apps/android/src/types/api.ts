@@ -21,6 +21,14 @@ export interface UserProfile {
 
 // ── Dashboard / Home ──────────────────────────────────────────────────────────
 
+export interface GeneralOnboarding {
+  learning_preferences?: string[];
+  interests?: string[];
+  strengths?: string[];
+  weaknesses?: string[];
+  completed?: boolean;
+}
+
 export interface DashboardProfile {
   student_id: string;
   name?: string;
@@ -30,6 +38,13 @@ export interface DashboardProfile {
   total_sessions?: number;
   traits?: LearnerTrait[];
   badges?: Badge[];
+  general_onboarding?: GeneralOnboarding;
+}
+
+export interface PartnerItem {
+  id?: string;
+  partner_id?: string;
+  organization: string;
 }
 
 export interface StreakData {

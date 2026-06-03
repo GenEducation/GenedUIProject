@@ -20,6 +20,7 @@ import type {
   SendChatPayload,
   UserProfile,
   AvailableAgentsResponse,
+  PartnerItem,
 } from "../types/api";
 
 const BASE = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
@@ -179,6 +180,27 @@ export const studentService = {
   fetchUserProfile: async (userId: string): Promise<UserProfile> => {
     const res = await authFetch(`${BASE}/auth/profile/${userId}`);
     return res.json();
+  },
+
+  fetchPartners: async (): Promise<PartnerItem[]> => {
+    const res = await authFetch(`${BASE}/partners`);
+    return res.json();
+  },
+
+  sendPartnerRequest: async (partnerId: string): Promise<void> => {
+    await authFetch(`${BASE}/student/partner`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ partner_id: partnerId }),
+    });
+  },
+
+  linkParent: async (contact: string): Promise<void> => {
+    await authFetch(`${BASE}/parent/link`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contact }),
+    });
   },
 
   updateProfile: async (data: {

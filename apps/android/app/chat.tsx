@@ -8,7 +8,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { MessageBubble } from "@/components/chat/MessageBubble";
@@ -17,6 +17,7 @@ import { useChat } from "@/hooks/useChat";
 import { colors, fonts } from "@/theme/tokens";
 
 export default function Chat() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     subject?: string;
@@ -30,7 +31,7 @@ export default function Chat() {
   const sessionId = params.sessionId;
   const agentId   = params.agentId;
 
-  const { messages, sending, error, send, clearError } = useChat({
+  const { messages, sessionId: chatSessionId, sending, error, send, clearError } = useChat({
     subject,
     grade,
     sessionId,
@@ -86,7 +87,16 @@ export default function Chat() {
         </ScrollView>
 
         <View style={{ paddingBottom: insets.bottom + 6 }}>
-          <ChatInput onSend={send} disabled={sending} />
+          <ChatInput
+            onSend={send}
+            disabled={sending}
+            onVoicePress={() => {
+              router.push({
+                pathname: "/voice-chat",
+                params: { subject, grade: String(grade), sessionId: chatSessionId ?? sessionId ?? undefined, agentId },
+              });
+            }}
+          />
         </View>
       </View>
     </KeyboardAvoidingView>

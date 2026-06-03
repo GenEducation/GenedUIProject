@@ -84,7 +84,19 @@ export function SubjectCard({ subject }: Props) {
         >
           <Text style={[styles.btnText, { color: visual.color }]}>Chat</Text>
         </Pressable>
-        <Pressable style={[styles.btn, { backgroundColor: visual.color }]}>
+        <Pressable
+          style={[styles.btn, { backgroundColor: visual.color }]}
+          onPress={() =>
+            router.push({
+              pathname: "/voice-chat",
+              params: {
+                subject: subjectKey,
+                grade: grade ?? 9,
+                ...(agentId ? { agentId } : {}),
+              },
+            })
+          }
+        >
           <Text style={[styles.btnText, { color: "#fff" }]}>Voice</Text>
         </Pressable>
       </View>

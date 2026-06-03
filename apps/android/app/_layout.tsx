@@ -31,7 +31,8 @@ function RootStackNavigator() {
       <Stack.Screen name="sign-in"  />
       <Stack.Screen name="sign-up"  />
       <Stack.Screen name="(tabs)"   />
-      <Stack.Screen name="chat"     options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="chat"       options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="voice-chat" options={{ animation: "slide_from_bottom" }} />
     </Stack>
   );
 }

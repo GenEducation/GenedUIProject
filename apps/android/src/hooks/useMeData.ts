@@ -8,12 +8,14 @@ import { useStudentId } from "./useStudentId";
 import { useRefreshOnFocus } from "./useRefreshOnFocus";
 import { useAuth } from "../store/useAuthStore";
 import { studentService } from "../services/studentService";
-import type { UserProfile, StreakData, VoiceOption } from "../types/api";
+import type { UserProfile, StreakData, VoiceOption, GeneralOnboarding, AvailableAgentsResponse } from "../types/api";
 
 export interface MeData {
   profile: UserProfile | null;
   streak: StreakData | null;
   voices: VoiceOption[];
+  onboarding: GeneralOnboarding | null;
+  enrolledPartners: AvailableAgentsResponse | null;
   loading: boolean;
   error: Error | null;
   refetch: () => void;
@@ -46,26 +48,50 @@ export function useMeData(): MeData {
     []
   );
 
-  const profile = useApi(fetchProfile, [studentId]);
-  const streak  = useApi(fetchStreak,  [studentId]);
-  const voices  = useApi(fetchVoices,  []);
+  const fetchOnboarding = useCallback(
+    () =>
+      studentId
+        ? studentService.fetchDashboardProfile(studentId).then((d) => d?.general_onboarding ?? null)
+        : Promise.resolve(null),
+    [studentId]
+  );
 
-  const { refetch: refetchProfile } = profile;
-  const { refetch: refetchStreak }  = streak;
-  const { refetch: refetchVoices }  = voices;
+  const fetchEnrolled = useCallback(
+    () =>
+      studentId
+        ? studentService.fetchAvailableAgents(studentId)
+        : Promise.resolve<AvailableAgentsResponse>({ partners: [] }),
+    [studentId]
+  );
+
+  const profile         = useApi(fetchProfile,    [studentId]);
+  const streak          = useApi(fetchStreak,     [studentId]);
+  const voices          = useApi(fetchVoices,     []);
+  const onboardingApi   = useApi(fetchOnboarding, [studentId]);
+  const enrolledApi     = useApi(fetchEnrolled,   [studentId]);
+
+  const { refetch: refetchProfile }    = profile;
+  const { refetch: refetchStreak }     = streak;
+  const { refetch: refetchVoices }     = voices;
+  const { refetch: refetchOnboarding } = onboardingApi;
+  const { refetch: refetchEnrolled }   = enrolledApi;
 
   const refetch = useCallback(() => {
     refetchProfile();
     refetchStreak();
     refetchVoices();
-  }, [refetchProfile, refetchStreak, refetchVoices]);
+    refetchOnboarding();
+    refetchEnrolled();
+  }, [refetchProfile, refetchStreak, refetchVoices, refetchOnboarding, refetchEnrolled]);
 
   useRefreshOnFocus(refetch);
 
   return {
-    profile: profile.data,
-    streak:  streak.data,
-    voices:  voices.data ?? [],
+    profile:         profile.data,
+    streak:          streak.data,
+    voices:          voices.data ?? [],
+    onboarding:      onboardingApi.data ?? null,
+    enrolledPartners: enrolledApi.data ?? null,
     loading: profile.loading || streak.loading,
     error:   profile.error || streak.error || null,
     refetch,
