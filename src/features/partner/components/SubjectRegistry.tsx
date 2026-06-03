@@ -5,6 +5,7 @@ import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, Chevro
 import { motion, AnimatePresence } from "framer-motion";
 import { usePartnerStore, SubjectFilters, restorePendingIngestions } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
+import { Skeleton } from "./Skeleton";
 
 interface SubjectRegistryProps {
   onUploadClick: () => void;
@@ -24,6 +25,7 @@ const labelClass = "text-[10px] font-black text-[#1A3D2C]/50 uppercase tracking-
 
 export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const subjects = usePartnerStore((state) => state.subjects);
+  const isSubjectsLoading = usePartnerStore((state) => state.isSubjectsLoading);
   const fetchSubjects = usePartnerStore((state) => state.fetchSubjects);
   const removeSubject = usePartnerStore((state) => state.removeSubject);
   const cancelIngestion = usePartnerStore((state) => state.cancelIngestion);
@@ -241,6 +243,26 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
       <div className="flex-1 flex flex-col bg-[#FBFCFB] rounded-[2rem] md:rounded-[2.5rem] p-3 md:p-4 border border-gray-100/50 shadow-[0_8px_40px_rgba(0,0,0,0.02)] min-h-0 overflow-hidden">
         <div className="flex-1 overflow-y-auto scrollbar-hide pr-1 md:pr-2">
           <div className="space-y-2 md:space-y-3">
+          {isSubjectsLoading && subjects.length === 0 && (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={`skel-${i}`}
+                className="flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl"
+              >
+                <div className="flex-1 flex items-center gap-3 md:gap-4">
+                  <div className="flex flex-col gap-1.5 w-[280px] md:w-[320px]">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                  <Skeleton className="hidden sm:block h-7 w-24 rounded-xl" />
+                </div>
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-8 w-8 rounded-xl" />
+                </div>
+              </div>
+            ))
+          )}
           {subjects.map((subject, i) => {
             const isActive = subject.status === "active";
             const isProcessing = subject.status === "in-progress";

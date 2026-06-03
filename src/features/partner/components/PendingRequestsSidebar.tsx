@@ -3,10 +3,12 @@
 import React from "react";
 import { ChevronRight } from "lucide-react";
 import { usePartnerStore } from "../store/usePartnerStore";
+import { Skeleton } from "./Skeleton";
 
 export function PendingRequestsSidebar() {
   const pendingRequests = usePartnerStore((state) => state.pendingRequests);
   const numberOfPendingRequests = usePartnerStore((state) => state.numberOfPendingRequests);
+  const isLoading = usePartnerStore((state) => state.isLoading);
   const setSelectedStudent = usePartnerStore((state) => state.setSelectedStudent);
 
   return (
@@ -21,6 +23,14 @@ export function PendingRequestsSidebar() {
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-hide space-y-2 pr-1 md:pr-2">
+        {isLoading && pendingRequests.length === 0 && (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={`skel-${i}`} className="flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-3 w-3 rounded-full" />
+            </div>
+          ))
+        )}
         {pendingRequests.map((request) => (
           <button
             key={request.id}

@@ -49,6 +49,7 @@ interface PartnerState {
 
   // --- UI State ---
   isLoading: boolean;
+  isSubjectsLoading: boolean;
   showUploadModal: boolean;
 
   // --- Actions ---
@@ -214,6 +215,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   subjectFilters: {},
   subjectPagination: { total_count: 0, limit: 20, offset: 0 },
   isLoading: false,
+  isSubjectsLoading: false,
   showUploadModal: false,
 
   setSelectedStudent: (student) => set({ selectedStudent: student }),
@@ -348,6 +350,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const partnerId = rawPartnerId?.replace(/['"]+/g, "");
     if (!partnerId) return;
 
+    set({ isSubjectsLoading: true });
     const { subjectFilters, subjectPagination } = get();
 
     const params = new URLSearchParams();
@@ -396,6 +399,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       );
 
       set({
+        isSubjectsLoading: false,
         subjects: [...localInProgress, ...mappedSubjects],
         subjectPagination: {
           total_count: data.total_count ?? 0,
@@ -420,6 +424,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       }
     } catch (error) {
       console.error("fetchSubjects error:", error);
+      set({ isSubjectsLoading: false });
     }
   },
 
