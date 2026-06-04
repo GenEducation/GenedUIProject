@@ -104,19 +104,22 @@ class VoiceService {
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
 
-    // Request microphone permission
+    // Request microphone permission.
+    // Native returns a capitalized PermissionStatus ('Granted' | 'Denied' | 'Undetermined'),
+    // so compare case-insensitively.
     const perm = await AudioManager.requestRecordingPermissions();
-    if (perm !== "granted") {
+    if (String(perm).toLowerCase() !== "granted") {
       this.isSessionActive = false;
       this.onEventCallback?.({ type: "error", error: "mic_permission_denied", message: "Microphone permission denied." });
       return;
     }
 
-    // Set audio session for recording + playback
+    // Set audio session for recording + playback (iOS routing; no-op on Android)
     AudioManager.setAudioSessionOptions({
-      allowsRecording: true,
-      mixWithOthers: false,
-    } as any);
+      iosCategory: "playAndRecord",
+      iosMode: "voiceChat",
+      iosOptions: ["defaultToSpeaker", "allowBluetoothHFP"],
+    });
 
     // Create AudioContext for 24kHz playback (matches backend output)
     this.audioCtx = new AudioContext({ sampleRate: 24000 });
