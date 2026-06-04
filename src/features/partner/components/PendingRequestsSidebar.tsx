@@ -17,9 +17,13 @@ export function PendingRequestsSidebar() {
         <h4 className="text-[9px] md:text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest">
           Pending Requests
         </h4>
-        <span className="px-2 md:px-3 py-0.5 md:py-1 bg-red-500 text-white text-[8px] md:text-[9px] font-black rounded-full">
-          {numberOfPendingRequests}
-        </span>
+        {isLoading && pendingRequests.length === 0 ? (
+          <Skeleton className="h-5 w-8 rounded-full" />
+        ) : (
+          <span className="px-2 md:px-3 py-0.5 md:py-1 bg-red-500 text-white text-[8px] md:text-[9px] font-black rounded-full">
+            {numberOfPendingRequests}
+          </span>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-hide space-y-2 pr-1 md:pr-2">

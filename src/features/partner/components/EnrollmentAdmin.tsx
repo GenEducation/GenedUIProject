@@ -33,9 +33,9 @@ export function EnrollmentAdmin() {
   }, [unreadCount, fetchStudents]);
 
   return (
-    <div className="flex-1 px-4 md:px-12 pt-8 md:pt-12 pb-8 bg-white flex flex-col min-h-0 overflow-hidden">
+    <div className="flex-1 px-4 md:px-12 pt-8 md:pt-12 pb-8 bg-white flex flex-col min-h-0 overflow-y-auto lg:overflow-hidden">
       {/* Main Content Grid */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 min-h-0 overflow-hidden scrollbar-hide">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 min-h-0 overflow-visible lg:overflow-hidden scrollbar-hide">
         {/* Left: Student Registry Table */}
         <StudentRegistryTable />
 
