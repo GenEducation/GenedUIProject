@@ -570,7 +570,7 @@ export function StudentChatMain({
               onStop={stopSkillRecording}
               onPlayAanya={() => {
                 if (activeSkillDirective?.directive_id) {
-                  playDirectiveTts(activeSkillDirective.directive_id, []);
+                  playDirectiveTts(activeSkillDirective.directive_id);
                 }
               }}
               onDismissPrompt={dismissRecordingPrompt}

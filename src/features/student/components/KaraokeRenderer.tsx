@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { useStudentStore } from "../store/useStudentStore";
 
@@ -11,14 +11,9 @@ interface KaraokeRendererProps {
 }
 
 export const KaraokeRenderer = ({ text, directiveId, mode }: KaraokeRendererProps) => {
-  const highlightedWordIndex = useStudentStore(state => state.highlightedWordIndex);
   const activeDirectiveId = useStudentStore(state => state.activeDirectiveId);
   const recordingState = useStudentStore(state => state.recordingState);
   const isActive = activeDirectiveId === directiveId;
-
-  const parts = useMemo(() => text.split(/(\s+)/), [text]);
-
-  let wordCounter = 0;
 
   return (
     <div
@@ -64,29 +59,7 @@ export const KaraokeRenderer = ({ text, directiveId, mode }: KaraokeRendererProp
         className="whitespace-pre-wrap leading-relaxed"
         style={{ fontSize: 16, color: "#1A202C", fontFamily: "'DM Sans', sans-serif", fontWeight: 500, paddingLeft: 4 }}
       >
-        {parts.map((part, i) => {
-          const isWhitespace = /\s/.test(part);
-          const currentIndex = isWhitespace ? -1 : wordCounter++;
-          const isHighlighted = isActive && currentIndex === highlightedWordIndex;
-
-          if (isWhitespace) return <span key={i}>{part}</span>;
-
-          return (
-            <motion.span
-              key={i}
-              animate={{
-                color: isHighlighted ? "#5B4DC7" : "#1A202C",
-                backgroundColor: isHighlighted ? "#5B4DC715" : "transparent",
-                scale: isHighlighted ? 1.08 : 1,
-                fontWeight: isHighlighted ? 700 : 500,
-              }}
-              transition={{ type: "spring", stiffness: 500, damping: 30, duration: 0.1 }}
-              className="inline-block rounded-md px-1 cursor-default"
-            >
-              {part}
-            </motion.span>
-          );
-        })}
+        {text}
       </div>
 
       {/* Active indicator */}

@@ -288,8 +288,7 @@ export interface StudentState {
   recordingPrompt: "silence" | "cap" | null;
   recordingError: string | null;
   activeDirectiveId: string | null;
-   highlightedWordIndex: number;
-  activeSkillDirective: any | null; 
+  activeSkillDirective: any | null;
   oralAnalysisResult: any | null;
   comprehensionResults: Record<string, { is_correct: boolean; answer: string }>;
 
@@ -336,7 +335,7 @@ export interface StudentState {
   clearPdfError: () => void;
 
   // ── English Skill Mode Actions (Wave 1–4) ────────────────────────────────────
-  playDirectiveTts: (directiveId: string, timepoints: any[]) => void;
+  playDirectiveTts: (directiveId: string) => void;
   stopPlayback: () => void;
   startSkillRecording: (directiveId: string, expectedDurationMs?: number) => void;
   stopSkillRecording: () => void;
@@ -350,7 +349,6 @@ export interface StudentState {
     answer: string
   ) => Promise<{ is_correct: boolean; id?: string; directive_id?: string; student_response?: string } | null>;
   clearComprehensionResult: (directiveId: string) => void;
-  setHighlightedWordIndex: (index: number) => void;
 }
 
 // -- Store --------------------------------------------------------------------─
@@ -425,7 +423,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   recordingPrompt: null,
   recordingError: null,
   activeDirectiveId: null,
-  highlightedWordIndex: -1,
   activeSkillDirective: null,
   oralAnalysisResult: null,
   comprehensionResults: {},
@@ -1584,16 +1581,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   // ── English Skill Mode Actions ─────────────────────────────────────────────
 
-  setHighlightedWordIndex: (index) => set({ highlightedWordIndex: index }),
-
   /** Trigger TTS playback for a directive (called from SSE tts_start handler) */
-  playDirectiveTts: (directiveId, timepoints) => {
-    set({ activeDirectiveId: directiveId, playbackState: "loading", highlightedWordIndex: -1 });
+  playDirectiveTts: (directiveId) => {
+    set({ activeDirectiveId: directiveId, playbackState: "loading" });
     // Lazy-import to avoid SSR issues with AudioContext
     import("@/features/student/services/audioPlayerService").then(({ audioPlayerService }) => {
-      audioPlayerService.play(directiveId, timepoints, {
+      audioPlayerService.play(directiveId, {
         onStateChange: (state) => set({ playbackState: state }),
-        onTimeUpdate: (_time, wordIndex) => set({ highlightedWordIndex: wordIndex }),
         onComplete: (dId) => {
           // Report playback_complete to backend (Wave 1 §7.1)
           const { activeChat } = get();
@@ -1601,7 +1595,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           if (sessionId && sessionId !== "new") {
             get().reportConversationAction("playback_complete", dId);
           }
-          set({ activeDirectiveId: null, highlightedWordIndex: -1 });
+          set({ activeDirectiveId: null });
         },
         onError: (_dId, msg) => {
           // Wave 4: graceful degradation — log, never crash
@@ -1617,7 +1611,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     import("@/features/student/services/audioPlayerService").then(({ audioPlayerService }) => {
       audioPlayerService.stop();
     });
-    set({ playbackState: "idle", activeDirectiveId: null, highlightedWordIndex: -1 });
+    set({ playbackState: "idle", activeDirectiveId: null });
   },
 
   /** Prepare for recording — opens the modal but doesn't activate mic yet (Wave 2 §9) */
@@ -1656,9 +1650,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       audioRecorderService.start(activeDirectiveId, sessionId, studentId, {
         onStateChange: (state) => {
           set({ recordingState: state });
-          if (state === "recording") {
-            // Fixed-speed frontend text timing is disabled. Highlight speed is guided solely by backend read-aloud timepoints.
-          }
         },
         onSilenceDetected: () => {
           set({ recordingPrompt: "silence" });
@@ -2254,7 +2245,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           }
         } else if (event.type === "tts_start") {
           // Backend generated TTS — trigger audio playback (Wave 1 §1.4)
-          get().playDirectiveTts(event.directive_id, event.timepoints || []);
+          get().playDirectiveTts(event.directive_id);
         } else if (event.type === "recording_open") {
           // Backend wants student to read aloud (Wave 2 §1.3)
           get().startSkillRecording(event.directive_id, event.expected_duration_ms);
