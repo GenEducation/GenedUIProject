@@ -105,6 +105,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
         set({ selectedAnalyticsSubject: subjects[0] });
       }
     } catch (error: any) {
+      if (error?.name === "AbortError") return;
       console.error("Fetch Analytics Subjects Error:", error?.request_id, error?.message ?? error);
     }
   },

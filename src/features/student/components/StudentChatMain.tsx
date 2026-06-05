@@ -11,6 +11,7 @@ import { KaraokeRenderer } from "./KaraokeRenderer";
 import { StudentChatInput } from "./StudentChatInput";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
+import { useSessionHeartbeat } from "@/hooks/useSessionHeartbeat";
 
 interface StudentChatMainProps {
   activeChat: ChatSession;
@@ -341,6 +342,9 @@ export function StudentChatMain({
   } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Heartbeat: signals to the backend that this session is live.
+  useSessionHeartbeat(studentProfile?.user_id, activeChat?.id);
+
   useEffect(() => {
     // During streaming or AI typing, use "auto" for instant sync
     // Otherwise use "smooth" for a nice transition
@@ -570,7 +574,7 @@ export function StudentChatMain({
               onStop={stopSkillRecording}
               onPlayAanya={() => {
                 if (activeSkillDirective?.directive_id) {
-                  playDirectiveTts(activeSkillDirective.directive_id, []);
+                  playDirectiveTts(activeSkillDirective.directive_id);
                 }
               }}
               onDismissPrompt={dismissRecordingPrompt}

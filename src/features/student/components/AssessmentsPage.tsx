@@ -129,7 +129,6 @@ export function AssessmentsPage() {
                 </div>
                 <h1 className="text-xl font-black text-[#042E5C] tracking-tight">Test</h1>
               </div>
-              <p className="text-[11px] font-medium text-[#042E5C]/40 uppercase tracking-widest">Select a chapter to begin</p>
             </div>
           </div>
         </div>

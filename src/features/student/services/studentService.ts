@@ -28,6 +28,14 @@ export const studentService = {
     return response.json();
   },
 
+  fetchParentReport: async (parentId: string, studentId: string) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/parent/students/${studentId}/report?parent_id=${parentId}`,
+      { headers: { accept: "application/json" } }
+    );
+    return response.json();
+  },
+
   fetchStudentStreak: async (studentId: string) => {
     const response = await authFetch(`${API_BASE_URL}/students/${studentId}/streak`);
     return response.json();
@@ -283,6 +291,43 @@ export const studentService = {
   fetchChapterEvolution: async (studentId: string, subject: string, documentTitle: string) => {
     const response = await authFetch(
       `${API_BASE_URL}/students/${studentId}/evolution-analysis?subject=${encodeURIComponent(subject)}&document_title=${encodeURIComponent(documentTitle)}`,
+      { headers: { accept: "application/json" } }
+    );
+    return response.json();
+  },
+
+  // ── Time Tracking ─────────────────────────────────────────────────────────
+
+  sendHeartbeat: async (studentId: string, sessionId: string): Promise<void> => {
+    try {
+      await authFetch(
+        `${API_BASE_URL}/students/${studentId}/sessions/${sessionId}/heartbeat`,
+        { method: "POST" }
+      );
+    } catch {
+      // Fire-and-forget — heartbeat failure must never affect the chat UX
+    }
+  },
+
+  fetchTimeSummary: async (studentId: string) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/students/${studentId}/time/summary`,
+      { headers: { accept: "application/json" } }
+    );
+    return response.json();
+  },
+
+  fetchTimeByChapter: async (studentId: string, subject?: string) => {
+    const url = subject
+      ? `${API_BASE_URL}/students/${studentId}/time/by-chapter?subject=${encodeURIComponent(subject)}`
+      : `${API_BASE_URL}/students/${studentId}/time/by-chapter`;
+    const response = await authFetch(url, { headers: { accept: "application/json" } });
+    return response.json();
+  },
+
+  fetchTimeByPeriod: async (studentId: string, granularity: "day" | "week" | "month" = "day") => {
+    const response = await authFetch(
+      `${API_BASE_URL}/students/${studentId}/time/by-period?granularity=${granularity}`,
       { headers: { accept: "application/json" } }
     );
     return response.json();
