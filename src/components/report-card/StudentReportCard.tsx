@@ -2592,16 +2592,16 @@ export function StudentReportCard({ parentId, childId, childName }: { parentId?:
             <>
               <h4 className="accent" style={{ margin: "0 0 14px", font: "600 11px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--proficient)" }}>Coverage</h4>
               <div className="chap-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
-                {chapters.map(c => {
+                {chapters.map((c, ci) => {
                   const score = Math.round(c.mastery_score * 100);
                   const band = bandFor(score).toLowerCase();
                   return (
-                    <div className="chap" key={c.document_title}>
+                    <div className="chap" key={`${c.subject}-${c.grade}-${c.document_title}-${ci}`}>
                       <div className="ctop">
                         <div><div className="title">{c.document_title}</div><div className="meta">{c.subject} · {c.study_count} sessions</div></div>
                         <span className={`chip ${band}`}>{bandFor(score)}</span>
                       </div>
-                      <div className="row"><span className="l">Score</span><b>{score}%</b></div>
+                      {/* <div className="row"><span className="l">Score</span><b>{score}%</b></div> */}
                       <div className="progress">
                         <div style={{ display:"flex", justifyContent: "space-between", fontSize: "12px", color: "var(--muted)", marginBottom: "4px" }}>
                           <span>Completion</span><span style={{ color: "var(--ink)", fontWeight: 600 }}>{Math.round(c.completion_percentage)}%</span>
@@ -2722,7 +2722,7 @@ export function StudentReportCard({ parentId, childId, childName }: { parentId?:
             const path = mappedLog.map((s: any, i: number) => `${i === 0 ? "M" : "L"} ${xs2(i, mappedLog.length).toFixed(1)} ${ys2(s.level).toFixed(1)}`).join(" ");
 
             return (
-              <div key={c.document_title} style={{ marginTop: ci > 0 ? '32px' : '0' }}>
+              <div key={`${c.subject}-${c.document_title}-${ci}`} style={{ marginTop: ci > 0 ? '32px' : '0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div><span style={{ fontSize: '24px', fontFamily: 'var(--display)' }}>{c.document_title}</span></div>
                   <div style={{ fontSize: '13px', color: 'var(--muted)' }}>{c.conversation_count} sessions</div>
@@ -3031,7 +3031,7 @@ export function StudentReportCard({ parentId, childId, childName }: { parentId?:
                     : "";
 
                   return (
-                    <div key={ch.document_title} style={{ borderTop: chi === 0 ? "1px solid var(--rule-faint)" : "1px solid var(--border)", paddingTop: "20px", marginTop: "20px" }}>
+                    <div key={`${subj.subject}-${ch.document_title}-${chi}`} style={{ borderTop: chi === 0 ? "1px solid var(--rule-faint)" : "1px solid var(--border)", paddingTop: "20px", marginTop: "20px" }}>
                       {/* Chapter header row */}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px", gap: "16px" }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
