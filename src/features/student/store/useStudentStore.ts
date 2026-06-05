@@ -283,6 +283,7 @@ export interface StudentState {
 
   // ── English Skill Mode State (Wave 1–4) ─────────────────────────────────────
   playbackState: "idle" | "loading" | "buffering" | "playing" | "paused" | "stopped" | "completed" | "error";
+  ttsReadyDirectiveIds: Set<string>;
   recordingState: "idle" | "permission_request" | "ready" | "recording" | "uploading" | "processing" | "completed" | "error";
   /** null = no prompt, 'silence' = auto-stop confirm dialog, 'cap' = duration nudge */
   recordingPrompt: "silence" | "cap" | null;
@@ -336,6 +337,8 @@ export interface StudentState {
 
   // ── English Skill Mode Actions (Wave 1–4) ────────────────────────────────────
   playDirectiveTts: (directiveId: string) => void;
+  pausePlayback: () => void;
+  resumePlayback: () => void;
   stopPlayback: () => void;
   startSkillRecording: (directiveId: string, expectedDurationMs?: number) => void;
   stopSkillRecording: () => void;
@@ -419,6 +422,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   chapterPdfError: null,
   // English skill mode initial state
   playbackState: "idle",
+  ttsReadyDirectiveIds: new Set<string>(),
   recordingState: "idle",
   recordingPrompt: null,
   recordingError: null,
@@ -1606,6 +1610,20 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     });
   },
 
+  /** Pause active TTS playback */
+  pausePlayback: () => {
+    import("@/features/student/services/audioPlayerService").then(({ audioPlayerService }) => {
+      audioPlayerService.pause();
+    });
+  },
+
+  /** Resume paused TTS playback */
+  resumePlayback: () => {
+    import("@/features/student/services/audioPlayerService").then(({ audioPlayerService }) => {
+      audioPlayerService.resume();
+    });
+  },
+
   /** Stop any active TTS playback */
   stopPlayback: () => {
     import("@/features/student/services/audioPlayerService").then(({ audioPlayerService }) => {
@@ -2244,8 +2262,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             }
           }
         } else if (event.type === "tts_start") {
-          // Backend generated TTS — trigger audio playback (Wave 1 §1.4)
-          get().playDirectiveTts(event.directive_id);
+          // Backend finished generating TTS — mark ready so the play button enables.
+          // Student controls when to listen (no auto-play).
+          set((s) => ({ ttsReadyDirectiveIds: new Set(s.ttsReadyDirectiveIds).add(event.directive_id) }));
         } else if (event.type === "recording_open") {
           // Backend wants student to read aloud (Wave 2 §1.3)
           get().startSkillRecording(event.directive_id, event.expected_duration_ms);

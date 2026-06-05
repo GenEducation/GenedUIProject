@@ -54,6 +54,20 @@ class AudioPlayerService {
     this.callbacks.onStateChange?.(state);
   }
 
+  /** Pause current playback by suspending the AudioContext */
+  async pause() {
+    if (this.playbackState !== "playing" || !this.audioCtx) return;
+    await this.audioCtx.suspend();
+    this.setState("paused");
+  }
+
+  /** Resume a paused playback */
+  async resume() {
+    if (this.playbackState !== "paused" || !this.audioCtx) return;
+    await this.audioCtx.resume();
+    this.setState("playing");
+  }
+
   /** Stop any current playback (Wave 1: single active playback rule) */
   stop() {
     try {

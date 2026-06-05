@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, X, AlertTriangle } from "lucide-react";
+import { X, AlertTriangle, Loader2 } from "lucide-react";
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean;
@@ -10,6 +10,8 @@ interface DeleteConfirmationModalProps {
   onConfirm: () => void;
   title: string;
   message: string;
+  isLoading?: boolean;
+  error?: string | null;
 }
 
 export function DeleteConfirmationModal({
@@ -18,17 +20,19 @@ export function DeleteConfirmationModal({
   onConfirm,
   title,
   message,
+  isLoading = false,
+  error = null,
 }: DeleteConfirmationModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop — not closeable while loading */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={isLoading ? undefined : onClose}
             className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[100]"
           />
 
@@ -51,30 +55,48 @@ export function DeleteConfirmationModal({
                 {message}
               </p>
 
+              {/* Error message */}
+              {error && (
+                <p className="w-full mb-4 px-4 py-2 rounded-xl bg-red-50 text-red-600 text-sm font-medium text-center">
+                  {error}
+                </p>
+              )}
+
               {/* Actions */}
               <div className="flex flex-col w-full gap-3">
                 <button
                   onClick={onConfirm}
-                  className="w-full py-4 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-red-500/20"
+                  disabled={isLoading}
+                  className="w-full py-4 bg-red-500 hover:bg-red-600 disabled:opacity-70 disabled:cursor-not-allowed text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-red-500/20 flex items-center justify-center gap-2"
                 >
-                  Delete Permanently
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Deleting…
+                    </>
+                  ) : (
+                    "Delete Permanently"
+                  )}
                 </button>
                 <button
                   onClick={onClose}
-                  className="w-full py-4 bg-[#F8F9F8] hover:bg-[#F2F3F2] text-[#1A3D2C]/60 rounded-2xl font-bold text-sm transition-all"
+                  disabled={isLoading}
+                  className="w-full py-4 bg-[#F8F9F8] hover:bg-[#F2F3F2] disabled:opacity-50 disabled:cursor-not-allowed text-[#1A3D2C]/60 rounded-2xl font-bold text-sm transition-all"
                 >
                   Keep It
                 </button>
               </div>
             </div>
 
-            {/* Close Button */}
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 text-[#1A3D2C]/20 hover:text-[#1A3D2C]/40 transition-colors"
-            >
-              <X size={20} />
-            </button>
+            {/* Close Button — hidden while loading */}
+            {!isLoading && (
+              <button
+                onClick={onClose}
+                className="absolute top-4 right-4 p-2 text-[#1A3D2C]/20 hover:text-[#1A3D2C]/40 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            )}
           </motion.div>
         </>
       )}

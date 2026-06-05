@@ -54,7 +54,7 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd 
         }}
         animate={{ scale: pulseScale }}
         transition={{ duration: pulseDuration, repeat: Infinity, ease: "easeInOut" }}
-        style={{ width: 220, height: 220 }}
+        style={{ width: "clamp(128px, 22vh, 220px)", height: "clamp(128px, 22vh, 220px)" }}
       >
         {/* Outer glow ring */}
         <motion.div
@@ -103,14 +103,33 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd 
         </motion.div>
       </motion.div>
 
-      {/* Caption */}
+      {/* Caption / start button */}
       <div className={`text-center flex flex-col items-center gap-1 px-4 ${caption ? "mt-5 min-h-[24px]" : "mt-0 min-h-0"}`}>
-        <p
-          className="text-[13px] font-bold tracking-[0.12em] uppercase text-center"
-          style={{ color: "#5B4DC7", opacity: voiceSessionStatus === "active" ? 0.9 : 0.45 }}
-        >
-          {caption}
-        </p>
+        {voiceSessionStatus === "idle" && onTap ? (
+          <button
+            onClick={onTap}
+            className="text-[13px] font-bold tracking-[0.12em] uppercase"
+            style={{
+              padding: "10px 28px",
+              borderRadius: 999,
+              background: "#5B4DC7",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer",
+              letterSpacing: "0.12em",
+              boxShadow: "0 4px 20px rgba(91,77,199,0.35)",
+            }}
+          >
+            Tap to start
+          </button>
+        ) : (
+          <p
+            className="text-[13px] font-bold tracking-[0.12em] uppercase text-center"
+            style={{ color: "#5B4DC7", opacity: voiceSessionStatus === "active" ? 0.9 : 0.45 }}
+          >
+            {caption}
+          </p>
+        )}
       </div>
     </div>
   );

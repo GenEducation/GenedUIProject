@@ -13,11 +13,20 @@ export function StudentRegistryTable() {
   const removeStudent = usePartnerStore((state) => state.removeStudent);
 
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
   const handleDelete = async () => {
-    if (deleteId) {
+    if (!deleteId) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
       await removeStudent(deleteId);
       setDeleteId(null);
+    } catch (err: any) {
+      setDeleteError(err?.message || "Failed to delete. Please try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -99,10 +108,12 @@ export function StudentRegistryTable() {
 
       <DeleteConfirmationModal
         isOpen={!!deleteId}
-        onClose={() => setDeleteId(null)}
+        onClose={() => { setDeleteId(null); setDeleteError(null); }}
         onConfirm={handleDelete}
         title="Remove Student?"
         message="This will permanently revoke this student's access to your partner portal agents."
+        isLoading={isDeleting}
+        error={deleteError}
       />
     </div>
   );

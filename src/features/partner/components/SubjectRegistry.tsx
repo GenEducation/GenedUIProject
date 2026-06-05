@@ -35,6 +35,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const subjectPagination = usePartnerStore((state) => state.subjectPagination);
 
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
   // Local draft state for filter inputs — committed on Apply
@@ -71,9 +73,16 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   };
 
   const handleDelete = async () => {
-    if (deleteId) {
+    if (!deleteId) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
       await removeSubject(deleteId);
       setDeleteId(null);
+    } catch (err: any) {
+      setDeleteError(err?.message || "Failed to delete. Please try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -392,10 +401,12 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         isOpen={!!deleteId}
-        onClose={() => setDeleteId(null)}
+        onClose={() => { setDeleteId(null); setDeleteError(null); }}
         onConfirm={handleDelete}
         title="Delete Curriculum?"
         message="This will permanently remove this subject and all associated learning materials from your registry."
+        isLoading={isDeleting}
+        error={deleteError}
       />
     </div>
   );
