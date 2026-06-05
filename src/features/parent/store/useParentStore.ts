@@ -13,7 +13,7 @@ interface ParentState {
   parentProfile: ParentProfile | null;
   linkedStudents: LinkedStudent[];
   selectedStudentId: string | null;
-  activeDashboardView: "analytics" | "chat" | "profile";
+  activeDashboardView: "analytics" | "chat" | "profile" | "report";
   selectedStudentSessions: any[];
   activeSessionId: string | null;
   activeSessionHistory: any[];
@@ -25,7 +25,7 @@ interface ParentState {
   setParentProfile: (profile: ParentProfile) => void;
   fetchLinkedStudents: () => Promise<void>;
   setSelectedStudentId: (id: string | null) => void;
-  setDashboardView: (view: "analytics" | "chat" | "profile") => void;
+  setDashboardView: (view: "analytics" | "chat" | "profile" | "report") => void;
   setActiveSessionId: (id: string | null) => void;
   fetchStudentSessions: (studentId: string) => Promise<void>;
   fetchSessionHistory: (studentId: string, sessionId: string) => Promise<void>;

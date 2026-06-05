@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import { motion } from "framer-motion";
+import { Play, Pause, Loader2 } from "lucide-react";
 import { useStudentStore } from "../store/useStudentStore";
 
 interface KaraokeRendererProps {
@@ -11,14 +12,30 @@ interface KaraokeRendererProps {
 }
 
 export const KaraokeRenderer = ({ text, directiveId, mode }: KaraokeRendererProps) => {
-  const highlightedWordIndex = useStudentStore(state => state.highlightedWordIndex);
   const activeDirectiveId = useStudentStore(state => state.activeDirectiveId);
+  const playbackState = useStudentStore(state => state.playbackState);
+  const ttsReadyDirectiveIds = useStudentStore(state => state.ttsReadyDirectiveIds);
   const recordingState = useStudentStore(state => state.recordingState);
+  const playDirectiveTts = useStudentStore(state => state.playDirectiveTts);
+  const pausePlayback = useStudentStore(state => state.pausePlayback);
+  const resumePlayback = useStudentStore(state => state.resumePlayback);
   const isActive = activeDirectiveId === directiveId;
+  const isReady = ttsReadyDirectiveIds.has(directiveId);
 
-  const parts = useMemo(() => text.split(/(\s+)/), [text]);
+  const isLoading = isActive && (playbackState === "loading" || playbackState === "buffering");
+  const isPlaying = isActive && playbackState === "playing";
+  const isPaused = isActive && playbackState === "paused";
 
-  let wordCounter = 0;
+  const handlePlayPause = () => {
+    if (isLoading) return;
+    if (isPlaying) {
+      pausePlayback();
+    } else if (isPaused) {
+      resumePlayback();
+    } else {
+      playDirectiveTts(directiveId);
+    }
+  };
 
   return (
     <div
@@ -39,54 +56,58 @@ export const KaraokeRenderer = ({ text, directiveId, mode }: KaraokeRendererProp
         }}
       />
 
-      {/* Mode label */}
-      <div
-        style={{
-          display: "inline-flex", alignItems: "center", gap: 5,
-          fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
-          textTransform: "uppercase", color: "#5B4DC7",
-          background: "#5B4DC710", borderRadius: 8, padding: "3px 10px",
-          marginBottom: 12, marginLeft: 4,
-        }}
-      >
-        <span
+      {/* Mode label + play/pause button */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, marginLeft: 4 }}>
+        <div
           style={{
-            width: 6, height: 6, borderRadius: "50%",
-            background: mode === "READ_ALOUD" ? "#00B894" : "#5B4DC7",
-            display: "inline-block",
-            animation: isActive && recordingState !== "completed" ? "pulse 1.5s infinite" : "none",
+            display: "inline-flex", alignItems: "center", gap: 5,
+            fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
+            textTransform: "uppercase", color: "#5B4DC7",
+            background: "#5B4DC710", borderRadius: 8, padding: "3px 10px",
           }}
-        />
-        {mode === "READ_ALOUD" ? "Read Aloud" : "Listen & Repeat"}
+        >
+          <span
+            style={{
+              width: 6, height: 6, borderRadius: "50%",
+              background: mode === "READ_ALOUD" ? "#00B894" : "#5B4DC7",
+              display: "inline-block",
+              animation: isActive && recordingState !== "completed" ? "pulse 1.5s infinite" : "none",
+            }}
+          />
+          {mode === "READ_ALOUD" ? "Read Aloud" : "Listen & Repeat"}
+        </div>
+
+        {mode !== "READ_ALOUD" && isReady && (
+          <button
+            onClick={handlePlayPause}
+            disabled={isLoading}
+            title={isPlaying ? "Pause" : isPaused ? "Resume" : "Play"}
+            style={{
+              width: 36, height: 36, borderRadius: "50%", border: "none",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: isLoading ? "default" : "pointer",
+              background: isPlaying || isPaused ? "#5B4DC7" : "#EDE9FE",
+              color: isPlaying || isPaused ? "#fff" : "#5B4DC7",
+              transition: "all 0.2s",
+              flexShrink: 0,
+              boxShadow: "0 2px 8px rgba(91,77,199,0.18)",
+            }}
+          >
+            {isLoading
+              ? <Loader2 size={16} style={{ animation: "spin 0.7s linear infinite" }} />
+              : isPlaying
+                ? <Pause size={16} />
+                : <Play size={16} style={{ marginLeft: 2 }} />
+            }
+          </button>
+        )}
       </div>
 
       <div
         className="whitespace-pre-wrap leading-relaxed"
         style={{ fontSize: 16, color: "#1A202C", fontFamily: "'DM Sans', sans-serif", fontWeight: 500, paddingLeft: 4 }}
       >
-        {parts.map((part, i) => {
-          const isWhitespace = /\s/.test(part);
-          const currentIndex = isWhitespace ? -1 : wordCounter++;
-          const isHighlighted = isActive && currentIndex === highlightedWordIndex;
-
-          if (isWhitespace) return <span key={i}>{part}</span>;
-
-          return (
-            <motion.span
-              key={i}
-              animate={{
-                color: isHighlighted ? "#5B4DC7" : "#1A202C",
-                backgroundColor: isHighlighted ? "#5B4DC715" : "transparent",
-                scale: isHighlighted ? 1.08 : 1,
-                fontWeight: isHighlighted ? 700 : 500,
-              }}
-              transition={{ type: "spring", stiffness: 500, damping: 30, duration: 0.1 }}
-              className="inline-block rounded-md px-1 cursor-default"
-            >
-              {part}
-            </motion.span>
-          );
-        })}
+        {text}
       </div>
 
       {/* Active indicator */}

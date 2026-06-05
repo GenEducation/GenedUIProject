@@ -173,7 +173,7 @@ export function StudentHome() {
     studentProfile, recentChats, availableAgents,
     fetchSessions, fetchAvailableAgents, fetchStudentStats, fetchOnboardingStatus,
     openNewChat, openExistingChat, openNewSession,
-    studentStats, isAgentsLoading, isSessionsLoading,
+    studentStats, isAgentsLoading, isSessionsLoading, isStatsLoading,
   } = useStudentStore();
   const { checkDNAStatus } = useOnboardingStore();
   const { hasEnded, hasDismissedCelebration, dismissCelebration } = useTutorialStore();
@@ -362,42 +362,74 @@ export function StudentHome() {
 
             {/* ── STAT STRIP ── */}
             <div className="grid grid-cols-3 mb-8" style={{ gap: "clamp(8px, 1.5vw, 16px)", ...fade(0.14) }}>
-              {[
-                { icon: "🔥", val: `${streakCount}`,   unit: "Day Streak", color: C.sun,      bg: C.sun + "14" },
-                { icon: "📚", val: `${totalSessions}`, unit: "Sessions",   color: C.genBlue,  bg: C.genBlue + "12" },
-                { icon: "⭐", val: `${longestStreak}`, unit: "Best Streak",color: C.edGreen,  bg: C.edGreen + "12" },
-              ].map((s, i) => (
-                <div key={i} className="rounded-2xl flex items-center"
-                  style={{
-                    background: C.card, border: `1px solid ${C.border}`,
-                    padding: "clamp(12px, 2vw, 20px) clamp(10px, 1.8vw, 18px)",
-                    gap: "clamp(8px, 1.2vw, 14px)",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                  }}>
-                  <div className="rounded-xl flex items-center justify-center flex-shrink-0"
+              {isStatsLoading ? (
+                [1, 2, 3].map((n) => (
+                  <div key={n} className="rounded-2xl flex items-center animate-pulse"
                     style={{
-                      background: s.bg,
-                      width:  "clamp(34px, 3.5vw, 44px)",
-                      height: "clamp(34px, 3.5vw, 44px)",
-                      fontSize: "clamp(15px, 1.8vw, 20px)",
+                      background: C.card, border: `1px solid ${C.border}`,
+                      padding: "clamp(12px, 2vw, 20px) clamp(10px, 1.8vw, 18px)",
+                      gap: "clamp(8px, 1.2vw, 14px)",
                     }}>
-                    {s.icon}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-extrabold leading-none"
-                      style={{ color: C.text, fontFamily: "'Nunito',sans-serif", fontSize: "clamp(18px, 2.4vw, 26px)" }}>
-                      {s.val}
-                    </div>
-                    <div className="font-semibold mt-1 whitespace-nowrap"
-                      style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>
-                      {s.unit}
+                    <div className="rounded-xl flex-shrink-0"
+                      style={{ background: C.border + "50", width: "clamp(34px, 3.5vw, 44px)", height: "clamp(34px, 3.5vw, 44px)" }} />
+                    <div className="min-w-0 flex flex-col gap-2">
+                      <div className="rounded" style={{ background: C.border + "60", height: 20, width: 40 }} />
+                      <div className="rounded" style={{ background: C.border + "40", height: 10, width: 64 }} />
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                [
+                  { icon: "🔥", val: `${streakCount}`,   unit: "Day Streak", color: C.sun,      bg: C.sun + "14" },
+                  { icon: "📚", val: `${totalSessions}`, unit: "Sessions",   color: C.genBlue,  bg: C.genBlue + "12" },
+                  { icon: "⭐", val: `${longestStreak}`, unit: "Best Streak",color: C.edGreen,  bg: C.edGreen + "12" },
+                ].map((s, i) => (
+                  <div key={i} className="rounded-2xl flex items-center"
+                    style={{
+                      background: C.card, border: `1px solid ${C.border}`,
+                      padding: "clamp(12px, 2vw, 20px) clamp(10px, 1.8vw, 18px)",
+                      gap: "clamp(8px, 1.2vw, 14px)",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                    }}>
+                    <div className="rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: s.bg,
+                        width:  "clamp(34px, 3.5vw, 44px)",
+                        height: "clamp(34px, 3.5vw, 44px)",
+                        fontSize: "clamp(15px, 1.8vw, 20px)",
+                      }}>
+                      {s.icon}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-extrabold leading-none"
+                        style={{ color: C.text, fontFamily: "'Nunito',sans-serif", fontSize: "clamp(18px, 2.4vw, 26px)" }}>
+                        {s.val}
+                      </div>
+                      <div className="font-semibold mt-1 whitespace-nowrap"
+                        style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>
+                        {s.unit}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* ── CONTINUE LEARNING ── */}
+            {isSessionsLoading && !continueSession && (
+              <div className="rounded-[20px] mb-8 animate-pulse"
+                style={{ background: C.card, border: `1px solid ${C.border}`, padding: "clamp(16px, 2vw, 24px)" }}>
+                <div className="flex items-center pl-3" style={{ gap: "clamp(12px, 2vw, 20px)" }}>
+                  <div className="rounded-full flex-shrink-0" style={{ width: 60, height: 60, background: C.border + "50" }} />
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="rounded" style={{ height: 10, width: 100, background: C.border + "40" }} />
+                    <div className="rounded" style={{ height: 16, width: "70%", background: C.border + "60" }} />
+                    <div className="rounded" style={{ height: 10, width: 120, background: C.border + "30" }} />
+                  </div>
+                  <div className="rounded-xl flex-shrink-0" style={{ width: 40, height: 40, background: C.border + "40" }} />
+                </div>
+              </div>
+            )}
             {continueSession && (
               <div
                 className="rounded-[20px] relative overflow-hidden cursor-pointer mb-8"
@@ -465,7 +497,26 @@ export function StudentHome() {
 
               {isAgentsLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "clamp(10px, 1.5vw, 16px)" }}>
-                  {[1,2].map(n => <div key={n} className="rounded-[18px] animate-pulse" style={{ height: 190, background: C.border + "50" }} />)}
+                  {[1, 2].map((n) => (
+                    <div key={n} className="rounded-[18px] animate-pulse"
+                      style={{ background: C.card, border: `1px solid ${C.border}`, padding: "clamp(16px, 2vw, 22px)" }}>
+                      <div className="flex items-center mb-4" style={{ gap: "clamp(10px, 1.2vw, 14px)" }}>
+                        <div className="rounded-[14px]" style={{ background: C.border + "50", width: "clamp(40px, 4vw, 48px)", height: "clamp(40px, 4vw, 48px)" }} />
+                        <div className="flex flex-col gap-2">
+                          <div className="rounded" style={{ background: C.border + "60", height: 14, width: 100 }} />
+                          <div className="rounded" style={{ background: C.border + "40", height: 10, width: 130 }} />
+                        </div>
+                      </div>
+                      <div className="flex items-center mb-4" style={{ gap: 10 }}>
+                        <div className="flex-1 rounded-full" style={{ height: 7, background: C.border + "30" }} />
+                        <div className="rounded" style={{ height: 12, width: 28, background: C.border + "40" }} />
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-1 rounded-[11px]" style={{ height: 34, background: C.border + "30" }} />
+                        <div className="flex-1 rounded-[11px]" style={{ height: 34, background: C.border + "50" }} />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : agents.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "clamp(10px, 1.5vw, 16px)" }}>
@@ -573,8 +624,22 @@ export function StudentHome() {
               </div>
 
               {isSessionsLoading ? (
-                <div className="flex flex-col gap-2.5">
-                  {[1,2,3].map(n => <div key={n} className="rounded-[14px] animate-pulse" style={{ height: 68, background: C.border + "50" }} />)}
+                <div className="flex flex-col" style={{ gap: "clamp(6px, 0.8vw, 10px)" }}>
+                  {[1, 2, 3].map((n) => (
+                    <div key={n} className="rounded-[14px] flex items-center animate-pulse"
+                      style={{
+                        background: C.card, border: `1px solid ${C.border}`,
+                        padding: "clamp(12px, 1.4vw, 16px) clamp(14px, 1.8vw, 20px)",
+                        gap: "clamp(10px, 1.4vw, 16px)",
+                      }}>
+                      <div className="rounded-full flex-shrink-0" style={{ width: 38, height: 38, background: C.border + "50" }} />
+                      <div className="flex-1 flex flex-col gap-2">
+                        <div className="rounded" style={{ height: 13, width: "60%", background: C.border + "60" }} />
+                        <div className="rounded" style={{ height: 10, width: "35%", background: C.border + "35" }} />
+                      </div>
+                      <div className="rounded" style={{ height: 10, width: 50, background: C.border + "30" }} />
+                    </div>
+                  ))}
                 </div>
               ) : displayedSessions.length > 0 ? (
                 <div className="flex flex-col" style={{ gap: "clamp(6px, 0.8vw, 10px)" }}>

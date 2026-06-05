@@ -4,18 +4,29 @@ import React from "react";
 import { Trash2 } from "lucide-react";
 import { usePartnerStore } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
+import { Skeleton } from "./Skeleton";
 
 export function StudentRegistryTable() {
   const students = usePartnerStore((state) => state.students);
+  const isLoading = usePartnerStore((state) => state.isLoading);
   const setSelectedStudent = usePartnerStore((state) => state.setSelectedStudent);
   const removeStudent = usePartnerStore((state) => state.removeStudent);
 
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
   const handleDelete = async () => {
-    if (deleteId) {
+    if (!deleteId) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
       await removeStudent(deleteId);
       setDeleteId(null);
+    } catch (err: any) {
+      setDeleteError(err?.message || "Failed to delete. Please try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -41,6 +52,24 @@ export function StudentRegistryTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#1A3D2C]/5">
+            {isLoading && students.length === 0 && (
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={`skel-${i}`}>
+                  <td className="py-2.5 md:py-3.5">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-8 h-8 rounded-lg" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  </td>
+                  <td className="py-2.5 md:py-3.5">
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </td>
+                  <td className="py-2.5 md:py-3.5 text-right">
+                    <Skeleton className="h-8 w-8 rounded-xl ml-auto" />
+                  </td>
+                </tr>
+              ))
+            )}
             {students.map((student) => (
               <tr
                 key={student.id}
@@ -79,10 +108,12 @@ export function StudentRegistryTable() {
 
       <DeleteConfirmationModal
         isOpen={!!deleteId}
-        onClose={() => setDeleteId(null)}
+        onClose={() => { setDeleteId(null); setDeleteError(null); }}
         onConfirm={handleDelete}
         title="Remove Student?"
         message="This will permanently revoke this student's access to your partner portal agents."
+        isLoading={isDeleting}
+        error={deleteError}
       />
     </div>
   );

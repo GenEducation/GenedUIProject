@@ -196,7 +196,7 @@ export function StudentVoiceView() {
       )}
 
       {/* Middle — Transcript (fills remaining space) */}
-      <section className="flex-1 px-6 overflow-hidden">
+      <section className="flex-1 min-h-[140px] px-6 overflow-hidden">
         <VoiceTranscript messages={messages} agentName={agentName} />
       </section>
 
