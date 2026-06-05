@@ -1936,7 +1936,7 @@ function ChapterEvolutionSection({
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────
 
-export function StudentReportCard() {
+export function StudentReportCard({ parentId, childId, childName }: { parentId?: string; childId?: string; childName?: string } = {}) {
   const { studentProfile } = useStudentStore();
 
   // ── State ──────────────────────────────────────────────
@@ -2033,6 +2033,30 @@ export function StudentReportCard() {
 
   // ── Data Fetching ─────────────────────────────────────
   const studentId = studentProfile?.user_id;
+
+  const fetchParentReportData = useCallback(async () => {
+    if (!parentId || !childId) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await studentService.fetchParentReport(parentId, childId);
+      setDashboardProfile(data.profile ?? null);
+      setTotalSessions(data.total_sessions ?? 0);
+      setSubjects(data.subjects ?? []);
+      setChapters(data.chapters ?? []);
+      setSkillTree(data.skill_tree ?? []);
+      setEnglishSkills(data.english_skills ?? null);
+      setTestSubmissions(data.test_submissions ?? []);
+      setProgressReport(data.progress_report ?? null);
+      setSubjectEvolutions(data.subject_evolutions ?? []);
+      setChapterEvolutions(data.chapter_evolutions ?? []);
+    } catch (err) {
+      console.error("[ReportCard] Failed to load parent report data:", err);
+      setError("Failed to load report data. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [parentId, childId]);
 
   const fetchAll = useCallback(async () => {
     if (!studentId) return;
@@ -2131,11 +2155,16 @@ export function StudentReportCard() {
   }, [studentId]);
 
   useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+    if (parentId && childId) {
+      fetchParentReportData();
+    } else {
+      fetchAll();
+    }
+  }, [fetchAll, fetchParentReportData, parentId, childId]);
 
   // ── Derived values ─────────────────────────────────────
   const displayName =
+    (parentId && childId ? childName : undefined) ||
     studentProfile?.name ||
     studentProfile?.username ||
     dashboardProfile?.name ||
@@ -2211,6 +2240,8 @@ export function StudentReportCard() {
     if (score >= 40) return "Approaching";
     return "Developing";
   };
+
+  const reportPeriod = new Date(progressReport?.updated_at ?? Date.now()).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
   
   const levels = { beginning:1, developing:2, approaching:3, proficient:4, advanced:5 };
   const colors = { beginning: "#94a3b8", developing: "#be123c", approaching: "#b45309", proficient: "#1d4ed8", advanced: "#047857" };
@@ -2485,12 +2516,12 @@ export function StudentReportCard() {
       {/* HEADER */}
       <header className="head">
         <div className="head-top">
-          <span className="brand" style={{ fontWeight: 700 }}><span className="brand-mark">G</span><span>GenEducation</span></span>
+          <span className="brand" style={{ fontWeight: 700 }}><span className="brand-mark">G</span><span>enEducation</span></span>
           <span className="label" style={{ fontSize: '12px', color: 'var(--muted)' }}>Report No. AR-{generatedAt.replace(/\s/g,"").toUpperCase()}</span>
         </div>
-        <div className="head-pre">Learner Report · May 2026</div>
-        <h1 className="head-title">{displayName}, reading — <em>a year in twelve sessions.</em></h1>
-        <p className="head-deck">A hesitant, audio-reliant student becomes an independent, highly analytical thinker. A short narrative of his progress through May 2026, with the numbers that back it up.</p>
+        <div className="head-pre">Learner Report · {reportPeriod}</div>
+        <h1 className="head-title">{progressReport?.headline ? <>{displayName} — <em>{progressReport.headline}</em></> : <>{displayName} — Learning Report</>}</h1>
+        <p className="head-deck">{progressReport?.overall_assessment ?? `A snapshot of ${displayName.split(' ')[0]}'s learning progress so far.`}</p>
         <div className="head-meta">
           <span>Student<b>{displayName}</b></span>
           <span>Grade<b>{displayGrade} · {displayBoard}</b></span>
@@ -2499,21 +2530,33 @@ export function StudentReportCard() {
         </div>
       </header>
 
+      {subjects.length === 0 && !progressReport && totalSessions === 0 ? (
+        <section className="section">
+          <div className="s-body">
+            <p className="lead">No sessions yet. {displayName.split(' ')[0]}&apos;s report will appear here after the first learning session — every score and insight below is generated from real session activity, so there&apos;s nothing to show until then.</p>
+          </div>
+        </section>
+      ) : (
+        <>
+
       {/* 1. SUBJECTS */}
       <section className="section">
         <div className="s-head">
           <span className="n">1</span>
           <div>
             <h2>Two subjects, two stories.</h2>
-            <div className="sub">Where {displayName.split(' ')[0]} stands at the end of May.</div>
+            <div className="sub">Where {displayName.split(' ')[0]} stands as of {reportPeriod}.</div>
           </div>
         </div>
         <div className="s-body">
           <div className="split">
             <div className="narrative">
-              <p className="lead">English is in motion. He logged nineteen sessions across two chapters this month, shifting from passive listening to fluent, independent reading — and arriving at a proficient overall band.</p>
-              <p>Mathematics, meanwhile, was assessed only through the diagnostic. The numbers below reflect baseline measurement, not active learning. Foundational gaps appear in measurement, problem solving, and geometry — natural starting points for next month.</p>
-              <p>Both subjects share the same adaptive grading: every score is computed from interactions during sessions, not from a single end-of-term test.</p>
+              {progressReport?.overall_assessment ? (
+                <p className="lead">{progressReport.overall_assessment}</p>
+              ) : (
+                <p className="lead">{subjects.map(s => `${s.subject} is at ${Math.round(s.overall_score*100)}% (${bandFor(s.overall_score*100)})`).join('. ')}{subjects.length ? '.' : ''}</p>
+              )}
+              <p>Every score is computed from interactions during sessions, using adaptive grading — not from a single end-of-term test.</p>
             </div>
             <aside className="rail">
               <h4 className="accent">At a glance</h4>
@@ -2542,13 +2585,13 @@ export function StudentReportCard() {
           </div>
         </div>
         <div className="s-body">
-          <div className="split">
-            <div className="narrative">
-              <p className="lead">Two English chapters — one finished, one mid-way — and two mathematics units measured by diagnostic. Each chapter sets its own ZPD; completion percentages reflect how far through the calibrated path {displayName.split(' ')[0]} has worked, not raw page count.</p>
-            </div>
-            <aside className="rail">
-              <h4 className="accent">Coverage</h4>
-              <div className="chap-grid" style={{ gridTemplateColumns: "1fr" }}>
+          <div className="narrative" style={{ marginBottom: "22px" }}>
+            <p className="lead" style={{ maxWidth: "72ch" }}>{chapters.length > 0 ? `${chapters.length} chapter${chapters.length !== 1 ? 's' : ''} across ${subjects.length} subject${subjects.length !== 1 ? 's' : ''}. Each chapter sets its own ZPD; completion reflects how far through the calibrated path ${displayName.split(' ')[0]} has worked, not raw page count.` : `Chapter coverage will appear here once ${displayName.split(' ')[0]} starts studying.`}</p>
+          </div>
+          {chapters.length > 0 && (
+            <>
+              <h4 className="accent" style={{ margin: "0 0 14px", font: "600 11px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--proficient)" }}>Coverage</h4>
+              <div className="chap-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
                 {chapters.map(c => {
                   const score = Math.round(c.mastery_score * 100);
                   const band = bandFor(score).toLowerCase();
@@ -2569,8 +2612,8 @@ export function StudentReportCard() {
                   );
                 })}
               </div>
-            </aside>
-          </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -3198,6 +3241,8 @@ export function StudentReportCard() {
         </button>
       </div>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        </>
+      )}
     </div>
   );
 }

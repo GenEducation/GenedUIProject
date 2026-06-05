@@ -18,7 +18,8 @@ import {
   Menu,
   X,
   LayoutGrid,
-  ChevronDown
+  ChevronDown,
+  ScrollText
 } from "lucide-react";
 import { useParentStore } from "../store/useParentStore";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
@@ -27,6 +28,7 @@ import { StudentAnalyticsDashboard } from "@/components/analytics/StudentAnalyti
 import { ParentChatExploration } from "./ParentChatExploration";
 import { ParentProfileView } from "./ParentProfileView";
 import { NotificationBell } from "@/components/NotificationBell";
+import { StudentReportCard } from "@/components/report-card/StudentReportCard";
 
 export function ParentHome() {
   const router = useRouter();
@@ -231,7 +233,7 @@ export function ParentHome() {
                       <span className="text-sm font-bold">Insight Dashboard</span>
                     </button>
 
-                    <button 
+                    <button
                       onClick={() => {
                         setDashboardView("chat");
                         router.push(`/parent/${selectedStudentId}/chat`);
@@ -245,6 +247,21 @@ export function ParentHome() {
                     >
                       <MessageSquare size={18} className={activeDashboardView === "chat" ? "" : "group-hover:scale-110 transition-transform"} />
                       <span className="text-sm font-bold">View Chat explorations</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setDashboardView("report");
+                        if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                      }}
+                      className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 group ${
+                        activeDashboardView === "report"
+                        ? "border-[#1a3a2a] bg-[#1a3a2a] text-white shadow-lg"
+                        : "border-dashed border-[#1a3a2a]/10 text-[#1a3a2a]/40 hover:border-[#1a3a2a]/30 hover:text-[#1a3a2a]/60"
+                      }`}
+                    >
+                      <ScrollText size={18} className={activeDashboardView === "report" ? "" : "group-hover:scale-110 transition-transform"} />
+                      <span className="text-sm font-bold">View Report Card</span>
                     </button>
                   </div>
                 )}
@@ -383,9 +400,17 @@ export function ParentHome() {
             >
               {activeDashboardView === "analytics" ? (
                 <div className="flex-1 overflow-hidden">
-                  <StudentAnalyticsDashboard 
-                    mode="parent" 
-                    studentId={selectedStudentId!} 
+                  <StudentAnalyticsDashboard
+                    mode="parent"
+                    studentId={selectedStudentId!}
+                  />
+                </div>
+              ) : activeDashboardView === "report" ? (
+                <div className="flex-1 overflow-y-auto">
+                  <StudentReportCard
+                    parentId={parentProfile?.user_id}
+                    childId={selectedStudentId!}
+                    childName={selectedStudent?.name || undefined}
                   />
                 </div>
               ) : (
