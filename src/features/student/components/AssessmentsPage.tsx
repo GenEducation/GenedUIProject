@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { studentService } from "@/features/student/services/studentService";
 import { TypingStudentCharacter } from "@/components/shared/loaders/StudentLoader/TypingStudentCharacter";
+import { StudentHomeSidebar } from "./StudentHomeSidebar";
 
 export function AssessmentsPage() {
   const router = useRouter();
@@ -36,6 +37,15 @@ export function AssessmentsPage() {
   const [isLoadingAll, setIsLoadingAll] = useState(false);
   const [isStartingTest, setIsStartingTest] = useState(false);
   const testNavTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  /* responsive sidebar */
+  useEffect(() => {
+    const handle = () => setSidebarOpen(window.innerWidth >= 1024);
+    handle();
+    window.addEventListener("resize", handle);
+    return () => window.removeEventListener("resize", handle);
+  }, []);
 
   useEffect(() => {
     return () => { if (testNavTimerRef.current) clearTimeout(testNavTimerRef.current); };
@@ -109,7 +119,19 @@ export function AssessmentsPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#F4F3EE]/30 overflow-hidden font-sans">
+    <div className="flex h-full overflow-hidden">
+      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed top-4 left-4 z-30 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
+          style={{ width: 38, height: 38, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#042E5C" }}
+          title="Open sidebar"
+        >
+          ☰
+        </button>
+      )}
+    <div className="flex-1 min-w-0 flex flex-col h-full bg-[#F4F3EE]/30 overflow-hidden font-sans">
       {/* Header Section */}
       <header className="px-8 py-6 flex flex-col gap-6 bg-white border-b border-[#042E5C]/5 sticky top-0 z-20">
         <div className="flex items-center justify-between">
@@ -120,8 +142,6 @@ export function AssessmentsPage() {
             >
               <ArrowLeft size={20} />
             </button>
-            <img src="/Logo.svg" alt="GenEd Logo" className="h-7 w-auto" />
-            <div className="h-8 w-px bg-[#042E5C]/10 mx-2" />
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-lg bg-[#042E5C]/5 flex items-center justify-center text-[#042E5C]">
@@ -269,6 +289,7 @@ export function AssessmentsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
     </div>
   );
 }

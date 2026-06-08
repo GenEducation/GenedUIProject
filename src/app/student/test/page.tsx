@@ -11,6 +11,7 @@ import { AssessmentSidebar } from "@/features/student/components/test/Assessment
 import { PaperHeader } from "@/features/student/components/test/PaperHeader";
 import { SectionDivider } from "@/features/student/components/test/SectionDivider";
 import { AuthGuard } from "@/components/auth/AuthGuard";
+import { StudentHomeSidebar } from "@/features/student/components/StudentHomeSidebar";
 import { Question, PaperSection } from "@/features/student/types/test";
 
 interface GroupedSection {
@@ -40,6 +41,26 @@ function TestPageContent() {
 
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0);
   const [showSubmitWarning, setShowSubmitWarning] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  /* responsive sidebar */
+  useEffect(() => {
+    const handle = () => setSidebarOpen(window.innerWidth >= 1024);
+    handle();
+    window.addEventListener("resize", handle);
+    return () => window.removeEventListener("resize", handle);
+  }, []);
+
+  const sidebarToggle = !sidebarOpen && (
+    <button
+      onClick={() => setSidebarOpen(true)}
+      className="fixed top-4 left-4 z-30 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
+      style={{ width: 38, height: 38, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#042E5C" }}
+      title="Open sidebar"
+    >
+      ☰
+    </button>
+  );
 
   const hasPaperSections =
     currentTest?.paper_meta?.sections && currentTest.paper_meta.sections.length > 0;
@@ -134,31 +155,38 @@ function TestPageContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 text-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="space-y-6"
-        >
-          <div className="relative inline-block">
-            <Loader2 size={64} className="text-[#042E5C] animate-spin" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Sparkles size={24} className="text-[#042E5C] animate-pulse" />
+      <div className="h-screen flex overflow-hidden">
+        <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        {sidebarToggle}
+        <div className="flex-1 min-w-0 bg-[#F8FAFC] flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="space-y-6"
+          >
+            <div className="relative inline-block">
+              <Loader2 size={64} className="text-[#042E5C] animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Sparkles size={24} className="text-[#042E5C] animate-pulse" />
+              </div>
             </div>
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-black text-[#042E5C]">Preparing Your Assessment</h2>
-            <p className="text-[#042E5C]/60 max-w-xs mx-auto">
-              Our AI is calibrating questions to your current mastery level...
-            </p>
-          </div>
-        </motion.div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-[#042E5C]">Preparing Your Assessment</h2>
+              <p className="text-[#042E5C]/60 max-w-xs mx-auto">
+                Our AI is calibrating questions to your current mastery level...
+              </p>
+            </div>
+          </motion.div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
+    <div className="h-screen flex overflow-hidden">
+      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {sidebarToggle}
+    <div className="min-h-screen flex-1 min-w-0 bg-[#F8FAFC] flex flex-col overflow-y-auto">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-[#042E5C]/5 px-6 py-4">
         <div className="max-w-[1400px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -364,6 +392,7 @@ function TestPageContent() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
     </div>
   );
 }
