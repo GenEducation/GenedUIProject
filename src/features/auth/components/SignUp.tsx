@@ -524,8 +524,8 @@ export function SignUp({
 
           <div>
             <label className={labelCls}>What grade are you in?</label>
-            <div className="grid grid-cols-4 gap-3">
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((grade) => (
+            <div className="grid grid-cols-3 gap-3">
+              {[3, 4, 5, 6, 7, 8].map((grade) => (
                 <button
                   key={grade}
                   type="button"
