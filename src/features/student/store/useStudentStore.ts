@@ -3,6 +3,7 @@ import { studentService } from "../services/studentService";
 import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import { parseContent, generateHistoricalSVG, normalizeSvg } from "../utils/parseContent";
 import { voiceService } from "../services/voiceService";
+import { parsePointerEvent, type PointerSpec } from "../components/pdf-viewer/pointerGeometry";
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
@@ -280,6 +281,8 @@ export interface StudentState {
   isPdfViewerOpen: boolean;
   isPdfLoading: boolean;
   chapterPdfError: string | null;
+  /** AI-driven virtual teaching pointer target on the textbook PDF. */
+  activePointer: PointerSpec | null;
 
   // ── English Skill Mode State (Wave 1–4) ─────────────────────────────────────
   playbackState: "idle" | "loading" | "buffering" | "playing" | "paused" | "stopped" | "completed" | "error";
@@ -334,6 +337,8 @@ export interface StudentState {
   openChapterPdf: () => Promise<void>;
   closePdfViewer: () => void;
   clearPdfError: () => void;
+  setPointer: (spec: PointerSpec) => void;
+  clearPointer: () => void;
 
   // ── English Skill Mode Actions (Wave 1–4) ────────────────────────────────────
   playDirectiveTts: (directiveId: string) => void;
@@ -420,6 +425,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   isPdfViewerOpen: false,
   isPdfLoading: false,
   chapterPdfError: null,
+  activePointer: null,
   // English skill mode initial state
   playbackState: "idle",
   ttsReadyDirectiveIds: new Set<string>(),
@@ -915,6 +921,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         chapterPdfCachedFor: null,
         isPdfLoading: false,
         chapterPdfError: null,
+        activePointer: null,
       }));
 
       // Trigger history fetch if not cached
@@ -1038,6 +1045,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       chapterPdfCachedFor: null,
       isPdfLoading: false,
       chapterPdfError: null,
+      activePointer: null,
     });
   },
 
@@ -1104,8 +1112,27 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
   },
 
-  closePdfViewer: () => set({ isPdfViewerOpen: false }),
+  closePdfViewer: () => set({ isPdfViewerOpen: false, activePointer: null }),
   clearPdfError: () => set({ chapterPdfError: null }),
+
+  setPointer: (spec) => {
+    set({ activePointer: spec });
+    // Auto-open the textbook so the pointer is actually visible. openChapterPdf
+    // is a no-op/opener when closed (it only toggles shut when already open).
+    const { isPdfViewerOpen, activeChat } = get();
+    if (!isPdfViewerOpen && activeChat?.chapter_name) {
+      get().openChapterPdf();
+    }
+    // Optional time-to-live auto-hide.
+    if (spec.ttlMs && spec.ttlMs > 0) {
+      setTimeout(() => {
+        // Only clear if this exact pointer is still showing.
+        if (get().activePointer === spec) set({ activePointer: null });
+      }, spec.ttlMs);
+    }
+  },
+
+  clearPointer: () => set({ activePointer: null }),
 
   startVoiceSession: async () => {
     const { activeChat, studentProfile, voicePrefs } = get();
@@ -1252,6 +1279,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           });
         } else if (event.type === "turn_complete") {
           set({ isAITyping: false, streamingMessageId: null });
+        } else if (event.type === "pointer") {
+          const spec = parsePointerEvent(event);
+          if (spec) get().setPointer(spec);
+        } else if (event.type === "pointer_clear") {
+          get().clearPointer();
         } else if (event.type === "status") {
           if (event.phase !== "teaching") {
             set({ isAITyping: false });
@@ -1798,6 +1830,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     const { studentProfile, activeChat } = get();
     if (!studentProfile) return;
 
+    // New student turn — drop any stale pointer so it never lingers on a spot
+    // the AI is no longer talking about. The AI re-points in its response if it
+    // is still referring to the textbook.
+    if (get().activePointer) set({ activePointer: null });
+
     // Handle Hub messaging (activeChat is null) or specific new chats
     const isHubMessage = !activeChat;
     const profile = get().studentProfile;
@@ -2271,6 +2308,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         } else if (event.type === "recording_closed") {
           // Backend closed the recording window
           get().stopSkillRecording();
+        } else if (event.type === "pointer") {
+          // AI points at a spot on the textbook PDF (text/figure/region).
+          const spec = parsePointerEvent(event);
+          if (spec) get().setPointer(spec);
+        } else if (event.type === "pointer_clear") {
+          get().clearPointer();
         } else if (event.type === "skill_result") {
           // Oral reading / comprehension result — store for UI display
           set((state) => {

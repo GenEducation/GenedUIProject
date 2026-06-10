@@ -7,6 +7,10 @@ import { usePdfDocument } from "./usePdfDocument";
 import { PdfPage } from "./PdfPage";
 import { PdfToolbar } from "./PdfToolbar";
 import { PdfSidebar } from "./PdfSidebar";
+import { PointerOverlay } from "./PointerOverlay";
+import { usePointerResolver } from "./usePointerResolver";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
+import type { PointerSpec } from "./pointerGeometry";
 
 const ZOOM_STEP = 0.25;
 const MIN_SCALE = 0.5;
@@ -33,6 +37,48 @@ export function PdfViewer({ pdfUrl }: PdfViewerProps) {
   const [isFitWidth, setIsFitWidth] = useState(true);
   const [containerWidth, setContainerWidth] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // ── Virtual teaching pointer ───────────────────────────────────────────────
+  const activePointer = useStudentStore((s) => s.activePointer);
+  const getPageEl = useCallback(
+    (pageNum: number) => pageRefs.current[pageNum - 1] ?? null,
+    []
+  );
+  const { rect: pointerRect, label: pointerLabel, visible: pointerVisible } =
+    usePointerResolver({
+      pdfDoc,
+      pointer: activePointer,
+      scale,
+      getPageEl,
+      // Recompute when the layout shifts (resize / fit-width changes offsets).
+      recomputeKey: Math.round(containerWidth),
+    });
+
+  // Bring a freshly targeted pointer into view (centered), once per new pointer.
+  const lastScrolledPointer = useRef<PointerSpec | null>(null);
+  useEffect(() => {
+    if (!activePointer || !pointerRect) return;
+    if (lastScrolledPointer.current === activePointer) return;
+    const container = scrollRef.current;
+    if (!container) return;
+    lastScrolledPointer.current = activePointer;
+    const targetTop =
+      pointerRect.y - container.clientHeight / 2 + pointerRect.height / 2;
+    container.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
+  }, [activePointer, pointerRect]);
+
+  // Dev-only hook so the pointer can be driven without a backend (manual/e2e).
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    const w = window as unknown as Record<string, unknown>;
+    w.__genedPointer = {
+      set: (spec: PointerSpec) => useStudentStore.getState().setPointer(spec),
+      clear: () => useStudentStore.getState().clearPointer(),
+    };
+    return () => {
+      delete w.__genedPointer;
+    };
+  }, []);
 
   // Measure scroll container width and recompute fit-to-width scale
   useEffect(() => {
@@ -236,7 +282,7 @@ export function PdfViewer({ pdfUrl }: PdfViewerProps) {
           className="flex-1 overflow-y-auto overflow-x-hidden"
           style={{ background: "#F7F8FC", padding: `${PAGE_GAP}px ${HORIZONTAL_PADDING}px` }}
         >
-          <div className="flex flex-col" style={{ gap: PAGE_GAP, alignItems: "center" }}>
+          <div className="flex flex-col" style={{ gap: PAGE_GAP, alignItems: "center", position: "relative" }}>
             {pdfDoc &&
               pageDimensions.map((dim, i) => {
                 const pageNum = i + 1;
@@ -253,6 +299,9 @@ export function PdfViewer({ pdfUrl }: PdfViewerProps) {
                   />
                 );
               })}
+
+            {/* Virtual teaching pointer overlay (shares the page coordinate space) */}
+            <PointerOverlay rect={pointerRect} label={pointerLabel} visible={pointerVisible} />
           </div>
         </div>
       </div>
