@@ -10,6 +10,14 @@ import { useParentStore } from "@/features/parent/store/useParentStore";
 export default function HomePage() {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
+  const [showVideo, setShowVideo] = useState(false);
+
+  useEffect(() => {
+    if (!showVideo) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setShowVideo(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showVideo]);
 
   useEffect(() => {
     const token = localStorage.getItem("gened_auth_token");
@@ -98,7 +106,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="bg-white font-sans">
+    <div className="bg-white font-sans" style={{ scrollBehavior: "smooth" }}>
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
@@ -106,20 +114,10 @@ export default function HomePage() {
             <Image src="/GenEd Logo Colored.svg" alt="GenEd" width={110} height={40} />
           </Link>
           <div className="hidden md:flex gap-8">
-            {[
-              { label: "Home", href: "/" },
-              { label: "For Schools", href: "https://gened.ai/onboarding" },
-              { label: "Offerings", href: "https://gened.ai/offerings" },
-              { label: "Contact", href: "https://gened.ai/contact" },
-            ].map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className="text-sm font-medium text-gray-700 hover:text-[#042E5C] transition-colors"
-              >
-                {item.label}
-              </a>
-            ))}
+            <a href="/" className="text-sm font-medium text-gray-700 hover:text-[#042E5C] transition-colors">Home</a>
+            <a href="#for-schools" className="text-sm font-medium text-gray-700 hover:text-[#042E5C] transition-colors">For Schools</a>
+            <a href="#why-gened" className="text-sm font-medium text-gray-700 hover:text-[#042E5C] transition-colors">Offerings</a>
+            <button type="button" className="text-sm font-medium text-gray-700 hover:text-[#042E5C] transition-colors cursor-default">Contact</button>
           </div>
           <div className="flex gap-3">
             <Link
@@ -169,12 +167,17 @@ export default function HomePage() {
               >
                 Get Started
               </Link>
-              <a
-                href="#device"
-                className="inline-block bg-white/10 hover:bg-white/20 backdrop-blur text-white font-semibold px-10 py-4 rounded-lg transition-all duration-200 text-lg text-center border border-white/20"
+              <button
+                type="button"
+                onClick={() => setShowVideo(true)}
+                className="inline-flex items-center gap-3 bg-white/10 hover:bg-white/20 backdrop-blur text-white font-semibold px-10 py-4 rounded-lg transition-all duration-200 text-lg text-center border border-white/20"
               >
-                Meet the Device ↓
-              </a>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+                  <path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
+                  <path fill="#FFFFFF" d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+                Meet the Device
+              </button>
             </div>
           </div>
         </div>
@@ -292,7 +295,7 @@ export default function HomePage() {
       </section>
 
       {/* ── WHY GENED ── */}
-      <section className="py-24 px-4 bg-gray-50">
+      <section id="why-gened" className="py-24 px-4 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <span className="text-[#059F6D] font-bold text-sm uppercase tracking-widest mb-4 block">
@@ -459,7 +462,7 @@ export default function HomePage() {
       </section>
 
       {/* ── FOR SCHOOLS ── */}
-      <section className="py-24 px-4 bg-white">
+      <section id="for-schools" className="py-24 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <span className="text-[#059F6D] font-bold text-sm uppercase tracking-widest mb-4 block">
@@ -595,6 +598,35 @@ export default function HomePage() {
           &copy; {new Date().getFullYear()} GenEd. All rights reserved.
         </p>
       </footer>
+      {/* ── VIDEO MODAL ── */}
+      {showVideo && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setShowVideo(false)}
+        >
+          <div
+            className="relative w-full max-w-4xl"
+            style={{ aspectRatio: "16/9" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowVideo(false)}
+              className="absolute -top-10 right-0 text-white text-3xl leading-none hover:text-gray-300 transition-colors"
+              aria-label="Close video"
+            >
+              ×
+            </button>
+            <iframe
+              src="https://www.youtube.com/embed/wOncSCH9Bak?autoplay=1&rel=0"
+              className="w-full h-full rounded-lg"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title="Meet the GenEd Device"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
