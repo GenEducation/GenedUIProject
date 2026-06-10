@@ -9,8 +9,15 @@ import { VoiceTranscript } from "./VoiceTranscript";
 import { VoiceControls } from "./VoiceControls";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { ResizableSplitPane } from "./ResizableSplitPane";
-import { ChapterPdfViewer } from "./ChapterPdfViewer";
+import dynamic from "next/dynamic";
 import { ConnectionQualityBanner } from "./ConnectionQualityBanner";
+
+// Lazy-loaded: pulls in pdfjs-dist, which is heavy. Only fetched when a
+// chapter PDF is actually opened.
+const ChapterPdfViewer = dynamic(
+  () => import("./ChapterPdfViewer").then((m) => m.ChapterPdfViewer),
+  { ssr: false }
+);
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 
 const STATUS_CAPTION: Record<string, string> = {

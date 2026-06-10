@@ -36,6 +36,14 @@ export const studentService = {
     return response.json();
   },
 
+  fetchTeacherReport: async (teacherId: string, studentId: string) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/teacher/students/${studentId}/report?teacher_id=${teacherId}`,
+      { headers: { accept: "application/json" } }
+    );
+    return response.json();
+  },
+
   fetchStudentStreak: async (studentId: string) => {
     const response = await authFetch(`${API_BASE_URL}/students/${studentId}/streak`);
     return response.json();

@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
+import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 
 export default function HomePage() {
   const router = useRouter();
@@ -13,7 +14,7 @@ export default function HomePage() {
 
   useEffect(() => {
     const token = localStorage.getItem("gened_auth_token");
-    const role = localStorage.getItem("gened_user_role") as "student" | "parent" | "partner" | null;
+    const role = localStorage.getItem("gened_user_role") as "student" | "parent" | "partner" | "teacher" | null;
     const profileStr = localStorage.getItem("gened_user_profile");
 
     if (token && role && profileStr) {
@@ -48,6 +49,17 @@ export default function HomePage() {
               email: profile.email || "",
               role: profile.role || "parent",
             });
+          } else if (role === "teacher") {
+            useTeacherStore.getState().setTeacherProfile({
+              user_id: profile.user_id || "",
+              username: profile.username || "",
+              email: profile.email || "",
+              role: profile.role || "TEACHER",
+              full_name: profile.full_name || profile.username || "",
+              title: profile.title || "",
+              subjects: profile.subjects || [],
+              partner_id: profile.partner_id,
+            });
           }
           router.replace(redirectPath);
           return;
@@ -73,6 +85,17 @@ export default function HomePage() {
             username: profile.username || "",
             email: profile.email || "",
             role: profile.role || "parent",
+          });
+        } else if (role === "teacher") {
+          useTeacherStore.getState().setTeacherProfile({
+            user_id: profile.user_id || "",
+            username: profile.username || "",
+            email: profile.email || "",
+            role: profile.role || "TEACHER",
+            full_name: profile.full_name || profile.username || "",
+            title: profile.title || "",
+            subjects: profile.subjects || [],
+            partner_id: profile.partner_id,
           });
         }
 

@@ -24,11 +24,21 @@ import {
 import { useParentStore } from "../store/useParentStore";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
-import { StudentAnalyticsDashboard } from "@/components/analytics/StudentAnalyticsDashboard";
+import dynamic from "next/dynamic";
 import { ParentChatExploration } from "./ParentChatExploration";
 import { ParentProfileView } from "./ParentProfileView";
 import { NotificationBell } from "@/components/NotificationBell";
-import { StudentReportCard } from "@/components/report-card/StudentReportCard";
+
+// Lazy-loaded: both are large and only shown on specific tabs.
+// StudentReportCard is ~160KB; StudentAnalyticsDashboard pulls in recharts.
+const StudentAnalyticsDashboard = dynamic(
+  () => import("@/components/analytics/StudentAnalyticsDashboard").then((m) => m.StudentAnalyticsDashboard),
+  { ssr: false }
+);
+const StudentReportCard = dynamic(
+  () => import("@/components/report-card/StudentReportCard").then((m) => m.StudentReportCard),
+  { ssr: false }
+);
 
 export function ParentHome() {
   const router = useRouter();

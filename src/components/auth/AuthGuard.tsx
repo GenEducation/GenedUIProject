@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
+import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 
-type Role = "student" | "parent" | "partner" | "admin";
+type Role = "student" | "parent" | "partner" | "admin" | "teacher";
 
 interface AuthGuardProps {
   requiredRole: Role;
@@ -72,6 +73,20 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
             username: profile.username || "",
             email: profile.email || "",
             role: profile.role || "parent",
+          });
+        }
+      } else if (role === "teacher") {
+        const currentProfile = useTeacherStore.getState().teacherProfile;
+        if (!currentProfile || currentProfile.user_id !== profile.user_id) {
+          useTeacherStore.getState().setTeacherProfile({
+            user_id: profile.user_id || "",
+            username: profile.username || "",
+            email: profile.email || "",
+            role: profile.role || "TEACHER",
+            full_name: profile.full_name || profile.username || "",
+            title: profile.title || "",
+            subjects: profile.subjects || [],
+            partner_id: profile.partner_id,
           });
         }
       }

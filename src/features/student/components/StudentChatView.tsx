@@ -8,7 +8,14 @@ import { StudentChatMain } from "./StudentChatMain";
 import { StudentChatHub } from "./StudentChatHub";
 import { AgentPickerModal } from "./AgentPickerModal";
 import { ResizableSplitPane } from "./ResizableSplitPane";
-import { ChapterPdfViewer } from "./ChapterPdfViewer";
+import dynamic from "next/dynamic";
+
+// Lazy-loaded: pulls in pdfjs-dist, which is heavy. Keep it out of the
+// initial chat-view bundle and only fetch it when a chapter PDF is opened.
+const ChapterPdfViewer = dynamic(
+  () => import("./ChapterPdfViewer").then((m) => m.ChapterPdfViewer),
+  { ssr: false }
+);
 
 /**
  * StudentChatView acts as a container for the modular chat layout.

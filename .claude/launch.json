@@ -25,6 +25,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "-s", "C:/tmp/gened-preview", "-l", "4400", "--no-clipboard"],
       "port": 4400
+    },
+    {
+      "name": "teacher-portal-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-s", "C:/Users/Hitesh/AppData/Local/Temp/gened-teacher-portal", "-l", "4410", "--no-clipboard"],
+      "port": 4410
     }
   ]
 }

@@ -6,7 +6,13 @@ import { StudentChatView } from "./StudentChatView";
 import { StudentHome } from "./StudentHome";
 import { StudentProfile } from "./StudentProfile";
 import { AssessmentsPage } from "@/features/student/components/AssessmentsPage";
-import { StudentAnalyticsDashboard } from "@/components/analytics/StudentAnalyticsDashboard";
+import dynamic from "next/dynamic";
+
+// Lazy-loaded: pulls in recharts; only rendered on the analytics tab.
+const StudentAnalyticsDashboard = dynamic(
+  () => import("@/components/analytics/StudentAnalyticsDashboard").then((m) => m.StudentAnalyticsDashboard),
+  { ssr: false }
+);
 
 /**
  * StudentPortal renders the correct sub-view based on the current URL path.

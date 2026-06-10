@@ -1,17 +1,29 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  BarChart2, ArrowLeft, CheckCircle2, 
+import {
+  BarChart2, ArrowLeft, CheckCircle2,
   Target, GraduationCap, ChevronDown, LayoutGrid, Info
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { MetricCard } from "./MetricCard";
-import { SkillMasteryView } from "./SkillMasteryView";
 import { ChapterMasteryView } from "./ChapterMasteryView";
-import { SkillProgression } from "./SkillProgression";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
+
+// Lazy-loaded: these are the recharts-backed views. Deferring them keeps
+// recharts out of the dashboard's initial bundle.
+const SkillMasteryView = dynamic(
+  () => import("./SkillMasteryView").then((m) => m.SkillMasteryView),
+  { ssr: false }
+);
+const SkillProgression = dynamic(
+  () => import("./SkillProgression").then((m) => m.SkillProgression),
+  { ssr: false }
+);
 
 type TabType = "chapter" | "skill" | "progression";
 

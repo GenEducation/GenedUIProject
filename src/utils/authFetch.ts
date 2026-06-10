@@ -33,9 +33,11 @@ export function getAuthToken(): string {
   return localStorage.getItem("gened_auth_token") ?? "";
 }
 
+export type AuthFetchOptions = RequestInit;
+
 export async function authFetch(
   input: RequestInfo | URL,
-  init?: RequestInit,
+  init?: AuthFetchOptions,
 ): Promise<Response> {
   const token = getAuthToken();
 
@@ -55,6 +57,11 @@ export async function authFetch(
     } catch (e) {
       console.error("Error parsing user profile for x-user-id header", e);
     }
+  }
+
+  const role = typeof window !== "undefined" ? localStorage.getItem("gened_user_role") : null;
+  if (role) {
+    headers.set("x-user-role", role.toUpperCase());
   }
 
   if (!headers.has("Content-Type") && init?.body && !(init.body instanceof FormData)) {
@@ -89,21 +96,12 @@ export async function authFetch(
       });
     }
 
-    if (response.status === 403) {
-      if (typeof window !== "undefined") {
-        window.location.href = "/?error=unauthorized";
-        return new Promise<Response>(() => {});
-      }
-      throw new ApiRequestError({
-        status: 403,
-        error_code: "AUTH_1203",
-        message: "You don't have permission to access this resource.",
-        request_id: requestId,
-        retryable: false,
-        details: {},
-      });
-    }
-
+    // 403 is a per-resource authorization outcome ("valid session, but you
+    // can't access THIS"), not a session failure. It falls through to the
+    // generic handler below and is thrown as ApiRequestError for the caller to
+    // handle — never a global redirect (that bounces an authenticated user
+    // back into the failing page and loops). Only 401 (above) is treated as
+    // session expiry.
     let body: any = {};
     try {
       body = await response.json();
