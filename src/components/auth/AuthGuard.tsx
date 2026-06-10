@@ -6,7 +6,7 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 
-type Role = "student" | "parent" | "partner";
+type Role = "student" | "parent" | "partner" | "admin";
 
 interface AuthGuardProps {
   requiredRole: Role;

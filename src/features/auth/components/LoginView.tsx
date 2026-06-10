@@ -21,8 +21,6 @@ const initialSignUpData: SignUpFields = {
   role: "student",
   grade: "",
   phone: "",
-  organization: "",
-  website: "",
   otp_code: "",
   parent_email: "",
 };
@@ -130,8 +128,6 @@ export function LoginView() {
         } else if (!/^\d{10}$/.test(signupData.phone.trim())) {
           errors.phone = "Phone must be a 10-digit number";
         }
-      } else if (signupData.role === "partner") {
-        if (!signupData.organization?.trim()) errors.organization = "Organization is compulsory";
       }
     }
 
@@ -162,7 +158,8 @@ export function LoginView() {
       const role =
         normalizedRole === "student" ||
         normalizedRole === "partner" ||
-        normalizedRole === "parent"
+        normalizedRole === "parent" ||
+        normalizedRole === "admin"
           ? normalizedRole
           : ("student" as const);
       
@@ -239,7 +236,8 @@ export function LoginView() {
       const role =
         normalizedRole === "student" ||
         normalizedRole === "partner" ||
-        normalizedRole === "parent"
+        normalizedRole === "parent" ||
+        normalizedRole === "admin"
           ? normalizedRole
           : ("student" as const);
       
@@ -397,7 +395,8 @@ export function LoginView() {
                         const role =
                           normalizedRole === "student" ||
                           normalizedRole === "partner" ||
-                          normalizedRole === "parent"
+                          normalizedRole === "parent" ||
+                          normalizedRole === "admin"
                             ? normalizedRole
                             : ("student" as const);
                         
