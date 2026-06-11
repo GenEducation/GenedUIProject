@@ -6,6 +6,7 @@ import {
   Answer,
   CreateChapterTestRequest,
   Question,
+  StudentTestSummary,
 } from "../types/test";
 
 function buildAnswerString(
@@ -37,8 +38,10 @@ interface TestState {
   justifications: Record<string, string>;
   matchSelections: Record<string, Record<number, string>>;
   testResult: SubmitTestResponse | null;
+  studentTests: StudentTestSummary[];
   isLoading: boolean;
   isSubmitting: boolean;
+  isLoadingTests: boolean;
   timerSeconds: number;
 
   startTest: (request: CreateChapterTestRequest) => Promise<void>;
@@ -46,6 +49,9 @@ interface TestState {
   updateJustification: (questionId: string, value: string) => void;
   updateMatchSelection: (questionId: string, selections: Record<number, string>) => void;
   submitTest: () => Promise<void>;
+  loadTest: (testId: string) => Promise<void>;
+  loadSubmission: (submissionId: string) => Promise<void>;
+  loadStudentTests: (studentId: string) => Promise<void>;
   resetTest: () => void;
 }
 
@@ -55,8 +61,10 @@ export const useTestStore = create<TestState>((set, get) => ({
   justifications: {},
   matchSelections: {},
   testResult: null,
+  studentTests: [],
   isLoading: false,
   isSubmitting: false,
+  isLoadingTests: false,
   timerSeconds: 0,
 
   startTest: async (request) => {
@@ -117,6 +125,43 @@ export const useTestStore = create<TestState>((set, get) => ({
       console.error("Failed to submit test:", error);
     } finally {
       set({ isSubmitting: false });
+    }
+  },
+
+  loadTest: async (testId) => {
+    set({ isLoading: true, testResult: null, answers: {}, justifications: {}, matchSelections: {} });
+    try {
+      const test = await testService.getTest(testId);
+      const timerSeconds = (test.paper_meta?.suggested_time_minutes ?? 30) * 60;
+      set({ currentTest: test, timerSeconds });
+    } catch (error) {
+      console.error("Failed to load test:", error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  loadSubmission: async (submissionId) => {
+    set({ isSubmitting: true });
+    try {
+      const result = await testService.getSubmission(submissionId);
+      set({ testResult: result });
+    } catch (error) {
+      console.error("Failed to load submission:", error);
+    } finally {
+      set({ isSubmitting: false });
+    }
+  },
+
+  loadStudentTests: async (studentId) => {
+    set({ isLoadingTests: true });
+    try {
+      const tests = await testService.listStudentTests(studentId);
+      set({ studentTests: tests });
+    } catch (error) {
+      console.error("Failed to load student tests:", error);
+    } finally {
+      set({ isLoadingTests: false });
     }
   },
 

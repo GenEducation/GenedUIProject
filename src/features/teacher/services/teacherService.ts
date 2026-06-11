@@ -159,9 +159,10 @@ export const teacherService = {
         method: "PATCH",
         headers: { ...jsonHeaders, "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-        // Approval can be legitimately blocked (TCHR_1104). authFetch throws
-        // every 403 as an ApiRequestError, which the store catches to surface
-        // the admission message — no global redirect.
+        // Approval can be legitimately blocked (TCHR_1104) — an expected 403,
+        // not a sign-out. Opt out of authFetch's default 403 → clear-session +
+        // redirect so the store catches the ApiRequestError and shows a toast.
+        allow403: true,
       },
     );
     return response.json();

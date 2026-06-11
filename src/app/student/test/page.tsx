@@ -89,11 +89,16 @@ function TestPageContent() {
   const isFirstSection = currentSectionIdx === 0;
   const isLastSection = currentSectionIdx === groupedSections.length - 1;
 
+  const backRoute =
+    from === "assessments" ? "/student/assessments" :
+    from === "schedule" ? "/student/schedule" :
+    "/student/analytics";
+
   useEffect(() => {
     if (!currentTest && !isLoading && !testResult) {
-      router.push(from === "assessments" ? "/student/assessments" : "/student/analytics");
+      router.push(backRoute);
     }
-  }, [currentTest, isLoading, testResult, router, from]);
+  }, [currentTest, isLoading, testResult, router, backRoute]);
 
   const handleNext = () => {
     if (!isLastSection) {
@@ -131,7 +136,7 @@ function TestPageContent() {
 
   const handleClose = () => {
     resetTest();
-    router.push(from === "assessments" ? "/student/assessments" : "/student/analytics");
+    router.push(backRoute);
   };
 
   const handleTimerExpired = useCallback(() => {

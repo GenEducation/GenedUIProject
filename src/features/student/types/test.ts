@@ -111,3 +111,11 @@ export interface SubmitTestResponse {
   section_results: Record<string, SectionResult>;
   graded_questions: GradedQuestion[];
 }
+
+export interface StudentTestSummary {
+  test_id: string;
+  document_title: string;
+  subject: string;
+  grade: number;
+  created_at: string;
+}

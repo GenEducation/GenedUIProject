@@ -33,7 +33,16 @@ export function getAuthToken(): string {
   return localStorage.getItem("gened_auth_token") ?? "";
 }
 
-export type AuthFetchOptions = RequestInit;
+export interface AuthFetchOptions extends RequestInit {
+  /**
+   * When true, a 403 is thrown as an ApiRequestError for the caller to handle
+   * instead of signing the user out. Use only where a 403 is an expected,
+   * recoverable business outcome (e.g. teacher approval blocked by school
+   * admission — TCHR_1104). By default, a 403 clears the session and redirects
+   * to the home page (`/`).
+   */
+  allow403?: boolean;
+}
 
 export async function authFetch(
   input: RequestInfo | URL,
@@ -96,12 +105,34 @@ export async function authFetch(
       });
     }
 
-    // 403 is a per-resource authorization outcome ("valid session, but you
-    // can't access THIS"), not a session failure. It falls through to the
-    // generic handler below and is thrown as ApiRequestError for the caller to
-    // handle — never a global redirect (that bounces an authenticated user
-    // back into the failing page and loops). Only 401 (above) is treated as
-    // session expiry.
+    // A 403 signs the user out (clear the session and send them to the home
+    // page) unless the caller opts out via `allow403`. Clearing the token is
+    // what makes this loop-safe: with no token, `app/page.tsx` no longer
+    // auto-bounces back to `/${role}`, so the failing page can't re-fetch and
+    // re-trigger the redirect. Callers that expect a recoverable 403 (e.g. the
+    // teacher approve flow / TCHR_1104) pass `allow403` to get the thrown
+    // ApiRequestError below instead.
+    if (response.status === 403 && !init?.allow403) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("gened_auth_token");
+        localStorage.removeItem("gened_user_profile");
+        localStorage.removeItem("gened_user_role");
+        localStorage.removeItem("gened_partner_id");
+        window.location.href = "/";
+        // Hang the promise so no catch block runs while the page unloads
+        return new Promise<Response>(() => {});
+      }
+      // SSR-only path
+      throw new ApiRequestError({
+        status: 403,
+        error_code: "AUTH_1203",
+        message: "You don't have permission to access this resource.",
+        request_id: requestId,
+        retryable: false,
+        details: {},
+      });
+    }
+
     let body: any = {};
     try {
       body = await response.json();

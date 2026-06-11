@@ -6,17 +6,18 @@ import { useRouter } from "next/navigation";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useTestStore } from "@/features/student/store/useTestStore";
-import { 
-  ClipboardCheck, 
-  ChevronRight, 
-  Search, 
-  Filter, 
-  BookOpen, 
+import {
+  ClipboardCheck,
+  ChevronRight,
+  Search,
+  Filter,
+  BookOpen,
   Sparkles,
   ArrowRight,
   Loader2,
   ArrowLeft,
-  Tag
+  Tag,
+  History
 } from "lucide-react";
 import { studentService } from "@/features/student/services/studentService";
 import { TypingStudentCharacter } from "@/components/shared/loaders/StudentLoader/TypingStudentCharacter";
@@ -31,7 +32,8 @@ export function AssessmentsPage() {
 
 
   const { studentProfile } = useStudentStore();
-  const { startTest } = useTestStore();
+  const { startTest, loadTest, loadStudentTests, studentTests, isLoadingTests } = useTestStore();
+  const [isLoadingResult, setIsLoadingResult] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [allChapters, setAllChapters] = useState<any[]>([]);
   const [isLoadingAll, setIsLoadingAll] = useState(false);
@@ -58,6 +60,12 @@ export function AssessmentsPage() {
     }
     return () => controller.abort();
   }, [studentProfile, fetchAnalyticsSubjects]);
+
+  useEffect(() => {
+    if (studentProfile?.user_id) {
+      loadStudentTests(studentProfile.user_id);
+    }
+  }, [studentProfile, loadStudentTests]);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,6 +103,18 @@ export function AssessmentsPage() {
     chapter.document_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     chapter.subject.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleViewTest = async (testId: string) => {
+    setIsLoadingResult(true);
+    try {
+      await loadTest(testId);
+      router.push("/student/test?from=assessments");
+    } catch (error) {
+      console.error("Error loading past test:", error);
+    } finally {
+      setIsLoadingResult(false);
+    }
+  };
 
   const handleStartTest = async (chapterTitle: string, subject: string) => {
     if (studentProfile?.user_id) {
@@ -173,6 +193,53 @@ export function AssessmentsPage() {
       {/* Chapters Grid */}
       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
         <div className="max-w-7xl mx-auto space-y-12">
+          {/* Past Tests / History */}
+          {(isLoadingTests || studentTests.length > 0) && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-[#042E5C]/5 flex items-center justify-center text-[#042E5C]">
+                  <History size={14} />
+                </div>
+                <h2 className="text-sm font-black text-[#042E5C] uppercase tracking-widest">Past Tests</h2>
+              </div>
+
+              {isLoadingTests ? (
+                <div className="flex items-center gap-3 py-6 text-[#042E5C]/40">
+                  <Loader2 size={20} className="animate-spin" />
+                  <span className="text-sm font-bold uppercase tracking-widest">Loading history...</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {studentTests.map((t) => (
+                    <div
+                      key={t.test_id}
+                      className="bg-white p-6 rounded-3xl border border-[#042E5C]/5 shadow-sm flex items-center justify-between gap-4"
+                    >
+                      <div className="min-w-0 space-y-1">
+                        <h3 className="text-sm font-black text-[#042E5C] truncate">{t.document_title}</h3>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black text-[#042E5C]/40 uppercase tracking-widest">
+                            {t.subject}
+                          </span>
+                          <span className="text-[10px] font-medium text-[#042E5C]/30">
+                            {new Date(t.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleViewTest(t.test_id)}
+                        disabled={isLoadingResult}
+                        className="shrink-0 px-4 py-2 rounded-xl bg-[#042E5C]/5 text-[#042E5C] text-[10px] font-black uppercase tracking-widest hover:bg-[#042E5C]/10 disabled:opacity-40 transition-all"
+                      >
+                        View Test
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {isLoadingAll ? (
             <div className="flex flex-col items-center justify-center py-32 space-y-4">
               <Loader2 size={40} className="text-[#042E5C] animate-spin" />
