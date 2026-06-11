@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Menu, Loader2, Volume2, VolumeX, Mic, MicOff, Square, Check, BookOpen } from "lucide-react";
+import { ArrowLeft, Menu, Loader2, Volume2, VolumeX, Mic, MicOff, Square, Check, BookOpen, HelpCircle, GraduationCap } from "lucide-react";
 import React, { useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -339,6 +339,9 @@ export function StudentChatMain({
     chapterPdfError,
     clearPdfError,
     studentProfile,
+    chatQueryMode,
+    chatQueryModePinned,
+    setChatQueryMode,
   } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -472,17 +475,84 @@ export function StudentChatMain({
             <AnimatePresence>
               <AudioStatusPill key="audio-pill" state={playbackState} onStop={stopPlayback} />
             </AnimatePresence>
-            <div className="flex items-center gap-1">
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00B894", display: "inline-block", flexShrink: 0 }} className="animate-pulse" />
-              <span style={{ fontSize: "clamp(8px, 2vw, 11px)", fontWeight: 700, color: "#00B894", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: "'DM Sans', sans-serif" }}>
-                Active
-              </span>
+
+            {/* ── Segmented mode toggle ── */}
+            <motion.div
+              className="flex items-center flex-shrink-0"
+              onClick={() => setChatQueryMode(chatQueryMode === "doubt" ? "study" : "doubt", true)}
+              whileTap={{ scale: 0.97 }}
+              style={{
+                background: "#E8E8EC",
+                borderRadius: 999,
+                padding: 3,
+                gap: 0,
+                fontFamily: "'DM Sans', sans-serif",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
+              {/* Doubt segment */}
+              <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 999, zIndex: 1 }}>
+                {chatQueryMode === "doubt" && (
+                  <motion.div
+                    layoutId="mode-active-pill"
+                    style={{ position: "absolute", inset: 0, borderRadius: 999, background: "#5B4DC7", boxShadow: "0 2px 8px rgba(91,77,199,0.4)" }}
+                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                  />
+                )}
+                <motion.span
+                  animate={{ color: chatQueryMode === "doubt" ? "#FFFFFF" : "#9CA3AF" }}
+                  transition={{ duration: 0.18 }}
+                  style={{ position: "relative", zIndex: 1, display: "flex" }}
+                >
+                  <HelpCircle size={11} />
+                </motion.span>
+                <motion.span
+                  animate={{ color: chatQueryMode === "doubt" ? "#FFFFFF" : "#9CA3AF" }}
+                  transition={{ duration: 0.18 }}
+                  style={{ position: "relative", zIndex: 1, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}
+                >
+                  Doubt
+                </motion.span>
+              </div>
+
+              {/* Teaching segment */}
+              <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 999, zIndex: 1 }}>
+                {chatQueryMode === "study" && (
+                  <motion.div
+                    layoutId="mode-active-pill"
+                    style={{ position: "absolute", inset: 0, borderRadius: 999, background: "#00B894", boxShadow: "0 2px 8px rgba(0,184,148,0.4)" }}
+                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                  />
+                )}
+                <motion.span
+                  animate={{ color: chatQueryMode === "study" ? "#FFFFFF" : "#9CA3AF" }}
+                  transition={{ duration: 0.18 }}
+                  style={{ position: "relative", zIndex: 1, display: "flex" }}
+                >
+                  <GraduationCap size={11} />
+                </motion.span>
+                <motion.span
+                  animate={{ color: chatQueryMode === "study" ? "#FFFFFF" : "#9CA3AF" }}
+                  transition={{ duration: 0.18 }}
+                  style={{ position: "relative", zIndex: 1, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}
+                >
+                  Teaching
+                </motion.span>
+              </div>
+            </motion.div>
+
+            {/* ── Static status: active dot + grade ── */}
+            <div className="flex items-center gap-1.5 flex-shrink-0" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00B894", flexShrink: 0 }} className="animate-pulse" />
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#00B894", letterSpacing: "0.04em" }}>Active</span>
+              {activeChat.grade && (
+                <>
+                  <span style={{ color: "#CBD5E1", fontSize: 10 }}>·</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#94A3B8", whiteSpace: "nowrap" }}>{activeChat.grade}</span>
+                </>
+              )}
             </div>
-            {activeChat.grade && (
-              <span style={{ fontSize: "clamp(8px, 2vw, 11px)", fontWeight: 700, color: "#94A3B8", background: "#F7F8FC", padding: "3px 8px", borderRadius: 14, border: "1px solid #E2E8F0", whiteSpace: "nowrap" }}>
-                Grade {activeChat.grade}
-              </span>
-            )}
           </div>
         </div>
 

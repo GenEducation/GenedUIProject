@@ -274,6 +274,12 @@ export interface StudentState {
   voicePrefs: { listenMode: "continuous" | "ptt"; pttHotkey: string; };
   pttHeld: boolean;
 
+  // ── Doubt / Study Mode ───────────────────────────────────────────────────────
+  /** Resolved mode for the current turn — updated optimistically on send and confirmed on done event */
+  chatQueryMode: "study" | "doubt";
+  /** True when the user has manually pinned the mode (overrides auto-detection until next AI response) */
+  chatQueryModePinned: boolean;
+
   // ── Chapter PDF Viewer State ─────────────────────────────────────────────────
   chapterPdfUrl: string | null;
   chapterPdfFetchedAt: number | null;
@@ -319,7 +325,8 @@ export interface StudentState {
   setPartnerModalOpen: (open: boolean) => void;
   stopMessageGeneration: () => void;
   submitActivityResult: (activityId: string, activityType: string, transcript: string) => Promise<void>;
-  sendMessage: (text?: string, activityInput?: any) => Promise<void>;
+  sendMessage: (text?: string, activityInput?: any, opts?: { isTypedQuery?: boolean }) => Promise<void>;
+  setChatQueryMode: (mode: "study" | "doubt", pinned?: boolean) => void;
   sendPartnerRequest: (partnerId: string) => Promise<void>;
   linkParent: (parentEmailOrPhone: string) => Promise<void>;
   startVoiceSession: () => Promise<void>;
@@ -418,6 +425,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   sessionMode: null,
   voicePrefs: getInitialVoicePrefs(),
   pttHeld: false,
+  chatQueryMode: "study",
+  chatQueryModePinned: false,
   // Chapter PDF viewer initial state
   chapterPdfUrl: null,
   chapterPdfFetchedAt: null,
@@ -469,6 +478,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   setConnectionQuality: (q) => set({ connectionQuality: q }),
   setRateLimitHit: (hit) => set({ isRateLimitHit: hit, ...(!hit && { rateLimitMessage: null }) }),
   setRateLimitMessage: (message) => set({ rateLimitMessage: message }),
+
+  setChatQueryMode: (mode, pinned = true) =>
+    set({ chatQueryMode: mode, chatQueryModePinned: pinned }),
   setPartnerModalOpen: (open) =>
     set({
       isPartnerModalOpen: open,
@@ -1826,7 +1838,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     });
   },
 
-  sendMessage: async (text?: string, activityInput?: any): Promise<void> => {
+  sendMessage: async (text?: string, activityInput?: any, opts?: { isTypedQuery?: boolean }): Promise<void> => {
     const { studentProfile, activeChat } = get();
     if (!studentProfile) return;
 
@@ -1932,19 +1944,42 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       const abortController = new AbortController();
       set({ chatAbortController: abortController });
 
+      // Mode resolution. The backend is the source of truth: it auto-classifies each
+      // turn (entry router for new sessions, classify_session_mode for ongoing ones)
+      // and returns session_mode in the done event, which updates the toggle below.
+      //
+      // The toggle is only a DETERMINISTIC manual override: when the user has pinned a
+      // mode, we send it as a hard lock so the backend obeys it instead of classifying.
+      // A pin is one-shot for typed queries — once the user sends a real message it is
+      // consumed and auto-classification resumes on the next turn (so e.g. picking Doubt
+      // then later typing "explain the whole chapter" lets the backend flip to study).
+      // Option clicks / greetings do NOT consume the pin, so a deterministic choice
+      // survives the entry-router menu flow (subject/chapter selection).
+      const isPinned = get().chatQueryModePinned;
+      const lockedMode = isPinned ? get().chatQueryMode : undefined;
+      const isTypedQuery = !!opts?.isTypedQuery && !!text && !activityInput && !isNewFocused;
+      if (isPinned && isTypedQuery) {
+        set({ chatQueryModePinned: false });
+      }
+
       const response = await studentService.sendChatMessage(
         {
           text,
           user_id: studentProfile.user_id,
           grade: studentProfile.grade,
           activity_input: activityInput,
+          // Only send mode fields when the user has locked it via the toggle.
+          // Otherwise omit them so the backend auto-classifies this turn.
+          ...(lockedMode && {
+            session_mode: lockedMode,
+            intent: lockedMode === "doubt" ? "doubt/help" : "study",
+          }),
           // Send session/agent/subject info
           ...(sessionIdToSend && !isNewFocused && { session_id: sessionIdToSend }),
           ...(!effectiveChat.isFocused && effectiveChat.agent_id && { agent_id: effectiveChat.agent_id }),
           ...(effectiveChat.subject && { subject: effectiveChat.subject }),
           ...(effectiveChat.isFocused && {
             document_title: effectiveChat.document_title || "General",
-            intent: "",
           }),
         } as any,
         abortController.signal,
@@ -1993,8 +2028,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           const patch = (msgs: ChatMessage[]) =>
             msgs.map((m) =>
               m.id === streamingMsgId 
-                ? { 
-                    ...m, 
+                ? {
+                    ...m,
                     text: text.replace(tags, "").trim(),
                     elements: displayElements.length > 0 ? displayElements : undefined,
                     toolStatus,
@@ -2337,6 +2372,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           finalOptions = Array.isArray(event.options) ? event.options : [];
           finalActions = Array.isArray(event.actions) ? event.actions : [];
           if (event.response) doneResponse = event.response;
+          // Mode propagation: the backend auto-classifies each turn and reports the
+          // resolved mode here. Reflect it on the toggle UNLESS the user has pinned a
+          // deterministic choice (in which case the backend already obeyed that lock).
+          if (event.session_mode) {
+            const confirmedMode = event.session_mode === "doubt" ? "doubt" : "study";
+            set((state) => state.chatQueryModePinned ? {} : { chatQueryMode: confirmedMode });
+          }
           // Propagate chapter_name immediately so the "View textbook" button
           // appears after the first response without waiting for fetchSessions().
           if (event.chapter_name) {

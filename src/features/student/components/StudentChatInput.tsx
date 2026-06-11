@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Mic, MicOff, Square } from "lucide-react";
+import { Send, Square } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useStudentStore } from "../store/useStudentStore";
 import { InlineSubjectPicker } from "./InlineSubjectPicker";
@@ -32,6 +32,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
   const [showSubjectPicker, setShowSubjectPicker] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
 
   // Show picker only while user has text in hub mode; hide when cleared
   useEffect(() => {
@@ -68,7 +69,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
       }
     }
 
-    sendMessage(trimmed);
+    sendMessage(trimmed, undefined, { isTypedQuery: true });
     setInput("");
     setSelectedSubject(null);
     setShowSubjectPicker(false);
