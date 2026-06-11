@@ -94,6 +94,7 @@ export const studentService = {
     grade: number;
     document_title?: string;
     intent?: string;
+    session_mode?: string;
     activity_input?: {
       activity_id: string;
       activity_type: string;
