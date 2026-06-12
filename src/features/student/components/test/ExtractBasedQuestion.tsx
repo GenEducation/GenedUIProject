@@ -29,7 +29,7 @@ export function ExtractBasedQuestion({
   return (
     <div className="space-y-5">
       {question.extract_passage && (
-        <div className="relative p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-200">
+        <div className="relative p-3 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-200">
           <div className="flex items-center gap-2 mb-3">
             <BookOpen size={14} className="text-slate-400" />
             <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
@@ -53,7 +53,7 @@ export function ExtractBasedQuestion({
         disabled={disabled}
         placeholder={"Answer all parts here...\n(a) ...\n(b) ..."}
         rows={4}
-        className="w-full p-4 rounded-xl border-2 border-[#042E5C]/10 focus:border-[#042E5C]/30 focus:ring-4 focus:ring-[#042E5C]/5 outline-none transition-all text-[15px] resize-none overflow-hidden min-h-[100px]"
+        className="w-full p-3 sm:p-4 rounded-xl border-2 border-[#042E5C]/10 focus:border-[#042E5C]/30 focus:ring-4 focus:ring-[#042E5C]/5 outline-none transition-all text-[15px] resize-none overflow-hidden min-h-[100px]"
       />
     </div>
   );

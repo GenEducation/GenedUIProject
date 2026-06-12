@@ -4,11 +4,13 @@ import { ScheduleSessionRequest, ScheduleSessionResponse } from "../types/schedu
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
 export const scheduleService = {
-  scheduleSession: async (request: ScheduleSessionRequest): Promise<ScheduleSessionResponse> => {
-    const response = await authFetch(`${API_BASE_URL}/schedule-session`, {
+  scheduleSession: async (request: ScheduleSessionRequest, opts?: { parentId?: string }): Promise<ScheduleSessionResponse> => {
+    const qs = opts?.parentId ? `?parent_id=${encodeURIComponent(opts.parentId)}` : "";
+    const response = await authFetch(`${API_BASE_URL}/schedule-session${qs}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
+      allow403: !!opts?.parentId,
     });
 
     if (!response.ok) {
@@ -24,8 +26,11 @@ export const scheduleService = {
     return response.json();
   },
 
-  getScheduledSessions: async (userId: string, signal?: AbortSignal): Promise<ScheduleSessionResponse[]> => {
-    const response = await authFetch(`${API_BASE_URL}/scheduled-sessions?user_id=${encodeURIComponent(userId)}`, { signal });
+  getScheduledSessions: async (userId: string, opts?: { parentId?: string; signal?: AbortSignal }): Promise<ScheduleSessionResponse[]> => {
+    let url = `${API_BASE_URL}/scheduled-sessions?user_id=${encodeURIComponent(userId)}`;
+    if (opts?.parentId) url += `&parent_id=${encodeURIComponent(opts.parentId)}`;
+
+    const response = await authFetch(url, { signal: opts?.signal, allow403: !!opts?.parentId });
 
     if (!response.ok) {
       const errorBody = await response.text();

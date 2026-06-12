@@ -51,7 +51,36 @@ export function AssessmentSidebar({
   }
 
   return (
-    <aside className="w-[450px] hidden xl:flex flex-col sticky top-24 h-[calc(100vh-120px)] bg-white rounded-[40px] border border-slate-100 overflow-hidden shadow-2xl shadow-slate-200/50">
+    <>
+      {/* Compact progress indicator — visible below xl, replaces the full constellation sidebar */}
+      <div className="flex xl:hidden gap-2 overflow-x-auto pb-1 -mx-1 px-1 custom-scrollbar">
+        {sidebarSections.map((section, sIdx) => {
+          const isCurrent = sIdx === currentSectionIdx;
+          const isCompleted = section.questions.every((q) => isQuestionAnswered(q.question_id));
+          const answeredCount = section.questions.filter((q) => isQuestionAnswered(q.question_id)).length;
+          const totalCount = section.questions.length;
+
+          return (
+            <div
+              key={sIdx}
+              className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-2xl border text-[11px] font-bold transition-all ${
+                isCompleted
+                  ? "bg-emerald-50 border-emerald-400 text-emerald-600"
+                  : isCurrent
+                  ? "bg-white border-cyan-400 text-cyan-600 shadow-sm"
+                  : "bg-white border-slate-200 text-slate-400"
+              }`}
+            >
+              <span className="w-6 h-6 rounded-full flex items-center justify-center border border-current text-[11px] font-black flex-shrink-0">
+                {isCompleted ? <Check size={12} strokeWidth={4} /> : section.label}
+              </span>
+              <span className="whitespace-nowrap uppercase tracking-wide">{answeredCount}/{totalCount}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <aside className="w-[450px] hidden xl:flex flex-col sticky top-24 h-[calc(100vh-120px)] bg-white rounded-[40px] border border-slate-100 overflow-hidden shadow-2xl shadow-slate-200/50">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
           className="absolute top-0 left-0 w-full h-full opacity-[0.03]"
@@ -264,6 +293,7 @@ export function AssessmentSidebar({
           );
         })}
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

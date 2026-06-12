@@ -8,8 +8,8 @@ interface ScheduleState {
   isBooking: boolean;
   bookError: string | null;
 
-  loadScheduledSessions: (userId: string) => Promise<void>;
-  bookSession: (request: ScheduleSessionRequest) => Promise<ScheduleSessionResponse | null>;
+  loadScheduledSessions: (userId: string, parentId?: string) => Promise<void>;
+  bookSession: (request: ScheduleSessionRequest, parentId?: string) => Promise<ScheduleSessionResponse | null>;
 }
 
 export const useScheduleStore = create<ScheduleState>((set, get) => ({
@@ -18,10 +18,10 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
   isBooking: false,
   bookError: null,
 
-  loadScheduledSessions: async (userId) => {
+  loadScheduledSessions: async (userId, parentId) => {
     set({ isLoading: true });
     try {
-      const sessions = await scheduleService.getScheduledSessions(userId);
+      const sessions = await scheduleService.getScheduledSessions(userId, { parentId });
       set({ sessions });
     } catch (error) {
       console.error("Failed to load scheduled sessions:", error);
@@ -30,11 +30,11 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
     }
   },
 
-  bookSession: async (request) => {
+  bookSession: async (request, parentId) => {
     set({ isBooking: true, bookError: null });
     try {
-      const session = await scheduleService.scheduleSession(request);
-      await get().loadScheduledSessions(request.user_id);
+      const session = await scheduleService.scheduleSession(request, { parentId });
+      await get().loadScheduledSessions(request.user_id, parentId);
       return session;
     } catch (error) {
       console.error("Failed to book session:", error);

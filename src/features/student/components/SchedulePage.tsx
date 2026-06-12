@@ -119,8 +119,8 @@ export function SchedulePage() {
       {!sidebarOpen && (
         <button
           onClick={() => setSidebarOpen(true)}
-          className="fixed top-4 left-4 z-30 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
-          style={{ width: 38, height: 38, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#042E5C" }}
+          className="fixed top-6 left-4 z-30 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
+          style={{ width: 40, height: 40, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#042E5C" }}
           title="Open sidebar"
         >
           ☰
@@ -128,7 +128,7 @@ export function SchedulePage() {
       )}
       <div className="flex-1 min-w-0 flex flex-col h-full bg-[#F4F3EE]/30 overflow-hidden font-sans">
         {/* Header */}
-        <header className="px-8 py-6 flex items-center gap-6 bg-white border-b border-[#042E5C]/5 sticky top-0 z-20">
+        <header className={`px-4 sm:px-8 py-6 flex items-center gap-3 sm:gap-6 bg-white border-b border-[#042E5C]/5 sticky top-0 z-20 transition-all ${!sidebarOpen ? "pl-16 sm:pl-8" : ""}`}>
           <button
             onClick={() => window.location.href = '/student'}
             className="w-10 h-10 rounded-full bg-[#042E5C]/5 text-[#042E5C] flex items-center justify-center hover:bg-[#042E5C]/10 transition-all"
@@ -145,29 +145,29 @@ export function SchedulePage() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-          <div className="max-w-5xl mx-auto space-y-12">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 custom-scrollbar">
+          <div className="max-w-5xl mx-auto space-y-8 sm:space-y-12">
             {/* Booking Form */}
-            <div className="bg-white p-8 rounded-[40px] border border-[#042E5C]/5 shadow-sm space-y-6">
+            <div className="bg-white p-4 sm:p-6 md:p-8 rounded-[28px] sm:rounded-[40px] border border-[#042E5C]/5 shadow-sm space-y-6">
               <h2 className="text-sm font-black text-[#042E5C] uppercase tracking-widest flex items-center gap-2">
                 <Sparkles size={14} />
                 Book a Session
               </h2>
 
               {/* Session Type Toggle */}
-              <div className="flex gap-3">
+              <div className="flex gap-2 sm:gap-3">
                 {(["TEST", "LEARNING"] as SessionType[]).map((type) => (
                   <button
                     key={type}
                     onClick={() => setSessionType(type)}
-                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all border ${
+                    className={`flex-1 flex items-center justify-center text-center gap-1.5 sm:gap-2 px-2 sm:px-6 py-3 sm:py-4 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-wide sm:tracking-[0.2em] leading-tight transition-all border ${
                       sessionType === type
                         ? "bg-[#042E5C] text-white border-[#042E5C] shadow-lg shadow-[#042E5C]/10"
                         : "bg-[#F4F3EE]/50 text-[#042E5C]/40 border-[#042E5C]/5 hover:text-[#042E5C]"
                     }`}
                   >
-                    {type === "TEST" ? <GraduationCap size={16} /> : <BookOpen size={16} />}
-                    {type === "TEST" ? "Test" : "Learning Session"}
+                    {type === "TEST" ? <GraduationCap size={16} className="shrink-0" /> : <BookOpen size={16} className="shrink-0" />}
+                    <span className="whitespace-nowrap">{type === "TEST" ? "Test" : "Learning Session"}</span>
                   </button>
                 ))}
               </div>
@@ -297,7 +297,7 @@ export function SchedulePage() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.97 }}
-                          className="bg-white p-6 rounded-3xl border border-[#042E5C]/5 shadow-sm space-y-4"
+                          className="bg-white p-4 sm:p-6 rounded-3xl border border-[#042E5C]/5 shadow-sm space-y-4"
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="min-w-0 space-y-1">

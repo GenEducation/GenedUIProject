@@ -47,15 +47,15 @@ function DraggableOption({
       style={style}
       {...listeners}
       {...attributes}
-      className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 bg-white cursor-grab active:cursor-grabbing transition-all select-none ${
+      className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 bg-white cursor-grab active:cursor-grabbing transition-all select-none ${
         isDragging
           ? "border-[#042E5C] shadow-lg scale-105 opacity-80"
           : "border-[#042E5C]/15 hover:border-[#042E5C]/30 shadow-sm"
       }`}
     >
       <GripVertical size={14} className="text-[#042E5C]/30 shrink-0" />
-      <span className="text-[13px] font-bold text-[#042E5C]/50 shrink-0">{label}.</span>
-      <span className="text-[14px] font-medium text-[#042E5C]">{text}</span>
+      <span className="text-[12px] sm:text-[13px] font-bold text-[#042E5C]/50 shrink-0">{label}.</span>
+      <span className="text-[13px] sm:text-[14px] font-medium text-[#042E5C]">{text}</span>
     </div>
   );
 }
@@ -76,7 +76,7 @@ function DropZone({
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[48px] rounded-xl border-2 border-dashed transition-all flex items-center px-4 ${
+      className={`min-h-[48px] rounded-xl border-2 border-dashed transition-all flex items-center px-2 sm:px-4 ${
         placedItem
           ? "border-emerald-300 bg-emerald-50/50"
           : isOver
@@ -167,7 +167,7 @@ export function MatchTheFollowingQuestion({
 
   return (
     <div className="space-y-5">
-      <p className="text-[17px] font-medium text-[#042E5C] leading-relaxed">
+      <p className="text-[15px] sm:text-[17px] font-medium text-[#042E5C] leading-relaxed">
         {question.prompt}
       </p>
 
@@ -185,15 +185,15 @@ export function MatchTheFollowingQuestion({
               : null;
 
             return (
-              <div key={left.id} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#042E5C]/5 flex items-center justify-center shrink-0">
-                  <span className="text-[13px] font-black text-[#042E5C]">{left.id}</span>
+              <div key={left.id} className="flex items-center gap-1.5 sm:gap-3">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#042E5C]/5 flex items-center justify-center shrink-0">
+                  <span className="text-[12px] sm:text-[13px] font-black text-[#042E5C]">{left.id}</span>
                 </div>
-                <div className="flex-1 py-2 px-3 rounded-xl bg-white border border-[#042E5C]/10">
-                  <span className="text-[14px] font-medium text-[#042E5C]">{left.text}</span>
+                <div className="flex-1 py-2 px-2 sm:px-3 rounded-xl bg-white border border-[#042E5C]/10 min-w-0">
+                  <span className="text-[13px] sm:text-[14px] font-medium text-[#042E5C]">{left.text}</span>
                 </div>
                 <span className="text-[#042E5C]/20 font-bold shrink-0">&rarr;</span>
-                <div className="flex-1">
+                <div className="flex-1 min-w-[90px]">
                   <DropZone
                     id={`drop-${left.id}`}
                     placedItem={placedRight}

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
@@ -97,6 +97,14 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
 
   const activeNav = getActiveNav();
 
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handle = () => setIsMobile(window.innerWidth < 768);
+    handle();
+    window.addEventListener("resize", handle);
+    return () => window.removeEventListener("resize", handle);
+  }, []);
+
   const navigate = (path: string) => {
     if (path === "/student") {
       window.location.href = path;
@@ -107,16 +115,37 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
   };
 
   const sidebarW = isOpen ? 260 : 0;
+  const mobileWidth = Math.min(260, 300);
 
   return (
-    <aside
-      className="h-full flex-shrink-0 flex flex-col overflow-hidden sidebar-transition"
-      style={{
-        width: sidebarW,
-        minWidth: sidebarW,
-        background: C.sidebarBg,
-      }}
-    >
+    <>
+      {isMobile && isOpen && (
+        <div
+          className="fixed inset-0 z-30"
+          style={{ background: "rgba(0,0,0,0.45)" }}
+          onClick={onClose}
+        />
+      )}
+      <aside
+        className={`flex-shrink-0 flex flex-col overflow-hidden sidebar-transition ${
+          isMobile ? "fixed inset-y-0 left-0 z-40 h-full" : "h-full"
+        }`}
+        style={
+          isMobile
+            ? {
+                width: isOpen ? mobileWidth : 0,
+                minWidth: isOpen ? mobileWidth : 0,
+                maxWidth: "85vw",
+                background: C.sidebarBg,
+                boxShadow: isOpen ? "0 0 32px rgba(0,0,0,0.35)" : "none",
+              }
+            : {
+                width: sidebarW,
+                minWidth: sidebarW,
+                background: C.sidebarBg,
+              }
+        }
+      >
       {isOpen && (
         <div className="flex flex-col h-full" style={{ padding: "16px 12px" }}>
           {/* Header: logo + close */}
@@ -235,7 +264,8 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
           </div>
         </div>
       )}
-    </aside>
+      </aside>
+    </>
   );
 });
 

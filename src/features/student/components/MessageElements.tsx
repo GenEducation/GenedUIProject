@@ -38,9 +38,9 @@ function FigureDescribeBlock({ figureAssetUrl, prompt, directiveId }: {
       {loading ? (
         <div className="w-full h-32 rounded-xl animate-pulse" style={{ background: "#F0EEFF" }} />
       ) : imageUrl ? (
-        <img src={imageUrl} alt="Scene" className="max-w-full rounded-xl" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }} />
+        <img src={imageUrl} alt="Scene" className="max-w-full rounded-xl" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.08)", maxHeight: "60vh", objectFit: "contain" }} />
       ) : (
-        <div className="w-full p-4 rounded-xl text-xs font-medium text-center" style={{ background: "#FFF8E1", color: "#D4820A" }}>
+        <div className="w-full p-3 sm:p-4 rounded-xl text-[10px] sm:text-xs font-medium text-center" style={{ background: "#FFF8E1", color: "#D4820A" }}>
           🖼️ Image unavailable
         </div>
       )}

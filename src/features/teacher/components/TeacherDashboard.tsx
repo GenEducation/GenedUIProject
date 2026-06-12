@@ -143,7 +143,7 @@ export function TeacherDashboard() {
             </div>
             <button
               onClick={logoutTeacher}
-              className="flex items-center gap-1.5 rounded-[9px] border border-white/15 bg-white/10 px-3 py-2 text-[12.5px] font-medium text-[#cfe0f2] transition-colors hover:bg-white/15 hover:text-white"
+              className="flex items-center gap-1.5 rounded-[9px] border border-white/15 bg-white/10 px-3 py-2 text-[12.5px] font-medium text-[#cfe0f2] transition-colors hover:border-[#E8635A]/40 hover:bg-[#E8635A]/15 hover:text-[#E8635A]"
             >
               <LogOut size={14} />
               Sign out

@@ -167,8 +167,8 @@ export const ChatMessageBubble = React.memo(
             {isStreaming && (
               <div className="absolute -inset-[3px] rounded-full border-[2px] border-transparent border-t-[#5B4DC7] border-r-[#5B4DC7]/20 animate-spin" style={{ animationDuration: '1s' }} />
             )}
-            <div className="w-10 h-10 rounded-full overflow-hidden relative z-10 bg-white" style={{ border: "1px solid #E2E8F0" }}>
-              <Image src="/Favicon1.jpg" alt="AI Agent" width={40} height={40} className="object-cover" />
+            <div className="rounded-full overflow-hidden relative z-10 bg-white" style={{ border: "1px solid #E2E8F0", width: "clamp(32px, 8vw, 40px)", height: "clamp(32px, 8vw, 40px)" }}>
+              <Image src="/Favicon1.jpg" alt="AI Agent" width={40} height={40} className="object-cover w-full h-full" />
             </div>
           </div>
         )}
@@ -238,7 +238,7 @@ export const ChatMessageBubble = React.memo(
                     <button
                       key={opt}
                       onClick={() => onOptionSelect?.(opt)}
-                      style={{ fontSize: "clamp(11px, 2.5vw, 13px)", fontWeight: 700, color: "#5B4DC7", background: "#FFFFFF", border: "1.5px solid #5B4DC720", borderRadius: 20, padding: "5px 14px", cursor: "pointer", transition: "all 0.2s", fontFamily: "'DM Sans', sans-serif" }}
+                      style={{ fontSize: "clamp(11px, 2.5vw, 13px)", fontWeight: 700, color: "#5B4DC7", background: "#FFFFFF", border: "1.5px solid #5B4DC720", borderRadius: 20, padding: "5px clamp(10px, 2.5vw, 14px)", cursor: "pointer", transition: "all 0.2s", fontFamily: "'DM Sans', sans-serif" }}
                       onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#5B4DC7"; (e.currentTarget as HTMLButtonElement).style.color = "#FFFFFF"; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#FFFFFF"; (e.currentTarget as HTMLButtonElement).style.color = "#5B4DC7"; }}
                     >

@@ -26,18 +26,18 @@ export function PaperHeader({
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-6 rounded-2xl bg-gradient-to-br from-[#042E5C] to-[#0a4a8a] text-white shadow-xl shadow-[#042E5C]/20"
+      className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-[#042E5C] to-[#0a4a8a] text-white shadow-xl shadow-[#042E5C]/20"
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2 flex-1">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="space-y-2 flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <FileText size={16} className="text-white/60" />
             <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/50">
               Chapter Test
             </span>
           </div>
-          <h1 className="text-xl font-extrabold">{title}</h1>
-          <div className="flex items-center gap-3 text-[13px] text-white/60 font-medium">
+          <h1 className="text-lg sm:text-xl font-extrabold">{title}</h1>
+          <div className="flex items-center gap-2 sm:gap-3 text-[12px] sm:text-[13px] text-white/60 font-medium flex-wrap">
             <span>Grade {grade}</span>
             <span className="w-1 h-1 rounded-full bg-white/30" />
             <span>{subject}</span>

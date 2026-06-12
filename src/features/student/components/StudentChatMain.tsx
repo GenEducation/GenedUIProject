@@ -206,7 +206,7 @@ function ReadingSkillModal({
 
           {state === "completed" && analysisResult && (
             <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                 <div className="bg-blue-50/50 p-2.5 sm:p-3 rounded-xl border border-blue-100 flex flex-col items-center text-center">
                   <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-blue-600 font-bold mb-0.5">Accuracy</span>
                   <span className="text-lg sm:text-xl font-black text-blue-900 leading-tight">
@@ -584,9 +584,9 @@ export function StudentChatMain({
                 key="welcome"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex-1 flex flex-col items-center justify-center px-6 max-w-5xl mx-auto w-full"
+                className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 max-w-5xl mx-auto w-full"
               >
-                <div style={{ width: 96, height: 96, borderRadius: 40, background: "#FFFFFF", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 32, boxShadow: "0 2px 12px rgba(91,77,199,0.08)" }}>
+                <div style={{ width: "clamp(64px, 16vw, 96px)", height: "clamp(64px, 16vw, 96px)", borderRadius: 40, background: "#FFFFFF", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 32, boxShadow: "0 2px 12px rgba(91,77,199,0.08)" }}>
                   <Image
                     src="/Favicon1.jpg"
                     alt="Agent Icon"
@@ -596,7 +596,7 @@ export function StudentChatMain({
                   />
                 </div>
                 <div className="text-center space-y-3 mb-12">
-                  <h1 style={{ fontFamily: "'Nunito', sans-serif", fontSize: 32, fontWeight: 800, color: "#1A202C", lineHeight: 1.2 }}>
+                  <h1 style={{ fontFamily: "'Nunito', sans-serif", fontSize: "clamp(22px, 5vw, 32px)", fontWeight: 800, color: "#1A202C", lineHeight: 1.2 }}>
                     New session: {activeChat.title}
                   </h1>
                   <p style={{ fontSize: 16, color: "#4A5568", maxWidth: 400, margin: "0 auto", lineHeight: 1.6 }}>
@@ -612,7 +612,7 @@ export function StudentChatMain({
             ) : (
               <div className="flex-1 flex flex-col">
                 {/* Messages List */}
-                <div className="flex-1 px-6 md:px-12 py-8 space-y-8 max-w-5xl mx-auto w-full">
+                <div className="flex-1 px-3 sm:px-6 md:px-12 py-8 space-y-8 max-w-5xl mx-auto w-full">
                   {messages
                     .filter((msg, idx) => !(idx === 0 && msg.sender === "user"))
                     .map((msg) => (

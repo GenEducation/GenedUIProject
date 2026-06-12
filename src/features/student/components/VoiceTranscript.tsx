@@ -23,7 +23,7 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
     <div className="w-full max-w-4xl mx-auto flex flex-col h-full">
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto rounded-2xl border border-[#E2E8F0] bg-white/70 backdrop-blur-sm px-5 py-4"
+        className="flex-1 overflow-y-auto rounded-2xl border border-[#E2E8F0] bg-white/70 backdrop-blur-sm px-3 sm:px-5 py-4"
         style={{ scrollbarWidth: "thin" }}
       >
         {messages.length === 0 ? (

@@ -95,14 +95,18 @@ export function PdfViewer({ pdfUrl }: PdfViewerProps) {
     return () => ro.disconnect();
   }, []);
 
+  const isCompact = containerWidth > 0 && containerWidth < 480;
+  const horizontalPadding = isCompact ? 8 : HORIZONTAL_PADDING;
+  const pageGap = isCompact ? 8 : PAGE_GAP;
+
   // Recompute scale when in fit-to-width mode or container width changes
   useEffect(() => {
     if (!isFitWidth || pageDimensions.length === 0 || containerWidth === 0) return;
     const maxPageWidth = Math.max(...pageDimensions.map((d) => d.width));
-    const available = containerWidth - HORIZONTAL_PADDING * 2;
+    const available = containerWidth - horizontalPadding * 2;
     const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, available / maxPageWidth));
     setScale(newScale);
-  }, [isFitWidth, pageDimensions, containerWidth]);
+  }, [isFitWidth, pageDimensions, containerWidth, horizontalPadding]);
 
   // Set up IntersectionObserver for lazy rendering (large rootMargin — pre-loads nearby pages)
   useEffect(() => {
@@ -265,8 +269,8 @@ export function PdfViewer({ pdfUrl }: PdfViewerProps) {
 
       {/* Body: optional sidebar + page scroll area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Thumbnail sidebar */}
-        {isSidebarOpen && pdfDoc && (
+        {/* Thumbnail sidebar — hidden on narrow/mobile panels */}
+        {isSidebarOpen && pdfDoc && !isCompact && (
           <PdfSidebar
             pdfDoc={pdfDoc}
             numPages={numPages}
@@ -280,9 +284,9 @@ export function PdfViewer({ pdfUrl }: PdfViewerProps) {
         <div
           ref={scrollRef}
           className="flex-1 overflow-y-auto overflow-x-hidden"
-          style={{ background: "#F7F8FC", padding: `${PAGE_GAP}px ${HORIZONTAL_PADDING}px` }}
+          style={{ background: "#F7F8FC", padding: `${pageGap}px ${horizontalPadding}px` }}
         >
-          <div className="flex flex-col" style={{ gap: PAGE_GAP, alignItems: "center", position: "relative" }}>
+          <div className="flex flex-col" style={{ gap: pageGap, alignItems: "center", position: "relative" }}>
             {pdfDoc &&
               pageDimensions.map((dim, i) => {
                 const pageNum = i + 1;

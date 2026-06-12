@@ -54,10 +54,14 @@ export function StudentVoiceView() {
   } = useStudentStore();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
   /* responsive sidebar */
   useEffect(() => {
-    const handle = () => setSidebarOpen(window.innerWidth >= 1024);
+    const handle = () => {
+      setSidebarOpen(window.innerWidth >= 1024);
+      setIsMobile(window.innerWidth < 768);
+    };
     handle();
     window.addEventListener("resize", handle);
     return () => window.removeEventListener("resize", handle);
@@ -135,13 +139,14 @@ export function StudentVoiceView() {
   const voiceContent = (
     <div className="h-full flex flex-col font-sans overflow-hidden" style={bgStyle}>
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-4 border-b border-[#042E5C]/8 bg-white/50 backdrop-blur-sm">
+      <header className={`flex items-center justify-between px-4 py-4 border-b border-[#042E5C]/8 bg-white/50 backdrop-blur-sm transition-all ${!sidebarOpen ? "pl-16 sm:pl-8" : ""}`}>
         <button
           onClick={handleEnd}
-          className="flex items-center gap-2 text-[13px] font-bold text-[#042E5C]/60 hover:text-[#042E5C] transition-colors shrink-0"
+          title="Back to subjects"
+          className="flex items-center justify-center rounded-[10px] text-[#042E5C]/60 hover:text-[#042E5C] hover:bg-[#042E5C]/5 transition-colors shrink-0"
+          style={{ width: 38, height: 38 }}
         >
-          <ArrowLeft size={16} />
-          Back to subjects
+          <ArrowLeft size={18} />
         </button>
         <div className="text-[13px] font-bold text-[#042E5C] text-right">
           <span className="capitalize">{subjectLabel}</span>
@@ -219,12 +224,12 @@ export function StudentVoiceView() {
       )}
 
       {/* Middle — Conversation feed (fills remaining space; full height once orb is hidden) */}
-      <section className="flex-1 min-h-[140px] px-6 overflow-hidden">
+      <section className="flex-1 min-h-[140px] px-3 sm:px-6 overflow-hidden">
         <VoiceTranscript messages={messages} agentName={agentName} />
       </section>
 
       {/* Bottom — Controls */}
-      <section className="relative px-6 pt-5 pb-7 flex flex-col items-center gap-5">
+      <section className="relative px-3 sm:px-6 pt-5 pb-7 flex flex-col items-center gap-5">
         <RateLimitPrompt
           isVisible={isRateLimitHit}
           onClose={() => setRateLimitHit(false)}
@@ -236,25 +241,39 @@ export function StudentVoiceView() {
 
   const mainArea = (
     <div
-      className="flex-1 min-w-0 h-full overflow-hidden"
+      className="flex-1 min-w-0 h-full overflow-hidden relative"
       onClick={voiceSessionStatus === "idle" ? startVoiceSession : undefined}
       style={{ cursor: voiceSessionStatus === "idle" ? "pointer" : "default" }}
     >
       {isPdfViewerOpen && chapterPdfUrl ? (
-        <ResizableSplitPane
-          left={voiceContent}
-          right={
-            <ChapterPdfViewer
-              pdfUrl={chapterPdfUrl}
-              chapterName={activeChat?.chapter_name || ""}
-              onClose={closePdfViewer}
-            />
-          }
-          defaultLeftPercent={50}
-          minLeftPx={280}
-          minRightPx={240}
-          storageKey="pdf_split_voice"
-        />
+        isMobile ? (
+          <>
+            {voiceContent}
+            {/* Full-screen textbook overlay on mobile */}
+            <div className="absolute inset-0 z-30 flex flex-col" style={{ background: "#F7F8FC" }} onClick={(e) => e.stopPropagation()}>
+              <ChapterPdfViewer
+                pdfUrl={chapterPdfUrl}
+                chapterName={activeChat?.chapter_name || ""}
+                onClose={closePdfViewer}
+              />
+            </div>
+          </>
+        ) : (
+          <ResizableSplitPane
+            left={voiceContent}
+            right={
+              <ChapterPdfViewer
+                pdfUrl={chapterPdfUrl}
+                chapterName={activeChat?.chapter_name || ""}
+                onClose={closePdfViewer}
+              />
+            }
+            defaultLeftPercent={50}
+            minLeftPx={280}
+            minRightPx={240}
+            storageKey="pdf_split_voice"
+          />
+        )
       ) : (
         voiceContent
       )}
