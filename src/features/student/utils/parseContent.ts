@@ -384,7 +384,7 @@ export function parseContent(content: string): ChatElement[] {
           meta: {
             engine: "show_figure",
             label: "Textbook Figure",
-            image: figureIdMatch ? figureIdMatch[1] : "",
+            figure_id: figureIdMatch ? figureIdMatch[1] : "",
           },
         });
       } else if (["SPEAK_PARA", "DIFFICULT_WORD", "READ_ALOUD", "LISTEN_COMPREHENSION", "SHOW_FIGURE_DESCRIBE", "KARAOKE"].includes(type)) {

@@ -5,6 +5,7 @@ import { ChatElement } from "../store/useStudentStore";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { VisualCard } from "./VisualCard";
 import { VisualBlock } from "./VisualBlock";
+import { FigureView } from "./FigureView";
 import { P5Visual } from "./P5Visual";
 import { GeoGebraVisual } from "./GeoGebraVisual";
 import { MathWidget } from "./MathWidget";
@@ -92,14 +93,21 @@ export const ChatElementRenderer = React.memo(({ elements, isReadOnly = false }:
             );
           }
           if (el.meta?.engine === "show_figure") {
-            const imgSource = el.meta.image?.startsWith('data:') ? el.meta.image : (el.meta.image ? `data:image/jpeg;base64,${el.meta.image}` : null);
+            // Live turns carry the figure as inline base64/data-URI in `image`. History
+            // turns only persist the `figure_id` reference, which must be fetched via
+            // FigureView's authenticated endpoint (see VisualBlock for the same pattern).
+            const imgSource = el.meta.image?.startsWith('data:')
+              ? el.meta.image
+              : (el.meta.image && !el.meta.figure_id ? `data:image/jpeg;base64,${el.meta.image}` : null);
             return (
               <VisualCard key={el.id} engine="show_figure" label={el.meta.label || ""}>
                 <div className="flex flex-col items-center">
-                  {imgSource ? (
+                  {el.meta.figure_id ? (
+                    <FigureView uuid={el.meta.figure_id} />
+                  ) : imgSource ? (
                     <img src={imgSource} alt={el.meta.label || "Figure"} className="max-w-full rounded-lg" />
                   ) : (
-                    <div className="bg-[#FFF8E1] text-[#F57F17] px-3 py-2 rounded-lg text-xs font-medium">📐 Figure ID: {el.meta.figure_id || "unknown"}</div>
+                    <div className="bg-[#FFF8E1] text-[#F57F17] px-3 py-2 rounded-lg text-xs font-medium">📐 Figure ID: unknown</div>
                   )}
                 </div>
               </VisualCard>
