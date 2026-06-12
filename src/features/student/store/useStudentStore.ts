@@ -3,6 +3,7 @@ import { studentService } from "../services/studentService";
 import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import { parseContent, generateHistoricalSVG, normalizeSvg } from "../utils/parseContent";
 import { voiceService } from "../services/voiceService";
+import { appendStreamedText } from "../utils/voiceStreamMerge";
 import { parsePointerEvent, type PointerSpec } from "../components/pdf-viewer/pointerGeometry";
 
 
@@ -1346,10 +1347,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             }
 
             if (lastMsgIdx >= 0) {
-              const elements = lastMsg.elements ? [...lastMsg.elements] : [
-                ...(lastMsg.text ? [{ id: Date.now().toString() + "-text", type: "text" as const, content: lastMsg.text }] : [])
-              ];
-              
+              // Keep the spoken transcript whole in `text` and store the visual as a
+              // visual-only element. Do NOT snapshot the in-progress text into an element:
+              // that split the text mid-word and switched its font when a visual arrived
+              // (and previously duplicated it). The renderer shows `text` then the visuals.
+              const elements = lastMsg.elements ? [...lastMsg.elements] : [];
+
               if (event.type === "visual_error") {
                 elements.push({
                   id: `visual-error-${Date.now()}`,
@@ -1409,10 +1412,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             }
 
             if (lastMsgIdx >= 0) {
-              const elements = lastMsg.elements ? [...lastMsg.elements] : [
-                ...(lastMsg.text ? [{ id: Date.now().toString() + "-text", type: "text" as const, content: lastMsg.text }] : [])
-              ];
-              
+              // See visual_block handler: keep the transcript whole in `text`; store only
+              // the widget as a visual element.
+              const elements = lastMsg.elements ? [...lastMsg.elements] : [];
+
               if (event.type === "math_widget_error") {
                 elements.push({
                   id: `math-error-${Date.now()}`,
@@ -1450,50 +1453,22 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             const lastMsg = state.messages[state.messages.length - 1];
             const sender = role === "user" ? "user" : "ai";
             
-            // Check if we are continuing a message or replacing a planning message
-            const isContinuing = 
-              lastMsg && 
-              lastMsg.sender === sender && 
-              state.streamingMessageId === lastMsg.id;
-            
-            const isReplacingPlanning = 
-              lastMsg && 
-              lastMsg.sender === "ai" && 
-              lastMsg.isPlanning &&
+            // Continuing the in-flight streamed message (same sender + still streaming).
+            // appendStreamedText handles the planning-replacement case internally via the
+            // message's isPlanning flag.
+            const isContinuing =
+              lastMsg &&
+              lastMsg.sender === sender &&
               state.streamingMessageId === lastMsg.id;
 
             let updatedMessages = [...state.messages];
             let newId = state.streamingMessageId;
 
             if (isContinuing) {
-              const newText = isReplacingPlanning ? content : lastMsg.text + (role === "user" ? " " : "") + content;
-              const updated: ChatMessage = {
-                ...lastMsg,
-                text: newText,
-                isPlanning: false
-              };
-
-              // If the message already has elements (e.g. from a visual_block),
-              // keep the SVG/widget elements and update the trailing text element
-              if (updated.elements && updated.elements.length > 0) {
-                const existingTextIdx = updated.elements.findIndex(
-                  (el) => el.type === "text" && el.id.endsWith("-transcript")
-                );
-                if (existingTextIdx >= 0) {
-                  updated.elements = [...updated.elements];
-                  updated.elements[existingTextIdx] = {
-                    ...updated.elements[existingTextIdx],
-                    content: newText
-                  };
-                } else {
-                  updated.elements = [
-                    ...updated.elements,
-                    { id: Date.now().toString() + "-transcript", type: "text" as const, content: newText }
-                  ];
-                }
-              }
-
-              updatedMessages[updatedMessages.length - 1] = updated;
+              // Continue the streamed turn into the in-flight message. When the message
+              // already carries elements (a visual fired earlier this turn) the text
+              // continues in a single trailing "-transcript" element. See voiceStreamMerge.
+              updatedMessages[updatedMessages.length - 1] = appendStreamedText(lastMsg, content, role);
             } else {
               newId = `voice-${Date.now()}`;
               updatedMessages.push({

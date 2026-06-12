@@ -97,7 +97,10 @@ export function MessageElements({ elements, isStreaming, toolStatus }: MessageEl
               </VisualCard>
             );
           }
-          if (el.meta?.engine === "show_figure") {
+          // show_figure renders a base64 figure from the textbook. The backend tags the
+          // payload engine as "image" (route_visual show_figure → engine:"image"); older
+          // payloads used "show_figure". Handle both so the figure isn't silently dropped.
+          if (el.meta?.engine === "show_figure" || el.meta?.engine === "image") {
             const imgSource = el.meta.image?.startsWith('data:') ? el.meta.image : (el.meta.image ? `data:image/jpeg;base64,${el.meta.image}` : null);
             return (
               <VisualCard key={el.id} engine="show_figure" label={el.meta.label || ""}>

@@ -37,6 +37,13 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
               const color = m.sender === "user" ? "#042E5C" : "#5B4DC7";
               const text = (m.text || "").trim();
               const hasElements = m.elements && m.elements.length > 0;
+              // History messages carry the transcript as interleaved text *elements*
+              // (from parseContent) and render those. Live messages keep the whole
+              // transcript in `text` with visual-only elements — so render the plain text
+              // span whenever the elements don't already include the text, keeping the
+              // font consistent and the text unbroken when a visual is present.
+              const hasTextElements = !!m.elements?.some((el) => el.type === "text");
+              const showPlainText = !!text && !hasTextElements;
               if (!text && !hasElements) return null;
               return (
                 <div key={m.id} className="flex flex-col gap-3">
@@ -47,7 +54,7 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
                     >
                       {label}
                     </span>
-                    {!hasElements && text && <span className="text-[#1A202C] flex-1">{text}</span>}
+                    {showPlainText && <span className="text-[#1A202C] flex-1">{text}</span>}
                   </div>
                   {hasElements && (
                     <div className="pl-[56px]">
