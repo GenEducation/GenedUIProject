@@ -311,12 +311,12 @@ export function parseContent(content: string): ChatElement[] {
           content: "desmos",
           meta: { engine: "desmos", label: getAttr("label") || "Graph", options: { expression: getAttr("expression") } }
         });
-      } else if (scEngine === "show_figure") {
+      } else if (scEngine === "show_figure" || scEngine === "image") {
         elements.push({
           id: `visual-${elementCount++}-${Date.now()}`,
           type: "visual",
           content: "show_figure",
-          meta: { engine: "show_figure", label: getAttr("label") || "Textbook Figure", figure_id: getAttr("figure_id"), image: getAttr("figure_id") }
+          meta: { engine: "show_figure", label: getAttr("label") || "Textbook Figure", figure_id: getAttr("figure_id") }
         });
       } else {
         elements.push({
