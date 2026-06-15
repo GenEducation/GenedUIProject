@@ -22,6 +22,18 @@ export interface Rect {
   height: number;
 }
 
+/**
+ * A rect expressed as fractions of the page (0..1, top-left origin). Scale- and
+ * layout-independent, so it survives zoom / panel-resize unchanged — the live
+ * placement layer multiplies it by the page element's current rendered box.
+ */
+export interface NormRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /** Minimal shape of a pdfjs TextItem (only the fields we need). */
 export interface TextItemLike {
   str: string;
@@ -260,6 +272,45 @@ export function resolveTargetRect(params: ResolveParams): Rect | null {
     default:
       return null;
   }
+}
+
+/**
+ * Convert a page-local device rect (px at some render scale) into a scale-free
+ * NormRect by dividing through by the rendered page size at that same scale.
+ * Zero-size rects (point targets) are preserved. Returns a zeroed NormRect if
+ * the page has no measurable size.
+ */
+export function deviceRectToNorm(
+  rect: Rect,
+  pageDeviceWidth: number,
+  pageDeviceHeight: number
+): NormRect {
+  if (pageDeviceWidth <= 0 || pageDeviceHeight <= 0) {
+    return { x: 0, y: 0, width: 0, height: 0 };
+  }
+  return {
+    x: rect.x / pageDeviceWidth,
+    y: rect.y / pageDeviceHeight,
+    width: rect.width / pageDeviceWidth,
+    height: rect.height / pageDeviceHeight,
+  };
+}
+
+/**
+ * Place a NormRect back into page-local pixels using the page element's LIVE
+ * rendered box size. Pairs with `pageRectToContent` to land in content-space.
+ */
+export function normRectToPageRect(
+  norm: NormRect,
+  pageBoxWidth: number,
+  pageBoxHeight: number
+): Rect {
+  return {
+    x: norm.x * pageBoxWidth,
+    y: norm.y * pageBoxHeight,
+    width: norm.width * pageBoxWidth,
+    height: norm.height * pageBoxHeight,
+  };
 }
 
 /** Shift a page-local rect into the scroll-content container's coordinate space. */

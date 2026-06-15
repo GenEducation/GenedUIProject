@@ -1,24 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import {
   resolveTargetRect,
   pageRectToContent,
+  deviceRectToNorm,
+  normRectToPageRect,
   findMatchingItemIndices,
   type PointerSpec,
   type Rect,
+  type NormRect,
   type TextItemLike,
 } from "./pointerGeometry";
 
 interface UsePointerResolverParams {
   pdfDoc: PDFDocumentProxy | null;
   pointer: PointerSpec | null;
-  /** Current render scale (viewport scale). */
-  scale: number;
   /** Returns the rendered page wrapper element for a 1-based page number. */
   getPageEl: (pageNum: number) => HTMLElement | null;
-  /** Bump to force a recompute once layout has settled (e.g. numPages, container width). */
+  /** Bump to force a re-place once layout has settled (e.g. numPages, container width). */
   recomputeKey?: number;
 }
 
@@ -29,21 +30,39 @@ interface ResolvedPointer {
   visible: boolean;
 }
 
+interface ResolvedTarget {
+  /** 1-based page the pointer lands on. */
+  page: number;
+  /** Scale- and layout-independent target rect (fractions of the page). */
+  norm: NormRect;
+}
+
 const MAX_LAYOUT_RETRIES = 12;
 
 /**
- * Resolves the active pointer spec into a concrete on-screen rect by combining
- * the pure geometry helpers with live pdfjs text content / viewport transforms
- * and the rendered page element's offset. Text content is cached per page.
+ * Resolves the active pointer spec into a concrete on-screen rect in two
+ * decoupled stages:
+ *
+ *  1. Resolution (async, scale-free): combine the pure geometry helpers with
+ *     pdfjs text content / viewport transforms to produce a *normalized* target
+ *     rect (fractions of the page) plus the page it lives on. This never reads
+ *     the live layout, so it can't tear against an in-flight resize.
+ *
+ *  2. Placement (synchronous, layout-driven): multiply the normalized rect by
+ *     the target page element's *live* rendered box and shift by its offset.
+ *     Re-runs on any layout change via a ResizeObserver on that element, so the
+ *     highlight stays glued to the text through zoom / panel-resize.
+ *
+ * Text content is cached per page.
  */
 export function usePointerResolver({
   pdfDoc,
   pointer,
-  scale,
   getPageEl,
   recomputeKey,
 }: UsePointerResolverParams): ResolvedPointer {
   const [rect, setRect] = useState<Rect | null>(null);
+  const [target, setTarget] = useState<ResolvedTarget | null>(null);
   const textCache = useRef<Map<number, TextItemLike[]>>(new Map());
 
   // Drop cached text content when the document changes.
@@ -51,36 +70,12 @@ export function usePointerResolver({
     textCache.current.clear();
   }, [pdfDoc]);
 
-  // Place a page-local rect into content coordinates, retrying across frames
-  // until the page element has been laid out.
-  const placeWithRetry = useCallback(
-    (pageNum: number, pageRect: Rect, isCancelled: () => boolean) => {
-      let attempts = 0;
-      const tryPlace = () => {
-        if (isCancelled()) return;
-        const el = getPageEl(pageNum);
-        // offsetParent is null while the element is display:none / not laid out.
-        if (el && el.offsetParent) {
-          setRect(pageRectToContent(pageRect, el.offsetLeft, el.offsetTop));
-          return;
-        }
-        if (attempts++ < MAX_LAYOUT_RETRIES) {
-          requestAnimationFrame(tryPlace);
-        } else {
-          setRect(null);
-        }
-      };
-      tryPlace();
-    },
-    [getPageEl]
-  );
-
+  // ── Stage 1: resolve the pointer spec into a normalized, scale-free target ──
   useEffect(() => {
     let cancelled = false;
-    const isCancelled = () => cancelled;
 
     if (!pdfDoc || !pointer) {
-      setRect(null);
+      setTarget(null);
       return;
     }
 
@@ -100,24 +95,24 @@ export function usePointerResolver({
 
     (async () => {
       try {
-        const target = pointer.target;
-        const isText = target.kind === "text";
+        const t = pointer.target;
+        const isText = t.kind === "text";
 
         // Resolve which page to point at. Text targets without an explicit page
         // are searched across the whole document for the first match.
         let targetPage = pointer.page ?? null;
         if (isText && targetPage == null) {
-          const occurrence = target.occurrence ?? 0;
+          const occurrence = t.occurrence ?? 0;
           for (let p = 1; p <= pdfDoc.numPages; p++) {
             const items = await getItems(p);
             if (cancelled) return;
-            if (findMatchingItemIndices(items, target.text, occurrence).length > 0) {
+            if (findMatchingItemIndices(items, t.text, occurrence).length > 0) {
               targetPage = p;
               break;
             }
           }
           if (targetPage == null) {
-            setRect(null);
+            setTarget(null);
             return;
           }
         }
@@ -125,37 +120,98 @@ export function usePointerResolver({
 
         const page = await pdfDoc.getPage(targetPage);
         if (cancelled) return;
-        const viewport = page.getViewport({ scale });
+        // Resolve at scale 1 so the normalization base matches the page's
+        // intrinsic dimensions; placement re-scales against the live box.
+        const viewport = page.getViewport({ scale: 1 });
         const items = isText ? await getItems(targetPage) : undefined;
         if (cancelled) return;
 
         const pageRect = resolveTargetRect({
-          target,
+          target: t,
           pageWidth: viewport.width,
           pageHeight: viewport.height,
           items,
           viewportTransform: viewport.transform,
-          scale,
+          scale: 1,
         });
 
         page.cleanup();
 
         if (cancelled) return;
         if (!pageRect) {
-          setRect(null);
+          setTarget(null);
           return;
         }
 
-        placeWithRetry(targetPage, pageRect, isCancelled);
+        setTarget({
+          page: targetPage,
+          norm: deviceRectToNorm(pageRect, viewport.width, viewport.height),
+        });
       } catch {
-        if (!cancelled) setRect(null);
+        if (!cancelled) setTarget(null);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [pdfDoc, pointer, scale, placeWithRetry, recomputeKey]);
+  }, [pdfDoc, pointer]);
+
+  // ── Stage 2: place the normalized target using the live page box ────────────
+  // Re-runs when the target changes, and stays glued to the text across layout
+  // changes via ResizeObservers on the page element and its container.
+  // `recomputeKey` is a final fallback nudge after the surrounding layout shifts.
+  useEffect(() => {
+    if (target == null) {
+      setRect(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const place = () => {
+      const el = getPageEl(target.page);
+      // offsetParent is null while the element is display:none / not laid out.
+      if (!el || !el.offsetParent) return false;
+      const pageRect = normRectToPageRect(target.norm, el.offsetWidth, el.offsetHeight);
+      setRect(pageRectToContent(pageRect, el.offsetLeft, el.offsetTop));
+      return true;
+    };
+
+    // Initial placement: retry across frames until the page has been laid out.
+    let attempts = 0;
+    const tryPlace = () => {
+      if (cancelled) return;
+      if (place()) return;
+      if (attempts++ < MAX_LAYOUT_RETRIES) {
+        requestAnimationFrame(tryPlace);
+      } else {
+        setRect(null);
+      }
+    };
+    tryPlace();
+
+    // Keep the highlight glued to the text across layout changes:
+    //  • the page element resizes on zoom / fit-width (size change), and
+    //  • its offsetParent (the scroll-content container) resizes when the split
+    //    divider is dragged at a FIXED zoom — that re-centers the page, shifting
+    //    its offset without changing its size, which is the case that left the
+    //    box stranded to the side of the text.
+    // PdfPage's wrapper size updates synchronously with the scale prop, so the
+    // observer fires on every layout tick with the correct box + offset.
+    const el = getPageEl(target.page);
+    let ro: ResizeObserver | null = null;
+    if (el && typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(() => place());
+      ro.observe(el);
+      if (el.offsetParent instanceof Element) ro.observe(el.offsetParent);
+    }
+
+    return () => {
+      cancelled = true;
+      ro?.disconnect();
+    };
+  }, [target, getPageEl, recomputeKey]);
 
   return { rect, label: pointer?.label, visible: rect != null };
 }

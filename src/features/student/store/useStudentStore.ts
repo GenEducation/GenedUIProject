@@ -28,7 +28,7 @@ export interface StudentProfile {
 
 export interface ChatElement {
   id: string;
-  type: "text" | "svg" | "widget" | "image" | "visual" | "comprehension_widget" | "english_skill_view";
+  type: "text" | "svg" | "widget" | "image" | "visual" | "comprehension_widget" | "english_skill_view" | "interactive";
   content: string;
   meta?: {
     // existing visual meta
@@ -52,6 +52,14 @@ export interface ChatElement {
     choices?: Array<{ id: string; label: string }>;
     allow_retry?: boolean;
     directive_id?: string;
+    // interactive math block meta (SDUI)
+    interactive_type?: string;
+    render?: any;
+    interaction?: any;
+    validation?: any;
+    anchor?: string;
+    interaction_type?: string;
+    is_fallback?: boolean;
     // difficult word meta
     word?: string;
     syllables?: string[];
@@ -302,6 +310,7 @@ export interface StudentState {
   activeSkillDirective: any | null;
   oralAnalysisResult: any | null;
   comprehensionResults: Record<string, { is_correct: boolean; answer: string }>;
+  interactiveResults: Record<string, { is_correct: boolean; attempts: number; student_answer: string }>;
 
   // Actions
   setStudentProfile: (profile: StudentProfile) => void;
@@ -365,6 +374,12 @@ export interface StudentState {
     answer: string
   ) => Promise<{ is_correct: boolean; id?: string; directive_id?: string; student_response?: string } | null>;
   clearComprehensionResult: (directiveId: string) => void;
+  submitInteractiveAnswer: (
+    directiveId: string,
+    interactionType: string,
+    answer: string
+  ) => Promise<{ is_correct: boolean; attempts?: number; directive_id?: string; interaction_type?: string; student_answer?: any } | null>;
+  clearInteractiveResult: (directiveId: string) => void;
 }
 
 // -- Store --------------------------------------------------------------------─
@@ -446,6 +461,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   activeSkillDirective: null,
   oralAnalysisResult: null,
   comprehensionResults: {},
+  interactiveResults: {},
   logoutStudent: () => {
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");
@@ -470,6 +486,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       isRateLimitHit: false,
       rateLimitMessage: null,
       comprehensionResults: {},
+  interactiveResults: {},
     });
     window.location.href = "/";
   },
@@ -1813,6 +1830,45 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     });
   },
 
+  /** POST /math/session/{id}/interactive-answer */
+  submitInteractiveAnswer: async (directiveId, interactionType, answer) => {
+    const { activeChat } = get();
+    const sessionId = activeChat?.session_id || activeChat?.id;
+    if (!sessionId || sessionId === "new") return null;
+    try {
+      const result = await studentService.submitInteractiveAnswer(
+        sessionId,
+        directiveId,
+        interactionType,
+        answer
+      );
+      if (result) {
+        set((state) => ({
+          interactiveResults: {
+            ...state.interactiveResults,
+            [directiveId]: {
+              is_correct: result.is_correct,
+              attempts: result.attempts ?? 1,
+              student_answer: answer,
+            },
+          },
+        }));
+      }
+      return result;
+    } catch (err) {
+      console.warn("[InteractiveAnswer] submission failed:", err);
+      return null;
+    }
+  },
+
+  clearInteractiveResult: (directiveId) => {
+    set((state) => {
+      const newResults = { ...state.interactiveResults };
+      delete newResults[directiveId];
+      return { interactiveResults: newResults };
+    });
+  },
+
   sendMessage: async (text?: string, activityInput?: any, opts?: { isTypedQuery?: boolean }): Promise<void> => {
     const { studentProfile, activeChat } = get();
     if (!studentProfile) return;
@@ -2127,6 +2183,45 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             content: event.expression || "",
             meta: { error: event.type === "math_widget_error", message: event.message },
           });
+          currentToolStatus = undefined;
+          if (isPlanningUIPresented) updateUI(bufferedText, elements);
+        } else if (event.type === "interactive_block" || event.type === "interactive_block_error") {
+          pushTextElement(currentTextBuffer);
+          currentTextBuffer = "";
+
+          if (event.type === "interactive_block_error") {
+            elements.push({
+              id: `interactive-error-${Date.now()}`,
+              type: "interactive",
+              content: "error",
+              meta: {
+                interactive_type: event.interactive_type || "unknown",
+                directive_id: event.directive_id,
+                label: event.label || "Activity",
+                message: event.message,
+                fallback_text: event.fallback_text || "[Interactive Block Error]",
+                is_fallback: true,
+              },
+            });
+          } else {
+            elements.push({
+              id: `interactive-${Date.now()}-${elements.length}`,
+              type: "interactive",
+              content: event.interactive_type || "interactive",
+              meta: {
+                directive_id: event.directive_id,
+                interactive_type: event.interactive_type,
+                label: event.label,
+                question: event.prompt,
+                render: event.render,
+                interaction: event.interaction,
+                validation: event.validation,
+                anchor: event.anchor,
+                interaction_type: event.meta?.interaction_type,
+                ...(event.meta || {}),
+              },
+            });
+          }
           currentToolStatus = undefined;
           if (isPlanningUIPresented) updateUI(bufferedText, elements);
         } else if ((event.type === "chunk" || event.type === "chunks") && typeof event.text === "string") {

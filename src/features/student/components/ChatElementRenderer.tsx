@@ -11,6 +11,7 @@ import { GeoGebraVisual } from "./GeoGebraVisual";
 import { MathWidget } from "./MathWidget";
 import { ComprehensionWidget } from "./ComprehensionWidget";
 import { KaraokeRenderer } from "./KaraokeRenderer";
+import { InteractiveBlock } from "./interactive/InteractiveBlock";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
@@ -156,6 +157,17 @@ export const ChatElementRenderer = React.memo(({ elements, isReadOnly = false }:
               text={el.content}
               directiveId={el.meta?.directive_id || ""}
               mode={el.meta?.mode}
+            />
+          );
+        }
+        if (el.type === "interactive") {
+          return (
+            <InteractiveBlock
+              key={el.id}
+              directiveId={el.meta?.directive_id || el.id}
+              meta={el.meta}
+              disabled={isReadOnly}
+              readOnly={isReadOnly}
             />
           );
         }

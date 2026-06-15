@@ -48,9 +48,9 @@ export function PdfViewer({ pdfUrl }: PdfViewerProps) {
     usePointerResolver({
       pdfDoc,
       pointer: activePointer,
-      scale,
       getPageEl,
-      // Recompute when the layout shifts (resize / fit-width changes offsets).
+      // Nudge a re-place when the layout shifts the page's offset without
+      // resizing it (the ResizeObserver covers size changes on its own).
       recomputeKey: Math.round(containerWidth),
     });
 
