@@ -269,7 +269,31 @@ export function parseContent(content: string): ChatElement[] {
       });
     }
 
-    if (match[1]) {
+    if (match[1] && match[1] === "interactive") {
+      // Interactive math block persisted in history as
+      // <<VISUAL type="interactive" label="...">>{block json}<</VISUAL>>.
+      // Live turns receive this as an `interactive_block` SSE event instead; here we
+      // rehydrate the same ChatElement shape from the stored JSON body.
+      const label = match[2];
+      const payload = match[3].trim();
+      let block: any = {};
+      try { block = JSON.parse(payload); } catch (e) { block = {}; }
+      elements.push({
+        id: `interactive-${elementCount++}-${Date.now()}`,
+        type: "interactive",
+        content: block.interactive_type || "interactive",
+        meta: {
+          directive_id: block.directive_id,
+          interactive_type: block.interactive_type,
+          label: block.label || label,
+          question: block.prompt,
+          render: block.render,
+          interaction: block.interaction,
+          validation: block.validation,
+          interaction_type: block.meta?.interaction_type || block.interaction_type,
+        },
+      });
+    } else if (match[1]) {
       const engine = match[1];
       const label = match[2];
       const payload = match[3].trim();
