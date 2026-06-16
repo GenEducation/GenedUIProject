@@ -3,6 +3,7 @@
 import React from "react";
 import type { InteractiveProps } from "./types";
 import { COMPONENT_REGISTRY } from "./registry";
+import { InteractiveContext } from "./shared";
 
 function Fallback({ label }: { label?: string }) {
   return (
@@ -32,7 +33,20 @@ export function InteractiveBlock({ directiveId, meta, disabled, readOnly }: Inte
   const Comp = type ? COMPONENT_REGISTRY[type] : undefined;
   if (!Comp) return <Fallback label={meta?.label} />;
 
-  return <Comp directiveId={directiveId} meta={meta} disabled={disabled} readOnly={readOnly} />;
+  // A block with no real directive_id can never be graded (history rehydration, or a
+  // directive the model emitted as raw text). Render it read-only — no Check button.
+  const effectiveReadOnly = !!readOnly || !meta?.directive_id;
+
+  return (
+    <InteractiveContext.Provider value={{ readOnly: effectiveReadOnly }}>
+      <Comp
+        directiveId={directiveId}
+        meta={meta}
+        disabled={disabled || effectiveReadOnly}
+        readOnly={effectiveReadOnly}
+      />
+    </InteractiveContext.Provider>
+  );
 }
 
 export default InteractiveBlock;

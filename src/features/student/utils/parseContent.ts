@@ -253,7 +253,7 @@ export function parseContent(content: string): ChatElement[] {
   if (!content) return [];
   const elements: ChatElement[] = [];
 
-  const masterRegex = /(?:<<VISUAL\s+type="([^"]+)"\s+label="([^"]*)"(?:[^>]*)>>?([\s\S]*?)<<?\/VISUAL>>?)|(?:<<VISUAL\s+type="([^"]+)"((?:\s+\w+="[^"]*")*)\s*\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)(?::|\s+)([\s\S]*?)(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
+  const masterRegex = /(?:<<VISUAL\s+type="([^"]+)"\s+label="([^"]*)"(?:[^>]*)>>?([\s\S]*?)<<?\/VISUAL>>?)|(?:<<VISUAL\s+type="([^"]+)"((?:\s+\w+="[^"]*")*)\s*\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE|math_interactive)(?::|\s+)([\s\S]*?)(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
 
   let elementCount = 0;
   let lastIndex = 0;
@@ -354,7 +354,45 @@ export function parseContent(content: string): ChatElement[] {
       const type = match[6];
       let attrsRaw = match[7];
 
-      if (type === "MATH_DRAW") {
+      if (type === "math_interactive") {
+        // Raw interactive directive emitted as text (model wrote the tool call inline
+        // instead of invoking it). Parse the attributes into an interactive element.
+        // It carries no directive_id, so InteractiveBlock renders it read-only.
+        // answer_key is intentionally never parsed or surfaced client-side.
+        const getStr = (k: string) => {
+          const m = attrsRaw.match(new RegExp(k + '="([^"]*)"'));
+          return m ? m[1] : undefined;
+        };
+        const getObj = (k: string) => {
+          const at = attrsRaw.indexOf(k + "=");
+          if (at < 0) return undefined;
+          const bs = attrsRaw.indexOf("{", at);
+          if (bs < 0) return undefined;
+          let depth = 0;
+          let end = bs;
+          for (let i = bs; i < attrsRaw.length; i++) {
+            if (attrsRaw[i] === "{") depth++;
+            else if (attrsRaw[i] === "}") { depth--; if (depth === 0) { end = i + 1; break; } }
+          }
+          const raw = attrsRaw.substring(bs, end);
+          const tryParse = (s: string) => { try { return JSON.parse(s); } catch (e) { return undefined; } };
+          let v = tryParse(raw);
+          if (v === undefined && raw.startsWith("{{") && raw.endsWith("}}")) v = tryParse(raw.slice(1, -1));
+          return v;
+        };
+        elements.push({
+          id: `interactive-${elementCount++}-${Date.now()}`,
+          type: "interactive",
+          content: getStr("interactive_type") || "interactive",
+          meta: {
+            interactive_type: getStr("interactive_type"),
+            label: getStr("label"),
+            question: getStr("prompt"),
+            render: getObj("render"),
+            interaction: getObj("interaction"),
+          },
+        });
+      } else if (type === "MATH_DRAW") {
         const typeMatch = attrsRaw.match(/type\s*=\s*[\\"]*([^\\"\s\>]+)[\\"]*/i);
         const paramsStart = attrsRaw.indexOf("params=");
         let params: any = {};

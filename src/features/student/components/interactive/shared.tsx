@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useContext, createContext } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, RefreshCw } from "lucide-react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import { COLORS, FONT } from "./types";
+
+// Set by InteractiveBlock. readOnly = true when the block can't be submitted
+// (history, or a directive with no directive_id) → the Check button is hidden.
+export const InteractiveContext = createContext<{ readOnly?: boolean }>({});
 
 // ── KaTeX inline label ────────────────────────────────────────────────────────
 export function Katex({ tex, style }: { tex: string; style?: React.CSSProperties }) {
@@ -166,6 +170,12 @@ export function InteractiveFooter({
   onRetry?: () => void;
   submitLabel?: string;
 }) {
+  const { readOnly } = useContext(InteractiveContext);
+  if (readOnly) {
+    // History / no directive_id: never offer Check or retry. Only surface a result
+    // if one happens to be cached.
+    return submitted ? <ResultBanner isCorrect={isCorrect} allowRetry={false} attempts={attempts} /> : null;
+  }
   if (submitted) {
     return <ResultBanner isCorrect={isCorrect} allowRetry={allowRetry} attempts={attempts} onRetry={onRetry} />;
   }

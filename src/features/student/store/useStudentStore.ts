@@ -2230,7 +2230,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
           // Detect and extract embedded tags (VISUAL, MATH_DRAW, English skill directives, raw SVG)
           // English skill directives are stripped from visible text and parsed for the audio/widget layer
-          const tagRegex = /(?:<<VISUAL[\s\S]*?<<?\/VISUAL>>?)|(?:<<VISUAL[\s\S]*?\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)[\s\S]*?>>?)|(?:<svg[\s\S]*?<\/svg>)/g;
+          const tagRegex = /(?:<<VISUAL[\s\S]*?<<?\/VISUAL>>?)|(?:<<VISUAL[\s\S]*?\/>>?)|(?:<<math_interactive[\s\S]*?>>)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)[\s\S]*?>>?)|(?:<svg[\s\S]*?<\/svg>)/g;
           let match;
           while ((match = tagRegex.exec(currentTextBuffer)) !== null) {
             const tag = match[0];
