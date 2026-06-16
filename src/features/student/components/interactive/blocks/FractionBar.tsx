@@ -14,7 +14,7 @@ export default function FractionBar({ directiveId, meta, disabled, readOnly }: I
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "select_cells";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const initial: number[] = Array.isArray(studentAnswer?.selected) ? studentAnswer.selected : (ans.shaded || []);
@@ -25,18 +25,25 @@ export default function FractionBar({ directiveId, meta, disabled, readOnly }: I
     <div style={{ display: "flex", gap: 3, maxWidth: 360 }}>
       {Array.from({ length: segments }).map((_, i) => {
         const on = shaded.includes(i);
+        const interactive = !!clickable && !lock;
         return (
-          <div
+          <button
             key={i}
+            type="button"
+            aria-label={clickable ? `segment ${i + 1}` : undefined}
+            aria-pressed={clickable ? on : undefined}
+            aria-hidden={clickable ? undefined : true}
+            tabIndex={interactive ? 0 : -1}
+            disabled={!interactive}
             onClick={() => {
               if (!clickable || lock) return;
               setSelected((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]));
             }}
             style={{
-              flex: 1, height: 34, borderRadius: 6,
+              flex: 1, height: 34, borderRadius: 6, padding: 0,
               background: on ? fill : "#FFFFFF",
               border: `1px solid ${on ? fill : COLORS.border}`,
-              cursor: clickable && !lock ? "pointer" : "default", transition: "all 0.15s",
+              cursor: interactive ? "pointer" : "default", transition: "all 0.15s",
             }}
           />
         );
@@ -58,6 +65,8 @@ export default function FractionBar({ directiveId, meta, disabled, readOnly }: I
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setSelected([]); retry(); }}
       />
     </InteractiveShell>

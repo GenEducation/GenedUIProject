@@ -15,7 +15,7 @@ export default function NumberLine({ directiveId, meta, disabled, readOnly }: In
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "place_point";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const steps = Math.max(1, Math.round((max - min) / step));
@@ -37,6 +37,21 @@ export default function NumberLine({ directiveId, meta, disabled, readOnly }: In
     setIdx(i);
   };
 
+  const nudge = (delta: number) => {
+    if (lock) return;
+    setIdx((cur) => Math.max(0, Math.min(steps, (cur < 0 ? 0 : cur) + delta)));
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (lock) return;
+    switch (e.key) {
+      case "ArrowRight": case "ArrowUp": e.preventDefault(); nudge(1); break;
+      case "ArrowLeft": case "ArrowDown": e.preventDefault(); nudge(-1); break;
+      case "Home": e.preventDefault(); setIdx(0); break;
+      case "End": e.preventDefault(); setIdx(steps); break;
+    }
+  };
+
   const dragging = useRef(false);
 
   return (
@@ -45,14 +60,18 @@ export default function NumberLine({ directiveId, meta, disabled, readOnly }: In
         ref={svgRef}
         viewBox={`0 0 ${W} 70`}
         style={{ width: "100%", maxWidth: 340, height: "auto", cursor: lock ? "default" : "pointer", touchAction: "none" }}
-        onMouseDown={(e) => { dragging.current = true; setFromClient(e.clientX); }}
-        onMouseMove={(e) => { if (dragging.current) setFromClient(e.clientX); }}
-        onMouseUp={() => (dragging.current = false)}
-        onMouseLeave={() => (dragging.current = false)}
+        onPointerDown={(e) => { if (lock) return; dragging.current = true; (e.currentTarget as SVGSVGElement).setPointerCapture?.(e.pointerId); setFromClient(e.clientX); }}
+        onPointerMove={(e) => { if (dragging.current) setFromClient(e.clientX); }}
+        onPointerUp={() => (dragging.current = false)}
+        onPointerCancel={() => (dragging.current = false)}
+        onKeyDown={onKeyDown}
+        tabIndex={lock ? -1 : 0}
         role="slider"
+        aria-label={meta?.question || "number line"}
         aria-valuemin={min}
         aria-valuemax={max}
         aria-valuenow={idx >= 0 ? valueOf(idx) : undefined}
+        aria-valuetext={idx >= 0 ? String(labels?.[idx] ?? valueOf(idx)) : undefined}
       >
         <line x1={pad} y1={40} x2={W - pad} y2={40} stroke={COLORS.border} strokeWidth={2} />
         {Array.from({ length: steps + 1 }).map((_, i) => (
@@ -76,6 +95,8 @@ export default function NumberLine({ directiveId, meta, disabled, readOnly }: In
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setIdx(-1); retry(); }}
       />
     </InteractiveShell>

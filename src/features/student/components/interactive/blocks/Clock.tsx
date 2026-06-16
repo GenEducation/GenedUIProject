@@ -11,7 +11,7 @@ export default function Clock({ directiveId, meta, disabled, readOnly }: Interac
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "place_point";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const [hour, setHour] = useState<number>(studentAnswer?.hour ?? render.initial_hour ?? 12);
@@ -55,6 +55,8 @@ export default function Clock({ directiveId, meta, disabled, readOnly }: Interac
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => retry()}
       />
     </InteractiveShell>

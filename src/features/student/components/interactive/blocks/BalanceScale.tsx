@@ -17,7 +17,7 @@ export default function BalanceScale({ directiveId, meta, disabled, readOnly }: 
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "build";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const [x, setX] = useState<number>(studentAnswer?.solve_x ?? 0);
@@ -55,6 +55,8 @@ export default function BalanceScale({ directiveId, meta, disabled, readOnly }: 
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setX(0); retry(); }}
       />
     </InteractiveShell>
