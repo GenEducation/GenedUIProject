@@ -8,7 +8,10 @@
  * Usage: BASE=http://localhost:3210 node pointer.e2e.mjs
  */
 import puppeteer from "puppeteer";
+import os from "node:os";
+import path from "node:path";
 
+const TMP = os.tmpdir();
 const BASE = process.env.BASE || "http://localhost:3210";
 const URL = `${BASE}/dev/pointer`;
 const PAGE1_WIDTH_PT = 612; // theme-showcase.pdf page width at scale 1
@@ -116,7 +119,41 @@ try {
   });
   check("text: hand anchored near target", handNear < 25, `dist=${handNear.toFixed(1)}px`);
 
-  await page.screenshot({ path: "/tmp/pointer_text.png" });
+  await page.screenshot({ path: path.join(TMP, "pointer_text.png") });
+
+  // ── Test 1b: highlight stays glued to text across a panel resize ──────────
+  // Reproduces the split-pane "expand/collapse" bug: changing the viewport
+  // width recomputes the fit-width scale, which used to leave the box offset.
+  // The box's position as a fraction of the rendered page must be invariant.
+  const fracBefore = await page.evaluate(() => {
+    const c = document.querySelector("canvas").getBoundingClientRect();
+    const b = document.querySelector('[data-testid="pointer-highlight"]').getBoundingClientRect();
+    return { x: (b.left - c.left) / c.width, y: (b.top - c.top) / c.height };
+  });
+  await page.setViewport({ width: 760, height: 900 }); // shrink ("collapse")
+  await waitStable(page, '[data-testid="pointer-highlight"]');
+  const fracNarrow = await page.evaluate(() => {
+    const c = document.querySelector("canvas").getBoundingClientRect();
+    const b = document.querySelector('[data-testid="pointer-highlight"]').getBoundingClientRect();
+    return { x: (b.left - c.left) / c.width, y: (b.top - c.top) / c.height };
+  });
+  check(
+    "resize (collapse): box stays glued to text",
+    Math.abs(fracNarrow.x - fracBefore.x) < 0.01 && Math.abs(fracNarrow.y - fracBefore.y) < 0.01,
+    `dx=${(fracNarrow.x - fracBefore.x).toFixed(4)} dy=${(fracNarrow.y - fracBefore.y).toFixed(4)}`
+  );
+  await page.setViewport({ width: 1280, height: 900 }); // grow back ("expand")
+  await waitStable(page, '[data-testid="pointer-highlight"]');
+  const fracWide = await page.evaluate(() => {
+    const c = document.querySelector("canvas").getBoundingClientRect();
+    const b = document.querySelector('[data-testid="pointer-highlight"]').getBoundingClientRect();
+    return { x: (b.left - c.left) / c.width, y: (b.top - c.top) / c.height };
+  });
+  check(
+    "resize (expand): box stays glued to text",
+    Math.abs(fracWide.x - fracBefore.x) < 0.01 && Math.abs(fracWide.y - fracBefore.y) < 0.01,
+    `dx=${(fracWide.x - fracBefore.x).toFixed(4)} dy=${(fracWide.y - fracBefore.y).toFixed(4)}`
+  );
 
   // ── Test 2: figure / region target ───────────────────────────────────────
   await page.evaluate(() =>
@@ -134,7 +171,7 @@ try {
   check("figure: height ~0.2 of page", Math.abs(figFracH - 0.2) < 0.05, `fracH=${figFracH.toFixed(3)}`);
   const figFracW = figGeom.bWidth / figGeom.cWidth;
   check("figure: width ~0.6 of page", Math.abs(figFracW - 0.6) < 0.06, `fracW=${figFracW.toFixed(3)}`);
-  await page.screenshot({ path: "/tmp/pointer_figure.png" });
+  await page.screenshot({ path: path.join(TMP, "pointer_figure.png") });
 
   // ── Test 3: missing text resolves to no overlay ──────────────────────────
   await page.evaluate(() =>
@@ -153,7 +190,7 @@ try {
   check("clear: highlight removed", !(await page.$('[data-testid="pointer-highlight"]')));
   check("clear: hand removed", !(await page.$('[data-testid="pointer-hand"]')));
 
-  console.log("\nScreenshots: /tmp/pointer_text.png, /tmp/pointer_figure.png");
+  console.log(`\nScreenshots: ${path.join(TMP, "pointer_text.png")}, ${path.join(TMP, "pointer_figure.png")}`);
 } finally {
   await browser.close();
 }

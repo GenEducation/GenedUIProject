@@ -253,6 +253,25 @@ export const studentService = {
     return response.json();
   },
 
+  /** POST /math/session/{session_id}/interactive-answer — grades an interactive math block.
+   *  session_id is the chat session id; authFetch injects the x-user-id header. */
+  submitInteractiveAnswer: async (
+    sessionId: string,
+    directiveId: string,
+    interactionType: string,
+    answer: string
+  ) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/math/session/${sessionId}/interactive-answer`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ directive_id: directiveId, interaction_type: interactionType, answer }),
+      }
+    );
+    return response.json();
+  },
+
   fetchSkillSessions: async (sessionId: string) => {
     const response = await authFetch(`${API_BASE_URL}/english/session/${sessionId}/skill-sessions`);
     return response.json();

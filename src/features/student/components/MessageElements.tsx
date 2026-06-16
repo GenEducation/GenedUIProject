@@ -12,6 +12,7 @@ import { P5Visual } from "./P5Visual";
 import { GeoGebraVisual } from "./GeoGebraVisual";
 import { ComprehensionWidget } from "./ComprehensionWidget";
 import { KaraokeRenderer } from "./KaraokeRenderer";
+import { InteractiveBlock } from "./interactive/InteractiveBlock";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
@@ -163,6 +164,15 @@ export function MessageElements({ elements, isStreaming, toolStatus }: MessageEl
               text={el.content}
               directiveId={el.meta?.directive_id || ""}
               mode={el.meta?.mode}
+            />
+          );
+        }
+        if (el.type === "interactive") {
+          return (
+            <InteractiveBlock
+              key={el.id}
+              directiveId={el.meta?.directive_id || el.id}
+              meta={el.meta}
             />
           );
         }

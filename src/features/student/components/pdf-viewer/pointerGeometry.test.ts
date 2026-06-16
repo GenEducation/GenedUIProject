@@ -13,6 +13,8 @@ import {
   clampRectToPage,
   resolveTargetRect,
   pageRectToContent,
+  deviceRectToNorm,
+  normRectToPageRect,
   parsePointerEvent,
   type TextItemLike,
   type Rect,
@@ -174,6 +176,35 @@ test("pageRectToContent offsets by the page position", () => {
   assert.deepEqual(pageRectToContent({ x: 10, y: 20, width: 5, height: 5 }, 100, 300), {
     x: 110, y: 320, width: 5, height: 5,
   });
+});
+
+// ── deviceRectToNorm / normRectToPageRect ────────────────────────────────────
+test("deviceRectToNorm divides through by the page size", () => {
+  assert.deepEqual(deviceRectToNorm({ x: 60, y: 160, width: 300, height: 240 }, 600, 800), {
+    x: 0.1, y: 0.2, width: 0.5, height: 0.3,
+  });
+});
+test("deviceRectToNorm preserves zero-size rects (point targets)", () => {
+  assert.deepEqual(deviceRectToNorm({ x: 300, y: 200, width: 0, height: 0 }, 600, 800), {
+    x: 0.5, y: 0.25, width: 0, height: 0,
+  });
+});
+test("deviceRectToNorm returns zeros when the page has no size", () => {
+  assert.deepEqual(deviceRectToNorm({ x: 10, y: 20, width: 5, height: 5 }, 0, 0), {
+    x: 0, y: 0, width: 0, height: 0,
+  });
+});
+test("normRectToPageRect multiplies by the live page box", () => {
+  assert.deepEqual(normRectToPageRect({ x: 0.1, y: 0.2, width: 0.5, height: 0.3 }, 600, 800), {
+    x: 60, y: 160, width: 300, height: 240,
+  });
+});
+test("device → norm → page round-trips at a different scale", () => {
+  // Resolve a bbox at scale 1 (600×800), normalize, then place against a live
+  // box scaled 1.5× (900×1200): the rect should scale proportionally.
+  const device = resolveTargetRect({ target: { kind: "bbox", bbox: [0.1, 0.2, 0.6, 0.5] }, pageWidth: 600, pageHeight: 800 })!;
+  const norm = deviceRectToNorm(device, 600, 800);
+  approxRect(normRectToPageRect(norm, 900, 1200), { x: 90, y: 240, width: 450, height: 360 });
 });
 
 // ── parsePointerEvent ─────────────────────────────────────────────────────────
