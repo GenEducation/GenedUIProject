@@ -13,7 +13,7 @@ export default function DataBuilder({ directiveId, meta, disabled, readOnly }: I
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "build";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const initValues: Record<string, number> = studentAnswer?.values || Object.fromEntries(categories.map((c) => [c, 0]));
@@ -49,6 +49,8 @@ export default function DataBuilder({ directiveId, meta, disabled, readOnly }: I
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setValues(Object.fromEntries(categories.map((c) => [c, 0]))); retry(); }}
       />
     </InteractiveShell>

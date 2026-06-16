@@ -21,7 +21,7 @@ export default function Hotspot({ directiveId, meta, disabled, readOnly }: Inter
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "select_cells";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const initial: string[] = Array.isArray(studentAnswer?.selected) ? studentAnswer.selected : [];
@@ -67,6 +67,8 @@ export default function Hotspot({ directiveId, meta, disabled, readOnly }: Inter
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setSelected([]); retry(); }}
       />
     </InteractiveShell>

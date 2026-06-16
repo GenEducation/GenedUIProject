@@ -16,7 +16,7 @@ export default function MoneyCounter({ directiveId, meta, disabled, readOnly }: 
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "build";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const [picks, setPicks] = useState<number[]>(Array.isArray(studentAnswer?.coins) ? studentAnswer.coins : []);
@@ -48,6 +48,8 @@ export default function MoneyCounter({ directiveId, meta, disabled, readOnly }: 
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setPicks([]); retry(); }}
       />
     </InteractiveShell>

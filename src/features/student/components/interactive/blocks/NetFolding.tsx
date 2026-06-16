@@ -26,7 +26,7 @@ export default function NetFolding({ directiveId, meta, disabled, readOnly }: In
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "match";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const initial: string | null = Array.isArray(studentAnswer?.pairs) && studentAnswer.pairs[0] ? studentAnswer.pairs[0][1] : null;
@@ -68,6 +68,8 @@ export default function NetFolding({ directiveId, meta, disabled, readOnly }: In
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setChoice(null); retry(); }}
       />
     </InteractiveShell>

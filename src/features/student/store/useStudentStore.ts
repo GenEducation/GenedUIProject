@@ -60,6 +60,9 @@ export interface ChatElement {
     anchor?: string;
     interaction_type?: string;
     is_fallback?: boolean;
+    // Set when the block is rehydrated from history: keep directive_id (so the
+    // student's cached result can be looked up) but render read-only (no re-attempt).
+    read_only?: boolean;
     // difficult word meta
     word?: string;
     syllables?: string[];
@@ -821,10 +824,25 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         },
       );
 
+      // Rehydrate graded interactive-block results so history shows the student's
+      // last answer (read-only). Seed these in the SAME set() as the messages, so
+      // the blocks mount with their cached result already present (the widgets read
+      // studentAnswer via useState initializer — a later update would be missed).
+      const rehydratedResults: Record<string, { is_correct: boolean; attempts: number; student_answer: string }> = {};
+      for (const r of (data.interactive_results || []) as any[]) {
+        if (!r?.directive_id) continue;
+        rehydratedResults[r.directive_id] = {
+          is_correct: !!r.is_correct,
+          attempts: r.attempts ?? 0,
+          student_answer:
+            typeof r.student_answer === "string" ? r.student_answer : JSON.stringify(r.student_answer ?? null),
+        };
+      }
+
       set((state) => {
         const isActive = state.activeChat?.id === sessionId;
         const activeChat = state.activeChat;
-        
+
         // Recover subject from history if current state is generic or missing
         let updatedActiveChat = activeChat;
         if (isActive && activeChat && historySubject && (!activeChat.subject || activeChat.subject === "General")) {
@@ -835,6 +853,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           activeChat: updatedActiveChat,
           messages: isActive ? mappedMessages : state.messages,
           chatMessagesCache: manageCacheEviction(state.chatMessagesCache, sessionId, mappedMessages),
+          // Merge so a live result submitted this session isn't clobbered by history.
+          interactiveResults: isActive
+            ? { ...rehydratedResults, ...state.interactiveResults }
+            : state.interactiveResults,
           isHistoryLoading: false,
           historyAbortController: null,
         };

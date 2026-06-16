@@ -24,7 +24,7 @@ export default function HundredChart({ directiveId, meta, disabled, readOnly }: 
   // original fill colour for full backward compatibility.
   const selFill = hasHighlights ? COLORS.brand : fill;
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const initial: number[] = Array.isArray(studentAnswer?.selected) ? studentAnswer.selected : [];
@@ -122,6 +122,8 @@ export default function HundredChart({ directiveId, meta, disabled, readOnly }: 
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setSelected([]); retry(); }}
       />
     </InteractiveShell>

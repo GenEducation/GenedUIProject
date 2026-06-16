@@ -15,7 +15,7 @@ export default function AreaModel({ directiveId, meta, disabled, readOnly }: Int
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "select_cells";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const initial: number[] = Array.isArray(studentAnswer?.selected) ? studentAnswer.selected : [];
@@ -56,6 +56,8 @@ export default function AreaModel({ directiveId, meta, disabled, readOnly }: Int
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setSelected([]); retry(); }}
       />
     </InteractiveShell>

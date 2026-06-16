@@ -64,7 +64,7 @@ export default function DragMatch({ directiveId, meta, disabled, readOnly }: Int
   const it = meta?.interaction_type || "match";
   const colors = ["#534AB7", "#1D9E75", "#D85A30", "#993556", "#185FA5"];
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const initial: Record<string, string> = {};
@@ -117,6 +117,8 @@ export default function DragMatch({ directiveId, meta, disabled, readOnly }: Int
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setByRight({}); retry(); }}
       />
     </InteractiveShell>
