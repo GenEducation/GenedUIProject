@@ -29,6 +29,14 @@ export default function NumberLine({ directiveId, meta, disabled, readOnly }: In
   const tickX = (i: number) => pad + (i / steps) * span;
   const valueOf = (i: number) => +(min + i * step).toFixed(decimals);
 
+  // Thin out labels so dense ranges (e.g. 0–60 step 1) stay readable instead of
+  // overlapping. Keep every step as a tick mark, but only label every Nth one,
+  // snapping N to a "nice" interval so the labels read 0,10,20,… not 0,7,14,…
+  const PX_PER_LABEL = 28; // minimum spacing between labels, in viewBox units
+  const niceSteps = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000];
+  const minEvery = Math.max(1, Math.ceil(steps / Math.max(2, Math.floor(span / PX_PER_LABEL))));
+  const labelEvery = niceSteps.find((n) => n >= minEvery) ?? minEvery;
+
   const setFromClient = (clientX: number) => {
     if (lock || !svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
@@ -55,14 +63,26 @@ export default function NumberLine({ directiveId, meta, disabled, readOnly }: In
         aria-valuenow={idx >= 0 ? valueOf(idx) : undefined}
       >
         <line x1={pad} y1={40} x2={W - pad} y2={40} stroke={COLORS.border} strokeWidth={2} />
-        {Array.from({ length: steps + 1 }).map((_, i) => (
-          <g key={i}>
-            <line x1={tickX(i)} y1={33} x2={tickX(i)} y2={47} stroke={COLORS.border} strokeWidth={2} />
-            <text x={tickX(i)} y={62} textAnchor="middle" fontSize={11} fill={COLORS.muted}>
-              {labels?.[i] ?? valueOf(i)}
-            </text>
-          </g>
-        ))}
+        {Array.from({ length: steps + 1 }).map((_, i) => {
+          const major = i % labelEvery === 0;
+          return (
+            <g key={i}>
+              <line
+                x1={tickX(i)}
+                y1={major ? 33 : 36}
+                x2={tickX(i)}
+                y2={major ? 47 : 44}
+                stroke={COLORS.border}
+                strokeWidth={major ? 2 : 1}
+              />
+              {major && (
+                <text x={tickX(i)} y={62} textAnchor="middle" fontSize={11} fill={COLORS.muted}>
+                  {labels?.[i] ?? valueOf(i)}
+                </text>
+              )}
+            </g>
+          );
+        })}
         {idx >= 0 && <circle cx={tickX(idx)} cy={40} r={11} fill={COLORS.brand} />}
       </svg>
       <p style={{ marginTop: 6, fontSize: 13, color: COLORS.muted }}>

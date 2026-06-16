@@ -1460,6 +1460,74 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             }
             return { messages: updatedMessages, streamingMessageId: newStreamingId };
           });
+        } else if (event.type === "interactive_block" || event.type === "interactive_block_error") {
+          // Mirrors the visual_block voice handler. Inert until the backend voice node
+          // emits interactive_block; the renderer (MessageElements → InteractiveBlock)
+          // already handles type:"interactive".
+          set((state) => {
+            const updatedMessages = [...state.messages];
+            let lastMsgIdx = updatedMessages.length - 1;
+            let lastMsg = updatedMessages[lastMsgIdx];
+            let newStreamingId = state.streamingMessageId;
+
+            if (!lastMsg || lastMsg.sender === "user") {
+              const newId = `voice-interactive-${Date.now()}`;
+              lastMsg = {
+                id: newId,
+                text: "",
+                sender: "ai",
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              };
+              updatedMessages.push(lastMsg);
+              lastMsgIdx = updatedMessages.length - 1;
+              newStreamingId = newId;
+            }
+
+            if (lastMsgIdx >= 0) {
+              const elements = lastMsg.elements ? [...lastMsg.elements] : [];
+
+              if (event.type === "interactive_block_error") {
+                elements.push({
+                  id: `interactive-error-${Date.now()}`,
+                  type: "interactive",
+                  content: "error",
+                  meta: {
+                    interactive_type: event.interactive_type || "unknown",
+                    directive_id: event.directive_id,
+                    label: event.label || "Activity",
+                    message: event.message,
+                    fallback_text: event.fallback_text || "[Interactive Block Error]",
+                    is_fallback: true,
+                  },
+                });
+              } else {
+                elements.push({
+                  id: `interactive-${Date.now()}-${elements.length}`,
+                  type: "interactive",
+                  content: event.interactive_type || "interactive",
+                  meta: {
+                    directive_id: event.directive_id,
+                    interactive_type: event.interactive_type,
+                    label: event.label,
+                    question: event.prompt,
+                    render: event.render,
+                    interaction: event.interaction,
+                    validation: event.validation,
+                    anchor: event.anchor,
+                    interaction_type: event.meta?.interaction_type,
+                    ...(event.meta || {}),
+                  },
+                });
+              }
+
+              updatedMessages[lastMsgIdx] = {
+                ...lastMsg,
+                elements,
+                toolStatus: undefined
+              };
+            }
+            return { messages: updatedMessages, streamingMessageId: newStreamingId };
+          });
         }
         },
         (content, role) => {
