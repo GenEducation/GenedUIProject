@@ -14,7 +14,7 @@ export default function ArrayBuilder({ directiveId, meta, disabled, readOnly }: 
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "build";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const [rows, setRows] = useState<number>(studentAnswer?.rows ?? 1);
@@ -54,6 +54,8 @@ export default function ArrayBuilder({ directiveId, meta, disabled, readOnly }: 
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setRows(1); setCols(1); retry(); }}
       />
     </InteractiveShell>

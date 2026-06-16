@@ -33,9 +33,13 @@ export function InteractiveBlock({ directiveId, meta, disabled, readOnly }: Inte
   const Comp = type ? COMPONENT_REGISTRY[type] : undefined;
   if (!Comp) return <Fallback label={meta?.label} />;
 
-  // A block with no real directive_id can never be graded (history rehydration, or a
-  // directive the model emitted as raw text). Render it read-only — no Check button.
-  const effectiveReadOnly = !!readOnly || !meta?.directive_id;
+  // Render read-only (no Check button) when:
+  //  - explicitly asked (readOnly prop), or
+  //  - the block was rehydrated from history (meta.read_only) — it keeps its
+  //    directive_id so the student's past result can still be looked up, or
+  //  - there is no directive_id at all (a directive emitted as raw text), so it
+  //    could never be graded.
+  const effectiveReadOnly = !!readOnly || !!meta?.read_only || !meta?.directive_id;
 
   return (
     <InteractiveContext.Provider value={{ readOnly: effectiveReadOnly }}>

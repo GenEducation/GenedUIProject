@@ -13,7 +13,7 @@ export default function BaseTenBlocks({ directiveId, meta, disabled, readOnly }:
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "build";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const [h, setH] = useState<number>(studentAnswer?.hundreds ?? 0);
@@ -56,6 +56,8 @@ export default function BaseTenBlocks({ directiveId, meta, disabled, readOnly }:
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setH(0); setT(0); setO(0); retry(); }}
       />
     </InteractiveShell>

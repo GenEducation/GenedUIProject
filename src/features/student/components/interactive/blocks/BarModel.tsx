@@ -14,7 +14,7 @@ export default function BarModel({ directiveId, meta, disabled, readOnly }: Inte
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "place_point";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const initUnits = typeof studentAnswer?.value === "number" ? Math.round((studentAnswer.value / whole) * ticks) : 0;
@@ -45,6 +45,8 @@ export default function BarModel({ directiveId, meta, disabled, readOnly }: Inte
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setUnits(0); retry(); }}
       />
     </InteractiveShell>

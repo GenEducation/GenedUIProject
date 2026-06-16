@@ -16,7 +16,7 @@ export default function Chart({ directiveId, meta, disabled, readOnly }: Interac
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "select_cells";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const initial: string[] = Array.isArray(studentAnswer?.selected) ? studentAnswer.selected : [];
@@ -39,15 +39,19 @@ export default function Chart({ directiveId, meta, disabled, readOnly }: Interac
         {data.map((d) => {
           const on = selected.includes(d.id);
           return (
-            <div
+            <button
               key={d.id}
+              type="button"
               onClick={() => toggle(d.id)}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flex: 1, cursor: lock ? "default" : "pointer" }}
+              aria-pressed={on}
+              aria-label={`${d.label}: ${d.value}`}
+              disabled={lock}
+              style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: 4, flex: 1, height: "100%", background: "none", border: "none", padding: 0, cursor: lock ? "default" : "pointer", fontFamily: "inherit" }}
             >
               <span style={{ fontSize: 11, color: COLORS.muted }}>{d.value}</span>
               <div style={{ width: "100%", maxWidth: 60, height: `${(d.value / maxVal) * 100}px`, background: on ? COLORS.brand : fill, borderRadius: "6px 6px 0 0", transition: "all 0.15s" }} />
               <span style={{ fontSize: 12, color: COLORS.ink, fontWeight: 600 }}>{d.label}</span>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -59,6 +63,8 @@ export default function Chart({ directiveId, meta, disabled, readOnly }: Interac
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setSelected([]); retry(); }}
       />
     </InteractiveShell>

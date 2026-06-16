@@ -16,7 +16,7 @@ export default function SymmetryGrid({ directiveId, meta, disabled, readOnly }: 
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "select_cells";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const initial: number[] = Array.isArray(studentAnswer?.selected) ? studentAnswer.selected : [];
@@ -68,6 +68,8 @@ export default function SymmetryGrid({ directiveId, meta, disabled, readOnly }: 
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setSelected([]); retry(); }}
       />
     </InteractiveShell>

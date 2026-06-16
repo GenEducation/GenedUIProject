@@ -12,7 +12,7 @@ export default function AngleTool({ directiveId, meta, disabled, readOnly }: Int
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "place_point";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const [deg, setDeg] = useState<number>(studentAnswer?.degrees ?? render.base_ray_deg ?? 30);
@@ -43,6 +43,8 @@ export default function AngleTool({ directiveId, meta, disabled, readOnly }: Int
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => retry()}
       />
     </InteractiveShell>

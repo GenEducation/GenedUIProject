@@ -13,7 +13,7 @@ export default function ShapePartition({ directiveId, meta, disabled, readOnly }
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "build";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
   const [parts, setParts] = useState<number>(studentAnswer?.parts ?? 1);
@@ -62,6 +62,8 @@ export default function ShapePartition({ directiveId, meta, disabled, readOnly }
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
+        submitError={submitError}
+        onDismissError={dismissError}
         onRetry={() => { setParts(1); retry(); }}
       />
     </InteractiveShell>

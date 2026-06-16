@@ -148,6 +148,28 @@ export function ResultBanner({
   );
 }
 
+// ── Submission error banner (network/server failure, NOT a wrong answer) ──────
+export function SubmitErrorBanner({ onDismiss }: { onDismiss?: () => void }) {
+  return (
+    <div role="alert" style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.danger, fontFamily: FONT }}>
+        Couldn&apos;t check your answer — please try again.
+      </span>
+      {onDismiss && (
+        <button
+          onClick={onDismiss}
+          style={{
+            display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700,
+            color: COLORS.brand, background: "none", border: "none", cursor: "pointer", fontFamily: FONT,
+          }}
+        >
+          <RefreshCw size={11} /> Retry
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── Footer: switches between Submit and Result based on submission state ───────
 export function InteractiveFooter({
   submitted,
@@ -159,6 +181,8 @@ export function InteractiveFooter({
   attempts,
   onRetry,
   submitLabel,
+  submitError,
+  onDismissError,
 }: {
   submitted: boolean;
   canSubmit: boolean;
@@ -169,6 +193,8 @@ export function InteractiveFooter({
   attempts?: number;
   onRetry?: () => void;
   submitLabel?: string;
+  submitError?: boolean;
+  onDismissError?: () => void;
 }) {
   const { readOnly } = useContext(InteractiveContext);
   if (readOnly) {
@@ -179,5 +205,10 @@ export function InteractiveFooter({
   if (submitted) {
     return <ResultBanner isCorrect={isCorrect} allowRetry={allowRetry} attempts={attempts} onRetry={onRetry} />;
   }
-  return <SubmitButton onClick={onSubmit} disabled={!canSubmit} submitting={submitting}>{submitLabel}</SubmitButton>;
+  return (
+    <>
+      <SubmitButton onClick={onSubmit} disabled={!canSubmit} submitting={submitting}>{submitLabel}</SubmitButton>
+      {submitError && <SubmitErrorBanner onDismiss={onDismissError} />}
+    </>
+  );
 }

@@ -16,6 +16,32 @@ import { InteractiveShell, InteractiveFooter, Katex } from "../shared";
 interface Item { id: string; label: string }
 const Lbl = ({ s }: { s: string }) => (/\\/.test(s) ? <Katex tex={s} /> : <span>{s}</span>);
 
+// Deterministic seeded shuffle that guarantees the result differs from the input
+// order whenever there are ≥2 items (so an ordering task is never pre-solved).
+function shuffleAway(ids: string[], seed: string): string[] {
+  if (ids.length < 2) return ids;
+  let h = 2166136261;
+  for (const ch of seed) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 16777619);
+  }
+  const rng = () => {
+    h ^= h << 13; h ^= h >>> 17; h ^= h << 5;
+    return ((h >>> 0) % 100000) / 100000;
+  };
+  const out = [...ids];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  // Fixed-point guard: if the shuffle happened to reproduce the original order,
+  // rotate by one so the student always has something to do.
+  if (out.every((id, i) => id === ids[i])) {
+    return [...ids.slice(1), ids[0]];
+  }
+  return out;
+}
+
 function SortableTile({ id, label }: Item) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
@@ -44,11 +70,17 @@ export default function SortableSequence({ directiveId, meta, disabled, readOnly
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "order";
 
-  const { submitted, isCorrect, attempts, submitting, submit, retry, studentAnswer } =
+  const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer(directiveId, it, allowRetry);
 
-  const initialOrder: string[] = Array.isArray(studentAnswer?.order) ? studentAnswer.order : items.map((i) => i.id);
-  const [order, setOrder] = useState<string[]>(initialOrder);
+  // An ordering activity must NOT present items already in answer order, or the
+  // student can "solve" it by clicking Check without doing anything. Shuffle the
+  // initial presentation (seeded by directiveId so it's stable across renders and
+  // guaranteed to differ from the given order when ≥2 items exist). On history
+  // reload we restore the student's saved order instead.
+  const [order, setOrder] = useState<string[]>(() =>
+    Array.isArray(studentAnswer?.order) ? studentAnswer.order : shuffleAway(items.map((i) => i.id), directiveId)
+  );
   const lock = disabled || submitted;
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(TouchSensor));
 
@@ -76,7 +108,9 @@ export default function SortableSequence({ directiveId, meta, disabled, readOnly
         isCorrect={isCorrect}
         allowRetry={allowRetry}
         attempts={attempts}
-        onRetry={() => { setOrder(items.map((i) => i.id)); retry(); }}
+        submitError={submitError}
+        onDismissError={dismissError}
+        onRetry={() => { setOrder(shuffleAway(items.map((i) => i.id), directiveId + "r")); retry(); }}
       />
     </InteractiveShell>
   );

@@ -291,6 +291,9 @@ export function parseContent(content: string): ChatElement[] {
           interaction: block.interaction,
           validation: block.validation,
           interaction_type: block.meta?.interaction_type || block.interaction_type,
+          // Rehydrated from history: show the student's past attempt read-only.
+          // directive_id (when present) lets the store's cached result fill it in.
+          read_only: true,
         },
       });
     } else if (match[1]) {
