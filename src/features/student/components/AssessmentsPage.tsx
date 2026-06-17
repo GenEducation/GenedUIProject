@@ -6,20 +6,22 @@ import { useRouter } from "next/navigation";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useTestStore } from "@/features/student/store/useTestStore";
-import { 
-  ClipboardCheck, 
-  ChevronRight, 
-  Search, 
-  Filter, 
-  BookOpen, 
+import {
+  ClipboardCheck,
+  ChevronRight,
+  Search,
+  Filter,
+  BookOpen,
   Sparkles,
   ArrowRight,
   Loader2,
   ArrowLeft,
-  Tag
+  Tag,
+  History
 } from "lucide-react";
 import { studentService } from "@/features/student/services/studentService";
 import { TypingStudentCharacter } from "@/components/shared/loaders/StudentLoader/TypingStudentCharacter";
+import { StudentHomeSidebar } from "./StudentHomeSidebar";
 
 export function AssessmentsPage() {
   const router = useRouter();
@@ -30,12 +32,22 @@ export function AssessmentsPage() {
 
 
   const { studentProfile } = useStudentStore();
-  const { startTest } = useTestStore();
+  const { startTest, loadTest, loadStudentTests, studentTests, isLoadingTests } = useTestStore();
+  const [isLoadingResult, setIsLoadingResult] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [allChapters, setAllChapters] = useState<any[]>([]);
   const [isLoadingAll, setIsLoadingAll] = useState(false);
   const [isStartingTest, setIsStartingTest] = useState(false);
   const testNavTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  /* responsive sidebar */
+  useEffect(() => {
+    const handle = () => setSidebarOpen(window.innerWidth >= 1024);
+    handle();
+    window.addEventListener("resize", handle);
+    return () => window.removeEventListener("resize", handle);
+  }, []);
 
   useEffect(() => {
     return () => { if (testNavTimerRef.current) clearTimeout(testNavTimerRef.current); };
@@ -48,6 +60,12 @@ export function AssessmentsPage() {
     }
     return () => controller.abort();
   }, [studentProfile, fetchAnalyticsSubjects]);
+
+  useEffect(() => {
+    if (studentProfile?.user_id) {
+      loadStudentTests(studentProfile.user_id);
+    }
+  }, [studentProfile, loadStudentTests]);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,6 +104,18 @@ export function AssessmentsPage() {
     chapter.subject.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleViewTest = async (testId: string) => {
+    setIsLoadingResult(true);
+    try {
+      await loadTest(testId);
+      router.push("/student/test?from=assessments");
+    } catch (error) {
+      console.error("Error loading past test:", error);
+    } finally {
+      setIsLoadingResult(false);
+    }
+  };
+
   const handleStartTest = async (chapterTitle: string, subject: string) => {
     if (studentProfile?.user_id) {
       setIsStartingTest(true);
@@ -109,7 +139,19 @@ export function AssessmentsPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#F4F3EE]/30 overflow-hidden font-sans">
+    <div className="flex h-full overflow-hidden">
+      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed top-4 left-4 z-30 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
+          style={{ width: 38, height: 38, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#042E5C" }}
+          title="Open sidebar"
+        >
+          ☰
+        </button>
+      )}
+    <div className="flex-1 min-w-0 flex flex-col h-full bg-[#F4F3EE]/30 overflow-hidden font-sans">
       {/* Header Section */}
       <header className="px-8 py-6 flex flex-col gap-6 bg-white border-b border-[#042E5C]/5 sticky top-0 z-20">
         <div className="flex items-center justify-between">
@@ -120,8 +162,6 @@ export function AssessmentsPage() {
             >
               <ArrowLeft size={20} />
             </button>
-            <img src="/Logo.svg" alt="GenEd Logo" className="h-7 w-auto" />
-            <div className="h-8 w-px bg-[#042E5C]/10 mx-2" />
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-lg bg-[#042E5C]/5 flex items-center justify-center text-[#042E5C]">
@@ -129,7 +169,6 @@ export function AssessmentsPage() {
                 </div>
                 <h1 className="text-xl font-black text-[#042E5C] tracking-tight">Test</h1>
               </div>
-              <p className="text-[11px] font-medium text-[#042E5C]/40 uppercase tracking-widest">Select a chapter to begin</p>
             </div>
           </div>
         </div>
@@ -154,6 +193,53 @@ export function AssessmentsPage() {
       {/* Chapters Grid */}
       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
         <div className="max-w-7xl mx-auto space-y-12">
+          {/* Past Tests / History */}
+          {(isLoadingTests || studentTests.length > 0) && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-[#042E5C]/5 flex items-center justify-center text-[#042E5C]">
+                  <History size={14} />
+                </div>
+                <h2 className="text-sm font-black text-[#042E5C] uppercase tracking-widest">Past Tests</h2>
+              </div>
+
+              {isLoadingTests ? (
+                <div className="flex items-center gap-3 py-6 text-[#042E5C]/40">
+                  <Loader2 size={20} className="animate-spin" />
+                  <span className="text-sm font-bold uppercase tracking-widest">Loading history...</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {studentTests.map((t) => (
+                    <div
+                      key={t.test_id}
+                      className="bg-white p-6 rounded-3xl border border-[#042E5C]/5 shadow-sm flex items-center justify-between gap-4"
+                    >
+                      <div className="min-w-0 space-y-1">
+                        <h3 className="text-sm font-black text-[#042E5C] truncate">{t.document_title}</h3>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black text-[#042E5C]/40 uppercase tracking-widest">
+                            {t.subject}
+                          </span>
+                          <span className="text-[10px] font-medium text-[#042E5C]/30">
+                            {new Date(t.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleViewTest(t.test_id)}
+                        disabled={isLoadingResult}
+                        className="shrink-0 px-4 py-2 rounded-xl bg-[#042E5C]/5 text-[#042E5C] text-[10px] font-black uppercase tracking-widest hover:bg-[#042E5C]/10 disabled:opacity-40 transition-all"
+                      >
+                        View Test
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {isLoadingAll ? (
             <div className="flex flex-col items-center justify-center py-32 space-y-4">
               <Loader2 size={40} className="text-[#042E5C] animate-spin" />
@@ -270,6 +356,7 @@ export function AssessmentsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
     </div>
   );
 }

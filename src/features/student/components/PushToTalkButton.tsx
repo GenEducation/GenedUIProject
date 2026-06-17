@@ -35,8 +35,8 @@ export function PushToTalkButton() {
         disabled={disabled}
         className="relative rounded-full flex items-center justify-center transition-shadow"
         style={{
-          width: 132,
-          height: 132,
+          width: "clamp(96px, 28vw, 132px)",
+          height: "clamp(96px, 28vw, 132px)",
           background: pttHeld
             ? "linear-gradient(135deg, #5B4DC7, #4A90D9)"
             : disabled

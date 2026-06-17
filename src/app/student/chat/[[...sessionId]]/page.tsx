@@ -68,8 +68,10 @@ export default function StudentChatUnifiedPage({
     }
   }, [agentFromUrl, sessionIdFromUrl, activeChat, initNewChat, router, availableAgents.length, studentProfile, fetchAvailableAgents, fetchSessions, recentChats.length]);
 
-  // Show a local "preparing" spinner only if we have NO chat state and are trying to load one
-  const isLoading = !activeChat && (agentFromUrl || sessionIdFromUrl);
+  // Show a local "preparing" spinner only when initializing a brand-new chat via ?agent=.
+  // Loading an existing session (sessionIdFromUrl) is handled by StudentChatView itself,
+  // which calls openChatById and shows its own "Loading Chat..." spinner.
+  const isLoading = !activeChat && agentFromUrl && !sessionIdFromUrl;
 
   if (isLoading) {
     return (

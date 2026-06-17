@@ -188,7 +188,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: 0.05 }}
-            className="grid grid-cols-3 gap-3 sm:gap-4"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4"
           >
             <StatCard
               icon={<Flame size={18} />}
@@ -373,7 +373,7 @@ function HubCard({ title, subtitle, icon, subjectKey, onStartChat, onStartVoice,
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="bg-white px-5 py-4 rounded-2xl border border-[#042E5C]/5 shadow-sm hover:shadow-md hover:border-[#042E5C]/10 transition-all text-left border-l-4 flex flex-col gap-3 flex-1 min-w-[280px] max-w-[340px]"
+      className="bg-white px-5 py-4 rounded-2xl border border-[#042E5C]/5 shadow-sm hover:shadow-md hover:border-[#042E5C]/10 transition-all text-left border-l-4 flex flex-col gap-3 flex-1 min-w-full sm:min-w-[280px] max-w-full sm:max-w-[340px]"
       style={{ borderLeftColor: config?.color ?? "#042E5C20" }}
     >
       <div className="flex items-start gap-3">

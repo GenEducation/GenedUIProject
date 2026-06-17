@@ -93,7 +93,7 @@ export function AgentPickerModal() {
         </div>
 
         {/* Subject list */}
-        <div className="overflow-y-auto max-h-[360px] p-4 space-y-1.5">
+        <div className="overflow-y-auto max-h-[60vh] p-4 space-y-1.5">
           {(!Array.isArray(filtered) || filtered.length === 0) ? (
             <div className="py-10 text-center text-sm text-[#042E5C]/40 px-8 leading-relaxed">
               {query ? "No subjects match your search." : "No subjects available yet."}

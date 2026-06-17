@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect } from "react";
+import { Suspense, useState, useEffect, useLayoutEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { StudentReportCard } from "@/components/report-card/StudentReportCard";
 import { StudentHomeSidebar } from "@/features/student/components/StudentHomeSidebar";
@@ -8,6 +8,16 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { ArrowLeft } from "lucide-react";
 
 export default function ReportCardPage() {
+  // useSearchParams() must be read inside a Suspense boundary or Next.js
+  // fails the production build when statically prerendering this route.
+  return (
+    <Suspense fallback={null}>
+      <ReportCardPageInner />
+    </Suspense>
+  );
+}
+
+function ReportCardPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isPrintMode = searchParams.get("print") === "1";

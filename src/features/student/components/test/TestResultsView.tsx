@@ -44,7 +44,7 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
           {verdict.label}
         </div>
 
-        <h2 className="text-3xl font-extrabold text-[#042E5C]">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#042E5C]">
           Overall Score: {Math.round(result.overall_score * 100)}%
         </h2>
 
@@ -67,22 +67,23 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: idx * 0.1 }}
-            className="p-5 bg-white rounded-2xl border border-[#042E5C]/10 shadow-sm"
+            className="p-3 sm:p-5 bg-white rounded-2xl border border-[#042E5C]/10 shadow-sm"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#042E5C]/5 flex items-center justify-center text-[#042E5C]">
-                  <BookOpen size={24} />
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[#042E5C]/5 flex items-center justify-center text-[#042E5C] flex-shrink-0">
+                  <BookOpen size={20} className="sm:hidden" />
+                  <BookOpen size={24} className="hidden sm:block" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-[#042E5C]">{sectionTitle}</h4>
-                  <p className="text-[12px] text-[#042E5C]/50 uppercase tracking-widest font-bold">
+                  <h4 className="font-bold text-[#042E5C] text-[14px] sm:text-[16px]">{sectionTitle}</h4>
+                  <p className="text-[11px] sm:text-[12px] text-[#042E5C]/50 uppercase tracking-widest font-bold">
                     Verdict: {data.verdict}
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-xl font-black text-[#042E5C]">
+                <div className="text-lg sm:text-xl font-black text-[#042E5C]">
                   {Math.round(data.actual_score * 100)}%
                 </div>
                 {data.total_marks != null && (
@@ -133,9 +134,9 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
             return (
               <div
                 key={idx}
-                className="p-4 rounded-xl bg-[#F8F9FA] border border-[#042E5C]/5 space-y-2"
+                className="p-3 sm:p-4 rounded-xl bg-[#F8F9FA] border border-[#042E5C]/5 space-y-2"
               >
-                <div className="flex justify-between items-start gap-4">
+                <div className="flex justify-between items-start gap-2 sm:gap-4">
                   <p className="text-[14px] font-medium text-[#042E5C]/80 flex-1">
                     {question.prompt}
                   </p>

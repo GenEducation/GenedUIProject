@@ -18,21 +18,21 @@ export function MultipleChoiceQuestion({
 }: MultipleChoiceQuestionProps) {
   return (
     <div className="space-y-4">
-      <p className="text-[17px] font-medium text-[#042E5C] leading-relaxed">
+      <p className="text-[15px] sm:text-[17px] font-medium text-[#042E5C] leading-relaxed">
         {question.prompt}
       </p>
-      
+
       <div className="grid gap-3">
         {question.options?.map((option, idx) => {
           const isSelected = selectedAnswer === option;
-          
+
           return (
             <motion.button
               key={idx}
               whileHover={!disabled ? { scale: 1.01 } : {}}
               whileTap={!disabled ? { scale: 0.99 } : {}}
               onClick={() => !disabled && onSelect(option)}
-              className={`w-full p-4 rounded-xl text-left transition-all border-2 flex items-center gap-3 ${
+              className={`w-full p-3 sm:p-4 rounded-xl text-left transition-all border-2 flex items-center gap-3 ${
                 isSelected 
                   ? "bg-[#042E5C]/5 border-[#042E5C] text-[#042E5C]" 
                   : "bg-white border-[#042E5C]/10 text-[#042E5C]/70 hover:border-[#042E5C]/30"

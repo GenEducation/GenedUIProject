@@ -22,7 +22,7 @@ export function TrueFalseQuestion({
 }: TrueFalseQuestionProps) {
   return (
     <div className="space-y-4">
-      <p className="text-[17px] font-medium text-[#042E5C] leading-relaxed">
+      <p className="text-[15px] sm:text-[17px] font-medium text-[#042E5C] leading-relaxed">
         {question.prompt}
       </p>
 
@@ -35,7 +35,7 @@ export function TrueFalseQuestion({
               whileHover={!disabled ? { scale: 1.02 } : {}}
               whileTap={!disabled ? { scale: 0.98 } : {}}
               onClick={() => !disabled && onSelect(option)}
-              className={`flex-1 p-4 rounded-xl text-center transition-all border-2 flex items-center justify-center gap-2 ${
+              className={`flex-1 p-3 sm:p-4 rounded-xl text-center transition-all border-2 flex items-center justify-center gap-2 ${
                 isSelected
                   ? "bg-[#042E5C]/5 border-[#042E5C] text-[#042E5C]"
                   : "bg-white border-[#042E5C]/10 text-[#042E5C]/70 hover:border-[#042E5C]/30"
@@ -69,7 +69,7 @@ export function TrueFalseQuestion({
             disabled={disabled}
             placeholder="Write your justification here..."
             rows={3}
-            className="w-full p-4 rounded-xl border-2 border-[#042E5C]/10 focus:border-[#042E5C]/30 focus:ring-4 focus:ring-[#042E5C]/5 outline-none transition-all text-[15px] resize-none"
+            className="w-full p-3 sm:p-4 rounded-xl border-2 border-[#042E5C]/10 focus:border-[#042E5C]/30 focus:ring-4 focus:ring-[#042E5C]/5 outline-none transition-all text-[15px] resize-none"
           />
         </motion.div>
       )}

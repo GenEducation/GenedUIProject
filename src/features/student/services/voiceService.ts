@@ -61,8 +61,15 @@ class VoiceService {
   private isTypewriterRunning = false;
 
   // Connection Quality State
-  private starvationTimes: number[] = [];
+  private currentQuality: "good" | "poor" | "reconnecting" | null = null;
+  private qualityCheckTimer: ReturnType<typeof setInterval> | null = null;
   private onConnectionQualityCallback: ((q: "good" | "poor" | "reconnecting") => void) | null = null;
+
+  // Quality check constants
+  private readonly QUALITY_CHECK_INTERVAL_MS      = 3_000;  // re-evaluate every 3s
+  private readonly WS_BUFFERED_POOR_BYTES         = 32_768; // 32KB queued = uplink congested (~4s of mic audio)
+  private readonly NETWORK_RTT_POOR_MS            = 500;    // navigator.connection.rtt threshold (ms)
+  private readonly NETWORK_DOWNLINK_POOR_MBPS     = 0.15;   // navigator.connection.downlink threshold (Mbps)
 
   async startSession(
     studentId: string,
@@ -96,7 +103,7 @@ class VoiceService {
 
     this.isSessionActive = true;
     this.retryCount = 0;
-    this.starvationTimes = [];
+    this.currentQuality = null;
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
 
@@ -216,10 +223,10 @@ class VoiceService {
     this.ws.onopen = () => {
       const wasReconnecting = this.retryCount > 0;
       this.retryCount = 0;
-      this.starvationTimes = [];
       this.sendInitMessage();
       this.onEventCallback?.({ type: "connected" });
-      if (wasReconnecting) this.onConnectionQualityCallback?.("good");
+      if (wasReconnecting) this.setQuality("good");
+      this.startQualityMonitoring();
     };
 
     this.ws.onmessage = (event) => {
@@ -267,7 +274,7 @@ class VoiceService {
         this.retryCount++;
         const delay = Math.pow(2, this.retryCount - 1) * 1000;
         console.log(`[VoiceService] Reconnecting in ${delay}ms (Attempt ${this.retryCount}/${this.MAX_RETRIES})...`);
-        this.onConnectionQualityCallback?.("reconnecting");
+        this.setQuality("reconnecting");
         setTimeout(() => this.connect(connId), delay);
       } else {
         if (this.retryCount >= this.MAX_RETRIES) {
@@ -300,31 +307,18 @@ class VoiceService {
   private handleIncomingAudio(buffer: ArrayBuffer) {
     if (!this.isSessionActive || !this.audioCtx) return;
 
-    const currentTime = this.audioCtx.currentTime;
-
-    // Jitter Buffer Starvation Recovery:
-    // If the playhead has already passed our scheduled play time by more than 50ms,
-    // it means network lag/jitter starved our queue. We immediately re-engage buffering
-    // to build a 6-frame (120ms) cushion for smooth playback instead of crackling.
-    if (!this.isBuffering && this.nextStartTime < currentTime - 0.05) {
-      console.warn(`[VoiceService] Jitter buffer starved (offset: ${(currentTime - this.nextStartTime).toFixed(3)}s). Re-buffering...`);
-      this.isBuffering = true;
-      this.nextStartTime = currentTime;
-      // Track starvation events in a 10s rolling window; ≥2 = poor connection
-      const now = Date.now();
-      this.starvationTimes = this.starvationTimes.filter(t => now - t < 10_000);
-      this.starvationTimes.push(now);
-      if (this.starvationTimes.length >= 2) this.onConnectionQualityCallback?.("poor");
-    }
-
     if (this.isBuffering) {
       this.bufferQueue.push(buffer);
       if (this.bufferQueue.length >= this.TARGET_BUFFER_SIZE) {
         this.isBuffering = false;
+        this.nextStartTime = this.audioCtx.currentTime;
         this.flushBuffer();
       }
       return;
     }
+
+    const currentTime = this.audioCtx.currentTime;
+    if (this.nextStartTime < currentTime) this.nextStartTime = currentTime;
 
     const floatData = new Float32Array(buffer.byteLength / 2);
     const int16Data = new Int16Array(buffer);
@@ -348,6 +342,52 @@ class VoiceService {
     while (this.bufferQueue.length > 0) {
       this.handleIncomingAudio(this.bufferQueue.shift()!);
     }
+  }
+
+  private setQuality(q: "good" | "poor" | "reconnecting") {
+    if (this.currentQuality === q) return;
+    this.currentQuality = q;
+    this.onConnectionQualityCallback?.(q);
+  }
+
+  private startQualityMonitoring() {
+    if (this.qualityCheckTimer) return;
+    this.qualityCheckTimer = setInterval(() => this.checkConnectionQuality(), this.QUALITY_CHECK_INTERVAL_MS);
+    this.checkConnectionQuality(); // run immediately on connect
+  }
+
+  private stopQualityMonitoring() {
+    if (this.qualityCheckTimer) {
+      clearInterval(this.qualityCheckTimer);
+      this.qualityCheckTimer = null;
+    }
+  }
+
+  private checkConnectionQuality() {
+    if (!this.isSessionActive || this.currentQuality === "reconnecting") return;
+
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      this.setQuality("poor");
+      return;
+    }
+
+    if (this.ws?.readyState === WebSocket.OPEN && this.ws.bufferedAmount > this.WS_BUFFERED_POOR_BYTES) {
+      this.setQuality("poor");
+      return;
+    }
+
+    const conn = typeof navigator !== "undefined" ? (navigator as any).connection : null;
+    if (conn) {
+      const poorType = conn.effectiveType === "slow-2g" || conn.effectiveType === "2g";
+      const highRtt  = conn.rtt  > this.NETWORK_RTT_POOR_MS;
+      const lowDown  = conn.downlink !== undefined && conn.downlink < this.NETWORK_DOWNLINK_POOR_MBPS;
+      if (poorType || highRtt || lowDown) {
+        this.setQuality("poor");
+        return;
+      }
+    }
+
+    this.setQuality("good");
   }
 
   private startTypewriterLoop() {
@@ -431,10 +471,11 @@ class VoiceService {
       this.audioCtx = null;
     }
     this.nextStartTime = 0;
-    
+
     this.isBuffering = true;
     this.bufferQueue = [];
-    this.starvationTimes = [];
+    this.currentQuality = null;
+    this.stopQualityMonitoring();
     this.onEventCallback = null;
     this.onTextRevealCallback = null;
     this.onConnectionQualityCallback = null;

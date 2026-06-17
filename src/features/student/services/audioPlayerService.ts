@@ -7,7 +7,6 @@
  * - Only ONE active playback session at a time
  * - Frontend owns playback lifecycle; backend owns audio generation
  * - Streams audio/mpeg from GET /audio/tts?directive_id=<uuid>
- * - Emits timepoint-based callbacks for word highlight sync
  */
 
 import { authFetch } from "@/utils/authFetch";
@@ -24,14 +23,8 @@ export type PlaybackState =
   | "completed"
   | "error";
 
-export interface TtsTimepoint {
-  word: string;
-  time_seconds: number;
-}
-
 export interface PlaybackCallbacks {
   onStateChange?: (state: PlaybackState) => void;
-  onTimeUpdate?: (currentTime: number, wordIndex: number) => void;
   onComplete?: (directiveId: string) => void;
   onError?: (directiveId: string, message: string) => void;
 }
@@ -43,10 +36,7 @@ class AudioPlayerService {
   private playbackState: PlaybackState = "idle";
   private startedAt = 0;
   private pausedAt = 0;
-  private highlightTimer: ReturnType<typeof setInterval> | null = null;
   private callbacks: PlaybackCallbacks = {};
-  private timepoints: TtsTimepoint[] = [];
-  private currentWordIndex = -1;
 
   private getOrCreateContext(): AudioContext {
     if (!this.audioCtx || this.audioCtx.state === "closed") {
@@ -64,42 +54,22 @@ class AudioPlayerService {
     this.callbacks.onStateChange?.(state);
   }
 
-  private clearHighlightTimer() {
-    if (this.highlightTimer !== null) {
-      clearInterval(this.highlightTimer);
-      this.highlightTimer = null;
-    }
+  /** Pause current playback by suspending the AudioContext */
+  async pause() {
+    if (this.playbackState !== "playing" || !this.audioCtx) return;
+    await this.audioCtx.suspend();
+    this.setState("paused");
   }
 
-  private startHighlightSync() {
-    if (this.timepoints.length === 0) return;
-    this.clearHighlightTimer();
-    this.currentWordIndex = -1;
-
-    this.highlightTimer = setInterval(() => {
-      if (!this.audioCtx || this.playbackState !== "playing") return;
-      const elapsed = this.audioCtx.currentTime - this.startedAt;
-
-      // Walk timepoints to find the current word
-      let newIdx = this.currentWordIndex;
-      for (let i = 0; i < this.timepoints.length; i++) {
-        if (this.timepoints[i].time_seconds <= elapsed) {
-          newIdx = i;
-        } else {
-          break;
-        }
-      }
-
-      if (newIdx !== this.currentWordIndex) {
-        this.currentWordIndex = newIdx;
-        this.callbacks.onTimeUpdate?.(elapsed, newIdx);
-      }
-    }, 50); // 50ms polling — within Wave 2's ±150ms drift tolerance
+  /** Resume a paused playback */
+  async resume() {
+    if (this.playbackState !== "paused" || !this.audioCtx) return;
+    await this.audioCtx.resume();
+    this.setState("playing");
   }
 
   /** Stop any current playback (Wave 1: single active playback rule) */
   stop() {
-    this.clearHighlightTimer();
     try {
       this.sourceNode?.stop();
     } catch {
@@ -107,15 +77,12 @@ class AudioPlayerService {
     }
     this.sourceNode = null;
     this.activeDirectiveId = null;
-    this.timepoints = [];
-    this.currentWordIndex = -1;
     this.setState("stopped");
   }
 
   /** Play TTS audio for a given directive_id. Stops any existing playback first. */
   async play(
     directiveId: string,
-    timepoints: TtsTimepoint[],
     callbacks: PlaybackCallbacks
   ): Promise<void> {
     // Enforce single active playback rule (Wave 1 §3.1)
@@ -124,7 +91,6 @@ class AudioPlayerService {
     }
 
     this.callbacks = callbacks;
-    this.timepoints = timepoints || [];
     this.activeDirectiveId = directiveId;
     this.setState("loading");
 
@@ -156,7 +122,6 @@ class AudioPlayerService {
 
       source.onended = () => {
         if (this.activeDirectiveId !== directiveId) return;
-        this.clearHighlightTimer();
         this.setState("completed");
         callbacks.onComplete?.(directiveId);
       };
@@ -166,7 +131,6 @@ class AudioPlayerService {
       this.pausedAt = 0;
       source.start(0);
       this.setState("playing");
-      this.startHighlightSync();
     } catch (err: any) {
       if (this.activeDirectiveId === directiveId) {
         this.setState("error");

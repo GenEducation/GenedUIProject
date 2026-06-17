@@ -18,15 +18,28 @@ import {
   Menu,
   X,
   LayoutGrid,
-  ChevronDown
+  ChevronDown,
+  ScrollText
 } from "lucide-react";
 import { useParentStore } from "../store/useParentStore";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
-import { StudentAnalyticsDashboard } from "@/components/analytics/StudentAnalyticsDashboard";
+import dynamic from "next/dynamic";
 import { ParentChatExploration } from "./ParentChatExploration";
 import { ParentProfileView } from "./ParentProfileView";
+import { ParentScheduleView } from "./ParentScheduleView";
 import { NotificationBell } from "@/components/NotificationBell";
+
+// Lazy-loaded: both are large and only shown on specific tabs.
+// StudentReportCard is ~160KB; StudentAnalyticsDashboard pulls in recharts.
+const StudentAnalyticsDashboard = dynamic(
+  () => import("@/components/analytics/StudentAnalyticsDashboard").then((m) => m.StudentAnalyticsDashboard),
+  { ssr: false }
+);
+const StudentReportCard = dynamic(
+  () => import("@/components/report-card/StudentReportCard").then((m) => m.StudentReportCard),
+  { ssr: false }
+);
 
 export function ParentHome() {
   const router = useRouter();
@@ -139,6 +152,9 @@ export function ParentHome() {
     } else if (parts.length >= 3 && parts[2] === 'analytics') {
       setSelectedStudentId(parts[1]);
       setDashboardView('analytics');
+    } else if (parts.length >= 3 && parts[2] === 'schedule') {
+      setSelectedStudentId(parts[1]);
+      setDashboardView('schedule');
     }
     // /parent alone: leave state as-is (store auto-selects first student)
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -231,7 +247,7 @@ export function ParentHome() {
                       <span className="text-sm font-bold">Insight Dashboard</span>
                     </button>
 
-                    <button 
+                    <button
                       onClick={() => {
                         setDashboardView("chat");
                         router.push(`/parent/${selectedStudentId}/chat`);
@@ -245,6 +261,37 @@ export function ParentHome() {
                     >
                       <MessageSquare size={18} className={activeDashboardView === "chat" ? "" : "group-hover:scale-110 transition-transform"} />
                       <span className="text-sm font-bold">View Chat explorations</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setDashboardView("report");
+                        if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                      }}
+                      className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 group ${
+                        activeDashboardView === "report"
+                        ? "border-[#1a3a2a] bg-[#1a3a2a] text-white shadow-lg"
+                        : "border-dashed border-[#1a3a2a]/10 text-[#1a3a2a]/40 hover:border-[#1a3a2a]/30 hover:text-[#1a3a2a]/60"
+                      }`}
+                    >
+                      <ScrollText size={18} className={activeDashboardView === "report" ? "" : "group-hover:scale-110 transition-transform"} />
+                      <span className="text-sm font-bold">View Report Card</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setDashboardView("schedule");
+                        router.push(`/parent/${selectedStudentId}/schedule`);
+                        if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                      }}
+                      className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 group ${
+                        activeDashboardView === "schedule"
+                        ? "border-[#1a3a2a] bg-[#1a3a2a] text-white shadow-lg"
+                        : "border-dashed border-[#1a3a2a]/10 text-[#1a3a2a]/40 hover:border-[#1a3a2a]/30 hover:text-[#1a3a2a]/60"
+                      }`}
+                    >
+                      <Calendar size={18} className={activeDashboardView === "schedule" ? "" : "group-hover:scale-110 transition-transform"} />
+                      <span className="text-sm font-bold">Learning Schedule</span>
                     </button>
                   </div>
                 )}
@@ -383,11 +430,25 @@ export function ParentHome() {
             >
               {activeDashboardView === "analytics" ? (
                 <div className="flex-1 overflow-hidden">
-                  <StudentAnalyticsDashboard 
-                    mode="parent" 
-                    studentId={selectedStudentId!} 
+                  <StudentAnalyticsDashboard
+                    mode="parent"
+                    studentId={selectedStudentId!}
                   />
                 </div>
+              ) : activeDashboardView === "report" ? (
+                <div className="flex-1 overflow-y-auto">
+                  <StudentReportCard
+                    parentId={parentProfile?.user_id}
+                    childId={selectedStudentId!}
+                    childName={selectedStudent?.name || undefined}
+                  />
+                </div>
+              ) : activeDashboardView === "schedule" ? (
+                <ParentScheduleView
+                  studentId={selectedStudentId!}
+                  parentId={parentProfile!.user_id}
+                  studentName={selectedStudent?.name}
+                />
               ) : (
                 <ParentChatExploration />
               )}

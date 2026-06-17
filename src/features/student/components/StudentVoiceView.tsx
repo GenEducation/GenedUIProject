@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
@@ -9,8 +9,16 @@ import { VoiceTranscript } from "./VoiceTranscript";
 import { VoiceControls } from "./VoiceControls";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { ResizableSplitPane } from "./ResizableSplitPane";
-import { ChapterPdfViewer } from "./ChapterPdfViewer";
+import dynamic from "next/dynamic";
 import { ConnectionQualityBanner } from "./ConnectionQualityBanner";
+
+// Lazy-loaded: pulls in pdfjs-dist, which is heavy. Only fetched when a
+// chapter PDF is actually opened.
+const ChapterPdfViewer = dynamic(
+  () => import("./ChapterPdfViewer").then((m) => m.ChapterPdfViewer),
+  { ssr: false }
+);
+import { StudentHomeSidebar } from "./StudentHomeSidebar";
 
 const STATUS_CAPTION: Record<string, string> = {
   idle: "Tap anywhere on the screen to start",
@@ -44,6 +52,20 @@ export function StudentVoiceView() {
     chapterPdfError,
     clearPdfError,
   } = useStudentStore();
+
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  /* responsive sidebar */
+  useEffect(() => {
+    const handle = () => {
+      setSidebarOpen(window.innerWidth >= 1024);
+      setIsMobile(window.innerWidth < 768);
+    };
+    handle();
+    window.addEventListener("resize", handle);
+    return () => window.removeEventListener("resize", handle);
+  }, []);
 
   // Stop voice session on unmount.
   useEffect(() => {
@@ -95,6 +117,9 @@ export function StudentVoiceView() {
 
   const reactive = voiceSessionStatus === "active" && !isMuted;
 
+  // Show the orb landing stage only before the conversation has actually started.
+  const showOrb = !(voiceSessionStatus === "active" && messages.length > 0);
+
   const caption = isRateLimitHit
     ? (rateLimitMessage || "Daily limit reached. Upgrade to Pro for more.")
     : isMuted && voiceSessionStatus === "active"
@@ -114,13 +139,14 @@ export function StudentVoiceView() {
   const voiceContent = (
     <div className="h-full flex flex-col font-sans overflow-hidden" style={bgStyle}>
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-4 border-b border-[#042E5C]/8 bg-white/50 backdrop-blur-sm">
+      <header className={`flex items-center justify-between px-4 py-4 border-b border-[#042E5C]/8 bg-white/50 backdrop-blur-sm transition-all ${!sidebarOpen ? "pl-16 sm:pl-8" : ""}`}>
         <button
           onClick={handleEnd}
-          className="flex items-center gap-2 text-[13px] font-bold text-[#042E5C]/60 hover:text-[#042E5C] transition-colors shrink-0"
+          title="Back to subjects"
+          className="flex items-center justify-center rounded-[10px] text-[#042E5C]/60 hover:text-[#042E5C] hover:bg-[#042E5C]/5 transition-colors shrink-0"
+          style={{ width: 38, height: 38 }}
         >
-          <ArrowLeft size={16} />
-          Back to subjects
+          <ArrowLeft size={18} />
         </button>
         <div className="text-[13px] font-bold text-[#042E5C] text-right">
           <span className="capitalize">{subjectLabel}</span>
@@ -131,16 +157,18 @@ export function StudentVoiceView() {
       {/* Connection quality alert — slides in below header */}
       <ConnectionQualityBanner quality={connectionQuality} />
 
-      {/* Top — Avatar / orb */}
-      <section className="flex flex-col items-center justify-center pt-6 pb-2">
-        <VoiceStage
-          caption={caption}
-          reactive={reactive}
-          onTap={handleOrbTap}
-          onPressStart={handleOrbPressStart}
-          onPressEnd={handleOrbPressEnd}
-        />
-      </section>
+      {/* Top — Avatar / orb (landing state only; hidden once the conversation is underway) */}
+      {showOrb && (
+        <section className="flex flex-col items-center justify-center pt-6 pb-2">
+          <VoiceStage
+            caption={caption}
+            reactive={reactive}
+            onTap={handleOrbTap}
+            onPressStart={handleOrbPressStart}
+            onPressEnd={handleOrbPressEnd}
+          />
+        </section>
+      )}
 
       {/* Textbook pill — between orb and transcript */}
       {activeChat?.chapter_name && (
@@ -195,13 +223,13 @@ export function StudentVoiceView() {
         </div>
       )}
 
-      {/* Middle — Transcript (fills remaining space) */}
-      <section className="flex-1 px-6 overflow-hidden">
+      {/* Middle — Conversation feed (fills remaining space; full height once orb is hidden) */}
+      <section className="flex-1 min-h-[140px] px-3 sm:px-6 overflow-hidden">
         <VoiceTranscript messages={messages} agentName={agentName} />
       </section>
 
       {/* Bottom — Controls */}
-      <section className="relative px-6 pt-5 pb-7 flex flex-col items-center gap-5">
+      <section className="relative px-3 sm:px-6 pt-5 pb-7 flex flex-col items-center gap-5">
         <RateLimitPrompt
           isVisible={isRateLimitHit}
           onClose={() => setRateLimitHit(false)}
@@ -211,34 +239,63 @@ export function StudentVoiceView() {
     </div>
   );
 
-  if (isPdfViewerOpen && chapterPdfUrl) {
-    return (
-      <div className="h-screen flex font-sans overflow-hidden">
-        <ResizableSplitPane
-          left={voiceContent}
-          right={
-            <ChapterPdfViewer
-              pdfUrl={chapterPdfUrl}
-              chapterName={activeChat?.chapter_name || ""}
-              onClose={closePdfViewer}
-            />
-          }
-          defaultLeftPercent={50}
-          minLeftPx={280}
-          minRightPx={240}
-          storageKey="pdf_split_voice"
-        />
-      </div>
-    );
-  }
-
-  return (
+  const mainArea = (
     <div
-      className="h-screen font-sans overflow-hidden"
+      className="flex-1 min-w-0 h-full overflow-hidden relative"
       onClick={voiceSessionStatus === "idle" ? startVoiceSession : undefined}
       style={{ cursor: voiceSessionStatus === "idle" ? "pointer" : "default" }}
     >
-      {voiceContent}
+      {isPdfViewerOpen && chapterPdfUrl ? (
+        isMobile ? (
+          <>
+            {voiceContent}
+            {/* Full-screen textbook overlay on mobile */}
+            <div className="absolute inset-0 z-30 flex flex-col" style={{ background: "#F7F8FC" }} onClick={(e) => e.stopPropagation()}>
+              <ChapterPdfViewer
+                pdfUrl={chapterPdfUrl}
+                chapterName={activeChat?.chapter_name || ""}
+                onClose={closePdfViewer}
+              />
+            </div>
+          </>
+        ) : (
+          <ResizableSplitPane
+            left={voiceContent}
+            right={
+              <ChapterPdfViewer
+                pdfUrl={chapterPdfUrl}
+                chapterName={activeChat?.chapter_name || ""}
+                onClose={closePdfViewer}
+              />
+            }
+            defaultLeftPercent={50}
+            minLeftPx={280}
+            minRightPx={240}
+            storageKey="pdf_split_voice"
+          />
+        )
+      ) : (
+        voiceContent
+      )}
+    </div>
+  );
+
+  return (
+    <div className="h-screen flex font-sans overflow-hidden relative">
+      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="absolute top-4 left-4 z-20 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
+          style={{ width: 38, height: 38, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#042E5C" }}
+          title="Open sidebar"
+        >
+          ☰
+        </button>
+      )}
+
+      {mainArea}
     </div>
   );
 }

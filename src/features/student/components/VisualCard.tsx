@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { Expand, X } from "lucide-react";
 
 export type EngineType = "p5sketch" | "geogebra" | "desmos" | "show_figure";
@@ -127,12 +128,17 @@ export function VisualCard({ engine, label, children }: VisualCardProps) {
         >
           Visual expanded
         </div>
-        <div
-          className="fixed inset-0 z-40 backdrop-blur-sm"
-          style={{ background: "rgba(0,0,0,0.35)" }}
-          onClick={() => setIsExpanded(false)}
-        />
-        {cardContent}
+        {typeof document !== "undefined" && createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-40 backdrop-blur-sm"
+              style={{ background: "rgba(0,0,0,0.35)" }}
+              onClick={() => setIsExpanded(false)}
+            />
+            {cardContent}
+          </>,
+          document.body
+        )}
       </>
     );
   }

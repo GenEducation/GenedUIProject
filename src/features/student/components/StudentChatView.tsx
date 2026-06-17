@@ -8,7 +8,14 @@ import { StudentChatMain } from "./StudentChatMain";
 import { StudentChatHub } from "./StudentChatHub";
 import { AgentPickerModal } from "./AgentPickerModal";
 import { ResizableSplitPane } from "./ResizableSplitPane";
-import { ChapterPdfViewer } from "./ChapterPdfViewer";
+import dynamic from "next/dynamic";
+
+// Lazy-loaded: pulls in pdfjs-dist, which is heavy. Keep it out of the
+// initial chat-view bundle and only fetch it when a chapter PDF is opened.
+const ChapterPdfViewer = dynamic(
+  () => import("./ChapterPdfViewer").then((m) => m.ChapterPdfViewer),
+  { ssr: false }
+);
 
 /**
  * StudentChatView acts as a container for the modular chat layout.
@@ -41,6 +48,7 @@ export function StudentChatView() {
 
   // Sidebar toggle state
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const toggleSidebar = useCallback(
     () => setIsSidebarOpen((prev) => !prev),
     [],
@@ -49,6 +57,7 @@ export function StudentChatView() {
   // Handle responsive auto-hide
   useEffect(() => {
     const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
       if (window.innerWidth < 1024) {
         setIsSidebarOpen(false);
       } else {
@@ -145,28 +154,50 @@ export function StudentChatView() {
             <StudentChatHub toggleSidebar={toggleSidebar} />
           </div>
         ) : isPdfViewerOpen && chapterPdfUrl && activeChat ? (
-          <ResizableSplitPane
-            left={
-              <StudentChatMain
-                activeChat={activeChat}
-                messages={messages}
-                isAITyping={isAITyping}
-                isSidebarOpen={isSidebarOpen}
-                toggleSidebar={toggleSidebar}
-              />
-            }
-            right={
-              <ChapterPdfViewer
-                pdfUrl={chapterPdfUrl}
-                chapterName={activeChat.chapter_name || activeChat.title}
-                onClose={closePdfViewer}
-              />
-            }
-            defaultLeftPercent={55}
-            minLeftPx={300}
-            minRightPx={240}
-            storageKey="pdf_split_chat"
-          />
+          isMobile ? (
+            <>
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <StudentChatMain
+                  activeChat={activeChat}
+                  messages={messages}
+                  isAITyping={isAITyping}
+                  isSidebarOpen={isSidebarOpen}
+                  toggleSidebar={toggleSidebar}
+                />
+              </div>
+              {/* Full-screen textbook overlay on mobile */}
+              <div className="absolute inset-0 z-30 flex flex-col" style={{ background: "#F7F8FC" }}>
+                <ChapterPdfViewer
+                  pdfUrl={chapterPdfUrl}
+                  chapterName={activeChat.chapter_name || activeChat.title}
+                  onClose={closePdfViewer}
+                />
+              </div>
+            </>
+          ) : (
+            <ResizableSplitPane
+              left={
+                <StudentChatMain
+                  activeChat={activeChat}
+                  messages={messages}
+                  isAITyping={isAITyping}
+                  isSidebarOpen={isSidebarOpen}
+                  toggleSidebar={toggleSidebar}
+                />
+              }
+              right={
+                <ChapterPdfViewer
+                  pdfUrl={chapterPdfUrl}
+                  chapterName={activeChat.chapter_name || activeChat.title}
+                  onClose={closePdfViewer}
+                />
+              }
+              defaultLeftPercent={55}
+              minLeftPx={300}
+              minRightPx={240}
+              storageKey="pdf_split_chat"
+            />
+          )
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
             <StudentChatMain
