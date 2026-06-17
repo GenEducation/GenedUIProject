@@ -24,6 +24,8 @@ export interface StudentProfile {
   preferred_voice?: string;
   plan?: "FREE" | "PRO";
   plan_expires_at?: string | null;
+  preferred_language?: string | null;
+  secondary_languages?: string[] | null;
 }
 
 export interface ChatElement {

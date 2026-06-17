@@ -327,6 +327,11 @@ export function StudentProfile() {
   const [voiceExpanded,    setVoiceExpanded]     = useState(false);
   const [onboarding,       setOnboarding]         = useState<GeneralOnboarding | null>(null);
   const [onboardingLoading,setOnboardingLoading]  = useState(true);
+  const [preferredLanguage, setPreferredLanguage] = useState<string | null>(null);
+  const [secondaryLanguages, setSecondaryLanguages] = useState<string[] | null>(null);
+  const [multilingualEnabled, setMultilingualEnabled] = useState<boolean>(false);
+  const [isLanguageLoading, setIsLanguageLoading] = useState<boolean>(false);
+  const [isLanguageSaving, setIsLanguageSaving] = useState<boolean>(false);
 
   /* responsive sidebar */
   useEffect(() => {
@@ -405,6 +410,55 @@ export function StudentProfile() {
     })();
     return () => { cancelled = true; };
   }, [studentProfile?.user_id]);
+
+  // Load language preferences on mount
+  useEffect(() => {
+    if (!studentProfile?.user_id) return;
+    let cancelled = false;
+    setIsLanguageLoading(true);
+    (async () => {
+      try {
+        const data = await studentService.fetchLanguagePreferences(studentProfile.user_id);
+        if (cancelled) return;
+        setPreferredLanguage(data.preferred_language || "en");
+        setSecondaryLanguages(data.secondary_languages || []);
+        setMultilingualEnabled(data.multilingual_enabled || false);
+      } catch (err) {
+        console.warn("[StudentProfile] Failed to fetch language preferences:", err);
+      } finally {
+        if (!cancelled) setIsLanguageLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [studentProfile?.user_id]);
+
+  const handleLanguageChange = async (langCode: string) => {
+    if (!studentProfile?.user_id) return;
+    setIsLanguageSaving(true);
+    try {
+      const data = await studentService.updateLanguagePreferences(studentProfile.user_id, {
+        preferred_language: langCode
+      });
+      setPreferredLanguage(data.preferred_language || "en");
+      const updatedProfile = {
+        ...studentProfile,
+        preferred_language: data.preferred_language || langCode
+      };
+      setStudentProfile(updatedProfile);
+      const stored = localStorage.getItem("gened_user_profile");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          parsed.preferred_language = data.preferred_language || langCode;
+          localStorage.setItem("gened_user_profile", JSON.stringify(parsed));
+        } catch {}
+      }
+    } catch (err) {
+      console.error("[StudentProfile] Failed to update language preference:", err);
+    } finally {
+      setIsLanguageSaving(false);
+    }
+  };
 
   // Keep pending voice in sync if profile loads/changes after mount
   useEffect(() => {
@@ -877,6 +931,61 @@ export function StudentProfile() {
                     </div>
                   )}
                 </div>
+
+                {/* Language Preference Section */}
+                {multilingualEnabled && (
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 10, borderTop: `1px solid ${C.border}`, paddingTop: 14, marginTop: 4 }}>
+                    <SectionHeader icon="🌐" label="Language of Instruction" />
+                    
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 14, background: C.pageBg, border: `1px solid ${C.border}` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 16 }}>🗣️</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>Preferred Language</span>
+                      </div>
+
+                      {isLanguageLoading ? (
+                        <span style={{ fontSize: 12, color: C.textMuted }}>Loading...</span>
+                      ) : (
+                        <div style={{ position: "relative" as const }}>
+                          <select
+                            value={preferredLanguage || "en"}
+                            disabled={isLanguageSaving}
+                            onChange={(e) => handleLanguageChange(e.target.value)}
+                            style={{
+                              padding: "6px 32px 6px 12px",
+                              borderRadius: 10,
+                              background: "white",
+                              border: `1.5px solid ${C.border}`,
+                              color: C.text,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              outline: "none",
+                              appearance: "none",
+                              fontFamily: "'DM Sans',sans-serif"
+                            }}
+                          >
+                            <option value="en">English (English)</option>
+                            <option value="hi">Hindi (हिन्दी)</option>
+                            <option value="hi-Latn">Hinglish (Hinglish)</option>
+                            <option value="mr">Marathi (मराठी)</option>
+                          </select>
+                          <ChevronDown
+                            size={14}
+                            style={{
+                              position: "absolute" as const,
+                              right: 10,
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              pointerEvents: "none",
+                              color: C.textMuted
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Logout */}
                 <button
