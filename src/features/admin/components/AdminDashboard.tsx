@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Presentation,
   UsersRound,
+  AudioLines,
 } from "lucide-react";
 
 import { StatsOverview } from "./StatsOverview";
@@ -26,6 +27,7 @@ import { EnrollmentsView } from "./EnrollmentsView";
 import { AssignmentsView } from "./AssignmentsView";
 import { AgentsView } from "./AgentsView";
 import { IngestionsView } from "./IngestionsView";
+import { WakeWordModelsView } from "./WakeWordModelsView";
 
 interface NavItem {
   label: string;
@@ -44,6 +46,7 @@ const NAV: NavItem[] = [
   { label: "Assignments", href: "/admin/assignments", icon: UsersRound },
   { label: "Agents", href: "/admin/agents", icon: Bot },
   { label: "Ingestions", href: "/admin/ingestions", icon: FileStack },
+  { label: "Wake-word Models", href: "/admin/wakeword-models", icon: AudioLines },
 ];
 
 export function AdminDashboard() {
@@ -79,6 +82,8 @@ export function AdminDashboard() {
         return <AgentsView />;
       case "/admin/ingestions":
         return <IngestionsView />;
+      case "/admin/wakeword-models":
+        return <WakeWordModelsView />;
       default:
         return <StatsOverview />;
     }

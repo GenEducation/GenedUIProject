@@ -274,6 +274,56 @@ export const deleteAgent = (id: string) =>
 
 export const listIngestions = () => getJson<Ingestion[]>("/admin/ingestions");
 
+// ── Custom wake-word models ────────────────────────────────────
+
+export interface WakewordModel {
+  id: string;
+  user_id: string | null;
+  user_email: string | null;
+  user_name: string | null;
+  device_id: string | null;
+  phrase: string;
+  model_name: string;
+  model_size: string;
+  status: string;
+  progress: number;
+  model_num_bytes: number | null;
+  model_sha256: string | null;
+  has_report: boolean;
+  error_code: string | null;
+  error_message: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface WakewordReport {
+  job_id: string;
+  model_name: string;
+  report_md: string | null;
+  report_json: Record<string, unknown> | null;
+}
+
+export const listWakewordModels = () =>
+  getJson<WakewordModel[]>("/admin/wakeword-models");
+
+export const getWakewordReport = (jobId: string) =>
+  getJson<WakewordReport>(`/admin/wakeword-models/${jobId}/report`);
+
+/** Download a trained ONNX (authed → blob → save). */
+export async function downloadWakewordModel(jobId: string, modelName: string): Promise<void> {
+  const res = await authFetch(`${API_BASE_URL}/admin/wakeword-models/${jobId}/download`);
+  if (!res.ok) throw new Error("Failed to download model");
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${modelName}.onnx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 // ── Bulk import ────────────────────────────────────────────────
 
 export type ImportRole = "STUDENT" | "PARENT" | "PARTNER" | "TEACHER";
