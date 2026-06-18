@@ -1,21 +1,17 @@
 /**
  * VoiceService — real-time bidirectional audio over WebSocket.
  *
- * Uses react-native-audio-api (Web Audio API port by Software Mansion) for
- * both directions — a near-verbatim port of the website's voiceService.ts:
- *
- *   INPUT:  AudioRecorder → 16kHz mono Float32 → Int16 → ws.send(binary)
+ *   INPUT:  react-native-live-audio-stream → 16kHz mono PCM16 (base64) → ws.send(binary)
  *   OUTPUT: ws binary → Int16 → Float32 → AudioContext.createBuffer →
  *           AudioBufferSourceNode.start(scheduledTime)  [gapless jitter buffer]
- *
- * This replaces the previous expo-audio / temp-WAV-file approach which was
- * too slow for realtime PCM streaming.
  */
 import {
   AudioContext,
-  AudioRecorder,
   AudioManager,
+  type AudioBufferSourceNode,
 } from "react-native-audio-api";
+import LiveAudioStream from "react-native-live-audio-stream";
+import { DeviceEventEmitter } from "react-native";
 import { getToken } from "./storage";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -47,9 +43,14 @@ class VoiceService {
   private onTextRevealCallback: TextRevealCallback | null = null;
   private onConnectionQualityCallback: QualityCallback | null = null;
 
-  // Microphone
-  private recorder: AudioRecorder | null = null;
+  // Microphone (react-native-live-audio-stream)
+  private audioSubscription: any = null;
   private isMuted = true;
+  private isRecording = false;
+  // The backend's first receive() on a new connection is receive_json(), expecting
+  // the `init` TEXT frame. We must NOT send any binary (mic) frame until init has
+  // been sent on the current socket, or the backend crashes with KeyError: 'text'.
+  private audioReadyToSend = false;
 
   // Playback (Web Audio API — mirrors web jitter buffer exactly)
   private audioCtx: AudioContext | null = null;
@@ -57,6 +58,10 @@ class VoiceService {
   private bufferQueue: ArrayBuffer[] = [];
   private isBuffering = true;
   private readonly TARGET_BUFFER_SIZE = 6;
+  // Finished playback nodes must be disconnected explicitly — RN's native audio
+  // graph does not GC them like browsers do, so they accumulate and cause
+  // progressive jitter over long sessions.
+  private activeSources = new Set<AudioBufferSourceNode>();
 
   // Typewriter sync
   private pendingAssistantText = "";
@@ -99,14 +104,13 @@ class VoiceService {
     if (this.isSessionActive) { this.sendInitMessage(); return; }
 
     this.isSessionActive = true;
+    this.isMuted = true;
     this.retryCount = 0;
     this.starvationTimes = [];
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
 
     // Request microphone permission.
-    // Native returns a capitalized PermissionStatus ('Granted' | 'Denied' | 'Undetermined'),
-    // so compare case-insensitively.
     const perm = await AudioManager.requestRecordingPermissions();
     if (String(perm).toLowerCase() !== "granted") {
       this.isSessionActive = false;
@@ -114,41 +118,46 @@ class VoiceService {
       return;
     }
 
-    // Set audio session for recording + playback (iOS routing; no-op on Android)
+    // Set audio session (iOS routing; on Android forces speaker output)
     AudioManager.setAudioSessionOptions({
       iosCategory: "playAndRecord",
       iosMode: "voiceChat",
       iosOptions: ["defaultToSpeaker", "allowBluetoothHFP"],
     });
 
-    // Create AudioContext for 24kHz playback (matches backend output)
+    // Create AudioContext for 24kHz playback (matches backend output).
+    // Must call resume() — AudioContext starts suspended per Web Audio API spec.
     this.audioCtx = new AudioContext({ sampleRate: 24000 });
+    await this.audioCtx.resume();
     this.nextStartTime = this.audioCtx.currentTime;
 
-    // Start microphone recorder (16kHz → backend input)
-    this.recorder = new AudioRecorder();
-    this.recorder.onAudioReady(
-      { sampleRate: 16000, channelCount: 1, bufferLength: 4096 },
-      ({ buffer }) => {
-        if (!this.isSessionActive || this.ws?.readyState !== WebSocket.OPEN) return;
+    // Start microphone via react-native-live-audio-stream (reliable PCM16 on Android)
+    LiveAudioStream.init({
+      sampleRate: 16000,
+      channels: 1,
+      bitsPerSample: 16,
+      bufferSize: 4096,
+    });
 
-        const float32 = buffer.getChannelData(0);
+    this.audioSubscription = DeviceEventEmitter.addListener("data", (base64Data: string) => {
+      // Block all binary until init has been sent on the current socket, otherwise
+      // the backend's first receive_json() gets binary and crashes the connection.
+      if (!this.isSessionActive || this.ws?.readyState !== WebSocket.OPEN || !this.audioReadyToSend) {
+        return;
+      }
 
-        if (this.isMuted) {
-          // Send silence when muted (keeps backend VAD timing)
-          const silence = new Int16Array(float32.length);
-          this.ws!.send(silence.buffer);
-        } else {
-          // Float32 [-1,1] → Int16 [-32767,32767]
-          const i16 = new Int16Array(float32.length);
-          for (let i = 0; i < float32.length; i++) {
-            i16[i] = Math.max(-1, Math.min(1, float32[i])) * 0x7fff;
-          }
-          this.ws!.send(i16.buffer);
-        }
-      },
-    );
-    this.recorder.start();
+      const pcmBuffer = this.decodeBase64(base64Data);
+
+      if (this.isMuted) {
+        // Send silence of same length (keeps backend VAD timing)
+        this.ws!.send(new ArrayBuffer(pcmBuffer.byteLength));
+      } else {
+        this.ws!.send(pcmBuffer);
+      }
+    });
+
+    LiveAudioStream.start();
+    this.isRecording = true;
 
     const connId = Math.random().toString(36).substring(7);
     this.currentConnectionId = connId;
@@ -168,13 +177,21 @@ class VoiceService {
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
 
+    this.audioReadyToSend = false;
     if (this.ws) { this.ws.close(); this.ws = null; }
 
-    // Stop recorder
-    if (this.recorder) {
-      try { this.recorder.stop(); } catch {}
-      this.recorder = null;
+    // Stop LiveAudioStream recorder
+    if (this.isRecording) {
+      try { LiveAudioStream.stop(); } catch {}
+      this.isRecording = false;
     }
+    if (this.audioSubscription) {
+      try { this.audioSubscription.remove(); } catch {}
+      this.audioSubscription = null;
+    }
+
+    // Stop & disconnect any in-flight playback nodes before closing the context
+    this.stopAllSources();
 
     // Close AudioContext
     if (this.audioCtx) {
@@ -195,9 +212,6 @@ class VoiceService {
 
   async setMuted(muted: boolean) {
     this.isMuted = muted;
-    // isMuted flag is read inside onAudioReady — no need to stop/start recorder.
-    // When muted, we send silence frames; when unmuted, real PCM.
-    // This avoids all start/stop races on Android MediaRecorder.
   }
 
   getSessionId() { return this.currentSessionId; }
@@ -213,14 +227,19 @@ class VoiceService {
     const endpoint = this.wsEndpoint.startsWith("/") ? this.wsEndpoint : `/${this.wsEndpoint}`;
     const wsUrl = `${wsBase}${endpoint}?token=${token || ""}&user_id=${this.currentStudentId}`;
 
+    // New socket: block mic uplink until we've sent the init frame on it.
+    this.audioReadyToSend = false;
     this.ws = new WebSocket(wsUrl);
     this.ws.binaryType = "arraybuffer";
 
     this.ws.onopen = () => {
       const wasReconnecting = this.retryCount > 0;
+      console.log(`[VoiceService] WS OPEN (reconnect=${wasReconnecting}, connId=${connId})`);
       this.retryCount = 0;
       this.starvationTimes = [];
-      // Reset jitter buffer on reconnect
+      // Kill any audio still scheduled from the dropped connection before
+      // resetting the jitter buffer, so stale speech can't overlap the new stream.
+      this.stopAllSources();
       this.isBuffering = true;
       this.bufferQueue = [];
       if (this.audioCtx) this.nextStartTime = this.audioCtx.currentTime;
@@ -255,23 +274,25 @@ class VoiceService {
         } catch { console.warn("[VoiceService] JSON parse error"); }
 
       } else {
-        // Binary frame — handle as ArrayBuffer or Blob
+        // Binary frame — audio from backend
         if (event.data instanceof ArrayBuffer) {
           this.handleIncomingAudio(event.data);
         } else if (typeof (event.data as any)?.arrayBuffer === "function") {
-          // React Native may deliver Blob on some devices
           (event.data as Blob).arrayBuffer().then((buf) => this.handleIncomingAudio(buf));
         }
       }
     };
 
-    this.ws.onclose = () => {
+    this.ws.onclose = (e: any) => {
+      console.log(`[VoiceService] WS CLOSE — code=${e?.code}, reason=${e?.reason || "(none)"}, retryCount=${this.retryCount}, sessionActive=${this.isSessionActive}`);
       if (this.isSessionActive && this.retryCount < this.MAX_RETRIES && this.currentConnectionId === connId) {
         this.retryCount++;
         const delay = Math.pow(2, this.retryCount - 1) * 1000;
+        console.log(`[VoiceService] reconnecting in ${delay}ms (attempt ${this.retryCount}/${this.MAX_RETRIES})`);
         this.onConnectionQualityCallback?.("reconnecting");
         setTimeout(() => this.connect(connId), delay);
       } else if (this.retryCount >= this.MAX_RETRIES) {
+        console.log(`[VoiceService] MAX RETRIES reached — tearing down session (mic will stop)`);
         this.onEventCallback?.({ type: "error", error: "max_retries", message: "Connection lost. Please try again." });
         this.stopSession();
       } else {
@@ -279,7 +300,7 @@ class VoiceService {
       }
     };
 
-    this.ws.onerror = () => console.warn("[VoiceService] WS error");
+    this.ws.onerror = (e: any) => console.warn(`[VoiceService] WS error: ${e?.message ?? ""}`);
   }
 
   private async sendInitMessage() {
@@ -296,19 +317,29 @@ class VoiceService {
     if (this.currentDocumentTitle) payload.document_title = this.currentDocumentTitle;
     if (this.currentAgentId) payload.agent_id = this.currentAgentId;
     if (this.currentGrade != null) payload.grade = this.currentGrade;
+    // Re-check OPEN: the await above may have spanned a close/reconnect.
+    if (this.ws.readyState !== WebSocket.OPEN) return;
     this.ws.send(JSON.stringify(payload));
+    // Init is now the first frame on this socket — mic binary may flow.
+    this.audioReadyToSend = true;
   }
 
-  // ── Audio Playback (mirrors web voiceService.ts lines ~300-345) ───────────
+  // ── Audio Playback ────────────────────────────────────────────────────────
+
+  private stopAllSources() {
+    for (const src of this.activeSources) {
+      try { src.stop(); } catch {}
+      try { src.disconnect(); } catch {}
+    }
+    this.activeSources.clear();
+  }
 
   private handleIncomingAudio(buffer: ArrayBuffer) {
     if (!this.isSessionActive || !this.audioCtx) return;
 
     const currentTime = this.audioCtx.currentTime;
 
-    // Jitter buffer starvation recovery (same as web)
     if (!this.isBuffering && this.nextStartTime < currentTime - 0.05) {
-      console.warn(`[VoiceService] Jitter buffer starved. Re-buffering...`);
       this.isBuffering = true;
       this.nextStartTime = currentTime;
       const now = Date.now();
@@ -336,21 +367,28 @@ class VoiceService {
   private scheduleAudioFrame(buffer: ArrayBuffer) {
     if (!this.audioCtx) return;
 
-    // Int16 → Float32  (mirrors web: int16[i] / 0x7FFF)
     const int16 = new Int16Array(buffer);
     const float32 = new Float32Array(int16.length);
     for (let i = 0; i < int16.length; i++) {
       float32[i] = int16[i] / 0x7fff;
     }
 
-    // Create AudioBuffer at 24kHz (server output rate)
     const audioBuf = this.audioCtx.createBuffer(1, float32.length, 24000);
     audioBuf.getChannelData(0).set(float32);
 
-    // Schedule gapless playback (same as web)
     const src = this.audioCtx.createBufferSource();
     src.buffer = audioBuf;
     src.connect(this.audioCtx.destination);
+
+    // Track the node and disconnect it once it finishes so the native audio
+    // graph doesn't accumulate dead nodes (cause of long-session jitter).
+    // NOTE: react-native-audio-api uses `onEnded` (capital E), not the
+    // Web-standard `onended` — the lowercase form silently never fires.
+    this.activeSources.add(src);
+    src.onEnded = () => {
+      try { src.disconnect(); } catch {}
+      this.activeSources.delete(src);
+    };
 
     const startTime = Math.max(this.audioCtx.currentTime, this.nextStartTime);
     src.start(startTime);
@@ -365,7 +403,6 @@ class VoiceService {
       if (!this.isSessionActive) { clearInterval(this.typewriterInterval!); this.typewriterInterval = null; return; }
       const remaining = this.pendingAssistantText.substring(this.revealedAssistantText.length);
       if (!remaining.length) return;
-      // Sync text reveal with audio: ~40 chars/s when audio queued, burst otherwise
       const count = (this.bufferQueue.length > 0 || !this.isBuffering)
         ? Math.max(1, Math.ceil(40 * 0.05))
         : remaining.length;
@@ -373,6 +410,17 @@ class VoiceService {
       this.revealedAssistantText += next;
       this.onTextRevealCallback?.(next, "assistant");
     }, 50);
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  private decodeBase64(base64: string): ArrayBuffer {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
   }
 }
 

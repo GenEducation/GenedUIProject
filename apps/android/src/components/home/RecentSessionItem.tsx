@@ -1,7 +1,6 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { ProgressRing } from "../ProgressRing";
 import { colors, fonts, subjectVisual } from "../../theme/tokens";
 import type { ChatSession } from "../../types/api";
 
@@ -21,8 +20,6 @@ export function RecentSessionItem({ session }: Props) {
     icon: "💬",
     label: raw.subject ?? raw.subject_name ?? "Session",
   };
-
-  const mastery = raw.message_count ? Math.min(100, raw.message_count * 4) : 50;
 
   const handlePress = () => {
     router.push({
@@ -49,7 +46,6 @@ export function RecentSessionItem({ session }: Props) {
           {raw.last_active ? ` · ${formatRelativeTime(raw.last_active)}` : ""}
         </Text>
       </View>
-      <ProgressRing percent={mastery} size={38} stroke={3.5} color={visual.color} fontSize={10} />
       <Text style={styles.chev}>›</Text>
     </Pressable>
   );

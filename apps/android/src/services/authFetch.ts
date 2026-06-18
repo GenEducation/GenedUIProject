@@ -65,7 +65,9 @@ export async function authFetch(
     headers.set("Content-Type", "application/json");
   }
 
+  console.log(`[API] ${init?.method ?? "GET"} ${input}`);
   const response = await fetch(input, { ...init, headers });
+  console.log(`[API] ← ${response.status} ${input.split("/").pop()}`);
 
   if (!response.ok) {
     const requestId = response.headers.get("x-request-id") || "";

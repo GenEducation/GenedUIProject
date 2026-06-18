@@ -49,6 +49,7 @@ export default function VoiceChatScreen() {
     isMuted,
     pttHeld,
     isAISpeaking,
+    isThinking,
     startSession,
     stopSession,
     toggleMute,
@@ -65,10 +66,10 @@ export default function VoiceChatScreen() {
 
   // Auto-scroll on new messages
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > 0 || isThinking) {
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
     }
-  }, [messages]);
+  }, [messages, isThinking]);
 
   // Determine orb phase and caption
   let orbPhase: "idle" | "listening" | "speaking" | "pttHeld" = "idle";
@@ -150,6 +151,14 @@ export default function VoiceChatScreen() {
                 <MessageBubble message={msg} />
               </View>
             ))
+          )}
+
+          {/* Single, state-driven thinking indicator. Rendered outside the message
+              list so it can never duplicate or get stuck out of order. */}
+          {isThinking && (
+            <View style={styles.messageWrap}>
+              <MessageBubble message={{ from: "ai", text: "", isStreaming: true }} />
+            </View>
           )}
         </ScrollView>
 

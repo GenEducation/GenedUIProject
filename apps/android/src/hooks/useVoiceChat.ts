@@ -29,6 +29,8 @@ export interface UseVoiceChatResult {
   isMuted: boolean;
   pttHeld: boolean;
   isAISpeaking: boolean;
+  /** AI is processing the turn but hasn't produced any transcript text yet. */
+  isThinking: boolean;
   startSession: () => Promise<void>;
   stopSession: () => void;
   toggleMute: () => void;
@@ -48,6 +50,7 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
   const [isMuted, setIsMuted] = useState(true);
   const [pttHeld, setPttHeld] = useState(false);
   const [isAISpeaking, setIsAISpeaking] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
 
   // Track assistant text accumulation for incremental reveal
   const assistantTextRef = useRef("");
@@ -61,6 +64,7 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
 
       case "disconnected":
         setVoiceStatus("idle");
+        setIsThinking(false);
         break;
 
       case "session_id":
@@ -72,19 +76,25 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
         break;
 
       case "planning":
+        // Backend is working but no transcript yet — show the single thinking indicator.
         setIsAISpeaking(true);
+        setIsThinking(true);
         break;
 
       case "turn_complete":
         setIsAISpeaking(false);
-        // Finalize current assistant message
+        setIsThinking(false);
+        // Finalize the current assistant message. If it never received text, drop it
+        // entirely so no empty "Processing…" bubble is left behind.
         if (currentAiMsgIdRef.current) {
+          const msgId = currentAiMsgIdRef.current;
+          const hasText = assistantTextRef.current.trim().length > 0;
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === currentAiMsgIdRef.current
-                ? { ...m, isStreaming: false, statusText: undefined }
-                : m
-            )
+            hasText
+              ? prev.map((m) =>
+                  m.id === msgId ? { ...m, isStreaming: false, statusText: undefined } : m
+                )
+              : prev.filter((m) => m.id !== msgId)
           );
           currentAiMsgIdRef.current = null;
           assistantTextRef.current = "";
@@ -93,6 +103,8 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
 
       case "error": {
         setVoiceStatus("error");
+        setIsThinking(false);
+        setIsAISpeaking(false);
         const errMsg =
           typeof event.message === "string" ? event.message
           : typeof event.error === "string" ? event.error
@@ -118,24 +130,30 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
           timestamp: new Date().toISOString(),
         },
       ]);
+      // User finished speaking → AI will respond next; show the thinking indicator
+      // until the first assistant text arrives.
+      setIsThinking(true);
     } else {
-      // Append to current assistant message or create new one
+      // Accumulate, but only ever materialise a bubble once there's real text — this
+      // prevents an empty "Processing…" bubble from being created and left stuck.
       assistantTextRef.current += text;
+      const accumulated = assistantTextRef.current;
+      if (!accumulated.trim()) return;
+
       setIsAISpeaking(true);
+      setIsThinking(false); // real text is now streaming; hide the standalone indicator
 
       if (!currentAiMsgIdRef.current) {
         const id = `ai-${Date.now()}`;
         currentAiMsgIdRef.current = id;
         setMessages((prev) => [
           ...prev,
-          { from: "ai", text: assistantTextRef.current, id, isStreaming: true },
+          { from: "ai", text: accumulated, id, isStreaming: true },
         ]);
       } else {
         const msgId = currentAiMsgIdRef.current;
         setMessages((prev) =>
-          prev.map((m) =>
-            m.id === msgId ? { ...m, text: assistantTextRef.current } : m
-          )
+          prev.map((m) => (m.id === msgId ? { ...m, text: accumulated } : m))
         );
       }
     }
@@ -177,6 +195,7 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
     voiceService.stopSession();
     setVoiceStatus("idle");
     setIsAISpeaking(false);
+    setIsThinking(false);
     setPttHeld(false);
   }, []);
 
@@ -214,6 +233,7 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
     isMuted,
     pttHeld,
     isAISpeaking,
+    isThinking,
     startSession,
     stopSession,
     toggleMute,

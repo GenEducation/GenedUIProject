@@ -1,7 +1,6 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { ProgressRing } from "../ProgressRing";
 import { colors, fonts, subjectVisual } from "../../theme/tokens";
 import type { ChatSession } from "../../types/api";
 
@@ -12,7 +11,6 @@ interface Props {
 export function ContinueLearning({ session }: Props) {
   const router = useRouter();
   const visual = subjectVisual[session.subject?.toLowerCase() ?? ""] ?? subjectVisual["mathematics"];
-  const mastery = session.message_count ? Math.min(100, session.message_count * 4) : 50;
 
   const handlePress = () => {
     router.push({
@@ -28,7 +26,9 @@ export function ContinueLearning({ session }: Props) {
   return (
     <Pressable style={styles.card} onPress={handlePress}>
       <View style={[styles.bar, { backgroundColor: visual.color }]} />
-      <ProgressRing percent={mastery} size={60} stroke={5} color={visual.color} />
+      <View style={[styles.iconWrap, { backgroundColor: visual.bg }]}>
+        <Text style={styles.icon}>{visual.icon}</Text>
+      </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.label, { color: visual.color }]}>CONTINUE LEARNING</Text>
         <Text style={styles.title} numberOfLines={1}>
@@ -79,6 +79,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 4,
   },
+  iconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  icon: { fontSize: 26 },
   label: {
     fontFamily: fonts.dmBold,
     fontSize: 9,
