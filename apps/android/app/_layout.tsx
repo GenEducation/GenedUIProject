@@ -14,6 +14,7 @@ import {
 import { JetBrainsMono_600SemiBold } from "@expo-google-fonts/jetbrains-mono";
 import { AuthProvider } from "@/store/useAuthStore";
 import { registerSessionExpiredHandler } from "@/services/authFetch";
+import { prefsStore } from "@/store/usePrefsStore";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -23,6 +24,7 @@ function RootStackNavigator() {
   /* Wire the 401/403 handler — navigates to sign-in and clears the session */
   useEffect(() => {
     registerSessionExpiredHandler(() => router.replace("/sign-in"));
+    prefsStore.hydrate();
   }, []);
 
   return (
@@ -33,6 +35,10 @@ function RootStackNavigator() {
       <Stack.Screen name="(tabs)"   />
       <Stack.Screen name="chat"       options={{ animation: "slide_from_bottom" }} />
       <Stack.Screen name="voice-chat" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="test"        options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="schedule" />
+      <Stack.Screen name="onboarding"  options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="pdf-viewer"  options={{ animation: "slide_from_bottom" }} />
     </Stack>
   );
 }

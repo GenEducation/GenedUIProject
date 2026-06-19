@@ -1,6 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
-import Svg, { Path } from "react-native-svg";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { Screen } from "@/components/Screen";
 import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
@@ -132,30 +131,32 @@ export default function Report() {
             <SecHead n={kpis.length > 0 ? "2" : "1"} title="Chapter progress." sub="Mastery by chapter." />
             <View style={styles.sBody}>
               {chapters.map((c) => {
+                const mastery = (c.mastery_score ?? c.mastery ?? 0) * (c.mastery_score != null && c.mastery_score <= 1 ? 100 : 1);
                 const band = BAND_STYLE[
-                  c.mastery >= 80 ? "Advanced"
-                    : c.mastery >= 60 ? "Proficient"
-                    : c.mastery >= 40 ? "Approaching"
+                  mastery >= 80 ? "Advanced"
+                    : mastery >= 60 ? "Proficient"
+                    : mastery >= 40 ? "Approaching"
                     : "Developing"
                 ] ?? DEFAULT_BAND;
+                const title = c.chapter_title ?? c.document_title;
                 return (
-                  <View key={c.chapter_title} style={styles.chap}>
+                  <View key={title} style={styles.chap}>
                     <View style={styles.cTop}>
-                      <Text style={styles.cT}>{c.chapter_title}</Text>
+                      <Text style={styles.cT}>{title}</Text>
                       <View style={[styles.chip, { backgroundColor: band.bg, borderColor: band.bd }]}>
                         <Text style={[styles.chipText, { color: band.color }]}>{band.label}</Text>
                       </View>
                     </View>
                     <View style={styles.bar}>
                       <View
-                        style={{ width: `${c.mastery}%`, height: "100%", backgroundColor: band.color, borderRadius: 2 }}
+                        style={{ width: `${Math.min(mastery, 100)}%`, height: "100%", backgroundColor: band.color, borderRadius: 2 }}
                       />
                     </View>
                     <View style={styles.cRow}>
                       {c.sessions ? (
                         <Text style={styles.cL}>{c.sessions} sessions</Text>
                       ) : <Text style={styles.cL}>—</Text>}
-                      <Text style={styles.cPct}>{c.mastery}%</Text>
+                      <Text style={styles.cPct}>{Math.round(mastery)}%</Text>
                     </View>
                   </View>
                 );
@@ -178,32 +179,6 @@ export default function Report() {
           </View>
         ))}
 
-        {/* Actions */}
-        <View style={styles.actions}>
-          <Pressable style={[styles.btn, styles.btnDark]}>
-            <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M12 3v12M8 11l4 4 4-4M5 19h14"
-                stroke="#fff"
-                strokeWidth={1.8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-            <Text style={styles.btnDarkText}>Download PDF</Text>
-          </Pressable>
-          <Pressable style={[styles.btn, styles.btnOut]}>
-            <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M6 9V3h12v6M6 18H4v-7h16v7h-2M8 14h8v6H8z"
-                stroke={colors.navy}
-                strokeWidth={1.7}
-                strokeLinejoin="round"
-              />
-            </Svg>
-            <Text style={styles.btnOutText}>Print</Text>
-          </Pressable>
-        </View>
       </ScrollView>
     </Screen>
   );
@@ -377,18 +352,4 @@ const styles = StyleSheet.create({
   },
   cPct: { fontFamily: fonts.dmBold, fontSize: 16, color: colors.ink },
 
-  actions: { flexDirection: "row", gap: 10 },
-  btn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-    height: 44,
-    borderRadius: 10,
-  },
-  btnDark: { backgroundColor: colors.navy },
-  btnDarkText: { color: "#fff", fontFamily: fonts.dmBold, fontSize: 13 },
-  btnOut: { ...surface },
-  btnOutText: { color: colors.navy, fontFamily: fonts.dmBold, fontSize: 13 },
 });

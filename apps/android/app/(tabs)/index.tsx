@@ -1,5 +1,7 @@
 import React from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Pressable } from "react-native";
+import { useRouter } from "expo-router";
+import { CalendarClock, ChevronRight } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
 import { AprilAvatar } from "@/components/AprilAvatar";
 import { SectionHead } from "@/components/SectionHead";
@@ -15,6 +17,7 @@ import { useAuth } from "@/store/useAuthStore";
 import { colors, fonts } from "@/theme/tokens";
 
 export default function Home() {
+  const router = useRouter();
   const { state } = useAuth();
   const { stats, subjects, recentSessions, loading, error, refetch } = useHomeData();
 
@@ -62,6 +65,18 @@ export default function Home() {
 
         {/* Stats */}
         {stats ? <StatStrip stats={stats} /> : null}
+
+        {/* Schedule quick action */}
+        <Pressable style={styles.scheduleCard} onPress={() => router.push("/schedule")}>
+          <View style={styles.scheduleIcon}>
+            <CalendarClock size={20} color={colors.genPurple} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.scheduleTitle}>Schedule a session</Text>
+            <Text style={styles.scheduleSub}>Plan a test or learning session ahead</Text>
+          </View>
+          <ChevronRight size={20} color={colors.textMuted} />
+        </Pressable>
 
         {/* Continue Learning */}
         {continueLearning ? (
@@ -124,4 +139,25 @@ const styles = StyleSheet.create({
     color: colors.textMid,
     marginTop: 5,
   },
+  scheduleCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 14,
+  },
+  scheduleIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.genPurple + "12",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scheduleTitle: { fontFamily: fonts.dmBold, fontSize: 14, color: colors.text },
+  scheduleSub: { fontFamily: fonts.dm, fontSize: 12, color: colors.textMuted, marginTop: 1 },
 });

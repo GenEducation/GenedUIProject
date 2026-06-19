@@ -7,17 +7,20 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
+  Switch,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Screen } from "@/components/Screen";
 import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
+import { PickerSheet } from "@/components/PickerSheet";
 import { useMeData } from "@/hooks/useMeData";
 import { useAuth } from "@/store/useAuthStore";
 import { useRouter } from "expo-router";
 import { studentService } from "@/services/studentService";
+import { prefsStore, usePrefs } from "@/store/usePrefsStore";
 import { colors, fonts } from "@/theme/tokens";
-import type { VoiceOption, GeneralOnboarding } from "@/types/api";
+import type { VoiceOption, GeneralOnboarding, PartnerItem } from "@/types/api";
 
 const AVATAR_COLORS = [
   colors.genPurple,
@@ -48,12 +51,12 @@ function buildTraits(onboarding: GeneralOnboarding | null) {
 /* ── Badge computation (mirrors website) ──────────────────────────────────── */
 function computeBadges(totalSessions: number, currentStreak: number) {
   return [
-    { icon: "🎯", label: "First Session",  earned: totalSessions  >= 1, color: colors.genPurple },
-    { icon: "🔥", label: "3-Day Streak",   earned: currentStreak  >= 3, color: colors.sun       },
-    { icon: "📖", label: "Explorer",       earned: totalSessions  >= 5, color: colors.genBlue   },
-    { icon: "🏆", label: "Quiz Champion",  earned: false,               color: colors.edGreen   },
-    { icon: "⭐", label: "Shapes Master",  earned: false,               color: colors.sun       },
-    { icon: "🚀", label: "7-Day Streak",   earned: currentStreak  >= 7, color: colors.coral     },
+    { icon: "🎯", label: "First Session", earned: totalSessions >= 1,  color: colors.genPurple },
+    { icon: "🔥", label: "3-Day Streak",  earned: currentStreak >= 3,  color: colors.sun       },
+    { icon: "📖", label: "Explorer",      earned: totalSessions >= 5,  color: colors.genBlue   },
+    { icon: "🚀", label: "7-Day Streak",  earned: currentStreak >= 7,  color: colors.coral     },
+    { icon: "🏆", label: "Dedicated",     earned: totalSessions >= 20, color: colors.edGreen   },
+    { icon: "⭐", label: "Star Learner",  earned: totalSessions >= 50, color: colors.sun       },
   ];
 }
 
@@ -81,16 +84,50 @@ export default function Me() {
   const router = useRouter();
   const { profile, streak, voices, onboarding, enrolledPartners, loading, error, refetch } = useMeData();
 
+  const prefs = usePrefs();
+
   const [avatarColor, setAvatarColor]     = useState<string>(colors.genPurple);
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
   const [voiceUpdating, setVoiceUpdating] = useState(false);
   const [parentInput, setParentInput]     = useState("");
   const [parentSending, setParentSending] = useState(false);
-  const [partnerSending, setPartnerSending] = useState(false);
+
+  // School (partner) request flow
+  const [availablePartners, setAvailablePartners] = useState<PartnerItem[]>([]);
+  const [partnerPickerOpen, setPartnerPickerOpen] = useState(false);
+  const [partnerSending, setPartnerSending]       = useState(false);
+  const [partnerMsg, setPartnerMsg]               = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   const handleLogout = async () => {
     await logout();
     router.replace("/sign-in");
+  };
+
+  const openPartnerPicker = async () => {
+    setPartnerMsg(null);
+    try {
+      const list = await studentService.fetchPartners();
+      setAvailablePartners(Array.isArray(list) ? list : []);
+      setPartnerPickerOpen(true);
+    } catch {
+      setPartnerMsg({ kind: "err", text: "Couldn't load schools. Try again." });
+    }
+  };
+
+  const handlePartnerRequest = async (partner: PartnerItem) => {
+    const id = partner.partner_id ?? partner.id;
+    if (!id || partnerSending) return;
+    setPartnerSending(true);
+    setPartnerMsg(null);
+    try {
+      await studentService.sendPartnerRequest(id);
+      setPartnerMsg({ kind: "ok", text: `Request sent to ${partner.organization}.` });
+      refetch();
+    } catch {
+      setPartnerMsg({ kind: "err", text: "Couldn't send request. Try again." });
+    } finally {
+      setPartnerSending(false);
+    }
   };
 
   if (loading) {
@@ -312,19 +349,61 @@ export default function Me() {
               ))}
             </View>
           ) : (
-            <Text style={[styles.emptyText, { marginBottom: 14 }]}>No school connected yet.</Text>
+            <Text style={[styles.emptyText, { marginBottom: 10 }]}>No school connected yet.</Text>
           )}
+
           <Pressable
             style={[styles.actionBtn, partnerSending && { opacity: 0.6 }]}
-            onPress={async () => {
-              // placeholder — a full picker modal can be added later
-            }}
+            onPress={openPartnerPicker}
             disabled={partnerSending}
           >
             {partnerSending
               ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={styles.actionBtnText}>Connect to a School</Text>}
+              : <Text style={styles.actionBtnText}>Connect a school</Text>}
           </Pressable>
+          {partnerMsg ? (
+            <Text
+              style={[
+                styles.partnerMsg,
+                { color: partnerMsg.kind === "ok" ? "#00B894" : colors.coral },
+              ]}
+            >
+              {partnerMsg.text}
+            </Text>
+          ) : null}
+        </Card>
+
+        {/* ── Settings ── */}
+        <Card>
+          <SectionHeader icon="⚙️" label="Settings" />
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Sound effects</Text>
+            <Switch
+              value={prefs.soundEnabled}
+              onValueChange={prefsStore.setSoundEnabled}
+              trackColor={{ false: colors.border, true: colors.genPurple + "88" }}
+              thumbColor={prefs.soundEnabled ? colors.genPurple : "#f4f3f4"}
+            />
+          </View>
+          <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
+            <Text style={styles.settingLabel}>Voice activation</Text>
+            <View style={styles.segment}>
+              {(["continuous", "ptt"] as const).map((mode) => {
+                const active = prefs.listenMode === mode;
+                return (
+                  <Pressable
+                    key={mode}
+                    style={[styles.segmentBtn, active && styles.segmentBtnActive]}
+                    onPress={() => prefsStore.setListenMode(mode)}
+                  >
+                    <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                      {mode === "continuous" ? "Continuous" : "Push to talk"}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
         </Card>
 
         {/* ── My Family ── */}
@@ -359,6 +438,19 @@ export default function Me() {
         </Pressable>
 
       </ScrollView>
+
+      <PickerSheet
+        visible={partnerPickerOpen}
+        title="Connect a school"
+        options={availablePartners.map((p) => p.organization)}
+        selected=""
+        onSelect={(org) => {
+          const p = availablePartners.find((x) => x.organization === org);
+          if (p) handlePartnerRequest(p);
+        }}
+        onClose={() => setPartnerPickerOpen(false)}
+        emptyText="No schools available to join"
+      />
     </Screen>
   );
 }
@@ -452,6 +544,30 @@ const styles = StyleSheet.create({
     paddingVertical: 11, alignItems: "center",
   },
   actionBtnText: { fontFamily: fonts.dmBold, fontSize: 13, color: "#fff" },
+  partnerMsg: { fontFamily: fonts.dmMedium, fontSize: 12, marginTop: 10, textAlign: "center" },
+
+  /* Settings */
+  settingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border + "80",
+  },
+  settingLabel: { fontFamily: fonts.dmBold, fontSize: 13, color: colors.text },
+  segment: {
+    flexDirection: "row",
+    backgroundColor: colors.pageBg,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 2,
+  },
+  segmentBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  segmentBtnActive: { backgroundColor: colors.genPurple },
+  segmentText: { fontFamily: fonts.dmBold, fontSize: 11, color: colors.textMuted },
+  segmentTextActive: { color: "#fff" },
 
   /* Family */
   inputRow: { flexDirection: "row", gap: 8 },

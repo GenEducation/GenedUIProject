@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, Pressable, Image, StyleSheet } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useRouter } from "expo-router";
+import { History } from "lucide-react-native";
 import { colors, fonts } from "../../theme/tokens";
 
 // Favicon1.jpg — the circular AI avatar used on the web in ChatMessageBubble
@@ -10,9 +11,11 @@ const FAVICON = require("../../../assets/Favicon1.jpg");
 interface Props {
   subject?: string;
   isOnline?: boolean;
+  /** When provided, shows a history button on the right that opens the sessions sheet. */
+  onOpenSessions?: () => void;
 }
 
-export function ChatHeader({ subject, isOnline = true }: Props) {
+export function ChatHeader({ subject, isOnline = true, onOpenSessions }: Props) {
   const router = useRouter();
 
   return (
@@ -56,6 +59,13 @@ export function ChatHeader({ subject, isOnline = true }: Props) {
           </Text>
         </View>
       </View>
+
+      {/* Sessions / history button */}
+      {onOpenSessions ? (
+        <Pressable onPress={onOpenSessions} hitSlop={10} style={styles.histBtn}>
+          <History size={20} color={colors.text} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -89,6 +99,14 @@ const styles = StyleSheet.create({
     height: 36,
   },
   info: { flex: 1 },
+  histBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.pageBg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   name: { fontFamily: fonts.dmBold, fontSize: 14, color: colors.text },
   statusRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   dot: { width: 6, height: 6, borderRadius: 3 },

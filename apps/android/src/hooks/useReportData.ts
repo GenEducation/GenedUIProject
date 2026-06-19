@@ -22,7 +22,7 @@ export function useReportData(): ReportData {
     () =>
       studentId
         ? studentService.fetchProgressReport(studentId)
-        : Promise.resolve<ProgressReport>({}),
+        : Promise.resolve<ProgressReport | null>(null),
     [studentId]
   );
 

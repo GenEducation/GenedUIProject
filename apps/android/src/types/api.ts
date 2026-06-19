@@ -99,8 +99,14 @@ export interface AvailableAgentsResponse {
 }
 
 export interface ChapterMastery {
-  chapter_title: string;
-  mastery: number;
+  document_title: string;
+  chapter_title?: string;
+  subject: string;
+  grade: number;
+  mastery_score?: number;
+  mastery?: number;
+  completion_percentage?: number;
+  study_count?: number;
   sessions?: number;
   last_studied?: string;
 }
@@ -144,10 +150,34 @@ export interface ChatSession {
   message_count?: number;
 }
 
+export interface ChatElement {
+  id: string;
+  type: "text" | "svg" | "widget" | "image" | "visual" | "comprehension_widget" | "english_skill_view" | "interactive";
+  content: string;
+  meta?: {
+    engine?: string;
+    label?: string;
+    code?: string;
+    commands?: any[];
+    options?: any;
+    image?: string;
+    figure_id?: string;
+    shape?: string;
+    params?: any;
+    interactive_type?: string;
+    render?: any;
+    interaction?: any;
+    validation?: any;
+    read_only?: boolean;
+    [key: string]: any;
+  };
+}
+
 export interface ChatMessage {
   id?: string;
   from: "me" | "ai";
   text: string;
+  elements?: ChatElement[];
   /** Planning phase status: "Thinking…", "Understanding your request…" */
   statusText?: string;
   /** Phase name: "thinking", "understanding", etc. */
@@ -155,6 +185,10 @@ export interface ChatMessage {
   /** True while this message is still being streamed */
   isStreaming?: boolean;
   timestamp?: string;
+  /** Chapter/document options sent by backend for student to choose from */
+  options?: string[];
+  /** Chapter name resolved by backend (from done event) */
+  chapterName?: string;
 }
 
 export interface SessionsResponse {

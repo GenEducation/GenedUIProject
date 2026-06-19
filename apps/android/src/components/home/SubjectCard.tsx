@@ -37,9 +37,33 @@ export function SubjectCard({ subject }: Props) {
 
   const agentId: string | undefined = raw.agent_id ?? undefined;
 
+  // Onboarding gate: if the subject's onboarding isn't complete, send the
+  // student through the conversational onboarding before normal chat/voice.
+  const needsOnboarding = raw.is_onboarding_complete === false;
+
+  const goToOnboarding = () => {
+    router.push({
+      pathname: "/onboarding",
+      params: { subject: subjectKey, grade: String(grade ?? 9) },
+    });
+  };
+
   const handleChat = () => {
+    if (needsOnboarding) return goToOnboarding();
     router.push({
       pathname: "/chat",
+      params: {
+        subject: subjectKey,
+        grade: grade ?? 9,
+        ...(agentId ? { agentId } : {}),
+      },
+    });
+  };
+
+  const handleVoice = () => {
+    if (needsOnboarding) return goToOnboarding();
+    router.push({
+      pathname: "/voice-chat",
       params: {
         subject: subjectKey,
         grade: grade ?? 9,
@@ -86,16 +110,7 @@ export function SubjectCard({ subject }: Props) {
         </Pressable>
         <Pressable
           style={[styles.btn, { backgroundColor: visual.color }]}
-          onPress={() =>
-            router.push({
-              pathname: "/voice-chat",
-              params: {
-                subject: subjectKey,
-                grade: grade ?? 9,
-                ...(agentId ? { agentId } : {}),
-              },
-            })
-          }
+          onPress={handleVoice}
         >
           <Text style={[styles.btnText, { color: "#fff" }]}>Voice</Text>
         </Pressable>

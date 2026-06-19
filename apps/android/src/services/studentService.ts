@@ -14,14 +14,13 @@ import type {
   SessionsResponse,
   ChatHistoryResponse,
   VoiceOption,
-  CreateTestResponse,
-  TestResult,
   TestSubmission,
   SendChatPayload,
   UserProfile,
   AvailableAgentsResponse,
   PartnerItem,
 } from "../types/api";
+import type { CreateChapterTestResponse, SubmitTestResponse } from "../types/test";
 
 const BASE = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -50,6 +49,24 @@ export const studentService = {
     return res.json();
   },
 
+  // ── PDF Viewer ──────────────────────────────────────────────────────────────
+
+  fetchChapterPdfUrl: async (
+    grade: number,
+    subject: string,
+    chapterName: string
+  ): Promise<{ pdf_url: string; chapter_name: string; grade: number; subject: string; ttl_seconds: number }> => {
+    const params = new URLSearchParams({
+      grade: String(grade),
+      subject,
+      chapter_name: chapterName,
+    });
+    const res = await authFetch(`${BASE}/rag/api/ncert/pdf-url?${params}`, {
+      headers: { accept: "application/json" },
+    });
+    return res.json();
+  },
+
   // ── Subjects / Chapters ─────────────────────────────────────────────────────
 
   fetchAnalyticsSubjects: async (studentId: string): Promise<SubjectInfo[]> => {
@@ -73,12 +90,18 @@ export const studentService = {
 
   // ── Progress Report ─────────────────────────────────────────────────────────
 
-  fetchProgressReport: async (studentId: string): Promise<ProgressReport> => {
-    const res = await authFetch(
-      `${BASE}/students/${studentId}/progress-report`,
-      { headers: { accept: "application/json" } }
-    );
-    return res.json();
+  fetchProgressReport: async (studentId: string): Promise<ProgressReport | null> => {
+    try {
+      const res = await authFetch(
+        `${BASE}/students/${studentId}/progress-report`,
+        { headers: { accept: "application/json" } }
+      );
+      return res.json();
+    } catch (err) {
+      // 404 = no report generated yet → show empty state, not an error
+      if (err instanceof ApiRequestError && err.status === 404) return null;
+      throw err;
+    }
   },
 
   // ── Chat / Sessions ─────────────────────────────────────────────────────────
@@ -146,7 +169,7 @@ export const studentService = {
     subject: string;
     grade: number;
     questions_per_section?: number;
-  }): Promise<CreateTestResponse> => {
+  }): Promise<CreateChapterTestResponse> => {
     const res = await authFetch(`${BASE}/create-chapter-test`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -155,10 +178,16 @@ export const studentService = {
     return res.json();
   },
 
+  /** Fetch a previously-created test (used by the scheduler "Start Test" path). */
+  getTest: async (testId: string): Promise<CreateChapterTestResponse> => {
+    const res = await authFetch(`${BASE}/tests/${testId}`);
+    return res.json();
+  },
+
   submitTest: async (
     testId: string,
     answers: { question_id: string; student_answer: string }[]
-  ): Promise<TestResult> => {
+  ): Promise<SubmitTestResponse> => {
     const res = await authFetch(`${BASE}/tests/${testId}/submit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -172,6 +201,122 @@ export const studentService = {
   /** Public endpoint — no auth needed, but authFetch handles it gracefully */
   fetchVoices: async (): Promise<VoiceOption[]> => {
     const res = await authFetch(`${BASE}/voices`);
+    return res.json();
+  },
+
+  // ── English Skill Mode ───────────────────────────────────────────────────────
+
+  submitComprehensionAnswer: async (
+    sessionId: string,
+    directiveId: string,
+    interactionType: "mcq" | "fill_blank" | "retell" | "free_response",
+    answer: string
+  ): Promise<any> => {
+    const res = await authFetch(`${BASE}/english/session/${sessionId}/comprehension-answer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ directive_id: directiveId, interaction_type: interactionType, answer }),
+    });
+    return res.json();
+  },
+
+  /** Fire-and-forget telemetry: playback_complete, silence_detected, etc. */
+  reportConversationAction: async (
+    sessionId: string,
+    type:
+      | "playback_complete"
+      | "silence_detected"
+      | "repeat_requested"
+      | "slower_requested"
+      | "interaction_skipped",
+    directiveId: string
+  ): Promise<void> => {
+    await authFetch(`${BASE}/english/session/${sessionId}/conversation-action`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, directive_id: directiveId, timestamp: new Date().toISOString() }),
+    });
+  },
+
+  /**
+   * Step A of the record→assess flow: ask the backend for a signed GCS upload URL.
+   * Returns `{ upload_url | signed_url, gcs_uri, headers? }`.
+   */
+  requestAudioUpload: async (
+    sessionId: string,
+    payload: { directive_id: string; mime_type: string; file_size: number; codec: string }
+  ): Promise<any> => {
+    const res = await authFetch(`${BASE}/english/session/${sessionId}/audio-upload`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        directive_id: payload.directive_id,
+        mime_type: payload.mime_type,
+        file_size: payload.file_size,
+        file_size_bytes: payload.file_size,
+        codec: payload.codec,
+      }),
+    });
+    return res.json();
+  },
+
+  /** Step C: submit the uploaded GCS URI for oral assessment. Returns {wer, pace_wpm, fluency, feedback}. */
+  submitOralResult: async (
+    sessionId: string,
+    directiveId: string,
+    gcsUri: string
+  ): Promise<any> => {
+    const res = await authFetch(`${BASE}/english/session/${sessionId}/oral-result`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ directive_id: directiveId, gcs_uri: gcsUri }),
+    });
+    return res.json();
+  },
+
+  // ── Interactive Math ─────────────────────────────────────────────────────────
+
+  /** POST /math/session/{session_id}/interactive-answer — grades an interactive math block. */
+  submitInteractiveAnswer: async (
+    sessionId: string,
+    directiveId: string,
+    interactionType: string,
+    answer: string
+  ): Promise<any> => {
+    const res = await authFetch(`${BASE}/math/session/${sessionId}/interactive-answer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ directive_id: directiveId, interaction_type: interactionType, answer }),
+    });
+    return res.json();
+  },
+
+  // ── Onboarding ──────────────────────────────────────────────────────────────
+  // Plain request/response (NOT SSE). Both calls return { response, is_complete }.
+
+  startOnboarding: async (
+    studentId: string,
+    subject: string,
+    grade: number
+  ): Promise<{ response: string; is_complete: boolean }> => {
+    const res = await authFetch(`${BASE}/api/onboarding/subject/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ student_id: studentId, subject, grade }),
+    });
+    return res.json();
+  },
+
+  sendOnboardingMessage: async (
+    studentId: string,
+    subject: string,
+    message: string
+  ): Promise<{ response: string; is_complete: boolean }> => {
+    const res = await authFetch(`${BASE}/api/onboarding/subject/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ student_id: studentId, subject, message }),
+    });
     return res.json();
   },
 

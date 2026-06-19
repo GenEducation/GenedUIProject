@@ -17,6 +17,7 @@ import { VoiceChatHeader } from "@/components/voice/VoiceChatHeader";
 import { VoiceOrb } from "@/components/voice/VoiceOrb";
 import { VoiceControls } from "@/components/voice/VoiceControls";
 import { useVoiceChat } from "@/hooks/useVoiceChat";
+import { RecordingSheet } from "@/components/chat/english/RecordingSheet";
 import { colors, fonts } from "@/theme/tokens";
 
 const STATUS_CAPTIONS: Record<string, string> = {
@@ -44,6 +45,7 @@ export default function VoiceChatScreen() {
 
   const {
     messages,
+    sessionId: voiceSessionId,
     voiceStatus,
     connectionQuality,
     isMuted,
@@ -148,7 +150,7 @@ export default function VoiceChatScreen() {
           ) : (
             messages.map((msg, i) => (
               <View key={msg.id ?? `msg-${i}`} style={styles.messageWrap}>
-                <MessageBubble message={msg} />
+                <MessageBubble message={msg} sessionId={voiceSessionId ?? params.sessionId} />
               </View>
             ))
           )}
@@ -186,6 +188,8 @@ export default function VoiceChatScreen() {
           />
         )}
       </View>
+
+      <RecordingSheet />
     </Screen>
   );
 }

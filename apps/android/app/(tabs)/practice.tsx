@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { Screen } from "@/components/Screen";
 import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
@@ -16,14 +17,15 @@ import { usePracticeData } from "@/hooks/usePracticeData";
 import { useStudentId } from "@/hooks/useStudentId";
 import { studentService } from "@/services/studentService";
 import { colors, fonts, subjectVisual, radius } from "@/theme/tokens";
-import type { SubjectInfo, TestSubmission } from "@/types/api";
+import type { ChapterMastery, TestSubmission } from "@/types/api";
 
 export default function Practice() {
+  const router = useRouter();
   const [selectedSubject, setSelectedSubject] = useState<string | undefined>();
-  const [creating, setCreating] = useState(false);
+  const [creatingId, setCreatingId] = useState<string | null>(null);
   const studentId = useStudentId();
 
-  const { subjects, submissions, loading, error, refetch } =
+  const { subjects, chapters, submissions, loading, error, refetch } =
     usePracticeData(selectedSubject);
 
   if (loading) {
@@ -42,28 +44,32 @@ export default function Practice() {
     );
   }
 
-  const handleStartTest = async (subject: SubjectInfo) => {
-    if (!studentId || creating) return;
-    setCreating(true);
+  const handleStartTest = async (chapter: ChapterMastery) => {
+    if (!studentId || creatingId) return;
+    const key = chapter.document_title;
+    setCreatingId(key);
     try {
-      await studentService.createChapterTest({
+      const test = await studentService.createChapterTest({
         student_id: studentId,
-        chapter_query: subject.subject,
-        subject: subject.subject,
-        grade: subject.grade ?? 9,
-        questions_per_section: 5,
+        chapter_query: chapter.document_title,
+        subject: chapter.subject,
+        grade: chapter.grade ?? 9,
+        questions_per_section: 3,
       });
-      Alert.alert(
-        "Test Created",
-        "Your practice test is ready! (Test runner coming soon.)"
-      );
-      refetch();
+      router.push({
+        pathname: "/test",
+        params: { testId: test.test_id, testData: JSON.stringify(test) },
+      });
     } catch {
       Alert.alert("Error", "Couldn't create test. Please try again.");
     } finally {
-      setCreating(false);
+      setCreatingId(null);
     }
   };
+
+  const filteredChapters = selectedSubject
+    ? chapters.filter((c) => c.subject?.toLowerCase() === selectedSubject.toLowerCase())
+    : chapters;
 
   return (
     <Screen background={colors.pageBg}>
@@ -72,11 +78,11 @@ export default function Practice() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.heading}>Practice</Text>
-        <Text style={styles.sub}>Test yourself on your subjects.</Text>
+        <Text style={styles.sub}>Test yourself on your chapters.</Text>
 
         {/* Subject filter chips */}
-        {subjects.length > 0 ? (
-          <View style={styles.subjectRow}>
+        {subjects.length > 0 && (
+          <View style={styles.chipRow}>
             <Pressable
               style={[styles.chip, !selectedSubject && styles.chipActive]}
               onPress={() => setSelectedSubject(undefined)}
@@ -85,77 +91,74 @@ export default function Practice() {
                 All
               </Text>
             </Pressable>
-            {subjects.map((s) => (
+            {subjects.map((s, i) => (
               <Pressable
-                key={s.subject}
-                style={[
-                  styles.chip,
-                  selectedSubject === s.subject && styles.chipActive,
-                ]}
+                key={s.subject ?? i}
+                style={[styles.chip, selectedSubject === s.subject && styles.chipActive]}
                 onPress={() =>
-                  setSelectedSubject(
-                    selectedSubject === s.subject ? undefined : s.subject
-                  )
+                  setSelectedSubject(selectedSubject === s.subject ? undefined : s.subject)
                 }
               >
-                <Text
-                  style={[
-                    styles.chipText,
-                    selectedSubject === s.subject && styles.chipTextActive,
-                  ]}
-                >
-                  {subjectVisual[s.subject.toLowerCase()]?.label ?? s.subject}
+                <Text style={[styles.chipText, selectedSubject === s.subject && styles.chipTextActive]}>
+                  {subjectVisual[s.subject?.toLowerCase() ?? ""]?.label ?? s.subject}
                 </Text>
               </Pressable>
             ))}
           </View>
-        ) : null}
+        )}
 
-        {/* Start New Test cards */}
-        {subjects.length > 0 ? (
-          <>
-            <SectionHead title="START NEW TEST" style={{ marginTop: 20 }} />
-            <View style={{ gap: 10 }}>
-              {(selectedSubject
-                ? subjects.filter((s) => s.subject === selectedSubject)
-                : subjects
-              ).map((s) => {
-                const visual = subjectVisual[s.subject.toLowerCase()] ?? {
-                  color: colors.genPurple,
-                  bg: "#EBF0FD",
-                  icon: "📚",
-                  label: s.subject,
-                };
-                return (
-                  <View key={s.subject} style={styles.subjectCard}>
-                    <View style={[styles.subjectIcon, { backgroundColor: visual.bg }]}>
-                      <Text style={styles.subjectEmoji}>{visual.icon}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.subjectName}>{visual.label}</Text>
-                      <Text style={styles.subjectMeta}>Grade {s.grade}</Text>
-                    </View>
-                    <Pressable
-                      style={[styles.startBtn, { backgroundColor: visual.color }]}
-                      onPress={() => handleStartTest(s)}
-                      disabled={creating}
-                    >
-                      <Text style={styles.startBtnText}>
-                        {creating ? "…" : "Start"}
-                      </Text>
-                    </Pressable>
-                  </View>
-                );
-              })}
-            </View>
-          </>
-        ) : (
+        {/* Chapter cards */}
+        <SectionHead title="START NEW TEST" style={{ marginTop: 20 }} />
+        {filteredChapters.length === 0 ? (
           <EmptyState
             icon="📚"
-            title="No subjects yet"
-            message="Start chatting to enroll in subjects."
+            title="No chapters yet"
+            message="Start chatting about a subject to unlock chapters."
             fullScreen={false}
           />
+        ) : (
+          <View style={{ gap: 10 }}>
+            {filteredChapters.map((c, i) => {
+              const visual = subjectVisual[c.subject?.toLowerCase() ?? ""] ?? {
+                color: colors.genPurple,
+                bg: "#EBF0FD",
+                icon: "📚",
+                label: c.subject,
+              };
+              const mastery = Math.round(
+                ((c.mastery_score ?? c.mastery ?? 0) * 100)
+              );
+              return (
+                <View key={`${c.subject}-${c.document_title}-${i}`} style={styles.chapterCard}>
+                  <View style={[styles.chapterIcon, { backgroundColor: visual.bg }]}>
+                    <Text style={styles.chapterEmoji}>{visual.icon}</Text>
+                  </View>
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <Text style={styles.chapterTitle} numberOfLines={2}>
+                      {c.document_title}
+                    </Text>
+                    <View style={styles.metaRow}>
+                      <View style={[styles.subjectBadge, { backgroundColor: visual.color + "18" }]}>
+                        <Text style={[styles.subjectBadgeText, { color: visual.color }]}>
+                          {visual.label}
+                        </Text>
+                      </View>
+                      {mastery > 0 && (
+                        <Text style={styles.masteryText}>{mastery}% mastery</Text>
+                      )}
+                    </View>
+                  </View>
+                  <Pressable
+                    style={[styles.startBtn, { backgroundColor: visual.color }, !!creatingId && styles.startBtnDisabled]}
+                    onPress={() => handleStartTest(c)}
+                    disabled={!!creatingId}
+                  >
+                    <Text style={styles.startBtnText}>{creatingId === c.document_title ? "…" : "Test"}</Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
         )}
 
         {/* Past submissions */}
@@ -204,12 +207,7 @@ function SubmissionCard({ submission }: { submission: TestSubmission }) {
           </Text>
         ) : null}
       </View>
-      <View
-        style={[
-          styles.scoreBadge,
-          { backgroundColor: visual.color + "18", borderColor: visual.color + "44" },
-        ]}
-      >
+      <View style={[styles.scoreBadge, { backgroundColor: visual.color + "18", borderColor: visual.color + "44" }]}>
         <Text style={[styles.scoreText, { color: visual.color }]}>{pct}%</Text>
       </View>
     </View>
@@ -221,7 +219,7 @@ const styles = StyleSheet.create({
   heading: { fontFamily: fonts.nunito, fontSize: 26, color: colors.text, marginBottom: 4 },
   sub: { fontFamily: fonts.dm, fontSize: 13, color: colors.textMuted, marginBottom: 16 },
 
-  subjectRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 7,
@@ -234,7 +232,7 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: fonts.dmBold, fontSize: 12, color: colors.textMid },
   chipTextActive: { color: colors.genPurple },
 
-  subjectCard: {
+  chapterCard: {
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
@@ -244,23 +242,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  subjectIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 13,
+  chapterIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
-  subjectEmoji: { fontSize: 22 },
-  subjectName: { fontFamily: fonts.dmBold, fontSize: 14, color: colors.text },
-  subjectMeta: { fontFamily: fonts.dm, fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  chapterEmoji: { fontSize: 20 },
+  chapterTitle: { fontFamily: fonts.dmBold, fontSize: 13, color: colors.text, lineHeight: 18 },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
+  subjectBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  subjectBadgeText: { fontFamily: fonts.dmBold, fontSize: 10 },
+  masteryText: { fontFamily: fonts.dm, fontSize: 11, color: colors.textMuted },
   startBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 9,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
+  startBtnDisabled: { opacity: 0.5 },
   startBtnText: { fontFamily: fonts.dmBold, fontSize: 12, color: "#fff" },
 
   submCard: {
@@ -273,23 +281,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  submIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  submIcon: { width: 38, height: 38, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   submEmoji: { fontSize: 18 },
   submSubject: { fontFamily: fonts.dmBold, fontSize: 13, color: colors.text },
   submChapter: { fontFamily: fonts.dm, fontSize: 11, color: colors.textMid, marginTop: 1 },
   submDate: { fontFamily: fonts.dm, fontSize: 10, color: colors.textMuted, marginTop: 1 },
-  scoreBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: "center",
-  },
+  scoreBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, alignItems: "center" },
   scoreText: { fontFamily: fonts.dmBold, fontSize: 14 },
 });

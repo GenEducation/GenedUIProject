@@ -7,7 +7,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { voiceService, type VoiceEvent } from "../services/voiceService";
 import { useAuth } from "../store/useAuthStore";
-import type { ChatMessage } from "../types/api";
+import { audioStore } from "../store/useAudioStore";
+import { pdfStore } from "../store/usePdfStore";
+import { prefsStore } from "../store/usePrefsStore";
+import type { ChatMessage, ChatElement } from "../types/api";
 
 export type VoiceStatus = "idle" | "connecting" | "active" | "error";
 export type ConnectionQuality = "good" | "poor" | "reconnecting";
@@ -56,6 +59,35 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
   const assistantTextRef = useRef("");
   const currentAiMsgIdRef = useRef<string | null>(null);
 
+  const appendVoiceElement = useCallback((element: ChatElement) => {
+    setIsThinking(false);
+    setIsAISpeaking(true);
+
+    if (!currentAiMsgIdRef.current) {
+      const id = `ai-${Date.now()}`;
+      currentAiMsgIdRef.current = id;
+      setMessages((prev) => [
+        ...prev,
+        {
+          from: "ai",
+          text: "",
+          id,
+          elements: [element],
+          isStreaming: true,
+        },
+      ]);
+    } else {
+      const msgId = currentAiMsgIdRef.current;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === msgId
+            ? { ...m, elements: m.elements ? [...m.elements, element] : [element] }
+            : m
+        )
+      );
+    }
+  }, []);
+
   const handleEvent = useCallback((event: VoiceEvent) => {
     switch (event.type) {
       case "connected":
@@ -68,7 +100,34 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
         break;
 
       case "session_id":
-        if (event.session_id) setSessionId(event.session_id);
+        if (event.session_id) {
+          setSessionId(event.session_id);
+          audioStore.setContext(event.session_id, options.grade);
+        }
+        break;
+
+      case "tts_start":
+        if (event.directive_id) audioStore.markReady(event.directive_id);
+        break;
+
+      case "skill_action":
+        audioStore.setActiveSkill(event.payload || { type: event.mode, directive_id: event.directive_id });
+        break;
+
+      case "recording_open":
+        if (event.directive_id) audioStore.openRecording(event.directive_id, event.expected_duration_ms);
+        break;
+
+      case "recording_closed":
+        audioStore.closeRecording();
+        break;
+
+      case "pointer":
+        pdfStore.setPointer(event as any);
+        break;
+
+      case "pointer_clear":
+        pdfStore.clearPointer();
         break;
 
       case "transcript":
@@ -113,6 +172,98 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
         setMessages((prev) => {
           const withoutPrevErr = prev.filter((m) => !m.id?.startsWith("err-"));
           return [...withoutPrevErr, { from: "ai", text: errMsg, id: `err-${Date.now()}` }];
+        });
+        break;
+      }
+
+      case "visual_block": {
+        const engine = event.engine || event.meta?.engine || "p5sketch";
+        appendVoiceElement({
+          id: `visual-${Date.now()}`,
+          type: "visual",
+          content: engine,
+          meta: {
+            engine,
+            label: event.label || "Visual",
+            code: event.code,
+            commands: event.commands,
+            image: event.image,
+            options: event.options,
+            meta: event.meta
+          }
+        });
+        break;
+      }
+
+      case "visual_error": {
+        appendVoiceElement({
+          id: `visual-error-${Date.now()}`,
+          type: "visual",
+          content: "error",
+          meta: {
+            engine: event.engine || "unknown",
+            label: event.label || "Visual",
+            message: event.message,
+            fallback_text: event.fallback_text || "[Visual Error]"
+          }
+        });
+        break;
+      }
+
+      case "math_widget": {
+        appendVoiceElement({
+          id: `widget-${Date.now()}`,
+          type: "widget",
+          content: event.expression || "",
+          meta: { error: false, message: event.message }
+        });
+        break;
+      }
+
+      case "math_widget_error": {
+        appendVoiceElement({
+          id: `widget-${Date.now()}`,
+          type: "widget",
+          content: event.fallback_text || "[Math Widget Error]",
+          meta: { error: true, message: event.message }
+        });
+        break;
+      }
+
+      case "interactive_block": {
+        appendVoiceElement({
+          id: `interactive-${Date.now()}`,
+          type: "interactive",
+          content: event.interactive_type || "interactive",
+          meta: {
+            directive_id: event.directive_id,
+            interactive_type: event.interactive_type,
+            label: event.label,
+            question: event.prompt,
+            render: event.render,
+            interaction: event.interaction,
+            validation: event.validation,
+            anchor: event.anchor,
+            interaction_type: event.meta?.interaction_type,
+            ...(event.meta || {}),
+          }
+        });
+        break;
+      }
+
+      case "interactive_block_error": {
+        appendVoiceElement({
+          id: `interactive-error-${Date.now()}`,
+          type: "interactive",
+          content: "error",
+          meta: {
+            interactive_type: event.interactive_type || "unknown",
+            directive_id: event.directive_id,
+            label: event.label || "Activity",
+            message: event.message,
+            fallback_text: event.fallback_text || "[Interactive Block Error]",
+            is_fallback: true,
+          }
         });
         break;
       }
@@ -166,7 +317,8 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
   const startSession = useCallback(async () => {
     if (!userId) return;
     setVoiceStatus("connecting");
-    setIsMuted(true);
+    // Continuous mode = always listening (unmuted); PTT = start muted, hold to talk.
+    setIsMuted(prefsStore.get().listenMode === "ptt");
     setPttHeld(false);
 
     try {

@@ -24,6 +24,11 @@
         "MODIFY_AUDIO_SETTINGS"
       ]
     },
+    "ios": {
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "GenEd uses your microphone for voice chat and read-aloud practice."
+      }
+    },
     "web": {
       "bundler": "metro",
       "output": "single"

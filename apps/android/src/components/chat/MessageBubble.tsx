@@ -11,28 +11,31 @@
  */
 import React, { useEffect, useRef, useMemo } from "react";
 import { View, Text, Image, StyleSheet, Animated } from "react-native";
-import Markdown from "react-native-markdown-display";
 import { colors, fonts } from "../../theme/tokens";
 import type { ChatMessage } from "../../types/api";
+import { ChatElementRenderer } from "./ChatElementRenderer";
 
 const FAVICON = require("../../../assets/Favicon1.jpg");
 
 interface Props {
   message: ChatMessage;
+  sessionId?: string;
 }
 
-/** Strip audio directives the AI injects (same cleanup as web MarkdownRenderer) */
+/** Strip audio directives and unwrap bare $math$ inline so it reads naturally */
 function cleanContent(text: string): string {
   return text
     .replace(/<<(?:SPEAK_PARA|KARAOKE|PRONUNCIATION):[\s\S]*?>>/g, "")
     .replace(/`(\$.+?\$)`/g, "$1")
+    // Unwrap inline $...$ so "say $1/3$" becomes "say 1/3" — no LaTeX renderer on Android
+    .replace(/\$([^$\n]+?)\$/g, "$1")
     .trim();
 }
 
-export function MessageBubble({ message }: Props) {
+export function MessageBubble({ message, sessionId }: Props) {
   const isMe = message.from === "me";
-  const isEmpty = !message.text && !message.statusText;
-  const isStatusOnly = !!message.statusText && !message.text;
+  const isEmpty = !message.text && !message.statusText && (!message.elements || message.elements.length === 0);
+  const isStatusOnly = !!message.statusText && !message.text && (!message.elements || message.elements.length === 0);
   const cleaned = useMemo(
     () => (message.text ? cleanContent(message.text) : ""),
     [message.text]
@@ -46,7 +49,7 @@ export function MessageBubble({ message }: Props) {
         </View>
       )}
 
-      <View style={[styles.bubble, isMe ? styles.me : styles.ai]}>
+      <View style={[styles.bubble, isMe ? styles.me : styles.ai, message.elements && message.elements.length > 0 && styles.richBubble]}>
         {isEmpty && message.isStreaming ? (
           <PulsingText text="Processing…" />
         ) : isStatusOnly ? (
@@ -54,7 +57,11 @@ export function MessageBubble({ message }: Props) {
         ) : isMe ? (
           <Text style={styles.textMe}>{message.text}</Text>
         ) : (
-          <Markdown style={mdStyles}>{cleaned}</Markdown>
+          <ChatElementRenderer
+            elements={message.elements || [{ id: "fallback-txt", type: "text", content: cleaned }]}
+            sessionId={sessionId}
+            isReadOnly={!message.isStreaming}
+          />
         )}
       </View>
     </View>
@@ -84,7 +91,7 @@ function PulsingText({ text }: { text: string }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
+  row: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   rowAi: { justifyContent: "flex-start" },
   rowMe: { justifyContent: "flex-end" },
 
@@ -99,6 +106,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 13,
     borderRadius: 16,
+  },
+  richBubble: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
   ai: {
     backgroundColor: "#FFFFFF",
