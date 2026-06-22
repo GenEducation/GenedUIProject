@@ -85,6 +85,11 @@ export const studentService = {
     return response.json();
   },
 
+  fetchVoiceSessionRestore: async (sessionId: string, signal?: AbortSignal) => {
+    const response = await authFetch(`${API_BASE_URL}/voice/session/${sessionId}/restore`, { signal });
+    return response.json();
+  },
+
   sendChatMessage: async (payload: {
     text: string;
     user_id: string;

@@ -3,7 +3,7 @@
 import { Loader2, LogOut, User, ClipboardCheck } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useStudentStore } from "../store/useStudentStore";
+import { useStudentStore, isVoiceSession, sessionRoutePath } from "../store/useStudentStore";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 
 const C = {
@@ -308,7 +308,8 @@ export const StudentChatSidebar = React.memo(({
                       key={chat.id}
                       onClick={() => {
                         openExistingChat(chat);
-                        window.location.href = `/student/chat/${chat.id}`;
+                        // Reopen in the modality the session was created with.
+                        window.location.href = sessionRoutePath(chat);
                         if (window.innerWidth < 1024) onClose();
                       }}
                       className="w-full rounded-xl border-none cursor-pointer transition-all"
@@ -335,7 +336,12 @@ export const StudentChatSidebar = React.memo(({
                         {emoji}
                       </div>
                       <div style={{ minWidth: 0, textAlign: "left" as const, flex: 1 }}>
-                        <div className="truncate" title={chat.title} style={{ lineHeight: 1.35 }}>{chat.title}</div>
+                        <div className="truncate" title={chat.title} style={{ lineHeight: 1.35 }}>
+                          <span aria-label={isVoiceSession(chat) ? "Voice session" : "Chat session"} title={isVoiceSession(chat) ? "Voice session" : "Chat session"} style={{ marginRight: 5 }}>
+                            {isVoiceSession(chat) ? "🎤" : "💬"}
+                          </span>
+                          {chat.title}
+                        </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
                           {chat.subject && (
                             <span style={{ fontSize: 10, color: `${color}90`, fontWeight: 700, textTransform: "capitalize" }}>
