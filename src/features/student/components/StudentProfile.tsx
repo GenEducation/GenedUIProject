@@ -969,6 +969,10 @@ export function StudentProfile() {
                             <option value="hi">Hindi (हिन्दी)</option>
                             <option value="hi-Latn">Hinglish (Hinglish)</option>
                             <option value="mr">Marathi (मराठी)</option>
+                            <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
+                            <option value="ta">Tamil (தமிழ்)</option>
+                            <option value="te">Telugu (తెలుగు)</option>
+                            <option value="kn">Kannada (ಕನ್ನಡ)</option>
                           </select>
                           <ChevronDown
                             size={14}
