@@ -6,60 +6,102 @@ import {
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import Svg, { Circle, Line, Path, Rect } from "react-native-svg";
+import Svg, { Circle, Path } from "react-native-svg";
 import { colors, fonts } from "@/theme/tokens";
 import { signUp, sendOtp } from "@/services/authService";
 import { useAuth } from "@/store/useAuthStore";
 import { tutorialStore } from "@/store/useTutorialStore";
 
-type Role = "student" | "parent" | "partner";
+type Role = "student" | "parent";
 
-/**
- * Multi-step sign-up — fully adopted from the web SignUp.tsx flow.
- *   Step 1: role selection (Student / Parent / Partner)
- *   Step 2: Student Details (username, parent email, password, confirm, grade)
- * Parent/Partner branch to a Step 3 on web; here we focus on the student portal.
- */
 export default function SignUp() {
   const router    = useRouter();
   const insets    = useSafeAreaInsets();
   const { login } = useAuth();
 
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [role, setRole] = useState<Role | null>(null);
 
-  const [username,       setUsername]       = useState("");
-  const [parentEmail,    setParentEmail]    = useState("");
-  const [password,       setPassword]       = useState("");
-  const [confirm,        setConfirm]        = useState("");
-  const [grade,          setGrade]          = useState<number | null>(null);
-  const [showPw,         setShowPw]         = useState(false);
-  const [hasPersonalEmail, setHasPersonalEmail] = useState(false);
-  const [personalEmail,  setPersonalEmail]  = useState("");
-  const [otpSent,        setOtpSent]        = useState(false);
-  const [otpCode,        setOtpCode]        = useState("");
-  const [otpLoading,     setOtpLoading]     = useState(false);
-  const [errors,         setErrors]         = useState<Record<string, string>>({});
-  const [rootError,      setRootError]      = useState("");
-  const [loading,        setLoading]        = useState(false);
+  // Shared
+  const [password,  setPassword]  = useState("");
+  const [confirm,   setConfirm]   = useState("");
+  const [showPw,    setShowPw]    = useState(false);
+  const [errors,    setErrors]    = useState<Record<string, string>>({});
+  const [rootError, setRootError] = useState("");
+  const [loading,   setLoading]   = useState(false);
 
-  const totalSegments = role === "student" || !role ? 2 : 3;
+  // Student-specific
+  const [username,          setUsername]          = useState("");
+  const [parentEmail,       setParentEmail]       = useState("");
+  const [grade,             setGrade]             = useState<number | null>(null);
+  const [hasPersonalEmail,  setHasPersonalEmail]  = useState(false);
+  const [personalEmail,     setPersonalEmail]     = useState("");
+  const [studentOtpSent,    setStudentOtpSent]    = useState(false);
+  const [studentOtpCode,    setStudentOtpCode]    = useState("");
+  const [studentOtpLoading, setStudentOtpLoading] = useState(false);
+
+  // Parent-specific
+  const [parentEmailId,  setParentEmailId]  = useState("");
+  const [parentOtpSent,  setParentOtpSent]  = useState(false);
+  const [parentOtpCode,  setParentOtpCode]  = useState("");
+  const [parentOtpLoading, setParentOtpLoading] = useState(false);
+  const [phone,          setPhone]          = useState("");
+
+  // Progress bar segments: student = 2, parent = 3
+  const totalSegments = role === "parent" ? 3 : 2;
 
   const selectRole = (r: Role) => {
     setRole(r);
     setStep(2);
   };
 
-  const validateStudent = () => {
+  /* ── Student OTP ── */
+  const handleStudentSendOtp = async () => {
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!personalEmail.trim() || !emailRe.test(personalEmail)) {
+      setErrors(prev => ({ ...prev, personalEmail: "Enter a valid email first" }));
+      return;
+    }
+    setStudentOtpLoading(true);
+    setErrors(prev => { const n = { ...prev }; delete n.personalEmail; return n; });
+    try {
+      await sendOtp(personalEmail.trim());
+      setStudentOtpSent(true);
+    } catch (err: any) {
+      setErrors(prev => ({ ...prev, personalEmail: err.message || "Failed to send OTP" }));
+    } finally {
+      setStudentOtpLoading(false);
+    }
+  };
+
+  /* ── Parent OTP ── */
+  const handleParentSendOtp = async () => {
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!parentEmailId.trim() || !emailRe.test(parentEmailId)) {
+      setErrors(prev => ({ ...prev, parentEmailId: "Enter a valid email first" }));
+      return;
+    }
+    setParentOtpLoading(true);
+    setErrors(prev => { const n = { ...prev }; delete n.parentEmailId; return n; });
+    try {
+      await sendOtp(parentEmailId.trim());
+      setParentOtpSent(true);
+    } catch (err: any) {
+      setErrors(prev => ({ ...prev, parentEmailId: err.message || "Failed to send OTP" }));
+    } finally {
+      setParentOtpLoading(false);
+    }
+  };
+
+  /* ── Validation ── */
+  const validateStudentStep2 = () => {
     const e: Record<string, string> = {};
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (hasPersonalEmail) {
       if (!personalEmail.trim()) e.personalEmail = "Email is required";
       else if (!emailRe.test(personalEmail)) e.personalEmail = "Invalid email format";
-      if (otpSent && !otpCode.trim()) e.otpCode = "Enter the OTP sent to your email";
-      // username optional — validate only if filled
+      if (studentOtpSent && !studentOtpCode.trim()) e.studentOtpCode = "Enter the OTP sent to your email";
       if (username.trim() && username.trim().length < 3) e.username = "Must be at least 3 characters";
-      // parentEmail optional — validate only if filled
       if (parentEmail.trim() && !emailRe.test(parentEmail)) e.parentEmail = "Invalid email format";
     } else {
       if (!username.trim()) e.username = "Username is required";
@@ -75,58 +117,74 @@ export default function SignUp() {
     return Object.keys(e).length === 0;
   };
 
-  const handleSendOtp = async () => {
+  const validateParentStep2 = () => {
+    const e: Record<string, string> = {};
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!personalEmail.trim() || !emailRe.test(personalEmail)) {
-      setErrors(prev => ({ ...prev, personalEmail: "Enter a valid email first" }));
-      return;
-    }
-    setOtpLoading(true);
-    setErrors(prev => { const n = { ...prev }; delete n.personalEmail; return n; });
-    try {
-      await sendOtp(personalEmail.trim());
-      setOtpSent(true);
-    } catch (err: any) {
-      setErrors(prev => ({ ...prev, personalEmail: err.message || "Failed to send OTP" }));
-    } finally {
-      setOtpLoading(false);
-    }
+    if (!parentEmailId.trim()) e.parentEmailId = "Email is required";
+    else if (!emailRe.test(parentEmailId)) e.parentEmailId = "Invalid email format";
+    if (parentOtpSent && !parentOtpCode.trim()) e.parentOtpCode = "Enter the OTP sent to your email";
+    if (!password.trim()) e.password = "Password is required";
+    else if (password.length < 6) e.password = "Must be at least 6 characters";
+    if (password !== confirm) e.confirm = "Passwords do not match";
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
-  const createAccount = async () => {
-    if (!validateStudent()) return;
-    setRootError("");
-    setLoading(true);
+  /* ── Submit ── */
+  const createStudentAccount = async () => {
+    if (!validateStudentStep2()) return;
+    setRootError(""); setLoading(true);
     try {
       const res = await signUp({
-        password,
-        role:         "STUDENT",
-        grade:        grade!,
-        ...(username.trim()     ? { username:     username.trim() }     : {}),
-        ...(parentEmail.trim()  ? { parent_email: parentEmail.trim() }  : {}),
+        password, role: "STUDENT", grade: grade!,
+        ...(username.trim()    ? { username: username.trim() } : {}),
+        ...(parentEmail.trim() ? { parent_email: parentEmail.trim() } : {}),
         ...(hasPersonalEmail && personalEmail.trim() ? { email_id: personalEmail.trim() } : {}),
-        ...(hasPersonalEmail && otpCode.trim()       ? { otp_code: otpCode.trim() }       : {}),
+        ...(hasPersonalEmail && studentOtpCode.trim() ? { otp_code: studentOtpCode.trim() } : {}),
       });
       await login(res);
       tutorialStore.startTutorial();
       router.replace("/(tabs)");
     } catch (e: any) {
       setRootError(e.message || "Sign-up failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
+  };
+
+  const continueParentToStep3 = () => {
+    if (!validateParentStep2()) return;
+    setErrors({});
+    setStep(3);
+  };
+
+  const createParentAccount = async () => {
+    setRootError(""); setLoading(true);
+    try {
+      const res = await signUp({
+        password, role: "PARENT",
+        email_id: parentEmailId.trim(),
+        ...(parentOtpCode.trim() ? { otp_code: parentOtpCode.trim() } : {}),
+        ...(phone.trim() ? { phone: phone.trim() } : {}),
+      });
+      await login(res);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      router.replace("/(parent)" as any);
+    } catch (e: any) {
+      setRootError(e.message || "Sign-up failed. Please try again.");
+    } finally { setLoading(false); }
   };
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
 
-      {/* progress bar */}
-      <View style={styles.progress}>
-        {Array.from({ length: totalSegments }).map((_, i) => (
-          <View key={i} style={[styles.progressSeg, i < step && styles.progressOn]} />
-        ))}
-      </View>
+      {/* Progress bar — only show after role is selected */}
+      {step > 1 && (
+        <View style={styles.progress}>
+          {Array.from({ length: totalSegments }).map((_, i) => (
+            <View key={i} style={[styles.progressSeg, i < step - 1 && styles.progressOn]} />
+          ))}
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: insets.bottom + 32 }}
@@ -139,9 +197,11 @@ export default function SignUp() {
           <Text style={styles.brandText}>GenEducation</Text>
         </View>
 
-        {step === 1 ? (
+        {step === 1 && (
           <Step1 selected={role} onSelect={selectRole} onLogin={() => router.replace("/sign-in")} />
-        ) : (
+        )}
+
+        {step === 2 && role === "student" && (
           <Step2Student
             back={() => setStep(1)}
             username={username} setUsername={setUsername}
@@ -152,10 +212,35 @@ export default function SignUp() {
             showPw={showPw} setShowPw={setShowPw}
             hasPersonalEmail={hasPersonalEmail} setHasPersonalEmail={setHasPersonalEmail}
             personalEmail={personalEmail} setPersonalEmail={setPersonalEmail}
-            otpSent={otpSent} otpCode={otpCode} setOtpCode={setOtpCode}
-            otpLoading={otpLoading} onSendOtp={handleSendOtp}
+            otpSent={studentOtpSent} otpCode={studentOtpCode} setOtpCode={setStudentOtpCode}
+            otpLoading={studentOtpLoading} onSendOtp={handleStudentSendOtp}
             errors={errors} rootError={rootError} loading={loading}
-            onSubmit={createAccount}
+            onSubmit={createStudentAccount}
+            onLogin={() => router.replace("/sign-in")}
+          />
+        )}
+
+        {step === 2 && role === "parent" && (
+          <Step2Parent
+            back={() => setStep(1)}
+            emailId={parentEmailId} setEmailId={setParentEmailId}
+            password={password} setPassword={setPassword}
+            confirm={confirm} setConfirm={setConfirm}
+            showPw={showPw} setShowPw={setShowPw}
+            otpSent={parentOtpSent} otpCode={parentOtpCode} setOtpCode={setParentOtpCode}
+            otpLoading={parentOtpLoading} onSendOtp={handleParentSendOtp}
+            errors={errors}
+            onContinue={continueParentToStep3}
+            onLogin={() => router.replace("/sign-in")}
+          />
+        )}
+
+        {step === 3 && role === "parent" && (
+          <Step3Parent
+            back={() => setStep(2)}
+            phone={phone} setPhone={setPhone}
+            rootError={rootError} loading={loading}
+            onSubmit={createParentAccount}
             onLogin={() => router.replace("/sign-in")}
           />
         )}
@@ -174,9 +259,20 @@ function Step1({
       <Text style={styles.subtitle}>Select your role to get started</Text>
 
       <View style={{ gap: 12, marginTop: 4 }}>
-        <RoleCard role="student" label="Student" selected={selected === "student"} onPress={() => onSelect("student")} art={<StudentArt />} artBg="#F1ECFF" />
-        <RoleCard role="parent" label="Parent" selected={selected === "parent"} onPress={() => onSelect("parent")} art={<ParentArt />} artBg="#EAF1FF" />
-        <RoleCard role="partner" label="Partner" selected={selected === "partner"} onPress={() => onSelect("partner")} art={<PartnerArt />} artBg="#F1ECFF" />
+        <RoleCard
+          label="Student"
+          selected={selected === "student"}
+          onPress={() => onSelect("student")}
+          art={<StudentArt />}
+          artBg="#F1ECFF"
+        />
+        <RoleCard
+          label="Parent"
+          selected={selected === "parent"}
+          onPress={() => onSelect("parent")}
+          art={<ParentArt />}
+          artBg="#EAF1FF"
+        />
       </View>
 
       <LoginRow onLogin={onLogin} />
@@ -186,7 +282,7 @@ function Step1({
 
 function RoleCard({
   label, selected, onPress, art, artBg,
-}: { role: Role; label: string; selected: boolean; onPress: () => void; art: React.ReactNode; artBg: string }) {
+}: { label: string; selected: boolean; onPress: () => void; art: React.ReactNode; artBg: string }) {
   return (
     <Pressable onPress={onPress} style={[styles.roleCard, selected && styles.roleCardSel]}>
       <View style={[styles.roleArt, { backgroundColor: artBg }]}>{art}</View>
@@ -246,7 +342,6 @@ function Step2Student(p: {
 
       {p.hasPersonalEmail ? (
         <>
-          {/* Personal email + OTP */}
           <View style={{ marginTop: 16 }}>
             <Text style={styles.label}>YOUR EMAIL ADDRESS</Text>
             <View style={[styles.inputWrap, !!p.errors.personalEmail && styles.inputWrapError, { paddingRight: 6 }]}>
@@ -279,26 +374,12 @@ function Step2Student(p: {
               placeholder="Enter the code from your email"
               value={p.otpCode}
               onChange={p.setOtpCode}
-              error={p.errors.otpCode}
-              keyboardType="default"
+              error={p.errors.studentOtpCode}
             />
           )}
 
-          <Input
-            label="Username (optional)"
-            placeholder="e.g. creative_coder"
-            value={p.username}
-            onChange={p.setUsername}
-            error={p.errors.username}
-          />
-          <Input
-            label="Parent or Guardian's Email (optional)"
-            placeholder="parent@example.com"
-            value={p.parentEmail}
-            onChange={p.setParentEmail}
-            error={p.errors.parentEmail}
-            keyboardType="email-address"
-          />
+          <Input label="Username (optional)" placeholder="e.g. creative_coder" value={p.username} onChange={p.setUsername} error={p.errors.username} />
+          <Input label="Parent or Guardian's Email (optional)" placeholder="parent@example.com" value={p.parentEmail} onChange={p.setParentEmail} error={p.errors.parentEmail} keyboardType="email-address" />
         </>
       ) : (
         <>
@@ -355,11 +436,155 @@ function Step2Student(p: {
   );
 }
 
+/* ───────────────────────── STEP 2 — PARENT CREDENTIALS ─────────────────── */
+function Step2Parent(p: {
+  back: () => void;
+  emailId: string; setEmailId: (v: string) => void;
+  password: string; setPassword: (v: string) => void;
+  confirm: string; setConfirm: (v: string) => void;
+  showPw: boolean; setShowPw: (v: boolean) => void;
+  otpSent: boolean; otpCode: string; setOtpCode: (v: string) => void;
+  otpLoading: boolean; onSendOtp: () => void;
+  errors: Record<string, string>;
+  onContinue: () => void;
+  onLogin: () => void;
+}) {
+  return (
+    <View>
+      <View style={styles.stepHead}>
+        <Pressable onPress={p.back} style={styles.backBtn}>
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+            <Path d="m15 6-6 6 6 6" stroke={colors.navy} strokeWidth={2} strokeLinecap="round" />
+          </Svg>
+        </Pressable>
+        <View>
+          <Text style={styles.stepTitle}>Account Credentials</Text>
+          <Text style={styles.stepEyebrow}>STEP 2 OF 3</Text>
+        </View>
+      </View>
+
+      {/* Email + OTP */}
+      <View style={{ marginTop: 16 }}>
+        <Text style={styles.label}>EMAIL ADDRESS</Text>
+        <View style={[styles.inputWrap, !!p.errors.parentEmailId && styles.inputWrapError, { paddingRight: 6 }]}>
+          <TextInput
+            style={[styles.input, { flex: 1 }]}
+            placeholder="you@example.com"
+            placeholderTextColor="#0E1F2B40"
+            value={p.emailId}
+            onChangeText={p.setEmailId}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <Pressable
+            onPress={p.onSendOtp}
+            disabled={p.otpLoading || p.otpSent}
+            style={[styles.verifyBtn, (p.otpLoading || p.otpSent) && { opacity: 0.5 }]}
+          >
+            {p.otpLoading
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={styles.verifyBtnText}>{p.otpSent ? "Sent ✓" : "Verify"}</Text>
+            }
+          </Pressable>
+        </View>
+        {!!p.errors.parentEmailId && <Text style={styles.error}>{p.errors.parentEmailId}</Text>}
+      </View>
+
+      {p.otpSent && (
+        <Input
+          label="OTP CODE"
+          placeholder="Enter the code from your email"
+          value={p.otpCode}
+          onChange={p.setOtpCode}
+          error={p.errors.parentOtpCode}
+        />
+      )}
+
+      <Input
+        label="Password" placeholder="••••••••" value={p.password} onChange={p.setPassword}
+        error={p.errors.password} secure={!p.showPw}
+        rightToggle={{ on: p.showPw, onToggle: () => p.setShowPw(!p.showPw) }}
+      />
+      <Input label="Confirm Password" placeholder="••••••••" value={p.confirm} onChange={p.setConfirm} error={p.errors.confirm} secure />
+
+      <Pressable
+        style={({ pressed }) => [styles.submit, pressed && { opacity: 0.9 }]}
+        onPress={p.onContinue}
+      >
+        <Text style={styles.submitText}>Continue</Text>
+        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+          <Path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      </Pressable>
+
+      <LoginRow onLogin={p.onLogin} />
+    </View>
+  );
+}
+
+/* ───────────────────────── STEP 3 — PARENT PROFILE ─────────────────────── */
+function Step3Parent(p: {
+  back: () => void;
+  phone: string; setPhone: (v: string) => void;
+  rootError: string; loading: boolean;
+  onSubmit: () => void;
+  onLogin: () => void;
+}) {
+  return (
+    <View>
+      <View style={styles.stepHead}>
+        <Pressable onPress={p.back} style={styles.backBtn}>
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+            <Path d="m15 6-6 6 6 6" stroke={colors.navy} strokeWidth={2} strokeLinecap="round" />
+          </Svg>
+        </Pressable>
+        <View>
+          <Text style={styles.stepTitle}>Complete Profile</Text>
+          <Text style={styles.stepEyebrow}>STEP 3 OF 3</Text>
+        </View>
+      </View>
+
+      <Input
+        label="Phone Number (optional)"
+        placeholder="e.g. +1 234 567 8900"
+        value={p.phone}
+        onChange={p.setPhone}
+        keyboardType="phone-pad"
+      />
+
+      {!!p.rootError && (
+        <View style={styles.rootErrBox}>
+          <Text style={styles.rootErrText}>{p.rootError}</Text>
+        </View>
+      )}
+
+      <Pressable
+        style={({ pressed }) => [styles.submit, pressed && { opacity: 0.9 }, p.loading && { opacity: 0.7 }]}
+        onPress={p.onSubmit}
+        disabled={p.loading}
+      >
+        {p.loading
+          ? <ActivityIndicator color="#fff" />
+          : <>
+              <Text style={styles.submitText}>Create Account</Text>
+              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+            </>
+        }
+      </Pressable>
+
+      <LoginRow onLogin={p.onLogin} />
+    </View>
+  );
+}
+
+/* ───────────────────────── SHARED UI ───────────────────────────────────── */
 function Input({
   label, placeholder, value, onChange, error, secure, keyboardType, rightToggle,
 }: {
   label: string; placeholder: string; value: string; onChange: (v: string) => void;
-  error?: string; secure?: boolean; keyboardType?: "email-address" | "default";
+  error?: string; secure?: boolean; keyboardType?: "email-address" | "phone-pad" | "default";
   rightToggle?: { on: boolean; onToggle: () => void };
 }) {
   return (
@@ -373,7 +598,7 @@ function Input({
           value={value}
           onChangeText={onChange}
           secureTextEntry={secure}
-          keyboardType={keyboardType === "email-address" ? "email-address" : "default"}
+          keyboardType={keyboardType === "email-address" ? "email-address" : keyboardType === "phone-pad" ? "phone-pad" : "default"}
           autoCapitalize="none"
         />
         {rightToggle && (
@@ -398,12 +623,11 @@ function LoginRow({ onLogin }: { onLogin: () => void }) {
   );
 }
 
-/* ── Role illustrations (ported from SignUp.tsx StudentSVG/ParentSVG/PartnerSVG) ── */
+/* ── Role illustrations ── */
 function StudentArt() {
   return (
     <Svg width={58} height={58} viewBox="0 0 420 420">
-      <Rect x="150" y="290" width="120" height="22" rx="11" fill="#8B5CF6" />
-      <Rect x="165" y="180" width="90" height="95" rx="40" fill="#22C55E" />
+      <Path d="M165 180 Q165 140 210 140 Q255 140 255 180 L255 275 Q255 315 210 315 Q165 315 165 275 Z" fill="#22C55E" />
       <Circle cx="210" cy="135" r="55" fill="#F4C7A1" />
       <Path d="M160 130 Q170 60 210 70 Q255 60 265 130 Q240 95 210 100 Q180 95 160 130" fill="#1E293B" />
       <Circle cx="190" cy="135" r="5" fill="#111" />
@@ -415,27 +639,12 @@ function StudentArt() {
 function ParentArt() {
   return (
     <Svg width={58} height={58} viewBox="0 0 420 420">
-      <Rect x="150" y="180" width="120" height="140" rx="50" fill="#2563EB" />
+      <Path d="M150 180 Q150 140 210 140 Q270 140 270 180 L270 320 Q270 360 210 360 Q150 360 150 320 Z" fill="#2563EB" />
       <Circle cx="210" cy="120" r="60" fill="#F4C7A1" />
       <Path d="M150 120 Q170 40 210 55 Q255 40 270 120 Q240 90 210 95 Q180 90 150 120" fill="#111827" />
       <Circle cx="190" cy="120" r="5" fill="#111" />
       <Circle cx="230" cy="120" r="5" fill="#111" />
       <Path d="M190 145 Q210 165 230 145" stroke="#111" strokeWidth={4} fill="none" strokeLinecap="round" />
-    </Svg>
-  );
-}
-function PartnerArt() {
-  return (
-    <Svg width={58} height={58} viewBox="0 0 420 420">
-      <Rect x="150" y="180" width="120" height="150" rx="50" fill="#8B5CF6" />
-      <Circle cx="210" cy="120" r="60" fill="#F4C7A1" />
-      <Path d="M150 120 Q170 45 210 60 Q250 45 270 120 Q240 90 210 95 Q180 90 150 120" fill="#111827" />
-      <Circle cx="190" cy="120" r="14" fill="none" stroke="#111" strokeWidth={3} />
-      <Circle cx="230" cy="120" r="14" fill="none" stroke="#111" strokeWidth={3} />
-      <Line x1="204" y1="120" x2="216" y2="120" stroke="#111" strokeWidth={3} />
-      <Circle cx="190" cy="120" r="4" fill="#111" />
-      <Circle cx="230" cy="120" r="4" fill="#111" />
-      <Path d="M190 150 Q210 168 230 150" stroke="#111" strokeWidth={4} fill="none" strokeLinecap="round" />
     </Svg>
   );
 }

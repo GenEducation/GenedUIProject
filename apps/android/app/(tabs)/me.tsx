@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -28,6 +28,18 @@ const AVATAR_COLORS = [
   colors.edGreen,
   colors.coral,
   colors.sun,
+];
+
+/* ── Supported instruction languages ─────────────────────────────────────── */
+const LANGUAGES: { code: string; label: string }[] = [
+  { code: "en",      label: "English"              },
+  { code: "hi",      label: "Hindi (हिन्दी)"       },
+  { code: "hi-Latn", label: "Hinglish"             },
+  { code: "mr",      label: "Marathi (मराठी)"      },
+  { code: "pa",      label: "Punjabi (ਪੰਜਾਬੀ)"    },
+  { code: "ta",      label: "Tamil (தமிழ்)"        },
+  { code: "te",      label: "Telugu (తెలుగు)"      },
+  { code: "kn",      label: "Kannada (ಕನ್ನಡ)"     },
 ];
 
 /* ── Trait groups (mirrors website) ───────────────────────────────────────── */
@@ -92,11 +104,54 @@ export default function Me() {
   const [parentInput, setParentInput]     = useState("");
   const [parentSending, setParentSending] = useState(false);
 
+  // Language preference
+  const [preferredLanguage, setPreferredLanguage]     = useState<string>("en");
+  const [multilingualEnabled, setMultilingualEnabled] = useState(false);
+  const [isLanguageSaving, setIsLanguageSaving]       = useState(false);
+  const [langPickerOpen, setLangPickerOpen]           = useState(false);
+
   // School (partner) request flow
   const [availablePartners, setAvailablePartners] = useState<PartnerItem[]>([]);
   const [partnerPickerOpen, setPartnerPickerOpen] = useState(false);
   const [partnerSending, setPartnerSending]       = useState(false);
   const [partnerMsg, setPartnerMsg]               = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  // Load language preferences when user is known
+  useEffect(() => {
+    const userId = state.status === "authenticated" ? state.profile.user_id : null;
+    if (!userId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await studentService.fetchLanguagePreferences(userId);
+        if (cancelled) return;
+        setMultilingualEnabled(data.multilingual_enabled ?? false);
+        setPreferredLanguage(data.preferred_language ?? "en");
+      } catch {
+        // non-fatal — section stays hidden
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [state.status]);
+
+  const handleLanguageChange = async (langCode: string) => {
+    const userId = state.status === "authenticated" ? state.profile.user_id : null;
+    if (!userId || isLanguageSaving) return;
+    setPreferredLanguage(langCode);
+    setIsLanguageSaving(true);
+    try {
+      const data = await studentService.updateLanguagePreferences(userId, { preferred_language: langCode });
+      setPreferredLanguage(data.preferred_language ?? langCode);
+    } catch {
+      // revert on failure — refetch to get correct value
+      try {
+        const data = await studentService.fetchLanguagePreferences(userId);
+        setPreferredLanguage(data.preferred_language ?? "en");
+      } catch {}
+    } finally {
+      setIsLanguageSaving(false);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -304,6 +359,27 @@ export default function Me() {
           </Card>
         )}
 
+        {/* ── Language of Instruction ── */}
+        {multilingualEnabled ? (
+          <Card>
+            <SectionHeader icon="🌐" label="Language of Instruction" />
+            <Pressable
+              style={[styles.langRow, isLanguageSaving && { opacity: 0.6 }]}
+              onPress={() => !isLanguageSaving && setLangPickerOpen(true)}
+            >
+              <Text style={styles.langRowLabel}>🗣️  Preferred Language</Text>
+              <View style={styles.langRowRight}>
+                <Text style={styles.langVal}>
+                  {LANGUAGES.find((l) => l.code === preferredLanguage)?.label ?? preferredLanguage}
+                </Text>
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                  <Path d="m6 9 6 6 6-6" stroke={colors.textMuted} strokeWidth={2} strokeLinecap="round" />
+                </Svg>
+              </View>
+            </Pressable>
+          </Card>
+        ) : null}
+
         {/* ── Badges ── */}
         <Card>
           <SectionHeader icon="🏅" label="My Badges" />
@@ -451,6 +527,20 @@ export default function Me() {
         onClose={() => setPartnerPickerOpen(false)}
         emptyText="No schools available to join"
       />
+
+      <PickerSheet
+        visible={langPickerOpen}
+        title="Language of Instruction"
+        options={LANGUAGES.map((l) => l.label)}
+        selected={LANGUAGES.find((l) => l.code === preferredLanguage)?.label ?? ""}
+        onSelect={(label) => {
+          const lang = LANGUAGES.find((l) => l.label === label);
+          if (lang) handleLanguageChange(lang.code);
+          setLangPickerOpen(false);
+        }}
+        onClose={() => setLangPickerOpen(false)}
+        emptyText="No languages available"
+      />
     </Screen>
   );
 }
@@ -581,6 +671,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.genPurple, justifyContent: "center",
   },
   addBtnText: { fontFamily: fonts.dmBold, fontSize: 12, color: "#fff" },
+
+  /* Language */
+  langRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: colors.pageBg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  langRowLabel: { fontFamily: fonts.dmBold, fontSize: 13, color: colors.text },
+  langRowRight: { flexDirection: "row", alignItems: "center", gap: 6 },
+  langVal:      { fontFamily: fonts.dmBold, fontSize: 13, color: colors.genPurple },
 
   /* Logout */
   logoutBtn: {

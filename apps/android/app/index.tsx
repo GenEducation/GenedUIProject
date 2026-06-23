@@ -9,7 +9,7 @@ import { useAuth } from "@/store/useAuthStore";
  *   unauthenticated → sign-in
  */
 export default function Index() {
-  const { state } = useAuth();
+  const { state, logout } = useAuth();
   const router    = useRouter();
 
   useEffect(() => {
@@ -18,8 +18,19 @@ export default function Index() {
       const role = state.profile.role?.toLowerCase();
       if (role === "partner") {
         router.replace("/(partner)");
-      } else {
+      } else if (role === "parent") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        router.replace("/(parent)" as any);
+      } else if (role === "teacher") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        router.replace("/(teacher)" as any);
+      } else if (role === "student") {
         router.replace("/(tabs)");
+      } else {
+        // Unknown or missing role — reject rather than grant student access
+        console.warn("[auth] unrecognized role:", role, "— signing out");
+        logout();
+        router.replace("/sign-in");
       }
     } else {
       router.replace("/sign-in");

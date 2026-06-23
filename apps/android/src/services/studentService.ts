@@ -19,6 +19,11 @@ import type {
   UserProfile,
   AvailableAgentsResponse,
   PartnerItem,
+  LanguagePreferences,
+  SkillSummary,
+  CGScore,
+  SkillProgressionEntry,
+  OverallHistoryPoint,
 } from "../types/api";
 import type { CreateChapterTestResponse, SubmitTestResponse } from "../types/test";
 
@@ -360,6 +365,61 @@ export const studentService = {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // ── Analytics ───────────────────────────────────────────────────────────────
+
+  fetchSkillSummary: async (studentId: string, subject: string): Promise<SkillSummary> => {
+    const res = await authFetch(
+      `${BASE}/students/${studentId}/skill-summary?subject=${encodeURIComponent(subject)}`,
+      { headers: { accept: "application/json" } }
+    );
+    return res.json();
+  },
+
+  fetchCGScores: async (studentId: string, subject: string): Promise<CGScore[]> => {
+    const res = await authFetch(
+      `${BASE}/students/${studentId}/cg-scores?subject=${encodeURIComponent(subject)}`,
+      { headers: { accept: "application/json" } }
+    );
+    return res.json();
+  },
+
+  fetchSkillProgression: async (studentId: string, subject: string): Promise<SkillProgressionEntry[]> => {
+    const res = await authFetch(
+      `${BASE}/students/${studentId}/skill-progression?subject=${encodeURIComponent(subject)}`,
+      { headers: { accept: "application/json" } }
+    );
+    return res.json();
+  },
+
+  fetchSkillProfileHistory: async (studentId: string, subject: string): Promise<{ history: OverallHistoryPoint[] }> => {
+    const res = await authFetch(
+      `${BASE}/students/${studentId}/skill-profile-history?subject=${encodeURIComponent(subject)}`,
+      { headers: { accept: "application/json" } }
+    );
+    return res.json();
+  },
+
+  // ── Language Preferences ────────────────────────────────────────────────────
+
+  fetchLanguagePreferences: async (studentId: string): Promise<LanguagePreferences> => {
+    const res = await authFetch(`${BASE}/students/${studentId}/language-preferences`, {
+      headers: { accept: "application/json" },
+    });
+    return res.json();
+  },
+
+  updateLanguagePreferences: async (
+    studentId: string,
+    payload: { preferred_language?: string | null; secondary_languages?: string[] | null }
+  ): Promise<LanguagePreferences> => {
+    const res = await authFetch(`${BASE}/students/${studentId}/language-preferences`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify(payload),
     });
     return res.json();
   },

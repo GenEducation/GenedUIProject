@@ -154,15 +154,15 @@ export function LoginView() {
       localStorage.setItem("gened_auth_token", token.access_token);
       localStorage.setItem("gened_user_profile", JSON.stringify(token));
       
-      const normalizedRole = token.role?.toLowerCase() ?? "student";
-      const role =
-        normalizedRole === "student" ||
-        normalizedRole === "partner" ||
-        normalizedRole === "parent" ||
-        normalizedRole === "admin"
-          ? normalizedRole
-          : ("student" as const);
-      
+      const normalizedRole = token.role?.toLowerCase();
+      const KNOWN_ROLES = ["student", "partner", "parent", "admin", "teacher"] as const;
+      type KnownRole = typeof KNOWN_ROLES[number];
+      if (!normalizedRole || !KNOWN_ROLES.includes(normalizedRole as KnownRole)) {
+        localStorage.removeItem("gened_auth_token");
+        localStorage.removeItem("gened_user_profile");
+        throw new Error(`Unrecognized account role: "${token.role}". Please contact support.`);
+      }
+      const role = normalizedRole as KnownRole;
       localStorage.setItem("gened_user_role", role);
 
       // Persist user-specific IDs for legacy support if needed
@@ -232,15 +232,15 @@ export function LoginView() {
       localStorage.setItem("gened_auth_token", authResponse.access_token);
       localStorage.setItem("gened_user_profile", JSON.stringify(authResponse));
       
-      const normalizedRole = authResponse.role?.toLowerCase() ?? "student";
-      const role =
-        normalizedRole === "student" ||
-        normalizedRole === "partner" ||
-        normalizedRole === "parent" ||
-        normalizedRole === "admin"
-          ? normalizedRole
-          : ("student" as const);
-      
+      const normalizedRole = authResponse.role?.toLowerCase();
+      const KNOWN_ROLES = ["student", "partner", "parent", "admin", "teacher"] as const;
+      type KnownRole = typeof KNOWN_ROLES[number];
+      if (!normalizedRole || !KNOWN_ROLES.includes(normalizedRole as KnownRole)) {
+        localStorage.removeItem("gened_auth_token");
+        localStorage.removeItem("gened_user_profile");
+        throw new Error(`Unrecognized account role: "${authResponse.role}". Please contact support.`);
+      }
+      const role = normalizedRole as KnownRole;
       localStorage.setItem("gened_user_role", role);
 
       if (role === "partner") {
@@ -391,15 +391,15 @@ export function LoginView() {
                         localStorage.setItem("gened_auth_token", res.access_token);
                         localStorage.setItem("gened_user_profile", JSON.stringify(res));
                         
-                        const normalizedRole = res.role?.toLowerCase() ?? "student";
-                        const role =
-                          normalizedRole === "student" ||
-                          normalizedRole === "partner" ||
-                          normalizedRole === "parent" ||
-                          normalizedRole === "admin"
-                            ? normalizedRole
-                            : ("student" as const);
-                        
+                        const normalizedRole = res.role?.toLowerCase();
+                        const KNOWN_ROLES = ["student", "partner", "parent", "admin", "teacher"] as const;
+                        type KnownRole = typeof KNOWN_ROLES[number];
+                        if (!normalizedRole || !KNOWN_ROLES.includes(normalizedRole as KnownRole)) {
+                          localStorage.removeItem("gened_auth_token");
+                          localStorage.removeItem("gened_user_profile");
+                          throw new Error(`Unrecognized account role: "${res.role}". Please contact support.`);
+                        }
+                        const role = normalizedRole as KnownRole;
                         localStorage.setItem("gened_user_role", role);
 
                         // Persist user-specific IDs for legacy support if needed

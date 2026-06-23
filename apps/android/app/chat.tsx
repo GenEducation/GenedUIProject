@@ -152,7 +152,21 @@ export default function Chat() {
         visible={sessionsOpen}
         sessions={sessions}
         activeSessionId={chatSessionId ?? sessionId}
-        onSelect={(s) => switchSession(s.session_id)}
+        onSelect={(s) => {
+          if (s.chat_mode === "voice") {
+            setSessionsOpen(false);
+            router.replace({
+              pathname: "/voice-chat" as any,
+              params: {
+                subject: s.subject ?? subject,
+                grade: String(s.grade ?? grade),
+                sessionId: s.session_id,
+              },
+            });
+          } else {
+            switchSession(s.session_id);
+          }
+        }}
         onNewChat={() => switchSession(null)}
         onClose={() => setSessionsOpen(false)}
       />

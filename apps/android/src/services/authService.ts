@@ -59,6 +59,7 @@ export async function signUp(params: {
   email_id?:     string;
   otp_code?:     string;
   grade?:        number;
+  phone?:        string;
 }): Promise<AuthTokenResponse> {
   const body: Record<string, unknown> = {
     password: params.password,
@@ -69,6 +70,7 @@ export async function signUp(params: {
   if (params.email_id)     body.email_id     = params.email_id;
   if (params.otp_code)     body.otp_code     = params.otp_code;
   if (params.grade != null) body.grade       = Number(params.grade);
+  if (params.phone)        body.phone        = params.phone;
 
   const res = await fetch(`${BASE}/auth/sign-up`, {
     method: "POST",

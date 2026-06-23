@@ -37,6 +37,11 @@ function RootStackNavigator() {
       <Stack.Screen name="sign-up"  />
       <Stack.Screen name="(tabs)"    />
       <Stack.Screen name="(partner)" />
+      <Stack.Screen name="(parent)"  />
+      <Stack.Screen name="(teacher)" />
+      <Stack.Screen name="parent-chat"  options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="teacher-chat"   options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="teacher-report" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="chat"       options={{ animation: "slide_from_bottom" }} />
       <Stack.Screen name="voice-chat" options={{ animation: "slide_from_bottom" }} />
       <Stack.Screen name="test"        options={{ animation: "slide_from_bottom" }} />

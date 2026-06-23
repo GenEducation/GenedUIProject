@@ -15,8 +15,51 @@ export interface UserProfile {
   school_board?: string;
   ai_name?: string;
   preferred_voice?: string;
+  preferred_language?: string;
   plan?: "FREE" | "PRO";
   plan_expires_at?: string | null;
+}
+
+export interface LanguagePreferences {
+  preferred_language: string | null;
+  secondary_languages: string[] | null;
+  multilingual_enabled: boolean;
+}
+
+export interface SkillSummary {
+  overall_score: number;
+  skill_index: number;
+  skill_index_max?: number;
+  skill_index_progress?: number;
+  skill_index_status?: string;
+  session_count?: number;
+}
+
+export interface CGScore {
+  cg_id: string;
+  cg_name: string;
+  avg_mastery: number;
+}
+
+export interface SkillHistoryPoint {
+  mastery_level: number;
+  assessment_count: number;
+  source: string;
+  session_id: string | null;
+  recorded_at: string;
+}
+
+export interface SkillProgressionEntry {
+  skill_id: string;
+  skill_name: string;
+  history: SkillHistoryPoint[];
+}
+
+export interface OverallHistoryPoint {
+  overall_score: number;
+  skill_index: number;
+  adaptive_mode: string;
+  recorded_at: string;
 }
 
 // ── Dashboard / Home ──────────────────────────────────────────────────────────
@@ -148,6 +191,7 @@ export interface ChatSession {
   last_message?: string;
   last_active?: string;
   message_count?: number;
+  chat_mode?: "text" | "voice";
 }
 
 export interface ChatElement {

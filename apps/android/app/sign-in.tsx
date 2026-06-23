@@ -31,7 +31,18 @@ export default function SignIn() {
     try {
       const res = await signIn(username.trim(), password);
       await login(res);
-      router.replace(res.role?.toLowerCase() === "partner" ? "/(partner)" : "/(tabs)");
+      const role = res.role?.toLowerCase();
+      if (role === "partner")       router.replace("/(partner)");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      else if (role === "parent")   router.replace("/(parent)" as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      else if (role === "teacher")  router.replace("/(teacher)" as any);
+      else if (role === "student")  router.replace("/(tabs)");
+      else {
+        // Unknown role — do not grant access, force re-login
+        await login(res); // still persist so logout works cleanly
+        setErrorMsg(`Unrecognized account role "${res.role}". Please contact support.`);
+      }
     } catch (e: any) {
       setErrorMsg(e.message || "Sign-in failed. Please try again.");
     } finally {

@@ -65,7 +65,7 @@ export function SessionsSheet({ visible, sessions, activeSessionId, onSelect, on
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.rowText, isActive && styles.rowTextActive]} numberOfLines={1}>
-                        {title}
+                        {item.chat_mode === "voice" ? "🎤 " : "💬 "}{title}
                       </Text>
                       <Text style={styles.meta} numberOfLines={1}>
                         {visual.label}
