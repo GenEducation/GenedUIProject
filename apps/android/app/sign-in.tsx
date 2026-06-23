@@ -31,7 +31,7 @@ export default function SignIn() {
     try {
       const res = await signIn(username.trim(), password);
       await login(res);
-      router.replace("/(tabs)");
+      router.replace(res.role?.toLowerCase() === "partner" ? "/(partner)" : "/(tabs)");
     } catch (e: any) {
       setErrorMsg(e.message || "Sign-in failed. Please try again.");
     } finally {

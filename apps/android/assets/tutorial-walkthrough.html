@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Quick Tour</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --purple: #5B4DC7;
+    --green:  #2D6A4F;
+    --bg:     #F7F8FC;
+    --card:   #FFFFFF;
+    --border: #E2E8F0;
+    --text:   #1A2332;
+    --mid:    #4A5568;
+    --muted:  #94A3B8;
+    --navy:   #042E5C;
+    --emerald:#059F6D;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #0f0f1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Outer stage ── */
+  #stage {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Phone shell ── */
+  #phone {
+    position: relative;
+    width: 340px;
+    height: 620px;
+    background: #1a1a2e;
+    border-radius: 42px;
+    box-shadow:
+      0 0 0 3px #2a2a3e,
+      0 0 0 6px #111,
+      0 32px 80px rgba(0,0,0,0.7),
+      0 0 60px rgba(91,77,199,0.2);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  /* notch */
+  #phone::before {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90px;
+    height: 22px;
+    background: #1a1a2e;
+    border-radius: 0 0 16px 16px;
+    z-index: 100;
+  }
+
+  /* ── Screen inside phone ── */
+  #screen {
+    position: absolute;
+    inset: 8px;
+    border-radius: 36px;
+    background: var(--bg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Status bar ── */
+  #statusbar {
+    height: 32px;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    flex-shrink: 0;
+    padding-top: 8px;
+  }
+  .sb-time { font-size: 11px; font-weight: 700; color: var(--text); }
+  .sb-icons { display: flex; gap: 4px; align-items: center; }
+  .sb-icons span { font-size: 11px; }
+
+  /* ── Scrollable content ── */
+  #content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── Screens ── */
+  .app-screen {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    padding: 10px 12px 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+  .app-screen.active { opacity: 1; }
+
+  /* ── Bottom tab bar ── */
+  #tabbar {
+    height: 56px;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+  }
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    cursor: pointer;
+    padding: 6px 0;
+    transition: all 0.2s;
+  }
+  .tab-icon { font-size: 18px; line-height: 1; }
+  .tab-label { font-size: 9px; font-weight: 700; color: var(--muted); font-family: 'DM Sans', sans-serif; }
+  .tab.active .tab-label { color: var(--purple); }
+
+  /* active tab indicator */
+  .tab-active-dot {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--purple);
+    margin-top: -2px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .tab.active .tab-active-dot { opacity: 1; }
+
+  /* ═══════════════════ HOME SCREEN ═══════════════════ */
+  .greeting-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .greeting-name {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .greeting-sub {
+    font-size: 10px;
+    color: var(--mid);
+    margin-top: 2px;
+  }
+  .april-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple), #7c6fd4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  /* stat strip */
+  .stat-strip { display: flex; gap: 6px; margin-bottom: 8px; }
+  .stat-card {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 6px;
+    text-align: center;
+  }
+  .stat-icon { font-size: 14px; }
+  .stat-val {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    color: var(--text);
+    display: block;
+    margin: 2px 0;
+  }
+  .stat-lbl { font-size: 8px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* schedule card */
+  .sched-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+  }
+  .sched-icon-wrap {
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    background: rgba(91,77,199,0.08);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .sched-title { font-size: 11px; font-weight: 700; color: var(--text); }
+  .sched-sub { font-size: 9px; color: var(--muted); }
+  .sched-chev { margin-left: auto; color: var(--muted); font-size: 11px; }
+
+  /* section head */
+  .section-head {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin: 8px 0 6px;
+  }
+
+  /* subject card */
+  .subject-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px;
+    margin-bottom: 6px;
+  }
+  .subject-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .subject-icon-wrap {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .subject-name { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 12px; color: var(--text); }
+  .subject-meta { font-size: 9px; color: var(--muted); margin-top: 1px; }
+  .progress-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .progress-track {
+    flex: 1; height: 5px; border-radius: 999px;
+    background: #EEF0F5; overflow: hidden;
+  }
+  .progress-fill { height: 100%; border-radius: 999px; }
+  .progress-pct { font-size: 10px; font-weight: 700; }
+  .subject-btns { display: flex; gap: 6px; }
+  .subject-btn {
+    flex: 1; height: 30px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; cursor: pointer;
+    border: none; font-family: 'DM Sans', sans-serif;
+  }
+  .btn-chat { border: 1.5px solid; background: transparent; }
+  .btn-voice { color: #fff; }
+
+  /* ═══════════════════ ME SCREEN ═══════════════════ */
+  .me-screen { padding: 8px 12px 0; }
+
+  .me-header {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  .avatar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .avatar-big {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple), #7c6fd4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    margin-bottom: 6px;
+    position: relative;
+  }
+  .avatar-dots {
+    display: flex; gap: 4px;
+  }
+  .avatar-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+  .avatar-name {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--text);
+    margin-top: 4px;
+  }
+  .avatar-grade { font-size: 10px; color: var(--muted); }
+
+  .traits-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+  .traits-title {
+    font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  .traits-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .trait-chip {
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 9px; font-weight: 700;
+    background: rgba(91,77,199,0.08);
+    color: var(--purple);
+  }
+
+  .school-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .school-card:hover { background: #f0f0ff; }
+  .school-icon {
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    background: rgba(91,77,199,0.08);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; flex-shrink: 0;
+  }
+  .school-label { font-size: 12px; font-weight: 700; color: var(--text); }
+  .school-sub { font-size: 9px; color: var(--muted); }
+  .school-chev { margin-left: auto; color: var(--muted); font-size: 11px; }
+
+  /* ═══════════════════ CONNECT SCHOOL ═══════════════════ */
+  #screen-connect {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 16px;
+    text-align: center;
+  }
+  .connect-icon { font-size: 40px; margin-bottom: 12px; }
+  .connect-title {
+    font-family: 'Nunito', sans-serif; font-weight: 800;
+    font-size: 16px; color: var(--text); margin-bottom: 6px;
+  }
+  .connect-sub { font-size: 10px; color: var(--mid); margin-bottom: 14px; line-height: 1.5; }
+  .connect-school-item {
+    width: 100%;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .connect-school-item:hover { border-color: var(--purple); }
+  .school-logo { font-size: 18px; }
+  .school-info-name { font-size: 11px; font-weight: 700; color: var(--text); }
+  .school-info-loc { font-size: 9px; color: var(--muted); }
+  .connect-success {
+    background: rgba(45,106,79,0.08);
+    border: 1.5px solid var(--green);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex; align-items: center; gap: 8px;
+    width: 100%;
+  }
+  .connect-success-icon { font-size: 20px; }
+  .connect-success-text { font-size: 11px; font-weight: 700; color: var(--green); }
+
+  /* ═══════════════════ CHAT SCREEN ═══════════════════ */
+  .chat-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+  }
+  .chat-back { font-size: 16px; color: var(--navy); cursor: pointer; }
+  .chat-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple), #7c6fd4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .chat-name { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 12px; color: var(--text); }
+  .chat-subject { font-size: 9px; color: var(--muted); }
+
+  .chat-body {
+    flex: 1;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+  }
+  .bubble {
+    max-width: 85%;
+    padding: 8px 11px;
+    border-radius: 14px;
+    font-size: 10px;
+    line-height: 1.5;
+  }
+  .bubble-ai {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .bubble-user {
+    background: var(--purple);
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .typing-dots {
+    display: flex; gap: 3px; align-items: center;
+    padding: 4px 0;
+  }
+  .typing-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: tdot 1s infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes tdot {
+    0%,80%,100% { transform: scale(0.7); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  .chat-input-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 10px;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+  }
+  .chat-input-box {
+    flex: 1; height: 30px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0 10px;
+    font-size: 10px; font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+  }
+  .chat-send-btn {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--purple);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  /* ═══════════════════ END SCREEN ═══════════════════ */
+  #screen-end {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 20px;
+    background: var(--bg);
+  }
+  .end-sparkle { font-size: 40px; margin-bottom: 12px; }
+  .end-title {
+    font-family: 'Nunito', sans-serif; font-weight: 800;
+    font-size: 18px; color: var(--text); margin-bottom: 8px;
+  }
+  .end-sub { font-size: 11px; color: var(--mid); line-height: 1.6; margin-bottom: 20px; }
+  .end-btn {
+    padding: 11px 28px;
+    border-radius: 12px;
+    background: var(--purple);
+    color: #fff;
+    font-size: 12px; font-weight: 700;
+    border: none; cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: opacity 0.2s;
+  }
+  .end-btn:hover { opacity: 0.85; }
+
+  /* ═══════════════════ CURSOR ═══════════════════ */
+  #cursor {
+    position: absolute;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: rgba(91,77,199,0.9);
+    box-shadow: 0 0 0 3px rgba(91,77,199,0.3);
+    pointer-events: none;
+    z-index: 200;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s;
+    opacity: 0;
+  }
+  #cursor.visible { opacity: 1; }
+  #cursor.tapping {
+    animation: tap-pulse 0.35s ease-out;
+  }
+  @keyframes tap-pulse {
+    0%   { transform: translate(-50%,-50%) scale(1); background: rgba(91,77,199,0.9); }
+    50%  { transform: translate(-50%,-50%) scale(0.6); background: rgba(91,77,199,1); }
+    100% { transform: translate(-50%,-50%) scale(1); background: rgba(91,77,199,0.9); }
+  }
+
+  /* ═══════════════════ CAPTION BAR ═══════════════════ */
+  #caption-bar {
+    position: absolute;
+    bottom: 64px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    background: rgba(4,46,92,0.92);
+    color: #fff;
+    font-size: 11px;
+    line-height: 1.5;
+    padding: 10px 14px;
+    border-radius: 12px;
+    backdrop-filter: blur(6px);
+    z-index: 300;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    text-align: center;
+    pointer-events: none;
+  }
+  #caption-bar.visible { opacity: 1; }
+  #caption-bar .caption-step {
+    font-size: 8px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; color: rgba(91,77,199,0.9); margin-bottom: 4px;
+  }
+
+  /* ═══════════════════ PROGRESS DOTS ═══════════════════ */
+  #progress-dots {
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 5px;
+    z-index: 400;
+  }
+  .pdot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    transition: all 0.3s;
+  }
+  .pdot.active {
+    width: 18px;
+    border-radius: 3px;
+    background: var(--purple);
+  }
+
+  /* phone glow */
+  @keyframes phone-glow {
+    0%,100% { box-shadow: 0 0 0 3px #2a2a3e, 0 0 0 6px #111, 0 32px 80px rgba(0,0,0,0.7), 0 0 60px rgba(91,77,199,0.2); }
+    50%      { box-shadow: 0 0 0 3px #2a2a3e, 0 0 0 6px #111, 0 32px 80px rgba(0,0,0,0.7), 0 0 80px rgba(91,77,199,0.35); }
+  }
+  #phone { animation: phone-glow 3s ease-in-out infinite; }
+
+  /* ── Responsive: full screen on very small viewports ── */
+  @media (max-height: 700px) {
+    #phone { height: 560px; width: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <!-- progress dots above phone -->
+  <div id="progress-dots">
+    <div class="pdot active" id="pd0"></div>
+    <div class="pdot" id="pd1"></div>
+    <div class="pdot" id="pd2"></div>
+    <div class="pdot" id="pd3"></div>
+    <div class="pdot" id="pd4"></div>
+  </div>
+
+  <!-- Phone shell -->
+  <div id="phone">
+    <div id="screen">
+      <!-- Status bar -->
+      <div id="statusbar">
+        <span class="sb-time">9:41</span>
+        <div class="sb-icons">
+          <span>📶</span>
+          <span>🔋</span>
+        </div>
+      </div>
+
+      <!-- Screens container -->
+      <div id="content">
+
+        <!-- ── HOME ── -->
+        <div class="app-screen active" id="screen-home">
+          <!-- Greeting -->
+          <div class="greeting-row">
+            <div>
+              <div class="greeting-name">Morning, Alex! ☀️</div>
+              <div class="greeting-sub">What would you like to learn today?</div>
+            </div>
+            <div class="april-avatar">🤖</div>
+          </div>
+
+          <!-- Stat strip -->
+          <div class="stat-strip">
+            <div class="stat-card">
+              <div class="stat-icon">🔥</div>
+              <span class="stat-val">7</span>
+              <div class="stat-lbl">Day Streak</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">📚</div>
+              <span class="stat-val">12</span>
+              <div class="stat-lbl">Sessions</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">⭐</div>
+              <span class="stat-val">14</span>
+              <div class="stat-lbl">Best Streak</div>
+            </div>
+          </div>
+
+          <!-- Schedule card -->
+          <div class="sched-card">
+            <div class="sched-icon-wrap">🗓️</div>
+            <div>
+              <div class="sched-title">Schedule a session</div>
+              <div class="sched-sub">Plan a test or learning session ahead</div>
+            </div>
+            <div class="sched-chev">›</div>
+          </div>
+
+          <!-- Section head -->
+          <div class="section-head">MY SUBJECTS</div>
+
+          <!-- Subject card — Mathematics -->
+          <div class="subject-card" id="math-card">
+            <div class="subject-top">
+              <div class="subject-icon-wrap" style="background:#EBF0FD;">📐</div>
+              <div>
+                <div class="subject-name">Mathematics</div>
+                <div class="subject-meta">Grade 6 · 12 chapters</div>
+              </div>
+            </div>
+            <div class="progress-row">
+              <div class="progress-track">
+                <div class="progress-fill" style="width:64%;background:#5B4DC7;"></div>
+              </div>
+              <span class="progress-pct" style="color:#5B4DC7;">64%</span>
+            </div>
+            <div class="subject-btns">
+              <button class="subject-btn btn-chat" style="color:#5B4DC7;border-color:rgba(91,77,199,0.4);">Chat</button>
+              <button class="subject-btn btn-voice" style="background:#5B4DC7;">Voice</button>
+            </div>
+          </div>
+
+          <!-- Subject card — English -->
+          <div class="subject-card">
+            <div class="subject-top">
+              <div class="subject-icon-wrap" style="background:#E8F5EF;">📖</div>
+              <div>
+                <div class="subject-name">English</div>
+                <div class="subject-meta">Grade 6 · 10 chapters</div>
+              </div>
+            </div>
+            <div class="progress-row">
+              <div class="progress-track">
+                <div class="progress-fill" style="width:48%;background:#2D6A4F;"></div>
+              </div>
+              <span class="progress-pct" style="color:#2D6A4F;">48%</span>
+            </div>
+            <div class="subject-btns">
+              <button class="subject-btn btn-chat" style="color:#2D6A4F;border-color:rgba(45,106,79,0.4);">Chat</button>
+              <button class="subject-btn btn-voice" style="background:#2D6A4F;">Voice</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── ME ── -->
+        <div class="app-screen" id="screen-me">
+          <div class="me-screen">
+            <div class="me-header">My Profile</div>
+
+            <div class="avatar-section">
+              <div class="avatar-big">🧑‍🎓</div>
+              <div class="avatar-dots">
+                <div class="avatar-dot" style="background:#5B4DC7;"></div>
+                <div class="avatar-dot" style="background:#059F6D;"></div>
+                <div class="avatar-dot" style="background:#F59E0B;"></div>
+                <div class="avatar-dot" style="background:#EF4444;"></div>
+              </div>
+              <div class="avatar-name">Alex</div>
+              <div class="avatar-grade">Grade 6 Student</div>
+            </div>
+
+            <div class="traits-card">
+              <div class="traits-title">How Nia Sees You</div>
+              <div class="traits-chips">
+                <span class="trait-chip">Curious 🔍</span>
+                <span class="trait-chip">Visual Learner 👁️</span>
+                <span class="trait-chip">Fast Grasp ⚡</span>
+                <span class="trait-chip">Detail-oriented 🎯</span>
+              </div>
+            </div>
+
+            <div class="school-card" id="school-card">
+              <div class="school-icon">🏫</div>
+              <div>
+                <div class="school-label">My School</div>
+                <div class="school-sub">Connect a school</div>
+              </div>
+              <div class="school-chev">›</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── CONNECT SCHOOL ── -->
+        <div class="app-screen" id="screen-connect">
+          <div class="connect-icon">🏫</div>
+          <div class="connect-title">Connect Your School</div>
+          <div class="connect-sub">Link your school account to unlock curriculum-aligned content and share progress with your teacher.</div>
+
+          <div class="connect-school-item" id="school-item">
+            <span class="school-logo">🏛️</span>
+            <div>
+              <div class="school-info-name">Sunrise Public School</div>
+              <div class="school-info-loc">Delhi, India</div>
+            </div>
+          </div>
+
+          <div class="connect-success" id="connect-success" style="display:none;">
+            <span class="connect-success-icon">✅</span>
+            <span class="connect-success-text">Connected to Sunrise Public School!</span>
+          </div>
+        </div>
+
+        <!-- ── CHAT ── -->
+        <div class="app-screen" id="screen-chat" style="padding:0;display:flex;flex-direction:column;">
+          <div class="chat-header">
+            <span class="chat-back">←</span>
+            <div class="chat-avatar">🤖</div>
+            <div>
+              <div class="chat-name">Nia</div>
+              <div class="chat-subject">Mathematics · Grade 6</div>
+            </div>
+          </div>
+          <div class="chat-body" id="chat-body">
+            <div class="bubble bubble-ai" id="bubble1" style="opacity:0;transition:opacity 0.4s;">
+              Hi Alex! 👋 I'm Nia, your personal tutor. What would you like to explore in Mathematics today?
+            </div>
+            <div class="bubble bubble-ai" id="bubble2" style="opacity:0;transition:opacity 0.4s;">
+              <div class="typing-dots">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-input-row">
+            <input class="chat-input-box" placeholder="Ask Nia anything…" readonly />
+            <div class="chat-send-btn">➤</div>
+          </div>
+        </div>
+
+        <!-- ── END ── -->
+        <div class="app-screen" id="screen-end">
+          <div class="end-sparkle">🎉</div>
+          <div class="end-title">You're all set!</div>
+          <div class="end-sub">Chat or voice with your AI tutor, track your progress, and connect your school — all in one place.</div>
+          <button class="end-btn" id="close-btn">Start Learning →</button>
+        </div>
+      </div><!-- /content -->
+
+      <!-- Bottom tab bar -->
+      <div id="tabbar">
+        <div class="tab active" id="tab-home">
+          <div class="tab-icon">🏠</div>
+          <div class="tab-label">Home</div>
+          <div class="tab-active-dot"></div>
+        </div>
+        <div class="tab" id="tab-practice">
+          <div class="tab-icon">🎯</div>
+          <div class="tab-label">Practice</div>
+          <div class="tab-active-dot"></div>
+        </div>
+        <div class="tab" id="tab-report">
+          <div class="tab-icon">📋</div>
+          <div class="tab-label">Report Card</div>
+          <div class="tab-active-dot"></div>
+        </div>
+        <div class="tab" id="tab-me">
+          <div class="tab-icon">😊</div>
+          <div class="tab-label">Me</div>
+          <div class="tab-active-dot"></div>
+        </div>
+      </div>
+    </div><!-- /screen -->
+
+    <!-- Cursor (inside phone for clipping) -->
+    <div id="cursor"></div>
+
+    <!-- Caption bar (inside phone) -->
+    <div id="caption-bar">
+      <div class="caption-step" id="caption-step"></div>
+      <div id="caption-text"></div>
+    </div>
+  </div><!-- /phone -->
+</div><!-- /stage -->
+
+<script>
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+const cursor   = document.getElementById('cursor');
+const captionBar  = document.getElementById('caption-bar');
+const captionStep = document.getElementById('caption-step');
+const captionText = document.getElementById('caption-text');
+
+function showCaption(step, text) {
+  captionStep.textContent = step;
+  captionText.textContent = text;
+  captionBar.classList.add('visible');
+}
+function hideCaption() {
+  captionBar.classList.remove('visible');
+}
+
+async function moveCursor(x, y, ms = 600) {
+  cursor.classList.add('visible');
+  cursor.style.transition = `left ${ms}ms cubic-bezier(0.4,0,0.2,1), top ${ms}ms cubic-bezier(0.4,0,0.2,1)`;
+  cursor.style.left = x + 'px';
+  cursor.style.top  = y + 'px';
+  await sleep(ms + 60);
+}
+
+async function tap(x, y) {
+  await moveCursor(x, y, 500);
+  await sleep(100);
+  cursor.classList.add('tapping');
+  await sleep(380);
+  cursor.classList.remove('tapping');
+  await sleep(100);
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.app-screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setActiveTab(tabId) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+}
+
+function setProgressDot(idx) {
+  document.querySelectorAll('.pdot').forEach((d,i) => {
+    d.classList.toggle('active', i === idx);
+  });
+}
+
+// ── Dynamic coordinate helper ────────────────────────────────────────────────
+// Always measure AFTER the target screen is active so the element is rendered.
+function center(el) {
+  const phone = document.getElementById('phone');
+  const pr = phone.getBoundingClientRect();
+  const r  = el.getBoundingClientRect();
+  return {
+    x: r.left - pr.left + r.width  / 2,
+    y: r.top  - pr.top  + r.height / 2,
+  };
+}
+
+// ── Main animation ──────────────────────────────────────────────────────────
+async function runAnimation() {
+  await sleep(800);
+
+  // ── Scene 0: Home intro ──
+  setProgressDot(0);
+  showCaption('Step 1 of 5', 'Welcome to GenEducation! This is your Home screen. See your stats and subjects here.');
+  // Home screen is active from the start — safe to measure immediately
+  const statStrip  = center(document.querySelector('.stat-strip'));
+  const mathCard   = center(document.getElementById('math-card'));
+  await sleep(400);
+  cursor.classList.add('visible');
+  cursor.style.transition = 'none';
+  cursor.style.left = statStrip.x + 'px';
+  cursor.style.top  = (statStrip.y + 60) + 'px'; // start slightly below, drift up
+  await sleep(100);
+  await moveCursor(statStrip.x, statStrip.y, 700);
+  await sleep(700);
+  await moveCursor(mathCard.x, mathCard.y, 700);
+  await sleep(900);
+  hideCaption();
+  await sleep(300);
+
+  // ── Scene 1: Tap Me tab ──
+  // Tab bar is always rendered — measure before tapping
+  setProgressDot(1);
+  showCaption('Step 2 of 5', 'Tap the "Me" tab to set up your profile and connect your school.');
+  const meTab = center(document.getElementById('tab-me'));
+  await tap(meTab.x, meTab.y);
+  setActiveTab('tab-me');
+  showScreen('screen-me');
+  await sleep(250); // wait for browser to render the new screen
+  hideCaption();
+  await sleep(200);
+
+  // ── Scene 2: Tap "My School" card ──
+  // Measure AFTER screen-me is active
+  setProgressDot(2);
+  showCaption('Step 3 of 5', 'Connect your school to get curriculum-aligned questions from your teacher.');
+  const schoolCard = center(document.getElementById('school-card'));
+  await sleep(1000);
+  await tap(schoolCard.x, schoolCard.y);
+  showScreen('screen-connect');
+  await sleep(250); // wait for screen-connect to render
+  hideCaption();
+
+  // Measure school-item AFTER screen-connect is active
+  showCaption('Step 3 of 5', 'Search and select your school from the list.');
+  const schoolItem = center(document.getElementById('school-item'));
+  await sleep(900);
+  await tap(schoolItem.x, schoolItem.y);
+  document.getElementById('school-item').style.display = 'none';
+  document.getElementById('connect-success').style.display = 'flex';
+  await sleep(1000);
+  hideCaption();
+  await sleep(400);
+
+  // ── Scene 3: Back to Home ──
+  setProgressDot(3);
+  showCaption('Step 4 of 5', 'Head back to Home and pick a subject to start learning!');
+  const homeTab = center(document.getElementById('tab-home'));
+  await tap(homeTab.x, homeTab.y);
+  setActiveTab('tab-home');
+  showScreen('screen-home');
+  await sleep(250);
+  hideCaption();
+  await sleep(300);
+
+  // ── Scene 4: Tap Chat button on Math card ──
+  // Home screen is active again — safe to measure
+  setProgressDot(4);
+  showCaption('Step 5 of 5', 'Tap "Chat" on any subject card to start a conversation with your AI tutor!');
+  const chatBtn = center(document.getElementById('math-card').querySelectorAll('.subject-btn')[0]);
+  await sleep(900);
+  await moveCursor(chatBtn.x, chatBtn.y, 600);
+  await sleep(300);
+  await tap(chatBtn.x, chatBtn.y);
+  showScreen('screen-chat');
+  await sleep(300);
+  hideCaption();
+
+  // animate chat bubbles
+  await sleep(400);
+  document.getElementById('bubble1').style.opacity = '1';
+  await sleep(1200);
+  document.getElementById('bubble2').style.opacity = '1';
+  await sleep(1800);
+  document.getElementById('bubble2').style.opacity = '0';
+  await sleep(300);
+
+  // ── End screen ──
+  cursor.classList.remove('visible');
+  showScreen('screen-end');
+  setActiveTab('tab-home');
+}
+
+// ── Close button ─────────────────────────────────────────────────────────────
+document.getElementById('close-btn').addEventListener('click', function() {
+  sendClose();
+});
+
+function sendClose() {
+  try {
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage('tutorial:close');
+    } else {
+      window.parent.postMessage('tutorial:close', '*');
+    }
+  } catch(e) {}
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+window.addEventListener('load', function() {
+  // Initial cursor position (center of phone, off-screen top)
+  cursor.style.left = '170px';
+  cursor.style.top  = '200px';
+  runAnimation().catch(console.error);
+});
+</script>
+</body>
+</html>

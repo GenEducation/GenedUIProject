@@ -8,8 +8,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Svg, { Circle, Line, Path, Rect } from "react-native-svg";
 import { colors, fonts } from "@/theme/tokens";
-import { signUp } from "@/services/authService";
+import { signUp, sendOtp } from "@/services/authService";
 import { useAuth } from "@/store/useAuthStore";
+import { tutorialStore } from "@/store/useTutorialStore";
 
 type Role = "student" | "parent" | "partner";
 
@@ -27,15 +28,20 @@ export default function SignUp() {
   const [step, setStep] = useState<1 | 2>(1);
   const [role, setRole] = useState<Role | null>(null);
 
-  const [username,    setUsername]    = useState("");
-  const [parentEmail, setParentEmail] = useState("");
-  const [password,    setPassword]    = useState("");
-  const [confirm,     setConfirm]     = useState("");
-  const [grade,       setGrade]       = useState<number | null>(null);
-  const [showPw,      setShowPw]      = useState(false);
-  const [errors,      setErrors]      = useState<Record<string, string>>({});
-  const [rootError,   setRootError]   = useState("");
-  const [loading,     setLoading]     = useState(false);
+  const [username,       setUsername]       = useState("");
+  const [parentEmail,    setParentEmail]    = useState("");
+  const [password,       setPassword]       = useState("");
+  const [confirm,        setConfirm]        = useState("");
+  const [grade,          setGrade]          = useState<number | null>(null);
+  const [showPw,         setShowPw]         = useState(false);
+  const [hasPersonalEmail, setHasPersonalEmail] = useState(false);
+  const [personalEmail,  setPersonalEmail]  = useState("");
+  const [otpSent,        setOtpSent]        = useState(false);
+  const [otpCode,        setOtpCode]        = useState("");
+  const [otpLoading,     setOtpLoading]     = useState(false);
+  const [errors,         setErrors]         = useState<Record<string, string>>({});
+  const [rootError,      setRootError]      = useState("");
+  const [loading,        setLoading]        = useState(false);
 
   const totalSegments = role === "student" || !role ? 2 : 3;
 
@@ -47,10 +53,20 @@ export default function SignUp() {
   const validateStudent = () => {
     const e: Record<string, string> = {};
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!username.trim()) e.username = "Username is required";
-    else if (username.trim().length < 3) e.username = "Must be at least 3 characters";
-    if (!parentEmail.trim()) e.parentEmail = "Parent email is required";
-    else if (!emailRe.test(parentEmail)) e.parentEmail = "Invalid email format";
+    if (hasPersonalEmail) {
+      if (!personalEmail.trim()) e.personalEmail = "Email is required";
+      else if (!emailRe.test(personalEmail)) e.personalEmail = "Invalid email format";
+      if (otpSent && !otpCode.trim()) e.otpCode = "Enter the OTP sent to your email";
+      // username optional — validate only if filled
+      if (username.trim() && username.trim().length < 3) e.username = "Must be at least 3 characters";
+      // parentEmail optional — validate only if filled
+      if (parentEmail.trim() && !emailRe.test(parentEmail)) e.parentEmail = "Invalid email format";
+    } else {
+      if (!username.trim()) e.username = "Username is required";
+      else if (username.trim().length < 3) e.username = "Must be at least 3 characters";
+      if (!parentEmail.trim()) e.parentEmail = "Parent email is required";
+      else if (!emailRe.test(parentEmail)) e.parentEmail = "Invalid email format";
+    }
     if (!password.trim()) e.password = "Password is required";
     else if (password.length < 6) e.password = "Must be at least 6 characters";
     if (password !== confirm) e.confirm = "Passwords do not match";
@@ -59,19 +75,40 @@ export default function SignUp() {
     return Object.keys(e).length === 0;
   };
 
+  const handleSendOtp = async () => {
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!personalEmail.trim() || !emailRe.test(personalEmail)) {
+      setErrors(prev => ({ ...prev, personalEmail: "Enter a valid email first" }));
+      return;
+    }
+    setOtpLoading(true);
+    setErrors(prev => { const n = { ...prev }; delete n.personalEmail; return n; });
+    try {
+      await sendOtp(personalEmail.trim());
+      setOtpSent(true);
+    } catch (err: any) {
+      setErrors(prev => ({ ...prev, personalEmail: err.message || "Failed to send OTP" }));
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
   const createAccount = async () => {
     if (!validateStudent()) return;
     setRootError("");
     setLoading(true);
     try {
       const res = await signUp({
-        username:     username.trim(),
         password,
-        grade:        grade!,
-        parent_email: parentEmail.trim(),
         role:         "STUDENT",
+        grade:        grade!,
+        ...(username.trim()     ? { username:     username.trim() }     : {}),
+        ...(parentEmail.trim()  ? { parent_email: parentEmail.trim() }  : {}),
+        ...(hasPersonalEmail && personalEmail.trim() ? { email_id: personalEmail.trim() } : {}),
+        ...(hasPersonalEmail && otpCode.trim()       ? { otp_code: otpCode.trim() }       : {}),
       });
       await login(res);
+      tutorialStore.startTutorial();
       router.replace("/(tabs)");
     } catch (e: any) {
       setRootError(e.message || "Sign-up failed. Please try again.");
@@ -113,6 +150,10 @@ export default function SignUp() {
             confirm={confirm} setConfirm={setConfirm}
             grade={grade} setGrade={setGrade}
             showPw={showPw} setShowPw={setShowPw}
+            hasPersonalEmail={hasPersonalEmail} setHasPersonalEmail={setHasPersonalEmail}
+            personalEmail={personalEmail} setPersonalEmail={setPersonalEmail}
+            otpSent={otpSent} otpCode={otpCode} setOtpCode={setOtpCode}
+            otpLoading={otpLoading} onSendOtp={handleSendOtp}
             errors={errors} rootError={rootError} loading={loading}
             onSubmit={createAccount}
             onLogin={() => router.replace("/sign-in")}
@@ -168,6 +209,10 @@ function Step2Student(p: {
   confirm: string; setConfirm: (v: string) => void;
   grade: number | null; setGrade: (v: number) => void;
   showPw: boolean; setShowPw: (v: boolean) => void;
+  hasPersonalEmail: boolean; setHasPersonalEmail: (v: boolean) => void;
+  personalEmail: string; setPersonalEmail: (v: string) => void;
+  otpSent: boolean; otpCode: string; setOtpCode: (v: string) => void;
+  otpLoading: boolean; onSendOtp: () => void;
   errors: Record<string, string>;
   rootError: string;
   loading: boolean;
@@ -188,9 +233,80 @@ function Step2Student(p: {
         </View>
       </View>
 
-      <Input label="Choose a Username" placeholder="e.g. creative_coder" value={p.username} onChange={p.setUsername} error={p.errors.username} />
-      <Input label="Parent or Guardian's Email" placeholder="parent@example.com" value={p.parentEmail} onChange={p.setParentEmail} error={p.errors.parentEmail} keyboardType="email-address" />
-      <Text style={styles.helper}>Required for account confirmation. Your parent will receive an email to confirm and link accounts.</Text>
+      {/* Personal-email toggle */}
+      <Pressable
+        onPress={() => p.setHasPersonalEmail(!p.hasPersonalEmail)}
+        style={styles.toggleRow}
+      >
+        <View style={[styles.toggleBox, p.hasPersonalEmail && styles.toggleBoxOn]}>
+          {p.hasPersonalEmail && <Text style={styles.toggleTick}>✓</Text>}
+        </View>
+        <Text style={styles.toggleLabel}>I want to sign up with my personal email</Text>
+      </Pressable>
+
+      {p.hasPersonalEmail ? (
+        <>
+          {/* Personal email + OTP */}
+          <View style={{ marginTop: 16 }}>
+            <Text style={styles.label}>YOUR EMAIL ADDRESS</Text>
+            <View style={[styles.inputWrap, !!p.errors.personalEmail && styles.inputWrapError, { paddingRight: 6 }]}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="you@example.com"
+                placeholderTextColor="#0E1F2B40"
+                value={p.personalEmail}
+                onChangeText={p.setPersonalEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <Pressable
+                onPress={p.onSendOtp}
+                disabled={p.otpLoading || p.otpSent}
+                style={[styles.verifyBtn, (p.otpLoading || p.otpSent) && { opacity: 0.5 }]}
+              >
+                {p.otpLoading
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={styles.verifyBtnText}>{p.otpSent ? "Sent ✓" : "Verify"}</Text>
+                }
+              </Pressable>
+            </View>
+            {!!p.errors.personalEmail && <Text style={styles.error}>{p.errors.personalEmail}</Text>}
+          </View>
+
+          {p.otpSent && (
+            <Input
+              label="OTP CODE"
+              placeholder="Enter the code from your email"
+              value={p.otpCode}
+              onChange={p.setOtpCode}
+              error={p.errors.otpCode}
+              keyboardType="default"
+            />
+          )}
+
+          <Input
+            label="Username (optional)"
+            placeholder="e.g. creative_coder"
+            value={p.username}
+            onChange={p.setUsername}
+            error={p.errors.username}
+          />
+          <Input
+            label="Parent or Guardian's Email (optional)"
+            placeholder="parent@example.com"
+            value={p.parentEmail}
+            onChange={p.setParentEmail}
+            error={p.errors.parentEmail}
+            keyboardType="email-address"
+          />
+        </>
+      ) : (
+        <>
+          <Input label="Choose a Username" placeholder="e.g. creative_coder" value={p.username} onChange={p.setUsername} error={p.errors.username} />
+          <Input label="Parent or Guardian's Email" placeholder="parent@example.com" value={p.parentEmail} onChange={p.setParentEmail} error={p.errors.parentEmail} keyboardType="email-address" />
+          <Text style={styles.helper}>Required for account confirmation. Your parent will receive an email to confirm and link accounts.</Text>
+        </>
+      )}
 
       <Input
         label="Password" placeholder="••••••••" value={p.password} onChange={p.setPassword}
@@ -201,7 +317,7 @@ function Step2Student(p: {
 
       <Text style={styles.label}>WHAT GRADE ARE YOU IN?</Text>
       <View style={styles.gradeGrid}>
-        {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => {
+        {[3, 4, 5, 6, 7, 8].map((g) => {
           const active = p.grade === g;
           return (
             <Pressable key={g} onPress={() => p.setGrade(g)} style={[styles.gradeCell, active && styles.gradeCellOn]}>
@@ -384,4 +500,23 @@ const styles = StyleSheet.create({
   loginLink: { color: colors.emerald, fontFamily: fonts.dmBold },
   rootErrBox: { marginTop: 10, padding: 14, borderRadius: 12, backgroundColor: "#fff1f2", borderWidth: 1, borderColor: "#fecdd3" },
   rootErrText: { fontFamily: fonts.dmBold, fontSize: 13, color: "#be123c" },
+
+  toggleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 14 },
+  toggleBox: {
+    width: 20, height: 20, borderRadius: 6,
+    borderWidth: 1.5, borderColor: navy15,
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  toggleBoxOn: { backgroundColor: colors.emerald, borderColor: colors.emerald },
+  toggleTick: { color: "#fff", fontSize: 11, fontFamily: fonts.dmBold },
+  toggleLabel: { fontFamily: fonts.dm, fontSize: 12, color: colors.navy, flex: 1 },
+
+  verifyBtn: {
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 8, backgroundColor: colors.emerald,
+    alignItems: "center", justifyContent: "center",
+    minWidth: 60,
+  },
+  verifyBtnText: { color: "#fff", fontFamily: fonts.dmBold, fontSize: 11 },
 });

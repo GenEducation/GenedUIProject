@@ -50,18 +50,30 @@ export async function signIn(username: string, password: string): Promise<AuthTo
   return res.json();
 }
 
-/** POST /auth/sign-up  (student path only for now) */
+/** POST /auth/sign-up */
 export async function signUp(params: {
-  username:     string;
-  password:     string;
-  grade:        number;
-  parent_email: string;
-  role:         "STUDENT" | "PARENT" | "PARTNER";
+  password:      string;
+  role:          "STUDENT" | "PARENT" | "PARTNER";
+  username?:     string;
+  parent_email?: string;
+  email_id?:     string;
+  otp_code?:     string;
+  grade?:        number;
 }): Promise<AuthTokenResponse> {
+  const body: Record<string, unknown> = {
+    password: params.password,
+    role:     params.role,
+  };
+  if (params.username)     body.username     = params.username;
+  if (params.parent_email) body.parent_email = params.parent_email;
+  if (params.email_id)     body.email_id     = params.email_id;
+  if (params.otp_code)     body.otp_code     = params.otp_code;
+  if (params.grade != null) body.grade       = Number(params.grade);
+
   const res = await fetch(`${BASE}/auth/sign-up`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(params),
+    body: JSON.stringify(body),
   });
   if (!res.ok) await handleError(res, "Sign-up failed.");
   return res.json();

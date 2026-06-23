@@ -31,6 +31,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "-s", "C:/Users/Hitesh/AppData/Local/Temp/gened-teacher-portal", "-l", "4410", "--no-clipboard"],
       "port": 4410
+    },
+    {
+      "name": "android-tutorial-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "apps/android/assets", "-l", "4420", "--no-clipboard"],
+      "port": 4420
     }
   ]
 }

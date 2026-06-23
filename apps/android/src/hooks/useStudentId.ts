@@ -6,5 +6,8 @@ import { useAuth } from "../store/useAuthStore";
 
 export function useStudentId(): string {
   const { state } = useAuth();
-  return state.status === "authenticated" ? state.profile.user_id : "";
+  if (state.status !== "authenticated") return "";
+  // Return empty for non-student roles so student hooks never fire with a partner/teacher user_id
+  if (state.profile.role !== "student") return "";
+  return state.profile.user_id;
 }

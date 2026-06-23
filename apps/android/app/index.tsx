@@ -3,8 +3,9 @@ import { useRouter } from "expo-router";
 import { useAuth } from "@/store/useAuthStore";
 
 /**
- * Entry guard — waits for auth hydration then routes:
- *   authenticated → student portal  (/(tabs))
+ * Entry guard — waits for auth hydration then routes by role:
+ *   partner       → partner portal  (/(partner))
+ *   student/other → student portal  (/(tabs))
  *   unauthenticated → sign-in
  */
 export default function Index() {
@@ -14,7 +15,12 @@ export default function Index() {
   useEffect(() => {
     if (state.status === "loading") return;
     if (state.status === "authenticated") {
-      router.replace("/(tabs)");
+      const role = state.profile.role?.toLowerCase();
+      if (role === "partner") {
+        router.replace("/(partner)");
+      } else {
+        router.replace("/(tabs)");
+      }
     } else {
       router.replace("/sign-in");
     }

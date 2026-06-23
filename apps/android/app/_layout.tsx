@@ -15,6 +15,8 @@ import { JetBrainsMono_600SemiBold } from "@expo-google-fonts/jetbrains-mono";
 import { AuthProvider } from "@/store/useAuthStore";
 import { registerSessionExpiredHandler } from "@/services/authFetch";
 import { prefsStore } from "@/store/usePrefsStore";
+import { tutorialStore } from "@/store/useTutorialStore";
+import { TutorialTourModal } from "@/components/tutorial/TutorialTourModal";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -25,6 +27,7 @@ function RootStackNavigator() {
   useEffect(() => {
     registerSessionExpiredHandler(() => router.replace("/sign-in"));
     prefsStore.hydrate();
+    tutorialStore.hydrate();
   }, []);
 
   return (
@@ -32,7 +35,8 @@ function RootStackNavigator() {
       <Stack.Screen name="index"    />
       <Stack.Screen name="sign-in"  />
       <Stack.Screen name="sign-up"  />
-      <Stack.Screen name="(tabs)"   />
+      <Stack.Screen name="(tabs)"    />
+      <Stack.Screen name="(partner)" />
       <Stack.Screen name="chat"       options={{ animation: "slide_from_bottom" }} />
       <Stack.Screen name="voice-chat" options={{ animation: "slide_from_bottom" }} />
       <Stack.Screen name="test"        options={{ animation: "slide_from_bottom" }} />
@@ -67,6 +71,7 @@ export default function RootLayout() {
       <AuthProvider>
         <StatusBar style="dark" />
         <RootStackNavigator />
+        <TutorialTourModal />
       </AuthProvider>
     </SafeAreaProvider>
   );

@@ -19,6 +19,7 @@ import { colors, fonts } from "@/theme/tokens";
 export default function Home() {
   const router = useRouter();
   const { state } = useAuth();
+
   const { stats, subjects, recentSessions, loading, error, refetch } = useHomeData();
 
   const firstName =

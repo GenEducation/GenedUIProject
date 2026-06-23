@@ -3,6 +3,9 @@ const { getDefaultConfig } = require("expo/metro-config");
 
 const config = getDefaultConfig(__dirname);
 
+// Allow .html files to be bundled as assets (e.g. tutorial-walkthrough.html via require())
+config.resolver.assetExts = [...(config.resolver.assetExts ?? []), "html"];
+
 // `react-native-audio-api` ships Apple-only ffmpeg `.xcframework` bundles that
 // contain macOS-style symlinks. On Windows, Metro's file watcher can't `lstat`
 // those symlinks and crashes with EACCES while crawling node_modules. These
