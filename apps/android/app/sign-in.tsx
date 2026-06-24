@@ -1,14 +1,15 @@
 import React, { useState } from "react";
 import {
   View, Text, TextInput, Pressable, StyleSheet, ScrollView,
-  ActivityIndicator, Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter, Link } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Svg, { Path } from "react-native-svg";
 import { colors, fonts } from "@/theme/tokens";
-import { signIn } from "@/services/authService";
+import { signIn, googleSignIn } from "@/services/authService";
+import { signInWithGoogle, GoogleSignInCancelled } from "@/services/googleAuth";
 import { useAuth } from "@/store/useAuthStore";
 
 export default function SignIn() {
@@ -16,10 +17,27 @@ export default function SignIn() {
   const insets    = useSafeAreaInsets();
   const { login } = useAuth();
 
-  const [username,    setUsername]    = useState("");
-  const [password,    setPassword]    = useState("");
-  const [loading,     setLoading]     = useState(false);
-  const [errorMsg,    setErrorMsg]    = useState("");
+  const [username,      setUsername]      = useState("");
+  const [password,      setPassword]      = useState("");
+  const [loading,       setLoading]       = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [errorMsg,      setErrorMsg]      = useState("");
+
+  /** Persist the session and route to the role's home, or surface an error. */
+  const routeByRole = async (res: Awaited<ReturnType<typeof signIn>>) => {
+    await login(res);
+    const role = res.role?.toLowerCase();
+    if (role === "partner")       router.replace("/(partner)");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    else if (role === "parent")   router.replace("/(parent)" as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    else if (role === "teacher")  router.replace("/(teacher)" as any);
+    else if (role === "student")  router.replace("/(tabs)");
+    else {
+      // Unknown role — do not grant access, force re-login
+      setErrorMsg(`Unrecognized account role "${res.role}". Please contact support.`);
+    }
+  };
 
   const handleSignIn = async () => {
     if (!username.trim() || !password.trim()) {
@@ -30,23 +48,29 @@ export default function SignIn() {
     setLoading(true);
     try {
       const res = await signIn(username.trim(), password);
-      await login(res);
-      const role = res.role?.toLowerCase();
-      if (role === "partner")       router.replace("/(partner)");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      else if (role === "parent")   router.replace("/(parent)" as any);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      else if (role === "teacher")  router.replace("/(teacher)" as any);
-      else if (role === "student")  router.replace("/(tabs)");
-      else {
-        // Unknown role — do not grant access, force re-login
-        await login(res); // still persist so logout works cleanly
-        setErrorMsg(`Unrecognized account role "${res.role}". Please contact support.`);
-      }
+      await routeByRole(res);
     } catch (e: any) {
       setErrorMsg(e.message || "Sign-in failed. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setErrorMsg("");
+    setGoogleLoading(true);
+    try {
+      const idToken = await signInWithGoogle();
+      const res = await googleSignIn(idToken);
+      await routeByRole(res);
+    } catch (e: any) {
+      if (e instanceof GoogleSignInCancelled) return; // user dismissed picker
+      setErrorMsg(
+        e.message ||
+          "Google sign-in failed. If you're new, create an account first.",
+      );
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -91,13 +115,19 @@ export default function SignIn() {
             <View style={styles.orLine} />
           </View>
 
-          {/* Google sign-in placeholder — native OAuth via expo-auth-session in next phase */}
+          {/* Native Google OAuth via @react-native-google-signin */}
           <Pressable
-            style={({ pressed }) => [styles.btnGoogle, pressed && styles.pressed]}
-            onPress={() => Alert.alert("Coming soon", "Native Google OAuth will be wired in the next phase.")}
+            style={({ pressed }) => [styles.btnGoogle, pressed && styles.pressed, googleLoading && { opacity: 0.7 }]}
+            onPress={handleGoogleSignIn}
+            disabled={googleLoading}
           >
-            <GoogleMark />
-            <Text style={styles.btnGoogleText}>Continue with Google</Text>
+            {googleLoading
+              ? <ActivityIndicator color={colors.navy} />
+              : <>
+                  <GoogleMark />
+                  <Text style={styles.btnGoogleText}>Continue with Google</Text>
+                </>
+            }
           </Pressable>
 
           <Text style={styles.footer}>

@@ -8,7 +8,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Svg, { Circle, Path } from "react-native-svg";
 import { colors, fonts } from "@/theme/tokens";
-import { signUp, sendOtp } from "@/services/authService";
+import { signUp, googleSignUp, sendOtp } from "@/services/authService";
+import { signInWithGoogle, GoogleSignInCancelled } from "@/services/googleAuth";
 import { useAuth } from "@/store/useAuthStore";
 import { tutorialStore } from "@/store/useTutorialStore";
 
@@ -29,6 +30,11 @@ export default function SignUp() {
   const [errors,    setErrors]    = useState<Record<string, string>>({});
   const [rootError, setRootError] = useState("");
   const [loading,   setLoading]   = useState(false);
+
+  // Google — when set, the account is created via /auth/google-sign-up and the
+  // email/password fields are skipped (the token carries the verified identity).
+  const [googleToken,   setGoogleToken]   = useState<string | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Student-specific
   const [username,          setUsername]          = useState("");
@@ -53,6 +59,22 @@ export default function SignUp() {
   const selectRole = (r: Role) => {
     setRole(r);
     setStep(2);
+  };
+
+  /** Fetch a Google ID token and mark the form as a Google-based sign-up. */
+  const handleGoogleAuth = async () => {
+    setRootError("");
+    setGoogleLoading(true);
+    try {
+      const idToken = await signInWithGoogle();
+      setGoogleToken(idToken);
+      setErrors({});
+    } catch (e: any) {
+      if (e instanceof GoogleSignInCancelled) return; // user dismissed picker
+      setRootError(e.message || "Google sign-in failed. Please try again.");
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   /* ── Student OTP ── */
@@ -97,6 +119,13 @@ export default function SignUp() {
   const validateStudentStep2 = () => {
     const e: Record<string, string> = {};
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Google sign-up: identity comes from the token; only grade is required.
+    if (googleToken) {
+      if (username.trim() && username.trim().length < 3) e.username = "Must be at least 3 characters";
+      if (!grade) e.grade = "Please select your grade";
+      setErrors(e);
+      return Object.keys(e).length === 0;
+    }
     if (hasPersonalEmail) {
       if (!personalEmail.trim()) e.personalEmail = "Email is required";
       else if (!emailRe.test(personalEmail)) e.personalEmail = "Invalid email format";
@@ -120,6 +149,8 @@ export default function SignUp() {
   const validateParentStep2 = () => {
     const e: Record<string, string> = {};
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Google sign-up: skip email/password — proceed straight to the profile step.
+    if (googleToken) { setErrors({}); return true; }
     if (!parentEmailId.trim()) e.parentEmailId = "Email is required";
     else if (!emailRe.test(parentEmailId)) e.parentEmailId = "Invalid email format";
     if (parentOtpSent && !parentOtpCode.trim()) e.parentOtpCode = "Enter the OTP sent to your email";
@@ -135,13 +166,18 @@ export default function SignUp() {
     if (!validateStudentStep2()) return;
     setRootError(""); setLoading(true);
     try {
-      const res = await signUp({
-        password, role: "STUDENT", grade: grade!,
-        ...(username.trim()    ? { username: username.trim() } : {}),
-        ...(parentEmail.trim() ? { parent_email: parentEmail.trim() } : {}),
-        ...(hasPersonalEmail && personalEmail.trim() ? { email_id: personalEmail.trim() } : {}),
-        ...(hasPersonalEmail && studentOtpCode.trim() ? { otp_code: studentOtpCode.trim() } : {}),
-      });
+      const res = googleToken
+        ? await googleSignUp(googleToken, {
+            role: "STUDENT", grade: grade!,
+            ...(username.trim() ? { username: username.trim() } : {}),
+          })
+        : await signUp({
+            password, role: "STUDENT", grade: grade!,
+            ...(username.trim()    ? { username: username.trim() } : {}),
+            ...(parentEmail.trim() ? { parent_email: parentEmail.trim() } : {}),
+            ...(hasPersonalEmail && personalEmail.trim() ? { email_id: personalEmail.trim() } : {}),
+            ...(hasPersonalEmail && studentOtpCode.trim() ? { otp_code: studentOtpCode.trim() } : {}),
+          });
       await login(res);
       tutorialStore.startTutorial();
       router.replace("/(tabs)");
@@ -159,12 +195,17 @@ export default function SignUp() {
   const createParentAccount = async () => {
     setRootError(""); setLoading(true);
     try {
-      const res = await signUp({
-        password, role: "PARENT",
-        email_id: parentEmailId.trim(),
-        ...(parentOtpCode.trim() ? { otp_code: parentOtpCode.trim() } : {}),
-        ...(phone.trim() ? { phone: phone.trim() } : {}),
-      });
+      const res = googleToken
+        ? await googleSignUp(googleToken, {
+            role: "PARENT",
+            ...(phone.trim() ? { phone: phone.trim() } : {}),
+          })
+        : await signUp({
+            password, role: "PARENT",
+            email_id: parentEmailId.trim(),
+            ...(parentOtpCode.trim() ? { otp_code: parentOtpCode.trim() } : {}),
+            ...(phone.trim() ? { phone: phone.trim() } : {}),
+          });
       await login(res);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       router.replace("/(parent)" as any);
@@ -215,6 +256,7 @@ export default function SignUp() {
             otpSent={studentOtpSent} otpCode={studentOtpCode} setOtpCode={setStudentOtpCode}
             otpLoading={studentOtpLoading} onSendOtp={handleStudentSendOtp}
             errors={errors} rootError={rootError} loading={loading}
+            googleToken={googleToken} googleLoading={googleLoading} onGoogleAuth={handleGoogleAuth}
             onSubmit={createStudentAccount}
             onLogin={() => router.replace("/sign-in")}
           />
@@ -230,6 +272,7 @@ export default function SignUp() {
             otpSent={parentOtpSent} otpCode={parentOtpCode} setOtpCode={setParentOtpCode}
             otpLoading={parentOtpLoading} onSendOtp={handleParentSendOtp}
             errors={errors}
+            googleToken={googleToken} googleLoading={googleLoading} onGoogleAuth={handleGoogleAuth}
             onContinue={continueParentToStep3}
             onLogin={() => router.replace("/sign-in")}
           />
@@ -312,6 +355,7 @@ function Step2Student(p: {
   errors: Record<string, string>;
   rootError: string;
   loading: boolean;
+  googleToken: string | null; googleLoading: boolean; onGoogleAuth: () => void;
   onSubmit: () => void;
   onLogin: () => void;
 }) {
@@ -329,18 +373,31 @@ function Step2Student(p: {
         </View>
       </View>
 
-      {/* Personal-email toggle */}
-      <Pressable
-        onPress={() => p.setHasPersonalEmail(!p.hasPersonalEmail)}
-        style={styles.toggleRow}
-      >
-        <View style={[styles.toggleBox, p.hasPersonalEmail && styles.toggleBoxOn]}>
-          {p.hasPersonalEmail && <Text style={styles.toggleTick}>✓</Text>}
-        </View>
-        <Text style={styles.toggleLabel}>I want to sign up with my personal email</Text>
-      </Pressable>
+      {p.googleToken ? (
+        <GoogleConnected />
+      ) : (
+        <>
+          <GoogleAuthButton loading={p.googleLoading} onPress={p.onGoogleAuth} />
+          <OrDivider />
+        </>
+      )}
 
-      {p.hasPersonalEmail ? (
+      {/* Personal-email toggle — only for the standard (non-Google) flow */}
+      {!p.googleToken && (
+        <Pressable
+          onPress={() => p.setHasPersonalEmail(!p.hasPersonalEmail)}
+          style={styles.toggleRow}
+        >
+          <View style={[styles.toggleBox, p.hasPersonalEmail && styles.toggleBoxOn]}>
+            {p.hasPersonalEmail && <Text style={styles.toggleTick}>✓</Text>}
+          </View>
+          <Text style={styles.toggleLabel}>I want to sign up with my personal email</Text>
+        </Pressable>
+      )}
+
+      {p.googleToken ? (
+        <Input label="Username (optional)" placeholder="e.g. creative_coder" value={p.username} onChange={p.setUsername} error={p.errors.username} />
+      ) : p.hasPersonalEmail ? (
         <>
           <View style={{ marginTop: 16 }}>
             <Text style={styles.label}>YOUR EMAIL ADDRESS</Text>
@@ -389,12 +446,16 @@ function Step2Student(p: {
         </>
       )}
 
-      <Input
-        label="Password" placeholder="••••••••" value={p.password} onChange={p.setPassword}
-        error={p.errors.password} secure={!p.showPw}
-        rightToggle={{ on: p.showPw, onToggle: () => p.setShowPw(!p.showPw) }}
-      />
-      <Input label="Confirm Password" placeholder="••••••••" value={p.confirm} onChange={p.setConfirm} error={p.errors.confirm} secure />
+      {!p.googleToken && (
+        <>
+          <Input
+            label="Password" placeholder="••••••••" value={p.password} onChange={p.setPassword}
+            error={p.errors.password} secure={!p.showPw}
+            rightToggle={{ on: p.showPw, onToggle: () => p.setShowPw(!p.showPw) }}
+          />
+          <Input label="Confirm Password" placeholder="••••••••" value={p.confirm} onChange={p.setConfirm} error={p.errors.confirm} secure />
+        </>
+      )}
 
       <Text style={styles.label}>WHAT GRADE ARE YOU IN?</Text>
       <View style={styles.gradeGrid}>
@@ -446,6 +507,7 @@ function Step2Parent(p: {
   otpSent: boolean; otpCode: string; setOtpCode: (v: string) => void;
   otpLoading: boolean; onSendOtp: () => void;
   errors: Record<string, string>;
+  googleToken: string | null; googleLoading: boolean; onGoogleAuth: () => void;
   onContinue: () => void;
   onLogin: () => void;
 }) {
@@ -463,49 +525,58 @@ function Step2Parent(p: {
         </View>
       </View>
 
-      {/* Email + OTP */}
-      <View style={{ marginTop: 16 }}>
-        <Text style={styles.label}>EMAIL ADDRESS</Text>
-        <View style={[styles.inputWrap, !!p.errors.parentEmailId && styles.inputWrapError, { paddingRight: 6 }]}>
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            placeholder="you@example.com"
-            placeholderTextColor="#0E1F2B40"
-            value={p.emailId}
-            onChangeText={p.setEmailId}
-            keyboardType="email-address"
-            autoCapitalize="none"
+      {p.googleToken ? (
+        <GoogleConnected />
+      ) : (
+        <>
+          <GoogleAuthButton loading={p.googleLoading} onPress={p.onGoogleAuth} />
+          <OrDivider />
+
+          {/* Email + OTP */}
+          <View style={{ marginTop: 16 }}>
+            <Text style={styles.label}>EMAIL ADDRESS</Text>
+            <View style={[styles.inputWrap, !!p.errors.parentEmailId && styles.inputWrapError, { paddingRight: 6 }]}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="you@example.com"
+                placeholderTextColor="#0E1F2B40"
+                value={p.emailId}
+                onChangeText={p.setEmailId}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <Pressable
+                onPress={p.onSendOtp}
+                disabled={p.otpLoading || p.otpSent}
+                style={[styles.verifyBtn, (p.otpLoading || p.otpSent) && { opacity: 0.5 }]}
+              >
+                {p.otpLoading
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={styles.verifyBtnText}>{p.otpSent ? "Sent ✓" : "Verify"}</Text>
+                }
+              </Pressable>
+            </View>
+            {!!p.errors.parentEmailId && <Text style={styles.error}>{p.errors.parentEmailId}</Text>}
+          </View>
+
+          {p.otpSent && (
+            <Input
+              label="OTP CODE"
+              placeholder="Enter the code from your email"
+              value={p.otpCode}
+              onChange={p.setOtpCode}
+              error={p.errors.parentOtpCode}
+            />
+          )}
+
+          <Input
+            label="Password" placeholder="••••••••" value={p.password} onChange={p.setPassword}
+            error={p.errors.password} secure={!p.showPw}
+            rightToggle={{ on: p.showPw, onToggle: () => p.setShowPw(!p.showPw) }}
           />
-          <Pressable
-            onPress={p.onSendOtp}
-            disabled={p.otpLoading || p.otpSent}
-            style={[styles.verifyBtn, (p.otpLoading || p.otpSent) && { opacity: 0.5 }]}
-          >
-            {p.otpLoading
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={styles.verifyBtnText}>{p.otpSent ? "Sent ✓" : "Verify"}</Text>
-            }
-          </Pressable>
-        </View>
-        {!!p.errors.parentEmailId && <Text style={styles.error}>{p.errors.parentEmailId}</Text>}
-      </View>
-
-      {p.otpSent && (
-        <Input
-          label="OTP CODE"
-          placeholder="Enter the code from your email"
-          value={p.otpCode}
-          onChange={p.setOtpCode}
-          error={p.errors.parentOtpCode}
-        />
+          <Input label="Confirm Password" placeholder="••••••••" value={p.confirm} onChange={p.setConfirm} error={p.errors.confirm} secure />
+        </>
       )}
-
-      <Input
-        label="Password" placeholder="••••••••" value={p.password} onChange={p.setPassword}
-        error={p.errors.password} secure={!p.showPw}
-        rightToggle={{ on: p.showPw, onToggle: () => p.setShowPw(!p.showPw) }}
-      />
-      <Input label="Confirm Password" placeholder="••••••••" value={p.confirm} onChange={p.setConfirm} error={p.errors.confirm} secure />
 
       <Pressable
         style={({ pressed }) => [styles.submit, pressed && { opacity: 0.9 }]}
@@ -623,6 +694,55 @@ function LoginRow({ onLogin }: { onLogin: () => void }) {
   );
 }
 
+/* ── Google sign-up controls ── */
+function GoogleAuthButton({ loading, onPress }: { loading: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.btnGoogle, pressed && { opacity: 0.85 }, loading && { opacity: 0.7 }]}
+      onPress={onPress}
+      disabled={loading}
+    >
+      {loading
+        ? <ActivityIndicator color={colors.navy} />
+        : <>
+            <GoogleMark />
+            <Text style={styles.btnGoogleText}>Sign up with Google</Text>
+          </>
+      }
+    </Pressable>
+  );
+}
+
+function GoogleConnected() {
+  return (
+    <View style={styles.googleConnected}>
+      <GoogleMark />
+      <Text style={styles.googleConnectedText}>Connected with Google — just finish your details below.</Text>
+    </View>
+  );
+}
+
+function OrDivider() {
+  return (
+    <View style={styles.orRow}>
+      <View style={styles.orLine} />
+      <Text style={styles.orText}>or continue with</Text>
+      <View style={styles.orLine} />
+    </View>
+  );
+}
+
+function GoogleMark() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24">
+      <Path fill="#4285F4" d="M23 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.2a5.3 5.3 0 0 1-2.3 3.5v2.9h3.7c2.2-2 3.4-5 3.4-8.6z" />
+      <Path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.8-2.9l-3.7-2.9c-1 .7-2.4 1.1-4.1 1.1-3.1 0-5.8-2.1-6.7-5H1.5v3C3.4 21.3 7.4 24 12 24z" />
+      <Path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6v-3H1.5a12 12 0 0 0 0 10.6l3.8-3z" />
+      <Path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4C17.9 1.2 15.2 0 12 0 7.4 0 3.4 2.7 1.5 6.7l3.8 3c.9-2.9 3.6-4.9 6.7-4.9z" />
+    </Svg>
+  );
+}
+
 /* ── Role illustrations ── */
 function StudentArt() {
   return (
@@ -728,4 +848,20 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   verifyBtnText: { color: "#fff", fontFamily: fonts.dmBold, fontSize: 11 },
+
+  btnGoogle: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9,
+    height: 50, borderRadius: 12, backgroundColor: "#fff",
+    borderWidth: 1, borderColor: navy15, marginTop: 18,
+  },
+  btnGoogleText: { color: "#1a1a1a", fontFamily: fonts.dmBold, fontSize: 14 },
+  orRow:  { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 18 },
+  orLine: { flex: 1, height: 1, backgroundColor: navy15 },
+  orText: { color: "#042e5c80", fontSize: 11, fontFamily: fonts.dm },
+  googleConnected: {
+    flexDirection: "row", alignItems: "center", gap: 10, marginTop: 18,
+    padding: 14, borderRadius: 12, backgroundColor: "#059F6D0d",
+    borderWidth: 1, borderColor: "#059F6D33",
+  },
+  googleConnectedText: { flex: 1, color: colors.navy, fontFamily: fonts.dm, fontSize: 12, lineHeight: 17 },
 });

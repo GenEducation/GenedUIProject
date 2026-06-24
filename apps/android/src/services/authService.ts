@@ -92,6 +92,33 @@ export async function googleSignIn(idToken: string): Promise<AuthTokenResponse> 
   return res.json();
 }
 
+/** POST /auth/google-sign-up  (ID token + role for a new Google account) */
+export async function googleSignUp(
+  idToken: string,
+  data: {
+    role:    "STUDENT" | "PARENT" | "PARTNER";
+    username?: string;
+    grade?:    number;
+    phone?:    string;
+  },
+): Promise<AuthTokenResponse> {
+  const body: Record<string, unknown> = {
+    token: idToken,
+    role:  data.role,
+  };
+  if (data.username)      body.username = data.username;
+  if (data.grade != null) body.grade    = Number(data.grade);
+  if (data.phone)         body.phone    = data.phone;
+
+  const res = await fetch(`${BASE}/auth/google-sign-up`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) await handleError(res, "Google sign-up failed.");
+  return res.json();
+}
+
 /** POST /auth/send-otp */
 export async function sendOtp(email: string): Promise<{ success: boolean; message: string }> {
   const res = await fetch(`${BASE}/auth/send-otp`, {
