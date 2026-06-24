@@ -42,6 +42,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
   const [scheduledDate, setScheduledDate] = useState(tomorrowDateString());
+  const [scheduledTime, setScheduledTime] = useState("");
   const [agentSubjects, setAgentSubjects] = useState<AgentSubject[]>([]);
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [bookedConfirmation, setBookedConfirmation] = useState(false);
@@ -104,6 +105,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
       subject,
       topic: topic || undefined,
       scheduled_date: scheduledDate,
+      scheduled_time: scheduledTime || undefined,
     }, parentId);
 
     if (result) {
@@ -150,7 +152,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
             ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Subject */}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest">Subject</label>
@@ -194,6 +196,17 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
                 value={scheduledDate}
                 min={tomorrowDateString()}
                 onChange={setScheduledDate}
+              />
+            </div>
+
+            {/* Time (optional) */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest">Start Time <span className="font-medium normal-case">(optional, IST)</span></label>
+              <input
+                type="time"
+                value={scheduledTime}
+                onChange={(e) => setScheduledTime(e.target.value)}
+                className="w-full bg-[#F4F3EE]/50 border border-[#1a3a2a]/5 rounded-2xl py-3.5 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1a3a2a]/10 focus:bg-white transition-all"
               />
             </div>
           </div>
@@ -302,6 +315,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
                         <div className="space-y-0.5">
                           <p className="text-xs font-bold text-[#1a3a2a]/60">
                             {new Date(s.scheduled_date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+                            {s.scheduled_time && <span className="ml-1.5 text-[#1a3a2a]/40">· {s.scheduled_time} IST</span>}
                           </p>
                           <p className="text-[10px] font-medium text-[#1a3a2a]/30 uppercase tracking-widest">
                             {progressLabel[s.status] ?? s.status}

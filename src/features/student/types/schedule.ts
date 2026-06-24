@@ -12,15 +12,18 @@ export interface ScheduleSessionRequest {
   subject: string;
   topic?: string;
   scheduled_date: string;
+  scheduled_time?: string; // "HH:MM" IST, optional
 }
 
 export interface ScheduleSessionResponse {
   id: string;
-  user_id: string;
+  student_id: string;
+  user_id?: string; // legacy alias
   session_type: SessionType;
   subject: string;
   topic: string | null;
   scheduled_date: string;
+  scheduled_time: string | null; // "HH:MM" IST
   preparation_status: PreparationStatus;
   status: SessionStatus;
   session_id: string | null;

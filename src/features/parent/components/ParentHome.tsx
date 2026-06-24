@@ -3,13 +3,13 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Users, 
-  Search, 
-  Link as LinkIcon, 
-  Plus, 
-  ChevronRight, 
-  BarChart2, 
+import {
+  Users,
+  Search,
+  Link as LinkIcon,
+  Plus,
+  ChevronRight,
+  BarChart2,
   Calendar,
   Settings,
   LogOut,
@@ -19,7 +19,8 @@ import {
   X,
   LayoutGrid,
   ChevronDown,
-  ScrollText
+  ScrollText,
+  Bell,
 } from "lucide-react";
 import { useParentStore } from "../store/useParentStore";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
@@ -28,6 +29,7 @@ import dynamic from "next/dynamic";
 import { ParentChatExploration } from "./ParentChatExploration";
 import { ParentProfileView } from "./ParentProfileView";
 import { ParentScheduleView } from "./ParentScheduleView";
+import { ParentMomentsView } from "./ParentMomentsView";
 import { NotificationBell } from "@/components/NotificationBell";
 
 // Lazy-loaded: both are large and only shown on specific tabs.
@@ -155,6 +157,9 @@ export function ParentHome() {
     } else if (parts.length >= 3 && parts[2] === 'schedule') {
       setSelectedStudentId(parts[1]);
       setDashboardView('schedule');
+    } else if (parts.length >= 3 && parts[2] === 'moments') {
+      setSelectedStudentId(parts[1]);
+      setDashboardView('moments');
     }
     // /parent alone: leave state as-is (store auto-selects first student)
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -292,6 +297,22 @@ export function ParentHome() {
                     >
                       <Calendar size={18} className={activeDashboardView === "schedule" ? "" : "group-hover:scale-110 transition-transform"} />
                       <span className="text-sm font-bold">Learning Schedule</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setDashboardView("moments");
+                        router.push(`/parent/${selectedStudentId}/moments`);
+                        if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                      }}
+                      className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 group ${
+                        activeDashboardView === "moments"
+                        ? "border-[#1a3a2a] bg-[#1a3a2a] text-white shadow-lg"
+                        : "border-dashed border-[#1a3a2a]/10 text-[#1a3a2a]/40 hover:border-[#1a3a2a]/30 hover:text-[#1a3a2a]/60"
+                      }`}
+                    >
+                      <Bell size={18} className={activeDashboardView === "moments" ? "" : "group-hover:scale-110 transition-transform"} />
+                      <span className="text-sm font-bold">Smart Alarms</span>
                     </button>
                   </div>
                 )}
@@ -447,6 +468,11 @@ export function ParentHome() {
                 <ParentScheduleView
                   studentId={selectedStudentId!}
                   parentId={parentProfile!.user_id}
+                  studentName={selectedStudent?.name}
+                />
+              ) : activeDashboardView === "moments" ? (
+                <ParentMomentsView
+                  studentId={selectedStudentId!}
                   studentName={selectedStudent?.name}
                 />
               ) : (
