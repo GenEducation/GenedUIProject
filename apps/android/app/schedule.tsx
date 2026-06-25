@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, CalendarClock, CheckCircle2, Clock, AlertTriangle, ArrowRight } from "lucide-react-native";
 import { PickerField, PickerSheet } from "@/components/PickerSheet";
+import { TimeField } from "@/components/TimeField";
 import { MonthCalendar } from "@/components/MonthCalendar";
 import { useSchedule } from "@/hooks/useSchedule";
 import { studentService } from "@/services/studentService";
@@ -50,6 +51,7 @@ export default function Schedule() {
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
   const [date, setDate] = useState(toISODate(nextDays(1)[0]));
+  const [scheduledTime, setScheduledTime] = useState("");
   const [booked, setBooked] = useState(false);
   const [pickerOpen, setPickerOpen] = useState<null | "subject" | "chapter">(null);
 
@@ -84,7 +86,7 @@ export default function Schedule() {
 
   const handleBook = async () => {
     setBooked(false);
-    const ok = await book({ session_type: sessionType, subject, topic: topic || undefined, scheduled_date: date });
+    const ok = await book({ session_type: sessionType, subject, topic: topic || undefined, scheduled_date: date, scheduled_time: scheduledTime || undefined });
     if (ok) {
       setBooked(true);
       setTimeout(() => setBooked(false), 4000);
@@ -157,6 +159,8 @@ export default function Schedule() {
                 <MonthCalendar value={date} onSelect={setDate} minDate={minDate} />
               </View>
 
+              <TimeField label="Start Time (optional, IST)" value={scheduledTime} onChange={setScheduledTime} />
+
               {bookError ? <Banner tone="error" text={bookError} /> : null}
               {booked ? <Banner tone="success" text="Scheduled! It’ll be prepared the night before." /> : null}
 
@@ -227,6 +231,7 @@ function SessionCard({ session, onStart, onReschedule }: { session: ScheduleSess
       <View style={styles.sessBottom}>
         <Text style={styles.sessDate}>
           {new Date(session.scheduled_date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+          {session.scheduled_time ? ` · ${session.scheduled_time} IST` : ""}
         </Text>
         {isFailed ? (
           <Pressable onPress={onReschedule} style={styles.ghostBtn}><Text style={styles.ghostText}>Reschedule</Text></Pressable>

@@ -164,16 +164,16 @@ export default function VoiceChatScreen() {
           )}
         </ScrollView>
 
-        {/* Voice Orb */}
-        <View style={styles.orbSection}>
-          <VoiceOrb
-            phase={orbPhase}
-            caption={caption}
-            onTap={handleOrbTap}
-            onPressIn={voiceStatus === "active" && isMuted ? handleOrbPressIn : undefined}
-            onPressOut={pttHeld ? handleOrbPressOut : undefined}
-          />
-        </View>
+        {/* Voice Orb — only shown before the session is active */}
+        {voiceStatus !== "active" && (
+          <View style={styles.orbSection}>
+            <VoiceOrb
+              phase={orbPhase}
+              caption={caption}
+              onTap={handleOrbTap}
+            />
+          </View>
+        )}
 
         {/* Controls — only visible during active session */}
         {voiceStatus === "active" && (

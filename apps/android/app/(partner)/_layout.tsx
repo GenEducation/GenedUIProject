@@ -1,9 +1,13 @@
 import React from "react";
 import { Text } from "react-native";
 import { Tabs } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts } from "@/theme/tokens";
 
 export default function PartnerLayout() {
+  const insets = useSafeAreaInsets();
+  // Floor the bottom inset — some Android devices report 0, hiding the bar under the nav.
+  const tabInset = Math.max(insets.bottom, 40);
   return (
     <Tabs
       screenOptions={{
@@ -11,8 +15,8 @@ export default function PartnerLayout() {
         tabBarActiveTintColor: colors.edGreen,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
-          height: 64,
-          paddingBottom: 8,
+          height: 64 + tabInset,
+          paddingBottom: 8 + tabInset,
           paddingTop: 8,
           borderTopColor: colors.border,
           backgroundColor: "#fff",

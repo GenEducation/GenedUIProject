@@ -1,12 +1,16 @@
 import React from "react";
 import { View, Text } from "react-native";
 import { Tabs } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts } from "@/theme/tokens";
 import { useTeacherStore } from "@/store/useTeacherStore";
 
 export default function TeacherLayout() {
   const { overview } = useTeacherStore();
   const pendingCount = overview?.pending ?? 0;
+  const insets = useSafeAreaInsets();
+  // Floor the bottom inset — some Android devices report 0, hiding the bar under the nav.
+  const tabInset = Math.max(insets.bottom, 40);
 
   return (
     <Tabs
@@ -15,8 +19,8 @@ export default function TeacherLayout() {
         tabBarActiveTintColor: colors.emerald,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
-          height: 64,
-          paddingBottom: 8,
+          height: 64 + tabInset,
+          paddingBottom: 8 + tabInset,
           paddingTop: 8,
           borderTopColor: colors.border,
           backgroundColor: "#fff",

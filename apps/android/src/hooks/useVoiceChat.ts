@@ -318,7 +318,8 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
     if (!userId) return;
     setVoiceStatus("connecting");
     // Continuous mode = always listening (unmuted); PTT = start muted, hold to talk.
-    setIsMuted(prefsStore.get().listenMode === "ptt");
+    const initialMuted = prefsStore.get().listenMode === "ptt";
+    setIsMuted(initialMuted);
     setPttHeld(false);
 
     try {
@@ -334,6 +335,11 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
         options.grade,
         handleConnectionQuality,
       );
+      // voiceService.startSession() initializes the mic muted. Without syncing it here,
+      // continuous mode stays silently muted at the service level (UI shows "listening"
+      // but no audio is sent) until the user manually toggles mute. The half-duplex echo
+      // guard still prevents the AI from hearing itself while it speaks.
+      await voiceService.setMuted(initialMuted);
     } catch (err) {
       setVoiceStatus("error");
       setMessages((prev) => {

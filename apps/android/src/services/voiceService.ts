@@ -63,6 +63,16 @@ class VoiceService {
   // progressive jitter over long sessions.
   private activeSources = new Set<AudioBufferSourceNode>();
 
+  // Half-duplex echo guard: there is no acoustic echo cancellation in the native
+  // audio path (unlike the web build, which gets AEC3 for free via getUserMedia's
+  // echoCancellation:true). So while the AI is audibly playing, we suppress the mic
+  // uplink — otherwise the AI's own speaker output is captured and transcribed back
+  // as a user turn ("talks to itself"). lastIncomingAudioAt is the wall-clock time of
+  // the most recent AI audio frame; the hangover keeps the mic gated briefly after
+  // playback ends to cover the speaker's decay tail.
+  private lastIncomingAudioAt = 0;
+  private readonly PLAYBACK_HANGOVER_MS = 600;
+
   // Typewriter sync
   private pendingAssistantText = "";
   private revealedAssistantText = "";
@@ -137,6 +147,7 @@ class VoiceService {
       channels: 1,
       bitsPerSample: 16,
       bufferSize: 4096,
+      audioSource: 7, // VOICE_COMMUNICATION — enables hardware AEC/NS/AGC on Android
     });
 
     this.audioSubscription = DeviceEventEmitter.addListener("data", (base64Data: string) => {
@@ -148,8 +159,9 @@ class VoiceService {
 
       const pcmBuffer = this.decodeBase64(base64Data);
 
-      if (this.isMuted) {
-        // Send silence of same length (keeps backend VAD timing)
+      if (this.isMuted || this.isAiAudioPlaying()) {
+        // Send silence of same length — keeps backend VAD timing, and (when the AI is
+        // speaking) stops the AI from transcribing its own speaker output as a user turn.
         this.ws!.send(new ArrayBuffer(pcmBuffer.byteLength));
       } else {
         this.ws!.send(pcmBuffer);
@@ -204,6 +216,7 @@ class VoiceService {
     this.isBuffering = true;
     this.bufferQueue = [];
     this.nextStartTime = 0;
+    this.lastIncomingAudioAt = 0;
     this.starvationTimes = [];
     this.onEventCallback = null;
     this.onTextRevealCallback = null;
@@ -334,8 +347,19 @@ class VoiceService {
     this.activeSources.clear();
   }
 
+  /** True while the AI's audio is queued/playing (plus a short hangover tail). */
+  private isAiAudioPlaying(): boolean {
+    if (!this.audioCtx) return false;
+    const scheduledAhead = this.nextStartTime > this.audioCtx.currentTime + 0.02;
+    const recentFrame = Date.now() - this.lastIncomingAudioAt < this.PLAYBACK_HANGOVER_MS;
+    return scheduledAhead || recentFrame || this.bufferQueue.length > 0;
+  }
+
   private handleIncomingAudio(buffer: ArrayBuffer) {
     if (!this.isSessionActive || !this.audioCtx) return;
+
+    // Stamp the arrival of AI audio so the half-duplex guard knows the AI is speaking.
+    this.lastIncomingAudioAt = Date.now();
 
     const currentTime = this.audioCtx.currentTime;
 

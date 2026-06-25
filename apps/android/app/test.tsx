@@ -173,7 +173,7 @@ export default function TestRunner() {
   const progressPct = totalQuestions ? (answeredCount / totalQuestions) * 100 : 0;
 
   return (
-    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <View style={{ paddingTop: insets.top, flex: 1 }}>
 
         {/* Header */}

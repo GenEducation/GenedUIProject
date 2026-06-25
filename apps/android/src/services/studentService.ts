@@ -403,6 +403,44 @@ export const studentService = {
     return res.json();
   },
 
+  // ── Report-card aggregation (mirrors the web report card's per-subject fetches) ──
+
+  fetchSkillTree: async (studentId: string, subject: string): Promise<any[]> => {
+    const res = await authFetch(
+      `${BASE}/students/${studentId}/skill-tree?subject=${encodeURIComponent(subject)}`,
+      { headers: { accept: "application/json" } }
+    );
+    return res.json();
+  },
+
+  fetchEnglishSkillsSummary: async (studentId: string): Promise<any | null> => {
+    const res = await authFetch(
+      `${BASE}/students/${studentId}/english-skills-summary`,
+      { headers: { accept: "application/json" } }
+    );
+    return res.json();
+  },
+
+  fetchSubjectEvolution: async (studentId: string, subject: string): Promise<any | null> => {
+    const res = await authFetch(
+      `${BASE}/students/${studentId}/subject-evolution-analysis?subject=${encodeURIComponent(subject)}`,
+      { headers: { accept: "application/json" } }
+    );
+    return res.json();
+  },
+
+  fetchChapterEvolution: async (
+    studentId: string,
+    subject: string,
+    documentTitle: string
+  ): Promise<any | null> => {
+    const res = await authFetch(
+      `${BASE}/students/${studentId}/evolution-analysis?subject=${encodeURIComponent(subject)}&document_title=${encodeURIComponent(documentTitle)}`,
+      { headers: { accept: "application/json" } }
+    );
+    return res.json();
+  },
+
   // ── Language Preferences ────────────────────────────────────────────────────
 
   fetchLanguagePreferences: async (studentId: string): Promise<LanguagePreferences> => {

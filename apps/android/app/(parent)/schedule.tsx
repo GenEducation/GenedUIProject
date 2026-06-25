@@ -2,7 +2,7 @@
  * Schedule tab — book TEST or LEARNING sessions for the selected child and
  * view their upcoming sessions. Header has child switcher + notification bell.
  */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,8 @@ import { EmptyState } from "@/components/EmptyState";
 import { ChildSwitcherSheet } from "@/components/parent/ChildSwitcherSheet";
 import { NotificationBell } from "@/components/parent/NotificationBell";
 import { PickerField, PickerSheet } from "@/components/PickerSheet";
+import { TimeField } from "@/components/TimeField";
+import { ParentMomentsManager } from "@/components/parent/ParentMomentsManager";
 import { MonthCalendar } from "@/components/MonthCalendar";
 import { useLinkedChildren } from "@/hooks/useLinkedChildren";
 import { useParentId } from "@/hooks/useParentId";
@@ -50,6 +52,7 @@ export default function ParentSchedule() {
   const { approvedChildren, loading: childrenLoading } = useLinkedChildren();
   const { selectedChildId } = useParentStore();
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [tab, setTab] = useState<"sessions" | "wakeups">("sessions");
 
   const selectedChild = useMemo(
     () => approvedChildren.find((c) => c.id === selectedChildId) ?? approvedChildren[0] ?? null,
@@ -66,6 +69,7 @@ export default function ParentSchedule() {
     d.setDate(d.getDate() + 1);
     return toISODate(d);
   });
+  const [scheduledTime, setScheduledTime] = useState("");
   const [pickerOpen, setPickerOpen]   = useState<null | "subject" | "chapter">(null);
   const [booking, setBooking]         = useState(false);
   const [bookError, setBookError]     = useState<string | null>(null);
@@ -136,6 +140,7 @@ export default function ParentSchedule() {
         subject,
         topic: topic || undefined,
         scheduled_date: date,
+        scheduled_time: scheduledTime || undefined,
       });
       await loadSessions();
       setBooked(true);
@@ -183,6 +188,21 @@ export default function ParentSchedule() {
         <NotificationBell userId={parentId} />
       </View>
 
+      {/* Sessions | Wake-Ups toggle */}
+      <View style={[s.segment, { marginHorizontal: 16, marginBottom: 4 }]}>
+        {([["sessions", "Sessions"], ["wakeups", "Wake-Ups"]] as const).map(([key, label]) => {
+          const active = tab === key;
+          return (
+            <Pressable key={key} onPress={() => setTab(key)} style={[s.segBtn, active && s.segBtnActive]}>
+              <Text style={[s.segText, active && s.segTextActive]}>{label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {tab === "wakeups" ? (
+        selectedChild ? <ParentMomentsManager studentId={selectedChild.id} /> : null
+      ) : (
       <FlatList
         data={sorted}
         keyExtractor={(item) => item.id}
@@ -234,6 +254,8 @@ export default function ParentSchedule() {
                 <MonthCalendar value={date} onSelect={setDate} minDate={minDate} />
               </View>
 
+              <TimeField label="Start Time (optional, IST)" value={scheduledTime} onChange={setScheduledTime} />
+
               {bookError ? <Banner tone="error" text={bookError} /> : null}
               {booked ? <Banner tone="success" text="Scheduled! It'll be prepared the night before." /> : null}
 
@@ -267,6 +289,7 @@ export default function ParentSchedule() {
           )
         }
       />
+      )}
 
       <PickerSheet
         visible={pickerOpen === "subject"}
@@ -323,6 +346,7 @@ function SessionCard({ session }: { session: ScheduleSessionResponse }) {
         {new Date(session.scheduled_date).toLocaleDateString(undefined, {
           weekday: "short", month: "short", day: "numeric",
         })}
+        {session.scheduled_time ? ` · ${session.scheduled_time} IST` : ""}
       </Text>
     </View>
   );

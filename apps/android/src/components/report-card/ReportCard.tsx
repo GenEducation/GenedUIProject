@@ -8,7 +8,31 @@
  */
 import React from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
+import Markdown from "react-native-markdown-display";
 import { colors, fonts } from "@/theme/tokens";
+
+// ── Markdown renderer ──────────────────────────────────────────────────────────
+// AI report fields (chapter_report, section bodies, evolution analyses) come back
+// as markdown (####, ###, **bold**, - bullets). Render them instead of dumping raw.
+const mdStyle: any = {
+  body:        { fontFamily: fonts.dm, fontSize: 13, color: colors.ink2, lineHeight: 21 },
+  heading1:    { fontFamily: fonts.serif, fontSize: 19, color: colors.ink, marginTop: 12, marginBottom: 6 },
+  heading2:    { fontFamily: fonts.serif, fontSize: 17, color: colors.ink, marginTop: 12, marginBottom: 5 },
+  heading3:    { fontFamily: fonts.serif, fontSize: 15, color: colors.ink, marginTop: 10, marginBottom: 4 },
+  heading4:    { fontFamily: fonts.dmBold, fontSize: 12.5, color: colors.ink, marginTop: 8, marginBottom: 2, letterSpacing: 0.3 },
+  strong:      { fontFamily: fonts.dmBold, color: colors.ink },
+  em:          { fontFamily: fonts.dm, fontStyle: "italic" },
+  paragraph:   { marginTop: 0, marginBottom: 8 },
+  bullet_list: { marginVertical: 2 },
+  ordered_list:{ marginVertical: 2 },
+  list_item:   { marginVertical: 1 },
+  hr:          { backgroundColor: colors.border, height: 1, marginVertical: 8 },
+  code_inline: { fontFamily: fonts.mono, fontSize: 12, backgroundColor: colors.pageBg },
+};
+
+function Md({ children }: { children: string }) {
+  return <Markdown style={mdStyle}>{children}</Markdown>;
+}
 
 // ── Normalised data shape ─────────────────────────────────────────────────────
 
@@ -339,7 +363,7 @@ export function ReportCard({ data, refreshControl }: Props) {
                 </View>
                 {c.chapter_report ? (
                   <View style={r.chapReport}>
-                    <Text style={r.chapReportText}>{c.chapter_report}</Text>
+                    <Md>{c.chapter_report}</Md>
                   </View>
                 ) : null}
               </View>
@@ -483,7 +507,7 @@ export function ReportCard({ data, refreshControl }: Props) {
       {/* ── NARRATIVE SECTIONS (student report) ── */}
       {sections.map((sec) => (
         <SectionCard key={sec.title} n={nextN()} title={sec.title} sub="">
-          <Text style={r.p}>{sec.body}</Text>
+          <Md>{sec.body}</Md>
         </SectionCard>
       ))}
 
