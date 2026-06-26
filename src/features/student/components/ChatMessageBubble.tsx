@@ -9,6 +9,7 @@ import { MarkdownRenderer } from "./MarkdownRenderer";
 import { useSmoothStream } from "@/hooks/useSmoothStream";
 import { ActivityRenderer } from "./ActivityRenderer";
 import { MessageElements } from "./MessageElements";
+import { ChapterOptionPicker } from "./ChapterOptionPicker";
 
 // ── Web Speech API TTS hook ───────────────────────────────────────────────────
 type SpeakState = "idle" | "loading" | "speaking";
@@ -233,19 +234,10 @@ export const ChatMessageBubble = React.memo(
             <div className="space-y-3 w-full px-1">
               {/* Option chips */}
               {message.options && message.options.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {message.options.map((opt) => (
-                    <button
-                      key={opt}
-                      onClick={() => onOptionSelect?.(opt)}
-                      style={{ fontSize: "clamp(11px, 2.5vw, 13px)", fontWeight: 700, color: "#5B4DC7", background: "#FFFFFF", border: "1.5px solid #5B4DC720", borderRadius: 20, padding: "5px clamp(10px, 2.5vw, 14px)", cursor: "pointer", transition: "all 0.2s", fontFamily: "'DM Sans', sans-serif" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#5B4DC7"; (e.currentTarget as HTMLButtonElement).style.color = "#FFFFFF"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#FFFFFF"; (e.currentTarget as HTMLButtonElement).style.color = "#5B4DC7"; }}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
+                <ChapterOptionPicker
+                  options={message.options}
+                  onSelect={(opt) => onOptionSelect?.(opt)}
+                />
               )}
 
               {/* Feedback row — clipboard + read aloud */}

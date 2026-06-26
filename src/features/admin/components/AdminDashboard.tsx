@@ -90,15 +90,15 @@ export function AdminDashboard() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0E1F2B] text-white">
+    <div className="flex h-screen overflow-hidden bg-[#0E1F2B] text-white">
       {/* Sidebar */}
-      <aside className="w-64 shrink-0 border-r border-white/10 bg-white/[0.02] flex flex-col">
-        <div className="flex items-center gap-2.5 px-6 h-16 border-b border-white/10">
-          <ShieldCheck className="h-6 w-6 text-[#059F6D]" />
-          <span className="font-bold tracking-tight">GenEd Admin</span>
+      <aside className="w-20 lg:w-64 shrink-0 border-r border-white/10 bg-white/[0.02] flex flex-col transition-all duration-300">
+        <div className="flex items-center justify-center lg:justify-start gap-2.5 px-3 lg:px-6 h-16 border-b border-white/10">
+          <ShieldCheck className="h-6 w-6 text-[#059F6D] shrink-0" />
+          <span className="hidden lg:inline font-bold tracking-tight">GenEd Admin</span>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
           {NAV.map((item) => {
             const active =
               pathname === item.href ||
@@ -108,14 +108,16 @@ export function AdminDashboard() {
               <button
                 key={item.href}
                 onClick={() => router.push(item.href)}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                title={item.label}
+                aria-current={active ? "page" : undefined}
+                className={`flex w-full items-center justify-center lg:justify-start gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   active
                     ? "bg-[#059F6D]/15 text-[#059F6D]"
                     : "text-white/55 hover:bg-white/5 hover:text-white"
                 }`}
               >
                 <Icon size={18} />
-                {item.label}
+                <span className="hidden lg:block truncate">{item.label}</span>
               </button>
             );
           })}
@@ -123,10 +125,11 @@ export function AdminDashboard() {
 
         <button
           onClick={handleLogout}
-          className="m-3 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/55 hover:bg-rose-500/10 hover:text-rose-300 transition-colors"
+          title="Sign out"
+          className="m-3 flex items-center justify-center lg:justify-start gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/55 hover:bg-rose-500/10 hover:text-rose-300 transition-colors"
         >
-          <LogOut size={18} />
-          Sign out
+          <LogOut size={18} className="shrink-0" />
+          <span className="hidden lg:block">Sign out</span>
         </button>
       </aside>
 
