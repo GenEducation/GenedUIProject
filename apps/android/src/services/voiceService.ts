@@ -13,6 +13,7 @@ import {
 import LiveAudioStream from "react-native-live-audio-stream";
 import { DeviceEventEmitter } from "react-native";
 import { getToken } from "./storage";
+import { isHardwareAECAvailable } from "./aecManager";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -63,15 +64,14 @@ class VoiceService {
   // progressive jitter over long sessions.
   private activeSources = new Set<AudioBufferSourceNode>();
 
-  // Half-duplex echo guard: there is no acoustic echo cancellation in the native
-  // audio path (unlike the web build, which gets AEC3 for free via getUserMedia's
-  // echoCancellation:true). So while the AI is audibly playing, we suppress the mic
-  // uplink — otherwise the AI's own speaker output is captured and transcribed back
-  // as a user turn ("talks to itself"). lastIncomingAudioAt is the wall-clock time of
-  // the most recent AI audio frame; the hangover keeps the mic gated briefly after
-  // playback ends to cover the speaker's decay tail.
-  private lastIncomingAudioAt = 0;
-  private readonly PLAYBACK_HANGOVER_MS = 600;
+  // aiSpeaking tracks whether the AI is currently outputting audio, driven by server
+  // events (turn_complete) rather than audioCtx.currentTime. Used for UI state only —
+  // the mic is never gated here; hardware AEC (attached via library patch) and Gemini's
+  // server-side noise filter handle echo suppression in true full-duplex.
+  private aiSpeaking = false;
+  private aiHangoverTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly AI_HANGOVER_MS = 1500;
+  private hardwareAECEnabled = false;
 
   // Typewriter sync
   private pendingAssistantText = "";
@@ -141,34 +141,42 @@ class VoiceService {
     await this.audioCtx.resume();
     this.nextStartTime = this.audioCtx.currentTime;
 
-    // Start microphone via react-native-live-audio-stream (reliable PCM16 on Android)
+    // Start microphone via react-native-live-audio-stream (reliable PCM16 on Android).
+    // audioSource 7 = VOICE_COMMUNICATION. The library patch (patches/) also explicitly
+    // attaches AcousticEchoCanceler/NoiseSuppressor/AutomaticGainControl to the
+    // AudioRecord session, enabling hardware AEC where available.
     LiveAudioStream.init({
       sampleRate: 16000,
       channels: 1,
       bitsPerSample: 16,
       bufferSize: 4096,
-      audioSource: 7, // VOICE_COMMUNICATION — enables hardware AEC/NS/AGC on Android
+      audioSource: 7,
     });
+    LiveAudioStream.start();
+
+    // Query hardware AEC availability AFTER init so the AudioRecord exists.
+    // Full-duplex: send real mic audio while AI speaks (hardware AEC cancels echo).
+    // Half-duplex fallback: send silence while AI speaks on devices without AEC.
+    this.hardwareAECEnabled = await isHardwareAECAvailable();
+    console.log(`[VoiceService] Hardware AEC: ${this.hardwareAECEnabled}`);
 
     this.audioSubscription = DeviceEventEmitter.addListener("data", (base64Data: string) => {
-      // Block all binary until init has been sent on the current socket, otherwise
-      // the backend's first receive_json() gets binary and crashes the connection.
       if (!this.isSessionActive || this.ws?.readyState !== WebSocket.OPEN || !this.audioReadyToSend) {
         return;
       }
 
       const pcmBuffer = this.decodeBase64(base64Data);
 
-      if (this.isMuted || this.isAiAudioPlaying()) {
-        // Send silence of same length — keeps backend VAD timing, and (when the AI is
-        // speaking) stops the AI from transcribing its own speaker output as a user turn.
+      if (this.isMuted) {
+        // User-controlled mute: always silence.
         this.ws!.send(new ArrayBuffer(pcmBuffer.byteLength));
       } else {
+        // Full-duplex: always send real audio. Hardware AEC (attached to AudioRecord via
+        // library patch) cancels speaker echo at the DSP level; Gemini's server-side VAD
+        // and noise filter handle any residual echo.
         this.ws!.send(pcmBuffer);
       }
     });
-
-    LiveAudioStream.start();
     this.isRecording = true;
 
     const connId = Math.random().toString(36).substring(7);
@@ -216,7 +224,8 @@ class VoiceService {
     this.isBuffering = true;
     this.bufferQueue = [];
     this.nextStartTime = 0;
-    this.lastIncomingAudioAt = 0;
+    this.aiSpeaking = false;
+    if (this.aiHangoverTimer) { clearTimeout(this.aiHangoverTimer); this.aiHangoverTimer = null; }
     this.starvationTimes = [];
     this.onEventCallback = null;
     this.onTextRevealCallback = null;
@@ -225,6 +234,15 @@ class VoiceService {
 
   async setMuted(muted: boolean) {
     this.isMuted = muted;
+  }
+
+  sendInterrupt() {
+    // User barged in — open mic immediately without waiting for hangover to expire.
+    this.aiSpeaking = false;
+    if (this.aiHangoverTimer) { clearTimeout(this.aiHangoverTimer); this.aiHangoverTimer = null; }
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "interrupt" }));
+    }
   }
 
   getSessionId() { return this.currentSessionId; }
@@ -256,6 +274,8 @@ class VoiceService {
       this.isBuffering = true;
       this.bufferQueue = [];
       if (this.audioCtx) this.nextStartTime = this.audioCtx.currentTime;
+      this.aiSpeaking = false;
+      if (this.aiHangoverTimer) { clearTimeout(this.aiHangoverTimer); this.aiHangoverTimer = null; }
       this.sendInitMessage();
       this.onEventCallback?.({ type: "connected" });
       if (wasReconnecting) this.onConnectionQualityCallback?.("good");
@@ -281,6 +301,17 @@ class VoiceService {
             } else {
               this.pendingAssistantText += (this.pendingAssistantText ? " " : "") + data.content;
             }
+          }
+
+          if (data.type === "turn_complete") {
+            // AI finished generating. Start hangover: keep mic gated for AI_HANGOVER_MS to
+            // cover in-flight network frames, Android hardware buffer drain, and echo tail.
+            // Cancelled if a new audio frame arrives (back-to-back turns stay gated).
+            if (this.aiHangoverTimer) clearTimeout(this.aiHangoverTimer);
+            this.aiHangoverTimer = setTimeout(() => {
+              this.aiSpeaking = false;
+              this.aiHangoverTimer = null;
+            }, this.AI_HANGOVER_MS);
           }
 
           this.onEventCallback?.(data);
@@ -347,19 +378,13 @@ class VoiceService {
     this.activeSources.clear();
   }
 
-  /** True while the AI's audio is queued/playing (plus a short hangover tail). */
-  private isAiAudioPlaying(): boolean {
-    if (!this.audioCtx) return false;
-    const scheduledAhead = this.nextStartTime > this.audioCtx.currentTime + 0.02;
-    const recentFrame = Date.now() - this.lastIncomingAudioAt < this.PLAYBACK_HANGOVER_MS;
-    return scheduledAhead || recentFrame || this.bufferQueue.length > 0;
-  }
-
   private handleIncomingAudio(buffer: ArrayBuffer) {
     if (!this.isSessionActive || !this.audioCtx) return;
 
-    // Stamp the arrival of AI audio so the half-duplex guard knows the AI is speaking.
-    this.lastIncomingAudioAt = Date.now();
+    // Mark AI as speaking and cancel any pending hangover — new audio means the turn
+    // isn't over yet, so back-to-back turns don't accidentally open the mic early.
+    this.aiSpeaking = true;
+    if (this.aiHangoverTimer) { clearTimeout(this.aiHangoverTimer); this.aiHangoverTimer = null; }
 
     const currentTime = this.audioCtx.currentTime;
 

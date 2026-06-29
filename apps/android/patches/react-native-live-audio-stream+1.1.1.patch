@@ -1,0 +1,39 @@
+diff --git a/node_modules/react-native-live-audio-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java b/node_modules/react-native-live-audio-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
+index 1234567..abcdef0 100644
+--- a/node_modules/react-native-live-audio-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
++++ b/node_modules/react-native-live-audio-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
+@@ -1,9 +1,13 @@
+ package com.imxiqi.rnliveaudiostream;
+
+ import android.media.AudioFormat;
+ import android.media.AudioRecord;
+ import android.media.MediaRecorder.AudioSource;
++import android.media.audiofx.AcousticEchoCanceler;
++import android.media.audiofx.AutomaticGainControl;
++import android.media.audiofx.NoiseSuppressor;
+ import android.util.Base64;
+ import android.util.Log;
+
+ import com.facebook.react.bridge.Promise;
+ import com.facebook.react.bridge.ReactApplicationContext;
+@@ -73,6 +77,21 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+
+         int recordingBufferSize = bufferSize * 3;
+         recorder = new AudioRecord(audioSource, sampleRateInHz, channelConfig, audioFormat, recordingBufferSize);
++
++        int sessionId = recorder.getAudioSessionId();
++        if (AcousticEchoCanceler.isAvailable()) {
++            AcousticEchoCanceler aec = AcousticEchoCanceler.create(sessionId);
++            if (aec != null) aec.setEnabled(true);
++        }
++        if (NoiseSuppressor.isAvailable()) {
++            NoiseSuppressor ns = NoiseSuppressor.create(sessionId);
++            if (ns != null) ns.setEnabled(true);
++        }
++        if (AutomaticGainControl.isAvailable()) {
++            AutomaticGainControl agc = AutomaticGainControl.create(sessionId);
++            if (agc != null) agc.setEnabled(true);
++        }
+     }
+
+     @ReactMethod
