@@ -19,6 +19,7 @@ export default function SignIn() {
 
   const [username,      setUsername]      = useState("");
   const [password,      setPassword]      = useState("");
+  const [showPassword,  setShowPassword]  = useState(false);
   const [loading,       setLoading]       = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg,      setErrorMsg]      = useState("");
@@ -94,7 +95,7 @@ export default function SignIn() {
 
         <View style={{ marginTop: 22 }}>
           <Field icon="user" placeholder="Username" value={username} onChange={setUsername} />
-          <Field icon="lock" placeholder="Password"  value={password} onChange={setPassword} secure />
+          <Field icon="lock" placeholder="Password"  value={password} onChange={setPassword} secure={!showPassword} showToggle toggleOn={showPassword} onToggle={() => setShowPassword((p) => !p)} />
 
           {!!errorMsg && <Text style={styles.error}>{errorMsg}</Text>}
 
@@ -144,6 +145,7 @@ export default function SignIn() {
 
 function Field({
   icon, placeholder, value, onChange, secure, keyboardType,
+  showToggle, toggleOn, onToggle,
 }: {
   icon: "user" | "mail" | "lock";
   placeholder: string;
@@ -151,6 +153,9 @@ function Field({
   onChange: (v: string) => void;
   secure?: boolean;
   keyboardType?: "email-address";
+  showToggle?: boolean;
+  toggleOn?: boolean;
+  onToggle?: () => void;
 }) {
   return (
     <View style={styles.field}>
@@ -183,7 +188,30 @@ function Field({
         autoCapitalize="none"
         autoCorrect={false}
       />
+      {showToggle && (
+        <Pressable onPress={onToggle} hitSlop={10} accessibilityRole="button" accessibilityLabel={toggleOn ? "Hide password" : "Show password"}>
+          <EyeIcon off={!toggleOn} />
+        </Pressable>
+      )}
     </View>
+  );
+}
+
+function EyeIcon({ off }: { off: boolean }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      {off ? (
+        <>
+          <Path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07A3 3 0 1 1 9.88 9.88" stroke="#9fb8d6" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+          <Path d="M6.61 6.61A18.5 18.5 0 0 0 2 12s3 8 10 8a9.12 9.12 0 0 0 5.39-1.61M2 2l20 20" stroke="#9fb8d6" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      ) : (
+        <>
+          <Path d="M2 12s3-8 10-8 10 8 10 8-3 8-10 8-10-8-10-8z" stroke="#9fb8d6" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+          <Path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="#9fb8d6" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      )}
+    </Svg>
   );
 }
 

@@ -43,7 +43,8 @@
       "expo-secure-store",
       "expo-audio",
       "react-native-audio-api",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      "./plugins/withVoiceEngine"
     ],
     "experiments": {
       "typedRoutes": true

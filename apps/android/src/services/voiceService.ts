@@ -1,19 +1,27 @@
 /**
  * VoiceService — real-time bidirectional audio over WebSocket.
  *
- *   INPUT:  react-native-live-audio-stream → 16kHz mono PCM16 (base64) → ws.send(binary)
- *   OUTPUT: ws binary → Int16 → Float32 → AudioContext.createBuffer →
- *           AudioBufferSourceNode.start(scheduledTime)  [gapless jitter buffer]
+ *   INPUT:  VoiceAudioEngine (native, AEC3-cleaned 16kHz mono PCM16, base64) → ws.send(binary)
+ *   OUTPUT: ws binary (24kHz PCM16) → VoiceAudioEngine.pushFarend (native gapless playback
+ *           + AEC3 reference)
+ *
+ * Mic capture and speaker playback are owned by a single native module (VoiceAudioEngine)
+ * so the WebRTC AudioProcessingModule (AEC3) sees the near-end and far-end signals
+ * time-aligned and cancels the AI's voice from the mic on every device — independent of
+ * whether the hardware HAL exposes AcousticEchoCanceler. This enables true full-duplex.
  */
-import {
-  AudioContext,
-  AudioManager,
-  type AudioBufferSourceNode,
-} from "react-native-audio-api";
-import LiveAudioStream from "react-native-live-audio-stream";
-import { DeviceEventEmitter } from "react-native";
+import { AudioManager } from "react-native-audio-api";
+import { DeviceEventEmitter, NativeModules } from "react-native";
 import { getToken } from "./storage";
-import { isHardwareAECAvailable } from "./aecManager";
+
+const { VoiceAudioEngine } = NativeModules as {
+  VoiceAudioEngine: {
+    start(): Promise<boolean>;
+    stop(): Promise<boolean>;
+    pushFarend(base64: string): void;
+    flush(): void;
+  };
+};
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,7 +52,7 @@ class VoiceService {
   private onTextRevealCallback: TextRevealCallback | null = null;
   private onConnectionQualityCallback: QualityCallback | null = null;
 
-  // Microphone (react-native-live-audio-stream)
+  // Microphone (native VoiceAudioEngine "data" event — AEC3-cleaned PCM16)
   private audioSubscription: any = null;
   private isMuted = true;
   private isRecording = false;
@@ -53,25 +61,12 @@ class VoiceService {
   // been sent on the current socket, or the backend crashes with KeyError: 'text'.
   private audioReadyToSend = false;
 
-  // Playback (Web Audio API — mirrors web jitter buffer exactly)
-  private audioCtx: AudioContext | null = null;
-  private nextStartTime = 0;
-  private bufferQueue: ArrayBuffer[] = [];
-  private isBuffering = true;
-  private readonly TARGET_BUFFER_SIZE = 6;
-  // Finished playback nodes must be disconnected explicitly — RN's native audio
-  // graph does not GC them like browsers do, so they accumulate and cause
-  // progressive jitter over long sessions.
-  private activeSources = new Set<AudioBufferSourceNode>();
-
   // aiSpeaking tracks whether the AI is currently outputting audio, driven by server
-  // events (turn_complete) rather than audioCtx.currentTime. Used for UI state only —
-  // the mic is never gated here; hardware AEC (attached via library patch) and Gemini's
-  // server-side noise filter handle echo suppression in true full-duplex.
+  // events (turn_complete) rather than a playback clock. With AEC3 the mic is never gated
+  // on it — this is UI state only (orb animation, interrupt affordance).
   private aiSpeaking = false;
   private aiHangoverTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly AI_HANGOVER_MS = 1500;
-  private hardwareAECEnabled = false;
 
   // Typewriter sync
   private pendingAssistantText = "";
@@ -82,9 +77,6 @@ class VoiceService {
   private retryCount = 0;
   private readonly MAX_RETRIES = 5;
   private currentConnectionId: string | null = null;
-
-  // Connection quality
-  private starvationTimes: number[] = [];
 
   // ── Public API ────────────────────────────────────────────────────────────
 
@@ -116,7 +108,6 @@ class VoiceService {
     this.isSessionActive = true;
     this.isMuted = true;
     this.retryCount = 0;
-    this.starvationTimes = [];
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
 
@@ -128,53 +119,48 @@ class VoiceService {
       return;
     }
 
-    // Set audio session (iOS routing; on Android forces speaker output)
+    // Voice-communication routing (forces speaker output on Android, AEC-friendly mode).
     AudioManager.setAudioSessionOptions({
       iosCategory: "playAndRecord",
       iosMode: "voiceChat",
       iosOptions: ["defaultToSpeaker", "allowBluetoothHFP"],
     });
 
-    // Create AudioContext for 24kHz playback (matches backend output).
-    // Must call resume() — AudioContext starts suspended per Web Audio API spec.
-    this.audioCtx = new AudioContext({ sampleRate: 24000 });
-    await this.audioCtx.resume();
-    this.nextStartTime = this.audioCtx.currentTime;
-
-    // Start microphone via react-native-live-audio-stream (reliable PCM16 on Android).
-    // audioSource 7 = VOICE_COMMUNICATION. The library patch (patches/) also explicitly
-    // attaches AcousticEchoCanceler/NoiseSuppressor/AutomaticGainControl to the
-    // AudioRecord session, enabling hardware AEC where available.
-    LiveAudioStream.init({
-      sampleRate: 16000,
-      channels: 1,
-      bitsPerSample: 16,
-      bufferSize: 4096,
-      audioSource: 7,
-    });
-    LiveAudioStream.start();
-
-    // Query hardware AEC availability AFTER init so the AudioRecord exists.
-    // Full-duplex: send real mic audio while AI speaks (hardware AEC cancels echo).
-    // Half-duplex fallback: send silence while AI speaks on devices without AEC.
-    this.hardwareAECEnabled = await isHardwareAECAvailable();
-    console.log(`[VoiceService] Hardware AEC: ${this.hardwareAECEnabled}`);
+    // Start the unified native engine: owns AudioRecord (16kHz mic) + AudioTrack (24kHz
+    // playback) with WebRTC AEC3 between them. Emits AEC3-cleaned mic frames as the "data"
+    // DeviceEventEmitter event (same shape the old mic library used).
+    if (!VoiceAudioEngine || typeof VoiceAudioEngine.start !== "function") {
+      // Native module isn't in this build (registration stripped, or app not rebuilt).
+      // Distinct from an engine start failure so the cause is obvious from the message.
+      this.isSessionActive = false;
+      this.onEventCallback?.({
+        type: "error",
+        error: "voice_engine_missing",
+        message: "Voice engine native module not found — rebuild the app (npx expo run:android).",
+      });
+      return;
+    }
+    try {
+      await VoiceAudioEngine.start();
+    } catch (e: any) {
+      this.isSessionActive = false;
+      this.onEventCallback?.({ type: "error", error: "voice_engine_failed", message: e?.message || "Could not start audio engine." });
+      return;
+    }
 
     this.audioSubscription = DeviceEventEmitter.addListener("data", (base64Data: string) => {
       if (!this.isSessionActive || this.ws?.readyState !== WebSocket.OPEN || !this.audioReadyToSend) {
         return;
       }
 
-      const pcmBuffer = this.decodeBase64(base64Data);
-
       if (this.isMuted) {
-        // User-controlled mute: always silence.
-        this.ws!.send(new ArrayBuffer(pcmBuffer.byteLength));
+        // User-controlled mute: send silence sized to the frame.
+        const bytes = this.base64ByteLength(base64Data);
+        this.ws!.send(new ArrayBuffer(bytes));
       } else {
-        // Full-duplex: always send real audio. Hardware AEC (attached to AudioRecord via
-        // library patch) cancels speaker echo at the DSP level; Gemini's server-side VAD
-        // and noise filter handle any residual echo.
-        this.ws!.send(pcmBuffer);
+        // Full-duplex: send the AEC3-cleaned mic frame. The AI's voice has already been
+        // removed natively, so it is never transcribed back as user input.
+        this.ws!.send(this.decodeBase64(base64Data));
       }
     });
     this.isRecording = true;
@@ -200,9 +186,9 @@ class VoiceService {
     this.audioReadyToSend = false;
     if (this.ws) { this.ws.close(); this.ws = null; }
 
-    // Stop LiveAudioStream recorder
+    // Tear down the native engine (mic + playback + APM).
     if (this.isRecording) {
-      try { LiveAudioStream.stop(); } catch {}
+      try { VoiceAudioEngine.stop(); } catch {}
       this.isRecording = false;
     }
     if (this.audioSubscription) {
@@ -210,23 +196,10 @@ class VoiceService {
       this.audioSubscription = null;
     }
 
-    // Stop & disconnect any in-flight playback nodes before closing the context
-    this.stopAllSources();
-
-    // Close AudioContext
-    if (this.audioCtx) {
-      try { this.audioCtx.close(); } catch {}
-      this.audioCtx = null;
-    }
-
     if (this.typewriterInterval) { clearInterval(this.typewriterInterval); this.typewriterInterval = null; }
 
-    this.isBuffering = true;
-    this.bufferQueue = [];
-    this.nextStartTime = 0;
     this.aiSpeaking = false;
     if (this.aiHangoverTimer) { clearTimeout(this.aiHangoverTimer); this.aiHangoverTimer = null; }
-    this.starvationTimes = [];
     this.onEventCallback = null;
     this.onTextRevealCallback = null;
     this.onConnectionQualityCallback = null;
@@ -237,12 +210,17 @@ class VoiceService {
   }
 
   sendInterrupt() {
-    // User barged in — open mic immediately without waiting for hangover to expire.
-    this.aiSpeaking = false;
-    if (this.aiHangoverTimer) { clearTimeout(this.aiHangoverTimer); this.aiHangoverTimer = null; }
+    // Optimistically clear playback client-side first, then notify server.
+    this.interruptPlayback();
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type: "interrupt" }));
     }
+  }
+
+  private interruptPlayback() {
+    try { VoiceAudioEngine.flush(); } catch {}
+    this.aiSpeaking = false;
+    if (this.aiHangoverTimer) { clearTimeout(this.aiHangoverTimer); this.aiHangoverTimer = null; }
   }
 
   getSessionId() { return this.currentSessionId; }
@@ -267,15 +245,9 @@ class VoiceService {
       const wasReconnecting = this.retryCount > 0;
       console.log(`[VoiceService] WS OPEN (reconnect=${wasReconnecting}, connId=${connId})`);
       this.retryCount = 0;
-      this.starvationTimes = [];
-      // Kill any audio still scheduled from the dropped connection before
-      // resetting the jitter buffer, so stale speech can't overlap the new stream.
-      this.stopAllSources();
-      this.isBuffering = true;
-      this.bufferQueue = [];
-      if (this.audioCtx) this.nextStartTime = this.audioCtx.currentTime;
-      this.aiSpeaking = false;
-      if (this.aiHangoverTimer) { clearTimeout(this.aiHangoverTimer); this.aiHangoverTimer = null; }
+      // Drop any audio still playing from the dropped connection so stale speech can't
+      // overlap the new stream.
+      this.interruptPlayback();
       this.sendInitMessage();
       this.onEventCallback?.({ type: "connected" });
       if (wasReconnecting) this.onConnectionQualityCallback?.("good");
@@ -303,10 +275,14 @@ class VoiceService {
             }
           }
 
+          if (data.type === "interrupted") {
+            this.interruptPlayback();
+            return;
+          }
+
           if (data.type === "turn_complete") {
-            // AI finished generating. Start hangover: keep mic gated for AI_HANGOVER_MS to
-            // cover in-flight network frames, Android hardware buffer drain, and echo tail.
-            // Cancelled if a new audio frame arrives (back-to-back turns stay gated).
+            // AI finished generating. Schedule aiSpeaking=false after a short hangover so the
+            // UI's speaking state covers the playback tail. Cancelled if more audio arrives.
             if (this.aiHangoverTimer) clearTimeout(this.aiHangoverTimer);
             this.aiHangoverTimer = setTimeout(() => {
               this.aiSpeaking = false;
@@ -368,80 +344,19 @@ class VoiceService {
     this.audioReadyToSend = true;
   }
 
-  // ── Audio Playback ────────────────────────────────────────────────────────
-
-  private stopAllSources() {
-    for (const src of this.activeSources) {
-      try { src.stop(); } catch {}
-      try { src.disconnect(); } catch {}
-    }
-    this.activeSources.clear();
-  }
+  // ── Audio Playback (native) ─────────────────────────────────────────────────
 
   private handleIncomingAudio(buffer: ArrayBuffer) {
-    if (!this.isSessionActive || !this.audioCtx) return;
+    if (!this.isSessionActive) return;
 
     // Mark AI as speaking and cancel any pending hangover — new audio means the turn
-    // isn't over yet, so back-to-back turns don't accidentally open the mic early.
+    // isn't over yet, so back-to-back turns keep the UI in the speaking state.
     this.aiSpeaking = true;
     if (this.aiHangoverTimer) { clearTimeout(this.aiHangoverTimer); this.aiHangoverTimer = null; }
 
-    const currentTime = this.audioCtx.currentTime;
-
-    if (!this.isBuffering && this.nextStartTime < currentTime - 0.05) {
-      this.isBuffering = true;
-      this.nextStartTime = currentTime;
-      const now = Date.now();
-      this.starvationTimes = this.starvationTimes.filter((t) => now - t < 10_000);
-      this.starvationTimes.push(now);
-      if (this.starvationTimes.length >= 2) this.onConnectionQualityCallback?.("poor");
-    }
-
-    if (this.isBuffering) {
-      this.bufferQueue.push(buffer);
-      if (this.bufferQueue.length >= this.TARGET_BUFFER_SIZE) {
-        this.isBuffering = false;
-        this.flushBuffer();
-      }
-      return;
-    }
-
-    this.scheduleAudioFrame(buffer);
-  }
-
-  private flushBuffer() {
-    while (this.bufferQueue.length > 0) this.scheduleAudioFrame(this.bufferQueue.shift()!);
-  }
-
-  private scheduleAudioFrame(buffer: ArrayBuffer) {
-    if (!this.audioCtx) return;
-
-    const int16 = new Int16Array(buffer);
-    const float32 = new Float32Array(int16.length);
-    for (let i = 0; i < int16.length; i++) {
-      float32[i] = int16[i] / 0x7fff;
-    }
-
-    const audioBuf = this.audioCtx.createBuffer(1, float32.length, 24000);
-    audioBuf.getChannelData(0).set(float32);
-
-    const src = this.audioCtx.createBufferSource();
-    src.buffer = audioBuf;
-    src.connect(this.audioCtx.destination);
-
-    // Track the node and disconnect it once it finishes so the native audio
-    // graph doesn't accumulate dead nodes (cause of long-session jitter).
-    // NOTE: react-native-audio-api uses `onEnded` (capital E), not the
-    // Web-standard `onended` — the lowercase form silently never fires.
-    this.activeSources.add(src);
-    src.onEnded = () => {
-      try { src.disconnect(); } catch {}
-      this.activeSources.delete(src);
-    };
-
-    const startTime = Math.max(this.audioCtx.currentTime, this.nextStartTime);
-    src.start(startTime);
-    this.nextStartTime = startTime + audioBuf.duration;
+    // Hand the 24kHz PCM16 frame to the native engine: it plays it gaplessly AND feeds it
+    // to AEC3 as the echo reference.
+    try { VoiceAudioEngine.pushFarend(this.encodeBase64(buffer)); } catch {}
   }
 
   // ── Typewriter Sync ───────────────────────────────────────────────────────
@@ -452,9 +367,8 @@ class VoiceService {
       if (!this.isSessionActive) { clearInterval(this.typewriterInterval!); this.typewriterInterval = null; return; }
       const remaining = this.pendingAssistantText.substring(this.revealedAssistantText.length);
       if (!remaining.length) return;
-      const count = (this.bufferQueue.length > 0 || !this.isBuffering)
-        ? Math.max(1, Math.ceil(40 * 0.05))
-        : remaining.length;
+      // Reveal while the AI is speaking; flush the rest once the turn ends.
+      const count = this.aiSpeaking ? Math.max(1, Math.ceil(40 * 0.05)) : remaining.length;
       const next = remaining.substring(0, count);
       this.revealedAssistantText += next;
       this.onTextRevealCallback?.(next, "assistant");
@@ -470,6 +384,23 @@ class VoiceService {
       bytes[i] = binaryString.charCodeAt(i);
     }
     return bytes.buffer;
+  }
+
+  private base64ByteLength(base64: string): number {
+    let len = (base64.length * 3) / 4;
+    if (base64.endsWith("==")) len -= 2;
+    else if (base64.endsWith("=")) len -= 1;
+    return Math.floor(len);
+  }
+
+  private encodeBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk) as unknown as number[]);
+    }
+    return btoa(binary);
   }
 }
 

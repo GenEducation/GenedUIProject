@@ -6,11 +6,17 @@
  */
 import { useState, useCallback, useEffect, useRef } from "react";
 import { voiceService, type VoiceEvent } from "../services/voiceService";
+import { studentService } from "../services/studentService";
 import { useAuth } from "../store/useAuthStore";
 import { audioStore } from "../store/useAudioStore";
 import { pdfStore } from "../store/usePdfStore";
 import { prefsStore } from "../store/usePrefsStore";
+import { parseContent } from "../utils/parseContent";
 import type { ChatMessage, ChatElement } from "../types/api";
+
+// Audio directives and inline SVG are stripped from rendered AI text — they drive
+// playback/visuals, not the transcript. Mirrors the cleanup in useChat's history loader.
+const AI_DIRECTIVE_RE = /(?:<<|<)(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)[\s\S]*?(?:>>|>)/g;
 
 export type VoiceStatus = "idle" | "connecting" | "active" | "error";
 export type ConnectionQuality = "good" | "poor" | "reconnecting";
@@ -58,6 +64,41 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
   // Track assistant text accumulation for incremental reveal
   const assistantTextRef = useRef("");
   const currentAiMsgIdRef = useRef<string | null>(null);
+
+  // Resuming an existing voice session: load prior transcript so the student sees the
+  // conversation so far. Voice turns are persisted as ChatMessages, so /get-history
+  // (via fetchChatHistory) serves them the same as text chat — no separate endpoint.
+  useEffect(() => {
+    const sid = options.sessionId;
+    if (!sid || !userId) return;
+    const cancelled = { current: false };
+    studentService
+      .fetchChatHistory(userId, sid)
+      .then((res) => {
+        if (cancelled.current) return;
+        // Backend returns turns under `history`; some callers see `messages`. Accept both.
+        const turns = (res as any).history ?? res.messages ?? [];
+        const mapped: ChatMessage[] = turns.map((m: any) => {
+          if (m.role === "user") {
+            return { from: "me", text: m.content, timestamp: m.timestamp ?? m.created_at };
+          }
+          const elements = parseContent(m.content);
+          return {
+            from: "ai",
+            text: m.content.replace(AI_DIRECTIVE_RE, "").replace(/<svg[\s\S]*?<\/svg>/g, "").trim(),
+            elements: elements.length > 1 || (elements.length === 1 && elements[0].type !== "text") ? elements : undefined,
+            timestamp: m.timestamp ?? m.created_at,
+          };
+        });
+        if (mapped.length) setMessages(mapped);
+      })
+      .catch(() => {
+        // History fetch failure is non-fatal — start with an empty transcript.
+      });
+    return () => {
+      cancelled.current = true;
+    };
+  }, [options.sessionId, userId]);
 
   const appendVoiceElement = useCallback((element: ChatElement) => {
     setIsThinking(false);
@@ -138,6 +179,24 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
         // Backend is working but no transcript yet — show the single thinking indicator.
         setIsAISpeaking(true);
         setIsThinking(true);
+        break;
+
+      case "interrupted":
+        setIsAISpeaking(false);
+        setIsThinking(false);
+        // Finalize the in-progress AI bubble (same logic as turn_complete).
+        // If it has text, mark it done; if it's empty, drop it.
+        if (currentAiMsgIdRef.current) {
+          const msgId = currentAiMsgIdRef.current;
+          const hasText = assistantTextRef.current.trim().length > 0;
+          setMessages((prev) =>
+            hasText
+              ? prev.map((m) => (m.id === msgId ? { ...m, isStreaming: false } : m))
+              : prev.filter((m) => m.id !== msgId)
+          );
+          currentAiMsgIdRef.current = null;
+          assistantTextRef.current = "";
+        }
         break;
 
       case "turn_complete":

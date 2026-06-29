@@ -1,0 +1,276 @@
+package ai.geneducation.app
+
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioManager
+import android.media.AudioRecord
+import android.media.AudioTrack
+import android.media.MediaRecorder
+import android.util.Base64
+import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.modules.core.DeviceEventManagerModule
+import java.util.concurrent.atomic.AtomicBoolean
+
+/**
+ * Unified full-duplex voice audio engine with WebRTC AEC3 echo cancellation.
+ *
+ * Owns BOTH the microphone (AudioRecord @ 16kHz) and the speaker (AudioTrack @ 24kHz)
+ * so the WebRTC AudioProcessingModule (native, see apm_jni.cpp) can see the near-end
+ * (mic) and far-end (speaker reference) signals time-aligned in one place — the
+ * prerequisite for software echo cancellation that works on every device regardless of
+ * whether the hardware HAL exposes AcousticEchoCanceler.
+ *
+ *   far-end  (24kHz from WS) ── pushFarend() ──> AudioTrack (play) + APM ProcessReverse
+ *   near-end (16kHz mic)     ── capture loop ──> APM ProcessStream ──> "data" event ──> JS ──> WS
+ *
+ * The JS-facing surface (start/stop + a base64 "data" DeviceEventEmitter event) mirrors
+ * react-native-live-audio-stream so voiceService.ts's existing uplink listener is reused.
+ */
+class VoiceAudioEngine(reactContext: ReactApplicationContext) :
+    ReactContextBaseJavaModule(reactContext) {
+
+    companion object {
+        private const val MIC_RATE = 16000      // APM capture rate + backend uplink rate
+        private const val FAR_RATE = 24000      // Gemini downlink playback rate
+        private const val FRAME_MS = 10         // WebRTC APM processes 10ms frames
+        private const val MIC_FRAME = MIC_RATE / 1000 * FRAME_MS   // 160 samples
+        private const val FAR_FRAME = FAR_RATE / 1000 * FRAME_MS   // 240 samples
+
+        // Load lazily + guarded so a load failure (missing .so for the device ABI, bad
+        // alignment, etc.) does NOT throw out of createNativeModules and silently drop the
+        // whole module — instead the module still registers and start() reports a clear error.
+        @Volatile private var nativeLibLoaded = false
+        @Volatile private var nativeLibError: String? = null
+        private fun ensureNativeLib() {
+            if (nativeLibLoaded) return
+            try {
+                System.loadLibrary("voiceapm")
+                nativeLibLoaded = true
+            } catch (t: Throwable) {
+                nativeLibError = t.message ?: t.toString()
+            }
+        }
+    }
+
+    override fun getName() = "VoiceAudioEngine"
+
+    // ── JNI (apm_jni.cpp) ───────────────────────────────────────────────────────
+    private external fun nativeCreate(captureRate: Int, renderRate: Int): Long
+    private external fun nativeProcessReverse(handle: Long, far: ShortArray)
+    private external fun nativeProcessCapture(handle: Long, near: ShortArray): ShortArray
+    private external fun nativeSetStreamDelayMs(handle: Long, delayMs: Int)
+    private external fun nativeDestroy(handle: Long)
+
+    private var apmHandle = 0L
+    private var record: AudioRecord? = null
+    private var track: AudioTrack? = null
+    private val running = AtomicBoolean(false)
+    private var captureThread: Thread? = null
+    private var playbackThread: Thread? = null
+
+    // Render (far-end) jitter buffer. pushFarend() enqueues network audio here; the
+    // playback thread drains it in fixed 10ms frames so the AEC reference is fed in lockstep
+    // with what the speaker actually plays — NOT on bursty network-arrival cadence.
+    private val renderQueue = ArrayDeque<Short>()
+    private val renderLock = Object()
+    // Start playing only once this much audio is buffered, to absorb network jitter
+    // (~50ms). Mirrors the old JS-side TARGET_BUFFER_SIZE.
+    private val PREBUFFER_SAMPLES = FAR_FRAME * 5
+    private var primed = false
+
+    @ReactMethod
+    fun start(promise: Promise) {
+        if (running.get()) { promise.resolve(true); return }
+        ensureNativeLib()
+        if (!nativeLibLoaded) {
+            promise.reject("voiceapm_load_failed", "libvoiceapm.so failed to load: ${nativeLibError ?: "unknown"}")
+            return
+        }
+        try {
+            // Capture stream is 16kHz, render (reverse) stream is its true 24kHz — APM
+            // resamples the reference to the processing rate internally with proper filtering.
+            apmHandle = nativeCreate(MIC_RATE, FAR_RATE)
+            if (apmHandle == 0L) { promise.reject("apm_create_failed", "Could not create WebRTC APM"); return }
+
+            // Mic: raw VOICE_RECOGNITION source so the platform doesn't double-process;
+            // the APM owns all NS/AGC/AEC.
+            val minRec = AudioRecord.getMinBufferSize(
+                MIC_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT
+            )
+            record = AudioRecord(
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                MIC_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT,
+                maxOf(minRec, MIC_FRAME * 2 * 8)
+            )
+
+            // Speaker: route to voice-communication usage so the OS treats it as a call
+            // and keeps render/capture clocks coherent.
+            val minTrack = AudioTrack.getMinBufferSize(
+                FAR_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+            )
+            track = AudioTrack(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build(),
+                AudioFormat.Builder()
+                    .setSampleRate(FAR_RATE)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                    .build(),
+                maxOf(minTrack, FAR_FRAME * 2 * 8),
+                AudioTrack.MODE_STREAM,
+                AudioManager.AUDIO_SESSION_ID_GENERATE
+            )
+            track?.play()
+
+            running.set(true)
+            primed = false
+            // Initial render-to-capture delay estimate: AudioTrack buffer + acoustic path.
+            // AEC3 refines this adaptively.
+            nativeSetStreamDelayMs(apmHandle, estimatedDelayMs())
+            record?.startRecording()
+            startCaptureLoop()
+            startPlaybackLoop()
+            promise.resolve(true)
+        } catch (e: Exception) {
+            cleanup()
+            promise.reject("voice_engine_start_failed", e.message, e)
+        }
+    }
+
+    /**
+     * Enqueue a 24kHz PCM16 frame from the WS into the render jitter buffer. Playback AND the
+     * AEC reference feed both happen on the playback thread, paced to real speaker time — so a
+     * bursty network arrival can't overrun AEC3's render buffer and desync the echo path.
+     */
+    @ReactMethod
+    fun pushFarend(base64: String) {
+        if (!running.get()) return
+        val bytes = Base64.decode(base64, Base64.DEFAULT)
+        synchronized(renderLock) {
+            var i = 0
+            while (i + 1 < bytes.size) {
+                renderQueue.addLast(((bytes[i].toInt() and 0xff) or (bytes[i + 1].toInt() shl 8)).toShort())
+                i += 2
+            }
+            renderLock.notifyAll()
+        }
+    }
+
+    @ReactMethod
+    fun flush() {
+        synchronized(renderLock) {
+            renderQueue.clear()
+            primed = false
+        }
+        try { track?.pause(); track?.flush(); track?.play() } catch (_: Exception) {}
+    }
+
+    @ReactMethod
+    fun stop(promise: Promise) {
+        cleanup()
+        promise.resolve(true)
+    }
+
+    // ── Internals ───────────────────────────────────────────────────────────────
+
+    private fun startCaptureLoop() {
+        captureThread = Thread {
+            val frame = ShortArray(MIC_FRAME)
+            while (running.get()) {
+                val rec = record ?: break
+                val n = rec.read(frame, 0, MIC_FRAME)
+                if (n != MIC_FRAME || apmHandle == 0L) continue
+                val cleaned = nativeProcessCapture(apmHandle, frame)
+                emitData(cleaned)
+            }
+        }.apply { name = "VoiceAudioCapture"; start() }
+    }
+
+    /**
+     * Playback + AEC reference, both paced to real speaker time. Each iteration pulls one
+     * fixed 10ms (240-sample @ 24kHz) frame, writes it to AudioTrack (which blocks at real
+     * rate in MODE_STREAM), then feeds that exact frame to ProcessReverseStream. This keeps
+     * the reverse stream in 1:1 lockstep with the 16kHz capture loop, so AEC3's render buffer
+     * never overruns and the echo-path delay stays stable.
+     */
+    private fun startPlaybackLoop() {
+        playbackThread = Thread {
+            val frame = ShortArray(FAR_FRAME)
+            val silence = ShortArray(FAR_FRAME)  // zeros — fed on underrun to hold cadence
+            while (running.get()) {
+                var haveFrame = false
+                synchronized(renderLock) {
+                    // (Re)prime: wait for the jitter buffer to fill before (re)starting playback.
+                    if (!primed) {
+                        if (renderQueue.size >= PREBUFFER_SAMPLES) primed = true
+                        else { try { renderLock.wait(20) } catch (_: InterruptedException) {} }
+                    }
+                    if (primed) {
+                        if (renderQueue.size >= FAR_FRAME) {
+                            for (k in 0 until FAR_FRAME) frame[k] = renderQueue.removeFirst()
+                            haveFrame = true
+                        } else {
+                            // Underran mid-stream — re-prime so we don't dribble silence.
+                            primed = false
+                        }
+                    }
+                }
+                // Before priming (pure startup silence) loop without writing. Once playing, a
+                // momentary underrun writes a silence frame so speaker and AEC reference stay
+                // sample-aligned with the capture cadence.
+                if (!primed && !haveFrame) continue
+                val out = if (haveFrame) frame else silence
+                try { track?.write(out, 0, FAR_FRAME) } catch (_: Exception) {}
+                if (apmHandle != 0L) nativeProcessReverse(apmHandle, out)
+            }
+        }.apply { name = "VoiceAudioPlayback"; start() }
+    }
+
+    private fun estimatedDelayMs(): Int {
+        // Render-to-capture delay = AudioTrack output buffering + acoustic path. A fixed
+        // estimate is fine because AEC3 refines the true delay adaptively. Most phones land
+        // ~80-120ms; the prebuffer (~50ms) plus typical hardware latency sits in that range.
+        return 120
+    }
+
+    private fun emitData(pcm: ShortArray) {
+        val bytes = ByteArray(pcm.size * 2)
+        var i = 0
+        for (s in pcm) {
+            bytes[i++] = (s.toInt() and 0xff).toByte()
+            bytes[i++] = ((s.toInt() shr 8) and 0xff).toByte()
+        }
+        val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+        reactApplicationContext
+            .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+            .emit("data", b64)
+    }
+
+    private fun cleanup() {
+        running.set(false)
+        // Wake the playback thread if it's blocked waiting on the render buffer.
+        synchronized(renderLock) { renderLock.notifyAll() }
+        try { captureThread?.join(200) } catch (_: Exception) {}
+        captureThread = null
+        try { playbackThread?.join(200) } catch (_: Exception) {}
+        playbackThread = null
+        try { record?.stop() } catch (_: Exception) {}
+        try { record?.release() } catch (_: Exception) {}
+        record = null
+        try { track?.stop() } catch (_: Exception) {}
+        try { track?.release() } catch (_: Exception) {}
+        track = null
+        synchronized(renderLock) { renderQueue.clear(); primed = false }
+        if (apmHandle != 0L) { nativeDestroy(apmHandle); apmHandle = 0L }
+    }
+
+    override fun invalidate() {
+        cleanup()
+        super.invalidate()
+    }
+}
