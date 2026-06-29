@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, ScrollView, StyleSheet, Pressable } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { CalendarClock, ChevronRight } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
@@ -20,7 +20,7 @@ export default function Home() {
   const router = useRouter();
   const { state } = useAuth();
 
-  const { stats, subjects, recentSessions, loading, error, refetch } = useHomeData();
+  const { stats, subjects, recentSessions, loading, refreshing, hasData, error, refetch } = useHomeData();
 
   const firstName =
     state.status === "authenticated"
@@ -39,7 +39,8 @@ export default function Home() {
     );
   }
 
-  if (error) {
+  // Only fall back to the error screen when there's no cached data to show.
+  if (error && !hasData) {
     return (
       <Screen background={colors.pageBg}>
         <ErrorState message="Couldn't load your dashboard." onRetry={refetch} />
@@ -59,7 +60,14 @@ export default function Home() {
         <View style={styles.greet}>
           <View style={{ flex: 1 }}>
             <Text style={styles.h1}>{greeting}, {firstName}!</Text>
-            <Text style={styles.sub}>What would you like to learn today?</Text>
+            {refreshing ? (
+              <View style={styles.refreshRow}>
+                <ActivityIndicator size="small" color={colors.textMuted} />
+                <Text style={styles.refreshText}>Updating…</Text>
+              </View>
+            ) : (
+              <Text style={styles.sub}>What would you like to learn today?</Text>
+            )}
           </View>
           <AprilAvatar size={52} />
         </View>
@@ -139,6 +147,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textMid,
     marginTop: 5,
+  },
+  refreshRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 5,
+  },
+  refreshText: {
+    fontFamily: fonts.dmMedium,
+    fontSize: 13,
+    color: colors.textMuted,
   },
   scheduleCard: {
     flexDirection: "row",

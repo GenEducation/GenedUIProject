@@ -5,6 +5,7 @@
 import React from "react";
 import { View, Pressable, Text, StyleSheet } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import { PhoneOff } from "lucide-react-native";
 import { colors, fonts } from "../../theme/tokens";
 
 interface Props {
@@ -34,14 +35,6 @@ function MicIcon({ muted, color }: { muted: boolean; color: string }) {
   );
 }
 
-function PhoneOffIcon({ color }: { color: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 004.73.94 2 2 0 012 2v3.28a2 2 0 01-1.67 1.97A19.47 19.47 0 0112 21 19.14 19.14 0 013 16.44M1.09 1.09l21.83 21.83" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
 export function VoiceControls({ isMuted, pttHeld, sessionActive, onToggleMute, onPttStart, onPttEnd, onEnd }: Props) {
   const showPtt = sessionActive && isMuted;
 
@@ -52,6 +45,10 @@ export function VoiceControls({ isMuted, pttHeld, sessionActive, onToggleMute, o
         style={[styles.muteBtn, isMuted ? styles.muteBtnMuted : styles.muteBtnUnmuted]}
         onPress={onToggleMute}
         disabled={!sessionActive}
+        focusable={false}
+        android_ripple={{ color: "rgba(0,0,0,0.12)", borderless: true, radius: 26 }}
+        accessibilityRole="button"
+        accessibilityLabel={isMuted ? "Unmute microphone" : "Mute microphone"}
       >
         <MicIcon muted={isMuted} color={isMuted ? "#fff" : colors.genPurple} />
       </Pressable>
@@ -62,6 +59,9 @@ export function VoiceControls({ isMuted, pttHeld, sessionActive, onToggleMute, o
           style={[styles.pttBtn, pttHeld && styles.pttBtnHeld]}
           onPressIn={onPttStart}
           onPressOut={onPttEnd}
+          focusable={false}
+          accessibilityRole="button"
+          accessibilityLabel="Hold to talk"
         >
           <MicIcon muted={false} color="#fff" />
           <Text style={styles.pttText}>{pttHeld ? "Speaking…" : "Hold to Talk"}</Text>
@@ -69,8 +69,14 @@ export function VoiceControls({ isMuted, pttHeld, sessionActive, onToggleMute, o
       )}
 
       {/* End session */}
-      <Pressable style={styles.endBtn} onPress={onEnd}>
-        <PhoneOffIcon color="#fff" />
+      <Pressable
+        style={styles.endBtn}
+        onPress={onEnd}
+        focusable={false}
+        accessibilityRole="button"
+        accessibilityLabel="End voice session"
+      >
+        <PhoneOff size={20} color="#fff" strokeWidth={2.5} />
         <Text style={styles.endText}>End</Text>
       </Pressable>
     </View>

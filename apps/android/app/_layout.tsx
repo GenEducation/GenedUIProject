@@ -47,6 +47,7 @@ function RootStackNavigator() {
       <Stack.Screen name="test"        options={{ animation: "slide_from_bottom" }} />
       <Stack.Screen name="schedule" />
       <Stack.Screen name="onboarding"  options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="personalize" options={{ animation: "slide_from_bottom" }} />
       <Stack.Screen name="pdf-viewer"  options={{ animation: "slide_from_bottom" }} />
     </Stack>
   );

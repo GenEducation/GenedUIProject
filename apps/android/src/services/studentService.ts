@@ -325,6 +325,26 @@ export const studentService = {
     return res.json();
   },
 
+  // General onboarding — populates the learner's traits ("How {ai} Sees You").
+  // Mirrors the web onboardingService.completeGeneralOnboarding payload.
+  completeGeneralOnboarding: async (data: {
+    student_id: string;
+    name: string;
+    age: number;
+    grade: number;
+    learning_preferences: string[];
+    interests: string[];
+    strengths: string[];
+    weaknesses: string[];
+  }): Promise<{ success?: boolean }> => {
+    const res = await authFetch(`${BASE}/api/onboarding/general/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
   // ── Profile ─────────────────────────────────────────────────────────────────
 
   fetchUserProfile: async (userId: string): Promise<UserProfile> => {

@@ -6,6 +6,7 @@
  */
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from "react";
 import { getToken, getProfile, setToken, setProfile, clearSession } from "../services/storage";
+import { clearHomeCache } from "../services/homeCache";
 import type { AuthTokenResponse } from "../services/authService";
 
 export interface UserProfile {
@@ -89,9 +90,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    if (state.status === "authenticated") {
+      await clearHomeCache(state.profile.user_id);
+    }
     await clearSession();
     dispatch({ type: "LOGGED_OUT" });
-  }, []);
+  }, [state]);
 
   return React.createElement(Ctx.Provider, { value: { state, login, logout } }, children);
 }

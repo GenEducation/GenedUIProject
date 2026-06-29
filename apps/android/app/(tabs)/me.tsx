@@ -16,7 +16,7 @@ import { ErrorState } from "@/components/ErrorState";
 import { PickerSheet } from "@/components/PickerSheet";
 import { useMeData } from "@/hooks/useMeData";
 import { useAuth } from "@/store/useAuthStore";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { studentService } from "@/services/studentService";
 import { prefsStore, usePrefs } from "@/store/usePrefsStore";
 import { colors, fonts } from "@/theme/tokens";
@@ -101,6 +101,7 @@ export default function Me() {
   const [avatarColor, setAvatarColor]     = useState<string>(colors.genPurple);
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
   const [voiceUpdating, setVoiceUpdating] = useState(false);
+  const [voicesExpanded, setVoicesExpanded] = useState(false);
   const [parentInput, setParentInput]     = useState("");
   const [parentSending, setParentSending] = useState(false);
 
@@ -315,39 +316,62 @@ export default function Me() {
               <Text style={styles.traitNote}>Based on your onboarding and learning patterns</Text>
             </>
           ) : (
-            <Text style={styles.emptyText}>
-              Complete onboarding to see how {aiName} understands your learning style.
-            </Text>
+            <View style={styles.traitEmpty}>
+              <Text style={styles.traitEmptyText}>
+                Tell {aiName} how you learn, what you enjoy, and where you want to grow — so your
+                tutor can personalize every session.
+              </Text>
+              <Pressable
+                style={styles.actionBtn}
+                onPress={() => router.push("/personalize" as Href)}
+                focusable={false}
+              >
+                <Text style={styles.actionBtnText}>Tell {aiName} about you</Text>
+              </Pressable>
+            </View>
           )}
         </View>
 
         {/* ── Tutor Voice ── */}
         {voices.length > 0 ? (
           <Card>
-            <View style={styles.voiceHeader}>
+            <Pressable
+              style={styles.voiceHeader}
+              onPress={() => setVoicesExpanded((e) => !e)}
+              focusable={false}
+            >
               <Text style={{ fontSize: 17 }}>🎙️</Text>
               <Text style={styles.voiceLabel}>TUTOR VOICE</Text>
               <Text style={styles.voiceVal}>
                 {voices.find((v) => v.id === currentVoice)?.label ?? currentVoice}
               </Text>
-              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+              <Svg
+                width={16}
+                height={16}
+                viewBox="0 0 24 24"
+                fill="none"
+                style={{ transform: [{ rotate: voicesExpanded ? "180deg" : "0deg" }] }}
+              >
                 <Path d="m6 9 6 6 6-6" stroke={colors.textMuted} strokeWidth={2} strokeLinecap="round" />
               </Svg>
-            </View>
-            <View style={styles.voiceList}>
-              {voices.map((v) => (
-                <Pressable
-                  key={v.id}
-                  style={[styles.voiceChip, currentVoice === v.id && styles.voiceChipActive]}
-                  onPress={() => handleVoiceChange(v)}
-                  disabled={voiceUpdating}
-                >
-                  <Text style={[styles.voiceChipText, currentVoice === v.id && styles.voiceChipTextActive]}>
-                    {v.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+            </Pressable>
+            {voicesExpanded ? (
+              <View style={styles.voiceList}>
+                {voices.map((v) => (
+                  <Pressable
+                    key={v.id}
+                    style={[styles.voiceChip, currentVoice === v.id && styles.voiceChipActive]}
+                    onPress={() => handleVoiceChange(v)}
+                    disabled={voiceUpdating}
+                    focusable={false}
+                  >
+                    <Text style={[styles.voiceChipText, currentVoice === v.id && styles.voiceChipTextActive]}>
+                      {v.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
           </Card>
         ) : (
           <Card>
@@ -598,6 +622,8 @@ const styles = StyleSheet.create({
   traitDesc: { fontFamily: fonts.dm, fontSize: 11, color: colors.textMid, marginTop: 2, lineHeight: 16 },
   traitNote: { fontFamily: fonts.dm, fontSize: 10, color: colors.textMuted, fontStyle: "italic", textAlign: "center", marginTop: 6 },
   emptyText: { fontFamily: fonts.dm, fontSize: 12, color: colors.textMuted, textAlign: "center", paddingVertical: 8 },
+  traitEmpty: { gap: 12, paddingTop: 2 },
+  traitEmptyText: { fontFamily: fonts.dm, fontSize: 12.5, color: colors.textMid, textAlign: "center", lineHeight: 18 },
 
   /* Voice */
   voiceHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
