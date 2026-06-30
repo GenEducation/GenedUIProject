@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { colors, fonts, subjectVisual } from "../../theme/tokens";
 import type { ChatSession } from "../../types/api";
+import { buildSessionRoute } from "../../utils/session";
 
 interface Props {
   session: ChatSession;
@@ -13,14 +14,9 @@ export function ContinueLearning({ session }: Props) {
   const visual = subjectVisual[session.subject?.toLowerCase() ?? ""] ?? subjectVisual["mathematics"];
 
   const handlePress = () => {
-    router.push({
-      pathname: "/chat",
-      params: {
-        sessionId: session.session_id,
-        subject: session.subject ?? "mathematics",
-        grade: session.grade ?? 9,
-      },
-    });
+    // Route voice sessions to the voice screen, text sessions to chat.
+    const route = buildSessionRoute(session, session.subject ?? "mathematics", session.grade ?? 9);
+    router.push(route as any);
   };
 
   return (

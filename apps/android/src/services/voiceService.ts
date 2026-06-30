@@ -277,12 +277,26 @@ class VoiceService {
 
           if (data.type === "interrupted") {
             this.interruptPlayback();
+            // The student barged in: drop the unheard tail so it can't leak into a
+            // new bubble, and forward the event so the hook finalizes the current
+            // bubble (clearing its message ref). Previously this returned early, so
+            // the hook never finalized → next turn merged into the old bubble.
+            this.pendingAssistantText = "";
+            this.revealedAssistantText = "";
+            this.onEventCallback?.(data);
             return;
           }
 
           if (data.type === "turn_complete") {
-            // AI finished generating. Schedule aiSpeaking=false after a short hangover so the
-            // UI's speaking state covers the playback tail. Cancelled if more audio arrives.
+            // Turn finished and the full text exists. Flush any tail the typewriter
+            // hasn't revealed yet INTO the current bubble, then reset buffers so
+            // nothing leaks into the next turn's bubble (which caused the split).
+            const tail = this.pendingAssistantText.substring(this.revealedAssistantText.length);
+            if (tail) this.onTextRevealCallback?.(tail, "assistant");
+            this.pendingAssistantText = "";
+            this.revealedAssistantText = "";
+            // Schedule aiSpeaking=false after a short hangover so the UI's speaking
+            // state covers the playback tail. Cancelled if more audio arrives.
             if (this.aiHangoverTimer) clearTimeout(this.aiHangoverTimer);
             this.aiHangoverTimer = setTimeout(() => {
               this.aiSpeaking = false;

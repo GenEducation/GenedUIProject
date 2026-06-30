@@ -26,8 +26,43 @@ import type {
   OverallHistoryPoint,
 } from "../types/api";
 import type { CreateChapterTestResponse, SubmitTestResponse } from "../types/test";
+import type { ChatSession } from "../types/api";
 
 const BASE = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+
+/**
+ * Map a raw `/get-session` row into the client ChatSession shape. The backend
+ * sends `source`, `subject_agent`, `agent_name`, `updated_at`, etc.; the app
+ * reads `subject`, `chat_mode`, `last_active`, `title`. Mirrors the web app's
+ * useStudentStore.fetchSessions mapping (`dev` branch).
+ */
+function normalizeSession(s: any): ChatSession {
+  const agentRaw = (s.subject_agent || "").toLowerCase();
+  const derivedSubject = agentRaw.includes("math")
+    ? "mathematics"
+    : agentRaw.includes("english")
+    ? "english"
+    : agentRaw.includes("science")
+    ? "science"
+    : agentRaw.includes("hindi")
+    ? "hindi"
+    : s.subject || "";
+  const isVoice = s.source === "voice" || s.source === "device";
+  return {
+    session_id: s.session_id ?? s.id,
+    subject: derivedSubject,
+    grade: typeof s.grade === "number" ? s.grade : undefined,
+    title: s.title || s.agent_name || "Learning Session",
+    last_message: s.last_message,
+    last_active: s.updated_at || s.created_at || s.last_active,
+    message_count: s.message_count,
+    source: s.source,
+    is_complete: !!s.is_complete,
+    agent_id: s.subject_agent ?? s.agent_id,
+    chapter_name: s.chapter_name || undefined,
+    chat_mode: isVoice ? "voice" : "text",
+  };
+}
 
 export const studentService = {
   // ── Dashboard / Home ────────────────────────────────────────────────────────
@@ -118,7 +153,17 @@ export const studentService = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId }),
       });
-      return res.json();
+      const data = await res.json();
+      // Normalize raw backend sessions into a consistent ChatSession shape so all
+      // consumers (Home, ContinueLearning, SessionsSheet) read the same fields.
+      // Mirrors the web app's useStudentStore.fetchSessions mapping (`dev` branch).
+      const rawList: any[] = Array.isArray(data?.sessions)
+        ? data.sessions
+        : Array.isArray(data)
+        ? data
+        : [];
+      const sessions = rawList.map(normalizeSession);
+      return { sessions };
     } catch (err) {
       if (err instanceof ApiRequestError && err.status === 404) {
         return { sessions: [] };
@@ -136,6 +181,19 @@ export const studentService = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user_id: userId, session_id: sessionId }),
     });
+    return res.json();
+  },
+
+  /**
+   * Restore a voice session's full transcript. Voice sessions use a dedicated
+   * endpoint (mirrors the web app) — `/get-history` drops the in-between assistant
+   * turns for voice. Returns `{ history: [...], source, is_complete, ... }`.
+   */
+  fetchVoiceSessionRestore: async (
+    sessionId: string,
+    signal?: AbortSignal
+  ): Promise<any> => {
+    const res = await authFetch(`${BASE}/voice/session/${sessionId}/restore`, { signal });
     return res.json();
   },
 

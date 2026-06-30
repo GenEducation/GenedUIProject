@@ -65,13 +65,18 @@ function withPackageRegistration(config) {
 function withAbiFilters(config) {
   return withAppBuildGradle(config, (cfg) => {
     let src = cfg.modResults.contents;
+    // Always enforce arm64-only for smaller APK size (~65 MB vs ~120 MB).
+    src = src.replace(
+      /ndk\s*\{[^}]*abiFilters[^}]*\}/,
+      `ndk { abiFilters "arm64-v8a" }`
+    );
     if (!src.includes("abiFilters")) {
       src = src.replace(
         /defaultConfig\s*{/,
-        `defaultConfig {\n        ndk { abiFilters "arm64-v8a", "armeabi-v7a", "x86_64" }`
+        `defaultConfig {\n        ndk { abiFilters "arm64-v8a" }`
       );
-      cfg.modResults.contents = src;
     }
+    cfg.modResults.contents = src;
     return cfg;
   });
 }

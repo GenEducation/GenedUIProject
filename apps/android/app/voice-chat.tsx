@@ -46,6 +46,7 @@ export default function VoiceChatScreen() {
   const {
     messages,
     sessionId: voiceSessionId,
+    subject: resolvedSubject,
     voiceStatus,
     connectionQuality,
     isMuted,
@@ -75,7 +76,10 @@ export default function VoiceChatScreen() {
 
   // Determine orb phase and caption
   let orbPhase: "idle" | "listening" | "speaking" | "pttHeld" = "idle";
-  let caption = STATUS_CAPTIONS.idle;
+  // Reopening a session with loaded transcript: the orb resumes the same session,
+  // so label it "Continue" instead of "start" (mirrors the web's Continue CTA).
+  const isResumable = voiceStatus === "idle" && messages.length > 0;
+  let caption = isResumable ? "Continue voice session" : STATUS_CAPTIONS.idle;
 
   if (voiceStatus === "connecting") {
     orbPhase = "idle";
@@ -127,7 +131,7 @@ export default function VoiceChatScreen() {
       <View style={[styles.container, { paddingBottom: insets.bottom }]}>
         {/* Header */}
         <VoiceChatHeader
-          subject={subject}
+          subject={resolvedSubject || subject}
           connectionQuality={connectionQuality}
           onBack={handleEnd}
         />

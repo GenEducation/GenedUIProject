@@ -24,6 +24,7 @@ import { studentService } from "@/services/studentService";
 import { pdfStore } from "@/store/usePdfStore";
 import { colors, fonts } from "@/theme/tokens";
 import type { ChatSession } from "@/types/api";
+import { isVoiceSession, buildSessionRoute } from "@/utils/session";
 
 export default function Chat() {
   const router = useRouter();
@@ -153,16 +154,9 @@ export default function Chat() {
         sessions={sessions}
         activeSessionId={chatSessionId ?? sessionId}
         onSelect={(s) => {
-          if (s.chat_mode === "voice") {
+          if (isVoiceSession(s)) {
             setSessionsOpen(false);
-            router.replace({
-              pathname: "/voice-chat" as any,
-              params: {
-                subject: s.subject ?? subject,
-                grade: String(s.grade ?? grade),
-                sessionId: s.session_id,
-              },
-            });
+            router.replace(buildSessionRoute(s, subject, grade) as any);
           } else {
             switchSession(s.session_id);
           }

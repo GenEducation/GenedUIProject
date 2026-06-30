@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { CalendarClock, ChevronRight } from "lucide-react-native";
@@ -21,6 +21,7 @@ export default function Home() {
   const { state } = useAuth();
 
   const { stats, subjects, recentSessions, loading, refreshing, hasData, error, refetch } = useHomeData();
+  const [showAllSessions, setShowAllSessions] = useState(false);
 
   const firstName =
     state.status === "authenticated"
@@ -112,7 +113,14 @@ export default function Home() {
         {/* Recent Sessions */}
         <SectionHead
           title="RECENT SESSIONS"
-          link={recentSessions.length > 3 ? "See all →" : undefined}
+          link={
+            recentSessions.length > 4
+              ? showAllSessions
+                ? "Show less"
+                : "See all →"
+              : undefined
+          }
+          onLinkPress={() => setShowAllSessions((v) => !v)}
           style={{ marginTop: 22 }}
         />
         {recentSessions.length === 0 ? (
@@ -124,7 +132,7 @@ export default function Home() {
           />
         ) : (
           <View style={{ gap: 8 }}>
-            {recentSessions.slice(0, 4).map((s) => (
+            {(showAllSessions ? recentSessions : recentSessions.slice(0, 4)).map((s) => (
               <RecentSessionItem key={s.session_id} session={s} />
             ))}
           </View>

@@ -42,11 +42,14 @@ export function VoiceControls({ isMuted, pttHeld, sessionActive, onToggleMute, o
     <View style={styles.row}>
       {/* Mute toggle */}
       <Pressable
-        style={[styles.muteBtn, isMuted ? styles.muteBtnMuted : styles.muteBtnUnmuted]}
+        style={({ pressed }) => [
+          styles.muteBtn,
+          isMuted ? styles.muteBtnMuted : styles.muteBtnUnmuted,
+          pressed && { opacity: 0.85 },
+        ]}
         onPress={onToggleMute}
         disabled={!sessionActive}
         focusable={false}
-        android_ripple={{ color: "rgba(0,0,0,0.12)", borderless: true, radius: 26 }}
         accessibilityRole="button"
         accessibilityLabel={isMuted ? "Unmute microphone" : "Mute microphone"}
       >

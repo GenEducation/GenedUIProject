@@ -33,6 +33,8 @@ export interface UseVoiceChatOptions {
 export interface UseVoiceChatResult {
   messages: ChatMessage[];
   sessionId: string | null;
+  /** Subject resolved from history meta_data (corrects a stale route-param subject). */
+  subject: string;
   voiceStatus: VoiceStatus;
   connectionQuality: ConnectionQuality;
   isMuted: boolean;
@@ -65,35 +67,83 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
   const assistantTextRef = useRef("");
   const currentAiMsgIdRef = useRef<string | null>(null);
 
+  // Subject resolved from session history meta_data (the route param can be a stale
+  // fallback like "mathematics" when /get-session has no subject_agent). Mirrors the
+  // web app's recovery from data.history[0].meta_data.subject. Used for the header and
+  // for (re)starting the session with the correct subject.
+  const [resolvedSubject, setResolvedSubject] = useState(options.subject);
+  const resolvedSubjectRef = useRef(options.subject);
+
   // Resuming an existing voice session: load prior transcript so the student sees the
-  // conversation so far. Voice turns are persisted as ChatMessages, so /get-history
-  // (via fetchChatHistory) serves them the same as text chat — no separate endpoint.
+  // conversation so far. Voice sessions use a dedicated restore endpoint — /get-history
+  // drops the in-between assistant turns for voice, so it only kept the last AI reply.
   useEffect(() => {
     const sid = options.sessionId;
     if (!sid || !userId) return;
     const cancelled = { current: false };
+
+    const mapTurns = (turns: any[]): ChatMessage[] =>
+      turns.map((m: any) => {
+        if (m.role === "user") {
+          return { from: "me", text: m.content, timestamp: m.created_at ?? m.timestamp };
+        }
+        const elements = parseContent(m.content);
+        return {
+          from: "ai",
+          text: m.content.replace(AI_DIRECTIVE_RE, "").replace(/<svg[\s\S]*?<\/svg>/g, "").trim(),
+          elements: elements.length > 1 || (elements.length === 1 && elements[0].type !== "text") ? elements : undefined,
+          timestamp: m.created_at ?? m.timestamp,
+        };
+      });
+
+    const applySubject = (turns: any[]) => {
+      const subj = turns?.[0]?.meta_data?.subject;
+      if (subj && typeof subj === "string") {
+        const lc = subj.toLowerCase();
+        resolvedSubjectRef.current = lc;
+        setResolvedSubject(lc);
+      }
+    };
+
+    // TEMP diagnostic — confirm which endpoint serves the transcript and how many
+    // user vs assistant turns come back, so we can tell a backend persistence gap from
+    // a frontend bug. Remove once the history issue is resolved.
+    const logTurns = (src: string, res: any, turns: any[]) => {
+      const users = turns.filter((t) => t?.role === "user").length;
+      const ai = turns.length - users;
+      console.log(
+        `[voice-history] via=${src} total=${turns.length} user=${users} ai=${ai} keys=${Object.keys(res || {}).join(",")}`
+      );
+    };
+
     studentService
-      .fetchChatHistory(userId, sid)
+      .fetchVoiceSessionRestore(sid)
       .then((res) => {
         if (cancelled.current) return;
-        // Backend returns turns under `history`; some callers see `messages`. Accept both.
-        const turns = (res as any).history ?? res.messages ?? [];
-        const mapped: ChatMessage[] = turns.map((m: any) => {
-          if (m.role === "user") {
-            return { from: "me", text: m.content, timestamp: m.timestamp ?? m.created_at };
-          }
-          const elements = parseContent(m.content);
-          return {
-            from: "ai",
-            text: m.content.replace(AI_DIRECTIVE_RE, "").replace(/<svg[\s\S]*?<\/svg>/g, "").trim(),
-            elements: elements.length > 1 || (elements.length === 1 && elements[0].type !== "text") ? elements : undefined,
-            timestamp: m.timestamp ?? m.created_at,
-          };
-        });
+        const turns = res.history ?? res.messages ?? [];
+        logTurns("restore", res, turns);
+        applySubject(turns);
+        const mapped = mapTurns(turns);
         if (mapped.length) setMessages(mapped);
       })
-      .catch(() => {
-        // History fetch failure is non-fatal — start with an empty transcript.
+      .catch((e) => {
+        // Restore failed (e.g. session mis-tagged) — fall back to /get-history so the
+        // student still sees whatever transcript is available.
+        console.log(`[voice-history] restore FAILED (${e?.message ?? e}) → get-history fallback`);
+        if (cancelled.current) return;
+        studentService
+          .fetchChatHistory(userId, sid)
+          .then((res) => {
+            if (cancelled.current) return;
+            const turns = (res as any).history ?? res.messages ?? [];
+            logTurns("get-history", res, turns);
+            applySubject(turns);
+            const mapped = mapTurns(turns);
+            if (mapped.length) setMessages(mapped);
+          })
+          .catch(() => {
+            // Non-fatal — start with an empty transcript.
+          });
       });
     return () => {
       cancelled.current = true;
@@ -331,15 +381,27 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
 
   const handleTextReveal = useCallback((text: string, role: "user" | "assistant") => {
     if (role === "user") {
-      setMessages((prev) => [
-        ...prev,
-        {
-          from: "me",
-          text,
-          id: `user-${Date.now()}`,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
+      // Close any in-progress assistant bubble BEFORE inserting the user message,
+      // so order stays chronological ([AI] → [user] → [AI next]) and the next
+      // assistant turn can't merge into the previous bubble (which rendered the
+      // AI's reply above the student's interruption).
+      const openAiId = currentAiMsgIdRef.current;
+      currentAiMsgIdRef.current = null;
+      assistantTextRef.current = "";
+      setMessages((prev) => {
+        const finalized = openAiId
+          ? prev.map((m) => (m.id === openAiId ? { ...m, isStreaming: false } : m))
+          : prev;
+        return [
+          ...finalized,
+          {
+            from: "me",
+            text,
+            id: `user-${Date.now()}`,
+            timestamp: new Date().toISOString(),
+          },
+        ];
+      });
       // User finished speaking → AI will respond next; show the thinking indicator
       // until the first assistant text arrives.
       setIsThinking(true);
@@ -387,7 +449,7 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
         handleEvent,
         handleTextReveal,
         sessionId ?? undefined,
-        options.subject,
+        resolvedSubjectRef.current ?? options.subject,
         options.voice ?? preferredVoice,
         options.documentTitle,
         options.agentId,
@@ -445,6 +507,7 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
   return {
     messages,
     sessionId,
+    subject: resolvedSubject,
     voiceStatus,
     connectionQuality,
     isMuted,

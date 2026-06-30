@@ -192,6 +192,15 @@ export interface ChatSession {
   last_active?: string;
   message_count?: number;
   chat_mode?: "text" | "voice";
+  /** Persistent modality/origin from the backend (chat_sessions.source):
+   * "voice"/"device" reopen in the voice UI; everything else in chat. */
+  source?: string;
+  /** Whether the session has been completed (no further turns expected). */
+  is_complete?: boolean;
+  /** Agent id (backend `subject_agent`) used when reopening the session. */
+  agent_id?: string;
+  /** Resolved chapter/document name for this session. */
+  chapter_name?: string;
 }
 
 export interface ChatElement {

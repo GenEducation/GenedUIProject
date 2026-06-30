@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { colors, fonts, subjectVisual } from "../../theme/tokens";
 import type { ChatSession } from "../../types/api";
+import { buildSessionRoute, isVoiceSession } from "../../utils/session";
 
 interface Props {
   session: ChatSession;
@@ -22,14 +23,11 @@ export function RecentSessionItem({ session }: Props) {
   };
 
   const handlePress = () => {
-    router.push({
-      pathname: "/chat",
-      params: {
-        sessionId: raw.session_id ?? raw.id,
-        subject: subjectKey || "mathematics",
-        grade: raw.grade ?? 9,
-      },
-    });
+    // Route voice sessions to the voice screen and text sessions to chat, using
+    // the session's real subject (derived in normalizeSession). subjectKey is the
+    // visual-theme key, used here as the subject fallback when the field is blank.
+    const route = buildSessionRoute(session, subjectKey || "mathematics", raw.grade ?? 9);
+    router.push(route as any);
   };
 
   return (
@@ -39,6 +37,7 @@ export function RecentSessionItem({ session }: Props) {
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.title} numberOfLines={1}>
+          {isVoiceSession(session) ? "🎤 " : ""}
           {raw.title ?? raw.last_message ?? raw.session_title ?? `${visual.label} session`}
         </Text>
         <Text style={styles.meta}>

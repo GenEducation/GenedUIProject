@@ -8,6 +8,7 @@ import { View, Text, Pressable, Modal, FlatList, StyleSheet, Dimensions } from "
 import { Plus, Check } from "lucide-react-native";
 import { colors, fonts, subjectVisual } from "../../theme/tokens";
 import type { ChatSession } from "../../types/api";
+import { isVoiceSession } from "../../utils/session";
 
 const SCREEN_H = Dimensions.get("window").height;
 
@@ -65,7 +66,7 @@ export function SessionsSheet({ visible, sessions, activeSessionId, onSelect, on
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.rowText, isActive && styles.rowTextActive]} numberOfLines={1}>
-                        {item.chat_mode === "voice" ? "🎤 " : "💬 "}{title}
+                        {isVoiceSession(item) ? "🎤 " : "💬 "}{title}
                       </Text>
                       <Text style={styles.meta} numberOfLines={1}>
                         {visual.label}

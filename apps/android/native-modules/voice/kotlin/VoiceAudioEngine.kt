@@ -106,14 +106,18 @@ class VoiceAudioEngine(reactContext: ReactApplicationContext) :
                 maxOf(minRec, MIC_FRAME * 2 * 8)
             )
 
-            // Speaker: route to voice-communication usage so the OS treats it as a call
-            // and keeps render/capture clocks coherent.
+            // Speaker: route to MEDIA usage so playback goes to the loudspeaker on the
+            // media stream (controlled by the phone's volume buttons) at full volume.
+            // USAGE_VOICE_COMMUNICATION routed to the call stream/earpiece, which the media
+            // volume can't raise → very low playback. Echo cancellation is unaffected: AEC3
+            // is software and gets its reference frame fed explicitly via nativeProcessReverse
+            // below, independent of OS audio routing.
             val minTrack = AudioTrack.getMinBufferSize(
                 FAR_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
             )
             track = AudioTrack(
                 AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build(),
                 AudioFormat.Builder()

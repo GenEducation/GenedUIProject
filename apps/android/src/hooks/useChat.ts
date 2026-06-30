@@ -65,12 +65,15 @@ export function useChat({
         .fetchChatHistory(userId, sid)
         .then((history) => {
           if (cancelledRef?.current) return;
-          const mapped: ChatMessage[] = (history.messages ?? []).map((m) => {
+          // Backend returns turns under `history`; some callers see `messages`. Accept both
+          // (mirrors useVoiceChat). Reading the wrong key here was leaving chats blank.
+          const turns: any[] = (history as any).history ?? history.messages ?? [];
+          const mapped: ChatMessage[] = turns.map((m) => {
             if (m.role === "user") {
               return {
                 from: "me",
                 text: m.content,
-                timestamp: m.timestamp,
+                timestamp: m.timestamp ?? m.created_at,
               };
             }
             const elements = parseContent(m.content);
@@ -78,7 +81,7 @@ export function useChat({
               from: "ai",
               text: m.content.replace(/(?:<<|<)(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)[\s\S]*?(?:>>|>)/g, "").replace(/<svg[\s\S]*?<\/svg>/g, "").trim(),
               elements: elements.length > 1 || (elements.length === 1 && elements[0].type !== "text") ? elements : undefined,
-              timestamp: m.timestamp,
+              timestamp: m.timestamp ?? m.created_at,
             };
           });
           setMessages(mapped);
