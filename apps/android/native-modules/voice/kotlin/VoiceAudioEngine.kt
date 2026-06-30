@@ -1,11 +1,14 @@
 package ai.geneducation.app
 
+import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioTrack
 import android.media.MediaRecorder
+import android.os.Build
 import android.util.Base64
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -67,6 +70,9 @@ class VoiceAudioEngine(reactContext: ReactApplicationContext) :
     private var apmHandle = 0L
     private var record: AudioRecord? = null
     private var track: AudioTrack? = null
+    private var audioManager: AudioManager? = null
+    private var prevAudioMode = AudioManager.MODE_NORMAL
+    private var prevSpeakerphoneOn = false
     private val running = AtomicBoolean(false)
     private var captureThread: Thread? = null
     private var playbackThread: Thread? = null
@@ -106,18 +112,19 @@ class VoiceAudioEngine(reactContext: ReactApplicationContext) :
                 maxOf(minRec, MIC_FRAME * 2 * 8)
             )
 
-            // Speaker: route to MEDIA usage so playback goes to the loudspeaker on the
-            // media stream (controlled by the phone's volume buttons) at full volume.
-            // USAGE_VOICE_COMMUNICATION routed to the call stream/earpiece, which the media
-            // volume can't raise → very low playback. Echo cancellation is unaffected: AEC3
-            // is software and gets its reference frame fed explicitly via nativeProcessReverse
-            // below, independent of OS audio routing.
+            // Speaker: VOICE_COMMUNICATION usage keeps the render/capture path low-latency and
+            // clock-coherent — the prerequisite AEC3 needs to align the echo reference. By
+            // itself this routes to the (quiet) earpiece, so we ALSO force the communication
+            // audio to the loudspeaker via AudioManager below. That gives loud playback AND
+            // working echo cancellation — the standard full-duplex speakerphone setup. (Using
+            // USAGE_MEDIA was loud but broke AEC because the media path's latency desyncs the
+            // echo reference.)
             val minTrack = AudioTrack.getMinBufferSize(
                 FAR_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
             )
             track = AudioTrack(
                 AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build(),
                 AudioFormat.Builder()
@@ -129,6 +136,27 @@ class VoiceAudioEngine(reactContext: ReactApplicationContext) :
                 AudioTrack.MODE_STREAM,
                 AudioManager.AUDIO_SESSION_ID_GENERATE
             )
+            track?.setVolume(1.0f)  // max per-track gain so playback isn't attenuated
+
+            // Put the device in communication mode and force output to the built-in speaker,
+            // so the VOICE_COMMUNICATION audio plays LOUD on the loudspeaker (not the earpiece)
+            // while staying on the AEC-coherent comm path. Restored in cleanup().
+            val am = reactApplicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audioManager = am
+            prevAudioMode = am.mode
+            prevSpeakerphoneOn = am.isSpeakerphoneOn
+            try {
+                am.mode = AudioManager.MODE_IN_COMMUNICATION
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val speaker = am.availableCommunicationDevices
+                        .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                    if (speaker != null) am.setCommunicationDevice(speaker)
+                } else {
+                    @Suppress("DEPRECATION")
+                    am.isSpeakerphoneOn = true
+                }
+            } catch (_: Exception) {}
+
             track?.play()
 
             running.set(true)
@@ -167,11 +195,14 @@ class VoiceAudioEngine(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun flush() {
+        // Barge-in: drop pending AI audio so it stops quickly. We deliberately DO NOT reset
+        // `primed` or pause/flush the AudioTrack — that would create an AEC3 reference gap and
+        // reset the playback clock, exactly the disruption that caused start-of-turn echo. The
+        // continuous loop keeps emitting silence + feeding the reference; the small residual
+        // already in the AudioTrack buffer (~one buffer) plays out within ~80ms, then silence.
         synchronized(renderLock) {
             renderQueue.clear()
-            primed = false
         }
-        try { track?.pause(); track?.flush(); track?.play() } catch (_: Exception) {}
     }
 
     @ReactMethod
@@ -196,43 +227,74 @@ class VoiceAudioEngine(reactContext: ReactApplicationContext) :
     }
 
     /**
-     * Playback + AEC reference, both paced to real speaker time. Each iteration pulls one
-     * fixed 10ms (240-sample @ 24kHz) frame, writes it to AudioTrack (which blocks at real
-     * rate in MODE_STREAM), then feeds that exact frame to ProcessReverseStream. This keeps
-     * the reverse stream in 1:1 lockstep with the 16kHz capture loop, so AEC3's render buffer
-     * never overruns and the echo-path delay stays stable.
+     * Playback + AEC reference, both paced to real speaker time.
+     *
+     * CRITICAL for echo cancellation: after a one-time initial prebuffer, this loop runs a
+     * CONTINUOUS 10ms cadence that NEVER stops — every tick it writes a frame to AudioTrack
+     * (real audio if the jitter buffer has any, otherwise silence) AND feeds that exact frame
+     * to ProcessReverseStream. Because the reference never gaps, AEC3's render buffer and
+     * echo-path delay stay locked across turn boundaries. (Previously the loop went idle
+     * between turns — no write, no reference — so AEC3 lost alignment and the first few hundred
+     * ms of each new AI turn leaked into the mic. That was the start-of-turn echo.)
+     *
+     * AudioTrack.write() blocks at the real playback rate in MODE_STREAM, so the silence we
+     * write keeps the speaker clock and the AEC reference advancing in lockstep with the
+     * 16kHz capture loop.
      */
     private fun startPlaybackLoop() {
         playbackThread = Thread {
             val frame = ShortArray(FAR_FRAME)
-            val silence = ShortArray(FAR_FRAME)  // zeros — fed on underrun to hold cadence
+            val silence = ShortArray(FAR_FRAME)  // zeros — fed between/within turns to hold cadence
+            var framesWritten = 0L               // total frames handed to AudioTrack (for delay calc)
+            var lastDelayUpdate = 0L
             while (running.get()) {
                 var haveFrame = false
                 synchronized(renderLock) {
-                    // (Re)prime: wait for the jitter buffer to fill before (re)starting playback.
+                    // One-time initial prebuffer: wait for the jitter buffer to fill once before
+                    // playback starts. `primed` is set ONCE and never reset mid-session, so the
+                    // continuous cadence below is never interrupted (no re-prime gaps).
                     if (!primed) {
                         if (renderQueue.size >= PREBUFFER_SAMPLES) primed = true
                         else { try { renderLock.wait(20) } catch (_: InterruptedException) {} }
                     }
-                    if (primed) {
-                        if (renderQueue.size >= FAR_FRAME) {
-                            for (k in 0 until FAR_FRAME) frame[k] = renderQueue.removeFirst()
-                            haveFrame = true
-                        } else {
-                            // Underran mid-stream — re-prime so we don't dribble silence.
-                            primed = false
-                        }
+                    if (primed && renderQueue.size >= FAR_FRAME) {
+                        for (k in 0 until FAR_FRAME) frame[k] = renderQueue.removeFirst()
+                        haveFrame = true
                     }
                 }
-                // Before priming (pure startup silence) loop without writing. Once playing, a
-                // momentary underrun writes a silence frame so speaker and AEC reference stay
-                // sample-aligned with the capture cadence.
-                if (!primed && !haveFrame) continue
+                if (!primed) continue  // still waiting for the very first prebuffer
                 val out = if (haveFrame) frame else silence
-                try { track?.write(out, 0, FAR_FRAME) } catch (_: Exception) {}
+                val wrote = try { track?.write(out, 0, FAR_FRAME) ?: 0 } catch (_: Exception) { 0 }
+                if (wrote > 0) framesWritten += wrote
                 if (apmHandle != 0L) nativeProcessReverse(apmHandle, out)
+
+                // Feed AEC3 the REAL render delay (frames buffered but not yet played), refreshed
+                // ~1×/sec, instead of a fixed guess — tighter, faster echo convergence. Falls back
+                // to the fixed estimate if the platform timestamp isn't available yet.
+                val now = System.currentTimeMillis()
+                if (apmHandle != 0L && now - lastDelayUpdate >= 1000L) {
+                    lastDelayUpdate = now
+                    nativeSetStreamDelayMs(apmHandle, measuredDelayMs(framesWritten))
+                }
             }
         }.apply { name = "VoiceAudioPlayback"; start() }
+    }
+
+    private val playbackTimestamp = android.media.AudioTimestamp()
+
+    /** Render latency in ms = frames written but not yet presented by the speaker, from the
+     *  AudioTrack timestamp; plus a small constant for capture + acoustic path. AEC3 refines
+     *  the fine alignment internally — this just gives it an accurate coarse delay. */
+    private fun measuredDelayMs(framesWritten: Long): Int {
+        val t = track ?: return estimatedDelayMs()
+        return try {
+            if (t.getTimestamp(playbackTimestamp)) {
+                val unplayed = framesWritten - playbackTimestamp.framePosition
+                if (unplayed < 0) return estimatedDelayMs()
+                val ms = unplayed.toDouble() / FAR_RATE * 1000.0 + 15.0
+                ms.toInt().coerceIn(20, 500)
+            } else estimatedDelayMs()
+        } catch (_: Exception) { estimatedDelayMs() }
     }
 
     private fun estimatedDelayMs(): Int {
@@ -269,6 +331,19 @@ class VoiceAudioEngine(reactContext: ReactApplicationContext) :
         try { track?.stop() } catch (_: Exception) {}
         try { track?.release() } catch (_: Exception) {}
         track = null
+        // Restore the device's audio mode + speaker routing we changed in start().
+        audioManager?.let { am ->
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    am.clearCommunicationDevice()
+                } else {
+                    @Suppress("DEPRECATION")
+                    am.isSpeakerphoneOn = prevSpeakerphoneOn
+                }
+                am.mode = prevAudioMode
+            } catch (_: Exception) {}
+        }
+        audioManager = null
         synchronized(renderLock) { renderQueue.clear(); primed = false }
         if (apmHandle != 0L) { nativeDestroy(apmHandle); apmHandle = 0L }
     }

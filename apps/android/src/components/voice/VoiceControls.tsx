@@ -101,11 +101,8 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    // No elevation/shadow: Samsung/One UI renders the elevation shadow of a rounded
+    // view as a square box (visible against the coral muted background). Keep it flat.
   },
   muteBtnMuted: {
     backgroundColor: colors.coral,
@@ -123,15 +120,9 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     backgroundColor: colors.genPurple,
-    shadowColor: colors.genPurple,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 4,
   },
   pttBtnHeld: {
     backgroundColor: "#34C759",
-    shadowColor: "#34C759",
     transform: [{ scale: 0.97 }],
   },
   pttText: {
@@ -147,11 +138,6 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     backgroundColor: "#EF4444",
-    shadowColor: "#EF4444",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 3,
   },
   endText: {
     fontFamily: fonts.dmBold,
