@@ -87,7 +87,6 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
 
   const getActiveNav = () => {
     if (pathname === "/student" || pathname === "/student/") return "home";
-    if (pathname?.startsWith("/student/analytics")) return "progress";
     if (pathname?.startsWith("/student/assessments")) return "practice";
     if (pathname?.startsWith("/student/schedule")) return "schedule";
     if (pathname?.startsWith("/student/report-card")) return "report";

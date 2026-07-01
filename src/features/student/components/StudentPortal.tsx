@@ -8,11 +8,6 @@ import { StudentProfile } from "./StudentProfile";
 import { AssessmentsPage } from "@/features/student/components/AssessmentsPage";
 import dynamic from "next/dynamic";
 
-// Lazy-loaded: pulls in recharts; only rendered on the analytics tab.
-const StudentAnalyticsDashboard = dynamic(
-  () => import("@/components/analytics/StudentAnalyticsDashboard").then((m) => m.StudentAnalyticsDashboard),
-  { ssr: false }
-);
 
 /**
  * StudentPortal renders the correct sub-view based on the current URL path.
@@ -23,24 +18,13 @@ export function StudentPortal() {
   
   const isProfileRoute = pathname === "/student/profile";
   const isAssessmentsRoute = pathname === "/student/assessments";
-  const isAnalyticsRoute = pathname === "/student/analytics";
+
   const isChatRoute = pathname?.startsWith("/student/chat");
 
   return (
     <div className="h-screen overflow-hidden">
       <AnimatePresence mode="wait">
-        {isAnalyticsRoute ? (
-          <motion.div
-            key="analytics"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="h-full"
-          >
-            <StudentAnalyticsDashboard />
-          </motion.div>
-        ) : isProfileRoute ? (
+        {isProfileRoute ? (
           <motion.div
             key="profile"
             initial={{ opacity: 0, x: 20 }}

@@ -62,57 +62,12 @@ export const TUTORIAL_SEQUENCE: TutorialStepDef[] = [
     requiresAction: "navigate"
   },
   {
-    id: "hamburger-menu-analytics",
-    target: '[data-tutorial="hamburger-menu"]',
-    title: "Open Menu",
-    description: "Open the menu again to find your Analytics dashboard.",
-    expectedRoute: "/student",
-    position: "bottom",
-    mobileOnly: true,
-    requiresAction: "open_sidebar"
-  },
-  {
-    id: "go-to-analytics",
-    target: '[data-tutorial="analytics-nav"]',
-    title: "Track Progress",
-    description: "Now let's see your progress. Click on the Analytics tab in the navigation.",
-    expectedRoute: "/student",
-    position: "top",
-    requiresAction: "navigate"
-  },
-  // 3. Analytics
-  {
-    id: "analytics-subject",
-    target: '[data-tutorial="chapter-mastery-tab"]',
-    title: "Subject Mastery",
-    description: "Here you can see your overall mastery levels across different subjects.",
-    expectedRoute: "/student/analytics",
-    position: "bottom"
-  },
-  {
-    id: "analytics-skill",
-    target: '[data-tutorial="skill-mastery-tab"]',
-    title: "Skill Mastery",
-    description: "Click here to drill down into specific micro-skills within a subject.",
-    expectedRoute: "/student/analytics",
-    position: "bottom"
-  },
-  {
-    id: "analytics-progression",
-    target: '[data-tutorial="skill-progression-tab"]',
-    title: "Skill Progression",
-    description: "This shows how your skills have improved over time.",
-    expectedRoute: "/student/analytics",
-    position: "bottom"
-  },
-  {
-    id: "go-to-chat",
-    target: '[data-tutorial="analytics-back-button"]',
+    id: "youre-all-set",
+    target: '[data-tutorial="profile-nav"]',
     title: "You're All Set!",
-    description: "Amazing work! Click Back to return to the Chat Hub and start your learning journey.",
-    expectedRoute: "/student/analytics",
+    description: "Amazing work! You're ready to start your learning journey. Check out your Practice tests or talk to a tutor.",
+    expectedRoute: "/student",
     position: "bottom",
-    requiresAction: "navigate"
   },
 ];
 

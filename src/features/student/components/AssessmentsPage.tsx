@@ -32,7 +32,7 @@ export function AssessmentsPage() {
 
 
   const { studentProfile } = useStudentStore();
-  const { startTest, loadTest, loadStudentTests, studentTests, isLoadingTests } = useTestStore();
+  const { startTest, loadTest, loadSubmission, loadStudentTests, studentTests, isLoadingTests } = useTestStore();
   const [isLoadingResult, setIsLoadingResult] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [allChapters, setAllChapters] = useState<any[]>([]);
@@ -108,6 +108,12 @@ export function AssessmentsPage() {
     setIsLoadingResult(true);
     try {
       await loadTest(testId);
+      const { currentTest } = useTestStore.getState();
+      if (!currentTest) {
+        console.error("Failed to load test paper.");
+        return;
+      }
+      await loadSubmission(testId);
       router.push("/student/test?from=assessments");
     } catch (error) {
       console.error("Error loading past test:", error);

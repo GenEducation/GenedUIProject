@@ -104,7 +104,7 @@ export const useTestStore = create<TestState>((set, get) => ({
 
     set({ isSubmitting: true });
     try {
-      const allQuestions = currentTest.sections.flatMap((s) => s.questions);
+      const allQuestions = currentTest.sections?.flatMap((s) => s.questions) || [];
       const formattedAnswers: Answer[] = allQuestions
         .filter((q) => answers[q.question_id] || matchSelections[q.question_id])
         .map((q) => ({
@@ -146,8 +146,10 @@ export const useTestStore = create<TestState>((set, get) => ({
     try {
       const result = await testService.getSubmission(submissionId);
       set({ testResult: result });
-    } catch (error) {
-      console.error("Failed to load submission:", error);
+    } catch (error: any) {
+      if (error?.status !== 404) {
+        console.error("Failed to load submission:", error);
+      }
     } finally {
       set({ isSubmitting: false });
     }
