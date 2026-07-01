@@ -104,7 +104,7 @@ export function AssessmentsPage() {
     chapter.subject.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleViewTest = async (testId: string) => {
+  const handleViewTest = async (testId: string, submissionId: string | null) => {
     setIsLoadingResult(true);
     try {
       await loadTest(testId);
@@ -113,7 +113,9 @@ export function AssessmentsPage() {
         console.error("Failed to load test paper.");
         return;
       }
-      await loadSubmission(testId);
+      if (submissionId) {
+        await loadSubmission(submissionId);
+      }
       router.push("/student/test?from=assessments");
     } catch (error) {
       console.error("Error loading past test:", error);
@@ -222,7 +224,18 @@ export function AssessmentsPage() {
                       className="bg-white p-6 rounded-3xl border border-[#042E5C]/5 shadow-sm flex items-center justify-between gap-4"
                     >
                       <div className="min-w-0 space-y-1">
-                        <h3 className="text-sm font-black text-[#042E5C] truncate">{t.document_title}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-black text-[#042E5C] truncate">{t.document_title}</h3>
+                          <span
+                            className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                              t.submission_id
+                                ? "bg-emerald-50 text-emerald-600"
+                                : "bg-amber-50 text-amber-600"
+                            }`}
+                          >
+                            {t.submission_id ? "Completed" : "Pending"}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-black text-[#042E5C]/40 uppercase tracking-widest">
                             {t.subject}
@@ -230,10 +243,15 @@ export function AssessmentsPage() {
                           <span className="text-[10px] font-medium text-[#042E5C]/30">
                             {new Date(t.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                           </span>
+                          {t.submission_id && t.overall_score != null && (
+                            <span className="text-[10px] font-black text-[#042E5C]/40">
+                              {Math.round(t.overall_score * 100)}%
+                            </span>
+                          )}
                         </div>
                       </div>
                       <button
-                        onClick={() => handleViewTest(t.test_id)}
+                        onClick={() => handleViewTest(t.test_id, t.submission_id)}
                         disabled={isLoadingResult}
                         className="shrink-0 px-4 py-2 rounded-xl bg-[#042E5C]/5 text-[#042E5C] text-[10px] font-black uppercase tracking-widest hover:bg-[#042E5C]/10 disabled:opacity-40 transition-all"
                       >

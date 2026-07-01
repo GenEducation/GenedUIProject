@@ -118,4 +118,7 @@ export interface StudentTestSummary {
   subject: string;
   grade: number;
   created_at: string;
+  submission_id: string | null;
+  overall_score: number | null;
+  overall_verdict: ZPDVerdict | null;
 }
