@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Menu, Loader2, Volume2, VolumeX, Mic, MicOff, Square, Check, BookOpen } from "lucide-react";
+import { ArrowLeft, Menu, Loader2, Volume2, VolumeX, Mic, MicOff, Square, Check, BookOpen, HelpCircle, GraduationCap } from "lucide-react";
 import React, { useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -206,7 +206,7 @@ function ReadingSkillModal({
 
           {state === "completed" && analysisResult && (
             <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                 <div className="bg-blue-50/50 p-2.5 sm:p-3 rounded-xl border border-blue-100 flex flex-col items-center text-center">
                   <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-blue-600 font-bold mb-0.5">Accuracy</span>
                   <span className="text-lg sm:text-xl font-black text-blue-900 leading-tight">
@@ -339,6 +339,9 @@ export function StudentChatMain({
     chapterPdfError,
     clearPdfError,
     studentProfile,
+    chatQueryMode,
+    chatQueryModePinned,
+    setChatQueryMode,
   } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -472,17 +475,84 @@ export function StudentChatMain({
             <AnimatePresence>
               <AudioStatusPill key="audio-pill" state={playbackState} onStop={stopPlayback} />
             </AnimatePresence>
-            <div className="flex items-center gap-1">
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00B894", display: "inline-block", flexShrink: 0 }} className="animate-pulse" />
-              <span style={{ fontSize: "clamp(8px, 2vw, 11px)", fontWeight: 700, color: "#00B894", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: "'DM Sans', sans-serif" }}>
-                Active
-              </span>
+
+            {/* ── Segmented mode toggle ── */}
+            <motion.div
+              className="flex items-center flex-shrink-0"
+              onClick={() => setChatQueryMode(chatQueryMode === "doubt" ? "study" : "doubt", true)}
+              whileTap={{ scale: 0.97 }}
+              style={{
+                background: "#E8E8EC",
+                borderRadius: 999,
+                padding: 3,
+                gap: 0,
+                fontFamily: "'DM Sans', sans-serif",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
+              {/* Doubt segment */}
+              <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 999, zIndex: 1 }}>
+                {chatQueryMode === "doubt" && (
+                  <motion.div
+                    layoutId="mode-active-pill"
+                    style={{ position: "absolute", inset: 0, borderRadius: 999, background: "#5B4DC7", boxShadow: "0 2px 8px rgba(91,77,199,0.4)" }}
+                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                  />
+                )}
+                <motion.span
+                  animate={{ color: chatQueryMode === "doubt" ? "#FFFFFF" : "#9CA3AF" }}
+                  transition={{ duration: 0.18 }}
+                  style={{ position: "relative", zIndex: 1, display: "flex" }}
+                >
+                  <HelpCircle size={11} />
+                </motion.span>
+                <motion.span
+                  animate={{ color: chatQueryMode === "doubt" ? "#FFFFFF" : "#9CA3AF" }}
+                  transition={{ duration: 0.18 }}
+                  style={{ position: "relative", zIndex: 1, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}
+                >
+                  Doubt
+                </motion.span>
+              </div>
+
+              {/* Teaching segment */}
+              <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 999, zIndex: 1 }}>
+                {chatQueryMode === "study" && (
+                  <motion.div
+                    layoutId="mode-active-pill"
+                    style={{ position: "absolute", inset: 0, borderRadius: 999, background: "#00B894", boxShadow: "0 2px 8px rgba(0,184,148,0.4)" }}
+                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                  />
+                )}
+                <motion.span
+                  animate={{ color: chatQueryMode === "study" ? "#FFFFFF" : "#9CA3AF" }}
+                  transition={{ duration: 0.18 }}
+                  style={{ position: "relative", zIndex: 1, display: "flex" }}
+                >
+                  <GraduationCap size={11} />
+                </motion.span>
+                <motion.span
+                  animate={{ color: chatQueryMode === "study" ? "#FFFFFF" : "#9CA3AF" }}
+                  transition={{ duration: 0.18 }}
+                  style={{ position: "relative", zIndex: 1, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}
+                >
+                  Teaching
+                </motion.span>
+              </div>
+            </motion.div>
+
+            {/* ── Static status: active dot + grade ── */}
+            <div className="flex items-center gap-1.5 flex-shrink-0" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00B894", flexShrink: 0 }} className="animate-pulse" />
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#00B894", letterSpacing: "0.04em" }}>Active</span>
+              {activeChat.grade && (
+                <>
+                  <span style={{ color: "#CBD5E1", fontSize: 10 }}>·</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#94A3B8", whiteSpace: "nowrap" }}>{activeChat.grade}</span>
+                </>
+              )}
             </div>
-            {activeChat.grade && (
-              <span style={{ fontSize: "clamp(8px, 2vw, 11px)", fontWeight: 700, color: "#94A3B8", background: "#F7F8FC", padding: "3px 8px", borderRadius: 14, border: "1px solid #E2E8F0", whiteSpace: "nowrap" }}>
-                Grade {activeChat.grade}
-              </span>
-            )}
           </div>
         </div>
 
@@ -514,9 +584,9 @@ export function StudentChatMain({
                 key="welcome"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex-1 flex flex-col items-center justify-center px-6 max-w-5xl mx-auto w-full"
+                className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 max-w-5xl mx-auto w-full"
               >
-                <div style={{ width: 96, height: 96, borderRadius: 40, background: "#FFFFFF", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 32, boxShadow: "0 2px 12px rgba(91,77,199,0.08)" }}>
+                <div style={{ width: "clamp(64px, 16vw, 96px)", height: "clamp(64px, 16vw, 96px)", borderRadius: 40, background: "#FFFFFF", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 32, boxShadow: "0 2px 12px rgba(91,77,199,0.08)" }}>
                   <Image
                     src="/Favicon1.jpg"
                     alt="Agent Icon"
@@ -526,7 +596,7 @@ export function StudentChatMain({
                   />
                 </div>
                 <div className="text-center space-y-3 mb-12">
-                  <h1 style={{ fontFamily: "'Nunito', sans-serif", fontSize: 32, fontWeight: 800, color: "#1A202C", lineHeight: 1.2 }}>
+                  <h1 style={{ fontFamily: "'Nunito', sans-serif", fontSize: "clamp(22px, 5vw, 32px)", fontWeight: 800, color: "#1A202C", lineHeight: 1.2 }}>
                     New session: {activeChat.title}
                   </h1>
                   <p style={{ fontSize: 16, color: "#4A5568", maxWidth: 400, margin: "0 auto", lineHeight: 1.6 }}>
@@ -542,7 +612,7 @@ export function StudentChatMain({
             ) : (
               <div className="flex-1 flex flex-col">
                 {/* Messages List */}
-                <div className="flex-1 px-6 md:px-12 py-8 space-y-8 max-w-5xl mx-auto w-full">
+                <div className="flex-1 px-3 sm:px-6 md:px-12 py-8 space-y-8 max-w-5xl mx-auto w-full">
                   {messages
                     .filter((msg, idx) => !(idx === 0 && msg.sender === "user"))
                     .map((msg) => (

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { ArrowLeft, BookOpen } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, BookOpen, Mic, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { VoiceStage } from "./VoiceStage";
@@ -9,8 +9,16 @@ import { VoiceTranscript } from "./VoiceTranscript";
 import { VoiceControls } from "./VoiceControls";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { ResizableSplitPane } from "./ResizableSplitPane";
-import { ChapterPdfViewer } from "./ChapterPdfViewer";
+import dynamic from "next/dynamic";
 import { ConnectionQualityBanner } from "./ConnectionQualityBanner";
+
+// Lazy-loaded: pulls in pdfjs-dist, which is heavy. Only fetched when a
+// chapter PDF is actually opened.
+const ChapterPdfViewer = dynamic(
+  () => import("./ChapterPdfViewer").then((m) => m.ChapterPdfViewer),
+  { ssr: false }
+);
+import { StudentHomeSidebar } from "./StudentHomeSidebar";
 
 const STATUS_CAPTION: Record<string, string> = {
   idle: "Tap anywhere on the screen to start",
@@ -44,6 +52,20 @@ export function StudentVoiceView() {
     chapterPdfError,
     clearPdfError,
   } = useStudentStore();
+
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  /* responsive sidebar */
+  useEffect(() => {
+    const handle = () => {
+      setSidebarOpen(window.innerWidth >= 1024);
+      setIsMobile(window.innerWidth < 768);
+    };
+    handle();
+    window.addEventListener("resize", handle);
+    return () => window.removeEventListener("resize", handle);
+  }, []);
 
   // Stop voice session on unmount.
   useEffect(() => {
@@ -86,14 +108,54 @@ export function StudentVoiceView() {
     router.push("/student");
   };
 
-  // Orb tap: only starts session when idle
-  const handleOrbTap = voiceSessionStatus === "idle" ? startVoiceSession : undefined;
+  // ── Resume / completion state ──────────────────────────────────────────────
+  // A reopened voice session arrives with transcript history but an idle pipeline.
+  // We must NOT auto-listen — the student resumes explicitly (spec requirement).
+  const hasHistory = messages.length > 0;
+  const isIdle = voiceSessionStatus === "idle";
+  // Treat a non-rate-limit error as "needs retry" (e.g. network failure mid-resume).
+  const isError = voiceSessionStatus === "error" && !isRateLimitHit;
+  const isCompleted = !!activeChat?.is_complete;
+  // Show an explicit Resume CTA when a session with history hasn't been (re)started
+  // this visit, or when a (re)connection attempt failed. Never for completed sessions.
+  const awaitingResume = (isIdle || isError) && hasHistory && !isCompleted;
+  // Completed sessions get a terminal CTA instead of Resume.
+  const showCompleted = isCompleted && (isIdle || isError);
+
+  const isVoiceMetadataMissing =
+    activeChat &&
+    (activeChat.source === "voice" || activeChat.source === "device") &&
+    !activeChat.orchestrator_state;
+
+  // Ambient tap-to-start is only for a brand-new session (no history, not completed).
+  // Reopened/completed/errored sessions use explicit buttons so we don't surprise-start the mic.
+  const ambientStart = isIdle && !hasHistory && !isCompleted ? startVoiceSession : undefined;
+
+  const handleResume = () => {
+    setRateLimitHit(false);
+    startVoiceSession();
+  };
+
+  const handleStartNew = () => {
+    stopVoiceSession();
+    router.push(
+      activeChat?.agent_id ? `/student/voice?agent=${activeChat.agent_id}` : "/student",
+    );
+  };
+
+  // Orb tap: only starts session when idle AND this is a fresh (no-history) session.
+  const handleOrbTap = ambientStart;
 
   // Orb press-and-hold: PTT when mic is muted during an active session
   const handleOrbPressStart = voiceSessionStatus === "active" && isMuted ? beginPttUtterance : undefined;
   const handleOrbPressEnd = voiceSessionStatus === "active" && isMuted ? endPttUtterance : undefined;
 
   const reactive = voiceSessionStatus === "active" && !isMuted;
+
+  // Show the orb landing stage only for a fresh session before the conversation starts.
+  // Reopened sessions (history) and completed sessions show the transcript + a CTA instead.
+  const showOrb =
+    !hasHistory && !isCompleted && !(voiceSessionStatus === "active" && messages.length > 0);
 
   const caption = isRateLimitHit
     ? (rateLimitMessage || "Daily limit reached. Upgrade to Pro for more.")
@@ -114,13 +176,14 @@ export function StudentVoiceView() {
   const voiceContent = (
     <div className="h-full flex flex-col font-sans overflow-hidden" style={bgStyle}>
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-4 border-b border-[#042E5C]/8 bg-white/50 backdrop-blur-sm">
+      <header className={`flex items-center justify-between px-4 py-4 border-b border-[#042E5C]/8 bg-white/50 backdrop-blur-sm transition-all ${!sidebarOpen ? "pl-16 sm:pl-8" : ""}`}>
         <button
           onClick={handleEnd}
-          className="flex items-center gap-2 text-[13px] font-bold text-[#042E5C]/60 hover:text-[#042E5C] transition-colors shrink-0"
+          title="Back to subjects"
+          className="flex items-center justify-center rounded-[10px] text-[#042E5C]/60 hover:text-[#042E5C] hover:bg-[#042E5C]/5 transition-colors shrink-0"
+          style={{ width: 38, height: 38 }}
         >
-          <ArrowLeft size={16} />
-          Back to subjects
+          <ArrowLeft size={18} />
         </button>
         <div className="text-[13px] font-bold text-[#042E5C] text-right">
           <span className="capitalize">{subjectLabel}</span>
@@ -131,16 +194,18 @@ export function StudentVoiceView() {
       {/* Connection quality alert — slides in below header */}
       <ConnectionQualityBanner quality={connectionQuality} />
 
-      {/* Top — Avatar / orb */}
-      <section className="flex flex-col items-center justify-center pt-6 pb-2">
-        <VoiceStage
-          caption={caption}
-          reactive={reactive}
-          onTap={handleOrbTap}
-          onPressStart={handleOrbPressStart}
-          onPressEnd={handleOrbPressEnd}
-        />
-      </section>
+      {/* Top — Avatar / orb (landing state only; hidden once the conversation is underway) */}
+      {showOrb && (
+        <section className="flex flex-col items-center justify-center pt-6 pb-2">
+          <VoiceStage
+            caption={caption}
+            reactive={reactive}
+            onTap={handleOrbTap}
+            onPressStart={handleOrbPressStart}
+            onPressEnd={handleOrbPressEnd}
+          />
+        </section>
+      )}
 
       {/* Textbook pill — between orb and transcript */}
       {activeChat?.chapter_name && (
@@ -195,50 +260,128 @@ export function StudentVoiceView() {
         </div>
       )}
 
-      {/* Middle — Transcript (fills remaining space) */}
-      <section className="flex-1 min-h-[140px] px-6 overflow-hidden">
+      {/* Middle — Conversation feed (fills remaining space; full height once orb is hidden) */}
+      <section className="flex-1 min-h-[140px] px-3 sm:px-6 overflow-hidden">
         <VoiceTranscript messages={messages} agentName={agentName} />
       </section>
 
-      {/* Bottom — Controls */}
-      <section className="relative px-6 pt-5 pb-7 flex flex-col items-center gap-5">
+      {/* Bottom — Controls (live), Resume CTA (reopened), or Completed CTA */}
+      <section className="relative px-3 sm:px-6 pt-5 pb-7 flex flex-col items-center gap-5">
         <RateLimitPrompt
           isVisible={isRateLimitHit}
           onClose={() => setRateLimitHit(false)}
         />
-        <VoiceControls onEnd={handleEnd} />
+
+        {showCompleted ? (
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-[13px] font-bold uppercase tracking-widest text-[#042E5C]/50">
+              Session Completed
+            </p>
+            <button
+              onClick={handleStartNew}
+              className="flex items-center gap-2 px-6 h-12 rounded-full font-bold text-[14px] text-white transition-all shadow-lg"
+              style={{ background: "linear-gradient(135deg, #5B4DC7, #4A90D9)" }}
+            >
+              <Sparkles size={16} />
+              Start New Session
+            </button>
+          </div>
+        ) : awaitingResume ? (
+          <div className="flex flex-col items-center gap-3">
+            {isError && (
+              <p className="text-[12px] font-semibold text-[#E8635A] text-center max-w-[280px]">
+                Couldn’t reconnect the voice session. Your transcript is safe — try again.
+              </p>
+            )}
+            {isVoiceMetadataMissing && (
+              <p className="text-[12px] font-semibold text-[#D4820A] text-center max-w-[280px]">
+                Voice session state is missing. You can view the transcript below or restart the voice session.
+              </p>
+            )}
+            <button
+              onClick={handleResume}
+              className="flex items-center gap-2.5 px-7 h-13 sm:h-14 rounded-full font-bold text-[15px] text-white transition-all select-none"
+              style={{
+                background: "linear-gradient(135deg, #5B4DC7, #4A90D9)",
+                boxShadow: "0 8px 24px rgba(91,77,199,0.40)",
+                paddingTop: 14,
+                paddingBottom: 14,
+              }}
+            >
+              <Mic size={18} />
+              {isVoiceMetadataMissing ? "Restart Voice Session" : isError ? "Reconnect Voice Session" : "Resume Voice Session"}
+            </button>
+            <button
+              onClick={handleEnd}
+              className="text-[12px] font-semibold text-[#042E5C]/40 hover:text-[#042E5C]/70 transition-colors"
+            >
+              Back to subjects
+            </button>
+          </div>
+        ) : (
+          <VoiceControls onEnd={handleEnd} />
+        )}
       </section>
     </div>
   );
 
-  if (isPdfViewerOpen && chapterPdfUrl) {
-    return (
-      <div className="h-screen flex font-sans overflow-hidden">
-        <ResizableSplitPane
-          left={voiceContent}
-          right={
-            <ChapterPdfViewer
-              pdfUrl={chapterPdfUrl}
-              chapterName={activeChat?.chapter_name || ""}
-              onClose={closePdfViewer}
-            />
-          }
-          defaultLeftPercent={50}
-          minLeftPx={280}
-          minRightPx={240}
-          storageKey="pdf_split_voice"
-        />
-      </div>
-    );
-  }
+  const mainArea = (
+    <div
+      className="flex-1 min-w-0 h-full overflow-hidden relative"
+      onClick={ambientStart}
+      style={{ cursor: ambientStart ? "pointer" : "default" }}
+    >
+      {isPdfViewerOpen && chapterPdfUrl ? (
+        isMobile ? (
+          <>
+            {voiceContent}
+            {/* Full-screen textbook overlay on mobile */}
+            <div className="absolute inset-0 z-30 flex flex-col" style={{ background: "#F7F8FC" }} onClick={(e) => e.stopPropagation()}>
+              <ChapterPdfViewer
+                pdfUrl={chapterPdfUrl}
+                chapterName={activeChat?.chapter_name || ""}
+                onClose={closePdfViewer}
+              />
+            </div>
+          </>
+        ) : (
+          <ResizableSplitPane
+            left={voiceContent}
+            right={
+              <ChapterPdfViewer
+                pdfUrl={chapterPdfUrl}
+                chapterName={activeChat?.chapter_name || ""}
+                onClose={closePdfViewer}
+              />
+            }
+            defaultLeftPercent={50}
+            minLeftPx={280}
+            minRightPx={240}
+            storageKey="pdf_split_voice"
+          />
+        )
+      ) : (
+        voiceContent
+      )}
+    </div>
+  );
 
   return (
-    <div
-      className="h-screen font-sans overflow-hidden"
-      onClick={voiceSessionStatus === "idle" ? startVoiceSession : undefined}
-      style={{ cursor: voiceSessionStatus === "idle" ? "pointer" : "default" }}
-    >
-      {voiceContent}
+    <div className="h-screen flex font-sans overflow-hidden relative">
+      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="absolute top-4 left-4 z-20 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
+          style={{ width: 38, height: 38, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#042E5C" }}
+          title="Open sidebar"
+        >
+          ☰
+        </button>
+      )}
+
+      {mainArea}
     </div>
   );
 }

@@ -54,7 +54,7 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd 
         }}
         animate={{ scale: pulseScale }}
         transition={{ duration: pulseDuration, repeat: Infinity, ease: "easeInOut" }}
-        style={{ width: "clamp(128px, 22vh, 220px)", height: "clamp(128px, 22vh, 220px)" }}
+        style={{ width: "min(clamp(128px, 22vh, 220px), 60vw)", height: "min(clamp(128px, 22vh, 220px), 60vw)" }}
       >
         {/* Outer glow ring */}
         <motion.div

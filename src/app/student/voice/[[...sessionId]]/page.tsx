@@ -23,6 +23,7 @@ export default function StudentVoiceUnifiedPage({
   const {
     activeChat,
     initNewVoiceSession,
+    openChatById,
     availableAgents,
     fetchAvailableAgents,
     fetchSessions,
@@ -38,7 +39,13 @@ export default function StudentVoiceUnifiedPage({
       fetchSessions();
     }
 
-    if (agentFromUrl && !sessionIdFromUrl) {
+    // Reopening an existing voice session by id: hydrate metadata + transcript
+    // history (does NOT start the mic — the user resumes explicitly from the UI).
+    if (sessionIdFromUrl) {
+      if (!activeChat || activeChat.id !== sessionIdFromUrl) {
+        openChatById(sessionIdFromUrl, agentFromUrl || undefined);
+      }
+    } else if (agentFromUrl && !sessionIdFromUrl) {
       if (availableAgents.length === 0) {
         fetchAvailableAgents();
       }
@@ -59,6 +66,7 @@ export default function StudentVoiceUnifiedPage({
     sessionIdFromUrl,
     activeChat,
     initNewVoiceSession,
+    openChatById,
     router,
     availableAgents.length,
     studentProfile,
@@ -66,6 +74,13 @@ export default function StudentVoiceUnifiedPage({
     fetchSessions,
     isSessionsLoading,
   ]);
+
+  // Redirect to Chat Page if this session should be in chat mode
+  useEffect(() => {
+    if (activeChat && activeChat.id === sessionIdFromUrl && activeChat.source !== "voice" && activeChat.source !== "device") {
+      router.replace(`/student/chat/${activeChat.id}`);
+    }
+  }, [activeChat, sessionIdFromUrl, router]);
 
   const isLoading = !activeChat && (agentFromUrl || sessionIdFromUrl);
 

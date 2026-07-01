@@ -42,7 +42,7 @@ export function ChapterPdfViewer({ pdfUrl, chapterName, onClose }: ChapterPdfVie
       {/* Header */}
       <div
         className="flex items-center justify-between flex-shrink-0"
-        style={{ padding: "10px 12px", background: "#FFFFFF", borderBottom: "1px solid #E2E8F0" }}
+        style={{ padding: "8px 10px", background: "#FFFFFF", borderBottom: "1px solid #E2E8F0" }}
       >
         <div className="flex items-center gap-2 min-w-0">
           <div
@@ -68,9 +68,9 @@ export function ChapterPdfViewer({ pdfUrl, chapterName, onClose }: ChapterPdfVie
           onClick={onClose}
           title="Close textbook"
           className="flex items-center justify-center rounded-lg transition-colors hover:bg-gray-100 flex-shrink-0"
-          style={{ width: 28, height: 28, color: "#94A3B8", border: "none", background: "transparent", cursor: "pointer" }}
+          style={{ width: 40, height: 40, color: "#94A3B8", border: "none", background: "transparent", cursor: "pointer" }}
         >
-          <X size={13} />
+          <X size={16} />
         </button>
       </div>
 

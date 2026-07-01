@@ -35,12 +35,12 @@ export function ResizableSplitPane({
 
   const [leftPercent, setLeftPercent] = useState<number>(getInitialPercent);
 
-  const onMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!isDragging.current || !containerRef.current) return;
+  const updatePercentFromClientX = useCallback(
+    (clientX: number) => {
+      if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       const totalWidth = rect.width;
-      const offsetX = e.clientX - rect.left;
+      const offsetX = clientX - rect.left;
 
       const minLeft = (minLeftPx / totalWidth) * 100;
       const maxLeft = ((totalWidth - minRightPx) / totalWidth) * 100;
@@ -51,7 +51,24 @@ export function ResizableSplitPane({
     [minLeftPx, minRightPx]
   );
 
-  const onMouseUp = useCallback(() => {
+  const onMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      updatePercentFromClientX(e.clientX);
+    },
+    [updatePercentFromClientX]
+  );
+
+  const onTouchMove = useCallback(
+    (e: TouchEvent) => {
+      if (!isDragging.current) return;
+      e.preventDefault();
+      updatePercentFromClientX(e.touches[0].clientX);
+    },
+    [updatePercentFromClientX]
+  );
+
+  const onDragEnd = useCallback(() => {
     if (!isDragging.current) return;
     isDragging.current = false;
     document.body.style.cursor = "";
@@ -63,17 +80,26 @@ export function ResizableSplitPane({
 
   useEffect(() => {
     document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
+    document.addEventListener("mouseup", onDragEnd);
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", onDragEnd);
     return () => {
       document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
+      document.removeEventListener("mouseup", onDragEnd);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onDragEnd);
     };
-  }, [onMouseMove, onMouseUp]);
+  }, [onMouseMove, onTouchMove, onDragEnd]);
 
   const onDividerMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     isDragging.current = true;
     document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  };
+
+  const onDividerTouchStart = () => {
+    isDragging.current = true;
     document.body.style.userSelect = "none";
   };
 
@@ -86,12 +112,13 @@ export function ResizableSplitPane({
       {/* Divider */}
       <div
         onMouseDown={onDividerMouseDown}
-        className="flex-shrink-0 group relative flex items-center justify-center"
-        style={{ width: 6, cursor: "col-resize", background: "#E2E8F0", zIndex: 10 }}
+        onTouchStart={onDividerTouchStart}
+        className="flex-shrink-0 group relative flex items-center justify-center touch-none"
+        style={{ width: 12, cursor: "col-resize", background: "#E2E8F0", zIndex: 10 }}
       >
         <div
           className="absolute inset-y-0 flex items-center justify-center transition-colors"
-          style={{ width: 6 }}
+          style={{ width: 12 }}
         >
           <div
             className="group-hover:bg-[#5B4DC7] transition-colors rounded-full"

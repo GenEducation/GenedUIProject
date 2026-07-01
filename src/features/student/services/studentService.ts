@@ -36,6 +36,14 @@ export const studentService = {
     return response.json();
   },
 
+  fetchTeacherReport: async (teacherId: string, studentId: string) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/teacher/students/${studentId}/report?teacher_id=${teacherId}`,
+      { headers: { accept: "application/json" } }
+    );
+    return response.json();
+  },
+
   fetchStudentStreak: async (studentId: string) => {
     const response = await authFetch(`${API_BASE_URL}/students/${studentId}/streak`);
     return response.json();
@@ -77,6 +85,11 @@ export const studentService = {
     return response.json();
   },
 
+  fetchVoiceSessionRestore: async (sessionId: string, signal?: AbortSignal) => {
+    const response = await authFetch(`${API_BASE_URL}/voice/session/${sessionId}/restore`, { signal });
+    return response.json();
+  },
+
   sendChatMessage: async (payload: {
     text: string;
     user_id: string;
@@ -86,6 +99,7 @@ export const studentService = {
     grade: number;
     document_title?: string;
     intent?: string;
+    session_mode?: string;
     activity_input?: {
       activity_id: string;
       activity_type: string;
@@ -244,6 +258,25 @@ export const studentService = {
     return response.json();
   },
 
+  /** POST /math/session/{session_id}/interactive-answer — grades an interactive math block.
+   *  session_id is the chat session id; authFetch injects the x-user-id header. */
+  submitInteractiveAnswer: async (
+    sessionId: string,
+    directiveId: string,
+    interactionType: string,
+    answer: string
+  ) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/math/session/${sessionId}/interactive-answer`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ directive_id: directiveId, interaction_type: interactionType, answer }),
+      }
+    );
+    return response.json();
+  },
+
   fetchSkillSessions: async (sessionId: string) => {
     const response = await authFetch(`${API_BASE_URL}/english/session/${sessionId}/skill-sessions`);
     return response.json();
@@ -329,6 +362,32 @@ export const studentService = {
     const response = await authFetch(
       `${API_BASE_URL}/students/${studentId}/time/by-period?granularity=${granularity}`,
       { headers: { accept: "application/json" } }
+    );
+    return response.json();
+  },
+
+  fetchLanguagePreferences: async (studentId: string) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/students/${studentId}/language-preferences`,
+      { headers: { accept: "application/json" } }
+    );
+    return response.json();
+  },
+
+  updateLanguagePreferences: async (
+    studentId: string,
+    payload: { preferred_language?: string | null; secondary_languages?: string[] | null }
+  ) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/students/${studentId}/language-preferences`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      }
     );
     return response.json();
   },

@@ -17,8 +17,6 @@ const initialSignUpData: SignUpFields = {
   role: "student",
   grade: "",
   phone: "",
-  organization: "",
-  website: "",
   otp_code: "",
   parent_email: "",
 };
@@ -67,8 +65,6 @@ export default function RegisterPage() {
       if (signupData.role === "parent") {
         if (!signupData.phone?.trim()) errs.phone = "Phone is compulsory";
         else if (!/^\d{10}$/.test(signupData.phone.trim())) errs.phone = "Phone must be a 10-digit number";
-      } else if (signupData.role === "partner") {
-        if (!signupData.organization?.trim()) errs.organization = "Organization is compulsory";
       }
     }
     return errs;
@@ -98,12 +94,11 @@ export default function RegisterPage() {
 
       const normalizedRole = authResponse.role?.toLowerCase() ?? "student";
       const role =
-        normalizedRole === "student" || normalizedRole === "partner" || normalizedRole === "parent"
-          ? (normalizedRole as "student" | "partner" | "parent")
+        normalizedRole === "student" || normalizedRole === "parent"
+          ? (normalizedRole as "student" | "parent")
           : ("student" as const);
 
       localStorage.setItem("gened_user_role", role);
-      if (role === "partner") localStorage.setItem("gened_partner_id", authResponse.user_id);
 
       if (role === "student") {
         useStudentStore.getState().setStudentProfile({

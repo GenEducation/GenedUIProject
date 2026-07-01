@@ -47,7 +47,7 @@ export function PttHotkeyConfig({ compact = false }: PttHotkeyConfigProps) {
       </span>
       <kbd
         className="px-2.5 py-1 rounded-md bg-white border border-[#E2E8F0] text-[#042E5C] font-bold shadow-sm"
-        style={{ minWidth: capturing ? 200 : 56, textAlign: "center", fontSize: compact ? 11 : 12 }}
+        style={{ minWidth: 56, maxWidth: capturing ? "80vw" : undefined, textAlign: "center", fontSize: compact ? 11 : 12 }}
       >
         {label}
       </kbd>

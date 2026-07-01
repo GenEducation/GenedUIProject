@@ -68,8 +68,17 @@ export default function StudentChatUnifiedPage({
     }
   }, [agentFromUrl, sessionIdFromUrl, activeChat, initNewChat, router, availableAgents.length, studentProfile, fetchAvailableAgents, fetchSessions, recentChats.length]);
 
-  // Show a local "preparing" spinner only if we have NO chat state and are trying to load one
-  const isLoading = !activeChat && (agentFromUrl || sessionIdFromUrl);
+  // Redirect to Voice Page if this session should be in voice mode
+  useEffect(() => {
+    if (activeChat && activeChat.id === sessionIdFromUrl && (activeChat.source === "voice" || activeChat.source === "device")) {
+      router.replace(`/student/voice/${activeChat.id}`);
+    }
+  }, [activeChat, sessionIdFromUrl, router]);
+
+  // Show a local "preparing" spinner only when initializing a brand-new chat via ?agent=.
+  // Loading an existing session (sessionIdFromUrl) is handled by StudentChatView itself,
+  // which calls openChatById and shows its own "Loading Chat..." spinner.
+  const isLoading = !activeChat && agentFromUrl && !sessionIdFromUrl;
 
   if (isLoading) {
     return (

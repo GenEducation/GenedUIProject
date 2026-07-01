@@ -41,7 +41,7 @@ export function PartnerRequestModal() {
               </div>
             )}
 
-            <div className="p-8 text-center space-y-5">
+            <div className="p-4 sm:p-8 text-center space-y-5">
               {partnerRequestStatus === "loading" && (
                 <div className="flex flex-col items-center justify-center space-y-4 py-6">
                   <div className="relative">

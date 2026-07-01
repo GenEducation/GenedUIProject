@@ -10,13 +10,11 @@ interface SignUpData {
   email: string;
   password: string;
   confirmPassword?: string;
-  role: "student" | "parent" | "partner";
+  role: "student" | "parent";
   age?: string;
   grade?: string;
   school_board?: string;
   phone?: string;
-  organization?: string;
-  website?: string;
   otp_code?: string;
   parent_email?: string;
 }
@@ -91,31 +89,6 @@ const ParentSVG = () => (
   </svg>
 );
 
-const PartnerSVG = () => (
-  <svg width="100%" height="100%" viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-    <ellipse cx="210" cy="370" rx="90" ry="18" fill="#64748B" opacity="0.3"/>
-    <rect x="150" y="180" width="120" height="150" rx="50" fill="#8B5CF6"/>
-    <ellipse cx="135" cy="245" rx="24" ry="18" fill="#F4C7A1"/>
-    <ellipse cx="285" cy="245" rx="24" ry="18" fill="#F4C7A1"/>
-    <rect x="85" y="210" width="55" height="70" rx="8" fill="#F59E0B"/>
-    <line x1="112" y1="210" x2="112" y2="280" stroke="white" strokeWidth="3"/>
-    <line x1="290" y1="230" x2="350" y2="180" stroke="#E5E7EB" strokeWidth="6" strokeLinecap="round"/>
-    <circle cx="210" cy="120" r="60" fill="#F4C7A1"/>
-    <path d="M150 120 Q170 45 210 60 Q250 45 270 120 Q240 90 210 95 Q180 90 150 120" fill="#111827"/>
-    <circle cx="190" cy="120" r="14" fill="none" stroke="#111" strokeWidth="3"/>
-    <circle cx="230" cy="120" r="14" fill="none" stroke="#111" strokeWidth="3"/>
-    <line x1="204" y1="120" x2="216" y2="120" stroke="#111" strokeWidth="3"/>
-    <circle cx="190" cy="120" r="4" fill="#111"/>
-    <circle cx="230" cy="120" r="4" fill="#111"/>
-    <path d="M190 150 Q210 168 230 150" stroke="#111" strokeWidth="4" fill="none" strokeLinecap="round"/>
-    <circle cx="90" cy="110" r="22" fill="#22C55E" opacity="0.9"/>
-    <text x="80" y="118" fontSize="18" fill="white">A+</text>
-    <circle cx="330" cy="110" r="22" fill="#38BDF8" opacity="0.9"/>
-    <text x="320" y="118" fontSize="18" fill="white">π</text>
-    <circle cx="350" cy="250" r="18" fill="#EF4444" opacity="0.9"/>
-    <text x="343" y="257" fontSize="16" fill="white">✓</text>
-  </svg>
-);
 
 export function SignUp({
   signupData,
@@ -261,7 +234,7 @@ export function SignUp({
 
   const prevStep = () => setStep((s) => s - 1);
 
-  const handleRoleSelect = (role: "student" | "parent" | "partner") => {
+  const handleRoleSelect = (role: "student" | "parent") => {
     const event = {
       target: { name: "role", value: role },
     } as any;
@@ -276,11 +249,12 @@ export function SignUp({
         <p className="text-xs text-[#042e5c]/50 mt-1">Select your role to get started</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
           { id: "student", label: "Student", icon: <StudentSVG /> },
           { id: "parent", label: "Parent", icon: <ParentSVG /> },
-          { id: "partner", label: "Partner", icon: <PartnerSVG /> },
+          // Partner accounts are provisioned by an administrator, not via public
+          // self-signup. (Removed intentionally.)
         ].map((role) => (
           <button
             key={role.id}
@@ -762,33 +736,6 @@ export function SignUp({
         </div>
       )}
 
-      {signupData.role === "partner" && (
-        <>
-          <div>
-            <label className={labelCls}>Organization</label>
-            <input
-              name="organization"
-              value={signupData.organization || ""}
-              onChange={onChange}
-              type="text"
-              placeholder="School or Institution name"
-              className={inputCls(!!errors.organization)}
-            />
-            {errors.organization && <p className={errorCls}>{errors.organization}</p>}
-          </div>
-          <div>
-            <label className={labelCls}>Website (Optional)</label>
-            <input
-              name="website"
-              value={signupData.website || ""}
-              onChange={onChange}
-              type="url"
-              placeholder="https://example.com"
-              className={inputCls(false)}
-            />
-          </div>
-        </>
-      )}
 
       {!googleToken && (errors.email || errors.password || errors.confirmPassword) && (
         <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold flex items-center gap-2 animate-pulse">

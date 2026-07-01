@@ -25,10 +25,10 @@ export function ShortAnswerQuestion({
 
   return (
     <div className="space-y-4">
-      <p className="text-[17px] font-medium text-[#042E5C] leading-relaxed">
+      <p className="text-[15px] sm:text-[17px] font-medium text-[#042E5C] leading-relaxed">
         {question.prompt}
       </p>
-      
+
       <textarea
         ref={textareaRef}
         value={value}
@@ -36,7 +36,7 @@ export function ShortAnswerQuestion({
         disabled={disabled}
         placeholder={question.type === "open_ended" ? "Write your explanation here..." : "Your answer..."}
         rows={1}
-        className="w-full p-4 rounded-xl border-2 border-[#042E5C]/10 focus:border-[#042E5C]/30 focus:ring-4 focus:ring-[#042E5C]/5 outline-none transition-all text-[15px] resize-none overflow-hidden min-h-[56px]"
+        className="w-full p-3 sm:p-4 rounded-xl border-2 border-[#042E5C]/10 focus:border-[#042E5C]/30 focus:ring-4 focus:ring-[#042E5C]/5 outline-none transition-all text-[15px] resize-none overflow-hidden min-h-[56px]"
       />
     </div>
   );

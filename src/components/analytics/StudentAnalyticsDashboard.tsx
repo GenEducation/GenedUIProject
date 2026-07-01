@@ -1,17 +1,29 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  BarChart2, ArrowLeft, CheckCircle2, 
+import {
+  BarChart2, ArrowLeft, CheckCircle2,
   Target, GraduationCap, ChevronDown, LayoutGrid, Info
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { MetricCard } from "./MetricCard";
-import { SkillMasteryView } from "./SkillMasteryView";
 import { ChapterMasteryView } from "./ChapterMasteryView";
-import { SkillProgression } from "./SkillProgression";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
+
+// Lazy-loaded: these are the recharts-backed views. Deferring them keeps
+// recharts out of the dashboard's initial bundle.
+const SkillMasteryView = dynamic(
+  () => import("./SkillMasteryView").then((m) => m.SkillMasteryView),
+  { ssr: false }
+);
+const SkillProgression = dynamic(
+  () => import("./SkillProgression").then((m) => m.SkillProgression),
+  { ssr: false }
+);
 
 type TabType = "chapter" | "skill" | "progression";
 
@@ -255,15 +267,19 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
             <div className="space-y-2 max-w-sm">
               <h3 className="text-xl font-bold text-[#1a3a2a]">No data yet</h3>
               <p className="text-sm text-[#1a3a2a]/50 leading-relaxed">
-                Complete your English or Mathematics onboarding to start tracking your progress here.
+                {mode === "parent"
+                  ? "This student hasn't completed their English or Mathematics onboarding yet. Once they do, progress data will appear here."
+                  : "Complete your English or Mathematics onboarding to start tracking your progress here."}
               </p>
             </div>
-            <a
-              href="/student"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-[#059F6D] text-white rounded-2xl text-sm font-bold shadow-lg shadow-[#059F6D]/20 hover:bg-[#048055] transition-colors"
-            >
-              Go to Onboarding
-            </a>
+            {mode !== "parent" && (
+              <a
+                href="/student"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#059F6D] text-white rounded-2xl text-sm font-bold shadow-lg shadow-[#059F6D]/20 hover:bg-[#048055] transition-colors"
+              >
+                Go to Onboarding
+              </a>
+            )}
           </div>
         )}
         <section className="space-y-4" style={{ display: analyticsSubjects.length === 0 && !isAnalyticsLoading ? "none" : undefined }}>

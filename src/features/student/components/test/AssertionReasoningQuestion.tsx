@@ -22,7 +22,7 @@ export function AssertionReasoningQuestion({
     <div className="space-y-5">
       {hasStructuredFields ? (
         <div className="space-y-3">
-          <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200/50">
+          <div className="p-3 sm:p-4 rounded-xl bg-blue-50/60 border border-blue-200/50">
             <span className="text-[11px] font-black text-blue-500 uppercase tracking-widest">
               Assertion (A)
             </span>
@@ -30,7 +30,7 @@ export function AssertionReasoningQuestion({
               {question.assertion}
             </p>
           </div>
-          <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200/50">
+          <div className="p-3 sm:p-4 rounded-xl bg-amber-50/60 border border-amber-200/50">
             <span className="text-[11px] font-black text-amber-600 uppercase tracking-widest">
               Reason (R)
             </span>
@@ -40,7 +40,7 @@ export function AssertionReasoningQuestion({
           </div>
         </div>
       ) : (
-        <p className="text-[17px] font-medium text-[#042E5C] leading-relaxed whitespace-pre-line">
+        <p className="text-[15px] sm:text-[17px] font-medium text-[#042E5C] leading-relaxed whitespace-pre-line">
           {question.prompt}
         </p>
       )}
@@ -58,7 +58,7 @@ export function AssertionReasoningQuestion({
               whileHover={!disabled ? { scale: 1.01 } : {}}
               whileTap={!disabled ? { scale: 0.99 } : {}}
               onClick={() => !disabled && onSelect(option)}
-              className={`w-full p-4 rounded-xl text-left transition-all border-2 flex items-center gap-3 ${
+              className={`w-full p-3 sm:p-4 rounded-xl text-left transition-all border-2 flex items-center gap-3 ${
                 isSelected
                   ? "bg-[#042E5C]/5 border-[#042E5C] text-[#042E5C]"
                   : "bg-white border-[#042E5C]/10 text-[#042E5C]/70 hover:border-[#042E5C]/30"

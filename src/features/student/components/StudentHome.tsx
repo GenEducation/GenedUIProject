@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { useStudentStore, type AgentItem } from "../store/useStudentStore";
+import { useStudentStore, sessionRoutePath, isVoiceSession, type AgentItem } from "../store/useStudentStore";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
@@ -288,7 +288,8 @@ export function StudentHome() {
 
   const handleSessionClick = (session: typeof allSessions[0]) => {
     openExistingChat(session);
-    window.location.href = `/student/chat/${session.id}`;
+    // Voice sessions reopen in the voice UI; chat sessions in the chat UI.
+    window.location.href = sessionRoutePath(session);
   };
 
   const fade = (d = 0) => ({
@@ -461,6 +462,9 @@ export function StudentHome() {
                     </div>
                     <div className="font-bold truncate"
                       style={{ color: C.text, fontFamily: "'Nunito',sans-serif", fontSize: "clamp(14px, 1.6vw, 18px)" }}>
+                      <span title={isVoiceSession(continueSession) ? "Voice session" : "Chat session"} style={{ marginRight: 5 }}>
+                        {isVoiceSession(continueSession) ? "🎤" : "💬"}
+                      </span>
                       {continueSession.title} — {continueSession.vis.label}
                     </div>
                     <div className="mt-1" style={{ color: C.textMuted, fontSize: "clamp(11px, 1vw, 13px)" }}>
@@ -665,6 +669,9 @@ export function StudentHome() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold truncate" style={{ color: C.text, fontSize: "clamp(13px, 1.3vw, 15px)" }}>
+                            <span title={isVoiceSession(sess) ? "Voice session" : "Chat session"} style={{ marginRight: 5 }}>
+                              {isVoiceSession(sess) ? "🎤" : "💬"}
+                            </span>
                             {sess.title}
                           </div>
                           <div className="mt-0.5" style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>

@@ -8,6 +8,7 @@ import { SignIn } from "@/features/auth/components/SignIn";
 import { signIn } from "@/features/auth/authService";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
+import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 
@@ -34,14 +35,28 @@ export default function LoginPage() {
 
     const normalizedRole = token.role?.toLowerCase() ?? "student";
     const role =
-      normalizedRole === "student" || normalizedRole === "partner" || normalizedRole === "parent"
-        ? (normalizedRole as "student" | "partner" | "parent")
+      normalizedRole === "student" ||
+      normalizedRole === "partner" ||
+      normalizedRole === "parent" ||
+      normalizedRole === "teacher"
+        ? (normalizedRole as "student" | "partner" | "parent" | "teacher")
         : ("student" as const);
 
     localStorage.setItem("gened_user_role", role);
     if (role === "partner") localStorage.setItem("gened_partner_id", token.user_id);
 
-    if (role === "student") {
+    if (role === "teacher") {
+      useTeacherStore.getState().setTeacherProfile({
+        user_id: token.user_id || "",
+        username: token.username || "",
+        email: token.email || "",
+        role: token.role || "TEACHER",
+        full_name: (token as any).full_name || token.username || "",
+        title: (token as any).title || "",
+        subjects: (token as any).subjects || [],
+        partner_id: (token as any).partner_id,
+      });
+    } else if (role === "student") {
       useStudentStore.getState().setStudentProfile({
         user_id: token.user_id,
         username: token.username,

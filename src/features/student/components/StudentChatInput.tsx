@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Mic, MicOff, Square } from "lucide-react";
+import { Send, Square } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useStudentStore } from "../store/useStudentStore";
 import { InlineSubjectPicker } from "./InlineSubjectPicker";
@@ -32,6 +32,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
   const [showSubjectPicker, setShowSubjectPicker] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
 
   // Show picker only while user has text in hub mode; hide when cleared
   useEffect(() => {
@@ -68,7 +69,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
       }
     }
 
-    sendMessage(trimmed);
+    sendMessage(trimmed, undefined, { isTypedQuery: true });
     setInput("");
     setSelectedSubject(null);
     setShowSubjectPicker(false);
@@ -103,8 +104,8 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
       )}
 
       <div
-        className="flex items-end gap-3 transition-all relative bg-white border border-[#E2E8F0] rounded-2xl px-5 focus-within:border-[#5B4DC7]/40 focus-within:shadow-sm"
-        style={{ padding: "12px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
+        className="flex items-end gap-2 sm:gap-3 transition-all relative bg-white border border-[#E2E8F0] rounded-2xl focus-within:border-[#5B4DC7]/40 focus-within:shadow-sm"
+        style={{ padding: "10px clamp(12px, 3vw, 20px)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
       >
         <motion.textarea
           key="textarea"

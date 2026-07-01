@@ -11,13 +11,12 @@ export interface SignUpFields {
   email: string;
   password: string;
   confirmPassword?: string;
-  role: "student" | "parent" | "partner";
+  // Partner accounts are admin-provisioned only; not a public signup role.
+  role: "student" | "parent";
   age?: string;
   grade?: string;
   school_board?: string;
   phone?: string;
-  organization?: string;
-  website?: string;
   otp_code?: string;
   parent_email?: string;
 }
@@ -105,9 +104,6 @@ export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
     body.otp_code = data.otp_code;
     if (data.role === "parent") {
       if (data.phone) body.phone = data.phone;
-    } else if (data.role === "partner") {
-      if (data.organization) body.organization = data.organization;
-      if (data.website) body.website = data.website;
     }
   }
 
@@ -154,9 +150,6 @@ export async function googleSignUp(token: string, data: Partial<SignUpFields>): 
     if (data.grade) body.grade = Number(data.grade);
   } else if (data.role === "parent") {
     if (data.phone) body.phone = data.phone;
-  } else if (data.role === "partner") {
-    if (data.organization) body.organization = data.organization;
-    if (data.website) body.website = data.website;
   }
 
   const response = await fetch(`${AUTH_API_BASE_URL}/auth/google-sign-up`, {

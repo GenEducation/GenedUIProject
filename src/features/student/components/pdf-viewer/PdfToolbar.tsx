@@ -15,8 +15,8 @@ interface PdfToolbarProps {
 }
 
 const ICON_BTN: React.CSSProperties = {
-  width: 28,
-  height: 28,
+  width: 32,
+  height: 32,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -58,9 +58,9 @@ export function PdfToolbar({
 
   return (
     <div
-      className="flex items-center gap-1 flex-shrink-0"
+      className="flex items-center gap-1 flex-shrink-0 flex-wrap"
       style={{
-        padding: "4px 10px",
+        padding: "4px 8px",
         background: "#FFFFFF",
         borderBottom: "1px solid #E2E8F0",
         fontFamily: "'DM Sans', sans-serif",

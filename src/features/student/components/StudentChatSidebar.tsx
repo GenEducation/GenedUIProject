@@ -3,7 +3,7 @@
 import { Loader2, LogOut, User, ClipboardCheck } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useStudentStore } from "../store/useStudentStore";
+import { useStudentStore, isVoiceSession, sessionRoutePath } from "../store/useStudentStore";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 
 const C = {
@@ -190,9 +190,17 @@ export const StudentChatSidebar = React.memo(({
 
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_WIDTH);
   const [profilePopupOpen, setProfilePopupOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const isDragging = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(DEFAULT_WIDTH);
+
+  useEffect(() => {
+    const handle = () => setIsMobile(window.innerWidth < 768);
+    handle();
+    window.addEventListener("resize", handle);
+    return () => window.removeEventListener("resize", handle);
+  }, []);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true;
@@ -224,17 +232,39 @@ export const StudentChatSidebar = React.memo(({
   }, []);
 
   const w = isOpen ? sidebarWidth : 0;
+  const mobileWidth = Math.min(sidebarWidth, 300);
 
   return (
-    <aside
-      className="h-full flex-shrink-0 flex flex-col overflow-hidden relative"
-      style={{
-        width: w,
-        minWidth: w,
-        background: C.sidebarBg,
-        transition: isOpen ? "none" : "width 0.25s ease, min-width 0.25s ease",
-      }}
-    >
+    <>
+      {isMobile && isOpen && (
+        <div
+          className="fixed inset-0 z-30"
+          style={{ background: "rgba(0,0,0,0.45)" }}
+          onClick={onClose}
+        />
+      )}
+      <aside
+        className={`flex-shrink-0 flex flex-col overflow-hidden relative ${
+          isMobile ? "fixed inset-y-0 left-0 z-40 h-full" : "h-full"
+        }`}
+        style={
+          isMobile
+            ? {
+                width: isOpen ? mobileWidth : 0,
+                minWidth: isOpen ? mobileWidth : 0,
+                maxWidth: "85vw",
+                background: C.sidebarBg,
+                transition: "width 0.25s ease, min-width 0.25s ease",
+                boxShadow: isOpen ? "0 0 32px rgba(0,0,0,0.35)" : "none",
+              }
+            : {
+                width: w,
+                minWidth: w,
+                background: C.sidebarBg,
+                transition: isOpen ? "none" : "width 0.25s ease, min-width 0.25s ease",
+              }
+        }
+      >
       {isOpen && (
         <div className="flex flex-col h-full w-full" style={{ padding: "16px 12px" }}>
           {/* Header: centered logo */}
@@ -278,7 +308,8 @@ export const StudentChatSidebar = React.memo(({
                       key={chat.id}
                       onClick={() => {
                         openExistingChat(chat);
-                        window.location.href = `/student/chat/${chat.id}`;
+                        // Reopen in the modality the session was created with.
+                        window.location.href = sessionRoutePath(chat);
                         if (window.innerWidth < 1024) onClose();
                       }}
                       className="w-full rounded-xl border-none cursor-pointer transition-all"
@@ -305,7 +336,12 @@ export const StudentChatSidebar = React.memo(({
                         {emoji}
                       </div>
                       <div style={{ minWidth: 0, textAlign: "left" as const, flex: 1 }}>
-                        <div className="truncate" title={chat.title} style={{ lineHeight: 1.35 }}>{chat.title}</div>
+                        <div className="truncate" title={chat.title} style={{ lineHeight: 1.35 }}>
+                          <span aria-label={isVoiceSession(chat) ? "Voice session" : "Chat session"} title={isVoiceSession(chat) ? "Voice session" : "Chat session"} style={{ marginRight: 5 }}>
+                            {isVoiceSession(chat) ? "🎤" : "💬"}
+                          </span>
+                          {chat.title}
+                        </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
                           {chat.subject && (
                             <span style={{ fontSize: 10, color: `${color}90`, fontWeight: 700, textTransform: "capitalize" }}>
@@ -396,7 +432,7 @@ export const StudentChatSidebar = React.memo(({
       )}
 
       {/* Drag-to-resize handle */}
-      {isOpen && (
+      {isOpen && !isMobile && (
         <div
           onMouseDown={onMouseDown}
           style={{
@@ -408,7 +444,8 @@ export const StudentChatSidebar = React.memo(({
           onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
         />
       )}
-    </aside>
+      </aside>
+    </>
   );
 });
 

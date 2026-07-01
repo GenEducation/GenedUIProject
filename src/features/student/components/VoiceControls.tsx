@@ -13,12 +13,12 @@ export function VoiceControls({ onEnd }: VoiceControlsProps) {
   const showPtt = sessionActive && isMuted;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
       {/* Mute toggle — compact circle, left */}
       <button
         onClick={toggleMute}
         disabled={!sessionActive}
-        className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-40"
+        className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-40 flex-shrink-0"
         style={{
           background: isMuted ? "#E8635A" : "white",
           color: isMuted ? "white" : "#5B4DC7",
@@ -38,7 +38,7 @@ export function VoiceControls({ onEnd }: VoiceControlsProps) {
           onMouseLeave={endPttUtterance}
           onTouchStart={(e) => { e.preventDefault(); beginPttUtterance(); }}
           onTouchEnd={(e) => { e.preventDefault(); endPttUtterance(); }}
-          className="flex items-center gap-2 px-7 h-12 rounded-full font-bold text-[13px] select-none transition-all"
+          className="flex items-center gap-2 px-4 sm:px-7 h-11 sm:h-12 rounded-full font-bold text-[12px] sm:text-[13px] select-none transition-all whitespace-nowrap flex-shrink-0"
           style={{
             background: pttHeld
               ? "linear-gradient(135deg, #34C759, #30d158)"
@@ -61,7 +61,7 @@ export function VoiceControls({ onEnd }: VoiceControlsProps) {
       {/* End — destructive, right */}
       <button
         onClick={onEnd}
-        className="flex items-center gap-2 px-5 h-12 rounded-full bg-red-500 text-white font-bold text-[13px] hover:bg-red-600 transition-all shadow-lg"
+        className="flex items-center gap-2 px-4 sm:px-5 h-11 sm:h-12 rounded-full bg-red-500 text-white font-bold text-[12px] sm:text-[13px] hover:bg-red-600 transition-all shadow-lg flex-shrink-0"
       >
         <PhoneOff size={18} />
         End

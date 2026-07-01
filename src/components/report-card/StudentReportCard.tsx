@@ -1936,7 +1936,7 @@ function ChapterEvolutionSection({
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────
 
-export function StudentReportCard({ parentId, childId, childName }: { parentId?: string; childId?: string; childName?: string } = {}) {
+export function StudentReportCard({ parentId, teacherId, childId, childName }: { parentId?: string; teacherId?: string; childId?: string; childName?: string } = {}) {
   const { studentProfile } = useStudentStore();
 
   // ── State ──────────────────────────────────────────────
@@ -2035,11 +2035,13 @@ export function StudentReportCard({ parentId, childId, childName }: { parentId?:
   const studentId = studentProfile?.user_id;
 
   const fetchParentReportData = useCallback(async () => {
-    if (!parentId || !childId) return;
+    if (!childId || !(parentId || teacherId)) return;
     setIsLoading(true);
     setError(null);
     try {
-      const data = await studentService.fetchParentReport(parentId, childId);
+      const data = parentId
+        ? await studentService.fetchParentReport(parentId, childId)
+        : await studentService.fetchTeacherReport(teacherId!, childId);
       setDashboardProfile(data.profile ?? null);
       setTotalSessions(data.total_sessions ?? 0);
       setSubjects(data.subjects ?? []);
@@ -2056,7 +2058,7 @@ export function StudentReportCard({ parentId, childId, childName }: { parentId?:
     } finally {
       setIsLoading(false);
     }
-  }, [parentId, childId]);
+  }, [parentId, teacherId, childId]);
 
   const fetchAll = useCallback(async () => {
     if (!studentId) return;
@@ -2155,16 +2157,16 @@ export function StudentReportCard({ parentId, childId, childName }: { parentId?:
   }, [studentId]);
 
   useEffect(() => {
-    if (parentId && childId) {
+    if (childId && (parentId || teacherId)) {
       fetchParentReportData();
     } else {
       fetchAll();
     }
-  }, [fetchAll, fetchParentReportData, parentId, childId]);
+  }, [fetchAll, fetchParentReportData, parentId, teacherId, childId]);
 
   // ── Derived values ─────────────────────────────────────
   const displayName =
-    (parentId && childId ? childName : undefined) ||
+    (childId && (parentId || teacherId) ? childName : undefined) ||
     studentProfile?.name ||
     studentProfile?.username ||
     dashboardProfile?.name ||

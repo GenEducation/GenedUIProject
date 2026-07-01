@@ -93,12 +93,12 @@ export function TestTimer({ totalSeconds, onExpired }: TestTimerProps) {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 text-center shadow-2xl space-y-5"
+              className="bg-white rounded-3xl p-5 sm:p-8 max-w-md w-[calc(100%-2rem)] sm:w-full mx-4 text-center shadow-2xl space-y-5"
             >
               <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto">
                 <Clock size={28} className="text-red-500" />
               </div>
-              <h2 className="text-2xl font-extrabold text-[#042E5C]">Time&apos;s Up!</h2>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-[#042E5C]">Time&apos;s Up!</h2>
               <p className="text-[#042E5C]/60 text-[15px]">
                 Your test will be submitted automatically in{" "}
                 <span className="font-bold text-red-500">{graceCountdown}s</span>
