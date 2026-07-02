@@ -8,6 +8,8 @@ import { GeneralOnboardingWizard } from "@/features/onboarding/components/Genera
 import { OnboardingPromptCard } from "@/features/onboarding/components/OnboardingPromptCard";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { notificationService } from "@/services/notificationService";
+import { ToastStack, ToastItem } from "@/features/teacher/components/Toast";
 
 export default function StudentLayout({
   children,
@@ -18,12 +20,44 @@ export default function StudentLayout({
   const { dnaStatus, checkDNAStatus } = useOnboardingStore();
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const pathname = usePathname();
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const pushToast = (toast: Omit<ToastItem, "id">) => {
+    setToasts((prev) => [...prev, { ...toast, id: Date.now() + Math.random() }]);
+  };
+
+  const dismissToast = (id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
 
   useEffect(() => {
     if (studentProfile?.user_id) {
       checkDNAStatus(studentProfile.user_id);
     }
   }, [studentProfile, checkDNAStatus]);
+
+  // Subscribe to real-time notification stream (SSE)
+  useEffect(() => {
+    if (!studentProfile?.user_id) return;
+
+    console.log("Initializing SSE notification stream for student layout...");
+    const unsubscribe = notificationService.subscribeToStream(
+      studentProfile.user_id,
+      (data) => {
+        // Show success style for live sessions, otherwise success/error
+        const toastType = data.type === "ERROR" || data.type === "WARNING" ? "error" : "success";
+        pushToast({
+          type: toastType,
+          title: data.title || "Reminder",
+          description: data.message,
+        });
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [studentProfile]);
 
   const isProfileIncomplete = studentProfile && !studentProfile.name;
 
@@ -61,6 +95,9 @@ export default function StudentLayout({
           }}
         />
       )}
+
+      {/* Global Real-time Toasts stack */}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </>
   );
 }
