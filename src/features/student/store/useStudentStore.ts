@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import * as Sentry from "@sentry/nextjs";
 import { studentService } from "../services/studentService";
 import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import { parseContent, generateHistoricalSVG, normalizeSvg } from "../utils/parseContent";
@@ -2088,6 +2089,14 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       };
     });
 
+    // Client-side TTFT/cancellation instrumentation (Phase 4 of the backend's
+    // observability roadmap — mirrors the backend's sse.stream.cancelled
+    // event, see docs/observability/frontend-instrumentation-spec.md in the
+    // MVP repo). Declared here (function scope, not inside try{}) so it's
+    // visible in the catch{} block below too. Timing-only; does not affect
+    // the streaming state machine.
+    const streamStartTime = performance.now();
+
     try {
       const sessionIdToSend =
         effectiveChat.session_id || (effectiveChat.id === "new" ? undefined : effectiveChat.id);
@@ -2106,6 +2115,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       const isNewFocused = effectiveChat.isFocused && isNewSession;
       const abortController = new AbortController();
       set({ chatAbortController: abortController });
+
+      let firstChunkReceived = false;
 
       // Mode resolution. The backend is the source of truth: it auto-classifies each
       // turn (entry router for new sessions, classify_session_mode for ongoing ones)
@@ -2357,6 +2368,16 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           currentToolStatus = undefined;
           if (isPlanningUIPresented) updateUI(bufferedText, elements);
         } else if ((event.type === "chunk" || event.type === "chunks") && typeof event.text === "string") {
+          if (!firstChunkReceived) {
+            firstChunkReceived = true;
+            const ttftMs = performance.now() - streamStartTime;
+            Sentry.addBreadcrumb({
+              category: "sse",
+              message: "Tutor stream: first chunk received (TTFT)",
+              level: "info",
+              data: { ttft_ms: Math.round(ttftMs) },
+            });
+          }
           currentTextBuffer += event.text;
           bufferedText += event.text;
 
@@ -2570,6 +2591,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           // Wave 4: graceful degradation — log only, session continues
           console.warn("[SkillError]", event.error_type, event.message);
         } else if (event.type === "done") {
+          Sentry.addBreadcrumb({
+            category: "sse",
+            message: "Tutor stream: completed",
+            level: "info",
+            data: { total_duration_ms: Math.round(performance.now() - streamStartTime) },
+          });
           finalSessionId = event.session_id;
           finalOptions = Array.isArray(event.options) ? event.options : [];
           finalActions = Array.isArray(event.actions) ? event.actions : [];
@@ -2868,6 +2895,16 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
       if (isAbort) {
         console.debug("Chat generation aborted by user");
+        // Client-side mirror of the backend's sse.stream.cancelled event —
+        // if this fires much more often than that backend metric, the gap
+        // points at client-side abandonment (tab-switch, navigation) rather
+        // than genuine network drops.
+        Sentry.addBreadcrumb({
+          category: "sse",
+          message: "Tutor stream: cancelled (client abort)",
+          level: "info",
+          data: { elapsed_ms: Math.round(performance.now() - streamStartTime) },
+        });
       } else if (isRateLimit) {
         set({ isRateLimitHit: true, rateLimitMessage: error.message || null });
       } else {
