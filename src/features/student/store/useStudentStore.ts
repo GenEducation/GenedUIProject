@@ -1635,7 +1635,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         },
         effectiveChat.session_id,
         effectiveChat.subject,
-        undefined,
+        // Explicit webapp voice endpoint — do not rely on voiceService's default,
+        // which is the tool-free device endpoint (/ws/april-live-graph-device).
+        "/ws/april-live-graph",
         studentProfile.preferred_voice,
         // Pass chapter context so backend can bypass entry phase when chapter is pre-selected
         // and resolve document access in both new and resumed sessions.

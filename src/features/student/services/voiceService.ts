@@ -78,7 +78,7 @@ class VoiceService {
     onTextReveal: (text: string, role: "user" | "assistant") => void,
     sessionId?: string,
     subject?: string,
-    wsEndpoint: string = "/ws/april-live-graph-device",
+    wsEndpoint: string = "/ws/april-live-graph",
     voice?: string,
     documentTitle?: string,
     agentId?: string,
