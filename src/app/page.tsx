@@ -421,7 +421,6 @@ export default function HomePage() {
           <p>GenEd is live and ready — a focused, distraction-free AI tutor that actually adapts to how your child learns.</p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <Link className="btn btn-primary" href="/register">Get started free <svg className="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></Link>
-            <a className="btn btn-ghost" style={{ borderColor: "rgba(255,255,255,.3)", color: "#fff" }} href="mailto:info@gened.ai">Talk to our team</a>
           </div>
         </div>
       </section>
