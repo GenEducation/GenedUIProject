@@ -9,6 +9,7 @@ import {
   requestPasswordReset,
   resetPassword,
   fetchProfile,
+  confirmDevicePairing,
   type AuthTokenResponse,
 } from "../authService";
 
@@ -168,5 +169,37 @@ describe("authService — handleAuthError precedence", () => {
   it("throws (with the default message) when the error body is not JSON", async () => {
     stubFetchError("totally not json");
     await expect(signIn({ username: "a", password: "b" })).rejects.toThrow("Signin request failed.");
+  });
+});
+
+describe("authService — confirmDevicePairing", () => {
+  it("uppercases + trims the user_code, attaches the Bearer token, and posts to the pairing endpoint", async () => {
+    localStorage.setItem("gened_auth_token", "tok-abc");
+    const fetchMock = stubFetchOk();
+
+    await confirmDevicePairing({ user_code: "  ab-cd  ", student_id: "s1" });
+
+    const { url, init, body } = firstCall(fetchMock);
+    expect(url).toMatch(/\/auth\/device\/pairing\/confirm$/);
+    expect(init.method).toBe("POST");
+    expect(init.headers.Authorization).toBe("Bearer tok-abc");
+    expect(body).toEqual({ user_code: "AB-CD", student_id: "s1" });
+  });
+
+  it("throws the parsed error body so the caller can branch on error_code", async () => {
+    stubFetchError({ error_code: "DEVICE_1104", message: "Invalid code" });
+
+    await expect(confirmDevicePairing({ user_code: "XYZ", student_id: "s1" })).rejects.toEqual({
+      error_code: "DEVICE_1104",
+      message: "Invalid code",
+    });
+  });
+
+  it("throws a default error object when the failure body is not JSON", async () => {
+    stubFetchError("gateway timeout", 504);
+
+    await expect(confirmDevicePairing({ user_code: "XYZ", student_id: "s1" })).rejects.toEqual({
+      message: "Pairing request failed.",
+    });
   });
 });
