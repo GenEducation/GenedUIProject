@@ -12,6 +12,7 @@ import { studentService } from "@/features/student/services/studentService";
 import { fetchVoices } from "@/features/student/services/voiceCatalogService";
 import { DEFAULT_GEMINI_VOICE, type GeminiVoice } from "@/constants/geminiVoices";
 import { PttHotkeyConfig } from "./PttHotkeyConfig";
+import { DevicePairingModal } from "./DevicePairingModal";
 
 /* ─── Design Tokens (matches home screen) ────────────────────────────────── */
 const C = {
@@ -332,6 +333,7 @@ export function StudentProfile() {
   const [multilingualEnabled, setMultilingualEnabled] = useState<boolean>(false);
   const [isLanguageLoading, setIsLanguageLoading] = useState<boolean>(false);
   const [isLanguageSaving, setIsLanguageSaving] = useState<boolean>(false);
+  const [pairingModalOpen, setPairingModalOpen] = useState<boolean>(false);
 
   /* responsive sidebar */
   useEffect(() => {
@@ -867,6 +869,26 @@ export function StudentProfile() {
               </div>
             </Card>
 
+            {/* ── MY DESKBOT ── */}
+            <Card style={{ ...fade(0.35) }}>
+              <SectionHeader icon="🤖" label="My Deskbot" />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Pair a physical device</div>
+                  <div style={{ fontSize: 12, color: C.textMid, marginTop: 2 }}>Link a Deskbot to your account for hands-free learning.</div>
+                </div>
+                <button
+                  onClick={() => setPairingModalOpen(true)}
+                  style={{
+                    padding: "10px 18px", borderRadius: 12, background: `${C.genPurple}15`, color: C.genPurple,
+                    border: `1.5px solid ${C.genPurple}30`, fontWeight: 700, fontSize: 12, cursor: "pointer", flexShrink: 0,
+                  }}
+                >
+                  Pair Device
+                </button>
+              </div>
+            </Card>
+
             {/* ── SETTINGS ── */}
             <Card style={{ ...fade(0.38) }}>
               <SectionHeader icon="⚙️" label="Settings" />
@@ -1006,6 +1028,7 @@ export function StudentProfile() {
       </main>
 
       <PartnerRequestModal />
+      <DevicePairingModal isOpen={pairingModalOpen} onClose={() => setPairingModalOpen(false)} />
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
