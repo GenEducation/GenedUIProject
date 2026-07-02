@@ -124,8 +124,8 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
 
         <div className="space-y-3">
           {result.graded_questions.map((graded, idx) => {
-            const question = test.sections
-              .flatMap((s) => s.questions)
+            const question = test?.sections
+              ?.flatMap((s) => s.questions)
               .find((q) => q.question_id === graded.question_id);
             if (!question) return null;
 

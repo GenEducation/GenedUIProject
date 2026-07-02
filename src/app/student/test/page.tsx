@@ -37,7 +37,7 @@ function TestPageContent() {
     timerSeconds,
   } = useTestStore();
   const searchParams = useSearchParams();
-  const from = searchParams.get("from") || "analytics";
+  const from = searchParams.get("from") || "assessments";
 
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0);
   const [showSubmitWarning, setShowSubmitWarning] = useState(false);
@@ -67,7 +67,7 @@ function TestPageContent() {
 
   const groupedSections: GroupedSection[] = useMemo(() => {
     if (!currentTest) return [];
-    const allQuestions = currentTest.sections.flatMap((s) => s.questions);
+    const allQuestions = currentTest.sections?.flatMap((s) => s.questions) || [];
 
     if (hasPaperSections) {
       const order: PaperSection[] = ["A", "B", "C"];
@@ -79,7 +79,7 @@ function TestPageContent() {
         .filter((g) => g.questions.length > 0);
     }
 
-    return currentTest.sections.map((s, i) => ({
+    return (currentTest.sections || []).map((s, i) => ({
       label: String.fromCharCode(65 + i) as PaperSection,
       questions: s.questions,
     }));
@@ -92,7 +92,7 @@ function TestPageContent() {
   const backRoute =
     from === "assessments" ? "/student/assessments" :
     from === "schedule" ? "/student/schedule" :
-    "/student/analytics";
+    "/student/assessments";
 
   useEffect(() => {
     if (!currentTest && !isLoading && !testResult) {
