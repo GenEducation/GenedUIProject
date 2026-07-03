@@ -66,6 +66,7 @@
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "lint-staged": "^16.2.3",
+    "msw": "^2.14.6",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.9"
