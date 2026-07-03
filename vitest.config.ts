@@ -14,19 +14,25 @@ export default defineConfig({
     },
     coverage: {
       provider: "v8",
-      // A low global floor plus per-file ratchets on the modules Phase 1 covers.
+      // A low global floor plus per-file ratchets on the modules covered so far.
       // Raise these as later phases add breadth; never chase a global 80 (voice/pdf
       // and the 200-component surface make that a vanity number).
       thresholds: {
-        lines: 15,
-        functions: 15,
-        branches: 15,
-        statements: 15,
+        // Phase 3 brought overall coverage to ~47/42/47/49; floor set comfortably below.
+        lines: 40,
+        functions: 35,
+        branches: 30,
+        statements: 40,
         "src/utils/authFetch.ts": { lines: 90, functions: 90, branches: 85 },
         "src/features/auth/authService.ts": { lines: 75, functions: 85 },
         "src/features/student/store/useTestStore.ts": { lines: 65, functions: 85 },
         "src/components/auth/AuthGuard.tsx": { lines: 75 },
         "src/features/student/utils/heatmapUtils.ts": { lines: 95, functions: 100 },
+        "src/components/NotificationBell.tsx": { lines: 75 },
+        "src/components/analytics/UnitCard.tsx": { lines: 95 },
+        "src/features/auth/components/SignUp.tsx": { lines: 50 },
+        "src/features/auth/components/ResetPassword.tsx": { lines: 90 },
+        "src/features/onboarding/components/GeneralOnboarding/GeneralOnboardingWizard.tsx": { lines: 95 },
       },
     },
   },
