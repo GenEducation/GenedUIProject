@@ -6,6 +6,7 @@ import { useTeacherStore, StatusFilter, SortOption } from "../store/useTeacherSt
 import { TeacherStudent } from "../services/teacherService";
 import { StudentCard } from "./StudentCard";
 import { SUBJECTS } from "../constants";
+import { rosterCounts, filterAndSortRoster } from "../utils/rosterUtils";
 
 interface StudentRosterProps {
   onApprove: (student: TeacherStudent) => void;
@@ -30,35 +31,12 @@ export function StudentRoster({ onApprove, onRemove, onViewChats, onViewReport, 
     isFetchingStudents,
   } = useTeacherStore();
 
-  const counts = useMemo(() => {
-    const pending = students.filter((s) => s.status === "PENDING").length;
-    const approved = students.filter((s) => s.status === "APPROVED").length;
-    return { all: students.length, pending, approved };
-  }, [students]);
+  const counts = useMemo(() => rosterCounts(students), [students]);
 
-  const filtered = useMemo(() => {
-    let list = students.filter((s) => {
-      if (statusFilter !== "all" && s.status !== statusFilter) return false;
-      if (subjectFilter !== "all" && s.subject !== subjectFilter) return false;
-      if (search) {
-        const name = (s.name || s.username || s.email || "").toLowerCase();
-        if (!name.includes(search.toLowerCase())) return false;
-      }
-      return true;
-    });
-
-    list = [...list].sort((a, b) => {
-      if (sort === "name") {
-        return (a.name || a.username || "").localeCompare(b.name || b.username || "");
-      }
-      // "low" (lowest mastery) and default fall back to status grouping until
-      // mastery data is available from a progress endpoint (Phase 2).
-      const order: Record<string, number> = { PENDING: 0, APPROVED: 1 };
-      return (order[a.status] ?? 2) - (order[b.status] ?? 2);
-    });
-
-    return list;
-  }, [students, statusFilter, subjectFilter, search, sort]);
+  const filtered = useMemo(
+    () => filterAndSortRoster(students, { statusFilter, subjectFilter, search, sort }),
+    [students, statusFilter, subjectFilter, search, sort],
+  );
 
   return (
     <div>
