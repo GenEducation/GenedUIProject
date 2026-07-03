@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "copy-vad-assets": "node scripts/copy-vad-assets.mjs",
     "postinstall": "node scripts/copy-vad-assets.mjs && node -e \"require('fs').copyFileSync('node_modules/pdfjs-dist/build/pdf.worker.min.mjs', 'public/pdf.worker.min.mjs')\" ",
     "prepare": "husky"
@@ -53,6 +54,7 @@
     "@tailwindcss/oxide-linux-arm64-musl": "4.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
