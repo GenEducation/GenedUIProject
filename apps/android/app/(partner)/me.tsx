@@ -35,7 +35,7 @@ const sh = StyleSheet.create({
 export default function PartnerMe() {
   const { state, logout } = useAuth();
   const router = useRouter();
-  const [avatarColor, setAvatarColor] = useState(colors.edGreen);
+  const [avatarColor, setAvatarColor] = useState<string>(colors.edGreen);
 
   const handleLogout = async () => {
     await logout();

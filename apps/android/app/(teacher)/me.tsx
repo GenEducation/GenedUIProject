@@ -44,7 +44,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 export default function TeacherMe() {
   const { state, logout } = useAuth();
   const router = useRouter();
-  const [avatarColor, setAvatarColor] = useState(colors.navy);
+  const [avatarColor, setAvatarColor] = useState<string>(colors.navy);
 
   const handleLogout = async () => {
     await logout();

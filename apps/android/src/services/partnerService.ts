@@ -37,7 +37,7 @@ function mapIngestionItem(raw: Record<string, unknown>): SubjectRegistryItem {
     id:               String(raw.ingestion_batch_id ?? raw.id ?? ""),
     document_title:   String(raw.document_title ?? raw.title ?? ""),
     subject:          String(raw.subject ?? ""),
-    grade:            raw.grade ?? "",
+    grade:            String(raw.grade ?? ""),
     status:           normaliseIngestionStatus(String(raw.status ?? "")),
     chapters_detected: typeof raw.chapters_detected === "number" ? raw.chapters_detected : undefined,
     chapter_titles:   Array.isArray(raw.chapter_titles) ? (raw.chapter_titles as string[]) : undefined,
