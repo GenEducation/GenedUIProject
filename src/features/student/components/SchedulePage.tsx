@@ -28,6 +28,27 @@ function tomorrowDateString(): string {
   return d.toISOString().slice(0, 10);
 }
 
+function getSessionStartTimestamp(scheduledDateStr: string, scheduledTimeStr?: string | null): number {
+  const d = new Date(scheduledDateStr);
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth();
+  const dateVal = d.getUTCDate();
+
+  let hours = 9;
+  let minutes = 0;
+  if (scheduledTimeStr) {
+    const parts = scheduledTimeStr.split(":");
+    if (parts.length === 2) {
+      hours = parseInt(parts[0], 10);
+      minutes = parseInt(parts[1], 10);
+    }
+  }
+
+  const istDate = new Date(Date.UTC(year, month, dateVal, hours, minutes));
+  const utcDate = new Date(istDate.getTime() - (5 * 60 + 30) * 60 * 1000);
+  return utcDate.getTime();
+}
+
 export function SchedulePage() {
   const router = useRouter();
   const { studentProfile, availableAgents, isAgentsLoading, fetchAvailableAgents } = useStudentStore();
@@ -288,17 +309,21 @@ export function SchedulePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <AnimatePresence mode="popLayout">
                     {sortedSessions.map((s) => {
+                      const startTs = getSessionStartTimestamp(s.scheduled_date, s.scheduled_time);
+                      const isExpired = Date.now() - startTs > 24 * 60 * 60 * 1000;
                       const isReady = s.preparation_status === "COMPLETED" && !!s.session_id;
                       const isFailed = s.preparation_status === "FAILED";
 
                       const statusConfig = isFailed
                         ? { bg: "bg-red-50", text: "text-red-600", label: "Preparation Failed" }
+                        : isExpired
+                        ? { bg: "bg-gray-100", text: "text-gray-500", label: "Expired" }
                         : isReady
                         ? { bg: "bg-emerald-50", text: "text-emerald-600", label: "Ready" }
                         : { bg: "bg-[#042E5C]/5", text: "text-[#042E5C]/40", label: "Being Prepared" };
 
                       const progressLabel: Record<string, string> = {
-                        PENDING: "Not started",
+                        PENDING: isExpired ? "Incomplete" : "Not started",
                         STARTED: "In progress",
                         "STARTED-EARLY": "Started early",
                         COMPLETED: "Finished",
@@ -353,7 +378,7 @@ export function SchedulePage() {
                             ) : (
                               <button
                                 onClick={() => handleStartSession(s.session_type, s.session_id!)}
-                                disabled={!isReady || isStartingSession}
+                                disabled={!isReady || isStartingSession || isExpired}
                                 className="px-4 py-2 rounded-xl bg-[#042E5C] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#064282] disabled:opacity-30 transition-all"
                               >
                                 {s.session_type === "TEST" ? "Start Test" : "Open Session"}
