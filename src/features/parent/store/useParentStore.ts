@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { parentService, LinkedStudent } from "../services/parentService";
 import { studentService } from "../../student/services/studentService";
+import * as Sentry from "@sentry/nextjs";
 
 interface ParentProfile {
   user_id: string;
@@ -176,6 +177,7 @@ export const useParentStore = create<ParentState>((set, get) => ({
   },
   
   logoutParent: () => {
+    Sentry.setUser(null);
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");
     localStorage.removeItem("gened_user_profile");

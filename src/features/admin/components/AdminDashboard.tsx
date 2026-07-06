@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import {
   LayoutDashboard,
   Users,
@@ -54,6 +55,7 @@ export function AdminDashboard() {
   const pathname = usePathname();
 
   const handleLogout = () => {
+    Sentry.setUser(null);
     localStorage.removeItem("gened_auth_token");
     localStorage.removeItem("gened_user_profile");
     localStorage.removeItem("gened_user_role");

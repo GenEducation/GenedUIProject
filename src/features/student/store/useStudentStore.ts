@@ -483,6 +483,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   comprehensionResults: {},
   interactiveResults: {},
   logoutStudent: () => {
+    Sentry.setUser(null);
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");
     localStorage.removeItem("gened_user_profile");

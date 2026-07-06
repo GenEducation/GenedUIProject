@@ -8,6 +8,7 @@ import {
   ChatMessage,
 } from "../services/teacherService";
 import { ApiRequestError } from "@/utils/authFetch";
+import * as Sentry from "@sentry/nextjs";
 
 export interface TeacherProfile {
   user_id: string;
@@ -217,6 +218,7 @@ export const useTeacherStore = create<TeacherState>((set, get) => ({
   },
 
   logoutTeacher: () => {
+    Sentry.setUser(null);
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");
     localStorage.removeItem("gened_user_profile");

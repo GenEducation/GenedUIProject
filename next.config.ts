@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
 export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
+  // Pin the uploaded source-map bundle to the same release id the browser SDK
+  // reports at runtime (NEXT_PUBLIC_RELEASE, set per-deploy in Vercel; falls
+  // back to the Vercel-provided git SHA). Without this, maps and events can be
+  // filed under different release ids and fail to symbolicate.
+  release: {
+    name: process.env.NEXT_PUBLIC_RELEASE || process.env.VERCEL_GIT_COMMIT_SHA,
+  },
   silent: true,
   widenClientFileUpload: true,
   webpack: {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
 import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
@@ -29,6 +30,8 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
     const profileStr = localStorage.getItem("gened_user_profile");
 
     if (!token || !role || !profileStr) {
+      // Not authenticated — make sure no stale user lingers on Sentry events.
+      Sentry.setUser(null);
       const currentPath = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/";
       router.replace(`/?redirect=${encodeURIComponent(currentPath)}`);
       return;
@@ -92,6 +95,15 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
       }
       // Partner hydration is handled from localStorage directly in the store
 
+      // Attribute all subsequent Sentry events to the logged-in user so we can
+      // answer "who hit this error?" and tag by role for filtering.
+      Sentry.setUser({
+        id: profile.user_id,
+        username: profile.username,
+        email: profile.email,
+      });
+      Sentry.setTag("role", role);
+
       setIsAuthorized(true);
 
       // Stop the global loader if it's running
@@ -102,6 +114,7 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
       return () => clearTimeout(timeout);
     } catch {
       // Corrupt localStorage — clear and re-login
+      Sentry.setUser(null);
       localStorage.clear();
       router.replace("/");
     }

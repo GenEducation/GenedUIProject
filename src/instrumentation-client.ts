@@ -28,7 +28,18 @@ Sentry.init({
   // approach (LogSamplingFilter). Revisit once real traffic volume is known.
   tracesSampleRate: 0.1,
 
-  integrations: [Sentry.browserTracingIntegration()],
+  // Session Replay — record a DOM replay so we can *watch* what a user did
+  // before an error. Sample lightly for normal sessions but always keep a
+  // replay when an error fires (highest-value case). Privacy masking is on by
+  // default (maskAllText/blockAllMedia) — required since this is a K-12
+  // product carrying student PII.
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1.0,
+
+  integrations: [
+    Sentry.browserTracingIntegration(),
+    Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }),
+  ],
 
   debug: false,
 });
