@@ -457,7 +457,7 @@ export default function HomePage() {
               ×
             </button>
             <iframe
-              src="https://www.youtube.com/embed/wOncSCH9Bak?autoplay=1&rel=0"
+              src="https://www.youtube.com/embed/YrTt8OwvT3I?autoplay=1&rel=0"
               className="w-full h-full rounded-lg"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
