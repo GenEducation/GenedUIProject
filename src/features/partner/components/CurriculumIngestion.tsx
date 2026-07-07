@@ -26,7 +26,20 @@ export function CurriculumIngestion({
   const [grade, setGrade] = useState("");
   const [board, setBoard] = useState("");
   const [documentType, setDocumentType] = useState("chapter");
-  
+
+  const gradeNum = parseInt(grade, 10);
+  const isMiddleSchool = [6, 7, 8].includes(gradeNum);
+  const subjectOptions = [
+    { value: "english", label: "English" },
+    { value: "mathematics", label: "Mathematics" },
+    ...(isMiddleSchool
+      ? [
+          { value: "science", label: "Science" },
+          { value: "social_science", label: "Social Science" },
+        ]
+      : []),
+  ];
+
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -156,16 +169,50 @@ export function CurriculumIngestion({
 
               {/* Form Fields */}
               <div className="space-y-4 md:space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Grade</label>
+                    <select
+                      value={grade}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setGrade(next);
+                        const nextIsMiddle = [6, 7, 8].includes(parseInt(next, 10));
+                        if (!nextIsMiddle && (subjectName === "science" || subjectName === "social_science")) {
+                          setSubjectName("");
+                        }
+                      }}
+                      className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="">Grade</option>
+                      {[3, 4, 5, 6, 7, 8].map((g) => (
+                        <option key={g} value={g}>Grade {g}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Board</label>
+                    <select
+                      value={board}
+                      onChange={(e) => setBoard(e.target.value)}
+                      className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="">Board</option>
+                      <option value="CBSE">CBSE</option>
+                    </select>
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Subject</label>
-                  <select 
+                  <select
                     value={subjectName}
                     onChange={(e) => setSubjectName(e.target.value)}
                     className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
                   >
                     <option value="">Select Subject</option>
-                    <option value="english">English</option>
-                    <option value="mathematics">Mathematics</option>
+                    {subjectOptions.map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -185,33 +232,6 @@ export function CurriculumIngestion({
                     placeholder="e.g. Bio-Bot 3000"
                     className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/30 transition-all"
                   />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Grade</label>
-                    <select 
-                      value={grade}
-                      onChange={(e) => setGrade(e.target.value)}
-                      className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
-                    >
-                      <option value="">Grade</option>
-                      {[...Array(12)].map((_, i) => (
-                        <option key={i + 1} value={i + 1}>Grade {i + 1}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Board</label>
-                    <select 
-                      value={board}
-                      onChange={(e) => setBoard(e.target.value)}
-                      className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
-                    >
-                      <option value="">Board</option>
-                      <option value="CBSE">CBSE</option>
-                    </select>
-                  </div>
                 </div>
 
                 <div className="space-y-2">
