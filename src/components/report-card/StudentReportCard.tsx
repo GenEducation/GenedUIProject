@@ -1973,45 +1973,21 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
     setSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const handlePrint = async () => {
-    if (isPdfGenerating) return;
+    if (isPdfGenerating || teacherId) return;
     setIsPdfGenerating(true);
 
     try {
-      // ═══════════════════════════════════════════════════════════
-      // Server-side PDF generation via Puppeteer
-      //
-      // We POST the user's auth context to /api/student/report-card/pdf.
-      // The route launches headless Chromium, seeds localStorage with
-      // the token, navigates to /student/report-card?print=1, waits for
-      // data to hydrate, and uses Chromium's native paginator to produce
-      // a perfect, selectable-text PDF. The user just gets a download.
-      // ═══════════════════════════════════════════════════════════
-
-      // Pull the auth context the same way authFetch does
-      const token = typeof window !== "undefined" ? localStorage.getItem("gened_auth_token") ?? "" : "";
-      const profileStr = typeof window !== "undefined" ? localStorage.getItem("gened_user_profile") ?? "{}" : "{}";
-      const role = typeof window !== "undefined" ? localStorage.getItem("gened_user_role") ?? "student" : "student";
-
-      let userProfile: Record<string, unknown> = {};
-      try { userProfile = JSON.parse(profileStr); } catch { /* empty */ }
-
-      if (!token) {
-        alert("You must be logged in to download the report card.");
+      // Server-rendered PDF, fetched through the gateway like every other
+      // API call (a parent downloads a linked child's report via the
+      // parent-service endpoint; a student downloads their own via
+      // core-service directly).
+      const targetStudentId = parentId ? childId : studentId;
+      if (!targetStudentId) {
+        alert("Unable to determine which student's report to download.");
         return;
       }
 
-      const response = await fetch("/api/student/report-card/pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, userProfile, role }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text().catch(() => "PDF generation failed");
-        throw new Error(errText);
-      }
-
-      const blob = await response.blob();
+      const blob = await studentService.downloadReportCardPdf(targetStudentId, parentId);
       const safeName = (displayName || "Student").replace(/[^a-z0-9]/gi, "_");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -2021,8 +1997,6 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      return;
-
     } catch (err) {
       console.error("[PDF] Generation failed:", err);
       alert("PDF generation failed — please try again.");
@@ -3207,17 +3181,18 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
       <div className="print-btn" style={{ textAlign: "center", marginTop: "24px", paddingBottom: "40px" }}>
         <button
           onClick={handlePrint}
-          disabled={isPdfGenerating}
+          disabled={isPdfGenerating || !!teacherId}
+          title={teacherId ? "PDF download isn't available in the teacher view yet" : undefined}
           style={{
             display: "inline-flex",
             alignItems: "center",
             gap: "8px",
             padding: "10px 24px",
-            background: isPdfGenerating ? "#8899aa" : "var(--navy)",
+            background: isPdfGenerating || teacherId ? "#8899aa" : "var(--navy)",
             color: "white",
             borderRadius: "8px",
             border: "none",
-            cursor: isPdfGenerating ? "not-allowed" : "pointer",
+            cursor: isPdfGenerating || teacherId ? "not-allowed" : "pointer",
             fontWeight: 600,
             fontSize: "14px",
             transition: "background 0.2s",
