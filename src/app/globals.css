@@ -6,15 +6,52 @@
   --navy: #042E5C;
   --emerald: #059F6D;
   --academic-grey: #F8F9FA;
+
+  /* Teacher portal token layer — additive, does not alter existing tokens above. */
+  --ink: #042E5C;
+  --muted: #6b7d91;
+  --muted-light: #94a3b8;
+  --border: #e6ecf2;
+  --paper: #FBFBFA;
+  --navy-700: #073e75;
+  --navy-300: #8fb9e6;
+  --emerald-600: #048a5d;
+  --emerald-50: #e7f7f0;
+  --warning: #E8A33D;
+  --warning-ink: #8a5a16;
+  --warning-bg: #fff6e6;
+  --warning-border: #f3e0bb;
+  --danger: #E1604B;
+  --danger-ink: #b3411f;
+  --danger-bg: #fdeeea;
+  --info: #1d5aa8;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
+
   --color-navy: var(--navy);
   --color-emerald: var(--emerald);
   --color-academic-grey: var(--academic-grey);
+
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-muted-light: var(--muted-light);
+  --color-border: var(--border);
+  --color-paper: var(--paper);
+  --color-navy-700: var(--navy-700);
+  --color-navy-300: var(--navy-300);
+  --color-emerald-600: var(--emerald-600);
+  --color-emerald-50: var(--emerald-50);
+  --color-warning: var(--warning);
+  --color-warning-ink: var(--warning-ink);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+  --color-danger: var(--danger);
+  --color-danger-ink: var(--danger-ink);
+  --color-danger-bg: var(--danger-bg);
+  --color-info: var(--info);
 
   --font-sans: "Inter", var(--font-inter), ui-sans-serif, system-ui;
   --font-serif: "Playfair Display", var(--font-playfair), ui-serif, Georgia, serif;

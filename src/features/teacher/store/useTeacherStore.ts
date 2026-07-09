@@ -9,6 +9,7 @@ import {
 } from "../services/teacherService";
 import { ApiRequestError } from "@/utils/authFetch";
 import * as Sentry from "@sentry/nextjs";
+import type { SlotResponse } from "@/features/lab/types/lab";
 
 export interface TeacherProfile {
   user_id: string;
@@ -45,13 +46,18 @@ interface TeacherState {
   approvingId: string | null; // student_id currently being approved
 
   // ---- Phase 2: individual student chat history & report ----
-  view: "roster" | "chats" | "analytics";
+  view: "roster" | "chats" | "analytics" | "lab";
   selectedStudent: TeacherStudent | null;
   chats: ChatSession[];
   activeSessionId: string | null;
   chatMessages: ChatMessage[];
   isFetchingChats: boolean;
   isFetchingMessages: boolean;
+
+  // ---- Lab Mode navigation ----
+  activeSlot: SlotResponse | null;
+  setView: (view: "roster" | "chats" | "analytics" | "lab") => void;
+  setActiveSlot: (slot: SlotResponse | null) => void;
 
   // actions
   setTeacherProfile: (profile: TeacherProfile) => void;
@@ -99,6 +105,10 @@ export const useTeacherStore = create<TeacherState>((set, get) => ({
   chatMessages: [],
   isFetchingChats: false,
   isFetchingMessages: false,
+
+  activeSlot: null,
+  setView: (view) => set({ view }),
+  setActiveSlot: (activeSlot) => set({ activeSlot }),
 
   setTeacherProfile: (profile) => set({ teacherProfile: profile }),
 
@@ -227,6 +237,8 @@ export const useTeacherStore = create<TeacherState>((set, get) => ({
       overview: null,
       students: [],
       requests: [],
+      view: "roster",
+      activeSlot: null,
     });
     window.location.href = "/";
   },

@@ -1,10 +1,12 @@
 export const SUBJECTS = ["English", "Mathematics", "Science", "Hindi"] as const;
 
+// Brand-harmonized palette (navy/emerald family) — replaces the earlier Flat-UI
+// colors which clashed with the portal's navy/emerald identity.
 export const SUBJECT_COLORS: Record<string, string> = {
-  English: "#74B9FF",
-  Mathematics: "#00B894",
-  Science: "#FDCB6E",
-  Hindi: "#6C5CE7",
+  English: "#4A6FA5", // slate blue
+  Mathematics: "#059F6D", // emerald
+  Science: "#B98A2E", // muted gold
+  Hindi: "#2E8C8C", // muted teal
 };
 
 export function subjectColor(subject?: string | null): string {

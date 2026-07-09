@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Search, UserX } from "lucide-react";
+import { Search, UserX, UserPlus } from "lucide-react";
 import { useTeacherStore, StatusFilter, SortOption } from "../store/useTeacherStore";
 import { TeacherStudent } from "../services/teacherService";
 import { StudentCard } from "./StudentCard";
@@ -15,9 +15,21 @@ interface StudentRosterProps {
   onViewReport: (student: TeacherStudent) => void;
   approvingId: string | null;
   removingId: string | null;
+  onInviteClick?: () => void;
 }
 
-export function StudentRoster({ onApprove, onRemove, onViewChats, onViewReport, approvingId, removingId }: StudentRosterProps) {
+const selectChevron =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7d91' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")";
+
+export function StudentRoster({
+  onApprove,
+  onRemove,
+  onViewChats,
+  onViewReport,
+  approvingId,
+  removingId,
+  onInviteClick,
+}: StudentRosterProps) {
   const {
     students,
     statusFilter,
@@ -41,10 +53,10 @@ export function StudentRoster({ onApprove, onRemove, onViewChats, onViewReport, 
   return (
     <div>
       {/* Controls */}
-      <section className="mb-5 flex flex-wrap items-end gap-3.5 rounded-2xl border border-[#e6ecf2] bg-white p-4 shadow-[0_1px_2px_rgba(4,46,92,.06),0_1px_3px_rgba(4,46,92,.05)]">
+      <section className="mb-5 flex flex-wrap items-end gap-3.5 rounded-2xl border border-border bg-white p-4 shadow-[0_1px_2px_rgba(4,46,92,.06),0_1px_3px_rgba(4,46,92,.05)]">
         <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#6b7d91]">Status</span>
-          <div className="flex rounded-[11px] border border-[#e6ecf2] bg-[#F8F9FA] p-[3px]">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Status</span>
+          <div className="flex rounded-[11px] border border-border bg-paper p-[3px]">
             {(
               [
                 ["all", "All", counts.all],
@@ -56,13 +68,13 @@ export function StudentRoster({ onApprove, onRemove, onViewChats, onViewReport, 
                 key={value}
                 onClick={() => setStatusFilter(value)}
                 className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[13px] font-semibold transition-all ${
-                  statusFilter === value ? "bg-[#042E5C] text-white shadow-md" : "text-[#6b7d91] hover:text-[#042E5C]"
+                  statusFilter === value ? "bg-ink text-white shadow-md" : "text-muted hover:text-ink"
                 }`}
               >
                 {label}
                 <span
                   className={`rounded-full px-1.5 text-[11px] font-bold ${
-                    statusFilter === value ? "bg-white/20 text-white" : "bg-[#e3e9ef] text-[#6b7d91]"
+                    statusFilter === value ? "bg-white/20 text-white" : "bg-border text-muted"
                   }`}
                 >
                   {count}
@@ -73,14 +85,13 @@ export function StudentRoster({ onApprove, onRemove, onViewChats, onViewReport, 
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#6b7d91]">Subject</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Subject</span>
           <select
             value={subjectFilter}
             onChange={(e) => setSubjectFilter(e.target.value)}
-            className="appearance-none rounded-[11px] border border-[#e6ecf2] bg-[#F8F9FA] px-3.5 py-2.5 pr-8 text-[13.5px] font-medium text-[#1c2b3a] outline-none"
+            className="appearance-none rounded-[11px] border border-border bg-paper px-3.5 py-2.5 pr-8 text-[13.5px] font-medium text-ink outline-none"
             style={{
-              backgroundImage:
-                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7d91' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
+              backgroundImage: selectChevron,
               backgroundRepeat: "no-repeat",
               backgroundPosition: "right 12px center",
             }}
@@ -95,14 +106,13 @@ export function StudentRoster({ onApprove, onRemove, onViewChats, onViewReport, 
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#6b7d91]">Sort</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Sort</span>
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as SortOption)}
-            className="appearance-none rounded-[11px] border border-[#e6ecf2] bg-[#F8F9FA] px-3.5 py-2.5 pr-8 text-[13.5px] font-medium text-[#1c2b3a] outline-none"
+            className="appearance-none rounded-[11px] border border-border bg-paper px-3.5 py-2.5 pr-8 text-[13.5px] font-medium text-ink outline-none"
             style={{
-              backgroundImage:
-                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7d91' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
+              backgroundImage: selectChevron,
               backgroundRepeat: "no-repeat",
               backgroundPosition: "right 12px center",
             }}
@@ -113,35 +123,48 @@ export function StudentRoster({ onApprove, onRemove, onViewChats, onViewReport, 
         </div>
 
         <div className="flex min-w-[200px] flex-1 flex-col gap-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#6b7d91]">Search</span>
-          <div className="flex items-center gap-2 rounded-[11px] border border-[#e6ecf2] bg-[#F8F9FA] px-3.5 py-2.5">
-            <Search size={15} className="flex-none text-[#6b7d91]" />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Search</span>
+          <div className="flex items-center gap-2 rounded-[11px] border border-border bg-paper px-3.5 py-2.5">
+            <Search size={15} className="flex-none text-muted" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search student…"
-              className="w-full bg-transparent text-[13.5px] text-[#1c2b3a] outline-none"
+              className="w-full bg-transparent text-[13.5px] text-ink outline-none"
             />
           </div>
         </div>
       </section>
 
-      <div className="mb-3.5 px-1 text-[13.5px] text-[#6b7d91]">
-        Showing <b className="font-bold text-[#042E5C]">{filtered.length}</b> of {students.length} student
+      <div className="mb-3.5 px-1 text-[13.5px] text-muted">
+        Showing <b className="font-bold text-ink">{filtered.length}</b> of {students.length} student
         {students.length !== 1 ? "s" : ""}
       </div>
 
       {isFetchingStudents && students.length === 0 ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-40 animate-pulse rounded-2xl border border-[#e6ecf2] bg-white" />
+            <div key={i} className="h-40 animate-pulse rounded-2xl border border-border bg-white" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#e6ecf2] bg-white py-16 text-center text-[#6b7d91]">
-          <UserX className="mx-auto mb-3 text-[#cbd5e1]" size={36} />
-          <h3 className="font-serif text-xl font-semibold text-[#042E5C]">No students here</h3>
-          <p className="mt-1 text-sm">Try a different filter, or invite a student to your class.</p>
+        <div className="rounded-2xl border border-dashed border-border bg-white py-16 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-ink/5 text-muted-light">
+            <UserX size={26} />
+          </div>
+          <h3 className="font-serif text-xl font-semibold text-ink">No students here</h3>
+          <p className="mx-auto mt-1 max-w-xs text-sm text-muted">
+            Try a different filter, or invite a student to your class.
+          </p>
+          {onInviteClick && (
+            <button
+              onClick={onInviteClick}
+              className="mx-auto mt-5 flex items-center gap-1.5 rounded-xl bg-emerald px-4 py-2.5 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-emerald-600"
+            >
+              <UserPlus size={15} />
+              Invite student
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
