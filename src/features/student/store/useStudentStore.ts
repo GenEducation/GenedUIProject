@@ -31,7 +31,7 @@ export interface StudentProfile {
 
 export interface ChatElement {
   id: string;
-  type: "text" | "svg" | "widget" | "image" | "visual" | "comprehension_widget" | "english_skill_view" | "interactive";
+  type: "text" | "svg" | "widget" | "image" | "visual" | "comprehension_widget" | "english_skill_view" | "interactive" | "pointer_ref";
   content: string;
   meta?: {
     // existing visual meta
@@ -2193,7 +2193,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
         if (tailText) {
           displayElements.push({
-            id: `stream-tail-${Date.now()}`,
+            id: `el-pos-${displayElements.length}`,
             type: "text",
             content: tailText
           });
@@ -2239,13 +2239,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                   lastEl.type === "svg" &&
                   lastEl.meta?.shape === newEl.meta.shape
                 ) {
-                  // Upgrade the existing element in place
-                  elements[lastIdx] = newEl;
+                  // Upgrade the existing element in place, keeping its id so
+                  // the renderer doesn't remount.
+                  elements[lastIdx] = { ...newEl, id: lastEl.id };
                 } else {
-                  elements.push(newEl);
+                  // Position-based id: if this text element occupies the same
+                  // slot the transient stream-tail did, the id matches and
+                  // React keeps the mounted typewriter instead of remounting it.
+                  elements.push({ ...newEl, id: `el-pos-${elements.length}` });
                 }
               } else {
-                elements.push(newEl);
+                elements.push({ ...newEl, id: `el-pos-${elements.length}` });
               }
             });
           }
