@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePartnerStore, SubjectFilters, restorePendingIngestions } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Skeleton } from "./Skeleton";
+import { IngestedPdfViewer } from "./IngestedPdfViewer";
 
 interface SubjectRegistryProps {
   onUploadClick: () => void;
@@ -29,6 +30,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const fetchSubjects = usePartnerStore((state) => state.fetchSubjects);
   const removeSubject = usePartnerStore((state) => state.removeSubject);
   const cancelIngestion = usePartnerStore((state) => state.cancelIngestion);
+  const openIngestedPdf = usePartnerStore((state) => state.openIngestedPdf);
   const setSubjectFilters = usePartnerStore((state) => state.setSubjectFilters);
   const setSubjectOffset = usePartnerStore((state) => state.setSubjectOffset);
   const subjectFilters = usePartnerStore((state) => state.subjectFilters);
@@ -336,6 +338,19 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           </div>
                         )}
 
+                        {isActive && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openIngestedPdf(subject);
+                            }}
+                            title="View PDF"
+                            className="p-2 text-[#1A3D2C]/40 hover:text-[#1A3D2C] hover:bg-[#1A3D2C]/5 rounded-xl transition-all"
+                          >
+                            <FileText size={18} />
+                          </button>
+                        )}
+
                         {(isActive || isFailed) && (
                           <button
                             onClick={(e) => {
@@ -408,6 +423,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         isLoading={isDeleting}
         error={deleteError}
       />
+
+      {/* Ingested PDF Viewer */}
+      <IngestedPdfViewer />
     </div>
   );
 }
