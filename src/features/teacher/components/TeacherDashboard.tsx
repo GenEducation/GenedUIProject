@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
-import { ArrowLeft, Plus, LogOut } from "lucide-react";
+import { motion } from "framer-motion";
+import { ArrowLeft, Plus } from "lucide-react";
 import { useTeacherStore } from "../store/useTeacherStore";
 import { TeacherStudent } from "../services/teacherService";
 import { TeacherSummary } from "./TeacherSummary";
@@ -11,6 +13,9 @@ import { InviteStudentModal } from "./InviteStudentModal";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ToastStack, ToastItem } from "./Toast";
 import { TeacherChatExploration } from "./TeacherChatExploration";
+import { TeacherSideBar } from "./TeacherSideBar";
+import { SlotScheduler } from "@/features/lab/components/SlotScheduler";
+import { RunPeriod } from "@/features/lab/components/RunPeriod";
 
 // Lazy-loaded: pulls in the full report-card document, only needed when a
 // teacher opens a student's report (same component used by the student/parent portals).
@@ -24,6 +29,9 @@ function studentLabel(student: TeacherStudent) {
 }
 
 export function TeacherDashboard() {
+  const router = useRouter();
+  const pathname = usePathname();
+
   const {
     teacherProfile,
     overview,
@@ -37,15 +45,29 @@ export function TeacherDashboard() {
     isRemoving,
     logoutTeacher,
     view,
+    setView,
     selectedStudent,
     openReport,
     openAnalytics,
     closeReport,
+    activeSlot,
+    setActiveSlot,
   } = useTeacherStore();
 
   const [isInviteOpen, setInviteOpen] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<TeacherStudent | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  // Sync the sidebar's coarse section (My Class vs. Lab Mode) with the URL so a
+  // refresh on /teacher/lab lands back in Lab Mode.
+  useEffect(() => {
+    if (pathname === "/teacher/lab" && view !== "lab") {
+      setView("lab");
+    } else if (pathname === "/teacher" && view === "lab") {
+      setView("roster");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   useEffect(() => {
     if (!teacherProfile) return;
@@ -118,91 +140,100 @@ export function TeacherDashboard() {
     });
   };
 
-  return (
-    <div className="min-h-screen bg-[#F8F9FA]">
-      {/* Top bar */}
-      <header className="sticky top-0 z-40 border-b-[3px] border-[#059F6D] bg-[#042E5C] text-white shadow-[0_6px_24px_rgba(4,46,92,.18)]">
-        <div className="flex items-center gap-4 px-6 py-3">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-white px-2.5 py-1.5">
-              <img src="/Logo.svg" alt="GenEd" className="h-6 w-auto" />
-            </div>
-            <div className="hidden sm:block">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8fb9e6]">
-                Teacher&apos;s Portal
-              </div>
-            </div>
-          </div>
-          <div className="flex-1" />
-          <div className="flex items-center gap-3">
-            <div className="hidden text-right leading-tight sm:block">
-              <div className="text-[13.5px] font-semibold">{teacherProfile?.full_name || teacherProfile?.username}</div>
-              <div className="text-[11px] text-[#8fb9e6]">
-                {[teacherProfile?.title, teacherProfile?.role].filter(Boolean).join(" · ")}
-              </div>
-            </div>
-            <button
-              onClick={logoutTeacher}
-              className="flex items-center gap-1.5 rounded-[9px] border border-white/15 bg-white/10 px-3 py-2 text-[12.5px] font-medium text-[#cfe0f2] transition-colors hover:border-[#E8635A]/40 hover:bg-[#E8635A]/15 hover:text-[#E8635A]"
-            >
-              <LogOut size={14} />
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
+  const handleSideBarNav = (target: "roster" | "lab") => {
+    if (target === "lab") {
+      setActiveSlot(null);
+      setView("lab");
+      router.push("/teacher/lab", { scroll: false });
+    } else {
+      setActiveSlot(null);
+      closeReport();
+      router.push("/teacher", { scroll: false });
+    }
+  };
 
-      {view === "analytics" && selectedStudent ? (
-        <div className="min-h-[calc(100vh-57px)] bg-[#FBFBFA]">
-          <div className="mx-auto max-w-6xl px-6 pt-6">
-            <button
-              onClick={closeReport}
-              className="mb-1 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[#6b7d91] transition-colors hover:text-[#042E5C]"
-            >
-              <ArrowLeft size={14} />
-              Back to class
-            </button>
+  return (
+    <div className="flex h-screen overflow-hidden bg-paper">
+      <TeacherSideBar
+        activeView={view}
+        onViewChange={handleSideBarNav}
+        onLogout={logoutTeacher}
+        teacherProfile={teacherProfile}
+      />
+
+      <main className="flex-1 overflow-y-auto">
+        {view === "lab" ? (
+          <div className="flex min-h-full flex-col bg-paper">
+            {activeSlot ? (
+              <RunPeriod
+                slot={activeSlot}
+                userId={teacherProfile?.user_id || ""}
+                onBack={() => setActiveSlot(null)}
+              />
+            ) : (
+              <SlotScheduler
+                teacherId={teacherProfile?.user_id || ""}
+                partnerId={teacherProfile?.partner_id || ""}
+                onOpenSlot={setActiveSlot}
+              />
+            )}
           </div>
-          <StudentReportCard
-            teacherId={teacherProfile?.user_id}
-            childId={selectedStudent.student_id}
-            childName={studentLabel(selectedStudent)}
-          />
-        </div>
-      ) : view === "chats" && selectedStudent ? (
-        <div className="flex h-[calc(100vh-57px)] flex-col">
-          <div className="flex-none border-b border-[#e6ecf2] bg-white px-6 py-3.5">
-            <button
-              onClick={closeReport}
-              className="mb-1.5 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[#6b7d91] transition-colors hover:text-[#042E5C]"
-            >
-              <ArrowLeft size={14} />
-              Back to class
-            </button>
-            <h1 className="font-serif text-lg font-semibold text-[#042E5C]">
-              {studentLabel(selectedStudent)} <span className="font-sans text-[12.5px] font-normal text-[#6b7d91]">· Chat history</span>
-            </h1>
+        ) : view === "analytics" && selectedStudent ? (
+          <div className="min-h-full bg-paper">
+            <div className="mx-auto max-w-6xl px-6 pt-6">
+              <button
+                onClick={closeReport}
+                className="mb-1 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-muted transition-colors hover:text-ink"
+              >
+                <ArrowLeft size={14} />
+                Back to class
+              </button>
+            </div>
+            <StudentReportCard
+              teacherId={teacherProfile?.user_id}
+              childId={selectedStudent.student_id}
+              childName={studentLabel(selectedStudent)}
+            />
           </div>
-          <TeacherChatExploration />
-        </div>
-      ) : (
-      <main className="mx-auto max-w-6xl px-6 py-8">
-        {view === "chats" ? null : (
-          <>
+        ) : view === "chats" && selectedStudent ? (
+          <div className="flex h-full flex-col">
+            <div className="flex-none border-b border-border bg-white px-6 py-3.5">
+              <button
+                onClick={closeReport}
+                className="mb-1.5 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-muted transition-colors hover:text-ink"
+              >
+                <ArrowLeft size={14} />
+                Back to class
+              </button>
+              <h1 className="font-serif text-lg font-semibold text-ink">
+                {studentLabel(selectedStudent)}{" "}
+                <span className="font-sans text-[12.5px] font-normal text-muted">· Chat history</span>
+              </h1>
+            </div>
+            <TeacherChatExploration />
+          </div>
+        ) : (
+          <motion.div
+            key="roster"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="mx-auto max-w-6xl px-6 py-8 lg:px-10"
+          >
             {/* Page head */}
-            <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[#059F6D]">My Students</p>
-                <h1 className="mt-1 font-serif text-3xl font-semibold text-[#042E5C] sm:text-4xl">
+                <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-emerald">My Students</p>
+                <h1 className="mt-1 font-serif text-3xl font-semibold text-ink sm:text-4xl">
                   Class Progress Overview
                 </h1>
-                <p className="mt-1 text-[15px] text-[#6b7d91]">
+                <p className="mt-1 text-[15px] text-muted">
                   Approve requests, then track each student&apos;s journey.
                 </p>
               </div>
               <button
                 onClick={() => setInviteOpen(true)}
-                className="flex items-center gap-2 rounded-xl bg-[#059F6D] px-4.5 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(5,159,109,.28)] transition-all hover:-translate-y-0.5 hover:bg-[#048a5d]"
+                className="flex items-center gap-2 rounded-xl bg-emerald px-4.5 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(5,159,109,.28)] transition-all hover:-translate-y-0.5 hover:bg-emerald-600"
               >
                 <Plus size={17} />
                 Invite student
@@ -218,11 +249,11 @@ export function TeacherDashboard() {
               onViewReport={handleViewAnalytics}
               approvingId={approvingId}
               removingId={isRemoving}
+              onInviteClick={() => setInviteOpen(true)}
             />
-          </>
+          </motion.div>
         )}
       </main>
-      )}
 
       <InviteStudentModal isOpen={isInviteOpen} onClose={() => setInviteOpen(false)} onInvite={handleInvite} />
 
