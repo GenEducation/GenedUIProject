@@ -25,12 +25,16 @@ interface SlotSchedulerProps {
 }
 
 export function SlotScheduler({ teacherId, partnerId, onOpenSlot }: SlotSchedulerProps) {
-  const { labs, fetchLabs, slots, isLoadingSlots, fetchSlots, cancelSlot, lastError } = useLabStore();
+  const { labs, fetchLabs, slots, isLoadingSlots, fetchSlots, cancelSlot, fetchCatalog, lastError } =
+    useLabStore();
   const [onDate, setOnDate] = useState(todayIso());
   const [isCreateOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
-    if (partnerId) fetchLabs(partnerId);
+    if (partnerId) {
+      fetchLabs(partnerId);
+      fetchCatalog(partnerId);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [partnerId]);
 
@@ -189,18 +193,37 @@ function CreateSlotModal({
   defaultDate: string;
   onClose: () => void;
 }) {
-  const { createSlot, fetchSlots } = useLabStore();
+  const { createSlot, fetchSlots, catalog } = useLabStore();
   const [labId, setLabId] = useState(labs[0]?.id || "");
-  const [grade, setGrade] = useState(6);
-  const [section, setSection] = useState("A");
+  // Grade + section are picked as one unit ("5|A") from the roster catalog, so a
+  // period is never scheduled against a class that has no enrollment register.
+  const [classKey, setClassKey] = useState("");
+  const [gradeStr, section] = classKey ? classKey.split("|") : ["", ""];
+  const grade = gradeStr ? Number(gradeStr) : 0;
   const [subject, setSubject] = useState("");
   const [objectiveMode, setObjectiveMode] = useState<ObjectiveMode>("CHAPTER_PRACTICE");
   const [chapter, setChapter] = useState("");
+  const [skillFocus, setSkillFocus] = useState("");
   const [scheduledDate, setScheduledDate] = useState(defaultDate);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("09:40");
   const [isSubmitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Deterministic dropdown options, derived from the school's ingested content.
+  // Subjects are scoped to the chosen grade; chapters to the chosen subject+grade.
+  const gradeSubjects = useMemo(
+    () => [...new Set(catalog.chapters.filter((c) => c.grade === grade).map((c) => c.subject))].sort(),
+    [catalog, grade],
+  );
+  const subjectChapters = useMemo(
+    () =>
+      catalog.chapters
+        .filter((c) => c.grade === grade && c.subject === subject)
+        .map((c) => c.document_title),
+    [catalog, grade, subject],
+  );
+  const isGapRecovery = objectiveMode === "GAP_RECOVERY";
 
   useEffect(() => {
     if (!labId && labs[0]) setLabId(labs[0].id);
@@ -210,8 +233,29 @@ function CreateSlotModal({
     setScheduledDate(defaultDate);
   }, [defaultDate, isOpen]);
 
+  // Keep selections consistent with the catalog: drop a subject that isn't
+  // offered for the chosen grade, and a chapter that doesn't belong to the
+  // chosen subject.
+  useEffect(() => {
+    if (subject && !gradeSubjects.includes(subject)) {
+      setSubject("");
+      setChapter("");
+    }
+  }, [gradeSubjects, subject]);
+
+  useEffect(() => {
+    if (chapter && !subjectChapters.includes(chapter)) {
+      setChapter("");
+    }
+  }, [subjectChapters, chapter]);
+
   const handleSubmit = async () => {
-    if (!labId || !subject.trim()) return;
+    if (!labId || !classKey || !subject.trim()) return;
+    const chapterValue = chapter.trim();
+    if (isGapRecovery && (!chapterValue || !skillFocus.trim())) {
+      setError("Gap Recovery needs a chapter and what you taught (skill focus).");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -222,7 +266,10 @@ function CreateSlotModal({
         section: section.trim(),
         subject: subject.trim(),
         objective_mode: objectiveMode,
-        chapter: chapter.trim() || undefined,
+        // The picked chapter is both the display label and the RAG anchor.
+        chapter: chapterValue || undefined,
+        document_title: chapterValue || undefined,
+        skill_focus: skillFocus.trim() || undefined,
         scheduled_date: scheduledDate,
         start_time: `${scheduledDate}T${startTime}:00+05:30`,
         end_time: `${scheduledDate}T${endTime}:00+05:30`,
@@ -272,27 +319,45 @@ function CreateSlotModal({
                   </option>
                 ))}
               </select>
-              <input
-                type="number"
-                min={1}
-                max={12}
-                value={grade}
-                onChange={(e) => setGrade(Number(e.target.value))}
-                placeholder="Grade"
-                className="rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20"
-              />
-              <input
-                value={section}
-                onChange={(e) => setSection(e.target.value)}
-                placeholder="Section"
-                className="rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20"
-              />
-              <input
+              <select
+                value={classKey}
+                onChange={(e) => setClassKey(e.target.value)}
+                disabled={catalog.classes.length === 0}
+                className="col-span-2 rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20 disabled:cursor-not-allowed disabled:bg-ink/5 disabled:text-muted"
+              >
+                <option value="">
+                  {catalog.classes.length === 0
+                    ? "No classes with a roster yet"
+                    : "Select class…"}
+                </option>
+                {catalog.classes.map((c) => (
+                  <option key={`${c.grade}|${c.section}`} value={`${c.grade}|${c.section}`}>
+                    Grade {c.grade} · {c.section}
+                  </option>
+                ))}
+              </select>
+              <select
                 value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Subject"
-                className="col-span-2 rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20"
-              />
+                onChange={(e) => {
+                  setSubject(e.target.value);
+                  setChapter("");
+                }}
+                disabled={gradeSubjects.length === 0}
+                className="col-span-2 rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20 disabled:cursor-not-allowed disabled:bg-ink/5 disabled:text-muted"
+              >
+                <option value="">
+                  {!classKey
+                    ? "Select a class first"
+                    : gradeSubjects.length === 0
+                      ? "No subjects available for this grade"
+                      : "Select subject…"}
+                </option>
+                {gradeSubjects.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
               <select
                 value={objectiveMode}
                 onChange={(e) => setObjectiveMode(e.target.value as ObjectiveMode)}
@@ -304,12 +369,35 @@ function CreateSlotModal({
                   </option>
                 ))}
               </select>
-              <input
+              <select
                 value={chapter}
                 onChange={(e) => setChapter(e.target.value)}
-                placeholder="Chapter (optional)"
-                className="col-span-2 rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20"
-              />
+                disabled={subjectChapters.length === 0}
+                className="col-span-2 rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20 disabled:cursor-not-allowed disabled:bg-ink/5 disabled:text-muted"
+              >
+                <option value="">
+                  {subjectChapters.length > 0
+                    ? isGapRecovery
+                      ? "Select chapter…"
+                      : "Select chapter (optional)…"
+                    : subject
+                      ? "No chapters available for this subject"
+                      : "Select a subject first"}
+                </option>
+                {subjectChapters.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              {isGapRecovery && (
+                <input
+                  value={skillFocus}
+                  onChange={(e) => setSkillFocus(e.target.value)}
+                  placeholder="What you taught (e.g. adding fractions with unlike denominators)"
+                  className="col-span-2 rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20"
+                />
+              )}
               <input
                 type="date"
                 value={scheduledDate}
@@ -332,7 +420,13 @@ function CreateSlotModal({
             {error && <p className="mt-3 text-xs text-danger-ink">{error}</p>}
             <button
               onClick={handleSubmit}
-              disabled={!labId || !subject.trim() || isSubmitting}
+              disabled={
+                !labId ||
+                !classKey ||
+                !subject.trim() ||
+                isSubmitting ||
+                (isGapRecovery && (!chapter.trim() || !skillFocus.trim()))
+              }
               className="mt-5 w-full rounded-xl bg-emerald py-3 text-sm font-bold text-white hover:bg-emerald-600 disabled:opacity-50"
             >
               {isSubmitting ? "Scheduling…" : "Schedule period"}

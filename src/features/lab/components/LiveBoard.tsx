@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeftRight, Check, Monitor, UserX, Zap, RefreshCw } from "lucide-react";
+import { ArrowLeftRight, Check, Monitor, UserCheck, UserX, Zap, RefreshCw } from "lucide-react";
 import { useLabStore } from "../store/useLabStore";
 import type { BoardResponse, LabSessionState } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
@@ -24,7 +24,8 @@ interface LiveBoardProps {
 }
 
 export function LiveBoard({ board, onToast }: LiveBoardProps) {
-  const { bind, reassign, swap, confirmOverride, markAbsent, endSession, refetchBoard } = useLabStore();
+  const { bind, reassign, resumeIncomplete, swap, confirmOverride, markAbsent, markPresent, endSession, refetchBoard } =
+    useLabStore();
   const [pendingReassign, setPendingReassign] = useState<{ sessionId: string; label: string } | null>(null);
   const [swapFirst, setSwapFirst] = useState<{ sessionId: string; label: string } | null>(null);
   const [busySessionId, setBusySessionId] = useState<string | null>(null);
@@ -117,7 +118,11 @@ export function LiveBoard({ board, onToast }: LiveBoardProps) {
         </div>
         {pendingReassign && (
           <div className="mt-3 flex items-center justify-between rounded-xl bg-warning-bg px-3.5 py-2.5 text-[12.5px] text-warning-ink">
-            <span>Pick a free desk for {pendingReassign.label}…</span>
+            <span>
+              {freeDevices.length > 0
+                ? `Pick a free desk for ${pendingReassign.label}…`
+                : `No free desks for ${pendingReassign.label} — end a session or add a spare first.`}
+            </span>
             <button onClick={() => setPendingReassign(null)} className="font-bold underline">
               Cancel
             </button>
@@ -128,6 +133,14 @@ export function LiveBoard({ board, onToast }: LiveBoardProps) {
       {/* Roster */}
       <div className="lg:col-span-2">
         <h3 className="mb-3 text-xs font-black uppercase tracking-widest text-muted">Roster</h3>
+        {swapFirst && (
+          <div className="mb-3 flex items-center justify-between rounded-xl bg-emerald-50 px-3.5 py-2.5 text-[12.5px] text-emerald-700">
+            <span>Pick another student to swap desks with {swapFirst.label}…</span>
+            <button onClick={() => setSwapFirst(null)} className="font-bold underline">
+              Cancel
+            </button>
+          </div>
+        )}
         <div className="space-y-2">
           {board.students.map((s) => {
             const isBusy = busySessionId === s.session_id;
@@ -185,7 +198,11 @@ export function LiveBoard({ board, onToast }: LiveBoardProps) {
                       }`}
                     >
                       <ArrowLeftRight size={11} />
-                      {swapFirst?.sessionId === s.session_id ? "Cancel swap" : "Swap"}
+                      {swapFirst?.sessionId === s.session_id
+                        ? "Cancel swap"
+                        : swapFirst
+                          ? "Swap here"
+                          : "Swap"}
                     </button>
                   )}
                   {["ASSIGNED", "CONFIRMED", "ACTIVE", "SUSPENDED"].includes(s.state) && (
@@ -207,13 +224,45 @@ export function LiveBoard({ board, onToast }: LiveBoardProps) {
                       </button>
                     </>
                   )}
+                  {s.state === "ABSENT" && (
+                    <button
+                      disabled={isBusy}
+                      onClick={() =>
+                        run(s.session_id, () => markPresent(s.session_id), `${s.student_name} marked present`)
+                      }
+                      className="flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[10.5px] font-bold text-emerald-600 disabled:opacity-50"
+                    >
+                      <UserCheck size={11} />
+                      Mark present
+                    </button>
+                  )}
                   {s.state === "IDLE" && freeDevices.length > 0 && (
                     <BindSelect
                       isBusy={isBusy}
+                      placeholder="Bind to desk…"
                       freeDevices={freeDevices}
                       onBind={(deviceId) => run(s.session_id, () => bind(s.student_id, deviceId), `Placed ${s.student_name}`)}
                     />
                   )}
+                  {s.state === "INCOMPLETE" &&
+                    (freeDevices.length > 0 ? (
+                      <BindSelect
+                        isBusy={isBusy}
+                        placeholder="Continue on desk…"
+                        freeDevices={freeDevices}
+                        onBind={(deviceId) =>
+                          run(
+                            s.session_id,
+                            () => resumeIncomplete(s.session_id, deviceId),
+                            `Resumed ${s.student_name}`,
+                          )
+                        }
+                      />
+                    ) : (
+                      <span className="rounded-lg bg-ink/5 px-2 py-1 text-[10.5px] font-semibold text-muted">
+                        No free desk to continue
+                      </span>
+                    ))}
                 </div>
               </div>
             );
@@ -233,10 +282,12 @@ function BindSelect({
   isBusy,
   freeDevices,
   onBind,
+  placeholder,
 }: {
   isBusy: boolean;
   freeDevices: BoardResponse["devices"];
   onBind: (deviceId: string) => void;
+  placeholder: string;
 }) {
   return (
     <select
@@ -248,7 +299,7 @@ function BindSelect({
       className="rounded-lg border border-border px-2 py-1 text-[10.5px] font-semibold text-ink disabled:opacity-50"
     >
       <option value="" disabled>
-        Bind to desk…
+        {placeholder}
       </option>
       {freeDevices.map((d) => (
         <option key={d.device_id} value={d.device_id}>

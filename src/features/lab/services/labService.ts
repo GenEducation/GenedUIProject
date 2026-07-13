@@ -14,6 +14,7 @@ import type {
   SessionResponse,
   BoardResponse,
   ClassReportResponse,
+  CatalogResponse,
 } from "../types/lab";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
@@ -84,6 +85,14 @@ export const labService = {
     const res = await authFetch(`${BASE_URL}/lab/devices/${encodeURIComponent(deviceId)}/revoke`, {
       method: "POST",
     });
+    return res.json();
+  },
+
+  // -- Catalog ----------------------------------------------------------------
+  getCatalog: async (partnerId: string, grade?: number): Promise<CatalogResponse> => {
+    const qs = new URLSearchParams({ partner_id: partnerId });
+    if (grade != null) qs.set("grade", String(grade));
+    const res = await authFetch(`${BASE_URL}/lab/catalog?${qs.toString()}`);
     return res.json();
   },
 
@@ -164,6 +173,18 @@ export const labService = {
     return res.json();
   },
 
+  resumeIncomplete: async (slotId: string, sessionId: string, deviceId: string): Promise<SessionResponse> => {
+    const res = await authFetch(
+      `${BASE_URL}/lab/slots/${encodeURIComponent(slotId)}/sessions/${encodeURIComponent(sessionId)}/resume`,
+      {
+        method: "POST",
+        headers: jsonHeaders,
+        body: JSON.stringify({ device_id: deviceId }),
+      },
+    );
+    return res.json();
+  },
+
   swap: async (slotId: string, sessionIdA: string, sessionIdB: string): Promise<SessionResponse[]> => {
     const res = await authFetch(`${BASE_URL}/lab/slots/${encodeURIComponent(slotId)}/swap`, {
       method: "POST",
@@ -184,6 +205,14 @@ export const labService = {
   markAbsent: async (slotId: string, sessionId: string): Promise<SessionResponse> => {
     const res = await authFetch(
       `${BASE_URL}/lab/slots/${encodeURIComponent(slotId)}/sessions/${encodeURIComponent(sessionId)}/absent`,
+      { method: "POST" },
+    );
+    return res.json();
+  },
+
+  markPresent: async (slotId: string, sessionId: string): Promise<SessionResponse> => {
+    const res = await authFetch(
+      `${BASE_URL}/lab/slots/${encodeURIComponent(slotId)}/sessions/${encodeURIComponent(sessionId)}/present`,
       { method: "POST" },
     );
     return res.json();

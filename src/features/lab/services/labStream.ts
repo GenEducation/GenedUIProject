@@ -17,7 +17,7 @@ export const labStream = {
   subscribeToBoardDeltas: (userId: string, onDelta: (delta: LabBoardDelta) => void): (() => void) => {
     const controller = new AbortController();
     const token = getAuthToken();
-    const streamUrl = `${STREAM_API_URL}/stream?user_id=${userId}`;
+    const streamUrl = `${STREAM_API_URL}/notify/stream?user_id=${userId}`;
 
     fetchEventSource(streamUrl, {
       headers: {

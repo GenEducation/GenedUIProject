@@ -113,6 +113,27 @@ export interface DeviceUpdateRequest {
   health_status?: LabDeviceHealth;
 }
 
+// -- Teaching catalog (deterministic dropdown source) -----------------------
+
+export interface CatalogChapter {
+  subject: string;
+  grade: number;
+  /** The RAG / GAP_RECOVERY anchor. Picked, never free-typed. */
+  document_title: string;
+}
+
+/** A class (grade + section) that has an imported roster — picked as one unit. */
+export interface CatalogClass {
+  grade: number;
+  section: string;
+}
+
+export interface CatalogResponse {
+  subjects: string[];
+  chapters: CatalogChapter[];
+  classes: CatalogClass[];
+}
+
 // -- Slots ------------------------------------------------------------------
 
 export interface SlotResponse {

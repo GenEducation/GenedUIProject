@@ -16,6 +16,7 @@ import type {
   ActivateResponse,
   BoardResponse,
   ClassReportResponse,
+  CatalogResponse,
 } from "../types/lab";
 
 const BOARD_POLL_MS = 5000;
@@ -32,6 +33,10 @@ interface LabState {
   // Slots (Teacher / BOARD)
   slots: SlotResponse[];
   isLoadingSlots: boolean;
+
+  // Teaching catalog (dropdown source for scheduling)
+  catalog: CatalogResponse;
+  isLoadingCatalog: boolean;
 
   // Live board
   activeSlotId: string | null;
@@ -60,6 +65,9 @@ interface LabState {
   revokeDevice: (labId: string, deviceId: string) => Promise<void>;
   clearMintedToken: () => void;
 
+  // -- Catalog ----------------------------------------------------------------------
+  fetchCatalog: (partnerId: string) => Promise<void>;
+
   // -- Slot actions -----------------------------------------------------------------
   fetchSlots: (params?: { labId?: string; onDate?: string }) => Promise<void>;
   createSlot: (payload: CreateSlotRequest) => Promise<SlotResponse>;
@@ -76,9 +84,11 @@ interface LabState {
   // -- Live controls (each refetches the board; on LAB_1105 the view was stale) ---------
   bind: (studentId: string, deviceId: string) => Promise<void>;
   reassign: (sessionId: string, deviceId: string) => Promise<void>;
+  resumeIncomplete: (sessionId: string, deviceId: string) => Promise<void>;
   swap: (sessionIdA: string, sessionIdB: string) => Promise<void>;
   confirmOverride: (sessionId: string) => Promise<void>;
   markAbsent: (sessionId: string) => Promise<void>;
+  markPresent: (sessionId: string) => Promise<void>;
   endSession: (sessionId: string) => Promise<void>;
 
   // -- Report ---------------------------------------------------------------------------
@@ -100,6 +110,9 @@ export const useLabStore = create<LabState>((set, get) => ({
 
   slots: [],
   isLoadingSlots: false,
+
+  catalog: { subjects: [], chapters: [], classes: [] },
+  isLoadingCatalog: false,
 
   activeSlotId: null,
   board: null,
@@ -197,6 +210,21 @@ export const useLabStore = create<LabState>((set, get) => ({
   },
 
   clearMintedToken: () => set({ lastMintedToken: null }),
+
+  fetchCatalog: async (partnerId) => {
+    if (!partnerId) return;
+    set({ isLoadingCatalog: true });
+    try {
+      const catalog = await labService.getCatalog(partnerId);
+      set({ catalog });
+    } catch (error) {
+      console.error("Fetch Catalog Error:", error);
+      // On failure the dropdowns simply show "no options" rather than crashing.
+      set({ catalog: { subjects: [], chapters: [], classes: [] } });
+    } finally {
+      set({ isLoadingCatalog: false });
+    }
+  },
 
   fetchSlots: async (params) => {
     set({ isLoadingSlots: true, lastError: null });
@@ -310,6 +338,16 @@ export const useLabStore = create<LabState>((set, get) => ({
     }
   },
 
+  resumeIncomplete: async (sessionId, deviceId) => {
+    const { activeSlotId } = get();
+    if (!activeSlotId) return;
+    try {
+      await labService.resumeIncomplete(activeSlotId, sessionId, deviceId);
+    } finally {
+      await get().refetchBoard();
+    }
+  },
+
   swap: async (sessionIdA, sessionIdB) => {
     const { activeSlotId } = get();
     if (!activeSlotId) return;
@@ -335,6 +373,16 @@ export const useLabStore = create<LabState>((set, get) => ({
     if (!activeSlotId) return;
     try {
       await labService.markAbsent(activeSlotId, sessionId);
+    } finally {
+      await get().refetchBoard();
+    }
+  },
+
+  markPresent: async (sessionId) => {
+    const { activeSlotId } = get();
+    if (!activeSlotId) return;
+    try {
+      await labService.markPresent(activeSlotId, sessionId);
     } finally {
       await get().refetchBoard();
     }
