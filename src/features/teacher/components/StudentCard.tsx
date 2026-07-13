@@ -45,7 +45,7 @@ export function StudentCard({
   return (
     <article
       className={`rounded-2xl border p-5 shadow-[0_1px_2px_rgba(4,46,92,.06),0_1px_3px_rgba(4,46,92,.05)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(4,46,92,.07),0_12px_32px_rgba(4,46,92,.06)] ${
-        isPending ? "border-[#f3e0bb] bg-gradient-to-b from-[#fffaf1] to-white" : "border-[#e6ecf2] bg-white"
+        isPending ? "border-warning-border bg-gradient-to-b from-[#fffaf1] to-white" : "border-border bg-white"
       }`}
     >
       <div className="flex items-start gap-3.5">
@@ -56,8 +56,8 @@ export function StudentCard({
           {initials(name)}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-bold text-[#042E5C]">{name}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] text-[#6b7d91]">
+          <p className="truncate text-[15px] font-bold text-ink">{name}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
             {student.email && student.name && (
               <span className="flex items-center gap-1 truncate">
                 <Mail size={11} className="flex-none" />
@@ -78,7 +78,7 @@ export function StudentCard({
         </div>
         <span
           className={`flex-none rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
-            isPending ? "bg-[#fcefd6] text-[#a96b14]" : "bg-[#e7f7f0] text-[#067a54]"
+            isPending ? "bg-warning-bg text-warning-ink" : "bg-emerald-50 text-emerald-600"
           }`}
         >
           {isPending ? "Pending" : "Approved"}
@@ -86,7 +86,7 @@ export function StudentCard({
       </div>
 
       {isPending && (
-        <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-[#f3e0bb] bg-[#fff6e6] p-3 text-[12.5px] leading-relaxed text-[#8a5a16]">
+        <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-warning-border bg-warning-bg p-3 text-[12.5px] leading-relaxed text-warning-ink">
           <Clock size={15} className="mt-0.5 flex-none" />
           <span>
             {student.requested_at
@@ -97,13 +97,13 @@ export function StudentCard({
         </div>
       )}
 
-      <div className="mt-4 flex items-center justify-between gap-2 border-t border-dashed border-[#e6ecf2] pt-3.5">
+      <div className="mt-4 flex items-center justify-between gap-2 border-t border-dashed border-border pt-3.5">
         {isPending ? (
           <>
             <button
               onClick={onRemove}
               disabled={isRemoving || isApproving}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#e6ecf2] px-3 py-1.5 text-[12.5px] font-semibold text-[#6b7d91] transition-colors hover:border-[#f6c4b5] hover:bg-[#fdeeea] hover:text-[#E1604B] disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-semibold text-muted transition-colors hover:border-[#f6c4b5] hover:bg-danger-bg hover:text-danger disabled:opacity-50"
             >
               {isRemoving ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
               Remove
@@ -111,7 +111,7 @@ export function StudentCard({
             <button
               onClick={onApprove}
               disabled={isApproving || isRemoving}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#059F6D] px-3.5 py-1.5 text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(5,159,109,.28)] transition-colors hover:bg-[#048a5d] disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald px-3.5 py-1.5 text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(5,159,109,.28)] transition-colors hover:bg-emerald-600 disabled:opacity-50"
             >
               {isApproving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
               Approve
@@ -122,7 +122,7 @@ export function StudentCard({
             <button
               onClick={onRemove}
               disabled={isRemoving}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold text-[#94a3b8] transition-colors hover:bg-[#fdeeea] hover:text-[#E1604B] disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-semibold text-muted-light transition-colors hover:bg-danger-bg hover:text-danger disabled:opacity-50"
             >
               {isRemoving ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
               Remove
@@ -130,14 +130,14 @@ export function StudentCard({
             <div className="flex items-center gap-2">
               <button
                 onClick={onViewChats}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#e6ecf2] px-3 py-1.5 text-[12.5px] font-semibold text-[#042E5C] transition-colors hover:border-[#cdeede] hover:bg-[#e7f7f0] hover:text-[#059F6D]"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[12.5px] font-semibold text-ink transition-colors hover:border-[#cdeede] hover:bg-emerald-50 hover:text-emerald"
               >
                 <MessageSquare size={13} />
                 Chat history
               </button>
               <button
                 onClick={onViewReport}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#042E5C] px-3 py-1.5 text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(4,46,92,.18)] transition-colors hover:bg-[#073e75]"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-ink px-3 py-1.5 text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(4,46,92,.18)] transition-colors hover:bg-navy-700"
               >
                 <ScrollText size={13} />
                 Report

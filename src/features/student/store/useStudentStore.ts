@@ -2401,6 +2401,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                 content: normalizeSvg(tag),
                 meta: { isRawBackendSvg: true }
               });
+            } else if (match[1] && /^(SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)$/.test(match[1])) {
+              // English skill directives are owned by the dedicated handler below
+              // (and by the skill_action event, keyed on the real directive_id).
+              // Skipping the generic parseContent push here avoids emitting a second
+              // widget with a Date.now()-based id when the inline payload lacks a
+              // directive_id — which previously rendered the quiz/word card twice.
             } else {
               const extracted = parseContent(tag);
               const tagElement = extracted.find(el => el.type !== "text");
