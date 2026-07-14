@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import {
   BookOpen, Zap, ChevronDown, ChevronRight,
   Target, Clock, Star,
-  BarChart3, FileText, Mic, Brain, Activity,
+  BarChart3, FileText, Brain, Activity,
   Download, Printer, ChevronUp, ScrollText, RefreshCw,
 } from "lucide-react";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
@@ -53,27 +53,6 @@ interface SkillCGItem {
   cg_name: string;
   avg_mastery: number;
   concepts: SkillConceptItem[];
-}
-
-interface EnglishModeStats {
-  mode: string;
-  session_count: number;
-  avg_accuracy?: number | null;
-  avg_fluency?: number | null;
-  avg_expression?: number | null;
-  avg_comprehension?: number | null;
-  avg_wpm?: number | null;
-  avg_overall?: number | null;
-}
-
-interface EnglishSkillsSummary {
-  total_sessions: number;
-  avg_accuracy?: number | null;
-  avg_fluency?: number | null;
-  avg_expression?: number | null;
-  avg_comprehension?: number | null;
-  avg_wpm?: number | null;
-  by_mode: EnglishModeStats[];
 }
 
 interface TestSubmission {
@@ -142,15 +121,6 @@ const SUBJECT_ACCENTS = [
   "#F59E0B",
   "#EF4444",
 ];
-
-const MODE_LABELS: Record<string, string> = {
-  speak_para: "Speak Paragraph",
-  difficult_word: "Difficult Words",
-  read_aloud: "Read Aloud",
-  karaoke: "Karaoke Reading",
-  show_figure_describe: "Describe Figure",
-  listen_comprehension: "Listen & Comprehend",
-};
 
 // ─────────────────────────────────────────────────────────
 // HELPER FUNCTIONS
@@ -742,176 +712,6 @@ function SkillMasterySection({
                       ))}
                     </div>
                   )}
-                </>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function EnglishSkillsSection({
-  englishSkills,
-  expanded,
-  onToggle,
-}: {
-  englishSkills: EnglishSkillsSummary | null;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <SectionHeader
-        icon={<Mic size={16} />}
-        title="English Skills Profile"
-        subtitle="Oral reading, fluency, comprehension across session modes"
-        expanded={expanded}
-        onToggle={onToggle}
-        accent="#0EA5E9"
-      />
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden section-body"
-          >
-            <div className="px-6 pb-6">
-              {!englishSkills || englishSkills.total_sessions === 0 ? (
-                <EmptyState message="No English skill sessions recorded yet." />
-              ) : (
-                <>
-                  {/* Aggregate metrics */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
-                    {[
-                      {
-                        label: "Accuracy",
-                        val: englishSkills.avg_accuracy,
-                        icon: <Target size={13} />,
-                      },
-                      {
-                        label: "Fluency",
-                        val: englishSkills.avg_fluency,
-                        icon: <Activity size={13} />,
-                      },
-                      {
-                        label: "Expression",
-                        val: englishSkills.avg_expression,
-                        icon: <Star size={13} />,
-                      },
-                      {
-                        label: "Comprehension",
-                        val: englishSkills.avg_comprehension,
-                        icon: <Brain size={13} />,
-                      },
-                      {
-                        label: "WPM",
-                        val: null,
-                        wpm: englishSkills.avg_wpm
-                          ? Math.round(englishSkills.avg_wpm)
-                          : null,
-                        icon: <Zap size={13} />,
-                      },
-                    ].map((m) => (
-                      <div
-                        key={m.label}
-                        className="bg-sky-50 border border-sky-100 rounded-xl p-3 text-center"
-                      >
-                        <div className="flex justify-center mb-1 text-sky-500">
-                          {m.icon}
-                        </div>
-                        <div
-                          className="text-xl font-bold"
-                          style={{
-                            color:
-                              m.val != null
-                                ? masteryColor(m.val)
-                                : "#0EA5E9",
-                          }}
-                        >
-                          {"wpm" in m && m.wpm != null
-                            ? m.wpm
-                            : m.val != null
-                            ? pct(m.val)
-                            : "—"}
-                        </div>
-                        <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                          {m.label}
-                        </div>
-                        {m.val != null && (
-                          <div className="mt-1.5">
-                            <MasteryBar value={m.val} height={3} />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Per-mode breakdown */}
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">
-                    Session Mode Breakdown
-                  </h4>
-                  <div className="space-y-2">
-                    {englishSkills.by_mode.map((mode) => (
-                      <div
-                        key={mode.mode}
-                        className="flex items-center gap-3 px-3 py-2.5 bg-slate-50 rounded-lg no-break"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-sm font-medium text-[#042E5C]">
-                              {MODE_LABELS[mode.mode] ?? mode.mode}
-                            </span>
-                            <span className="text-xs text-slate-400">
-                              {mode.session_count} sessions
-                            </span>
-                          </div>
-                          <div className="flex gap-3 text-xs text-slate-500 flex-wrap">
-                            {mode.avg_accuracy != null && (
-                              <span>
-                                Accuracy:{" "}
-                                <b style={{ color: masteryColor(mode.avg_accuracy) }}>
-                                  {pct(mode.avg_accuracy)}
-                                </b>
-                              </span>
-                            )}
-                            {mode.avg_fluency != null && (
-                              <span>
-                                Fluency:{" "}
-                                <b style={{ color: masteryColor(mode.avg_fluency) }}>
-                                  {pct(mode.avg_fluency)}
-                                </b>
-                              </span>
-                            )}
-                            {mode.avg_comprehension != null && (
-                              <span>
-                                Comprehension:{" "}
-                                <b
-                                  style={{
-                                    color: masteryColor(mode.avg_comprehension),
-                                  }}
-                                >
-                                  {pct(mode.avg_comprehension)}
-                                </b>
-                              </span>
-                            )}
-                            {mode.avg_wpm != null && (
-                              <span>
-                                WPM:{" "}
-                                <b className="text-sky-600">
-                                  {Math.round(mode.avg_wpm)}
-                                </b>
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </>
               )}
             </div>
@@ -1948,7 +1748,6 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
   const [subjects, setSubjects] = useState<SubjectData[]>([]);
   const [chapters, setChapters] = useState<ChapterMasteryItem[]>([]);
   const [skillTree, setSkillTree] = useState<SkillCGItem[]>([]);
-  const [englishSkills, setEnglishSkills] = useState<EnglishSkillsSummary | null>(null);
   const [testSubmissions, setTestSubmissions] = useState<TestSubmission[]>([]);
   const [totalSessions, setTotalSessions] = useState(0);
 
@@ -1961,7 +1760,6 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
     subjects: true,
     curriculum: false,
     skills: false,
-    english: false,
     tests: false,
     reports: false,
     aiInsights: true,
@@ -2051,7 +1849,6 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
       setSubjects(data.subjects ?? []);
       setChapters(data.chapters ?? []);
       setSkillTree(data.skill_tree ?? []);
-      setEnglishSkills(data.english_skills ?? null);
       setTestSubmissions(data.test_submissions ?? []);
       setProgressReport(data.progress_report ?? null);
       setSubjectEvolutions(data.subject_evolutions ?? []);
@@ -2129,14 +1926,12 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
       setSkillTree(allCGs);
       setSubjectEvolutions(allSubjectEvos);
 
-      // 3. Fetch English skills + test submissions + progress report in parallel
-      const [englishData, testData, progressData] = await Promise.all([
-        studentService.fetchEnglishSkillsSummary(studentId).catch(() => null),
+      // 3. Fetch test submissions + progress report in parallel
+      const [testData, progressData] = await Promise.all([
         studentService.fetchTestSubmissions(studentId).catch(() => []),
         studentService.fetchProgressReport(studentId).catch(() => null),
       ]);
 
-      if (englishData) setEnglishSkills(englishData);
       if (Array.isArray(testData)) setTestSubmissions(testData);
       if (progressData && !progressData.detail) setProgressReport(progressData);
 
@@ -2238,7 +2033,6 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
   
   // Derived data for the new layout
   const aiInsights = progressReport?.report_json || {};
-  const ep: Partial<EnglishSkillsSummary> = englishSkills || {};
 
   const bandFor = (score: number) => {
     if (score >= 80) return "Advanced";
@@ -2374,22 +2168,6 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
         .rc-spark-legend span { display: inline-flex; align-items: center; gap: 4px; }
         .rc-spark-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
-        /* english */
-        .rc-eng-grid { display: grid; grid-template-columns: 2.2fr 1fr; gap: 18px; }
-        .rc-ring-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
-        .rc-ring-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; text-align: center; box-shadow: var(--shadow); }
-        .rc-ring-card svg { margin: 0 auto 8px; }
-        .rc-ring-label { font-size: 11.5px; color: var(--muted); font-weight: 600; }
-        .rc-wpm-card { grid-column: 1/-1; background: var(--navy); color: #fff; border-radius: var(--r); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
-        .rc-wpm-num { font-family: var(--display); font-size: 28px; font-weight: 700; }
-        .rc-wpm-lbl { font-size: 11.5px; color: #B9D0E8; }
-        .rc-mode-aside { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; box-shadow: var(--shadow); }
-        .rc-mode-aside h4 { margin: 0 0 12px; font-size: 12px; font-family: var(--mono); letter-spacing: .04em; color: var(--muted); text-transform: uppercase; }
-        .rc-mode-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 12.5px; }
-        .rc-mode-row:last-child { border-bottom: none; }
-        .rc-mode-name { font-weight: 600; text-transform: capitalize; }
-        .rc-mode-stat { color: var(--muted); font-family: var(--mono); font-size: 11px; }
-
         /* tests */
         .rc-test-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 16px; align-items: center; padding: 13px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 8px; box-shadow: var(--shadow); }
         .rc-test-title { font-weight: 600; font-size: 13.5px; }
@@ -2443,8 +2221,6 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
 
         @media (max-width: 820px) {
           .rc-summary-grid { grid-template-columns: 1fr; }
-          .rc-ring-grid { grid-template-columns: repeat(2,1fr); }
-          .rc-eng-grid { grid-template-columns: 1fr; }
           .rc-two-col { grid-template-columns: 1fr; }
           .rc-chapter-row { grid-template-columns: 1fr auto; }
           .rc-bar-track { display: none; }
@@ -2462,12 +2238,12 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
           .pb { display: block !important; break-before: page !important; page-break-before: always !important; height: 0 !important; margin: 0 !important; padding: 0 !important; border: none !important; background: none !important; }
           .rc-section { overflow: visible !important; border-bottom: none !important; }
-          .rc-subject-card, .rc-ring-card, .rc-test-row, .rc-pat-card, .rc-dim-card, .rc-expander {
+          .rc-subject-card, .rc-test-row, .rc-pat-card, .rc-dim-card, .rc-expander {
             break-inside: avoid; page-break-inside: avoid; overflow: visible !important;
           }
           .rc-sc-body, .rc-expander-panel { display: block !important; }
-          .rc-eng-grid, .rc-two-col { display: block !important; }
-          .rc-eng-grid > div, .rc-two-col > div { max-width: 100% !important; margin-bottom: 16px !important; }
+          .rc-two-col { display: block !important; }
+          .rc-two-col > div { max-width: 100% !important; margin-bottom: 16px !important; }
         }
       `}</style>
 
@@ -2505,11 +2281,7 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
                 <div className="rc-summary-stats">
                   <div className="rc-sstat"><div className="num">{totalSessions}</div><div className="lbl">Sessions</div></div>
                   <div className="rc-sstat"><div className="num">{chapters.length}</div><div className="lbl">Chapters</div></div>
-                  {englishSkills ? (
-                    <div className="rc-sstat"><div className="num">{Math.round(ep.avg_wpm || 0)}</div><div className="lbl">WPM Reading</div></div>
-                  ) : (
-                    <div className="rc-sstat"><div className="num">{Math.round(overallAvg * 100)}%</div><div className="lbl">Avg. Mastery</div></div>
-                  )}
+                  <div className="rc-sstat"><div className="num">{Math.round(overallAvg * 100)}%</div><div className="lbl">Avg. Mastery</div></div>
                 </div>
               </div>
               {subjects.length > 0 && (
@@ -2757,61 +2529,12 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
               </>
             )}
 
-            {/* ── 02 ENGLISH READING PROFILE ── */}
-            {englishSkills && (
-              <>
-                <div className="pb" />
-                <section className="rc-section" id="rc-english">
-                  <div className="rc-sec-head"><span className="rc-sec-n">02</span><h2>English Reading Profile</h2></div>
-                  <p className="rc-sec-sub">Aggregated across {englishSkills.total_sessions} read-aloud session{englishSkills.total_sessions !== 1 ? "s" : ""} this term.</p>
-                  <div className="rc-eng-grid">
-                    <div>
-                      <div className="rc-ring-grid">
-                        {([
-                          ["Accuracy", ep.avg_accuracy, "#047857"],
-                          ["Fluency", ep.avg_fluency, "#1D4ED8"],
-                          ["Expression", ep.avg_expression, "#B45309"],
-                          ["Comprehension", ep.avg_comprehension, "#047857"],
-                        ] as const).map(([label, val, stroke]) => {
-                          const v = Math.round((val || 0) * 100);
-                          const r = 26, circ = 2 * Math.PI * r, offset = circ * (1 - v / 100);
-                          return (
-                            <div className="rc-ring-card" key={label}>
-                              <svg width="64" height="64" viewBox="0 0 64 64">
-                                <circle cx="32" cy="32" r={r} fill="none" stroke="#EDEAE0" strokeWidth="6" />
-                                <circle cx="32" cy="32" r={r} fill="none" stroke={stroke} strokeWidth="6" strokeDasharray={circ.toFixed(1)} strokeDashoffset={offset.toFixed(1)} strokeLinecap="round" transform="rotate(-90 32 32)" />
-                                <text x="32" y="38" textAnchor="middle" fontFamily="var(--display)" fontWeight="700" fontSize="15" fill="var(--navy)">{v}%</text>
-                              </svg>
-                              <div className="rc-ring-label">{label}</div>
-                            </div>
-                          );
-                        })}
-                        <div className="rc-wpm-card">
-                          <div><div className="rc-wpm-num">{Math.round(ep.avg_wpm || 0)}</div><div className="rc-wpm-lbl">Words per minute</div></div>
-                          <div style={{ textAlign: "right" }}><div className="rc-wpm-lbl">Grade benchmark</div></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="rc-mode-aside">
-                      <h4>By Session Mode</h4>
-                      {(ep.by_mode || []).map((m) => (
-                        <div className="rc-mode-row" key={m.mode}>
-                          <span className="rc-mode-name">{MODE_LABELS[m.mode] ?? m.mode.replace(/_/g, " ")}</span>
-                          <span className="rc-mode-stat">{m.session_count} sess · {Math.round((m.avg_accuracy || 0) * 100)}% acc</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </section>
-              </>
-            )}
-
-            {/* ── 03 CHAPTER TESTS ── */}
+            {/* ── 02 CHAPTER TESTS ── */}
             {testSubmissions.length > 0 && (
               <>
                 <div className="pb" />
                 <section className="rc-section" id="rc-tests">
-                  <div className="rc-sec-head"><span className="rc-sec-n">03</span><h2>Chapter Tests</h2></div>
+                  <div className="rc-sec-head"><span className="rc-sec-n">02</span><h2>Chapter Tests</h2></div>
                   <p className="rc-sec-sub">{testSubmissions.length} test{testSubmissions.length !== 1 ? "s" : ""} submitted this term.</p>
                   {testSubmissions.map((t) => {
                     const correct = Object.values(t.section_results).reduce((sum, r) => sum + (r.correct ?? 0), 0);
@@ -2833,12 +2556,12 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
               </>
             )}
 
-            {/* ── 04 AI LEARNING INSIGHTS ── */}
+            {/* ── 03 AI LEARNING INSIGHTS ── */}
             {progressReport && (
               <>
                 <div className="pb" />
                 <section className="rc-section" id="rc-insights">
-                  <div className="rc-sec-head"><span className="rc-sec-n">04</span><h2>AI Learning Insights</h2></div>
+                  <div className="rc-sec-head"><span className="rc-sec-n">03</span><h2>AI Learning Insights</h2></div>
                   <p className="rc-sec-sub">Cross-subject patterns synthesized from all sessions this term.</p>
 
                   {progressReport.headline && (
@@ -2928,12 +2651,12 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
               </>
             )}
 
-            {/* ── 05 SUBJECT LEARNING TRENDS ── */}
+            {/* ── 04 SUBJECT LEARNING TRENDS ── */}
             {subjectEvolutions.length > 0 && (
               <>
                 <div className="pb" />
                 <section className="rc-section" id="rc-trends">
-                  <div className="rc-sec-head"><span className="rc-sec-n">05</span><h2>Subject Learning Trends</h2></div>
+                  <div className="rc-sec-head"><span className="rc-sec-n">04</span><h2>Subject Learning Trends</h2></div>
                   <p className="rc-sec-sub">How each subject evolved chapter to chapter.</p>
                   {subjectEvolutions.map((evo) => {
                     const sj = evo.analysis_json ?? ({} as any);

@@ -166,13 +166,6 @@ export const studentService = {
     return response.json();
   },
 
-  fetchEnglishSkillsSummary: async (studentId: string) => {
-    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/english-skills-summary`, {
-      headers: { "accept": "application/json" }
-    });
-    return response.json();
-  },
-
   fetchTestSubmissions: async (studentId: string, subject?: string) => {
     const url = subject
       ? `${API_BASE_URL}/students/${studentId}/test-submissions?subject=${encodeURIComponent(subject)}`
