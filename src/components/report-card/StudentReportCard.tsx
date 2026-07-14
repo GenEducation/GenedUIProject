@@ -1972,6 +1972,36 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
   const toggle = (key: keyof typeof sections) =>
     setSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
+  // ── New layout UI state ────────────────────────────────
+  // Subjects default OPEN; track which have been explicitly closed.
+  const [closedSubjects, setClosedSubjects] = useState<Set<string>>(() => new Set());
+  // Generic nested expanders (learning arc, session log, full report, subject trends…) default CLOSED.
+  const [openExpanders, setOpenExpanders] = useState<Set<string>>(() => new Set());
+  // Clamp toggles (AI insight long text) default CLAMPED (collapsed).
+  const [expandedClamps, setExpandedClamps] = useState<Set<string>>(() => new Set());
+
+  const toggleSubjectOpen = (name: string) =>
+    setClosedSubjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  const toggleExpanderOpen = (key: string) =>
+    setOpenExpanders((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  const toggleClampOpen = (key: string) =>
+    setExpandedClamps((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
   const handlePrint = async () => {
     if (isPdfGenerating || teacherId) return;
     setIsPdfGenerating(true);
@@ -2228,998 +2258,778 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
       data-ready={isLoading ? undefined : "true"}
       style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "Inter, sans-serif" }}
     >
+      {/* ── FONTS ── */}
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,500&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
+      />
+
       {/* ── PRINT STYLES ── */}
       <style>{`
         :root {
-          --navy:    #042E5C;
-          --emerald: #059F6D;
-          --bg:      #F8F9FA;
-          --border:  #E2E8F0;
-          --text:    #042E5C;
-          --muted:   #64748B;
-          --light:   #F1F5F9;
-          
-          /* New Theme vars */
-          --surface: #ffffff;
-          --surface-2: #f8fafc;
-          --rule-faint: #f1f5f9;
-          --ink: #0f172a;
-          --ink-2: #334155;
-          --r: 8px;
-          --r-sm: 4px;
-          --r-lg: 12px;
-          --sans: 'Inter', sans-serif;
-          --mono: 'JetBrains Mono', monospace;
-          --display: 'Source Serif 4', 'Charter', Georgia, 'Times New Roman', serif;
-
-          --advanced: #047857;
-          --advanced-bg: #ecfdf5;
-          --advanced-bd: #a7f3d0;
-          --proficient: #1d4ed8;
-          --proficient-bg: #eff6ff;
-          --proficient-bd: #bfdbfe;
-          --approaching: #b45309;
-          --approaching-bg: #fffbeb;
-          --approaching-bd: #fde68a;
-          --developing: #be123c;
-          --developing-bg: #fff1f2;
-          --developing-bd: #fecdd3;
+          --navy:#042E5C; --emerald:#059F6D; --bg:#F7F6F2; --border:#E4E1D8; --text:#1B2430; --muted:#6B7280;
+          --surface:#ffffff; --surface-2:#FBFAF6; --rule:#EDEAE0;
+          --adv-fg:#047857; --adv-bg:#ECFDF5; --adv-bd:#A7F3D0;
+          --pro-fg:#1D4ED8; --pro-bg:#EFF6FF; --pro-bd:#BFDBFE;
+          --app-fg:#B45309; --app-bg:#FFFBEB; --app-bd:#FDE68A;
+          --dev-fg:#BE123C; --dev-bg:#FFF1F2; --dev-bd:#FECDD3;
+          --r:10px; --r-sm:6px; --r-lg:16px;
+          --sans:'Inter',sans-serif; --display:'Source Serif 4',Charter,Georgia,serif; --mono:'JetBrains Mono',monospace;
+          --shadow: 0 1px 2px rgba(4,46,92,.04), 0 8px 24px -12px rgba(4,46,92,.10);
         }
+        .report-root { background: var(--bg); font-family: var(--sans); color: var(--text); font-size: 15px; line-height: 1.55; }
+        .rc-wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px 60px; }
 
-        .report-root { max-width: 1080px; margin: 0 auto; padding: 32px 28px 80px; }
+        /* header */
+        .rc-head { padding: 36px 0 26px; border-bottom: 1px solid var(--border); }
+        .rc-head-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+        .rc-brand-row { display: flex; align-items: center; gap: 10px; }
+        .rc-brand-mark { width: 28px; height: 28px; border-radius: 7px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 700; font-size: 15px; }
+        .rc-brand-name { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: var(--navy); font-weight: 600; }
+        .rc-report-no { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+        .rc-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--emerald); font-weight: 600; margin: 20px 0 10px; }
+        .rc-head h1 { font-family: var(--display); font-weight: 600; font-size: 32px; line-height: 1.2; margin: 0 0 12px; color: var(--navy); }
+        .rc-head h1 em { font-style: italic; color: var(--emerald); }
+        .rc-deck { font-size: 15px; color: var(--muted); max-width: 640px; margin: 0 0 20px; }
+        .rc-meta-row { display: flex; gap: 26px; flex-wrap: wrap; font-size: 12.5px; }
+        .rc-meta-item { display: flex; flex-direction: column; gap: 2px; }
+        .rc-meta-item .k { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+        .rc-meta-item .v { font-weight: 600; color: var(--navy); }
 
-        .head { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 26px 32px; margin-bottom: 24px; }
-        .head-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-        .head-pre { font: 600 11px/1 var(--mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--proficient); margin-bottom: 10px; }
-        .head-title { font-family: var(--display); font-size: 42px; font-weight: 500; line-height: 1.05; letter-spacing: -0.018em; margin: 0 0 8px; max-width: 26ch; }
-        .head-title em { font-style: italic; color: var(--proficient); }
-        .head-deck { color: var(--ink-2); font-size: 15px; max-width: 56ch; margin: 0 0 18px; }
-        .head-meta { display: flex; gap: 26px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--border); font-size: 13px; }
-        .head-meta span { color: var(--muted); }
-        .head-meta b { color: var(--ink); font-weight: 600; margin-left: 4px; }
+        /* summary band */
+        .rc-summary { margin-top: 22px; background: linear-gradient(160deg,var(--navy),#06407D); border-radius: var(--r-lg); padding: 26px 26px 22px; color: #fff; box-shadow: var(--shadow); }
+        .rc-summary-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 26px; }
+        .rc-summary-lead-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #8FB4DE; margin-bottom: 8px; }
+        .rc-summary-lead { font-family: var(--display); font-size: 18px; line-height: 1.5; font-weight: 500; }
+        .rc-summary-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; align-content: start; }
+        .rc-sstat { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: var(--r); padding: 11px 13px; }
+        .rc-sstat .num { font-family: var(--display); font-size: 21px; font-weight: 700; }
+        .rc-sstat .lbl { font-size: 10.5px; color: #B9D0E8; margin-top: 2px; }
+        .rc-subject-dials { display: flex; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+        .rc-dial { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 999px; padding: 6px 14px 6px 6px; }
+        .rc-dial svg { width: 36px; height: 36px; }
+        .rc-dial-txt .name { font-size: 12.5px; font-weight: 600; }
+        .rc-dial-txt .band { font-size: 10.5px; color: #B9D0E8; }
 
-        .section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 18px; overflow: hidden; }
-        .s-head { padding: 20px 32px 18px; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 36px 1fr auto; gap: 14px; align-items: baseline; }
-        .s-head .n { width: 28px; height: 28px; background: var(--ink); color: #fff; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font: 600 13px/1 var(--sans); }
-        .s-head h2 { margin: 0; font-family: var(--display); font-size: 22px; font-weight: 500; letter-spacing: -0.012em; }
-        .s-head .sub { color: var(--muted); font-size: 13px; max-width: 50ch; }
-        .s-head .trail { font: 500 11px/1 var(--mono); color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
-        .s-body { padding: 28px 32px 32px; }
+        /* section framework */
+        .rc-section { padding: 40px 0; border-bottom: 1px solid var(--border); }
+        .rc-section:last-of-type { border-bottom: none; }
+        .rc-sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+        .rc-sec-n { font-family: var(--mono); font-size: 12px; color: var(--emerald); font-weight: 700; }
+        .rc-sec-head h2 { font-family: var(--display); font-size: 22px; font-weight: 600; margin: 0; color: var(--navy); }
+        .rc-sec-sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; max-width: 620px; }
 
-        .split { display: grid; grid-template-columns: 1.45fr 1fr; gap: 40px; align-items: start; }
-        .split-narrow { grid-template-columns: 1.8fr 1fr; }
-        .narrative h3 { font-family: var(--display); font-size: 24px; font-weight: 500; line-height: 1.25; letter-spacing: -0.01em; margin: 0 0 12px; max-width: 32ch; }
-        .narrative p { font-size: 15px; line-height: 1.7; color: var(--ink-2); margin: 0 0 14px; max-width: 56ch; }
-        .narrative p.lead { font-family: var(--display); font-size: 19px; line-height: 1.5; color: var(--ink); margin-bottom: 16px; max-width: 50ch; }
+        /* subject cards */
+        .rc-subject-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 16px; overflow: hidden; box-shadow: var(--shadow); }
+        .rc-sc-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--rule); cursor: pointer; background: var(--surface-2); }
+        .rc-sc-head:hover { background: #F5F3EC; }
+        .rc-sc-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+        .rc-sc-accent { width: 5px; height: 34px; border-radius: 3px; flex-shrink: 0; }
+        .rc-sc-title { font-family: var(--display); font-size: 17px; font-weight: 600; color: var(--navy); }
+        .rc-sc-headline { font-size: 12px; color: var(--muted); margin-top: 2px; font-style: italic; }
+        .rc-sc-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+        .rc-chip { font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid; letter-spacing: .02em; white-space: nowrap; }
+        .rc-chip.advanced { color: var(--adv-fg); background: var(--adv-bg); border-color: var(--adv-bd); }
+        .rc-chip.proficient { color: var(--pro-fg); background: var(--pro-bg); border-color: var(--pro-bd); }
+        .rc-chip.approaching { color: var(--app-fg); background: var(--app-bg); border-color: var(--app-bd); }
+        .rc-chip.developing { color: var(--dev-fg); background: var(--dev-bg); border-color: var(--dev-bd); }
+        .rc-sc-score { font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--navy); min-width: 44px; text-align: right; }
+        .rc-sc-body { padding: 18px 20px 20px; }
 
-        .rail { border-left: 1px solid var(--border); padding-left: 28px; }
-        .rail h4 { margin: 0 0 10px; font: 600 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-        .rail h4.accent { color: var(--proficient); }
+        .rc-chapter-row { display: grid; grid-template-columns: 1fr auto 110px; gap: 14px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--rule); }
+        .rc-chapter-row:last-child { border-bottom: none; }
+        .rc-ch-title { font-weight: 600; font-size: 13.5px; color: var(--text); }
+        .rc-ch-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+        .rc-ch-mastery { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--navy); text-align: right; }
+        .rc-bar-track { height: 6px; background: var(--rule); border-radius: 99px; overflow: hidden; width: 110px; }
+        .rc-bar-fill { height: 100%; border-radius: 99px; }
 
-        .rail-kpi { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 16px; }
-        .rail-kpi > div { padding: 14px 16px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-        .rail-kpi > div:nth-child(2n) { border-right: 0; }
-        .rail-kpi > div:nth-last-child(-n+2) { border-bottom: 0; }
-        .rail-kpi .k { font: 600 10.5px/1 var(--mono); color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
-        .rail-kpi .v { font-size: 24px; font-weight: 600; line-height: 1; margin-top: 6px; font-variant-numeric: tabular-nums; letter-spacing: -0.012em; }
-        .rail-kpi .v small { font-size: 12px; color: var(--muted); font-weight: 500; }
-        .rail-kpi .sub { margin-top: 4px; font-size: 12px; color: var(--muted); }
+        /* expanders */
+        .rc-expander { margin-top: 14px; border: 1px solid var(--rule); border-radius: var(--r); overflow: hidden; }
+        .rc-expander-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--surface-2); border: none; padding: 11px 16px; cursor: pointer; text-align: left; font-family: var(--sans); font-size: 12.5px; font-weight: 600; color: var(--navy); }
+        .rc-expander-btn:hover { background: #F2F0E8; }
+        .rc-expander-btn .plus { font-family: var(--mono); font-size: 15px; color: var(--emerald); transition: transform .2s; display: inline-block; }
+        .rc-expander-panel { padding: 16px 18px 18px; border-top: 1px solid var(--rule); background: #fff; }
 
-        .chap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-        .chap { border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; }
-        .chap .ctop { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; }
-        .chap .title { font-size: 16px; font-weight: 600; }
-        .chap .subj { font: 500 11px/1 var(--mono); color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
-        .chap .row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 13px; }
-        .chap .row b { font-size: 18px; font-variant-numeric: tabular-nums; font-weight: 600; }
-        .chap .row .l { color: var(--muted); font: 600 10.5px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; }
-        .chap .progress { margin-top: 10px; }
-        .bar { height: 4px; background: var(--border); border-radius: 2px; width: 100%; overflow: hidden; display: flex; }
-        .bar i { height: 100%; display: block; border-radius: 2px; }
-        .bar.advanced i { background: var(--advanced); }
-        .bar.proficient i { background: var(--proficient); }
-        .bar.approaching i { background: var(--approaching); }
-        .bar.developing i { background: var(--developing); }
+        .rc-clamp { font-size: 13.5px; color: var(--ink-2, #334155); line-height: 1.6; }
+        .rc-clamp.collapsed { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+        .rc-more-btn { background: none; border: none; color: var(--emerald); font-weight: 600; font-size: 12.5px; cursor: pointer; padding: 6px 0 0; font-family: var(--sans); }
 
-        .chip { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid transparent; }
-        .chip.advanced { background: var(--advanced-bg); color: var(--advanced); border-color: var(--advanced-bd); }
-        .chip.proficient { background: var(--proficient-bg); color: var(--proficient); border-color: var(--proficient-bd); }
-        .chip.approaching { background: var(--approaching-bg); color: var(--approaching); border-color: var(--approaching-bd); }
-        .chip.developing { background: var(--developing-bg); color: var(--developing); border-color: var(--developing-bd); }
+        .rc-dim-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 10px; margin-top: 12px; }
+        .rc-dim-card { background: var(--surface-2); border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 10px 12px; }
+        .rc-dim-head { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; gap: 6px; }
+        .rc-dim-delta { font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
+        .rc-dim-delta.up { color: var(--adv-fg); background: var(--adv-bg); }
+        .rc-dim-delta.down { color: var(--dev-fg); background: var(--dev-bg); }
+        .rc-dim-obs { font-size: 11.5px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
 
-        .ep-feature { display: grid; grid-template-columns: 1.4fr 1fr; gap: 36px; align-items: start; }
-        .ep-rings { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-        .ring { border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px 12px; }
-        .ring .k { font: 600 10.5px/1 var(--mono); color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
-        .ring .v { font-size: 30px; font-weight: 600; line-height: 1; margin: 8px 0 8px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
-        .ring .v small { font-size: 12px; color: var(--muted); font-weight: 500; }
-        .wpm-card { grid-column: 1 / -1; margin-top: 6px; background: var(--ink); color: #fff; border-radius: var(--r); padding: 14px 18px; display: flex; align-items: baseline; justify-content: space-between; }
-        .wpm-card .k { font: 600 10.5px/1 var(--mono); color: rgba(255,255,255,0.65); letter-spacing: 0.12em; text-transform: uppercase; }
-        .wpm-card .v { font-size: 32px; font-weight: 600; letter-spacing: -0.02em; }
-        .wpm-card .v small { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.65); margin-left: 4px; }
+        .rc-log-row { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--rule); font-size: 12.5px; }
+        .rc-log-row:last-child { border-bottom: none; }
+        .rc-log-idx { font-family: var(--mono); color: var(--muted); width: 20px; flex-shrink: 0; }
+        .rc-log-stage { font-weight: 600; color: var(--navy); margin-bottom: 2px; }
+        .rc-log-obs { color: var(--muted); font-size: 12px; margin: 0; padding-left: 16px; }
 
-        .test-feature { border: 1px solid var(--border); border-radius: var(--r); padding: 20px 24px; margin-top: 14px; display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
-        .test-feature .tt { font-family: var(--display); font-size: 22px; font-weight: 500; margin: 0 0 4px; }
-        .test-feature .tt .subj { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: 8px; letter-spacing: 0.08em; text-transform: uppercase; }
-        .test-feature .narr { color: var(--ink-2); font-size: 14px; line-height: 1.55; margin: 0 0 14px; }
-        .test-feature .secs { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; }
-        .test-feature .secs > div { padding: 6px 12px; background: var(--surface-2); border-radius: var(--r-sm); }
-        .test-feature .secs b { font-weight: 600; font-variant-numeric: tabular-nums; margin-left: 4px; }
-        .test-feature .right .score { font-size: 48px; font-weight: 600; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; line-height: 1; text-align: center; }
-        .test-feature .right .score small { font-size: 16px; color: var(--muted); font-weight: 500; }
-        .test-feature .right .pass { display: block; text-align: center; margin-top: 8px; font: 700 11px/1 var(--mono); letter-spacing: 0.16em; background: var(--advanced-bg); color: var(--advanced); border: 1px solid var(--advanced-bd); padding: 5px 10px; border-radius: var(--r-sm); }
+        .rc-spark-wrap { margin-top: 4px; }
+        .rc-spark-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 10.5px; color: var(--muted); margin-top: 6px; }
+        .rc-spark-legend span { display: inline-flex; align-items: center; gap: 4px; }
+        .rc-spark-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
-        .feature-hero { display: grid; grid-template-columns: 1.5fr 1fr; gap: 40px; }
-        .feature-hero .lead-quote { font-family: var(--display); font-size: 30px; line-height: 1.22; letter-spacing: -0.015em; color: var(--ink); margin: 0 0 22px; font-weight: 500; }
-        .feature-hero .lead-quote em { font-style: italic; color: var(--proficient); }
+        /* english */
+        .rc-eng-grid { display: grid; grid-template-columns: 2.2fr 1fr; gap: 18px; }
+        .rc-ring-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+        .rc-ring-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; text-align: center; box-shadow: var(--shadow); }
+        .rc-ring-card svg { margin: 0 auto 8px; }
+        .rc-ring-label { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+        .rc-wpm-card { grid-column: 1/-1; background: var(--navy); color: #fff; border-radius: var(--r); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
+        .rc-wpm-num { font-family: var(--display); font-size: 28px; font-weight: 700; }
+        .rc-wpm-lbl { font-size: 11.5px; color: #B9D0E8; }
+        .rc-mode-aside { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; box-shadow: var(--shadow); }
+        .rc-mode-aside h4 { margin: 0 0 12px; font-size: 12px; font-family: var(--mono); letter-spacing: .04em; color: var(--muted); text-transform: uppercase; }
+        .rc-mode-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 12.5px; }
+        .rc-mode-row:last-child { border-bottom: none; }
+        .rc-mode-name { font-weight: 600; text-transform: capitalize; }
+        .rc-mode-stat { color: var(--muted); font-family: var(--mono); font-size: 11px; }
 
-        .pat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 8px; }
-        .pat { border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; background: var(--surface); }
-        .pat.warn { border-color: var(--approaching-bd); background: var(--approaching-bg); }
-        .pat.good { border-color: var(--advanced-bd); background: var(--advanced-bg); }
-        .pat .tg { font: 600 10.5px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; }
-        .pat.warn .tg { color: var(--approaching); }
-        .pat.good .tg { color: var(--advanced); }
-        .pat h5 { font-family: var(--display); font-size: 18px; font-weight: 500; margin: 8px 0 8px; line-height: 1.25; }
+        /* tests */
+        .rc-test-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 16px; align-items: center; padding: 13px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 8px; box-shadow: var(--shadow); }
+        .rc-test-title { font-weight: 600; font-size: 13.5px; }
+        .rc-test-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+        .rc-test-score { font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--navy); }
+        .rc-test-date { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+        .rc-verdict { font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+        .rc-verdict.pass { color: var(--adv-fg); background: var(--adv-bg); }
+        .rc-verdict.fail { color: var(--dev-fg); background: var(--dev-bg); }
 
-        .focus { display: grid; grid-template-columns: 64px 1fr 120px; gap: 14px; padding: 14px 0; border-top: 1px solid var(--rule-faint); align-items: start; }
-        .focus:first-of-type { border-top: 1px solid var(--border); }
-        .focus .area { font-size: 15px; font-weight: 500; }
-        .focus .rat { font-size: 13px; color: var(--muted); line-height: 1.55; margin-top: 4px; max-width: 60ch; }
-        .focus .stag { text-align: right; font: 600 11px/1 var(--mono); color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
-        .pri { font: 600 10px/1 var(--mono); padding: 3px 6px; border-radius: 4px; }
-        .pri.HIGH { background: var(--developing-bg); color: var(--developing); }
-        .pri.MEDIUM { background: var(--approaching-bg); color: var(--approaching); }
+        /* focus areas */
+        .rc-focus-row { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--rule); align-items: flex-start; }
+        .rc-focus-row:last-child { border-bottom: none; }
+        .rc-pri { font-family: var(--mono); font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 5px; flex-shrink: 0; margin-top: 2px; letter-spacing: .05em; white-space: nowrap; }
+        .rc-pri.high { background: var(--dev-bg); color: var(--dev-fg); }
+        .rc-pri.medium { background: var(--app-bg); color: var(--app-fg); }
+        .rc-pri.low { background: var(--pro-bg); color: var(--pro-fg); }
+        .rc-focus-area { font-weight: 600; font-size: 13px; }
+        .rc-focus-rat { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+        .rc-focus-tag { font-size: 10.5px; color: var(--navy); font-family: var(--mono); margin-top: 4px; }
 
-        .arc { border-top: 1px solid var(--border); margin-top: 10px; }
-        .arc-row { display: grid; grid-template-columns: 50px 100px 1fr; gap: 16px; padding: 14px 0; border-bottom: 1px dashed var(--border); align-items: start; }
-        .arc-row .n { font-family: var(--display); font-size: 24px; font-weight: 500; color: var(--proficient); line-height: 1; }
-        .arc-row .lvl { font: 600 10.5px/1.4 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: var(--r-sm); display: inline-block; }
-        .lvl-beginning  { background: var(--surface-2); color: var(--muted); }
-        .lvl-developing { background: var(--developing-bg); color: var(--developing); }
-        .lvl-approaching{ background: var(--approaching-bg); color: var(--approaching); }
-        .lvl-proficient { background: var(--proficient-bg); color: var(--proficient); }
-        .lvl-advanced   { background: var(--advanced-bg); color: var(--advanced); }
+        .rc-pat-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(240px,1fr)); gap: 12px; margin-top: 16px; }
+        .rc-pat-card { border-radius: var(--r); padding: 14px 16px; border: 1px solid; }
+        .rc-pat-card.good { background: var(--adv-bg); border-color: var(--adv-bd); }
+        .rc-pat-card.warn { background: var(--app-bg); border-color: var(--app-bd); }
+        .rc-pat-name { font-weight: 700; font-size: 12.5px; margin-bottom: 4px; }
+        .rc-pat-desc { font-size: 12px; color: var(--ink-2, #334155); line-height: 1.5; }
+        .rc-pat-subjects { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 6px; }
 
-        .arc-spark { border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; margin: 8px 0 18px; }
-        .arc-spark .h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
-        .arc-spark .h .l { font: 600 11px/1 var(--mono); color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; }
-        .arc-spark svg { display: block; width: 100%; height: 80px; }
+        .rc-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .rc-list-card { background: var(--surface-2); border: 1px solid var(--rule); border-radius: var(--r); padding: 14px 16px; }
+        .rc-list-card h4 { margin: 0 0 10px; font-size: 12px; font-family: var(--mono); text-transform: uppercase; letter-spacing: .05em; }
+        .rc-list-card.strength h4 { color: var(--adv-fg); }
+        .rc-list-card.weakness h4 { color: var(--dev-fg); }
+        .rc-list-card ul { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-2, #334155); }
+        .rc-list-card li { margin-bottom: 6px; line-height: 1.5; }
 
-        .level-key { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; font: 500 11px/1 var(--mono); color: var(--muted); letter-spacing: 0.06em; }
-        .level-key span { display: inline-flex; align-items: center; gap: 4px; }
-        .level-key i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .rc-hero { background: linear-gradient(160deg,#FBFAF6,#F2EFE5); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px 26px; margin-bottom: 20px; }
+        .rc-hero blockquote { font-family: var(--display); font-style: italic; font-size: 19px; color: var(--navy); margin: 0 0 10px; line-height: 1.5; }
 
-        .dim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
-        .dim { padding: 14px 16px; background: var(--surface-2); border-radius: var(--r); }
-        .dim .dn { font-size: 14.5px; font-weight: 600; margin-bottom: 4px; }
-        .dim .dd { font-size: 13px; color: var(--ink-2); line-height: 1.55; }
+        .rc-markdown { font-size: 13px; line-height: 1.7; color: var(--ink-2, #334155); }
 
-        .cr { border-top: 1px solid var(--border); padding-top: 20px; margin-top: 24px; }
-        .cr:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
-        .cr-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; gap: 12px; }
-        .cr-h .name { font-family: var(--display); font-size: 24px; font-weight: 500; }
-        .cr-summary { font-size: 15px; line-height: 1.65; color: var(--ink-2); margin: 0 0 18px; max-width: 70ch; }
-        
-        .kp-grid { display: grid; grid-template-columns: 240px 1fr 1fr; gap: 14px; padding: 12px 0; border-top: 1px solid var(--rule-faint); }
-        .kp-area { font-size: 14.5px; font-weight: 600; }
+        .rc-foot { padding: 36px 0 10px; text-align: center; }
+        .rc-print-btn { background: var(--navy); color: #fff; border: none; border-radius: 999px; padding: 13px 28px; font-family: var(--sans); font-weight: 600; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: var(--shadow); }
+        .rc-print-btn:hover:not(:disabled) { background: #06407D; }
+        .rc-print-btn:disabled { cursor: not-allowed; opacity: .6; }
+        .rc-foot-note { font-size: 11px; color: var(--muted); margin-top: 10px; font-family: var(--mono); }
+
+        .rc-empty { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 40px 32px; text-align: center; }
+        .rc-empty p { font-family: var(--display); font-size: 17px; color: var(--muted); max-width: 60ch; margin: 0 auto; }
+
+        @media (max-width: 820px) {
+          .rc-summary-grid { grid-template-columns: 1fr; }
+          .rc-ring-grid { grid-template-columns: repeat(2,1fr); }
+          .rc-eng-grid { grid-template-columns: 1fr; }
+          .rc-two-col { grid-template-columns: 1fr; }
+          .rc-chapter-row { grid-template-columns: 1fr auto; }
+          .rc-bar-track { display: none; }
+          .rc-test-row { grid-template-columns: 1fr; gap: 8px; }
+          .rc-pat-grid { grid-template-columns: 1fr; }
+        }
 
         /* Page-break sentinel — invisible on screen, hard break in print */
         .pb { display: none; }
 
         @media print {
-          /* Hide chrome */
-          .toolbar, .subnav, .print-btn { display: none !important; }
-
-          /* Reset page chrome */
-          html, body {
-            background: white !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            height: auto !important;
-            overflow: visible !important;
+          .rc-print-btn, .rc-foot { display: none !important; }
+          html, body { background: white !important; margin: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; }
+          .rc-wrap { max-width: 100% !important; padding: 0 24px 32px !important; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+          .pb { display: block !important; break-before: page !important; page-break-before: always !important; height: 0 !important; margin: 0 !important; padding: 0 !important; border: none !important; background: none !important; }
+          .rc-section { overflow: visible !important; border-bottom: none !important; }
+          .rc-subject-card, .rc-ring-card, .rc-test-row, .rc-pat-card, .rc-dim-card, .rc-expander {
+            break-inside: avoid; page-break-inside: avoid; overflow: visible !important;
           }
-
-          /* Report takes full page width */
-          .report-root {
-            max-width: 100% !important;
-            padding: 16px 24px 32px !important;
-            margin: 0 !important;
-          }
-
-          /* Ensure all backgrounds and colors print */
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
-          }
-
-          /* ── Page-break sentinels (DOM nodes, most reliable in Chromium) ── */
-          .pb {
-            display: block !important;
-            break-before: page !important;
-            page-break-before: always !important;
-            height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            background: none !important;
-          }
-
-          /* ── Sections: unlock overflow so content flows across pages ── */
-          .section {
-            overflow: visible !important;
-            border-radius: 0 !important;
-          }
-          .s-body {
-            overflow: visible !important;
-          }
-
-          /* ── Two-column grids → vertical stack in print ────────────────
-             Chromium's print engine treats a CSS grid containing
-             break-inside:avoid children as a single atomic block and
-             defers the ENTIRE grid to the next page when it doesn't
-             predict it'll fit — leaving a huge blank gap after the
-             section heading. Collapsing to block flow fixes this
-             permanently. Content stacks: narrative first, rail below. */
-          .split {
-            display: block !important;
-          }
-          .split .narrative {
-            max-width: 100% !important;
-            margin-bottom: 24px !important;
-          }
-          .split .rail {
-            border-left: none !important;
-            padding-left: 0 !important;
-            border-top: 1px solid var(--border) !important;
-            padding-top: 20px !important;
-          }
-          .split .rail h4 {
-            margin-top: 0 !important;
-          }
-
-          /* Small atomic cards stay intact */
-          .chap, .ring, .test-feature, .pat, .dim,
-          .arc-spark, .focus, .cr, .wpm-card {
-            break-inside: avoid;
-            page-break-inside: avoid;
-            overflow: visible !important;
-          }
+          .rc-sc-body, .rc-expander-panel { display: block !important; }
+          .rc-eng-grid, .rc-two-col { display: block !important; }
+          .rc-eng-grid > div, .rc-two-col > div { max-width: 100% !important; margin-bottom: 16px !important; }
         }
       `}</style>
 
-      {/* HEADER */}
-      <header className="head">
-        <div className="head-top">
-          <span className="brand" style={{ fontWeight: 700 }}><span className="brand-mark">G</span><span>enEducation</span></span>
-          <span className="label" style={{ fontSize: '12px', color: 'var(--muted)' }}>Report No. AR-{generatedAt.replace(/\s/g,"").toUpperCase()}</span>
-        </div>
-        <div className="head-pre">Learner Report · {reportPeriod}</div>
-        <h1 className="head-title">{progressReport?.headline ? <>{displayName} — <em>{progressReport.headline}</em></> : <>{displayName} — Learning Report</>}</h1>
-        <p className="head-deck">{progressReport?.overall_assessment ?? `A snapshot of ${displayName.split(' ')[0]}'s learning progress so far.`}</p>
-        <div className="head-meta">
-          <span>Student<b>{displayName}</b></span>
-          <span>Grade<b>{displayGrade} · {displayBoard}</b></span>
-          <span>Sessions<b>{totalSessions}</b></span>
-          <span>Issued<b>{generatedAt}</b></span>
-        </div>
-      </header>
-
-      {subjects.length === 0 && !progressReport && totalSessions === 0 ? (
-        <section className="section">
-          <div className="s-body">
-            <p className="lead">No sessions yet. {displayName.split(' ')[0]}&apos;s report will appear here after the first learning session — every score and insight below is generated from real session activity, so there&apos;s nothing to show until then.</p>
+      <div className="rc-wrap">
+        {/* ── HEADER ── */}
+        <header className="rc-head" id="rc-summary">
+          <div className="rc-head-top">
+            <div className="rc-eyebrow" style={{ margin: 0 }}>Learner Report · {reportPeriod}</div>
+            <div className="rc-report-no">AR-{generatedAt.replace(/\s/g, "").toUpperCase()}</div>
           </div>
-        </section>
-      ) : (
-        <>
-
-      {/* 1. SUBJECTS */}
-      <section className="section">
-        <div className="s-head">
-          <span className="n">1</span>
-          <div>
-            <h2>Two subjects, two stories.</h2>
-            <div className="sub">Where {displayName.split(' ')[0]} stands as of {reportPeriod}.</div>
+          <h1>{progressReport?.headline ? <>{displayName} — <em>{progressReport.headline}</em></> : <>{displayName} — Learning Report</>}</h1>
+          <p className="rc-deck">{progressReport?.overall_assessment ?? `A snapshot of ${displayName.split(" ")[0]}'s learning progress so far.`}</p>
+          <div className="rc-meta-row">
+            <div className="rc-meta-item"><span className="k">Student</span><span className="v">{displayName}</span></div>
+            <div className="rc-meta-item"><span className="k">Grade · Board</span><span className="v">{displayGrade ?? "—"} · {displayBoard ?? "—"}</span></div>
+            <div className="rc-meta-item"><span className="k">Sessions</span><span className="v">{totalSessions}</span></div>
+            <div className="rc-meta-item"><span className="k">Issued</span><span className="v">{generatedAt}</span></div>
           </div>
-        </div>
-        <div className="s-body">
-          <div className="split">
-            <div className="narrative">
-              {progressReport?.overall_assessment ? (
-                <p className="lead">{progressReport.overall_assessment}</p>
-              ) : (
-                <p className="lead">{subjects.map(s => `${s.subject} is at ${Math.round(s.overall_score*100)}% (${bandFor(s.overall_score*100)})`).join('. ')}{subjects.length ? '.' : ''}</p>
-              )}
-              <p>Every score is computed from interactions during sessions, using adaptive grading — not from a single end-of-term test.</p>
-            </div>
-            <aside className="rail">
-              <h4 className="accent">At a glance</h4>
-              <div className="rail-kpi">
-                {subjects.map(s => (
-                  <div key={s.subject}>
-                    <div className="k">{s.subject}</div>
-                    <div className="v">{Math.round(s.overall_score * 100)}<small>%</small></div>
-                    <div className="sub">{bandFor(s.overall_score * 100)}</div>
+
+          {subjects.length === 0 && !progressReport && totalSessions === 0 ? null : (
+            <div className="rc-summary">
+              <div className="rc-summary-grid">
+                <div>
+                  <div className="rc-summary-lead-label">The Short Version</div>
+                  <div className="rc-summary-lead">
+                    {progressReport?.overall_assessment
+                      ? progressReport.overall_assessment
+                      : subjects.length > 0
+                      ? `${displayName.split(" ")[0]} is currently ${subjects
+                          .map((s) => `${bandFor(s.overall_score * 100).toLowerCase()} in ${s.subject}`)
+                          .join(", ")}.`
+                      : "Insights will appear here once sessions begin."}
                   </div>
-                ))}
+                </div>
+                <div className="rc-summary-stats">
+                  <div className="rc-sstat"><div className="num">{totalSessions}</div><div className="lbl">Sessions</div></div>
+                  <div className="rc-sstat"><div className="num">{chapters.length}</div><div className="lbl">Chapters</div></div>
+                  {englishSkills ? (
+                    <div className="rc-sstat"><div className="num">{Math.round(ep.avg_wpm || 0)}</div><div className="lbl">WPM Reading</div></div>
+                  ) : (
+                    <div className="rc-sstat"><div className="num">{Math.round(overallAvg * 100)}%</div><div className="lbl">Avg. Mastery</div></div>
+                  )}
+                </div>
               </div>
-            </aside>
-          </div>
-        </div>
-      </section>
-
-      {/* 2. COVERAGE */}
-      <div className="pb" />
-      <section className="section">
-        <div className="s-head">
-          <span className="n">2</span>
-          <div>
-            <h2>What he is reading and learning.</h2>
-            <div className="sub">Chapter-by-chapter completion and mastery.</div>
-          </div>
-        </div>
-        <div className="s-body">
-          <div className="narrative" style={{ marginBottom: "22px" }}>
-            <p className="lead" style={{ maxWidth: "72ch" }}>{chapters.length > 0 ? `${chapters.length} chapter${chapters.length !== 1 ? 's' : ''} across ${subjects.length} subject${subjects.length !== 1 ? 's' : ''}. Each chapter sets its own ZPD; completion reflects how far through the calibrated path ${displayName.split(' ')[0]} has worked, not raw page count.` : `Chapter coverage will appear here once ${displayName.split(' ')[0]} starts studying.`}</p>
-          </div>
-          {chapters.length > 0 && (
-            <>
-              <h4 className="accent" style={{ margin: "0 0 14px", font: "600 11px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--proficient)" }}>Coverage</h4>
-              <div className="chap-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
-                {chapters.map((c, ci) => {
-                  const score = Math.round(c.mastery_score * 100);
-                  const band = bandFor(score).toLowerCase();
-                  return (
-                    <div className="chap" key={`${c.subject}-${c.grade}-${c.document_title}-${ci}`}>
-                      <div className="ctop">
-                        <div><div className="title">{c.document_title}</div><div className="meta">{c.subject} · {c.study_count} sessions</div></div>
-                        <span className={`chip ${band}`}>{bandFor(score)}</span>
-                      </div>
-                      {/* <div className="row"><span className="l">Score</span><b>{score}%</b></div> */}
-                      <div className="progress">
-                        <div style={{ display:"flex", justifyContent: "space-between", fontSize: "12px", color: "var(--muted)", marginBottom: "4px" }}>
-                          <span>Completion</span><span style={{ color: "var(--ink)", fontWeight: 600 }}>{Math.round(c.completion_percentage)}%</span>
+              {subjects.length > 0 && (
+                <div className="rc-subject-dials">
+                  {subjects.map((s) => {
+                    const score = Math.round(s.overall_score * 100);
+                    const r = 16;
+                    const circ = 2 * Math.PI * r;
+                    const offset = circ * (1 - score / 100);
+                    return (
+                      <div className="rc-dial" key={s.subject}>
+                        <svg viewBox="0 0 40 40">
+                          <circle cx="20" cy="20" r={r} fill="none" stroke="rgba(255,255,255,.18)" strokeWidth="4" />
+                          <circle cx="20" cy="20" r={r} fill="none" stroke="#5EEAD4" strokeWidth="4" strokeDasharray={circ.toFixed(1)} strokeDashoffset={offset.toFixed(1)} strokeLinecap="round" transform="rotate(-90 20 20)" />
+                          <text x="20" y="24" textAnchor="middle" fontFamily="var(--display)" fontWeight="700" fontSize="14" fill="#fff">{score}</text>
+                        </svg>
+                        <div className="rc-dial-txt">
+                          <div className="name">{s.subject}</div>
+                          <div className="band">{bandFor(score)}</div>
                         </div>
-                        <div className={`bar ${band}`}><i style={{ width: `${c.completion_percentage}%` }}></i></div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </header>
+
+        {subjects.length === 0 && !progressReport && totalSessions === 0 ? (
+          <div className="rc-empty">
+            <p>No sessions yet. {displayName.split(" ")[0]}&apos;s report will appear here after the first learning session — every score and insight below is generated from real session activity, so there&apos;s nothing to show until then.</p>
+          </div>
+        ) : (
+          <>
+            {/* ── 01 SUBJECTS & CHAPTERS ── */}
+            {subjects.length > 0 && (
+              <>
+                <div className="pb" />
+                <section className="rc-section" id="rc-subjects">
+                  <div className="rc-sec-head"><span className="rc-sec-n">01</span><h2>Subjects &amp; Chapters</h2></div>
+                  <p className="rc-sec-sub">Tap a subject to see chapter-level mastery, the learning arc across sessions, and skill dimensions.</p>
+
+                  {subjects.map((subj, si) => {
+                    const isOpen = !closedSubjects.has(subj.subject);
+                    const accent = SUBJECT_ACCENTS[si % SUBJECT_ACCENTS.length];
+                    const score = Math.round(subj.overall_score * 100);
+                    const band = bandFor(score).toLowerCase();
+                    const subjChapters = chapters.filter((c) => c.subject === subj.subject);
+                    return (
+                      <div className="rc-subject-card" key={subj.subject}>
+                        <div className="rc-sc-head" onClick={() => toggleSubjectOpen(subj.subject)}>
+                          <div className="rc-sc-left">
+                            <div className="rc-sc-accent" style={{ background: accent }} />
+                            <div style={{ minWidth: 0 }}>
+                              <div className="rc-sc-title">{subj.subject}</div>
+                              {progressReport?.headline && (
+                                <div className="rc-sc-headline">{subjChapters.length} chapter{subjChapters.length !== 1 ? "s" : ""} · {subj.session_count} sessions</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="rc-sc-right">
+                            <span className={`rc-chip ${band}`}>{bandFor(score)}</span>
+                            <span className="rc-sc-score">{score}%</span>
+                            <motion.span animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }} style={{ display: "flex", color: "var(--muted)" }}>
+                              <ChevronDown size={18} />
+                            </motion.span>
+                          </div>
+                        </div>
+                        <AnimatePresence initial={false}>
+                          {isOpen && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.22 }}
+                              style={{ overflow: "hidden" }}
+                            >
+                              <div className="rc-sc-body">
+                                {subjChapters.length === 0 && (
+                                  <p style={{ fontSize: "13px", color: "var(--muted)" }}>No chapters recorded yet.</p>
+                                )}
+                                {subjChapters.map((ch, chi) => {
+                                  const chScore = Math.round(ch.mastery_score * 100);
+                                  const chBand = bandFor(chScore).toLowerCase();
+                                  const evo = chapterEvolutions.find(
+                                    (e) => e.subject === subj.subject && e.document_title === ch.document_title
+                                  );
+                                  const chapterKey = `${subj.subject}::${ch.document_title}`;
+                                  const arcOpen = openExpanders.has(`${chapterKey}::arc`);
+                                  const logOpen = openExpanders.has(`${chapterKey}::log`);
+                                  const reportOpen = openExpanders.has(`${chapterKey}::report`);
+
+                                  let sparkPath = "";
+                                  let mappedLog: { n: number; level: string; obs: string[]; stage: string }[] = [];
+                                  let sessionLog: any[] = [];
+                                  let dimensions: any[] = [];
+                                  if (evo) {
+                                    const analysis = evo.analysis_json ?? ({} as any);
+                                    dimensions = analysis.dimension_analyses ?? analysis.dimensions ?? [];
+                                    sessionLog = analysis.per_conversation ?? [];
+                                    mappedLog = sessionLog.map((s: any, idx: number) => {
+                                      const rawScore = s.overall_score ?? (idx / Math.max(sessionLog.length - 1, 1));
+                                      let level = "beginning";
+                                      if (rawScore > 0.8) level = "advanced";
+                                      else if (rawScore > 0.6) level = "proficient";
+                                      else if (rawScore > 0.4) level = "approaching";
+                                      else if (rawScore > 0.2) level = "developing";
+                                      return {
+                                        n: idx + 1,
+                                        level,
+                                        obs: s.tutor_observations ?? s.observations ?? [],
+                                        stage: s.stage_label ?? `Session ${idx + 1}`,
+                                      };
+                                    });
+                                    const W = 480, H = 100, pad = 20;
+                                    const xs = (i: number, n: number) => pad + i * ((W - pad * 2) / (n > 1 ? n - 1 : 1));
+                                    const ys = (lvl: string) => H - pad - ((levels[lvl as keyof typeof levels] || 1) - 1) * ((H - pad * 2) / 4);
+                                    sparkPath = mappedLog.length > 1
+                                      ? mappedLog.map((s, i) => `${i === 0 ? "M" : "L"} ${xs(i, mappedLog.length).toFixed(1)} ${ys(s.level).toFixed(1)}`).join(" ")
+                                      : "";
+                                    (mappedLog as any)._xs = xs;
+                                    (mappedLog as any)._ys = ys;
+                                  }
+
+                                  return (
+                                    <div key={chapterKey}>
+                                      <div className="rc-chapter-row">
+                                        <div>
+                                          <div className="rc-ch-title">{ch.document_title}</div>
+                                          <div className="rc-ch-sub">{ch.study_count} sessions · {subj.subject}</div>
+                                        </div>
+                                        <div className="rc-ch-mastery">{chScore}%</div>
+                                        <div className="rc-bar-track"><div className="rc-bar-fill" style={{ width: `${chScore}%`, background: masteryColor(ch.mastery_score) }} /></div>
+                                      </div>
+
+                                      {evo && (
+                                        <div className="rc-expander">
+                                          <button className="rc-expander-btn" onClick={() => toggleExpanderOpen(`${chapterKey}::arc`)}>
+                                            <span>📈 Learning arc &amp; skill dimensions — {ch.document_title}</span>
+                                            <span className="plus" style={{ transform: arcOpen ? "rotate(45deg)" : "none" }}>+</span>
+                                          </button>
+                                          {arcOpen && (
+                                            <div className="rc-expander-panel">
+                                              {evo.headline && (
+                                                <p style={{ fontFamily: "var(--display)", fontStyle: "italic", color: "var(--pro-fg)", fontSize: "14.5px", margin: "0 0 10px" }}>{evo.headline}</p>
+                                              )}
+                                              {mappedLog.length > 1 && (
+                                                <div className="rc-spark-wrap">
+                                                  <svg viewBox={`0 0 480 100`} width="100%" height="100">
+                                                    <line x1="20" y1="80" x2="460" y2="80" stroke="#E4E1D8" strokeWidth="1" />
+                                                    <path d={sparkPath} fill="none" stroke="#1D4ED8" strokeWidth="2.5" />
+                                                    {mappedLog.map((s, i) => (
+                                                      <circle key={i} cx={(mappedLog as any)._xs(i, mappedLog.length)} cy={(mappedLog as any)._ys(s.level)} r="4" fill={colors[s.level as keyof typeof colors] || colors.beginning} />
+                                                    ))}
+                                                  </svg>
+                                                  <div className="rc-spark-legend">
+                                                    {(["beginning", "developing", "approaching", "proficient", "advanced"] as const).map((l) => (
+                                                      <span key={l}><i style={{ background: colors[l] }} />{l.charAt(0).toUpperCase() + l.slice(1)}</span>
+                                                    ))}
+                                                  </div>
+                                                </div>
+                                              )}
+                                              {dimensions.length > 0 && (
+                                                <div className="rc-dim-grid">
+                                                  {dimensions.map((d: any, i: number) => {
+                                                    const delta = typeof d.delta === "number" ? Math.round(d.delta * 100) : null;
+                                                    const name = d.dimension_name ?? d.dimension ?? d.name ?? "";
+                                                    const obs = d.key_observation ?? d.analysis ?? d.desc ?? "";
+                                                    return (
+                                                      <div className="rc-dim-card" key={i}>
+                                                        <div className="rc-dim-head">
+                                                          <span>{name}</span>
+                                                          {delta != null && delta !== 0 && (
+                                                            <span className={`rc-dim-delta ${delta > 0 ? "up" : "down"}`}>{delta > 0 ? "+" : ""}{delta}</span>
+                                                          )}
+                                                        </div>
+                                                        {obs && <div className="rc-dim-obs">{obs}</div>}
+                                                      </div>
+                                                    );
+                                                  })}
+                                                </div>
+                                              )}
+
+                                              {sessionLog.length > 0 && (
+                                                <div className="rc-expander" style={{ marginTop: "14px" }}>
+                                                  <button className="rc-expander-btn" onClick={() => toggleExpanderOpen(`${chapterKey}::log`)}>
+                                                    <span>🗒 Session log ({sessionLog.length} sessions)</span>
+                                                    <span className="plus" style={{ transform: logOpen ? "rotate(45deg)" : "none" }}>+</span>
+                                                  </button>
+                                                  {logOpen && (
+                                                    <div className="rc-expander-panel">
+                                                      {mappedLog.map((s, i) => (
+                                                        <div className="rc-log-row" key={i}>
+                                                          <span className="rc-log-idx">{s.n}</span>
+                                                          <div style={{ flex: 1 }}>
+                                                            <div className="rc-log-stage">{s.stage}</div>
+                                                            {s.obs.length > 0 && (
+                                                              <ul className="rc-log-obs">
+                                                                {s.obs.slice(0, 3).map((o, j) => <li key={j}>{o}</li>)}
+                                                              </ul>
+                                                            )}
+                                                          </div>
+                                                        </div>
+                                                      ))}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )}
+
+                                              {ch.chapter_report && (
+                                                <div className="rc-expander" style={{ marginTop: "10px" }}>
+                                                  <button className="rc-expander-btn" onClick={() => toggleExpanderOpen(`${chapterKey}::report`)}>
+                                                    <span>📄 Full chapter report</span>
+                                                    <span className="plus" style={{ transform: reportOpen ? "rotate(45deg)" : "none" }}>+</span>
+                                                  </button>
+                                                  {reportOpen && (
+                                                    <div className="rc-expander-panel">
+                                                      <div className="rc-markdown prose prose-sm max-w-none
+                                                        prose-h3:font-serif prose-h3:text-[var(--navy)] prose-h3:font-medium prose-h3:text-base prose-h3:mt-4 prose-h3:mb-2 prose-h3:first:mt-0
+                                                        prose-p:text-[var(--ink-2,#334155)] prose-p:my-1.5
+                                                        prose-li:text-[var(--ink-2,#334155)] prose-li:my-0.5
+                                                        prose-strong:text-[var(--navy)] prose-ul:my-1 prose-ul:pl-4">
+                                                        <ReactMarkdown>{ch.chapter_report}</ReactMarkdown>
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })}
+                </section>
+              </>
+            )}
+
+            {/* ── 02 ENGLISH READING PROFILE ── */}
+            {englishSkills && (
+              <>
+                <div className="pb" />
+                <section className="rc-section" id="rc-english">
+                  <div className="rc-sec-head"><span className="rc-sec-n">02</span><h2>English Reading Profile</h2></div>
+                  <p className="rc-sec-sub">Aggregated across {englishSkills.total_sessions} read-aloud session{englishSkills.total_sessions !== 1 ? "s" : ""} this term.</p>
+                  <div className="rc-eng-grid">
+                    <div>
+                      <div className="rc-ring-grid">
+                        {([
+                          ["Accuracy", ep.avg_accuracy, "#047857"],
+                          ["Fluency", ep.avg_fluency, "#1D4ED8"],
+                          ["Expression", ep.avg_expression, "#B45309"],
+                          ["Comprehension", ep.avg_comprehension, "#047857"],
+                        ] as const).map(([label, val, stroke]) => {
+                          const v = Math.round((val || 0) * 100);
+                          const r = 26, circ = 2 * Math.PI * r, offset = circ * (1 - v / 100);
+                          return (
+                            <div className="rc-ring-card" key={label}>
+                              <svg width="64" height="64" viewBox="0 0 64 64">
+                                <circle cx="32" cy="32" r={r} fill="none" stroke="#EDEAE0" strokeWidth="6" />
+                                <circle cx="32" cy="32" r={r} fill="none" stroke={stroke} strokeWidth="6" strokeDasharray={circ.toFixed(1)} strokeDashoffset={offset.toFixed(1)} strokeLinecap="round" transform="rotate(-90 32 32)" />
+                                <text x="32" y="38" textAnchor="middle" fontFamily="var(--display)" fontWeight="700" fontSize="15" fill="var(--navy)">{v}%</text>
+                              </svg>
+                              <div className="rc-ring-label">{label}</div>
+                            </div>
+                          );
+                        })}
+                        <div className="rc-wpm-card">
+                          <div><div className="rc-wpm-num">{Math.round(ep.avg_wpm || 0)}</div><div className="rc-wpm-lbl">Words per minute</div></div>
+                          <div style={{ textAlign: "right" }}><div className="rc-wpm-lbl">Grade benchmark</div></div>
+                        </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* 3. ENGLISH PROFILE */}
-      {englishSkills && (<>
-      <div className="pb" />
-      <section className="section">
-        <div className="s-head">
-          <span className="n">3</span>
-          <div>
-            <h2>How he reads aloud.</h2>
-            <div className="sub">Oral reading, fluency, comprehension across session modes.</div>
-          </div>
-        </div>
-        <div className="s-body">
-          <div className="ep-feature">
-            <div className="ep-rings">
-              <div className="ring"><div className="k">Accuracy</div><div className="v">{Math.round(ep.avg_accuracy || 0)}<small>%</small></div><div className="bar proficient"><i style={{width: `${ep.avg_accuracy || 0}%`}}></i></div></div>
-              <div className="ring"><div className="k">Fluency</div><div className="v">{Math.round(ep.avg_fluency || 0)}<small>%</small></div><div className="bar proficient"><i style={{width: `${ep.avg_fluency || 0}%`}}></i></div></div>
-              <div className="ring"><div className="k">Expression</div><div className="v">{Math.round(ep.avg_expression || 0)}<small>%</small></div><div className="bar approaching"><i style={{width: `${ep.avg_expression || 0}%`}}></i></div></div>
-              <div className="ring"><div className="k">Comprehension</div><div className="v">{Math.round(ep.avg_comprehension || 0)}<small>%</small></div><div className="bar proficient"><i style={{width: `${ep.avg_comprehension || 0}%`}}></i></div></div>
-              <div className="wpm-card"><span className="k">Reading speed</span><span className="v">{Math.round(ep.avg_wpm || 0)}<small>wpm</small></span></div>
-            </div>
-            <aside>
-              <h4 style={{ margin: "0 0 10px", font: "600 11px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Session mode breakdown</h4>
-              <div className="modes-list">
-                {(ep.by_mode || []).map((m: any) => (
-                  <div className="mode-row" key={m.mode}>
-                    <div><div className="nm">{m.mode.replace('_', ' ')}</div><div className="sub">{m.session_count} sessions</div></div>
-                    <div className="mt">
-                      <span style={{ color: "var(--muted)" }}>Acc <b>{Math.round(m.avg_accuracy || 0)}%</b></span>
-                      <span style={{ color: "var(--muted)" }}>Flu <b>{Math.round(m.avg_fluency || 0)}%</b></span>
+                    <div className="rc-mode-aside">
+                      <h4>By Session Mode</h4>
+                      {(ep.by_mode || []).map((m) => (
+                        <div className="rc-mode-row" key={m.mode}>
+                          <span className="rc-mode-name">{MODE_LABELS[m.mode] ?? m.mode.replace(/_/g, " ")}</span>
+                          <span className="rc-mode-stat">{m.session_count} sess · {Math.round((m.avg_accuracy || 0) * 100)}% acc</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
-            </aside>
-          </div>
-        </div>
-      </section>
-      </>)}
+                </section>
+              </>
+            )}
 
-      {/* 4. CHAPTER TESTS */}
-      {testSubmissions.length > 0 && (<>
-      <div className="pb" />
-      <section className="section">
-        <div className="s-head">
-          <span className="n">4</span>
-          <div>
-            <h2>Chapter Test Results</h2>
-            <div className="sub">ZPD-calibrated tests.</div>
-          </div>
-        </div>
-        <div className="s-body">
-          {testSubmissions.map((t, idx) => (
-            <div className="test-feature" key={idx}>
-              <div>
-                <h3 className="tt">{t.document_title}<span className="subj">{t.subject}</span></h3>
-                <div className="secs">
-                  {Object.entries(t.section_results).map(([sName, res]) => (
-                    <div key={sName}>{sName} <b>{res.correct}/{res.total}</b> · <b>{res.score ? Math.round(res.score * 100) : 0}%</b></div>
-                  ))}
-                </div>
-              </div>
-              <div className="right">
-                <div className="score">{Math.round(t.overall_score * 100)}<small>%</small></div>
-                <span className="pass" style={{ color: t.overall_verdict === "PASS" ? "var(--advanced)" : "var(--developing)", background: t.overall_verdict === "PASS" ? "var(--advanced-bg)" : "var(--developing-bg)" }}>{t.overall_verdict}</span>
-                <div className="date">{formatDate(t.submitted_at)}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-      </>)}
-
-      {/* 5. EVOLUTION LINE CHART */}
-      {chapterEvolutions.length > 0 && (<>
-      <div className="pb" />
-      <section className="section">
-        <div className="s-head">
-          <span className="n">5</span>
-          <div>
-            <h2>Chapter Learning Evolution</h2>
-            <div className="sub">Session-by-session arc with skill dimensions.</div>
-          </div>
-        </div>
-        <div className="s-body">
-          {chapterEvolutions.map((c, ci) => {
-            const analysis = c.analysis_json || {};
-            const dimensions = analysis.dimension_analyses || [];
-            const sessionLog = analysis.per_conversation || [];
-            const mappedLog = sessionLog.map((s: any, idx: number) => {
-               // Assign a mock level based on score/progression if not strictly available
-               const score = s.overall_score || (idx / sessionLog.length);
-               let level = "beginning";
-               if (score > 0.8) level = "advanced";
-               else if (score > 0.6) level = "proficient";
-               else if (score > 0.4) level = "approaching";
-               else if (score > 0.2) level = "developing";
-               return { n: idx + 1, level, notes: s.observations || [] };
-            });
-
-            const W2 = 720, H2 = 100, pad2 = 18;
-            const xs2 = (i: number, n: number) => pad2 + i * ((W2 - pad2*2) / (n > 1 ? n - 1 : 1));
-            const ys2 = (lvl: string) => H2 - pad2 - ((levels[lvl as keyof typeof levels] || 1) - 1) * ((H2 - pad2*2) / 4);
-            const path = mappedLog.map((s: any, i: number) => `${i === 0 ? "M" : "L"} ${xs2(i, mappedLog.length).toFixed(1)} ${ys2(s.level).toFixed(1)}`).join(" ");
-
-            return (
-              <div key={`${c.subject}-${c.document_title}-${ci}`} style={{ marginTop: ci > 0 ? '32px' : '0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <div><span style={{ fontSize: '24px', fontFamily: 'var(--display)' }}>{c.document_title}</span></div>
-                  <div style={{ fontSize: '13px', color: 'var(--muted)' }}>{c.conversation_count} sessions</div>
-                </div>
-                <h3 style={{ fontFamily: 'var(--display)', fontSize: '20px', margin: '6px 0 14px' }}>{c.headline}</h3>
-
-                {mappedLog.length > 0 && (
-                <div className="arc-spark">
-                  <div className="h"><span className="l">Session arc</span></div>
-                  <svg viewBox={`0 0 ${W2} ${H2}`} preserveAspectRatio="none">
-                    {[1,2,3,4,5].map(l => (
-                       <line key={l} x1={pad2} x2={W2-pad2} y1={H2 - pad2 - (l-1)*((H2-pad2*2)/4)} y2={H2 - pad2 - (l-1)*((H2-pad2*2)/4)} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="2 3" />
-                    ))}
-                    <path d={path} fill="none" stroke="#0f172a" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-                    {mappedLog.map((s: any, i: number) => (
-                      <g key={i}>
-                        <circle cx={xs2(i, mappedLog.length)} cy={ys2(s.level)} r="4" fill={colors[s.level as keyof typeof colors] || colors.beginning} stroke="#fff" strokeWidth="2" />
-                        <text x={xs2(i, mappedLog.length)} y={H2 - 4} textAnchor="middle" fontFamily="JetBrains Mono" fontSize="9" fill="#94a3b8">{s.n}</text>
-                      </g>
-                    ))}
-                  </svg>
-                </div>
-                )}
-
-                <div className="dim-grid">
-                  {dimensions.map((d: any, i: number) => (
-                    <div className="dim" key={i}><div className="dn">{d.dimension || d.name}</div><div className="dd">{d.analysis || d.desc}</div></div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-      </>)}
-
-      {/* 6. AI LEARNING INSIGHTS */}
-      {progressReport && (<>
-      <div className="pb" />
-      <section className="section">
-        <div className="s-head">
-          <span className="n">6</span>
-          <div>
-            <h2>AI Learning Insights</h2>
-            <div className="sub">Holistic progress analysis across all subjects and sessions.</div>
-          </div>
-        </div>
-        <div className="s-body">
-          {progressReport.headline && (
-            <div className="feature-hero" style={{ marginBottom: "28px" }}>
-              <div>
-                <p className="lead-quote">"{progressReport.headline}"</p>
-                {progressReport.overall_assessment && (
-                  <p style={{ fontSize: "15px", lineHeight: 1.7, color: "var(--ink-2)", maxWidth: "60ch" }}>
-                    {progressReport.overall_assessment}
-                  </p>
-                )}
-              </div>
-              {/* Strengths & Weaknesses */}
-              {(() => {
-                const strengths: string[] = (progressReport.report_json as any)?.universal_strengths ?? [];
-                const weaknesses: string[] = (progressReport.report_json as any)?.universal_weaknesses ?? [];
-                return (strengths.length > 0 || weaknesses.length > 0) ? (
-                  <aside className="rail">
-                    {strengths.length > 0 && (
-                      <div style={{ marginBottom: "16px" }}>
-                        <h4 style={{ margin: "0 0 8px", font: "600 11px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--advanced)" }}>Strengths</h4>
-                        <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.65 }}>
-                          {strengths.map((s, i) => <li key={i}>{s}</li>)}
-                        </ul>
+            {/* ── 03 CHAPTER TESTS ── */}
+            {testSubmissions.length > 0 && (
+              <>
+                <div className="pb" />
+                <section className="rc-section" id="rc-tests">
+                  <div className="rc-sec-head"><span className="rc-sec-n">03</span><h2>Chapter Tests</h2></div>
+                  <p className="rc-sec-sub">{testSubmissions.length} test{testSubmissions.length !== 1 ? "s" : ""} submitted this term.</p>
+                  {testSubmissions.map((t) => {
+                    const correct = Object.values(t.section_results).reduce((sum, r) => sum + (r.correct ?? 0), 0);
+                    const total = Object.values(t.section_results).reduce((sum, r) => sum + (r.total ?? 0), 0);
+                    const pass = t.overall_verdict === "PASS";
+                    return (
+                      <div className="rc-test-row" key={t.submission_id}>
+                        <div>
+                          <div className="rc-test-title">{t.document_title}</div>
+                          <div className="rc-test-sub">{t.subject}{total > 0 ? ` · ${correct}/${total} correct` : ""}</div>
+                        </div>
+                        <div className="rc-test-score">{Math.round(t.overall_score * 100)}%</div>
+                        <span className={`rc-verdict ${pass ? "pass" : "fail"}`}>{pass ? "PASS" : "RETRY"}</span>
+                        <div className="rc-test-date">{formatDate(t.submitted_at)}</div>
                       </div>
-                    )}
-                    {weaknesses.length > 0 && (
-                      <div>
-                        <h4 style={{ margin: "0 0 8px", font: "600 11px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--approaching)" }}>Areas to Improve</h4>
-                        <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.65 }}>
-                          {weaknesses.map((w, i) => <li key={i}>{w}</li>)}
-                        </ul>
-                      </div>
-                    )}
-                  </aside>
-                ) : null;
-              })()}
-            </div>
-          )}
+                    );
+                  })}
+                </section>
+              </>
+            )}
 
-          {/* Focus Areas */}
-          {(() => {
-            const focusAreas: any[] = (progressReport.report_json as any)?.focus_areas ?? [];
-            return focusAreas.length > 0 ? (
-              <div style={{ marginBottom: "28px" }}>
-                <h4 style={{ margin: "0 0 4px", font: "600 11px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Recommended Focus Areas</h4>
-                {focusAreas.map((fa, i) => {
-                  const pri = (fa.priority ?? "medium").toUpperCase();
-                  return (
-                    <div className="focus" key={i}>
-                      <span className={`pri ${pri}`}>{pri}</span>
-                      <div>
-                        <div className="area">{fa.area}</div>
-                        {(fa.suggested_approach || fa.rationale) && (
-                          <div className="rat">{fa.suggested_approach ?? fa.rationale}</div>
+            {/* ── 04 AI LEARNING INSIGHTS ── */}
+            {progressReport && (
+              <>
+                <div className="pb" />
+                <section className="rc-section" id="rc-insights">
+                  <div className="rc-sec-head"><span className="rc-sec-n">04</span><h2>AI Learning Insights</h2></div>
+                  <p className="rc-sec-sub">Cross-subject patterns synthesized from all sessions this term.</p>
+
+                  {progressReport.headline && (
+                    <div className="rc-hero">
+                      <blockquote>&quot;{progressReport.headline}&quot;</blockquote>
+                      {progressReport.overall_assessment && (
+                        <>
+                          <p className={`rc-clamp ${expandedClamps.has("overall") ? "" : "collapsed"}`}>{progressReport.overall_assessment}</p>
+                          <button className="rc-more-btn" onClick={() => toggleClampOpen("overall")}>
+                            {expandedClamps.has("overall") ? "Show less" : "Read full analysis"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {(() => {
+                    const strengths: string[] = (aiInsights as any)?.universal_strengths ?? [];
+                    const weaknesses: string[] = (aiInsights as any)?.universal_weaknesses ?? [];
+                    return (strengths.length > 0 || weaknesses.length > 0) ? (
+                      <div className="rc-two-col">
+                        {strengths.length > 0 && (
+                          <div className="rc-list-card strength">
+                            <h4>Universal Strengths</h4>
+                            <ul>{strengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
+                          </div>
+                        )}
+                        {weaknesses.length > 0 && (
+                          <div className="rc-list-card weakness">
+                            <h4>Areas to Improve</h4>
+                            <ul>{weaknesses.map((w, i) => <li key={i}>{w}</li>)}</ul>
+                          </div>
                         )}
                       </div>
-                      {fa.subject && <div className="stag">{fa.subject}</div>}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null;
-          })()}
+                    ) : null;
+                  })()}
 
-          {/* Cross-subject patterns */}
-          {(() => {
-            const patterns: any[] = (progressReport.report_json as any)?.cross_subject_patterns ?? [];
-            return patterns.length > 0 ? (
-              <div>
-                <h4 style={{ margin: "0 0 10px", font: "600 11px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Cross-Subject Patterns</h4>
-                <div className="pat-grid">
-                  {patterns.map((p, i) => (
-                    <div key={i} className={`pat ${p.is_positive ? "good" : "warn"}`}>
-                      <div className="tg">{p.is_positive ? "Strength" : "Watch"}</div>
-                      <h5>{p.pattern_name}</h5>
-                      <p style={{ fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.55, margin: 0 }}>{p.summary ?? p.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null;
-          })()}
-        </div>
-      </section>
-      </>)}
-
-      {/* 7. SUBJECT LEARNING TRENDS */}
-      {subjectEvolutions.length > 0 && (<>
-      <div className="pb" />
-      <section className="section">
-        <div className="s-head">
-          <span className="n">7</span>
-          <div>
-            <h2>Subject Learning Trends</h2>
-            <div className="sub">How learning evolved across chapters within each subject.</div>
-          </div>
-        </div>
-        <div className="s-body">
-          {subjectEvolutions.map((evo, idx) => {
-            const sj = evo.analysis_json ?? ({} as any);
-            const strengths: string[] = sj.universal_strengths ?? sj.subject_strengths ?? [];
-            const weaknesses: string[] = sj.universal_weaknesses ?? sj.subject_weaknesses ?? [];
-            const patterns: any[] = sj.cross_chapter_patterns ?? [];
-            const recommendations: any[] = sj.recommendations ?? [];
-            return (
-              <div key={evo.subject} style={{ borderTop: idx > 0 ? "1px solid var(--border)" : "none", paddingTop: idx > 0 ? "28px" : "0", marginTop: idx > 0 ? "28px" : "0" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
-                  <h3 style={{ fontFamily: "var(--display)", fontSize: "24px", fontWeight: 500, margin: 0 }}>{evo.subject}</h3>
-                  <span style={{ font: "500 11px/1 var(--mono)", color: "var(--muted)", letterSpacing: "0.1em" }}>
-                    {evo.chapter_count} chapter{evo.chapter_count !== 1 ? "s" : ""}
-                  </span>
-                </div>
-                {evo.headline && (
-                  <p style={{ fontFamily: "var(--display)", fontSize: "18px", color: "var(--proficient)", margin: "0 0 10px", fontStyle: "italic" }}>{evo.headline}</p>
-                )}
-                {evo.subject_skill_trajectory && (
-                  <p style={{ fontSize: "15px", lineHeight: 1.7, color: "var(--ink-2)", margin: "0 0 16px", maxWidth: "70ch" }}>{evo.subject_skill_trajectory}</p>
-                )}
-                {(strengths.length > 0 || weaknesses.length > 0) && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "16px" }}>
-                    {strengths.length > 0 && (
-                      <div>
-                        <h4 style={{ margin: "0 0 6px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--advanced)" }}>Strengths</h4>
-                        <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.65 }}>
-                          {strengths.map((s, i) => <li key={i}>{s}</li>)}
-                        </ul>
-                      </div>
-                    )}
-                    {weaknesses.length > 0 && (
-                      <div>
-                        <h4 style={{ margin: "0 0 6px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--approaching)" }}>Areas to Improve</h4>
-                        <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.65 }}>
-                          {weaknesses.map((w, i) => <li key={i}>{w}</li>)}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {patterns.length > 0 && (
-                  <div style={{ marginBottom: "12px" }}>
-                    <h4 style={{ margin: "0 0 8px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Patterns Across Chapters</h4>
-                    <div className="dim-grid">
-                      {patterns.slice(0, 4).map((p: any, i: number) => (
-                        <div className="dim" key={i}>
-                          <div className="dn">{p.pattern_name}</div>
-                          <div className="dd">{p.summary ?? p.description}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {recommendations.length > 0 && (
-                  <div>
-                    <h4 style={{ margin: "0 0 6px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Recommendations</h4>
-                    <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.65 }}>
-                      {recommendations.slice(0, 4).map((r: any, i: number) => (
-                        <li key={i}>{typeof r === "string" ? r : (r.action ?? r.text ?? "")}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-      </>)}
-
-      {/* 8. AI CHAPTER REPORTS */}
-      {chapters.some((ch) => ch.chapter_report) && (<>
-      <div className="pb" />
-      <section className="section">
-        <div className="s-head">
-          <span className="n">8</span>
-          <div>
-            <h2>AI Chapter Reports</h2>
-            <div className="sub">AI-generated pedagogical analysis per chapter — session summary, traits, concept trajectory.</div>
-          </div>
-        </div>
-        <div className="s-body">
-          {chapters.filter((ch) => ch.chapter_report).map((ch, idx) => (
-            <div key={`${ch.subject}-${ch.document_title}`} className="cr">
-              <div className="cr-h">
-                <span className="name">{ch.document_title}</span>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-                  <span style={{ font: "500 11px/1 var(--mono)", color: "var(--muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>{ch.subject}</span>
-                  <span className={`chip ${bandFor(ch.mastery_score * 100).toLowerCase()}`}>{bandFor(ch.mastery_score * 100)}</span>
-                  <span style={{ font: "500 11px/1 var(--mono)", color: "var(--muted)" }}>{ch.study_count} sessions · {Math.round(ch.completion_percentage)}% complete</span>
-                </div>
-              </div>
-              <div
-                className="cr-summary prose prose-sm max-w-none
-                  prose-h3:font-display prose-h3:text-[var(--ink)] prose-h3:font-medium prose-h3:text-lg prose-h3:mt-5 prose-h3:mb-2 prose-h3:first:mt-0
-                  prose-h4:text-[var(--ink)] prose-h4:font-semibold prose-h4:text-sm prose-h4:mt-3 prose-h4:mb-1
-                  prose-p:text-[var(--ink-2)] prose-p:leading-relaxed prose-p:my-1
-                  prose-li:text-[var(--ink-2)] prose-li:my-0.5
-                  prose-strong:text-[var(--ink)] prose-ul:my-1 prose-ul:pl-4"
-              >
-                <ReactMarkdown>{ch.chapter_report!}</ReactMarkdown>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-      </>)}
-
-      {/* 9. SUBJECT-WISE CHAPTER REPORTS */}
-      {subjects.length > 0 && (<>
-      <div className="pb" />
-      <section className="section">
-        <div className="s-head">
-          <span className="n">9</span>
-          <div>
-            <h2>Chapter-by-Chapter Breakdown</h2>
-            <div className="sub">Full analysis for every chapter, grouped by subject — mastery, session arc, skill dimensions, and AI report.</div>
-          </div>
-        </div>
-        <div className="s-body">
-          {subjects.map((subj, si) => {
-            const subjChapters = chapters.filter((c) => c.subject === subj.subject);
-            if (subjChapters.length === 0) return null;
-            return (
-              <div key={subj.subject} style={{ borderTop: si > 0 ? "2px solid var(--border)" : "none", paddingTop: si > 0 ? "36px" : "0", marginTop: si > 0 ? "36px" : "0" }}>
-                {/* Subject heading */}
-                <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginBottom: "20px" }}>
-                  <h3 style={{ fontFamily: "var(--display)", fontSize: "28px", fontWeight: 500, margin: 0, letterSpacing: "-0.01em" }}>{subj.subject}</h3>
-                  <span style={{ font: "500 11px/1 var(--mono)", color: "var(--muted)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                    {subjChapters.length} chapter{subjChapters.length !== 1 ? "s" : ""} · {subj.session_count} sessions
-                  </span>
-                  <span className={`chip ${bandFor(subj.overall_score * 100).toLowerCase()}`}>{bandFor(subj.overall_score * 100)}</span>
-                </div>
-
-                {/* Each chapter */}
-                {subjChapters.map((ch, chi) => {
-                  const evo = chapterEvolutions.find(
-                    (e) => e.subject === subj.subject && e.document_title === ch.document_title
-                  );
-                  const analysis = evo?.analysis_json ?? ({} as any);
-                  const dimensions: any[] = analysis.dimension_analyses ?? analysis.dimensions ?? [];
-                  const sessionLog: any[] = analysis.per_conversation ?? [];
-                  const recommendations: any[] = analysis.recommendations ?? [];
-
-                  // Build sparkline path from session log
-                  const mappedLog = sessionLog.map((s: any, idx: number) => {
-                    const rawScore = s.overall_score ?? (idx / Math.max(sessionLog.length - 1, 1));
-                    let level = "beginning";
-                    if (rawScore > 0.8) level = "advanced";
-                    else if (rawScore > 0.6) level = "proficient";
-                    else if (rawScore > 0.4) level = "approaching";
-                    else if (rawScore > 0.2) level = "developing";
-                    return { n: idx + 1, level, obs: s.tutor_observations ?? s.observations ?? [] };
-                  });
-
-                  const W = 680, H = 80, pad = 16;
-                  const xs = (i: number, n: number) => pad + i * ((W - pad * 2) / (n > 1 ? n - 1 : 1));
-                  const ys = (lvl: string) => H - pad - ((levels[lvl as keyof typeof levels] || 1) - 1) * ((H - pad * 2) / 4);
-                  const sparkPath = mappedLog.length > 1
-                    ? mappedLog.map((s: any, i: number) => `${i === 0 ? "M" : "L"} ${xs(i, mappedLog.length).toFixed(1)} ${ys(s.level).toFixed(1)}`).join(" ")
-                    : "";
-
-                  return (
-                    <div key={`${subj.subject}-${ch.document_title}-${chi}`} style={{ borderTop: chi === 0 ? "1px solid var(--rule-faint)" : "1px solid var(--border)", paddingTop: "20px", marginTop: "20px" }}>
-                      {/* Chapter header row */}
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "14px", gap: "16px" }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "4px" }}>
-                            <span style={{ fontFamily: "var(--display)", fontSize: "20px", fontWeight: 500 }}>{ch.document_title}</span>
-                            <span className={`chip ${bandFor(ch.mastery_score * 100).toLowerCase()}`}>{bandFor(ch.mastery_score * 100)}</span>
-                          </div>
-                          <div style={{ font: "500 11px/1 var(--mono)", color: "var(--muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                            {ch.study_count} session{ch.study_count !== 1 ? "s" : ""}
-                          </div>
-                        </div>
-                        {/* Mastery + completion stats */}
-                        <div style={{ display: "flex", gap: "24px", flexShrink: 0 }}>
-                          <div style={{ textAlign: "right" }}>
-                            <div style={{ font: "600 10.5px/1 var(--mono)", color: "var(--muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "4px" }}>Mastery</div>
-                            <div style={{ fontSize: "24px", fontWeight: 600, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em", color: masteryColor(ch.mastery_score) }}>
-                              {Math.round(ch.mastery_score * 100)}<small style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 500 }}>%</small>
-                            </div>
-                          </div>
-                          <div style={{ textAlign: "right" }}>
-                            <div style={{ font: "600 10.5px/1 var(--mono)", color: "var(--muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "4px" }}>Complete</div>
-                            <div style={{ fontSize: "24px", fontWeight: 600, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em" }}>
-                              {Math.round(ch.completion_percentage)}<small style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 500 }}>%</small>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Completion bar */}
-                      <div className={`bar ${bandFor(ch.mastery_score * 100).toLowerCase()}`} style={{ marginBottom: "20px" }}>
-                        <i style={{ width: `${Math.round(ch.completion_percentage)}%` }} />
-                      </div>
-
-                      {/* Evolution headline + sparkline */}
-                      {evo && (
-                        <div style={{ marginBottom: "18px" }}>
-                          {evo.headline && (
-                            <p style={{ fontFamily: "var(--display)", fontSize: "17px", fontStyle: "italic", color: "var(--proficient)", margin: "0 0 10px" }}>{evo.headline}</p>
-                          )}
-                          {evo.skill_score_trajectory && (
-                            <p style={{ fontSize: "14px", lineHeight: 1.65, color: "var(--ink-2)", margin: "0 0 12px", maxWidth: "65ch" }}>{evo.skill_score_trajectory}</p>
-                          )}
-                          {/* Sparkline */}
-                          {mappedLog.length > 1 && (
-                            <div className="arc-spark">
-                              <div className="h">
-                                <span className="l">Session arc — {evo.conversation_count} session{evo.conversation_count !== 1 ? "s" : ""}</span>
-                                <div className="level-key">
-                                  {(["advanced","proficient","approaching","developing","beginning"] as const).map((l) => (
-                                    <span key={l}><i style={{ background: colors[l] }} />{l}</span>
-                                  ))}
-                                </div>
-                              </div>
-                              <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-                                {[1,2,3,4,5].map((l) => (
-                                  <line key={l} x1={pad} x2={W-pad} y1={ys(["beginning","developing","approaching","proficient","advanced"][l-1])} y2={ys(["beginning","developing","approaching","proficient","advanced"][l-1])} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="2 3" />
-                                ))}
-                                <path d={sparkPath} fill="none" stroke="#0f172a" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-                                {mappedLog.map((s: any, i: number) => (
-                                  <g key={i}>
-                                    <circle cx={xs(i, mappedLog.length)} cy={ys(s.level)} r="4" fill={colors[s.level as keyof typeof colors] || colors.beginning} stroke="#fff" strokeWidth="2" />
-                                    <text x={xs(i, mappedLog.length)} y={H - 2} textAnchor="middle" fontFamily="JetBrains Mono" fontSize="9" fill="#94a3b8">{s.n}</text>
-                                  </g>
-                                ))}
-                              </svg>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Skill dimensions grid */}
-                      {dimensions.length > 0 && (
-                        <div style={{ marginBottom: "18px" }}>
-                          <h4 style={{ margin: "0 0 8px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Skill Dimensions</h4>
-                          <div className="dim-grid">
-                            {dimensions.map((d: any, i: number) => {
-                              const afterScore = typeof d.after_score === "number" ? d.after_score : (typeof d.score === "number" ? d.score : null);
-                              const delta = typeof d.delta === "number" ? d.delta : null;
-                              const name = d.dimension_name ?? d.dimension ?? d.name ?? "";
-                              const obs = d.key_observation ?? d.analysis ?? d.desc ?? "";
+                  {(() => {
+                    const focusAreas: any[] = (aiInsights as any)?.focus_areas ?? [];
+                    if (focusAreas.length === 0) return null;
+                    const faOpen = openExpanders.has("focus-areas");
+                    return (
+                      <div className="rc-expander" style={{ marginTop: "20px" }}>
+                        <button className="rc-expander-btn" onClick={() => toggleExpanderOpen("focus-areas")}>
+                          <span>🎯 Focus areas for next term ({focusAreas.length})</span>
+                          <span className="plus" style={{ transform: faOpen ? "rotate(45deg)" : "none" }}>+</span>
+                        </button>
+                        {faOpen && (
+                          <div className="rc-expander-panel">
+                            {focusAreas.map((fa, i) => {
+                              const pri = (fa.priority ?? "medium").toLowerCase();
                               return (
-                                <div className="dim" key={i}>
-                                  <div className="dn" style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                                    <span>{name}</span>
-                                    {afterScore != null && (
-                                      <span style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                                        <span style={{ fontSize: "14px", fontWeight: 700, color: masteryColor(afterScore), fontVariantNumeric: "tabular-nums" }}>{Math.round(afterScore * 100)}%</span>
-                                        {delta != null && delta !== 0 && (
-                                          <span style={{ fontSize: "11px", fontWeight: 700, padding: "1px 5px", borderRadius: "4px", background: delta > 0 ? "var(--advanced-bg)" : "var(--developing-bg)", color: delta > 0 ? "var(--advanced)" : "var(--developing)" }}>
-                                            {delta > 0 ? "+" : ""}{Math.round(delta * 100)}
-                                          </span>
-                                        )}
-                                      </span>
+                                <div className="rc-focus-row" key={i}>
+                                  <span className={`rc-pri ${pri}`}>{pri.toUpperCase()}</span>
+                                  <div>
+                                    <div className="rc-focus-area">{fa.area}</div>
+                                    {(fa.suggested_approach || fa.rationale) && (
+                                      <div className="rc-focus-rat">{fa.suggested_approach ?? fa.rationale}</div>
                                     )}
+                                    {fa.subject && <div className="rc-focus-tag">{fa.subject}</div>}
                                   </div>
-                                  {afterScore != null && (
-                                    <div className={`bar ${bandFor(afterScore * 100).toLowerCase()}`} style={{ height: "3px", marginBottom: "6px" }}>
-                                      <i style={{ width: `${Math.round(afterScore * 100)}%` }} />
-                                    </div>
-                                  )}
-                                  {obs && <div className="dd">{obs}</div>}
                                 </div>
                               );
                             })}
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
+                    );
+                  })()}
 
-                      {/* Session-by-session observations */}
-                      {sessionLog.length > 0 && (
-                        <div style={{ marginBottom: "18px" }}>
-                          <h4 style={{ margin: "0 0 8px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Session Log</h4>
-                          <div className="arc">
-                            {sessionLog.map((s: any, i: number) => {
-                              const obs: string[] = s.tutor_observations ?? s.observations ?? [];
-                              const stageLabel: string = s.stage_label ?? `Session ${i + 1}`;
-                              const lvl = mappedLog[i]?.level ?? "beginning";
-                              return (
-                                <div className="arc-row" key={i}>
-                                  <div className="n">{i + 1}</div>
-                                  <div><span className={`lvl lvl-${lvl}`}>{stageLabel}</span></div>
-                                  <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.6 }}>
-                                    {obs.slice(0, 3).map((o: string, j: number) => <li key={j}>{o}</li>)}
-                                  </ul>
-                                </div>
-                              );
-                            })}
+                  {(() => {
+                    const patterns: any[] = (aiInsights as any)?.cross_subject_patterns ?? [];
+                    if (patterns.length === 0) return null;
+                    return (
+                      <div className="rc-pat-grid">
+                        {patterns.map((p, i) => (
+                          <div className={`rc-pat-card ${p.is_positive ? "good" : "warn"}`} key={i}>
+                            <div className="rc-pat-name">{p.is_positive ? "✓" : "⚠"} {p.pattern_name}</div>
+                            <div className="rc-pat-desc">{p.summary ?? p.description}</div>
+                            {p.subjects && <div className="rc-pat-subjects">{Array.isArray(p.subjects) ? p.subjects.join(" · ") : p.subjects}</div>}
                           </div>
-                        </div>
-                      )}
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </section>
+              </>
+            )}
 
-                      {/* Recommendations */}
-                      {recommendations.length > 0 && (
-                        <div style={{ marginBottom: "18px" }}>
-                          <h4 style={{ margin: "0 0 6px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)" }}>Recommendations</h4>
-                          <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.65 }}>
-                            {recommendations.map((r: any, i: number) => (
-                              <li key={i}>{typeof r === "string" ? r : (r.action ?? r.text ?? "")}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Chapter AI report markdown */}
-                      {ch.chapter_report && (
-                        <div style={{ marginTop: "16px", padding: "20px 24px", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--r)" }}>
-                          <div style={{ font: "600 10.5px/1 var(--mono)", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "12px" }}>AI Chapter Report</div>
-                          <div
-                            className="prose prose-sm max-w-none
-                              prose-h3:font-serif prose-h3:text-[var(--ink)] prose-h3:font-medium prose-h3:text-lg prose-h3:mt-5 prose-h3:mb-2 prose-h3:first:mt-0
-                              prose-h4:text-[var(--ink)] prose-h4:font-semibold prose-h4:text-sm prose-h4:mt-3 prose-h4:mb-1
-                              prose-p:text-[var(--ink-2)] prose-p:text-sm prose-p:leading-relaxed prose-p:my-1.5
-                              prose-li:text-sm prose-li:text-[var(--ink-2)] prose-li:my-0.5
-                              prose-strong:text-[var(--ink)] prose-ul:my-1 prose-ul:pl-4"
-                          >
-                            <ReactMarkdown>{ch.chapter_report}</ReactMarkdown>
+            {/* ── 05 SUBJECT LEARNING TRENDS ── */}
+            {subjectEvolutions.length > 0 && (
+              <>
+                <div className="pb" />
+                <section className="rc-section" id="rc-trends">
+                  <div className="rc-sec-head"><span className="rc-sec-n">05</span><h2>Subject Learning Trends</h2></div>
+                  <p className="rc-sec-sub">How each subject evolved chapter to chapter.</p>
+                  {subjectEvolutions.map((evo) => {
+                    const sj = evo.analysis_json ?? ({} as any);
+                    const strengths: string[] = sj.universal_strengths ?? sj.subject_strengths ?? [];
+                    const weaknesses: string[] = sj.universal_weaknesses ?? sj.subject_weaknesses ?? [];
+                    const patterns: any[] = sj.cross_chapter_patterns ?? [];
+                    const recommendations: any[] = sj.recommendations ?? [];
+                    const key = `trend::${evo.subject}`;
+                    const isOpen = openExpanders.has(key);
+                    const clampKey = `trend-clamp::${evo.subject}`;
+                    return (
+                      <div className="rc-expander" key={evo.subject} style={{ marginTop: "12px" }}>
+                        <button className="rc-expander-btn" onClick={() => toggleExpanderOpen(key)}>
+                          <span>📘 {evo.subject} — {evo.chapter_count} chapter{evo.chapter_count !== 1 ? "s" : ""}{evo.overall_adapted ? " · trending up" : ""}</span>
+                          <span className="plus" style={{ transform: isOpen ? "rotate(45deg)" : "none" }}>+</span>
+                        </button>
+                        {isOpen && (
+                          <div className="rc-expander-panel">
+                            {evo.headline && (
+                              <p style={{ fontFamily: "var(--display)", fontStyle: "italic", color: "var(--navy)", fontSize: "15px", margin: "0 0 10px" }}>&quot;{evo.headline}&quot;</p>
+                            )}
+                            {evo.subject_skill_trajectory && (
+                              <>
+                                <p className={`rc-clamp ${expandedClamps.has(clampKey) ? "" : "collapsed"}`} style={{ WebkitLineClamp: expandedClamps.has(clampKey) ? "unset" : 2 } as any}>{evo.subject_skill_trajectory}</p>
+                                <button className="rc-more-btn" onClick={() => toggleClampOpen(clampKey)}>
+                                  {expandedClamps.has(clampKey) ? "Show less" : "Read more"}
+                                </button>
+                              </>
+                            )}
+                            {(strengths.length > 0 || weaknesses.length > 0) && (
+                              <div className="rc-two-col" style={{ marginTop: "14px" }}>
+                                {strengths.length > 0 && (
+                                  <div className="rc-list-card strength"><h4>Strengths</h4><ul>{strengths.map((s, i) => <li key={i}>{s}</li>)}</ul></div>
+                                )}
+                                {weaknesses.length > 0 && (
+                                  <div className="rc-list-card weakness"><h4>Weaknesses</h4><ul>{weaknesses.map((w, i) => <li key={i}>{w}</li>)}</ul></div>
+                                )}
+                              </div>
+                            )}
+                            {recommendations.length > 0 && (
+                              <div style={{ marginTop: "14px" }}>
+                                <h4 style={{ margin: "0 0 6px", font: "600 10.5px/1 var(--mono)", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)" }}>Recommendations</h4>
+                                <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "12.5px", color: "var(--ink-2, #334155)", lineHeight: 1.65 }}>
+                                  {recommendations.map((r, i) => <li key={i}>{typeof r === "string" ? r : (r.action ?? r.text ?? "")}</li>)}
+                                </ul>
+                              </div>
+                            )}
+                            {patterns.length > 0 && (
+                              <div className="rc-dim-grid" style={{ marginTop: "14px" }}>
+                                {patterns.slice(0, 4).map((p: any, i: number) => (
+                                  <div className="rc-dim-card" key={i}>
+                                    <div className="rc-dim-head"><span>{p.pattern_name}</span></div>
+                                    <div className="rc-dim-obs">{p.summary ?? p.description}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-      </>)}
+                        )}
+                      </div>
+                    );
+                  })}
+                </section>
+              </>
+            )}
 
-      {/* Download PDF button */}
-      <div className="print-btn" style={{ textAlign: "center", marginTop: "24px", paddingBottom: "40px" }}>
-        <button
-          onClick={handlePrint}
-          disabled={isPdfGenerating || !!teacherId}
-          title={teacherId ? "PDF download isn't available in the teacher view yet" : undefined}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "10px 24px",
-            background: isPdfGenerating || teacherId ? "#8899aa" : "var(--navy)",
-            color: "white",
-            borderRadius: "8px",
-            border: "none",
-            cursor: isPdfGenerating || teacherId ? "not-allowed" : "pointer",
-            fontWeight: 600,
-            fontSize: "14px",
-            transition: "background 0.2s",
-          }}
-        >
-          {isPdfGenerating ? (
-            <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "spin 1s linear infinite" }}>
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-              </svg>
-              Generating PDF…
-            </>
-          ) : (
-            <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Download PDF
-            </>
-          )}
-        </button>
+            {/* ── FOOTER ── */}
+            <footer className="rc-foot">
+              <button
+                className="rc-print-btn"
+                onClick={handlePrint}
+                disabled={isPdfGenerating || !!teacherId}
+                title={teacherId ? "PDF download isn't available in the teacher view yet" : undefined}
+              >
+                {isPdfGenerating ? (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "spin 1s linear infinite" }}>
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                    Generating PDF…
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z" />
+                    </svg>
+                    Download PDF
+                  </>
+                )}
+              </button>
+              <div className="rc-foot-note">GenEducation Report Card v2</div>
+            </footer>
+            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+          </>
+        )}
       </div>
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-        </>
-      )}
     </div>
   );
 }

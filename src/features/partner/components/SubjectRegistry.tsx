@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, FileText } from "lucide-react";
+import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePartnerStore, SubjectFilters, restorePendingIngestions } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
@@ -285,7 +285,12 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-transparent hover:border-[#1A3D2C]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all cursor-pointer overflow-hidden"
+                onClick={() => {
+                  if (isActive) openIngestedPdf(subject);
+                }}
+                className={`group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-transparent hover:border-[#1A3D2C]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all overflow-hidden ${
+                  isActive ? "cursor-pointer" : "cursor-default"
+                }`}
               >
                 <div className="flex-1 flex items-center gap-3 md:gap-4">
                   {/* Left Side Highlight bar */}
@@ -336,19 +341,6 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                               <Square size={14} className="fill-current group-hover/stop:scale-90 transition-transform" />
                             </button>
                           </div>
-                        )}
-
-                        {isActive && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openIngestedPdf(subject);
-                            }}
-                            title="View PDF"
-                            className="p-2 text-[#1A3D2C]/40 hover:text-[#1A3D2C] hover:bg-[#1A3D2C]/5 rounded-xl transition-all"
-                          >
-                            <FileText size={18} />
-                          </button>
                         )}
 
                         {(isActive || isFailed) && (

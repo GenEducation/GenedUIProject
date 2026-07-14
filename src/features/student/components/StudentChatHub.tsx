@@ -18,6 +18,7 @@ import { EnglishIcon } from "@/components/icons/EnglishIcon";
 import { MathematicsIcon } from "@/components/icons/MathematicsIcon";
 import { ScienceIcon } from "@/components/icons/ScienceIcon";
 import { HindiIcon } from "@/components/icons/HindiIcon";
+import { SessionStartingOverlay } from "./SessionStartingOverlay";
 
 
 type SubjectKey = "english" | "mathematics" | "science" | "hindi";
@@ -64,6 +65,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
     openExistingChat,
     openNewChat,
     openNewSession,
+    startNewChatSession,
     setAgentPickerOpen,
     isRateLimitHit,
     setRateLimitHit,
@@ -143,6 +145,8 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
   return (
     <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
       <style>{animateGradientStyle}</style>
+
+      <SessionStartingOverlay />
 
       {/* Mobile header */}
       <header className="lg:hidden flex items-center px-6 py-4 bg-white flex-shrink-0">
@@ -259,8 +263,11 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                       subjectKey={subjectKey}
                       isOnboardingComplete={isOnboardingComplete}
                       onStartChat={() => {
-                        openNewSession(agent, "chat");
-                        router.push(`/student/chat/new?agentId=${agent.agent_id}`);
+                        // Wait for the real session_id before navigating so the
+                        // greeting streams into a stable chat view (typing intact).
+                        startNewChatSession(agent, (sessionId) => {
+                          router.push(`/student/chat/${sessionId}`);
+                        });
                       }}
                       onStartVoice={() => {
                         openNewSession(agent, "voice");

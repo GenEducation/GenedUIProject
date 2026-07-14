@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Play, Pause, Check, ChevronDown } from "lucide-react";
 import { useStudentStore, StudentProfile as StudentProfileType } from "../store/useStudentStore";
@@ -13,6 +13,9 @@ import { fetchVoices } from "@/features/student/services/voiceCatalogService";
 import { DEFAULT_GEMINI_VOICE, type GeminiVoice } from "@/constants/geminiVoices";
 import { PttHotkeyConfig } from "./PttHotkeyConfig";
 import { DevicePairingModal } from "./DevicePairingModal";
+import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
+import { GeneralOnboardingWizard } from "@/features/onboarding/components/GeneralOnboarding/GeneralOnboardingWizard";
+import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 
 /* ─── Design Tokens (matches home screen) ────────────────────────────────── */
 const C = {
@@ -31,8 +34,6 @@ const C = {
   card:      "#FFFFFF",
   border:    "#E2E8F0",
 };
-
-const AVATAR_COLORS = [C.genPurple, C.genBlue, C.edGreen, C.sky, C.coral, C.sun, C.sparkle, "#55EFC4"];
 
 /* ─── "How {tutor} sees you" — derived from the profile API ─────────────────
  * The /students/{id}/profile endpoint returns a `general_onboarding` block
@@ -311,7 +312,7 @@ export function StudentProfile() {
   const { completeAction } = useTutorialStore();
 
   const [sidebarOpen,      setSidebarOpen]      = useState(true);
-  const [avatarColor,      setAvatarColor]      = useState(C.genPurple);
+  const avatarColor = C.genPurple;
   const [soundEnabled,     setSoundEnabled]      = useState(true);
   const [parentInput,      setParentInput]       = useState("");
   const [selectedPartner,  setSelectedPartner]   = useState("");
@@ -334,6 +335,8 @@ export function StudentProfile() {
   const [isLanguageLoading, setIsLanguageLoading] = useState<boolean>(false);
   const [isLanguageSaving, setIsLanguageSaving] = useState<boolean>(false);
   const [pairingModalOpen, setPairingModalOpen] = useState<boolean>(false);
+  const [showOnboardingWizard, setShowOnboardingWizard] = useState<boolean>(false);
+  const checkDNAStatus = useOnboardingStore((s) => s.checkDNAStatus);
 
   /* responsive sidebar */
   useEffect(() => {
@@ -391,27 +394,25 @@ export function StudentProfile() {
   }, [studentProfile?.user_id]);
 
   /* Pull the student's onboarding profile so "How {tutor} sees you" reflects
-   * their actual self-reported preferences rather than hardcoded archetypes. */
-  useEffect(() => {
+   * their actual self-reported preferences rather than hardcoded archetypes.
+   * Also re-run after the wizard completes so traits appear without a reload. */
+  const loadDashboardProfile = useCallback(async () => {
     if (!studentProfile?.user_id) return;
-    let cancelled = false;
     setOnboardingLoading(true);
-    (async () => {
-      try {
-        const data = await studentService.fetchDashboardProfile(studentProfile.user_id);
-        if (cancelled) return;
-        setOnboarding(data?.general_onboarding ?? null);
-      } catch (err) {
-        if (!cancelled) {
-          console.warn("[StudentProfile] Failed to load onboarding profile:", err);
-          setOnboarding(null);
-        }
-      } finally {
-        if (!cancelled) setOnboardingLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    try {
+      const data = await studentService.fetchDashboardProfile(studentProfile.user_id);
+      setOnboarding(data?.general_onboarding ?? null);
+    } catch (err) {
+      console.warn("[StudentProfile] Failed to load onboarding profile:", err);
+      setOnboarding(null);
+    } finally {
+      setOnboardingLoading(false);
+    }
   }, [studentProfile?.user_id]);
+
+  useEffect(() => {
+    loadDashboardProfile();
+  }, [loadDashboardProfile]);
 
   // Load language preferences on mount
   useEffect(() => {
@@ -537,7 +538,6 @@ export function StudentProfile() {
   const displayName   = studentProfile?.name || username;
   const grade         = studentProfile?.grade         ? `Grade ${studentProfile.grade}` : "—";
   const board         = studentProfile?.school_board  ?? "CBSE";
-  const initials      = displayName.charAt(0).toUpperCase();
   const aiTutorName   = studentProfile?.ai_name || "Nia";
   const streakCount   = studentStats?.currentStreak ?? 0;
   const totalSessions = studentStats?.totalSessions  ?? 0;
@@ -605,26 +605,13 @@ export function StudentProfile() {
               display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center",
               marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)", ...fade(0.08),
             }}>
-              {/* Avatar */}
+              {/* Avatar — circular illustration with a fixed backdrop color */}
               <div style={{
-                width: 88, height: 88, borderRadius: 28,
-                background: `linear-gradient(135deg, ${avatarColor}, ${avatarColor}CC)`,
-                display: "flex", alignItems: "center", justifyContent: "center",
+                width: 88, height: 88, borderRadius: "50%",
                 boxShadow: `0 8px 24px ${avatarColor}30`, border: "3px solid white",
+                overflow: "hidden", flexShrink: 0,
               }}>
-                <span style={{ color: "white", fontSize: 36, fontWeight: 800, fontFamily: "'Nunito',sans-serif" }}>{initials}</span>
-              </div>
-
-              {/* Color picker */}
-              <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" as const, justifyContent: "center" }}>
-                {AVATAR_COLORS.map(col => (
-                  <button key={col} onClick={() => setAvatarColor(col)} style={{
-                    width: col === avatarColor ? 22 : 18, height: col === avatarColor ? 22 : 18,
-                    borderRadius: "50%", background: col, border: col === avatarColor ? "2px solid white" : "none",
-                    cursor: "pointer", boxShadow: col === avatarColor ? `0 0 0 2px ${col}` : "none",
-                    transition: "all 0.2s", flexShrink: 0,
-                  }} />
-                ))}
+                <StudentAvatarIllustration bg={avatarColor} />
               </div>
 
               <h1 style={{ fontSize: "clamp(22px,4vw,28px)", fontWeight: 800, color: C.text, marginTop: 14, fontFamily: "'Nunito',sans-serif" }}>{displayName}</h1>
@@ -680,9 +667,22 @@ export function StudentProfile() {
                   <p style={{ fontSize: 10, color: C.textMuted, marginTop: 12, fontStyle: "italic", textAlign: "center" as const }}>Based on your onboarding and learning patterns</p>
                 </>
               ) : (
-                <p style={{ fontSize: 12, color: C.textMuted, textAlign: "center" as const, padding: "8px 0" }}>
-                  Complete onboarding to see how {aiTutorName} understands your learning style.
-                </p>
+                <div style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 12, padding: "8px 0" }}>
+                  <p style={{ fontSize: 12, color: C.textMuted, textAlign: "center" as const, margin: 0 }}>
+                    Complete onboarding to see how {aiTutorName} understands your learning style.
+                  </p>
+                  <button
+                    onClick={() => setShowOnboardingWizard(true)}
+                    style={{
+                      padding: "10px 20px", borderRadius: 12, border: "none",
+                      background: C.genPurple, color: "white", fontSize: 13, fontWeight: 700,
+                      fontFamily: "'Nunito',sans-serif", cursor: "pointer",
+                      boxShadow: `0 4px 14px ${C.genPurple}40`,
+                    }}
+                  >
+                    ✨ Start Questionnaire
+                  </button>
+                </div>
               )}
             </div>
 
@@ -1029,6 +1029,18 @@ export function StudentProfile() {
 
       <PartnerRequestModal />
       <DevicePairingModal isOpen={pairingModalOpen} onClose={() => setPairingModalOpen(false)} />
+
+      {/* General onboarding questionnaire — launched from the "How AI sees you" empty state */}
+      {showOnboardingWizard && studentProfile && (
+        <GeneralOnboardingWizard
+          studentProfile={studentProfile}
+          onComplete={() => {
+            setShowOnboardingWizard(false);
+            checkDNAStatus(studentProfile.user_id);
+            loadDashboardProfile();
+          }}
+        />
+      )}
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

@@ -300,6 +300,12 @@ export interface StudentState {
   studentStats: { currentStreak: number; longestStreak: number; totalSessions: number } | null;
   isStatsLoading: boolean;
   sessionMode: "chat" | "voice" | null;
+  // True while a brand-new chat is being created and we're waiting for the
+  // backend's session_id chunk before navigating to the chat page.
+  isStartingSession: boolean;
+  // One-shot navigation callback invoked with the real session_id once the
+  // backend assigns it (set by startNewChatSession).
+  pendingSessionNavigation: ((sessionId: string) => void) | null;
   voicePrefs: { listenMode: "continuous" | "ptt"; pttHotkey: string; };
   pttHeld: boolean;
 
@@ -366,6 +372,7 @@ export interface StudentState {
   beginPttUtterance: () => void;
   endPttUtterance: () => void;
   openNewSession: (agent: AgentItem, mode: "chat" | "voice") => void;
+  startNewChatSession: (agent: AgentItem, navigate: (sessionId: string) => void) => void;
   initNewVoiceSession: (agentId: string) => void;
   setListenMode: (mode: "continuous" | "ptt") => void;
   setPttHotkey: (key: string) => void;
@@ -459,6 +466,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   studentStats: null,
   isStatsLoading: false,
   sessionMode: null,
+  isStartingSession: false,
+  pendingSessionNavigation: null,
   voicePrefs: getInitialVoicePrefs(),
   pttHeld: false,
   chatQueryMode: "study",
@@ -1709,6 +1718,21 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }));
   },
 
+  /**
+   * Start a brand-new chat WITHOUT navigating yet. The greeting request is
+   * fired from the current page (home/hub); once the backend streams back the
+   * real session_id, `navigate` is invoked with it so the caller can
+   * router.push straight to /student/chat/{realId}. This avoids the mid-stream
+   * "new" → realId URL swap that remounted the chat view and killed the
+   * greeting's typing animation.
+   */
+  startNewChatSession: (agent: AgentItem, navigate: (sessionId: string) => void) => {
+    if (get().isStartingSession) return; // ignore double-clicks
+    get().openNewSession(agent, "chat");
+    set({ isStartingSession: true, pendingSessionNavigation: navigate });
+    get().sendMessage("Hello");
+  },
+
   initNewVoiceSession: (agentId: string) => {
     const { availableAgents } = get();
     const agent = availableAgents.find((a) => a.agent_id === agentId);
@@ -2098,6 +2122,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     // the streaming state machine.
     const streamStartTime = performance.now();
 
+    // Set when the mid-stream session_id event promotes activeChat from
+    // "new"/"new-focused" to its real id — later state checks that compare
+    // against chatSentFromId must also accept this id, otherwise the visible
+    // thread stops receiving stream patches after promotion. Function-scoped
+    // so the catch{} block can use it too.
+    let promotedSessionId: string | null = null;
+
     try {
       const sessionIdToSend =
         effectiveChat.session_id || (effectiveChat.id === "new" ? undefined : effectiveChat.id);
@@ -2214,7 +2245,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                 : m
             );
           return {
-            messages: state.activeChat?.id === chatSentFromId ? patch(state.messages) : state.messages,
+            messages:
+              state.activeChat?.id === chatSentFromId ||
+              (promotedSessionId && state.activeChat?.id === promotedSessionId)
+                ? patch(state.messages)
+                : state.messages,
             chatMessagesCache: {
               ...state.chatMessagesCache,
               [chatSentFromId]: patch(state.chatMessagesCache[chatSentFromId] || []),
@@ -2728,7 +2763,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
               };
 
               set({ activeChat: updatedChat });
-              window.history.pushState(null, "", `/student/chat/${newSessionId}`);
+              promotedSessionId = newSessionId;
+              const pendingNav = get().pendingSessionNavigation;
+              if (pendingNav) {
+                // Deferred-navigation flow: we're still on the page the user
+                // started from — navigate to the real session URL now, so the
+                // rest of the greeting streams into a stable, mounted chat view.
+                set({ pendingSessionNavigation: null, isStartingSession: false });
+                pendingNav(newSessionId);
+              } else {
+                window.history.pushState(null, "", `/student/chat/${newSessionId}`);
+              }
               // Reset guard so fetchSessions actually runs and populates chapter_name on activeChat
               set({ hasFetchedSessions: false });
               fetchSessions();
@@ -2844,7 +2889,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             (c) => c.id !== finalSessionId && c.session_id !== finalSessionId,
           );
           newRecentChats = [updatedChat, ...deduplicatedChats];
-          if (state.activeChat?.id === "new") {
+          if (
+            state.activeChat?.id === "new" ||
+            state.activeChat?.id === finalSessionId
+          ) {
             finalActiveChat = updatedChat;
           }
         } else if (chatInList) {
@@ -2883,7 +2931,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         const newTypingIds = state.typingChatIds.filter(
           (id) => id !== chatSentFromId,
         );
-        const isStillViewing = state.activeChat?.id === chatSentFromId;
+        const isStillViewing =
+          state.activeChat?.id === chatSentFromId ||
+          (promotedSessionId !== null && state.activeChat?.id === promotedSessionId);
 
         return {
           activeChat: finalActiveChat,
@@ -2899,6 +2949,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           ) || null,
         };
       });
+
+      // Safety net: if we were holding navigation for a new session but the
+      // session_id event never fired mid-stream, resolve it now (or clear it
+      // so the "starting" overlay doesn't hang forever).
+      {
+        const pendingNav = get().pendingSessionNavigation;
+        if (pendingNav) {
+          set({ pendingSessionNavigation: null, isStartingSession: false });
+          if (finalSessionId) pendingNav(finalSessionId);
+        }
+      }
     } catch (error: any) {
       const isAbort = error.name === "AbortError";
       const isRateLimit = error instanceof ApiRequestError && error.status === 429;
@@ -2948,18 +3009,21 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         const newTypingIds = state.typingChatIds.filter(
           (id) => id !== chatSentFromId,
         );
+        const isStillViewing =
+          state.activeChat?.id === chatSentFromId ||
+          (promotedSessionId !== null && state.activeChat?.id === promotedSessionId);
 
         return {
           chatMessagesCache: manageCacheEviction(state.chatMessagesCache, chatSentFromId, finishedMessages),
-          messages:
-            state.activeChat?.id === chatSentFromId
-              ? finishedMessages
-              : state.messages,
+          messages: isStillViewing ? finishedMessages : state.messages,
           typingChatIds: newTypingIds,
-          isAITyping:
-            state.activeChat?.id === chatSentFromId ? false : state.isAITyping,
+          isAITyping: isStillViewing ? false : state.isAITyping,
           streamingMessageId: null,
           chatAbortController: null,
+          // Abandon any deferred new-session navigation so the caller's
+          // "starting" overlay is dismissed on failure.
+          pendingSessionNavigation: null,
+          isStartingSession: false,
         };
       });
     }

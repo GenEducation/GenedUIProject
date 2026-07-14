@@ -6,6 +6,11 @@ export type PreparationStatus = "PENDING" | "COMPLETED" | "FAILED";
 // session-open lifecycle (driven by the student opening it)
 export type SessionStatus = "PENDING" | "STARTED" | "STARTED-EARLY" | "COMPLETED";
 
+export interface ScheduleSessionRescheduleRequest {
+  scheduled_date: string;    // "YYYY-MM-DD"
+  scheduled_time?: string;   // "HH:MM" IST, optional
+}
+
 export interface ScheduleSessionRequest {
   user_id: string;
   session_type: SessionType;

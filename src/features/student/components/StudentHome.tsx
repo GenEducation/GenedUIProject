@@ -9,6 +9,8 @@ import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingSto
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
+import { NotificationBell } from "@/components/NotificationBell";
+import { SessionStartingOverlay } from "./SessionStartingOverlay";
 
 /* ═══ DESIGN TOKENS ═══ */
 const C = {
@@ -172,7 +174,7 @@ export function StudentHome() {
   const {
     studentProfile, recentChats, availableAgents,
     fetchSessions, fetchAvailableAgents, fetchStudentStats, fetchOnboardingStatus,
-    openNewChat, openExistingChat, openNewSession,
+    openNewChat, openExistingChat, openNewSession, startNewChatSession,
     studentStats, isAgentsLoading, isSessionsLoading, isStatsLoading,
   } = useStudentStore();
   const { checkDNAStatus } = useOnboardingStore();
@@ -269,8 +271,12 @@ export function StudentHome() {
         grade:           agent.grade ?? studentProfile?.grade ?? 9,
       });
     } else {
-      openNewSession(agent, "chat");
-      router.push(`/student/chat/new?agentId=${agent.agent_id}`);
+      // Hold navigation until the backend assigns the real session_id, then
+      // jump straight to /student/chat/{id} so the greeting streams with the
+      // normal typing effect (no mid-stream URL swap / remount).
+      startNewChatSession(agent, (sessionId) => {
+        router.push(`/student/chat/${sessionId}`);
+      });
     }
   };
 
@@ -303,6 +309,8 @@ export function StudentHome() {
     <div className="flex h-screen overflow-hidden relative" style={{ fontFamily: "'DM Sans','Nunito',system-ui,sans-serif", background: C.pageBg }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
 
+      <SessionStartingOverlay />
+
       {/* ── SIDEBAR ── */}
       <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -313,7 +321,7 @@ export function StudentHome() {
         {/* Mobile / collapsed topbar */}
         {!sidebarOpen && (
           <div
-            className="flex items-center flex-shrink-0 border-b"
+            className="flex items-center flex-shrink-0 border-b relative z-20"
             style={{ padding: "12px 16px", borderColor: C.border, background: C.card }}
           >
             {/* hamburger on left */}
@@ -331,8 +339,12 @@ export function StudentHome() {
               <Image src="/Logo.svg" alt="GenEd" width={90} height={32} style={{ height: 32, width: "auto" }} priority />
             </div>
 
-            {/* April avatar on right to balance */}
-            <div className="flex-shrink-0 opacity-0 pointer-events-none" style={{ width: 38 }} />
+            {/* Notification bell on right, balancing the hamburger */}
+            <div className="flex-shrink-0">
+              {studentProfile?.user_id && (
+                <NotificationBell userId={studentProfile.user_id} align="right" />
+              )}
+            </div>
           </div>
         )}
 
@@ -346,7 +358,7 @@ export function StudentHome() {
           <div className="w-full mx-auto" style={{ maxWidth: 860, padding: sidebarOpen ? "36px 40px 48px" : "24px 16px 40px" }}>
 
             {/* ── GREETING HEADER ── */}
-            <div className="flex items-start justify-between mb-8" style={fade(0.06)}>
+            <div className="flex items-start justify-between mb-8 relative z-20" style={fade(0.06)}>
               <div>
                 <h1 className="font-extrabold leading-tight m-0"
                   style={{ color: C.text, fontFamily: "'Nunito',sans-serif", fontSize: "clamp(22px, 3vw, 34px)" }}>
@@ -356,8 +368,13 @@ export function StudentHome() {
                   What would you like to learn today?
                 </p>
               </div>
-              <div className="flex-shrink-0 cursor-pointer ml-4">
-                <AprilAvatar state={aprilState} size={56} />
+              <div className="flex-shrink-0 flex items-center gap-3 ml-4">
+                {studentProfile?.user_id && (
+                  <NotificationBell userId={studentProfile.user_id} align="right" />
+                )}
+                <div className="cursor-pointer">
+                  <AprilAvatar state={aprilState} size={56} />
+                </div>
               </div>
             </div>
 
