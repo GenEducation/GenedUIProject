@@ -91,6 +91,11 @@ export interface ChatMessage {
   sender: "user" | "ai";
   timestamp: string;
   isPlanning?: boolean;
+  // Set on the finalized greeting message when it was sent via the deferred
+  // new-session navigation flow (see startNewChatSession) — signals
+  // ChatMessageBubble to replay the typing effect on its first mount, since
+  // the stream usually finishes before the router.push completes.
+  replayTyping?: boolean;
   options?: string[];
   statusText?: string;
   toolStatus?: string;
@@ -2129,6 +2134,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     // so the catch{} block can use it too.
     let promotedSessionId: string | null = null;
 
+    // Captured before the mid-stream session_id handler nulls it — true when
+    // this send is part of the deferred-navigation new-session flow, so the
+    // finalized greeting should replay its typing effect once the caller's
+    // router.push lands on the mounted chat page.
+    const isDeferredNavSend = get().pendingSessionNavigation !== null;
+
     try {
       const sessionIdToSend =
         effectiveChat.session_id || (effectiveChat.id === "new" ? undefined : effectiveChat.id);
@@ -2862,6 +2873,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           actions: finalActions.length > 0 ? finalActions : undefined,
           statusText: undefined,
           toolStatus: undefined,
+          replayTyping: isDeferredNavSend || undefined,
         };
 
         const patchMsg = (msgs: ChatMessage[]) =>

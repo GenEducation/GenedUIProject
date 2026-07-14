@@ -202,9 +202,13 @@ interface MessageElementsProps {
   elements: ChatElement[];
   isStreaming?: boolean;
   toolStatus?: string;
+  // Fired once every element has been sequentially revealed (only relevant
+  // when wasStreaming — historical messages reveal everything immediately
+  // and never call this).
+  onAllRevealed?: () => void;
 }
 
-export function MessageElements({ elements, isStreaming, toolStatus }: MessageElementsProps) {
+export function MessageElements({ elements, isStreaming, toolStatus, onAllRevealed }: MessageElementsProps) {
   // Whether this message was actively streaming when it first mounted. Captured
   // once (lazy initializer) so historical (already-complete) messages always
   // reveal instantly, while live messages reveal their elements in strict
@@ -218,6 +222,12 @@ export function MessageElements({ elements, isStreaming, toolStatus }: MessageEl
   const advance = useCallback((i: number) => {
     setRevealedCount((r) => (i === r ? r + 1 : r));
   }, []);
+
+  useEffect(() => {
+    if (wasStreaming && elements.length > 0 && revealedCount >= elements.length) {
+      onAllRevealed?.();
+    }
+  }, [wasStreaming, revealedCount, elements.length, onAllRevealed]);
 
   const visibleElements = useMemo(
     () => (wasStreaming ? elements.slice(0, Math.min(revealedCount + 1, elements.length)) : elements),
