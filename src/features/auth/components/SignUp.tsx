@@ -4,6 +4,7 @@ import { ChangeEvent, FormEvent, useState } from "react";
 import { Eye, EyeOff, ArrowLeft, ArrowRight } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 import { motion, AnimatePresence } from "framer-motion";
+import { RoleCard } from "./RoleCard";
 
 interface SignUpData {
   username?: string;
@@ -43,51 +44,12 @@ const labelCls =
 const errorCls =
   "text-rose-500 text-[10px] font-semibold mt-1.5 ml-0.5 italic animate-in fade-in slide-in-from-top-1";
 
-// Role SVGs provided by user
-const StudentSVG = () => (
-  <svg width="100%" height="100%" viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-    <rect x="90" y="290" width="240" height="24" rx="12" fill="#8B5CF6"/>
-    <rect x="110" y="314" width="16" height="60" fill="#6D28D9"/>
-    <rect x="294" y="314" width="16" height="60" fill="#6D28D9"/>
-    <rect x="150" y="230" width="120" height="70" rx="10" fill="#0f172a" stroke="#38BDF8" strokeWidth="4"/>
-    <circle cx="210" cy="265" r="12" fill="#38BDF8" opacity="0.8"/>
-    <rect x="100" y="250" width="40" height="28" rx="4" fill="#F59E0B"/>
-    <line x1="120" y1="250" x2="120" y2="278" stroke="#fff" strokeWidth="2"/>
-    <rect x="165" y="180" width="90" height="95" rx="40" fill="#22C55E"/>
-    <ellipse cx="160" cy="245" rx="22" ry="16" fill="#F4C7A1"/>
-    <ellipse cx="260" cy="245" rx="22" ry="16" fill="#F4C7A1"/>
-    <circle cx="210" cy="135" r="55" fill="#F4C7A1"/>
-    <path d="M160 130 Q170 60 210 70 Q255 60 265 130 Q240 95 210 100 Q180 95 160 130" fill="#1E293B"/>
-    <circle cx="190" cy="135" r="5" fill="#111"/>
-    <circle cx="230" cy="135" r="5" fill="#111"/>
-    <path d="M192 160 Q210 175 228 160" stroke="#111" strokeWidth="4" fill="none" strokeLinecap="round"/>
-    <circle cx="320" cy="120" r="12" fill="#38BDF8" opacity="0.8"/>
-    <text x="314" y="126" fontSize="14" fill="white">A+</text>
-    <circle cx="90" cy="120" r="10" fill="#F59E0B" opacity="0.8"/>
-    <text x="84" y="126" fontSize="14" fill="white">★</text>
-    <rect x="300" y="190" width="40" height="10" rx="5" fill="#EF4444" transform="rotate(-20 300 190)"/>
-  </svg>
-);
-
-const ParentSVG = () => (
-  <svg width="100%" height="100%" viewBox="0 0 420 420" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-    <rect x="150" y="180" width="120" height="140" rx="50" fill="#2563EB"/>
-    <ellipse cx="130" cy="250" rx="25" ry="18" fill="#F4C7A1"/>
-    <ellipse cx="290" cy="250" rx="25" ry="18" fill="#F4C7A1"/>
-    <circle cx="210" cy="120" r="60" fill="#F4C7A1"/>
-    <path d="M150 120 Q170 40 210 55 Q255 40 270 120 Q240 90 210 95 Q180 90 150 120" fill="#111827"/>
-    <circle cx="190" cy="120" r="5" fill="#111"/>
-    <circle cx="230" cy="120" r="5" fill="#111"/>
-    <path d="M190 145 Q210 165 230 145" stroke="#111" strokeWidth="4" fill="none" strokeLinecap="round"/>
-    <rect x="275" y="220" width="70" height="90" rx="12" fill="#0f172a" stroke="#38BDF8" strokeWidth="4"/>
-    <circle cx="310" cy="265" r="8" fill="#38BDF8"/>
-    <circle cx="90" cy="110" r="25" fill="#22C55E" opacity="0.9"/>
-    <text x="78" y="118" fontSize="20" fill="white">👧</text>
-    <circle cx="330" cy="110" r="22" fill="#EF4444" opacity="0.9"/>
-    <text x="320" y="118" fontSize="18" fill="white">❤</text>
-    <ellipse cx="210" cy="360" rx="90" ry="20" fill="#94A3B8" opacity="0.3"/>
-  </svg>
-);
+// Role illustration slots. Each role maps to an array of image URLs so a card's
+// artwork can auto-rotate when more than one illustration is supplied later.
+const ROLE_ILLUSTRATIONS: Record<"student" | "parent", string[]> = {
+  student: ["/illustrations/role-student.svg"],
+  parent: ["/illustrations/role-parent.svg"],
+};
 
 
 export function SignUp({
@@ -251,26 +213,19 @@ export function SignUp({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
-          { id: "student", label: "Student", icon: <StudentSVG /> },
-          { id: "parent", label: "Parent", icon: <ParentSVG /> },
+          { id: "student" as const, label: "Student", illustrations: ROLE_ILLUSTRATIONS.student },
+          { id: "parent" as const, label: "Parent", illustrations: ROLE_ILLUSTRATIONS.parent },
           // Partner accounts are provisioned by an administrator, not via public
           // self-signup. (Removed intentionally.)
-        ].map((role) => (
-          <button
+        ].map((role, i) => (
+          <RoleCard
             key={role.id}
-            type="button"
-            onClick={() => handleRoleSelect(role.id as any)}
-            className={`group relative flex flex-col items-center p-6 rounded-2xl border-2 transition-all duration-300 ${
-              signupData.role === role.id
-                ? "border-[#059F6D] bg-[#059F6D]/5 shadow-lg shadow-[#059F6D]/10 animate-pulse-subtle"
-                : "border-[#042e5c]/10 bg-white hover:border-[#059F6D]/40 hover:bg-[#059F6D]/5"
-            }`}
-          >
-            <div className="w-full aspect-square mb-4 transition-transform duration-300 group-hover:scale-110">
-              {role.icon}
-            </div>
-            <span className="text-sm font-bold text-[#042e5c]">{role.label}</span>
-          </button>
+            label={role.label}
+            illustrations={role.illustrations}
+            selected={signupData.role === role.id}
+            onSelect={() => handleRoleSelect(role.id)}
+            startDelay={i * 1500}
+          />
         ))}
       </div>
     </div>
