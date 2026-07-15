@@ -12,6 +12,7 @@ import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
+import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
 
 /* ═══ DESIGN TOKENS ═══ */
 const C = {
@@ -226,6 +227,7 @@ export function StudentHome() {
     fetchSessions, fetchAvailableAgents, fetchStudentStats, fetchOnboardingStatus,
     openNewChat, openExistingChat, openNewSession, startNewChatSession,
     studentStats, isAgentsLoading, isSessionsLoading, isStatsLoading,
+    avatarId,
   } = useStudentStore();
   const { checkDNAStatus } = useOnboardingStore();
   const { hasEnded, hasDismissedCelebration, dismissCelebration } = useTutorialStore();
@@ -454,8 +456,23 @@ export function StudentHome() {
                 {studentProfile?.user_id && (
                   <NotificationBell userId={studentProfile.user_id} align="right" />
                 )}
-                <div className="cursor-pointer">
-                  <AprilAvatar state={aprilState} size={56} />
+                <div
+                  className="cursor-pointer"
+                  onClick={() => router.push("/student/profile")}
+                  style={{
+                    width: 56, height: 56, borderRadius: "50%", overflow: "hidden",
+                    border: "3px solid white", boxShadow: `0 8px 24px ${C.sun}30`,
+                  }}
+                >
+                  {avatarId === "graduate-girl" ? (
+                    <img
+                      src="/avatars/girl-graduate.png"
+                      alt="Student avatar"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                  ) : (
+                    <StudentAvatarIllustration bg={C.sun} />
+                  )}
                 </div>
               </div>
             </div>

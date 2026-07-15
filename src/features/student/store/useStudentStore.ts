@@ -313,6 +313,7 @@ export interface StudentState {
   pendingSessionNavigation: ((sessionId: string) => void) | null;
   voicePrefs: { listenMode: "continuous" | "ptt"; pttHotkey: string; };
   pttHeld: boolean;
+  avatarId: AvatarId;
 
   // ── Doubt / Study Mode ───────────────────────────────────────────────────────
   /** Resolved mode for the current turn — updated optimistically on send and confirmed on done event */
@@ -381,6 +382,7 @@ export interface StudentState {
   initNewVoiceSession: (agentId: string) => void;
   setListenMode: (mode: "continuous" | "ptt") => void;
   setPttHotkey: (key: string) => void;
+  setAvatarId: (id: AvatarId) => void;
 
   // ── Chapter PDF Viewer Actions ───────────────────────────────────────────────
   openChapterPdf: () => Promise<void>;
@@ -415,6 +417,16 @@ export interface StudentState {
 }
 
 // -- Store --------------------------------------------------------------------─
+
+export type AvatarId = "graduate-boy" | "graduate-girl";
+
+const getInitialAvatarId = (): AvatarId => {
+  if (typeof window === "undefined") {
+    return "graduate-boy";
+  }
+  const saved = localStorage.getItem("gened_avatar_id");
+  return saved === "graduate-girl" ? "graduate-girl" : "graduate-boy";
+};
 
 const getInitialVoicePrefs = () => {
   if (typeof window === "undefined") {
@@ -475,6 +487,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   pendingSessionNavigation: null,
   voicePrefs: getInitialVoicePrefs(),
   pttHeld: false,
+  avatarId: getInitialAvatarId(),
   chatQueryMode: "study",
   chatQueryModePinned: false,
   // Chapter PDF viewer initial state
@@ -1780,6 +1793,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       }
       return { voicePrefs: newPrefs };
     });
+  },
+
+  setAvatarId: (id) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("gened_avatar_id", id);
+    }
+    set({ avatarId: id });
   },
 
   // ── English Skill Mode Actions ─────────────────────────────────────────────

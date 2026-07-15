@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Play, Pause, Check, ChevronDown } from "lucide-react";
+import { Loader2, Play, Pause, Check, ChevronDown, Pencil } from "lucide-react";
 import { useStudentStore, StudentProfile as StudentProfileType } from "../store/useStudentStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
@@ -13,6 +13,7 @@ import { fetchVoices } from "@/features/student/services/voiceCatalogService";
 import { DEFAULT_GEMINI_VOICE, type GeminiVoice } from "@/constants/geminiVoices";
 import { PttHotkeyConfig } from "./PttHotkeyConfig";
 import { DevicePairingModal } from "./DevicePairingModal";
+import { AvatarPickerModal } from "./AvatarPickerModal";
 import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
 import { GeneralOnboardingWizard } from "@/features/onboarding/components/GeneralOnboarding/GeneralOnboardingWizard";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
@@ -308,11 +309,12 @@ export function StudentProfile() {
     linkParent, studentStats, fetchStudentStats,
     setStudentProfile,
     voicePrefs, setListenMode,
+    avatarId, setAvatarId,
   } = useStudentStore();
   const { completeAction } = useTutorialStore();
 
   const [sidebarOpen,      setSidebarOpen]      = useState(true);
-  const avatarColor = C.genPurple;
+  const avatarColor = C.sun;
   const [soundEnabled,     setSoundEnabled]      = useState(true);
   const [parentInput,      setParentInput]       = useState("");
   const [selectedPartner,  setSelectedPartner]   = useState("");
@@ -335,6 +337,7 @@ export function StudentProfile() {
   const [isLanguageLoading, setIsLanguageLoading] = useState<boolean>(false);
   const [isLanguageSaving, setIsLanguageSaving] = useState<boolean>(false);
   const [pairingModalOpen, setPairingModalOpen] = useState<boolean>(false);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState<boolean>(false);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState<boolean>(false);
   const checkDNAStatus = useOnboardingStore((s) => s.checkDNAStatus);
 
@@ -605,13 +608,37 @@ export function StudentProfile() {
               display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center",
               marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)", ...fade(0.08),
             }}>
-              {/* Avatar — circular illustration with a fixed backdrop color */}
-              <div style={{
-                width: 88, height: 88, borderRadius: "50%",
-                boxShadow: `0 8px 24px ${avatarColor}30`, border: "3px solid white",
-                overflow: "hidden", flexShrink: 0,
-              }}>
-                <StudentAvatarIllustration bg={avatarColor} />
+              {/* Avatar — circular illustration, chosen by the student via the edit badge */}
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <div style={{
+                  width: 88, height: 88, borderRadius: "50%",
+                  boxShadow: `0 8px 24px ${avatarColor}30`, border: "3px solid white",
+                  overflow: "hidden",
+                }}>
+                  {avatarId === "graduate-girl" ? (
+                    <img
+                      src="/avatars/girl-graduate.png"
+                      alt="Girl graduate avatar"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                  ) : (
+                    <StudentAvatarIllustration bg={avatarColor} />
+                  )}
+                </div>
+                <button
+                  onClick={() => setAvatarPickerOpen(true)}
+                  aria-label="Change avatar"
+                  style={{
+                    position: "absolute", bottom: -2, right: -2,
+                    width: 28, height: 28, borderRadius: "50%",
+                    background: C.card, border: `2px solid ${C.card}`,
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", color: C.textMid,
+                  }}
+                >
+                  <Pencil size={13} />
+                </button>
               </div>
 
               <h1 style={{ fontSize: "clamp(22px,4vw,28px)", fontWeight: 800, color: C.text, marginTop: 14, fontFamily: "'Nunito',sans-serif" }}>{displayName}</h1>
@@ -1029,6 +1056,12 @@ export function StudentProfile() {
 
       <PartnerRequestModal />
       <DevicePairingModal isOpen={pairingModalOpen} onClose={() => setPairingModalOpen(false)} />
+      <AvatarPickerModal
+        isOpen={avatarPickerOpen}
+        onClose={() => setAvatarPickerOpen(false)}
+        selectedId={avatarId}
+        onSelect={setAvatarId}
+      />
 
       {/* General onboarding questionnaire — launched from the "How AI sees you" empty state */}
       {showOnboardingWizard && studentProfile && (
