@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   View, Text, TextInput, Pressable, StyleSheet, ScrollView,
-  ActivityIndicator,
+  ActivityIndicator, Image,
 } from "react-native";
 import { useRouter, Link } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,6 +11,8 @@ import { colors, fonts } from "@/theme/tokens";
 import { signIn, googleSignIn } from "@/services/authService";
 import { signInWithGoogle, GoogleSignInCancelled } from "@/services/googleAuth";
 import { useAuth } from "@/store/useAuthStore";
+
+const GENED_LOGO_WHITE = require("../assets/gened-logo-white.png");
 
 export default function SignIn() {
   const router    = useRouter();
@@ -83,12 +85,7 @@ export default function SignIn() {
         keyboardShouldPersistTaps="handled"
       >
         {/* brandmark */}
-        <View style={styles.brandmark}>
-          <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
-            <Path d="M12 3 1 8l11 5 9-4.1V15" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-            <Path d="M5 11.5V16c0 1.4 3.1 3 7 3s7-1.6 7-3v-4.5" stroke="#3fd39a" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-          </Svg>
-        </View>
+        <Image source={GENED_LOGO_WHITE} style={styles.brandLogo} resizeMode="contain" />
 
         <Text style={styles.h1}>Learn smarter,{"\n"}every single day.</Text>
         <Text style={styles.sub}>Your AI tutor for every subject — chat, practice, and track real progress.</Text>
@@ -228,11 +225,7 @@ function GoogleMark() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.navy },
-  brandmark: {
-    width: 62, height: 62, borderRadius: 20, marginTop: 28,
-    backgroundColor: "rgba(255,255,255,0.12)", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
-    alignItems: "center", justifyContent: "center",
-  },
+  brandLogo: { width: 150, height: 30, alignSelf: "flex-start", marginTop: 30 },
   h1:  { fontFamily: fonts.playfair, fontSize: 32, color: "#fff", marginTop: 26, lineHeight: 36 },
   sub: { fontFamily: fonts.dm, color: "#bcd3ee", fontSize: 14, marginTop: 10, lineHeight: 21 },
   field: {

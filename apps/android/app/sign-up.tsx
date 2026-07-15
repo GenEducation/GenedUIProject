@@ -1,17 +1,20 @@
 import React, { useState } from "react";
 import {
   View, Text, TextInput, Pressable, StyleSheet, ScrollView,
-  ActivityIndicator,
+  ActivityIndicator, Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import Svg, { Circle, Path } from "react-native-svg";
+import Svg, { Path } from "react-native-svg";
 import { colors, fonts } from "@/theme/tokens";
 import { signUp, googleSignUp, sendOtp } from "@/services/authService";
 import { signInWithGoogle, GoogleSignInCancelled } from "@/services/googleAuth";
 import { useAuth } from "@/store/useAuthStore";
 import { tutorialStore } from "@/store/useTutorialStore";
+import { RoleCarousel } from "@/components/auth/RoleCarousel";
+
+const GENED_LOGO = require("../assets/gened-logo.png");
 
 type Role = "student" | "parent";
 
@@ -214,6 +217,16 @@ export default function SignUp() {
     } finally { setLoading(false); }
   };
 
+  // Step 1 is a full-bleed onboarding carousel with its own layout/status bar.
+  if (step === 1) {
+    return (
+      <>
+        <StatusBar style="light" />
+        <RoleCarousel onSelect={selectRole} onSwitchToSignIn={() => router.replace("/sign-in")} />
+      </>
+    );
+  }
+
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <StatusBar style="dark" />
@@ -231,16 +244,8 @@ export default function SignUp() {
         contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: insets.bottom + 32 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.brand}>
-          <View style={styles.brandMark}>
-            <Text style={styles.brandMarkText}>G</Text>
-          </View>
-          <Text style={styles.brandText}>GenEducation</Text>
-        </View>
+        <Image source={GENED_LOGO} style={styles.brandLogo} resizeMode="contain" />
 
-        {step === 1 && (
-          <Step1 selected={role} onSelect={selectRole} onLogin={() => router.replace("/sign-in")} />
-        )}
 
         {step === 2 && role === "student" && (
           <Step2Student
@@ -289,53 +294,6 @@ export default function SignUp() {
         )}
       </ScrollView>
     </View>
-  );
-}
-
-/* ───────────────────────── STEP 1 — ROLE SELECT ───────────────────────── */
-function Step1({
-  selected, onSelect, onLogin,
-}: { selected: Role | null; onSelect: (r: Role) => void; onLogin: () => void }) {
-  return (
-    <View>
-      <Text style={styles.title}>Let&apos;s personalize{"\n"}your experience</Text>
-      <Text style={styles.subtitle}>Select your role to get started</Text>
-
-      <View style={{ gap: 12, marginTop: 4 }}>
-        <RoleCard
-          label="Student"
-          selected={selected === "student"}
-          onPress={() => onSelect("student")}
-          art={<StudentArt />}
-          artBg="#F1ECFF"
-        />
-        <RoleCard
-          label="Parent"
-          selected={selected === "parent"}
-          onPress={() => onSelect("parent")}
-          art={<ParentArt />}
-          artBg="#EAF1FF"
-        />
-      </View>
-
-      <LoginRow onLogin={onLogin} />
-    </View>
-  );
-}
-
-function RoleCard({
-  label, selected, onPress, art, artBg,
-}: { label: string; selected: boolean; onPress: () => void; art: React.ReactNode; artBg: string }) {
-  return (
-    <Pressable onPress={onPress} style={[styles.roleCard, selected && styles.roleCardSel]}>
-      <View style={[styles.roleArt, { backgroundColor: artBg }]}>{art}</View>
-      <Text style={styles.roleLabel}>{label}</Text>
-      {selected && (
-        <View style={styles.roleCheck}>
-          <Text style={styles.roleCheckText}>✓</Text>
-        </View>
-      )}
-    </Pressable>
   );
 }
 
@@ -761,55 +719,13 @@ function GoogleMark() {
   );
 }
 
-/* ── Role illustrations ── */
-function StudentArt() {
-  return (
-    <Svg width={58} height={58} viewBox="0 0 420 420">
-      <Path d="M165 180 Q165 140 210 140 Q255 140 255 180 L255 275 Q255 315 210 315 Q165 315 165 275 Z" fill="#22C55E" />
-      <Circle cx="210" cy="135" r="55" fill="#F4C7A1" />
-      <Path d="M160 130 Q170 60 210 70 Q255 60 265 130 Q240 95 210 100 Q180 95 160 130" fill="#1E293B" />
-      <Circle cx="190" cy="135" r="5" fill="#111" />
-      <Circle cx="230" cy="135" r="5" fill="#111" />
-      <Path d="M192 160 Q210 175 228 160" stroke="#111" strokeWidth={4} fill="none" strokeLinecap="round" />
-    </Svg>
-  );
-}
-function ParentArt() {
-  return (
-    <Svg width={58} height={58} viewBox="0 0 420 420">
-      <Path d="M150 180 Q150 140 210 140 Q270 140 270 180 L270 320 Q270 360 210 360 Q150 360 150 320 Z" fill="#2563EB" />
-      <Circle cx="210" cy="120" r="60" fill="#F4C7A1" />
-      <Path d="M150 120 Q170 40 210 55 Q255 40 270 120 Q240 90 210 95 Q180 90 150 120" fill="#111827" />
-      <Circle cx="190" cy="120" r="5" fill="#111" />
-      <Circle cx="230" cy="120" r="5" fill="#111" />
-      <Path d="M190 145 Q210 165 230 145" stroke="#111" strokeWidth={4} fill="none" strokeLinecap="round" />
-    </Svg>
-  );
-}
-
 const navy15 = "rgba(4,46,92,0.10)";
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#F4F7FB" },
   progress: { flexDirection: "row", gap: 4, paddingHorizontal: 14, paddingTop: 8 },
   progressSeg: { flex: 1, height: 5, borderRadius: 999, backgroundColor: navy15 },
   progressOn: { backgroundColor: colors.emerald },
-  brand: { flexDirection: "row", alignItems: "center", gap: 7, marginTop: 18, marginBottom: 20 },
-  brandMark: { width: 22, height: 22, borderRadius: 6, backgroundColor: colors.navy, alignItems: "center", justifyContent: "center" },
-  brandMarkText: { color: "#fff", fontFamily: fonts.dmBold, fontSize: 13 },
-  brandText: { color: colors.navy, fontFamily: fonts.dmBold, fontSize: 14 },
-
-  title: { fontFamily: fonts.playfair, fontSize: 24, color: colors.navy, lineHeight: 28 },
-  subtitle: { fontFamily: fonts.dm, fontSize: 12, color: "#042e5c80", marginTop: 8, marginBottom: 18 },
-
-  roleCard: {
-    flexDirection: "row", alignItems: "center", gap: 14, padding: 14,
-    borderRadius: 18, borderWidth: 2, borderColor: navy15, backgroundColor: "#fff",
-  },
-  roleCardSel: { borderColor: colors.emerald, backgroundColor: "#059F6D0d" },
-  roleArt: { width: 62, height: 62, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  roleLabel: { fontFamily: fonts.dmBold, fontSize: 15, color: colors.navy },
-  roleCheck: { marginLeft: "auto", width: 24, height: 24, borderRadius: 12, backgroundColor: colors.emerald, alignItems: "center", justifyContent: "center" },
-  roleCheckText: { color: "#fff", fontFamily: fonts.dmBold, fontSize: 13 },
+  brandLogo: { width: 128, height: 26, marginTop: 18, marginBottom: 20 },
 
   stepHead: { flexDirection: "row", alignItems: "center", gap: 14, marginBottom: 8 },
   backBtn: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, borderColor: navy15, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
