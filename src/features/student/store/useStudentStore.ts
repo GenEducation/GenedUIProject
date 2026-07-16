@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import * as Sentry from "@sentry/nextjs";
 import { studentService } from "../services/studentService";
 import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import { parseContent, generateHistoricalSVG, normalizeSvg } from "../utils/parseContent";
@@ -24,11 +25,13 @@ export interface StudentProfile {
   preferred_voice?: string;
   plan?: "FREE" | "PRO";
   plan_expires_at?: string | null;
+  preferred_language?: string | null;
+  secondary_languages?: string[] | null;
 }
 
 export interface ChatElement {
   id: string;
-  type: "text" | "svg" | "widget" | "image" | "visual" | "comprehension_widget" | "english_skill_view" | "interactive";
+  type: "text" | "svg" | "widget" | "image" | "visual" | "comprehension_widget" | "english_skill_view" | "interactive" | "pointer_ref";
   content: string;
   meta?: {
     // existing visual meta
@@ -88,6 +91,11 @@ export interface ChatMessage {
   sender: "user" | "ai";
   timestamp: string;
   isPlanning?: boolean;
+  // Set on the finalized greeting message when it was sent via the deferred
+  // new-session navigation flow (see startNewChatSession) — signals
+  // ChatMessageBubble to replay the typing effect on its first mount, since
+  // the stream usually finishes before the router.push completes.
+  replayTyping?: boolean;
   options?: string[];
   statusText?: string;
   toolStatus?: string;
@@ -111,7 +119,21 @@ export interface ChatSession {
   chatMode?: "text" | "voice";
   chapter_completion_percentage?: number;
   chapter_name?: string;
+  // Persistent modality/origin from the backend (chat_sessions.source):
+  // "voice" / "device" reopen in the voice UI; "webapp" / "chat" / undefined reopen in chat.
+  source?: string;
+  // Whether the session has been completed (no further turns expected).
+  is_complete?: boolean;
+  orchestrator_state?: any;
 }
+
+/** Voice-origin sessions reopen in the voice UI; everything else is chat. */
+export const isVoiceSession = (chat?: { source?: string } | null): boolean =>
+  chat?.source === "voice" || chat?.source === "device";
+
+/** Route a session to the correct surface based on its persisted modality. */
+export const sessionRoutePath = (chat: { id: string; source?: string }): string =>
+  isVoiceSession(chat) ? `/student/voice/${chat.id}` : `/student/chat/${chat.id}`;
 
 export interface SubjectItem {
   id: string;
@@ -220,7 +242,7 @@ const MAX_CACHED_SESSIONS = 10;
 const manageCacheEviction = (cache: Record<string, ChatMessage[]>, newSessionId: string, newMessages: ChatMessage[]) => {
   const updatedCache = { ...cache, [newSessionId]: newMessages };
   const sessionIds = Object.keys(updatedCache);
-  
+
   if (sessionIds.length > MAX_CACHED_SESSIONS) {
     // Simple FIFO eviction: remove the first key (oldest)
     const oldestSessionId = sessionIds[0];
@@ -231,7 +253,7 @@ const manageCacheEviction = (cache: Record<string, ChatMessage[]>, newSessionId:
       delete updatedCache[sessionIds[1]];
     }
   }
-  
+
   return updatedCache;
 };
 
@@ -283,8 +305,15 @@ export interface StudentState {
   studentStats: { currentStreak: number; longestStreak: number; totalSessions: number } | null;
   isStatsLoading: boolean;
   sessionMode: "chat" | "voice" | null;
+  // True while a brand-new chat is being created and we're waiting for the
+  // backend's session_id chunk before navigating to the chat page.
+  isStartingSession: boolean;
+  // One-shot navigation callback invoked with the real session_id once the
+  // backend assigns it (set by startNewChatSession).
+  pendingSessionNavigation: ((sessionId: string) => void) | null;
   voicePrefs: { listenMode: "continuous" | "ptt"; pttHotkey: string; };
   pttHeld: boolean;
+  avatarId: AvatarId;
 
   // ── Doubt / Study Mode ───────────────────────────────────────────────────────
   /** Resolved mode for the current turn — updated optimistically on send and confirmed on done event */
@@ -349,9 +378,11 @@ export interface StudentState {
   beginPttUtterance: () => void;
   endPttUtterance: () => void;
   openNewSession: (agent: AgentItem, mode: "chat" | "voice") => void;
+  startNewChatSession: (agent: AgentItem, navigate: (sessionId: string) => void) => void;
   initNewVoiceSession: (agentId: string) => void;
   setListenMode: (mode: "continuous" | "ptt") => void;
   setPttHotkey: (key: string) => void;
+  setAvatarId: (id: AvatarId) => void;
 
   // ── Chapter PDF Viewer Actions ───────────────────────────────────────────────
   openChapterPdf: () => Promise<void>;
@@ -386,6 +417,16 @@ export interface StudentState {
 }
 
 // -- Store --------------------------------------------------------------------─
+
+export type AvatarId = "graduate-boy" | "graduate-girl";
+
+const getInitialAvatarId = (): AvatarId => {
+  if (typeof window === "undefined") {
+    return "graduate-boy";
+  }
+  const saved = localStorage.getItem("gened_avatar_id");
+  return saved === "graduate-girl" ? "graduate-girl" : "graduate-boy";
+};
 
 const getInitialVoicePrefs = () => {
   if (typeof window === "undefined") {
@@ -442,8 +483,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   studentStats: null,
   isStatsLoading: false,
   sessionMode: null,
+  isStartingSession: false,
+  pendingSessionNavigation: null,
   voicePrefs: getInitialVoicePrefs(),
   pttHeld: false,
+  avatarId: getInitialAvatarId(),
   chatQueryMode: "study",
   chatQueryModePinned: false,
   // Chapter PDF viewer initial state
@@ -466,6 +510,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   comprehensionResults: {},
   interactiveResults: {},
   logoutStudent: () => {
+    Sentry.setUser(null);
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");
     localStorage.removeItem("gened_user_profile");
@@ -489,7 +534,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       isRateLimitHit: false,
       rateLimitMessage: null,
       comprehensionResults: {},
-  interactiveResults: {},
+      interactiveResults: {},
     });
     window.location.href = "/";
   },
@@ -522,7 +567,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   fetchOnboardingStatus: async () => {
     const { studentProfile, isOnboardingLoading } = get();
     if (!studentProfile || isOnboardingLoading) return;
-    
+
     set({ isOnboardingLoading: true });
     try {
       const status = await studentService.fetchOnboardingStatus(studentProfile.user_id);
@@ -579,9 +624,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         const raw = (s.subject_agent || "").toLowerCase();
         const derivedSubject = raw.includes("math") ? "mathematics"
           : raw.includes("english") ? "english"
-          : raw.includes("science") ? "science"
-          : raw.includes("hindi") ? "hindi"
-          : (s.subject || "");
+            : raw.includes("science") ? "science"
+              : raw.includes("hindi") ? "hindi"
+                : (s.subject || "");
 
         return {
           id: s.session_id,
@@ -598,6 +643,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             ? s.chapter_completion_percentage
             : undefined,
           chapter_name: s.chapter_name || "",
+          source: s.source,
+          is_complete: !!s.is_complete,
+          // Mirror persisted modality onto the client-only chatMode flag.
+          chatMode: (s.source === "voice" || s.source === "device") ? "voice" : "text",
         };
       });
 
@@ -783,18 +832,25 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     const controller = new AbortController();
     set({ isHistoryLoading: true, historyAbortController: controller });
 
-    try {
-      const response = await authFetch(`${API_BASE_URL}/get-history`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: studentProfile.user_id,
-          session_id: sessionId,
-        }),
-        signal: controller.signal,
-      });
+    const chat = get().recentChats.find((c) => c.id === sessionId);
+    const isVoice = isVoiceSession(chat) || (typeof window !== "undefined" && window.location.pathname.includes("/student/voice/"));
 
-      const data = await response.json();
+    try {
+      let data;
+      if (isVoice) {
+        data = await studentService.fetchVoiceSessionRestore(sessionId, controller.signal);
+      } else {
+        const response = await authFetch(`${API_BASE_URL}/get-history`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: studentProfile.user_id,
+            session_id: sessionId,
+          }),
+          signal: controller.signal,
+        });
+        data = await response.json();
+      }
 
       // Extract subject from history if activeChat is missing it or has "General"
       const historySubject = data.history?.[0]?.meta_data?.subject;
@@ -809,15 +865,15 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             text: content.replace(/(?:<<|<)(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)[\s\S]*?(?:>>|>)/g, "").replace(/<svg[\s\S]*?<\/svg>/g, "").trim(),
             elements:
               elements.length > 1 ||
-              (elements.length === 1 && elements[0].type !== "text")
+                (elements.length === 1 && elements[0].type !== "text")
                 ? elements
                 : undefined,
             sender: h.role === "user" ? "user" : "ai",
             timestamp: h.created_at
               ? new Date(h.created_at).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
+                hour: "2-digit",
+                minute: "2-digit",
+              })
               : "",
             actions: h.meta_data?.actions || undefined,
           };
@@ -847,6 +903,19 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         let updatedActiveChat = activeChat;
         if (isActive && activeChat && historySubject && (!activeChat.subject || activeChat.subject === "General")) {
           updatedActiveChat = { ...activeChat, subject: historySubject };
+        }
+        // Carry persisted modality + completion from the history payload so the voice
+        // resume UI (Resume vs. "Session Completed") is correct even on a cold URL load.
+        if (isActive && updatedActiveChat) {
+          updatedActiveChat = {
+            ...updatedActiveChat,
+            source: data.source ?? updatedActiveChat.source,
+            is_complete: typeof data.is_complete === "boolean" ? data.is_complete : updatedActiveChat.is_complete,
+            chatMode: (data.source === "voice" || data.source === "device")
+              ? "voice"
+              : updatedActiveChat.chatMode,
+            orchestrator_state: data.orchestrator_state ?? null,
+          };
         }
 
         return {
@@ -910,13 +979,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       fetchSessions(); // Load history in background
       const profile = get().studentProfile;
       const agents = get().availableAgents;
-      
+
       // 1. Try to find the specific agent requested in URL
       // 2. Otherwise try to find an agent for the student's grade
       // 3. Fallback to first available
-      const targetAgent = (agentId ? agents.find(a => a.agent_id === agentId) : null) || 
-                          agents.find(a => a.grade === profile?.grade) || 
-                          agents[0];
+      const targetAgent = (agentId ? agents.find(a => a.agent_id === agentId) : null) ||
+        agents.find(a => a.grade === profile?.grade) ||
+        agents[0];
 
       if (targetAgent) {
         openNewChat(targetAgent);
@@ -1233,324 +1302,324 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       await voiceService.startSession(
         studentProfile.user_id,
         (event: any) => {
-        if (event.type === "connected") {
-          set({ voiceSessionStatus: "active" });
-        } else if (event.type === "disconnected") {
-          set({ voiceSessionStatus: "idle" });
-        } else if (event.type === "error") {
-          console.log("🎙️ [StudentStore] Voice session error event received:", event);
-          if (event.error === "rate_limit_exceeded") {
-            console.log("🎙️ [StudentStore] Setting isRateLimitHit to true");
-            set({ 
-              voiceSessionStatus: "error",
-              isRateLimitHit: true,
-              rateLimitMessage: "Daily limit reached. Please upgrade to Pro for more."
-            });
-          } else {
-            set({ voiceSessionStatus: "error" });
-          }
-        } else if (event.type === "session_id") {
-          // Update activeChat with the real session_id from backend
-          const { activeChat, fetchSessions } = get();
-          if (
-            activeChat &&
-            (activeChat.id === "new" || activeChat.id === "new-focused")
-          ) {
-            const newSessionId = event.session_id;
+          if (event.type === "connected") {
+            set({ voiceSessionStatus: "active" });
+          } else if (event.type === "disconnected") {
+            set({ voiceSessionStatus: "idle" });
+          } else if (event.type === "error") {
+            console.log("🎙️ [StudentStore] Voice session error event received:", event);
+            if (event.error === "rate_limit_exceeded") {
+              console.log("🎙️ [StudentStore] Setting isRateLimitHit to true");
+              set({
+                voiceSessionStatus: "error",
+                isRateLimitHit: true,
+                rateLimitMessage: "Daily limit reached. Please upgrade to Pro for more."
+              });
+            } else {
+              set({ voiceSessionStatus: "error" });
+            }
+          } else if (event.type === "session_id") {
+            // Update activeChat with the real session_id from backend
+            const { activeChat, fetchSessions } = get();
+            if (
+              activeChat &&
+              (activeChat.id === "new" || activeChat.id === "new-focused")
+            ) {
+              const newSessionId = event.session_id;
 
-            // 1. Update the store
+              // 1. Update the store
+              set((state) => ({
+                activeChat: state.activeChat
+                  ? { ...state.activeChat, session_id: newSessionId }
+                  : null,
+              }));
+
+              // 2. Update the URL
+              window.history.pushState(
+                {},
+                "",
+                `/student?session=${newSessionId}`,
+              );
+
+              // 3. Refresh sidebar to show the new chat (reset guard so chapter_name gets populated)
+              set({ hasFetchedSessions: false });
+              fetchSessions();
+            }
+          } else if (event.type === "entry_resolved") {
+            // Update chat metadata when entry phase completes.
+            // chapter_name (not just lastTopic) must be set so the "View textbook" button activates.
             set((state) => ({
               activeChat: state.activeChat
-                ? { ...state.activeChat, session_id: newSessionId }
-                : null,
-            }));
-
-            // 2. Update the URL
-            window.history.pushState(
-              {},
-              "",
-              `/student?session=${newSessionId}`,
-            );
-
-            // 3. Refresh sidebar to show the new chat (reset guard so chapter_name gets populated)
-            set({ hasFetchedSessions: false });
-            fetchSessions();
-          }
-        } else if (event.type === "entry_resolved") {
-          // Update chat metadata when entry phase completes.
-          // chapter_name (not just lastTopic) must be set so the "View textbook" button activates.
-          set((state) => ({
-            activeChat: state.activeChat
-              ? {
+                ? {
                   ...state.activeChat,
                   subject: event.subject,
                   lastTopic: event.chapter,
                   // Preserve existing chapter_name on resume; set from event on new/entry-phase sessions.
                   chapter_name: state.activeChat.chapter_name || event.chapter || state.activeChat.chapter_name,
                 }
-              : null,
-          }));
-          // Refresh sessions so DB-persisted chapter_name merges back into the sidebar entry.
-          const { fetchSessions: refreshSessions } = get();
-          set({ hasFetchedSessions: false });
-          refreshSessions();
-        } else if (event.type === "planning") {
-          const { text } = event;
-          set((state) => {
-            const lastMsg = state.messages[state.messages.length - 1];
-            const isContinuingPlanning = 
-              lastMsg && 
-              lastMsg.sender === "ai" && 
-              lastMsg.isPlanning && 
-              state.streamingMessageId === lastMsg.id;
+                : null,
+            }));
+            // Refresh sessions so DB-persisted chapter_name merges back into the sidebar entry.
+            const { fetchSessions: refreshSessions } = get();
+            set({ hasFetchedSessions: false });
+            refreshSessions();
+          } else if (event.type === "planning") {
+            const { text } = event;
+            set((state) => {
+              const lastMsg = state.messages[state.messages.length - 1];
+              const isContinuingPlanning =
+                lastMsg &&
+                lastMsg.sender === "ai" &&
+                lastMsg.isPlanning &&
+                state.streamingMessageId === lastMsg.id;
 
-            let updatedMessages = [...state.messages];
-            let newId = state.streamingMessageId;
+              let updatedMessages = [...state.messages];
+              let newId = state.streamingMessageId;
 
-            if (isContinuingPlanning) {
-              updatedMessages[updatedMessages.length - 1] = {
-                ...lastMsg,
-                text: text || "Thinking...",
+              if (isContinuingPlanning) {
+                updatedMessages[updatedMessages.length - 1] = {
+                  ...lastMsg,
+                  text: text || "Thinking...",
+                };
+              } else {
+                newId = `planning-${Date.now()}`;
+                updatedMessages.push({
+                  id: newId,
+                  text: text || "Thinking...",
+                  sender: "ai",
+                  isPlanning: true,
+                  timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                });
+              }
+
+              return {
+                messages: updatedMessages,
+                streamingMessageId: newId,
+                isAITyping: true,
               };
-            } else {
-              newId = `planning-${Date.now()}`;
-              updatedMessages.push({
-                id: newId,
-                text: text || "Thinking...",
-                sender: "ai",
-                isPlanning: true,
-                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-              });
+            });
+          } else if (event.type === "turn_complete") {
+            set({ isAITyping: false, streamingMessageId: null });
+          } else if (event.type === "pointer") {
+            const spec = parsePointerEvent(event);
+            if (spec) get().setPointer(spec);
+          } else if (event.type === "pointer_clear") {
+            get().clearPointer();
+          } else if (event.type === "status") {
+            if (event.phase !== "teaching") {
+              set({ isAITyping: false });
             }
+          } else if (event.type === "tool_status") {
+            set((state) => {
+              const updatedMessages = [...state.messages];
+              let lastMsg = updatedMessages[updatedMessages.length - 1];
+              let newStreamingId = state.streamingMessageId;
 
-            return {
-              messages: updatedMessages,
-              streamingMessageId: newId,
-              isAITyping: true,
-            };
-          });
-        } else if (event.type === "turn_complete") {
-          set({ isAITyping: false, streamingMessageId: null });
-        } else if (event.type === "pointer") {
-          const spec = parsePointerEvent(event);
-          if (spec) get().setPointer(spec);
-        } else if (event.type === "pointer_clear") {
-          get().clearPointer();
-        } else if (event.type === "status") {
-          if (event.phase !== "teaching") {
-            set({ isAITyping: false });
+              if (!lastMsg || lastMsg.sender === "user") {
+                const newId = `voice-tool-${Date.now()}`;
+                lastMsg = {
+                  id: newId,
+                  text: "",
+                  sender: "ai",
+                  timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                  toolStatus: event.message
+                };
+                updatedMessages.push(lastMsg);
+                newStreamingId = newId;
+              } else {
+                updatedMessages[updatedMessages.length - 1] = {
+                  ...lastMsg,
+                  toolStatus: event.message
+                };
+              }
+              return { messages: updatedMessages, isAITyping: true, streamingMessageId: newStreamingId };
+            });
+          } else if (event.type === "visual_block" || event.type === "visual_error") {
+            set((state) => {
+              const updatedMessages = [...state.messages];
+              let lastMsgIdx = updatedMessages.length - 1;
+              let lastMsg = updatedMessages[lastMsgIdx];
+              let newStreamingId = state.streamingMessageId;
+
+              if (!lastMsg || lastMsg.sender === "user") {
+                const newId = `voice-visual-${Date.now()}`;
+                lastMsg = {
+                  id: newId,
+                  text: "",
+                  sender: "ai",
+                  timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                };
+                updatedMessages.push(lastMsg);
+                lastMsgIdx = updatedMessages.length - 1;
+                newStreamingId = newId;
+              }
+
+              if (lastMsgIdx >= 0) {
+                // Keep the spoken transcript whole in `text` and store the visual as a
+                // visual-only element. Do NOT snapshot the in-progress text into an element:
+                // that split the text mid-word and switched its font when a visual arrived
+                // (and previously duplicated it). The renderer shows `text` then the visuals.
+                const elements = lastMsg.elements ? [...lastMsg.elements] : [];
+
+                if (event.type === "visual_error") {
+                  elements.push({
+                    id: `visual-error-${Date.now()}`,
+                    type: "visual",
+                    content: "error",
+                    meta: {
+                      engine: event.engine || "unknown",
+                      label: event.label || "Visual",
+                      message: event.message,
+                      fallback_text: event.fallback_text || "[Visual Error]"
+                    }
+                  });
+                } else {
+                  const engine = event.engine || event.meta?.engine || "p5sketch";
+                  elements.push({
+                    id: `visual-${Date.now()}-${elements.length}`,
+                    type: "visual",
+                    content: engine,
+                    meta: {
+                      engine,
+                      label: event.label || "Visual",
+                      code: event.code,
+                      commands: event.commands,
+                      image: event.image,
+                      options: event.options,
+                      meta: event.meta
+                    }
+                  });
+                }
+
+                updatedMessages[lastMsgIdx] = {
+                  ...lastMsg,
+                  elements,
+                  toolStatus: undefined
+                };
+              }
+              return { messages: updatedMessages, streamingMessageId: newStreamingId };
+            });
+          } else if (event.type === "math_widget" || event.type === "math_widget_error") {
+            set((state) => {
+              const updatedMessages = [...state.messages];
+              let lastMsgIdx = updatedMessages.length - 1;
+              let lastMsg = updatedMessages[lastMsgIdx];
+              let newStreamingId = state.streamingMessageId;
+
+              if (!lastMsg || lastMsg.sender === "user") {
+                const newId = `voice-math-${Date.now()}`;
+                lastMsg = {
+                  id: newId,
+                  text: "",
+                  sender: "ai",
+                  timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                };
+                updatedMessages.push(lastMsg);
+                lastMsgIdx = updatedMessages.length - 1;
+                newStreamingId = newId;
+              }
+
+              if (lastMsgIdx >= 0) {
+                // See visual_block handler: keep the transcript whole in `text`; store only
+                // the widget as a visual element.
+                const elements = lastMsg.elements ? [...lastMsg.elements] : [];
+
+                if (event.type === "math_widget_error") {
+                  elements.push({
+                    id: `math-error-${Date.now()}`,
+                    type: "text",
+                    content: event.fallback_text || "[Math Widget Error]",
+                  });
+                } else {
+                  elements.push({
+                    id: `visual-${Date.now()}-${elements.length}`,
+                    type: "visual",
+                    content: "desmos",
+                    meta: {
+                      engine: "desmos",
+                      label: "Graph",
+                      options: { expression: event.expression, ...event.options }
+                    }
+                  });
+                }
+
+                updatedMessages[lastMsgIdx] = {
+                  ...lastMsg,
+                  elements,
+                  toolStatus: undefined
+                };
+              }
+              return { messages: updatedMessages, streamingMessageId: newStreamingId };
+            });
+          } else if (event.type === "interactive_block" || event.type === "interactive_block_error") {
+            // Mirrors the visual_block voice handler. Inert until the backend voice node
+            // emits interactive_block; the renderer (MessageElements → InteractiveBlock)
+            // already handles type:"interactive".
+            set((state) => {
+              const updatedMessages = [...state.messages];
+              let lastMsgIdx = updatedMessages.length - 1;
+              let lastMsg = updatedMessages[lastMsgIdx];
+              let newStreamingId = state.streamingMessageId;
+
+              if (!lastMsg || lastMsg.sender === "user") {
+                const newId = `voice-interactive-${Date.now()}`;
+                lastMsg = {
+                  id: newId,
+                  text: "",
+                  sender: "ai",
+                  timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                };
+                updatedMessages.push(lastMsg);
+                lastMsgIdx = updatedMessages.length - 1;
+                newStreamingId = newId;
+              }
+
+              if (lastMsgIdx >= 0) {
+                const elements = lastMsg.elements ? [...lastMsg.elements] : [];
+
+                if (event.type === "interactive_block_error") {
+                  elements.push({
+                    id: `interactive-error-${Date.now()}`,
+                    type: "interactive",
+                    content: "error",
+                    meta: {
+                      interactive_type: event.interactive_type || "unknown",
+                      directive_id: event.directive_id,
+                      label: event.label || "Activity",
+                      message: event.message,
+                      fallback_text: event.fallback_text || "[Interactive Block Error]",
+                      is_fallback: true,
+                    },
+                  });
+                } else {
+                  elements.push({
+                    id: `interactive-${Date.now()}-${elements.length}`,
+                    type: "interactive",
+                    content: event.interactive_type || "interactive",
+                    meta: {
+                      directive_id: event.directive_id,
+                      interactive_type: event.interactive_type,
+                      label: event.label,
+                      question: event.prompt,
+                      render: event.render,
+                      interaction: event.interaction,
+                      validation: event.validation,
+                      anchor: event.anchor,
+                      interaction_type: event.meta?.interaction_type,
+                      ...(event.meta || {}),
+                    },
+                  });
+                }
+
+                updatedMessages[lastMsgIdx] = {
+                  ...lastMsg,
+                  elements,
+                  toolStatus: undefined
+                };
+              }
+              return { messages: updatedMessages, streamingMessageId: newStreamingId };
+            });
           }
-        } else if (event.type === "tool_status") {
-          set((state) => {
-            const updatedMessages = [...state.messages];
-            let lastMsg = updatedMessages[updatedMessages.length - 1];
-            let newStreamingId = state.streamingMessageId;
-            
-            if (!lastMsg || lastMsg.sender === "user") {
-              const newId = `voice-tool-${Date.now()}`;
-              lastMsg = {
-                id: newId,
-                text: "",
-                sender: "ai",
-                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                toolStatus: event.message
-              };
-              updatedMessages.push(lastMsg);
-              newStreamingId = newId;
-            } else {
-              updatedMessages[updatedMessages.length - 1] = {
-                ...lastMsg,
-                toolStatus: event.message
-              };
-            }
-            return { messages: updatedMessages, isAITyping: true, streamingMessageId: newStreamingId };
-          });
-        } else if (event.type === "visual_block" || event.type === "visual_error") {
-          set((state) => {
-            const updatedMessages = [...state.messages];
-            let lastMsgIdx = updatedMessages.length - 1;
-            let lastMsg = updatedMessages[lastMsgIdx];
-            let newStreamingId = state.streamingMessageId;
-
-            if (!lastMsg || lastMsg.sender === "user") {
-              const newId = `voice-visual-${Date.now()}`;
-              lastMsg = {
-                id: newId,
-                text: "",
-                sender: "ai",
-                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-              };
-              updatedMessages.push(lastMsg);
-              lastMsgIdx = updatedMessages.length - 1;
-              newStreamingId = newId;
-            }
-
-            if (lastMsgIdx >= 0) {
-              // Keep the spoken transcript whole in `text` and store the visual as a
-              // visual-only element. Do NOT snapshot the in-progress text into an element:
-              // that split the text mid-word and switched its font when a visual arrived
-              // (and previously duplicated it). The renderer shows `text` then the visuals.
-              const elements = lastMsg.elements ? [...lastMsg.elements] : [];
-
-              if (event.type === "visual_error") {
-                elements.push({
-                  id: `visual-error-${Date.now()}`,
-                  type: "visual",
-                  content: "error",
-                  meta: {
-                    engine: event.engine || "unknown",
-                    label: event.label || "Visual",
-                    message: event.message,
-                    fallback_text: event.fallback_text || "[Visual Error]"
-                  }
-                });
-              } else {
-                const engine = event.engine || event.meta?.engine || "p5sketch";
-                elements.push({
-                  id: `visual-${Date.now()}-${elements.length}`,
-                  type: "visual",
-                  content: engine,
-                  meta: {
-                    engine,
-                    label: event.label || "Visual",
-                    code: event.code,
-                    commands: event.commands,
-                    image: event.image,
-                    options: event.options,
-                    meta: event.meta
-                  }
-                });
-              }
-
-              updatedMessages[lastMsgIdx] = {
-                ...lastMsg,
-                elements,
-                toolStatus: undefined
-              };
-            }
-            return { messages: updatedMessages, streamingMessageId: newStreamingId };
-          });
-        } else if (event.type === "math_widget" || event.type === "math_widget_error") {
-          set((state) => {
-            const updatedMessages = [...state.messages];
-            let lastMsgIdx = updatedMessages.length - 1;
-            let lastMsg = updatedMessages[lastMsgIdx];
-            let newStreamingId = state.streamingMessageId;
-
-            if (!lastMsg || lastMsg.sender === "user") {
-              const newId = `voice-math-${Date.now()}`;
-              lastMsg = {
-                id: newId,
-                text: "",
-                sender: "ai",
-                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-              };
-              updatedMessages.push(lastMsg);
-              lastMsgIdx = updatedMessages.length - 1;
-              newStreamingId = newId;
-            }
-
-            if (lastMsgIdx >= 0) {
-              // See visual_block handler: keep the transcript whole in `text`; store only
-              // the widget as a visual element.
-              const elements = lastMsg.elements ? [...lastMsg.elements] : [];
-
-              if (event.type === "math_widget_error") {
-                elements.push({
-                  id: `math-error-${Date.now()}`,
-                  type: "text",
-                  content: event.fallback_text || "[Math Widget Error]",
-                });
-              } else {
-                elements.push({
-                  id: `visual-${Date.now()}-${elements.length}`,
-                  type: "visual",
-                  content: "desmos",
-                  meta: {
-                    engine: "desmos",
-                    label: "Graph",
-                    options: { expression: event.expression, ...event.options }
-                  }
-                });
-              }
-
-              updatedMessages[lastMsgIdx] = {
-                ...lastMsg,
-                elements,
-                toolStatus: undefined
-              };
-            }
-            return { messages: updatedMessages, streamingMessageId: newStreamingId };
-          });
-        } else if (event.type === "interactive_block" || event.type === "interactive_block_error") {
-          // Mirrors the visual_block voice handler. Inert until the backend voice node
-          // emits interactive_block; the renderer (MessageElements → InteractiveBlock)
-          // already handles type:"interactive".
-          set((state) => {
-            const updatedMessages = [...state.messages];
-            let lastMsgIdx = updatedMessages.length - 1;
-            let lastMsg = updatedMessages[lastMsgIdx];
-            let newStreamingId = state.streamingMessageId;
-
-            if (!lastMsg || lastMsg.sender === "user") {
-              const newId = `voice-interactive-${Date.now()}`;
-              lastMsg = {
-                id: newId,
-                text: "",
-                sender: "ai",
-                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-              };
-              updatedMessages.push(lastMsg);
-              lastMsgIdx = updatedMessages.length - 1;
-              newStreamingId = newId;
-            }
-
-            if (lastMsgIdx >= 0) {
-              const elements = lastMsg.elements ? [...lastMsg.elements] : [];
-
-              if (event.type === "interactive_block_error") {
-                elements.push({
-                  id: `interactive-error-${Date.now()}`,
-                  type: "interactive",
-                  content: "error",
-                  meta: {
-                    interactive_type: event.interactive_type || "unknown",
-                    directive_id: event.directive_id,
-                    label: event.label || "Activity",
-                    message: event.message,
-                    fallback_text: event.fallback_text || "[Interactive Block Error]",
-                    is_fallback: true,
-                  },
-                });
-              } else {
-                elements.push({
-                  id: `interactive-${Date.now()}-${elements.length}`,
-                  type: "interactive",
-                  content: event.interactive_type || "interactive",
-                  meta: {
-                    directive_id: event.directive_id,
-                    interactive_type: event.interactive_type,
-                    label: event.label,
-                    question: event.prompt,
-                    render: event.render,
-                    interaction: event.interaction,
-                    validation: event.validation,
-                    anchor: event.anchor,
-                    interaction_type: event.meta?.interaction_type,
-                    ...(event.meta || {}),
-                  },
-                });
-              }
-
-              updatedMessages[lastMsgIdx] = {
-                ...lastMsg,
-                elements,
-                toolStatus: undefined
-              };
-            }
-            return { messages: updatedMessages, streamingMessageId: newStreamingId };
-          });
-        }
         },
         (content, role) => {
           const { activeChat } = get();
@@ -1559,7 +1628,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           set((state) => {
             const lastMsg = state.messages[state.messages.length - 1];
             const sender = role === "user" ? "user" : "ai";
-            
+
             // Continuing the in-flight streamed message (same sender + still streaming).
             // appendStreamedText handles the planning-replacement case internally via the
             // message's isPlanning flag.
@@ -1595,7 +1664,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         },
         effectiveChat.session_id,
         effectiveChat.subject,
-        undefined,
+        // Explicit webapp voice endpoint — do not rely on voiceService's default,
+        // which is the tool-free device endpoint (/ws/april-live-graph-device).
+        "/ws/april-live-graph",
         studentProfile.preferred_voice,
         // Pass chapter context so backend can bypass entry phase when chapter is pre-selected
         // and resolve document access in both new and resumed sessions.
@@ -1622,7 +1693,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   toggleMute: () => {
     const { isMuted } = get();
     const newMutedState = !isMuted;
-    
+
     try {
       voiceService.setMuted(newMutedState);
       set({ isMuted: newMutedState });
@@ -1663,6 +1734,21 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       isAgentPickerOpen: false,
       isAITyping: false,
     }));
+  },
+
+  /**
+   * Start a brand-new chat WITHOUT navigating yet. The greeting request is
+   * fired from the current page (home/hub); once the backend streams back the
+   * real session_id, `navigate` is invoked with it so the caller can
+   * router.push straight to /student/chat/{realId}. This avoids the mid-stream
+   * "new" → realId URL swap that remounted the chat view and killed the
+   * greeting's typing animation.
+   */
+  startNewChatSession: (agent: AgentItem, navigate: (sessionId: string) => void) => {
+    if (get().isStartingSession) return; // ignore double-clicks
+    get().openNewSession(agent, "chat");
+    set({ isStartingSession: true, pendingSessionNavigation: navigate });
+    get().sendMessage("Hello");
   },
 
   initNewVoiceSession: (agentId: string) => {
@@ -1707,6 +1793,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       }
       return { voicePrefs: newPrefs };
     });
+  },
+
+  setAvatarId: (id) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("gened_avatar_id", id);
+    }
+    set({ avatarId: id });
   },
 
   // ── English Skill Mode Actions ─────────────────────────────────────────────
@@ -1765,9 +1858,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       if (activeDirectiveId === directiveId) return;
     }
 
-    set({ 
-      activeDirectiveId: directiveId, 
-      recordingState: "ready", 
+    set({
+      activeDirectiveId: directiveId,
+      recordingState: "ready",
       recordingPrompt: null,
       recordingError: null
     });
@@ -1777,7 +1870,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   confirmStartRecording: () => {
     const { activeDirectiveId, activeChat, studentProfile, recordingState } = get();
     if (!activeDirectiveId) return;
-    
+
     // Guard: Don't start if already in progress
     if (recordingState === "permission_request" || recordingState === "recording") {
       console.warn("[Recording] Already starting or recording, ignoring click");
@@ -1786,11 +1879,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
     console.log("[Recording] confirmStartRecording triggered", { activeDirectiveId, currentState: recordingState });
     set({ recordingState: "permission_request" });
-    
+
     import("@/features/student/services/audioRecorderService").then(({ audioRecorderService }) => {
       const sessionId = activeChat?.session_id || activeChat?.id || "";
       const studentId = studentProfile?.user_id || "";
-      
+
       audioRecorderService.start(activeDirectiveId, sessionId, studentId, {
         onStateChange: (state) => {
           set({ recordingState: state });
@@ -1831,8 +1924,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     import("@/features/student/services/audioRecorderService").then(({ audioRecorderService }) => {
       audioRecorderService.stop();
     });
-    set({ 
-      recordingState: "idle", 
+    set({
+      recordingState: "idle",
       recordingPrompt: null,
       recordingError: null,
       oralAnalysisResult: null
@@ -1869,15 +1962,15 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
     try {
       const result = await studentService.submitOralResult(sessionId, directiveId, gcsUri);
-      set({ 
+      set({
         recordingState: "completed",
-        oralAnalysisResult: result 
+        oralAnalysisResult: result
       });
     } catch (err) {
       console.warn("[OralResult] submission failed:", err);
-      set({ 
-        recordingState: "error", 
-        recordingError: "Failed to analyze your reading. Please try again." 
+      set({
+        recordingState: "error",
+        recordingError: "Failed to analyze your reading. Please try again."
       });
     }
   },
@@ -1971,7 +2064,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     // Handle Hub messaging (activeChat is null) or specific new chats
     const isHubMessage = !activeChat;
     const profile = get().studentProfile;
-    
+
     // If it's a Hub message, try to find a sensible default agent for the student
     const defaultAgent = get().availableAgents.find(a => a.grade === profile?.grade) || get().availableAgents[0];
 
@@ -2028,7 +2121,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
       return {
         // Atomic update: ensure activeChat is set if it was null (Hub message)
-        activeChat: state.activeChat 
+        activeChat: state.activeChat
           ? (state.activeChat.chatMode ? state.activeChat : { ...state.activeChat, chatMode: "text" })
           : { ...effectiveChat, chatMode: "text" },
         messages:
@@ -2045,6 +2138,27 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         streamingMessageId: streamingMsgId,
       };
     });
+
+    // Client-side TTFT/cancellation instrumentation (Phase 4 of the backend's
+    // observability roadmap — mirrors the backend's sse.stream.cancelled
+    // event, see docs/observability/frontend-instrumentation-spec.md in the
+    // MVP repo). Declared here (function scope, not inside try{}) so it's
+    // visible in the catch{} block below too. Timing-only; does not affect
+    // the streaming state machine.
+    const streamStartTime = performance.now();
+
+    // Set when the mid-stream session_id event promotes activeChat from
+    // "new"/"new-focused" to its real id — later state checks that compare
+    // against chatSentFromId must also accept this id, otherwise the visible
+    // thread stops receiving stream patches after promotion. Function-scoped
+    // so the catch{} block can use it too.
+    let promotedSessionId: string | null = null;
+
+    // Captured before the mid-stream session_id handler nulls it — true when
+    // this send is part of the deferred-navigation new-session flow, so the
+    // finalized greeting should replay its typing effect once the caller's
+    // router.push lands on the mounted chat page.
+    const isDeferredNavSend = get().pendingSessionNavigation !== null;
 
     try {
       const sessionIdToSend =
@@ -2064,6 +2178,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       const isNewFocused = effectiveChat.isFocused && isNewSession;
       const abortController = new AbortController();
       set({ chatAbortController: abortController });
+
+      let firstChunkReceived = false;
 
       // Mode resolution. The backend is the source of truth: it auto-classifies each
       // turn (entry router for new sessions, classify_session_mode for ongoing ones)
@@ -2136,10 +2252,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         const displayElements = [...els];
         const tags = /(?:<<VISUAL[\s\S]*?<<?\/VISUAL>>?)|(?:<<VISUAL[\s\S]*?\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE)[\s\S]*?(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
         const tailText = currentTextBuffer.replace(tags, "").trim();
-        
+
         if (tailText) {
           displayElements.push({
-            id: `stream-tail-${Date.now()}`,
+            id: `el-pos-${displayElements.length}`,
             type: "text",
             content: tailText
           });
@@ -2148,19 +2264,23 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         set((state) => {
           const patch = (msgs: ChatMessage[]) =>
             msgs.map((m) =>
-              m.id === streamingMsgId 
+              m.id === streamingMsgId
                 ? {
-                    ...m,
-                    text: text.replace(tags, "").trim(),
-                    elements: displayElements.length > 0 ? displayElements : undefined,
-                    toolStatus,
-                    statusText: statusText !== undefined ? statusText : currentStatusText,
-                    phase: phase !== undefined ? phase : currentPhase
-                  } 
+                  ...m,
+                  text: text.replace(tags, "").trim(),
+                  elements: displayElements.length > 0 ? displayElements : undefined,
+                  toolStatus,
+                  statusText: statusText !== undefined ? statusText : currentStatusText,
+                  phase: phase !== undefined ? phase : currentPhase
+                }
                 : m
             );
           return {
-            messages: state.activeChat?.id === chatSentFromId ? patch(state.messages) : state.messages,
+            messages:
+              state.activeChat?.id === chatSentFromId ||
+              (promotedSessionId && state.activeChat?.id === promotedSessionId)
+                ? patch(state.messages)
+                : state.messages,
             chatMessagesCache: {
               ...state.chatMessagesCache,
               [chatSentFromId]: patch(state.chatMessagesCache[chatSentFromId] || []),
@@ -2185,13 +2305,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                   lastEl.type === "svg" &&
                   lastEl.meta?.shape === newEl.meta.shape
                 ) {
-                  // Upgrade the existing element in place
-                  elements[lastIdx] = newEl;
+                  // Upgrade the existing element in place, keeping its id so
+                  // the renderer doesn't remount.
+                  elements[lastIdx] = { ...newEl, id: lastEl.id };
                 } else {
-                  elements.push(newEl);
+                  // Position-based id: if this text element occupies the same
+                  // slot the transient stream-tail did, the id matches and
+                  // React keeps the mounted typewriter instead of remounting it.
+                  elements.push({ ...newEl, id: `el-pos-${elements.length}` });
                 }
               } else {
-                elements.push(newEl);
+                elements.push({ ...newEl, id: `el-pos-${elements.length}` });
               }
             });
           }
@@ -2219,7 +2343,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         } else if (event.type === "visual_block" || event.type === "visual_error") {
           pushTextElement(currentTextBuffer);
           currentTextBuffer = "";
-          
+
           if (event.type === "visual_error") {
             elements.push({
               id: `visual-error-${Date.now()}`,
@@ -2235,11 +2359,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           } else {
             const engine = event.engine || event.meta?.engine || "p5sketch";
             const label = event.label || "Visual";
-            
+
             // Deduplication: If we already have a visual from the text stream with the same label/engine, skip this
-            const isDuplicate = elements.some(el => 
-              el.type === "visual" && 
-              el.meta?.engine === engine && 
+            const isDuplicate = elements.some(el =>
+              el.type === "visual" &&
+              el.meta?.engine === engine &&
               el.meta?.label === label
             );
 
@@ -2315,6 +2439,16 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           currentToolStatus = undefined;
           if (isPlanningUIPresented) updateUI(bufferedText, elements);
         } else if ((event.type === "chunk" || event.type === "chunks") && typeof event.text === "string") {
+          if (!firstChunkReceived) {
+            firstChunkReceived = true;
+            const ttftMs = performance.now() - streamStartTime;
+            Sentry.addBreadcrumb({
+              category: "sse",
+              message: "Tutor stream: first chunk received (TTFT)",
+              level: "info",
+              data: { ttft_ms: Math.round(ttftMs) },
+            });
+          }
           currentTextBuffer += event.text;
           bufferedText += event.text;
 
@@ -2324,11 +2458,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           let match;
           while ((match = tagRegex.exec(currentTextBuffer)) !== null) {
             const tag = match[0];
-            
+
             // 1. Finalize and push any text that appeared BEFORE the tag
             const textBefore = currentTextBuffer.substring(0, match.index);
             if (textBefore.trim()) pushTextElement(textBefore);
-            
+
             // 2. Process the tag itself
             if (tag.startsWith("<svg")) {
               elements.push({
@@ -2337,23 +2471,29 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                 content: normalizeSvg(tag),
                 meta: { isRawBackendSvg: true }
               });
+            } else if (match[1] && /^(SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)$/.test(match[1])) {
+              // English skill directives are owned by the dedicated handler below
+              // (and by the skill_action event, keyed on the real directive_id).
+              // Skipping the generic parseContent push here avoids emitting a second
+              // widget with a Date.now()-based id when the inline payload lacks a
+              // directive_id — which previously rendered the quiz/word card twice.
             } else {
               const extracted = parseContent(tag);
               const tagElement = extracted.find(el => el.type !== "text");
               if (tagElement) {
                 // Deduplication: If this is a visual block, check if it's already in elements
-                const isDuplicate = tagElement.type === "visual" && elements.some(el => 
-                  el.type === "visual" && 
-                  el.meta?.engine === tagElement.meta?.engine && 
+                const isDuplicate = tagElement.type === "visual" && elements.some(el =>
+                  el.type === "visual" &&
+                  el.meta?.engine === tagElement.meta?.engine &&
                   el.meta?.label === tagElement.meta?.label
                 );
-                
+
                 if (!isDuplicate) {
                   elements.push(tagElement);
                 }
               }
             }
-            
+
             // 3. Remove the processed part (textBefore + tag) from the active buffer
             currentTextBuffer = currentTextBuffer.substring(match.index + tag.length);
             tagRegex.lastIndex = 0; // Reset for remaining text
@@ -2421,7 +2561,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           // Mode Controller (The "What"): Prepare the UI state for a skill mode
           const { mode, payload } = event;
           const directiveType = (mode || "").toUpperCase();
-          
+
           set({ activeSkillDirective: { type: directiveType, ...payload } });
 
           // Add a dedicated reading block element if it's a speaking mode (Wave 1/2)
@@ -2528,6 +2668,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           // Wave 4: graceful degradation — log only, session continues
           console.warn("[SkillError]", event.error_type, event.message);
         } else if (event.type === "done") {
+          Sentry.addBreadcrumb({
+            category: "sse",
+            message: "Tutor stream: completed",
+            level: "info",
+            data: { total_duration_ms: Math.round(performance.now() - streamStartTime) },
+          });
           finalSessionId = event.session_id;
           finalOptions = Array.isArray(event.options) ? event.options : [];
           finalActions = Array.isArray(event.actions) ? event.actions : [];
@@ -2564,7 +2710,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       // -- Orchestrator Loop (Non-blocking) -----------------------------------
       const orchestrateUI = async () => {
         let shownStatuses = 0;
-        
+
         while (!streamDone || planningQueue.length > shownStatuses) {
           if (planningQueue.length > shownStatuses) {
             const item = planningQueue[shownStatuses];
@@ -2628,13 +2774,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           if (event.type === "session_id" && event.session_id) {
             const newSessionId = event.session_id;
             const { activeChat: currentChat, fetchSessions } = get();
-            
+
             // Sync state and URL only if we are transitioning from a new/null session
             if (!currentChat || currentChat.id === "new" || currentChat.id === "new-focused") {
-              const updatedChat: ChatSession = currentChat ? { 
-                ...currentChat, 
-                id: newSessionId, 
-                session_id: newSessionId 
+              const updatedChat: ChatSession = currentChat ? {
+                ...currentChat,
+                id: newSessionId,
+                session_id: newSessionId
               } : {
                 id: newSessionId,
                 session_id: newSessionId,
@@ -2648,7 +2794,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
               };
 
               set({ activeChat: updatedChat });
-              window.history.pushState(null, "", `/student/chat/${newSessionId}`);
+              promotedSessionId = newSessionId;
+              const pendingNav = get().pendingSessionNavigation;
+              if (pendingNav) {
+                // Deferred-navigation flow: we're still on the page the user
+                // started from — navigate to the real session URL now, so the
+                // rest of the greeting streams into a stable, mounted chat view.
+                set({ pendingSessionNavigation: null, isStartingSession: false });
+                pendingNav(newSessionId);
+              } else {
+                window.history.pushState(null, "", `/student/chat/${newSessionId}`);
+              }
               // Reset guard so fetchSessions actually runs and populates chapter_name on activeChat
               set({ hasFetchedSessions: false });
               fetchSessions();
@@ -2737,6 +2893,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           actions: finalActions.length > 0 ? finalActions : undefined,
           statusText: undefined,
           toolStatus: undefined,
+          replayTyping: isDeferredNavSend || undefined,
         };
 
         const patchMsg = (msgs: ChatMessage[]) =>
@@ -2764,7 +2921,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             (c) => c.id !== finalSessionId && c.session_id !== finalSessionId,
           );
           newRecentChats = [updatedChat, ...deduplicatedChats];
-          if (state.activeChat?.id === "new") {
+          if (
+            state.activeChat?.id === "new" ||
+            state.activeChat?.id === finalSessionId
+          ) {
             finalActiveChat = updatedChat;
           }
         } else if (chatInList) {
@@ -2790,9 +2950,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         // Migrate cache key from tempId to realId with eviction management
         const currentCached = state.chatMessagesCache[chatSentFromId] || [];
         const finalisedMessages = patchMsg(currentCached);
-        
+
         let newCache = manageCacheEviction(state.chatMessagesCache, realId, finalisedMessages);
-        
+
         if (realId !== chatSentFromId) {
           // Explicitly cleanup the temporary ID cache
           const cleanedCache = { ...newCache };
@@ -2803,7 +2963,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         const newTypingIds = state.typingChatIds.filter(
           (id) => id !== chatSentFromId,
         );
-        const isStillViewing = state.activeChat?.id === chatSentFromId;
+        const isStillViewing =
+          state.activeChat?.id === chatSentFromId ||
+          (promotedSessionId !== null && state.activeChat?.id === promotedSessionId);
 
         return {
           activeChat: finalActiveChat,
@@ -2814,11 +2976,22 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           isAITyping: isStillViewing ? false : state.isAITyping,
           streamingMessageId: null,
           chatAbortController: null,
-          activeActivity: finalActions.find(a => 
+          activeActivity: finalActions.find(a =>
             ["request_reading", "request_listening", "request_spelling", "request_repeat"].includes(a.type)
           ) || null,
         };
       });
+
+      // Safety net: if we were holding navigation for a new session but the
+      // session_id event never fired mid-stream, resolve it now (or clear it
+      // so the "starting" overlay doesn't hang forever).
+      {
+        const pendingNav = get().pendingSessionNavigation;
+        if (pendingNav) {
+          set({ pendingSessionNavigation: null, isStartingSession: false });
+          if (finalSessionId) pendingNav(finalSessionId);
+        }
+      }
     } catch (error: any) {
       const isAbort = error.name === "AbortError";
       const isRateLimit = error instanceof ApiRequestError && error.status === 429;
@@ -2826,6 +2999,16 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
       if (isAbort) {
         console.debug("Chat generation aborted by user");
+        // Client-side mirror of the backend's sse.stream.cancelled event —
+        // if this fires much more often than that backend metric, the gap
+        // points at client-side abandonment (tab-switch, navigation) rather
+        // than genuine network drops.
+        Sentry.addBreadcrumb({
+          category: "sse",
+          message: "Tutor stream: cancelled (client abort)",
+          level: "info",
+          data: { elapsed_ms: Math.round(performance.now() - streamStartTime) },
+        });
       } else if (isRateLimit) {
         set({ isRateLimitHit: true, rateLimitMessage: error.message || null });
       } else {
@@ -2858,18 +3041,21 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         const newTypingIds = state.typingChatIds.filter(
           (id) => id !== chatSentFromId,
         );
+        const isStillViewing =
+          state.activeChat?.id === chatSentFromId ||
+          (promotedSessionId !== null && state.activeChat?.id === promotedSessionId);
 
         return {
           chatMessagesCache: manageCacheEviction(state.chatMessagesCache, chatSentFromId, finishedMessages),
-          messages:
-            state.activeChat?.id === chatSentFromId
-              ? finishedMessages
-              : state.messages,
+          messages: isStillViewing ? finishedMessages : state.messages,
           typingChatIds: newTypingIds,
-          isAITyping:
-            state.activeChat?.id === chatSentFromId ? false : state.isAITyping,
+          isAITyping: isStillViewing ? false : state.isAITyping,
           streamingMessageId: null,
           chatAbortController: null,
+          // Abandon any deferred new-session navigation so the caller's
+          // "starting" overlay is dismissed on failure.
+          pendingSessionNavigation: null,
+          isStartingSession: false,
         };
       });
     }

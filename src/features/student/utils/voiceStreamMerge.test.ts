@@ -1,6 +1,6 @@
 /**
  * Regression tests for the live-voice transcript merge.
- * Run with: node --test src/features/student/utils/voiceStreamMerge.test.ts
+ * Runs under Vitest (`npm test`); uses node:assert for the assertions.
  *
  * Guards the voice transcript bugs from sessions 5a2013dd-… and 012648ad-…:
  *   - the assistant answer rendered twice around an interactive block;
@@ -8,7 +8,7 @@
  * Both came from snapshotting the in-progress text into elements. The transcript is now
  * kept whole in `text`; visuals are visual-only elements rendered after it.
  */
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 
 import { appendStreamedText } from "./voiceStreamMerge.ts";

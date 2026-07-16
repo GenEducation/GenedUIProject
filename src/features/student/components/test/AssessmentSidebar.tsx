@@ -32,17 +32,23 @@ export function AssessmentSidebar({
 
   const sidebarSections = useMemo(() => {
     if (hasPaperSections) {
-      const allQuestions = currentTest.sections.flatMap((s) => s.questions);
+      const allQuestions = currentTest.sections?.flatMap((s) => s.questions) || [];
       return currentTest.paper_meta!.sections.map((meta) => {
-        const questions = allQuestions.filter((q) => q.paper_section === meta.label);
-        return { label: meta.label, title: meta.title, questions, meta };
+        const matchingQuestions = allQuestions.filter(
+          (q) => q.paper_section === meta.label
+        );
+        return {
+          label: meta.label,
+          title: meta.title,
+          questions: matchingQuestions,
+        };
       });
     }
-    return currentTest.sections.map((s, i) => ({
+
+    return (currentTest.sections || []).map((s, i) => ({
       label: String.fromCharCode(65 + i) as PaperSection,
-      title: s.main_heading,
+      title: s.main_heading || `Section ${String.fromCharCode(65 + i)}`,
       questions: s.questions,
-      meta: null,
     }));
   }, [currentTest, hasPaperSections]);
 

@@ -3,12 +3,16 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 import Image from "next/image";
-import { useStudentStore, type AgentItem } from "../store/useStudentStore";
+import { useStudentStore, sessionRoutePath, isVoiceSession, type AgentItem } from "../store/useStudentStore";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
+import { NotificationBell } from "@/components/NotificationBell";
+import { SessionStartingOverlay } from "./SessionStartingOverlay";
+import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
 
 /* ═══ DESIGN TOKENS ═══ */
 const C = {
@@ -156,6 +160,55 @@ function Confetti({ active, onDone }: { active: boolean; onDone?: () => void }) 
   return <canvas ref={ref} className="absolute inset-0 z-50 pointer-events-none w-full h-full" />;
 }
 
+/* ═══ CUSTOM DROPDOWN ═══ */
+function FilterDropdown({ value, options, onChange, activeColor, defaultColor }: { value: string, options: string[], onChange: (v: string) => void, activeColor: string, defaultColor: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handle = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+  
+  const isActive = value !== options[0];
+  return (
+    <div className="relative" ref={ref}>
+      <button 
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 bg-white border border-[#e2e8f0] rounded-full px-4 py-1.5 text-sm font-medium outline-none cursor-pointer hover:bg-gray-50 focus:border-[#5B4DC7] focus:ring-1 focus:ring-[#5B4DC7] transition-all"
+        style={{ color: isActive ? activeColor : defaultColor }}
+      >
+        {value}
+        <ChevronDown className="w-4 h-4 text-gray-400" />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div 
+            initial={{ opacity: 0, y: -5, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -5, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-50 mt-2 left-0 min-w-full bg-white rounded-[16px] border border-[#042E5C]/10 shadow-xl overflow-hidden py-1"
+          >
+            {options.map(opt => (
+              <div 
+                key={opt}
+                onClick={() => { onChange(opt); setOpen(false); }}
+                className="px-4 py-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors whitespace-nowrap"
+                style={{ color: opt === value ? activeColor : "#1a2332", fontWeight: opt === value ? 600 : 500 }}
+              >
+                {opt}
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 /* ═══ HELPERS ═══ */
 function normalizeSubjectKey(subject: string): string {
   const lower = (subject ?? "").toLowerCase();
@@ -172,8 +225,9 @@ export function StudentHome() {
   const {
     studentProfile, recentChats, availableAgents,
     fetchSessions, fetchAvailableAgents, fetchStudentStats, fetchOnboardingStatus,
-    openNewChat, openExistingChat, openNewSession,
+    openNewChat, openExistingChat, openNewSession, startNewChatSession,
     studentStats, isAgentsLoading, isSessionsLoading, isStatsLoading,
+    avatarId,
   } = useStudentStore();
   const { checkDNAStatus } = useOnboardingStore();
   const { hasEnded, hasDismissedCelebration, dismissCelebration } = useTutorialStore();
@@ -186,6 +240,11 @@ export function StudentHome() {
   const [onboardingModal,setOnboardingModal]= useState<{ originalSubject: string; grade: number } | null>(null);
   const [showAllSessions,setShowAllSessions]= useState(false);
   const [showAllSubjects,setShowAllSubjects]= useState(false);
+
+  // Filters
+  const [filterDate, setFilterDate] = useState<string>("All Time");
+  const [filterType, setFilterType] = useState<string>("All");
+  const [filterSubject, setFilterSubject] = useState<string>("All");
 
   /* responsive sidebar */
   useEffect(() => {
@@ -232,7 +291,7 @@ export function StudentHome() {
   });
 
   /* All sessions mapped with relative time */
-  const allSessions = recentChats.map(chat => {
+  const allSessionsRaw = recentChats.map(chat => {
     const key = normalizeSubjectKey(chat.subject ?? chat.title ?? "");
     return {
       ...chat,
@@ -242,6 +301,33 @@ export function StudentHome() {
         ? Math.round(chat.chapter_completion_percentage)
         : 0,
     };
+  });
+
+  const allSessions = allSessionsRaw.filter(sess => {
+    if (filterSubject !== "All" && sess.vis.label !== filterSubject) return false;
+    
+    if (filterType !== "All") {
+      const isVoice = isVoiceSession(sess);
+      if (filterType === "Voice" && !isVoice) return false;
+      if (filterType === "Chat" && isVoice) return false;
+    }
+
+    if (filterDate !== "All Time") {
+      const now = new Date();
+      // Handle the timestamp fields available
+      const dateVal = sess.lastActive || (sess as any).created_at || (sess as any).session_date;
+      if (dateVal) {
+        const d = new Date(dateVal);
+        if (!isNaN(d.getTime())) {
+          const diffDays = (now.getTime() - d.getTime()) / 86400000;
+          if (filterDate === "Today" && d.toDateString() !== now.toDateString()) return false;
+          if (filterDate === "This Week" && diffDays > 7) return false;
+          if (filterDate === "This Month" && diffDays > 30) return false;
+        }
+      }
+    }
+    
+    return true;
   });
 
   /* Continue learning = most recent session (index 0) */
@@ -269,8 +355,12 @@ export function StudentHome() {
         grade:           agent.grade ?? studentProfile?.grade ?? 9,
       });
     } else {
-      openNewSession(agent, "chat");
-      router.push(`/student/chat/new?agentId=${agent.agent_id}`);
+      // Hold navigation until the backend assigns the real session_id, then
+      // jump straight to /student/chat/{id} so the greeting streams with the
+      // normal typing effect (no mid-stream URL swap / remount).
+      startNewChatSession(agent, (sessionId) => {
+        router.push(`/student/chat/${sessionId}`);
+      });
     }
   };
 
@@ -288,7 +378,8 @@ export function StudentHome() {
 
   const handleSessionClick = (session: typeof allSessions[0]) => {
     openExistingChat(session);
-    window.location.href = `/student/chat/${session.id}`;
+    // Voice sessions reopen in the voice UI; chat sessions in the chat UI.
+    window.location.href = sessionRoutePath(session);
   };
 
   const fade = (d = 0) => ({
@@ -302,6 +393,8 @@ export function StudentHome() {
     <div className="flex h-screen overflow-hidden relative" style={{ fontFamily: "'DM Sans','Nunito',system-ui,sans-serif", background: C.pageBg }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
 
+      <SessionStartingOverlay />
+
       {/* ── SIDEBAR ── */}
       <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -312,7 +405,7 @@ export function StudentHome() {
         {/* Mobile / collapsed topbar */}
         {!sidebarOpen && (
           <div
-            className="flex items-center flex-shrink-0 border-b"
+            className="flex items-center flex-shrink-0 border-b relative z-20"
             style={{ padding: "12px 16px", borderColor: C.border, background: C.card }}
           >
             {/* hamburger on left */}
@@ -330,8 +423,30 @@ export function StudentHome() {
               <Image src="/Logo.svg" alt="GenEd" width={90} height={32} style={{ height: 32, width: "auto" }} priority />
             </div>
 
-            {/* April avatar on right to balance */}
-            <div className="flex-shrink-0 opacity-0 pointer-events-none" style={{ width: 38 }} />
+            {/* Notification bell + profile on right, balancing the hamburger */}
+            <div className="flex-shrink-0 flex items-center gap-2">
+              {studentProfile?.user_id && (
+                <NotificationBell userId={studentProfile.user_id} align="right" />
+              )}
+              <div
+                className="cursor-pointer"
+                onClick={() => router.push("/student/profile")}
+                style={{
+                  width: 38, height: 38, borderRadius: "50%", overflow: "hidden",
+                  border: "2px solid white", boxShadow: `0 2px 8px ${C.sun}30`,
+                }}
+              >
+                {avatarId === "graduate-girl" ? (
+                  <img
+                    src="/avatars/girl-graduate.png"
+                    alt="Student avatar"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  />
+                ) : (
+                  <StudentAvatarIllustration bg={C.sun} />
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -345,7 +460,7 @@ export function StudentHome() {
           <div className="w-full mx-auto" style={{ maxWidth: 860, padding: sidebarOpen ? "36px 40px 48px" : "24px 16px 40px" }}>
 
             {/* ── GREETING HEADER ── */}
-            <div className="flex items-start justify-between mb-8" style={fade(0.06)}>
+            <div className="flex items-start justify-between mb-8 relative z-20" style={fade(0.06)}>
               <div>
                 <h1 className="font-extrabold leading-tight m-0"
                   style={{ color: C.text, fontFamily: "'Nunito',sans-serif", fontSize: "clamp(22px, 3vw, 34px)" }}>
@@ -355,9 +470,31 @@ export function StudentHome() {
                   What would you like to learn today?
                 </p>
               </div>
-              <div className="flex-shrink-0 cursor-pointer ml-4">
-                <AprilAvatar state={aprilState} size={56} />
-              </div>
+              {sidebarOpen && (
+                <div className="flex-shrink-0 flex items-center gap-3 ml-4">
+                  {studentProfile?.user_id && (
+                    <NotificationBell userId={studentProfile.user_id} align="right" />
+                  )}
+                  <div
+                    className="cursor-pointer"
+                    onClick={() => router.push("/student/profile")}
+                    style={{
+                      width: 56, height: 56, borderRadius: "50%", overflow: "hidden",
+                      border: "3px solid white", boxShadow: `0 8px 24px ${C.sun}30`,
+                    }}
+                  >
+                    {avatarId === "graduate-girl" ? (
+                      <img
+                        src="/avatars/girl-graduate.png"
+                        alt="Student avatar"
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                      />
+                    ) : (
+                      <StudentAvatarIllustration bg={C.sun} />
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ── STAT STRIP ── */}
@@ -461,6 +598,9 @@ export function StudentHome() {
                     </div>
                     <div className="font-bold truncate"
                       style={{ color: C.text, fontFamily: "'Nunito',sans-serif", fontSize: "clamp(14px, 1.6vw, 18px)" }}>
+                      <span title={isVoiceSession(continueSession) ? "Voice session" : "Chat session"} style={{ marginRight: 5 }}>
+                        {isVoiceSession(continueSession) ? "🎤" : "💬"}
+                      </span>
                       {continueSession.title} — {continueSession.vis.label}
                     </div>
                     <div className="mt-1" style={{ color: C.textMuted, fontSize: "clamp(11px, 1vw, 13px)" }}>
@@ -610,7 +750,7 @@ export function StudentHome() {
             {/* ── RECENT SESSIONS ── */}
             <div style={fade(0.38)}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold uppercase m-0" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
+                <h2 className="font-bold uppercase m-0 flex items-center gap-2" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
                   Recent sessions
                 </h2>
                 {hasMore && (
@@ -619,6 +759,56 @@ export function StudentHome() {
                     className="font-semibold cursor-pointer bg-transparent border-none"
                     style={{ color: C.genPurple, fontSize: "clamp(11px, 1vw, 13px)" }}>
                     {showAllSessions ? "Show less ↑" : "See all →"}
+                  </button>
+                )}
+              </div>
+
+              {/* Filters UI */}
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                {/* Date Filter */}
+                <FilterDropdown 
+                  value={filterDate}
+                  options={["All Time", "Today", "This Week", "This Month"]}
+                  onChange={setFilterDate}
+                  activeColor={C.genPurple}
+                  defaultColor={C.textMid}
+                />
+                
+                {/* Type Filter */}
+                <FilterDropdown 
+                  value={filterType}
+                  options={["All Types", "Voice Sessions", "Chat Sessions"]}
+                  onChange={v => {
+                    if (v === "All Types") setFilterType("All");
+                    else if (v === "Voice Sessions") setFilterType("Voice");
+                    else if (v === "Chat Sessions") setFilterType("Chat");
+                  }}
+                  activeColor={C.genPurple}
+                  defaultColor={C.textMid}
+                />
+
+                {/* Subject Filter */}
+                <FilterDropdown 
+                  value={filterSubject}
+                  options={["All Subjects", ...Object.values(SUBJECTS_VISUAL).map(s => s.label)]}
+                  onChange={v => {
+                    if (v === "All Subjects") setFilterSubject("All");
+                    else setFilterSubject(v);
+                  }}
+                  activeColor={C.genPurple}
+                  defaultColor={C.textMid}
+                />
+                
+                {(filterDate !== "All Time" || filterType !== "All" || filterSubject !== "All") && (
+                  <button 
+                    onClick={() => {
+                      setFilterDate("All Time");
+                      setFilterType("All");
+                      setFilterSubject("All");
+                    }}
+                    className="text-xs font-semibold text-gray-400 hover:text-red-500 bg-transparent border-none cursor-pointer transition-colors"
+                  >
+                    Clear filters
                   </button>
                 )}
               </div>
@@ -665,6 +855,9 @@ export function StudentHome() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold truncate" style={{ color: C.text, fontSize: "clamp(13px, 1.3vw, 15px)" }}>
+                            <span title={isVoiceSession(sess) ? "Voice session" : "Chat session"} style={{ marginRight: 5 }}>
+                              {isVoiceSession(sess) ? "🎤" : "💬"}
+                            </span>
                             {sess.title}
                           </div>
                           <div className="mt-0.5" style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>

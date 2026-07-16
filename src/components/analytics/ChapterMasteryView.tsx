@@ -30,7 +30,7 @@ export const ChapterMasteryView: React.FC<ChapterMasteryViewProps> = ({ mode = "
       grade: studentProfile.grade || 5,
       questions_per_section: 3
     });
-    router.push("/student/test?from=analytics");
+    router.push("/student/test?from=assessments");
   };
 
   return (

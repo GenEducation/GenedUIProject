@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { parentService, LinkedStudent } from "../services/parentService";
 import { studentService } from "../../student/services/studentService";
+import * as Sentry from "@sentry/nextjs";
 
 interface ParentProfile {
   user_id: string;
@@ -13,7 +14,7 @@ interface ParentState {
   parentProfile: ParentProfile | null;
   linkedStudents: LinkedStudent[];
   selectedStudentId: string | null;
-  activeDashboardView: "analytics" | "chat" | "profile" | "report" | "schedule";
+  activeDashboardView: "analytics" | "chat" | "profile" | "report" | "schedule" | "moments";
   selectedStudentSessions: any[];
   activeSessionId: string | null;
   activeSessionHistory: any[];
@@ -25,7 +26,7 @@ interface ParentState {
   setParentProfile: (profile: ParentProfile) => void;
   fetchLinkedStudents: () => Promise<void>;
   setSelectedStudentId: (id: string | null) => void;
-  setDashboardView: (view: "analytics" | "chat" | "profile" | "report" | "schedule") => void;
+  setDashboardView: (view: "analytics" | "chat" | "profile" | "report" | "schedule" | "moments") => void;
   setActiveSessionId: (id: string | null) => void;
   fetchStudentSessions: (studentId: string) => Promise<void>;
   fetchSessionHistory: (studentId: string, sessionId: string) => Promise<void>;
@@ -176,6 +177,7 @@ export const useParentStore = create<ParentState>((set, get) => ({
   },
   
   logoutParent: () => {
+    Sentry.setUser(null);
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");
     localStorage.removeItem("gened_user_profile");

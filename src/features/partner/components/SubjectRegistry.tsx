@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { usePartnerStore, SubjectFilters, restorePendingIngestions } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Skeleton } from "./Skeleton";
+import { IngestedPdfViewer } from "./IngestedPdfViewer";
 
 interface SubjectRegistryProps {
   onUploadClick: () => void;
@@ -29,6 +30,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const fetchSubjects = usePartnerStore((state) => state.fetchSubjects);
   const removeSubject = usePartnerStore((state) => state.removeSubject);
   const cancelIngestion = usePartnerStore((state) => state.cancelIngestion);
+  const openIngestedPdf = usePartnerStore((state) => state.openIngestedPdf);
   const setSubjectFilters = usePartnerStore((state) => state.setSubjectFilters);
   const setSubjectOffset = usePartnerStore((state) => state.setSubjectOffset);
   const subjectFilters = usePartnerStore((state) => state.subjectFilters);
@@ -283,7 +285,12 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-transparent hover:border-[#1A3D2C]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all cursor-pointer overflow-hidden"
+                onClick={() => {
+                  if (isActive) openIngestedPdf(subject);
+                }}
+                className={`group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-transparent hover:border-[#1A3D2C]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all overflow-hidden ${
+                  isActive ? "cursor-pointer" : "cursor-default"
+                }`}
               >
                 <div className="flex-1 flex items-center gap-3 md:gap-4">
                   {/* Left Side Highlight bar */}
@@ -408,6 +415,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         isLoading={isDeleting}
         error={deleteError}
       />
+
+      {/* Ingested PDF Viewer */}
+      <IngestedPdfViewer />
     </div>
   );
 }

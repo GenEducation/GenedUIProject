@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { DatePicker } from "./DatePicker";
+import { TimePicker } from "./TimePicker";
+import { RescheduleModal, RescheduleModalTarget } from "@/components/shared/RescheduleModal";
 import { SessionType } from "../types/schedule";
 
 function tomorrowDateString(): string {
@@ -28,10 +30,31 @@ function tomorrowDateString(): string {
   return d.toISOString().slice(0, 10);
 }
 
+function getSessionStartTimestamp(scheduledDateStr: string, scheduledTimeStr?: string | null): number {
+  const d = new Date(scheduledDateStr);
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth();
+  const dateVal = d.getUTCDate();
+
+  let hours = 9;
+  let minutes = 0;
+  if (scheduledTimeStr) {
+    const parts = scheduledTimeStr.split(":");
+    if (parts.length === 2) {
+      hours = parseInt(parts[0], 10);
+      minutes = parseInt(parts[1], 10);
+    }
+  }
+
+  const istDate = new Date(Date.UTC(year, month, dateVal, hours, minutes));
+  const utcDate = new Date(istDate.getTime() - (5 * 60 + 30) * 60 * 1000);
+  return utcDate.getTime();
+}
+
 export function SchedulePage() {
   const router = useRouter();
   const { studentProfile, availableAgents, isAgentsLoading, fetchAvailableAgents } = useStudentStore();
-  const { sessions, isLoading, isBooking, bookError, loadScheduledSessions, bookSession } = useScheduleStore();
+  const { sessions, isLoading, isBooking, bookError, loadScheduledSessions, bookSession, isRescheduling, rescheduleError, rescheduleSession } = useScheduleStore();
   const { loadTest } = useTestStore();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -39,8 +62,11 @@ export function SchedulePage() {
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
   const [scheduledDate, setScheduledDate] = useState(tomorrowDateString());
+  const [scheduledTime, setScheduledTime] = useState("");
   const [isStartingSession, setIsStartingSession] = useState(false);
   const [bookedConfirmation, setBookedConfirmation] = useState(false);
+  const [rescheduleTarget, setRescheduleTarget] = useState<RescheduleModalTarget | null>(null);
+  const [rescheduleConfirmation, setRescheduleConfirmation] = useState(false);
 
   useEffect(() => {
     const handle = () => setSidebarOpen(window.innerWidth >= 1024);
@@ -79,6 +105,7 @@ export function SchedulePage() {
       subject,
       topic: topic || undefined,
       scheduled_date: scheduledDate,
+      scheduled_time: scheduledTime || undefined,
     });
 
     if (result) {
@@ -103,12 +130,26 @@ export function SchedulePage() {
     }
   };
 
-  const handleReschedule = (sessionTypeForRow: SessionType, subjectForRow: string, topicForRow: string | null) => {
-    setSessionType(sessionTypeForRow);
-    setSubject(subjectForRow);
-    if (topicForRow) setTopic(topicForRow);
-    setScheduledDate(tomorrowDateString());
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const handleReschedule = (id: string, sessionTypeForRow: SessionType, subjectForRow: string, topicForRow: string | null) => {
+    setRescheduleTarget({
+      id,
+      sessionType: sessionTypeForRow,
+      subject: subjectForRow,
+      topic: topicForRow,
+    });
+  };
+
+  const handleConfirmReschedule = async (scheduledDate: string, scheduledTime: string) => {
+    if (!rescheduleTarget) return;
+    const result = await rescheduleSession(rescheduleTarget.id, {
+      scheduled_date: scheduledDate,
+      scheduled_time: scheduledTime || undefined,
+    });
+    if (result) {
+      setRescheduleTarget(null);
+      setRescheduleConfirmation(true);
+      setTimeout(() => setRescheduleConfirmation(false), 4000);
+    }
   };
 
   const sortedSessions = [...sessions].sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
@@ -172,7 +213,7 @@ export function SchedulePage() {
                 ))}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Subject */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-[#042E5C]/40 uppercase tracking-widest">Subject</label>
@@ -217,6 +258,15 @@ export function SchedulePage() {
                     onChange={setScheduledDate}
                   />
                 </div>
+
+                {/* Time (optional) */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-[#042E5C]/40 uppercase tracking-widest">Start Time <span className="font-medium normal-case">(optional, IST)</span></label>
+                  <TimePicker
+                    value={scheduledTime}
+                    onChange={setScheduledTime}
+                  />
+                </div>
               </div>
 
               {bookError && (
@@ -254,6 +304,13 @@ export function SchedulePage() {
 
             {/* Scheduled Sessions List */}
             <div className="space-y-4">
+              {rescheduleConfirmation && (
+                <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-50 text-emerald-600 text-sm font-bold mb-4">
+                  <CheckCircle2 size={16} />
+                  Session rescheduled! It will be prepared the night before.
+                </div>
+              )}
+
               <h2 className="text-sm font-black text-[#042E5C] uppercase tracking-widest flex items-center gap-2">
                 <CalendarClock size={14} />
                 Upcoming Sessions
@@ -275,17 +332,21 @@ export function SchedulePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <AnimatePresence mode="popLayout">
                     {sortedSessions.map((s) => {
+                      const startTs = getSessionStartTimestamp(s.scheduled_date, s.scheduled_time);
+                      const isExpired = Date.now() - startTs > 24 * 60 * 60 * 1000;
                       const isReady = s.preparation_status === "COMPLETED" && !!s.session_id;
                       const isFailed = s.preparation_status === "FAILED";
 
                       const statusConfig = isFailed
                         ? { bg: "bg-red-50", text: "text-red-600", label: "Preparation Failed" }
+                        : isExpired
+                        ? { bg: "bg-gray-100", text: "text-gray-500", label: "Expired" }
                         : isReady
                         ? { bg: "bg-emerald-50", text: "text-emerald-600", label: "Ready" }
                         : { bg: "bg-[#042E5C]/5", text: "text-[#042E5C]/40", label: "Being Prepared" };
 
                       const progressLabel: Record<string, string> = {
-                        PENDING: "Not started",
+                        PENDING: isExpired ? "Incomplete" : "Not started",
                         STARTED: "In progress",
                         "STARTED-EARLY": "Started early",
                         COMPLETED: "Finished",
@@ -323,6 +384,7 @@ export function SchedulePage() {
                             <div className="space-y-0.5">
                               <p className="text-xs font-bold text-[#042E5C]/60">
                                 {new Date(s.scheduled_date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+                                {s.scheduled_time && <span className="ml-1.5 text-[#042E5C]/40">· {s.scheduled_time} IST</span>}
                               </p>
                               <p className="text-[10px] font-medium text-[#042E5C]/30 uppercase tracking-widest">
                                 {progressLabel[s.status] ?? s.status}
@@ -331,7 +393,7 @@ export function SchedulePage() {
 
                             {isFailed ? (
                               <button
-                                onClick={() => handleReschedule(s.session_type, s.subject, s.topic)}
+                                onClick={() => handleReschedule(s.id, s.session_type, s.subject, s.topic)}
                                 className="px-4 py-2 rounded-xl bg-[#042E5C]/5 text-[#042E5C] text-[10px] font-black uppercase tracking-widest hover:bg-[#042E5C]/10 transition-all"
                               >
                                 Reschedule
@@ -339,7 +401,7 @@ export function SchedulePage() {
                             ) : (
                               <button
                                 onClick={() => handleStartSession(s.session_type, s.session_id!)}
-                                disabled={!isReady || isStartingSession}
+                                disabled={!isReady || isStartingSession || isExpired}
                                 className="px-4 py-2 rounded-xl bg-[#042E5C] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#064282] disabled:opacity-30 transition-all"
                               >
                                 {s.session_type === "TEST" ? "Start Test" : "Open Session"}
@@ -356,6 +418,15 @@ export function SchedulePage() {
           </div>
         </div>
       </div>
+
+      <RescheduleModal
+        isOpen={!!rescheduleTarget}
+        target={rescheduleTarget}
+        onClose={() => setRescheduleTarget(null)}
+        onConfirm={handleConfirmReschedule}
+        isSubmitting={isRescheduling}
+        errorMessage={rescheduleError}
+      />
     </div>
   );
 }

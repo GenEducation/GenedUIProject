@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { authFetch } from "@/utils/authFetch";
+import { studentService } from "@/features/student/services/studentService";
 
 export interface Student {
   id: string;
@@ -52,6 +53,12 @@ interface PartnerState {
   isSubjectsLoading: boolean;
   showUploadModal: boolean;
 
+  // --- PDF Viewer State ---
+  viewerPdfUrl: string | null;
+  viewerTitle: string | null;
+  isViewerLoading: boolean;
+  viewerError: string | null;
+
   // --- Actions ---
   // Analytics Actions
   setSelectedStudent: (student: Student | null) => void;
@@ -69,6 +76,10 @@ interface PartnerState {
   removeSubject: (agentId: string) => Promise<void>;
   removeStudent: (studentId: string) => Promise<void>;
   setShowUploadModal: (show: boolean) => void;
+
+  // PDF Viewer Actions
+  openIngestedPdf: (subject: Subject) => Promise<void>;
+  closePdfViewer: () => void;
 
   // Auth/Logout Action
   logoutPartner: () => void;
@@ -217,9 +228,44 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   isLoading: false,
   isSubjectsLoading: false,
   showUploadModal: false,
+  viewerPdfUrl: null,
+  viewerTitle: null,
+  isViewerLoading: false,
+  viewerError: null,
 
   setSelectedStudent: (student) => set({ selectedStudent: student }),
   setShowUploadModal: (show) => set({ showUploadModal: show }),
+
+  // -- PDF Viewer actions ---------------------------------------------------
+  openIngestedPdf: async (subject) => {
+    set({
+      isViewerLoading: true,
+      viewerError: null,
+      viewerTitle: subject.agent,
+      viewerPdfUrl: null,
+    });
+
+    try {
+      const grade = typeof subject.grade === "string" ? parseInt(subject.grade, 10) : subject.grade;
+      const data = await studentService.fetchChapterPdfUrl(grade, subject.subject, subject.agent);
+
+      if (!data?.pdf_url || !data.pdf_url.startsWith("https://")) {
+        throw new Error("PDF not available for this document.");
+      }
+
+      set({ viewerPdfUrl: data.pdf_url, isViewerLoading: false });
+    } catch (error: any) {
+      console.error("openIngestedPdf error:", error);
+      set({
+        isViewerLoading: false,
+        viewerError: error?.message || "PDF not available for this document.",
+      });
+    }
+  },
+
+  closePdfViewer: () => {
+    set({ viewerPdfUrl: null, viewerTitle: null, isViewerLoading: false, viewerError: null });
+  },
 
   // -- Fetch students from backend ----------------------------------------─
   fetchStudents: async () => {

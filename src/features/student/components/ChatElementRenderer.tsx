@@ -13,7 +13,109 @@ import { ComprehensionWidget } from "./ComprehensionWidget";
 import { KaraokeRenderer } from "./KaraokeRenderer";
 import { InteractiveBlock } from "./interactive/InteractiveBlock";
 
+import { useStudentStore } from "../store/useStudentStore";
+import type { PointerSpec } from "./pdf-viewer/pointerGeometry";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
+
+/** Clickable callout that activates the PDF pointer — same as the live SSE "pointer" event. */
+function PointerRefCallout({ text, textEnd, label, page }: {
+  text: string;
+  textEnd?: string;
+  label?: string;
+  page?: number;
+}) {
+  const setPointer = useStudentStore((s) => s.setPointer);
+
+  const handleClick = () => {
+    const spec: PointerSpec = {
+      page,
+      label,
+      target: { kind: "text", text, textEnd },
+    };
+    setPointer(spec);
+  };
+
+  const snippet = textEnd ? `${text} … ${textEnd}` : text;
+
+  return (
+    <button
+      onClick={handleClick}
+      title="Click to highlight in textbook"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        width: "100%",
+        background: "linear-gradient(135deg, #EFF6FF 0%, #F0F9FF 100%)",
+        border: "1.5px solid #BFDBFE",
+        borderLeft: "4px solid #1A6BBF",
+        borderRadius: 10,
+        padding: "10px 14px",
+        cursor: "pointer",
+        textAlign: "left",
+        transition: "background 0.15s, box-shadow 0.15s",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.background =
+          "linear-gradient(135deg, #DBEAFE 0%, #E0F2FE 100%)";
+        (e.currentTarget as HTMLButtonElement).style.boxShadow =
+          "0 2px 8px rgba(26,107,191,0.15)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.background =
+          "linear-gradient(135deg, #EFF6FF 0%, #F0F9FF 100%)";
+        (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
+      }}
+    >
+      {/* Pin icon */}
+      <span style={{ fontSize: 18, flexShrink: 0 }}>📍</span>
+
+      {/* Text content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {label && (
+          <p style={{
+            margin: 0,
+            fontSize: 11,
+            fontWeight: 700,
+            color: "#1A6BBF",
+            textTransform: "uppercase",
+            letterSpacing: "0.06em",
+            marginBottom: 2,
+            fontFamily: "'DM Sans', sans-serif",
+          }}>
+            {label}
+          </p>
+        )}
+        <p style={{
+          margin: 0,
+          fontSize: 13,
+          color: "#334155",
+          fontStyle: "italic",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          fontFamily: "'DM Sans', sans-serif",
+        }}>
+          &ldquo;{snippet}&rdquo;
+        </p>
+      </div>
+
+      {/* CTA */}
+      <span style={{
+        flexShrink: 0,
+        fontSize: 11,
+        fontWeight: 600,
+        color: "#1A6BBF",
+        whiteSpace: "nowrap",
+        fontFamily: "'DM Sans', sans-serif",
+      }}>
+        View in textbook →
+      </span>
+    </button>
+  );
+}
+
 
 function FigureDescribeBlock({ figureAssetUrl, prompt, directiveId }: {
   figureAssetUrl?: string; prompt: string; directiveId?: string;
@@ -168,6 +270,18 @@ export const ChatElementRenderer = React.memo(({ elements, isReadOnly = false }:
               meta={el.meta}
               disabled={isReadOnly}
               readOnly={isReadOnly}
+            />
+          );
+        }
+
+        if (el.type === "pointer_ref") {
+          return (
+            <PointerRefCallout
+              key={el.id}
+              text={el.content}
+              textEnd={el.meta?.text_end}
+              label={el.meta?.label}
+              page={el.meta?.page}
             />
           );
         }

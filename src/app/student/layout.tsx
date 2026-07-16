@@ -8,6 +8,8 @@ import { GeneralOnboardingWizard } from "@/features/onboarding/components/Genera
 import { OnboardingPromptCard } from "@/features/onboarding/components/OnboardingPromptCard";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useNotificationStore } from "@/store/useNotificationStore";
+import { ToastStack, ToastItem } from "@/features/teacher/components/Toast";
 
 export default function StudentLayout({
   children,
@@ -16,14 +18,54 @@ export default function StudentLayout({
 }) {
   const { studentProfile } = useStudentStore();
   const { dnaStatus, checkDNAStatus } = useOnboardingStore();
+  const { fetchNotifications, initStream } = useNotificationStore();
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const pathname = usePathname();
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const pushToast = (toast: Omit<ToastItem, "id">) => {
+    setToasts((prev) => [...prev, { ...toast, id: Date.now() + Math.random() }]);
+  };
+
+  const dismissToast = (id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
 
   useEffect(() => {
     if (studentProfile?.user_id) {
       checkDNAStatus(studentProfile.user_id);
     }
   }, [studentProfile, checkDNAStatus]);
+
+  // Fetch notification history so the bell's unread badge is correct before the bell mounts
+  useEffect(() => {
+    if (!studentProfile?.user_id) return;
+    fetchNotifications(studentProfile.user_id);
+
+    const onFocus = () => fetchNotifications(studentProfile.user_id);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [studentProfile, fetchNotifications]);
+
+  // Subscribe to real-time notification stream (SSE) via the shared notification store
+  useEffect(() => {
+    if (!studentProfile?.user_id) return;
+
+    console.log("Initializing SSE notification stream for student layout...");
+    const unsubscribe = initStream(studentProfile.user_id, (data) => {
+      // Show success style for live sessions, otherwise success/error
+      const toastType = data.type === "ERROR" || data.type === "WARNING" ? "error" : "success";
+      pushToast({
+        type: toastType,
+        title: data.title || "Reminder",
+        description: data.message,
+      });
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [studentProfile, initStream]);
 
   const isProfileIncomplete = studentProfile && !studentProfile.name;
 
@@ -61,6 +103,9 @@ export default function StudentLayout({
           }}
         />
       )}
+
+      {/* Global Real-time Toasts stack */}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </>
   );
 }

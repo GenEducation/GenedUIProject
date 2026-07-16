@@ -44,6 +44,20 @@ export const studentService = {
     return response.json();
   },
 
+  /** Downloads the report card as a PDF, rendered server-side and routed
+   * through the gateway. Pass `parentId` when a parent is downloading a
+   * linked child's report; omit it for a student downloading their own. */
+  downloadReportCardPdf: async (studentId: string, parentId?: string): Promise<Blob> => {
+    const url = parentId
+      ? `${API_BASE_URL}/parent/students/${studentId}/report-card/pdf?parent_id=${parentId}`
+      : `${API_BASE_URL}/students/${studentId}/report-card/pdf`;
+    const response = await authFetch(url, {
+      method: parentId ? "POST" : "GET",
+      headers: { accept: "application/pdf" },
+    });
+    return response.blob();
+  },
+
   fetchStudentStreak: async (studentId: string) => {
     const response = await authFetch(`${API_BASE_URL}/students/${studentId}/streak`);
     return response.json();
@@ -82,6 +96,11 @@ export const studentService = {
         session_id: sessionId,
       }),
     });
+    return response.json();
+  },
+
+  fetchVoiceSessionRestore: async (sessionId: string, signal?: AbortSignal) => {
+    const response = await authFetch(`${API_BASE_URL}/voice/session/${sessionId}/restore`, { signal });
     return response.json();
   },
 
@@ -143,13 +162,6 @@ export const studentService = {
     const response = await authFetch(`${API_BASE_URL}/students/${studentId}/chapter-mastery?subject=${encodeURIComponent(subject)}`, {
       headers: { "accept": "application/json" },
       signal,
-    });
-    return response.json();
-  },
-
-  fetchEnglishSkillsSummary: async (studentId: string) => {
-    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/english-skills-summary`, {
-      headers: { "accept": "application/json" }
     });
     return response.json();
   },
@@ -357,6 +369,32 @@ export const studentService = {
     const response = await authFetch(
       `${API_BASE_URL}/students/${studentId}/time/by-period?granularity=${granularity}`,
       { headers: { accept: "application/json" } }
+    );
+    return response.json();
+  },
+
+  fetchLanguagePreferences: async (studentId: string) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/students/${studentId}/language-preferences`,
+      { headers: { accept: "application/json" } }
+    );
+    return response.json();
+  },
+
+  updateLanguagePreferences: async (
+    studentId: string,
+    payload: { preferred_language?: string | null; secondary_languages?: string[] | null }
+  ) => {
+    const response = await authFetch(
+      `${API_BASE_URL}/students/${studentId}/language-preferences`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      }
     );
     return response.json();
   },

@@ -9,7 +9,7 @@ interface NotificationState {
   
   fetchNotifications: (userId: string) => Promise<void>;
   markAsRead: (notificationId: string) => Promise<void>;
-  initStream: (userId: string) => () => void;
+  initStream: (userId: string, onNew?: (notification: Notification) => void) => () => void;
   addNotification: (notification: Notification) => void;
   isDropdownOpen: boolean;
   setIsDropdownOpen: (open: boolean) => void;
@@ -68,18 +68,19 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     });
   },
 
-  initStream: (userId: string) => {
+  initStream: (userId: string, onNew?: (notification: Notification) => void) => {
     const unsub = notificationService.subscribeToStream(userId, (data) => {
       console.log("🔔 [NotificationStore] Processing incoming data:", data);
-      
+
       // Validate the incoming SSE data payload correctly
       if (data && typeof data === 'object' && data.id) {
         get().addNotification(data as Notification);
+        onNew?.(data as Notification);
       } else {
         console.warn("⚠️ [NotificationStore] Received malformed or incomplete notification payload:", data);
       }
     });
-    
+
     return unsub;
   },
 

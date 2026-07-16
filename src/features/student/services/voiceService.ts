@@ -53,6 +53,7 @@ class VoiceService {
   private bufferQueue: ArrayBuffer[] = [];
   private isBuffering = true;
   private readonly TARGET_BUFFER_SIZE = 6;
+  private activeSources: AudioBufferSourceNode[] = [];
 
   // Typewriter Sync State
   private pendingAssistantText = "";
@@ -246,6 +247,11 @@ class VoiceService {
             return;
           }
 
+          if (data.type === "interrupted") {
+            this.interruptPlayback();
+            return;
+          }
+
           if (data.type === "session_id" && data.session_id) {
             this.currentSessionId = data.session_id;
           }
@@ -332,6 +338,10 @@ class VoiceService {
     const source = this.audioCtx!.createBufferSource();
     source.buffer = audioBuffer;
     source.connect(this.audioCtx!.destination);
+    this.activeSources.push(source);
+    source.onended = () => {
+      this.activeSources = this.activeSources.filter(s => s !== source);
+    };
 
     const startTime = Math.max(this.audioCtx!.currentTime, this.nextStartTime);
     source.start(startTime);
@@ -341,6 +351,19 @@ class VoiceService {
   private flushBuffer() {
     while (this.bufferQueue.length > 0) {
       this.handleIncomingAudio(this.bufferQueue.shift()!);
+    }
+  }
+
+  private interruptPlayback() {
+    // Stop all scheduled/playing bot audio immediately.
+    for (const src of this.activeSources) {
+      try { src.stop(); } catch { /* already ended */ }
+    }
+    this.activeSources = [];
+    this.bufferQueue = [];
+    this.isBuffering = true;
+    if (this.audioCtx) {
+      this.nextStartTime = this.audioCtx.currentTime;
     }
   }
 
@@ -471,7 +494,7 @@ class VoiceService {
       this.audioCtx = null;
     }
     this.nextStartTime = 0;
-
+    this.activeSources = [];
     this.isBuffering = true;
     this.bufferQueue = [];
     this.currentQuality = null;

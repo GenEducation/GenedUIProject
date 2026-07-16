@@ -4,11 +4,12 @@ import { motion } from "framer-motion";
 import { Copy, Check, Volume2, VolumeX, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { ChatMessage } from "../store/useStudentStore";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { useSmoothStream } from "@/hooks/useSmoothStream";
 import { ActivityRenderer } from "./ActivityRenderer";
 import { MessageElements } from "./MessageElements";
+import { ChapterOptionPicker } from "./ChapterOptionPicker";
 
 // ── Web Speech API TTS hook ───────────────────────────────────────────────────
 type SpeakState = "idle" | "loading" | "speaking";
@@ -132,6 +133,10 @@ interface ChatMessageBubbleProps {
   onOptionSelect?: (option: string) => void;
 }
 
+// Messages whose typing replay has already played once (across remounts in
+// this session) — prevents re-typing on revisit. Keyed by message.id.
+const replayedMessageIds = new Set<string>();
+
 const SmoothMarkdown = ({ content, isStreaming }: { content: string; isStreaming: boolean }) => {
   const displayedText = useSmoothStream(content, isStreaming, 15);
   return <MarkdownRenderer content={displayedText} showToolbar={!isStreaming} />;
@@ -142,8 +147,32 @@ export const ChatMessageBubble = React.memo(
     const isUser = message.sender === "user";
     const [copied, setCopied] = useState(false);
 
+    // Decide once per mount (render-time ref latch, StrictMode-safe) whether
+    // this message should replay its typing effect: the finalized greeting
+    // from a deferred-navigation new-session send usually mounts after its
+    // stream already finished, so isStreaming alone would render it instantly.
+    const replayRef = useRef<boolean | null>(null);
+    if (replayRef.current === null) {
+      replayRef.current = !!message.replayTyping && !replayedMessageIds.has(message.id);
+      if (replayRef.current) replayedMessageIds.add(message.id);
+    }
+    const effectiveStreaming = !!isStreaming || replayRef.current;
+
+    // While replaying, options/extras below the bubble must wait for the
+    // typing effect to finish rather than appearing alongside it. Starts
+    // "finished" immediately for non-replay messages (no-op elsewhere).
+    const [replayFinished, setReplayFinished] = useState(() => !replayRef.current);
+
     // Apply elegant streaming buffer if this is the active streaming message
-    const displayedText = useSmoothStream(message.text, !!isStreaming, 15);
+    const displayedText = useSmoothStream(message.text, effectiveStreaming, 15);
+
+    // Markdown-only path (no elements): flip replayFinished once the typed
+    // text has caught up to the full message text.
+    const hasElements = !!message.elements && message.elements.length > 0;
+    React.useEffect(() => {
+      if (!replayRef.current || replayFinished || hasElements) return;
+      if (displayedText.length >= message.text.length) setReplayFinished(true);
+    }, [displayedText, message.text, hasElements, replayFinished]);
 
     // Read-aloud via Web Speech API (AI messages only)
     const { state: speakState, toggle: toggleSpeak } = useReadAloud(message.text);
@@ -195,7 +224,12 @@ export const ChatMessageBubble = React.memo(
                   {message.statusText}
                 </span>
               ) : message.elements && message.elements.length > 0 ? (
-                <MessageElements elements={message.elements} isStreaming={isStreaming} toolStatus={message.toolStatus} />
+                <MessageElements
+                  elements={message.elements}
+                  isStreaming={effectiveStreaming}
+                  toolStatus={message.toolStatus}
+                  onAllRevealed={() => setReplayFinished(true)}
+                />
               ) : (
                 <MarkdownRenderer content={displayedText} showToolbar={!isUser && !isStreaming} />
               )}
@@ -228,24 +262,15 @@ export const ChatMessageBubble = React.memo(
             )}
           </div>
 
-          {/* AI message extras */}
-          {!isUser && !isStreaming && (
+          {/* AI message extras — held back until replay typing (if any) finishes */}
+          {!isUser && !isStreaming && replayFinished && (
             <div className="space-y-3 w-full px-1">
               {/* Option chips */}
               {message.options && message.options.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {message.options.map((opt) => (
-                    <button
-                      key={opt}
-                      onClick={() => onOptionSelect?.(opt)}
-                      style={{ fontSize: "clamp(11px, 2.5vw, 13px)", fontWeight: 700, color: "#5B4DC7", background: "#FFFFFF", border: "1.5px solid #5B4DC720", borderRadius: 20, padding: "5px clamp(10px, 2.5vw, 14px)", cursor: "pointer", transition: "all 0.2s", fontFamily: "'DM Sans', sans-serif" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#5B4DC7"; (e.currentTarget as HTMLButtonElement).style.color = "#FFFFFF"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#FFFFFF"; (e.currentTarget as HTMLButtonElement).style.color = "#5B4DC7"; }}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
+                <ChapterOptionPicker
+                  options={message.options}
+                  onSelect={(opt) => onOptionSelect?.(opt)}
+                />
               )}
 
               {/* Feedback row — clipboard + read aloud */}

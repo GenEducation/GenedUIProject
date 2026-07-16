@@ -253,7 +253,7 @@ export function parseContent(content: string): ChatElement[] {
   if (!content) return [];
   const elements: ChatElement[] = [];
 
-  const masterRegex = /(?:<<VISUAL\s+type="([^"]+)"\s+label="([^"]*)"(?:[^>]*)>>?([\s\S]*?)<<?\/VISUAL>>?)|(?:<<VISUAL\s+type="([^"]+)"((?:\s+\w+="[^"]*")*)\s*\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE|math_interactive)(?::|\s+)([\s\S]*?)(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
+  const masterRegex = /(?:<<VISUAL\s+type="([^"]+)"\s+label="([^"]*)"(?:[^>]*)>>?([\s\S]*?)<<?\/VISUAL>>?)|(?:<<VISUAL\s+type="([^"]+)"((?:\s+\w+="[^"]*")*)\s*\/>>?)|(?:<<(MATH_DRAW|MATH_WIDGET|SHOW_FIGURE|SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE|math_interactive|POINT)(?::|\s+)([\s\S]*?)(?:>>|>|$))|(<svg[\s\S]*?<\/svg>)/g;
 
   let elementCount = 0;
   let lastIndex = 0;
@@ -452,6 +452,24 @@ export function parseContent(content: string): ChatElement[] {
             figure_id: figureIdMatch ? figureIdMatch[1] : "",
           },
         });
+      } else if (type === "POINT") {
+        const getAttr = (k: string) => {
+          const m = attrsRaw.match(new RegExp(`${k}="([^"]*)"`, "s"));
+          return m ? m[1] : undefined;
+        };
+        const text = getAttr("text") || "";
+        const textEnd = getAttr("text_end");
+        const label = getAttr("label");
+        const pageStr = getAttr("page");
+        const page = pageStr ? parseInt(pageStr, 10) : undefined;
+        if (text) {
+          elements.push({
+            id: `ptr-${elementCount++}-${Date.now()}`,
+            type: "pointer_ref",
+            content: text,
+            meta: { text_end: textEnd, label, page },
+          });
+        }
       } else if (["SPEAK_PARA", "DIFFICULT_WORD", "READ_ALOUD", "LISTEN_COMPREHENSION", "SHOW_FIGURE_DESCRIBE", "KARAOKE"].includes(type)) {
         try {
           const payload = JSON.parse(attrsRaw.trim());

@@ -257,3 +257,34 @@ export async function updateProfile(data: {
   }
   return response.json();
 }
+
+export async function confirmDevicePairing(data: {
+  user_code: string;
+  student_id: string;
+}): Promise<{ status: string; pushed: boolean; student_id: string }> {
+  const token = localStorage.getItem("gened_auth_token");
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/device/pairing/confirm`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      user_code: data.user_code.trim().toUpperCase(),
+      student_id: data.student_id,
+    }),
+  });
+
+  if (!response.ok) {
+    let errorData;
+    try {
+      errorData = await response.json();
+    } catch (e) {
+      errorData = { message: "Pairing request failed." };
+    }
+    // Throwing error data so caller can branch on error_code
+    throw errorData;
+  }
+  
+  return response.json();
+}

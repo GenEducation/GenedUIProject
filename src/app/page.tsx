@@ -394,9 +394,6 @@ export default function HomePage() {
             <div className="card reveal" data-d="2"><div className="ico amber"><svg className="icon" viewBox="0 0 24 24"><path d="M3 3v18h18" /><path d="M7 14l4-4 3 3 5-6" /></svg></div><h3 style={{ fontSize: 18 }}>Spot at-risk students</h3><p>See who's falling behind before results day, not after.</p></div>
             <div className="card reveal" data-d="3"><div className="ico coral"><svg className="icon" viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z" /></svg></div><h3 style={{ fontSize: 18 }}>Safe and controlled</h3><p>Fully managed by administration. No unsupervised internet, ever.</p></div>
           </div>
-          <div style={{ textAlign: "center", marginTop: 48 }} className="reveal">
-            <a className="btn btn-ink" href="https://gened.ai/contact" target="_blank" rel="noopener noreferrer">Book a school demo <svg className="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>
-          </div>
         </div>
       </section>
 
@@ -424,7 +421,6 @@ export default function HomePage() {
           <p>GenEd is live and ready — a focused, distraction-free AI tutor that actually adapts to how your child learns.</p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <Link className="btn btn-primary" href="/register">Get started free <svg className="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></Link>
-            <a className="btn btn-ghost" style={{ borderColor: "rgba(255,255,255,.3)", color: "#fff" }} href="https://gened.ai/contact" target="_blank" rel="noopener noreferrer">Talk to our team</a>
           </div>
         </div>
       </section>
@@ -461,7 +457,7 @@ export default function HomePage() {
               ×
             </button>
             <iframe
-              src="https://www.youtube.com/embed/wOncSCH9Bak?autoplay=1&rel=0"
+              src="https://www.youtube.com/embed/YrTt8OwvT3I?autoplay=1&rel=0"
               className="w-full h-full rounded-lg"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen

@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useScheduleStore } from "@/features/student/store/useScheduleStore";
 import { DatePicker } from "@/features/student/components/DatePicker";
+import { TimePicker } from "@/features/student/components/TimePicker";
 import { studentService } from "@/features/student/services/studentService";
+import { RescheduleModal, RescheduleModalTarget } from "@/components/shared/RescheduleModal";
 import { SessionType } from "@/features/student/types/schedule";
 import {
   CalendarClock,
@@ -36,15 +38,18 @@ function tomorrowDateString(): string {
 }
 
 export function ParentScheduleView({ studentId, parentId, studentName }: ParentScheduleViewProps) {
-  const { sessions, isLoading, isBooking, bookError, loadScheduledSessions, bookSession } = useScheduleStore();
+  const { sessions, isLoading, isBooking, bookError, loadScheduledSessions, bookSession, isRescheduling, rescheduleError, rescheduleSession } = useScheduleStore();
 
   const [sessionType, setSessionType] = useState<SessionType>("TEST");
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
   const [scheduledDate, setScheduledDate] = useState(tomorrowDateString());
+  const [scheduledTime, setScheduledTime] = useState("");
   const [agentSubjects, setAgentSubjects] = useState<AgentSubject[]>([]);
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [bookedConfirmation, setBookedConfirmation] = useState(false);
+  const [rescheduleTarget, setRescheduleTarget] = useState<RescheduleModalTarget | null>(null);
+  const [rescheduleConfirmation, setRescheduleConfirmation] = useState(false);
 
   useEffect(() => {
     loadScheduledSessions(studentId, parentId);
@@ -104,6 +109,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
       subject,
       topic: topic || undefined,
       scheduled_date: scheduledDate,
+      scheduled_time: scheduledTime || undefined,
     }, parentId);
 
     if (result) {
@@ -112,12 +118,30 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
     }
   };
 
-  const handleReschedule = (sessionTypeForRow: SessionType, subjectForRow: string, topicForRow: string | null) => {
-    setSessionType(sessionTypeForRow);
-    setSubject(subjectForRow);
-    if (topicForRow) setTopic(topicForRow);
-    setScheduledDate(tomorrowDateString());
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const handleReschedule = (id: string, sessionTypeForRow: SessionType, subjectForRow: string, topicForRow: string | null) => {
+    setRescheduleTarget({
+      id,
+      sessionType: sessionTypeForRow,
+      subject: subjectForRow,
+      topic: topicForRow,
+    });
+  };
+
+  const handleConfirmReschedule = async (scheduledDate: string, scheduledTime: string) => {
+    if (!rescheduleTarget) return;
+    const result = await rescheduleSession(
+      rescheduleTarget.id,
+      {
+        scheduled_date: scheduledDate,
+        scheduled_time: scheduledTime || undefined,
+      },
+      parentId
+    );
+    if (result) {
+      setRescheduleTarget(null);
+      setRescheduleConfirmation(true);
+      setTimeout(() => setRescheduleConfirmation(false), 4000);
+    }
   };
 
   const sortedSessions = [...sessions].sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
@@ -150,7 +174,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
             ))}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Subject */}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest">Subject</label>
@@ -196,6 +220,16 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
                 onChange={setScheduledDate}
               />
             </div>
+
+            {/* Time (optional) */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest">Start Time <span className="font-medium normal-case">(optional, IST)</span></label>
+              <TimePicker
+                value={scheduledTime}
+                onChange={setScheduledTime}
+                themeColor="#1a3a2a"
+              />
+            </div>
           </div>
 
           {bookError && (
@@ -233,6 +267,13 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
 
         {/* Scheduled Sessions List */}
         <div className="space-y-4">
+          {rescheduleConfirmation && (
+            <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-50 text-emerald-600 text-sm font-bold mb-4">
+              <CheckCircle2 size={16} />
+              Session rescheduled! It will be prepared the night before.
+            </div>
+          )}
+
           <h2 className="text-sm font-black text-[#1a3a2a] uppercase tracking-widest flex items-center gap-2">
             <CalendarClock size={14} />
             Upcoming Sessions
@@ -302,6 +343,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
                         <div className="space-y-0.5">
                           <p className="text-xs font-bold text-[#1a3a2a]/60">
                             {new Date(s.scheduled_date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+                            {s.scheduled_time && <span className="ml-1.5 text-[#1a3a2a]/40">· {s.scheduled_time} IST</span>}
                           </p>
                           <p className="text-[10px] font-medium text-[#1a3a2a]/30 uppercase tracking-widest">
                             {progressLabel[s.status] ?? s.status}
@@ -310,7 +352,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
 
                         {isFailed && (
                           <button
-                            onClick={() => handleReschedule(s.session_type, s.subject, s.topic)}
+                            onClick={() => handleReschedule(s.id, s.session_type, s.subject, s.topic)}
                             className="px-4 py-2 rounded-xl bg-[#1a3a2a]/5 text-[#1a3a2a] text-[10px] font-black uppercase tracking-widest hover:bg-[#1a3a2a]/10 transition-all"
                           >
                             Reschedule
@@ -325,6 +367,16 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
           )}
         </div>
       </div>
+
+      <RescheduleModal
+        isOpen={!!rescheduleTarget}
+        target={rescheduleTarget}
+        onClose={() => setRescheduleTarget(null)}
+        onConfirm={handleConfirmReschedule}
+        isSubmitting={isRescheduling}
+        errorMessage={rescheduleError}
+        themeColor="#1a3a2a"
+      />
     </div>
   );
 }

@@ -8,6 +8,8 @@ interface DatePickerProps {
   value: string; // "YYYY-MM-DD"
   min?: string; // "YYYY-MM-DD"
   onChange: (value: string) => void;
+  themeColor?: string; // default "#042E5C"
+  popoverDirection?: "bottom" | "right"; // default "bottom"
 }
 
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -28,7 +30,7 @@ function toDateString(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-export function DatePicker({ value, min, onChange }: DatePickerProps) {
+export function DatePicker({ value, min, onChange, themeColor = "#042E5C", popoverDirection = "bottom" }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -93,10 +95,15 @@ export function DatePicker({ value, min, onChange }: DatePickerProps) {
       <button
         type="button"
         onClick={() => setIsOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-3 bg-[#F4F3EE]/50 border border-[#042E5C]/5 rounded-2xl py-3.5 px-4 text-sm font-medium text-left focus:outline-none focus:ring-2 focus:ring-[#042E5C]/10 hover:bg-white transition-all"
+        className="w-full flex items-center justify-between gap-3 bg-[#F4F3EE]/50 border border-[#042E5C]/5 rounded-2xl py-3.5 px-4 text-sm font-medium text-left focus:outline-none transition-all"
+        style={{
+          outline: "none",
+        }}
+        onFocus={(e) => (e.currentTarget.style.boxShadow = `0 0 0 2px ${themeColor}1a`)}
+        onBlur={(e) => (e.currentTarget.style.boxShadow = "")}
       >
-        <span className={selected ? "text-[#042E5C]" : "text-[#042E5C]/40"}>{formattedValue}</span>
-        <Calendar size={16} className="text-[#042E5C]/40 shrink-0" />
+        <span style={{ color: selected ? themeColor : `${themeColor}66` }}>{formattedValue}</span>
+        <Calendar size={16} style={{ color: `${themeColor}66` }} className="shrink-0" />
       </button>
 
       <AnimatePresence>
@@ -106,25 +113,31 @@ export function DatePicker({ value, min, onChange }: DatePickerProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute z-50 mt-2 right-0 w-[min(90vw,300px)] bg-white rounded-[28px] border border-[#042E5C]/5 shadow-2xl shadow-[#042E5C]/10 p-5"
+            className={`z-50 mt-2 w-full min-w-[320px] bg-white rounded-[24px] border border-[#042E5C]/5 shadow-2xl shadow-[#042E5C]/10 p-4 relative ${popoverDirection === "right" ? "md:absolute md:-top-4 md:left-[calc(100%+16px)] md:mt-0" : "absolute top-full left-0"}`}
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-black text-[#042E5C] tracking-tight">
+              <span className="text-sm font-black tracking-tight" style={{ color: themeColor }}>
                 {MONTHS[month]} {year}
               </span>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => goToMonth(-1)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#042E5C]/50 hover:bg-[#042E5C]/5 hover:text-[#042E5C] transition-all"
+                  className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
+                  style={{ color: `${themeColor}80` }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = `${themeColor}0d`; (e.currentTarget as HTMLButtonElement).style.color = themeColor; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = ""; (e.currentTarget as HTMLButtonElement).style.color = `${themeColor}80`; }}
                 >
                   <ChevronLeft size={16} />
                 </button>
                 <button
                   type="button"
                   onClick={() => goToMonth(1)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-[#042E5C]/50 hover:bg-[#042E5C]/5 hover:text-[#042E5C] transition-all"
+                  className="w-8 h-8 rounded-full flex items-center justify-center transition-all"
+                  style={{ color: `${themeColor}80` }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = `${themeColor}0d`; (e.currentTarget as HTMLButtonElement).style.color = themeColor; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = ""; (e.currentTarget as HTMLButtonElement).style.color = `${themeColor}80`; }}
                 >
                   <ChevronRight size={16} />
                 </button>
@@ -134,7 +147,7 @@ export function DatePicker({ value, min, onChange }: DatePickerProps) {
             {/* Weekday labels */}
             <div className="grid grid-cols-7 mb-1">
               {WEEKDAYS.map((w) => (
-                <div key={w} className="h-8 flex items-center justify-center text-[10px] font-black text-[#042E5C]/30 uppercase tracking-widest">
+                <div key={w} className="h-8 flex items-center justify-center text-[10px] font-black uppercase tracking-widest" style={{ color: `${themeColor}4d` }}>
                   {w}
                 </div>
               ))}
@@ -147,19 +160,35 @@ export function DatePicker({ value, min, onChange }: DatePickerProps) {
                 const isSelected = selected && isSameDay(date, selected);
                 const isToday = isSameDay(date, new Date());
 
+                const style: React.CSSProperties = isSelected
+                  ? { background: themeColor, color: "white", boxShadow: `0 4px 12px ${themeColor}33` }
+                  : {};
+
                 return (
                   <button
                     type="button"
                     key={idx}
                     onClick={() => handleSelect(date)}
                     disabled={disabled}
+                    style={style}
                     className={`h-9 w-9 mx-auto flex items-center justify-center rounded-full text-xs font-bold transition-all
-                      ${isSelected ? "bg-[#042E5C] text-white shadow-lg shadow-[#042E5C]/20" : ""}
-                      ${!isSelected && !disabled && inCurrentMonth ? "text-[#042E5C] hover:bg-[#042E5C]/8" : ""}
-                      ${!isSelected && !inCurrentMonth ? "text-[#042E5C]/15" : ""}
-                      ${disabled ? "text-[#042E5C]/15 cursor-not-allowed" : "cursor-pointer"}
-                      ${isToday && !isSelected ? "ring-1 ring-inset ring-[#042E5C]/20" : ""}
+                      ${!isSelected && !disabled && inCurrentMonth ? "cursor-pointer" : ""}
+                      ${!isSelected && !inCurrentMonth ? "opacity-20" : ""}
+                      ${disabled ? "opacity-15 cursor-not-allowed" : ""}
+                      ${isToday && !isSelected ? "ring-1 ring-inset" : ""}
                     `}
+                    onMouseEnter={(e) => {
+                      if (!isSelected && !disabled) {
+                        (e.currentTarget as HTMLButtonElement).style.background = `${themeColor}14`;
+                        (e.currentTarget as HTMLButtonElement).style.color = themeColor;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        (e.currentTarget as HTMLButtonElement).style.background = "";
+                        (e.currentTarget as HTMLButtonElement).style.color = "";
+                      }
+                    }}
                   >
                     {date.getDate()}
                   </button>

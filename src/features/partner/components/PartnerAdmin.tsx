@@ -10,14 +10,15 @@ import { AnimatePresence, motion } from "framer-motion";
 import { NotificationBell } from "@/components/NotificationBell";
 import { User } from "lucide-react";
 import { usePartnerStore } from "../store/usePartnerStore";
+import { LabSetup } from "@/features/lab/components/LabSetup";
 
 export function PartnerAdmin() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Derive active view from URL
   // Derive active view from URL - Analytics is now the default
-  const activeView: "subjects" | "analytics" = pathname === '/partner/subjects' ? 'subjects' : 'analytics';
+  const activeView: "subjects" | "analytics" | "labs" =
+    pathname === "/partner/subjects" ? "subjects" : pathname === "/partner/labs" ? "labs" : "analytics";
 
   const showUploadModal = usePartnerStore((state) => state.showUploadModal);
   const setShowUploadModal = usePartnerStore((state) => state.setShowUploadModal);
@@ -28,9 +29,11 @@ export function PartnerAdmin() {
   return (
     <div className="flex h-screen bg-[#F8F9F8] overflow-hidden">
       {/* Navigation Sidebar */}
-      <SideBar 
-        activeView={activeView} 
-        onViewChange={(view) => router.push(view === 'analytics' ? '/partner' : '/partner/subjects')} 
+      <SideBar
+        activeView={activeView}
+        onViewChange={(view) =>
+          router.push(view === "analytics" ? "/partner" : view === "subjects" ? "/partner/subjects" : "/partner/labs")
+        }
       />
 
       {/* Main Content Area */}
@@ -39,7 +42,7 @@ export function PartnerAdmin() {
         <header className="h-[88px] shrink-0 border-b border-[#1A3D2C]/5 bg-white/40 flex items-center justify-between px-8 lg:px-12 z-50 transition-all">
           <div className="flex-1">
              <h2 className="text-xl font-black text-[#1A3D2C] hidden lg:block tracking-tight">
-               {activeView === "subjects" ? "Academic Registry" : "Enrollment Overview"}
+               {activeView === "subjects" ? "Academic Registry" : activeView === "labs" ? "Lab Mode" : "Enrollment Overview"}
              </h2>
           </div>
           <div className="flex items-center gap-4">
@@ -59,6 +62,16 @@ export function PartnerAdmin() {
                 className="flex-1 flex flex-col h-full"
               >
                 <SubjectRegistry onUploadClick={() => setShowUploadModal(true)} />
+              </motion.div>
+            ) : activeView === "labs" ? (
+              <motion.div
+                key="labs"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="flex-1 flex flex-col h-full overflow-hidden"
+              >
+                <LabSetup partnerId={partnerId || ""} />
               </motion.div>
             ) : (
               <motion.div
