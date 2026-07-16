@@ -423,11 +423,29 @@ export function StudentHome() {
               <Image src="/Logo.svg" alt="GenEd" width={90} height={32} style={{ height: 32, width: "auto" }} priority />
             </div>
 
-            {/* Notification bell on right, balancing the hamburger */}
-            <div className="flex-shrink-0">
+            {/* Notification bell + profile on right, balancing the hamburger */}
+            <div className="flex-shrink-0 flex items-center gap-2">
               {studentProfile?.user_id && (
                 <NotificationBell userId={studentProfile.user_id} align="right" />
               )}
+              <div
+                className="cursor-pointer"
+                onClick={() => router.push("/student/profile")}
+                style={{
+                  width: 38, height: 38, borderRadius: "50%", overflow: "hidden",
+                  border: "2px solid white", boxShadow: `0 2px 8px ${C.sun}30`,
+                }}
+              >
+                {avatarId === "graduate-girl" ? (
+                  <img
+                    src="/avatars/girl-graduate.png"
+                    alt="Student avatar"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  />
+                ) : (
+                  <StudentAvatarIllustration bg={C.sun} />
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -452,29 +470,31 @@ export function StudentHome() {
                   What would you like to learn today?
                 </p>
               </div>
-              <div className="flex-shrink-0 flex items-center gap-3 ml-4">
-                {studentProfile?.user_id && (
-                  <NotificationBell userId={studentProfile.user_id} align="right" />
-                )}
-                <div
-                  className="cursor-pointer"
-                  onClick={() => router.push("/student/profile")}
-                  style={{
-                    width: 56, height: 56, borderRadius: "50%", overflow: "hidden",
-                    border: "3px solid white", boxShadow: `0 8px 24px ${C.sun}30`,
-                  }}
-                >
-                  {avatarId === "graduate-girl" ? (
-                    <img
-                      src="/avatars/girl-graduate.png"
-                      alt="Student avatar"
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                    />
-                  ) : (
-                    <StudentAvatarIllustration bg={C.sun} />
+              {sidebarOpen && (
+                <div className="flex-shrink-0 flex items-center gap-3 ml-4">
+                  {studentProfile?.user_id && (
+                    <NotificationBell userId={studentProfile.user_id} align="right" />
                   )}
+                  <div
+                    className="cursor-pointer"
+                    onClick={() => router.push("/student/profile")}
+                    style={{
+                      width: 56, height: 56, borderRadius: "50%", overflow: "hidden",
+                      border: "3px solid white", boxShadow: `0 8px 24px ${C.sun}30`,
+                    }}
+                  >
+                    {avatarId === "graduate-girl" ? (
+                      <img
+                        src="/avatars/girl-graduate.png"
+                        alt="Student avatar"
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                      />
+                    ) : (
+                      <StudentAvatarIllustration bg={C.sun} />
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* ── STAT STRIP ── */}
