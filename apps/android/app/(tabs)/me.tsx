@@ -8,12 +8,15 @@ import {
   TextInput,
   ActivityIndicator,
   Switch,
+  Image,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Screen } from "@/components/Screen";
 import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
 import { PickerSheet } from "@/components/PickerSheet";
+import { StudentAvatarIllustration } from "@/components/StudentAvatarIllustration";
+import { AvatarPickerModal } from "@/components/AvatarPickerModal";
 import { useMeData } from "@/hooks/useMeData";
 import { useAuth } from "@/store/useAuthStore";
 import { useRouter, type Href } from "expo-router";
@@ -22,13 +25,8 @@ import { prefsStore, usePrefs } from "@/store/usePrefsStore";
 import { colors, fonts } from "@/theme/tokens";
 import type { VoiceOption, GeneralOnboarding, PartnerItem } from "@/types/api";
 
-const AVATAR_COLORS = [
-  colors.genPurple,
-  colors.genBlue,
-  colors.edGreen,
-  colors.coral,
-  colors.sun,
-];
+const GIRL_GRADUATE = require("../../assets/avatars/girl-graduate.png");
+const AVATAR_ACCENT = "#F0AD4E";
 
 /* ── Supported instruction languages ─────────────────────────────────────── */
 const LANGUAGES: { code: string; label: string }[] = [
@@ -98,7 +96,7 @@ export default function Me() {
 
   const prefs = usePrefs();
 
-  const [avatarColor, setAvatarColor]     = useState<string>(colors.genPurple);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
   const [voiceUpdating, setVoiceUpdating] = useState(false);
   const [voicesExpanded, setVoicesExpanded] = useState(false);
@@ -206,8 +204,6 @@ export default function Me() {
     profile ??
     (state.status === "authenticated" ? state.profile : null);
 
-  const firstName = (displayProfile?.name ?? displayProfile?.username ?? "?").split(" ")[0];
-  const initial   = firstName[0]?.toUpperCase() ?? "?";
   const grade     = displayProfile?.grade;
   const board     = displayProfile?.school_board;
   const aiName    = displayProfile?.ai_name ?? "Nia";
@@ -256,25 +252,27 @@ export default function Me() {
 
         {/* ── Hero ── */}
         <View style={styles.hero}>
-          <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
-            <Text style={styles.avatarText}>{initial}</Text>
-          </View>
-          <View style={styles.dots}>
-            {AVATAR_COLORS.map((c) => {
-              const active = c === avatarColor;
-              return (
-                <Pressable
-                  key={c}
-                  onPress={() => setAvatarColor(c)}
-                  style={[
-                    styles.dot,
-                    { backgroundColor: c, width: active ? 20 : 16, height: active ? 20 : 16 },
-                    active && { borderWidth: 2, borderColor: "#fff" },
-                  ]}
-                />
-              );
-            })}
-          </View>
+          <Pressable style={styles.avatarWrap} onPress={() => setAvatarPickerOpen(true)}>
+            <View style={styles.avatar}>
+              {prefs.avatarId === "graduate-girl" ? (
+                <Image source={GIRL_GRADUATE} style={styles.avatarImg} resizeMode="cover" />
+              ) : (
+                <StudentAvatarIllustration bg={AVATAR_ACCENT} />
+              )}
+            </View>
+            <View style={styles.avatarEditBtn}>
+              <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
+                <Path d="M12 20h9" stroke="#fff" strokeWidth={2} strokeLinecap="round" />
+                <Path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+            </View>
+          </Pressable>
+          <AvatarPickerModal
+            isOpen={avatarPickerOpen}
+            onClose={() => setAvatarPickerOpen(false)}
+            selectedId={prefs.avatarId}
+            onSelect={prefsStore.setAvatarId}
+          />
           <Text style={styles.name}>
             {displayProfile?.name ?? displayProfile?.username ?? "—"}
           </Text>
@@ -596,14 +594,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 14,
   },
+  avatarWrap: { width: 88, height: 88 },
   avatar: {
-    width: 80, height: 80, borderRadius: 26,
+    width: 88, height: 88, borderRadius: 44,
     alignItems: "center", justifyContent: "center",
-    borderWidth: 3, borderColor: "#fff",
+    borderWidth: 3, borderColor: "#fff", overflow: "hidden",
+    shadowColor: AVATAR_ACCENT, shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
-  avatarText: { color: "#fff", fontFamily: fonts.nunito, fontSize: 32 },
-  dots: { flexDirection: "row", gap: 6, marginTop: 12, alignItems: "center" },
-  dot:  { borderRadius: 999 },
+  avatarImg: { width: "100%", height: "100%" },
+  avatarEditBtn: {
+    position: "absolute", bottom: -2, right: -2,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: colors.genPurple, alignItems: "center", justifyContent: "center",
+    borderWidth: 2, borderColor: "#fff",
+  },
   name: { fontFamily: fonts.nunito, fontSize: 24, color: colors.text, marginTop: 13 },
   grade: { fontFamily: fonts.dmBold, fontSize: 13, color: colors.textMid, marginTop: 4 },
   tutor: { fontFamily: fonts.dmBold, fontSize: 12, color: colors.textMuted, marginTop: 4 },

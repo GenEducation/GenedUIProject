@@ -14,7 +14,7 @@ import {
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { UserPlus } from "lucide-react-native";
+import { UserPlus, Monitor } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
 import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
@@ -178,9 +178,18 @@ export default function TeacherRoster() {
     <Screen background={colors.pageBg}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.eyebrow}>My Class</Text>
-          <Text style={styles.title}>Students</Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.eyebrow}>My Class</Text>
+            <Text style={styles.title}>Students</Text>
+          </View>
+          <Pressable
+            style={styles.labModeBtn}
+            onPress={() => router.push("/teacher-lab-schedule" as any)}
+          >
+            <Monitor size={16} color={colors.emerald} />
+            <Text style={styles.labModeBtnText}>Lab Mode</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -301,6 +310,14 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   title: { fontFamily: fonts.nunito, fontSize: 28, color: colors.text },
+
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  labModeBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    borderWidth: 1.5, borderColor: colors.emerald + "40", backgroundColor: colors.emerald + "10",
+    borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 9,
+  },
+  labModeBtnText: { fontFamily: fonts.dmBold, fontSize: 12, color: colors.emerald },
 
   statsRow: { marginBottom: 12 },
 

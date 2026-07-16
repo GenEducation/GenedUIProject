@@ -18,6 +18,7 @@ import { ArrowLeft, CalendarClock, CheckCircle2, Clock, AlertTriangle, ArrowRigh
 import { PickerField, PickerSheet } from "@/components/PickerSheet";
 import { TimeField } from "@/components/TimeField";
 import { MonthCalendar } from "@/components/MonthCalendar";
+import { RescheduleSheet, type RescheduleTarget } from "@/components/RescheduleSheet";
 import { useSchedule } from "@/hooks/useSchedule";
 import { studentService } from "@/services/studentService";
 import { useStudentId } from "@/hooks/useStudentId";
@@ -44,7 +45,10 @@ export default function Schedule() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const studentId = useStudentId();
-  const { sessions, loading, booking, bookError, load, book } = useSchedule();
+  const {
+    sessions, loading, booking, bookError, load, book,
+    rescheduling, rescheduleError, rescheduleSession,
+  } = useSchedule();
 
   const [subjectOpts, setSubjectOpts] = useState<SubjectOpt[]>([]);
   const [sessionType, setSessionType] = useState<SessionType>("TEST");
@@ -54,6 +58,8 @@ export default function Schedule() {
   const [scheduledTime, setScheduledTime] = useState("");
   const [booked, setBooked] = useState(false);
   const [pickerOpen, setPickerOpen] = useState<null | "subject" | "chapter">(null);
+  const [rescheduleTarget, setRescheduleTarget] = useState<RescheduleTarget | null>(null);
+  const [rescheduled, setRescheduled] = useState(false);
 
   const minDate = useMemo(() => toISODate(nextDays(1)[0]), []); // tomorrow
 
@@ -100,10 +106,20 @@ export default function Schedule() {
   };
 
   const reschedule = (s: ScheduleSessionResponse) => {
-    setSessionType(s.session_type);
-    setSubject(s.subject);
-    if (s.topic) setTopic(s.topic);
-    setDate(toISODate(nextDays(1)[0]));
+    setRescheduleTarget({ id: s.id, sessionType: s.session_type, subject: s.subject, topic: s.topic });
+  };
+
+  const confirmReschedule = async (scheduledDate: string, scheduledTime: string) => {
+    if (!rescheduleTarget) return;
+    const ok = await rescheduleSession(rescheduleTarget.id, {
+      scheduled_date: scheduledDate,
+      scheduled_time: scheduledTime || undefined,
+    });
+    if (ok) {
+      setRescheduleTarget(null);
+      setRescheduled(true);
+      setTimeout(() => setRescheduled(false), 4000);
+    }
   };
 
   const sorted = useMemo(() => [...sessions].sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date)), [sessions]);
@@ -128,6 +144,8 @@ export default function Schedule() {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.genPurple} />}
         ListHeaderComponent={
           <View style={{ gap: 18, marginBottom: 6 }}>
+            {rescheduled ? <Banner tone="success" text="Session rescheduled." /> : null}
+
             {/* Booking card */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Book a Session</Text>
@@ -201,6 +219,14 @@ export default function Schedule() {
         onSelect={setTopic}
         onClose={() => setPickerOpen(null)}
         emptyText="No chapters available"
+      />
+
+      <RescheduleSheet
+        target={rescheduleTarget}
+        onClose={() => setRescheduleTarget(null)}
+        onConfirm={confirmReschedule}
+        isSubmitting={rescheduling}
+        errorMessage={rescheduleError}
       />
     </View>
   );

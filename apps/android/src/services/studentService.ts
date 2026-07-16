@@ -491,14 +491,6 @@ export const studentService = {
     return res.json();
   },
 
-  fetchEnglishSkillsSummary: async (studentId: string): Promise<any | null> => {
-    const res = await authFetch(
-      `${BASE}/students/${studentId}/english-skills-summary`,
-      { headers: { accept: "application/json" } }
-    );
-    return res.json();
-  },
-
   fetchSubjectEvolution: async (studentId: string, subject: string): Promise<any | null> => {
     const res = await authFetch(
       `${BASE}/students/${studentId}/subject-evolution-analysis?subject=${encodeURIComponent(subject)}`,

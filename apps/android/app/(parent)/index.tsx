@@ -19,7 +19,7 @@ import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
 import { EmptyState } from "@/components/EmptyState";
 import { ChildRow } from "@/components/parent/ChildRow";
-import { NotificationBell } from "@/components/parent/NotificationBell";
+import { NotificationBell } from "@/components/NotificationBell";
 import { useLinkedChildren } from "@/hooks/useLinkedChildren";
 import { useParentId } from "@/hooks/useParentId";
 import { parentService } from "@/services/parentService";

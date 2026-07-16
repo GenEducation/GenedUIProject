@@ -17,6 +17,7 @@ import { registerSessionExpiredHandler } from "@/services/authFetch";
 import { prefsStore } from "@/store/usePrefsStore";
 import { tutorialStore } from "@/store/useTutorialStore";
 import { TutorialTourModal } from "@/components/tutorial/TutorialTourModal";
+import { LoaderJourney } from "@/components/loaders/LoaderJourney";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -42,6 +43,9 @@ function RootStackNavigator() {
       <Stack.Screen name="parent-chat"  options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="teacher-chat"   options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="teacher-report" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="partner-lab-devices" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="teacher-lab-schedule" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="teacher-lab-run" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="chat"       options={{ animation: "slide_from_bottom" }} />
       <Stack.Screen name="voice-chat" options={{ animation: "slide_from_bottom" }} />
       <Stack.Screen name="test"        options={{ animation: "slide_from_bottom" }} />
@@ -78,6 +82,7 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         <RootStackNavigator />
         <TutorialTourModal />
+        <LoaderJourney />
       </AuthProvider>
     </SafeAreaProvider>
   );

@@ -7,7 +7,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Screen } from "@/components/Screen";
-import { NotificationBell } from "@/components/parent/NotificationBell";
+import { NotificationBell } from "@/components/NotificationBell";
 import { useAuth } from "@/store/useAuthStore";
 import { useParentId } from "@/hooks/useParentId";
 import { useRouter } from "expo-router";

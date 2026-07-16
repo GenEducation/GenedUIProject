@@ -21,6 +21,8 @@ export interface UserProfile {
   preferred_voice?: string;
   plan?:          "FREE" | "PRO";
   plan_expires_at?: string | null;
+  /** Present for TEACHER accounts — the partner (school) they're linked to. */
+  partner_id?:    string;
 }
 
 type AuthState =
@@ -57,6 +59,7 @@ function tokenToProfile(r: AuthTokenResponse): UserProfile {
     preferred_voice: r.preferred_voice,
     plan:            r.plan,
     plan_expires_at: r.plan_expires_at,
+    partner_id:      r.partner_id,
   };
 }
 

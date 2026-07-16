@@ -6,7 +6,11 @@ import { useCallback, useEffect, useState } from "react";
 import { scheduleService } from "../services/scheduleService";
 import { useStudentId } from "./useStudentId";
 import { useRefreshOnFocus } from "./useRefreshOnFocus";
-import type { ScheduleSessionRequest, ScheduleSessionResponse } from "../types/schedule";
+import type {
+  ScheduleSessionRequest,
+  ScheduleSessionRescheduleRequest,
+  ScheduleSessionResponse,
+} from "../types/schedule";
 
 export function useSchedule() {
   const studentId = useStudentId();
@@ -14,6 +18,8 @@ export function useSchedule() {
   const [loading, setLoading] = useState(false);
   const [booking, setBooking] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
+  const [rescheduling, setRescheduling] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!studentId) return;
@@ -50,5 +56,26 @@ export function useSchedule() {
     [studentId, load]
   );
 
-  return { sessions, loading, booking, bookError, load, book };
+  const rescheduleSession = useCallback(
+    async (scheduledSessionId: string, request: ScheduleSessionRescheduleRequest): Promise<boolean> => {
+      setRescheduling(true);
+      setRescheduleError(null);
+      try {
+        await scheduleService.rescheduleSession(scheduledSessionId, request);
+        await load();
+        return true;
+      } catch (err) {
+        setRescheduleError(err instanceof Error ? err.message : "Failed to reschedule session");
+        return false;
+      } finally {
+        setRescheduling(false);
+      }
+    },
+    [load]
+  );
+
+  return {
+    sessions, loading, booking, bookError, load, book,
+    rescheduling, rescheduleError, rescheduleSession,
+  };
 }

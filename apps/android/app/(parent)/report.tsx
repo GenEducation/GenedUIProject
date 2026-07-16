@@ -4,7 +4,7 @@ import { Screen } from "@/components/Screen";
 import { LoadingState } from "@/components/LoadingState";
 import { EmptyState } from "@/components/EmptyState";
 import { ChildSwitcherSheet } from "@/components/parent/ChildSwitcherSheet";
-import { NotificationBell } from "@/components/parent/NotificationBell";
+import { NotificationBell } from "@/components/NotificationBell";
 import { ReportCard, fromParentReport } from "@/components/report-card/ReportCard";
 import { useLinkedChildren } from "@/hooks/useLinkedChildren";
 import { useParentId } from "@/hooks/useParentId";

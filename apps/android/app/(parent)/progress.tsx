@@ -17,7 +17,7 @@ import { Screen } from "@/components/Screen";
 import { LoadingState } from "@/components/LoadingState";
 import { EmptyState } from "@/components/EmptyState";
 import { ChildSwitcherSheet } from "@/components/parent/ChildSwitcherSheet";
-import { NotificationBell } from "@/components/parent/NotificationBell";
+import { NotificationBell } from "@/components/NotificationBell";
 import { SpiderChart } from "@/components/analytics/SpiderChart";
 import { ProgressionChart } from "@/components/analytics/ProgressionChart";
 import { useLinkedChildren } from "@/hooks/useLinkedChildren";

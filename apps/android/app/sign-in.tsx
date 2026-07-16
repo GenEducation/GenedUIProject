@@ -11,6 +11,7 @@ import { colors, fonts } from "@/theme/tokens";
 import { signIn, googleSignIn } from "@/services/authService";
 import { signInWithGoogle, GoogleSignInCancelled } from "@/services/googleAuth";
 import { useAuth } from "@/store/useAuthStore";
+import { useLoaderStore } from "@/store/useLoaderStore";
 
 const GENED_LOGO_WHITE = require("../assets/gened-logo-white.png");
 
@@ -26,20 +27,29 @@ export default function SignIn() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg,      setErrorMsg]      = useState("");
 
-  /** Persist the session and route to the role's home, or surface an error. */
+  /** Persist the session, then route to the role's home once the loader finishes. */
   const routeByRole = async (res: Awaited<ReturnType<typeof signIn>>) => {
     await login(res);
     const role = res.role?.toLowerCase();
-    if (role === "partner")       router.replace("/(partner)");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    else if (role === "parent")   router.replace("/(parent)" as any);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    else if (role === "teacher")  router.replace("/(teacher)" as any);
-    else if (role === "student")  router.replace("/(tabs)");
-    else {
+    const path =
+      role === "partner" ? "/(partner)" :
+      role === "parent"  ? "/(parent)" :
+      role === "teacher" ? "/(teacher)" :
+      role === "student" ? "/(tabs)" :
+      null;
+
+    if (!path) {
       // Unknown role — do not grant access, force re-login
+      useLoaderStore.getState().stopLoading();
       setErrorMsg(`Unrecognized account role "${res.role}". Please contact support.`);
+      return;
     }
+
+    useLoaderStore.getState().completeLoading();
+    setTimeout(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      router.replace(path as any);
+    }, 1200);
   };
 
   const handleSignIn = async () => {
@@ -49,10 +59,12 @@ export default function SignIn() {
     }
     setErrorMsg("");
     setLoading(true);
+    useLoaderStore.getState().startLoading();
     try {
       const res = await signIn(username.trim(), password);
       await routeByRole(res);
     } catch (e: any) {
+      useLoaderStore.getState().stopLoading();
       setErrorMsg(e.message || "Sign-in failed. Please try again.");
     } finally {
       setLoading(false);
@@ -62,11 +74,13 @@ export default function SignIn() {
   const handleGoogleSignIn = async () => {
     setErrorMsg("");
     setGoogleLoading(true);
+    useLoaderStore.getState().startLoading();
     try {
       const idToken = await signInWithGoogle();
       const res = await googleSignIn(idToken);
       await routeByRole(res);
     } catch (e: any) {
+      useLoaderStore.getState().stopLoading();
       if (e instanceof GoogleSignInCancelled) return; // user dismissed picker
       setErrorMsg(
         e.message ||

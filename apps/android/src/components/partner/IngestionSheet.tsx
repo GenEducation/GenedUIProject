@@ -17,8 +17,16 @@ import { PickerSheet, PickerField } from "../PickerSheet";
 import { colors, fonts, radius } from "../../theme/tokens";
 import type { IngestionUploadForm } from "../../types/partner";
 
-const SUBJECTS = ["English", "Mathematics", "Science", "Hindi"];
-const GRADES   = Array.from({ length: 12 }, (_, i) => String(i + 1));
+const GRADES = ["3", "4", "5", "6", "7", "8"];
+const MIDDLE_SCHOOL_GRADES = ["6", "7", "8"];
+const BASE_SUBJECTS = ["English", "Mathematics"];
+const MIDDLE_SCHOOL_SUBJECTS = ["Science", "Social Science"];
+
+function subjectsForGrade(grade: string): string[] {
+  return MIDDLE_SCHOOL_GRADES.includes(grade)
+    ? [...BASE_SUBJECTS, ...MIDDLE_SCHOOL_SUBJECTS]
+    : BASE_SUBJECTS;
+}
 
 interface Props {
   onClose: () => void;
@@ -39,12 +47,23 @@ export function IngestionSheet({ onClose, onSubmit }: Props) {
   const [grade,    setGrade]    = useState("");
   const [title,    setTitle]    = useState("");
   const [agent,    setAgent]    = useState("");
-  const [board,    setBoard]    = useState("CBSE");
+  const board = "CBSE";
 
   const [subjectPickerOpen, setSubjectPickerOpen] = useState(false);
   const [gradePickerOpen,   setGradePickerOpen]   = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const availableSubjects = subjectsForGrade(grade);
+
+  // Auto-clear the subject if it's no longer valid for the newly selected grade
+  // (e.g. Science was picked, then grade changed away from 6-8).
+  const handleGradeChange = (nextGrade: string) => {
+    setGrade(nextGrade);
+    if (subject && !subjectsForGrade(nextGrade).includes(subject)) {
+      setSubject("");
+    }
+  };
 
   // PDF preview state
   const [currentPage, setCurrentPage] = useState(1);
@@ -107,11 +126,11 @@ export function IngestionSheet({ onClose, onSubmit }: Props) {
     try {
       await onSubmit(
         {
-          subject:        subject.toLowerCase(),
+          subject:        subject.toLowerCase().replace(/\s+/g, "_"),
           document_title: title.trim(),
           agent_name:     agent.trim(),
           grade:          grade,
-          board:          board.trim() || "CBSE",
+          board:          board,
           document_type:  "chapter",
         },
         file.uri,
@@ -267,6 +286,14 @@ export function IngestionSheet({ onClose, onSubmit }: Props) {
               onPress={() => setGradePickerOpen(true)}
             />
 
+            {/* Board */}
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Board</Text>
+              <View style={[styles.input, styles.inputReadOnly]}>
+                <Text style={styles.inputReadOnlyText}>{board}</Text>
+              </View>
+            </View>
+
             {/* Document Title */}
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Document Title</Text>
@@ -288,18 +315,6 @@ export function IngestionSheet({ onClose, onSubmit }: Props) {
                 placeholderTextColor={colors.textMuted}
                 value={agent}
                 onChangeText={setAgent}
-              />
-            </View>
-
-            {/* Board */}
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Board</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. CBSE"
-                placeholderTextColor={colors.textMuted}
-                value={board}
-                onChangeText={setBoard}
               />
             </View>
           </View>
@@ -327,7 +342,7 @@ export function IngestionSheet({ onClose, onSubmit }: Props) {
       <PickerSheet
         visible={subjectPickerOpen}
         title="Select Subject"
-        options={SUBJECTS}
+        options={availableSubjects}
         selected={subject}
         onSelect={setSubject}
         onClose={() => setSubjectPickerOpen(false)}
@@ -339,7 +354,7 @@ export function IngestionSheet({ onClose, onSubmit }: Props) {
         title="Select Grade"
         options={GRADES.map((g) => `Grade ${g}`)}
         selected={grade ? `Grade ${grade}` : ""}
-        onSelect={(val) => setGrade(val.replace("Grade ", ""))}
+        onSelect={(val) => handleGradeChange(val.replace("Grade ", ""))}
         onClose={() => setGradePickerOpen(false)}
       />
     </Modal>
@@ -531,6 +546,8 @@ const styles = StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.pageBg,
   },
+  inputReadOnly: { opacity: 0.7, justifyContent: "center" },
+  inputReadOnlyText: { fontFamily: fonts.dmMedium, fontSize: 14, color: colors.textMuted },
 
   errorText: {
     fontFamily: fonts.dmMedium,

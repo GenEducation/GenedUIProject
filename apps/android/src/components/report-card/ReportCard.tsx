@@ -56,14 +56,6 @@ export interface ReportSection {
   body:  string;
 }
 
-export interface ReportEnglishSkills {
-  avg_accuracy?:      number;
-  avg_fluency?:       number;
-  avg_expression?:    number;
-  avg_comprehension?: number;
-  avg_wpm?:           number;
-}
-
 export interface ReportTestSubmission {
   document_title?:   string;
   subject?:          string;
@@ -92,7 +84,6 @@ export interface ReportCardData {
   subjects:       ReportSubject[];
   chapters:       ReportChapter[];
   sections:       ReportSection[];
-  englishSkills?: ReportEnglishSkills;
   testSubs?:      ReportTestSubmission[];
   aiInsights?:    ReportAiInsights;
   skillTree?:     any[];
@@ -175,7 +166,6 @@ export function fromParentReport(
       };
     }),
     sections: [],
-    englishSkills: data?.english_skills ?? undefined,
     testSubs:      data?.test_submissions?.length > 0 ? data.test_submissions : undefined,
     aiInsights: (rj.universal_strengths?.length || rj.universal_weaknesses?.length || rj.focus_areas?.length) ? {
       strengths:  rj.universal_strengths  ?? [],
@@ -266,7 +256,7 @@ export function ReportCard({ data, refreshControl }: Props) {
     period, reportNumber, issued,
     headline, narrative,
     subjects, chapters, sections,
-    englishSkills, testSubs, aiInsights,
+    testSubs, aiInsights,
     skillTree, subjectEvolutions, chapterEvolutions,
   } = data;
 
@@ -413,39 +403,7 @@ export function ReportCard({ data, refreshControl }: Props) {
         </SectionCard>
       )}
 
-      {/* ── 3. ENGLISH PROFILE (parent only) ── */}
-      {englishSkills && (
-        <SectionCard n={nextN()} title="How they read aloud." sub="Oral reading, fluency, comprehension.">
-          <View style={r.epGrid}>
-            {[
-              { label: "Accuracy",      val: englishSkills.avg_accuracy      ?? 0 },
-              { label: "Fluency",        val: englishSkills.avg_fluency        ?? 0 },
-              { label: "Expression",     val: englishSkills.avg_expression     ?? 0 },
-              { label: "Comprehension",  val: englishSkills.avg_comprehension  ?? 0 },
-            ].map(({ label, val }) => {
-              const band = bandFor(val);
-              const b = BAND[band];
-              return (
-                <View key={label} style={r.epRing}>
-                  <Text style={r.epLabel}>{label}</Text>
-                  <Text style={[r.epVal, { color: b.fg }]}>{Math.round(val)}<Text style={r.epUnit}>%</Text></Text>
-                  <View style={r.bar}>
-                    <View style={[r.barFill, { width: `${Math.min(val, 100)}%` as any, backgroundColor: b.fg }]} />
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-          {(englishSkills.avg_wpm ?? 0) > 0 && (
-            <View style={r.wpmCard}>
-              <Text style={r.wpmLabel}>READING SPEED</Text>
-              <Text style={r.wpmVal}>{Math.round(englishSkills.avg_wpm!)}<Text style={r.wpmUnit}> wpm</Text></Text>
-            </View>
-          )}
-        </SectionCard>
-      )}
-
-      {/* ── 4. TESTS (parent only) ── */}
+      {/* ── 3. TESTS (parent only) ── */}
       {testSubs && testSubs.length > 0 && (
         <SectionCard n={nextN()} title="Chapter Test Results" sub="ZPD-calibrated assessments.">
           {testSubs.map((t: ReportTestSubmission, i: number) => {
@@ -634,17 +592,6 @@ const r = StyleSheet.create({
   barVal:       { fontFamily: fonts.dmBold, fontSize: 13 },
   bar:          { height: 4, backgroundColor: colors.border, borderRadius: 2, overflow: "hidden" },
   barFill:      { height: "100%", borderRadius: 2 },
-
-  // English skills
-  epGrid:       { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  epRing:       { width: "48%", borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, gap: 6 },
-  epLabel:      { fontFamily: fonts.dmBold, fontSize: 9, color: colors.muted, textTransform: "uppercase", letterSpacing: 0.8 },
-  epVal:        { fontFamily: fonts.nunito, fontSize: 24, lineHeight: 28 },
-  epUnit:       { fontSize: 12, color: colors.muted },
-  wpmCard:      { backgroundColor: colors.navy, borderRadius: 10, padding: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  wpmLabel:     { fontFamily: fonts.dmBold, fontSize: 9, color: "rgba(255,255,255,0.5)", letterSpacing: 1.2, textTransform: "uppercase" },
-  wpmVal:       { fontFamily: fonts.nunito, fontSize: 28, color: "#fff" },
-  wpmUnit:      { fontSize: 13, color: "rgba(255,255,255,0.5)" },
 
   // Tests
   testCard:     { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 13, gap: 12 },

@@ -10,10 +10,12 @@ import { useSyncExternalStore } from "react";
 import * as SecureStore from "expo-secure-store";
 
 export type ListenMode = "continuous" | "ptt";
+export type AvatarId = "graduate-boy" | "graduate-girl";
 
 export interface Prefs {
   soundEnabled: boolean;
   listenMode: ListenMode;
+  avatarId: AvatarId;
   hydrated: boolean;
 }
 
@@ -22,6 +24,7 @@ const STORAGE_KEY = "gened_prefs";
 const state: Prefs = {
   soundEnabled: true,
   listenMode: "continuous",
+  avatarId: "graduate-boy",
   hydrated: false,
 };
 
@@ -41,7 +44,11 @@ function subscribe(listener: () => void) {
 function persist() {
   SecureStore.setItemAsync(
     STORAGE_KEY,
-    JSON.stringify({ soundEnabled: state.soundEnabled, listenMode: state.listenMode })
+    JSON.stringify({
+      soundEnabled: state.soundEnabled,
+      listenMode: state.listenMode,
+      avatarId: state.avatarId,
+    })
   ).catch(() => {});
 }
 
@@ -55,6 +62,9 @@ export const prefsStore = {
         if (typeof parsed.soundEnabled === "boolean") state.soundEnabled = parsed.soundEnabled;
         if (parsed.listenMode === "continuous" || parsed.listenMode === "ptt") {
           state.listenMode = parsed.listenMode;
+        }
+        if (parsed.avatarId === "graduate-boy" || parsed.avatarId === "graduate-girl") {
+          state.avatarId = parsed.avatarId;
         }
       }
     } catch {
@@ -71,6 +81,11 @@ export const prefsStore = {
   },
   setListenMode: (mode: ListenMode) => {
     state.listenMode = mode;
+    persist();
+    emit();
+  },
+  setAvatarId: (id: AvatarId) => {
+    state.avatarId = id;
     persist();
     emit();
   },

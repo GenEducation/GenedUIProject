@@ -3,7 +3,11 @@
  * no parent_id branch). Uses authFetch for Bearer-token injection.
  */
 import { authFetch } from "./authFetch";
-import type { ScheduleSessionRequest, ScheduleSessionResponse } from "../types/schedule";
+import type {
+  ScheduleSessionRequest,
+  ScheduleSessionRescheduleRequest,
+  ScheduleSessionResponse,
+} from "../types/schedule";
 
 const BASE = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -24,6 +28,21 @@ export const scheduleService = {
     const res = await authFetch(
       `${BASE}/scheduled-sessions?user_id=${encodeURIComponent(userId)}`,
       { signal }
+    );
+    return res.json();
+  },
+
+  rescheduleSession: async (
+    scheduledSessionId: string,
+    request: ScheduleSessionRescheduleRequest
+  ): Promise<ScheduleSessionResponse> => {
+    const res = await authFetch(
+      `${BASE}/scheduled-sessions/${encodeURIComponent(scheduledSessionId)}/reschedule`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+      }
     );
     return res.json();
   },

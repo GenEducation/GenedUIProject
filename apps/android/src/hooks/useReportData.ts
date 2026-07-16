@@ -4,8 +4,8 @@
  * them into the parent-report shape consumed by `fromParentReport`.
  *
  * The bare /progress-report endpoint alone only carries the AI narrative — the
- * numeric subject KPIs, chapter mastery, skill tree, tests, English profile and
- * evolution analyses each live behind their own per-subject/per-chapter endpoints.
+ * numeric subject KPIs, chapter mastery, skill tree, tests and evolution
+ * analyses each live behind their own per-subject/per-chapter endpoints.
  */
 import { useCallback } from "react";
 import { useApi } from "./useApi";
@@ -20,7 +20,6 @@ export interface FullReportData {
   subjects: any[];
   chapters: any[];
   skill_tree: any[];
-  english_skills: any | null;
   test_submissions: any[];
   progress_report: any | null;
   subject_evolutions: any[];
@@ -84,9 +83,8 @@ async function assembleReport(studentId: string): Promise<FullReportData> {
     if (subjectEvo && !hasDetail(subjectEvo)) subject_evolutions.push(subjectEvo);
   }
 
-  // 3. English skills + test submissions + progress report in parallel.
-  const [english, tests, progress] = await Promise.all([
-    studentService.fetchEnglishSkillsSummary(studentId).catch(() => null),
+  // 3. Test submissions + progress report in parallel.
+  const [tests, progress] = await Promise.all([
     studentService.fetchTestSubmissions(studentId).catch(() => []),
     studentService.fetchProgressReport(studentId).catch(() => null),
   ]);
@@ -107,7 +105,6 @@ async function assembleReport(studentId: string): Promise<FullReportData> {
     subjects,
     chapters,
     skill_tree,
-    english_skills: english && !hasDetail(english) ? english : null,
     test_submissions: Array.isArray(tests) ? tests : [],
     progress_report: progress && !hasDetail(progress) ? progress : null,
     subject_evolutions,

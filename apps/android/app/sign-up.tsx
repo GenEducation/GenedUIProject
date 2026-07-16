@@ -12,6 +12,7 @@ import { signUp, googleSignUp, sendOtp } from "@/services/authService";
 import { signInWithGoogle, GoogleSignInCancelled } from "@/services/googleAuth";
 import { useAuth } from "@/store/useAuthStore";
 import { tutorialStore } from "@/store/useTutorialStore";
+import { useLoaderStore } from "@/store/useLoaderStore";
 import { RoleCarousel } from "@/components/auth/RoleCarousel";
 
 const GENED_LOGO = require("../assets/gened-logo.png");
@@ -168,6 +169,7 @@ export default function SignUp() {
   const createStudentAccount = async () => {
     if (!validateStudentStep2()) return;
     setRootError(""); setLoading(true);
+    useLoaderStore.getState().startLoading();
     try {
       const res = googleToken
         ? await googleSignUp(googleToken, {
@@ -183,8 +185,10 @@ export default function SignUp() {
           });
       await login(res);
       tutorialStore.startTutorial();
-      router.replace("/(tabs)");
+      useLoaderStore.getState().completeLoading();
+      setTimeout(() => router.replace("/(tabs)"), 1200);
     } catch (e: any) {
+      useLoaderStore.getState().stopLoading();
       setRootError(e.message || "Sign-up failed. Please try again.");
     } finally { setLoading(false); }
   };
@@ -197,6 +201,7 @@ export default function SignUp() {
 
   const createParentAccount = async () => {
     setRootError(""); setLoading(true);
+    useLoaderStore.getState().startLoading();
     try {
       const res = googleToken
         ? await googleSignUp(googleToken, {
@@ -210,9 +215,13 @@ export default function SignUp() {
             ...(phone.trim() ? { phone: phone.trim() } : {}),
           });
       await login(res);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      router.replace("/(parent)" as any);
+      useLoaderStore.getState().completeLoading();
+      setTimeout(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        router.replace("/(parent)" as any);
+      }, 1200);
     } catch (e: any) {
+      useLoaderStore.getState().stopLoading();
       setRootError(e.message || "Sign-up failed. Please try again.");
     } finally { setLoading(false); }
   };

@@ -1,5 +1,5 @@
 /**
- * Notification bell for the parent portal header.
+ * Notification bell for portal headers (student, parent, ...).
  * Shows an unread badge and opens a bottom sheet of notifications.
  * Connects to the SSE stream on mount for live updates.
  */
@@ -22,12 +22,12 @@ import {
   AlertCircle,
   X,
 } from "lucide-react-native";
-import { colors, fonts, radius } from "../../theme/tokens";
+import { colors, fonts, radius } from "../theme/tokens";
 import {
   notificationStore,
   useNotificationStore,
-} from "../../store/useNotificationStore";
-import type { Notification } from "../../services/notificationService";
+} from "../store/useNotificationStore";
+import type { Notification } from "../services/notificationService";
 
 function timeAgo(dateStr: string): string {
   const now = new Date();

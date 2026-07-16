@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { CalendarClock, ChevronRight } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
 import { AprilAvatar } from "@/components/AprilAvatar";
+import { NotificationBell } from "@/components/NotificationBell";
 import { SectionHead } from "@/components/SectionHead";
 import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
@@ -13,12 +14,14 @@ import { ContinueLearning } from "@/components/home/ContinueLearning";
 import { SubjectCard } from "@/components/home/SubjectCard";
 import { RecentSessionItem } from "@/components/home/RecentSessionItem";
 import { useHomeData } from "@/hooks/useHomeData";
+import { useStudentId } from "@/hooks/useStudentId";
 import { useAuth } from "@/store/useAuthStore";
 import { colors, fonts } from "@/theme/tokens";
 
 export default function Home() {
   const router = useRouter();
   const { state } = useAuth();
+  const studentId = useStudentId();
 
   const { stats, subjects, recentSessions, loading, refreshing, hasData, error, refetch } = useHomeData();
   const [showAllSessions, setShowAllSessions] = useState(false);
@@ -70,7 +73,10 @@ export default function Home() {
               <Text style={styles.sub}>What would you like to learn today?</Text>
             )}
           </View>
-          <AprilAvatar size={52} />
+          <View style={styles.greetActions}>
+            <NotificationBell userId={studentId} />
+            <AprilAvatar size={52} />
+          </View>
         </View>
 
         {/* Stats */}
@@ -149,6 +155,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 18,
   },
+  greetActions: { flexDirection: "row", alignItems: "center", gap: 10 },
   h1: { fontFamily: fonts.nunito, fontSize: 22, color: colors.text },
   sub: {
     fontFamily: fonts.dmMedium,

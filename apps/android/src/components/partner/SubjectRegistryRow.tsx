@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { View, Text, Pressable, StyleSheet, Animated } from "react-native";
+import { FileText } from "lucide-react-native";
 import { colors, fonts, subjectVisual } from "../../theme/tokens";
 import { StatusBadge } from "./StatusBadge";
 import type { SubjectRegistryItem } from "../../types/partner";
@@ -8,9 +9,10 @@ interface Props {
   item: SubjectRegistryItem;
   onDelete?: () => void;
   onCancel?: () => void;
+  onViewPdf?: () => void;
 }
 
-export function SubjectRegistryRow({ item, onDelete, onCancel }: Props) {
+export function SubjectRegistryRow({ item, onDelete, onCancel, onViewPdf }: Props) {
   const visual = subjectVisual[item.subject.toLowerCase()] ?? {
     color: colors.genPurple,
     bg:    colors.genPurple + "12",
@@ -61,15 +63,22 @@ export function SubjectRegistryRow({ item, onDelete, onCancel }: Props) {
       {/* Right side */}
       <View style={styles.right}>
         <StatusBadge status={item.status} />
-        {item.status === "in-progress" && onCancel ? (
-          <Pressable style={styles.actionBtn} onPress={onCancel} hitSlop={8}>
-            <Text style={styles.cancelText}>✕</Text>
-          </Pressable>
-        ) : (item.status === "active" || item.status === "failed") && onDelete ? (
-          <Pressable style={styles.actionBtn} onPress={onDelete} hitSlop={8}>
-            <Text style={styles.deleteText}>🗑</Text>
-          </Pressable>
-        ) : null}
+        <View style={styles.actionRow}>
+          {item.status === "active" && onViewPdf ? (
+            <Pressable style={styles.actionBtn} onPress={onViewPdf} hitSlop={8}>
+              <FileText size={16} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
+          {item.status === "in-progress" && onCancel ? (
+            <Pressable style={styles.actionBtn} onPress={onCancel} hitSlop={8}>
+              <Text style={styles.cancelText}>✕</Text>
+            </Pressable>
+          ) : (item.status === "active" || item.status === "failed") && onDelete ? (
+            <Pressable style={styles.actionBtn} onPress={onDelete} hitSlop={8}>
+              <Text style={styles.deleteText}>🗑</Text>
+            </Pressable>
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -103,6 +112,7 @@ const styles = StyleSheet.create({
   progressText: { fontFamily: fonts.dmMedium, fontSize: 11, color: "#B45309" },
 
   right: { alignItems: "flex-end", gap: 8, flexShrink: 0 },
+  actionRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   actionBtn: { padding: 4 },
   cancelText: { fontSize: 14, color: colors.textMuted },
   deleteText: { fontSize: 16 },

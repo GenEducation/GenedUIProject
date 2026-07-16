@@ -24,6 +24,8 @@ export interface AuthTokenResponse {
   school_board?:  string;
   plan?:          "FREE" | "PRO";
   plan_expires_at?: string | null;
+  /** Present for TEACHER accounts — the partner (school) they're linked to. */
+  partner_id?:    string;
 }
 
 async function handleError(res: Response, fallback: string): Promise<never> {

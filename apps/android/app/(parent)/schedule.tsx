@@ -17,11 +17,12 @@ import { Screen } from "@/components/Screen";
 import { LoadingState } from "@/components/LoadingState";
 import { EmptyState } from "@/components/EmptyState";
 import { ChildSwitcherSheet } from "@/components/parent/ChildSwitcherSheet";
-import { NotificationBell } from "@/components/parent/NotificationBell";
+import { NotificationBell } from "@/components/NotificationBell";
 import { PickerField, PickerSheet } from "@/components/PickerSheet";
 import { TimeField } from "@/components/TimeField";
 import { ParentMomentsManager } from "@/components/parent/ParentMomentsManager";
 import { MonthCalendar } from "@/components/MonthCalendar";
+import { RescheduleSheet, type RescheduleTarget } from "@/components/RescheduleSheet";
 import { useLinkedChildren } from "@/hooks/useLinkedChildren";
 import { useParentId } from "@/hooks/useParentId";
 import { useParentStore } from "@/store/useParentStore";
@@ -78,6 +79,12 @@ export default function ParentSchedule() {
   /* Sessions list */
   const [sessions, setSessions]       = useState<ScheduleSessionResponse[]>([]);
   const [loading, setLoading]         = useState(false);
+
+  /* Reschedule */
+  const [rescheduleTarget, setRescheduleTarget] = useState<RescheduleTarget | null>(null);
+  const [rescheduling, setRescheduling]         = useState(false);
+  const [rescheduleError, setRescheduleError]   = useState<string | null>(null);
+  const [rescheduled, setRescheduled]           = useState(false);
 
   const minDate = useMemo(() => {
     const d = new Date();
@@ -152,6 +159,26 @@ export default function ParentSchedule() {
     }
   };
 
+  const confirmReschedule = async (scheduledDate: string, scheduledTime: string) => {
+    if (!rescheduleTarget) return;
+    setRescheduling(true);
+    setRescheduleError(null);
+    try {
+      await scheduleService.rescheduleSession(rescheduleTarget.id, {
+        scheduled_date: scheduledDate,
+        scheduled_time: scheduledTime || undefined,
+      });
+      await loadSessions();
+      setRescheduleTarget(null);
+      setRescheduled(true);
+      setTimeout(() => setRescheduled(false), 4000);
+    } catch (err) {
+      setRescheduleError(err instanceof Error ? err.message : "Failed to reschedule session");
+    } finally {
+      setRescheduling(false);
+    }
+  };
+
   if (childrenLoading && approvedChildren.length === 0) {
     return (
       <Screen background={colors.pageBg}>
@@ -213,6 +240,8 @@ export default function ParentSchedule() {
         }
         ListHeaderComponent={
           <View style={{ gap: 18, marginBottom: 6 }}>
+            {rescheduled ? <Banner tone="success" text="Session rescheduled." /> : null}
+
             {/* Booking card */}
             <View style={s.card}>
               <Text style={s.cardTitle}>Book a Session</Text>
@@ -279,7 +308,14 @@ export default function ParentSchedule() {
             <Text style={s.sectionTitle}>Upcoming Sessions</Text>
           </View>
         }
-        renderItem={({ item }) => <SessionCard session={item} />}
+        renderItem={({ item }) => (
+          <SessionCard
+            session={item}
+            onReschedule={() =>
+              setRescheduleTarget({ id: item.id, sessionType: item.session_type, subject: item.subject, topic: item.topic })
+            }
+          />
+        )}
         ListEmptyComponent={
           loading ? null : (
             <View style={s.empty}>
@@ -316,11 +352,19 @@ export default function ParentSchedule() {
         selectedChildId={selectedChildId}
         onClose={() => setSwitcherOpen(false)}
       />
+
+      <RescheduleSheet
+        target={rescheduleTarget}
+        onClose={() => setRescheduleTarget(null)}
+        onConfirm={confirmReschedule}
+        isSubmitting={rescheduling}
+        errorMessage={rescheduleError}
+      />
     </Screen>
   );
 }
 
-function SessionCard({ session }: { session: ScheduleSessionResponse }) {
+function SessionCard({ session, onReschedule }: { session: ScheduleSessionResponse; onReschedule: () => void }) {
   const isFailed = session.preparation_status === "FAILED";
   const isReady  = session.preparation_status === "COMPLETED" && !!session.session_id;
   const status = isFailed
@@ -342,12 +386,19 @@ function SessionCard({ session }: { session: ScheduleSessionResponse }) {
           <Text style={[s.statusText, { color: status.fg }]}>{status.label}</Text>
         </View>
       </View>
-      <Text style={s.sessDate}>
-        {new Date(session.scheduled_date).toLocaleDateString(undefined, {
-          weekday: "short", month: "short", day: "numeric",
-        })}
-        {session.scheduled_time ? ` · ${session.scheduled_time} IST` : ""}
-      </Text>
+      <View style={s.sessBottom}>
+        <Text style={s.sessDate}>
+          {new Date(session.scheduled_date).toLocaleDateString(undefined, {
+            weekday: "short", month: "short", day: "numeric",
+          })}
+          {session.scheduled_time ? ` · ${session.scheduled_time} IST` : ""}
+        </Text>
+        {isFailed ? (
+          <Pressable onPress={onReschedule} style={s.ghostBtn}>
+            <Text style={s.ghostText}>Reschedule</Text>
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -430,6 +481,9 @@ const s = StyleSheet.create({
   },
   statusText: { fontFamily: fonts.dmBold, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 },
   sessDate:   { fontFamily: fonts.dmMedium, fontSize: 12, color: colors.textMid },
+  sessBottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  ghostBtn:   { backgroundColor: colors.pageBg, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 },
+  ghostText:  { fontFamily: fonts.dmBold, fontSize: 12, color: colors.text },
 
   empty: { alignItems: "center", gap: 8, paddingVertical: 40 },
   emptyText: { fontFamily: fonts.dm, fontSize: 13, color: colors.textMuted },

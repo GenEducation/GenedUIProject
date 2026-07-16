@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { Screen } from "@/components/Screen";
 import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
@@ -16,6 +17,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { SubjectRegistryRow } from "@/components/partner/SubjectRegistryRow";
 import { IngestionSheet } from "@/components/partner/IngestionSheet";
 import { useAcademicRegistry } from "@/hooks/useAcademicRegistry";
+import { pdfStore } from "@/store/usePdfStore";
 import { colors, fonts, radius } from "@/theme/tokens";
 import type { RegistryFilter } from "@/hooks/useAcademicRegistry";
 import type { SubjectRegistryItem } from "@/types/partner";
@@ -28,6 +30,7 @@ const STATUS_FILTERS: { key: RegistryFilter; label: string }[] = [
 ];
 
 export default function RegistryScreen() {
+  const router = useRouter();
   const {
     subjects, allSubjects,
     search, statusFilter,
@@ -60,6 +63,11 @@ export default function RegistryScreen() {
         },
       ]
     );
+  };
+
+  const viewPdf = (item: SubjectRegistryItem) => {
+    pdfStore.openPdf(item.document_title, Number(item.grade), item.subject);
+    router.push("/pdf-viewer");
   };
 
   const confirmCancel = (item: SubjectRegistryItem) => {
@@ -143,6 +151,7 @@ export default function RegistryScreen() {
             item={item}
             onDelete={() => confirmDelete(item)}
             onCancel={() => confirmCancel(item)}
+            onViewPdf={() => viewPdf(item)}
           />
         )}
         contentContainerStyle={styles.list}

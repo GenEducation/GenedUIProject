@@ -33,6 +33,10 @@ export default function PartnerLayout() {
         options={{ title: "Registry", tabBarIcon: () => <Emoji char="📚" /> }}
       />
       <Tabs.Screen
+        name="labs"
+        options={{ title: "Labs", tabBarIcon: () => <Emoji char="🖥️" /> }}
+      />
+      <Tabs.Screen
         name="me"
         options={{ title: "Me", tabBarIcon: () => <Emoji char="😊" /> }}
       />

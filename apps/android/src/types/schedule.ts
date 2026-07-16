@@ -17,6 +17,11 @@ export interface ScheduleSessionRequest {
   scheduled_time?: string; // "HH:MM" IST, optional
 }
 
+export interface ScheduleSessionRescheduleRequest {
+  scheduled_date: string; // YYYY-MM-DD
+  scheduled_time?: string; // "HH:MM" IST, optional
+}
+
 export interface ScheduleSessionResponse {
   id: string;
   student_id: string;
