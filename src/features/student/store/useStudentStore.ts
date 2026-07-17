@@ -621,12 +621,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       console.log("📂 [StudentStore] Raw Sessions Data:", data);
 
       const mappedChats: ChatSession[] = data.sessions.map((s: any) => {
+        // Prefer the backend's canonical subject (mirrored from the orchestrator,
+        // e.g. "Social Science"). The agent-id substring guess is only a legacy
+        // fallback for old rows — and must check "social" before "science".
         const raw = (s.subject_agent || "").toLowerCase();
-        const derivedSubject = raw.includes("math") ? "mathematics"
-          : raw.includes("english") ? "english"
-            : raw.includes("science") ? "science"
-              : raw.includes("hindi") ? "hindi"
-                : (s.subject || "");
+        const derivedSubject = s.subject
+          || (raw.includes("math") ? "mathematics"
+            : raw.includes("english") ? "english"
+              : (raw.includes("social") || raw.includes("sst")) ? "social science"
+                : raw.includes("science") ? "science"
+                  : raw.includes("hindi") ? "hindi"
+                    : "");
 
         return {
           id: s.session_id,

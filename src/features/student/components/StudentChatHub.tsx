@@ -17,16 +17,18 @@ import { SUBJECT_CONFIG, Subject } from "@/constants/subjectConfig";
 import { EnglishIcon } from "@/components/icons/EnglishIcon";
 import { MathematicsIcon } from "@/components/icons/MathematicsIcon";
 import { ScienceIcon } from "@/components/icons/ScienceIcon";
+import { SocialScienceIcon } from "@/components/icons/SocialScienceIcon";
 import { HindiIcon } from "@/components/icons/HindiIcon";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
 
 
-type SubjectKey = "english" | "mathematics" | "science" | "hindi";
+type SubjectKey = "english" | "mathematics" | "science" | "social_science" | "hindi";
 
 const SUBJECT_ICON_MAP: Record<SubjectKey, React.ComponentType<{ size: number; style?: React.CSSProperties }>> = {
   english: EnglishIcon,
   mathematics: MathematicsIcon,
   science: ScienceIcon,
+  social_science: SocialScienceIcon,
   hindi: HindiIcon,
 };
 
@@ -34,6 +36,8 @@ function normalizeSubject(subject: string): SubjectKey | null {
   const lower = (subject ?? "").toLowerCase();
   if (lower.includes("english")) return "english";
   if (lower.includes("math")) return "mathematics";
+  // "social" must be checked before "science" — "social science" contains both
+  if (lower.includes("social") || lower.includes("sst")) return "social_science";
   if (lower.includes("science")) return "science";
   if (lower.includes("hindi")) return "hindi";
   return null;
@@ -45,6 +49,7 @@ function resolveSubjectLabel(chat: { subject?: string; title?: string }): string
   const hay = (chat.title ?? "").toLowerCase();
   if (hay.includes("english")) return "English";
   if (hay.includes("math")) return "Mathematics";
+  if (hay.includes("social") || hay.includes("sst")) return "Social Science";
   if (hay.includes("science")) return "Science";
   if (hay.includes("hindi")) return "Hindi";
   return "Session";

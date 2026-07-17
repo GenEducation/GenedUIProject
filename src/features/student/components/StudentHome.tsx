@@ -34,10 +34,11 @@ const C = {
 };
 
 const SUBJECTS_VISUAL: Record<string, { color: string; bg: string; icon: string; label: string }> = {
-  english:     { color: "#4A90D9", bg: "#EBF3FB", icon: "📖", label: "English" },
-  mathematics: { color: "#2D6A4F", bg: "#E8F5EF", icon: "🧮", label: "Mathematics" },
-  science:     { color: "#D4820A", bg: "#FEF5E7", icon: "🔬", label: "Science" },
-  hindi:       { color: "#7B5EA7", bg: "#F3EDF9", icon: "✏️", label: "Hindi" },
+  english:        { color: "#4A90D9", bg: "#EBF3FB", icon: "📖", label: "English" },
+  mathematics:    { color: "#2D6A4F", bg: "#E8F5EF", icon: "🧮", label: "Mathematics" },
+  science:        { color: "#D4820A", bg: "#FEF5E7", icon: "🔬", label: "Science" },
+  social_science: { color: "#B0543F", bg: "#FBEFEB", icon: "🌍", label: "Social Science" },
+  hindi:          { color: "#7B5EA7", bg: "#F3EDF9", icon: "✏️", label: "Hindi" },
 };
 
 /* ═══ RELATIVE TIME ═══ */
@@ -214,6 +215,8 @@ function normalizeSubjectKey(subject: string): string {
   const lower = (subject ?? "").toLowerCase();
   if (lower.includes("english"))  return "english";
   if (lower.includes("math"))     return "mathematics";
+  // "social" must be checked before "science" — "social science" contains both
+  if (lower.includes("social") || lower.includes("sst")) return "social_science";
   if (lower.includes("science"))  return "science";
   if (lower.includes("hindi"))    return "hindi";
   return lower;

@@ -5,14 +5,16 @@ import { SUBJECT_CONFIG, Subject } from "@/constants/subjectConfig";
 import { EnglishIcon } from "@/components/icons/EnglishIcon";
 import { MathematicsIcon } from "@/components/icons/MathematicsIcon";
 import { ScienceIcon } from "@/components/icons/ScienceIcon";
+import { SocialScienceIcon } from "@/components/icons/SocialScienceIcon";
 import { HindiIcon } from "@/components/icons/HindiIcon";
 
-const SUBJECTS: Subject[] = ["english", "mathematics", "science", "hindi"];
+const SUBJECTS: Subject[] = ["english", "mathematics", "science", "social_science", "hindi"];
 
 const ICON_MAP: Record<Subject, React.ComponentType<{ size: number; style?: React.CSSProperties }>> = {
   english: EnglishIcon,
   mathematics: MathematicsIcon,
   science: ScienceIcon,
+  social_science: SocialScienceIcon,
   hindi: HindiIcon,
 };
 

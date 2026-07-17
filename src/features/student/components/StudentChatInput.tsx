@@ -58,10 +58,13 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
     const trimmed = input.trim();
     if (!trimmed) return;
 
-    // If in hub mode with a subject selected, route to that subject's agent
+    // If in hub mode with a subject selected, route to that subject's agent.
+    // Picker keys use underscores ("social_science") while backend subjects use
+    // spaces ("Social Science"), so compare on a space-normalized form.
     if (isHub && selectedSubject) {
+      const wanted = selectedSubject.replace(/_/g, " ");
       const agent = availableAgents.find(
-        a => a.subject.toLowerCase() === selectedSubject ||
+        a => a.subject.toLowerCase().replace(/_/g, " ") === wanted ||
              (selectedSubject === "mathematics" && a.subject.toLowerCase() === "math")
       );
       if (agent) {
