@@ -93,9 +93,12 @@ export function ChapterOptionPicker({ options, onSelect }: ChapterOptionPickerPr
               No chapter matches that.
             </div>
           ) : (
-            matches.map((o) => (
-              <button
+            matches.map((o, i) => (
+              <motion.button
                 key={o.raw}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(i * 0.03, 0.32), type: "spring", stiffness: 400, damping: 30 }}
                 onClick={() => onSelect(o.raw)}
                 className="w-full flex items-center gap-2.5 transition-colors group"
                 style={{ padding: "9px 12px", borderRadius: 11, background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}
@@ -108,7 +111,7 @@ export function ChapterOptionPicker({ options, onSelect }: ChapterOptionPickerPr
                 <span style={{ fontSize: 13, fontWeight: 600, color: TEXT, fontFamily: "'DM Sans', sans-serif" }}>
                   {o.title}
                 </span>
-              </button>
+              </motion.button>
             ))
           )}
         </div>

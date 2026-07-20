@@ -195,7 +195,10 @@ export function LoginView() {
       }
 
       const redirectPath = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("redirect") : null;
-      router.replace(redirectPath || `/${role}`);
+      useLoaderStore.getState().completeLoading();
+      setTimeout(() => {
+        router.replace(redirectPath || `/${role}`);
+      }, 1200);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
       const rawMsg = error instanceof Error ? error.message : "Unable to complete signin.";
@@ -271,8 +274,10 @@ export function LoginView() {
         useTutorialStore.getState().startTutorial();
       }
 
-      // Redirect immediately
-      router.replace(`/${role}`);
+      useLoaderStore.getState().completeLoading();
+      setTimeout(() => {
+        router.replace(`/${role}`);
+      }, 1200);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
       const rawMsg = error instanceof Error ? error.message : "Unable to complete signup.";

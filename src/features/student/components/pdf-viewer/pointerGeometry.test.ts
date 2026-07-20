@@ -1,8 +1,8 @@
 /**
  * Unit tests for pointerGeometry.
- * Run with: node --test src/features/student/components/pdf-viewer/pointerGeometry.test.ts
+ * Runs under Vitest (`npm test`); uses node:assert for the assertions.
  */
-import { test } from "node:test";
+import { test } from "vitest";
 import assert from "node:assert/strict";
 import {
   multiplyTransform,

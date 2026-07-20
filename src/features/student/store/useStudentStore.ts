@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import * as Sentry from "@sentry/nextjs";
 import { studentService } from "../services/studentService";
 import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import { parseContent, generateHistoricalSVG, normalizeSvg } from "../utils/parseContent";
@@ -30,7 +31,7 @@ export interface StudentProfile {
 
 export interface ChatElement {
   id: string;
-  type: "text" | "svg" | "widget" | "image" | "visual" | "comprehension_widget" | "english_skill_view" | "interactive";
+  type: "text" | "svg" | "widget" | "image" | "visual" | "comprehension_widget" | "english_skill_view" | "interactive" | "pointer_ref";
   content: string;
   meta?: {
     // existing visual meta
@@ -90,6 +91,11 @@ export interface ChatMessage {
   sender: "user" | "ai";
   timestamp: string;
   isPlanning?: boolean;
+  // Set on the finalized greeting message when it was sent via the deferred
+  // new-session navigation flow (see startNewChatSession) — signals
+  // ChatMessageBubble to replay the typing effect on its first mount, since
+  // the stream usually finishes before the router.push completes.
+  replayTyping?: boolean;
   options?: string[];
   statusText?: string;
   toolStatus?: string;
@@ -299,8 +305,15 @@ export interface StudentState {
   studentStats: { currentStreak: number; longestStreak: number; totalSessions: number } | null;
   isStatsLoading: boolean;
   sessionMode: "chat" | "voice" | null;
+  // True while a brand-new chat is being created and we're waiting for the
+  // backend's session_id chunk before navigating to the chat page.
+  isStartingSession: boolean;
+  // One-shot navigation callback invoked with the real session_id once the
+  // backend assigns it (set by startNewChatSession).
+  pendingSessionNavigation: ((sessionId: string) => void) | null;
   voicePrefs: { listenMode: "continuous" | "ptt"; pttHotkey: string; };
   pttHeld: boolean;
+  avatarId: AvatarId;
 
   // ── Doubt / Study Mode ───────────────────────────────────────────────────────
   /** Resolved mode for the current turn — updated optimistically on send and confirmed on done event */
@@ -365,9 +378,11 @@ export interface StudentState {
   beginPttUtterance: () => void;
   endPttUtterance: () => void;
   openNewSession: (agent: AgentItem, mode: "chat" | "voice") => void;
+  startNewChatSession: (agent: AgentItem, navigate: (sessionId: string) => void) => void;
   initNewVoiceSession: (agentId: string) => void;
   setListenMode: (mode: "continuous" | "ptt") => void;
   setPttHotkey: (key: string) => void;
+  setAvatarId: (id: AvatarId) => void;
 
   // ── Chapter PDF Viewer Actions ───────────────────────────────────────────────
   openChapterPdf: () => Promise<void>;
@@ -402,6 +417,16 @@ export interface StudentState {
 }
 
 // -- Store --------------------------------------------------------------------─
+
+export type AvatarId = "graduate-boy" | "graduate-girl";
+
+const getInitialAvatarId = (): AvatarId => {
+  if (typeof window === "undefined") {
+    return "graduate-boy";
+  }
+  const saved = localStorage.getItem("gened_avatar_id");
+  return saved === "graduate-girl" ? "graduate-girl" : "graduate-boy";
+};
 
 const getInitialVoicePrefs = () => {
   if (typeof window === "undefined") {
@@ -458,8 +483,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   studentStats: null,
   isStatsLoading: false,
   sessionMode: null,
+  isStartingSession: false,
+  pendingSessionNavigation: null,
   voicePrefs: getInitialVoicePrefs(),
   pttHeld: false,
+  avatarId: getInitialAvatarId(),
   chatQueryMode: "study",
   chatQueryModePinned: false,
   // Chapter PDF viewer initial state
@@ -482,6 +510,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   comprehensionResults: {},
   interactiveResults: {},
   logoutStudent: () => {
+    Sentry.setUser(null);
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");
     localStorage.removeItem("gened_user_profile");
@@ -592,12 +621,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       console.log("📂 [StudentStore] Raw Sessions Data:", data);
 
       const mappedChats: ChatSession[] = data.sessions.map((s: any) => {
+        // Prefer the backend's canonical subject (mirrored from the orchestrator,
+        // e.g. "Social Science"). The agent-id substring guess is only a legacy
+        // fallback for old rows — and must check "social" before "science".
         const raw = (s.subject_agent || "").toLowerCase();
-        const derivedSubject = raw.includes("math") ? "mathematics"
-          : raw.includes("english") ? "english"
-            : raw.includes("science") ? "science"
-              : raw.includes("hindi") ? "hindi"
-                : (s.subject || "");
+        const derivedSubject = s.subject
+          || (raw.includes("math") ? "mathematics"
+            : raw.includes("english") ? "english"
+              : (raw.includes("social") || raw.includes("sst")) ? "social science"
+                : raw.includes("science") ? "science"
+                  : raw.includes("hindi") ? "hindi"
+                    : "");
 
         return {
           id: s.session_id,
@@ -1707,6 +1741,21 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }));
   },
 
+  /**
+   * Start a brand-new chat WITHOUT navigating yet. The greeting request is
+   * fired from the current page (home/hub); once the backend streams back the
+   * real session_id, `navigate` is invoked with it so the caller can
+   * router.push straight to /student/chat/{realId}. This avoids the mid-stream
+   * "new" → realId URL swap that remounted the chat view and killed the
+   * greeting's typing animation.
+   */
+  startNewChatSession: (agent: AgentItem, navigate: (sessionId: string) => void) => {
+    if (get().isStartingSession) return; // ignore double-clicks
+    get().openNewSession(agent, "chat");
+    set({ isStartingSession: true, pendingSessionNavigation: navigate });
+    get().sendMessage("Hello");
+  },
+
   initNewVoiceSession: (agentId: string) => {
     const { availableAgents } = get();
     const agent = availableAgents.find((a) => a.agent_id === agentId);
@@ -1749,6 +1798,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       }
       return { voicePrefs: newPrefs };
     });
+  },
+
+  setAvatarId: (id) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("gened_avatar_id", id);
+    }
+    set({ avatarId: id });
   },
 
   // ── English Skill Mode Actions ─────────────────────────────────────────────
@@ -2088,6 +2144,27 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       };
     });
 
+    // Client-side TTFT/cancellation instrumentation (Phase 4 of the backend's
+    // observability roadmap — mirrors the backend's sse.stream.cancelled
+    // event, see docs/observability/frontend-instrumentation-spec.md in the
+    // MVP repo). Declared here (function scope, not inside try{}) so it's
+    // visible in the catch{} block below too. Timing-only; does not affect
+    // the streaming state machine.
+    const streamStartTime = performance.now();
+
+    // Set when the mid-stream session_id event promotes activeChat from
+    // "new"/"new-focused" to its real id — later state checks that compare
+    // against chatSentFromId must also accept this id, otherwise the visible
+    // thread stops receiving stream patches after promotion. Function-scoped
+    // so the catch{} block can use it too.
+    let promotedSessionId: string | null = null;
+
+    // Captured before the mid-stream session_id handler nulls it — true when
+    // this send is part of the deferred-navigation new-session flow, so the
+    // finalized greeting should replay its typing effect once the caller's
+    // router.push lands on the mounted chat page.
+    const isDeferredNavSend = get().pendingSessionNavigation !== null;
+
     try {
       const sessionIdToSend =
         effectiveChat.session_id || (effectiveChat.id === "new" ? undefined : effectiveChat.id);
@@ -2106,6 +2183,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       const isNewFocused = effectiveChat.isFocused && isNewSession;
       const abortController = new AbortController();
       set({ chatAbortController: abortController });
+
+      let firstChunkReceived = false;
 
       // Mode resolution. The backend is the source of truth: it auto-classifies each
       // turn (entry router for new sessions, classify_session_mode for ongoing ones)
@@ -2181,7 +2260,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
         if (tailText) {
           displayElements.push({
-            id: `stream-tail-${Date.now()}`,
+            id: `el-pos-${displayElements.length}`,
             type: "text",
             content: tailText
           });
@@ -2202,7 +2281,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                 : m
             );
           return {
-            messages: state.activeChat?.id === chatSentFromId ? patch(state.messages) : state.messages,
+            messages:
+              state.activeChat?.id === chatSentFromId ||
+              (promotedSessionId && state.activeChat?.id === promotedSessionId)
+                ? patch(state.messages)
+                : state.messages,
             chatMessagesCache: {
               ...state.chatMessagesCache,
               [chatSentFromId]: patch(state.chatMessagesCache[chatSentFromId] || []),
@@ -2227,13 +2310,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                   lastEl.type === "svg" &&
                   lastEl.meta?.shape === newEl.meta.shape
                 ) {
-                  // Upgrade the existing element in place
-                  elements[lastIdx] = newEl;
+                  // Upgrade the existing element in place, keeping its id so
+                  // the renderer doesn't remount.
+                  elements[lastIdx] = { ...newEl, id: lastEl.id };
                 } else {
-                  elements.push(newEl);
+                  // Position-based id: if this text element occupies the same
+                  // slot the transient stream-tail did, the id matches and
+                  // React keeps the mounted typewriter instead of remounting it.
+                  elements.push({ ...newEl, id: `el-pos-${elements.length}` });
                 }
               } else {
-                elements.push(newEl);
+                elements.push({ ...newEl, id: `el-pos-${elements.length}` });
               }
             });
           }
@@ -2357,6 +2444,16 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           currentToolStatus = undefined;
           if (isPlanningUIPresented) updateUI(bufferedText, elements);
         } else if ((event.type === "chunk" || event.type === "chunks") && typeof event.text === "string") {
+          if (!firstChunkReceived) {
+            firstChunkReceived = true;
+            const ttftMs = performance.now() - streamStartTime;
+            Sentry.addBreadcrumb({
+              category: "sse",
+              message: "Tutor stream: first chunk received (TTFT)",
+              level: "info",
+              data: { ttft_ms: Math.round(ttftMs) },
+            });
+          }
           currentTextBuffer += event.text;
           bufferedText += event.text;
 
@@ -2379,6 +2476,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                 content: normalizeSvg(tag),
                 meta: { isRawBackendSvg: true }
               });
+            } else if (match[1] && /^(SPEAK_PARA|DIFFICULT_WORD|READ_ALOUD|LISTEN_COMPREHENSION|SHOW_FIGURE_DESCRIBE|KARAOKE)$/.test(match[1])) {
+              // English skill directives are owned by the dedicated handler below
+              // (and by the skill_action event, keyed on the real directive_id).
+              // Skipping the generic parseContent push here avoids emitting a second
+              // widget with a Date.now()-based id when the inline payload lacks a
+              // directive_id — which previously rendered the quiz/word card twice.
             } else {
               const extracted = parseContent(tag);
               const tagElement = extracted.find(el => el.type !== "text");
@@ -2570,6 +2673,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           // Wave 4: graceful degradation — log only, session continues
           console.warn("[SkillError]", event.error_type, event.message);
         } else if (event.type === "done") {
+          Sentry.addBreadcrumb({
+            category: "sse",
+            message: "Tutor stream: completed",
+            level: "info",
+            data: { total_duration_ms: Math.round(performance.now() - streamStartTime) },
+          });
           finalSessionId = event.session_id;
           finalOptions = Array.isArray(event.options) ? event.options : [];
           finalActions = Array.isArray(event.actions) ? event.actions : [];
@@ -2690,7 +2799,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
               };
 
               set({ activeChat: updatedChat });
-              window.history.pushState(null, "", `/student/chat/${newSessionId}`);
+              promotedSessionId = newSessionId;
+              const pendingNav = get().pendingSessionNavigation;
+              if (pendingNav) {
+                // Deferred-navigation flow: we're still on the page the user
+                // started from — navigate to the real session URL now, so the
+                // rest of the greeting streams into a stable, mounted chat view.
+                set({ pendingSessionNavigation: null, isStartingSession: false });
+                pendingNav(newSessionId);
+              } else {
+                window.history.pushState(null, "", `/student/chat/${newSessionId}`);
+              }
               // Reset guard so fetchSessions actually runs and populates chapter_name on activeChat
               set({ hasFetchedSessions: false });
               fetchSessions();
@@ -2779,6 +2898,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           actions: finalActions.length > 0 ? finalActions : undefined,
           statusText: undefined,
           toolStatus: undefined,
+          replayTyping: isDeferredNavSend || undefined,
         };
 
         const patchMsg = (msgs: ChatMessage[]) =>
@@ -2806,7 +2926,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             (c) => c.id !== finalSessionId && c.session_id !== finalSessionId,
           );
           newRecentChats = [updatedChat, ...deduplicatedChats];
-          if (state.activeChat?.id === "new") {
+          if (
+            state.activeChat?.id === "new" ||
+            state.activeChat?.id === finalSessionId
+          ) {
             finalActiveChat = updatedChat;
           }
         } else if (chatInList) {
@@ -2845,7 +2968,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         const newTypingIds = state.typingChatIds.filter(
           (id) => id !== chatSentFromId,
         );
-        const isStillViewing = state.activeChat?.id === chatSentFromId;
+        const isStillViewing =
+          state.activeChat?.id === chatSentFromId ||
+          (promotedSessionId !== null && state.activeChat?.id === promotedSessionId);
 
         return {
           activeChat: finalActiveChat,
@@ -2861,6 +2986,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           ) || null,
         };
       });
+
+      // Safety net: if we were holding navigation for a new session but the
+      // session_id event never fired mid-stream, resolve it now (or clear it
+      // so the "starting" overlay doesn't hang forever).
+      {
+        const pendingNav = get().pendingSessionNavigation;
+        if (pendingNav) {
+          set({ pendingSessionNavigation: null, isStartingSession: false });
+          if (finalSessionId) pendingNav(finalSessionId);
+        }
+      }
     } catch (error: any) {
       const isAbort = error.name === "AbortError";
       const isRateLimit = error instanceof ApiRequestError && error.status === 429;
@@ -2868,6 +3004,16 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
       if (isAbort) {
         console.debug("Chat generation aborted by user");
+        // Client-side mirror of the backend's sse.stream.cancelled event —
+        // if this fires much more often than that backend metric, the gap
+        // points at client-side abandonment (tab-switch, navigation) rather
+        // than genuine network drops.
+        Sentry.addBreadcrumb({
+          category: "sse",
+          message: "Tutor stream: cancelled (client abort)",
+          level: "info",
+          data: { elapsed_ms: Math.round(performance.now() - streamStartTime) },
+        });
       } else if (isRateLimit) {
         set({ isRateLimitHit: true, rateLimitMessage: error.message || null });
       } else {
@@ -2900,18 +3046,21 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         const newTypingIds = state.typingChatIds.filter(
           (id) => id !== chatSentFromId,
         );
+        const isStillViewing =
+          state.activeChat?.id === chatSentFromId ||
+          (promotedSessionId !== null && state.activeChat?.id === promotedSessionId);
 
         return {
           chatMessagesCache: manageCacheEviction(state.chatMessagesCache, chatSentFromId, finishedMessages),
-          messages:
-            state.activeChat?.id === chatSentFromId
-              ? finishedMessages
-              : state.messages,
+          messages: isStillViewing ? finishedMessages : state.messages,
           typingChatIds: newTypingIds,
-          isAITyping:
-            state.activeChat?.id === chatSentFromId ? false : state.isAITyping,
+          isAITyping: isStillViewing ? false : state.isAITyping,
           streamingMessageId: null,
           chatAbortController: null,
+          // Abandon any deferred new-session navigation so the caller's
+          // "starting" overlay is dismissed on failure.
+          pendingSessionNavigation: null,
+          isStartingSession: false,
         };
       });
     }

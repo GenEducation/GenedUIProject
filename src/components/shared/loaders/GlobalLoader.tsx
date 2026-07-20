@@ -1,16 +1,17 @@
 "use client";
 
 import React from "react";
-import { StudentLoader } from "./StudentLoader/StudentLoader";
+import { LoaderJourney } from "./LoaderJourney/LoaderJourney";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 
 export const GlobalLoader = () => {
-  const { isVisible, stopLoading } = useLoaderStore();
+  const { isVisible, isComplete, stopLoading } = useLoaderStore();
 
   return (
-    <StudentLoader 
-      isVisible={isVisible} 
-      onComplete={stopLoading} 
+    <LoaderJourney
+      isVisible={isVisible}
+      isComplete={isComplete}
+      onFinished={stopLoading}
     />
   );
 };

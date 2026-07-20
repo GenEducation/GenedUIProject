@@ -39,32 +39,33 @@ function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: num
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 24 }}
-      animate={{ opacity: 1, x: 0 }}
+      initial={{ opacity: 0, x: 24, y: 8 }}
+      animate={{ opacity: 1, x: 0, y: 0 }}
       exit={{ opacity: 0, x: 24 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       className={`pointer-events-auto flex w-[320px] max-w-[90vw] items-start gap-3 rounded-xl border bg-white p-4 shadow-[0_24px_60px_rgba(4,46,92,.22)] ${
-        isError ? "border-l-4 border-l-[#E1604B] border-[#e6ecf2]" : "border-l-4 border-l-[#059F6D] border-[#e6ecf2]"
+        isError ? "border-l-4 border-l-danger border-border" : "border-l-4 border-l-emerald border-border"
       }`}
     >
       <span
         className={`mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full text-white ${
-          isError ? "bg-[#E1604B]" : "bg-[#059F6D]"
+          isError ? "bg-danger" : "bg-emerald"
         }`}
       >
         {isError ? <AlertTriangle size={12} /> : <Check size={12} />}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[13.5px] font-bold text-[#042E5C]">{toast.title}</p>
+        <p className="text-[13.5px] font-bold text-ink">{toast.title}</p>
         {toast.description && (
-          <p className="mt-0.5 text-[12.5px] leading-relaxed text-[#6b7d91]">{toast.description}</p>
+          <p className="mt-0.5 text-[12.5px] leading-relaxed text-muted">{toast.description}</p>
         )}
         {toast.code && (
-          <span className="mt-1.5 inline-block rounded-md bg-[#fdeeea] px-1.5 py-0.5 font-mono text-[10.5px] text-[#b3411f]">
+          <span className="mt-1.5 inline-block rounded-md bg-danger-bg px-1.5 py-0.5 font-mono text-[10.5px] text-danger-ink">
             error_code: {toast.code}
           </span>
         )}
       </div>
-      <button onClick={() => onDismiss(toast.id)} className="flex-none text-[#94a3b8] hover:text-[#6b7d91]">
+      <button onClick={() => onDismiss(toast.id)} className="flex-none text-muted-light hover:text-muted">
         <X size={14} />
       </button>
     </motion.div>

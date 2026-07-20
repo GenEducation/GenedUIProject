@@ -1,5 +1,5 @@
 import { authFetch } from "@/utils/authFetch";
-import { ScheduleSessionRequest, ScheduleSessionResponse } from "../types/schedule";
+import { ScheduleSessionRequest, ScheduleSessionRescheduleRequest, ScheduleSessionResponse } from "../types/schedule";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
@@ -43,5 +43,32 @@ export const scheduleService = {
     }
 
     return response.json();
-  }
+  },
+
+  rescheduleSession: async (
+    scheduledSessionId: string,
+    request: ScheduleSessionRescheduleRequest,
+    opts?: { parentId?: string }
+  ): Promise<ScheduleSessionResponse> => {
+    const qs = opts?.parentId ? `?parent_id=${encodeURIComponent(opts.parentId)}` : "";
+    const response = await authFetch(
+      `${API_BASE_URL}/scheduled-sessions/${scheduledSessionId}/reschedule${qs}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+        allow403: !!opts?.parentId,
+      }
+    );
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("Reschedule Session Error:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorBody,
+      });
+      throw new Error(`Failed to reschedule session: ${response.status}`);
+    }
+    return response.json();
+  },
 };

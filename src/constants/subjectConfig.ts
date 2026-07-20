@@ -1,4 +1,4 @@
-export type Subject = 'english' | 'mathematics' | 'science' | 'hindi';
+export type Subject = 'english' | 'mathematics' | 'science' | 'social_science' | 'hindi';
 
 export const SUBJECT_CONFIG: Record<Subject, {
   name: string;
@@ -31,6 +31,14 @@ export const SUBJECT_CONFIG: Record<Subject, {
     textColor: '#FDCB6E',
     borderColor: '#FDCB6E',
     hoverBgColor: 'rgba(253, 203, 110, 0.12)',
+  },
+  social_science: {
+    name: 'Social Science',
+    color: '#E17055',      // Terracotta
+    bgColor: 'rgba(225, 112, 85, 0.08)',
+    textColor: '#E17055',
+    borderColor: '#E17055',
+    hoverBgColor: 'rgba(225, 112, 85, 0.12)',
   },
   hindi: {
     name: 'Hindi',

@@ -4,15 +4,17 @@ import React from 'react';
 import { EnglishIcon } from './icons/EnglishIcon';
 import { MathematicsIcon } from './icons/MathematicsIcon';
 import { ScienceIcon } from './icons/ScienceIcon';
+import { SocialScienceIcon } from './icons/SocialScienceIcon';
 import { HindiIcon } from './icons/HindiIcon';
 import { SUBJECT_CONFIG, Subject } from '@/constants/subjectConfig';
 
-const subjects: Subject[] = ['english', 'mathematics', 'science', 'hindi'];
+const subjects: Subject[] = ['english', 'mathematics', 'science', 'social_science', 'hindi'];
 
 const iconMap = {
   english: EnglishIcon,
   mathematics: MathematicsIcon,
   science: ScienceIcon,
+  social_science: SocialScienceIcon,
   hindi: HindiIcon,
 };
 

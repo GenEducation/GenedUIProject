@@ -9,15 +9,17 @@ import { SUBJECT_CONFIG } from "@/constants/subjectConfig";
 import { EnglishIcon } from "@/components/icons/EnglishIcon";
 import { MathematicsIcon } from "@/components/icons/MathematicsIcon";
 import { ScienceIcon } from "@/components/icons/ScienceIcon";
+import { SocialScienceIcon } from "@/components/icons/SocialScienceIcon";
 import { HindiIcon } from "@/components/icons/HindiIcon";
 import React from "react";
 
-type SubjectKey = "english" | "mathematics" | "science" | "hindi";
+type SubjectKey = "english" | "mathematics" | "science" | "social_science" | "hindi";
 
 const SUBJECT_ICON_MAP: Record<SubjectKey, React.ComponentType<{ size: number; style?: React.CSSProperties }>> = {
   english: EnglishIcon,
   mathematics: MathematicsIcon,
   science: ScienceIcon,
+  social_science: SocialScienceIcon,
   hindi: HindiIcon,
 };
 
@@ -25,6 +27,8 @@ function normalizeSubject(subject: string): SubjectKey | null {
   const lower = (subject ?? "").toLowerCase();
   if (lower.includes("english")) return "english";
   if (lower.includes("math")) return "mathematics";
+  // "social" must be checked before "science" — "social science" contains both
+  if (lower.includes("social") || lower.includes("sst")) return "social_science";
   if (lower.includes("science")) return "science";
   if (lower.includes("hindi")) return "hindi";
   return null;
@@ -32,7 +36,7 @@ function normalizeSubject(subject: string): SubjectKey | null {
 
 export function AgentPickerModal() {
   const router = useRouter();
-  const { setAgentPickerOpen, openNewSession, startVoiceSession, availableAgents } = useStudentStore();
+  const { setAgentPickerOpen, openNewSession, startNewChatSession, startVoiceSession, availableAgents } = useStudentStore();
   const [query, setQuery] = useState("");
 
   const filtered = query.trim()
@@ -133,9 +137,12 @@ export function AgentPickerModal() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={() => {
-                        openNewSession(agent, "chat");
                         setAgentPickerOpen(false);
-                        router.push(`/student/chat/new?agentId=${agent.agent_id}`);
+                        // Wait for the real session_id before navigating so the
+                        // greeting streams into a stable chat view (typing intact).
+                        startNewChatSession(agent, (sessionId) => {
+                          router.push(`/student/chat/${sessionId}`);
+                        });
                       }}
                       className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[#042E5C]/8 text-[#042E5C] hover:bg-[#042E5C]/15 transition-all cursor-pointer"
                     >

@@ -1,17 +1,37 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Play, Pause, Loader2 } from "lucide-react";
 import { useStudentStore } from "../store/useStudentStore";
+import { useSmoothStream } from "@/hooks/useSmoothStream";
 
 interface KaraokeRendererProps {
   text: string;
   directiveId: string;
   mode?: string;
+  /** Whether the parent message is actively streaming — types the passage
+   * out smoothly instead of showing it all at once. Defaults to false
+   * (instant, full text) for standalone/historical usage. */
+  isStreaming?: boolean;
+  /** Position of this element in the message's sequential reveal order. */
+  index?: number;
+  /** Called once the passage has finished typing, to advance the reveal
+   * sequence to the next element. */
+  advance?: (index: number) => void;
 }
 
-export const KaraokeRenderer = ({ text, directiveId, mode }: KaraokeRendererProps) => {
+export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, advance }: KaraokeRendererProps) => {
+  const displayedText = useSmoothStream(text, !!isStreaming, 15);
+  const advancedRef = useRef(false);
+
+  useEffect(() => {
+    if (!advancedRef.current && text.length > 0 && displayedText.length >= text.length && advance && index !== undefined) {
+      advancedRef.current = true;
+      advance(index);
+    }
+  }, [displayedText, text, advance, index]);
+
   const activeDirectiveId = useStudentStore(state => state.activeDirectiveId);
   const playbackState = useStudentStore(state => state.playbackState);
   const ttsReadyDirectiveIds = useStudentStore(state => state.ttsReadyDirectiveIds);
@@ -107,7 +127,7 @@ export const KaraokeRenderer = ({ text, directiveId, mode }: KaraokeRendererProp
         className="whitespace-pre-wrap leading-relaxed"
         style={{ fontSize: 16, color: "#1A202C", fontFamily: "'DM Sans', sans-serif", fontWeight: 500, paddingLeft: 4 }}
       >
-        {text}
+        {displayedText}
       </div>
 
       {/* Active indicator */}

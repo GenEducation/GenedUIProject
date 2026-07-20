@@ -1,12 +1,12 @@
 "use client";
 
 import React from "react";
-import { BookOpen, BarChart2, LogOut } from "lucide-react";
+import { BookOpen, BarChart2, LogOut, MonitorSmartphone, type LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface SideBarProps {
-  activeView: "subjects" | "analytics";
-  onViewChange: (view: "subjects" | "analytics") => void;
+  activeView: "subjects" | "analytics" | "labs";
+  onViewChange: (view: "subjects" | "analytics" | "labs") => void;
 }
 
 import { usePartnerStore } from "../store/usePartnerStore";
@@ -18,9 +18,10 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
   const rawPartnerId = typeof window !== 'undefined' ? localStorage.getItem("gened_partner_id") : null;
   const partnerId = rawPartnerId?.replace(/['"]+/g, "");
 
-  const navItems: { id: "subjects" | "analytics"; label: string; icon: any; badge?: number | null }[] = [
+  const navItems: { id: "subjects" | "analytics" | "labs"; label: string; icon: LucideIcon; badge?: number | null }[] = [
     { id: "analytics", label: "Analytics", icon: BarChart2, badge: numberOfPendingRequests > 0 ? numberOfPendingRequests : null },
     { id: "subjects", label: "Subjects", icon: BookOpen },
+    { id: "labs", label: "Lab Mode", icon: MonitorSmartphone },
   ];
 
   return (
