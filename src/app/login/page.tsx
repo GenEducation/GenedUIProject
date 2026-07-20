@@ -83,7 +83,10 @@ export default function LoginPage() {
       typeof window !== "undefined"
         ? new URLSearchParams(window.location.search).get("redirect")
         : null;
-    router.replace(redirectPath || `/${role}`);
+    useLoaderStore.getState().completeLoading();
+    setTimeout(() => {
+      router.replace(redirectPath || `/${role}`);
+    }, 1200);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

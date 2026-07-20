@@ -11,7 +11,7 @@ test.describe("Auth — login flow", () => {
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(token) }),
     );
 
-    await page.goto("/");
+    await page.goto("/login");
 
     // Fill the username/password form
     await page.fill('input[name="username"]', "ada");
@@ -34,14 +34,14 @@ test.describe("Auth — login flow", () => {
       }),
     );
 
-    await page.goto("/");
+    await page.goto("/login");
     await page.fill('input[name="username"]', "ada");
     await page.fill('input[name="password"]', "wrongpass");
     await page.click('button[type="submit"]');
 
     await expect(page.getByText("Invalid credentials")).toBeVisible();
-    await expect(page).toHaveURL(/\//);
-    // Must not have navigated to a portal
+    // Stays on the login page — must not have navigated to a portal
+    await expect(page).toHaveURL(/\/login/);
     await expect(page).not.toHaveURL(/\/student|\/teacher|\/parent|\/admin/);
   });
 

@@ -106,9 +106,14 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
 
       setIsAuthorized(true);
 
-      // Stop the global loader if it's running
+      // Stop the global loader only if it was never put into completion mode.
+      // When an auth flow calls completeLoading(), the loader owns its own
+      // dismissal (trophy + confetti, then onFinished/stopLoading); tearing it
+      // down here would cut the celebration short.
       const timeout = setTimeout(() => {
-        useLoaderStore.getState().stopLoading();
+        if (!useLoaderStore.getState().isComplete) {
+          useLoaderStore.getState().stopLoading();
+        }
       }, 500);
 
       return () => clearTimeout(timeout);

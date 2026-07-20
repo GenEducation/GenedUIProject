@@ -14,6 +14,15 @@ async function stubApiCatchAll(page: Parameters<typeof seedAuth>[0]) {
     const url = route.request().url();
     // Pass through non-API resources (Next.js chunks, _next/static, etc.)
     if (!url.includes(API)) return route.continue();
+    // The sessions endpoint (POST /get-session) is read as `data.sessions.map(...)`,
+    // so it needs an object with a `sessions` array, not a bare list.
+    if (url.includes("/get-session")) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ sessions: [] }),
+      });
+    }
     return route.fulfill({
       status: 200,
       contentType: "application/json",

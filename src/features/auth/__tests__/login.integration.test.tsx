@@ -46,7 +46,7 @@ describe("login flow (integration)", () => {
 
     fillAndSubmit(container);
 
-    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/student"));
+    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/student"), { timeout: 2000 });
     expect(localStorage.getItem("gened_auth_token")).toBe("test-jwt");
     expect(localStorage.getItem("gened_user_role")).toBe("student");
     expect(JSON.parse(localStorage.getItem("gened_user_profile")!).user_id).toBe("u_student");
@@ -59,7 +59,7 @@ describe("login flow (integration)", () => {
 
     fillAndSubmit(container);
 
-    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/student/analytics"));
+    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/student/analytics"), { timeout: 2000 });
   });
 
   it("routes a teacher to the teacher home", async () => {
@@ -70,7 +70,7 @@ describe("login flow (integration)", () => {
 
     fillAndSubmit(container);
 
-    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/teacher"));
+    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/teacher"), { timeout: 2000 });
   });
 
   it("shows the server error message and does not redirect on 401", async () => {
