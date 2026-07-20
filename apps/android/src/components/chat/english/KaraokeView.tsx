@@ -11,6 +11,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated, ActivityIndicator }
 import { Play, Pause, Mic } from "lucide-react-native";
 import { colors, fonts } from "../../../theme/tokens";
 import { audioStore, useAudioPlayback, useRecordingState } from "../../../store/useAudioStore";
+import { micPrimingStore } from "../../../store/useMicPrimingStore";
 
 interface Props {
   text: string;
@@ -44,7 +45,7 @@ export function KaraokeView({ text, directiveId, mode, readOnly }: Props) {
 
   const handleRecord = () => {
     audioStore.openRecording(directiveId);
-    audioStore.confirmStartRecording();
+    micPrimingStore.requestAccess(() => audioStore.confirmStartRecording());
   };
 
   return (

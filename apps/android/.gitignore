@@ -5,6 +5,8 @@ dist/
 web-build/
 expo-env.d.ts
 .env
+.env.production
+.env.*.local
 
 # Native
 *.orig.*

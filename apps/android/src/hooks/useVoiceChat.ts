@@ -5,6 +5,7 @@
  * for the voice-chat screen to consume.
  */
 import { useState, useCallback, useEffect, useRef } from "react";
+import { AppState } from "react-native";
 import { voiceService, type VoiceEvent } from "../services/voiceService";
 import { studentService } from "../services/studentService";
 import { useAuth } from "../store/useAuthStore";
@@ -503,6 +504,18 @@ export function useVoiceChat(options: UseVoiceChatOptions): UseVoiceChatResult {
       voiceService.stopSession();
     };
   }, []);
+
+  // End the voice session when the app leaves the foreground. The mic must not keep
+  // recording once the student can no longer see the app (Play Families policy +
+  // Android 14 foreground-service-type rules for background microphone access).
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active") {
+        stopSession();
+      }
+    });
+    return () => subscription.remove();
+  }, [stopSession]);
 
   return {
     messages,

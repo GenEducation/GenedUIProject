@@ -8,14 +8,13 @@ import {
   TextInput,
   ActivityIndicator,
   Switch,
-  Image,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Screen } from "@/components/Screen";
 import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
 import { PickerSheet } from "@/components/PickerSheet";
-import { StudentAvatarIllustration } from "@/components/StudentAvatarIllustration";
+import { StudentAvatarArt, AVATAR_ACCENT } from "@/components/StudentAvatar";
 import { AvatarPickerModal } from "@/components/AvatarPickerModal";
 import { useMeData } from "@/hooks/useMeData";
 import { useAuth } from "@/store/useAuthStore";
@@ -25,8 +24,6 @@ import { prefsStore, usePrefs } from "@/store/usePrefsStore";
 import { colors, fonts } from "@/theme/tokens";
 import type { VoiceOption, GeneralOnboarding, PartnerItem } from "@/types/api";
 
-const GIRL_GRADUATE = require("../../assets/avatars/girl-graduate.png");
-const AVATAR_ACCENT = "#F0AD4E";
 
 /* ── Supported instruction languages ─────────────────────────────────────── */
 const LANGUAGES: { code: string; label: string }[] = [
@@ -254,11 +251,7 @@ export default function Me() {
         <View style={styles.hero}>
           <Pressable style={styles.avatarWrap} onPress={() => setAvatarPickerOpen(true)}>
             <View style={styles.avatar}>
-              {prefs.avatarId === "graduate-girl" ? (
-                <Image source={GIRL_GRADUATE} style={styles.avatarImg} resizeMode="cover" />
-              ) : (
-                <StudentAvatarIllustration bg={AVATAR_ACCENT} />
-              )}
+              <StudentAvatarArt avatarId={prefs.avatarId} />
             </View>
             <View style={styles.avatarEditBtn}>
               <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
@@ -602,7 +595,6 @@ const styles = StyleSheet.create({
     shadowColor: AVATAR_ACCENT, shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 8 },
     elevation: 3,
   },
-  avatarImg: { width: "100%", height: "100%" },
   avatarEditBtn: {
     position: "absolute", bottom: -2, right: -2,
     width: 26, height: 26, borderRadius: 13,

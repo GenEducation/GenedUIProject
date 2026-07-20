@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from
 import { useRouter } from "expo-router";
 import { CalendarClock, ChevronRight } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
-import { AprilAvatar } from "@/components/AprilAvatar";
+import { StudentAvatar } from "@/components/StudentAvatar";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SectionHead } from "@/components/SectionHead";
 import { LoadingState } from "@/components/LoadingState";
@@ -75,7 +75,7 @@ export default function Home() {
           </View>
           <View style={styles.greetActions}>
             <NotificationBell userId={studentId} />
-            <AprilAvatar size={52} />
+            <StudentAvatar size={52} />
           </View>
         </View>
 

@@ -20,12 +20,17 @@ export function MathWidget({ expression, meta, minimal = false }: MathWidgetProp
     );
   }
 
+  // Desmos demo key (dcb317...) is a public evaluation key from their docs — fine for
+  // dev, but swap in a licensed production key via EXPO_PUBLIC_DESMOS_API_KEY before
+  // shipping to Play (see the Play Store compliance review, issue H2).
+  const desmosApiKey = process.env.EXPO_PUBLIC_DESMOS_API_KEY || "dcb31709b452b1cf9dc26972add0fda6";
+
   const desmosHtml = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-      <script src="https://www.desmos.com/api/v1.9/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+      <script src="https://www.desmos.com/api/v1.9/calculator.js?apiKey=${desmosApiKey}"></script>
       <style>
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #FFFFFF; }
         #calculator { width: 100%; height: 100%; }
@@ -51,12 +56,13 @@ export function MathWidget({ expression, meta, minimal = false }: MathWidgetProp
     <View style={[styles.card, minimal && styles.minimalMargin]}>
       <View style={styles.webviewContainer}>
         <WebView
-          originWhitelist={["*"]}
+          originWhitelist={["about:blank", "https://www.desmos.com/*"]}
           source={{ html: desmosHtml }}
           style={styles.webview}
           androidHardwareAccelerationDisabled={false}
           javaScriptEnabled={true}
           domStorageEnabled={true}
+          allowFileAccess={false}
           scalesPageToFit={true}
         />
       </View>

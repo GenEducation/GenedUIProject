@@ -94,11 +94,12 @@ export function ChatElementRenderer({ elements, sessionId, isReadOnly = false }:
             return (
               <VisualCard key={el.id} engine="p5sketch" label={el.meta.label || ""}>
                 <WebView
-                  originWhitelist={["*"]}
+                  originWhitelist={["about:blank"]}
                   source={{ html: p5Html }}
                   style={styles.webview}
                   javaScriptEnabled={true}
                   domStorageEnabled={true}
+                  allowFileAccess={false}
                 />
               </VisualCard>
             );
@@ -157,11 +158,12 @@ export function ChatElementRenderer({ elements, sessionId, isReadOnly = false }:
             return (
               <VisualCard key={el.id} engine="geogebra" label={el.meta.label || ""}>
                 <WebView
-                  originWhitelist={["*"]}
+                  originWhitelist={["about:blank", "https://www.geogebra.org/*"]}
                   source={{ html: ggbHtml }}
                   style={styles.webview}
                   javaScriptEnabled={true}
                   domStorageEnabled={true}
+                  allowFileAccess={false}
                 />
               </VisualCard>
             );

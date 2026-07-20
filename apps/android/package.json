@@ -11,7 +11,8 @@
     "web": "expo start --web",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:ci": "jest --ci --coverage"
+    "test:ci": "jest --ci --coverage",
+    "verify:prod-env": "node scripts/check-prod-env.js"
   },
   "dependencies": {
     "@expo-google-fonts/dm-sans": "^0.2.3",
@@ -58,6 +59,7 @@
     "@babel/plugin-transform-class-properties": "^7.29.7",
     "@babel/plugin-transform-private-methods": "^7.29.7",
     "@babel/plugin-transform-private-property-in-object": "^7.29.7",
+    "babel-plugin-transform-remove-console": "^6.9.4",
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^30.0.0",

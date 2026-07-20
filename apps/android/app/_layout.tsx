@@ -16,7 +16,9 @@ import { AuthProvider } from "@/store/useAuthStore";
 import { registerSessionExpiredHandler } from "@/services/authFetch";
 import { prefsStore } from "@/store/usePrefsStore";
 import { tutorialStore } from "@/store/useTutorialStore";
+import { micPrimingStore } from "@/store/useMicPrimingStore";
 import { TutorialTourModal } from "@/components/tutorial/TutorialTourModal";
+import { MicPrimingSheet } from "@/components/voice/MicPrimingSheet";
 import { LoaderJourney } from "@/components/loaders/LoaderJourney";
 
 SplashScreen.preventAutoHideAsync();
@@ -29,6 +31,7 @@ function RootStackNavigator() {
     registerSessionExpiredHandler(() => router.replace("/sign-in"));
     prefsStore.hydrate();
     tutorialStore.hydrate();
+    micPrimingStore.hydrate();
   }, []);
 
   return (
@@ -82,6 +85,7 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         <RootStackNavigator />
         <TutorialTourModal />
+        <MicPrimingSheet />
         <LoaderJourney />
       </AuthProvider>
     </SafeAreaProvider>

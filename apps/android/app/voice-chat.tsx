@@ -18,6 +18,7 @@ import { VoiceOrb } from "@/components/voice/VoiceOrb";
 import { VoiceControls } from "@/components/voice/VoiceControls";
 import { useVoiceChat } from "@/hooks/useVoiceChat";
 import { RecordingSheet } from "@/components/chat/english/RecordingSheet";
+import { micPrimingStore } from "@/store/useMicPrimingStore";
 import { colors, fonts } from "@/theme/tokens";
 
 const STATUS_CAPTIONS: Record<string, string> = {
@@ -105,7 +106,7 @@ export default function VoiceChatScreen() {
 
   const handleOrbTap = () => {
     if (voiceStatus === "idle" || voiceStatus === "error") {
-      startSession();
+      micPrimingStore.requestAccess(startSession);
     }
   };
 
