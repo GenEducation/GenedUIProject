@@ -11,8 +11,10 @@ interface NotificationBellProps {
 const timeAgo = (date: string | Date) => {
   const now = new Date();
   const past = new Date(date);
+  // Guard against unparseable dates so we never render "NaN … ago".
+  if (Number.isNaN(past.getTime())) return "just now";
   const diffInMs = now.getTime() - past.getTime();
-  
+
   const seconds = Math.floor(diffInMs / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);

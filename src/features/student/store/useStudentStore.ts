@@ -6,6 +6,7 @@ import { parseContent, generateHistoricalSVG, normalizeSvg } from "../utils/pars
 import { voiceService } from "../services/voiceService";
 import { appendStreamedText } from "../utils/voiceStreamMerge";
 import { parsePointerEvent, type PointerSpec } from "../components/pdf-viewer/pointerGeometry";
+import { getStudentDisplayName } from "../utils/displayName";
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
@@ -1303,6 +1304,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     try {
       // Initialize the mute state in voiceService as well
       voiceService.setMuted(isPtt);
+      // TODO(backend): greet with display_name instead of username.
+      voiceService.setStudentDisplayName(getStudentDisplayName(studentProfile));
 
       await voiceService.startSession(
         studentProfile.user_id,
@@ -2208,6 +2211,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         {
           text,
           user_id: studentProfile.user_id,
+          // TODO(backend): greet with display_name instead of username.
+          display_name: getStudentDisplayName(studentProfile),
           grade: studentProfile.grade,
           activity_input: activityInput,
           // Only send mode fields when the user has locked it via the toggle.

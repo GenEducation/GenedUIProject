@@ -107,6 +107,9 @@ export const studentService = {
   sendChatMessage: async (payload: {
     text: string;
     user_id: string;
+    // Resolved, title-cased student display name (prefers real name over the
+    // login handle). TODO(backend): greet with display_name instead of username.
+    display_name?: string;
     session_id?: string;
     agent_id?: string;
     subject: string;

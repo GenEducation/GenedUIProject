@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { studentService } from "@/features/student/services/studentService";
+import { getStudentDisplayName, titleCase } from "@/features/student/utils/displayName";
 
 // ─────────────────────────────────────────────────────────
 // TYPES
@@ -1964,11 +1965,14 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
   }, [fetchAll, fetchParentReportData, parentId, teacherId, childId]);
 
   // ── Derived values ─────────────────────────────────────
+  const resolvedStudentName =
+    studentProfile?.name || studentProfile?.username
+      ? getStudentDisplayName(studentProfile)
+      : undefined;
   const displayName =
     (childId && (parentId || teacherId) ? childName : undefined) ||
-    studentProfile?.name ||
-    studentProfile?.username ||
-    dashboardProfile?.name ||
+    resolvedStudentName ||
+    (dashboardProfile?.name ? titleCase(dashboardProfile.name) : undefined) ||
     "Student";
   const displayGrade =
     studentProfile?.grade ?? dashboardProfile?.grade ?? null;

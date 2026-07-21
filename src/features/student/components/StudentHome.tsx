@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { useStudentStore, sessionRoutePath, isVoiceSession, type AgentItem } from "../store/useStudentStore";
+import { getStudentDisplayName } from "../utils/displayName";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
@@ -349,7 +350,9 @@ export function StudentHome() {
     return "Hey";
   };
 
-  const username = studentProfile?.name || studentProfile?.username || "Scholar";
+  const username = (studentProfile?.name || studentProfile?.username)
+    ? getStudentDisplayName(studentProfile)
+    : "Scholar";
 
   const handleAgentChatClick = (agent: typeof agents[0]) => {
     if (agent.is_onboarding_complete === false) {

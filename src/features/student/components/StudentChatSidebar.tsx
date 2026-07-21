@@ -4,6 +4,7 @@ import { Loader2, LogOut, User, ClipboardCheck } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useStudentStore, isVoiceSession, sessionRoutePath } from "../store/useStudentStore";
+import { getStudentDisplayName } from "../utils/displayName";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 
 const C = {
@@ -39,7 +40,11 @@ const SUBJECT_META: Record<string, { emoji: string; color: string }> = {
 
 function timeAgo(iso: string): string {
   if (!iso) return "";
-  const diff = Date.now() - new Date(iso).getTime();
+  const t = new Date(iso).getTime();
+  // Fresh client-created sessions carry the literal "Just now" (not an ISO
+  // date); parsing it yields NaN, which used to fall through to "NaNmo ago".
+  if (Number.isNaN(t)) return "Just now";
+  const diff = Date.now() - t;
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "Just now";
   if (mins < 60) return `${mins}m ago`;
@@ -66,7 +71,7 @@ function ProfilePopup({
   onLogout,
   onClose,
 }: {
-  profile: { username?: string; grade?: number; plan?: string } | null;
+  profile: { name?: string; username?: string; grade?: number; plan?: string } | null;
   onLogout: () => void;
   onClose: () => void;
 }) {
@@ -82,7 +87,8 @@ function ProfilePopup({
     return () => document.removeEventListener("mousedown", handler);
   }, [onClose]);
 
-  const initial = (profile?.username ?? "U").charAt(0).toUpperCase();
+  const displayName = getStudentDisplayName(profile);
+  const initial = displayName.charAt(0).toUpperCase();
 
   const menuItems = [
     { icon: <User size={14} />,         label: "Profile",    path: "/student/profile" },
@@ -120,7 +126,7 @@ function ProfilePopup({
           {initial}
         </div>
         <div style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF", lineHeight: 1.3 }}>
-          {profile?.username ?? "Student"}
+          {displayName}
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 }}>
           <span style={{ fontSize: 11, color: "rgba(200,209,220,0.6)" }}>Grade {profile?.grade ?? "—"}</span>
@@ -402,13 +408,13 @@ export const StudentChatSidebar = React.memo(({
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 13, fontWeight: 800, color: "white",
                 }}>
-                  {(studentProfile?.username ?? "U").charAt(0).toUpperCase()}
+                  {getStudentDisplayName(studentProfile).charAt(0).toUpperCase()}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   {/* Row 1: name + PRO */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: C.sidebarActive, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {studentProfile?.username ?? "Student"}
+                      {getStudentDisplayName(studentProfile)}
                     </span>
                     {studentProfile?.plan && (
                       <span style={{

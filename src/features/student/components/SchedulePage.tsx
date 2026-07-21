@@ -152,7 +152,125 @@ export function SchedulePage() {
     }
   };
 
-  const sortedSessions = [...sessions].sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
+  // Classify a session by its lifecycle so genuinely upcoming sessions are
+  // separated from ones that already failed prep or slipped into the past.
+  const classify = (s: (typeof sessions)[number]) => {
+    const startTs = getSessionStartTimestamp(s.scheduled_date, s.scheduled_time);
+    const isExpired = Date.now() - startTs > 24 * 60 * 60 * 1000;
+    const isFailed = s.preparation_status === "FAILED";
+    const isReady = s.preparation_status === "COMPLETED" && !!s.session_id;
+    return { startTs, isExpired, isFailed, isReady };
+  };
+
+  // The backend can emit several rows for the same topic/date when prep is
+  // retried; collapse them, keeping the "most ready" row.
+  const readinessRank = (s: (typeof sessions)[number]) => {
+    const { isReady, isFailed, isExpired } = classify(s);
+    if (isReady) return 3;
+    if (isExpired) return 1;
+    if (isFailed) return 0;
+    return 2; // being prepared / pending
+  };
+  const dedupedSessions = Object.values(
+    sessions.reduce<Record<string, (typeof sessions)[number]>>((acc, s) => {
+      const key = `${(s.topic || s.subject || "").toLowerCase()}|${s.scheduled_date}|${s.scheduled_time ?? ""}`;
+      if (!acc[key] || readinessRank(s) > readinessRank(acc[key])) acc[key] = s;
+      return acc;
+    }, {})
+  );
+
+  const upcomingSessions = dedupedSessions
+    .filter((s) => {
+      const c = classify(s);
+      return !c.isExpired && !c.isFailed;
+    })
+    .sort((a, b) => classify(a).startTs - classify(b).startTs);
+
+  const pastSessions = dedupedSessions
+    .filter((s) => {
+      const c = classify(s);
+      return c.isExpired || c.isFailed;
+    })
+    .sort((a, b) => classify(b).startTs - classify(a).startTs);
+
+  // Single card renderer reused by both the Upcoming and Past sections.
+  const renderSessionCard = (s: (typeof sessions)[number]) => {
+    const { isExpired, isReady, isFailed } = classify(s);
+
+    const statusConfig = isFailed
+      ? { bg: "bg-amber-50", text: "text-amber-600", label: "Couldn't set up" }
+      : isExpired
+      ? { bg: "bg-gray-100", text: "text-gray-500", label: "Missed" }
+      : isReady
+      ? { bg: "bg-emerald-50", text: "text-emerald-600", label: "Ready" }
+      : { bg: "bg-[#042E5C]/5", text: "text-[#042E5C]/40", label: "Being Prepared" };
+
+    const progressLabel: Record<string, string> = {
+      PENDING: isExpired ? "Incomplete" : "Not started",
+      STARTED: "In progress",
+      "STARTED-EARLY": "Started early",
+      COMPLETED: "Finished",
+    };
+
+    return (
+      <motion.div
+        key={s.id}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97 }}
+        className="bg-white p-4 sm:p-6 rounded-3xl border border-[#042E5C]/5 shadow-sm space-y-4"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 space-y-1">
+            <h3 className="text-sm font-black text-[#042E5C] truncate">
+              {s.topic || s.subject}
+            </h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-black text-[#042E5C]/40 uppercase tracking-widest">
+                {s.subject}
+              </span>
+              <span className="text-[10px] font-black text-[#042E5C]/30 uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#042E5C]/5">
+                {s.session_type}
+              </span>
+            </div>
+          </div>
+          <span className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${statusConfig.bg} ${statusConfig.text} text-[10px] font-black uppercase tracking-wider`}>
+            {isFailed ? <AlertTriangle size={10} /> : isReady ? <CheckCircle2 size={10} /> : <Clock size={10} />}
+            {statusConfig.label}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <p className="text-xs font-bold text-[#042E5C]/60">
+              {new Date(s.scheduled_date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+              {s.scheduled_time && <span className="ml-1.5 text-[#042E5C]/40">· {s.scheduled_time} IST</span>}
+            </p>
+            <p className="text-[10px] font-medium text-[#042E5C]/30 uppercase tracking-widest">
+              {progressLabel[s.status] ?? s.status}
+            </p>
+          </div>
+
+          {isFailed || isExpired ? (
+            <button
+              onClick={() => handleReschedule(s.id, s.session_type, s.subject, s.topic)}
+              className="px-4 py-2 rounded-xl bg-[#042E5C]/5 text-[#042E5C] text-[10px] font-black uppercase tracking-widest hover:bg-[#042E5C]/10 transition-all"
+            >
+              Reschedule
+            </button>
+          ) : (
+            <button
+              onClick={() => handleStartSession(s.session_type, s.session_id!)}
+              disabled={!isReady || isStartingSession}
+              className="px-4 py-2 rounded-xl bg-[#042E5C] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#064282] disabled:opacity-30 transition-all"
+            >
+              {s.session_type === "TEST" ? "Start Test" : "Open Session"}
+            </button>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -321,7 +439,7 @@ export function SchedulePage() {
                   <Loader2 size={20} className="animate-spin" />
                   <span className="text-sm font-bold uppercase tracking-widest">Loading sessions...</span>
                 </div>
-              ) : sortedSessions.length === 0 ? (
+              ) : upcomingSessions.length === 0 && pastSessions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 space-y-4 bg-white/40 rounded-[40px] border border-dashed border-[#042E5C]/10">
                   <div className="w-16 h-16 rounded-full bg-[#042E5C]/5 flex items-center justify-center text-[#042E5C]/20">
                     <CalendarClock size={32} />
@@ -329,90 +447,36 @@ export function SchedulePage() {
                   <p className="text-sm font-medium text-[#042E5C]/40">No sessions scheduled yet.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <AnimatePresence mode="popLayout">
-                    {sortedSessions.map((s) => {
-                      const startTs = getSessionStartTimestamp(s.scheduled_date, s.scheduled_time);
-                      const isExpired = Date.now() - startTs > 24 * 60 * 60 * 1000;
-                      const isReady = s.preparation_status === "COMPLETED" && !!s.session_id;
-                      const isFailed = s.preparation_status === "FAILED";
+                <>
+                  {upcomingSessions.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 space-y-3 bg-white/40 rounded-[32px] border border-dashed border-[#042E5C]/10">
+                      <div className="w-12 h-12 rounded-full bg-[#042E5C]/5 flex items-center justify-center text-[#042E5C]/20">
+                        <CalendarClock size={24} />
+                      </div>
+                      <p className="text-sm font-medium text-[#042E5C]/40">Nothing coming up — book a session above.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <AnimatePresence mode="popLayout">
+                        {upcomingSessions.map((s) => renderSessionCard(s))}
+                      </AnimatePresence>
+                    </div>
+                  )}
 
-                      const statusConfig = isFailed
-                        ? { bg: "bg-red-50", text: "text-red-600", label: "Preparation Failed" }
-                        : isExpired
-                        ? { bg: "bg-gray-100", text: "text-gray-500", label: "Expired" }
-                        : isReady
-                        ? { bg: "bg-emerald-50", text: "text-emerald-600", label: "Ready" }
-                        : { bg: "bg-[#042E5C]/5", text: "text-[#042E5C]/40", label: "Being Prepared" };
-
-                      const progressLabel: Record<string, string> = {
-                        PENDING: isExpired ? "Incomplete" : "Not started",
-                        STARTED: "In progress",
-                        "STARTED-EARLY": "Started early",
-                        COMPLETED: "Finished",
-                      };
-
-                      return (
-                        <motion.div
-                          key={s.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.97 }}
-                          className="bg-white p-4 sm:p-6 rounded-3xl border border-[#042E5C]/5 shadow-sm space-y-4"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="min-w-0 space-y-1">
-                              <h3 className="text-sm font-black text-[#042E5C] truncate">
-                                {s.topic || s.subject}
-                              </h3>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-[10px] font-black text-[#042E5C]/40 uppercase tracking-widest">
-                                  {s.subject}
-                                </span>
-                                <span className="text-[10px] font-black text-[#042E5C]/30 uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#042E5C]/5">
-                                  {s.session_type}
-                                </span>
-                              </div>
-                            </div>
-                            <span className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${statusConfig.bg} ${statusConfig.text} text-[10px] font-black uppercase tracking-wider`}>
-                              {isFailed ? <AlertTriangle size={10} /> : isReady ? <CheckCircle2 size={10} /> : <Clock size={10} />}
-                              {statusConfig.label}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="space-y-0.5">
-                              <p className="text-xs font-bold text-[#042E5C]/60">
-                                {new Date(s.scheduled_date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
-                                {s.scheduled_time && <span className="ml-1.5 text-[#042E5C]/40">· {s.scheduled_time} IST</span>}
-                              </p>
-                              <p className="text-[10px] font-medium text-[#042E5C]/30 uppercase tracking-widest">
-                                {progressLabel[s.status] ?? s.status}
-                              </p>
-                            </div>
-
-                            {isFailed ? (
-                              <button
-                                onClick={() => handleReschedule(s.id, s.session_type, s.subject, s.topic)}
-                                className="px-4 py-2 rounded-xl bg-[#042E5C]/5 text-[#042E5C] text-[10px] font-black uppercase tracking-widest hover:bg-[#042E5C]/10 transition-all"
-                              >
-                                Reschedule
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleStartSession(s.session_type, s.session_id!)}
-                                disabled={!isReady || isStartingSession || isExpired}
-                                className="px-4 py-2 rounded-xl bg-[#042E5C] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#064282] disabled:opacity-30 transition-all"
-                              >
-                                {s.session_type === "TEST" ? "Start Test" : "Open Session"}
-                              </button>
-                            )}
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </AnimatePresence>
-                </div>
+                  {pastSessions.length > 0 && (
+                    <div className="space-y-4 pt-8">
+                      <h2 className="text-sm font-black text-[#042E5C]/50 uppercase tracking-widest flex items-center gap-2">
+                        <Clock size={14} />
+                        Past &amp; Needs Attention
+                      </h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <AnimatePresence mode="popLayout">
+                          {pastSessions.map((s) => renderSessionCard(s))}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

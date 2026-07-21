@@ -31,6 +31,7 @@ class VoiceService {
   private processor: ScriptProcessorNode | null = null;
   private isSessionActive = false;
   private currentStudentId: string | null = null;
+  private currentDisplayName: string | null = null;
   private currentSessionId: string | null = null;
   private currentSubject: string | null = null;
   private currentVoice: string | null = null;
@@ -71,6 +72,14 @@ class VoiceService {
   private readonly WS_BUFFERED_POOR_BYTES         = 32_768; // 32KB queued = uplink congested (~4s of mic audio)
   private readonly NETWORK_RTT_POOR_MS            = 500;    // navigator.connection.rtt threshold (ms)
   private readonly NETWORK_DOWNLINK_POOR_MBPS     = 0.15;   // navigator.connection.downlink threshold (Mbps)
+
+  /**
+   * Set the resolved student display name to send with the voice init payload.
+   * Call before startSession. TODO(backend): greet with display_name, not username.
+   */
+  setStudentDisplayName(name: string | null) {
+    this.currentDisplayName = name;
+  }
 
   async startSession(
     studentId: string,
@@ -307,6 +316,7 @@ class VoiceService {
     if (this.currentDocumentTitle) payload.document_title = this.currentDocumentTitle;
     if (this.currentAgentId) payload.agent_id = this.currentAgentId;
     if (this.currentGrade != null) payload.grade = this.currentGrade;
+    if (this.currentDisplayName) payload.display_name = this.currentDisplayName;
     this.ws.send(JSON.stringify(payload));
   }
 
@@ -458,6 +468,7 @@ class VoiceService {
   stopSession() {
     this.isSessionActive = false;
     this.currentStudentId = null;
+    this.currentDisplayName = null;
     this.currentSessionId = null;
     this.currentSubject = null;
     this.currentVoice = null;

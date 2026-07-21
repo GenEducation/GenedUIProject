@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { StudentReportCard } from "@/components/report-card/StudentReportCard";
 import { StudentHomeSidebar } from "@/features/student/components/StudentHomeSidebar";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 import { ArrowLeft } from "lucide-react";
 
 export default function ReportCardPage() {
@@ -132,7 +133,13 @@ function ReportCardPageInner() {
   }
 
   // ── Normal mode: full app shell with sidebar + back button ─────────────
+  // Wrapped in AuthGuard (like every other /student/* route) so it hydrates
+  // studentProfile from localStorage on a cold load/refresh. Without it,
+  // studentId was undefined → fetchAll() early-returned → the spinner hung
+  // forever and the sidebar showed the empty "Student · FREE · Grade —".
+  // Print mode above intentionally stays outside AuthGuard (Puppeteer bypasses auth).
   return (
+    <AuthGuard requiredRole="student">
     <div className="flex h-screen overflow-hidden relative" style={{ background: "#F7F6F3" }}>
       <div>
         <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -193,5 +200,6 @@ function ReportCardPageInner() {
         </div>
       </main>
     </div>
+    </AuthGuard>
   );
 }

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
+import { getStudentDisplayName } from "../utils/displayName";
 import { LogOut } from "lucide-react";
 import { UpgradeButton } from "@/features/billing/UpgradeButton";
 
@@ -185,13 +186,13 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                   color: C.sparkle,
                 }}
               >
-                {(studentProfile?.name || studentProfile?.username || "U").charAt(0).toUpperCase()}
+                {getStudentDisplayName(studentProfile).charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
                 {/* Name + plan badge */}
                 <div className="flex items-center gap-1.5 min-w-0">
                   <div className="text-[13px] font-semibold truncate" style={{ color: C.sidebarActive }}>
-                    {studentProfile?.name || studentProfile?.username || "Student"}
+                    {getStudentDisplayName(studentProfile)}
                   </div>
                   <span style={{
                     flexShrink: 0,
@@ -231,7 +232,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
             {!isPro && studentProfile?.user_id && (
               <UpgradeButton
                 userId={studentProfile.user_id}
-                userName={studentProfile.name || studentProfile.username || "Student"}
+                userName={getStudentDisplayName(studentProfile)}
                 userEmail={studentProfile.email}
                 billingCycle="monthly"
                 className="w-full justify-center mt-3 text-[12px] py-2"

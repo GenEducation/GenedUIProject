@@ -1,0 +1,792 @@
+/* ============================================================
+   GenEd Deskbot — Pre-order page
+   Scoped design system. Everything lives under .gened-preorder
+   so it never touches the global Tailwind / Inter theme.
+   Palette + fonts intentionally mirror the landing page
+   (Fraunces + Manrope, emerald / navy / cream).
+   ============================================================ */
+
+.gened-preorder {
+  /* palette (shared with landing.css) */
+  --ink: #0a2a4a;
+  --navy: #042e5c;
+  --navy-700: #0b3a6e;
+  --green: #059f6d;
+  --green-600: #04875c;
+  --green-800: #046b50; /* deep green — feature titles (readable on the grey stage) */
+  --green-200: #9be3c8;
+  --accent-blue: #1d5aa8; /* feature number — echoes the device's blue face */
+  --cream: #f7f6f1;
+  --cream-2: #efede3;
+  --amber: #f4b740;
+  --coral: #ff7a59;
+  --paper: #ffffff;
+  --muted: #5c6b7a;
+  --line: rgba(4, 46, 92, 0.1);
+
+  /* studio grey — matches the device clip's baked-in background */
+  --studio-1: #edeef0;
+  --studio-2: #e0e1e4;
+  --studio-3: #d3d4d8;
+
+  --r: 18px;
+  --maxw: 1180px;
+  --display: "Fraunces", Georgia, serif;
+  --body: "Manrope", system-ui, sans-serif;
+
+  font-family: var(--body);
+  color: var(--ink);
+  background: var(--cream);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  position: relative;
+  /* NB: do NOT set overflow-x/-y here — it creates a scroll container that
+     breaks `position: sticky` on the device stage. Horizontal overflow is
+     contained per-section instead (.po-stage-sticky, .po-cta). */
+}
+
+/* film-grain atmosphere */
+.gened-preorder::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.gened-preorder *,
+.gened-preorder *::before,
+.gened-preorder *::after {
+  box-sizing: border-box;
+}
+
+.po-wrap {
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ---------- buttons ---------- */
+.po-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 0.94rem;
+  letter-spacing: -0.01em;
+  padding: 13px 24px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s,
+    background 0.25s, color 0.25s, border-color 0.25s;
+  white-space: nowrap;
+}
+.po-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+.po-btn-primary {
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 10px 24px -8px rgba(5, 159, 109, 0.55);
+}
+.po-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px -10px rgba(5, 159, 109, 0.65);
+  background: var(--green-600);
+}
+.po-btn-ghost {
+  background: transparent;
+  color: var(--navy);
+  border-color: var(--line);
+}
+.po-btn-ghost:hover {
+  border-color: var(--navy);
+  transform: translateY(-2px);
+}
+.po-btn-lg {
+  padding: 16px 30px;
+  font-size: 1.02rem;
+}
+.po-btn-light {
+  background: #fff;
+  color: var(--navy);
+}
+.po-btn-light:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px -12px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------- sticky header (persistent Pre-order CTA) ---------- */
+.po-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--cream) 82%, transparent);
+  backdrop-filter: saturate(1.4) blur(14px);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.po-header .po-wrap {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.po-header .po-logo {
+  display: inline-flex;
+  align-items: center;
+}
+.po-header .po-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.po-header .po-back:hover {
+  color: var(--navy);
+}
+.po-header .po-back svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+.po-header-cta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* ---------- intro ---------- */
+.po-intro {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 76px 0 8px;
+}
+.po-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--green-600);
+  background: rgba(5, 159, 109, 0.09);
+  border: 1px solid rgba(5, 159, 109, 0.18);
+  padding: 8px 16px;
+  border-radius: 999px;
+}
+.po-eyebrow .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 4px rgba(5, 159, 109, 0.18);
+}
+.po-intro h1 {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: clamp(2.6rem, 6vw, 4.6rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin: 22px auto 0;
+  max-width: 14ch;
+  color: var(--navy);
+}
+.po-intro h1 em {
+  font-style: italic;
+  color: var(--green-600);
+}
+.po-intro p {
+  font-size: 1.08rem;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 52ch;
+  margin: 20px auto 0;
+}
+.po-scrollhint {
+  margin-top: 26px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.po-scrollhint svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--green);
+  stroke-width: 2;
+  fill: none;
+  animation: po-bob 1.8s ease-in-out infinite;
+}
+@keyframes po-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(5px);
+  }
+}
+
+/* ---------- the device scroll stage ---------- */
+.po-stage-scroll {
+  position: relative;
+  /* tall track that drives the scrub; ~360vh */
+  height: 360vh;
+}
+.po-stage-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+.po-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* fade the grey studio backdrop into the cream page at top & bottom */
+.po-stage-sticky::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+      to bottom,
+      var(--cream) 0%,
+      transparent 16%,
+      transparent 82%,
+      var(--cream) 100%
+    ),
+    radial-gradient(
+      120% 80% at 50% 42%,
+      transparent 55%,
+      rgba(4, 46, 92, 0.06) 100%
+    );
+}
+
+/* feature overlay layer */
+.po-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.po-overlay .po-wrap {
+  padding-bottom: 8vh;
+}
+
+/* individual feature card */
+.po-feature {
+  position: absolute;
+  bottom: 8vh;
+  left: 24px;
+  max-width: 440px;
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: opacity, transform;
+}
+.po-feature.is-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+.po-feature .po-fnum {
+  font-family: var(--display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent-blue);
+  letter-spacing: 0.1em;
+}
+.po-feature h3 {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: clamp(1.9rem, 3.8vw, 2.9rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--green-800);
+  margin: 8px 0 12px;
+}
+.po-feature p {
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: var(--ink);
+  font-weight: 500;
+  max-width: 40ch;
+}
+
+/* progress rail */
+.po-rail {
+  position: absolute;
+  z-index: 4;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  pointer-events: none;
+}
+.po-rail span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(4, 46, 92, 0.22);
+  transition: all 0.3s ease;
+}
+.po-rail span.is-active {
+  background: var(--green);
+  transform: scale(1.5);
+  box-shadow: 0 0 0 4px rgba(5, 159, 109, 0.16);
+}
+
+/* ---------- fallback (mobile / reduced-motion) ---------- */
+.po-fallback {
+  position: relative;
+  z-index: 2;
+  padding: 40px 0 20px;
+}
+.po-fallback-video {
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto 8px;
+  display: block;
+  border-radius: 24px;
+  background: radial-gradient(circle at 50% 45%, var(--studio-1), var(--studio-3));
+}
+.po-fallback-list {
+  display: grid;
+  gap: 18px;
+  max-width: 640px;
+  margin: 24px auto 0;
+}
+.po-fallback-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 24px 26px;
+  box-shadow: 0 12px 30px -20px rgba(4, 46, 92, 0.35);
+}
+.po-fallback-card .po-fnum {
+  font-family: var(--display);
+  color: var(--accent-blue);
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+}
+.po-fallback-card h3 {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 1.5rem;
+  color: var(--green-800);
+  margin: 6px 0 8px;
+  letter-spacing: -0.01em;
+}
+.po-fallback-card p {
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 1rem;
+}
+
+/* ---------- "in the box" / reassurance strip ---------- */
+.po-strip {
+  position: relative;
+  z-index: 2;
+  padding: 40px 0 20px;
+}
+.po-strip-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+.po-chip {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  text-align: center;
+}
+.po-chip .po-chip-ico {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 159, 109, 0.1);
+  color: var(--green-600);
+  margin-bottom: 12px;
+}
+.po-chip .po-chip-ico svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+.po-chip h4 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--navy);
+  margin: 0 0 4px;
+}
+.po-chip p {
+  font-size: 0.86rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+/* ---------- closing CTA band (dark navy for rhythm) ---------- */
+.po-cta {
+  position: relative;
+  z-index: 2;
+  margin-top: 40px;
+  background: radial-gradient(120% 140% at 50% 0%, var(--navy-700), var(--navy));
+  color: #fff;
+  padding: 80px 0 88px;
+  text-align: center;
+  overflow: hidden;
+}
+.po-cta h2 {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: clamp(2rem, 4.5vw, 3.2rem);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  max-width: 20ch;
+  margin: 0 auto;
+}
+.po-cta h2 em {
+  font-style: italic;
+  color: var(--green-200);
+}
+.po-cta p {
+  color: rgba(255, 255, 255, 0.72);
+  max-width: 48ch;
+  margin: 18px auto 30px;
+  line-height: 1.6;
+  font-size: 1.05rem;
+}
+
+/* ---------- footer ---------- */
+.po-footer {
+  position: relative;
+  z-index: 2;
+  background: var(--cream-2);
+  border-top: 1px solid var(--line);
+  padding: 40px 0;
+}
+.po-footer .po-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.po-footer p {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.po-footer a {
+  color: var(--navy);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.po-footer a:hover {
+  text-decoration: underline;
+}
+
+/* ============================================================
+   Modal + reservation form
+   ============================================================ */
+.po-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(4, 22, 43, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.po-modal-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 101;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  pointer-events: none;
+}
+.po-modal {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 560px;
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--paper);
+  border-radius: 26px;
+  box-shadow: 0 40px 100px rgba(4, 22, 43, 0.4);
+  border: 1px solid var(--line);
+}
+.po-modal-head {
+  padding: 30px 32px 20px;
+  border-bottom: 1px solid var(--line);
+  position: relative;
+  background: linear-gradient(180deg, var(--cream) 0%, var(--paper) 100%);
+  border-radius: 26px 26px 0 0;
+}
+.po-modal-head .po-eyebrow {
+  margin-bottom: 12px;
+}
+.po-modal-head h2 {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 1.7rem;
+  color: var(--navy);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+.po-modal-head p {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin-top: 6px;
+}
+.po-modal-close {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.po-modal-close:hover {
+  color: var(--navy);
+  border-color: var(--navy);
+}
+.po-modal-close svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+.po-form {
+  padding: 24px 32px 32px;
+  display: grid;
+  gap: 16px;
+}
+.po-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.po-field label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(4, 46, 92, 0.5);
+  margin-bottom: 7px;
+}
+.po-field input,
+.po-field select,
+.po-field textarea {
+  width: 100%;
+  font-family: var(--body);
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.po-field textarea {
+  resize: vertical;
+  min-height: 74px;
+}
+.po-field input::placeholder,
+.po-field textarea::placeholder {
+  color: rgba(10, 42, 74, 0.3);
+}
+.po-field input:focus,
+.po-field select:focus,
+.po-field textarea:focus {
+  outline: none;
+  border-color: var(--green);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(5, 159, 109, 0.14);
+}
+.po-field.has-error input,
+.po-field.has-error select,
+.po-field.has-error textarea {
+  border-color: var(--coral);
+  background: rgba(255, 122, 89, 0.06);
+}
+.po-field .po-err {
+  color: var(--coral);
+  font-size: 0.76rem;
+  font-weight: 600;
+  margin-top: 6px;
+}
+.po-consent {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  font-size: 0.86rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.po-consent input {
+  margin-top: 3px;
+  width: 17px;
+  height: 17px;
+  accent-color: var(--green);
+  flex-shrink: 0;
+}
+.po-consent.has-error {
+  color: var(--coral);
+}
+.po-submit {
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+}
+.po-submit[disabled] {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.po-spinner {
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: po-spin 0.7s linear infinite;
+}
+@keyframes po-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* success state */
+.po-success {
+  padding: 44px 34px 40px;
+  text-align: center;
+}
+.po-success-badge {
+  width: 74px;
+  height: 74px;
+  border-radius: 22px;
+  background: rgba(5, 159, 109, 0.12);
+  color: var(--green-600);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.po-success-badge svg {
+  width: 36px;
+  height: 36px;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  fill: none;
+}
+.po-success h2 {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 1.8rem;
+  color: var(--navy);
+}
+.po-success p {
+  color: var(--muted);
+  margin: 10px auto 20px;
+  max-width: 40ch;
+  line-height: 1.6;
+}
+.po-ref {
+  display: inline-block;
+  font-family: var(--display);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--navy);
+  background: var(--cream);
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 10px 18px;
+  margin-bottom: 24px;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 860px) {
+  .po-strip-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .po-feature {
+    left: 20px;
+    right: 20px;
+    max-width: none;
+  }
+}
+@media (max-width: 620px) {
+  .po-header .po-back span {
+    display: none;
+  }
+  .po-form-row {
+    grid-template-columns: 1fr;
+  }
+  .po-intro {
+    padding-top: 54px;
+  }
+}
+
+/* respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .gened-preorder * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

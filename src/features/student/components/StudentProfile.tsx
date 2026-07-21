@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Play, Pause, Check, ChevronDown, Pencil } from "lucide-react";
 import { useStudentStore, StudentProfile as StudentProfileType } from "../store/useStudentStore";
+import { getStudentDisplayName } from "../utils/displayName";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { PartnerRequestModal } from "./PartnerRequestModal";
@@ -538,7 +539,7 @@ export function StudentProfile() {
   const isLoading = partnerRequestStatus === "loading";
 
   const username      = studentProfile?.username      ?? "Student";
-  const displayName   = studentProfile?.name || username;
+  const displayName   = getStudentDisplayName(studentProfile);
   const grade         = studentProfile?.grade         ? `Grade ${studentProfile.grade}` : "—";
   const board         = studentProfile?.school_board  ?? "CBSE";
   const aiTutorName   = studentProfile?.ai_name || "Nia";
