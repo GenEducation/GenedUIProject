@@ -44,20 +44,6 @@ export const studentService = {
     return response.json();
   },
 
-  /** Downloads the report card as a PDF, rendered server-side and routed
-   * through the gateway. Pass `parentId` when a parent is downloading a
-   * linked child's report; omit it for a student downloading their own. */
-  downloadReportCardPdf: async (studentId: string, parentId?: string): Promise<Blob> => {
-    const url = parentId
-      ? `${API_BASE_URL}/parent/students/${studentId}/report-card/pdf?parent_id=${parentId}`
-      : `${API_BASE_URL}/students/${studentId}/report-card/pdf`;
-    const response = await authFetch(url, {
-      method: parentId ? "POST" : "GET",
-      headers: { accept: "application/pdf" },
-    });
-    return response.blob();
-  },
-
   fetchStudentStreak: async (studentId: string) => {
     const response = await authFetch(`${API_BASE_URL}/students/${studentId}/streak`);
     return response.json();
