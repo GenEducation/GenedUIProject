@@ -3,13 +3,195 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
-import { BookOpen, FileText, Brain, Activity, ChevronDown, Lock } from "lucide-react";
+import { BookOpen, FileText, Brain, Activity, ChevronDown, Lock, User, Target, TrendingUp, Award, Sparkles, Clock } from "lucide-react";
 import type { ReportCardData, ReportCardUI, SubjectData } from "./types";
 import {
-  SUBJECT_ACCENTS, masteryColor, bandFor, bandClass, formatDate,
+  SUBJECT_ACCENTS, masteryColor, bandFor, bandClass, formatDate, ringArc,
   buildChapterArc, deriveTopicInsights, deriveUnlocks, testAggregate,
   subjectAdapted, pendingTrendSubjects, SPARK_COLORS, type SparkLevel,
 } from "./utils";
+
+// ─────────────────────────────────────────────────────────
+// STRUCTURED SESSION REPORT RENDERER
+// ─────────────────────────────────────────────────────────
+
+function SessionReportViewer({ reportText }: { reportText: string }) {
+  if (!reportText) return null;
+
+  // Helper to parse key-value lines
+  const getValue = (pattern: RegExp, text: string) => {
+    const match = text.match(pattern);
+    return match ? match[1].trim() : null;
+  };
+
+  // Extract Summary
+  const summaryMatch = reportText.match(/### Summary of Current Session \((.*?)\)\n([\s\S]*?)(?=\n### |$)/);
+  const completionBadge = summaryMatch ? summaryMatch[1] : null;
+  const summaryBody = summaryMatch ? summaryMatch[2].trim() : "";
+
+  // Extract Student Traits
+  const traitsSection = reportText.match(/### Student Traits & Engagement\n([\s\S]*?)(?=\n### |$)/)?.[1] || "";
+  const mood = getValue(/- \*\*Mood\*\*: (.*)/, traitsSection);
+  const engagement = getValue(/- \*\*Engagement\*\*: (.*)/, traitsSection);
+  const questioning = getValue(/- \*\*Questioning Style\*\*: (.*)/, traitsSection);
+  const evidence = getValue(/- \*\*Evidence\*\*: (.*)/, traitsSection);
+
+  // Extract Pedagogical Points
+  const pedagogySection = reportText.match(/### Pedagogical Key Points\n([\s\S]*?)(?=\n### |$)/)?.[1] || "";
+  const pedagogyBlocks: { title: string; friction?: string; breakthrough?: string; misconception?: string }[] = [];
+  const pRegex = /#### (.*?)\n([\s\S]*?)(?=(#### |$))/g;
+  let pMatch;
+  while ((pMatch = pRegex.exec(pedagogySection)) !== null) {
+    const blockText = pMatch[2];
+    pedagogyBlocks.push({
+      title: pMatch[1].trim(),
+      friction: getValue(/- \*\*Friction Points\*\*: (.*)/, blockText) || undefined,
+      breakthrough: getValue(/- \*\*Breakthroughs\*\*: (.*)/, blockText) || undefined,
+      misconception: getValue(/- \*\*Misconceptions\*\*: (.*)/, blockText) || undefined,
+    });
+  }
+
+  // Extract Concept Trajectory
+  const trajSection = reportText.match(/### Concept Trajectory\n([\s\S]*?)(?=\n### |$)/)?.[1] || "";
+  const trajLines: { concept: string; transition: string; desc: string }[] = [];
+  const tRegex = /- \*\*(.*?)\*\*: (.*?) — (.*)/g;
+  let tMatch;
+  while ((tMatch = tRegex.exec(trajSection)) !== null) {
+    trajLines.push({
+      concept: tMatch[1].trim(),
+      transition: tMatch[2].trim(),
+      desc: tMatch[3].trim(),
+    });
+  }
+
+  // Extract Updated Overall Summary
+  const overallSummary = reportText.match(/### Updated Overall Summary\n([\s\S]*?)(?=\n### |$)/)?.[1]?.trim();
+
+  // If text structure doesn't match standard headings, fall back gracefully to Markdown
+  const isStructured = summaryMatch || traitsSection || pedagogyBlocks.length > 0 || trajLines.length > 0;
+
+  if (!isStructured) {
+    return (
+      <div className={MD_CLASSES}>
+        <ReactMarkdown>{reportText}</ReactMarkdown>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rc-session-report">
+      {/* Session Summary Header */}
+      <div className="rc-sr-header">
+        <div className="rc-sr-header-top">
+          <div className="rc-sr-title">
+            <Sparkles size={13} />
+            <span>Session Overview</span>
+          </div>
+          {completionBadge && <span className="rc-sr-badge">{completionBadge}</span>}
+        </div>
+        {summaryBody && <p className="rc-sr-summary-text">{summaryBody}</p>}
+      </div>
+
+      {/* Student Traits & Engagement */}
+      {(mood || engagement || questioning || evidence) && (
+        <div>
+          <div className="rc-sr-section-title">
+            <User size={13} />
+            <span>Learner Traits &amp; Engagement</span>
+          </div>
+          <div className="rc-sr-traits-grid">
+            {mood && (
+              <div className="rc-sr-trait-card">
+                <div className="rc-sr-trait-label">Mood</div>
+                <div className="rc-sr-trait-value">{mood}</div>
+              </div>
+            )}
+            {engagement && (
+              <div className="rc-sr-trait-card">
+                <div className="rc-sr-trait-label">Engagement</div>
+                <div className="rc-sr-trait-value">{engagement}</div>
+              </div>
+            )}
+            {questioning && (
+              <div className="rc-sr-trait-card">
+                <div className="rc-sr-trait-label">Questioning Style</div>
+                <div className="rc-sr-trait-value">{questioning}</div>
+              </div>
+            )}
+          </div>
+          {evidence && (
+            <div className="rc-sr-evidence">
+              <p className="rc-sr-evidence-quote">{evidence}</p>
+              <div className="rc-sr-evidence-cap">Observed evidence</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Pedagogical Key Points */}
+      {pedagogyBlocks.length > 0 && (
+        <div>
+          <div className="rc-sr-section-title">
+            <Target size={13} />
+            <span>Pedagogical Key Points</span>
+          </div>
+          {pedagogyBlocks.map((block, idx) => (
+            <div className="rc-sr-pedagogy-card" key={idx}>
+              <div className="rc-sr-pedagogy-head">{block.title}</div>
+              <div className="rc-sr-pedagogy-details">
+                {block.friction && (
+                  <div className="rc-sr-point-item">
+                    <span className="rc-sr-point-tag friction">Friction</span>
+                    <span>{block.friction}</span>
+                  </div>
+                )}
+                {block.breakthrough && (
+                  <div className="rc-sr-point-item">
+                    <span className="rc-sr-point-tag breakthrough">Breakthrough</span>
+                    <span>{block.breakthrough}</span>
+                  </div>
+                )}
+                {block.misconception && (
+                  <div className="rc-sr-point-item">
+                    <span className="rc-sr-point-tag misconception">Misconception</span>
+                    <span>{block.misconception}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Concept Trajectory */}
+      {trajLines.length > 0 && (
+        <div>
+          <div className="rc-sr-section-title">
+            <TrendingUp size={13} />
+            <span>Concept Trajectory</span>
+          </div>
+          {trajLines.map((traj, idx) => (
+            <div className="rc-sr-trajectory-card" key={idx}>
+              <div className="rc-sr-traj-head">
+                <span>{traj.concept}</span>
+                <span className="rc-sr-traj-badge">{traj.transition}</span>
+              </div>
+              <div className="rc-sr-traj-desc">{traj.desc}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Overall Chapter Progress Summary */}
+      {overallSummary && (
+        <div className="rc-sr-final">
+          <div className="rc-sr-final-cap">Cumulative Chapter Assessment</div>
+          <p>{overallSummary}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────
 // SHARED HELPERS — collapse to plain markup in print variant
@@ -44,6 +226,37 @@ function Chevron({ open, print }: { open: boolean; print: boolean }) {
     >
       <ChevronDown size={18} />
     </motion.span>
+  );
+}
+
+/** A single labelled dial: an SVG ring with the number centered inside and the
+ *  caption below the circle. Shared by the mastery + coverage chapter gauges. */
+function Dial({ pct, color, label }: { pct: number; color: string; label: string }) {
+  const r = 20;
+  const ring = ringArc(r, pct);
+  return (
+    <div className="rc-ch-dial">
+      <svg width="52" height="52" viewBox="0 0 52 52">
+        <circle cx="26" cy="26" r={r} fill="none" stroke="var(--rule)" strokeWidth="5" />
+        <circle
+          cx="26" cy="26" r={r} fill="none" stroke={color} strokeWidth="5" strokeLinecap="round"
+          strokeDasharray={ring.circ.toFixed(1)} strokeDashoffset={ring.offset.toFixed(1)} transform="rotate(-90 26 26)"
+        />
+        <text x="26" y="31" textAnchor="middle" fontFamily="var(--display)" fontWeight="700" fontSize="16" fill="var(--navy)">{pct}</text>
+      </svg>
+      <div className="rc-ch-dial-label">{label}</div>
+    </div>
+  );
+}
+
+/** Chapter gauge: twin dials — mastery (band-colored) and coverage/completion
+ *  (subject accent) — side by side, each captioned below the circle. */
+function ChapterGauge({ masteryPct, coveragePct, accent }: { masteryPct: number; coveragePct: number; accent: string }) {
+  return (
+    <div className="rc-ch-dials">
+      <Dial pct={masteryPct} color={masteryColor(masteryPct / 100)} label="MASTERY" />
+      <Dial pct={coveragePct} color={accent} label="COVERAGE" />
+    </div>
   );
 }
 
@@ -109,9 +322,9 @@ function TopicMastery({ subject, data, ui }: { subject: string; data: ReportCard
   const open = ui.isExpOpen(key);
 
   return (
-    <div className="rc-expander" style={{ marginTop: "14px" }}>
+    <div className="rc-expander rc-expander--tm" style={{ marginTop: "14px" }}>
       <button className="rc-expander-btn" onClick={() => ui.toggleExp(key)}>
-        <span>🧠 Topic mastery — {insights.cgs.length} topic group{insights.cgs.length !== 1 ? "s" : ""}</span>
+        <span>🧠 Skill Mastery — {insights.cgs.length} topic group{insights.cgs.length !== 1 ? "s" : ""}</span>
         <span className="plus" style={{ transform: open ? "rotate(45deg)" : "none" }}>+</span>
       </button>
       <Reveal open={open} print={print}>
@@ -241,33 +454,64 @@ function SubjectCard({ subj, si, data, ui }: { subj: SubjectData; si: number; da
 
             return (
               <div key={chapterKey}>
-                <div className="rc-chapter-row">
+                <div className="rc-chapter-row" style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "16px", alignItems: "center" }}>
                   <div>
-                    <div className="rc-ch-title">{ch.document_title}</div>
-                    <div className="rc-ch-sub">
-                      {ch.study_count} session{ch.study_count !== 1 ? "s" : ""} · {Math.round(ch.completion_percentage)}% complete
+                    <div className="rc-ch-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span>{ch.document_title}</span>
+                      {ch.status && (
+                        <span style={{
+                          fontSize: "10px",
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                          background: ch.status === "completed" ? "rgba(16, 185, 129, 0.1)" : "rgba(245, 158, 11, 0.1)",
+                          color: ch.status === "completed" ? "#048a5d" : "#b36b00",
+                          border: `1px solid ${ch.status === "completed" ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.3)"}`
+                        }}>
+                          {ch.status === "completed" ? "Completed" : "In Progress"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="rc-ch-subline">
+                      <span className="rc-ch-band" style={{ color: masteryColor(ch.mastery_score) }}>{bandFor(chScore)}</span>
+                      <span className="rc-ch-time">
+                        <Clock size={12} />
+                        {ch.time_minutes != null
+                          ? `${Math.round(ch.time_minutes)} min · ${ch.time_sessions ?? ch.study_count} session${(ch.time_sessions ?? ch.study_count) !== 1 ? "s" : ""}`
+                          : `${ch.study_count} session${ch.study_count !== 1 ? "s" : ""}`}
+                      </span>
                     </div>
                   </div>
-                  <div className="rc-ch-mastery">{chScore}%</div>
-                  <div>
-                    <div className="rc-bar-track">
-                      <div className="rc-bar-fill" style={{ width: `${chScore}%`, background: masteryColor(ch.mastery_score) }} />
-                    </div>
-                    <div className="rc-bar-track thin" title="Completion">
-                      <div className="rc-bar-fill" style={{ width: `${Math.round(ch.completion_percentage)}%`, background: accent, opacity: 0.5 }} />
-                    </div>
-                  </div>
+
+                  <ChapterGauge masteryPct={chScore} coveragePct={Math.round(ch.completion_percentage)} accent={accent} />
                 </div>
 
-                {!evo && ch.study_count < 2 && (
+                {!evo && !ch.chapter_report && ch.study_count < 2 && (
                   <p className="rc-ch-hint">Learning arc unlocks after 2+ sessions on this chapter.</p>
                 )}
-                {!evo && ch.study_count >= 2 && (
+                {!evo && !ch.chapter_report && ch.study_count >= 2 && (
                   <p className="rc-ch-hint">Analysis pending — the learning arc is being generated.</p>
                 )}
 
+                {/* Direct Chapter Report Expander (available immediately whenever chapter_report exists, even without full multi-session evolution arc) */}
+                {ch.chapter_report && !evo && (
+                  <div className="rc-expander rc-expander--sr" style={{ marginTop: "10px" }}>
+                    <button className="rc-expander-btn" onClick={() => ui.toggleExp(`${chapterKey}::report`)}>
+                      <span>📄 Latest Session Report — {ch.document_title}</span>
+                      <span className="plus" style={{ transform: reportOpen ? "rotate(45deg)" : "none" }}>+</span>
+                    </button>
+                    <Reveal open={reportOpen} print={print}>
+                      <div className="rc-expander-panel">
+                        <SessionReportViewer reportText={ch.chapter_report} />
+                      </div>
+                    </Reveal>
+                  </div>
+                )}
+
                 {evo && (
-                  <div className="rc-expander">
+                  <div className="rc-expander" style={{ marginTop: "10px" }}>
                     <button className="rc-expander-btn" onClick={() => ui.toggleExp(`${chapterKey}::arc`)}>
                       <span>📈 Learning arc &amp; skill dimensions — {ch.document_title}</span>
                       <span className="plus" style={{ transform: arcOpen ? "rotate(45deg)" : "none" }}>+</span>
@@ -347,16 +591,14 @@ function SubjectCard({ subj, si, data, ui }: { subj: SubjectData; si: number; da
                         )}
 
                         {ch.chapter_report && (
-                          <div className="rc-expander" style={{ marginTop: "10px" }}>
+                          <div className="rc-expander rc-expander--sr" style={{ marginTop: "10px" }}>
                             <button className="rc-expander-btn" onClick={() => ui.toggleExp(`${chapterKey}::report`)}>
                               <span>📄 Full chapter report</span>
                               <span className="plus" style={{ transform: reportOpen ? "rotate(45deg)" : "none" }}>+</span>
                             </button>
                             <Reveal open={reportOpen} print={print}>
                               <div className="rc-expander-panel">
-                                <div className={MD_CLASSES}>
-                                  <ReactMarkdown>{ch.chapter_report}</ReactMarkdown>
-                                </div>
+                                <SessionReportViewer reportText={ch.chapter_report} />
                               </div>
                             </Reveal>
                           </div>
@@ -398,7 +640,7 @@ function TestItem({ t, ui }: { t: ReportCardData["testSubmissions"][number]; ui:
           <div className="rc-test-sub">{t.subject}{total > 0 ? ` · ${correct}/${total} correct` : ""}</div>
         </div>
         <div className="rc-test-score">{Math.round(t.overall_score * 100)}%</div>
-        <span className={`rc-verdict ${pass ? "pass" : "fail"}`}>{pass ? "PASS" : "RETRY"}</span>
+        <span className={`rc-verdict ${pass ? "pass" : "fail"}`}>{pass ? "PASS" : "FAIL"}</span>
         <div className="rc-test-date">{formatDate(t.submitted_at)}</div>
         <span className="rc-test-plus">{hasBreakdown ? (open ? "−" : "+") : ""}</span>
       </div>

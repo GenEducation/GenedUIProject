@@ -41,6 +41,14 @@ export function bandClass(score: number): string {
   return bandFor(score).toLowerCase();
 }
 
+/** Ring geometry for an SVG circular gauge: given a radius and a 0-100 score,
+ *  returns the circumference + dash-offset needed to draw the filled arc. */
+export function ringArc(r: number, scorePct: number) {
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - Math.max(0, Math.min(100, scorePct)) / 100);
+  return { circ, offset };
+}
+
 export function pct(val: number | null | undefined): string {
   if (val == null) return "—";
   return `${Math.round(val * 100)}%`;

@@ -150,15 +150,32 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
         if (subjectEvoData && !subjectEvoData.detail) allSubjectEvos.push(subjectEvoData);
       }
 
+      const [testData, progressData, timeByChapterData] = await Promise.all([
+        studentService.fetchTestSubmissions(studentId).catch(() => []),
+        studentService.fetchProgressReport(studentId).catch(() => null),
+        studentService.fetchTimeByChapter(studentId).catch(() => []),
+      ]);
+
+      if (Array.isArray(timeByChapterData)) {
+        const timeByKey = new Map<string, { total_minutes: number; session_count: number }>();
+        for (const t of timeByChapterData) {
+          const key = `${(t.subject ?? "").toLowerCase()}::${(t.chapter_name ?? "").toLowerCase()}`;
+          timeByKey.set(key, t);
+        }
+        for (const ch of allChapters) {
+          const key = `${ch.subject.toLowerCase()}::${ch.document_title.toLowerCase()}`;
+          const t = timeByKey.get(key);
+          if (t) {
+            ch.time_minutes = t.total_minutes;
+            ch.time_sessions = t.session_count;
+          }
+        }
+      }
+
       setSubjects(allSubjects);
       setChapters(allChapters);
       setSkillTree(allCGs);
       setSubjectEvolutions(allSubjectEvos);
-
-      const [testData, progressData] = await Promise.all([
-        studentService.fetchTestSubmissions(studentId).catch(() => []),
-        studentService.fetchProgressReport(studentId).catch(() => null),
-      ]);
 
       if (Array.isArray(testData)) setTestSubmissions(testData);
       if (progressData && !progressData.detail) setProgressReport(progressData);

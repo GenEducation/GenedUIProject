@@ -18,6 +18,12 @@ export interface ChapterMasteryItem {
   study_count: number;
   grade: number;
   chapter_report?: string | null;
+  status?: string | null;
+  is_curriculum?: boolean;
+  is_system?: boolean;
+  is_placeholder?: boolean;
+  time_minutes?: number;
+  time_sessions?: number;
 }
 
 export interface SkillLOItem {

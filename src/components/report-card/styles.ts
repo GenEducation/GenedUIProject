@@ -9,6 +9,8 @@ export const RC_STYLES = `
     --pro-fg:#1D4ED8; --pro-bg:#EFF6FF; --pro-bd:#BFDBFE;
     --app-fg:#B45309; --app-bg:#FFFBEB; --app-bd:#FDE68A;
     --dev-fg:#BE123C; --dev-bg:#FFF1F2; --dev-bd:#FECDD3;
+    --sr-tint:#EEF3FA; --sr-tint-2:#E3ECF6; --sr-accent:#2B4A7E; --sr-border:#D3E0F0;
+    --tm-tint:#F7F1FC; --tm-tint-2:#EFE3F8; --tm-accent:#6D28D9; --tm-border:#E3D3F2;
     --r:10px; --r-sm:6px; --r-lg:16px;
     --sans:'Inter',sans-serif; --display:'Source Serif 4',Charter,Georgia,serif; --mono:'JetBrains Mono',monospace;
     --shadow: 0 1px 2px rgba(4,46,92,.04), 0 8px 24px -12px rgba(4,46,92,.10);
@@ -90,12 +92,35 @@ export const RC_STYLES = `
   .rc-bar-track.thin { height: 3px; margin-top: 4px; }
   .rc-ch-hint { font-size: 11px; color: var(--muted); font-style: italic; padding: 2px 0 8px; }
 
+  /* chapter gauge: twin mastery + coverage dials, captioned below */
+  .rc-ch-subline { display: flex; align-items: center; gap: 12px; margin-top: 4px; flex-wrap: wrap; }
+  .rc-ch-band { font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: .02em; }
+  .rc-ch-time { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rc-ch-time svg { color: var(--emerald); flex-shrink: 0; }
+  .rc-ch-dials { display: flex; align-items: flex-start; gap: 14px; }
+  .rc-ch-dial { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .rc-ch-dial-label { font-family: var(--mono); font-size: 8.5px; letter-spacing: .08em; color: var(--muted); }
+
   /* expanders */
   .rc-expander { margin-top: 14px; border: 1px solid var(--rule); border-radius: var(--r); overflow: hidden; }
   .rc-expander-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--surface-2); border: none; padding: 11px 16px; cursor: pointer; text-align: left; font-family: var(--sans); font-size: 12.5px; font-weight: 600; color: var(--navy); }
   .rc-expander-btn:hover { background: #F2F0E8; }
   .rc-expander-btn .plus { font-family: var(--mono); font-size: 15px; color: var(--emerald); transition: transform .2s; display: inline-block; }
   .rc-expander-panel { padding: 16px 18px 18px; border-top: 1px solid var(--rule); background: #fff; }
+
+  /* session-report expander — cool indigo identity to stand apart from the warm document */
+  .rc-expander--sr { border-color: var(--sr-border); }
+  .rc-expander--sr .rc-expander-btn { background: var(--sr-tint); color: var(--sr-accent); }
+  .rc-expander--sr .rc-expander-btn:hover { background: var(--sr-tint-2); }
+  .rc-expander--sr .rc-expander-btn .plus { color: var(--sr-accent); }
+  .rc-expander--sr .rc-expander-panel { background: var(--sr-tint); border-top-color: var(--sr-border); }
+
+  /* topic-mastery expander — violet identity, distinct from the session-report indigo */
+  .rc-expander--tm { border-color: var(--tm-border); }
+  .rc-expander--tm .rc-expander-btn { background: var(--tm-tint); color: var(--tm-accent); }
+  .rc-expander--tm .rc-expander-btn:hover { background: var(--tm-tint-2); }
+  .rc-expander--tm .rc-expander-btn .plus { color: var(--tm-accent); }
+  .rc-expander--tm .rc-expander-panel { background: #fff; border-top-color: var(--tm-border); }
 
   .rc-clamp { font-size: 13.5px; color: var(--ink-2); line-height: 1.6; }
   .rc-clamp.collapsed { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
@@ -190,6 +215,44 @@ export const RC_STYLES = `
   .rc-hero blockquote { font-family: var(--display); font-style: italic; font-size: 19px; color: var(--navy); margin: 0 0 10px; line-height: 1.5; }
 
   .rc-markdown { font-size: 13px; line-height: 1.7; color: var(--ink-2); }
+
+  /* Structured session report — editorial treatment matching the report document */
+  .rc-session-report { font-family: var(--sans); color: var(--text); }
+  .rc-sr-header { background: linear-gradient(160deg,#FFFFFF,var(--sr-tint-2)); border: 1px solid var(--sr-border); border-left: 3px solid var(--sr-accent); border-radius: var(--r); padding: 16px 18px 14px; margin-bottom: 18px; }
+  .rc-sr-header-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+  .rc-sr-title { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--sr-accent); font-weight: 600; display: flex; align-items: center; gap: 7px; }
+  .rc-sr-badge { font-family: var(--mono); font-size: 10.5px; font-weight: 600; color: var(--navy); background: var(--surface); padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); white-space: nowrap; }
+  .rc-sr-summary-text { font-family: var(--display); font-size: 14.5px; font-style: italic; color: var(--navy); line-height: 1.55; margin: 0; }
+
+  .rc-sr-section-title { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--navy); font-weight: 700; margin: 20px 0 10px; display: flex; align-items: center; gap: 7px; border-bottom: 1px dashed var(--rule); padding-bottom: 6px; }
+  .rc-sr-section-title svg { color: var(--sr-accent); }
+
+  .rc-sr-traits-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 12px; }
+  .rc-sr-trait-card { border-left: 2px solid var(--rule); padding: 2px 0 2px 12px; }
+  .rc-sr-trait-label { font-family: var(--mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 3px; }
+  .rc-sr-trait-value { font-size: 13px; font-weight: 600; color: var(--navy); line-height: 1.4; }
+  .rc-sr-evidence { border-left: 2px solid var(--sr-accent); padding: 4px 0 4px 14px; margin: 10px 0 16px; }
+  .rc-sr-evidence-quote { font-family: var(--display); font-style: italic; font-size: 13px; color: var(--ink-2); line-height: 1.6; margin: 0; }
+  .rc-sr-evidence-cap { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 5px; }
+
+  .rc-sr-pedagogy-card { background: var(--surface-2); border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 12px 14px; margin-bottom: 8px; }
+  .rc-sr-pedagogy-head { font-family: var(--display); font-size: 13.5px; font-weight: 600; color: var(--navy); margin-bottom: 8px; }
+  .rc-sr-pedagogy-details { display: flex; flex-direction: column; gap: 7px; font-size: 12.5px; color: var(--ink-2); }
+  .rc-sr-point-item { display: flex; gap: 9px; align-items: flex-start; line-height: 1.5; }
+  .rc-sr-point-tag { font-family: var(--mono); font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid; flex-shrink: 0; text-transform: uppercase; letter-spacing: .04em; margin-top: 1px; }
+  .rc-sr-point-tag.friction { background: var(--dev-bg); color: var(--dev-fg); border-color: var(--dev-bd); }
+  .rc-sr-point-tag.breakthrough { background: var(--adv-bg); color: var(--adv-fg); border-color: var(--adv-bd); }
+  .rc-sr-point-tag.misconception { background: var(--app-bg); color: var(--app-fg); border-color: var(--app-bd); }
+
+  .rc-sr-trajectory-card { padding: 9px 0; border-bottom: 1px dashed var(--rule); font-size: 12.5px; }
+  .rc-sr-trajectory-card:last-child { border-bottom: none; }
+  .rc-sr-traj-head { font-weight: 600; color: var(--navy); margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .rc-sr-traj-badge { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--sr-accent); background: rgba(43,74,126,.08); border: 1px solid rgba(43,74,126,.2); padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .rc-sr-traj-desc { color: var(--ink-2); font-size: 12px; line-height: 1.55; }
+
+  .rc-sr-final { margin-top: 18px; background: linear-gradient(160deg,#FFFFFF,var(--sr-tint-2)); border: 1px solid var(--sr-border); border-radius: var(--r); padding: 14px 16px; }
+  .rc-sr-final-cap { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--sr-accent); font-weight: 700; margin-bottom: 5px; }
+  .rc-sr-final p { font-family: var(--display); font-size: 13.5px; color: var(--navy); margin: 0; line-height: 1.6; }
 
   /* pending trend rows */
   .rc-pending-row { display: flex; align-items: center; gap: 8px; padding: 11px 16px; border: 1px dashed var(--rule); border-radius: var(--r); margin-top: 12px; font-size: 12.5px; color: var(--muted); opacity: .8; }
