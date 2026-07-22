@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import "./pre-order.css";
@@ -38,6 +38,15 @@ const FEATURES: PreorderFeature[] = [
 
 export default function PreOrderPage() {
   const [open, setOpen] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
+
+  // Close the video modal on Escape.
+  useEffect(() => {
+    if (!showVideo) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setShowVideo(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showVideo]);
 
   return (
     <div className="gened-preorder">
@@ -64,7 +73,7 @@ export default function PreOrderPage() {
               <svg viewBox="0 0 24 24">
                 <path d="M19 12H5M11 6l-6 6 6 6" />
               </svg>
-              <span>Back to site</span>
+              <span>Website</span>
             </Link>
             <button
               type="button"
@@ -90,6 +99,18 @@ export default function PreOrderPage() {
             A dedicated AI learning device — not a phone, not a tablet. Scroll to
             watch it come to life, and reserve one for your child today.
           </p>
+          <div className="po-intro-actions">
+            <button
+              type="button"
+              className="po-btn po-btn-ghost"
+              onClick={() => setShowVideo(true)}
+            >
+              <svg viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" fill="currentColor" stroke="none" />
+              </svg>
+              Meet the device
+            </button>
+          </div>
           <div className="po-scrollhint">
             Scroll to wake it
             <svg viewBox="0 0 24 24">
@@ -182,6 +203,36 @@ export default function PreOrderPage() {
       </footer>
 
       <PreorderModal isOpen={open} onClose={() => setOpen(false)} />
+
+      {/* ── "Meet the device" video modal ── */}
+      {showVideo && (
+        <div
+          className="fixed inset-0 z-[120] bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setShowVideo(false)}
+        >
+          <div
+            className="relative w-full max-w-4xl"
+            style={{ aspectRatio: "16/9" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowVideo(false)}
+              className="absolute -top-10 right-0 text-white text-3xl leading-none hover:text-gray-300 transition-colors"
+              aria-label="Close video"
+            >
+              ×
+            </button>
+            <iframe
+              src="https://www.youtube.com/embed/YrTt8OwvT3I?autoplay=1&rel=0"
+              className="w-full h-full rounded-lg"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title="Meet the GenEd Device"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

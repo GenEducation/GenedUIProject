@@ -223,6 +223,11 @@
   max-width: 52ch;
   margin: 20px auto 0;
 }
+.po-intro-actions {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+}
 .po-scrollhint {
   margin-top: 26px;
   display: inline-flex;
