@@ -67,5 +67,5 @@ export default function BaseTenBlocks({ directiveId, meta, disabled, readOnly }:
 const btn = (lock?: boolean): React.CSSProperties => ({
   display: "flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 600, padding: "7px 12px",
   borderRadius: 12, border: `1px solid ${COLORS.border}`, background: "#FFFFFF", color: COLORS.ink,
-  cursor: lock ? "default" : "pointer", fontFamily: "'DM Sans', sans-serif",
+  cursor: lock ? "default" : "pointer", fontFamily: "var(--font-body)",
 });

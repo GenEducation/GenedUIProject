@@ -279,7 +279,7 @@ export function MessageElements({ elements, isStreaming, toolStatus, onAllReveal
         );
       })}
       {toolStatus && isStreaming && (
-        <div className="flex items-center gap-3 animate-pulse mt-3" style={{ padding: "10px 16px", background: "#5B4DC708", border: "1px solid #5B4DC715", borderRadius: 16, fontSize: 12, fontWeight: 700, color: "#5B4DC7" }}>
+        <div className="flex items-center gap-3 animate-pulse mt-3" style={{ padding: "10px 16px", background: "#5B4DC708", border: "1px solid #5B4DC715", borderRadius: 16, fontSize: 12, fontWeight: 700, color: "var(--tutor)" }}>
           <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#00B894", animation: "bounce 1s infinite" }} />
           {toolStatus}
         </div>

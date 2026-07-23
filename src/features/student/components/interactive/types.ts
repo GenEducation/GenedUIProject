@@ -1,4 +1,5 @@
 import type { ChatElement } from "../../store/useStudentStore";
+import { STUDENT_COLORS } from "../../theme/colors";
 
 export interface InteractiveProps {
   directiveId: string;
@@ -7,9 +8,11 @@ export interface InteractiveProps {
   readOnly?: boolean;
 }
 
-// Brand palette shared across all interactive math widgets.
+// Brand palette shared across all interactive math widgets. Raw hex (not
+// var()) — some consumers (e.g. Hotspot.tsx: `${COLORS.brand}55`) alpha-
+// suffix this value, which CSS custom properties can't support.
 export const COLORS = {
-  brand: "#5B4DC7",
+  brand: STUDENT_COLORS.tutor,
   brandSoft: "#EDE9FE",
   success: "#00B894",
   danger: "#E53E3E",
@@ -20,7 +23,7 @@ export const COLORS = {
   panel: "#F7F6FD",
 };
 
-export const FONT = "'DM Sans', sans-serif";
+export const FONT = "var(--font-body)";
 
 // interactive_type → interaction_type. Mirrors backend validator.py.
 export const TYPE_TO_INTERACTION: Record<string, string> = {

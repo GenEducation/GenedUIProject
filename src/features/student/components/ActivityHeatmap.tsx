@@ -46,7 +46,7 @@ export function ActivityHeatmap() {
 
   if (isLoading) {
     return (
-      <div className="w-full h-24 bg-gradient-to-r from-[#042E5C]/5 to-transparent rounded-2xl animate-pulse" />
+      <div className="w-full h-24 bg-gradient-to-r from-[var(--primary-ink)]/5 to-transparent rounded-2xl animate-pulse" />
     );
   }
 
@@ -62,7 +62,7 @@ export function ActivityHeatmap() {
             {DAY_LABELS.map((d, i) => (
               <div
                 key={i}
-                className="text-[#042E5C]/30 font-bold text-center"
+                className="text-[var(--primary-ink)]/30 font-bold text-center"
                 style={{
                   fontSize: 8,
                   height: CELL,
@@ -80,7 +80,7 @@ export function ActivityHeatmap() {
             <div key={`${month.year}-${month.label}-${mi}`} className="flex flex-col flex-shrink-0">
               {/* Month label */}
               <div
-                className="text-[#042E5C]/40 font-bold mb-1 whitespace-nowrap"
+                className="text-[var(--primary-ink)]/40 font-bold mb-1 whitespace-nowrap"
                 style={{ fontSize: 9, height: 14, lineHeight: "14px" }}
               >
                 {month.label}
@@ -133,7 +133,7 @@ export function ActivityHeatmap() {
       {/* Tooltip */}
       {tooltip && (
         <div
-          className="absolute z-20 px-2 py-1 rounded-lg bg-[#042E5C] text-white pointer-events-none whitespace-nowrap shadow-lg"
+          className="absolute z-20 px-2 py-1 rounded-lg bg-[var(--primary-ink)] text-white pointer-events-none whitespace-nowrap shadow-lg"
           style={{
             fontSize: 10,
             fontWeight: 700,

@@ -71,7 +71,7 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
       <div
         style={{
           position: "absolute", left: 0, top: 0, bottom: 0, width: 4,
-          background: mode === "READ_ALOUD" ? "linear-gradient(180deg, #4A90D9, #5B4DC7)" : "linear-gradient(180deg, #BE185D, #F9A8D4)",
+          background: mode === "READ_ALOUD" ? "linear-gradient(180deg, var(--tutor-soft), var(--tutor))" : "linear-gradient(180deg, #BE185D, #F9A8D4)",
           borderRadius: "18px 0 0 18px",
         }}
       />
@@ -82,14 +82,14 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
           style={{
             display: "inline-flex", alignItems: "center", gap: 5,
             fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
-            textTransform: "uppercase", color: "#5B4DC7",
+            textTransform: "uppercase", color: "var(--tutor)",
             background: "#5B4DC710", borderRadius: 8, padding: "3px 10px",
           }}
         >
           <span
             style={{
               width: 6, height: 6, borderRadius: "50%",
-              background: mode === "READ_ALOUD" ? "#00B894" : "#5B4DC7",
+              background: mode === "READ_ALOUD" ? "#00B894" : "var(--tutor)",
               display: "inline-block",
               animation: isActive && recordingState !== "completed" ? "pulse 1.5s infinite" : "none",
             }}
@@ -106,8 +106,8 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
               width: 36, height: 36, borderRadius: "50%", border: "none",
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: isLoading ? "default" : "pointer",
-              background: isPlaying || isPaused ? "#5B4DC7" : "#EDE9FE",
-              color: isPlaying || isPaused ? "#fff" : "#5B4DC7",
+              background: isPlaying || isPaused ? "var(--tutor)" : "#EDE9FE",
+              color: isPlaying || isPaused ? "#fff" : "var(--tutor)",
               transition: "all 0.2s",
               flexShrink: 0,
               boxShadow: "0 2px 8px rgba(91,77,199,0.18)",
@@ -125,7 +125,7 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
 
       <div
         className="whitespace-pre-wrap leading-relaxed"
-        style={{ fontSize: 16, color: "#1A202C", fontFamily: "'DM Sans', sans-serif", fontWeight: 500, paddingLeft: 4 }}
+        style={{ fontSize: 16, color: "#1A202C", fontFamily: "var(--font-body)", fontWeight: 500, paddingLeft: 4 }}
       >
         {displayedText}
       </div>
@@ -138,7 +138,7 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
           style={{
             marginTop: 12, display: "flex", alignItems: "center", gap: 6,
             fontSize: 10, fontWeight: 800, letterSpacing: "0.1em",
-            textTransform: "uppercase", color: "#5B4DC7", paddingLeft: 4,
+            textTransform: "uppercase", color: "var(--tutor)", paddingLeft: 4,
           }}
         >
           <div

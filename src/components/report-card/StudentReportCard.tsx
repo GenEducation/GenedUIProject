@@ -202,6 +202,22 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
     }
   }, [fetchAll, fetchParentReportData, parentId, teacherId, childId]);
 
+  // Watchdog: fetchAll() no-ops (leaving isLoading true forever) if studentId
+  // never hydrates from the store, and a hung network request has no other
+  // timeout — both looked identical to a student as an infinite spinner.
+  useEffect(() => {
+    if (!isLoading) return;
+    const timer = setTimeout(() => {
+      setIsLoading((stillLoading) => {
+        if (stillLoading) {
+          setError("This is taking longer than expected. Please try again.");
+        }
+        return false;
+      });
+    }, 15000);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
   // ── Derived display values ─────────────────────────────
   const resolvedStudentName =
     studentProfile?.name || studentProfile?.username ? getStudentDisplayName(studentProfile) : undefined;

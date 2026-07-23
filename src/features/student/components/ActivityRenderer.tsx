@@ -40,7 +40,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
 
   const renderReading = () => (
     <div className="flex flex-col gap-3 mt-2 mb-4">
-      <div className="text-[15px] font-medium text-[#042E5C]/90 leading-relaxed border-l-2 border-[#042E5C]/20 pl-3">
+      <div className="text-[15px] font-medium text-[var(--primary-ink)]/90 leading-relaxed border-l-2 border-[var(--primary-ink)]/20 pl-3">
         {action.content}
       </div>
       
@@ -49,20 +49,20 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
           <button
             onClick={handleToggleMic}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm ${
-              isListening ? "bg-red-500 text-white animate-pulse" : "bg-white text-[#042E5C] border border-[#042E5C]/10 hover:bg-[#042E5C] hover:text-white"
+              isListening ? "bg-red-500 text-white animate-pulse" : "bg-white text-[var(--primary-ink)] border border-[var(--primary-ink)]/10 hover:bg-[var(--primary-ink)] hover:text-white"
             }`}
           >
             {isListening ? <MicOff size={16} /> : <Mic size={16} />}
           </button>
           
-          <div className="flex-1 px-3 py-2 bg-white/50 rounded-xl border border-transparent min-h-[40px] text-[13px] text-[#042E5C]/60 flex items-center">
+          <div className="flex-1 px-3 py-2 bg-white/50 rounded-xl border border-transparent min-h-[40px] text-[13px] text-[var(--primary-ink)]/60 flex items-center">
             {localTranscript || (isListening ? "Listening..." : "Tap mic to read aloud") }
           </div>
 
           {localTranscript && (
             <button
               onClick={handleSubmit}
-              className="w-10 h-10 rounded-full bg-[#042E5C] text-white flex items-center justify-center hover:bg-[#064282] transition-all"
+              className="w-10 h-10 rounded-full bg-[var(--primary-ink)] text-white flex items-center justify-center hover:bg-[#064282] transition-all"
             >
               <Send size={16} />
             </button>
@@ -79,17 +79,17 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
   );
 
   const renderListening = () => (
-    <div className="flex flex-col gap-4 p-4 bg-white rounded-2xl border border-[#042E5C]/10 shadow-sm mt-3">
+    <div className="flex flex-col gap-4 p-4 bg-white rounded-2xl border border-[var(--primary-ink)]/10 shadow-sm mt-3">
       <div className="flex items-center gap-4">
         <button
           onClick={() => setIsPlaying(!isPlaying)}
-          className="w-12 h-12 rounded-full bg-[#042E5C] text-white flex items-center justify-center hover:bg-[#064282] transition-all shadow-md"
+          className="w-12 h-12 rounded-full bg-[var(--primary-ink)] text-white flex items-center justify-center hover:bg-[#064282] transition-all shadow-md"
         >
           {isPlaying ? <Pause size={20} /> : <Play size={20} className="ml-1" />}
         </button>
         <div className="flex-1">
-          <p className="text-[14px] font-bold text-[#042E5C]">Listen carefully</p>
-          <p className="text-[12px] text-[#042E5C]/60">{action.question || "Answer the question based on what you hear."}</p>
+          <p className="text-[14px] font-bold text-[var(--primary-ink)]">Listen carefully</p>
+          <p className="text-[12px] text-[var(--primary-ink)]/60">{action.question || "Answer the question based on what you hear."}</p>
         </div>
       </div>
 
@@ -100,12 +100,12 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
             value={localTranscript}
             onChange={(e) => setLocalTranscript(e.target.value)}
             placeholder="Type your answer here..."
-            className="flex-1 px-4 py-3 bg-[#F8F9FA] rounded-xl border border-[#042E5C]/10 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#042E5C]/20"
+            className="flex-1 px-4 py-3 bg-[#F8F9FA] rounded-xl border border-[var(--primary-ink)]/10 text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary-ink)]/20"
           />
           <button
             onClick={handleSubmit}
             disabled={!localTranscript.trim()}
-            className="px-6 py-3 bg-[#042E5C] text-white rounded-xl font-bold text-[14px] disabled:opacity-30 transition-all"
+            className="px-6 py-3 bg-[var(--primary-ink)] text-white rounded-xl font-bold text-[14px] disabled:opacity-30 transition-all"
           >
             Submit
           </button>
@@ -121,11 +121,11 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
   );
 
   const renderSpelling = () => (
-    <div className="flex flex-col gap-4 p-4 bg-white rounded-2xl border border-[#042E5C]/10 shadow-sm mt-3">
-      <p className="text-[14px] font-bold text-[#042E5C]">Spelling Challenge</p>
+    <div className="flex flex-col gap-4 p-4 bg-white rounded-2xl border border-[var(--primary-ink)]/10 shadow-sm mt-3">
+      <p className="text-[14px] font-bold text-[var(--primary-ink)]">Spelling Challenge</p>
       <div className="flex flex-wrap gap-2">
         {action.words?.map((word, i) => (
-          <span key={i} className="px-3 py-1 bg-[#042E5C]/5 rounded-lg text-[13px] font-medium text-[#042E5C]">
+          <span key={i} className="px-3 py-1 bg-[var(--primary-ink)]/5 rounded-lg text-[13px] font-medium text-[var(--primary-ink)]">
             {word}
           </span>
         ))}
@@ -138,12 +138,12 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
             value={localTranscript}
             onChange={(e) => setLocalTranscript(e.target.value)}
             placeholder="Spell the words..."
-            className="w-full px-4 py-3 bg-[#F8F9FA] rounded-xl border border-[#042E5C]/10 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#042E5C]/20"
+            className="w-full px-4 py-3 bg-[#F8F9FA] rounded-xl border border-[var(--primary-ink)]/10 text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary-ink)]/20"
           />
           <button
             onClick={handleSubmit}
             disabled={!localTranscript.trim()}
-            className="w-full py-3 bg-[#042E5C] text-white rounded-xl font-bold text-[14px] disabled:opacity-30 transition-all"
+            className="w-full py-3 bg-[var(--primary-ink)] text-white rounded-xl font-bold text-[14px] disabled:opacity-30 transition-all"
           >
             Check Spelling
           </button>
@@ -161,11 +161,11 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
   const renderRepeat = () => (
     <div className="flex flex-col gap-3 mt-2 mb-4">
       <div className="flex items-center gap-2 pl-1">
-        <RotateCcw size={14} className="text-[#042E5C]/50" />
-        <p className="text-[12px] font-bold text-[#042E5C]/50 uppercase tracking-wider">Repeat after me</p>
+        <RotateCcw size={14} className="text-[var(--primary-ink)]/50" />
+        <p className="text-[12px] font-bold text-[var(--primary-ink)]/50 uppercase tracking-wider">Repeat after me</p>
       </div>
       
-      <div className="text-[15px] font-medium text-[#042E5C]/90 leading-relaxed border-l-2 border-[#042E5C]/20 pl-3 italic">
+      <div className="text-[15px] font-medium text-[var(--primary-ink)]/90 leading-relaxed border-l-2 border-[var(--primary-ink)]/20 pl-3 italic">
         "{action.content}"
       </div>
 
@@ -174,20 +174,20 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
           <button
             onClick={handleToggleMic}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm ${
-              isListening ? "bg-red-500 text-white animate-pulse" : "bg-white text-[#042E5C] border border-[#042E5C]/10 hover:bg-[#042E5C] hover:text-white"
+              isListening ? "bg-red-500 text-white animate-pulse" : "bg-white text-[var(--primary-ink)] border border-[var(--primary-ink)]/10 hover:bg-[var(--primary-ink)] hover:text-white"
             }`}
           >
             {isListening ? <MicOff size={16} /> : <Mic size={16} />}
           </button>
           
-          <div className="flex-1 px-3 py-2 bg-white/50 rounded-xl border border-transparent min-h-[40px] text-[13px] text-[#042E5C]/60 flex items-center">
+          <div className="flex-1 px-3 py-2 bg-white/50 rounded-xl border border-transparent min-h-[40px] text-[13px] text-[var(--primary-ink)]/60 flex items-center">
             {localTranscript || (isListening ? "Listening..." : "Tap to record...") }
           </div>
 
           {localTranscript && (
             <button
               onClick={handleSubmit}
-              className="w-10 h-10 rounded-full bg-[#042E5C] text-white flex items-center justify-center hover:bg-[#064282] transition-all"
+              className="w-10 h-10 rounded-full bg-[var(--primary-ink)] text-white flex items-center justify-center hover:bg-[#064282] transition-all"
             >
               <Send size={16} />
             </button>

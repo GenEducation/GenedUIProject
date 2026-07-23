@@ -10,7 +10,7 @@ interface PointerOverlayProps {
   visible: boolean;
 }
 
-const ACCENT = "#5B4DC7";
+const ACCENT = "var(--tutor)";
 
 // Fingertip position inside the hand SVG's viewBox. The hand is offset by this
 // amount so the fingertip lands exactly on the anchor point.
@@ -93,7 +93,7 @@ export function PointerOverlay({ rect, label, visible }: PointerOverlayProps) {
                 color: "#fff",
                 fontSize: 12,
                 fontWeight: 700,
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: "var(--font-body)",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",

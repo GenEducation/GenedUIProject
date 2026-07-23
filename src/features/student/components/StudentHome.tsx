@@ -3,39 +3,46 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Menu } from "lucide-react";
 import Image from "next/image";
 import { useStudentStore, sessionRoutePath, isVoiceSession, type AgentItem } from "../store/useStudentStore";
 import { getStudentDisplayName } from "../utils/displayName";
+import { STUDENT_COLORS } from "../theme/colors";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
+import { StreakStats } from "./StreakStats";
+import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
 import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
+import { Button } from "@/components/ui/Button";
 
-/* ═══ DESIGN TOKENS ═══ */
+/* ═══ DESIGN TOKENS ═══ — sourced from STUDENT_COLORS (see theme/colors.ts) */
 const C = {
-  genPurple: "#5B4DC7",
-  genBlue:   "#4A90D9",
-  edGreen:   "#2D6A4F",
-  sparkle:   "#8B7FE8",
-  growth:    "#00B894",
-  sun:       "#F0AD4E",
-  coral:     "#E8635A",
-  sky:       "#5DADE2",
-  text:      "#1a2332",
-  textMid:   "#4a5568",
-  textMuted: "#94a3b8",
-  textFaint: "#cbd5e1",
-  pageBg:    "#F7F8FC",
-  card:      "#FFFFFF",
-  border:    "#e2e8f0",
+  genPurple: STUDENT_COLORS.tutor,
+  genBlue:   STUDENT_COLORS.tutorSoft,
+  edGreen:   STUDENT_COLORS.subjectMath,
+  sparkle:   STUDENT_COLORS.tutorLight,
+  growth:    STUDENT_COLORS.growth,
+  sun:       STUDENT_COLORS.warn,
+  coral:     STUDENT_COLORS.danger,
+  sky:       STUDENT_COLORS.sky,
+  text:      STUDENT_COLORS.text,
+  textMid:   STUDENT_COLORS.textMid,
+  textMuted: STUDENT_COLORS.textMuted,
+  textFaint: STUDENT_COLORS.textFaint,
+  pageBg:    STUDENT_COLORS.pageBg,
+  card:      STUDENT_COLORS.card,
+  border:    STUDENT_COLORS.border,
 };
 
+// Raw hex, not var() — these get alpha-suffix concatenated below
+// (`${vis.color}cc`, `vis.color + "14"`), which CSS custom properties can't
+// support.
 const SUBJECTS_VISUAL: Record<string, { color: string; bg: string; icon: string; label: string }> = {
-  english:        { color: "#4A90D9", bg: "#EBF3FB", icon: "📖", label: "English" },
+  english:        { color: STUDENT_COLORS.subjectEnglish, bg: "#EBF3FB", icon: "📖", label: "English" },
   mathematics:    { color: "#2D6A4F", bg: "#E8F5EF", icon: "🧮", label: "Mathematics" },
   science:        { color: "#D4820A", bg: "#FEF5E7", icon: "🔬", label: "Science" },
   social_science: { color: "#B0543F", bg: "#FBEFEB", icon: "🌍", label: "Social Science" },
@@ -115,11 +122,15 @@ function ProgressRing({ percent, size = 40, stroke = 3.5, color }: { percent: nu
   const r    = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const off  = circ * (1 - percent / 100);
+  // A round cap on a near-empty arc renders as a dot floating off the track
+  // rather than "barely started" — square the cap below ~6% so a low value
+  // still reads as a short flat sliver sitting on the track.
+  const cap = percent > 0 && percent < 6 ? "butt" : "round";
   return (
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color + "18"} strokeWidth={stroke} />
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
-        strokeDasharray={circ} strokeDashoffset={off} strokeLinecap="round"
+        strokeDasharray={circ} strokeDashoffset={off} strokeLinecap={cap}
         style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1)" }} />
     </svg>
   );
@@ -179,7 +190,7 @@ function FilterDropdown({ value, options, onChange, activeColor, defaultColor }:
     <div className="relative" ref={ref}>
       <button 
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 bg-white border border-[#e2e8f0] rounded-full px-4 py-1.5 text-sm font-medium outline-none cursor-pointer hover:bg-gray-50 focus:border-[#5B4DC7] focus:ring-1 focus:ring-[#5B4DC7] transition-all"
+        className="flex items-center gap-2 bg-white border border-[#e2e8f0] rounded-full px-4 py-1.5 text-sm font-medium outline-none cursor-pointer hover:bg-gray-50 focus:border-[var(--tutor)] focus:ring-1 focus:ring-[var(--tutor)] transition-all"
         style={{ color: isActive ? activeColor : defaultColor }}
       >
         {value}
@@ -192,7 +203,7 @@ function FilterDropdown({ value, options, onChange, activeColor, defaultColor }:
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -5, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 mt-2 left-0 min-w-full bg-white rounded-[16px] border border-[#042E5C]/10 shadow-xl overflow-hidden py-1"
+            className="absolute z-50 mt-2 left-0 min-w-full bg-white rounded-[16px] border border-[var(--primary-ink)]/10 shadow-xl overflow-hidden py-1"
           >
             {options.map(opt => (
               <div 
@@ -240,7 +251,11 @@ export function StudentHome() {
   const [showConfetti,   setShowConfetti]   = useState(false);
   const [aprilState,     setAprilState]     = useState<AprilState>("idle");
   const [hoveredAgent,   setHoveredAgent]   = useState<string | null>(null);
-  const [mounted,        setMounted]        = useState(false);
+  // Starts true (not false→effect→true) — content used to render at
+  // opacity:0 until a mount effect fired, so any hydration stall extended
+  // the blank screen indefinitely. The stagger transition above still plays
+  // on genuine visibility changes; it just no longer gates first paint.
+  const [mounted,        setMounted]        = useState(true);
   const [onboardingModal,setOnboardingModal]= useState<{ originalSubject: string; grade: number } | null>(null);
   const [showAllSessions,setShowAllSessions]= useState(false);
   const [showAllSubjects,setShowAllSubjects]= useState(false);
@@ -251,12 +266,7 @@ export function StudentHome() {
   const [filterSubject, setFilterSubject] = useState<string>("All");
 
   /* responsive sidebar */
-  useEffect(() => {
-    const handle = () => setSidebarOpen(window.innerWidth >= 1024);
-    handle();
-    window.addEventListener("resize", handle);
-    return () => window.removeEventListener("resize", handle);
-  }, []);
+  useDebouncedResize(() => setSidebarOpen(window.innerWidth >= 1024));
 
   /* data fetch */
   useEffect(() => {
@@ -284,10 +294,6 @@ export function StudentHome() {
     dismissCelebration();
     return () => clearTimeout(t);
   }, [hasEnded, hasDismissedCelebration, dismissCelebration]);
-
-  const streakCount   = studentStats?.currentStreak  ?? 0;
-  const totalSessions = studentStats?.totalSessions   ?? 0;
-  const longestStreak = studentStats?.longestStreak   ?? 0;
 
   const agents = availableAgents.map((agent: AgentItem) => {
     const key = normalizeSubjectKey(agent.subject);
@@ -385,19 +391,23 @@ export function StudentHome() {
   const handleSessionClick = (session: typeof allSessions[0]) => {
     openExistingChat(session);
     // Voice sessions reopen in the voice UI; chat sessions in the chat UI.
-    window.location.href = sessionRoutePath(session);
+    // router.push (not window.location.href) — the full reload used to
+    // discard the SPA cache and re-fetch every script on each session open.
+    router.push(sessionRoutePath(session));
   };
 
   const fade = (d = 0) => ({
     opacity:   mounted ? 1 : 0,
     transform: mounted ? "translateY(0)" : "translateY(14px)",
-    transition: `all 0.55s cubic-bezier(0.22,1,0.36,1) ${d}s`,
+    // Scoped to opacity/transform (was `all`, which tweens every layout
+    // property on mount) and shortened — see the `mounted` init below for
+    // why this can no longer gate initial paint.
+    transition: `opacity 0.35s cubic-bezier(0.22,1,0.36,1) ${d}s, transform 0.35s cubic-bezier(0.22,1,0.36,1) ${d}s`,
   });
 
 
   return (
-    <div className="flex h-screen overflow-hidden relative" style={{ fontFamily: "'DM Sans','Nunito',system-ui,sans-serif", background: C.pageBg }}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+    <div className="flex h-screen overflow-hidden relative" style={{ fontFamily: "var(--font-body)", background: C.pageBg }}>
 
       <SessionStartingOverlay />
 
@@ -421,7 +431,7 @@ export function StudentHome() {
               style={{ width: 38, height: 38, background: C.pageBg, border: `1px solid ${C.border}`, color: C.textMid }}
               title="Open sidebar"
             >
-              ☰
+              <Menu size={16} strokeWidth={1.75} />
             </button>
 
             {/* Logo centered */}
@@ -469,7 +479,7 @@ export function StudentHome() {
             <div className="flex items-start justify-between mb-8 relative z-20" style={fade(0.06)}>
               <div>
                 <h1 className="font-extrabold leading-tight m-0"
-                  style={{ color: C.text, fontFamily: "'Nunito',sans-serif", fontSize: "clamp(22px, 3vw, 34px)" }}>
+                  style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(22px, 3vw, 34px)" }}>
                   {getGreeting()}, {username}!
                 </h1>
                 <p className="mt-2 font-medium leading-relaxed" style={{ color: C.textMid, fontSize: "clamp(13px, 1.4vw, 15px)" }}>
@@ -504,58 +514,8 @@ export function StudentHome() {
             </div>
 
             {/* ── STAT STRIP ── */}
-            <div className="grid grid-cols-3 mb-8" style={{ gap: "clamp(8px, 1.5vw, 16px)", ...fade(0.14) }}>
-              {isStatsLoading ? (
-                [1, 2, 3].map((n) => (
-                  <div key={n} className="rounded-2xl flex items-center animate-pulse"
-                    style={{
-                      background: C.card, border: `1px solid ${C.border}`,
-                      padding: "clamp(12px, 2vw, 20px) clamp(10px, 1.8vw, 18px)",
-                      gap: "clamp(8px, 1.2vw, 14px)",
-                    }}>
-                    <div className="rounded-xl flex-shrink-0"
-                      style={{ background: C.border + "50", width: "clamp(34px, 3.5vw, 44px)", height: "clamp(34px, 3.5vw, 44px)" }} />
-                    <div className="min-w-0 flex flex-col gap-2">
-                      <div className="rounded" style={{ background: C.border + "60", height: 20, width: 40 }} />
-                      <div className="rounded" style={{ background: C.border + "40", height: 10, width: 64 }} />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                [
-                  { icon: "🔥", val: `${streakCount}`,   unit: "Day Streak", color: C.sun,      bg: C.sun + "14" },
-                  { icon: "📚", val: `${totalSessions}`, unit: "Sessions",   color: C.genBlue,  bg: C.genBlue + "12" },
-                  { icon: "⭐", val: `${longestStreak}`, unit: "Best Streak",color: C.edGreen,  bg: C.edGreen + "12" },
-                ].map((s, i) => (
-                  <div key={i} className="rounded-2xl flex items-center"
-                    style={{
-                      background: C.card, border: `1px solid ${C.border}`,
-                      padding: "clamp(12px, 2vw, 20px) clamp(10px, 1.8vw, 18px)",
-                      gap: "clamp(8px, 1.2vw, 14px)",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                    }}>
-                    <div className="rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: s.bg,
-                        width:  "clamp(34px, 3.5vw, 44px)",
-                        height: "clamp(34px, 3.5vw, 44px)",
-                        fontSize: "clamp(15px, 1.8vw, 20px)",
-                      }}>
-                      {s.icon}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-extrabold leading-none"
-                        style={{ color: C.text, fontFamily: "'Nunito',sans-serif", fontSize: "clamp(18px, 2.4vw, 26px)" }}>
-                        {s.val}
-                      </div>
-                      <div className="font-semibold mt-1 whitespace-nowrap"
-                        style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>
-                        {s.unit}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="mb-8" style={{ ...fade(0.14) }}>
+              <StreakStats data={studentStats} isLoading={isStatsLoading} variant="card" />
             </div>
 
             {/* ── CONTINUE LEARNING ── */}
@@ -593,7 +553,7 @@ export function StudentHome() {
                   <div className="relative flex-shrink-0">
                     <ProgressRing percent={continueSession.mastery} size={60} stroke={5} color={C.genPurple} />
                     <div className="absolute inset-0 flex items-center justify-center font-extrabold"
-                      style={{ color: C.genPurple, fontFamily: "'Nunito',sans-serif", fontSize: "clamp(11px, 1.2vw, 14px)" }}>
+                      style={{ color: C.genPurple, fontFamily: "var(--font-display)", fontSize: "clamp(11px, 1.2vw, 14px)" }}>
                       {continueSession.mastery}%
                     </div>
                   </div>
@@ -603,7 +563,7 @@ export function StudentHome() {
                       Continue learning
                     </div>
                     <div className="font-bold truncate"
-                      style={{ color: C.text, fontFamily: "'Nunito',sans-serif", fontSize: "clamp(14px, 1.6vw, 18px)" }}>
+                      style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(14px, 1.6vw, 18px)" }}>
                       <span title={isVoiceSession(continueSession) ? "Voice session" : "Chat session"} style={{ marginRight: 5 }}>
                         {isVoiceSession(continueSession) ? "🎤" : "💬"}
                       </span>
@@ -691,7 +651,7 @@ export function StudentHome() {
                             {vis.icon}
                           </div>
                           <div>
-                            <div className="font-bold" style={{ color: C.text, fontFamily: "'Nunito',sans-serif", fontSize: "clamp(14px, 1.5vw, 17px)" }}>
+                            <div className="font-bold" style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(14px, 1.5vw, 17px)" }}>
                               {vis.label}
                             </div>
                             <div className="font-medium mt-0.5" style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>
@@ -707,33 +667,30 @@ export function StudentHome() {
                           <span className="font-bold flex-shrink-0" style={{ color: vis.color, fontSize: "clamp(12px, 1.2vw, 14px)" }}>{mastery}%</span>
                         </div>
                         <div className="flex gap-2 w-full mt-2">
-                          <button
+                          <Button
+                            variant="secondary"
+                            fullWidth
                             onClick={() => handleAgentChatClick(agent)}
-                            className="flex-1 rounded-[11px] font-bold cursor-pointer transition-all py-2 text-center"
                             style={{
                               border: `1.5px solid ${vis.color}40`,
                               background: hov ? `${vis.color}10` : "transparent",
                               color: vis.color,
-                              fontFamily: "'DM Sans',sans-serif",
                               fontSize: "clamp(11px, 1.1vw, 13px)",
                             }}
                           >
                             Chat
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="primary"
+                            fullWidth
                             onClick={() => handleAgentVoiceClick(agent)}
-                            className="flex-1 rounded-[11px] font-bold cursor-pointer transition-all py-2 text-center"
                             style={{
-                              background: vis.color,
-                              color: "white",
-                              border: "none",
-                              fontFamily: "'DM Sans',sans-serif",
                               fontSize: "clamp(11px, 1.1vw, 13px)",
-                              boxShadow: hov ? `0 4px 12px ${vis.color}30` : "none",
+                              boxShadow: hov ? `0 4px 12px ${STUDENT_COLORS.primary}30` : "none",
                             }}
                           >
                             Voice
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     );
@@ -781,8 +738,8 @@ export function StudentHome() {
                 />
                 
                 {/* Type Filter */}
-                <FilterDropdown 
-                  value={filterType}
+                <FilterDropdown
+                  value={filterType === "All" ? "All Types" : filterType === "Voice" ? "Voice Sessions" : "Chat Sessions"}
                   options={["All Types", "Voice Sessions", "Chat Sessions"]}
                   onChange={v => {
                     if (v === "All Types") setFilterType("All");
@@ -794,8 +751,8 @@ export function StudentHome() {
                 />
 
                 {/* Subject Filter */}
-                <FilterDropdown 
-                  value={filterSubject}
+                <FilterDropdown
+                  value={filterSubject === "All" ? "All Subjects" : filterSubject}
                   options={["All Subjects", ...Object.values(SUBJECTS_VISUAL).map(s => s.label)]}
                   onChange={v => {
                     if (v === "All Subjects") setFilterSubject("All");

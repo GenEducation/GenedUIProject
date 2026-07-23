@@ -5,18 +5,21 @@ import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { getStudentDisplayName } from "../utils/displayName";
-import { LogOut } from "lucide-react";
+import { STUDENT_COLORS } from "../theme/colors";
+import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
+import { STRINGS } from "../constants/strings";
+import { LogOut, Menu } from "lucide-react";
 import { UpgradeButton } from "@/features/billing/UpgradeButton";
 
-/* ═══ TOKENS (from design) ═══ */
+/* ═══ TOKENS ═══ — sourced from STUDENT_COLORS (see theme/colors.ts) */
 const C = {
-  genPurple: "#5B4DC7",
-  genBlue: "#4A90D9",
-  edGreen: "#2D6A4F",
-  sparkle: "#8B7FE8",
-  sidebarBg: "#1C2333",
-  sidebarText: "#c8d1dc",
-  sidebarActive: "#FFFFFF",
+  genPurple: STUDENT_COLORS.tutor,
+  genBlue: STUDENT_COLORS.tutorSoft,
+  edGreen: STUDENT_COLORS.subjectMath,
+  sparkle: STUDENT_COLORS.tutorLight,
+  sidebarBg: STUDENT_COLORS.sidebarBg,
+  sidebarText: STUDENT_COLORS.sidebarText,
+  sidebarActive: STUDENT_COLORS.sidebarActive,
 };
 
 /* ═══ GENED LOGO ═══ */
@@ -55,7 +58,7 @@ function NavItem({
         color: active ? C.sidebarActive : C.sidebarText,
         fontSize: 14,
         fontWeight: active ? 700 : 500,
-        fontFamily: "'DM Sans', sans-serif",
+        fontFamily: "var(--font-body)",
       }}
     >
       <span className="text-lg w-[22px] text-center">{icon}</span>
@@ -81,7 +84,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
 }: StudentHomeSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { studentProfile, logoutStudent } = useStudentStore();
+  const { studentProfile, logoutStudent, avatarId } = useStudentStore();
 
   const plan   = studentProfile?.plan ?? "FREE";
   const isPro  = plan === "PRO";
@@ -92,7 +95,9 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
     if (pathname?.startsWith("/student/schedule")) return "schedule";
     if (pathname?.startsWith("/student/report-card")) return "report";
     if (pathname?.startsWith("/student/profile")) return "me";
-    return "home";
+    // Chat and Voice aren't nav items — no highlight, rather than the old
+    // fallback of always highlighting "Home" while in a voice session.
+    return null;
   };
 
   const activeNav = getActiveNav();
@@ -163,30 +168,35 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
               }}
               title="Close sidebar"
             >
-              ☰
+              <Menu size={16} strokeWidth={1.75} />
             </button>
           </div>
 
           {/* Nav */}
           <nav className="flex flex-col gap-1">
-            <NavItem icon="🏠" label="Home" active={activeNav === "home"} onClick={() => navigate("/student")} />
-            <NavItem icon="🎯" label="Practice" active={activeNav === "practice"} onClick={() => navigate("/student/assessments")} />
-            <NavItem icon="🗓️" label="Schedule" active={activeNav === "schedule"} onClick={() => navigate("/student/schedule")} />
-            <NavItem icon="📋" label="Report Card" active={activeNav === "report"} onClick={() => navigate("/student/report-card")} />
-            <NavItem icon="😊" label="Me" active={activeNav === "me"} onClick={() => navigate("/student/profile")} />
+            <NavItem icon="🏠" label={STRINGS.nav.home} active={activeNav === "home"} onClick={() => navigate("/student")} />
+            <NavItem icon="🎯" label={STRINGS.nav.practice} active={activeNav === "practice"} onClick={() => navigate("/student/assessments")} />
+            <NavItem icon="🗓️" label={STRINGS.nav.schedule} active={activeNav === "schedule"} onClick={() => navigate("/student/schedule")} />
+            <NavItem icon="📋" label={STRINGS.nav.reportCard} active={activeNav === "report"} onClick={() => navigate("/student/report-card")} />
+            <NavItem icon="😊" label={STRINGS.nav.me} active={activeNav === "me"} onClick={() => navigate("/student/profile")} />
           </nav>
 
           {/* Student info */}
           <div className="mt-auto pt-3.5" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
             <div className="flex items-center gap-2.5 px-1">
               <div
-                className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center text-sm font-bold"
-                style={{
-                  background: `linear-gradient(135deg, ${C.genPurple}30, ${C.genBlue}30)`,
-                  color: C.sparkle,
-                }}
+                className="w-[34px] h-[34px] rounded-full overflow-hidden flex-shrink-0"
+                style={{ border: "1.5px solid rgba(255,255,255,0.12)" }}
               >
-                {getStudentDisplayName(studentProfile).charAt(0).toUpperCase()}
+                {avatarId === "graduate-girl" ? (
+                  <img
+                    src="/avatars/girl-graduate.png"
+                    alt="Student avatar"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  />
+                ) : (
+                  <StudentAvatarIllustration bg={C.genPurple} />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 {/* Name + plan badge */}

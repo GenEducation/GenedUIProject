@@ -36,13 +36,13 @@ export function ExtractBasedQuestion({
               Read the passage carefully
             </span>
           </div>
-          <p className="text-[15px] text-[#042E5C]/80 leading-relaxed italic whitespace-pre-line">
+          <p className="text-[15px] text-[var(--primary-ink)]/80 leading-relaxed italic whitespace-pre-line">
             &ldquo;{question.extract_passage}&rdquo;
           </p>
         </div>
       )}
 
-      <div className="text-[15px] font-medium text-[#042E5C] leading-relaxed whitespace-pre-line">
+      <div className="text-[15px] font-medium text-[var(--primary-ink)] leading-relaxed whitespace-pre-line">
         {question.prompt}
       </div>
 
@@ -53,7 +53,7 @@ export function ExtractBasedQuestion({
         disabled={disabled}
         placeholder={"Answer all parts here...\n(a) ...\n(b) ..."}
         rows={4}
-        className="w-full p-3 sm:p-4 rounded-xl border-2 border-[#042E5C]/10 focus:border-[#042E5C]/30 focus:ring-4 focus:ring-[#042E5C]/5 outline-none transition-all text-[15px] resize-none overflow-hidden min-h-[100px]"
+        className="w-full p-3 sm:p-4 rounded-xl border-2 border-[var(--primary-ink)]/10 focus:border-[var(--primary-ink)]/30 focus:ring-4 focus:ring-[var(--primary-ink)]/5 outline-none transition-all text-[15px] resize-none overflow-hidden min-h-[100px]"
       />
     </div>
   );

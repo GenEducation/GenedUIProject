@@ -121,7 +121,7 @@ export function ResetPassword({ token, initialEmail = "" }: ResetPasswordProps) 
                   onChange={(e) => setPassword(e.target.value)}
                   type={showPassword ? "text" : "password"}
                   required
-                  placeholder="••••••••"
+                  placeholder="Enter your new password"
                   className="w-full rounded-xl border border-[#042e5c]/15 bg-white/70 px-5 py-3.5 text-sm text-[#0E1F2B] transition-all duration-200 placeholder:text-[#0E1F2B]/25 hover:border-[#059F6D]/40 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/15 font-mono tracking-widest"
                 />
                 <button
@@ -144,7 +144,7 @@ export function ResetPassword({ token, initialEmail = "" }: ResetPasswordProps) 
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 type={showPassword ? "text" : "password"}
                 required
-                placeholder="••••••••"
+                placeholder="Confirm your new password"
                 className="w-full rounded-xl border border-[#042e5c]/15 bg-white/70 px-5 py-3.5 text-sm text-[#0E1F2B] transition-all duration-200 placeholder:text-[#0E1F2B]/25 hover:border-[#059F6D]/40 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/15 font-mono tracking-widest"
               />
             </div>

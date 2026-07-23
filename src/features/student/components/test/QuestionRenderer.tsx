@@ -34,12 +34,12 @@ export function QuestionRenderer({
   const marksLabel = question.marks === 1 ? "1 mark" : `${question.marks} marks`;
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 rounded-2xl bg-white border border-[#042E5C]/8 shadow-sm space-y-4">
+    <div className="p-3 sm:p-4 md:p-6 rounded-2xl bg-white border border-[var(--primary-ink)]/8 shadow-sm space-y-4">
       <div className="flex items-center justify-between">
-        <span className="text-[12px] font-black text-[#042E5C]/40 uppercase tracking-widest">
+        <span className="text-[12px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">
           Q{questionNumber}
         </span>
-        <span className="px-3 py-1 rounded-full bg-[#042E5C]/5 text-[11px] font-bold text-[#042E5C]/60 uppercase tracking-wider">
+        <span className="px-3 py-1 rounded-full bg-[var(--primary-ink)]/5 text-[11px] font-bold text-[var(--primary-ink)]/60 uppercase tracking-wider">
           {marksLabel}
         </span>
       </div>

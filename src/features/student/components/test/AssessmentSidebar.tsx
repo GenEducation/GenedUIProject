@@ -91,7 +91,7 @@ export function AssessmentSidebar({
         <div
           className="absolute top-0 left-0 w-full h-full opacity-[0.03]"
           style={{
-            backgroundImage: "radial-gradient(#042E5C 1px, transparent 1px)",
+            backgroundImage: "radial-gradient(var(--primary-ink) 1px, transparent 1px)",
             backgroundSize: "32px 32px",
           }}
         />

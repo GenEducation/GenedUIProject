@@ -131,7 +131,7 @@ export const TutorialVideoModal: React.FC = () => {
                     />
                     <p
                       className="text-sm font-medium"
-                      style={{ color: "rgba(200,209,220,0.45)", fontFamily: "'DM Sans',sans-serif" }}
+                      style={{ color: "rgba(200,209,220,0.45)", fontFamily: "var(--font-body)" }}
                     >
                       Loading tour…
                     </p>

@@ -420,7 +420,7 @@ export function SignUp({
                 value={signupData.password}
                 onChange={onChange}
                 type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
+                placeholder="Create a password"
                 className={`${inputCls(!!errors.password || !!localErrors.password)} pr-12`}
               />
               <button
@@ -443,7 +443,7 @@ export function SignUp({
               value={signupData.confirmPassword || ""}
               onChange={onChange}
               type="password"
-              placeholder="••••••••"
+              placeholder="Confirm your password"
               className={inputCls(!!errors.confirmPassword || !!localErrors.confirmPassword)}
             />
             {(errors.confirmPassword || localErrors.confirmPassword) && (
@@ -614,7 +614,7 @@ export function SignUp({
                   value={signupData.password}
                   onChange={onChange}
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder="Create a password"
                   className={`${inputCls(!!errors.password || !!localErrors.password)} pr-12`}
                 />
                 <button
@@ -637,7 +637,7 @@ export function SignUp({
                 value={signupData.confirmPassword || ""}
                 onChange={onChange}
                 type="password"
-                placeholder="••••••••"
+                placeholder="Confirm your password"
                 className={`${inputCls(!!errors.confirmPassword || !!localErrors.confirmPassword)}`}
               />
               {(errors.confirmPassword || localErrors.confirmPassword) && (

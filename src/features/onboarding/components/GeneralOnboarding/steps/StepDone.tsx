@@ -39,7 +39,7 @@ export function StepDone({ name, age, aiName, isSubmitting, onFinish }: StepDone
       <h2
         className="mt-3.5 mb-2"
         style={{
-          fontFamily: "'Space Grotesk', sans-serif",
+          fontFamily: "var(--font-display)",
           fontSize: "30px",
           fontWeight: 700,
           letterSpacing: "-0.02em",
@@ -139,7 +139,7 @@ export function StepDone({ name, age, aiName, isSubmitting, onFinish }: StepDone
         style={{
           background: "#1DB87B",
           color: "#062417",
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
+          fontFamily: "var(--font-body)",
         }}
         onMouseEnter={(e) => {
           if (!e.currentTarget.disabled) {

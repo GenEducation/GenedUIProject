@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ArrowLeft, BookOpen, Mic, Sparkles } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { ArrowLeft, BookOpen, Mic, Sparkles, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { VoiceStage } from "./VoiceStage";
@@ -19,9 +19,12 @@ const ChapterPdfViewer = dynamic(
   { ssr: false }
 );
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
+import { titleCase } from "../utils/displayName";
 
+// "idle" has no entry: the fresh-idle screen shows VoiceStage's own "Tap to
+// start" pill instead of a caption (see the ternary in VoiceStage.tsx) — a
+// string here would never actually render.
 const STATUS_CAPTION: Record<string, string> = {
-  idle: "Tap anywhere on the screen to start",
   connecting: "Connecting…",
   active: "Listening…",
   error: "Connection error",
@@ -40,6 +43,7 @@ export function StudentVoiceView() {
     toggleMute,
     beginPttUtterance,
     endPttUtterance,
+    voicePrefs,
     studentProfile,
     isRateLimitHit,
     rateLimitMessage,
@@ -55,11 +59,17 @@ export function StudentVoiceView() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  // Once the student explicitly opens/closes the sidebar, stop overriding
+  // that choice on every window resize — it used to reopen a sidebar the
+  // student had just closed.
+  const sidebarManuallySet = useRef(false);
+  const openSidebar = () => { sidebarManuallySet.current = true; setSidebarOpen(true); };
+  const closeSidebar = () => { sidebarManuallySet.current = true; setSidebarOpen(false); };
 
   /* responsive sidebar */
   useEffect(() => {
     const handle = () => {
-      setSidebarOpen(window.innerWidth >= 1024);
+      if (!sidebarManuallySet.current) setSidebarOpen(window.innerWidth >= 1024);
       setIsMobile(window.innerWidth < 768);
     };
     handle();
@@ -75,10 +85,13 @@ export function StudentVoiceView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Space bar hold-to-speak when mic is muted.
+  // Hold-to-speak when mic is muted, using whichever key the student
+  // configured in Profile → Voice Settings (PttHotkeyConfig). This used to
+  // hardcode "Space" regardless of that setting, so a custom hotkey was
+  // silently ignored.
   useEffect(() => {
     const onDown = (e: KeyboardEvent) => {
-      if (e.code !== "Space" || e.repeat) return;
+      if (e.code !== voicePrefs.pttHotkey || e.repeat) return;
       if (voiceSessionStatus !== "active") return;
       const { isMuted } = useStudentStore.getState();
       if (!isMuted) return;
@@ -86,9 +99,8 @@ export function StudentVoiceView() {
       beginPttUtterance();
     };
     const onUp = (e: KeyboardEvent) => {
-      if (e.code !== "Space") return;
+      if (e.code !== voicePrefs.pttHotkey) return;
       if (voiceSessionStatus !== "active") return;
-      const { isMuted } = useStudentStore.getState();
       // end PTT if we were holding (pttHeld will be true)
       const { pttHeld } = useStudentStore.getState();
       if (!pttHeld) return;
@@ -101,9 +113,15 @@ export function StudentVoiceView() {
       window.removeEventListener("keydown", onDown);
       window.removeEventListener("keyup", onUp);
     };
-  }, [voiceSessionStatus, beginPttUtterance, endPttUtterance]);
+  }, [voiceSessionStatus, beginPttUtterance, endPttUtterance, voicePrefs.pttHotkey]);
 
   const handleEnd = () => {
+    // Only confirm when there's a live call to lose — leaving a fresh/idle
+    // screen has nothing to confirm. Previously every path (back arrow, End
+    // button, "Back to subjects" link) ended the session with no confirmation.
+    if (voiceSessionStatus === "active" && !window.confirm("End this voice session?")) {
+      return;
+    }
     stopVoiceSession();
     router.push("/student");
   };
@@ -163,31 +181,108 @@ export function StudentVoiceView() {
       ? ""
       : STATUS_CAPTION[voiceSessionStatus] || "—";
 
-  const aiName = studentProfile?.ai_name || "Nia";
+  const aiName = titleCase(studentProfile?.ai_name || "Nia");
   const agentName = aiName;
   const subjectLabel = activeChat?.subject ? activeChat.subject : "Voice Session";
   const gradeLabel = activeChat?.grade ? ` · ${activeChat.grade}` : "";
 
+  // Fine SVG noise over the existing radial mesh, so the landing screen has some
+  // texture instead of reading as a flat off-white slab.
+  const NOISE_URL =
+    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E\")";
+
   const bgStyle = {
-    background:
-      "radial-gradient(circle at 20% 0%, rgba(91,77,199,0.10), transparent 40%), radial-gradient(circle at 80% 100%, rgba(74,144,217,0.10), transparent 40%), #F7F8FC",
+    background: [
+      NOISE_URL,
+      "radial-gradient(circle at 20% 0%, rgba(91,77,199,0.10), transparent 40%)",
+      "radial-gradient(circle at 80% 100%, rgba(74,144,217,0.10), transparent 40%)",
+      "#F7F8FC",
+    ].join(", "),
   };
+
+  const textbookPill = activeChat?.chapter_name ? (
+    <div className="flex flex-col items-center gap-1.5">
+      <button
+        onClick={openChapterPdf}
+        disabled={isPdfLoading}
+        className="flex items-center gap-1.5 transition-all"
+        style={{
+          padding: "5px 14px",
+          borderRadius: 20,
+          border: isPdfViewerOpen ? "1.5px solid var(--tutor)" : "1.5px solid #D6D3F0",
+          background: isPdfViewerOpen ? "var(--tutor)" : "#EDE9FE",
+          color: isPdfViewerOpen ? "#FFFFFF" : "var(--tutor)",
+          fontSize: 12,
+          fontWeight: 700,
+          fontFamily: "var(--font-body)",
+          cursor: isPdfLoading ? "default" : "pointer",
+          opacity: isPdfLoading ? 0.7 : 1,
+        }}
+      >
+        {isPdfLoading ? (
+          <span style={{
+            display: "inline-block",
+            width: 11,
+            height: 11,
+            border: `2px solid ${isPdfViewerOpen ? "rgba(255,255,255,0.4)" : "#C4B8F5"}`,
+            borderTopColor: isPdfViewerOpen ? "#fff" : "var(--tutor)",
+            borderRadius: "50%",
+            animation: "spin 0.7s linear infinite",
+          }} />
+        ) : (
+          <BookOpen size={13} />
+        )}
+        View textbook
+      </button>
+      {chapterPdfError && (
+        <button
+          onClick={clearPdfError}
+          style={{
+            fontSize: 11,
+            color: "#EF4444",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
+        >
+          {chapterPdfError} ✕
+        </button>
+      )}
+    </div>
+  ) : null;
 
   const voiceContent = (
     <div className="h-full flex flex-col font-sans overflow-hidden" style={bgStyle}>
-      {/* Header */}
-      <header className={`flex items-center justify-between px-4 py-4 border-b border-[#042E5C]/8 bg-white/50 backdrop-blur-sm transition-all ${!sidebarOpen ? "pl-16 sm:pl-8" : ""}`}>
-        <button
-          onClick={handleEnd}
-          title="Back to subjects"
-          className="flex items-center justify-center rounded-[10px] text-[#042E5C]/60 hover:text-[#042E5C] hover:bg-[#042E5C]/5 transition-colors shrink-0"
-          style={{ width: 38, height: 38 }}
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <div className="text-[13px] font-bold text-[#042E5C] text-right">
-          <span className="capitalize">{subjectLabel}</span>
-          <span className="text-[#042E5C]/40 font-medium">{gradeLabel}</span>
+      {/* Header — solid background + boxed 32px buttons, matching the chat
+          header (StudentChatMain.tsx) instead of its own translucent style
+          with a hamburger floating outside the header. */}
+      <header style={{ background: "#FFFFFF", borderBottom: "1px solid #E2E8F0", flexShrink: 0 }}>
+        <div className="flex items-center justify-between" style={{ padding: "10px 12px" }}>
+          <div className="flex items-center gap-2">
+            {!sidebarOpen && (
+              <button
+                onClick={openSidebar}
+                title="Open sidebar"
+                className="transition-all flex-shrink-0"
+                style={{ width: 32, height: 32, borderRadius: 10, background: "#F7F8FC", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", color: "#4A5568", cursor: "pointer" }}
+              >
+                <Menu size={15} strokeWidth={1.75} />
+              </button>
+            )}
+            <button
+              onClick={handleEnd}
+              title="Back to subjects"
+              className="transition-all flex-shrink-0"
+              style={{ width: 32, height: 32, borderRadius: 10, background: "#F7F8FC", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", color: "#4A5568", cursor: "pointer" }}
+            >
+              <ArrowLeft size={15} />
+            </button>
+          </div>
+          <div className="text-[13px] font-bold text-[var(--primary-ink)] text-right">
+            <span className="capitalize">{subjectLabel}</span>
+            <span className="text-[var(--primary-ink)]/40 font-medium">{gradeLabel}</span>
+          </div>
         </div>
       </header>
 
@@ -203,62 +298,13 @@ export function StudentVoiceView() {
             onTap={handleOrbTap}
             onPressStart={handleOrbPressStart}
             onPressEnd={handleOrbPressEnd}
+            agentName={agentName}
           />
         </section>
       )}
 
       {/* Textbook pill — between orb and transcript */}
-      {activeChat?.chapter_name && (
-        <div className="flex flex-col items-center gap-1.5 pb-3">
-          <button
-            onClick={openChapterPdf}
-            disabled={isPdfLoading}
-            className="flex items-center gap-1.5 transition-all"
-            style={{
-              padding: "5px 14px",
-              borderRadius: 20,
-              border: isPdfViewerOpen ? "1.5px solid #5B4DC7" : "1.5px solid #D6D3F0",
-              background: isPdfViewerOpen ? "#5B4DC7" : "#EDE9FE",
-              color: isPdfViewerOpen ? "#FFFFFF" : "#5B4DC7",
-              fontSize: 12,
-              fontWeight: 700,
-              fontFamily: "'DM Sans', sans-serif",
-              cursor: isPdfLoading ? "default" : "pointer",
-              opacity: isPdfLoading ? 0.7 : 1,
-            }}
-          >
-            {isPdfLoading ? (
-              <span style={{
-                display: "inline-block",
-                width: 11,
-                height: 11,
-                border: `2px solid ${isPdfViewerOpen ? "rgba(255,255,255,0.4)" : "#C4B8F5"}`,
-                borderTopColor: isPdfViewerOpen ? "#fff" : "#5B4DC7",
-                borderRadius: "50%",
-                animation: "spin 0.7s linear infinite",
-              }} />
-            ) : (
-              <BookOpen size={13} />
-            )}
-            View textbook
-          </button>
-          {chapterPdfError && (
-            <button
-              onClick={clearPdfError}
-              style={{
-                fontSize: 11,
-                color: "#EF4444",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-              }}
-            >
-              {chapterPdfError} ✕
-            </button>
-          )}
-        </div>
-      )}
+      {textbookPill && <div className="flex justify-center pb-3">{textbookPill}</div>}
 
       {/* Middle — Conversation feed (fills remaining space; full height once orb is hidden) */}
       <section className="flex-1 min-h-[140px] px-3 sm:px-6 overflow-hidden">
@@ -274,13 +320,13 @@ export function StudentVoiceView() {
 
         {showCompleted ? (
           <div className="flex flex-col items-center gap-3">
-            <p className="text-[13px] font-bold uppercase tracking-widest text-[#042E5C]/50">
+            <p className="text-[13px] font-bold uppercase tracking-widest text-[var(--primary-ink)]/50">
               Session Completed
             </p>
             <button
               onClick={handleStartNew}
               className="flex items-center gap-2 px-6 h-12 rounded-full font-bold text-[14px] text-white transition-all shadow-lg"
-              style={{ background: "linear-gradient(135deg, #5B4DC7, #4A90D9)" }}
+              style={{ background: "linear-gradient(135deg, var(--tutor), var(--tutor-soft))" }}
             >
               <Sparkles size={16} />
               Start New Session
@@ -302,7 +348,7 @@ export function StudentVoiceView() {
               onClick={handleResume}
               className="flex items-center gap-2.5 px-7 h-13 sm:h-14 rounded-full font-bold text-[15px] text-white transition-all select-none"
               style={{
-                background: "linear-gradient(135deg, #5B4DC7, #4A90D9)",
+                background: "linear-gradient(135deg, var(--tutor), var(--tutor-soft))",
                 boxShadow: "0 8px 24px rgba(91,77,199,0.40)",
                 paddingTop: 14,
                 paddingBottom: 14,
@@ -313,11 +359,17 @@ export function StudentVoiceView() {
             </button>
             <button
               onClick={handleEnd}
-              className="text-[12px] font-semibold text-[#042E5C]/40 hover:text-[#042E5C]/70 transition-colors"
+              className="text-[12px] font-semibold text-[var(--primary-ink)]/40 hover:text-[var(--primary-ink)]/70 transition-colors"
             >
               Back to subjects
             </button>
           </div>
+        ) : ambientStart ? (
+          // Fresh session, nothing started yet. VoiceControls would be a
+          // disabled mic plus a destructive "End" for a call that hasn't
+          // begun — show neither; the orb's "Tap to start" pill is the
+          // single start affordance.
+          null
         ) : (
           <VoiceControls onEnd={handleEnd} />
         )}
@@ -326,11 +378,11 @@ export function StudentVoiceView() {
   );
 
   const mainArea = (
-    <div
-      className="flex-1 min-w-0 h-full overflow-hidden relative"
-      onClick={ambientStart}
-      style={{ cursor: ambientStart ? "pointer" : "default" }}
-    >
+    // No whole-pane onClick here — the orb + its "Tap to start" pill
+    // (VoiceStage.tsx) are the single, visible start affordance. A second,
+    // invisible full-pane click target duplicated it and could fire from an
+    // accidental tap anywhere on the screen.
+    <div className="flex-1 min-w-0 h-full overflow-hidden relative">
       {isPdfViewerOpen && chapterPdfUrl ? (
         isMobile ? (
           <>
@@ -368,19 +420,9 @@ export function StudentVoiceView() {
 
   return (
     <div className="h-screen flex font-sans overflow-hidden relative">
-      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      {!sidebarOpen && (
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="absolute top-4 left-4 z-20 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
-          style={{ width: 38, height: 38, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#042E5C" }}
-          title="Open sidebar"
-        >
-          ☰
-        </button>
-      )}
-
+      <StudentHomeSidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      {/* The sidebar-open toggle now lives in the voice header itself
+          (matches the chat header) instead of floating outside it. */}
       {mainArea}
     </div>
   );

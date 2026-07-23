@@ -15,7 +15,8 @@ function fillForm(overrides: Partial<Record<"email" | "otp" | "password" | "conf
   fireEvent.change(screen.getByPlaceholderText("Enter 6-digit code"), {
     target: { value: overrides.otp ?? "123456" },
   });
-  const [password, confirm] = screen.getAllByPlaceholderText("••••••••");
+  const password = screen.getByPlaceholderText("Enter your new password");
+  const confirm = screen.getByPlaceholderText("Confirm your new password");
   fireEvent.change(password, { target: { value: overrides.password ?? "newpassword1" } });
   fireEvent.change(confirm, { target: { value: overrides.confirm ?? "newpassword1" } });
 }

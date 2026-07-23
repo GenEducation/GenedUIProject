@@ -11,7 +11,7 @@ interface VisualCardProps {
 }
 
 const ENGINE_META: Record<EngineType, { label: string; color: string; bg: string; dot: string }> = {
-  p5sketch:    { label: "Interactive", color: "#4A90D9", bg: "#EFF6FF", dot: "#4A90D9" },
+  p5sketch:    { label: "Interactive", color: "var(--tutor-soft)", bg: "#EFF6FF", dot: "var(--tutor-soft)" },
   geogebra:    { label: "Geometry",    color: "#D4820A", bg: "#FFF7ED", dot: "#D4820A" },
   desmos:      { label: "Graph",       color: "#2D6A4F", bg: "#F0FDF4", dot: "#2D6A4F" },
   show_figure: { label: "Textbook",    color: "#7B5EA7", bg: "#F5F3FF", dot: "#7B5EA7" },
@@ -58,7 +58,7 @@ export function VisualCard({ engine, label, children }: VisualCardProps) {
             style={{
               fontSize: 11, fontWeight: 800, letterSpacing: "0.1em",
               textTransform: "uppercase", color: meta.color,
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "var(--font-body)",
             }}
           >
             {meta.label}
@@ -73,7 +73,7 @@ export function VisualCard({ engine, label, children }: VisualCardProps) {
           }}
           onMouseEnter={e => {
             (e.currentTarget as HTMLButtonElement).style.background = "#5B4DC710";
-            (e.currentTarget as HTMLButtonElement).style.color = "#5B4DC7";
+            (e.currentTarget as HTMLButtonElement).style.color = "var(--tutor)";
           }}
           onMouseLeave={e => {
             (e.currentTarget as HTMLButtonElement).style.background = "transparent";
@@ -107,7 +107,7 @@ export function VisualCard({ engine, label, children }: VisualCardProps) {
           style={{
             fontSize: 11, color: "#94A3B8", fontWeight: 600,
             letterSpacing: "0.06em", textTransform: "uppercase",
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "var(--font-body)",
           }}
         >
           {label || "Visual"}

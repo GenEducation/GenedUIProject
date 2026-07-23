@@ -105,7 +105,7 @@ export function SegmentedInput({ length, value, onChange, disabled }: SegmentedI
               color: '#1A202C',
               outline: 'none',
               transition: 'all 0.2s',
-              fontFamily: "'DM Sans', sans-serif"
+              fontFamily: "var(--font-body)"
             }}
             maxLength={2} // allow typing over to get the last char in handleChange
           />

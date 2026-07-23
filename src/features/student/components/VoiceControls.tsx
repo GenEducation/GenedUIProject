@@ -21,7 +21,7 @@ export function VoiceControls({ onEnd }: VoiceControlsProps) {
         className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-40 flex-shrink-0"
         style={{
           background: isMuted ? "#E8635A" : "white",
-          color: isMuted ? "white" : "#5B4DC7",
+          color: isMuted ? "white" : "var(--tutor)",
           border: `1px solid ${isMuted ? "#E8635A" : "#E2E8F0"}`,
           boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
         }}
@@ -42,7 +42,7 @@ export function VoiceControls({ onEnd }: VoiceControlsProps) {
           style={{
             background: pttHeld
               ? "linear-gradient(135deg, #34C759, #30d158)"
-              : "linear-gradient(135deg, #5B4DC7, #4A90D9)",
+              : "linear-gradient(135deg, var(--tutor), var(--tutor-soft))",
             color: "white",
             boxShadow: pttHeld
               ? "0 6px 20px rgba(52,199,89,0.45)"

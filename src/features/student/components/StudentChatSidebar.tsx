@@ -4,20 +4,26 @@ import { Loader2, LogOut, User, ClipboardCheck } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useStudentStore, isVoiceSession, sessionRoutePath } from "../store/useStudentStore";
+import { useShallow } from "zustand/react/shallow";
 import { getStudentDisplayName } from "../utils/displayName";
+import { STUDENT_COLORS } from "../theme/colors";
+import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
+import { STRINGS } from "../constants/strings";
+import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 
+/* Sourced from STUDENT_COLORS (see theme/colors.ts) */
 const C = {
-  sidebarBg: "#1C2333",
-  genPurple: "#5B4DC7",
-  genBlue: "#4A90D9",
-  sparkle: "#8B7FE8",
-  sidebarText: "rgba(200,209,220,1)",
-  sidebarMuted: "rgba(255,255,255,0.25)",
-  sidebarActive: "#FFFFFF",
-  sidebarBorder: "rgba(255,255,255,0.06)",
-  sidebarHover: "rgba(255,255,255,0.06)",
-  sidebarActiveBg: "rgba(255,255,255,0.10)",
+  sidebarBg: STUDENT_COLORS.sidebarBg,
+  genPurple: STUDENT_COLORS.tutor,
+  genBlue: STUDENT_COLORS.tutorSoft,
+  sparkle: STUDENT_COLORS.tutorLight,
+  sidebarText: STUDENT_COLORS.sidebarText,
+  sidebarMuted: STUDENT_COLORS.sidebarMuted,
+  sidebarActive: STUDENT_COLORS.sidebarActive,
+  sidebarBorder: STUDENT_COLORS.sidebarBorder,
+  sidebarHover: STUDENT_COLORS.sidebarHover,
+  sidebarActiveBg: STUDENT_COLORS.sidebarActiveBg,
 };
 
 const NAV_ITEMS = [
@@ -30,12 +36,14 @@ const MIN_WIDTH = 200;
 const MAX_WIDTH = 420;
 const DEFAULT_WIDTH = 260;
 
+// Raw hex, not var() — these values get alpha-suffix concatenated below
+// (`${color}18`), which CSS custom properties can't support.
 const SUBJECT_META: Record<string, { emoji: string; color: string }> = {
-  english:     { emoji: "📖", color: "#4A90D9" },
-  mathematics: { emoji: "🧮", color: "#2D6A4F" },
-  math:        { emoji: "🧮", color: "#2D6A4F" },
-  science:     { emoji: "🔬", color: "#D4820A" },
-  hindi:       { emoji: "✏️", color: "#7B5EA7" },
+  english:     { emoji: "📖", color: STUDENT_COLORS.subjectEnglish },
+  mathematics: { emoji: "🧮", color: STUDENT_COLORS.subjectMath },
+  math:        { emoji: "🧮", color: STUDENT_COLORS.subjectMath },
+  science:     { emoji: "🔬", color: STUDENT_COLORS.subjectScience },
+  hindi:       { emoji: "✏️", color: STUDENT_COLORS.subjectHindi },
 };
 
 function timeAgo(iso: string): string {
@@ -62,20 +70,23 @@ function getSubjectMeta(subject?: string, title?: string) {
   for (const [key, val] of Object.entries(SUBJECT_META)) {
     if (hay.includes(key)) return val;
   }
-  return { emoji: "📚", color: "#8B7FE8" };
+  return { emoji: "📚", color: STUDENT_COLORS.tutorLight };
 }
 
 // ── Profile Popup ─────────────────────────────────────────────────────────────
 function ProfilePopup({
   profile,
+  avatarId,
   onLogout,
   onClose,
 }: {
   profile: { name?: string; username?: string; grade?: number; plan?: string } | null;
+  avatarId?: string;
   onLogout: () => void;
   onClose: () => void;
 }) {
   const popupRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -88,11 +99,10 @@ function ProfilePopup({
   }, [onClose]);
 
   const displayName = getStudentDisplayName(profile);
-  const initial = displayName.charAt(0).toUpperCase();
 
   const menuItems = [
-    { icon: <User size={14} />,         label: "Profile",    path: "/student/profile" },
-    { icon: <ClipboardCheck size={14}/>,label: "Tests",      path: "/student/assessments" },
+    { icon: <User size={14} />,         label: STRINGS.nav.me,       path: "/student/profile" },
+    { icon: <ClipboardCheck size={14}/>,label: STRINGS.nav.practice, path: "/student/assessments" },
   ];
 
   return (
@@ -109,7 +119,7 @@ function ProfilePopup({
         boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
         overflow: "hidden",
         zIndex: 100,
-        fontFamily: "'DM Sans', sans-serif",
+        fontFamily: "var(--font-body)",
         animation: "slideUpFade 0.18s cubic-bezier(0.22,1,0.36,1)",
       }}
     >
@@ -118,12 +128,18 @@ function ProfilePopup({
       {/* Header */}
       <div style={{ padding: "18px 18px 14px", textAlign: "center", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <div style={{
-          width: 48, height: 48, borderRadius: 14, margin: "0 auto 10px",
-          background: `linear-gradient(135deg, ${C.genPurple}, ${C.genBlue})`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 20, fontWeight: 800, color: "white",
+          width: 48, height: 48, borderRadius: "50%", margin: "0 auto 10px", overflow: "hidden",
+          border: "1.5px solid rgba(255,255,255,0.12)",
         }}>
-          {initial}
+          {avatarId === "graduate-girl" ? (
+            <img
+              src="/avatars/girl-graduate.png"
+              alt="Student avatar"
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            />
+          ) : (
+            <StudentAvatarIllustration bg={C.genPurple} />
+          )}
         </div>
         <div style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF", lineHeight: 1.3 }}>
           {displayName}
@@ -147,7 +163,7 @@ function ProfilePopup({
         {menuItems.map(item => (
           <button
             key={item.label}
-            onClick={() => { window.location.href = item.path; onClose(); }}
+            onClick={() => { router.push(item.path); onClose(); }}
             className="w-full flex items-center justify-center gap-2 rounded-xl border-none cursor-pointer transition-all"
             style={{ padding: "9px 14px", background: "transparent", color: "rgba(200,209,220,0.8)", fontSize: 13, fontWeight: 700 }}
             onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)"}
@@ -185,14 +201,30 @@ export const StudentChatSidebar = React.memo(({
   isOpen: boolean;
   onClose: () => void;
 }) => {
+  // Selected via useShallow (not a plain destructure of the whole store) —
+  // this component is React.memo'd, but subscribing to the entire store
+  // meant any state change anywhere in the app (including every streamed
+  // chat token) still re-rendered its 100+ item session list.
   const {
     openExistingChat,
     closeChat,
     recentChats,
     isSessionsLoading,
     logoutStudent,
-    studentProfile
-  } = useStudentStore();
+    studentProfile,
+    avatarId
+  } = useStudentStore(
+    useShallow((s) => ({
+      openExistingChat: s.openExistingChat,
+      closeChat: s.closeChat,
+      recentChats: s.recentChats,
+      isSessionsLoading: s.isSessionsLoading,
+      logoutStudent: s.logoutStudent,
+      studentProfile: s.studentProfile,
+      avatarId: s.avatarId,
+    }))
+  );
+  const router = useRouter();
 
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_WIDTH);
   const [profilePopupOpen, setProfilePopupOpen] = useState(false);
@@ -201,12 +233,7 @@ export const StudentChatSidebar = React.memo(({
   const startX = useRef(0);
   const startWidth = useRef(DEFAULT_WIDTH);
 
-  useEffect(() => {
-    const handle = () => setIsMobile(window.innerWidth < 768);
-    handle();
-    window.addEventListener("resize", handle);
-    return () => window.removeEventListener("resize", handle);
-  }, []);
+  useDebouncedResize(() => setIsMobile(window.innerWidth < 768));
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true;
@@ -276,15 +303,18 @@ export const StudentChatSidebar = React.memo(({
           {/* Header: centered logo */}
           <div className="flex items-center justify-center mb-6 px-1 py-1">
             <button
-              onClick={() => { closeChat(); window.location.href = "/student"; }}
+              onClick={() => { closeChat(); router.push("/student"); }}
               className="hover:opacity-80 transition-opacity"
             >
+              {/* Inverted to white — the colored logo read at poor contrast
+                  on this dark sidebar ground (matches StudentHomeSidebar's
+                  own inverted treatment). */}
               <Image
                 src="/Logo.svg"
                 alt="GenEd"
                 width={96}
                 height={30}
-                style={{ height: 30, width: "auto" }}
+                style={{ height: 30, width: "auto", filter: "brightness(0) invert(1)" }}
                 priority
               />
             </button>
@@ -295,7 +325,7 @@ export const StudentChatSidebar = React.memo(({
             <p style={{
               fontSize: 11, fontWeight: 700, color: C.sidebarMuted,
               letterSpacing: "1.5px", textTransform: "uppercase",
-              padding: "4px 6px 12px", textAlign: "center", fontFamily: "'DM Sans', sans-serif",
+              padding: "4px 6px 12px", textAlign: "center", fontFamily: "var(--font-body)",
             }}>
               Recent Sessions
             </p>
@@ -315,7 +345,10 @@ export const StudentChatSidebar = React.memo(({
                       onClick={() => {
                         openExistingChat(chat);
                         // Reopen in the modality the session was created with.
-                        window.location.href = sessionRoutePath(chat);
+                        // router.push (not window.location.href) — the full
+                        // reload used to discard the SPA cache and re-fetch
+                        // every script (including Razorpay) on each open.
+                        router.push(sessionRoutePath(chat));
                         if (window.innerWidth < 1024) onClose();
                       }}
                       className="w-full rounded-xl border-none cursor-pointer transition-all"
@@ -325,7 +358,7 @@ export const StudentChatSidebar = React.memo(({
                         color: isActive ? C.sidebarActive : C.sidebarText,
                         fontSize: 13,
                         fontWeight: isActive ? 800 : 700,
-                        fontFamily: "'DM Sans', sans-serif",
+                        fontFamily: "var(--font-body)",
                         borderBottom: idx < recentChats.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
                         display: "flex",
                         alignItems: "center",
@@ -385,6 +418,7 @@ export const StudentChatSidebar = React.memo(({
               {profilePopupOpen && (
                 <ProfilePopup
                   profile={studentProfile ?? null}
+                  avatarId={avatarId}
                   onLogout={logoutStudent}
                   onClose={() => setProfilePopupOpen(false)}
                 />
@@ -396,19 +430,25 @@ export const StudentChatSidebar = React.memo(({
                   padding: "10px 14px",
                   background: profilePopupOpen ? "rgba(255,255,255,0.08)" : "transparent",
                   color: C.sidebarActive,
-                  fontFamily: "'DM Sans', sans-serif",
+                  fontFamily: "var(--font-body)",
                   border: profilePopupOpen ? "1px solid rgba(255,255,255,0.10)" : "1px solid transparent",
                 }}
                 onMouseEnter={e => { if (!profilePopupOpen) (e.currentTarget as HTMLButtonElement).style.background = C.sidebarHover; }}
                 onMouseLeave={e => { if (!profilePopupOpen) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
               >
                 <div style={{
-                  width: 32, height: 32, borderRadius: 10, flexShrink: 0,
-                  background: `linear-gradient(135deg, ${C.genPurple}, ${C.genBlue})`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 13, fontWeight: 800, color: "white",
+                  width: 32, height: 32, borderRadius: "50%", flexShrink: 0, overflow: "hidden",
+                  border: "1.5px solid rgba(255,255,255,0.12)",
                 }}>
-                  {getStudentDisplayName(studentProfile).charAt(0).toUpperCase()}
+                  {avatarId === "graduate-girl" ? (
+                    <img
+                      src="/avatars/girl-graduate.png"
+                      alt="Student avatar"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                  ) : (
+                    <StudentAvatarIllustration bg={C.genPurple} />
+                  )}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   {/* Row 1: name + PRO */}

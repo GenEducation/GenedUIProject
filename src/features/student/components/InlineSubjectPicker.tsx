@@ -26,8 +26,8 @@ interface InlineSubjectPickerProps {
 
 export function InlineSubjectPicker({ selectedSubject, onSelectSubject, onDismiss }: InlineSubjectPickerProps) {
   return (
-    <div className="flex items-center gap-2 px-4 py-2 mb-1 bg-white rounded-2xl border border-[#042E5C]/8 shadow-sm flex-wrap">
-      <span className="text-[10px] font-extrabold text-[#042E5C]/40 uppercase tracking-widest flex-shrink-0">
+    <div className="flex items-center gap-2 px-4 py-2 mb-1 bg-white rounded-2xl border border-[var(--primary-ink)]/8 shadow-sm flex-wrap">
+      <span className="text-[10px] font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest flex-shrink-0">
         Subject
       </span>
       <div className="flex items-center gap-1.5 flex-1 flex-wrap">
@@ -57,7 +57,7 @@ export function InlineSubjectPicker({ selectedSubject, onSelectSubject, onDismis
       </div>
       <button
         onClick={onDismiss}
-        className="w-5 h-5 rounded-full flex items-center justify-center text-[#042E5C]/30 hover:text-[#042E5C]/60 hover:bg-[#042E5C]/5 transition-all flex-shrink-0"
+        className="w-5 h-5 rounded-full flex items-center justify-center text-[var(--primary-ink)]/30 hover:text-[var(--primary-ink)]/60 hover:bg-[var(--primary-ink)]/5 transition-all flex-shrink-0"
       >
         <X size={12} />
       </button>

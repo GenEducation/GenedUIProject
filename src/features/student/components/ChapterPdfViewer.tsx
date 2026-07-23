@@ -16,12 +16,12 @@ const PdfViewer = dynamic(
             width: 28,
             height: 28,
             border: "3px solid #EDE9FE",
-            borderTopColor: "#5B4DC7",
+            borderTopColor: "var(--tutor)",
             borderRadius: "50%",
             animation: "spin 0.8s linear infinite",
           }}
         />
-        <p style={{ fontSize: 13, color: "#64748B", fontFamily: "'DM Sans', sans-serif", margin: 0 }}>
+        <p style={{ fontSize: 13, color: "#64748B", fontFamily: "var(--font-body)", margin: 0 }}>
           Loading textbook…
         </p>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -49,12 +49,12 @@ export function ChapterPdfViewer({ pdfUrl, chapterName, onClose }: ChapterPdfVie
             className="flex-shrink-0 flex items-center justify-center rounded-lg"
             style={{ width: 28, height: 28, background: "#EDE9FE" }}
           >
-            <BookOpen size={14} style={{ color: "#5B4DC7" }} />
+            <BookOpen size={14} style={{ color: "var(--tutor)" }} />
           </div>
           <div className="min-w-0">
             <p
               className="truncate"
-              style={{ fontWeight: 700, fontSize: 13, color: "#1A202C", fontFamily: "'Nunito', 'DM Sans', sans-serif", margin: 0 }}
+              style={{ fontWeight: 700, fontSize: 13, color: "#1A202C", fontFamily: "var(--font-display), var(--font-body)", margin: 0 }}
             >
               {chapterName}
             </p>

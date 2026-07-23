@@ -2,11 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Play, Pause, Check, ChevronDown, Pencil } from "lucide-react";
+import { Loader2, Play, Pause, Check, ChevronDown, Pencil, Menu, Lock, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { useStudentStore, StudentProfile as StudentProfileType } from "../store/useStudentStore";
-import { getStudentDisplayName } from "../utils/displayName";
+import { getStudentDisplayName, titleCase } from "../utils/displayName";
+import { STUDENT_COLORS } from "../theme/colors";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
+import { StreakStats } from "./StreakStats";
+import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { PartnerRequestModal } from "./PartnerRequestModal";
 import { updateProfile, fetchProfile } from "@/features/auth/authService";
 import { studentService } from "@/features/student/services/studentService";
@@ -18,23 +22,25 @@ import { AvatarPickerModal } from "./AvatarPickerModal";
 import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
 import { GeneralOnboardingWizard } from "@/features/onboarding/components/GeneralOnboarding/GeneralOnboardingWizard";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
+import { useTestStore } from "../store/useTestStore";
 
-/* ─── Design Tokens (matches home screen) ────────────────────────────────── */
+/* ─── Design Tokens ─── sourced from STUDENT_COLORS (see theme/colors.ts),
+   now byte-for-byte identical to the home screen's palette. */
 const C = {
-  genPurple: "#5B4DC7",
-  genBlue:   "#4A90D9",
-  edGreen:   "#2D6A4F",
-  sparkle:   "#8B7FE8",
-  growth:    "#00B894",
-  sun:       "#F0AD4E",
-  coral:     "#E8635A",
-  sky:       "#5DADE2",
-  text:      "#1A202C",
-  textMid:   "#4A5568",
-  textMuted: "#94A3B8",
-  pageBg:    "#F7F8FC",
-  card:      "#FFFFFF",
-  border:    "#E2E8F0",
+  genPurple: STUDENT_COLORS.tutor,
+  genBlue:   STUDENT_COLORS.tutorSoft,
+  edGreen:   STUDENT_COLORS.subjectMath,
+  sparkle:   STUDENT_COLORS.tutorLight,
+  growth:    STUDENT_COLORS.growth,
+  sun:       STUDENT_COLORS.warn,
+  coral:     STUDENT_COLORS.danger,
+  sky:       STUDENT_COLORS.sky,
+  text:      STUDENT_COLORS.text,
+  textMid:   STUDENT_COLORS.textMid,
+  textMuted: STUDENT_COLORS.textMuted,
+  pageBg:    STUDENT_COLORS.pageBg,
+  card:      STUDENT_COLORS.card,
+  border:    STUDENT_COLORS.border,
 };
 
 /* ─── "How {tutor} sees you" — derived from the profile API ─────────────────
@@ -67,49 +73,73 @@ function buildTraits(onboarding: GeneralOnboarding | null) {
   });
 }
 
-/* ─── Badge computation ──────────────────────────────────────────────────── */
-function computeBadges(totalSessions: number, currentStreak: number) {
+/* ─── Badge computation ──────────────────────────────────────────────────────
+ * Every badge is driven by real data — sessions, streak, and completed tests
+ * (studentTests from useTestStore). "Quiz Champion" and "Shapes Master" used
+ * to be hardcoded `earned: false` and could never unlock; both are now
+ * derived from actual test submissions. */
+function computeBadges(
+  totalSessions: number,
+  currentStreak: number,
+  testsCompleted: number,
+  bestScorePct: number | null
+) {
   return [
-    { icon: "🎯", label: "First Session",   earned: totalSessions  >= 1,  color: C.genPurple },
-    { icon: "🔥", label: "3-Day Streak",    earned: currentStreak  >= 3,  color: C.sun       },
-    { icon: "📖", label: "Explorer",        earned: totalSessions  >= 5,  color: C.genBlue   },
-    { icon: "🏆", label: "Quiz Champion",   earned: false,                color: C.edGreen   },
-    { icon: "⭐", label: "Shapes Master",   earned: false,                color: C.sun       },
-    { icon: "🚀", label: "7-Day Streak",    earned: currentStreak  >= 7,  color: C.coral     },
+    { icon: "🎯", label: "First Session",  earned: totalSessions  >= 1, color: C.genPurple, progress: `${Math.min(totalSessions, 1)}/1 sessions` },
+    { icon: "🔥", label: "3-Day Streak",   earned: currentStreak  >= 3, color: C.sun,       progress: `${Math.min(currentStreak, 3)}/3 day streak` },
+    { icon: "📖", label: "Explorer",       earned: totalSessions  >= 5, color: C.genBlue,   progress: `${Math.min(totalSessions, 5)}/5 sessions` },
+    { icon: "🏆", label: "Quiz Champion",  earned: testsCompleted >= 3, color: C.edGreen,   progress: `${Math.min(testsCompleted, 3)}/3 tests taken` },
+    { icon: "⭐", label: "High Scorer",    earned: (bestScorePct ?? 0) >= 80, color: C.sun,  progress: bestScorePct != null ? `Best score ${bestScorePct}%` : "Score 80%+ on a test" },
+    { icon: "🚀", label: "7-Day Streak",   earned: currentStreak  >= 7, color: C.coral,     progress: `${Math.min(currentStreak, 7)}/7 day streak` },
   ];
 }
 
 /* ─── Sub-components ─────────────────────────────────────────────────────── */
 
-function SectionHeader({ icon, label }: { icon: string; label: string }) {
+function SectionHeader({ icon, label, color = C.textMuted, marginBottom = 16 }: { icon: string; label: string; color?: string; marginBottom?: number }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom }}>
       <span style={{ fontSize: 14 }}>{icon}</span>
-      <span style={{ fontSize: 11, fontWeight: 800, color: C.textMuted, textTransform: "uppercase" as const, letterSpacing: 1.5, fontFamily: "'DM Sans',sans-serif" }}>
+      <span style={{ fontSize: 11, fontWeight: 800, color, textTransform: "uppercase" as const, letterSpacing: 1.5, fontFamily: "var(--font-body)" }}>
         {label}
       </span>
     </div>
   );
 }
 
-function Badge({ icon, label, earned, color }: { icon: string; label: string; earned: boolean; color: string }) {
+function Badge({ icon, label, earned, color, progress }: { icon: string; label: string; earned: boolean; color: string; progress: string }) {
   return (
-    <div style={{
-      display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 6,
-      padding: "14px 8px", borderRadius: 18,
-      background: earned ? `${color}08` : "#F8F9FA",
-      border: `1.5px solid ${earned ? `${color}25` : C.border}`,
-      opacity: earned ? 1 : 0.55,
-      filter: earned ? "none" : "grayscale(0.7)",
-      transition: "all 0.25s",
-    }}>
+    <div
+      role="img"
+      aria-label={earned ? `${label} — earned` : `${label} — locked, ${progress}`}
+      title={earned ? label : `Locked: ${progress}`}
+      style={{
+        display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 6,
+        padding: "14px 8px", borderRadius: 18,
+        background: earned ? `${color}08` : "#F8F9FA",
+        border: `1.5px solid ${earned ? `${color}25` : C.border}`,
+        transition: "all 0.25s",
+      }}
+    >
       <div style={{
-        width: 40, height: 40, borderRadius: 13,
+        position: "relative", width: 40, height: 40, borderRadius: 13,
         background: earned ? `${color}15` : "#EDF2F7",
         display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
-      }}>{icon}</div>
-      <span style={{ fontSize: 10, fontWeight: 700, color: earned ? color : C.textMuted, textAlign: "center" as const, lineHeight: 1.3, fontFamily: "'DM Sans',sans-serif" }}>{label}</span>
-      {!earned && <span style={{ fontSize: 9, color: C.textMuted }}>🔒</span>}
+      }}>
+        <span style={{ opacity: earned ? 1 : 0.35 }}>{icon}</span>
+        {!earned && (
+          <div style={{
+            position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(255,255,255,0.55)", borderRadius: 13,
+          }}>
+            <Lock size={14} color={C.textMuted} strokeWidth={2} />
+          </div>
+        )}
+      </div>
+      <span style={{ fontSize: 10, fontWeight: 700, color: earned ? color : C.textMuted, textAlign: "center" as const, lineHeight: 1.3, fontFamily: "var(--font-body)" }}>{label}</span>
+      <span style={{ fontSize: 8.5, fontWeight: 600, color: C.textMuted, textAlign: "center" as const, lineHeight: 1.2 }}>
+        {earned ? "Earned" : progress}
+      </span>
     </div>
   );
 }
@@ -264,7 +294,7 @@ function VoicePicker({
             </button>
 
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "var(--font-body)" }}>
                 {v.label}
                 {isSaved && (
                   <span style={{
@@ -313,13 +343,18 @@ export function StudentProfile() {
     avatarId, setAvatarId,
   } = useStudentStore();
   const { completeAction } = useTutorialStore();
+  const { studentTests, loadStudentTests } = useTestStore();
 
   const [sidebarOpen,      setSidebarOpen]      = useState(true);
   const avatarColor = C.sun;
   const [soundEnabled,     setSoundEnabled]      = useState(true);
   const [parentInput,      setParentInput]       = useState("");
   const [selectedPartner,  setSelectedPartner]   = useState("");
-  const [mounted,          setMounted]           = useState(false);
+  // Starts true — content used to render at opacity:0 until a mount effect
+  // fired alongside three network fetches, so a hydration or fetch stall
+  // extended the blank screen indefinitely. See StudentHome.tsx for the
+  // same fix.
+  const [mounted,          setMounted]           = useState(true);
   const [pendingVoice,     setPendingVoice]      = useState<string>(studentProfile?.preferred_voice || DEFAULT_GEMINI_VOICE);
   const [savingVoice,      setSavingVoice]       = useState(false);
   const [voiceError,       setVoiceError]        = useState<string | null>(null);
@@ -343,19 +378,16 @@ export function StudentProfile() {
   const checkDNAStatus = useOnboardingStore((s) => s.checkDNAStatus);
 
   /* responsive sidebar */
-  useEffect(() => {
-    const handle = () => setSidebarOpen(window.innerWidth >= 1024);
-    handle();
-    window.addEventListener("resize", handle);
-    return () => window.removeEventListener("resize", handle);
-  }, []);
+  useDebouncedResize(() => setSidebarOpen(window.innerWidth >= 1024));
 
   useEffect(() => {
     setMounted(true);
     fetchAvailablePartners();
     fetchEnrolledPartners();
     fetchStudentStats();
-  }, [fetchAvailablePartners, fetchEnrolledPartners, fetchStudentStats]);
+    if (studentProfile?.user_id) loadStudentTests(studentProfile.user_id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchAvailablePartners, fetchEnrolledPartners, fetchStudentStats, studentProfile?.user_id]);
 
   /**
    * Heal a stale localStorage profile by pulling the latest from auth-service
@@ -542,11 +574,16 @@ export function StudentProfile() {
   const displayName   = getStudentDisplayName(studentProfile);
   const grade         = studentProfile?.grade         ? `Grade ${studentProfile.grade}` : "—";
   const board         = studentProfile?.school_board  ?? "CBSE";
-  const aiTutorName   = studentProfile?.ai_name || "Nia";
+  const aiTutorName   = titleCase(studentProfile?.ai_name || "Nia");
   const streakCount   = studentStats?.currentStreak ?? 0;
   const totalSessions = studentStats?.totalSessions  ?? 0;
-  const longestStreak = studentStats?.longestStreak  ?? 0;
-  const badges        = computeBadges(totalSessions, streakCount);
+
+  const completedTests = studentTests.filter((t) => t.submission_id != null);
+  const testsCompleted = completedTests.length;
+  const bestScorePct = completedTests.length
+    ? Math.round(Math.max(...completedTests.map((t) => t.overall_score ?? 0)) * 100)
+    : null;
+  const badges = computeBadges(totalSessions, streakCount, testsCompleted, bestScorePct);
 
   const learningTraits = buildTraits(onboarding);
 
@@ -564,8 +601,7 @@ export function StudentProfile() {
   });
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "'DM Sans','Nunito',system-ui,sans-serif", background: C.pageBg }}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "var(--font-body)", background: C.pageBg }}>
 
       {/* Sidebar */}
       <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -579,8 +615,8 @@ export function StudentProfile() {
             <button
               onClick={() => setSidebarOpen(true)}
               style={{ width: 38, height: 38, borderRadius: 10, border: `1px solid ${C.border}`, background: C.pageBg, color: C.textMid, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}
-            >☰</button>
-            <span style={{ flex: 1, textAlign: "center", fontWeight: 800, fontSize: 15, color: C.text, fontFamily: "'Nunito',sans-serif" }}>My Profile</span>
+            ><Menu size={16} strokeWidth={1.75} /></button>
+            <span style={{ flex: 1, textAlign: "center", fontWeight: 800, fontSize: 15, color: C.text, fontFamily: "var(--font-display)" }}>My Profile</span>
             <div style={{ width: 38, flexShrink: 0 }} />
           </div>
         )}
@@ -642,31 +678,19 @@ export function StudentProfile() {
                 </button>
               </div>
 
-              <h1 style={{ fontSize: "clamp(22px,4vw,28px)", fontWeight: 800, color: C.text, marginTop: 14, fontFamily: "'Nunito',sans-serif" }}>{displayName}</h1>
+              <h1 style={{ fontSize: "clamp(22px,4vw,28px)", fontWeight: 800, color: C.text, marginTop: 14, fontFamily: "var(--font-display)" }}>{displayName}</h1>
               <p style={{ fontSize: 13, color: C.textMid, fontWeight: 600, marginTop: 4 }}>{grade} · {board}</p>
               <p style={{ fontSize: 12, color: C.textMuted, fontWeight: 600, marginTop: 4 }}>AI Tutor: {aiTutorName}</p>
 
               {/* Stat strip */}
-              <div style={{ display: "flex", gap: 0, marginTop: 18, paddingTop: 18, borderTop: `1px solid ${C.border}`, width: "100%", justifyContent: "space-around" }}>
-                {[
-                  { icon: "🔥", value: streakCount,   label: "day streak",     color: C.sun      },
-                  { icon: "📚", value: totalSessions, label: "sessions",        color: C.genBlue  },
-                  { icon: "⭐", value: longestStreak, label: "longest streak",  color: C.genPurple },
-                ].map((s, i) => (
-                  <div key={i} style={{ flex: 1, textAlign: "center", maxWidth: 120 }}>
-                    <div style={{ fontSize: "clamp(18px,3vw,22px)", fontWeight: 800, color: s.color, fontFamily: "'Nunito',sans-serif" }}>{s.icon} {s.value}</div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase" as const, letterSpacing: 1, marginTop: 2 }}>{s.label}</div>
-                  </div>
-                ))}
+              <div style={{ marginTop: 18, paddingTop: 18, borderTop: `1px solid ${C.border}`, width: "100%" }}>
+                <StreakStats data={studentStats} variant="strip" />
               </div>
             </div>
 
             {/* ── HOW APRIL SEES YOU ── */}
             <div style={{ background: `linear-gradient(135deg, ${C.genPurple}06, ${C.genBlue}06)`, borderRadius: 24, padding: "22px 24px", border: `1px solid ${C.genPurple}12`, marginBottom: 16, ...fade(0.14) }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                <span style={{ fontSize: 15 }}>🧠</span>
-                <span style={{ fontSize: 11, fontWeight: 800, color: C.genPurple, textTransform: "uppercase" as const, letterSpacing: 1.2, fontFamily: "'DM Sans',sans-serif" }}>{`How ${aiTutorName} Sees You`}</span>
-              </div>
+              <SectionHeader icon="🧠" label={`How ${aiTutorName} Sees You`} color={C.genPurple} marginBottom={14} />
               {onboardingLoading ? (
                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
                   {[0, 1, 2].map(i => (
@@ -686,7 +710,7 @@ export function StudentProfile() {
                       <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 14px", background: "white", borderRadius: 14, border: `1px solid ${C.border}` }}>
                         <span style={{ fontSize: 18, flexShrink: 0 }}>{t.icon}</span>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>{t.title}</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "var(--font-body)" }}>{t.title}</div>
                           <div style={{ fontSize: 11, color: C.textMid, marginTop: 2, lineHeight: 1.5 }}>{t.description}</div>
                         </div>
                       </div>
@@ -704,7 +728,7 @@ export function StudentProfile() {
                     style={{
                       padding: "10px 20px", borderRadius: 12, border: "none",
                       background: C.genPurple, color: "white", fontSize: 13, fontWeight: 700,
-                      fontFamily: "'Nunito',sans-serif", cursor: "pointer",
+                      fontFamily: "var(--font-display)", cursor: "pointer",
                       boxShadow: `0 4px 14px ${C.genPurple}40`,
                     }}
                   >
@@ -731,14 +755,14 @@ export function StudentProfile() {
                   flex: 1,
                   fontSize: 13, fontWeight: 800, color: C.textMuted,
                   textTransform: "uppercase" as const, letterSpacing: 1.4,
-                  fontFamily: "'DM Sans',sans-serif",
+                  fontFamily: "var(--font-body)",
                 }}>
                   Tutor Voice
                 </span>
                 {savedVoice && (
                   <span style={{
                     fontSize: 14, fontWeight: 700, color: C.genPurple,
-                    fontFamily: "'DM Sans',sans-serif",
+                    fontFamily: "var(--font-body)",
                   }}>
                     {savedVoice}
                   </span>
@@ -806,7 +830,7 @@ export function StudentProfile() {
                       display: "flex", alignItems: "center", gap: 14, padding: "14px 16px",
                       background: `${C.edGreen}06`, borderRadius: 16, border: `1px solid ${C.edGreen}15`,
                     }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 14, background: `${C.edGreen}12`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: C.edGreen, fontFamily: "'Nunito',sans-serif", flexShrink: 0 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 14, background: `${C.edGreen}12`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: C.edGreen, fontFamily: "var(--font-display)", flexShrink: 0 }}>
                         {(partner.organization ?? "PT").substring(0, 2).toUpperCase()}
                       </div>
                       <div>
@@ -835,7 +859,7 @@ export function StudentProfile() {
                       border: `1.5px solid ${C.border}`, background: C.pageBg,
                       fontSize: 12, fontWeight: 600, color: C.textMid,
                       outline: "none", cursor: "pointer", appearance: "none" as const,
-                      fontFamily: "'DM Sans',sans-serif",
+                      fontFamily: "var(--font-body)",
                     }}
                   >
                     <option value="" disabled>Connect to a school...</option>
@@ -880,20 +904,17 @@ export function StudentProfile() {
                   style={{
                     flex: 1, minWidth: 0, padding: "10px 14px", borderRadius: 12,
                     border: `1.5px solid ${C.border}`, fontSize: 12, fontWeight: 500,
-                    outline: "none", fontFamily: "'DM Sans',sans-serif", background: C.pageBg,
+                    outline: "none", fontFamily: "var(--font-body)", background: C.pageBg,
                   }}
                 />
-                <button
+                <Button
+                  variant="primary"
                   onClick={handleLinkParent}
                   disabled={!parentInput.trim() || isLoading}
-                  style={{
-                    padding: "10px 18px", borderRadius: 12, background: C.genPurple, color: "white",
-                    border: "none", fontWeight: 700, fontSize: 12, cursor: "pointer",
-                    opacity: !parentInput.trim() || isLoading ? 0.5 : 1, flexShrink: 0,
-                  }}
+                  className="flex-shrink-0"
                 >
                   {isLoading ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : "Add"}
-                </button>
+                </Button>
               </div>
             </Card>
 
@@ -943,7 +964,7 @@ export function StudentProfile() {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 14, background: C.pageBg, border: `1px solid ${C.border}` }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span style={{ fontSize: 16 }}>🎙️</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>Voice Activation</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "var(--font-body)" }}>Voice Activation</span>
                     </div>
                     
                     <div className="inline-flex p-1 rounded-lg bg-white border border-[#E2E8F0] shadow-sm">
@@ -951,8 +972,8 @@ export function StudentProfile() {
                         onClick={() => setListenMode("continuous")}
                         className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                           voicePrefs.listenMode === "continuous"
-                            ? "bg-[#5B4DC7] text-white shadow"
-                            : "text-[#94A3B8] hover:text-[#042E5C]"
+                            ? "bg-[var(--tutor)] text-white shadow"
+                            : "text-[#94A3B8] hover:text-[var(--primary-ink)]"
                         }`}
                       >
                         Continuous
@@ -961,8 +982,8 @@ export function StudentProfile() {
                         onClick={() => setListenMode("ptt")}
                         className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                           voicePrefs.listenMode === "ptt"
-                            ? "bg-[#5B4DC7] text-white shadow"
-                            : "text-[#94A3B8] hover:text-[#042E5C]"
+                            ? "bg-[var(--tutor)] text-white shadow"
+                            : "text-[#94A3B8] hover:text-[var(--primary-ink)]"
                         }`}
                       >
                         Push to talk
@@ -975,7 +996,7 @@ export function StudentProfile() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 14, background: C.pageBg, border: `1px solid ${C.border}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <span style={{ fontSize: 16 }}>⌨️</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>PTT Hotkey</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "var(--font-body)" }}>PTT Hotkey</span>
                       </div>
                       <PttHotkeyConfig compact={true} />
                     </div>
@@ -990,7 +1011,7 @@ export function StudentProfile() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 14, background: C.pageBg, border: `1px solid ${C.border}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <span style={{ fontSize: 16 }}>🗣️</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>Preferred Language</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "var(--font-body)" }}>Preferred Language</span>
                       </div>
 
                       {isLanguageLoading ? (
@@ -1012,7 +1033,7 @@ export function StudentProfile() {
                               cursor: "pointer",
                               outline: "none",
                               appearance: "none",
-                              fontFamily: "'DM Sans',sans-serif"
+                              fontFamily: "var(--font-body)"
                             }}
                           >
                             <option value="en">English (English)</option>
@@ -1041,13 +1062,10 @@ export function StudentProfile() {
                   </div>
                 )}
 
-                {/* Logout */}
-                <button
-                  onClick={logoutStudent}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 14, border: "1.5px solid #FEE2E2", background: "#FEF2F2", color: "#EF4444", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}
-                >
-                  🚪 Logout
-                </button>
+                {/* Logout — same red as the sidebar's logout affordance */}
+                <Button variant="destructive" size="lg" fullWidth onClick={logoutStudent} leadingIcon={<LogOut size={15} />}>
+                  Logout
+                </Button>
               </div>
             </Card>
 

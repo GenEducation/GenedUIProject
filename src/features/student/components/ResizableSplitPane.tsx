@@ -121,7 +121,7 @@ export function ResizableSplitPane({
           style={{ width: 12 }}
         >
           <div
-            className="group-hover:bg-[#5B4DC7] transition-colors rounded-full"
+            className="group-hover:bg-[var(--tutor)] transition-colors rounded-full"
             style={{ width: 2, height: 32, background: "#CBD5E0" }}
           />
         </div>

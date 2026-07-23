@@ -98,15 +98,15 @@ export function TestTimer({ totalSeconds, onExpired }: TestTimerProps) {
               <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto">
                 <Clock size={28} className="text-red-500" />
               </div>
-              <h2 className="text-xl sm:text-2xl font-extrabold text-[#042E5C]">Time&apos;s Up!</h2>
-              <p className="text-[#042E5C]/60 text-[15px]">
+              <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--primary-ink)]">Time&apos;s Up!</h2>
+              <p className="text-[var(--primary-ink)]/60 text-[15px]">
                 Your test will be submitted automatically in{" "}
                 <span className="font-bold text-red-500">{graceCountdown}s</span>
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={handleSubmitNow}
-                  className="flex-1 py-3 bg-[#042E5C] text-white rounded-xl font-bold text-[15px] hover:bg-[#064282] transition-all"
+                  className="flex-1 py-3 bg-[var(--primary-ink)] text-white rounded-xl font-bold text-[15px] hover:bg-[#064282] transition-all"
                 >
                   Submit Now
                 </button>

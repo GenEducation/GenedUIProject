@@ -1,10 +1,11 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Menu, Loader2, Volume2, VolumeX, Mic, MicOff, Square, Check, BookOpen, HelpCircle, GraduationCap } from "lucide-react";
+import { ArrowLeft, Menu, Loader2, Volume2, VolumeX, Mic, MicOff, Square, Check, BookOpen, HelpCircle, GraduationCap, Pin } from "lucide-react";
 import React, { useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { STUDENT_COLORS } from "../theme/colors";
 import { useStudentStore, ChatMessage, ChatSession } from "../store/useStudentStore";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { KaraokeRenderer } from "./KaraokeRenderer";
@@ -12,6 +13,7 @@ import { StudentChatInput } from "./StudentChatInput";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { useSessionHeartbeat } from "@/hooks/useSessionHeartbeat";
+import { STRINGS } from "../constants/strings";
 
 interface StudentChatMainProps {
   activeChat: ChatSession;
@@ -168,7 +170,7 @@ function ReadingSkillModal({
               <button
                 disabled={state === "permission_request" || state === "uploading" || state === "processing"}
                 onClick={(state === "permission_request" || state === "ready") ? onStart : onStop}
-                className="w-full bg-[#5B4DC7] hover:bg-[#5B4DC7]/90 disabled:bg-[#5B4DC7]/50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-[#5B4DC7]/20 active:scale-[0.98]"
+                className="w-full bg-[var(--tutor)] hover:bg-[var(--tutor)]/90 disabled:bg-[var(--tutor)]/50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-[var(--tutor)]/20 active:scale-[0.98]"
               >
                 {state === "permission_request" ? (
                   <>
@@ -196,7 +198,7 @@ function ReadingSkillModal({
               {prompt === "silence" && (
                 <button
                   onClick={onDismissPrompt}
-                  className="text-xs font-bold text-[#94A3B8] hover:text-[#5B4DC7] uppercase tracking-widest pt-1"
+                  className="text-xs font-bold text-[#94A3B8] hover:text-[var(--tutor)] uppercase tracking-widest pt-1"
                 >
                   Keep Recording
                 </button>
@@ -243,7 +245,7 @@ function ReadingSkillModal({
                   <button
                     onClick={onPlayAanya}
                     disabled={playbackState === "loading" || playbackState === "buffering"}
-                    className="flex-1 bg-white border-2 border-[#5B4DC7] text-[#5B4DC7] font-bold py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
+                    className="flex-1 bg-white border-2 border-[var(--tutor)] text-[var(--tutor)] font-bold py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
                   >
                     {(playbackState === "loading" || playbackState === "buffering") ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -255,7 +257,7 @@ function ReadingSkillModal({
                 )}
                 <button
                   onClick={onStop}
-                  className="flex-1 bg-[#5B4DC7] text-white font-bold py-4 rounded-2xl shadow-lg shadow-[#5B4DC7]/20 active:scale-[0.98] transition-all"
+                  className="flex-1 bg-[var(--tutor)] text-white font-bold py-4 rounded-2xl shadow-lg shadow-[var(--tutor)]/20 active:scale-[0.98] transition-all"
                 >
                   Done
                 </button>
@@ -293,7 +295,7 @@ function ReadingSkillModal({
                 </button>
                 <button
                   onClick={onStop}
-                  className="flex-1 bg-[#5B4DC7]/5 hover:bg-[#5B4DC7]/10 text-[#5B4DC7] font-bold py-4 rounded-2xl transition-all"
+                  className="flex-1 bg-[var(--tutor)]/5 hover:bg-[var(--tutor)]/10 text-[var(--tutor)] font-bold py-4 rounded-2xl transition-all"
                 >
                   Close Task
                 </button>
@@ -342,6 +344,7 @@ export function StudentChatMain({
     chatQueryMode,
     chatQueryModePinned,
     setChatQueryMode,
+    connectionQuality,
   } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -383,12 +386,14 @@ export function StudentChatMain({
     : null;
 
   // Derive subject color from chat subject
+  // Raw hex, not var() — these get alpha-suffix concatenated below
+  // (`${subjectAccent}20`), which CSS custom properties can't support.
   const subjectColorMap: Record<string, string> = {
-    english: "#4A90D9", mathematics: "#2D6A4F", math: "#2D6A4F",
-    science: "#D4820A", hindi: "#7B5EA7",
+    english: STUDENT_COLORS.subjectEnglish, mathematics: STUDENT_COLORS.subjectMath, math: STUDENT_COLORS.subjectMath,
+    science: STUDENT_COLORS.subjectScience, hindi: STUDENT_COLORS.subjectHindi,
   };
   const subjectKey = (activeChat.subject ?? "").toLowerCase();
-  const subjectAccent = Object.entries(subjectColorMap).find(([k]) => subjectKey.includes(k))?.[1] ?? "#5B4DC7";
+  const subjectAccent = Object.entries(subjectColorMap).find(([k]) => subjectKey.includes(k))?.[1] ?? STUDENT_COLORS.tutor;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "#F7F8FC" }}>
@@ -414,11 +419,11 @@ export function StudentChatMain({
               <ArrowLeft size={15} />
             </button>
             <div className="min-w-0">
-              <h2 className="truncate" style={{ fontWeight: 800, color: "#1A202C", fontSize: "clamp(11px, 3vw, 17px)", lineHeight: 1.3, fontFamily: "'Nunito', 'DM Sans', sans-serif", margin: 0 }}>
+              <h2 className="truncate" style={{ fontWeight: 800, color: "#1A202C", fontSize: "clamp(11px, 3vw, 17px)", lineHeight: 1.3, fontFamily: "var(--font-display), var(--font-body)", margin: 0 }}>
                 {activeChat.title}
               </h2>
               {(chapterPct !== null || activeChat.subject) && (
-                <p style={{ fontSize: "clamp(9px, 2.2vw, 13px)", fontWeight: 600, color: subjectAccent, margin: "1px 0 0", fontFamily: "'DM Sans', sans-serif" }}>
+                <p style={{ fontSize: "clamp(9px, 2.2vw, 13px)", fontWeight: 600, color: subjectAccent, margin: "1px 0 0", fontFamily: "var(--font-body)" }}>
                   {[chapterPct !== null ? `${chapterPct}%` : null, activeChat.subject].filter(Boolean).join(" · ")}
                 </p>
               )}
@@ -436,12 +441,12 @@ export function StudentChatMain({
                   style={{
                     padding: "4px 10px",
                     borderRadius: 20,
-                    border: isPdfViewerOpen ? "1.5px solid #5B4DC7" : "1.5px solid #D6D3F0",
-                    background: isPdfViewerOpen ? "#5B4DC7" : "#EDE9FE",
-                    color: isPdfViewerOpen ? "#FFFFFF" : "#5B4DC7",
+                    border: isPdfViewerOpen ? "1.5px solid var(--tutor)" : "1.5px solid #D6D3F0",
+                    background: isPdfViewerOpen ? "var(--tutor)" : "#EDE9FE",
+                    color: isPdfViewerOpen ? "#FFFFFF" : "var(--tutor)",
                     fontSize: 11,
                     fontWeight: 700,
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: "var(--font-body)",
                     cursor: isPdfLoading ? "default" : "pointer",
                     whiteSpace: "nowrap",
                     opacity: isPdfLoading ? 0.7 : 1,
@@ -453,7 +458,7 @@ export function StudentChatMain({
                       width: 10,
                       height: 10,
                       border: `2px solid ${isPdfViewerOpen ? "rgba(255,255,255,0.4)" : "#C4B8F5"}`,
-                      borderTopColor: isPdfViewerOpen ? "#fff" : "#5B4DC7",
+                      borderTopColor: isPdfViewerOpen ? "#fff" : "var(--tutor)",
                       borderRadius: "50%",
                       animation: "spin 0.7s linear infinite",
                     }} />
@@ -476,27 +481,48 @@ export function StudentChatMain({
               <AudioStatusPill key="audio-pill" state={playbackState} onStop={stopPlayback} />
             </AnimatePresence>
 
-            {/* ── Segmented mode toggle ── */}
-            <motion.div
+            {/* ── Segmented mode toggle ──
+                 Two independent buttons, not one click-to-flip div: clicking
+                 the already-active mode used to switch you to the other one.
+                 Each button sets its own mode explicitly (idempotent) and is
+                 natively keyboard-reachable. The pin icon shows when the
+                 student's explicit choice is locked in for this turn —
+                 `chatQueryModePinned` used to be tracked but never surfaced,
+                 so the choice silently reverted to auto-classification with
+                 no indication. */}
+            <div
+              role="radiogroup"
+              aria-label="Chat mode"
+              title={chatQueryModePinned ? "Locked for your next message" : undefined}
               className="flex items-center flex-shrink-0"
-              onClick={() => setChatQueryMode(chatQueryMode === "doubt" ? "study" : "doubt", true)}
-              whileTap={{ scale: 0.97 }}
               style={{
                 background: "#E8E8EC",
                 borderRadius: 999,
-                padding: 3,
-                gap: 0,
-                fontFamily: "'DM Sans', sans-serif",
-                cursor: "pointer",
-                userSelect: "none",
+                padding: "3px 3px 3px 8px",
+                gap: 4,
+                fontFamily: "var(--font-body)",
               }}
             >
+              {chatQueryModePinned && (
+                <Pin size={10} style={{ color: "#9CA3AF", flexShrink: 0 }} aria-hidden="true" />
+              )}
               {/* Doubt segment */}
-              <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 999, zIndex: 1 }}>
+              <motion.button
+                type="button"
+                role="radio"
+                aria-checked={chatQueryMode === "doubt"}
+                onClick={() => setChatQueryMode("doubt", true)}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  position: "relative", display: "flex", alignItems: "center", gap: 5,
+                  padding: "5px 12px", borderRadius: 999, zIndex: 1,
+                  border: "none", background: "transparent", cursor: "pointer",
+                }}
+              >
                 {chatQueryMode === "doubt" && (
                   <motion.div
                     layoutId="mode-active-pill"
-                    style={{ position: "absolute", inset: 0, borderRadius: 999, background: "#5B4DC7", boxShadow: "0 2px 8px rgba(91,77,199,0.4)" }}
+                    style={{ position: "absolute", inset: 0, borderRadius: 999, background: "var(--tutor)", boxShadow: "0 2px 8px rgba(91,77,199,0.4)" }}
                     transition={{ type: "spring", stiffness: 400, damping: 32 }}
                   />
                 )}
@@ -512,12 +538,23 @@ export function StudentChatMain({
                   transition={{ duration: 0.18 }}
                   style={{ position: "relative", zIndex: 1, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}
                 >
-                  Doubt
+                  {STRINGS.chat.doubtMode}
                 </motion.span>
-              </div>
+              </motion.button>
 
-              {/* Teaching segment */}
-              <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 999, zIndex: 1 }}>
+              {/* Teaching (internal "study") segment */}
+              <motion.button
+                type="button"
+                role="radio"
+                aria-checked={chatQueryMode === "study"}
+                onClick={() => setChatQueryMode("study", true)}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  position: "relative", display: "flex", alignItems: "center", gap: 5,
+                  padding: "5px 12px", borderRadius: 999, zIndex: 1,
+                  border: "none", background: "transparent", cursor: "pointer",
+                }}
+              >
                 {chatQueryMode === "study" && (
                   <motion.div
                     layoutId="mode-active-pill"
@@ -537,15 +574,24 @@ export function StudentChatMain({
                   transition={{ duration: 0.18 }}
                   style={{ position: "relative", zIndex: 1, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}
                 >
-                  Teaching
+                  {STRINGS.chat.studyMode}
                 </motion.span>
-              </div>
-            </motion.div>
+              </motion.button>
+            </div>
 
-            {/* ── Static status: active dot + grade ── */}
-            <div className="flex items-center gap-1.5 flex-shrink-0" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00B894", flexShrink: 0 }} className="animate-pulse" />
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#00B894", letterSpacing: "0.04em" }}>Active</span>
+            {/* ── Connection status: bound to real streaming/connection state,
+                 not a decorative dot that always says "Active". ── */}
+            <div className="flex items-center gap-1.5 flex-shrink-0" style={{ fontFamily: "var(--font-body)" }}>
+              <span
+                style={{
+                  width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                  background: connectionQuality === "poor" ? "#E8635A" : connectionQuality === "reconnecting" ? "#F0AD4E" : "#00B894",
+                }}
+                className={isAITyping || connectionQuality === "reconnecting" ? "animate-pulse" : undefined}
+              />
+              <span style={{ fontSize: 11, fontWeight: 700, color: connectionQuality === "poor" ? "#E8635A" : "#00B894", letterSpacing: "0.04em" }}>
+                {isAITyping ? "Thinking…" : connectionQuality === "poor" ? "Poor connection" : connectionQuality === "reconnecting" ? "Reconnecting…" : "Active"}
+              </span>
               {activeChat.grade && (
                 <>
                   <span style={{ color: "#CBD5E1", fontSize: 10 }}>·</span>
@@ -596,7 +642,7 @@ export function StudentChatMain({
                   />
                 </div>
                 <div className="text-center space-y-3 mb-12">
-                  <h1 style={{ fontFamily: "'Nunito', sans-serif", fontSize: "clamp(22px, 5vw, 32px)", fontWeight: 800, color: "#1A202C", lineHeight: 1.2 }}>
+                  <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(22px, 5vw, 32px)", fontWeight: 800, color: "#1A202C", lineHeight: 1.2 }}>
                     New session: {activeChat.title}
                   </h1>
                   <p style={{ fontSize: 16, color: "#4A5568", maxWidth: 400, margin: "0 auto", lineHeight: 1.6 }}>
