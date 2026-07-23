@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Menu, Loader2, Volume2, VolumeX, Mic, MicOff, Square, Check, BookOpen, HelpCircle, GraduationCap } from "lucide-react";
+import { ArrowLeft, Menu, Loader2, Volume2, VolumeX, Mic, MicOff, Square, Check, BookOpen, HelpCircle, GraduationCap, Pin } from "lucide-react";
 import React, { useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -13,6 +13,7 @@ import { StudentChatInput } from "./StudentChatInput";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { useSessionHeartbeat } from "@/hooks/useSessionHeartbeat";
+import { STRINGS } from "../constants/strings";
 
 interface StudentChatMainProps {
   activeChat: ChatSession;
@@ -343,6 +344,7 @@ export function StudentChatMain({
     chatQueryMode,
     chatQueryModePinned,
     setChatQueryMode,
+    connectionQuality,
   } = useStudentStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -479,23 +481,44 @@ export function StudentChatMain({
               <AudioStatusPill key="audio-pill" state={playbackState} onStop={stopPlayback} />
             </AnimatePresence>
 
-            {/* ── Segmented mode toggle ── */}
-            <motion.div
+            {/* ── Segmented mode toggle ──
+                 Two independent buttons, not one click-to-flip div: clicking
+                 the already-active mode used to switch you to the other one.
+                 Each button sets its own mode explicitly (idempotent) and is
+                 natively keyboard-reachable. The pin icon shows when the
+                 student's explicit choice is locked in for this turn —
+                 `chatQueryModePinned` used to be tracked but never surfaced,
+                 so the choice silently reverted to auto-classification with
+                 no indication. */}
+            <div
+              role="radiogroup"
+              aria-label="Chat mode"
+              title={chatQueryModePinned ? "Locked for your next message" : undefined}
               className="flex items-center flex-shrink-0"
-              onClick={() => setChatQueryMode(chatQueryMode === "doubt" ? "study" : "doubt", true)}
-              whileTap={{ scale: 0.97 }}
               style={{
                 background: "#E8E8EC",
                 borderRadius: 999,
-                padding: 3,
-                gap: 0,
+                padding: "3px 3px 3px 8px",
+                gap: 4,
                 fontFamily: "var(--font-body)",
-                cursor: "pointer",
-                userSelect: "none",
               }}
             >
+              {chatQueryModePinned && (
+                <Pin size={10} style={{ color: "#9CA3AF", flexShrink: 0 }} aria-hidden="true" />
+              )}
               {/* Doubt segment */}
-              <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 999, zIndex: 1 }}>
+              <motion.button
+                type="button"
+                role="radio"
+                aria-checked={chatQueryMode === "doubt"}
+                onClick={() => setChatQueryMode("doubt", true)}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  position: "relative", display: "flex", alignItems: "center", gap: 5,
+                  padding: "5px 12px", borderRadius: 999, zIndex: 1,
+                  border: "none", background: "transparent", cursor: "pointer",
+                }}
+              >
                 {chatQueryMode === "doubt" && (
                   <motion.div
                     layoutId="mode-active-pill"
@@ -515,12 +538,23 @@ export function StudentChatMain({
                   transition={{ duration: 0.18 }}
                   style={{ position: "relative", zIndex: 1, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}
                 >
-                  Doubt
+                  {STRINGS.chat.doubtMode}
                 </motion.span>
-              </div>
+              </motion.button>
 
-              {/* Teaching segment */}
-              <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 999, zIndex: 1 }}>
+              {/* Teaching (internal "study") segment */}
+              <motion.button
+                type="button"
+                role="radio"
+                aria-checked={chatQueryMode === "study"}
+                onClick={() => setChatQueryMode("study", true)}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  position: "relative", display: "flex", alignItems: "center", gap: 5,
+                  padding: "5px 12px", borderRadius: 999, zIndex: 1,
+                  border: "none", background: "transparent", cursor: "pointer",
+                }}
+              >
                 {chatQueryMode === "study" && (
                   <motion.div
                     layoutId="mode-active-pill"
@@ -540,15 +574,24 @@ export function StudentChatMain({
                   transition={{ duration: 0.18 }}
                   style={{ position: "relative", zIndex: 1, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}
                 >
-                  Teaching
+                  {STRINGS.chat.studyMode}
                 </motion.span>
-              </div>
-            </motion.div>
+              </motion.button>
+            </div>
 
-            {/* ── Static status: active dot + grade ── */}
+            {/* ── Connection status: bound to real streaming/connection state,
+                 not a decorative dot that always says "Active". ── */}
             <div className="flex items-center gap-1.5 flex-shrink-0" style={{ fontFamily: "var(--font-body)" }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00B894", flexShrink: 0 }} className="animate-pulse" />
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#00B894", letterSpacing: "0.04em" }}>Active</span>
+              <span
+                style={{
+                  width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                  background: connectionQuality === "poor" ? "#E8635A" : connectionQuality === "reconnecting" ? "#F0AD4E" : "#00B894",
+                }}
+                className={isAITyping || connectionQuality === "reconnecting" ? "animate-pulse" : undefined}
+              />
+              <span style={{ fontSize: 11, fontWeight: 700, color: connectionQuality === "poor" ? "#E8635A" : "#00B894", letterSpacing: "0.04em" }}>
+                {isAITyping ? "Thinking…" : connectionQuality === "poor" ? "Poor connection" : connectionQuality === "reconnecting" ? "Reconnecting…" : "Active"}
+              </span>
               {activeChat.grade && (
                 <>
                   <span style={{ color: "#CBD5E1", fontSize: 10 }}>·</span>

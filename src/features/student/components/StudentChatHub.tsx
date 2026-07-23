@@ -8,11 +8,12 @@ import {
   useStudentStore,
 } from "../store/useStudentStore";
 import { StudentChatInput } from "./StudentChatInput";
-import { ChevronRight, Clock, Bot, Menu, Flame, BarChart2 } from "lucide-react";
+import { ChevronRight, Clock, Bot, Menu } from "lucide-react";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { ActivityHeatmap } from "./ActivityHeatmap";
+import { StreakStats } from "./StreakStats";
 import { SUBJECT_CONFIG, Subject } from "@/constants/subjectConfig";
 import { EnglishIcon } from "@/components/icons/EnglishIcon";
 import { MathematicsIcon } from "@/components/icons/MathematicsIcon";
@@ -197,26 +198,8 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: 0.05 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4"
           >
-            <StatCard
-              icon={<Flame size={18} />}
-              label="Current Streak"
-              value={`${studentStats?.currentStreak ?? 0} days`}
-              accentColor="#FDCB6E"
-            />
-            <StatCard
-              icon={<BarChart2 size={18} />}
-              label="Total Sessions"
-              value={studentStats?.totalSessions ?? 0}
-              accentColor="#74B9FF"
-            />
-            <StatCard
-              icon={<Flame size={18} />}
-              label="Longest Streak"
-              value={`${studentStats?.longestStreak ?? 0} days`}
-              accentColor="#00B894"
-            />
+            <StreakStats data={studentStats} variant="card" />
           </motion.section>
 
           {/* 3. Activity Heatmap */}
@@ -329,35 +312,6 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
         )}
       </AnimatePresence>
 
-    </div>
-  );
-}
-
-// ── StatCard ──────────────────────────────────────────────────────────────────
-
-interface StatCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  accentColor: string;
-}
-
-function StatCard({ icon, label, value, accentColor }: StatCardProps) {
-  return (
-    <div
-      className="bg-white rounded-2xl px-4 py-3 border border-[var(--primary-ink)]/5 shadow-sm hover:shadow-md transition-all border-l-4 flex items-center justify-between gap-3"
-      style={{ borderLeftColor: accentColor }}
-    >
-      <div className="flex items-center gap-3 min-w-0">
-        <div
-          className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center"
-          style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
-        >
-          {icon}
-        </div>
-        <p className="text-[10px] font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest leading-none truncate">{label}</p>
-      </div>
-      <p className="text-lg sm:text-xl font-extrabold text-[var(--primary-ink)] leading-none flex-shrink-0">{value}</p>
     </div>
   );
 }

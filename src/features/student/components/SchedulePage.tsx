@@ -24,6 +24,8 @@ import { DatePicker } from "./DatePicker";
 import { TimePicker } from "./TimePicker";
 import { RescheduleModal, RescheduleModalTarget } from "@/components/shared/RescheduleModal";
 import { SessionType } from "../types/schedule";
+import { Button } from "@/components/ui/Button";
+import { STRINGS } from "../constants/strings";
 
 function tomorrowDateString(): string {
   const d = new Date();
@@ -253,20 +255,22 @@ export function SchedulePage() {
           </div>
 
           {isFailed || isExpired ? (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => handleReschedule(s.id, s.session_type, s.subject, s.topic)}
-              className="px-4 py-2 rounded-xl bg-[var(--primary-ink)]/5 text-[var(--primary-ink)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--primary-ink)]/10 transition-all"
             >
               Reschedule
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={() => handleStartSession(s.session_type, s.session_id!)}
               disabled={!isReady || isStartingSession}
-              className="px-4 py-2 rounded-xl bg-[var(--primary-ink)] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#064282] disabled:opacity-30 transition-all"
             >
-              {s.session_type === "TEST" ? "Start Test" : "Open Session"}
-            </button>
+              {s.session_type === "TEST" ? STRINGS.practice.startCta : "Open Session"}
+            </Button>
           )}
         </div>
       </motion.div>
@@ -321,8 +325,12 @@ export function SchedulePage() {
                     key={type}
                     onClick={() => setSessionType(type)}
                     className={`flex-1 flex items-center justify-center text-center gap-1.5 sm:gap-2 px-2 sm:px-6 py-3 sm:py-4 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-wide sm:tracking-[0.2em] leading-tight transition-all border ${
+                      // Neutral ink selection, not a second brand accent — the
+                      // page's one colored "action" is the emerald Schedule
+                      // Session CTA below. A solid navy block here read as a
+                      // second, competing primary color on the same screen.
                       sessionType === type
-                        ? "bg-[var(--primary-ink)] text-white border-[var(--primary-ink)] shadow-lg shadow-[var(--primary-ink)]/10"
+                        ? "bg-white text-[var(--primary-ink)] border-[var(--primary-ink)]/25 shadow-sm"
                         : "bg-[#F4F3EE]/50 text-[var(--primary-ink)]/40 border-[var(--primary-ink)]/5 hover:text-[var(--primary-ink)]"
                     }`}
                   >
@@ -402,10 +410,13 @@ export function SchedulePage() {
                 </div>
               )}
 
-              <button
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
                 onClick={handleBook}
                 disabled={isBooking || !subject || !scheduledDate || (sessionType === "TEST" && !topic)}
-                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-[var(--primary-ink)] text-white rounded-3xl text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-[var(--primary-ink)]/10 hover:bg-[#064282] hover:shadow-[var(--primary-ink)]/20 disabled:opacity-50 transition-all"
+                trailingIcon={!isBooking && <ArrowRight size={16} />}
               >
                 {isBooking ? (
                   <>
@@ -413,12 +424,9 @@ export function SchedulePage() {
                     Scheduling...
                   </>
                 ) : (
-                  <>
-                    Schedule Session
-                    <ArrowRight size={16} />
-                  </>
+                  "Schedule Session"
                 )}
-              </button>
+              </Button>
             </div>
 
             {/* Scheduled Sessions List */}

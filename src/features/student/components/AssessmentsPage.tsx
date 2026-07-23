@@ -23,6 +23,8 @@ import {
 import { studentService } from "@/features/student/services/studentService";
 import { TypingStudentCharacter } from "@/components/shared/loaders/StudentLoader/TypingStudentCharacter";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
+import { Button } from "@/components/ui/Button";
+import { STRINGS } from "../constants/strings";
 
 export function AssessmentsPage() {
   const router = useRouter();
@@ -176,7 +178,7 @@ export function AssessmentsPage() {
                 <div className="w-6 h-6 rounded-lg bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]">
                   <ClipboardCheck size={16} />
                 </div>
-                <h1 className="text-xl font-black text-[var(--primary-ink)] tracking-tight">Test</h1>
+                <h1 className="text-xl font-black text-[var(--primary-ink)] tracking-tight">{STRINGS.practice.pageTitle}</h1>
               </div>
             </div>
           </div>
@@ -209,7 +211,7 @@ export function AssessmentsPage() {
                 <div className="w-6 h-6 rounded-lg bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]">
                   <History size={14} />
                 </div>
-                <h2 className="text-sm font-black text-[var(--primary-ink)] uppercase tracking-widest">Past Tests</h2>
+                <h2 className="text-sm font-black text-[var(--primary-ink)] uppercase tracking-widest">{STRINGS.practice.pastSectionTitle}</h2>
               </div>
 
               {isLoadingTests ? (
@@ -219,14 +221,26 @@ export function AssessmentsPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {studentTests.map((t) => (
+                  {studentTests.map((t) => {
+                    const scorePct = t.submission_id && t.overall_score != null
+                      ? Math.round(t.overall_score * 100)
+                      : null;
+                    // Threshold colors mirror the report card's band language
+                    // (Developing/Approaching/Proficient/Advanced).
+                    const scoreColor = scorePct == null
+                      ? null
+                      : scorePct >= 80 ? "text-emerald-600"
+                      : scorePct >= 60 ? "text-blue-600"
+                      : scorePct >= 40 ? "text-amber-600"
+                      : "text-red-500";
+                    return (
                     <div
                       key={t.test_id}
                       className="bg-white p-6 rounded-3xl border border-[var(--primary-ink)]/5 shadow-sm flex items-center justify-between gap-4"
                     >
-                      <div className="min-w-0 space-y-1">
+                      <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-black text-[var(--primary-ink)] truncate">{t.document_title}</h3>
+                          <h3 className="text-sm font-black text-[var(--primary-ink)] truncate flex-1 min-w-0">{t.document_title}</h3>
                           <span
                             className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
                               t.submission_id
@@ -244,22 +258,26 @@ export function AssessmentsPage() {
                           <span className="text-[10px] font-medium text-[var(--primary-ink)]/30">
                             {new Date(t.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                           </span>
-                          {t.submission_id && t.overall_score != null && (
-                            <span className="text-[10px] font-black text-[var(--primary-ink)]/40">
-                              {Math.round(t.overall_score * 100)}%
-                            </span>
-                          )}
                         </div>
                       </div>
-                      <button
+                      {scorePct != null && (
+                        <div className="shrink-0 flex flex-col items-center">
+                          <span className={`text-xl font-black leading-none ${scoreColor}`}>{scorePct}%</span>
+                          <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--primary-ink)]/30 mt-0.5">Score</span>
+                        </div>
+                      )}
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => handleViewTest(t.test_id, t.submission_id)}
                         disabled={isLoadingResult}
-                        className="shrink-0 px-4 py-2 rounded-xl bg-[var(--primary-ink)]/5 text-[var(--primary-ink)] text-[10px] font-black uppercase tracking-widest hover:bg-[var(--primary-ink)]/10 disabled:opacity-40 transition-all"
+                        className="shrink-0"
                       >
                         View Test
-                      </button>
+                      </Button>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -279,7 +297,10 @@ export function AssessmentsPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ delay: idx * 0.05 }}
+                    // Capped — an uncapped idx*0.05 delay meant the last card
+                    // in a long curriculum list could wait multiple seconds
+                    // to animate in.
+                    transition={{ delay: Math.min(idx * 0.05, 0.4) }}
                     className="group"
                   >
                     <div className="bg-white p-8 rounded-[40px] border border-[var(--primary-ink)]/5 shadow-sm hover:shadow-2xl hover:shadow-[var(--primary-ink)]/10 transition-all flex flex-col h-full relative overflow-hidden">
@@ -305,13 +326,15 @@ export function AssessmentsPage() {
                       </div>
 
                       <div className="pt-8">
-                        <button 
+                        <Button
+                          variant="primary"
+                          size="lg"
+                          fullWidth
                           onClick={() => handleStartTest(chapter.document_title, chapter.subject)}
-                          className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-[var(--primary-ink)] text-white rounded-3xl text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-[var(--primary-ink)]/10 hover:bg-[#064282] hover:shadow-[var(--primary-ink)]/20 transition-all group/btn"
+                          trailingIcon={<ArrowRight size={16} />}
                         >
-                          Start Test
-                          <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
-                        </button>
+                          {STRINGS.practice.startCta}
+                        </Button>
                       </div>
                     </div>
                   </motion.div>
@@ -330,7 +353,7 @@ export function AssessmentsPage() {
                 <p className="text-sm font-medium text-[var(--primary-ink)]/40">
                   {searchQuery
                     ? "Try adjusting your search or select a different subject"
-                    : "Complete your English or Mathematics onboarding to unlock assessments."}
+                    : STRINGS.practice.lockedMessage}
                 </p>
               </div>
             </div>

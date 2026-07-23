@@ -3,7 +3,6 @@ import { Inter, Playfair_Display, Baloo_2, Mukta, Source_Serif_4, JetBrains_Mono
 import "./globals.css";
 import { GlobalLoader } from "@/components/shared/loaders/GlobalLoader";
 import { TutorialVideoModal } from "@/components/shared/TutorialVideoModal";
-import Script from "next/script";
 
 // Inter + Playfair back the out-of-scope teacher/parent/lab portals (see
 // .portal-legacy-type in globals.css) — kept even though the student app
@@ -62,10 +61,6 @@ export default function RootLayout({
         <GlobalLoader />
         {children}
         <TutorialVideoModal />
-        <Script 
-          src="https://checkout.razorpay.com/v1/checkout.js" 
-          strategy="lazyOnload"
-        />
       </body>
     </html>
   );

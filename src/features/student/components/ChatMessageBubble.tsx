@@ -206,7 +206,7 @@ export const ChatMessageBubble = React.memo(
           {/* Message Content Bin */}
           {(isStreaming || message.statusText || message.text.length > 0 || (message.elements && message.elements.length > 0)) && (
             <div
-              className="px-4 py-3 sm:px-6 sm:py-5 leading-relaxed text-[13px] sm:text-[15px] transition-all duration-300 w-full"
+              className="px-4 py-3 sm:px-6 sm:py-5 leading-relaxed text-[13px] sm:text-[15px] w-full"
               style={{
                 borderRadius: "1.75rem",
                 borderTopRightRadius: isUser ? 6 : undefined,
@@ -215,6 +215,11 @@ export const ChatMessageBubble = React.memo(
                 color: isUser ? "#FFFFFF" : "#1A202C",
                 border: isUser ? "none" : "1px solid #E2E8F0",
                 boxShadow: isUser ? "0 2px 10px rgba(91,77,199,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
+                // Scoped to color/shadow only — `transition-all` here used to
+                // tween the bubble's width on every revealed character
+                // (the column is shrink-to-fit up to max-w-[85%]), making the
+                // bubble visibly lag the streamed text.
+                transition: "background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease",
               }}
             >
               {message.text.length === 0 && !message.statusText && !message.elements && isStreaming ? (

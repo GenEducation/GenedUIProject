@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Play, Pause, Check, ChevronDown, Pencil, Menu } from "lucide-react";
+import { Loader2, Play, Pause, Check, ChevronDown, Pencil, Menu, Lock, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { useStudentStore, StudentProfile as StudentProfileType } from "../store/useStudentStore";
-import { getStudentDisplayName } from "../utils/displayName";
+import { getStudentDisplayName, titleCase } from "../utils/displayName";
 import { STUDENT_COLORS } from "../theme/colors";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
+import { StreakStats } from "./StreakStats";
+import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { PartnerRequestModal } from "./PartnerRequestModal";
 import { updateProfile, fetchProfile } from "@/features/auth/authService";
 import { studentService } from "@/features/student/services/studentService";
@@ -19,6 +22,7 @@ import { AvatarPickerModal } from "./AvatarPickerModal";
 import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
 import { GeneralOnboardingWizard } from "@/features/onboarding/components/GeneralOnboarding/GeneralOnboardingWizard";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
+import { useTestStore } from "../store/useTestStore";
 
 /* ─── Design Tokens ─── sourced from STUDENT_COLORS (see theme/colors.ts),
    now byte-for-byte identical to the home screen's palette. */
@@ -69,49 +73,73 @@ function buildTraits(onboarding: GeneralOnboarding | null) {
   });
 }
 
-/* ─── Badge computation ──────────────────────────────────────────────────── */
-function computeBadges(totalSessions: number, currentStreak: number) {
+/* ─── Badge computation ──────────────────────────────────────────────────────
+ * Every badge is driven by real data — sessions, streak, and completed tests
+ * (studentTests from useTestStore). "Quiz Champion" and "Shapes Master" used
+ * to be hardcoded `earned: false` and could never unlock; both are now
+ * derived from actual test submissions. */
+function computeBadges(
+  totalSessions: number,
+  currentStreak: number,
+  testsCompleted: number,
+  bestScorePct: number | null
+) {
   return [
-    { icon: "🎯", label: "First Session",   earned: totalSessions  >= 1,  color: C.genPurple },
-    { icon: "🔥", label: "3-Day Streak",    earned: currentStreak  >= 3,  color: C.sun       },
-    { icon: "📖", label: "Explorer",        earned: totalSessions  >= 5,  color: C.genBlue   },
-    { icon: "🏆", label: "Quiz Champion",   earned: false,                color: C.edGreen   },
-    { icon: "⭐", label: "Shapes Master",   earned: false,                color: C.sun       },
-    { icon: "🚀", label: "7-Day Streak",    earned: currentStreak  >= 7,  color: C.coral     },
+    { icon: "🎯", label: "First Session",  earned: totalSessions  >= 1, color: C.genPurple, progress: `${Math.min(totalSessions, 1)}/1 sessions` },
+    { icon: "🔥", label: "3-Day Streak",   earned: currentStreak  >= 3, color: C.sun,       progress: `${Math.min(currentStreak, 3)}/3 day streak` },
+    { icon: "📖", label: "Explorer",       earned: totalSessions  >= 5, color: C.genBlue,   progress: `${Math.min(totalSessions, 5)}/5 sessions` },
+    { icon: "🏆", label: "Quiz Champion",  earned: testsCompleted >= 3, color: C.edGreen,   progress: `${Math.min(testsCompleted, 3)}/3 tests taken` },
+    { icon: "⭐", label: "High Scorer",    earned: (bestScorePct ?? 0) >= 80, color: C.sun,  progress: bestScorePct != null ? `Best score ${bestScorePct}%` : "Score 80%+ on a test" },
+    { icon: "🚀", label: "7-Day Streak",   earned: currentStreak  >= 7, color: C.coral,     progress: `${Math.min(currentStreak, 7)}/7 day streak` },
   ];
 }
 
 /* ─── Sub-components ─────────────────────────────────────────────────────── */
 
-function SectionHeader({ icon, label }: { icon: string; label: string }) {
+function SectionHeader({ icon, label, color = C.textMuted, marginBottom = 16 }: { icon: string; label: string; color?: string; marginBottom?: number }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom }}>
       <span style={{ fontSize: 14 }}>{icon}</span>
-      <span style={{ fontSize: 11, fontWeight: 800, color: C.textMuted, textTransform: "uppercase" as const, letterSpacing: 1.5, fontFamily: "var(--font-body)" }}>
+      <span style={{ fontSize: 11, fontWeight: 800, color, textTransform: "uppercase" as const, letterSpacing: 1.5, fontFamily: "var(--font-body)" }}>
         {label}
       </span>
     </div>
   );
 }
 
-function Badge({ icon, label, earned, color }: { icon: string; label: string; earned: boolean; color: string }) {
+function Badge({ icon, label, earned, color, progress }: { icon: string; label: string; earned: boolean; color: string; progress: string }) {
   return (
-    <div style={{
-      display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 6,
-      padding: "14px 8px", borderRadius: 18,
-      background: earned ? `${color}08` : "#F8F9FA",
-      border: `1.5px solid ${earned ? `${color}25` : C.border}`,
-      opacity: earned ? 1 : 0.55,
-      filter: earned ? "none" : "grayscale(0.7)",
-      transition: "all 0.25s",
-    }}>
+    <div
+      role="img"
+      aria-label={earned ? `${label} — earned` : `${label} — locked, ${progress}`}
+      title={earned ? label : `Locked: ${progress}`}
+      style={{
+        display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 6,
+        padding: "14px 8px", borderRadius: 18,
+        background: earned ? `${color}08` : "#F8F9FA",
+        border: `1.5px solid ${earned ? `${color}25` : C.border}`,
+        transition: "all 0.25s",
+      }}
+    >
       <div style={{
-        width: 40, height: 40, borderRadius: 13,
+        position: "relative", width: 40, height: 40, borderRadius: 13,
         background: earned ? `${color}15` : "#EDF2F7",
         display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
-      }}>{icon}</div>
+      }}>
+        <span style={{ opacity: earned ? 1 : 0.35 }}>{icon}</span>
+        {!earned && (
+          <div style={{
+            position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(255,255,255,0.55)", borderRadius: 13,
+          }}>
+            <Lock size={14} color={C.textMuted} strokeWidth={2} />
+          </div>
+        )}
+      </div>
       <span style={{ fontSize: 10, fontWeight: 700, color: earned ? color : C.textMuted, textAlign: "center" as const, lineHeight: 1.3, fontFamily: "var(--font-body)" }}>{label}</span>
-      {!earned && <span style={{ fontSize: 9, color: C.textMuted }}>🔒</span>}
+      <span style={{ fontSize: 8.5, fontWeight: 600, color: C.textMuted, textAlign: "center" as const, lineHeight: 1.2 }}>
+        {earned ? "Earned" : progress}
+      </span>
     </div>
   );
 }
@@ -315,13 +343,18 @@ export function StudentProfile() {
     avatarId, setAvatarId,
   } = useStudentStore();
   const { completeAction } = useTutorialStore();
+  const { studentTests, loadStudentTests } = useTestStore();
 
   const [sidebarOpen,      setSidebarOpen]      = useState(true);
   const avatarColor = C.sun;
   const [soundEnabled,     setSoundEnabled]      = useState(true);
   const [parentInput,      setParentInput]       = useState("");
   const [selectedPartner,  setSelectedPartner]   = useState("");
-  const [mounted,          setMounted]           = useState(false);
+  // Starts true — content used to render at opacity:0 until a mount effect
+  // fired alongside three network fetches, so a hydration or fetch stall
+  // extended the blank screen indefinitely. See StudentHome.tsx for the
+  // same fix.
+  const [mounted,          setMounted]           = useState(true);
   const [pendingVoice,     setPendingVoice]      = useState<string>(studentProfile?.preferred_voice || DEFAULT_GEMINI_VOICE);
   const [savingVoice,      setSavingVoice]       = useState(false);
   const [voiceError,       setVoiceError]        = useState<string | null>(null);
@@ -345,19 +378,16 @@ export function StudentProfile() {
   const checkDNAStatus = useOnboardingStore((s) => s.checkDNAStatus);
 
   /* responsive sidebar */
-  useEffect(() => {
-    const handle = () => setSidebarOpen(window.innerWidth >= 1024);
-    handle();
-    window.addEventListener("resize", handle);
-    return () => window.removeEventListener("resize", handle);
-  }, []);
+  useDebouncedResize(() => setSidebarOpen(window.innerWidth >= 1024));
 
   useEffect(() => {
     setMounted(true);
     fetchAvailablePartners();
     fetchEnrolledPartners();
     fetchStudentStats();
-  }, [fetchAvailablePartners, fetchEnrolledPartners, fetchStudentStats]);
+    if (studentProfile?.user_id) loadStudentTests(studentProfile.user_id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchAvailablePartners, fetchEnrolledPartners, fetchStudentStats, studentProfile?.user_id]);
 
   /**
    * Heal a stale localStorage profile by pulling the latest from auth-service
@@ -544,11 +574,16 @@ export function StudentProfile() {
   const displayName   = getStudentDisplayName(studentProfile);
   const grade         = studentProfile?.grade         ? `Grade ${studentProfile.grade}` : "—";
   const board         = studentProfile?.school_board  ?? "CBSE";
-  const aiTutorName   = studentProfile?.ai_name || "Nia";
+  const aiTutorName   = titleCase(studentProfile?.ai_name || "Nia");
   const streakCount   = studentStats?.currentStreak ?? 0;
   const totalSessions = studentStats?.totalSessions  ?? 0;
-  const longestStreak = studentStats?.longestStreak  ?? 0;
-  const badges        = computeBadges(totalSessions, streakCount);
+
+  const completedTests = studentTests.filter((t) => t.submission_id != null);
+  const testsCompleted = completedTests.length;
+  const bestScorePct = completedTests.length
+    ? Math.round(Math.max(...completedTests.map((t) => t.overall_score ?? 0)) * 100)
+    : null;
+  const badges = computeBadges(totalSessions, streakCount, testsCompleted, bestScorePct);
 
   const learningTraits = buildTraits(onboarding);
 
@@ -648,26 +683,14 @@ export function StudentProfile() {
               <p style={{ fontSize: 12, color: C.textMuted, fontWeight: 600, marginTop: 4 }}>AI Tutor: {aiTutorName}</p>
 
               {/* Stat strip */}
-              <div style={{ display: "flex", gap: 0, marginTop: 18, paddingTop: 18, borderTop: `1px solid ${C.border}`, width: "100%", justifyContent: "space-around" }}>
-                {[
-                  { icon: "🔥", value: streakCount,   label: "day streak",     color: C.sun      },
-                  { icon: "📚", value: totalSessions, label: "sessions",        color: C.genBlue  },
-                  { icon: "⭐", value: longestStreak, label: "longest streak",  color: C.genPurple },
-                ].map((s, i) => (
-                  <div key={i} style={{ flex: 1, textAlign: "center", maxWidth: 120 }}>
-                    <div style={{ fontSize: "clamp(18px,3vw,22px)", fontWeight: 800, color: s.color, fontFamily: "var(--font-display)" }}>{s.icon} {s.value}</div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase" as const, letterSpacing: 1, marginTop: 2 }}>{s.label}</div>
-                  </div>
-                ))}
+              <div style={{ marginTop: 18, paddingTop: 18, borderTop: `1px solid ${C.border}`, width: "100%" }}>
+                <StreakStats data={studentStats} variant="strip" />
               </div>
             </div>
 
             {/* ── HOW APRIL SEES YOU ── */}
             <div style={{ background: `linear-gradient(135deg, ${C.genPurple}06, ${C.genBlue}06)`, borderRadius: 24, padding: "22px 24px", border: `1px solid ${C.genPurple}12`, marginBottom: 16, ...fade(0.14) }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                <span style={{ fontSize: 15 }}>🧠</span>
-                <span style={{ fontSize: 11, fontWeight: 800, color: C.genPurple, textTransform: "uppercase" as const, letterSpacing: 1.2, fontFamily: "var(--font-body)" }}>{`How ${aiTutorName} Sees You`}</span>
-              </div>
+              <SectionHeader icon="🧠" label={`How ${aiTutorName} Sees You`} color={C.genPurple} marginBottom={14} />
               {onboardingLoading ? (
                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
                   {[0, 1, 2].map(i => (
@@ -884,17 +907,14 @@ export function StudentProfile() {
                     outline: "none", fontFamily: "var(--font-body)", background: C.pageBg,
                   }}
                 />
-                <button
+                <Button
+                  variant="primary"
                   onClick={handleLinkParent}
                   disabled={!parentInput.trim() || isLoading}
-                  style={{
-                    padding: "10px 18px", borderRadius: 12, background: C.genPurple, color: "white",
-                    border: "none", fontWeight: 700, fontSize: 12, cursor: "pointer",
-                    opacity: !parentInput.trim() || isLoading ? 0.5 : 1, flexShrink: 0,
-                  }}
+                  className="flex-shrink-0"
                 >
                   {isLoading ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : "Add"}
-                </button>
+                </Button>
               </div>
             </Card>
 
@@ -1042,13 +1062,10 @@ export function StudentProfile() {
                   </div>
                 )}
 
-                {/* Logout */}
-                <button
-                  onClick={logoutStudent}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 14, border: "1.5px solid #FEE2E2", background: "#FEF2F2", color: "#EF4444", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "var(--font-body)" }}
-                >
-                  🚪 Logout
-                </button>
+                {/* Logout — same red as the sidebar's logout affordance */}
+                <Button variant="destructive" size="lg" fullWidth onClick={logoutStudent} leadingIcon={<LogOut size={15} />}>
+                  Logout
+                </Button>
               </div>
             </Card>
 

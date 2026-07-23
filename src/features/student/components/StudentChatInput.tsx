@@ -33,6 +33,13 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // The keyboard hint below shows once, until the student's first send —
+  // it used to render permanently on every visit to the docked input.
+  const [hintDismissed, setHintDismissed] = useState(true);
+  useEffect(() => {
+    setHintDismissed(localStorage.getItem("gened_chat_hint_seen") === "1");
+  }, []);
+
 
   // Show picker only while user has text in hub mode; hide when cleared
   useEffect(() => {
@@ -76,6 +83,10 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
     setInput("");
     setSelectedSubject(null);
     setShowSubjectPicker(false);
+    if (!hintDismissed) {
+      localStorage.setItem("gened_chat_hint_seen", "1");
+      setHintDismissed(true);
+    }
 
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -182,7 +193,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
           </motion.button>
         </div>
       </div>
-      {!isCentered && !isHub && (
+      {!isCentered && !isHub && !hintDismissed && (
         <p className="text-[11px] font-bold text-center mt-3 uppercase tracking-[0.1em]" style={{ color: "#CBD5E1" }}>
           Press Enter to send &bull; Shift+Enter for new line
         </p>

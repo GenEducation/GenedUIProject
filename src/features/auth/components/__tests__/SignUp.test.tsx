@@ -141,7 +141,8 @@ describe("SignUp — parent flow", () => {
     fireEvent.change(screen.getByPlaceholderText("scholar@gened.edu"), {
       target: { value: "parent@example.com" },
     });
-    const [password, confirm] = screen.getAllByPlaceholderText("••••••••");
+    const password = screen.getByPlaceholderText("Create a password");
+    const confirm = screen.getByPlaceholderText("Confirm your password");
     fireEvent.change(password, { target: { value: "secret1" } });
     fireEvent.change(confirm, { target: { value: "secret1" } });
     fireEvent.click(screen.getByRole("button", { name: /continue/i }));

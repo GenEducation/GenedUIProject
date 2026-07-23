@@ -11,10 +11,13 @@ import { STUDENT_COLORS } from "../theme/colors";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
+import { StreakStats } from "./StreakStats";
+import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
 import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
+import { Button } from "@/components/ui/Button";
 
 /* ═══ DESIGN TOKENS ═══ — sourced from STUDENT_COLORS (see theme/colors.ts) */
 const C = {
@@ -119,11 +122,15 @@ function ProgressRing({ percent, size = 40, stroke = 3.5, color }: { percent: nu
   const r    = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const off  = circ * (1 - percent / 100);
+  // A round cap on a near-empty arc renders as a dot floating off the track
+  // rather than "barely started" — square the cap below ~6% so a low value
+  // still reads as a short flat sliver sitting on the track.
+  const cap = percent > 0 && percent < 6 ? "butt" : "round";
   return (
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color + "18"} strokeWidth={stroke} />
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
-        strokeDasharray={circ} strokeDashoffset={off} strokeLinecap="round"
+        strokeDasharray={circ} strokeDashoffset={off} strokeLinecap={cap}
         style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1)" }} />
     </svg>
   );
@@ -244,7 +251,11 @@ export function StudentHome() {
   const [showConfetti,   setShowConfetti]   = useState(false);
   const [aprilState,     setAprilState]     = useState<AprilState>("idle");
   const [hoveredAgent,   setHoveredAgent]   = useState<string | null>(null);
-  const [mounted,        setMounted]        = useState(false);
+  // Starts true (not false→effect→true) — content used to render at
+  // opacity:0 until a mount effect fired, so any hydration stall extended
+  // the blank screen indefinitely. The stagger transition above still plays
+  // on genuine visibility changes; it just no longer gates first paint.
+  const [mounted,        setMounted]        = useState(true);
   const [onboardingModal,setOnboardingModal]= useState<{ originalSubject: string; grade: number } | null>(null);
   const [showAllSessions,setShowAllSessions]= useState(false);
   const [showAllSubjects,setShowAllSubjects]= useState(false);
@@ -255,12 +266,7 @@ export function StudentHome() {
   const [filterSubject, setFilterSubject] = useState<string>("All");
 
   /* responsive sidebar */
-  useEffect(() => {
-    const handle = () => setSidebarOpen(window.innerWidth >= 1024);
-    handle();
-    window.addEventListener("resize", handle);
-    return () => window.removeEventListener("resize", handle);
-  }, []);
+  useDebouncedResize(() => setSidebarOpen(window.innerWidth >= 1024));
 
   /* data fetch */
   useEffect(() => {
@@ -288,10 +294,6 @@ export function StudentHome() {
     dismissCelebration();
     return () => clearTimeout(t);
   }, [hasEnded, hasDismissedCelebration, dismissCelebration]);
-
-  const streakCount   = studentStats?.currentStreak  ?? 0;
-  const totalSessions = studentStats?.totalSessions   ?? 0;
-  const longestStreak = studentStats?.longestStreak   ?? 0;
 
   const agents = availableAgents.map((agent: AgentItem) => {
     const key = normalizeSubjectKey(agent.subject);
@@ -389,13 +391,18 @@ export function StudentHome() {
   const handleSessionClick = (session: typeof allSessions[0]) => {
     openExistingChat(session);
     // Voice sessions reopen in the voice UI; chat sessions in the chat UI.
-    window.location.href = sessionRoutePath(session);
+    // router.push (not window.location.href) — the full reload used to
+    // discard the SPA cache and re-fetch every script on each session open.
+    router.push(sessionRoutePath(session));
   };
 
   const fade = (d = 0) => ({
     opacity:   mounted ? 1 : 0,
     transform: mounted ? "translateY(0)" : "translateY(14px)",
-    transition: `all 0.55s cubic-bezier(0.22,1,0.36,1) ${d}s`,
+    // Scoped to opacity/transform (was `all`, which tweens every layout
+    // property on mount) and shortened — see the `mounted` init below for
+    // why this can no longer gate initial paint.
+    transition: `opacity 0.35s cubic-bezier(0.22,1,0.36,1) ${d}s, transform 0.35s cubic-bezier(0.22,1,0.36,1) ${d}s`,
   });
 
 
@@ -507,58 +514,8 @@ export function StudentHome() {
             </div>
 
             {/* ── STAT STRIP ── */}
-            <div className="grid grid-cols-3 mb-8" style={{ gap: "clamp(8px, 1.5vw, 16px)", ...fade(0.14) }}>
-              {isStatsLoading ? (
-                [1, 2, 3].map((n) => (
-                  <div key={n} className="rounded-2xl flex items-center animate-pulse"
-                    style={{
-                      background: C.card, border: `1px solid ${C.border}`,
-                      padding: "clamp(12px, 2vw, 20px) clamp(10px, 1.8vw, 18px)",
-                      gap: "clamp(8px, 1.2vw, 14px)",
-                    }}>
-                    <div className="rounded-xl flex-shrink-0"
-                      style={{ background: C.border + "50", width: "clamp(34px, 3.5vw, 44px)", height: "clamp(34px, 3.5vw, 44px)" }} />
-                    <div className="min-w-0 flex flex-col gap-2">
-                      <div className="rounded" style={{ background: C.border + "60", height: 20, width: 40 }} />
-                      <div className="rounded" style={{ background: C.border + "40", height: 10, width: 64 }} />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                [
-                  { icon: "🔥", val: `${streakCount}`,   unit: "Day Streak", color: C.sun,      bg: C.sun + "14" },
-                  { icon: "📚", val: `${totalSessions}`, unit: "Sessions",   color: C.genBlue,  bg: C.genBlue + "12" },
-                  { icon: "⭐", val: `${longestStreak}`, unit: "Best Streak",color: C.edGreen,  bg: C.edGreen + "12" },
-                ].map((s, i) => (
-                  <div key={i} className="rounded-2xl flex items-center"
-                    style={{
-                      background: C.card, border: `1px solid ${C.border}`,
-                      padding: "clamp(12px, 2vw, 20px) clamp(10px, 1.8vw, 18px)",
-                      gap: "clamp(8px, 1.2vw, 14px)",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                    }}>
-                    <div className="rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: s.bg,
-                        width:  "clamp(34px, 3.5vw, 44px)",
-                        height: "clamp(34px, 3.5vw, 44px)",
-                        fontSize: "clamp(15px, 1.8vw, 20px)",
-                      }}>
-                      {s.icon}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-extrabold leading-none"
-                        style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(18px, 2.4vw, 26px)" }}>
-                        {s.val}
-                      </div>
-                      <div className="font-semibold mt-1 whitespace-nowrap"
-                        style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>
-                        {s.unit}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="mb-8" style={{ ...fade(0.14) }}>
+              <StreakStats data={studentStats} isLoading={isStatsLoading} variant="card" />
             </div>
 
             {/* ── CONTINUE LEARNING ── */}
@@ -710,36 +667,30 @@ export function StudentHome() {
                           <span className="font-bold flex-shrink-0" style={{ color: vis.color, fontSize: "clamp(12px, 1.2vw, 14px)" }}>{mastery}%</span>
                         </div>
                         <div className="flex gap-2 w-full mt-2">
-                          <button
+                          <Button
+                            variant="secondary"
+                            fullWidth
                             onClick={() => handleAgentChatClick(agent)}
-                            className="flex-1 rounded-[11px] font-bold cursor-pointer transition-all py-2 text-center"
                             style={{
                               border: `1.5px solid ${vis.color}40`,
                               background: hov ? `${vis.color}10` : "transparent",
                               color: vis.color,
-                              fontFamily: "var(--font-body)",
                               fontSize: "clamp(11px, 1.1vw, 13px)",
                             }}
                           >
                             Chat
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="primary"
+                            fullWidth
                             onClick={() => handleAgentVoiceClick(agent)}
-                            className="flex-1 rounded-[11px] font-bold cursor-pointer transition-all py-2 text-center"
                             style={{
-                              // Primary CTA — always the brand color, never the
-                              // per-subject color (that's what made "Voice" a
-                              // different-colored button on every subject card).
-                              background: STUDENT_COLORS.primary,
-                              color: "white",
-                              border: "none",
-                              fontFamily: "var(--font-body)",
                               fontSize: "clamp(11px, 1.1vw, 13px)",
                               boxShadow: hov ? `0 4px 12px ${STUDENT_COLORS.primary}30` : "none",
                             }}
                           >
                             Voice
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     );
@@ -787,8 +738,8 @@ export function StudentHome() {
                 />
                 
                 {/* Type Filter */}
-                <FilterDropdown 
-                  value={filterType}
+                <FilterDropdown
+                  value={filterType === "All" ? "All Types" : filterType === "Voice" ? "Voice Sessions" : "Chat Sessions"}
                   options={["All Types", "Voice Sessions", "Chat Sessions"]}
                   onChange={v => {
                     if (v === "All Types") setFilterType("All");
@@ -800,8 +751,8 @@ export function StudentHome() {
                 />
 
                 {/* Subject Filter */}
-                <FilterDropdown 
-                  value={filterSubject}
+                <FilterDropdown
+                  value={filterSubject === "All" ? "All Subjects" : filterSubject}
                   options={["All Subjects", ...Object.values(SUBJECTS_VISUAL).map(s => s.label)]}
                   onChange={v => {
                     if (v === "All Subjects") setFilterSubject("All");

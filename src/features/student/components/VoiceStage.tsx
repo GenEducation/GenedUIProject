@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useStudentStore } from "../store/useStudentStore";
 
 interface VoiceStageProps {
@@ -9,10 +9,14 @@ interface VoiceStageProps {
   onTap?: () => void;        // called on click (idle → start session)
   onPressStart?: () => void; // called on press down (muted → PTT start)
   onPressEnd?: () => void;   // called on press up   (muted → PTT end)
+  /** Tutor display name — shown with the orb so voice, chat, and home present
+   * the same companion (previously the orb carried no name/avatar at all). */
+  agentName?: string;
 }
 
-export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd }: VoiceStageProps) {
+export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd, agentName }: VoiceStageProps) {
   const { voiceSessionStatus, isAITyping, isMuted, pttHeld } = useStudentStore();
+  const reduceMotion = useReducedMotion();
   const isSpeaking = isAITyping;
   const phase = isSpeaking ? "speaking" : reactive ? "listening" : "idle";
 
@@ -26,6 +30,14 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd 
 
   return (
     <div className="flex flex-col items-center justify-center w-full">
+      {agentName && (
+        <span
+          className="text-[12px] font-extrabold tracking-wide mb-3"
+          style={{ color: "var(--tutor)", fontFamily: "var(--font-display)" }}
+        >
+          {agentName}
+        </span>
+      )}
       <motion.div
         className={`relative select-none ${isTappable ? "cursor-pointer" : ""}`}
         onClick={onTap}
@@ -52,7 +64,7 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd 
             onTap();
           }
         }}
-        animate={{ scale: pulseScale }}
+        animate={reduceMotion ? undefined : { scale: pulseScale }}
         transition={{ duration: pulseDuration, repeat: Infinity, ease: "easeInOut" }}
         style={{ width: "min(clamp(128px, 22vh, 220px), 60vw)", height: "min(clamp(128px, 22vh, 220px), 60vw)" }}
       >
@@ -67,13 +79,17 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd 
                 : "radial-gradient(circle at 30% 30%, rgba(91,77,199,0.35), rgba(74,144,217,0.15) 60%, transparent 75%)",
             filter: "blur(20px)",
           }}
-          animate={{ opacity: pttHeld ? [0.7, 1, 0.7] : phase === "idle" ? [0.4, 0.6, 0.4] : [0.6, 1, 0.6] }}
+          animate={
+            reduceMotion
+              ? undefined
+              : { opacity: pttHeld ? [0.7, 1, 0.7] : phase === "idle" ? [0.4, 0.6, 0.4] : [0.6, 1, 0.6] }
+          }
           transition={{ duration: pttHeld ? 0.8 : pulseDuration * 1.3, repeat: Infinity, ease: "easeInOut" }}
         />
         {/* Orb */}
         <motion.div
           className="absolute inset-4 rounded-full overflow-hidden"
-          animate={{ scale: pttHeld ? 1.06 : 1 }}
+          animate={reduceMotion ? undefined : { scale: pttHeld ? 1.06 : 1 }}
           transition={{ duration: 0.15, ease: "easeOut" }}
           style={{
             background: pttHeld
@@ -93,7 +109,7 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd 
               background:
                 "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.45), transparent 55%)",
             }}
-            animate={{ rotate: [0, 360] }}
+            animate={reduceMotion ? undefined : { rotate: [0, 360] }}
             transition={{
               duration: phase === "speaking" ? 8 : 20,
               repeat: Infinity,
