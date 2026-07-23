@@ -26,7 +26,7 @@ export function AssertionReasoningQuestion({
             <span className="text-[11px] font-black text-blue-500 uppercase tracking-widest">
               Assertion (A)
             </span>
-            <p className="text-[15px] font-medium text-[#042E5C] mt-1 leading-relaxed">
+            <p className="text-[15px] font-medium text-[var(--primary-ink)] mt-1 leading-relaxed">
               {question.assertion}
             </p>
           </div>
@@ -34,18 +34,18 @@ export function AssertionReasoningQuestion({
             <span className="text-[11px] font-black text-amber-600 uppercase tracking-widest">
               Reason (R)
             </span>
-            <p className="text-[15px] font-medium text-[#042E5C] mt-1 leading-relaxed">
+            <p className="text-[15px] font-medium text-[var(--primary-ink)] mt-1 leading-relaxed">
               {question.reason}
             </p>
           </div>
         </div>
       ) : (
-        <p className="text-[15px] sm:text-[17px] font-medium text-[#042E5C] leading-relaxed whitespace-pre-line">
+        <p className="text-[15px] sm:text-[17px] font-medium text-[var(--primary-ink)] leading-relaxed whitespace-pre-line">
           {question.prompt}
         </p>
       )}
 
-      <p className="text-[13px] font-semibold text-[#042E5C]/60 uppercase tracking-wider">
+      <p className="text-[13px] font-semibold text-[var(--primary-ink)]/60 uppercase tracking-wider">
         Choose the correct option
       </p>
 
@@ -60,13 +60,13 @@ export function AssertionReasoningQuestion({
               onClick={() => !disabled && onSelect(option)}
               className={`w-full p-3 sm:p-4 rounded-xl text-left transition-all border-2 flex items-center gap-3 ${
                 isSelected
-                  ? "bg-[#042E5C]/5 border-[#042E5C] text-[#042E5C]"
-                  : "bg-white border-[#042E5C]/10 text-[#042E5C]/70 hover:border-[#042E5C]/30"
+                  ? "bg-[var(--primary-ink)]/5 border-[var(--primary-ink)] text-[var(--primary-ink)]"
+                  : "bg-white border-[var(--primary-ink)]/10 text-[var(--primary-ink)]/70 hover:border-[var(--primary-ink)]/30"
               } ${disabled ? "cursor-default" : "cursor-pointer"}`}
             >
               <div
                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                  isSelected ? "border-[#042E5C] bg-[#042E5C]" : "border-[#042E5C]/20"
+                  isSelected ? "border-[var(--primary-ink)] bg-[var(--primary-ink)]" : "border-[var(--primary-ink)]/20"
                 }`}
               >
                 {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}

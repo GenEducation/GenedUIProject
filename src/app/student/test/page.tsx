@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, Send, Sparkles, Loader2, ArrowLeft, AlertTriangle } from "lucide-react";
+import { ChevronRight, ChevronLeft, Send, Sparkles, Loader2, ArrowLeft, AlertTriangle, Menu } from "lucide-react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTestStore } from "@/features/student/store/useTestStore";
@@ -58,7 +58,7 @@ function TestPageContent() {
       style={{ width: 38, height: 38, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#042E5C" }}
       title="Open sidebar"
     >
-      ☰
+      <Menu size={16} strokeWidth={1.75} />
     </button>
   );
 

@@ -26,7 +26,7 @@ export function PaperHeader({
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-[#042E5C] to-[#0a4a8a] text-white shadow-xl shadow-[#042E5C]/20"
+      className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-[var(--primary-ink)] to-[#0a4a8a] text-white shadow-xl shadow-[var(--primary-ink)]/20"
     >
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="space-y-2 flex-1 min-w-0">

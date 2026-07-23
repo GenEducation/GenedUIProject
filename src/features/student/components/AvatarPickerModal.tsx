@@ -42,7 +42,7 @@ export function AvatarPickerModal({ isOpen, onClose, selectedId, onSelect }: Ava
         </button>
 
         <div style={{ padding: '32px 24px', textAlign: 'center' }}>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', margin: '0 0 8px 0', fontFamily: "'Nunito',sans-serif" }}>Choose your avatar</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', margin: '0 0 8px 0', fontFamily: "var(--font-display)" }}>Choose your avatar</h2>
           <p style={{ fontSize: 14, color: '#4A5568', margin: '0 0 24px 0', lineHeight: 1.5 }}>
             Pick the picture that shows up on your profile and in the sidebar.
           </p>

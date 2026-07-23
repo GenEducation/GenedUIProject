@@ -57,7 +57,7 @@ export function StepQuestion({
               borderRadius: "14px",
               border: "2px solid rgba(11,36,71,0.10)",
               background: "#FAFBFE",
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "var(--font-body)",
               fontSize: "16px",
               color: "#0B2447",
               resize: "none",
@@ -82,7 +82,7 @@ export function StepQuestion({
                 className="inline-flex items-center gap-1.5 py-3 px-4 rounded-[12px] bg-transparent cursor-pointer transition-all duration-[180ms] hover:border-[rgba(11,36,71,0.25)]"
                 style={{
                   border: "1.5px solid rgba(11,36,71,0.12)",
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontFamily: "var(--font-body)",
                   fontSize: "14px",
                   fontWeight: 600,
                   color: "rgba(11,36,71,0.55)",
@@ -98,7 +98,7 @@ export function StepQuestion({
               style={{
                 background: "#1DB87B",
                 color: "#062417",
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: "var(--font-body)",
               }}
               onMouseEnter={(e) => {
                 if (!e.currentTarget.disabled) {

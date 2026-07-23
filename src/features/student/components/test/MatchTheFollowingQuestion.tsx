@@ -49,13 +49,13 @@ function DraggableOption({
       {...attributes}
       className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 bg-white cursor-grab active:cursor-grabbing transition-all select-none ${
         isDragging
-          ? "border-[#042E5C] shadow-lg scale-105 opacity-80"
-          : "border-[#042E5C]/15 hover:border-[#042E5C]/30 shadow-sm"
+          ? "border-[var(--primary-ink)] shadow-lg scale-105 opacity-80"
+          : "border-[var(--primary-ink)]/15 hover:border-[var(--primary-ink)]/30 shadow-sm"
       }`}
     >
-      <GripVertical size={14} className="text-[#042E5C]/30 shrink-0" />
-      <span className="text-[12px] sm:text-[13px] font-bold text-[#042E5C]/50 shrink-0">{label}.</span>
-      <span className="text-[13px] sm:text-[14px] font-medium text-[#042E5C]">{text}</span>
+      <GripVertical size={14} className="text-[var(--primary-ink)]/30 shrink-0" />
+      <span className="text-[12px] sm:text-[13px] font-bold text-[var(--primary-ink)]/50 shrink-0">{label}.</span>
+      <span className="text-[13px] sm:text-[14px] font-medium text-[var(--primary-ink)]">{text}</span>
     </div>
   );
 }
@@ -80,27 +80,27 @@ function DropZone({
         placedItem
           ? "border-emerald-300 bg-emerald-50/50"
           : isOver
-          ? "border-[#042E5C] bg-[#042E5C]/5"
-          : "border-[#042E5C]/15 bg-slate-50/50"
+          ? "border-[var(--primary-ink)] bg-[var(--primary-ink)]/5"
+          : "border-[var(--primary-ink)]/15 bg-slate-50/50"
       }`}
     >
       {placedItem ? (
         <div className="flex items-center justify-between w-full py-2">
           <div className="flex items-center gap-2">
             <span className="text-[13px] font-bold text-emerald-600">{placedItem.label}.</span>
-            <span className="text-[14px] font-medium text-[#042E5C]">{placedItem.text}</span>
+            <span className="text-[14px] font-medium text-[var(--primary-ink)]">{placedItem.text}</span>
           </div>
           {!disabled && (
             <button
               onClick={onRemove}
-              className="text-[11px] font-bold text-[#042E5C]/40 hover:text-red-500 transition-colors uppercase tracking-wider"
+              className="text-[11px] font-bold text-[var(--primary-ink)]/40 hover:text-red-500 transition-colors uppercase tracking-wider"
             >
               Remove
             </button>
           )}
         </div>
       ) : (
-        <span className="text-[13px] text-[#042E5C]/30 italic">Drop here</span>
+        <span className="text-[13px] text-[var(--primary-ink)]/30 italic">Drop here</span>
       )}
     </div>
   );
@@ -167,7 +167,7 @@ export function MatchTheFollowingQuestion({
 
   return (
     <div className="space-y-5">
-      <p className="text-[15px] sm:text-[17px] font-medium text-[#042E5C] leading-relaxed">
+      <p className="text-[15px] sm:text-[17px] font-medium text-[var(--primary-ink)] leading-relaxed">
         {question.prompt}
       </p>
 
@@ -186,13 +186,13 @@ export function MatchTheFollowingQuestion({
 
             return (
               <div key={left.id} className="flex items-center gap-1.5 sm:gap-3">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#042E5C]/5 flex items-center justify-center shrink-0">
-                  <span className="text-[12px] sm:text-[13px] font-black text-[#042E5C]">{left.id}</span>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[var(--primary-ink)]/5 flex items-center justify-center shrink-0">
+                  <span className="text-[12px] sm:text-[13px] font-black text-[var(--primary-ink)]">{left.id}</span>
                 </div>
-                <div className="flex-1 py-2 px-2 sm:px-3 rounded-xl bg-white border border-[#042E5C]/10 min-w-0">
-                  <span className="text-[13px] sm:text-[14px] font-medium text-[#042E5C]">{left.text}</span>
+                <div className="flex-1 py-2 px-2 sm:px-3 rounded-xl bg-white border border-[var(--primary-ink)]/10 min-w-0">
+                  <span className="text-[13px] sm:text-[14px] font-medium text-[var(--primary-ink)]">{left.text}</span>
                 </div>
-                <span className="text-[#042E5C]/20 font-bold shrink-0">&rarr;</span>
+                <span className="text-[var(--primary-ink)]/20 font-bold shrink-0">&rarr;</span>
                 <div className="flex-1 min-w-[90px]">
                   <DropZone
                     id={`drop-${left.id}`}
@@ -211,7 +211,7 @@ export function MatchTheFollowingQuestion({
         </div>
 
         <div className="pt-4">
-          <span className="text-[11px] font-black text-[#042E5C]/40 uppercase tracking-widest block mb-3">
+          <span className="text-[11px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest block mb-3">
             Drag options to match
           </span>
           <div className="flex flex-wrap gap-2">
@@ -229,10 +229,10 @@ export function MatchTheFollowingQuestion({
 
         <DragOverlay>
           {activeItem ? (
-            <div className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-[#042E5C] bg-white shadow-xl cursor-grabbing">
-              <GripVertical size={14} className="text-[#042E5C]/30" />
-              <span className="text-[13px] font-bold text-[#042E5C]/50">{activeItem.label}.</span>
-              <span className="text-[14px] font-medium text-[#042E5C]">{activeItem.text}</span>
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-[var(--primary-ink)] bg-white shadow-xl cursor-grabbing">
+              <GripVertical size={14} className="text-[var(--primary-ink)]/30" />
+              <span className="text-[13px] font-bold text-[var(--primary-ink)]/50">{activeItem.label}.</span>
+              <span className="text-[14px] font-medium text-[var(--primary-ink)]">{activeItem.text}</span>
             </div>
           ) : null}
         </DragOverlay>

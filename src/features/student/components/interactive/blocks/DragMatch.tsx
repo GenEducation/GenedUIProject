@@ -24,7 +24,7 @@ function Chip({ id, label }: Item) {
         transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
         display: "flex", alignItems: "center", gap: 6, padding: "9px 12px", borderRadius: 12,
         background: "#FFFFFF", border: `1px solid ${isDragging ? COLORS.brand : COLORS.border}`,
-        cursor: "grab", fontSize: 14, fontWeight: 600, color: COLORS.ink, fontFamily: "'DM Sans', sans-serif",
+        cursor: "grab", fontSize: 14, fontWeight: 600, color: COLORS.ink, fontFamily: "var(--font-body)",
         boxShadow: isDragging ? "0 6px 16px rgba(91,77,199,0.2)" : "none", touchAction: "none",
       }}
     >

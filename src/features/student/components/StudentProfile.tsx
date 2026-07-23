@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Play, Pause, Check, ChevronDown, Pencil } from "lucide-react";
+import { Loader2, Play, Pause, Check, ChevronDown, Pencil, Menu } from "lucide-react";
 import { useStudentStore, StudentProfile as StudentProfileType } from "../store/useStudentStore";
 import { getStudentDisplayName } from "../utils/displayName";
+import { STUDENT_COLORS } from "../theme/colors";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { PartnerRequestModal } from "./PartnerRequestModal";
@@ -19,22 +20,23 @@ import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
 import { GeneralOnboardingWizard } from "@/features/onboarding/components/GeneralOnboarding/GeneralOnboardingWizard";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 
-/* ─── Design Tokens (matches home screen) ────────────────────────────────── */
+/* ─── Design Tokens ─── sourced from STUDENT_COLORS (see theme/colors.ts),
+   now byte-for-byte identical to the home screen's palette. */
 const C = {
-  genPurple: "#5B4DC7",
-  genBlue:   "#4A90D9",
-  edGreen:   "#2D6A4F",
-  sparkle:   "#8B7FE8",
-  growth:    "#00B894",
-  sun:       "#F0AD4E",
-  coral:     "#E8635A",
-  sky:       "#5DADE2",
-  text:      "#1A202C",
-  textMid:   "#4A5568",
-  textMuted: "#94A3B8",
-  pageBg:    "#F7F8FC",
-  card:      "#FFFFFF",
-  border:    "#E2E8F0",
+  genPurple: STUDENT_COLORS.tutor,
+  genBlue:   STUDENT_COLORS.tutorSoft,
+  edGreen:   STUDENT_COLORS.subjectMath,
+  sparkle:   STUDENT_COLORS.tutorLight,
+  growth:    STUDENT_COLORS.growth,
+  sun:       STUDENT_COLORS.warn,
+  coral:     STUDENT_COLORS.danger,
+  sky:       STUDENT_COLORS.sky,
+  text:      STUDENT_COLORS.text,
+  textMid:   STUDENT_COLORS.textMid,
+  textMuted: STUDENT_COLORS.textMuted,
+  pageBg:    STUDENT_COLORS.pageBg,
+  card:      STUDENT_COLORS.card,
+  border:    STUDENT_COLORS.border,
 };
 
 /* ─── "How {tutor} sees you" — derived from the profile API ─────────────────
@@ -85,7 +87,7 @@ function SectionHeader({ icon, label }: { icon: string; label: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
       <span style={{ fontSize: 14 }}>{icon}</span>
-      <span style={{ fontSize: 11, fontWeight: 800, color: C.textMuted, textTransform: "uppercase" as const, letterSpacing: 1.5, fontFamily: "'DM Sans',sans-serif" }}>
+      <span style={{ fontSize: 11, fontWeight: 800, color: C.textMuted, textTransform: "uppercase" as const, letterSpacing: 1.5, fontFamily: "var(--font-body)" }}>
         {label}
       </span>
     </div>
@@ -108,7 +110,7 @@ function Badge({ icon, label, earned, color }: { icon: string; label: string; ea
         background: earned ? `${color}15` : "#EDF2F7",
         display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
       }}>{icon}</div>
-      <span style={{ fontSize: 10, fontWeight: 700, color: earned ? color : C.textMuted, textAlign: "center" as const, lineHeight: 1.3, fontFamily: "'DM Sans',sans-serif" }}>{label}</span>
+      <span style={{ fontSize: 10, fontWeight: 700, color: earned ? color : C.textMuted, textAlign: "center" as const, lineHeight: 1.3, fontFamily: "var(--font-body)" }}>{label}</span>
       {!earned && <span style={{ fontSize: 9, color: C.textMuted }}>🔒</span>}
     </div>
   );
@@ -264,7 +266,7 @@ function VoicePicker({
             </button>
 
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "var(--font-body)" }}>
                 {v.label}
                 {isSaved && (
                   <span style={{
@@ -564,8 +566,7 @@ export function StudentProfile() {
   });
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "'DM Sans','Nunito',system-ui,sans-serif", background: C.pageBg }}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "var(--font-body)", background: C.pageBg }}>
 
       {/* Sidebar */}
       <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -579,8 +580,8 @@ export function StudentProfile() {
             <button
               onClick={() => setSidebarOpen(true)}
               style={{ width: 38, height: 38, borderRadius: 10, border: `1px solid ${C.border}`, background: C.pageBg, color: C.textMid, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}
-            >☰</button>
-            <span style={{ flex: 1, textAlign: "center", fontWeight: 800, fontSize: 15, color: C.text, fontFamily: "'Nunito',sans-serif" }}>My Profile</span>
+            ><Menu size={16} strokeWidth={1.75} /></button>
+            <span style={{ flex: 1, textAlign: "center", fontWeight: 800, fontSize: 15, color: C.text, fontFamily: "var(--font-display)" }}>My Profile</span>
             <div style={{ width: 38, flexShrink: 0 }} />
           </div>
         )}
@@ -642,7 +643,7 @@ export function StudentProfile() {
                 </button>
               </div>
 
-              <h1 style={{ fontSize: "clamp(22px,4vw,28px)", fontWeight: 800, color: C.text, marginTop: 14, fontFamily: "'Nunito',sans-serif" }}>{displayName}</h1>
+              <h1 style={{ fontSize: "clamp(22px,4vw,28px)", fontWeight: 800, color: C.text, marginTop: 14, fontFamily: "var(--font-display)" }}>{displayName}</h1>
               <p style={{ fontSize: 13, color: C.textMid, fontWeight: 600, marginTop: 4 }}>{grade} · {board}</p>
               <p style={{ fontSize: 12, color: C.textMuted, fontWeight: 600, marginTop: 4 }}>AI Tutor: {aiTutorName}</p>
 
@@ -654,7 +655,7 @@ export function StudentProfile() {
                   { icon: "⭐", value: longestStreak, label: "longest streak",  color: C.genPurple },
                 ].map((s, i) => (
                   <div key={i} style={{ flex: 1, textAlign: "center", maxWidth: 120 }}>
-                    <div style={{ fontSize: "clamp(18px,3vw,22px)", fontWeight: 800, color: s.color, fontFamily: "'Nunito',sans-serif" }}>{s.icon} {s.value}</div>
+                    <div style={{ fontSize: "clamp(18px,3vw,22px)", fontWeight: 800, color: s.color, fontFamily: "var(--font-display)" }}>{s.icon} {s.value}</div>
                     <div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase" as const, letterSpacing: 1, marginTop: 2 }}>{s.label}</div>
                   </div>
                 ))}
@@ -665,7 +666,7 @@ export function StudentProfile() {
             <div style={{ background: `linear-gradient(135deg, ${C.genPurple}06, ${C.genBlue}06)`, borderRadius: 24, padding: "22px 24px", border: `1px solid ${C.genPurple}12`, marginBottom: 16, ...fade(0.14) }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
                 <span style={{ fontSize: 15 }}>🧠</span>
-                <span style={{ fontSize: 11, fontWeight: 800, color: C.genPurple, textTransform: "uppercase" as const, letterSpacing: 1.2, fontFamily: "'DM Sans',sans-serif" }}>{`How ${aiTutorName} Sees You`}</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: C.genPurple, textTransform: "uppercase" as const, letterSpacing: 1.2, fontFamily: "var(--font-body)" }}>{`How ${aiTutorName} Sees You`}</span>
               </div>
               {onboardingLoading ? (
                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
@@ -686,7 +687,7 @@ export function StudentProfile() {
                       <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 14px", background: "white", borderRadius: 14, border: `1px solid ${C.border}` }}>
                         <span style={{ fontSize: 18, flexShrink: 0 }}>{t.icon}</span>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>{t.title}</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "var(--font-body)" }}>{t.title}</div>
                           <div style={{ fontSize: 11, color: C.textMid, marginTop: 2, lineHeight: 1.5 }}>{t.description}</div>
                         </div>
                       </div>
@@ -704,7 +705,7 @@ export function StudentProfile() {
                     style={{
                       padding: "10px 20px", borderRadius: 12, border: "none",
                       background: C.genPurple, color: "white", fontSize: 13, fontWeight: 700,
-                      fontFamily: "'Nunito',sans-serif", cursor: "pointer",
+                      fontFamily: "var(--font-display)", cursor: "pointer",
                       boxShadow: `0 4px 14px ${C.genPurple}40`,
                     }}
                   >
@@ -731,14 +732,14 @@ export function StudentProfile() {
                   flex: 1,
                   fontSize: 13, fontWeight: 800, color: C.textMuted,
                   textTransform: "uppercase" as const, letterSpacing: 1.4,
-                  fontFamily: "'DM Sans',sans-serif",
+                  fontFamily: "var(--font-body)",
                 }}>
                   Tutor Voice
                 </span>
                 {savedVoice && (
                   <span style={{
                     fontSize: 14, fontWeight: 700, color: C.genPurple,
-                    fontFamily: "'DM Sans',sans-serif",
+                    fontFamily: "var(--font-body)",
                   }}>
                     {savedVoice}
                   </span>
@@ -806,7 +807,7 @@ export function StudentProfile() {
                       display: "flex", alignItems: "center", gap: 14, padding: "14px 16px",
                       background: `${C.edGreen}06`, borderRadius: 16, border: `1px solid ${C.edGreen}15`,
                     }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 14, background: `${C.edGreen}12`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: C.edGreen, fontFamily: "'Nunito',sans-serif", flexShrink: 0 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 14, background: `${C.edGreen}12`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: C.edGreen, fontFamily: "var(--font-display)", flexShrink: 0 }}>
                         {(partner.organization ?? "PT").substring(0, 2).toUpperCase()}
                       </div>
                       <div>
@@ -835,7 +836,7 @@ export function StudentProfile() {
                       border: `1.5px solid ${C.border}`, background: C.pageBg,
                       fontSize: 12, fontWeight: 600, color: C.textMid,
                       outline: "none", cursor: "pointer", appearance: "none" as const,
-                      fontFamily: "'DM Sans',sans-serif",
+                      fontFamily: "var(--font-body)",
                     }}
                   >
                     <option value="" disabled>Connect to a school...</option>
@@ -880,7 +881,7 @@ export function StudentProfile() {
                   style={{
                     flex: 1, minWidth: 0, padding: "10px 14px", borderRadius: 12,
                     border: `1.5px solid ${C.border}`, fontSize: 12, fontWeight: 500,
-                    outline: "none", fontFamily: "'DM Sans',sans-serif", background: C.pageBg,
+                    outline: "none", fontFamily: "var(--font-body)", background: C.pageBg,
                   }}
                 />
                 <button
@@ -943,7 +944,7 @@ export function StudentProfile() {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 14, background: C.pageBg, border: `1px solid ${C.border}` }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span style={{ fontSize: 16 }}>🎙️</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>Voice Activation</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "var(--font-body)" }}>Voice Activation</span>
                     </div>
                     
                     <div className="inline-flex p-1 rounded-lg bg-white border border-[#E2E8F0] shadow-sm">
@@ -951,8 +952,8 @@ export function StudentProfile() {
                         onClick={() => setListenMode("continuous")}
                         className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                           voicePrefs.listenMode === "continuous"
-                            ? "bg-[#5B4DC7] text-white shadow"
-                            : "text-[#94A3B8] hover:text-[#042E5C]"
+                            ? "bg-[var(--tutor)] text-white shadow"
+                            : "text-[#94A3B8] hover:text-[var(--primary-ink)]"
                         }`}
                       >
                         Continuous
@@ -961,8 +962,8 @@ export function StudentProfile() {
                         onClick={() => setListenMode("ptt")}
                         className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                           voicePrefs.listenMode === "ptt"
-                            ? "bg-[#5B4DC7] text-white shadow"
-                            : "text-[#94A3B8] hover:text-[#042E5C]"
+                            ? "bg-[var(--tutor)] text-white shadow"
+                            : "text-[#94A3B8] hover:text-[var(--primary-ink)]"
                         }`}
                       >
                         Push to talk
@@ -975,7 +976,7 @@ export function StudentProfile() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 14, background: C.pageBg, border: `1px solid ${C.border}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <span style={{ fontSize: 16 }}>⌨️</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>PTT Hotkey</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "var(--font-body)" }}>PTT Hotkey</span>
                       </div>
                       <PttHotkeyConfig compact={true} />
                     </div>
@@ -990,7 +991,7 @@ export function StudentProfile() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 14, background: C.pageBg, border: `1px solid ${C.border}` }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <span style={{ fontSize: 16 }}>🗣️</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "'DM Sans',sans-serif" }}>Preferred Language</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "var(--font-body)" }}>Preferred Language</span>
                       </div>
 
                       {isLanguageLoading ? (
@@ -1012,7 +1013,7 @@ export function StudentProfile() {
                               cursor: "pointer",
                               outline: "none",
                               appearance: "none",
-                              fontFamily: "'DM Sans',sans-serif"
+                              fontFamily: "var(--font-body)"
                             }}
                           >
                             <option value="en">English (English)</option>
@@ -1044,7 +1045,7 @@ export function StudentProfile() {
                 {/* Logout */}
                 <button
                   onClick={logoutStudent}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 14, border: "1.5px solid #FEE2E2", background: "#FEF2F2", color: "#EF4444", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 14, border: "1.5px solid #FEE2E2", background: "#FEF2F2", color: "#EF4444", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "var(--font-body)" }}
                 >
                   🚪 Logout
                 </button>

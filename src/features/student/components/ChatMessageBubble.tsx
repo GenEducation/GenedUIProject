@@ -194,7 +194,7 @@ export const ChatMessageBubble = React.memo(
         {!isUser && (
           <div className="relative flex-shrink-0 mt-0.5">
             {isStreaming && (
-              <div className="absolute -inset-[3px] rounded-full border-[2px] border-transparent border-t-[#5B4DC7] border-r-[#5B4DC7]/20 animate-spin" style={{ animationDuration: '1s' }} />
+              <div className="absolute -inset-[3px] rounded-full border-[2px] border-transparent border-t-[var(--tutor)] border-r-[var(--tutor)]/20 animate-spin" style={{ animationDuration: '1s' }} />
             )}
             <div className="rounded-full overflow-hidden relative z-10 bg-white" style={{ border: "1px solid #E2E8F0", width: "clamp(32px, 8vw, 40px)", height: "clamp(32px, 8vw, 40px)" }}>
               <Image src="/Favicon1.jpg" alt="AI Agent" width={40} height={40} className="object-cover w-full h-full" />
@@ -211,7 +211,7 @@ export const ChatMessageBubble = React.memo(
                 borderRadius: "1.75rem",
                 borderTopRightRadius: isUser ? 6 : undefined,
                 borderTopLeftRadius: !isUser ? 6 : undefined,
-                background: isUser ? "#5B4DC7" : "#FFFFFF",
+                background: isUser ? "var(--tutor)" : "#FFFFFF",
                 color: isUser ? "#FFFFFF" : "#1A202C",
                 border: isUser ? "none" : "1px solid #E2E8F0",
                 boxShadow: isUser ? "0 2px 10px rgba(91,77,199,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
@@ -255,7 +255,7 @@ export const ChatMessageBubble = React.memo(
               <button
                 onClick={handleCopy}
                 style={{ width: 28, height: 28, borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8" }}
-                className="transition-all hover:bg-[#F7F8FC] hover:text-[#5B4DC7]"
+                className="transition-all hover:bg-[#F7F8FC] hover:text-[var(--tutor)]"
               >
                 {copied ? <Check size={14} className="text-[#00B894]" /> : <Copy size={14} />}
               </button>
@@ -278,7 +278,7 @@ export const ChatMessageBubble = React.memo(
                 <button
                   onClick={handleCopy}
                   style={{ width: 32, height: 32, borderRadius: 10, background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", transition: "all 0.2s" }}
-                  className="hover:bg-[#F7F8FC] hover:text-[#5B4DC7]"
+                  className="hover:bg-[#F7F8FC] hover:text-[var(--tutor)]"
                 >
                   {copied ? <Check size={15} className="text-[#00B894]" /> : <Copy size={15} />}
                 </button>
@@ -297,13 +297,13 @@ export const ChatMessageBubble = React.memo(
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: speakState === "speaking" ? "#5B4DC7" : "#94A3B8",
+                    color: speakState === "speaking" ? "var(--tutor)" : "#94A3B8",
                     transition: "all 0.2s",
                   }}
-                  className="hover:bg-[#F7F8FC] hover:text-[#5B4DC7]"
+                  className="hover:bg-[#F7F8FC] hover:text-[var(--tutor)]"
                 >
                   {speakState === "loading" ? (
-                    <Loader2 size={15} className="animate-spin text-[#5B4DC7]" />
+                    <Loader2 size={15} className="animate-spin text-[var(--tutor)]" />
                   ) : speakState === "speaking" ? (
                     <VolumeX size={15} />
                   ) : (

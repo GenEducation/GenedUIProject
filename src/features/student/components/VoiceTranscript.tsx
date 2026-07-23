@@ -34,7 +34,7 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
           <div className="flex flex-col gap-5">
             {messages.map((m) => {
               const label = m.sender === "user" ? "You" : agentName;
-              const color = m.sender === "user" ? "#042E5C" : "#5B4DC7";
+              const color = m.sender === "user" ? "var(--primary-ink)" : "var(--tutor)";
               const text = (m.text || "").trim();
               const hasElements = m.elements && m.elements.length > 0;
               // History messages carry the transcript as interleaved text *elements*

@@ -18,7 +18,7 @@ export function SessionStartingOverlay() {
       <div className="flex flex-col items-center gap-4">
         <div
           className="w-10 h-10 border-4 rounded-full animate-spin"
-          style={{ borderColor: "#E2E8F0", borderTopColor: "#5B4DC7" }}
+          style={{ borderColor: "#E2E8F0", borderTopColor: "var(--tutor)" }}
         />
         <p
           style={{

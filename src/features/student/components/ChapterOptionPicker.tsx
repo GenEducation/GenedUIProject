@@ -19,7 +19,7 @@ interface ParsedOption {
 }
 
 // Brand tokens (kept consistent with ChatMessageBubble / StudentChatMain).
-const PURPLE = "#5B4DC7";
+const PURPLE = "var(--tutor)";
 const SOFT = "#EDE9FE";
 const TEXT = "#1A202C";
 const MUTED = "#94A3B8";
@@ -50,7 +50,7 @@ function NumberBadge({ num, active, small }: { num: string; active?: boolean; sm
         fontWeight: 800,
         fontSize: small ? 11 : 13,
         flexShrink: 0,
-        fontFamily: "'Nunito', sans-serif",
+        fontFamily: "var(--font-display)",
         transition: "all 0.15s",
       }}
     >
@@ -84,7 +84,7 @@ export function ChapterOptionPicker({ options, onSelect }: ChapterOptionPickerPr
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Type a chapter name or number…"
             aria-label="Search chapters"
-            style={{ border: "none", outline: "none", flex: 1, fontSize: 13.5, fontFamily: "'DM Sans', sans-serif", color: TEXT, background: "transparent" }}
+            style={{ border: "none", outline: "none", flex: 1, fontSize: 13.5, fontFamily: "var(--font-body)", color: TEXT, background: "transparent" }}
           />
         </div>
         <div className="max-h-[320px] overflow-y-auto">
@@ -105,10 +105,10 @@ export function ChapterOptionPicker({ options, onSelect }: ChapterOptionPickerPr
                 onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = SOFT; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
               >
-                <span style={{ fontSize: 11, fontWeight: 700, color: MUTED, fontFamily: "'Nunito', sans-serif", width: 22, flexShrink: 0 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: MUTED, fontFamily: "var(--font-display)", width: 22, flexShrink: 0 }}>
                   {o.num ?? ""}
                 </span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT, fontFamily: "'DM Sans', sans-serif" }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: TEXT, fontFamily: "var(--font-body)" }}>
                   {o.title}
                 </span>
               </motion.button>
@@ -135,7 +135,7 @@ export function ChapterOptionPicker({ options, onSelect }: ChapterOptionPickerPr
           onMouseLeave={(e) => { const t = e.currentTarget as HTMLButtonElement; t.style.borderColor = BORDER; t.style.background = "#FFFFFF"; }}
         >
           {o.num !== null && <NumberBadge num={o.num} />}
-          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: TEXT, fontFamily: "'DM Sans', sans-serif" }}>
+          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: TEXT, fontFamily: "var(--font-body)" }}>
             {o.title}
           </span>
           <ChevronRight size={16} style={{ color: "#CBD5E1", flexShrink: 0 }} />

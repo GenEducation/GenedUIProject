@@ -127,11 +127,11 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
     .animate-gradient-text {
       background: linear-gradient(
         to right,
-        #042E5C,
+        var(--primary-ink),
         #03b1ed,
         #00a866,
         #430163,
-        #042E5C
+        var(--primary-ink)
       );
       background-size: 300% auto;
       -webkit-background-clip: text;
@@ -165,7 +165,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             }
           }}
           data-tutorial="hamburger-menu"
-          className="w-10 h-10 rounded-xl bg-[#F4F3EE] flex items-center justify-center text-[#042E5C]/60 hover:text-[#042E5C] transition-all"
+          className="w-10 h-10 rounded-xl bg-[#F4F3EE] flex items-center justify-center text-[var(--primary-ink)]/60 hover:text-[var(--primary-ink)] transition-all"
         >
           <Menu size={20} />
         </button>
@@ -185,7 +185,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight animate-gradient-text">
                 {greeting}, {username}!
               </h1>
-              <p className="text-sm sm:text-base font-bold text-[#042E5C]/50 tracking-tight">
+              <p className="text-sm sm:text-base font-bold text-[var(--primary-ink)]/50 tracking-tight">
                 You&apos;re on a <span className="text-[#00B894] font-extrabold">{studentStats?.currentStreak ?? 0}-day streak</span>. Ready to keep going?
               </p>
             </motion.header>
@@ -226,10 +226,10 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             transition={{ duration: 0.2, delay: 0.1 }}
             className="space-y-3"
           >
-            <h2 className="text-sm font-extrabold text-[#042E5C]/40 uppercase tracking-widest px-2">
+            <h2 className="text-sm font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest px-2">
               Activity
             </h2>
-            <div className="bg-white rounded-2xl p-5 border border-[#042E5C]/5 shadow-sm">
+            <div className="bg-white rounded-2xl p-5 border border-[var(--primary-ink)]/5 shadow-sm">
               <ActivityHeatmap />
             </div>
           </motion.section>
@@ -242,10 +242,10 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             className="space-y-4"
           >
             <div className="flex items-center justify-between px-2">
-              <h2 className="text-sm font-extrabold text-[#042E5C]/40 uppercase tracking-widest">Quick Start</h2>
+              <h2 className="text-sm font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest">Quick Start</h2>
               <button
                 onClick={() => setAgentPickerOpen(true)}
-                className="text-[10px] font-bold text-[#042E5C]/40 hover:text-[#042E5C] uppercase tracking-widest flex items-center gap-1 transition-colors"
+                className="text-[10px] font-bold text-[var(--primary-ink)]/40 hover:text-[var(--primary-ink)] uppercase tracking-widest flex items-center gap-1 transition-colors"
               >
                 All Subjects <ChevronRight size={12} />
               </button>
@@ -253,7 +253,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             <div className="flex flex-wrap gap-3">
               {isAgentsLoading ? (
                 [1, 2, 3].map(n => (
-                  <div key={n} className="h-14 w-52 bg-white/50 rounded-2xl animate-pulse border border-[#042E5C]/5" />
+                  <div key={n} className="h-14 w-52 bg-white/50 rounded-2xl animate-pulse border border-[var(--primary-ink)]/5" />
                 ))
               ) : availableAgents.length > 0 ? (
                 availableAgents.slice(0, 3).map((agent, i) => {
@@ -289,12 +289,12 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                   );
                 })
               ) : (
-                <div className="col-span-full py-10 text-center bg-white/20 rounded-3xl border-2 border-dashed border-[#042E5C]/5 w-full">
+                <div className="col-span-full py-10 text-center bg-white/20 rounded-3xl border-2 border-dashed border-[var(--primary-ink)]/5 w-full">
                   <div className="max-w-xs mx-auto space-y-3">
-                    <Bot size={32} className="mx-auto text-[#042E5C]/20" />
-                    <p className="text-sm font-bold text-[#042E5C]/60">No subjects yet</p>
-                    <p className="text-xs text-[#042E5C]/40 leading-relaxed px-4">
-                      Connect to a school from your <button onClick={() => router.push("/student/profile")} className="underline underline-offset-2 hover:text-[#042E5C]/70 transition-colors">Profile</button> to see your subjects here.
+                    <Bot size={32} className="mx-auto text-[var(--primary-ink)]/20" />
+                    <p className="text-sm font-bold text-[var(--primary-ink)]/60">No subjects yet</p>
+                    <p className="text-xs text-[var(--primary-ink)]/40 leading-relaxed px-4">
+                      Connect to a school from your <button onClick={() => router.push("/student/profile")} className="underline underline-offset-2 hover:text-[var(--primary-ink)]/70 transition-colors">Profile</button> to see your subjects here.
                     </p>
                   </div>
                 </div>
@@ -345,7 +345,7 @@ interface StatCardProps {
 function StatCard({ icon, label, value, accentColor }: StatCardProps) {
   return (
     <div
-      className="bg-white rounded-2xl px-4 py-3 border border-[#042E5C]/5 shadow-sm hover:shadow-md transition-all border-l-4 flex items-center justify-between gap-3"
+      className="bg-white rounded-2xl px-4 py-3 border border-[var(--primary-ink)]/5 shadow-sm hover:shadow-md transition-all border-l-4 flex items-center justify-between gap-3"
       style={{ borderLeftColor: accentColor }}
     >
       <div className="flex items-center gap-3 min-w-0">
@@ -355,9 +355,9 @@ function StatCard({ icon, label, value, accentColor }: StatCardProps) {
         >
           {icon}
         </div>
-        <p className="text-[10px] font-extrabold text-[#042E5C]/40 uppercase tracking-widest leading-none truncate">{label}</p>
+        <p className="text-[10px] font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest leading-none truncate">{label}</p>
       </div>
-      <p className="text-lg sm:text-xl font-extrabold text-[#042E5C] leading-none flex-shrink-0">{value}</p>
+      <p className="text-lg sm:text-xl font-extrabold text-[var(--primary-ink)] leading-none flex-shrink-0">{value}</p>
     </div>
   );
 }
@@ -385,7 +385,7 @@ function HubCard({ title, subtitle, icon, subjectKey, onStartChat, onStartVoice,
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="bg-white px-5 py-4 rounded-2xl border border-[#042E5C]/5 shadow-sm hover:shadow-md hover:border-[#042E5C]/10 transition-all text-left border-l-4 flex flex-col gap-3 flex-1 min-w-full sm:min-w-[280px] max-w-full sm:max-w-[340px]"
+      className="bg-white px-5 py-4 rounded-2xl border border-[var(--primary-ink)]/5 shadow-sm hover:shadow-md hover:border-[var(--primary-ink)]/10 transition-all text-left border-l-4 flex flex-col gap-3 flex-1 min-w-full sm:min-w-[280px] max-w-full sm:max-w-[340px]"
       style={{ borderLeftColor: config?.color ?? "#042E5C20" }}
     >
       <div className="flex items-start gap-3">
@@ -396,15 +396,15 @@ function HubCard({ title, subtitle, icon, subjectKey, onStartChat, onStartVoice,
           {IconComponent ? (
             <IconComponent
               size={20}
-              style={{ "--icon-color": config?.color ?? "#042E5C" } as React.CSSProperties}
+              style={{ "--icon-color": config?.color ?? "var(--primary-ink)" } as React.CSSProperties}
             />
           ) : (
             <span style={{ color: "#042E5C60" }}>{icon}</span>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-[#042E5C] text-sm line-clamp-1">{title}</h3>
-          <p className="text-[10px] font-bold text-[#042E5C]/40 uppercase tracking-widest leading-none mt-1">
+          <h3 className="font-bold text-[var(--primary-ink)] text-sm line-clamp-1">{title}</h3>
+          <p className="text-[10px] font-bold text-[var(--primary-ink)]/40 uppercase tracking-widest leading-none mt-1">
             {isOnboardingComplete ? subtitle : "Complete Onboarding"}
           </p>
         </div>

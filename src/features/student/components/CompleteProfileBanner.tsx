@@ -96,7 +96,7 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
           <X size={18} />
         </button>
 
-        <h3 className="text-lg font-bold text-[#042e5c] mb-1">
+        <h3 className="text-lg font-bold text-[var(--primary-ink)] mb-1">
           Tell us a bit about yourself
         </h3>
         <p className="text-xs text-gray-500 mb-6">
@@ -113,7 +113,7 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
               onChange={(e) => setName(e.target.value)}
               type="text"
               placeholder="What should we call you?"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/10"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/10"
             />
           </div>
 
@@ -127,7 +127,7 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
                 onChange={(e) => setAge(e.target.value)}
                 type="number"
                 placeholder="e.g. 14"
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/10"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/10"
               />
             </div>
             <div>
@@ -139,7 +139,7 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
                 onChange={(e) => setSchoolBoard(e.target.value)}
                 type="text"
                 placeholder="e.g. CBSE"
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/10"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/10"
               />
             </div>
           </div>
@@ -153,7 +153,7 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
               onChange={(e) => setAiName(e.target.value)}
               type="text"
               placeholder="Give your AI tutor a name! (default: Nia)"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/10"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/10"
             />
           </div>
         </div>
@@ -172,7 +172,7 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="flex-1 py-3 rounded-xl bg-[#059F6D] text-sm font-bold text-white shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/30 transition-all active:scale-[0.98] disabled:opacity-60"
+            className="flex-1 py-3 rounded-xl bg-[var(--primary)] text-sm font-bold text-white shadow-lg shadow-[var(--primary)]/20 hover:shadow-xl hover:shadow-[var(--primary)]/30 transition-all active:scale-[0.98] disabled:opacity-60"
           >
             {isSaving ? "Saving..." : "Save"}
           </button>

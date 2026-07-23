@@ -77,7 +77,7 @@ export function SageBubble({
         fontSize: "14.5px",
         lineHeight: 1.5,
         color: "#0B2447",
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        fontFamily: "var(--font-body)",
         cursor: !done ? "pointer" : "default",
       }}
       dangerouslySetInnerHTML={{

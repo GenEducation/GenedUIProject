@@ -2054,17 +2054,15 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
     <div
       className="report-root"
       data-ready={isLoading ? undefined : "true"}
-      style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "Inter, sans-serif" }}
+      style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "var(--font-body)" }}
     >
-      {/* ── FONTS ── */}
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,500&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
-      />
-
       {/* ── PRINT STYLES ── */}
       <style>{`
-        :root {
+        /* Scoped to .report-root, not :root — --font-body/--font-report-display/
+           --font-mono are declared on <body> (same element as next/font's
+           generated font variables), and :root (the ancestor <html>) can't see
+           a descendant's custom properties, which silently invalidated these. */
+        .report-root {
           --navy:#042E5C; --emerald:#059F6D; --bg:#F7F6F2; --border:#E4E1D8; --text:#1B2430; --muted:#6B7280;
           --surface:#ffffff; --surface-2:#FBFAF6; --rule:#EDEAE0;
           --adv-fg:#047857; --adv-bg:#ECFDF5; --adv-bd:#A7F3D0;
@@ -2072,7 +2070,7 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
           --app-fg:#B45309; --app-bg:#FFFBEB; --app-bd:#FDE68A;
           --dev-fg:#BE123C; --dev-bg:#FFF1F2; --dev-bd:#FECDD3;
           --r:10px; --r-sm:6px; --r-lg:16px;
-          --sans:'Inter',sans-serif; --display:'Source Serif 4',Charter,Georgia,serif; --mono:'JetBrains Mono',monospace;
+          --sans: var(--font-body); --display: var(--font-report-display); --mono: var(--font-mono);
           --shadow: 0 1px 2px rgba(4,46,92,.04), 0 8px 24px -12px rgba(4,46,92,.10);
         }
         .report-root { background: var(--bg); font-family: var(--sans); color: var(--text); font-size: 15px; line-height: 1.55; }

@@ -6,7 +6,7 @@ import { StudentReportCard } from "@/components/report-card/StudentReportCard";
 import { StudentHomeSidebar } from "@/features/student/components/StudentHomeSidebar";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { AuthGuard } from "@/components/auth/AuthGuard";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Menu } from "lucide-react";
 
 export default function ReportCardPage() {
   // useSearchParams() must be read inside a Suspense boundary or Next.js
@@ -162,7 +162,7 @@ function ReportCardPageInner() {
               style={{ background: "rgba(0,0,0,0.05)", color: "#444", fontSize: 16 }}
               title="Open sidebar"
             >
-              ☰
+              <Menu size={16} strokeWidth={1.75} />
             </button>
           )}
 
@@ -175,7 +175,7 @@ function ReportCardPageInner() {
               fontSize: 13,
               fontWeight: 500,
               padding: "6px 10px",
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "var(--font-body)",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = "rgba(0,0,0,0.05)";
@@ -190,7 +190,7 @@ function ReportCardPageInner() {
             <span>Back to Home</span>
           </button>
 
-          <div style={{ marginLeft: "auto", fontSize: 13, color: "#999", fontFamily: "'DM Sans', sans-serif" }}>
+          <div style={{ marginLeft: "auto", fontSize: 13, color: "#999", fontFamily: "var(--font-body)" }}>
             Report Card
           </div>
         </div>

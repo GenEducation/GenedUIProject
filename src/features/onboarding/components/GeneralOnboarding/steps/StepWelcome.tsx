@@ -38,7 +38,7 @@ export function StepWelcome({ name, aiName, onNext }: StepWelcomeProps) {
             style={{
               background: "#1DB87B",
               color: "#062417",
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "var(--font-body)",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = "#34D399";

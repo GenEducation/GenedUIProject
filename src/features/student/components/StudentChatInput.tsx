@@ -107,7 +107,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
       )}
 
       <div
-        className="flex items-end gap-2 sm:gap-3 transition-all relative bg-white border border-[#E2E8F0] rounded-2xl focus-within:border-[#5B4DC7]/40 focus-within:shadow-sm"
+        className="flex items-end gap-2 sm:gap-3 transition-all relative bg-white border border-[#E2E8F0] rounded-2xl focus-within:border-[var(--tutor)]/40 focus-within:shadow-sm"
         style={{ padding: "10px clamp(12px, 3vw, 20px)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
       >
         <motion.textarea
@@ -153,7 +153,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
             className={`w-10 h-10 rounded-full flex-shrink-0 text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm ${
               isAITyping
                 ? "bg-red-500 hover:bg-red-600"
-                : "bg-[#5B4DC7] hover:bg-[#4A3DB5]"
+                : "bg-[var(--tutor)] hover:bg-[#4A3DB5]"
             }`}
           >
             <AnimatePresence mode="wait" initial={false}>

@@ -5,18 +5,19 @@ import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { getStudentDisplayName } from "../utils/displayName";
-import { LogOut } from "lucide-react";
+import { STUDENT_COLORS } from "../theme/colors";
+import { LogOut, Menu } from "lucide-react";
 import { UpgradeButton } from "@/features/billing/UpgradeButton";
 
-/* ═══ TOKENS (from design) ═══ */
+/* ═══ TOKENS ═══ — sourced from STUDENT_COLORS (see theme/colors.ts) */
 const C = {
-  genPurple: "#5B4DC7",
-  genBlue: "#4A90D9",
-  edGreen: "#2D6A4F",
-  sparkle: "#8B7FE8",
-  sidebarBg: "#1C2333",
-  sidebarText: "#c8d1dc",
-  sidebarActive: "#FFFFFF",
+  genPurple: STUDENT_COLORS.tutor,
+  genBlue: STUDENT_COLORS.tutorSoft,
+  edGreen: STUDENT_COLORS.subjectMath,
+  sparkle: STUDENT_COLORS.tutorLight,
+  sidebarBg: STUDENT_COLORS.sidebarBg,
+  sidebarText: STUDENT_COLORS.sidebarText,
+  sidebarActive: STUDENT_COLORS.sidebarActive,
 };
 
 /* ═══ GENED LOGO ═══ */
@@ -55,7 +56,7 @@ function NavItem({
         color: active ? C.sidebarActive : C.sidebarText,
         fontSize: 14,
         fontWeight: active ? 700 : 500,
-        fontFamily: "'DM Sans', sans-serif",
+        fontFamily: "var(--font-body)",
       }}
     >
       <span className="text-lg w-[22px] text-center">{icon}</span>
@@ -92,7 +93,9 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
     if (pathname?.startsWith("/student/schedule")) return "schedule";
     if (pathname?.startsWith("/student/report-card")) return "report";
     if (pathname?.startsWith("/student/profile")) return "me";
-    return "home";
+    // Chat and Voice aren't nav items — no highlight, rather than the old
+    // fallback of always highlighting "Home" while in a voice session.
+    return null;
   };
 
   const activeNav = getActiveNav();
@@ -163,7 +166,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
               }}
               title="Close sidebar"
             >
-              ☰
+              <Menu size={16} strokeWidth={1.75} />
             </button>
           </div>
 

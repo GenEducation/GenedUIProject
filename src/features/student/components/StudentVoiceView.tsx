@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, BookOpen, Mic, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpen, Mic, Sparkles, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { VoiceStage } from "./VoiceStage";
@@ -176,18 +176,18 @@ export function StudentVoiceView() {
   const voiceContent = (
     <div className="h-full flex flex-col font-sans overflow-hidden" style={bgStyle}>
       {/* Header */}
-      <header className={`flex items-center justify-between px-4 py-4 border-b border-[#042E5C]/8 bg-white/50 backdrop-blur-sm transition-all ${!sidebarOpen ? "pl-16 sm:pl-8" : ""}`}>
+      <header className={`flex items-center justify-between px-4 py-4 border-b border-[var(--primary-ink)]/8 bg-white/50 backdrop-blur-sm transition-all ${!sidebarOpen ? "pl-16 sm:pl-8" : ""}`}>
         <button
           onClick={handleEnd}
           title="Back to subjects"
-          className="flex items-center justify-center rounded-[10px] text-[#042E5C]/60 hover:text-[#042E5C] hover:bg-[#042E5C]/5 transition-colors shrink-0"
+          className="flex items-center justify-center rounded-[10px] text-[var(--primary-ink)]/60 hover:text-[var(--primary-ink)] hover:bg-[var(--primary-ink)]/5 transition-colors shrink-0"
           style={{ width: 38, height: 38 }}
         >
           <ArrowLeft size={18} />
         </button>
-        <div className="text-[13px] font-bold text-[#042E5C] text-right">
+        <div className="text-[13px] font-bold text-[var(--primary-ink)] text-right">
           <span className="capitalize">{subjectLabel}</span>
-          <span className="text-[#042E5C]/40 font-medium">{gradeLabel}</span>
+          <span className="text-[var(--primary-ink)]/40 font-medium">{gradeLabel}</span>
         </div>
       </header>
 
@@ -217,12 +217,12 @@ export function StudentVoiceView() {
             style={{
               padding: "5px 14px",
               borderRadius: 20,
-              border: isPdfViewerOpen ? "1.5px solid #5B4DC7" : "1.5px solid #D6D3F0",
-              background: isPdfViewerOpen ? "#5B4DC7" : "#EDE9FE",
-              color: isPdfViewerOpen ? "#FFFFFF" : "#5B4DC7",
+              border: isPdfViewerOpen ? "1.5px solid var(--tutor)" : "1.5px solid #D6D3F0",
+              background: isPdfViewerOpen ? "var(--tutor)" : "#EDE9FE",
+              color: isPdfViewerOpen ? "#FFFFFF" : "var(--tutor)",
               fontSize: 12,
               fontWeight: 700,
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "var(--font-body)",
               cursor: isPdfLoading ? "default" : "pointer",
               opacity: isPdfLoading ? 0.7 : 1,
             }}
@@ -233,7 +233,7 @@ export function StudentVoiceView() {
                 width: 11,
                 height: 11,
                 border: `2px solid ${isPdfViewerOpen ? "rgba(255,255,255,0.4)" : "#C4B8F5"}`,
-                borderTopColor: isPdfViewerOpen ? "#fff" : "#5B4DC7",
+                borderTopColor: isPdfViewerOpen ? "#fff" : "var(--tutor)",
                 borderRadius: "50%",
                 animation: "spin 0.7s linear infinite",
               }} />
@@ -274,13 +274,13 @@ export function StudentVoiceView() {
 
         {showCompleted ? (
           <div className="flex flex-col items-center gap-3">
-            <p className="text-[13px] font-bold uppercase tracking-widest text-[#042E5C]/50">
+            <p className="text-[13px] font-bold uppercase tracking-widest text-[var(--primary-ink)]/50">
               Session Completed
             </p>
             <button
               onClick={handleStartNew}
               className="flex items-center gap-2 px-6 h-12 rounded-full font-bold text-[14px] text-white transition-all shadow-lg"
-              style={{ background: "linear-gradient(135deg, #5B4DC7, #4A90D9)" }}
+              style={{ background: "linear-gradient(135deg, var(--tutor), var(--tutor-soft))" }}
             >
               <Sparkles size={16} />
               Start New Session
@@ -302,7 +302,7 @@ export function StudentVoiceView() {
               onClick={handleResume}
               className="flex items-center gap-2.5 px-7 h-13 sm:h-14 rounded-full font-bold text-[15px] text-white transition-all select-none"
               style={{
-                background: "linear-gradient(135deg, #5B4DC7, #4A90D9)",
+                background: "linear-gradient(135deg, var(--tutor), var(--tutor-soft))",
                 boxShadow: "0 8px 24px rgba(91,77,199,0.40)",
                 paddingTop: 14,
                 paddingBottom: 14,
@@ -313,7 +313,7 @@ export function StudentVoiceView() {
             </button>
             <button
               onClick={handleEnd}
-              className="text-[12px] font-semibold text-[#042E5C]/40 hover:text-[#042E5C]/70 transition-colors"
+              className="text-[12px] font-semibold text-[var(--primary-ink)]/40 hover:text-[var(--primary-ink)]/70 transition-colors"
             >
               Back to subjects
             </button>
@@ -374,10 +374,10 @@ export function StudentVoiceView() {
         <button
           onClick={() => setSidebarOpen(true)}
           className="absolute top-4 left-4 z-20 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
-          style={{ width: 38, height: 38, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#042E5C" }}
+          style={{ width: 38, height: 38, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "var(--primary-ink)" }}
           title="Open sidebar"
         >
-          ☰
+          <Menu size={16} strokeWidth={1.75} />
         </button>
       )}
 

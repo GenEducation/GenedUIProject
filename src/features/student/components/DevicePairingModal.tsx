@@ -109,7 +109,7 @@ export function DevicePairingModal({ isOpen, onClose }: DevicePairingModalProps)
                     <CheckCircle size={32} />
                   </div>
                   <div>
-                    <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', margin: '0 0 8px 0', fontFamily: "'Nunito',sans-serif" }}>Device Paired!</h2>
+                    <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', margin: '0 0 8px 0', fontFamily: "var(--font-display)" }}>Device Paired!</h2>
                     <p style={{ fontSize: 14, color: '#4A5568', margin: 0, lineHeight: 1.5 }}>It'll be ready in a few seconds.</p>
                   </div>
                 </>
@@ -119,7 +119,7 @@ export function DevicePairingModal({ isOpen, onClose }: DevicePairingModalProps)
                     <AlertTriangle size={32} />
                   </div>
                   <div>
-                    <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', margin: '0 0 8px 0', fontFamily: "'Nunito',sans-serif" }}>Almost there...</h2>
+                    <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', margin: '0 0 8px 0', fontFamily: "var(--font-display)" }}>Almost there...</h2>
                     <p style={{ fontSize: 14, color: '#4A5568', margin: 0, lineHeight: 1.5 }}>
                       Pairing was approved, but we couldn't wake the device. Please restart your device and try again with the new code.
                     </p>
@@ -130,7 +130,7 @@ export function DevicePairingModal({ isOpen, onClose }: DevicePairingModalProps)
                 onClick={handleClose}
                 style={{
                   marginTop: 8, width: '100%', padding: '14px', borderRadius: 12,
-                  background: '#5B4DC7', color: 'white', border: 'none',
+                  background: 'var(--tutor)', color: 'white', border: 'none',
                   fontWeight: 700, fontSize: 14, cursor: 'pointer',
                 }}
               >
@@ -140,7 +140,7 @@ export function DevicePairingModal({ isOpen, onClose }: DevicePairingModalProps)
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div>
-                <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', margin: '0 0 8px 0', fontFamily: "'Nunito',sans-serif" }}>Pair your Deskbot</h2>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', margin: '0 0 8px 0', fontFamily: "var(--font-display)" }}>Pair your Deskbot</h2>
                 <p style={{ fontSize: 14, color: '#4A5568', margin: 0, lineHeight: 1.5 }}>
                   Please enter the 6-character code shown on your device screen.
                 </p>
@@ -166,7 +166,7 @@ export function DevicePairingModal({ isOpen, onClose }: DevicePairingModalProps)
                 disabled={code.length < 6 || loading}
                 style={{
                   marginTop: 8, width: '100%', padding: '14px', borderRadius: 12,
-                  background: code.length === 6 && !loading ? '#5B4DC7' : '#E2E8F0',
+                  background: code.length === 6 && !loading ? 'var(--tutor)' : '#E2E8F0',
                   color: code.length === 6 && !loading ? 'white' : '#94A3B8',
                   border: 'none', fontWeight: 700, fontSize: 14,
                   cursor: code.length === 6 && !loading ? 'pointer' : 'not-allowed',

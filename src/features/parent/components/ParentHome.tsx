@@ -171,7 +171,7 @@ export function ParentHome() {
   const selectedStudent = linkedStudents.find(s => s.student_id === selectedStudentId);
 
   return (
-    <div className="flex h-screen bg-[#FBFBFA] overflow-hidden font-sans relative">
+    <div className="portal-legacy-type flex h-screen bg-[#FBFBFA] overflow-hidden font-sans relative">
       {/* -- MOBILE SIDEBAR OVERLAY ------------------------------------------ */}
       <AnimatePresence>
         {isSidebarOpen && (

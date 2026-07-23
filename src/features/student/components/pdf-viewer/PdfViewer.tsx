@@ -212,12 +212,12 @@ export function PdfViewer({ pdfUrl }: PdfViewerProps) {
             width: 28,
             height: 28,
             border: "3px solid #EDE9FE",
-            borderTopColor: "#5B4DC7",
+            borderTopColor: "var(--tutor)",
             borderRadius: "50%",
             animation: "spin 0.8s linear infinite",
           }}
         />
-        <p style={{ fontSize: 13, color: "#64748B", fontFamily: "'DM Sans', sans-serif", margin: 0 }}>
+        <p style={{ fontSize: 13, color: "#64748B", fontFamily: "var(--font-body)", margin: 0 }}>
           Loading textbook…
         </p>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -229,7 +229,7 @@ export function PdfViewer({ pdfUrl }: PdfViewerProps) {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 gap-3" style={{ background: "#F7F8FC" }}>
-        <p style={{ fontSize: 13, color: "#EF4444", fontFamily: "'DM Sans', sans-serif", margin: 0 }}>
+        <p style={{ fontSize: 13, color: "#EF4444", fontFamily: "var(--font-body)", margin: 0 }}>
           {error}
         </p>
         <button
@@ -237,13 +237,13 @@ export function PdfViewer({ pdfUrl }: PdfViewerProps) {
           style={{
             fontSize: 12,
             fontWeight: 600,
-            color: "#5B4DC7",
+            color: "var(--tutor)",
             background: "#EDE9FE",
             border: "none",
             borderRadius: 8,
             padding: "6px 14px",
             cursor: "pointer",
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "var(--font-body)",
           }}
         >
           Retry

@@ -69,29 +69,29 @@ export function AgentPickerModal() {
         className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[520px] bg-white rounded-3xl shadow-2xl shadow-black/20 z-50 overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-7 pt-7 pb-5 border-b border-[#042E5C]/8">
+        <div className="flex items-center justify-between px-7 pt-7 pb-5 border-b border-[var(--primary-ink)]/8">
           <div>
-            <h2 className="text-xl font-extrabold text-[#042E5C]">All Subjects</h2>
-            <p className="text-sm text-[#042E5C]/50 mt-0.5">Select what you'd like to learn today</p>
+            <h2 className="text-xl font-extrabold text-[var(--primary-ink)]">All Subjects</h2>
+            <p className="text-sm text-[var(--primary-ink)]/50 mt-0.5">Select what you'd like to learn today</p>
           </div>
           <button
             onClick={() => setAgentPickerOpen(false)}
-            className="w-9 h-9 rounded-xl bg-[#F4F3EE] flex items-center justify-center text-[#042E5C]/50 hover:text-[#042E5C] hover:bg-[#042E5C]/8 transition-all"
+            className="w-9 h-9 rounded-xl bg-[#F4F3EE] flex items-center justify-center text-[var(--primary-ink)]/50 hover:text-[var(--primary-ink)] hover:bg-[var(--primary-ink)]/8 transition-all"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Search */}
-        <div className="px-7 py-4 border-b border-[#042E5C]/8">
+        <div className="px-7 py-4 border-b border-[var(--primary-ink)]/8">
           <div className="flex items-center gap-3 bg-[#F4F3EE] rounded-2xl px-4 py-3">
-            <Search size={16} className="text-[#042E5C]/40 flex-shrink-0" />
+            <Search size={16} className="text-[var(--primary-ink)]/40 flex-shrink-0" />
             <input
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by subject or grade..."
-              className="flex-1 bg-transparent text-sm text-[#042E5C] placeholder:text-[#042E5C]/35 focus:outline-none"
+              className="flex-1 bg-transparent text-sm text-[var(--primary-ink)] placeholder:text-[var(--primary-ink)]/35 focus:outline-none"
             />
           </div>
         </div>
@@ -99,7 +99,7 @@ export function AgentPickerModal() {
         {/* Subject list */}
         <div className="overflow-y-auto max-h-[60vh] p-4 space-y-1.5">
           {(!Array.isArray(filtered) || filtered.length === 0) ? (
-            <div className="py-10 text-center text-sm text-[#042E5C]/40 px-8 leading-relaxed">
+            <div className="py-10 text-center text-sm text-[var(--primary-ink)]/40 px-8 leading-relaxed">
               {query ? "No subjects match your search." : "No subjects available yet."}
             </div>
           ) : (
@@ -124,15 +124,15 @@ export function AgentPickerModal() {
                     {IconComp ? (
                       <IconComp
                         size={20}
-                        style={{ "--icon-color": config?.color ?? "#042E5C" } as React.CSSProperties}
+                        style={{ "--icon-color": config?.color ?? "var(--primary-ink)" } as React.CSSProperties}
                       />
                     ) : (
-                      <span className="text-[#042E5C]/40 text-sm font-bold">?</span>
+                      <span className="text-[var(--primary-ink)]/40 text-sm font-bold">?</span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-[#042E5C] text-sm">{agent.subject}</p>
-                    <p className="text-xs text-[#042E5C]/45 mt-1">Grade {agent.grade}</p>
+                    <p className="font-bold text-[var(--primary-ink)] text-sm">{agent.subject}</p>
+                    <p className="text-xs text-[var(--primary-ink)]/45 mt-1">Grade {agent.grade}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
@@ -144,7 +144,7 @@ export function AgentPickerModal() {
                           router.push(`/student/chat/${sessionId}`);
                         });
                       }}
-                      className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[#042E5C]/8 text-[#042E5C] hover:bg-[#042E5C]/15 transition-all cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[var(--primary-ink)]/8 text-[var(--primary-ink)] hover:bg-[var(--primary-ink)]/15 transition-all cursor-pointer"
                     >
                       Chat
                     </button>
@@ -155,7 +155,7 @@ export function AgentPickerModal() {
                         startVoiceSession();
                         router.push(`/student/voice?agent=${agent.agent_id}`);
                       }}
-                      className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[#5B4DC7] text-white hover:bg-[#5B4DC7]/90 shadow-sm transition-all cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[var(--tutor)] text-white hover:bg-[var(--tutor)]/90 shadow-sm transition-all cursor-pointer"
                     >
                       Voice
                     </button>
@@ -167,8 +167,8 @@ export function AgentPickerModal() {
         </div>
 
         {/* Footer */}
-        <div className="px-7 py-4 border-t border-[#042E5C]/8 bg-[#F4F3EE]/50">
-          <p className="text-xs text-[#042E5C]/40 text-center">
+        <div className="px-7 py-4 border-t border-[var(--primary-ink)]/8 bg-[#F4F3EE]/50">
+          <p className="text-xs text-[var(--primary-ink)]/40 text-center">
             {filtered.length} subject{filtered.length !== 1 ? "s" : ""} available
           </p>
         </div>

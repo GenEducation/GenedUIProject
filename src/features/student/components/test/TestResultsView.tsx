@@ -44,17 +44,17 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
           {verdict.label}
         </div>
 
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#042E5C]">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[var(--primary-ink)]">
           Overall Score: {Math.round(result.overall_score * 100)}%
         </h2>
 
         {hasMarksData && (
-          <p className="text-lg font-bold text-[#042E5C]/70">
+          <p className="text-lg font-bold text-[var(--primary-ink)]/70">
             {obtainedMarks} / {totalMarks} marks
           </p>
         )}
 
-        <p className="text-[#042E5C]/60 max-w-md mx-auto">
+        <p className="text-[var(--primary-ink)]/60 max-w-md mx-auto">
           Great effort on the {test.document_title} test! Here&apos;s a breakdown of your
           performance by section.
         </p>
@@ -67,31 +67,31 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: idx * 0.1 }}
-            className="p-3 sm:p-5 bg-white rounded-2xl border border-[#042E5C]/10 shadow-sm"
+            className="p-3 sm:p-5 bg-white rounded-2xl border border-[var(--primary-ink)]/10 shadow-sm"
           >
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[#042E5C]/5 flex items-center justify-center text-[#042E5C] flex-shrink-0">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)] flex-shrink-0">
                   <BookOpen size={20} className="sm:hidden" />
                   <BookOpen size={24} className="hidden sm:block" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-[#042E5C] text-[14px] sm:text-[16px]">{sectionTitle}</h4>
-                  <p className="text-[11px] sm:text-[12px] text-[#042E5C]/50 uppercase tracking-widest font-bold">
+                  <h4 className="font-bold text-[var(--primary-ink)] text-[14px] sm:text-[16px]">{sectionTitle}</h4>
+                  <p className="text-[11px] sm:text-[12px] text-[var(--primary-ink)]/50 uppercase tracking-widest font-bold">
                     Verdict: {data.verdict}
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-lg sm:text-xl font-black text-[#042E5C]">
+                <div className="text-lg sm:text-xl font-black text-[var(--primary-ink)]">
                   {Math.round(data.actual_score * 100)}%
                 </div>
                 {data.total_marks != null && (
-                  <div className="text-[13px] font-bold text-[#042E5C]/60">
+                  <div className="text-[13px] font-bold text-[var(--primary-ink)]/60">
                     {data.marks_obtained} / {data.total_marks}
                   </div>
                 )}
-                <div className="text-[11px] text-[#042E5C]/40">
+                <div className="text-[11px] text-[var(--primary-ink)]/40">
                   Target: {Math.round(data.expected_score * 100)}%
                 </div>
               </div>
@@ -118,7 +118,7 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
       </div>
 
       <div className="space-y-4">
-        <h3 className="font-bold text-[#042E5C] text-lg flex items-center gap-2">
+        <h3 className="font-bold text-[var(--primary-ink)] text-lg flex items-center gap-2">
           Detailed Feedback
         </h3>
 
@@ -134,15 +134,15 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
             return (
               <div
                 key={idx}
-                className="p-3 sm:p-4 rounded-xl bg-[#F8F9FA] border border-[#042E5C]/5 space-y-2"
+                className="p-3 sm:p-4 rounded-xl bg-[#F8F9FA] border border-[var(--primary-ink)]/5 space-y-2"
               >
                 <div className="flex justify-between items-start gap-2 sm:gap-4">
-                  <p className="text-[14px] font-medium text-[#042E5C]/80 flex-1">
+                  <p className="text-[14px] font-medium text-[var(--primary-ink)]/80 flex-1">
                     {question.prompt}
                   </p>
                   <div className="flex items-center gap-2 shrink-0">
                     {hasGradedMarks && (
-                      <span className="text-[12px] font-bold text-[#042E5C]/50">
+                      <span className="text-[12px] font-bold text-[var(--primary-ink)]/50">
                         {graded.marks_awarded} / {graded.marks}
                       </span>
                     )}
@@ -159,7 +159,7 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
                     </div>
                   </div>
                 </div>
-                <p className="text-[13px] text-[#042E5C]/60 italic bg-white/50 p-2 rounded-lg border border-dashed border-[#042E5C]/10">
+                <p className="text-[13px] text-[var(--primary-ink)]/60 italic bg-white/50 p-2 rounded-lg border border-dashed border-[var(--primary-ink)]/10">
                   AI Review: {graded.rationale}
                 </p>
               </div>
@@ -170,7 +170,7 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
 
       <button
         onClick={onClose}
-        className="w-full py-4 bg-[#042E5C] text-white rounded-2xl font-bold text-[16px] shadow-lg shadow-[#042E5C]/20 flex items-center justify-center gap-2 hover:bg-[#064282] transition-all"
+        className="w-full py-4 bg-[var(--primary-ink)] text-white rounded-2xl font-bold text-[16px] shadow-lg shadow-[var(--primary-ink)]/20 flex items-center justify-center gap-2 hover:bg-[#064282] transition-all"
       >
         Continue Learning
         <ArrowRight size={20} />

@@ -38,10 +38,10 @@ export function PushToTalkButton() {
           width: "clamp(96px, 28vw, 132px)",
           height: "clamp(96px, 28vw, 132px)",
           background: pttHeld
-            ? "linear-gradient(135deg, #5B4DC7, #4A90D9)"
+            ? "linear-gradient(135deg, var(--tutor), var(--tutor-soft))"
             : disabled
               ? "rgba(91,77,199,0.18)"
-              : "linear-gradient(135deg, #6D5FD3, #5B4DC7)",
+              : "linear-gradient(135deg, #6D5FD3, var(--tutor))",
           color: "white",
           boxShadow: pttHeld
             ? "0 0 0 12px rgba(91,77,199,0.18), 0 18px 50px rgba(91,77,199,0.45)"
@@ -64,7 +64,7 @@ export function PushToTalkButton() {
           />
         )}
       </motion.button>
-      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#5B4DC7]/80 mt-1">
+      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--tutor)]/80 mt-1">
         {disabled
           ? voiceSessionStatus === "connecting"
             ? "Connecting…"
