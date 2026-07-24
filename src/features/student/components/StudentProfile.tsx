@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Play, Pause, Check, ChevronDown, Pencil, Menu, Lock, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useStudentStore, StudentProfile as StudentProfileType } from "../store/useStudentStore";
+import { useSidebarStore } from "../store/useSidebarStore";
 import { getStudentDisplayName, titleCase } from "../utils/displayName";
 import { STUDENT_COLORS } from "../theme/colors";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
@@ -345,7 +346,7 @@ export function StudentProfile() {
   const { completeAction } = useTutorialStore();
   const { studentTests, loadStudentTests } = useTestStore();
 
-  const [sidebarOpen,      setSidebarOpen]      = useState(true);
+  const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const avatarColor = C.sun;
   const [soundEnabled,     setSoundEnabled]      = useState(true);
   const [parentInput,      setParentInput]       = useState("");
@@ -378,7 +379,7 @@ export function StudentProfile() {
   const checkDNAStatus = useOnboardingStore((s) => s.checkDNAStatus);
 
   /* responsive sidebar */
-  useDebouncedResize(() => setSidebarOpen(window.innerWidth >= 1024));
+  useDebouncedResize(() => applyResponsive(window.innerWidth >= 1024));
 
   useEffect(() => {
     setMounted(true);
@@ -604,7 +605,7 @@ export function StudentProfile() {
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "var(--font-body)", background: C.pageBg }}>
 
       {/* Sidebar */}
-      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
 
       {/* Main content */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>

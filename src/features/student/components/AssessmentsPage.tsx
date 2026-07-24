@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useTestStore } from "@/features/student/store/useTestStore";
+import { useSidebarStore } from "@/features/student/store/useSidebarStore";
 import {
   ClipboardCheck,
   ChevronRight,
@@ -42,15 +43,15 @@ export function AssessmentsPage() {
   const [isLoadingAll, setIsLoadingAll] = useState(false);
   const [isStartingTest, setIsStartingTest] = useState(false);
   const testNavTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
 
   /* responsive sidebar */
   useEffect(() => {
-    const handle = () => setSidebarOpen(window.innerWidth >= 1024);
+    const handle = () => applyResponsive(window.innerWidth >= 1024);
     handle();
     window.addEventListener("resize", handle);
     return () => window.removeEventListener("resize", handle);
-  }, []);
+  }, [applyResponsive]);
 
   useEffect(() => {
     return () => { if (testNavTimerRef.current) clearTimeout(testNavTimerRef.current); };
@@ -151,7 +152,7 @@ export function AssessmentsPage() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
       {!sidebarOpen && (
         <button
           onClick={() => setSidebarOpen(true)}

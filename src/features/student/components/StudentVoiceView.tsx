@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, BookOpen, Mic, Sparkles, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
+import { useSidebarStore } from "../store/useSidebarStore";
 import { VoiceStage } from "./VoiceStage";
 import { VoiceTranscript } from "./VoiceTranscript";
 import { VoiceControls } from "./VoiceControls";
@@ -57,19 +58,15 @@ export function StudentVoiceView() {
     clearPdfError,
   } = useStudentStore();
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const [isMobile, setIsMobile] = useState(false);
-  // Once the student explicitly opens/closes the sidebar, stop overriding
-  // that choice on every window resize — it used to reopen a sidebar the
-  // student had just closed.
-  const sidebarManuallySet = useRef(false);
-  const openSidebar = () => { sidebarManuallySet.current = true; setSidebarOpen(true); };
-  const closeSidebar = () => { sidebarManuallySet.current = true; setSidebarOpen(false); };
+  const openSidebar = () => setSidebarOpen(true);
+  const closeSidebar = () => setSidebarOpen(false);
 
   /* responsive sidebar */
   useEffect(() => {
     const handle = () => {
-      if (!sidebarManuallySet.current) setSidebarOpen(window.innerWidth >= 1024);
+      applyResponsive(window.innerWidth >= 1024);
       setIsMobile(window.innerWidth < 768);
     };
     handle();
@@ -420,7 +417,7 @@ export function StudentVoiceView() {
 
   return (
     <div className="h-screen flex font-sans overflow-hidden relative">
-      <StudentHomeSidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      <StudentHomeSidebar isOpen={sidebarOpen} onClose={closeSidebar} onOpen={openSidebar} />
       {/* The sidebar-open toggle now lives in the voice header itself
           (matches the chat header) instead of floating outside it. */}
       {mainArea}

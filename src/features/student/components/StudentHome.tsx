@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Menu } from "lucide-react";
 import Image from "next/image";
 import { useStudentStore, sessionRoutePath, isVoiceSession, type AgentItem } from "../store/useStudentStore";
+import { useSidebarStore } from "../store/useSidebarStore";
 import { getStudentDisplayName } from "../utils/displayName";
 import { STUDENT_COLORS } from "../theme/colors";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
@@ -247,7 +248,7 @@ export function StudentHome() {
   const { checkDNAStatus } = useOnboardingStore();
   const { hasEnded, hasDismissedCelebration, dismissCelebration } = useTutorialStore();
 
-  const [sidebarOpen,    setSidebarOpen]    = useState(true);
+  const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const [showConfetti,   setShowConfetti]   = useState(false);
   const [aprilState,     setAprilState]     = useState<AprilState>("idle");
   const [hoveredAgent,   setHoveredAgent]   = useState<string | null>(null);
@@ -266,7 +267,7 @@ export function StudentHome() {
   const [filterSubject, setFilterSubject] = useState<string>("All");
 
   /* responsive sidebar */
-  useDebouncedResize(() => setSidebarOpen(window.innerWidth >= 1024));
+  useDebouncedResize(() => applyResponsive(window.innerWidth >= 1024));
 
   /* data fetch */
   useEffect(() => {
@@ -412,7 +413,7 @@ export function StudentHome() {
       <SessionStartingOverlay />
 
       {/* ── SIDEBAR ── */}
-      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
 
       {/* ── MAIN ── */}
       <main className="flex-1 overflow-hidden flex flex-col relative min-w-0">
@@ -421,7 +422,7 @@ export function StudentHome() {
         {/* Mobile / collapsed topbar */}
         {!sidebarOpen && (
           <div
-            className="flex items-center flex-shrink-0 border-b relative z-20"
+            className="flex md:hidden items-center flex-shrink-0 border-b relative z-20"
             style={{ padding: "12px 16px", borderColor: C.border, background: C.card }}
           >
             {/* hamburger on left */}
@@ -486,31 +487,29 @@ export function StudentHome() {
                   What would you like to learn today?
                 </p>
               </div>
-              {sidebarOpen && (
-                <div className="flex-shrink-0 flex items-center gap-3 ml-4">
-                  {studentProfile?.user_id && (
-                    <NotificationBell userId={studentProfile.user_id} align="right" />
+              <div className={`flex-shrink-0 items-center gap-3 ml-4 ${sidebarOpen ? "flex" : "hidden md:flex"}`}>
+                {studentProfile?.user_id && (
+                  <NotificationBell userId={studentProfile.user_id} align="right" />
+                )}
+                <div
+                  className="cursor-pointer"
+                  onClick={() => router.push("/student/profile")}
+                  style={{
+                    width: 56, height: 56, borderRadius: "50%", overflow: "hidden",
+                    border: "3px solid white", boxShadow: `0 8px 24px ${C.sun}30`,
+                  }}
+                >
+                  {avatarId === "graduate-girl" ? (
+                    <img
+                      src="/avatars/girl-graduate.png"
+                      alt="Student avatar"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                  ) : (
+                    <StudentAvatarIllustration bg={C.sun} />
                   )}
-                  <div
-                    className="cursor-pointer"
-                    onClick={() => router.push("/student/profile")}
-                    style={{
-                      width: 56, height: 56, borderRadius: "50%", overflow: "hidden",
-                      border: "3px solid white", boxShadow: `0 8px 24px ${C.sun}30`,
-                    }}
-                  >
-                    {avatarId === "graduate-girl" ? (
-                      <img
-                        src="/avatars/girl-graduate.png"
-                        alt="Student avatar"
-                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                      />
-                    ) : (
-                      <StudentAvatarIllustration bg={C.sun} />
-                    )}
-                  </div>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* ── STAT STRIP ── */}

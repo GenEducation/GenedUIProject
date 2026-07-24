@@ -76,11 +76,15 @@ function NavItem({
 interface StudentHomeSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpen: () => void;
 }
+
+const RAIL_W = 72;
 
 export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
   isOpen,
   onClose,
+  onOpen,
 }: StudentHomeSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -119,8 +123,16 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
     if (window.innerWidth < 1024) onClose();
   };
 
-  const sidebarW = isOpen ? 260 : 0;
+  const sidebarW = isOpen ? 260 : RAIL_W;
   const mobileWidth = Math.min(260, 300);
+
+  const navItems = [
+    { icon: "🏠", label: STRINGS.nav.home, key: "home", path: "/student" },
+    { icon: "🎯", label: STRINGS.nav.practice, key: "practice", path: "/student/assessments" },
+    { icon: "🗓️", label: STRINGS.nav.schedule, key: "schedule", path: "/student/schedule" },
+    { icon: "📋", label: STRINGS.nav.reportCard, key: "report", path: "/student/report-card" },
+    { icon: "😊", label: STRINGS.nav.me, key: "me", path: "/student/profile" },
+  ];
 
   return (
     <>
@@ -174,11 +186,15 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
 
           {/* Nav */}
           <nav className="flex flex-col gap-1">
-            <NavItem icon="🏠" label={STRINGS.nav.home} active={activeNav === "home"} onClick={() => navigate("/student")} />
-            <NavItem icon="🎯" label={STRINGS.nav.practice} active={activeNav === "practice"} onClick={() => navigate("/student/assessments")} />
-            <NavItem icon="🗓️" label={STRINGS.nav.schedule} active={activeNav === "schedule"} onClick={() => navigate("/student/schedule")} />
-            <NavItem icon="📋" label={STRINGS.nav.reportCard} active={activeNav === "report"} onClick={() => navigate("/student/report-card")} />
-            <NavItem icon="😊" label={STRINGS.nav.me} active={activeNav === "me"} onClick={() => navigate("/student/profile")} />
+            {navItems.map((item) => (
+              <NavItem
+                key={item.key}
+                icon={item.icon}
+                label={item.label}
+                active={activeNav === item.key}
+                onClick={() => navigate(item.path)}
+              />
+            ))}
           </nav>
 
           {/* Student info */}
@@ -270,6 +286,84 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
             >
               <LogOut size={15} />
               <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!isOpen && !isMobile && (
+        <div className="flex flex-col items-center h-full" style={{ padding: "16px 8px" }}>
+          {/* Expand button */}
+          <button
+            onClick={onOpen}
+            className="flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-all mb-7"
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              color: C.sidebarText,
+              fontSize: 16,
+            }}
+            title="Open sidebar"
+          >
+            <Menu size={16} strokeWidth={1.75} />
+          </button>
+
+          {/* Nav icons */}
+          <nav className="flex flex-col gap-1 items-center">
+            {navItems.map((item) => {
+              const active = activeNav === item.key;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => navigate(item.path)}
+                  title={item.label}
+                  className="flex items-center justify-center rounded-xl border-none cursor-pointer transition-all"
+                  style={{
+                    width: 44,
+                    height: 44,
+                    background: active ? "rgba(255,255,255,0.1)" : "transparent",
+                    color: active ? C.sidebarActive : C.sidebarText,
+                    fontSize: 18,
+                  }}
+                >
+                  {item.icon}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Avatar + logout */}
+          <div className="mt-auto flex flex-col items-center gap-2 pt-3.5" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            <button
+              onClick={() => navigate("/student/profile")}
+              title={getStudentDisplayName(studentProfile)}
+              className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border-none cursor-pointer p-0"
+              style={{ border: "1.5px solid rgba(255,255,255,0.12)" }}
+            >
+              {avatarId === "graduate-girl" ? (
+                <img
+                  src="/avatars/girl-graduate.png"
+                  alt="Student avatar"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+              ) : (
+                <StudentAvatarIllustration bg={C.genPurple} />
+              )}
+            </button>
+            <button
+              onClick={logoutStudent}
+              title="Logout"
+              className="flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-all"
+              style={{ background: "transparent", color: C.sidebarText }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(232,99,90,0.12)";
+                e.currentTarget.style.color = "#E8635A";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = C.sidebarText;
+              }}
+            >
+              <LogOut size={15} />
             </button>
           </div>
         </div>

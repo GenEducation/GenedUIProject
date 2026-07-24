@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useScheduleStore } from "@/features/student/store/useScheduleStore";
 import { useTestStore } from "@/features/student/store/useTestStore";
+import { useSidebarStore } from "@/features/student/store/useSidebarStore";
 import {
   CalendarClock,
   ArrowLeft,
@@ -60,7 +61,7 @@ export function SchedulePage() {
   const { sessions, isLoading, isBooking, bookError, loadScheduledSessions, bookSession, isRescheduling, rescheduleError, rescheduleSession } = useScheduleStore();
   const { loadTest } = useTestStore();
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const [sessionType, setSessionType] = useState<SessionType>("TEST");
   const [subject, setSubject] = useState("");
   const [topic, setTopic] = useState("");
@@ -72,11 +73,11 @@ export function SchedulePage() {
   const [rescheduleConfirmation, setRescheduleConfirmation] = useState(false);
 
   useEffect(() => {
-    const handle = () => setSidebarOpen(window.innerWidth >= 1024);
+    const handle = () => applyResponsive(window.innerWidth >= 1024);
     handle();
     window.addEventListener("resize", handle);
     return () => window.removeEventListener("resize", handle);
-  }, []);
+  }, [applyResponsive]);
 
   useEffect(() => {
     if (studentProfile?.user_id) {
@@ -279,7 +280,7 @@ export function SchedulePage() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
       {!sidebarOpen && (
         <button
           onClick={() => setSidebarOpen(true)}
