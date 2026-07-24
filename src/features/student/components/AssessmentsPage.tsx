@@ -165,42 +165,39 @@ export function AssessmentsPage() {
       )}
     <div className="flex-1 min-w-0 flex flex-col h-full bg-[#F4F3EE]/30 overflow-hidden font-sans">
       {/* Header Section */}
-      <header className="px-8 py-6 flex flex-col gap-6 bg-white border-b border-[var(--primary-ink)]/5 sticky top-0 z-20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <button 
-              onClick={() => window.location.href = '/student'}
-              className="w-10 h-10 rounded-full bg-[var(--primary-ink)]/5 text-[var(--primary-ink)] flex items-center justify-center hover:bg-[var(--primary-ink)]/10 transition-all"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]">
-                  <ClipboardCheck size={16} />
-                </div>
-                <h1 className="text-xl font-black text-[var(--primary-ink)] tracking-tight">{STRINGS.practice.pageTitle}</h1>
-              </div>
+      <header className="px-4 sm:px-8 py-6 flex items-center gap-3 sm:gap-6 bg-white border-b border-[var(--primary-ink)]/5 sticky top-0 z-20">
+        <button
+          onClick={() => window.location.href = '/student'}
+          className="w-10 h-10 rounded-full bg-[var(--primary-ink)]/5 text-[var(--primary-ink)] flex items-center justify-center hover:bg-[var(--primary-ink)]/10 transition-all"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]">
+              <ClipboardCheck size={16} />
             </div>
+            <h1 className="text-xl font-black text-[var(--primary-ink)] tracking-tight">{STRINGS.practice.pageTitle}</h1>
           </div>
-        </div>
-
-        <div className="flex items-center justify-center gap-4">
-          <div className="w-full max-w-md relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--primary-ink)]/30 group-focus-within:text-[var(--primary-ink)] transition-colors" size={18} />
-            <input 
-              type="text"
-              placeholder="Search chapters or subjects..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#F4F3EE]/50 border border-[var(--primary-ink)]/5 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--primary-ink)]/10 focus:bg-white transition-all"
-            />
-          </div>
-          <button className="w-12 h-12 rounded-2xl bg-white border border-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]/40 hover:text-[var(--primary-ink)] transition-all">
-            <Filter size={18} />
-          </button>
         </div>
       </header>
+
+      {/* Search + Filter Section */}
+      <div className="px-8 py-6 flex items-center justify-center gap-4">
+        <div className="w-full max-w-md relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--primary-ink)]/30 group-focus-within:text-[var(--primary-ink)] transition-colors" size={18} />
+          <input
+            type="text"
+            placeholder="Search chapters or subjects..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-[#F4F3EE]/50 border border-[var(--primary-ink)]/5 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--primary-ink)]/10 focus:bg-white transition-all"
+          />
+        </div>
+        <button className="w-12 h-12 rounded-2xl bg-white border border-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]/40 hover:text-[var(--primary-ink)] transition-all">
+          <Filter size={18} />
+        </button>
+      </div>
 
       {/* Chapters Grid */}
       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">

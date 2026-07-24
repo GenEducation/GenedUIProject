@@ -17,6 +17,7 @@ const C = {
   genBlue: STUDENT_COLORS.tutorSoft,
   edGreen: STUDENT_COLORS.subjectMath,
   sparkle: STUDENT_COLORS.tutorLight,
+  sun: STUDENT_COLORS.warn,
   sidebarBg: STUDENT_COLORS.sidebarBg,
   sidebarText: STUDENT_COLORS.sidebarText,
   sidebarActive: STUDENT_COLORS.sidebarActive,
@@ -211,7 +212,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                     style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                   />
                 ) : (
-                  <StudentAvatarIllustration bg={C.genPurple} />
+                  <StudentAvatarIllustration bg={C.sun} />
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -346,7 +347,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 />
               ) : (
-                <StudentAvatarIllustration bg={C.genPurple} />
+                <StudentAvatarIllustration bg={C.sun} />
               )}
             </button>
             <button

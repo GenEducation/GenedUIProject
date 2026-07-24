@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Menu } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Menu } from "lucide-react";
 import Image from "next/image";
 import { useStudentStore, sessionRoutePath, isVoiceSession, type AgentItem } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
@@ -259,7 +259,10 @@ export function StudentHome() {
   const [mounted,        setMounted]        = useState(true);
   const [onboardingModal,setOnboardingModal]= useState<{ originalSubject: string; grade: number } | null>(null);
   const [showAllSessions,setShowAllSessions]= useState(false);
-  const [showAllSubjects,setShowAllSubjects]= useState(false);
+  const subjectsScrollRef = useRef<HTMLDivElement>(null);
+  const scrollSubjects = (dir: "left" | "right") => {
+    subjectsScrollRef.current?.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" });
+  };
 
   // Filters
   const [filterDate, setFilterDate] = useState<string>("All Time");
@@ -344,10 +347,10 @@ export function StudentHome() {
   /* Continue learning = most recent session (index 0) */
   const continueSession = allSessions[0] ?? null;
 
-  /* Session list shown below = index 1..3 (next 3), expand to all */
+  /* Session list shown below = index 1..3 (next 3) by default, expand to all */
   const previewSessions = allSessions.slice(1, 4);
   const displayedSessions = showAllSessions ? allSessions.slice(1) : previewSessions;
-  const hasMore = allSessions.length > 4;
+  const hasMoreSessions = allSessions.length > 4;
 
   const getGreeting = () => {
     const h = new Date().getHours();
@@ -590,21 +593,13 @@ export function StudentHome() {
                 <h2 className="font-bold uppercase m-0" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
                   My subjects
                 </h2>
-                {agents.length > 2 && (
-                  <button
-                    onClick={() => setShowAllSubjects(v => !v)}
-                    className="font-semibold cursor-pointer bg-transparent border-none"
-                    style={{ color: C.genPurple, fontSize: "clamp(11px, 1vw, 13px)" }}>
-                    {showAllSubjects ? "Show less ↑" : `See all (${agents.length}) →`}
-                  </button>
-                )}
               </div>
 
               {isAgentsLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "clamp(10px, 1.5vw, 16px)" }}>
+                <div className="flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)" }}>
                   {[1, 2].map((n) => (
-                    <div key={n} className="rounded-[18px] animate-pulse"
-                      style={{ background: C.card, border: `1px solid ${C.border}`, padding: "clamp(16px, 2vw, 22px)" }}>
+                    <div key={n} className="rounded-[18px] animate-pulse flex-shrink-0"
+                      style={{ background: C.card, border: `1px solid ${C.border}`, padding: "clamp(16px, 2vw, 22px)", width: "clamp(280px, calc(50% - 8px), 460px)" }}>
                       <div className="flex items-center mb-4" style={{ gap: "clamp(10px, 1.2vw, 14px)" }}>
                         <div className="rounded-[14px]" style={{ background: C.border + "50", width: "clamp(40px, 4vw, 48px)", height: "clamp(40px, 4vw, 48px)" }} />
                         <div className="flex flex-col gap-2">
@@ -624,8 +619,37 @@ export function StudentHome() {
                   ))}
                 </div>
               ) : agents.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "clamp(10px, 1.5vw, 16px)" }}>
-                  {(showAllSubjects ? agents : agents.slice(0, 2)).map((agent) => {
+                <div className="relative">
+                  {agents.length > 2 && (
+                    <>
+                      <button
+                        onClick={() => scrollSubjects("left")}
+                        aria-label="Scroll subjects left"
+                        className="hidden md:flex items-center justify-center absolute z-10 rounded-full cursor-pointer"
+                        style={{
+                          left: -16, top: "50%", transform: "translateY(-50%)",
+                          width: 34, height: 34, background: C.card, border: `1px solid ${C.border}`,
+                          color: C.textMid, boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                        }}
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      <button
+                        onClick={() => scrollSubjects("right")}
+                        aria-label="Scroll subjects right"
+                        className="hidden md:flex items-center justify-center absolute z-10 rounded-full cursor-pointer"
+                        style={{
+                          right: -16, top: "50%", transform: "translateY(-50%)",
+                          width: 34, height: 34, background: C.card, border: `1px solid ${C.border}`,
+                          color: C.textMid, boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                        }}
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                    </>
+                  )}
+                  <div ref={subjectsScrollRef} className="flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)" }}>
+                    {agents.map((agent) => {
                     const vis = agent.vis;
                     const hov = hoveredAgent === agent.agent_id;
                     const mastery = typeof agent.subject_coverage_percentage === "number"
@@ -635,11 +659,12 @@ export function StudentHome() {
                       <div key={agent.agent_id}
                         onMouseEnter={() => setHoveredAgent(agent.agent_id)}
                         onMouseLeave={() => setHoveredAgent(null)}
-                        className="rounded-[18px] cursor-pointer"
+                        className="rounded-[18px] cursor-pointer flex-shrink-0"
                         style={{
                           background: C.card,
                           border: `1px solid ${hov ? vis.color + "60" : C.border}`,
                           padding: "clamp(16px, 2vw, 22px)",
+                          width: "clamp(280px, calc(50% - 8px), 460px)",
                           transform: hov ? "translateY(-3px)" : "none",
                           boxShadow: hov ? `0 10px 30px ${vis.color}18` : "0 1px 5px rgba(0,0,0,0.04)",
                           transition: "all 0.25s ease",
@@ -693,7 +718,8 @@ export function StudentHome() {
                         </div>
                       </div>
                     );
-                  })}
+                    })}
+                  </div>
                 </div>
               ) : (
                 <div className="rounded-2xl border-2 border-dashed p-10 text-center" style={{ borderColor: C.border }}>
@@ -715,62 +741,65 @@ export function StudentHome() {
                 <h2 className="font-bold uppercase m-0 flex items-center gap-2" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
                   Recent sessions
                 </h2>
-                {hasMore && (
-                  <button
-                    onClick={() => setShowAllSessions(v => !v)}
-                    className="font-semibold cursor-pointer bg-transparent border-none"
-                    style={{ color: C.genPurple, fontSize: "clamp(11px, 1vw, 13px)" }}>
-                    {showAllSessions ? "Show less ↑" : "See all →"}
-                  </button>
-                )}
               </div>
 
               {/* Filters UI */}
-              <div className="flex flex-wrap items-center gap-3 mb-4">
-                {/* Date Filter */}
-                <FilterDropdown 
-                  value={filterDate}
-                  options={["All Time", "Today", "This Week", "This Month"]}
-                  onChange={setFilterDate}
-                  activeColor={C.genPurple}
-                  defaultColor={C.textMid}
-                />
-                
-                {/* Type Filter */}
-                <FilterDropdown
-                  value={filterType === "All" ? "All Types" : filterType === "Voice" ? "Voice Sessions" : "Chat Sessions"}
-                  options={["All Types", "Voice Sessions", "Chat Sessions"]}
-                  onChange={v => {
-                    if (v === "All Types") setFilterType("All");
-                    else if (v === "Voice Sessions") setFilterType("Voice");
-                    else if (v === "Chat Sessions") setFilterType("Chat");
-                  }}
-                  activeColor={C.genPurple}
-                  defaultColor={C.textMid}
-                />
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Date Filter */}
+                  <FilterDropdown
+                    value={filterDate}
+                    options={["All Time", "Today", "This Week", "This Month"]}
+                    onChange={setFilterDate}
+                    activeColor={C.genPurple}
+                    defaultColor={C.textMid}
+                  />
 
-                {/* Subject Filter */}
-                <FilterDropdown
-                  value={filterSubject === "All" ? "All Subjects" : filterSubject}
-                  options={["All Subjects", ...Object.values(SUBJECTS_VISUAL).map(s => s.label)]}
-                  onChange={v => {
-                    if (v === "All Subjects") setFilterSubject("All");
-                    else setFilterSubject(v);
-                  }}
-                  activeColor={C.genPurple}
-                  defaultColor={C.textMid}
-                />
-                
-                {(filterDate !== "All Time" || filterType !== "All" || filterSubject !== "All") && (
-                  <button 
-                    onClick={() => {
-                      setFilterDate("All Time");
-                      setFilterType("All");
-                      setFilterSubject("All");
+                  {/* Type Filter */}
+                  <FilterDropdown
+                    value={filterType === "All" ? "All Types" : filterType === "Voice" ? "Voice Sessions" : "Chat Sessions"}
+                    options={["All Types", "Voice Sessions", "Chat Sessions"]}
+                    onChange={v => {
+                      if (v === "All Types") setFilterType("All");
+                      else if (v === "Voice Sessions") setFilterType("Voice");
+                      else if (v === "Chat Sessions") setFilterType("Chat");
                     }}
-                    className="text-xs font-semibold text-gray-400 hover:text-red-500 bg-transparent border-none cursor-pointer transition-colors"
-                  >
-                    Clear filters
+                    activeColor={C.genPurple}
+                    defaultColor={C.textMid}
+                  />
+
+                  {/* Subject Filter */}
+                  <FilterDropdown
+                    value={filterSubject === "All" ? "All Subjects" : filterSubject}
+                    options={["All Subjects", ...Object.values(SUBJECTS_VISUAL).map(s => s.label)]}
+                    onChange={v => {
+                      if (v === "All Subjects") setFilterSubject("All");
+                      else setFilterSubject(v);
+                    }}
+                    activeColor={C.genPurple}
+                    defaultColor={C.textMid}
+                  />
+
+                  {(filterDate !== "All Time" || filterType !== "All" || filterSubject !== "All") && (
+                    <button
+                      onClick={() => {
+                        setFilterDate("All Time");
+                        setFilterType("All");
+                        setFilterSubject("All");
+                      }}
+                      className="text-xs font-semibold text-gray-400 hover:text-red-500 bg-transparent border-none cursor-pointer transition-colors"
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+
+                {hasMoreSessions && (
+                  <button
+                    onClick={() => setShowAllSessions(v => !v)}
+                    className="font-semibold cursor-pointer bg-transparent border-none flex-shrink-0"
+                    style={{ color: C.genPurple, fontSize: "clamp(11px, 1vw, 13px)" }}>
+                    {showAllSessions ? "Show less ↑" : "See all →"}
                   </button>
                 )}
               </div>

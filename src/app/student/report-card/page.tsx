@@ -7,7 +7,7 @@ import { StudentHomeSidebar } from "@/features/student/components/StudentHomeSid
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useSidebarStore } from "@/features/student/store/useSidebarStore";
 import { AuthGuard } from "@/components/auth/AuthGuard";
-import { ArrowLeft, Menu } from "lucide-react";
+import { ArrowLeft, ClipboardList, Menu } from "lucide-react";
 
 export default function ReportCardPage() {
   // StudentReportCard reads useSearchParams() (dev `?simulate=`), which must
@@ -74,65 +74,42 @@ function ReportCardPageInner() {
   // forever and the sidebar showed the empty "Student · FREE · Grade —".
   return (
     <AuthGuard requiredRole="student">
-    <div className="flex h-screen overflow-hidden relative" style={{ background: "#F7F6F3" }}>
-      <div>
-        <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
-      </div>
-
-      <main className="flex-1 overflow-hidden flex flex-col min-w-0">
-        {/* Top bar */}
-        <div
-          className="flex items-center gap-3 flex-shrink-0 px-5"
-          style={{
-            height: 52,
-            borderBottom: "1px solid rgba(0,0,0,0.07)",
-            background: "#fff",
-          }}
+    <div className="flex h-screen overflow-hidden relative">
+      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed top-6 left-4 z-30 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
+          style={{ width: 40, height: 40, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "var(--primary-ink)" }}
+          title="Open sidebar"
         >
-          {!sidebarOpen && (
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-all"
-              style={{ background: "rgba(0,0,0,0.05)", color: "#444", fontSize: 16 }}
-              title="Open sidebar"
-            >
-              <Menu size={16} strokeWidth={1.75} />
-            </button>
-          )}
+          <Menu size={18} strokeWidth={1.75} />
+        </button>
+      )}
 
+      <div className="flex-1 min-w-0 flex flex-col h-full bg-[#F4F3EE]/30 overflow-hidden font-sans">
+        {/* Header */}
+        <header className={`px-4 sm:px-8 py-6 flex items-center gap-3 sm:gap-6 bg-white border-b border-[var(--primary-ink)]/5 sticky top-0 z-20 transition-all ${!sidebarOpen ? "pl-16 sm:pl-8" : ""}`}>
           <button
             onClick={() => router.push("/student")}
-            className="flex items-center gap-1.5 rounded-lg border-none cursor-pointer transition-all"
-            style={{
-              background: "transparent",
-              color: "#666",
-              fontSize: 13,
-              fontWeight: 500,
-              padding: "6px 10px",
-              fontFamily: "var(--font-body)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.05)";
-              e.currentTarget.style.color = "#222";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "#666";
-            }}
+            className="w-10 h-10 rounded-full bg-[var(--primary-ink)]/5 text-[var(--primary-ink)] flex items-center justify-center hover:bg-[var(--primary-ink)]/10 transition-all"
           >
-            <ArrowLeft size={15} />
-            <span>Back to Home</span>
+            <ArrowLeft size={20} />
           </button>
-
-          <div style={{ marginLeft: "auto", fontSize: 13, color: "#999", fontFamily: "var(--font-body)" }}>
-            Report Card
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]">
+                <ClipboardList size={16} />
+              </div>
+              <h1 className="text-xl font-black text-[var(--primary-ink)] tracking-tight">Report Card</h1>
+            </div>
           </div>
-        </div>
+        </header>
 
         <div className="flex-1 overflow-y-auto">
           <StudentReportCard />
         </div>
-      </main>
+      </div>
     </div>
     </AuthGuard>
   );
