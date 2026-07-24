@@ -1,18 +1,11 @@
 "use client";
 
-<<<<<<< Updated upstream
-import { Suspense, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { StudentReportCard } from "@/components/report-card/StudentReportCard";
-import { StudentHomeSidebar } from "@/features/student/components/StudentHomeSidebar";
-=======
 import { Suspense, useEffect, useLayoutEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { StudentReportCard } from "@/components/report-card/StudentReportCard";
 import { StudentHomeSidebar } from "@/features/student/components/StudentHomeSidebar";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useSidebarStore } from "@/features/student/store/useSidebarStore";
->>>>>>> Stashed changes
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { ArrowLeft, Menu } from "lucide-react";
 
@@ -29,9 +22,6 @@ export default function ReportCardPage() {
 
 function ReportCardPageInner() {
   const router = useRouter();
-<<<<<<< Updated upstream
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-=======
   const searchParams = useSearchParams();
   const isPrintMode = searchParams.get("print") === "1";
 
@@ -73,7 +63,6 @@ function ReportCardPageInner() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
->>>>>>> Stashed changes
 
   useEffect(() => {
     applyResponsive(window.innerWidth >= 1024);
