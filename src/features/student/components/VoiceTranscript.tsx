@@ -56,11 +56,10 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-5">
             {messages.map((m) => {
-              const isUser = m.sender === "user";
-              const label = isUser ? "You" : agentName;
-              const color = isUser ? "var(--primary-ink)" : "var(--tutor)";
+              const label = m.sender === "user" ? "You" : agentName;
+              const color = m.sender === "user" ? "var(--primary-ink)" : "var(--tutor)";
               const text = (m.text || "").trim();
               const hasElements = m.elements && m.elements.length > 0;
               // History messages carry the transcript as interleaved text *elements*
@@ -72,32 +71,17 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
               const showPlainText = !!text && !hasTextElements;
               if (!text && !hasElements) return null;
               return (
-                <div
-                  key={m.id}
-                  className="rounded-xl px-3 py-2.5"
-                  style={{
-                    // Light per-sender tint + alignment so a turn is
-                    // scannable at a glance, instead of two label colors
-                    // being the only difference between speakers.
-                    background: isUser ? "rgba(4,46,92,0.04)" : "rgba(91,77,199,0.04)",
-                    marginLeft: isUser ? "10%" : 0,
-                    marginRight: isUser ? 0 : "10%",
-                  }}
-                >
-                  <div className="flex items-start gap-3 text-[14px] leading-relaxed">
-                    <span
-                      className="font-extrabold tracking-wide uppercase text-[10px] mt-1 min-w-[44px]"
-                      style={{ color }}
-                    >
-                      {label}
-                    </span>
-                    {showPlainText && <span className="text-[#1A202C] flex-1">{text}</span>}
+                <div key={m.id} className="flex items-start gap-3 text-[14px] leading-relaxed">
+                  <span
+                    className="font-extrabold tracking-wide uppercase text-[10px] mt-1 min-w-[44px]"
+                    style={{ color }}
+                  >
+                    {label}
+                  </span>
+                  <div className="flex-1 flex flex-col gap-3">
+                    {showPlainText && <span className="text-[#1A202C]">{text}</span>}
+                    {hasElements && <MessageElements elements={m.elements!} />}
                   </div>
-                  {hasElements && (
-                    <div className="pl-[56px] mt-1">
-                      <MessageElements elements={m.elements!} />
-                    </div>
-                  )}
                 </div>
               );
             })}

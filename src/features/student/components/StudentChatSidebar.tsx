@@ -17,6 +17,7 @@ const C = {
   sidebarBg: STUDENT_COLORS.sidebarBg,
   genPurple: STUDENT_COLORS.tutor,
   genBlue: STUDENT_COLORS.tutorSoft,
+  sun: STUDENT_COLORS.warn,
   sparkle: STUDENT_COLORS.tutorLight,
   sidebarText: STUDENT_COLORS.sidebarText,
   sidebarMuted: STUDENT_COLORS.sidebarMuted,
@@ -138,7 +139,7 @@ function ProfilePopup({
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
             />
           ) : (
-            <StudentAvatarIllustration bg={C.genPurple} />
+            <StudentAvatarIllustration bg={C.sun} />
           )}
         </div>
         <div style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF", lineHeight: 1.3 }}>
@@ -447,7 +448,7 @@ export const StudentChatSidebar = React.memo(({
                       style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                     />
                   ) : (
-                    <StudentAvatarIllustration bg={C.genPurple} />
+                    <StudentAvatarIllustration bg={C.sun} />
                   )}
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>

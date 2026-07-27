@@ -54,6 +54,21 @@ export function StudentChatView() {
     [],
   );
 
+  // Cleanup audio on unmount / navigation (Wave 1 §3.2). Lives here (not in
+  // StudentChatMain) because StudentChatMain unmounts/remounts when the
+  // textbook split-pane layout toggles, which would otherwise kill in-flight
+  // TTS playback every time the Textbook button is clicked.
+  useEffect(() => {
+    return () => {
+      import("@/features/student/services/audioPlayerService").then(({ audioPlayerService }) => {
+        audioPlayerService.destroy();
+      });
+      import("@/features/student/services/audioRecorderService").then(({ audioRecorderService }) => {
+        audioRecorderService.destroy();
+      });
+    };
+  }, []);
+
   // Handle responsive auto-hide
   useEffect(() => {
     const handleResize = () => {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Play, Pause, Check, ChevronDown, Pencil, Menu, Lock, LogOut } from "lucide-react";
+import { Loader2, Play, Pause, Check, ChevronDown, Pencil, Menu, Lock, LogOut, ArrowLeft, Smile } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useStudentStore, StudentProfile as StudentProfileType } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
@@ -622,6 +622,26 @@ export function StudentProfile() {
           </div>
         )}
 
+        {/* Desktop header (matches Practice/Schedule/Report Card) */}
+        {sidebarOpen && (
+          <header className="px-4 sm:px-8 py-6 flex items-center gap-3 sm:gap-6 bg-white border-b border-[var(--primary-ink)]/5 sticky top-0 z-20">
+            <button
+              onClick={() => router.push("/student")}
+              className="w-10 h-10 rounded-full bg-[var(--primary-ink)]/5 text-[var(--primary-ink)] flex items-center justify-center hover:bg-[var(--primary-ink)]/10 transition-all"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]">
+                  <Smile size={16} />
+                </div>
+                <h1 className="text-xl font-black text-[var(--primary-ink)] tracking-tight">My Profile</h1>
+              </div>
+            </div>
+          </header>
+        )}
+
         {/* Scrollable body */}
         <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", position: "relative" }}>
 
@@ -629,16 +649,6 @@ export function StudentProfile() {
           <div style={{ position: "absolute", top: -80, right: -80, width: 280, height: 280, borderRadius: "50%", background: `radial-gradient(circle, ${C.genPurple}06, transparent 70%)`, pointerEvents: "none" }} />
 
           <div style={{ maxWidth: 960, margin: "0 auto", padding: sidebarOpen ? "32px 40px 60px" : "24px 16px 60px" }}>
-
-            {/* Back button + title row (desktop) */}
-            {sidebarOpen && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28, ...fade(0.05) }}>
-                <button
-                  onClick={() => router.push("/student")}
-                  style={{ width: 38, height: 38, borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, color: C.textMid, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}
-                >←</button>
-              </div>
-            )}
 
             {/* ── HERO CARD ── */}
             <div style={{

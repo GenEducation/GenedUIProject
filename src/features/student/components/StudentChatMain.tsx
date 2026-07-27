@@ -358,18 +358,6 @@ export function StudentChatMain({
     messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
   }, [messages, isAITyping, streamingMessageId]);
 
-  // Cleanup audio on unmount / navigation (Wave 1 §3.2)
-  useEffect(() => {
-    return () => {
-      import("@/features/student/services/audioPlayerService").then(({ audioPlayerService }) => {
-        audioPlayerService.destroy();
-      });
-      import("@/features/student/services/audioRecorderService").then(({ audioRecorderService }) => {
-        audioRecorderService.destroy();
-      });
-    };
-  }, []);
-
   const handleOptionSelect = useCallback(
     (option: string) => {
       sendMessage(option);
