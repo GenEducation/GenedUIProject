@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { authFetch } from "@/utils/authFetch";
 import {
+  allTaxonomyGrades,
   loadSubjectCatalog,
   requireExactSubject,
   resetSubjectCatalogForTests,
@@ -89,6 +90,27 @@ describe("taxonomy subject catalogue", () => {
     expect(requireExactSubject("Environmental Studies", 4, catalog)).toBe(
       "Environmental Studies",
     );
+  });
+
+  it("unions grades across subjects without duplicates and in order", async () => {
+    // Science and Social Science both serve 6-8, English and Mathematics 3-8.
+    const catalog = await loadSubjectCatalog();
+    expect(allTaxonomyGrades(catalog)).toEqual([3, 4, 5, 6, 7, 8]);
+  });
+
+  it("offers a grade the moment any single subject serves it", async () => {
+    vi.mocked(authFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ subjects: [{ name: "Environmental Studies", grades: [9] }] }),
+      ),
+    );
+
+    // A grade picker built from a literal array would silently omit 9 here.
+    expect(allTaxonomyGrades(await loadSubjectCatalog())).toEqual([9]);
+  });
+
+  it("offers no grades before the catalogue loads, rather than guessing", async () => {
+    expect(allTaxonomyGrades([])).toEqual([]);
   });
 
   it("fails closed on a malformed catalogue", async () => {

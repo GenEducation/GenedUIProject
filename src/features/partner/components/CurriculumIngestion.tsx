@@ -4,9 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import { usePartnerStore } from "../store/usePartnerStore";
 import { PageWisePreview } from "./PageWisePreview";
 import {
+  allTaxonomyGrades,
   requireExactSubject,
   subjectsForGrade,
-  useSubjectCatalog,
+  useTaxonomySubjects,
 } from "@/features/subjects/subjectCatalog";
 
 interface CurriculumIngestionProps {
@@ -33,7 +34,10 @@ export function CurriculumIngestion({
   const [documentType, setDocumentType] = useState("chapter");
 
   const gradeNum = parseInt(grade, 10);
-  const catalog = useSubjectCatalog((state) => state.subjects);
+  // Loads the catalogue on mount rather than assuming an earlier screen already
+  // did — ingestion is the boundary where an off-taxonomy name would be written.
+  const catalog = useTaxonomySubjects();
+  const gradeOptions = allTaxonomyGrades(catalog);
   const subjectOptions = subjectsForGrade(gradeNum, catalog);
 
   const [file, setFile] = useState<File | null>(null);
@@ -185,7 +189,7 @@ export function CurriculumIngestion({
                       className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
                     >
                       <option value="">Grade</option>
-                      {[3, 4, 5, 6, 7, 8].map((g) => (
+                      {gradeOptions.map((g) => (
                         <option key={g} value={g}>Grade {g}</option>
                       ))}
                     </select>

@@ -454,6 +454,19 @@ export function SignUp({
           <div>
             <label className={labelCls}>What grade are you in?</label>
             <div className="grid grid-cols-3 gap-3">
+              {/*
+                Deliberately literal, unlike every other grade picker. The
+                catalogue comes from `/rag/taxonomy/subjects`, which the gateway
+                requires a JWT for, and sign-up runs before one exists: the
+                fetch would 401, and `authFetch` answers a 401 by clearing the
+                session and redirecting to `/?error=session_expired` — ejecting
+                the user out of the form they are filling in. Deriving this from
+                the taxonomy needs `/rag/taxonomy` added to the gateway's
+                `_PUBLIC_PREFIXES` first (it carries no user data, so this is
+                viable — see `gateway-service/src/gateway_service/auth.py`).
+                Grades here select the student's own year, not a subject, so a
+                taxonomy change that adds a subject does not invalidate them.
+              */}
               {[3, 4, 5, 6, 7, 8].map((grade) => (
                 <button
                   key={grade}

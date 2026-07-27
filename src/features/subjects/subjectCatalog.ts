@@ -113,6 +113,22 @@ export function subjectsForGrade(
 }
 
 /**
+ * Every grade the taxonomy serves, ascending, across all subjects. Grade
+ * pickers derive their options from this so a taxonomy change reaches the UI
+ * without a matching edit to a literal array, and so a grade can never be
+ * offered that carries no subjects.
+ */
+export function allTaxonomyGrades(
+  catalog: TaxonomySubject[] = useSubjectCatalog.getState().subjects,
+): number[] {
+  const grades = new Set<number>();
+  for (const item of catalog) {
+    for (const grade of item.grades) grades.add(grade);
+  }
+  return [...grades].sort((a, b) => a - b);
+}
+
+/**
  * Strict validation boundary for API, storage, and UI values. It deliberately
  * performs no trimming, case folding, aliasing, or punctuation conversion.
  */
