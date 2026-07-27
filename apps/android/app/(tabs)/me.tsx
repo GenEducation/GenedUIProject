@@ -10,6 +10,7 @@ import {
   Switch,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import { LogOut, Lock } from "lucide-react-native";
 import { Screen } from "@/components/Screen";
 import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
@@ -22,7 +23,9 @@ import { useRouter, type Href } from "expo-router";
 import { studentService } from "@/services/studentService";
 import { prefsStore, usePrefs } from "@/store/usePrefsStore";
 import { colors, fonts } from "@/theme/tokens";
-import type { VoiceOption, GeneralOnboarding, PartnerItem } from "@/types/api";
+import { getStudentDisplayName } from "@/utils/displayName";
+import { useStudentId } from "@/hooks/useStudentId";
+import type { VoiceOption, GeneralOnboarding, PartnerItem, TestSubmission } from "@/types/api";
 
 
 /* ── Supported instruction languages ─────────────────────────────────────── */
@@ -55,15 +58,29 @@ function buildTraits(onboarding: GeneralOnboarding | null) {
   });
 }
 
-/* ── Badge computation (mirrors website) ──────────────────────────────────── */
-function computeBadges(totalSessions: number, currentStreak: number) {
+/**
+ * Badge computation (mirrors website). Each badge carries a `progress`
+ * string ("2/3 tests taken" / "Earned") so locked badges show how close the
+ * student is, instead of just a plain lock.
+ */
+function computeBadges(totalSessions: number, currentStreak: number, testSubmissions: TestSubmission[]) {
+  const testsTaken = testSubmissions.length;
+  const bestScore = testSubmissions.reduce((max, s) => Math.max(max, s.percentage ?? 0), 0);
+
+  const withProgress = (earned: boolean, progressText: string) => ({
+    earned,
+    progress: earned ? "Earned" : progressText,
+  });
+
   return [
-    { icon: "🎯", label: "First Session", earned: totalSessions >= 1,  color: colors.genPurple },
-    { icon: "🔥", label: "3-Day Streak",  earned: currentStreak >= 3,  color: colors.sun       },
-    { icon: "📖", label: "Explorer",      earned: totalSessions >= 5,  color: colors.genBlue   },
-    { icon: "🚀", label: "7-Day Streak",  earned: currentStreak >= 7,  color: colors.coral     },
-    { icon: "🏆", label: "Dedicated",     earned: totalSessions >= 20, color: colors.edGreen   },
-    { icon: "⭐", label: "Star Learner",  earned: totalSessions >= 50, color: colors.sun       },
+    { icon: "🎯", label: "First Session", color: colors.genPurple, ...withProgress(totalSessions >= 1, `${Math.min(totalSessions, 1)}/1 session`) },
+    { icon: "🔥", label: "3-Day Streak",  color: colors.sun,       ...withProgress(currentStreak >= 3, `${Math.min(currentStreak, 3)}/3 day streak`) },
+    { icon: "📖", label: "Explorer",      color: colors.genBlue,   ...withProgress(totalSessions >= 5, `${Math.min(totalSessions, 5)}/5 sessions`) },
+    { icon: "🚀", label: "7-Day Streak",  color: colors.coral,     ...withProgress(currentStreak >= 7, `${Math.min(currentStreak, 7)}/7 day streak`) },
+    { icon: "🏆", label: "Dedicated",     color: colors.edGreen,   ...withProgress(totalSessions >= 20, `${Math.min(totalSessions, 20)}/20 sessions`) },
+    { icon: "⭐", label: "Star Learner",  color: colors.sun,       ...withProgress(totalSessions >= 50, `${Math.min(totalSessions, 50)}/50 sessions`) },
+    { icon: "📝", label: "Quiz Champion", color: colors.genPurple, ...withProgress(testsTaken >= 3, `${Math.min(testsTaken, 3)}/3 tests taken`) },
+    { icon: "🎓", label: "High Scorer",   color: colors.growth,    ...withProgress(bestScore >= 80, `Best score ${Math.round(bestScore)}%`) },
   ];
 }
 
@@ -90,8 +107,10 @@ export default function Me() {
   const { state, logout } = useAuth();
   const router = useRouter();
   const { profile, streak, voices, onboarding, enrolledPartners, loading, error, refetch } = useMeData();
+  const studentId = useStudentId();
 
   const prefs = usePrefs();
+  const [testSubmissions, setTestSubmissions] = useState<TestSubmission[]>([]);
 
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<string | null>(null);
@@ -129,6 +148,16 @@ export default function Me() {
     })();
     return () => { cancelled = true; };
   }, [state.status]);
+
+  // Test submissions — needed to compute the Quiz Champion / High Scorer badges
+  useEffect(() => {
+    if (!studentId) return;
+    let cancelled = false;
+    studentService.fetchTestSubmissions(studentId)
+      .then((subs) => { if (!cancelled) setTestSubmissions(subs); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [studentId]);
 
   const handleLanguageChange = async (langCode: string) => {
     const userId = state.status === "authenticated" ? state.profile.user_id : null;
@@ -213,7 +242,7 @@ export default function Me() {
   ];
 
   const traits = buildTraits(onboarding);
-  const badges = computeBadges(streak?.total_sessions ?? 0, streak?.current_streak ?? 0);
+  const badges = computeBadges(streak?.total_sessions ?? 0, streak?.current_streak ?? 0, testSubmissions);
 
   const partners = enrolledPartners?.partners ?? [];
 
@@ -267,7 +296,7 @@ export default function Me() {
             onSelect={prefsStore.setAvatarId}
           />
           <Text style={styles.name}>
-            {displayProfile?.name ?? displayProfile?.username ?? "—"}
+            {displayProfile ? getStudentDisplayName(displayProfile) : "—"}
           </Text>
           {(grade || board) ? (
             <Text style={styles.grade}>
@@ -289,10 +318,7 @@ export default function Me() {
 
         {/* ── How {tutor} Sees You ── */}
         <View style={[styles.card, styles.traitsCard]}>
-          <View style={sh.row}>
-            <Text style={{ fontSize: 15 }}>🧠</Text>
-            <Text style={[sh.label, { color: colors.genPurple }]}>How {aiName} Sees You</Text>
-          </View>
+          <SectionHeader icon="🧠" label={`How ${aiName} Sees You`} />
           {traits.length > 0 ? (
             <>
               {traits.map((t, i) => (
@@ -404,14 +430,21 @@ export default function Me() {
                 key={i}
                 style={[
                   styles.badge,
-                  { borderColor: b.earned ? b.color + "40" : colors.border, backgroundColor: b.earned ? b.color + "08" : "#F8F9FA", opacity: b.earned ? 1 : 0.55 },
+                  { borderColor: b.earned ? b.color + "40" : colors.border, backgroundColor: b.earned ? b.color + "08" : "#F8F9FA" },
                 ]}
+                accessibilityRole="image"
+                accessibilityLabel={`${b.label} — ${b.progress}`}
               >
-                <View style={[styles.badgeIcon, { backgroundColor: b.earned ? b.color + "15" : "#EDF2F7" }]}>
+                <View style={[styles.badgeIcon, { backgroundColor: b.earned ? b.color + "15" : "#EDF2F7", opacity: b.earned ? 1 : 0.5 }]}>
                   <Text style={{ fontSize: 18 }}>{b.icon}</Text>
+                  {!b.earned && (
+                    <View style={styles.badgeLockOverlay}>
+                      <Lock size={12} color={colors.textMuted} />
+                    </View>
+                  )}
                 </View>
                 <Text style={[styles.badgeLabel, { color: b.earned ? b.color : colors.textMuted }]}>{b.label}</Text>
-                {!b.earned && <Text style={{ fontSize: 9, color: colors.textMuted }}>🔒</Text>}
+                <Text style={[styles.badgeProgress, { color: b.earned ? b.color : colors.textFaint }]}>{b.progress}</Text>
               </View>
             ))}
           </View>
@@ -525,6 +558,7 @@ export default function Me() {
 
         {/* ── Logout ── */}
         <Pressable style={styles.logoutBtn} onPress={handleLogout}>
+          <LogOut size={16} color={colors.coral} />
           <Text style={styles.logoutText}>Sign Out</Text>
         </Pressable>
 
@@ -641,8 +675,14 @@ const styles = StyleSheet.create({
     width: "30%", flexGrow: 1, alignItems: "center", gap: 6,
     paddingVertical: 14, paddingHorizontal: 8, borderRadius: 18, borderWidth: 1.5,
   },
-  badgeIcon:  { width: 40, height: 40, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  badgeIcon:  { width: 40, height: 40, borderRadius: 13, alignItems: "center", justifyContent: "center", position: "relative" },
+  badgeLockOverlay: {
+    position: "absolute", bottom: -3, right: -3, width: 18, height: 18, borderRadius: 9,
+    backgroundColor: "#fff", borderWidth: 1, borderColor: colors.border,
+    alignItems: "center", justifyContent: "center",
+  },
   badgeLabel: { fontFamily: fonts.dmBold, fontSize: 10, textAlign: "center", lineHeight: 14 },
+  badgeProgress: { fontFamily: fonts.dm, fontSize: 8.5, textAlign: "center" },
 
   /* School */
   partnerRow:      { flexDirection: "row", alignItems: "center", gap: 14, padding: 14, backgroundColor: colors.edGreen + "06", borderRadius: 16, borderWidth: 1, borderColor: colors.edGreen + "15" },
@@ -653,7 +693,7 @@ const styles = StyleSheet.create({
   connectedDot:    { width: 6, height: 6, borderRadius: 3, backgroundColor: "#00B894" },
   connectedText:   { fontFamily: fonts.dmBold, fontSize: 11, color: "#00B894" },
   actionBtn: {
-    marginTop: 4, backgroundColor: colors.genPurple, borderRadius: 12,
+    marginTop: 4, backgroundColor: colors.primary, borderRadius: 12,
     paddingVertical: 11, alignItems: "center",
   },
   actionBtnText: { fontFamily: fonts.dmBold, fontSize: 13, color: "#fff" },
@@ -691,7 +731,7 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     paddingHorizontal: 18, paddingVertical: 10, borderRadius: 12,
-    backgroundColor: colors.genPurple, justifyContent: "center",
+    backgroundColor: colors.primary, justifyContent: "center",
   },
   addBtnText: { fontFamily: fonts.dmBold, fontSize: 12, color: "#fff" },
 
@@ -714,7 +754,8 @@ const styles = StyleSheet.create({
   /* Logout */
   logoutBtn: {
     marginTop: 8, borderWidth: 1.5, borderColor: colors.coral + "66",
-    borderRadius: 14, paddingVertical: 14, alignItems: "center",
+    borderRadius: 14, paddingVertical: 14, alignItems: "center", justifyContent: "center",
+    flexDirection: "row", gap: 8,
     backgroundColor: colors.coral + "0a",
   },
   logoutText: { fontFamily: fonts.dmBold, fontSize: 14, color: colors.coral },

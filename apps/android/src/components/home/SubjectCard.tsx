@@ -109,7 +109,7 @@ export function SubjectCard({ subject }: Props) {
           <Text style={[styles.btnText, { color: visual.color }]}>Chat</Text>
         </Pressable>
         <Pressable
-          style={[styles.btn, { backgroundColor: visual.color }]}
+          style={[styles.btn, { backgroundColor: colors.primary }]}
           onPress={handleVoice}
         >
           <Text style={[styles.btnText, { color: "#fff" }]}>Voice</Text>
@@ -125,6 +125,7 @@ function resolveVisualKey(raw: string): string {
   const s = raw.toLowerCase().replace(/[_\s-]/g, "");
   if (s.includes("math"))    return "mathematics";
   if (s.includes("english")) return "english";
+  if (s.includes("social"))  return "socialscience";
   if (s.includes("science")) return "science";
   if (s.includes("hindi"))   return "hindi";
   // Try direct match first

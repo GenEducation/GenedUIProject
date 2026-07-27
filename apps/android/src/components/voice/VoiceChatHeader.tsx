@@ -15,9 +15,9 @@ interface Props {
 }
 
 const QUALITY_COLORS: Record<ConnectionQuality, string> = {
-  good: "#34C759",
-  poor: "#F0AD4E",
-  reconnecting: "#EF4444",
+  good: colors.growth,
+  poor: colors.coral,
+  reconnecting: colors.sun,
 };
 
 export function VoiceChatHeader({ subject, connectionQuality, onBack }: Props) {

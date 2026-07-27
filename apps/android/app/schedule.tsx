@@ -9,7 +9,7 @@ import {
   Text,
   Pressable,
   StyleSheet,
-  FlatList,
+  SectionList,
   RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -122,7 +122,7 @@ export default function Schedule() {
     }
   };
 
-  const sorted = useMemo(() => [...sessions].sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date)), [sessions]);
+  const { upcoming, pastNeedsAttention } = useMemo(() => classifySessions(sessions), [sessions]);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -137,13 +137,21 @@ export default function Schedule() {
         <View style={{ width: 36 }} />
       </View>
 
-      <FlatList
-        data={sorted}
+      <SectionList
+        sections={
+          upcoming.length === 0 && pastNeedsAttention.length === 0
+            ? []
+            : [
+                { title: "Upcoming Sessions", key: "upcoming", data: upcoming, emptyText: "Nothing coming up — book a session above." },
+                { title: "Past & Needs Attention", key: "past", data: pastNeedsAttention, emptyText: "" },
+              ].filter((s) => s.data.length > 0 || s.key === "upcoming")
+        }
         keyExtractor={(s) => s.id}
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 12 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24 }}
+        stickySectionHeadersEnabled={false}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.genPurple} />}
         ListHeaderComponent={
-          <View style={{ gap: 18, marginBottom: 6 }}>
+          <View style={{ gap: 18, marginBottom: 18 }}>
             {rescheduled ? <Banner tone="success" text="Session rescheduled." /> : null}
 
             {/* Booking card */}
@@ -187,18 +195,27 @@ export default function Schedule() {
                 {!booking ? <ArrowRight size={16} color="#fff" /> : null}
               </Pressable>
             </View>
-
-            <Text style={styles.sectionTitle}>Upcoming Sessions</Text>
           </View>
         }
+        renderSectionHeader={({ section }) => (
+          <Text style={[styles.sectionTitle, section.key === "past" && { marginTop: 18 }]}>{section.title}</Text>
+        )}
         renderItem={({ item }) => <SessionCard session={item} onStart={() => startSession(item)} onReschedule={() => reschedule(item)} />}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+        renderSectionFooter={({ section }) =>
+          section.data.length === 0 && section.emptyText ? (
+            <View style={styles.sectionEmpty}>
+              <Text style={styles.emptyText}>{section.emptyText}</Text>
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
-          loading ? null : (
+          loading ? null : upcoming.length === 0 && pastNeedsAttention.length === 0 ? (
             <View style={styles.empty}>
               <CalendarClock size={28} color={colors.textFaint} />
               <Text style={styles.emptyText}>No sessions scheduled yet.</Text>
             </View>
-          )
+          ) : null
         }
       />
 
@@ -232,15 +249,55 @@ export default function Schedule() {
   );
 }
 
+/**
+ * Groups retried prep rows for the same (subject, topic, date, type),
+ * keeping the most-ready row, then splits into Upcoming vs Past & Needs
+ * Attention. A session is "past" once its date has gone by without
+ * finishing prep+being opened.
+ */
+function classifySessions(sessions: ScheduleSessionResponse[]) {
+  const readiness = (s: ScheduleSessionResponse) =>
+    s.preparation_status === "COMPLETED" ? 2 : s.preparation_status === "PENDING" ? 1 : 0;
+
+  const byKey = new Map<string, ScheduleSessionResponse>();
+  for (const s of sessions) {
+    const key = `${s.session_type}|${s.subject}|${s.topic ?? ""}|${s.scheduled_date}`;
+    const existing = byKey.get(key);
+    if (!existing || readiness(s) > readiness(existing)) byKey.set(key, s);
+  }
+  const deduped = [...byKey.values()];
+
+  const today = toISODate(new Date());
+  const upcoming: ScheduleSessionResponse[] = [];
+  const pastNeedsAttention: ScheduleSessionResponse[] = [];
+
+  for (const s of deduped) {
+    const isFailed = s.preparation_status === "FAILED";
+    const isReady = s.preparation_status === "COMPLETED" && !!s.session_id;
+    const isPastDate = s.scheduled_date < today;
+    if (isFailed || (isPastDate && !isReady)) pastNeedsAttention.push(s);
+    else upcoming.push(s);
+  }
+
+  upcoming.sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
+  pastNeedsAttention.sort((a, b) => b.scheduled_date.localeCompare(a.scheduled_date));
+
+  return { upcoming, pastNeedsAttention };
+}
+
 function SessionCard({ session, onStart, onReschedule }: { session: ScheduleSessionResponse; onStart: () => void; onReschedule: () => void }) {
   const isFailed = session.preparation_status === "FAILED";
   const isReady = session.preparation_status === "COMPLETED" && !!session.session_id;
+  const isMissed = !isFailed && !isReady && session.scheduled_date < toISODate(new Date());
   const status = isFailed
-    ? { bg: "#FFF1EC", fg: colors.coral, label: "Failed", Icon: AlertTriangle }
+    ? { bg: "#FFF6E9", fg: colors.sun, label: "Couldn't set up", Icon: AlertTriangle }
+    : isMissed
+    ? { bg: colors.pageBg, fg: colors.textMuted, label: "Missed", Icon: Clock }
     : isReady
     ? { bg: "#E7F8F0", fg: colors.growth, label: "Ready", Icon: CheckCircle2 }
     : { bg: colors.pageBg, fg: colors.textMuted, label: "Being Prepared", Icon: Clock };
   const Icon = status.Icon;
+  const needsReschedule = isFailed || isMissed;
 
   return (
     <View style={styles.sessCard}>
@@ -259,11 +316,11 @@ function SessionCard({ session, onStart, onReschedule }: { session: ScheduleSess
           {new Date(session.scheduled_date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
           {session.scheduled_time ? ` · ${session.scheduled_time} IST` : ""}
         </Text>
-        {isFailed ? (
+        {needsReschedule ? (
           <Pressable onPress={onReschedule} style={styles.ghostBtn}><Text style={styles.ghostText}>Reschedule</Text></Pressable>
         ) : (
           <Pressable onPress={onStart} disabled={!isReady} style={[styles.startBtn, !isReady && styles.startBtnDisabled]}>
-            <Text style={styles.startText}>{session.session_type === "TEST" ? "Start Test" : "Open"}</Text>
+            <Text style={styles.startText}>{session.session_type === "TEST" ? "Start Test" : "Open Session"}</Text>
           </Pressable>
         )}
       </View>
@@ -289,10 +346,10 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.card, borderRadius: 20, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 14 },
   cardTitle: { fontFamily: fonts.dmBold, fontSize: 13, color: colors.textMid, textTransform: "uppercase", letterSpacing: 1 },
   segment: { flexDirection: "row", backgroundColor: colors.pageBg, borderRadius: 12, padding: 4, gap: 4 },
-  segBtn: { flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 9 },
-  segBtnActive: { backgroundColor: colors.genPurple },
+  segBtn: { flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 9, borderWidth: 1.5, borderColor: "transparent" },
+  segBtnActive: { backgroundColor: colors.card, borderColor: colors.text },
   segText: { fontFamily: fonts.dmBold, fontSize: 13, color: colors.textMid },
-  segTextActive: { color: "#fff" },
+  segTextActive: { color: colors.text },
   fieldLabel: { fontFamily: fonts.dmBold, fontSize: 11, letterSpacing: 0.5, color: colors.textMuted, textTransform: "uppercase" },
   dateChip: { width: 60, alignItems: "center", paddingVertical: 10, borderRadius: 14, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.card, gap: 1 },
   dateChipActive: { borderColor: colors.genPurple, backgroundColor: colors.genPurple + "12" },
@@ -300,7 +357,7 @@ const styles = StyleSheet.create({
   dateNum: { fontFamily: fonts.dmBold, fontSize: 18, color: colors.text },
   dateMon: { fontFamily: fonts.dm, fontSize: 10, color: colors.textMuted },
   dateTextActive: { color: colors.genPurple },
-  bookBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: colors.genPurple, borderRadius: 16, paddingVertical: 15 },
+  bookBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: colors.primary, borderRadius: 16, paddingVertical: 15 },
   bookBtnDisabled: { opacity: 0.5 },
   bookText: { fontFamily: fonts.dmBold, fontSize: 14, color: "#fff" },
   banner: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
@@ -314,11 +371,12 @@ const styles = StyleSheet.create({
   statusText: { fontFamily: fonts.dmBold, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 },
   sessBottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   sessDate: { fontFamily: fonts.dmMedium, fontSize: 12, color: colors.textMid },
-  startBtn: { backgroundColor: colors.genPurple, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 },
+  startBtn: { backgroundColor: colors.primary, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 },
   startBtnDisabled: { opacity: 0.35 },
   startText: { fontFamily: fonts.dmBold, fontSize: 12, color: "#fff" },
   ghostBtn: { backgroundColor: colors.pageBg, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 },
   ghostText: { fontFamily: fonts.dmBold, fontSize: 12, color: colors.text },
   empty: { alignItems: "center", gap: 8, paddingVertical: 40 },
   emptyText: { fontFamily: fonts.dm, fontSize: 13, color: colors.textMuted },
+  sectionEmpty: { paddingVertical: 16 },
 });

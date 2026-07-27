@@ -16,7 +16,7 @@ import { SectionHead } from "@/components/SectionHead";
 import { usePracticeData } from "@/hooks/usePracticeData";
 import { useStudentId } from "@/hooks/useStudentId";
 import { studentService } from "@/services/studentService";
-import { colors, fonts, subjectVisual, radius } from "@/theme/tokens";
+import { colors, fonts, subjectVisual, radius, normalizeSubjectKey } from "@/theme/tokens";
 import type { ChapterMastery, TestSubmission } from "@/types/api";
 
 export default function Practice() {
@@ -100,7 +100,7 @@ export default function Practice() {
                 }
               >
                 <Text style={[styles.chipText, selectedSubject === s.subject && styles.chipTextActive]}>
-                  {subjectVisual[s.subject?.toLowerCase() ?? ""]?.label ?? s.subject}
+                  {subjectVisual[normalizeSubjectKey(s.subject)]?.label ?? s.subject}
                 </Text>
               </Pressable>
             ))}
@@ -119,7 +119,7 @@ export default function Practice() {
         ) : (
           <View style={{ gap: 10 }}>
             {filteredChapters.map((c, i) => {
-              const visual = subjectVisual[c.subject?.toLowerCase() ?? ""] ?? {
+              const visual = subjectVisual[normalizeSubjectKey(c.subject)] ?? {
                 color: colors.genPurple,
                 bg: "#EBF0FD",
                 icon: "📚",
@@ -183,7 +183,7 @@ export default function Practice() {
 }
 
 function SubmissionCard({ submission }: { submission: TestSubmission }) {
-  const visual = subjectVisual[submission.subject?.toLowerCase() ?? ""] ?? {
+  const visual = subjectVisual[normalizeSubjectKey(submission.subject)] ?? {
     color: colors.genPurple,
     bg: "#EBF0FD",
     icon: "📚",

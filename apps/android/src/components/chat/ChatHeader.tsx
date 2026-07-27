@@ -8,15 +8,30 @@ import { colors, fonts } from "../../theme/tokens";
 // Favicon1.jpg — the circular AI avatar used on the web in ChatMessageBubble
 const FAVICON = require("../../../assets/Favicon1.jpg");
 
+export type ChatConnectionQuality = "good" | "poor" | "reconnecting";
+
 interface Props {
   subject?: string;
-  isOnline?: boolean;
+  /** True while the AI is generating a reply — shows "Thinking…" over the status dot. */
+  isThinking?: boolean;
+  /** Real connection state, not a decorative always-on dot. */
+  connectionQuality?: ChatConnectionQuality;
   /** When provided, shows a history button on the right that opens the sessions sheet. */
   onOpenSessions?: () => void;
 }
 
-export function ChatHeader({ subject, isOnline = true, onOpenSessions }: Props) {
+export function ChatHeader({ subject, isThinking = false, connectionQuality = "good", onOpenSessions }: Props) {
   const router = useRouter();
+
+  const statusColor =
+    connectionQuality === "poor" ? colors.coral : connectionQuality === "reconnecting" ? colors.sun : colors.growth;
+  const statusLabel = isThinking
+    ? "Thinking…"
+    : connectionQuality === "poor"
+    ? "Poor connection"
+    : connectionQuality === "reconnecting"
+    ? "Reconnecting…"
+    : "Active";
 
   return (
     <View style={styles.row}>
@@ -43,20 +58,8 @@ export function ChatHeader({ subject, isOnline = true, onOpenSessions }: Props) 
           {subject ? `${capitalize(subject)} Tutor` : "GenEd Tutor"}
         </Text>
         <View style={styles.statusRow}>
-          <View
-            style={[
-              styles.dot,
-              { backgroundColor: isOnline ? colors.growth : colors.textMuted },
-            ]}
-          />
-          <Text
-            style={[
-              styles.status,
-              { color: isOnline ? colors.growth : colors.textMuted },
-            ]}
-          >
-            {isOnline ? "Online" : "Offline"}
-          </Text>
+          <View style={[styles.dot, { backgroundColor: statusColor }]} />
+          <Text style={[styles.status, { color: statusColor }]}>{statusLabel}</Text>
         </View>
       </View>
 

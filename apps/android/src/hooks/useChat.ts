@@ -32,7 +32,7 @@ export interface UseChatResult {
   chapterName: string | null;
   sending: boolean;
   error: string | null;
-  send: (text: string) => Promise<void>;
+  send: (text: string, silent?: boolean, intent?: string) => Promise<void>;
   /** Switch the active session and reload its history in place (no remount). */
   switchSession: (sessionId: string | null) => void;
   clearError: () => void;
@@ -128,7 +128,7 @@ export function useChat({
   );
 
   const send = useCallback(
-    async (text: string, silent = false) => {
+    async (text: string, silent = false, intent?: string) => {
       if (!text.trim() || !userId) return;
 
       // Keep the audio store's session/grade context current for skill directives
@@ -435,6 +435,7 @@ export function useChat({
             subject,
             grade,
             ...(agentId ? { agent_id: agentId } : {}),
+            ...(intent ? { intent } : {}),
           },
           signal
         );

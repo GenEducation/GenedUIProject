@@ -55,6 +55,7 @@ function resolveVisualKey(raw: string): string {
   const s = raw.toLowerCase().replace(/[_\s-]/g, "");
   if (s.includes("math"))    return "mathematics";
   if (s.includes("english")) return "english";
+  if (s.includes("social"))  return "socialscience";
   if (s.includes("science")) return "science";
   if (s.includes("hindi"))   return "hindi";
   return raw.toLowerCase();

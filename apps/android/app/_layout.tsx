@@ -8,6 +8,12 @@ import { Nunito_700Bold, Nunito_800ExtraBold } from "@expo-google-fonts/nunito";
 import { DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from "@expo-google-fonts/dm-sans";
 import { PlayfairDisplay_700Bold } from "@expo-google-fonts/playfair-display";
 import {
+  Baloo2_600SemiBold,
+  Baloo2_700Bold,
+  Baloo2_800ExtraBold,
+} from "@expo-google-fonts/baloo-2";
+import { Mukta_400Regular, Mukta_500Medium, Mukta_600SemiBold, Mukta_700Bold } from "@expo-google-fonts/mukta";
+import {
   SourceSerif4_500Medium,
   SourceSerif4_500Medium_Italic,
 } from "@expo-google-fonts/source-serif-4";
@@ -71,6 +77,13 @@ export default function RootLayout() {
     SourceSerif4_500Medium,
     SourceSerif4_500Medium_Italic,
     JetBrainsMono_600SemiBold,
+    Baloo2_600SemiBold,
+    Baloo2_700Bold,
+    Baloo2_800ExtraBold,
+    Mukta_400Regular,
+    Mukta_500Medium,
+    Mukta_600SemiBold,
+    Mukta_700Bold,
   });
 
   useEffect(() => {

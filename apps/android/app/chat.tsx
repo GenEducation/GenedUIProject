@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BookOpen, ChevronRight } from "lucide-react-native";
+import { BookOpen, ChevronRight, HelpCircle, GraduationCap, Pin } from "lucide-react-native";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { ChatInput } from "@/components/chat/ChatInput";
@@ -56,6 +56,20 @@ export default function Chat() {
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [sessionsOpen, setSessionsOpen] = useState(false);
+
+  // Doubt/teaching mode toggle — mirrors web's chatQueryMode. Selecting a
+  // mode explicitly pins it for the next message only (see handleModeSelect).
+  const [chatMode, setChatMode] = useState<"study" | "doubt">("study");
+  const [chatModePinned, setChatModePinned] = useState(false);
+  const handleModeSelect = (mode: "study" | "doubt") => {
+    setChatMode(mode);
+    setChatModePinned(true);
+  };
+  const handleSend = (text: string) => {
+    const intent = chatModePinned ? (chatMode === "doubt" ? "doubt/help" : "study") : undefined;
+    setChatModePinned(false);
+    return send(text, false, intent);
+  };
 
   const scrollRef = useRef<ScrollView>(null);
 
@@ -108,7 +122,31 @@ export default function Chat() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <ChatHeader subject={subject} onOpenSessions={() => setSessionsOpen(true)} />
+        <ChatHeader
+          subject={subject}
+          isThinking={sending}
+          connectionQuality={error ? "poor" : "good"}
+          onOpenSessions={() => setSessionsOpen(true)}
+        />
+
+        {/* Doubt / Learn toggle — each button explicitly sets + pins its mode */}
+        <View style={styles.modeRow}>
+          {chatModePinned ? <Pin size={10} color={colors.textMuted} /> : null}
+          <Pressable
+            style={[styles.modePill, chatMode === "doubt" && chatModePinned && styles.modePillDoubtActive]}
+            onPress={() => handleModeSelect("doubt")}
+          >
+            <HelpCircle size={11} color={chatMode === "doubt" && chatModePinned ? "#fff" : colors.textMuted} />
+            <Text style={[styles.modeText, chatMode === "doubt" && chatModePinned && styles.modeTextActive]}>Ask a doubt</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.modePill, chatMode === "study" && chatModePinned && styles.modePillStudyActive]}
+            onPress={() => handleModeSelect("study")}
+          >
+            <GraduationCap size={11} color={chatMode === "study" && chatModePinned ? "#fff" : colors.textMuted} />
+            <Text style={[styles.modeText, chatMode === "study" && chatModePinned && styles.modeTextActive]}>Learn a topic</Text>
+          </Pressable>
+        </View>
 
         {chapterName ? (
           <Pressable style={styles.docChip} onPress={openPdf}>
@@ -143,7 +181,7 @@ export default function Chat() {
         </ScrollView>
 
         <View style={{ paddingBottom: insets.bottom + 6 }}>
-          <ChatInput onSend={send} disabled={sending} />
+          <ChatInput onSend={handleSend} disabled={sending} />
         </View>
       </View>
 
@@ -228,4 +266,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.genPurple,
   },
+  modeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    alignSelf: "flex-start",
+    backgroundColor: "#E8E8EC",
+    borderRadius: 999,
+    padding: 3,
+  },
+  modePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  modePillDoubtActive: { backgroundColor: colors.tutor },
+  modePillStudyActive: { backgroundColor: colors.growth },
+  modeText: { fontFamily: fonts.dmBold, fontSize: 11, color: colors.textMuted },
+  modeTextActive: { color: "#fff" },
 });

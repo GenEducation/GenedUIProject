@@ -8,9 +8,11 @@
  *  4. Controls bar (mute / PTT / end)
  */
 import React, { useEffect, useRef } from "react";
-import { View, ScrollView, StyleSheet, Text } from "react-native";
+import { View, ScrollView, StyleSheet, Text, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Circle } from "react-native-svg";
 import { Screen } from "@/components/Screen";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { VoiceChatHeader } from "@/components/voice/VoiceChatHeader";
@@ -20,6 +22,29 @@ import { useVoiceChat } from "@/hooks/useVoiceChat";
 import { RecordingSheet } from "@/components/chat/english/RecordingSheet";
 import { micPrimingStore } from "@/store/useMicPrimingStore";
 import { colors, fonts } from "@/theme/tokens";
+
+/** Scattered low-opacity dots layered over the idle orb backdrop so the
+ * landing screen isn't a flat slab of color. Deterministic pseudo-random
+ * placement (no image asset needed). */
+function NoiseTexture() {
+  const dots = useRef(
+    Array.from({ length: 40 }, (_, i) => {
+      const seed = i * 137.5;
+      return {
+        cx: (seed % 100) + "%",
+        cy: ((seed * 1.7) % 100) + "%",
+        r: 0.6 + (i % 3) * 0.4,
+      };
+    })
+  ).current;
+  return (
+    <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+      {dots.map((d, i) => (
+        <Circle key={i} cx={d.cx} cy={d.cy} r={d.r} fill={colors.text} opacity={0.035} />
+      ))}
+    </Svg>
+  );
+}
 
 const STATUS_CAPTIONS: Record<string, string> = {
   idle: "Tap to start voice chat",
@@ -123,8 +148,24 @@ export default function VoiceChatScreen() {
   };
 
   const handleEnd = () => {
-    stopSession();
-    router.back();
+    // Only prompt while a session is actually live — idle/fresh sessions
+    // (nothing to lose) end immediately, same as the web.
+    if (voiceStatus !== "active") {
+      stopSession();
+      router.back();
+      return;
+    }
+    Alert.alert("End this voice session?", undefined, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "End",
+        style: "destructive",
+        onPress: () => {
+          stopSession();
+          router.back();
+        },
+      },
+    ]);
   };
 
   return (
@@ -172,6 +213,11 @@ export default function VoiceChatScreen() {
         {/* Voice Orb — only shown before the session is active */}
         {voiceStatus !== "active" && (
           <View style={styles.orbSection}>
+            <LinearGradient
+              colors={[colors.tutor + "10", colors.pageBg, colors.pageBg]}
+              style={StyleSheet.absoluteFill}
+            />
+            <NoiseTexture />
             <VoiceOrb
               phase={orbPhase}
               caption={caption}
@@ -241,5 +287,6 @@ const styles = StyleSheet.create({
   orbSection: {
     alignItems: "center",
     paddingVertical: 8,
+    overflow: "hidden",
   },
 });

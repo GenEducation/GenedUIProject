@@ -17,6 +17,7 @@ import { useHomeData } from "@/hooks/useHomeData";
 import { useStudentId } from "@/hooks/useStudentId";
 import { useAuth } from "@/store/useAuthStore";
 import { colors, fonts } from "@/theme/tokens";
+import { getStudentDisplayName } from "@/utils/displayName";
 
 export default function Home() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function Home() {
 
   const firstName =
     state.status === "authenticated"
-      ? (state.profile.name ?? state.profile.username).split(" ")[0]
+      ? getStudentDisplayName(state.profile).split(" ")[0]
       : "";
 
   const hour = new Date().getHours();
@@ -100,7 +101,7 @@ export default function Home() {
         ) : null}
 
         {/* My Subjects */}
-        <SectionHead title="MY SUBJECTS" link={subjects.length > 2 ? `See all (${subjects.length}) →` : undefined} />
+        <SectionHead title="MY SUBJECTS" />
         {subjects.length === 0 ? (
           <EmptyState
             icon="📚"
@@ -109,11 +110,17 @@ export default function Home() {
             fullScreen={false}
           />
         ) : (
-          <View style={{ gap: 12 }}>
-            {subjects.slice(0, 3).map((s) => (
-              <SubjectCard key={s.subject} subject={s} />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.subjectsRow}
+          >
+            {subjects.map((s) => (
+              <View key={s.subject} style={styles.subjectCardWrap}>
+                <SubjectCard subject={s} />
+              </View>
             ))}
-          </View>
+          </ScrollView>
         )}
 
         {/* Recent Sessions */}
@@ -195,4 +202,6 @@ const styles = StyleSheet.create({
   },
   scheduleTitle: { fontFamily: fonts.dmBold, fontSize: 14, color: colors.text },
   scheduleSub: { fontFamily: fonts.dm, fontSize: 12, color: colors.textMuted, marginTop: 1 },
+  subjectsRow: { gap: 12, paddingRight: 4 },
+  subjectCardWrap: { width: 280 },
 });
