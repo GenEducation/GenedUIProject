@@ -19,9 +19,14 @@ import {
   AlertTriangle,
   ArrowRight,
 } from "lucide-react";
+import {
+  loadSubjectCatalog,
+  requireExactSubject,
+  type ExactSubject,
+} from "@/features/subjects/subjectCatalog";
 
 interface AgentSubject {
-  subject: string;
+  subject: ExactSubject;
   document_titles: string[];
 }
 
@@ -41,7 +46,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
   const { sessions, isLoading, isBooking, bookError, loadScheduledSessions, bookSession, isRescheduling, rescheduleError, rescheduleSession } = useScheduleStore();
 
   const [sessionType, setSessionType] = useState<SessionType>("TEST");
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState<ExactSubject | "">("");
   const [topic, setTopic] = useState("");
   const [scheduledDate, setScheduledDate] = useState(tomorrowDateString());
   const [scheduledTime, setScheduledTime] = useState("");
@@ -62,6 +67,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
     const fetchAgents = async () => {
       setIsLoadingAgents(true);
       try {
+        const catalog = await loadSubjectCatalog();
         const data = await studentService.fetchAvailableAgents(studentId, controller.signal);
         if (cancelled) return;
 
@@ -72,7 +78,14 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
               partner.subjects.forEach((sub: any) => {
                 sub.agents?.forEach((agent: any) => {
                   if (agent.subject) {
-                    subjects.push({ subject: agent.subject, document_titles: agent.document_titles ?? [] });
+                    try {
+                      subjects.push({
+                        subject: requireExactSubject(agent.subject, Number(agent.grade), catalog),
+                        document_titles: agent.document_titles ?? [],
+                      });
+                    } catch {
+                      // Invalid historical agent rows are not scheduling options.
+                    }
                   }
                 });
               });
@@ -180,7 +193,10 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
               <label className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest">Subject</label>
               <select
                 value={subject}
-                onChange={(e) => setSubject(e.target.value)}
+                onChange={(e) => {
+                  const match = agentSubjects.find((item) => item.subject === e.target.value);
+                  if (match) setSubject(match.subject);
+                }}
                 disabled={isLoadingAgents}
                 className="w-full bg-[#F4F3EE]/50 border border-[#1a3a2a]/5 rounded-2xl py-3.5 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1a3a2a]/10 focus:bg-white transition-all disabled:opacity-50"
               >

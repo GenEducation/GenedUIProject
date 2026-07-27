@@ -3,6 +3,11 @@ import { Upload, X, FileText, Check, RotateCcw } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { usePartnerStore } from "../store/usePartnerStore";
 import { PageWisePreview } from "./PageWisePreview";
+import {
+  requireExactSubject,
+  subjectsForGrade,
+  useSubjectCatalog,
+} from "@/features/subjects/subjectCatalog";
 
 interface CurriculumIngestionProps {
   onClose: () => void;
@@ -28,17 +33,8 @@ export function CurriculumIngestion({
   const [documentType, setDocumentType] = useState("chapter");
 
   const gradeNum = parseInt(grade, 10);
-  const isMiddleSchool = [6, 7, 8].includes(gradeNum);
-  const subjectOptions = [
-    { value: "english", label: "English" },
-    { value: "mathematics", label: "Mathematics" },
-    ...(isMiddleSchool
-      ? [
-          { value: "science", label: "Science" },
-          { value: "social_science", label: "Social Science" },
-        ]
-      : []),
-  ];
+  const catalog = useSubjectCatalog((state) => state.subjects);
+  const subjectOptions = subjectsForGrade(gradeNum, catalog);
 
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -70,10 +66,10 @@ export function CurriculumIngestion({
 
   const handleProcess = async () => {
     if (!subjectName || !documentTitle || !agentName || !grade || !file) return;
-    
+    const exactSubject = requireExactSubject(subjectName, gradeNum, catalog);
     setIsProcessing(true);
     // Trigger upload (handles its own success/error state updates)
-    uploadCurriculum(file, subjectName, documentTitle, agentName, grade, board, documentType);
+    uploadCurriculum(file, exactSubject, documentTitle, agentName, grade, board, documentType);
     
     // Close immediately as per user request
     onClose();
@@ -177,8 +173,12 @@ export function CurriculumIngestion({
                       onChange={(e) => {
                         const next = e.target.value;
                         setGrade(next);
-                        const nextIsMiddle = [6, 7, 8].includes(parseInt(next, 10));
-                        if (!nextIsMiddle && (subjectName === "science" || subjectName === "social_science")) {
+                        if (
+                          subjectName &&
+                          !subjectsForGrade(parseInt(next, 10), catalog).some(
+                            (candidate) => candidate === subjectName,
+                          )
+                        ) {
                           setSubjectName("");
                         }
                       }}
@@ -210,8 +210,8 @@ export function CurriculumIngestion({
                     className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
                   >
                     <option value="">Select Subject</option>
-                    {subjectOptions.map((s) => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
+                    {subjectOptions.map((subject) => (
+                      <option key={subject} value={subject}>{subject}</option>
                     ))}
                   </select>
                 </div>

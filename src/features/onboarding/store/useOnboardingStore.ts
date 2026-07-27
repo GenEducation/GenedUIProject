@@ -1,5 +1,9 @@
 import { create } from "zustand";
 import { onboardingService } from "../services/onboardingService";
+import {
+  requireLoadedExactSubject,
+  type ExactSubject,
+} from "@/features/subjects/subjectCatalog";
 
 export interface OnboardingMessage {
   id: string;
@@ -10,7 +14,7 @@ export interface OnboardingMessage {
 
 interface OnboardingState {
   type: "general" | "subject" | null;
-  subject: string | null;
+  subject: ExactSubject | null;
   grade: number | null;
   dnaStatus: "PENDING" | "GENERAL_COMPLETED" | "COMPLETED" | string | null;
   
@@ -54,14 +58,15 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
   },
 
   startOnboarding: async (studentId, type, subject, grade) => {
-    set({ type, subject: subject || null, grade: grade || null, messages: [], isComplete: false, isVoiceOnly: false });
     try {
       let data;
       if (type === "general") {
+        set({ type, subject: null, grade: null, messages: [], isComplete: false, isVoiceOnly: false });
         data = await onboardingService.startGeneralOnboarding(studentId);
       } else {
-        if (!subject || !grade) throw new Error("Subject and grade required for subject onboarding");
-        data = await onboardingService.startSubjectOnboarding(studentId, subject, grade);
+        const exactSubject = await requireLoadedExactSubject(subject, grade);
+        set({ type, subject: exactSubject, grade: grade!, messages: [], isComplete: false, isVoiceOnly: false });
+        data = await onboardingService.startSubjectOnboarding(studentId, exactSubject, grade!);
       }
 
       let responseText = data.response || "";

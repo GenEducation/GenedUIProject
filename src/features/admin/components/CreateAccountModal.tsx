@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { createUser, listPartners, CreateUserPayload, PartnerRow } from "../adminService";
+import { useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
 
 interface Props {
   onClose: () => void;
@@ -17,6 +18,11 @@ const labelCls =
   "block text-[9px] font-bold uppercase tracking-[0.22em] text-white/40 mb-1.5";
 
 export function CreateAccountModal({ onClose, onCreated }: Props) {
+  const catalog = useTaxonomySubjects();
+  const taxonomySubjects = useMemo(
+    () => Array.from(new Set(catalog.map((entry) => entry.name))),
+    [catalog],
+  );
   const [role, setRole] = useState<FormRole>("STUDENT");
   const [form, setForm] = useState<Record<string, string>>({});
   const [partners, setPartners] = useState<PartnerRow[]>([]);
@@ -213,8 +219,27 @@ export function CreateAccountModal({ onClose, onCreated }: Props) {
                   <input className={inputCls} value={form.title ?? ""} onChange={(e) => set("title", e.target.value)} placeholder="HOD Science" />
                 </div>
                 <div className="col-span-2">
-                  <label className={labelCls}>Subjects (comma-separated)</label>
-                  <input className={inputCls} value={form.subjects ?? ""} onChange={(e) => set("subjects", e.target.value)} placeholder="Math, Science" />
+                  <label className={labelCls}>Subjects</label>
+                  <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/15 bg-white/5 p-3">
+                    {taxonomySubjects.map((subject) => {
+                      const selected = (form.subjects ?? "").split(",").filter(Boolean);
+                      return (
+                        <label key={subject} className="flex items-center gap-2 text-xs text-white/80">
+                          <input
+                            type="checkbox"
+                            checked={selected.includes(subject)}
+                            onChange={(event) => {
+                              const next = event.target.checked
+                                ? [...selected, subject]
+                                : selected.filter((item) => item !== subject);
+                              set("subjects", next.join(","));
+                            }}
+                          />
+                          {subject}
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </>

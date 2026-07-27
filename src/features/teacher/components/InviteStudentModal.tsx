@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2 } from "lucide-react";
-import { SUBJECTS } from "../constants";
+import { useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
 
 interface InviteStudentModalProps {
   isOpen: boolean;
@@ -13,9 +13,18 @@ interface InviteStudentModalProps {
 
 export function InviteStudentModal({ isOpen, onClose, onInvite }: InviteStudentModalProps) {
   const [identifier, setIdentifier] = useState("");
-  const [subject, setSubject] = useState<string>(SUBJECTS[1]);
+  const catalog = useTaxonomySubjects();
+  const subjects = useMemo(
+    () => Array.from(new Set(catalog.map((entry) => entry.name))),
+    [catalog],
+  );
+  const [subject, setSubject] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!subject && subjects.length > 0) setSubject(subjects[0]);
+  }, [subject, subjects]);
 
   const handleSend = async () => {
     if (!identifier.trim()) {
@@ -27,7 +36,7 @@ export function InviteStudentModal({ isOpen, onClose, onInvite }: InviteStudentM
     try {
       await onInvite(identifier.trim(), subject);
       setIdentifier("");
-      setSubject(SUBJECTS[1] as string);
+      setSubject(subjects[0] ?? "");
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send invite. Please try again.");
@@ -89,7 +98,7 @@ export function InviteStudentModal({ isOpen, onClose, onInvite }: InviteStudentM
                       "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7d91' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
                   }}
                 >
-                  {SUBJECTS.map((s) => (
+                  {subjects.map((s) => (
                     <option key={s} value={s}>
                       {s}
                     </option>

@@ -37,13 +37,18 @@ beforeEach(() => {
     // The store sorts discovered subjects alphabetically and auto-selects subjects[0].
     http.get(`${BASE}/api/students/:userId/available-agents`, () =>
       HttpResponse.json({
-        partners: [{ subjects: [{ subject: "Science" }, { subject: "Math" }] }],
+        partners: [{
+          subjects: [
+            { subject: "Science", agents: [{ subject: "Science", grade: 6 }] },
+            { subject: "Mathematics", agents: [{ subject: "Mathematics", grade: 6 }] },
+          ],
+        }],
       }),
     ),
     http.get(`${BASE}/students/:studentId/skill-summary`, () => HttpResponse.json({ overall_score: 0.5, skill_index: 1 })),
     http.get(`${BASE}/students/:studentId/cg-scores`, () => HttpResponse.json([])),
     http.get(`${BASE}/students/:studentId/skill-tree`, () => HttpResponse.json([])),
-    chapterMasteryHandler({ Math: "Algebra Basics", Science: "Photosynthesis" }),
+    chapterMasteryHandler({ Mathematics: "Algebra Basics", Science: "Photosynthesis" }),
   );
 });
 
@@ -52,7 +57,7 @@ describe("StudentAnalyticsDashboard, as rendered by ParentHome (mode=\"parent\")
     render(<StudentAnalyticsDashboard mode="parent" studentId="child-1" />);
 
     await waitFor(() => expect(screen.getByText("Algebra Basics")).toBeInTheDocument());
-    expect(useAnalyticsStore.getState().selectedAnalyticsSubject).toBe("Math");
+    expect(useAnalyticsStore.getState().selectedAnalyticsSubject).toBe("Mathematics");
   });
 
   it("hides the practice/test actions on chapter cards — parent view is read-only", async () => {

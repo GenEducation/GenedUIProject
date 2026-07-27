@@ -26,6 +26,7 @@ import { TypingStudentCharacter } from "@/components/shared/loaders/StudentLoade
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { Button } from "@/components/ui/Button";
 import { STRINGS } from "../constants/strings";
+import { requireExactSubject } from "@/features/subjects/subjectCatalog";
 
 export function AssessmentsPage() {
   const router = useRouter();
@@ -129,14 +130,15 @@ export function AssessmentsPage() {
   };
 
   const handleStartTest = async (chapterTitle: string, subject: string) => {
-    if (studentProfile?.user_id) {
+    if (studentProfile?.user_id && Number.isInteger(studentProfile.grade)) {
       setIsStartingTest(true);
       try {
+        const exactSubject = requireExactSubject(subject, studentProfile.grade);
         await startTest({
           student_id: studentProfile.user_id,
-          subject: subject,
+          subject: exactSubject,
           chapter_query: chapterTitle,
-          grade: studentProfile.grade || 1,
+          grade: studentProfile.grade!,
           questions_per_section: 3
         });
         

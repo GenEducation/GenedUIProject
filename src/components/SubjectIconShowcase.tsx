@@ -1,24 +1,14 @@
 'use client';
 
 import React from 'react';
-import { EnglishIcon } from './icons/EnglishIcon';
-import { MathematicsIcon } from './icons/MathematicsIcon';
-import { ScienceIcon } from './icons/ScienceIcon';
-import { SocialScienceIcon } from './icons/SocialScienceIcon';
-import { HindiIcon } from './icons/HindiIcon';
-import { SUBJECT_CONFIG, Subject } from '@/constants/subjectConfig';
-
-const subjects: Subject[] = ['english', 'mathematics', 'science', 'social_science', 'hindi'];
-
-const iconMap = {
-  english: EnglishIcon,
-  mathematics: MathematicsIcon,
-  science: ScienceIcon,
-  social_science: SocialScienceIcon,
-  hindi: HindiIcon,
-};
+import { getSubjectConfig } from '@/constants/subjectConfig';
+import { useSubjectCatalog } from '@/features/subjects/subjectCatalog';
+import { SubjectIcon } from '@/features/subjects/subjectPresentation';
 
 export const SubjectIconShowcase: React.FC = () => {
+  const entries = useSubjectCatalog((state) => state.subjects);
+  const subjects = entries.map((entry) => entry.name);
+
   return (
     <div className="w-full bg-gradient-to-br from-slate-50 to-slate-100 p-12 min-h-screen">
       <div className="max-w-6xl mx-auto">
@@ -35,8 +25,7 @@ export const SubjectIconShowcase: React.FC = () => {
         {/* Icons Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
           {subjects.map((subject) => {
-            const config = SUBJECT_CONFIG[subject];
-            const IconComponent = iconMap[subject];
+            const config = getSubjectConfig(subject);
 
             return (
               <div
@@ -48,16 +37,16 @@ export const SubjectIconShowcase: React.FC = () => {
                   className="w-20 h-20 rounded-xl flex items-center justify-center mb-6 transition-colors"
                   style={{ backgroundColor: config.bgColor }}
                 >
-                  <IconComponent
+                  <SubjectIcon
+                    subject={subject}
                     size={40}
-                    className="text-[color:var(--icon-color)]"
-                    style={{ '--icon-color': config.color } as React.CSSProperties}
+                    style={{ '--icon-color': config.color, color: config.color } as React.CSSProperties}
                   />
                 </div>
 
                 {/* Subject name */}
                 <h3 className="text-lg font-bold text-slate-900 mb-2">
-                  {config.name}
+                  {subject}
                 </h3>
 
                 {/* Color swatch */}
@@ -73,10 +62,7 @@ export const SubjectIconShowcase: React.FC = () => {
 
                 {/* Color name */}
                 <p className="text-xs text-slate-500 font-medium">
-                  {subject === 'english' && 'Sky Blue'}
-                  {subject === 'mathematics' && 'Growth Green'}
-                  {subject === 'science' && 'Sun Orange'}
-                  {subject === 'hindi' && 'Spark Purple'}
+                  Taxonomy subject
                 </p>
               </div>
             );
@@ -91,8 +77,7 @@ export const SubjectIconShowcase: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {subjects.map((subject) => {
-              const config = SUBJECT_CONFIG[subject];
-              const IconComponent = iconMap[subject];
+              const config = getSubjectConfig(subject);
 
               return (
                 <div
@@ -105,16 +90,16 @@ export const SubjectIconShowcase: React.FC = () => {
                     className="w-12 h-12 rounded-lg flex items-center justify-center mb-4"
                     style={{ backgroundColor: config.bgColor }}
                   >
-                    <IconComponent
+                    <SubjectIcon
+                      subject={subject}
                       size={24}
-                      className="text-[color:var(--icon-color)]"
-                      style={{ '--icon-color': config.color } as React.CSSProperties}
+                      style={{ '--icon-color': config.color, color: config.color } as React.CSSProperties}
                     />
                   </div>
 
                   {/* Subject label */}
                   <h4 className="font-bold text-slate-900 mb-1">
-                    {config.name}
+                    {subject}
                   </h4>
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-4">
                     Grade 4
@@ -150,12 +135,12 @@ export const SubjectIconShowcase: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {subjects.map((subject) => {
-              const config = SUBJECT_CONFIG[subject];
+              const config = getSubjectConfig(subject);
 
               return (
                 <div key={`palette-${subject}`}>
                   <p className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-wider">
-                    {config.name}
+                    {subject}
                   </p>
 
                   <div className="space-y-2">

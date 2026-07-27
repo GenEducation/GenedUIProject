@@ -1,4 +1,5 @@
 import { getAuthToken } from "@/utils/authFetch";
+import type { ExactSubject } from "@/features/subjects/subjectCatalog";
 
 /**
  * VoiceService handles the real-time audio interaction with the April backend.
@@ -33,7 +34,7 @@ class VoiceService {
   private currentStudentId: string | null = null;
   private currentDisplayName: string | null = null;
   private currentSessionId: string | null = null;
-  private currentSubject: string | null = null;
+  private currentSubject: ExactSubject | null = null;
   private currentVoice: string | null = null;
   private currentDocumentTitle: string | null = null;
   private currentAgentId: string | null = null;
@@ -86,7 +87,7 @@ class VoiceService {
     onEvent: (event: any) => void,
     onTextReveal: (text: string, role: "user" | "assistant") => void,
     sessionId?: string,
-    subject?: string,
+    subject?: ExactSubject,
     wsEndpoint: string = "/ws/april-live-graph",
     voice?: string,
     documentTitle?: string,
@@ -284,7 +285,17 @@ class VoiceService {
       }
     };
 
-    this.ws.onclose = () => {
+    this.ws.onclose = (event) => {
+      if (event.code === 1008) {
+        const callback = this.onEventCallback;
+        this.stopSession();
+        callback?.({
+          type: "error",
+          error: "SUBJECT_NOT_IN_TAXONOMY",
+          message: "This subject is not available for the selected grade.",
+        });
+        return;
+      }
       if (this.isSessionActive && this.retryCount < this.MAX_RETRIES && this.currentConnectionId === connId) {
         this.retryCount++;
         const delay = Math.pow(2, this.retryCount - 1) * 1000;
@@ -309,10 +320,10 @@ class VoiceService {
       type: "init",
       student_id: this.currentStudentId,
       session_id: this.currentSessionId,
-      subject: this.currentSubject,
       voice: this.currentVoice,
       token: getAuthToken(),
     };
+    if (this.currentSubject) payload.subject = this.currentSubject;
     if (this.currentDocumentTitle) payload.document_title = this.currentDocumentTitle;
     if (this.currentAgentId) payload.agent_id = this.currentAgentId;
     if (this.currentGrade != null) payload.grade = this.currentGrade;

@@ -7,6 +7,7 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
 import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { useLoaderStore } from "@/stores/useLoaderStore";
+import { loadSubjectCatalog } from "@/features/subjects/subjectCatalog";
 
 type Role = "student" | "parent" | "partner" | "admin" | "teacher";
 
@@ -103,6 +104,12 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
         email: profile.email,
       });
       Sentry.setTag("role", role);
+
+      // Warm the complete static taxonomy manifest once after authentication.
+      // Subject-scoped actions await the same de-duplicated promise themselves.
+      void loadSubjectCatalog().catch((error) => {
+        Sentry.captureException(error, { tags: { boundary: "subject_catalog" } });
+      });
 
       setIsAuthorized(true);
 

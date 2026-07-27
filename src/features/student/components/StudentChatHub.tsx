@@ -14,47 +14,10 @@ import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { ActivityHeatmap } from "./ActivityHeatmap";
 import { StreakStats } from "./StreakStats";
-import { SUBJECT_CONFIG, Subject } from "@/constants/subjectConfig";
-import { EnglishIcon } from "@/components/icons/EnglishIcon";
-import { MathematicsIcon } from "@/components/icons/MathematicsIcon";
-import { ScienceIcon } from "@/components/icons/ScienceIcon";
-import { SocialScienceIcon } from "@/components/icons/SocialScienceIcon";
-import { HindiIcon } from "@/components/icons/HindiIcon";
+import { getSubjectConfig } from "@/constants/subjectConfig";
+import { SubjectIcon } from "@/features/subjects/subjectPresentation";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
 
-
-type SubjectKey = "english" | "mathematics" | "science" | "social_science" | "hindi";
-
-const SUBJECT_ICON_MAP: Record<SubjectKey, React.ComponentType<{ size: number; style?: React.CSSProperties }>> = {
-  english: EnglishIcon,
-  mathematics: MathematicsIcon,
-  science: ScienceIcon,
-  social_science: SocialScienceIcon,
-  hindi: HindiIcon,
-};
-
-function normalizeSubject(subject: string): SubjectKey | null {
-  const lower = (subject ?? "").toLowerCase();
-  if (lower.includes("english")) return "english";
-  if (lower.includes("math")) return "mathematics";
-  // "social" must be checked before "science" — "social science" contains both
-  if (lower.includes("social") || lower.includes("sst")) return "social_science";
-  if (lower.includes("science")) return "science";
-  if (lower.includes("hindi")) return "hindi";
-  return null;
-}
-
-function resolveSubjectLabel(chat: { subject?: string; title?: string }): string {
-  if (chat.subject) return chat.subject;
-  // Extract from title as fallback
-  const hay = (chat.title ?? "").toLowerCase();
-  if (hay.includes("english")) return "English";
-  if (hay.includes("math")) return "Mathematics";
-  if (hay.includes("social") || hay.includes("sst")) return "Social Science";
-  if (hay.includes("science")) return "Science";
-  if (hay.includes("hindi")) return "Hindi";
-  return "Session";
-}
 
 interface StudentChatHubProps {
   toggleSidebar: () => void;
@@ -113,9 +76,9 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
   const onboardingSubjects = onboardingStatus?.subjects
     ? onboardingStatus.subjects
         .filter(s => s.status === "PENDING")
-        .map(s => {
-          const agent = availableAgents.find(a => a.subject === s.subject);
-          return agent || { subject: s.subject, agent_id: s.subject, grade: studentProfile?.grade };
+        .flatMap((item) => {
+          const agent = availableAgents.find((candidate) => candidate.subject === item.subject);
+          return agent ? [agent] : [];
         })
     : [];
 
@@ -240,15 +203,13 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                 ))
               ) : availableAgents.length > 0 ? (
                 availableAgents.slice(0, 3).map((agent, i) => {
-                  const subjectKey = normalizeSubject(agent.subject);
                   const isOnboardingComplete = agent.is_onboarding_complete !== false;
                   return (
                     <HubCard
                       key={agent.agent_id}
                       title={agent.subject || agent.name}
                       subtitle={`Grade ${agent.grade}`}
-                      icon={<Bot size={18} />}
-                      subjectKey={subjectKey}
+                      subject={agent.subject}
                       isOnboardingComplete={isOnboardingComplete}
                       onStartChat={() => {
                         // Wait for the real session_id before navigating so the
@@ -264,7 +225,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                       onOnboarding={() => {
                         setOnboardingModal({
                           subject: agent.subject,
-                          grade: agent.grade ?? studentProfile?.grade ?? 9,
+                          grade: agent.grade,
                         });
                       }}
                       delay={0.3 + i * 0.05}
@@ -321,8 +282,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
 interface HubCardProps {
   title: string;
   subtitle: string;
-  icon: React.ReactNode;
-  subjectKey: SubjectKey | null;
+  subject: string;
   onStartChat: () => void;
   onStartVoice: () => void;
   delay: number;
@@ -330,9 +290,8 @@ interface HubCardProps {
   onOnboarding?: () => void;
 }
 
-function HubCard({ title, subtitle, icon, subjectKey, onStartChat, onStartVoice, delay, isOnboardingComplete = true, onOnboarding }: HubCardProps) {
-  const config = subjectKey ? SUBJECT_CONFIG[subjectKey] : null;
-  const IconComponent = subjectKey ? SUBJECT_ICON_MAP[subjectKey] : null;
+function HubCard({ title, subtitle, subject, onStartChat, onStartVoice, delay, isOnboardingComplete = true, onOnboarding }: HubCardProps) {
+  const config = getSubjectConfig(subject);
 
   return (
     <motion.div
@@ -340,21 +299,18 @@ function HubCard({ title, subtitle, icon, subjectKey, onStartChat, onStartVoice,
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
       className="bg-white px-5 py-4 rounded-2xl border border-[var(--primary-ink)]/5 shadow-sm hover:shadow-md hover:border-[var(--primary-ink)]/10 transition-all text-left border-l-4 flex flex-col gap-3 flex-1 min-w-full sm:min-w-[280px] max-w-full sm:max-w-[340px]"
-      style={{ borderLeftColor: config?.color ?? "#042E5C20" }}
+      style={{ borderLeftColor: config.color }}
     >
       <div className="flex items-start gap-3">
         <div
           className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center"
-          style={{ backgroundColor: config ? config.bgColor : "rgba(4,46,92,0.05)" }}
+          style={{ backgroundColor: config.bgColor }}
         >
-          {IconComponent ? (
-            <IconComponent
-              size={20}
-              style={{ "--icon-color": config?.color ?? "var(--primary-ink)" } as React.CSSProperties}
-            />
-          ) : (
-            <span style={{ color: "#042E5C60" }}>{icon}</span>
-          )}
+          <SubjectIcon
+            subject={subject}
+            size={20}
+            style={{ "--icon-color": config.color, color: config.color } as React.CSSProperties}
+          />
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-[var(--primary-ink)] text-sm line-clamp-1">{title}</h3>

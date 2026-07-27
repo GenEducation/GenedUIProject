@@ -5,7 +5,7 @@ import { Send, Square } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useStudentStore } from "../store/useStudentStore";
 import { InlineSubjectPicker } from "./InlineSubjectPicker";
-import { Subject } from "@/constants/subjectConfig";
+import type { ExactSubject } from "@/features/subjects/subjectCatalog";
 
 /* ── Text-only compositor ─────────────────────────────────────────────── */
 
@@ -30,7 +30,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
 
   const [input, setInput] = useState("");
   const [showSubjectPicker, setShowSubjectPicker] = useState(false);
-  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<ExactSubject | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // The keyboard hint below shows once, until the student's first send —
@@ -66,16 +66,12 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
     if (!trimmed) return;
 
     // If in hub mode with a subject selected, route to that subject's agent.
-    // Picker keys use underscores ("social_science") while backend subjects use
-    // spaces ("Social Science"), so compare on a space-normalized form.
     if (isHub && selectedSubject) {
-      const wanted = selectedSubject.replace(/_/g, " ");
-      const agent = availableAgents.find(
-        a => a.subject.toLowerCase().replace(/_/g, " ") === wanted ||
-             (selectedSubject === "mathematics" && a.subject.toLowerCase() === "math")
-      );
+      const agent = availableAgents.find((candidate) => candidate.subject === selectedSubject);
       if (agent) {
         openNewChat(agent);
+      } else {
+        return;
       }
     }
 

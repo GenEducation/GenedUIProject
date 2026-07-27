@@ -27,6 +27,10 @@ import { RescheduleModal, RescheduleModalTarget } from "@/components/shared/Resc
 import { SessionType } from "../types/schedule";
 import { Button } from "@/components/ui/Button";
 import { STRINGS } from "../constants/strings";
+import {
+  requireExactSubject,
+  type ExactSubject,
+} from "@/features/subjects/subjectCatalog";
 
 function tomorrowDateString(): string {
   const d = new Date();
@@ -63,7 +67,7 @@ export function SchedulePage() {
 
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const [sessionType, setSessionType] = useState<SessionType>("TEST");
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState<ExactSubject | "">("");
   const [topic, setTopic] = useState("");
   const [scheduledDate, setScheduledDate] = useState(tomorrowDateString());
   const [scheduledTime, setScheduledTime] = useState("");
@@ -99,14 +103,15 @@ export function SchedulePage() {
   }, [chapters]);
 
   const handleBook = async () => {
-    if (!studentProfile?.user_id || !subject || !scheduledDate) return;
+    if (!studentProfile?.user_id || !Number.isInteger(studentProfile.grade) || !subject || !scheduledDate) return;
     if (sessionType === "TEST" && !topic) return;
+    const exactSubject = requireExactSubject(subject, studentProfile.grade);
 
     setBookedConfirmation(false);
     const result = await bookSession({
       user_id: studentProfile.user_id,
       session_type: sessionType,
-      subject,
+      subject: exactSubject,
       topic: topic || undefined,
       scheduled_date: scheduledDate,
       scheduled_time: scheduledTime || undefined,
@@ -175,9 +180,17 @@ export function SchedulePage() {
     if (isFailed) return 0;
     return 2; // being prepared / pending
   };
+  const validSessions = sessions.filter((session) => {
+    try {
+      requireExactSubject(session.subject, studentProfile?.grade);
+      return true;
+    } catch {
+      return false;
+    }
+  });
   const dedupedSessions = Object.values(
-    sessions.reduce<Record<string, (typeof sessions)[number]>>((acc, s) => {
-      const key = `${(s.topic || s.subject || "").toLowerCase()}|${s.scheduled_date}|${s.scheduled_time ?? ""}`;
+    validSessions.reduce<Record<string, (typeof sessions)[number]>>((acc, s) => {
+      const key = `${s.subject}|${s.topic ?? ""}|${s.scheduled_date}|${s.scheduled_time ?? ""}`;
       if (!acc[key] || readinessRank(s) > readinessRank(acc[key])) acc[key] = s;
       return acc;
     }, {})
@@ -347,7 +360,9 @@ export function SchedulePage() {
                   <label className="text-[10px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">Subject</label>
                   <select
                     value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
+                    onChange={(e) => {
+                      setSubject(requireExactSubject(e.target.value, studentProfile?.grade));
+                    }}
                     className="w-full bg-[#F4F3EE]/50 border border-[var(--primary-ink)]/5 rounded-2xl py-3.5 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--primary-ink)]/10 focus:bg-white transition-all"
                   >
                     {isAgentsLoading && <option value="">Loading...</option>}

@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pencil, GraduationCap } from "lucide-react";
 import { listTeachers, updateTeacher, updateUser, TeacherRow } from "../adminService";
 import { DataTable, Column } from "./DataTable";
 import { EntityEditModal } from "./EntityEditModal";
 import { BulkImportModal } from "./BulkImportModal";
+import { useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
 
 const columns: Column<TeacherRow>[] = [
   { key: "full_name", header: "Name", accessor: (t) => t.full_name ?? t.username },
@@ -21,6 +22,11 @@ const columns: Column<TeacherRow>[] = [
 ];
 
 export function TeachersView() {
+  const catalog = useTaxonomySubjects();
+  const taxonomySubjects = useMemo(
+    () => Array.from(new Set(catalog.map((entry) => entry.name))),
+    [catalog],
+  );
   const [rows, setRows] = useState<TeacherRow[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -100,10 +106,18 @@ export function TeachersView() {
             if (rest.full_name !== undefined) teacherFields.full_name = String(rest.full_name);
             if (rest.title !== undefined) teacherFields.title = String(rest.title);
             if (subjects !== undefined) {
-              teacherFields.subjects = String(subjects)
+              const requestedSubjects = String(subjects)
                 .split(",")
                 .map((s) => s.trim())
                 .filter(Boolean);
+              if (
+                requestedSubjects.some(
+                  (subject) => !taxonomySubjects.some((candidate) => candidate === subject),
+                )
+              ) {
+                throw new Error("Every teacher subject must exactly match the taxonomy catalogue.");
+              }
+              teacherFields.subjects = requestedSubjects;
             }
             if (Object.keys(teacherFields).length) tasks.push(updateTeacher(editing.id, teacherFields));
             await Promise.all(tasks);

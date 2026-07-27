@@ -15,9 +15,27 @@ import { RC_STYLES } from "./styles";
 import { applySimulation } from "./utils";
 import { ReportCardBody } from "./ReportCardBody";
 import { usePrintPdf } from "./usePrintPdf";
+import {
+  loadSubjectCatalog,
+  requireExactSubject,
+  type TaxonomySubject,
+} from "@/features/subjects/subjectCatalog";
 
 const FONT_HREF =
   "https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,500&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap";
+
+function hasExactReportSubject(
+  row: { subject?: unknown },
+  grade: unknown,
+  catalog: TaxonomySubject[],
+): boolean {
+  try {
+    requireExactSubject(row.subject, grade, catalog);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export function StudentReportCard({ parentId, teacherId, childId, childName }: { parentId?: string; teacherId?: string; childId?: string; childName?: string } = {}) {
   const { studentProfile } = useStudentStore();
@@ -73,18 +91,23 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
     setIsLoading(true);
     setError(null);
     try {
+      const catalog = await loadSubjectCatalog();
       const data = parentId
         ? await studentService.fetchParentReport(parentId, childId)
         : await studentService.fetchTeacherReport(teacherId!, childId);
+      const grade = data.profile?.grade;
+      if (!Number.isInteger(grade)) {
+        throw new Error("A valid student grade is required to build a report.");
+      }
       setDashboardProfile(data.profile ?? null);
       setTotalSessions(data.total_sessions ?? 0);
-      setSubjects(data.subjects ?? []);
-      setChapters(data.chapters ?? []);
-      setSkillTree(data.skill_tree ?? []);
-      setTestSubmissions(data.test_submissions ?? []);
+      setSubjects((data.subjects ?? []).filter((row: SubjectData) => hasExactReportSubject(row, grade, catalog)));
+      setChapters((data.chapters ?? []).filter((row: ChapterMasteryItem) => hasExactReportSubject(row, grade, catalog)));
+      setSkillTree((data.skill_tree ?? []).filter((row: SkillCGItem) => hasExactReportSubject(row, grade, catalog)));
+      setTestSubmissions((data.test_submissions ?? []).filter((row: TestSubmission) => hasExactReportSubject(row, grade, catalog)));
       setProgressReport(data.progress_report ?? null);
-      setSubjectEvolutions(data.subject_evolutions ?? []);
-      setChapterEvolutions(data.chapter_evolutions ?? []);
+      setSubjectEvolutions((data.subject_evolutions ?? []).filter((row: SubjectEvolutionData) => hasExactReportSubject(row, grade, catalog)));
+      setChapterEvolutions((data.chapter_evolutions ?? []).filter((row: EvolutionAnalysisData) => hasExactReportSubject(row, grade, catalog)));
     } catch (err) {
       console.error("[ReportCard] Failed to load parent report data:", err);
       setError("Failed to load report data. Please try again.");
@@ -99,13 +122,27 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
     setError(null);
 
     try {
-      const [profileData, subjectListData] = await Promise.all([
+      const [catalog, profileData, subjectListData] = await Promise.all([
+        loadSubjectCatalog(),
         studentService.fetchDashboardProfile(studentId).catch(() => null),
         studentService.fetchAnalyticsSubjects(studentId).catch(() => ({ subjects: [] })),
       ]);
 
       if (profileData) setDashboardProfile(profileData);
-      const subjectNames: string[] = subjectListData?.subjects ?? [];
+      const grade = profileData?.grade ?? studentProfile?.grade;
+      if (!Number.isInteger(grade)) {
+        throw new Error("A valid student grade is required to build a report.");
+      }
+      const rawSubjectNames: unknown[] = Array.isArray(subjectListData?.subjects)
+        ? subjectListData.subjects
+        : [];
+      const subjectNames = rawSubjectNames.flatMap((subject) => {
+        try {
+          return [requireExactSubject(subject, grade, catalog)];
+        } catch {
+          return [];
+        }
+      });
       setTotalSessions(subjectListData?.session_count ?? 0);
 
       const perSubjectResults = await Promise.all(
@@ -159,11 +196,11 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
       if (Array.isArray(timeByChapterData)) {
         const timeByKey = new Map<string, { total_minutes: number; session_count: number }>();
         for (const t of timeByChapterData) {
-          const key = `${(t.subject ?? "").toLowerCase()}::${(t.chapter_name ?? "").toLowerCase()}`;
+          const key = `${t.subject ?? ""}::${(t.chapter_name ?? "").toLowerCase()}`;
           timeByKey.set(key, t);
         }
         for (const ch of allChapters) {
-          const key = `${ch.subject.toLowerCase()}::${ch.document_title.toLowerCase()}`;
+          const key = `${ch.subject}::${ch.document_title.toLowerCase()}`;
           const t = timeByKey.get(key);
           if (t) {
             ch.time_minutes = t.total_minutes;
@@ -192,7 +229,7 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
     } finally {
       setIsLoading(false);
     }
-  }, [studentId]);
+  }, [studentId, studentProfile?.grade]);
 
   useEffect(() => {
     if (childId && (parentId || teacherId)) {

@@ -43,12 +43,23 @@ const C = {
 // (`${vis.color}cc`, `vis.color + "14"`), which CSS custom properties can't
 // support.
 const SUBJECTS_VISUAL: Record<string, { color: string; bg: string; icon: string; label: string }> = {
-  english:        { color: STUDENT_COLORS.subjectEnglish, bg: "#EBF3FB", icon: "📖", label: "English" },
-  mathematics:    { color: "#2D6A4F", bg: "#E8F5EF", icon: "🧮", label: "Mathematics" },
-  science:        { color: "#D4820A", bg: "#FEF5E7", icon: "🔬", label: "Science" },
-  social_science: { color: "#B0543F", bg: "#FBEFEB", icon: "🌍", label: "Social Science" },
-  hindi:          { color: "#7B5EA7", bg: "#F3EDF9", icon: "✏️", label: "Hindi" },
+  English:        { color: STUDENT_COLORS.subjectEnglish, bg: "#EBF3FB", icon: "📖", label: "English" },
+  Mathematics:    { color: "#2D6A4F", bg: "#E8F5EF", icon: "🧮", label: "Mathematics" },
+  Science:        { color: "#D4820A", bg: "#FEF5E7", icon: "🔬", label: "Science" },
+  "Social Science": { color: "#B0543F", bg: "#FBEFEB", icon: "🌍", label: "Social Science" },
+  History:        { color: "#A6762D", bg: "#F6EFE4", icon: "📜", label: "History" },
+  Geography:      { color: "#1E8FA6", bg: "#E7F5F7", icon: "🧭", label: "Geography" },
+  "Social & Political Science": { color: "#8C4A6B", bg: "#F7EBF1", icon: "⚖️", label: "Social & Political Science" },
 };
+
+function subjectVisual(subject: string) {
+  return SUBJECTS_VISUAL[subject] ?? {
+    color: STUDENT_COLORS.tutor,
+    bg: "#F1EEF8",
+    icon: "📚",
+    label: subject,
+  };
+}
 
 /* ═══ RELATIVE TIME ═══ */
 function timeAgo(dateStr: string): string {
@@ -223,18 +234,6 @@ function FilterDropdown({ value, options, onChange, activeColor, defaultColor }:
   );
 }
 
-/* ═══ HELPERS ═══ */
-function normalizeSubjectKey(subject: string): string {
-  const lower = (subject ?? "").toLowerCase();
-  if (lower.includes("english"))  return "english";
-  if (lower.includes("math"))     return "mathematics";
-  // "social" must be checked before "science" — "social science" contains both
-  if (lower.includes("social") || lower.includes("sst")) return "social_science";
-  if (lower.includes("science"))  return "science";
-  if (lower.includes("hindi"))    return "hindi";
-  return lower;
-}
-
 /* ═══════════════ MAIN ═══════════════ */
 export function StudentHome() {
   const router = useRouter();
@@ -300,17 +299,14 @@ export function StudentHome() {
   }, [hasEnded, hasDismissedCelebration, dismissCelebration]);
 
   const agents = availableAgents.map((agent: AgentItem) => {
-    const key = normalizeSubjectKey(agent.subject);
-    return { ...agent, subjectKey: key, vis: SUBJECTS_VISUAL[key] ?? SUBJECTS_VISUAL.english } as AgentItem & { subjectKey: string; vis: { color: string; bg: string; icon: string; label: string } };
+    return { ...agent, vis: subjectVisual(agent.subject) };
   });
 
   /* All sessions mapped with relative time */
   const allSessionsRaw = recentChats.map(chat => {
-    const key = normalizeSubjectKey(chat.subject ?? chat.title ?? "");
     return {
       ...chat,
-      subjectKey: key,
-      vis: SUBJECTS_VISUAL[key] ?? SUBJECTS_VISUAL.english,
+      vis: subjectVisual(chat.subject ?? ""),
       mastery: typeof chat.chapter_completion_percentage === "number"
         ? Math.round(chat.chapter_completion_percentage)
         : 0,
@@ -368,7 +364,7 @@ export function StudentHome() {
     if (agent.is_onboarding_complete === false) {
       setOnboardingModal({
         originalSubject: agent.subject,
-        grade:           agent.grade ?? studentProfile?.grade ?? 9,
+        grade:           agent.grade,
       });
     } else {
       // Hold navigation until the backend assigns the real session_id, then
@@ -384,7 +380,7 @@ export function StudentHome() {
     if (agent.is_onboarding_complete === false) {
       setOnboardingModal({
         originalSubject: agent.subject,
-        grade:           agent.grade ?? studentProfile?.grade ?? 9,
+        grade:           agent.grade,
       });
     } else {
       openNewSession(agent, "voice");
@@ -771,7 +767,10 @@ export function StudentHome() {
                   {/* Subject Filter */}
                   <FilterDropdown
                     value={filterSubject === "All" ? "All Subjects" : filterSubject}
-                    options={["All Subjects", ...Object.values(SUBJECTS_VISUAL).map(s => s.label)]}
+                    options={[
+                      "All Subjects",
+                      ...Array.from(new Set(availableAgents.map((agent) => agent.subject))),
+                    ]}
                     onChange={v => {
                       if (v === "All Subjects") setFilterSubject("All");
                       else setFilterSubject(v);

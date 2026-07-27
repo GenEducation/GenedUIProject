@@ -6,6 +6,10 @@ import { Plus, X, Clock, Ban, PlayCircle, CalendarX2, FlaskConical } from "lucid
 import { useLabStore } from "../store/useLabStore";
 import { OBJECTIVE_MODES, type ObjectiveMode, type SlotResponse } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
+import {
+  requireExactSubject,
+  type ExactSubject,
+} from "@/features/subjects/subjectCatalog";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -200,7 +204,7 @@ function CreateSlotModal({
   const [classKey, setClassKey] = useState("");
   const [gradeStr, section] = classKey ? classKey.split("|") : ["", ""];
   const grade = gradeStr ? Number(gradeStr) : 0;
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState<ExactSubject | "">("");
   const [objectiveMode, setObjectiveMode] = useState<ObjectiveMode>("CHAPTER_PRACTICE");
   const [chapter, setChapter] = useState("");
   const [skillFocus, setSkillFocus] = useState("");
@@ -212,10 +216,17 @@ function CreateSlotModal({
 
   // Deterministic dropdown options, derived from the school's ingested content.
   // Subjects are scoped to the chosen grade; chapters to the chosen subject+grade.
-  const gradeSubjects = useMemo(
-    () => [...new Set(catalog.chapters.filter((c) => c.grade === grade).map((c) => c.subject))].sort(),
-    [catalog, grade],
-  );
+  const gradeSubjects = useMemo(() => {
+    const subjects = new Set<ExactSubject>();
+    for (const chapter of catalog.chapters.filter((item) => item.grade === grade)) {
+      try {
+        subjects.add(requireExactSubject(chapter.subject, grade));
+      } catch {
+        // Do not expose historical/non-taxonomy lab catalogue entries.
+      }
+    }
+    return Array.from(subjects).sort();
+  }, [catalog, grade]);
   const subjectChapters = useMemo(
     () =>
       catalog.chapters
@@ -250,7 +261,8 @@ function CreateSlotModal({
   }, [subjectChapters, chapter]);
 
   const handleSubmit = async () => {
-    if (!labId || !classKey || !subject.trim()) return;
+    if (!labId || !classKey || !subject) return;
+    const exactSubject = requireExactSubject(subject, grade);
     const chapterValue = chapter.trim();
     if (isGapRecovery && (!chapterValue || !skillFocus.trim())) {
       setError("Gap Recovery needs a chapter and what you taught (skill focus).");
@@ -264,7 +276,7 @@ function CreateSlotModal({
         teacher_id: teacherId,
         grade,
         section: section.trim(),
-        subject: subject.trim(),
+        subject: exactSubject,
         objective_mode: objectiveMode,
         // The picked chapter is both the display label and the RAG anchor.
         chapter: chapterValue || undefined,
@@ -339,7 +351,8 @@ function CreateSlotModal({
               <select
                 value={subject}
                 onChange={(e) => {
-                  setSubject(e.target.value);
+                  const match = gradeSubjects.find((candidate) => candidate === e.target.value);
+                  setSubject(match ?? "");
                   setChapter("");
                 }}
                 disabled={gradeSubjects.length === 0}
@@ -423,7 +436,7 @@ function CreateSlotModal({
               disabled={
                 !labId ||
                 !classKey ||
-                !subject.trim() ||
+                !subject ||
                 isSubmitting ||
                 (isGapRecovery && (!chapter.trim() || !skillFocus.trim()))
               }

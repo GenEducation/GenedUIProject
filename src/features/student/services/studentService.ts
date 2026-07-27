@@ -292,7 +292,7 @@ export const studentService = {
   ): Promise<{ pdf_url: string; chapter_name: string; grade: number; subject: string; ttl_seconds: number }> => {
     const params = new URLSearchParams({
       grade: String(grade),
-      subject: subject.toLowerCase(),
+      subject,
       chapter_name: chapterName,
     });
     const response = await authFetch(`${API_BASE_URL}/rag/api/ncert/pdf-url?${params}`);

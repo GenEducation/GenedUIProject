@@ -8,6 +8,7 @@ import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingSto
 import { OnboardingChatView } from "@/features/onboarding/components/OnboardingChatView";
 import { WavingStudentCharacter } from "@/components/shared/loaders/StudentLoader/WavingStudentCharacter";
 import { BookOpen, MessageSquare, Clock, ShieldCheck } from "lucide-react";
+import { requireExactSubject } from "@/features/subjects/subjectCatalog";
 
 const SUBJECT_ICONS: Record<string, string> = {
   Mathematics: "📐",
@@ -33,15 +34,28 @@ function OnboardingContent() {
   } = useOnboardingStore();
 
   const queryType = searchParams?.get("type") === "subject" ? "subject" : "general";
-  const querySubject = searchParams?.get("subject") || undefined;
-  const queryGrade = Number(searchParams?.get("grade")) || undefined;
+  const rawQuerySubject = searchParams?.get("subject") || undefined;
+  const rawQueryGrade = Number(searchParams?.get("grade"));
+  const queryGrade = Number.isInteger(rawQueryGrade) ? rawQueryGrade : undefined;
+  let querySubject;
+  try {
+    querySubject =
+      queryType === "subject"
+        ? requireExactSubject(rawQuerySubject, queryGrade)
+        : undefined;
+  } catch {
+    querySubject = undefined;
+  }
 
   useEffect(() => {
-    if (!studentProfile) return;
+    if (!studentProfile || (queryType === "subject" && !querySubject)) {
+      if (queryType === "subject") router.replace("/student");
+      return;
+    }
     if (!type || (queryType === "subject" && querySubject !== storeSubject)) {
       startOnboarding(studentProfile.user_id, queryType, querySubject, queryGrade);
     }
-  }, [studentProfile, startOnboarding, type, queryType, querySubject, queryGrade, storeSubject]);
+  }, [studentProfile, startOnboarding, type, queryType, querySubject, queryGrade, storeSubject, router]);
 
   useEffect(() => {
     if (isComplete) {

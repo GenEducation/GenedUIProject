@@ -14,6 +14,7 @@ import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { useSessionHeartbeat } from "@/hooks/useSessionHeartbeat";
 import { STRINGS } from "../constants/strings";
+import { getSubjectConfig } from "@/constants/subjectConfig";
 
 interface StudentChatMainProps {
   activeChat: ChatSession;
@@ -376,12 +377,9 @@ export function StudentChatMain({
   // Derive subject color from chat subject
   // Raw hex, not var() — these get alpha-suffix concatenated below
   // (`${subjectAccent}20`), which CSS custom properties can't support.
-  const subjectColorMap: Record<string, string> = {
-    english: STUDENT_COLORS.subjectEnglish, mathematics: STUDENT_COLORS.subjectMath, math: STUDENT_COLORS.subjectMath,
-    science: STUDENT_COLORS.subjectScience, hindi: STUDENT_COLORS.subjectHindi,
-  };
-  const subjectKey = (activeChat.subject ?? "").toLowerCase();
-  const subjectAccent = Object.entries(subjectColorMap).find(([k]) => subjectKey.includes(k))?.[1] ?? STUDENT_COLORS.tutor;
+  const subjectAccent = activeChat.subject
+    ? getSubjectConfig(activeChat.subject).color
+    : STUDENT_COLORS.tutor;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "#F7F8FC" }}>

@@ -1,39 +1,34 @@
 "use client";
 
 import { X } from "lucide-react";
-import { SUBJECT_CONFIG, Subject } from "@/constants/subjectConfig";
-import { EnglishIcon } from "@/components/icons/EnglishIcon";
-import { MathematicsIcon } from "@/components/icons/MathematicsIcon";
-import { ScienceIcon } from "@/components/icons/ScienceIcon";
-import { SocialScienceIcon } from "@/components/icons/SocialScienceIcon";
-import { HindiIcon } from "@/components/icons/HindiIcon";
-
-const SUBJECTS: Subject[] = ["english", "mathematics", "science", "social_science", "hindi"];
-
-const ICON_MAP: Record<Subject, React.ComponentType<{ size: number; style?: React.CSSProperties }>> = {
-  english: EnglishIcon,
-  mathematics: MathematicsIcon,
-  science: ScienceIcon,
-  social_science: SocialScienceIcon,
-  hindi: HindiIcon,
-};
+import { getSubjectConfig } from "@/constants/subjectConfig";
+import {
+  subjectsForGrade,
+  type ExactSubject,
+  useSubjectCatalog,
+} from "@/features/subjects/subjectCatalog";
+import { SubjectIcon } from "@/features/subjects/subjectPresentation";
+import { useStudentStore } from "../store/useStudentStore";
 
 interface InlineSubjectPickerProps {
-  selectedSubject: Subject | null;
-  onSelectSubject: (subject: Subject | null) => void;
+  selectedSubject: ExactSubject | null;
+  onSelectSubject: (subject: ExactSubject | null) => void;
   onDismiss: () => void;
 }
 
 export function InlineSubjectPicker({ selectedSubject, onSelectSubject, onDismiss }: InlineSubjectPickerProps) {
+  const grade = useStudentStore((state) => state.studentProfile?.grade);
+  const catalog = useSubjectCatalog((state) => state.subjects);
+  const subjects = subjectsForGrade(grade, catalog);
+
   return (
     <div className="flex items-center gap-2 px-4 py-2 mb-1 bg-white rounded-2xl border border-[var(--primary-ink)]/8 shadow-sm flex-wrap">
       <span className="text-[10px] font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest flex-shrink-0">
         Subject
       </span>
       <div className="flex items-center gap-1.5 flex-1 flex-wrap">
-        {SUBJECTS.map((subject) => {
-          const config = SUBJECT_CONFIG[subject];
-          const Icon = ICON_MAP[subject];
+        {subjects.map((subject) => {
+          const config = getSubjectConfig(subject);
           const isSelected = selectedSubject === subject;
           return (
             <button
@@ -46,11 +41,12 @@ export function InlineSubjectPicker({ selectedSubject, onSelectSubject, onDismis
                 color: isSelected ? "#fff" : config.color,
               }}
             >
-              <Icon
+              <SubjectIcon
+                subject={subject}
                 size={12}
                 style={{ "--icon-color": isSelected ? "#fff" : config.color } as React.CSSProperties}
               />
-              {config.name}
+              {subject}
             </button>
           );
         })}

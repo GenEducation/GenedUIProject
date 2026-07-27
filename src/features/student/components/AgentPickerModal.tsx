@@ -1,38 +1,13 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Search, ChevronRight } from "lucide-react";
+import { X, Search } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useStudentStore, AgentItem } from "../store/useStudentStore";
-import { SUBJECT_CONFIG } from "@/constants/subjectConfig";
-import { EnglishIcon } from "@/components/icons/EnglishIcon";
-import { MathematicsIcon } from "@/components/icons/MathematicsIcon";
-import { ScienceIcon } from "@/components/icons/ScienceIcon";
-import { SocialScienceIcon } from "@/components/icons/SocialScienceIcon";
-import { HindiIcon } from "@/components/icons/HindiIcon";
+import { useStudentStore } from "../store/useStudentStore";
+import { getSubjectConfig } from "@/constants/subjectConfig";
+import { SubjectIcon } from "@/features/subjects/subjectPresentation";
 import React from "react";
-
-type SubjectKey = "english" | "mathematics" | "science" | "social_science" | "hindi";
-
-const SUBJECT_ICON_MAP: Record<SubjectKey, React.ComponentType<{ size: number; style?: React.CSSProperties }>> = {
-  english: EnglishIcon,
-  mathematics: MathematicsIcon,
-  science: ScienceIcon,
-  social_science: SocialScienceIcon,
-  hindi: HindiIcon,
-};
-
-function normalizeSubject(subject: string): SubjectKey | null {
-  const lower = (subject ?? "").toLowerCase();
-  if (lower.includes("english")) return "english";
-  if (lower.includes("math")) return "mathematics";
-  // "social" must be checked before "science" — "social science" contains both
-  if (lower.includes("social") || lower.includes("sst")) return "social_science";
-  if (lower.includes("science")) return "science";
-  if (lower.includes("hindi")) return "hindi";
-  return null;
-}
 
 export function AgentPickerModal() {
   const router = useRouter();
@@ -104,9 +79,7 @@ export function AgentPickerModal() {
             </div>
           ) : (
             filtered.map((agent, i) => {
-              const subjectKey = normalizeSubject(agent.subject);
-              const config = subjectKey ? SUBJECT_CONFIG[subjectKey] : null;
-              const IconComp = subjectKey ? SUBJECT_ICON_MAP[subjectKey] : null;
+              const config = getSubjectConfig(agent.subject);
 
               return (
                 <motion.div
@@ -115,20 +88,17 @@ export function AgentPickerModal() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.035 }}
                   className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-left hover:bg-[#F4F3EE]/50 transition-all border-l-4"
-                  style={{ borderLeftColor: config?.color ?? "transparent" }}
+                  style={{ borderLeftColor: config.color }}
                 >
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
-                    style={{ backgroundColor: config?.bgColor ?? "rgba(4,46,92,0.05)" }}
+                    style={{ backgroundColor: config.bgColor }}
                   >
-                    {IconComp ? (
-                      <IconComp
-                        size={20}
-                        style={{ "--icon-color": config?.color ?? "var(--primary-ink)" } as React.CSSProperties}
-                      />
-                    ) : (
-                      <span className="text-[var(--primary-ink)]/40 text-sm font-bold">?</span>
-                    )}
+                    <SubjectIcon
+                      subject={agent.subject}
+                      size={20}
+                      style={{ "--icon-color": config.color, color: config.color } as React.CSSProperties}
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-[var(--primary-ink)] text-sm">{agent.subject}</p>

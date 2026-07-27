@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { authFetch } from "@/utils/authFetch";
 import { studentService } from "@/features/student/services/studentService";
+import {
+  requireLoadedExactSubject,
+  type ExactSubject,
+} from "@/features/subjects/subjectCatalog";
 
 export interface Student {
   id: string;
@@ -71,7 +75,7 @@ interface PartnerState {
   setSubjectFilters: (filters: SubjectFilters) => void;
   setSubjectOffset: (offset: number) => void;
   addSubject: (subject: Subject) => void;
-  uploadCurriculum: (file: File, subjectName: string, documentTitle: string, agentName: string, grade: string, board: string, documentType: string) => Promise<void>;
+  uploadCurriculum: (file: File, subjectName: ExactSubject, documentTitle: string, agentName: string, grade: string, board: string, documentType: string) => Promise<void>;
   cancelIngestion: (tempId: string) => Promise<void>;
   removeSubject: (agentId: string) => Promise<void>;
   removeStudent: (studentId: string) => Promise<void>;
@@ -247,7 +251,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
     try {
       const grade = typeof subject.grade === "string" ? parseInt(subject.grade, 10) : subject.grade;
-      const data = await studentService.fetchChapterPdfUrl(grade, subject.subject, subject.agent);
+      const exactSubject = await requireLoadedExactSubject(subject.subject, grade);
+      const data = await studentService.fetchChapterPdfUrl(grade, exactSubject, subject.agent);
 
       if (!data?.pdf_url || !data.pdf_url.startsWith("https://")) {
         throw new Error("PDF not available for this document.");
@@ -478,11 +483,13 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     set((state) => ({ subjects: [subject, ...state.subjects] })),
 
   uploadCurriculum: async (file, subjectName, documentTitle, agentName, grade, board, documentType) => {
+    const gradeNumber = Number(grade);
+    const exactSubject = await requireLoadedExactSubject(subjectName, gradeNumber);
     const tempId = Math.random().toString(36).substring(2, 9);
 
     const optimisticSubject: Subject = {
       id: tempId,
-      subject: subjectName,
+      subject: exactSubject,
       agent: documentTitle, // Show the Document Title as the primary name
       grade,
       board,
@@ -499,10 +506,10 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("subject", subjectName);
+      formData.append("subject", exactSubject);
       formData.append("document_title", documentTitle); // Mapped to documentTitle (document_title on backend)
       formData.append("agent_name", agentName);
-      formData.append("grade", String(parseInt(grade, 10) || 0));
+      formData.append("grade", String(gradeNumber));
       formData.append("board", board);
 
       formData.append("document_type", documentType || "chapter");

@@ -11,6 +11,7 @@ import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
 import { STRINGS } from "../constants/strings";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import React, { useState, useRef, useCallback, useEffect } from "react";
+import { getSubjectConfig } from "@/constants/subjectConfig";
 
 /* Sourced from STUDENT_COLORS (see theme/colors.ts) */
 const C = {
@@ -39,12 +40,14 @@ const DEFAULT_WIDTH = 260;
 
 // Raw hex, not var() — these values get alpha-suffix concatenated below
 // (`${color}18`), which CSS custom properties can't support.
-const SUBJECT_META: Record<string, { emoji: string; color: string }> = {
-  english:     { emoji: "📖", color: STUDENT_COLORS.subjectEnglish },
-  mathematics: { emoji: "🧮", color: STUDENT_COLORS.subjectMath },
-  math:        { emoji: "🧮", color: STUDENT_COLORS.subjectMath },
-  science:     { emoji: "🔬", color: STUDENT_COLORS.subjectScience },
-  hindi:       { emoji: "✏️", color: STUDENT_COLORS.subjectHindi },
+const SUBJECT_EMOJI: Readonly<Record<string, string>> = {
+  English: "📖",
+  Mathematics: "🧮",
+  Science: "🔬",
+  "Social Science": "🌍",
+  History: "📜",
+  Geography: "🧭",
+  "Social & Political Science": "⚖️",
 };
 
 function timeAgo(iso: string): string {
@@ -66,12 +69,12 @@ function timeAgo(iso: string): string {
   return `${Math.floor(days / 30)}mo ago`;
 }
 
-function getSubjectMeta(subject?: string, title?: string) {
-  const hay = ((subject ?? "") + " " + (title ?? "")).toLowerCase();
-  for (const [key, val] of Object.entries(SUBJECT_META)) {
-    if (hay.includes(key)) return val;
-  }
-  return { emoji: "📚", color: STUDENT_COLORS.tutorLight };
+function getSubjectMeta(subject?: string) {
+  if (!subject) return { emoji: "📚", color: STUDENT_COLORS.tutorLight };
+  return {
+    emoji: SUBJECT_EMOJI[subject] ?? "📚",
+    color: getSubjectConfig(subject).color,
+  };
 }
 
 // ── Profile Popup ─────────────────────────────────────────────────────────────
@@ -339,7 +342,7 @@ export const StudentChatSidebar = React.memo(({
               <div className="flex flex-col" style={{ gap: 0 }}>
                 {recentChats.map((chat, idx) => {
                   const isActive = activeChatId === chat.id;
-                  const { emoji, color } = getSubjectMeta(chat.subject, chat.title);
+                  const { emoji, color } = getSubjectMeta(chat.subject);
                   return (
                     <button
                       key={chat.id}

@@ -7,6 +7,11 @@ import { voiceService } from "../services/voiceService";
 import { appendStreamedText } from "../utils/voiceStreamMerge";
 import { parsePointerEvent, type PointerSpec } from "../components/pdf-viewer/pointerGeometry";
 import { getStudentDisplayName } from "../utils/displayName";
+import {
+  loadSubjectCatalog,
+  requireExactSubject,
+  type ExactSubject,
+} from "@/features/subjects/subjectCatalog";
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
@@ -116,7 +121,7 @@ export interface ChatSession {
   agent_id?: string;
   isFocused?: boolean;
   document_title?: string;
-  subject?: string;
+  subject?: ExactSubject;
   chatMode?: "text" | "voice";
   chapter_completion_percentage?: number;
   chapter_name?: string;
@@ -136,18 +141,10 @@ export const isVoiceSession = (chat?: { source?: string } | null): boolean =>
 export const sessionRoutePath = (chat: { id: string; source?: string }): string =>
   isVoiceSession(chat) ? `/student/voice/${chat.id}` : `/student/chat/${chat.id}`;
 
-export interface SubjectItem {
-  id: string;
-  name: string;
-  grade: string;
-  icon: string;
-  chaptersCount: number;
-}
-
 export interface AgentItem {
   agent_id: string;
   name: string;
-  subject: string;
+  subject: ExactSubject;
   grade: number;
   is_onboarding_complete?: boolean;
   subject_coverage_percentage?: number;
@@ -159,79 +156,6 @@ export interface PartnerItem {
   partner_id?: string;
   organization: string;
 }
-
-export const AVAILABLE_SUBJECTS: SubjectItem[] = [
-  {
-    id: "sub-1",
-    name: "Quantum Physics",
-    grade: "Grade 12",
-    icon: "⚛",
-    chaptersCount: 12,
-  },
-  {
-    id: "sub-2",
-    name: "Medieval History",
-    grade: "Grade 10",
-    icon: "🏰",
-    chaptersCount: 8,
-  },
-  {
-    id: "sub-3",
-    name: "Advanced Calculus",
-    grade: "Grade 12",
-    icon: "∑",
-    chaptersCount: 15,
-  },
-  {
-    id: "sub-4",
-    name: "Essay Writing",
-    grade: "Grade 9–12",
-    icon: "✍️",
-    chaptersCount: 6,
-  },
-  {
-    id: "sub-5",
-    name: "Research Methods",
-    grade: "Grade 11",
-    icon: "🔍",
-    chaptersCount: 5,
-  },
-  {
-    id: "sub-6",
-    name: "Computer Science",
-    grade: "Grade 10",
-    icon: "💻",
-    chaptersCount: 10,
-  },
-  {
-    id: "sub-7",
-    name: "Biology",
-    grade: "Grade 11",
-    icon: "🧬",
-    chaptersCount: 14,
-  },
-  {
-    id: "sub-8",
-    name: "Economics",
-    grade: "Grade 12",
-    icon: "📊",
-    chaptersCount: 9,
-  },
-  {
-    id: "sub-9",
-    name: "Chemistry",
-    grade: "Grade 11",
-    icon: "⚗️",
-    chaptersCount: 11,
-  },
-  {
-    id: "sub-10",
-    name: "Literature",
-    grade: "Grade 10",
-    icon: "📖",
-    chaptersCount: 7,
-  },
-];
 
 // parseContent, generateHistoricalSVG, normalizeSvg are imported from ../utils/parseContent
 
@@ -358,7 +282,7 @@ export interface StudentState {
   openChatById: (sessionId: string, agentId?: string) => Promise<void>;
   openNewChat: (agent: AgentItem) => string;
   initNewChat: (agentId: string) => void;
-  startFocusedSession: (documentTitle: string, subject: string) => string;
+  startFocusedSession: (documentTitle: string, subject: ExactSubject) => string;
   closeChat: () => void;
   setProfileOpen: (open: boolean) => void;
   setAgentPickerOpen: (open: boolean) => void;
@@ -618,23 +542,23 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
     set({ isSessionsLoading: true });
     try {
+      if (!Number.isInteger(studentProfile.grade)) {
+        throw new Error("A valid student grade is required to load subject sessions.");
+      }
+      const catalog = await loadSubjectCatalog();
       const data = await studentService.fetchSessions(studentProfile.user_id);
       console.log("📂 [StudentStore] Raw Sessions Data:", data);
 
-      const mappedChats: ChatSession[] = data.sessions.map((s: any) => {
-        // Prefer the backend's canonical subject (mirrored from the orchestrator,
-        // e.g. "Social Science"). The agent-id substring guess is only a legacy
-        // fallback for old rows — and must check "social" before "science".
-        const raw = (s.subject_agent || "").toLowerCase();
-        const derivedSubject = s.subject
-          || (raw.includes("math") ? "mathematics"
-            : raw.includes("english") ? "english"
-              : (raw.includes("social") || raw.includes("sst")) ? "social science"
-                : raw.includes("science") ? "science"
-                  : raw.includes("hindi") ? "hindi"
-                    : "");
-
-        return {
+      const mappedChats: ChatSession[] = data.sessions.flatMap((s: any) => {
+        let subject: ExactSubject;
+        try {
+          subject = requireExactSubject(s.subject, studentProfile.grade, catalog);
+        } catch {
+          // Historical aliases remain untouched on the server but are not
+          // selectable or resumable in new subject-scoped flows.
+          return [];
+        }
+        return [{
           id: s.session_id,
           session_id: s.session_id,
           title: s.title || s.agent_name || "Learning Session",
@@ -644,7 +568,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           lastTopic: s.chapter_name || "Continued Learning",
           grade: "",
           agent_id: s.subject_agent,
-          subject: derivedSubject,
+          subject,
           chapter_completion_percentage: typeof s.chapter_completion_percentage === "number"
             ? s.chapter_completion_percentage
             : undefined,
@@ -653,7 +577,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           is_complete: !!s.is_complete,
           // Mirror persisted modality onto the client-only chatMode flag.
           chatMode: (s.source === "voice" || s.source === "device") ? "voice" : "text",
-        };
+        }];
       });
 
       set((state) => {
@@ -686,6 +610,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
     set({ isAgentsLoading: true });
     try {
+      if (!Number.isInteger(studentProfile.grade)) {
+        throw new Error("A valid student grade is required to load subjects.");
+      }
+      const catalog = await loadSubjectCatalog();
       const data = await studentService.fetchAvailableAgents(
         studentProfile.user_id,
       );
@@ -698,14 +626,23 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             partner.subjects.forEach((subject: any) => {
               if (subject.agents && Array.isArray(subject.agents)) {
                 subject.agents.forEach((agent: any) => {
-                  agents.push({
-                    ...agent,
-                    is_onboarding_complete: subject.is_onboarding_complete,
-                    subject_coverage_percentage:
-                      typeof subject.subject_coverage_percentage === "number"
-                        ? subject.subject_coverage_percentage
-                        : undefined,
-                  });
+                  try {
+                    const grade = Number(agent.grade);
+                    const exactSubject = requireExactSubject(agent.subject, grade, catalog);
+                    if (grade !== studentProfile.grade) return;
+                    agents.push({
+                      ...agent,
+                      grade,
+                      subject: exactSubject,
+                      is_onboarding_complete: subject.is_onboarding_complete,
+                      subject_coverage_percentage:
+                        typeof subject.subject_coverage_percentage === "number"
+                          ? subject.subject_coverage_percentage
+                          : undefined,
+                    });
+                  } catch {
+                    // Fail closed for malformed or historical agent rows.
+                  }
                 });
               }
             });
@@ -858,9 +795,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         data = await response.json();
       }
 
-      // Extract subject from history if activeChat is missing it or has "General"
-      const historySubject = data.history?.[0]?.meta_data?.subject;
-
       const mappedMessages: ChatMessage[] = (data.history || []).map(
         (h: any, i: number) => {
           const content = h.content || "";
@@ -905,11 +839,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         const isActive = state.activeChat?.id === sessionId;
         const activeChat = state.activeChat;
 
-        // Recover subject from history if current state is generic or missing
         let updatedActiveChat = activeChat;
-        if (isActive && activeChat && historySubject && (!activeChat.subject || activeChat.subject === "General")) {
-          updatedActiveChat = { ...activeChat, subject: historySubject };
-        }
         // Carry persisted modality + completion from the history payload so the voice
         // resume UI (Resume vs. "Session Completed") is correct even on a cold URL load.
         if (isActive && updatedActiveChat) {
@@ -996,13 +926,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       if (targetAgent) {
         openNewChat(targetAgent);
       } else {
-        // Absolute fallback only if no agents are loaded yet
-        openNewChat({
-          name: "Socratic Tutor",
-          agent_id: agentId || "eng-grade-4",
-          subject: "",
-          grade: profile?.grade || 4,
-        });
+        window.location.href = "/student";
       }
       return;
     }
@@ -1014,7 +938,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       if (savedContext) {
         try {
           const { subject, documentTitle } = JSON.parse(savedContext);
-          startFocusedSession(subject, documentTitle);
+          const grade = get().studentProfile?.grade;
+          const exactSubject = requireExactSubject(subject, grade);
+          startFocusedSession(documentTitle, exactSubject);
           return;
         } catch {
           console.error("Failed to recover focused session context");
@@ -1111,11 +1037,18 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   startFocusedSession: (documentTitle, subject) => {
     const { availableAgents, studentProfile } = get();
+    if (!Number.isInteger(studentProfile?.grade)) {
+      throw new Error("A valid student grade is required to start this session.");
+    }
+    const exactSubject = requireExactSubject(subject, studentProfile?.grade);
 
     // Find matching agent for the subject
     const matchingAgent = availableAgents.find(
-      (a) => a.subject.toLowerCase() === subject.toLowerCase(),
+      (a) => a.subject === exactSubject && a.grade === studentProfile?.grade,
     );
+    if (!matchingAgent) {
+      throw new Error(`No ${exactSubject} learning agent is available for this grade.`);
+    }
 
     const tempId = "new-focused";
     const newSession: ChatSession = {
@@ -1125,14 +1058,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       agentType: "Focused Tutor",
       agentIcon: "🎯",
       lastActive: "Just now",
-      lastTopic: subject,
-      grade: studentProfile?.grade
-        ? `Grade ${studentProfile.grade}`
-        : "General",
-      agent_id: matchingAgent?.agent_id || "eng-grade-4", // Fallback
+      lastTopic: exactSubject,
+      grade: `Grade ${studentProfile!.grade}`,
+      agent_id: matchingAgent.agent_id,
       isFocused: true,
       document_title: documentTitle,
-      subject: subject,
+      subject: exactSubject,
     };
 
     // Navigation to /student/chat is handled by the calling component via router.push
@@ -1140,7 +1071,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     // Save context for refresh recovery
     sessionStorage.setItem(
       "pending_focused_session",
-      JSON.stringify({ subject, documentTitle }),
+      JSON.stringify({ subject: exactSubject, documentTitle }),
     );
 
     set((state) => ({
@@ -1263,26 +1194,14 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   startVoiceSession: async () => {
     const { activeChat, studentProfile, voicePrefs } = get();
-    if (!studentProfile) return;
+    if (!studentProfile || !Number.isInteger(studentProfile.grade) || !activeChat) {
+      set({ voiceSessionStatus: "error" });
+      return;
+    }
 
-    // Handle Hub start
-    const isHubStart = !activeChat;
-    const effectiveChat: ChatSession = activeChat || {
-      id: "new",
-      title: "New Session",
-      subject: "General",
-      agent_id: undefined,
-      isFocused: false,
-      agentType: "General Assistant",
-      agentIcon: "🤖",
-      lastActive: "Just now",
-      lastTopic: "Continued Learning",
-      chatMode: "voice"
-    };
-
-    // Force transition from Hub to Chat view immediately
-    if (isHubStart) {
-      set({ activeChat: { ...effectiveChat, chatMode: "voice" } });
+    const effectiveChat = activeChat;
+    if (effectiveChat.subject) {
+      requireExactSubject(effectiveChat.subject, studentProfile.grade);
     }
 
     console.log("🎙️ [StudentStore] Starting Voice Session for Chat:", effectiveChat);
@@ -1356,11 +1275,15 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           } else if (event.type === "entry_resolved") {
             // Update chat metadata when entry phase completes.
             // chapter_name (not just lastTopic) must be set so the "View textbook" button activates.
+            const exactSubject = requireExactSubject(
+              event.subject,
+              studentProfile.grade,
+            );
             set((state) => ({
               activeChat: state.activeChat
                 ? {
                   ...state.activeChat,
-                  subject: event.subject,
+                  subject: exactSubject,
                   lastTopic: event.chapter,
                   // Preserve existing chapter_name on resume; set from event on new/entry-phase sessions.
                   chapter_name: state.activeChat.chapter_name || event.chapter || state.activeChat.chapter_name,
@@ -2062,7 +1985,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   sendMessage: async (text?: string, activityInput?: any, opts?: { isTypedQuery?: boolean }): Promise<void> => {
     const { studentProfile, activeChat } = get();
-    if (!studentProfile) return;
+    if (!studentProfile || !Number.isInteger(studentProfile.grade)) return;
 
     // New student turn — drop any stale pointer so it never lingers on a spot
     // the AI is no longer talking about. The AI re-points in its response if it
@@ -2082,12 +2005,15 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       subject: defaultAgent?.subject,
       agent_id: defaultAgent?.agent_id,
       isFocused: false,
-      agentType: "General Assistant",
+      agentType: "Socratic Tutor",
       agentIcon: "🤖",
       lastActive: "Just now",
       lastTopic: "Continued Learning",
       chatMode: "text"
     };
+    if (effectiveChat.subject) {
+      requireExactSubject(effectiveChat.subject, studentProfile.grade);
+    }
 
     // Capture the ID of the chat where the message was sent
     const chatSentFromId = effectiveChat.id;
@@ -2799,7 +2725,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                 agentIcon: "🤖",
                 lastActive: "Just now",
                 lastTopic: "Continued Learning",
-                subject: event.subject || "General",
+                subject: event.subject
+                  ? requireExactSubject(event.subject, studentProfile.grade)
+                  : effectiveChat.subject,
                 grade: "",
               };
 
