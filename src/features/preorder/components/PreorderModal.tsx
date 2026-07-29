@@ -3,7 +3,9 @@
 import { useEffect, useState, ChangeEvent, FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { PreorderFields } from "../types";
-import { submitPreorder } from "../services/preorderService";
+import { createPreorder, verifyPreorder } from "../services/preorderService";
+import { loadRazorpayScript } from "@/features/billing/loadRazorpayScript";
+import { ApiRequestError } from "@/utils/authFetch";
 
 interface Props {
   isOpen: boolean;
@@ -11,6 +13,27 @@ interface Props {
 }
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function messageForError(err: unknown): string {
+  if (err instanceof ApiRequestError) {
+    switch (err.error_code) {
+      case "PREORD_1101":
+        return err.message || "Please check the details you entered and try again.";
+      case "PREORD_1102":
+        return "We couldn't find that reservation. Please start again.";
+      case "PREORD_1103":
+        return "This reservation is already paid or can no longer be changed.";
+      case "PREORD_1201":
+        return "We couldn't verify your payment. If you were charged, contact support with your reference.";
+      case "PREORD_1202":
+      case "PREORD_1203":
+        return "Payments are temporarily unavailable. Please try again shortly.";
+      default:
+        break;
+    }
+  }
+  return "Something went wrong. Please try again.";
+}
 
 const EMPTY: PreorderFields = {
   fullName: "",
@@ -91,12 +114,58 @@ export function PreorderModal({ isOpen, onClose }: Props) {
     e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
+    setErrors({});
+
     try {
-      const res = await submitPreorder(data);
-      setReference(res.reference);
-    } catch {
-      setErrors({ form: "Something went wrong. Please try again." });
-    } finally {
+      await loadRazorpayScript();
+      const order = await createPreorder(data);
+
+      if (!order.key_id) {
+        setErrors({ form: "Payments are temporarily unavailable. Please try again shortly." });
+        setSubmitting(false);
+        return;
+      }
+
+      const rzp = new (window as any).Razorpay({
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: "GenEd",
+        description: "Deskbot pre-order deposit",
+        order_id: order.razorpay_order_id,
+        prefill: {
+          name: data.fullName,
+          email: data.email,
+          contact: data.phone,
+        },
+        theme: {
+          color: "#059F6D",
+        },
+        handler: async (response: any) => {
+          try {
+            const result = await verifyPreorder({
+              reference: order.reference,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            setReference(result.reference);
+          } catch (err) {
+            setErrors({ form: messageForError(err) });
+          } finally {
+            setSubmitting(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setSubmitting(false);
+            setErrors({ form: "Payment cancelled — your reservation isn't confirmed yet." });
+          },
+        },
+      });
+      rzp.open();
+    } catch (err) {
+      setErrors({ form: messageForError(err) });
       setSubmitting(false);
     }
   };
@@ -143,8 +212,8 @@ export function PreorderModal({ isOpen, onClose }: Props) {
                     </span>
                     <h2>Pre-order the Deskbot</h2>
                     <p>
-                      No payment today — reserve your place and we&apos;ll reach
-                      out with delivery details before we ship.
+                      A refundable ₹500 deposit reserves your place — we&apos;ll
+                      reach out with delivery details before we ship.
                     </p>
                   </div>
 
@@ -255,7 +324,7 @@ export function PreorderModal({ isOpen, onClose }: Props) {
                       />
                       <span>
                         I agree to be contacted about my GenEd Deskbot
-                        pre-order. No payment is taken now.
+                        pre-order and to the ₹500 refundable deposit.
                       </span>
                     </label>
 
@@ -272,11 +341,11 @@ export function PreorderModal({ isOpen, onClose }: Props) {
                     >
                       {submitting ? (
                         <>
-                          <span className="po-spinner" /> Reserving…
+                          <span className="po-spinner" /> Opening payment…
                         </>
                       ) : (
                         <>
-                          Reserve my Deskbot
+                          Reserve for ₹500
                           <svg viewBox="0 0 24 24">
                             <path d="M5 12h14M13 6l6 6-6 6" />
                           </svg>
@@ -310,10 +379,16 @@ function SuccessView({
       </div>
       <h2>You&apos;re on the list.</h2>
       <p>
-        Your Deskbot is reserved. We&apos;ll email you with delivery details
-        before we ship — keep this reference handy.
+        Your Deskbot is reserved and your ₹500 deposit is confirmed.
+        We&apos;ll email you with delivery details before we ship — keep this
+        reference handy.
       </p>
       <div className="po-ref">{reference}</div>
+      <p className="po-success-note">
+        A GenEd account has been created for you. To sign in, use{" "}
+        <strong>Forgot password</strong> on the login page with the email you
+        used to pre-order.
+      </p>
       <div>
         <button
           type="button"

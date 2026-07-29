@@ -39,6 +39,7 @@ export default defineConfig({
         "src/features/teacher/store/useTeacherStore.ts": { lines: 80, functions: 85 },
         "src/features/teacher/utils/rosterUtils.ts": { lines: 95, functions: 100, branches: 80 },
         "src/features/parent/services/parentService.ts": { lines: 70, functions: 100 },
+        "src/features/preorder/services/preorderService.ts": { lines: 90, functions: 100 },
         "src/features/parent/store/useParentStore.ts": { lines: 80 },
         "src/features/admin/adminService.ts": { lines: 60 },
         "src/features/admin/components/DataTable.tsx": { lines: 95, branches: 80 },

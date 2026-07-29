@@ -53,8 +53,9 @@
   --surface-page: #F7F8FC;
   --surface-card: #FFFFFF;
   --surface-border: #e2e8f0;
+  --surface-sunken: #F4F3EE; /* recessed field bg (inputs/selects); only the 5 FIELD_CLASSNAME sites use this token today */
 
-  --radius-card: 16px;
+  --radius-card: 24px; /* matches Profile's list cards, the actual majority usage — nothing consumed the old 16px value */
   --radius-control: 10px;
   --radius-pill: 999px;
 }

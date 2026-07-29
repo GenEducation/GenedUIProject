@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { Clock, X } from "lucide-react";
+import { FIELD_CLASSNAME } from "@/components/ui/fieldStyles";
 
 interface TimePickerProps {
   value: string; // "HH:MM" (24-hour format)
@@ -181,7 +182,7 @@ export function TimePicker({ value, onChange, themeColor = "#042E5C", popoverDir
         .hide-scroll::-webkit-scrollbar { display: none; }
       `}} />
       <div
-        className="w-full flex items-center justify-between gap-3 bg-[#F4F3EE]/50 border border-[var(--primary-ink)]/5 rounded-2xl py-3.5 px-4 text-sm font-medium text-left focus-within:ring-2 focus-within:ring-opacity-10 transition-all cursor-pointer"
+        className={`${FIELD_CLASSNAME} flex items-center justify-between gap-3 px-4 text-left focus-within:ring-2 focus-within:ring-opacity-10 cursor-pointer`}
         style={{
           boxShadow: isOpen ? `0 0 0 2px ${themeColor}1a` : "none",
         }}

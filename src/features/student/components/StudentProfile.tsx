@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Play, Pause, Check, ChevronDown, Pencil, Menu, Lock, LogOut, ArrowLeft, Smile } from "lucide-react";
+import { Loader2, Play, Pause, Check, ChevronDown, Pencil, Menu, Lock, LogOut, Smile } from "lucide-react";
+import { PageHeader } from "@/components/student/PageHeader";
+import { PageContainer } from "@/components/student/PageContainer";
 import { Button } from "@/components/ui/Button";
 import { useStudentStore, StudentProfile as StudentProfileType } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
@@ -148,7 +150,7 @@ function Badge({ icon, label, earned, color, progress }: { icon: string; label: 
 function Card({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div style={{
-      background: C.card, borderRadius: 24, padding: "22px 24px",
+      background: C.card, borderRadius: "var(--radius-card)", padding: "22px 24px",
       border: `1px solid ${C.border}`, marginBottom: 16,
       boxShadow: "0 1px 4px rgba(0,0,0,0.03)", ...style,
     }}>
@@ -624,22 +626,11 @@ export function StudentProfile() {
 
         {/* Desktop header (matches Practice/Schedule/Report Card) */}
         {sidebarOpen && (
-          <header className="px-4 sm:px-8 py-6 flex items-center gap-3 sm:gap-6 bg-white border-b border-[var(--primary-ink)]/5 sticky top-0 z-20">
-            <button
-              onClick={() => router.push("/student")}
-              className="w-10 h-10 rounded-full bg-[var(--primary-ink)]/5 text-[var(--primary-ink)] flex items-center justify-center hover:bg-[var(--primary-ink)]/10 transition-all"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]">
-                  <Smile size={16} />
-                </div>
-                <h1 className="text-xl font-black text-[var(--primary-ink)] tracking-tight">My Profile</h1>
-              </div>
-            </div>
-          </header>
+          <PageHeader
+            icon={<Smile size={16} />}
+            title="My Profile"
+            onBack={() => router.push("/student")}
+          />
         )}
 
         {/* Scrollable body */}
@@ -648,11 +639,12 @@ export function StudentProfile() {
           {/* Bg decoration */}
           <div style={{ position: "absolute", top: -80, right: -80, width: 280, height: 280, borderRadius: "50%", background: `radial-gradient(circle, ${C.genPurple}06, transparent 70%)`, pointerEvents: "none" }} />
 
-          <div style={{ maxWidth: 960, margin: "0 auto", padding: sidebarOpen ? "32px 40px 60px" : "24px 16px 60px" }}>
+          <div style={{ padding: sidebarOpen ? "32px 40px 60px" : "24px 16px 60px" }}>
+          <PageContainer>
 
             {/* ── HERO CARD ── */}
             <div style={{
-              background: C.card, borderRadius: 24, padding: "32px 24px", border: `1px solid ${C.border}`,
+              background: C.card, borderRadius: "var(--radius-card)", padding: "32px 24px", border: `1px solid ${C.border}`,
               display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center",
               marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.03)", ...fade(0.08),
             }}>
@@ -700,7 +692,7 @@ export function StudentProfile() {
             </div>
 
             {/* ── HOW APRIL SEES YOU ── */}
-            <div style={{ background: `linear-gradient(135deg, ${C.genPurple}06, ${C.genBlue}06)`, borderRadius: 24, padding: "22px 24px", border: `1px solid ${C.genPurple}12`, marginBottom: 16, ...fade(0.14) }}>
+            <div style={{ background: `linear-gradient(135deg, ${C.genPurple}06, ${C.genBlue}06)`, borderRadius: "var(--radius-card)", padding: "22px 24px", border: `1px solid ${C.genPurple}12`, marginBottom: 16, ...fade(0.14) }}>
               <SectionHeader icon="🧠" label={`How ${aiTutorName} Sees You`} color={C.genPurple} marginBottom={14} />
               {onboardingLoading ? (
                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
@@ -1080,6 +1072,7 @@ export function StudentProfile() {
               </div>
             </Card>
 
+          </PageContainer>
           </div>
         </div>
       </main>

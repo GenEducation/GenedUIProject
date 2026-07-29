@@ -417,6 +417,18 @@ export function StudentHome() {
       {/* ── MAIN ── */}
       <main className="flex-1 overflow-hidden flex flex-col relative min-w-0">
         <Confetti active={showConfetti} onDone={() => setShowConfetti(false)} />
+        {showConfetti && (
+          <motion.img
+            src="/loaders/journey/char-trophy.svg"
+            alt=""
+            aria-hidden="true"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 16 }}
+            className="absolute inset-0 m-auto z-50 w-28 h-28 object-contain pointer-events-none drop-shadow-xl"
+          />
+        )}
 
         {/* Mobile / collapsed topbar */}
         {!sidebarOpen && (

@@ -9,7 +9,6 @@ import { useTestStore } from "@/features/student/store/useTestStore";
 import { useSidebarStore } from "@/features/student/store/useSidebarStore";
 import {
   CalendarClock,
-  ArrowLeft,
   Loader2,
   Sparkles,
   BookOpen,
@@ -18,7 +17,6 @@ import {
   Clock,
   AlertTriangle,
   ArrowRight,
-  Menu,
 } from "lucide-react";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { DatePicker } from "./DatePicker";
@@ -31,6 +29,10 @@ import {
   requireExactSubject,
   type ExactSubject,
 } from "@/features/subjects/subjectCatalog";
+import { PageHeader } from "@/components/student/PageHeader";
+import { SidebarToggle } from "@/components/student/SidebarToggle";
+import { PageContainer } from "@/components/student/PageContainer";
+import { FIELD_CLASSNAME, FIELD_FOCUS_CLASSNAME } from "@/components/ui/fieldStyles";
 
 function tomorrowDateString(): string {
   const d = new Date();
@@ -294,37 +296,17 @@ export function SchedulePage() {
   return (
     <div className="flex h-screen overflow-hidden">
       <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
-      {!sidebarOpen && (
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="fixed top-6 left-4 z-30 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
-          style={{ width: 40, height: 40, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "var(--primary-ink)" }}
-          title="Open sidebar"
-        >
-          <Menu size={18} strokeWidth={1.75} />
-        </button>
-      )}
-      <div className="flex-1 min-w-0 flex flex-col h-full bg-[#F4F3EE]/30 overflow-hidden font-sans">
-        {/* Header */}
-        <header className={`px-4 sm:px-8 py-6 flex items-center gap-3 sm:gap-6 bg-white border-b border-[var(--primary-ink)]/5 sticky top-0 z-20 transition-all ${!sidebarOpen ? "pl-16 sm:pl-8" : ""}`}>
-          <button
-            onClick={() => window.location.href = '/student'}
-            className="w-10 h-10 rounded-full bg-[var(--primary-ink)]/5 text-[var(--primary-ink)] flex items-center justify-center hover:bg-[var(--primary-ink)]/10 transition-all"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]">
-                <CalendarClock size={16} />
-              </div>
-              <h1 className="text-xl font-black text-[var(--primary-ink)] tracking-tight">Schedule</h1>
-            </div>
-          </div>
-        </header>
+      <SidebarToggle />
+      <div className="flex-1 min-w-0 flex flex-col h-full bg-[var(--surface-page)] overflow-hidden font-sans">
+        <PageHeader
+          icon={<CalendarClock size={16} />}
+          title="Schedule"
+          onBack={() => window.location.href = '/student'}
+          sidebarOpen={sidebarOpen}
+        />
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 custom-scrollbar">
-          <div className="max-w-5xl mx-auto space-y-8 sm:space-y-12">
+          <PageContainer className="space-y-8 sm:space-y-12">
             {/* Booking Form */}
             <div className="bg-white p-4 sm:p-6 md:p-8 rounded-[28px] sm:rounded-[40px] border border-[var(--primary-ink)]/5 shadow-sm space-y-6">
               <h2 className="text-sm font-black text-[var(--primary-ink)] uppercase tracking-widest flex items-center gap-2">
@@ -363,7 +345,7 @@ export function SchedulePage() {
                     onChange={(e) => {
                       setSubject(requireExactSubject(e.target.value, studentProfile?.grade));
                     }}
-                    className="w-full bg-[#F4F3EE]/50 border border-[var(--primary-ink)]/5 rounded-2xl py-3.5 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--primary-ink)]/10 focus:bg-white transition-all"
+                    className={`${FIELD_CLASSNAME} ${FIELD_FOCUS_CLASSNAME} px-4`}
                   >
                     {isAgentsLoading && <option value="">Loading...</option>}
                     {!isAgentsLoading && availableAgents.length === 0 && <option value="">No subjects available</option>}
@@ -382,7 +364,7 @@ export function SchedulePage() {
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
                     disabled={isAgentsLoading}
-                    className="w-full bg-[#F4F3EE]/50 border border-[var(--primary-ink)]/5 rounded-2xl py-3.5 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--primary-ink)]/10 focus:bg-white transition-all disabled:opacity-50"
+                    className={`${FIELD_CLASSNAME} ${FIELD_FOCUS_CLASSNAME} px-4 disabled:opacity-50`}
                   >
                     {isAgentsLoading && <option value="">Loading...</option>}
                     {!isAgentsLoading && chapters.length === 0 && <option value="">No chapters available</option>}
@@ -504,7 +486,7 @@ export function SchedulePage() {
                 </>
               )}
             </div>
-          </div>
+          </PageContainer>
         </div>
       </div>
 

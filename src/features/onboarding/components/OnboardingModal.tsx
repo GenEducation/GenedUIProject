@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Send, Mic, Square } from "lucide-react";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
-import { WavingStudentCharacter } from "@/components/shared/loaders/StudentLoader/WavingStudentCharacter";
+import { studentService } from "@/features/student/services/studentService";
 import { MarkdownRenderer } from "@/features/student/components/MarkdownRenderer";
 import { SubjectOnboardingCelebration } from "@/features/onboarding/components/SubjectOnboardingCelebration";
 
@@ -81,7 +81,27 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
     }
   }, [isComplete, showCelebration, clearSession, studentProfile?.user_id]);
 
-  const handleCelebrationDismiss = () => {
+  const handleCelebrationDismiss = async () => {
+    // The chat-completion POST just told us this subject is done, but the
+    // Hub re-reads status from a separate GET path (fetchOnboardingStatus /
+    // fetchAvailableAgents) after reload. If that read hasn't caught up yet,
+    // reloading immediately can show onboarding as still pending — poll the
+    // cheap, uncached status endpoint briefly to confirm before reloading.
+    const studentId = studentProfile?.user_id;
+    if (studentId) {
+      const MAX_ATTEMPTS = 5;
+      const DELAY_MS = 700;
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        try {
+          const status = await studentService.fetchOnboardingStatus(studentId);
+          const entry = status?.subjects?.find((s: { subject: string }) => s.subject === subject);
+          if (!entry || entry.status !== "PENDING") break; // confirmed, or subject not tracked — proceed
+        } catch {
+          break; // don't let a status-check failure block the dismiss flow
+        }
+        await new Promise((r) => setTimeout(r, DELAY_MS));
+      }
+    }
     onClose();
     window.location.reload();
   };
@@ -201,7 +221,12 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
           <div className="relative z-10 flex flex-1 items-center justify-center min-h-0 -mt-10">
             <div className="relative scale-90">
               <div className="absolute inset-0 rounded-full bg-white/5 blur-2xl scale-110" />
-              <WavingStudentCharacter />
+              <img
+                src="/illustrations/student-waving.png"
+                alt=""
+                aria-hidden="true"
+                className="relative w-[180px] h-auto object-contain"
+              />
             </div>
           </div>
 

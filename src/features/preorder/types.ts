@@ -2,7 +2,7 @@
 
 export type BuyerType = "parent" | "school" | "other";
 
-/** Fields captured for a reservation (no payment). */
+/** Fields captured for a reservation. */
 export interface PreorderFields {
   fullName: string;
   email: string;
@@ -16,8 +16,25 @@ export interface PreorderFields {
   consent: boolean;
 }
 
-/** Result returned by the (stubbed) submission service. */
-export interface PreorderResult {
+/** Response from `POST /preorders` — a Razorpay order awaiting payment. */
+export interface PreorderOrder {
+  reference: string;
+  razorpay_order_id: string;
+  amount: number;
+  currency: string;
+  key_id: string | null;
+}
+
+/** Payload sent to `POST /preorders/verify` after Razorpay checkout succeeds. */
+export interface PreorderVerifyPayload {
+  reference: string;
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
+/** Response from `POST /preorders/verify`. */
+export interface PreorderVerifyResult {
   ok: boolean;
   reference: string;
 }

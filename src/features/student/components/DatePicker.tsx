@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { FIELD_CLASSNAME } from "@/components/ui/fieldStyles";
 
 interface DatePickerProps {
   value: string; // "YYYY-MM-DD"
@@ -95,7 +96,7 @@ export function DatePicker({ value, min, onChange, themeColor = "#042E5C", popov
       <button
         type="button"
         onClick={() => setIsOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-3 bg-[#F4F3EE]/50 border border-[var(--primary-ink)]/5 rounded-2xl py-3.5 px-4 text-sm font-medium text-left focus:outline-none transition-all"
+        className={`${FIELD_CLASSNAME} flex items-center justify-between gap-3 px-4 text-left focus:outline-none`}
         style={{
           outline: "none",
         }}

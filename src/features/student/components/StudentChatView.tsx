@@ -3,6 +3,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
+import { useSidebarStore } from "../store/useSidebarStore";
+import { Loader2 } from "lucide-react";
 import { StudentChatSidebar } from "./StudentChatSidebar";
 import { StudentChatMain } from "./StudentChatMain";
 import { StudentChatHub } from "./StudentChatHub";
@@ -46,12 +48,16 @@ export function StudentChatView() {
     closePdfViewer,
   } = useStudentStore();
 
-  // Sidebar toggle state
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Sidebar toggle state — shared with every other student page via
+  // useSidebarStore (see useSidebarStore.ts). Previously local useState here,
+  // which meant: (1) the open/closed choice reset every time you navigated
+  // into or out of chat, and (2) the resize handler below unconditionally
+  // overwrote the student's manual toggle instead of respecting it.
+  const { sidebarOpen: isSidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const [isMobile, setIsMobile] = useState(false);
   const toggleSidebar = useCallback(
-    () => setIsSidebarOpen((prev) => !prev),
-    [],
+    () => setSidebarOpen(!isSidebarOpen),
+    [isSidebarOpen, setSidebarOpen],
   );
 
   // Cleanup audio on unmount / navigation (Wave 1 §3.2). Lives here (not in
@@ -69,21 +75,19 @@ export function StudentChatView() {
     };
   }, []);
 
-  // Handle responsive auto-hide
+  // Handle responsive auto-hide. applyResponsive is a no-op once the student
+  // has manually toggled the sidebar (see useSidebarStore.ts), unlike the
+  // previous handler which stomped that choice on every resize.
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 1024) {
-        setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
+      applyResponsive(window.innerWidth >= 1024);
     };
 
     handleResize(); // Init
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [applyResponsive]);
 
   // Guard & Hydration: if user lands on /student/chat/[id] but state is empty (refresh).
   useEffect(() => {
@@ -133,9 +137,9 @@ export function StudentChatView() {
   // 4. Safety Guard: If we have a sessionId but no activeChat yet (history loading), show loading
   if (sessionId && !activeChat) {
     return (
-      <div className="h-screen flex items-center justify-center font-sans" style={{ background: "#F7F8FC" }}>
+      <div className="h-screen flex items-center justify-center font-sans" style={{ background: "var(--surface-page)" }}>
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 rounded-full animate-spin" style={{ borderColor: "#E2E8F0", borderTopColor: "var(--tutor)" }} />
+          <Loader2 className="w-10 h-10 animate-spin" style={{ color: "var(--tutor)" }} />
           <p style={{ fontSize: 12, fontWeight: 700, color: "#94A3B8", letterSpacing: "0.15em", textTransform: "uppercase" }}>Loading Chat...</p>
         </div>
       </div>
@@ -144,9 +148,9 @@ export function StudentChatView() {
 
   if (isSessionsLoading && !studentProfile) {
     return (
-      <div className="h-screen flex items-center justify-center font-sans" style={{ background: "#F7F8FC" }}>
+      <div className="h-screen flex items-center justify-center font-sans" style={{ background: "var(--surface-page)" }}>
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 rounded-full animate-spin" style={{ borderColor: "#E2E8F0", borderTopColor: "var(--tutor)" }} />
+          <Loader2 className="w-10 h-10 animate-spin" style={{ color: "var(--tutor)" }} />
           <p style={{ fontSize: 12, fontWeight: 700, color: "#94A3B8", letterSpacing: "0.15em", textTransform: "uppercase" }}>Initializing Portal...</p>
         </div>
       </div>
@@ -154,12 +158,13 @@ export function StudentChatView() {
   }
 
   return (
-    <div className="h-screen flex font-sans overflow-hidden" style={{ background: "#F7F8FC" }}>
+    <div className="h-screen flex font-sans overflow-hidden" style={{ background: "var(--surface-page)" }}>
       {/* -- LEFT SIDEBAR (Always present for consistency) ---------------- */}
       <StudentChatSidebar
         activeChatId={activeChat?.id || "none"}
         isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
+        onClose={() => setSidebarOpen(false)}
+        sessionType="chat"
       />
 
       {/* Main Area: Hub vs Chat (with optional PDF split pane) */}
@@ -181,7 +186,7 @@ export function StudentChatView() {
                 />
               </div>
               {/* Full-screen textbook overlay on mobile */}
-              <div className="absolute inset-0 z-30 flex flex-col" style={{ background: "#F7F8FC" }}>
+              <div className="absolute inset-0 z-30 flex flex-col" style={{ background: "var(--surface-page)" }}>
                 <ChapterPdfViewer
                   pdfUrl={chapterPdfUrl}
                   chapterName={activeChat.chapter_name || activeChat.title}

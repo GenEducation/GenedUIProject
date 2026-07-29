@@ -199,11 +199,13 @@ function ProfilePopup({
 export const StudentChatSidebar = React.memo(({
   activeChatId,
   isOpen,
-  onClose
+  onClose,
+  sessionType = "chat",
 }: {
   activeChatId: string;
   isOpen: boolean;
   onClose: () => void;
+  sessionType?: "voice" | "chat";
 }) => {
   // Selected via useShallow (not a plain destructure of the whole store) —
   // this component is React.memo'd, but subscribing to the entire store
@@ -270,6 +272,10 @@ export const StudentChatSidebar = React.memo(({
 
   const w = isOpen ? sidebarWidth : 0;
   const mobileWidth = Math.min(sidebarWidth, 300);
+
+  const filteredChats = recentChats.filter(
+    (chat) => isVoiceSession(chat) === (sessionType === "voice")
+  );
 
   return (
     <>
@@ -338,9 +344,9 @@ export const StudentChatSidebar = React.memo(({
               <div className="flex justify-center py-8">
                 <Loader2 size={20} style={{ color: "rgba(255,255,255,0.2)" }} className="animate-spin" />
               </div>
-            ) : recentChats.length > 0 ? (
+            ) : filteredChats.length > 0 ? (
               <div className="flex flex-col" style={{ gap: 0 }}>
-                {recentChats.map((chat, idx) => {
+                {filteredChats.map((chat, idx) => {
                   const isActive = activeChatId === chat.id;
                   const { emoji, color } = getSubjectMeta(chat.subject);
                   return (
@@ -363,7 +369,7 @@ export const StudentChatSidebar = React.memo(({
                         fontSize: 13,
                         fontWeight: isActive ? 800 : 700,
                         fontFamily: "var(--font-body)",
-                        borderBottom: idx < recentChats.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
+                        borderBottom: idx < filteredChats.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
                         display: "flex",
                         alignItems: "center",
                         gap: 10,
@@ -380,9 +386,6 @@ export const StudentChatSidebar = React.memo(({
                       </div>
                       <div style={{ minWidth: 0, textAlign: "left" as const, flex: 1 }}>
                         <div className="truncate" title={chat.title} style={{ lineHeight: 1.35 }}>
-                          <span aria-label={isVoiceSession(chat) ? "Voice session" : "Chat session"} title={isVoiceSession(chat) ? "Voice session" : "Chat session"} style={{ marginRight: 5 }}>
-                            {isVoiceSession(chat) ? "🎤" : "💬"}
-                          </span>
                           {chat.title}
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
@@ -408,7 +411,7 @@ export const StudentChatSidebar = React.memo(({
             ) : (
               <div className="px-2 py-5 text-center">
                 <p style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontStyle: "italic" }}>
-                  No recent sessions yet.
+                  {sessionType === "voice" ? "No recent voice sessions yet." : "No recent sessions yet."}
                 </p>
               </div>
             )}
