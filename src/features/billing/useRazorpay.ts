@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createOrder, verifyPayment } from "./paymentService";
+import { loadRazorpayScript } from "./loadRazorpayScript";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 
 interface RazorpayOptions {
@@ -11,30 +12,6 @@ interface RazorpayOptions {
   billingCycle: "monthly" | "annual";
   onSuccess?: (expiresAt: string) => void;
   onError?: (error: string) => void;
-}
-
-// Razorpay's checkout script used to load from the root layout on every
-// route (report card, chat, voice, auth) even though only the upgrade CTA
-// needs it. Load it lazily, once, only when a payment actually starts.
-let razorpayScriptPromise: Promise<void> | null = null;
-function loadRazorpayScript(): Promise<void> {
-  if (typeof window !== "undefined" && (window as any).Razorpay) {
-    return Promise.resolve();
-  }
-  if (!razorpayScriptPromise) {
-    razorpayScriptPromise = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => {
-        razorpayScriptPromise = null;
-        reject(new Error("Failed to load Razorpay checkout script"));
-      };
-      document.body.appendChild(script);
-    });
-  }
-  return razorpayScriptPromise;
 }
 
 export const useRazorpay = () => {

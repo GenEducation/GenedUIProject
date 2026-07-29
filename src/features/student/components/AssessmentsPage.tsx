@@ -16,10 +16,8 @@ import {
   Sparkles,
   ArrowRight,
   Loader2,
-  ArrowLeft,
   Tag,
   History,
-  Menu
 } from "lucide-react";
 import { studentService } from "@/features/student/services/studentService";
 import { TypingStudentCharacter } from "@/components/shared/loaders/StudentLoader/TypingStudentCharacter";
@@ -27,6 +25,10 @@ import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { Button } from "@/components/ui/Button";
 import { STRINGS } from "../constants/strings";
 import { requireExactSubject } from "@/features/subjects/subjectCatalog";
+import { PageHeader } from "@/components/student/PageHeader";
+import { SidebarToggle } from "@/components/student/SidebarToggle";
+import { PageContainer } from "@/components/student/PageContainer";
+import { FIELD_CLASSNAME, FIELD_FOCUS_CLASSNAME } from "@/components/ui/fieldStyles";
 
 export function AssessmentsPage() {
   const router = useRouter();
@@ -153,36 +155,16 @@ export function AssessmentsPage() {
   };
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
       <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
-      {!sidebarOpen && (
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="fixed top-4 left-4 z-30 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
-          style={{ width: 38, height: 38, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "var(--primary-ink)" }}
-          title="Open sidebar"
-        >
-          <Menu size={16} strokeWidth={1.75} />
-        </button>
-      )}
-    <div className="flex-1 min-w-0 flex flex-col h-full bg-[#F4F3EE]/30 overflow-hidden font-sans">
-      {/* Header Section */}
-      <header className="px-4 sm:px-8 py-6 flex items-center gap-3 sm:gap-6 bg-white border-b border-[var(--primary-ink)]/5 sticky top-0 z-20">
-        <button
-          onClick={() => window.location.href = '/student'}
-          className="w-10 h-10 rounded-full bg-[var(--primary-ink)]/5 text-[var(--primary-ink)] flex items-center justify-center hover:bg-[var(--primary-ink)]/10 transition-all"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div className="space-y-0.5">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]">
-              <ClipboardCheck size={16} />
-            </div>
-            <h1 className="text-xl font-black text-[var(--primary-ink)] tracking-tight">{STRINGS.practice.pageTitle}</h1>
-          </div>
-        </div>
-      </header>
+      <SidebarToggle />
+    <div className="flex-1 min-w-0 flex flex-col h-screen bg-[var(--surface-page)] overflow-hidden font-sans">
+      <PageHeader
+        icon={<ClipboardCheck size={16} />}
+        title={STRINGS.practice.pageTitle}
+        onBack={() => window.location.href = '/student'}
+        sidebarOpen={sidebarOpen}
+      />
 
       {/* Search + Filter Section */}
       <div className="px-8 py-6 flex items-center justify-center gap-4">
@@ -193,7 +175,7 @@ export function AssessmentsPage() {
             placeholder="Search chapters or subjects..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#F4F3EE]/50 border border-[var(--primary-ink)]/5 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--primary-ink)]/10 focus:bg-white transition-all"
+            className={`${FIELD_CLASSNAME} ${FIELD_FOCUS_CLASSNAME} pl-12 pr-4`}
           />
         </div>
         <button className="w-12 h-12 rounded-2xl bg-white border border-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]/40 hover:text-[var(--primary-ink)] transition-all">
@@ -203,7 +185,7 @@ export function AssessmentsPage() {
 
       {/* Chapters Grid */}
       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-        <div className="max-w-7xl mx-auto space-y-12">
+        <PageContainer width="wide" className="space-y-12">
           {/* Past Tests / History */}
           {(isLoadingTests || studentTests.length > 0) && (
             <div className="space-y-4">
@@ -358,7 +340,7 @@ export function AssessmentsPage() {
               </div>
             </div>
           )}
-        </div>
+        </PageContainer>
       </div>
 
       {/* Test Initiation Loader Overlay */}

@@ -133,8 +133,8 @@ export default function PreOrderPage() {
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
               </span>
-              <h4>No payment now</h4>
-              <p>Reserve free. Pay only when it&apos;s ready to ship.</p>
+              <h4>₹500 to reserve</h4>
+              <p>A refundable ₹500 deposit holds your place.</p>
             </div>
             <div className="po-chip">
               <span className="po-chip-ico">
@@ -154,7 +154,7 @@ export default function PreOrderPage() {
                 </svg>
               </span>
               <h4>Cancel anytime</h4>
-              <p>No commitment until you confirm your order.</p>
+              <p>Your deposit is refunded in full if you cancel.</p>
             </div>
             <div className="po-chip">
               <span className="po-chip-ico">
@@ -176,8 +176,8 @@ export default function PreOrderPage() {
             Give your child a device that <em>only</em> teaches.
           </h2>
           <p>
-            Reserve your GenEd Deskbot now. It takes a minute, costs nothing
-            today, and puts you first in line.
+            Reserve your GenEd Deskbot now. It takes a minute, a refundable
+            ₹500 deposit, and puts you first in line.
           </p>
           <button
             type="button"

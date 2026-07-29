@@ -19,7 +19,7 @@ const ChapterPdfViewer = dynamic(
   () => import("./ChapterPdfViewer").then((m) => m.ChapterPdfViewer),
   { ssr: false }
 );
-import { StudentHomeSidebar } from "./StudentHomeSidebar";
+import { StudentChatSidebar } from "./StudentChatSidebar";
 import { titleCase } from "../utils/displayName";
 
 // "idle" has no entry: the fresh-idle screen shows VoiceStage's own "Tap to
@@ -417,7 +417,12 @@ export function StudentVoiceView() {
 
   return (
     <div className="h-screen flex font-sans overflow-hidden relative">
-      <StudentHomeSidebar isOpen={sidebarOpen} onClose={closeSidebar} onOpen={openSidebar} />
+      <StudentChatSidebar
+        activeChatId={activeChat?.id || "none"}
+        isOpen={sidebarOpen}
+        onClose={closeSidebar}
+        sessionType="voice"
+      />
       {/* The sidebar-open toggle now lives in the voice header itself
           (matches the chat header) instead of floating outside it. */}
       {mainArea}

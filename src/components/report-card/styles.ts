@@ -2,7 +2,11 @@
 // card. One stylesheet string, injected once by the container. Screen + print.
 
 export const RC_STYLES = `
-  :root {
+  /* Scoped to .report-root (not :root) — these custom properties were
+     previously global, so mounting the report card silently overrode the
+     app-wide --border/--muted tokens for every other component on screen
+     (e.g. the sidebar) for as long as it stayed mounted. */
+  .report-root {
     --navy:#042E5C; --emerald:#059F6D; --bg:#F7F6F2; --border:#E4E1D8; --text:#1B2430; --muted:#6B7280;
     --surface:#ffffff; --surface-2:#FBFAF6; --rule:#EDEAE0; --ink-2:#334155;
     --adv-fg:#047857; --adv-bg:#ECFDF5; --adv-bd:#A7F3D0;
