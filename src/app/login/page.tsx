@@ -11,6 +11,7 @@ import { useParentStore } from "@/features/parent/store/useParentStore";
 import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useLoaderStore } from "@/stores/useLoaderStore";
+import { completeAndRedirect, getRedirectParam } from "@/features/auth/usePostAuthRedirect";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -79,14 +80,8 @@ export default function LoginPage() {
       });
     }
 
-    const redirectPath =
-      typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search).get("redirect")
-        : null;
-    useLoaderStore.getState().completeLoading();
-    setTimeout(() => {
-      router.replace(redirectPath || `/${role}`);
-    }, 1200);
+    const redirectPath = getRedirectParam();
+    completeAndRedirect(router, redirectPath || `/${role}`);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -126,11 +121,13 @@ export default function LoginPage() {
   const handleGoogleSuccess = async (token: string) => {
     setErrors({});
     setIsSigningIn(true);
+    useLoaderStore.getState().startLoading();
     try {
       const { googleSignIn } = await import("@/features/auth/authService");
       const res = await googleSignIn(token);
       persistAndRedirect(res);
     } catch (err) {
+      useLoaderStore.getState().stopLoading();
       setErrors({ root: "Google Sign-In failed. Please try again or use your username/password." });
     } finally {
       setIsSigningIn(false);

@@ -13,6 +13,7 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useLoaderStore } from "@/stores/useLoaderStore";
+import { completeAndRedirect, getRedirectParam } from "../usePostAuthRedirect";
 
 const initialSignUpData: SignUpFields = {
   email: "",
@@ -194,11 +195,8 @@ export function LoginView() {
         });
       }
 
-      const redirectPath = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("redirect") : null;
-      useLoaderStore.getState().completeLoading();
-      setTimeout(() => {
-        router.replace(redirectPath || `/${role}`);
-      }, 1200);
+      const redirectPath = getRedirectParam();
+      completeAndRedirect(router, redirectPath || `/${role}`);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
       const rawMsg = error instanceof Error ? error.message : "Unable to complete signin.";
@@ -274,10 +272,7 @@ export function LoginView() {
         useTutorialStore.getState().startTutorial();
       }
 
-      useLoaderStore.getState().completeLoading();
-      setTimeout(() => {
-        router.replace(`/${role}`);
-      }, 1200);
+      completeAndRedirect(router, `/${role}`);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
       const rawMsg = error instanceof Error ? error.message : "Unable to complete signup.";
@@ -389,6 +384,7 @@ export function LoginView() {
                     onGoogleSuccess={async (token) => {
                       setSigninErrors({});
                       setIsSigningIn(true);
+                      useLoaderStore.getState().startLoading();
                       try {
                         const { googleSignIn } = await import("../authService");
                         const res = await googleSignIn(token);
@@ -434,9 +430,10 @@ export function LoginView() {
                           });
                         }
 
-                        const redirectPath = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("redirect") : null;
-                        router.push(redirectPath || `/${role}`);
+                        const redirectPath = getRedirectParam();
+                        completeAndRedirect(router, redirectPath || `/${role}`);
                       } catch (err: any) {
+                        useLoaderStore.getState().stopLoading();
                         console.error("Detailed Google Sign-in Error:", err.message);
                         setSigninErrors({ root: "Google Sign-In failed. Please try again or use your username/password." });
                       } finally {

@@ -25,8 +25,21 @@ vi.mock("next/navigation", () => ({
 }));
 
 import LoginPage from "@/app/login/page";
+import { GlobalLoader } from "@/components/shared/loaders/GlobalLoader";
 
 autoResetStore(useStudentStore);
+
+// Post-auth redirect is handed off to GlobalLoader (normally mounted once in
+// the root layout) — mount it alongside the page so the celebration timing
+// that gates navigation actually runs, matching the real app tree.
+function renderLoginPage() {
+  return render(
+    <>
+      <GlobalLoader />
+      <LoginPage />
+    </>,
+  );
+}
 
 function fillAndSubmit(container: HTMLElement, username = "ada", password = "password123") {
   fireEvent.change(container.querySelector('input[name="username"]')!, { target: { value: username } });
@@ -42,11 +55,11 @@ beforeEach(() => {
 
 describe("login flow (integration)", () => {
   it("persists the token/profile/role and redirects to the role home on success", async () => {
-    const { container } = render(<LoginPage />);
+    const { container } = renderLoginPage();
 
     fillAndSubmit(container);
 
-    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/student"), { timeout: 2000 });
+    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/student"), { timeout: 4000 });
     expect(localStorage.getItem("gened_auth_token")).toBe("test-jwt");
     expect(localStorage.getItem("gened_user_role")).toBe("student");
     expect(JSON.parse(localStorage.getItem("gened_user_profile")!).user_id).toBe("u_student");
@@ -55,22 +68,22 @@ describe("login flow (integration)", () => {
 
   it("honors a ?redirect= target instead of the role home", async () => {
     window.history.pushState({}, "", "/login?redirect=%2Fstudent%2Fanalytics");
-    const { container } = render(<LoginPage />);
+    const { container } = renderLoginPage();
 
     fillAndSubmit(container);
 
-    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/student/analytics"), { timeout: 2000 });
+    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/student/analytics"), { timeout: 4000 });
   });
 
   it("routes a teacher to the teacher home", async () => {
     server.use(
       http.post(`${BASE}/auth/sign-in`, () => HttpResponse.json(makeAuthToken({ role: "teacher", user_id: "u_t" }))),
     );
-    const { container } = render(<LoginPage />);
+    const { container } = renderLoginPage();
 
     fillAndSubmit(container);
 
-    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/teacher"), { timeout: 2000 });
+    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/teacher"), { timeout: 4000 });
   });
 
   it("shows the server error message and does not redirect on 401", async () => {
@@ -79,7 +92,7 @@ describe("login flow (integration)", () => {
         HttpResponse.json({ message: "Invalid username or password" }, { status: 401 }),
       ),
     );
-    const { container } = render(<LoginPage />);
+    const { container } = renderLoginPage();
 
     fillAndSubmit(container);
 

@@ -113,14 +113,11 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
 
       setIsAuthorized(true);
 
-      // Stop the global loader only if it was never put into completion mode.
-      // When an auth flow calls completeLoading(), the loader owns its own
-      // dismissal (trophy + confetti, then onFinished/stopLoading); tearing it
-      // down here would cut the celebration short.
+      // This route is now authorized and rendering — it's the destination of
+      // any post-auth handoff, so it owns tearing the overlay down. A short
+      // delay lets the first paint land before the loader fades out.
       const timeout = setTimeout(() => {
-        if (!useLoaderStore.getState().isComplete) {
-          useLoaderStore.getState().stopLoading();
-        }
+        useLoaderStore.getState().stopLoading();
       }, 500);
 
       return () => clearTimeout(timeout);
