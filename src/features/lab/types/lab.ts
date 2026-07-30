@@ -32,6 +32,12 @@ export type LabSessionState =
   | "ABSENT";
 
 export type LabDeviceHealth = "ONLINE" | "OFFLINE" | "NEEDS_ATTENTION";
+export type LabDevicePairingStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "CONNECTED"
+  | "EXPIRED"
+  | "CANCELLED";
 
 export type EndReason =
   | "completed"
@@ -87,7 +93,12 @@ export interface DeviceResponse {
   hardware_id: string;
   health_status: LabDeviceHealth;
   last_heartbeat_at: string | null;
+  device_model?: string | null;
   firmware_version?: string | null;
+  provisioned_at?: string | null;
+  first_connected_at?: string | null;
+  last_connected_at?: string | null;
+  provisioning_source?: "MANUAL" | "PAIRING";
   is_spare: boolean;
   revoked_at: string | null;
 }
@@ -111,6 +122,41 @@ export interface DeviceUpdateRequest {
   is_spare?: boolean;
   firmware_version?: string;
   health_status?: LabDeviceHealth;
+}
+
+export interface ConfirmLabDevicePairingRequest {
+  lab_id: string;
+  user_code: string;
+  device_label: string;
+  is_spare?: boolean;
+  existing_device_id?: string | null;
+}
+
+export interface LabDevicePairingRecord {
+  id: string;
+  status: LabDevicePairingStatus;
+  hardware_id: string;
+  device_model?: string | null;
+  firmware_version?: string | null;
+  expires_at: string;
+  approved_at?: string | null;
+  connected_at?: string | null;
+  cancelled_at?: string | null;
+  partner_id?: string | null;
+  lab_id?: string | null;
+  lab_device_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConfirmLabDevicePairingResponse {
+  status: LabDevicePairingStatus;
+  pairing_id: string;
+  device: DeviceResponse;
+}
+
+export interface MoveDeviceRequest {
+  target_lab_id: string;
 }
 
 // -- Teaching catalog (deterministic dropdown source) -----------------------

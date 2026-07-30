@@ -7,6 +7,10 @@ import type {
   DeviceProvisionResponse,
   RegisterDeviceRequest,
   DeviceUpdateRequest,
+  ConfirmLabDevicePairingRequest,
+  ConfirmLabDevicePairingResponse,
+  LabDevicePairingRecord,
+  MoveDeviceRequest,
   SlotResponse,
   CreateSlotRequest,
   SlotUpdateRequest,
@@ -84,6 +88,44 @@ export const labService = {
   revokeDevice: async (deviceId: string): Promise<DeviceResponse> => {
     const res = await authFetch(`${BASE_URL}/lab/devices/${encodeURIComponent(deviceId)}/revoke`, {
       method: "POST",
+    });
+    return res.json();
+  },
+
+  confirmDevicePairing: async (
+    payload: ConfirmLabDevicePairingRequest,
+  ): Promise<ConfirmLabDevicePairingResponse> => {
+    const res = await authFetch(`${BASE_URL}/lab/device-pairings/confirm`, {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  listDevicePairings: async (labId: string): Promise<LabDevicePairingRecord[]> => {
+    const res = await authFetch(
+      `${BASE_URL}/lab/labs/${encodeURIComponent(labId)}/device-pairings`,
+    );
+    return res.json();
+  },
+
+  cancelDevicePairing: async (pairingId: string): Promise<LabDevicePairingRecord> => {
+    const res = await authFetch(
+      `${BASE_URL}/lab/device-pairings/${encodeURIComponent(pairingId)}/cancel`,
+      { method: "POST" },
+    );
+    return res.json();
+  },
+
+  moveDevice: async (
+    deviceId: string,
+    payload: MoveDeviceRequest,
+  ): Promise<DeviceResponse> => {
+    const res = await authFetch(`${BASE_URL}/lab/devices/${encodeURIComponent(deviceId)}/move`, {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(payload),
     });
     return res.json();
   },

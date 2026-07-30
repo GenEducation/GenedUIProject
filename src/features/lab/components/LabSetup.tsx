@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, MonitorSmartphone, Wifi, WifiOff, TriangleAlert, RotateCw, Ban, X, ChevronRight, type LucideIcon } from "lucide-react";
+import { Plus, MonitorSmartphone, Wifi, WifiOff, TriangleAlert, Link2, ArrowRightLeft, Settings2, Ban, X, ChevronRight, type LucideIcon } from "lucide-react";
 import { useLabStore } from "../store/useLabStore";
 import { DeviceTokenModal } from "./DeviceTokenModal";
-import type { LabDeviceHealth } from "../types/lab";
+import { LabDevicePairingWizard } from "./LabDevicePairingWizard";
+import { MoveDeviceModal } from "./MoveDeviceModal";
+import type { DeviceResponse, LabDeviceHealth } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
 
 const healthStyles: Record<LabDeviceHealth, { icon: LucideIcon; className: string; label: string }> = {
@@ -27,7 +29,6 @@ export function LabSetup({ partnerId }: LabSetupProps) {
     createLab,
     fetchDevices,
     registerDevice,
-    rotateToken,
     revokeDevice,
     lastMintedToken,
     clearMintedToken,
@@ -36,6 +37,9 @@ export function LabSetup({ partnerId }: LabSetupProps) {
   const [selectedLabId, setSelectedLabId] = useState<string | null>(null);
   const [isCreateLabOpen, setCreateLabOpen] = useState(false);
   const [isRegisterDeviceOpen, setRegisterDeviceOpen] = useState(false);
+  const [isPairingOpen, setPairingOpen] = useState(false);
+  const [reconnectDevice, setReconnectDevice] = useState<DeviceResponse | null>(null);
+  const [movingDevice, setMovingDevice] = useState<DeviceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -115,13 +119,26 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                   {Math.round(selectedLab.default_session_seconds / 60)} min
                 </p>
               </div>
-              <button
-                onClick={() => setRegisterDeviceOpen(true)}
-                className="flex items-center gap-2 rounded-xl bg-[#1A3D2C] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#0f2a1d]"
-              >
-                <Plus size={16} />
-                Register device
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setRegisterDeviceOpen(true)}
+                  className="flex items-center gap-2 rounded-xl border border-[#1A3D2C]/10 px-3 py-2.5 text-xs font-bold text-[#1A3D2C]/60 hover:bg-[#1A3D2C]/5"
+                  title="Manual token registration is retained only as a pilot fallback"
+                >
+                  <Settings2 size={14} />
+                  Advanced
+                </button>
+                <button
+                  onClick={() => {
+                    setReconnectDevice(null);
+                    setPairingOpen(true);
+                  }}
+                  className="flex items-center gap-2 rounded-xl bg-[#1A3D2C] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#0f2a1d]"
+                >
+                  <Plus size={16} />
+                  Pair devices
+                </button>
+              </div>
             </div>
 
             {error && (
@@ -135,6 +152,10 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                 {devices.map((device) => {
                   const health = healthStyles[device.health_status];
                   const HealthIcon = health.icon;
+                  const waitingForFirstConnection =
+                    device.provisioning_source === "PAIRING" &&
+                    !device.first_connected_at &&
+                    !device.revoked_at;
                   return (
                     <div
                       key={device.id}
@@ -154,26 +175,41 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                         )}
                       </div>
                       <span
-                        className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${health.className}`}
+                        className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                          waitingForFirstConnection
+                            ? "bg-amber-50 text-amber-700"
+                            : health.className
+                        }`}
                       >
                         <HealthIcon size={12} />
-                        {health.label}
+                        {waitingForFirstConnection ? "Approved · waiting for device" : health.label}
                       </span>
+                      <div className="mt-2 space-y-0.5 text-[11px] text-[#1A3D2C]/45">
+                        {device.device_model && <p>{device.device_model}</p>}
+                        {device.firmware_version && <p>Software {device.firmware_version}</p>}
+                        {device.last_connected_at && (
+                          <p>Last connected {new Date(device.last_connected_at).toLocaleString()}</p>
+                        )}
+                      </div>
 
                       {!device.revoked_at && (
-                        <div className="mt-4 flex gap-2">
+                        <div className="mt-4 grid grid-cols-3 gap-2">
                           <button
-                            onClick={async () => {
-                              try {
-                                await rotateToken(selectedLab.id, device.id);
-                              } catch (err) {
-                                setError(err instanceof ApiRequestError ? err.message : "Failed to rotate token.");
-                              }
+                            onClick={() => {
+                              setReconnectDevice(device);
+                              setPairingOpen(true);
                             }}
-                            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#1A3D2C]/5 py-2 text-[11px] font-bold text-[#1A3D2C] hover:bg-[#1A3D2C]/10"
+                            className="flex items-center justify-center gap-1 rounded-lg bg-[#1A3D2C]/5 py-2 text-[10px] font-bold text-[#1A3D2C] hover:bg-[#1A3D2C]/10"
                           >
-                            <RotateCw size={12} />
-                            Rotate token
+                            <Link2 size={12} />
+                            Reconnect
+                          </button>
+                          <button
+                            onClick={() => setMovingDevice(device)}
+                            className="flex items-center justify-center gap-1 rounded-lg bg-[#1A3D2C]/5 py-2 text-[10px] font-bold text-[#1A3D2C] hover:bg-[#1A3D2C]/10"
+                          >
+                            <ArrowRightLeft size={12} />
+                            Move
                           </button>
                           <button
                             onClick={async () => {
@@ -183,7 +219,7 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                                 setError(err instanceof ApiRequestError ? err.message : "Failed to revoke device.");
                               }
                             }}
-                            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-danger-bg py-2 text-[11px] font-bold text-danger-ink hover:bg-[#fbdcd3]"
+                            className="flex items-center justify-center gap-1 rounded-lg bg-danger-bg py-2 text-[10px] font-bold text-danger-ink hover:bg-[#fbdcd3]"
                           >
                             <Ban size={12} />
                             Revoke
@@ -219,6 +255,29 @@ export function LabSetup({ partnerId }: LabSetupProps) {
             await registerDevice(payload);
             setRegisterDeviceOpen(false);
           }}
+        />
+      )}
+
+      {selectedLab && (
+        <LabDevicePairingWizard
+          isOpen={isPairingOpen}
+          lab={selectedLab}
+          existingDevices={devices}
+          reconnectDevice={reconnectDevice}
+          onClose={() => {
+            setPairingOpen(false);
+            setReconnectDevice(null);
+          }}
+        />
+      )}
+
+      {selectedLab && (
+        <MoveDeviceModal
+          device={movingDevice}
+          sourceLab={selectedLab}
+          labs={labs}
+          onClose={() => setMovingDevice(null)}
+          onMoved={(targetLabId) => setSelectedLabId(targetLabId)}
         />
       )}
 

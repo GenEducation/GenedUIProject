@@ -10,6 +10,8 @@ import type {
   DeviceProvisionResponse,
   RegisterDeviceRequest,
   DeviceUpdateRequest,
+  ConfirmLabDevicePairingRequest,
+  ConfirmLabDevicePairingResponse,
   SlotResponse,
   CreateSlotRequest,
   SlotUpdateRequest,
@@ -63,6 +65,10 @@ interface LabState {
   rotateToken: (labId: string, deviceId: string) => Promise<DeviceProvisionResponse>;
   updateDevice: (labId: string, deviceId: string, payload: DeviceUpdateRequest) => Promise<void>;
   revokeDevice: (labId: string, deviceId: string) => Promise<void>;
+  confirmDevicePairing: (
+    payload: ConfirmLabDevicePairingRequest,
+  ) => Promise<ConfirmLabDevicePairingResponse>;
+  moveDevice: (sourceLabId: string, deviceId: string, targetLabId: string) => Promise<void>;
   clearMintedToken: () => void;
 
   // -- Catalog ----------------------------------------------------------------------
@@ -207,6 +213,56 @@ export const useLabStore = create<LabState>((set, get) => ({
         [labId]: (state.devicesByLab[labId] || []).map((d) => (d.id === deviceId ? updated : d)),
       },
     }));
+  },
+
+  confirmDevicePairing: async (payload) => {
+    const result = await labService.confirmDevicePairing(payload);
+    set((state) => {
+      const existing = state.devicesByLab[payload.lab_id] || [];
+      const nextDevices = existing.some((device) => device.id === result.device.id)
+        ? existing.map((device) => (device.id === result.device.id ? result.device : device))
+        : [...existing, result.device];
+      return {
+        devicesByLab: {
+          ...state.devicesByLab,
+          [payload.lab_id]: nextDevices,
+        },
+        labs: state.labs.map((lab) =>
+          lab.id === payload.lab_id && !existing.some((device) => device.id === result.device.id)
+            ? { ...lab, device_count: lab.device_count + 1 }
+            : lab,
+        ),
+      };
+    });
+    return result;
+  },
+
+  moveDevice: async (sourceLabId, deviceId, targetLabId) => {
+    const moved = await labService.moveDevice(deviceId, { target_lab_id: targetLabId });
+    set((state) => {
+      const sourceDevices = (state.devicesByLab[sourceLabId] || []).filter(
+        (device) => device.id !== deviceId,
+      );
+      const targetDevices = state.devicesByLab[targetLabId] || [];
+      return {
+        devicesByLab: {
+          ...state.devicesByLab,
+          [sourceLabId]: sourceDevices,
+          [targetLabId]: targetDevices.some((device) => device.id === deviceId)
+            ? targetDevices.map((device) => (device.id === deviceId ? moved : device))
+            : [...targetDevices, moved],
+        },
+        labs: state.labs.map((lab) => {
+          if (lab.id === sourceLabId) {
+            return { ...lab, device_count: Math.max(0, lab.device_count - 1) };
+          }
+          if (lab.id === targetLabId) {
+            return { ...lab, device_count: lab.device_count + 1 };
+          }
+          return lab;
+        }),
+      };
+    });
   },
 
   clearMintedToken: () => set({ lastMintedToken: null }),
