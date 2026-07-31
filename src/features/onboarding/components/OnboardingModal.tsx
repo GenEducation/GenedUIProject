@@ -50,7 +50,7 @@ interface OnboardingModalProps {
 }
 
 export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProps) {
-  const { messages, isAITyping, isVoiceOnly, sendVoiceMessage, sendMessage, streamingMessageId, startOnboarding, isComplete, clearSession, type, subject: storeSubject } = useOnboardingStore();
+  const { messages, isAITyping, isVoiceOnly, sendVoiceMessage, sendMessage, streamingMessageId, startOnboarding, isComplete, type, subject: storeSubject } = useOnboardingStore();
   const { studentProfile } = useStudentStore();
 
   const [showCelebration, setShowCelebration] = useState(false);
@@ -70,16 +70,21 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
     }
   }, [studentProfile, subject, grade, startOnboarding, type, storeSubject]);
 
-  // Show celebration when onboarding completes, then close on dismiss
+  // Show celebration when onboarding completes, then close on dismiss.
+  // Deliberately does NOT call clearSession() here: the modal stays mounted
+  // while the celebration screen shows, and clearSession() resets `type`/
+  // `subject` in the store — which are also the guard condition on the
+  // start-onboarding effect above, so clearing them mid-celebration
+  // re-triggered that effect and restarted onboarding, duplicating the
+  // greeting message. Cleanup happens via the full reload on dismiss instead.
   useEffect(() => {
     if (isComplete && !showCelebration) {
       if (studentProfile?.user_id) {
         useOnboardingStore.getState().checkDNAStatus(studentProfile.user_id);
       }
-      clearSession();
       setShowCelebration(true);
     }
-  }, [isComplete, showCelebration, clearSession, studentProfile?.user_id]);
+  }, [isComplete, showCelebration, studentProfile?.user_id]);
 
   const handleCelebrationDismiss = () => {
     onClose();
