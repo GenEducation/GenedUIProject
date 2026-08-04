@@ -97,6 +97,12 @@ export interface ChatMessage {
   sender: "user" | "ai";
   timestamp: string;
   isPlanning?: boolean;
+  // The tutor's turn was withheld by the safety gate and this redirect was sent in its
+  // place (backend frame `safety_redirect`). Styled differently from ordinary tutor
+  // speech because it is not the tutor answering — it is the tutor declining to, and a
+  // child who cannot tell those apart learns the wrong lesson about what was refused.
+  // Never has audio: the same gate that produced it suppressed the spoken turn.
+  isSafetyRedirect?: boolean;
   // Set on the finalized greeting message when it was sent via the deferred
   // new-session navigation flow (see startNewChatSession) — signals
   // ChatMessageBubble to replay the typing effect on its first mount, since
@@ -219,6 +225,16 @@ export interface StudentState {
   chatAbortController: AbortController | null;
   voiceSessionStatus: "idle" | "connecting" | "active" | "error";
   connectionQuality: "good" | "poor" | "reconnecting" | null;
+  // A backend-authored line to show the child when the session does something they
+  // would otherwise experience as a fault. Held separately from `connectionQuality` so
+  // the two cannot overwrite each other, and so the copy stays the backend's rather than
+  // being re-invented here — it is written for a nine-year-old and we should not
+  // paraphrase it.
+  //   "rotating" — the provider's planned socket rotation. Routine; the lesson resumes.
+  //   "ended"    — a duration/budget cap closed the lesson deliberately. Nothing resumes.
+  // The kind matters because the two need opposite treatments: one is "hold on", the
+  // other is "we're done for now", and a spinner on the second is a lie.
+  sessionNotice: { message: string; kind: "rotating" | "ended" } | null;
   hasFetchedSessions: boolean;
   hasFetchedAgents: boolean;
   isMuted: boolean;
@@ -399,6 +415,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   chatAbortController: null,
   voiceSessionStatus: "idle",
   connectionQuality: null,
+  sessionNotice: null,
   hasFetchedSessions: false,
   hasFetchedAgents: false,
   isMuted: false,
@@ -1230,7 +1247,63 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         studentProfile.user_id,
         (event: any) => {
           if (event.type === "connected") {
-            set({ voiceSessionStatus: "active" });
+            // Clears any rotation notice from the socket we just replaced.
+            set({ voiceSessionStatus: "active", sessionNotice: null });
+          } else if (event.type === "safety_redirect") {
+            // The tutor's spoken turn was withheld and this was sent in its place. It
+            // must NOT go through the transcript path: that buffers assistant text and
+            // reveals it in step with audio playback, and this frame is defined by
+            // having no audio — the text would sit in the buffer and never appear,
+            // which is the exact silence the backend change exists to end.
+            if (!event.content) return;
+            set((state) => ({
+              messages: [
+                ...state.messages,
+                {
+                  id: `voice-safety-${Date.now()}`,
+                  text: event.content,
+                  sender: "ai" as const,
+                  timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                  isSafetyRedirect: true,
+                },
+              ],
+              // End the turn. Nothing further is coming for it, and leaving
+              // streamingMessageId set would let the NEXT turn's first text append
+              // itself onto the redirect as though the tutor were continuing it.
+              streamingMessageId: null,
+              isAITyping: false,
+            }));
+          } else if (event.type === "reconnect") {
+            // Planned provider socket rotation (GoAway), not a fault. Deliberately not
+            // `connectionQuality: "reconnecting"` — that banner is red and alarming
+            // because it means the child's own connection is failing. This is routine
+            // and the backend sends warm, child-facing copy for it; use that copy.
+            set({
+              sessionNotice: event.message
+                ? { message: event.message, kind: "rotating" as const }
+                : null,
+            });
+          } else if (event.type === "session_limit") {
+            // A duration or daily-budget cap ended the lesson on purpose, and the
+            // backend already said so kindly. The session is over: voiceService has
+            // stopped it so the close does not read as a drop, and all that is left is
+            // to show the child why. `reason` is "session_cap" | "daily_budget".
+            set({
+              voiceSessionStatus: "idle",
+              isAITyping: false,
+              streamingMessageId: null,
+              sessionNotice: event.message
+                ? { message: event.message, kind: "ended" as const }
+                : null,
+            });
+          } else if (event.type === "session_limit_warning") {
+            // Heads-up before the cap lands. Still "rotating" in treatment — the lesson
+            // is still going, so this must not look terminal.
+            set({
+              sessionNotice: event.message
+                ? { message: event.message, kind: "rotating" as const }
+                : null,
+            });
           } else if (event.type === "disconnected") {
             set({ voiceSessionStatus: "idle" });
           } else if (event.type === "error") {
@@ -1618,7 +1691,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     } catch (error) {
       console.error("Failed to stop voice session:", error);
     }
-    set({ voiceSessionStatus: "idle", connectionQuality: null, isMuted: false, pttHeld: false });
+    set({ voiceSessionStatus: "idle", connectionQuality: null, sessionNotice: null, isMuted: false, pttHeld: false });
   },
 
   toggleMute: () => {

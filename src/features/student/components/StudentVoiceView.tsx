@@ -38,6 +38,7 @@ export function StudentVoiceView() {
     messages,
     voiceSessionStatus,
     connectionQuality,
+    sessionNotice,
     startVoiceSession,
     stopVoiceSession,
     isMuted,
@@ -284,7 +285,7 @@ export function StudentVoiceView() {
       </header>
 
       {/* Connection quality alert — slides in below header */}
-      <ConnectionQualityBanner quality={connectionQuality} />
+      <ConnectionQualityBanner quality={connectionQuality} notice={sessionNotice} />
 
       {/* Top — Avatar / orb (landing state only; hidden once the conversation is underway) */}
       {showOrb && (

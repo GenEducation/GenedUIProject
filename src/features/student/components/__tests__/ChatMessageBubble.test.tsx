@@ -62,4 +62,38 @@ describe("ChatMessageBubble", () => {
     expect(screen.getByText("Tell me more")).toBeInTheDocument();
     expect(screen.getByText("Next topic")).toBeInTheDocument();
   });
+
+  it("renders a safety redirect visibly differently from an ordinary reply", () => {
+    // A withheld turn and an answered one must not look the same. If they do, the child
+    // reads the redirect as the answer to what they asked, which is the opposite of
+    // what the gate is for.
+    const { container: redirect } = render(
+      <ChatMessageBubble message={message({ text: "Let's get back to the lesson!", isSafetyRedirect: true })} />,
+    );
+    const { container: ordinary } = render(
+      <ChatMessageBubble message={message({ text: "Let's get back to the lesson!" })} />,
+    );
+
+    const redirectBubble = redirect.querySelector<HTMLElement>("[style*='border-radius']");
+    const ordinaryBubble = ordinary.querySelector<HTMLElement>("[style*='border-radius']");
+
+    expect(redirectBubble?.style.background).toBeTruthy();
+    expect(redirectBubble?.style.background).not.toBe(ordinaryBubble?.style.background);
+  });
+
+  it("never styles a user message as a redirect", () => {
+    // `isSafetyRedirect` describes what the tutor did, so it can only apply to the
+    // tutor's side. A user bubble keeps its own treatment regardless.
+    const { container: flagged } = render(
+      <ChatMessageBubble message={message({ sender: "user", text: "hi", isSafetyRedirect: true })} />,
+    );
+    const { container: plain } = render(
+      <ChatMessageBubble message={message({ sender: "user", text: "hi" })} />,
+    );
+
+    const flaggedBubble = flagged.querySelector<HTMLElement>("[style*='border-radius']");
+    const plainBubble = plain.querySelector<HTMLElement>("[style*='border-radius']");
+
+    expect(flaggedBubble?.style.background).toBe(plainBubble?.style.background);
+  });
 });

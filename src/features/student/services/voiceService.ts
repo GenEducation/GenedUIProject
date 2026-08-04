@@ -257,6 +257,20 @@ class VoiceService {
             return;
           }
 
+          if (data.type === "session_limit") {
+            // The backend ended the lesson on purpose (duration or daily-budget cap) and
+            // has already sent the child a warm explanation. It closes the socket right
+            // after. Stop the session BEFORE that close lands: `onclose` cannot tell a
+            // deliberate ending from a dropped connection, so left alone it would fire
+            // up to MAX_RETRIES silent reconnects and then report "Connection lost" —
+            // replacing the message above with an error, for a session that ended
+            // exactly as designed. This ordering is why the cap is safe to enable.
+            const callback = this.onEventCallback;
+            this.stopSession();
+            callback?.(data);
+            return;
+          }
+
           if (data.type === "interrupted") {
             this.interruptPlayback();
             return;

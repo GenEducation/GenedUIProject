@@ -145,6 +145,12 @@ const SmoothMarkdown = ({ content, isStreaming }: { content: string; isStreaming
 export const ChatMessageBubble = React.memo(
   ({ message, isStreaming, onOptionSelect }: ChatMessageBubbleProps) => {
     const isUser = message.sender === "user";
+    // The safety gate withheld the tutor's turn and sent this instead. Warm amber, not
+    // warning-red: the child asked something the tutor is steering away from, and the
+    // product's job at that moment is to redirect them kindly, not to make them feel
+    // caught. Distinct from a normal reply because it IS distinct — treating it as
+    // ordinary tutor speech is how a redirect gets mistaken for an answer.
+    const isSafetyRedirect = !isUser && !!message.isSafetyRedirect;
     const [copied, setCopied] = useState(false);
 
     // Decide once per mount (render-time ref latch, StrictMode-safe) whether
@@ -211,9 +217,9 @@ export const ChatMessageBubble = React.memo(
                 borderRadius: "1.75rem",
                 borderTopRightRadius: isUser ? 6 : undefined,
                 borderTopLeftRadius: !isUser ? 6 : undefined,
-                background: isUser ? "var(--tutor)" : "#FFFFFF",
-                color: isUser ? "#FFFFFF" : "#1A202C",
-                border: isUser ? "none" : "1px solid #E2E8F0",
+                background: isUser ? "var(--tutor)" : isSafetyRedirect ? "#FFF8EC" : "#FFFFFF",
+                color: isUser ? "#FFFFFF" : isSafetyRedirect ? "#7C4A11" : "#1A202C",
+                border: isUser ? "none" : isSafetyRedirect ? "1px solid #F3D9AE" : "1px solid #E2E8F0",
                 boxShadow: isUser ? "0 2px 10px rgba(91,77,199,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
                 // Scoped to color/shadow only — `transition-all` here used to
                 // tween the bubble's width on every revealed character
