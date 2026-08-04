@@ -14,7 +14,6 @@ interface SignUpData {
   role: "student" | "parent";
   age?: string;
   grade?: string;
-  school_board?: string;
   phone?: string;
   otp_code?: string;
   parent_email?: string;

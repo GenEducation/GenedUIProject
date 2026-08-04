@@ -22,16 +22,16 @@ const columns: Column<TeacherRow>[] = [
 ];
 
 export function TeachersView() {
-  const catalog = useTaxonomySubjects();
-  const taxonomySubjects = useMemo(
-    () => Array.from(new Set(catalog.map((entry) => entry.name))),
-    [catalog],
-  );
   const [rows, setRows] = useState<TeacherRow[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<TeacherRow | null>(null);
   const [bulk, setBulk] = useState<TeacherRow | null>(null);
+  const catalog = useTaxonomySubjects(editing?.board);
+  const taxonomySubjects = useMemo(
+    () => Array.from(new Set(catalog.map((entry) => entry.name))),
+    [catalog],
+  );
 
   const load = useCallback(() => {
     setLoading(true);

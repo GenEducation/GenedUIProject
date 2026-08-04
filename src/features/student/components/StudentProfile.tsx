@@ -576,7 +576,7 @@ export function StudentProfile() {
   const username      = studentProfile?.username      ?? "Student";
   const displayName   = getStudentDisplayName(studentProfile);
   const grade         = studentProfile?.grade         ? `Grade ${studentProfile.grade}` : "—";
-  const board         = studentProfile?.school_board  ?? "CBSE";
+  const board         = studentProfile?.school_board  ?? "—";
   const aiTutorName   = titleCase(studentProfile?.ai_name || "Nia");
   const streakCount   = studentStats?.currentStreak ?? 0;
   const totalSessions = studentStats?.totalSessions  ?? 0;

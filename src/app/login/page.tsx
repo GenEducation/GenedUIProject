@@ -39,8 +39,9 @@ export default function LoginPage() {
       normalizedRole === "student" ||
       normalizedRole === "partner" ||
       normalizedRole === "parent" ||
-      normalizedRole === "teacher"
-        ? (normalizedRole as "student" | "partner" | "parent" | "teacher")
+      normalizedRole === "teacher" ||
+      normalizedRole === "admin"
+        ? (normalizedRole as "student" | "partner" | "parent" | "teacher" | "admin")
         : ("student" as const);
 
     localStorage.setItem("gened_user_role", role);

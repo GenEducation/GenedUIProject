@@ -25,6 +25,7 @@ const manifest = {
 
 describe("taxonomy subject catalogue", () => {
   beforeEach(() => {
+    localStorage.clear();
     resetSubjectCatalogForTests();
     vi.mocked(authFetch).mockReset();
     vi.mocked(authFetch).mockResolvedValue(
@@ -44,7 +45,7 @@ describe("taxonomy subject catalogue", () => {
 
     expect(authFetch).toHaveBeenCalledTimes(1);
     expect(authFetch).toHaveBeenCalledWith(
-      "http://localhost:0/test-api/rag/taxonomy/subjects",
+      "http://localhost:0/test-api/rag/taxonomy/subjects?board=CBSE",
     );
     expect(first).toBe(second);
     expect(second).toBe(third);
@@ -55,6 +56,16 @@ describe("taxonomy subject catalogue", () => {
 
     expect(subjectsForGrade(5, catalog)).toEqual(["English", "Mathematics"]);
     expect(requireExactSubject("Social Science", 6, catalog)).toBe("Social Science");
+  });
+
+  it("uses the backend-derived ICSE board from the saved profile", async () => {
+    localStorage.setItem("gened_user_profile", JSON.stringify({ school_board: "ICSE" }));
+
+    await loadSubjectCatalog();
+
+    expect(authFetch).toHaveBeenCalledWith(
+      "http://localhost:0/test-api/rag/taxonomy/subjects?board=ICSE",
+    );
   });
 
   it.each([

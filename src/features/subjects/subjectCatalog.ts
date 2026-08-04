@@ -2,9 +2,11 @@ import { useEffect } from "react";
 import { create } from "zustand";
 
 import { authFetch } from "@/utils/authFetch";
+import { isEducationBoard, type EducationBoard } from "@/types/education";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 const EXACT_SUBJECT = Symbol("ExactSubject");
+const DEFAULT_TAXONOMY_BOARD: EducationBoard = "CBSE";
 
 export type ExactSubject = string & { readonly [EXACT_SUBJECT]: true };
 
@@ -52,7 +54,28 @@ export const useSubjectCatalog = create<SubjectCatalogState>((set) => ({
   setError: (message) => set({ subjects: [], isLoaded: false, error: message }),
 }));
 
-let catalogRequest: Promise<TaxonomySubject[]> | null = null;
+const catalogRequests = new Map<EducationBoard, Promise<TaxonomySubject[]>>();
+
+function profileBoard(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const rawProfile = localStorage.getItem("gened_user_profile");
+    if (!rawProfile) return undefined;
+    const profile: unknown = JSON.parse(rawProfile);
+    if (!profile || typeof profile !== "object") return undefined;
+    const stored = profile as { school_board?: unknown; board?: unknown };
+    if (typeof stored.school_board === "string") return stored.school_board;
+    return typeof stored.board === "string" ? stored.board : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function resolveTaxonomyBoard(board?: string): EducationBoard {
+  const candidate = board ?? profileBoard() ?? DEFAULT_TAXONOMY_BOARD;
+  if (isEducationBoard(candidate)) return candidate;
+  throw new Error("The profile contains an unsupported school board.");
+}
 
 function parseCatalog(payload: unknown): TaxonomySubject[] {
   const rows =
@@ -83,12 +106,17 @@ function parseCatalog(payload: unknown): TaxonomySubject[] {
 }
 
 /**
- * Fetch the complete taxonomy manifest once per browser runtime. All callers
- * share the same promise and derive grade-specific views in memory.
+ * Fetch the complete taxonomy manifest once per board per browser runtime.
+ * The board comes from the backend-derived profile when a caller does not
+ * explicitly provide one; CBSE is only the pre-profile/default-partner path.
  */
-export function loadSubjectCatalog(): Promise<TaxonomySubject[]> {
+export function loadSubjectCatalog(board?: string): Promise<TaxonomySubject[]> {
+  const resolvedBoard = resolveTaxonomyBoard(board);
+  let catalogRequest = catalogRequests.get(resolvedBoard);
   if (!catalogRequest) {
-    catalogRequest = authFetch(`${API_BASE_URL}/rag/taxonomy/subjects`)
+    catalogRequest = authFetch(
+      `${API_BASE_URL}/rag/taxonomy/subjects?board=${encodeURIComponent(resolvedBoard)}`,
+    )
       .then(async (response) => parseCatalog(await response.json()))
       .then((subjects) => {
         useSubjectCatalog.getState().setLoaded(subjects);
@@ -100,6 +128,7 @@ export function loadSubjectCatalog(): Promise<TaxonomySubject[]> {
         useSubjectCatalog.getState().setError(message);
         throw error;
       });
+    catalogRequests.set(resolvedBoard, catalogRequest);
   }
   return catalogRequest;
 }
@@ -157,18 +186,18 @@ export function isSubjectValidationError(error: unknown): error is SubjectValida
   return error instanceof SubjectValidationError;
 }
 
-export function useTaxonomySubjects(): TaxonomySubject[] {
+export function useTaxonomySubjects(board?: string): TaxonomySubject[] {
   const subjects = useSubjectCatalog((state) => state.subjects);
   useEffect(() => {
-    void loadSubjectCatalog().catch(() => {
+    void loadSubjectCatalog(board).catch(() => {
       // The catalogue store exposes the failure. Subject actions remain closed.
     });
-  }, []);
+  }, [board]);
   return subjects;
 }
 
 /** Test-only reset for deterministic request de-duplication tests. */
 export function resetSubjectCatalogForTests(): void {
-  catalogRequest = null;
+  catalogRequests.clear();
   useSubjectCatalog.setState({ subjects: [], isLoaded: false, error: null });
 }

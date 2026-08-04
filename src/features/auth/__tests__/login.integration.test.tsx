@@ -86,6 +86,22 @@ describe("login flow (integration)", () => {
     await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/teacher"), { timeout: 4000 });
   });
 
+  it("persists an admin role and routes to the admin console", async () => {
+    server.use(
+      http.post(`${BASE}/auth/sign-in`, () =>
+        HttpResponse.json(makeAuthToken({ role: "ADMIN", user_id: "u_admin" })),
+      ),
+    );
+    const { container } = renderLoginPage();
+
+    fillAndSubmit(container, "GenEd Admin");
+
+    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/admin"), { timeout: 4000 });
+    expect(localStorage.getItem("gened_user_role")).toBe("admin");
+    expect(JSON.parse(localStorage.getItem("gened_user_profile")!).user_id).toBe("u_admin");
+    expect(useStudentStore.getState().studentProfile).toBeNull();
+  });
+
   it("shows the server error message and does not redirect on 401", async () => {
     server.use(
       http.post(`${BASE}/auth/sign-in`, () =>

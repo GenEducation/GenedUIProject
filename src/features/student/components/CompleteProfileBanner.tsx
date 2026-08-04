@@ -16,7 +16,6 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
   );
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
-  const [schoolBoard, setSchoolBoard] = useState("");
   const [aiName, setAiName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -49,12 +48,10 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
         user_id: string;
         name?: string;
         age?: number;
-        school_board?: string;
         ai_name?: string;
       } = { user_id: studentProfile.user_id };
       if (name.trim()) updates.name = name.trim();
       if (age.trim()) updates.age = Number(age);
-      if (schoolBoard.trim()) updates.school_board = schoolBoard.trim();
       if (aiName.trim()) updates.ai_name = aiName.trim();
 
       if (Object.keys(updates).length <= 1) {
@@ -117,31 +114,17 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
-                Age
-              </label>
-              <input
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                type="number"
-                placeholder="e.g. 14"
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/10"
-              />
-            </div>
-            <div>
-              <label className="block text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
-                School Board
-              </label>
-              <input
-                value={schoolBoard}
-                onChange={(e) => setSchoolBoard(e.target.value)}
-                type="text"
-                placeholder="e.g. CBSE"
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/10"
-              />
-            </div>
+          <div>
+            <label className="block text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
+              Age
+            </label>
+            <input
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              type="number"
+              placeholder="e.g. 14"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-300 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/10"
+            />
           </div>
 
           <div>

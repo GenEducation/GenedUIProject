@@ -6,6 +6,7 @@ import { PageWisePreview } from "./PageWisePreview";
 import {
   allTaxonomyGrades,
   requireExactSubject,
+  resolveTaxonomyBoard,
   subjectsForGrade,
   useTaxonomySubjects,
 } from "@/features/subjects/subjectCatalog";
@@ -30,13 +31,13 @@ export function CurriculumIngestion({
   const [documentTitle, setDocumentTitle] = useState("");
   const [agentName, setAgentName] = useState("");
   const [grade, setGrade] = useState("");
-  const [board, setBoard] = useState("");
+  const board = resolveTaxonomyBoard();
   const [documentType, setDocumentType] = useState("chapter");
 
   const gradeNum = parseInt(grade, 10);
   // Loads the catalogue on mount rather than assuming an earlier screen already
   // did — ingestion is the boundary where an off-taxonomy name would be written.
-  const catalog = useTaxonomySubjects();
+  const catalog = useTaxonomySubjects(board);
   const gradeOptions = allTaxonomyGrades(catalog);
   const subjectOptions = subjectsForGrade(gradeNum, catalog);
 
@@ -198,11 +199,10 @@ export function CurriculumIngestion({
                     <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Board</label>
                     <select
                       value={board}
-                      onChange={(e) => setBoard(e.target.value)}
+                      disabled
                       className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
                     >
-                      <option value="">Board</option>
-                      <option value="CBSE">CBSE</option>
+                      <option value={board}>{board}</option>
                     </select>
                   </div>
                 </div>

@@ -6,12 +6,14 @@ import { listPartners, updatePartner, updateUser, PartnerRow, ImportRole } from 
 import { DataTable, Column } from "./DataTable";
 import { EntityEditModal } from "./EntityEditModal";
 import { BulkImportModal } from "./BulkImportModal";
+import { EDUCATION_BOARDS, isEducationBoard } from "@/types/education";
 
 const columns: Column<PartnerRow>[] = [
   { key: "organization", header: "Organization", accessor: (p) => p.organization },
   { key: "username", header: "Username" },
   { key: "email", header: "Email" },
   { key: "website", header: "Website", accessor: (p) => p.website },
+  { key: "board", header: "Board", accessor: (p) => p.board, filterable: true },
   { key: "student_count", header: "Students", accessor: (p) => p.student_count },
 ];
 
@@ -87,6 +89,7 @@ export function PartnersView() {
             { key: "organization", label: "Organization" },
             { key: "email", label: "Email" },
             { key: "website", label: "Website" },
+            { key: "board", label: "Education board", type: "select", options: EDUCATION_BOARDS },
           ]}
           onClose={() => setEditing(null)}
           onSave={async (vals) => {
@@ -94,7 +97,15 @@ export function PartnersView() {
             const { email, ...partnerFields } = vals;
             const tasks: Promise<unknown>[] = [];
             if (email !== undefined) tasks.push(updateUser(editing.id, { email: String(email) }));
-            if (Object.keys(partnerFields).length) tasks.push(updatePartner(editing.id, partnerFields));
+            const { board, ...rest } = partnerFields;
+            if (board !== undefined && !isEducationBoard(board)) {
+              throw new Error("Select a recognized education board.");
+            }
+            const update = {
+              ...rest,
+              ...(board !== undefined ? { board } : {}),
+            };
+            if (Object.keys(update).length) tasks.push(updatePartner(editing.id, update));
             await Promise.all(tasks);
             load();
           }}

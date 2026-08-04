@@ -237,7 +237,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                   </span>
                 </div>
                 <div className="text-[10px]" style={{ color: C.sidebarText, opacity: 0.6 }}>
-                  Grade {studentProfile?.grade ?? "—"} · {studentProfile?.school_board ?? "CBSE"}
+                  Grade {studentProfile?.grade ?? "—"} · {studentProfile?.school_board ?? "—"}
                 </div>
               </div>
             </div>

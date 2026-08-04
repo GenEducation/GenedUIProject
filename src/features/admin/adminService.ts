@@ -1,4 +1,5 @@
 import { authFetch } from "@/utils/authFetch";
+import type { EducationBoard } from "@/types/education";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -68,7 +69,7 @@ export interface StudentRow {
   name: string | null;
   age: number | null;
   grade: number | null;
-  school_board: string | null;
+  school_board: EducationBoard;
   parent_email: string | null;
   plan: Plan;
 }
@@ -87,6 +88,7 @@ export interface PartnerRow {
   email: string;
   organization: string | null;
   website: string | null;
+  board: EducationBoard;
   student_count: number;
 }
 
@@ -99,6 +101,7 @@ export interface TeacherRow {
   title: string | null;
   partner_id: string | null;
   partner_org: string | null;
+  board: EducationBoard;
   student_count: number;
   plan: Plan;
 }
@@ -128,24 +131,37 @@ export interface Ingestion {
   ingested_at: string;
 }
 
-export interface CreateUserPayload {
-  role: "STUDENT" | "PARENT" | "PARTNER" | "TEACHER";
+interface CreateUserBase {
   email: string;
   password: string;
   username?: string;
-  age?: number;
-  grade?: number;
-  school_board?: string;
-  parent_email?: string;
-  phone?: string;
-  organization?: string;
-  website?: string;
-  // Teacher fields
-  partner_id?: string;
-  full_name?: string;
-  subjects?: string[];
-  title?: string;
 }
+
+export type CreateUserPayload =
+  | (CreateUserBase & {
+      role: "STUDENT";
+      age?: number;
+      grade?: number;
+      parent_email?: string;
+      partner_id?: string;
+    })
+  | (CreateUserBase & {
+      role: "PARENT";
+      phone?: string;
+    })
+  | (CreateUserBase & {
+      role: "PARTNER";
+      organization?: string;
+      website?: string;
+      board: EducationBoard;
+    })
+  | (CreateUserBase & {
+      role: "TEACHER";
+      partner_id: string;
+      full_name?: string;
+      subjects?: string[];
+      title?: string;
+    });
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -207,7 +223,7 @@ export const listParents = () => getJson<ParentRow[]>("/admin/parents");
 
 export const updateStudent = (
   id: string,
-  payload: { name?: string; age?: number; grade?: number; school_board?: string; parent_email?: string },
+  payload: { name?: string; age?: number; grade?: number; parent_email?: string },
 ) => send<{ message: string }>(`/admin/students/${id}`, "PATCH", payload);
 
 export const updateParent = (id: string, payload: { phone?: string }) =>
@@ -220,6 +236,7 @@ export const updatePartner = (
     website?: string;
     enable_teachers?: boolean;
     allow_transcript_access?: boolean;
+    board?: EducationBoard;
   },
 ) => send<{ message: string }>(`/admin/partners/${id}`, "PATCH", payload);
 

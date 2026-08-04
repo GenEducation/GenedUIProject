@@ -79,7 +79,6 @@ export function StudentsView() {
             { key: "name", label: "Name" },
             { key: "age", label: "Age", type: "number" },
             { key: "grade", label: "Grade", type: "number" },
-            { key: "school_board", label: "Board" },
             { key: "parent_email", label: "Parent email" },
           ]}
           onClose={() => setEditing(null)}
