@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ArrowLeft, PlayCircle, StopCircle, Users, ExternalLink } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ArrowLeft, PlayCircle, StopCircle, Users, ExternalLink, RefreshCw, TriangleAlert } from "lucide-react";
 import { useLabStore } from "../store/useLabStore";
+import { labService } from "../services/labService";
 import { LiveBoard } from "./LiveBoard";
 import { ClassReport } from "./ClassReport";
-import type { SlotResponse } from "../types/lab";
+import type { LabCapacityResponse, SlotResponse } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
 import { ToastStack, ToastItem } from "@/features/teacher/components/Toast";
 
@@ -21,12 +22,48 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
   const [activateResult, setActivateResult] = useState<{ assigned: number; idle: number } | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [noRosterError, setNoRosterError] = useState(false);
+  const [capacity, setCapacity] = useState<LabCapacityResponse | null>(null);
+  const [isLoadingCapacity, setIsLoadingCapacity] = useState(false);
+  const [startBlocked, setStartBlocked] = useState<"feature" | "capacity" | null>(null);
+  const [capacityCheckFailed, setCapacityCheckFailed] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const currentSlot = slots.find((s) => s.id === slot.id) || slot;
 
   const pushToast = (t: Omit<ToastItem, "id">) => setToasts((prev) => [...prev, { ...t, id: Date.now() + Math.random() }]);
   const dismissToast = (id: number) => setToasts((prev) => prev.filter((t) => t.id !== id));
+
+  const loadCapacity = useCallback(async () => {
+    if (currentSlot.status !== "SCHEDULED") return;
+    setIsLoadingCapacity(true);
+    setNoRosterError(false);
+    setCapacityCheckFailed(false);
+    setStartBlocked(null);
+    try {
+      const result = await labService.getSlotCapacity(slot.id);
+      setCapacity(result);
+      setStartBlocked(result.can_start ? null : "capacity");
+    } catch (err) {
+      setCapacity(null);
+      if (err instanceof ApiRequestError && err.error_code === "LAB_1101") {
+        setNoRosterError(true);
+      } else if (err instanceof ApiRequestError && err.error_code === "LAB_1120") {
+        setStartBlocked("feature");
+      } else if (err instanceof ApiRequestError && err.error_code === "LAB_1121") {
+        setStartBlocked("capacity");
+      } else {
+        // Start performs the same authoritative check, so a failed hint does
+        // not strand the teacher; explain that Start will retry it.
+        setCapacityCheckFailed(true);
+      }
+    } finally {
+      setIsLoadingCapacity(false);
+    }
+  }, [currentSlot.status, slot.id]);
+
+  useEffect(() => {
+    void loadCapacity();
+  }, [loadCapacity]);
 
   useEffect(() => {
     if (currentSlot.status === "ACTIVE" || currentSlot.status === "COMPLETED") {
@@ -39,6 +76,7 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
   const handleActivate = async () => {
     setIsBusy(true);
     setNoRosterError(false);
+    setStartBlocked(null);
     try {
       const result = await activateSlot(slot.id);
       setActivateResult({ assigned: result.assigned, idle: result.idle });
@@ -46,6 +84,10 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
     } catch (err) {
       if (err instanceof ApiRequestError && err.error_code === "LAB_1101") {
         setNoRosterError(true);
+      } else if (err instanceof ApiRequestError && err.error_code === "LAB_1120") {
+        setStartBlocked("feature");
+      } else if (err instanceof ApiRequestError && err.error_code === "LAB_1121") {
+        setStartBlocked("capacity");
       } else {
         pushToast({ type: "error", title: "Couldn't activate", description: err instanceof ApiRequestError ? err.message : undefined });
       }
@@ -87,11 +129,21 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
         {currentSlot.status === "SCHEDULED" && (
           <button
             onClick={handleActivate}
-            disabled={isBusy}
+            disabled={isBusy || isLoadingCapacity || noRosterError || startBlocked !== null}
             className="flex items-center gap-2 rounded-xl bg-emerald px-5 py-3.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(5,159,109,.28)] hover:-translate-y-0.5 hover:bg-emerald-600 disabled:opacity-50"
           >
             <PlayCircle size={18} />
-            {isBusy ? "Activating…" : "Activate period"}
+            {isBusy
+              ? "Activating…"
+              : isLoadingCapacity
+                ? "Checking readiness…"
+                : noRosterError
+                  ? "Roster required"
+                  : startBlocked === "feature"
+                  ? "Starts paused"
+                  : startBlocked === "capacity"
+                    ? "Waiting for capacity"
+                    : "Activate period"}
           </button>
         )}
         {currentSlot.status === "ACTIVE" && (
@@ -115,6 +167,50 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
               <ExternalLink size={12} />
             </button>
           )}
+        </div>
+      )}
+
+      {currentSlot.status === "SCHEDULED" && startBlocked === "feature" && (
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-border bg-warning-bg p-4 text-[13px] text-warning-ink">
+          <TriangleAlert className="mt-0.5 shrink-0" size={17} />
+          <div>
+            <p className="font-bold">New Lab periods are paused for this school.</p>
+            <p className="mt-1">Your school administrator can confirm when starts are enabled again. Any period already running is unaffected.</p>
+          </div>
+        </div>
+      )}
+
+      {currentSlot.status === "SCHEDULED" && startBlocked === "capacity" && (
+        <div className="mb-5 flex items-center justify-between gap-4 rounded-xl border border-border bg-warning-bg p-4 text-[13px] text-warning-ink">
+          <div className="flex items-start gap-3">
+            <TriangleAlert className="mt-0.5 shrink-0" size={17} />
+            <div>
+              <p className="font-bold">The whole class cannot be started yet.</p>
+              <p className="mt-1">Shared voice capacity is currently in use. Wait a minute and retry; if it continues, ask your school administrator.</p>
+            </div>
+          </div>
+          <button onClick={() => void loadCapacity()} disabled={isLoadingCapacity} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-2 font-bold disabled:opacity-50">
+            <RefreshCw size={13} className={isLoadingCapacity ? "animate-spin" : ""} />
+            Retry
+          </button>
+        </div>
+      )}
+
+      {currentSlot.status === "SCHEDULED" && capacity && startBlocked === null && (
+        <div className="mb-5 flex items-center gap-4 rounded-xl bg-emerald-50 p-4 text-[13px] text-emerald-600">
+          <Users size={16} />
+          <span>
+            Ready to reserve <strong>{capacity.required}</strong> of <strong>{capacity.limit}</strong> voice places when you start.
+          </span>
+        </div>
+      )}
+
+      {currentSlot.status === "SCHEDULED" && capacityCheckFailed && startBlocked === null && (
+        <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-border bg-white p-4 text-[13px] text-muted">
+          <span>Readiness could not be refreshed. Activate period will safely check again before starting anyone.</span>
+          <button onClick={() => void loadCapacity()} className="inline-flex shrink-0 items-center gap-1.5 font-bold text-ink">
+            <RefreshCw size={13} /> Retry
+          </button>
         </div>
       )}
 

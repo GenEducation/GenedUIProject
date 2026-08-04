@@ -60,6 +60,25 @@ describe("labService physical-device commissioning", () => {
     expect(result).not.toHaveProperty("device_token");
   });
 
+  it("reads the authoritative pre-start capacity hint", async () => {
+    const fetchMock = stubFetch({
+      slot_id: "slot-1",
+      limit: 24,
+      required: 3,
+      active: 0,
+      lab_active: 0,
+      reserved: 0,
+      available: 24,
+      can_start: true,
+    });
+
+    const result = await labService.getSlotCapacity("slot/1");
+
+    expect(firstCall(fetchMock).url).toContain("/lab/slots/slot%2F1/capacity");
+    expect(result.can_start).toBe(true);
+    expect(result.limit).toBe(24);
+  });
+
   it("moves a device by target Lab without rotating its credential", async () => {
     const fetchMock = stubFetch({
       id: "device-1",

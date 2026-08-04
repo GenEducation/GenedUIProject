@@ -201,6 +201,7 @@ export interface SlotResponse {
   session_seconds: number;
   status: LabSlotStatus;
   auto_allocated: boolean;
+  board_version: number;
 }
 
 export interface CreateSlotRequest {
@@ -238,7 +239,20 @@ export interface ActivateResponse {
   slot_id: string;
   assigned: number;
   idle: number;
+  capacity_reserved: number;
+  capacity_limit: number;
   sessions: SessionResponse[];
+}
+
+export interface LabCapacityResponse {
+  slot_id: string;
+  limit: number;
+  required: number;
+  active: number;
+  lab_active: number;
+  reserved: number;
+  available: number;
+  can_start: boolean;
 }
 
 // -- Sessions / board -------------------------------------------------------

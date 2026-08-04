@@ -19,6 +19,7 @@ import type {
   BoardResponse,
   ClassReportResponse,
   CatalogResponse,
+  LabCapacityResponse,
 } from "../types/lab";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
@@ -177,6 +178,13 @@ export const labService = {
     const res = await authFetch(`${BASE_URL}/lab/slots/${encodeURIComponent(slotId)}/activate`, {
       method: "POST",
     });
+    return res.json();
+  },
+
+  getSlotCapacity: async (slotId: string): Promise<LabCapacityResponse> => {
+    const res = await authFetch(
+      `${BASE_URL}/lab/slots/${encodeURIComponent(slotId)}/capacity`,
+    );
     return res.json();
   },
 
