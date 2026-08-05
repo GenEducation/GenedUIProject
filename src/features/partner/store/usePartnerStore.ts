@@ -251,8 +251,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
     try {
       const grade = typeof subject.grade === "string" ? parseInt(subject.grade, 10) : subject.grade;
-      const exactSubject = await requireLoadedExactSubject(subject.subject, grade);
-      const data = await studentService.fetchChapterPdfUrl(grade, exactSubject, subject.agent);
+      await requireLoadedExactSubject(subject.subject, grade, subject.board);
+      const data = await studentService.fetchPartnerIngestionPdfUrl(subject.id);
 
       if (!data?.pdf_url || !data.pdf_url.startsWith("https://")) {
         throw new Error("PDF not available for this document.");
@@ -432,6 +432,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         subject: item.subject,
         agent: item.document_title,
         grade: item.grade,
+        board: item.board,
         status: item.status === "completed"
           ? "active"
           : (item.status === "queued" || item.status === "processing" || item.status === "finalizing")

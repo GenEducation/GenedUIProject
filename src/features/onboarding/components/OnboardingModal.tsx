@@ -5,7 +5,10 @@ import { X, MessageSquare, BookOpen, Clock, ShieldCheck, User, TrendingUp, Shiel
 import { useEffect, useRef, useState } from "react";
 import { Send, Mic, Square } from "lucide-react";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
-import { useStudentStore } from "@/features/student/store/useStudentStore";
+import {
+  selectEffectiveLearningPartner,
+  useStudentStore,
+} from "@/features/student/store/useStudentStore";
 import { studentService } from "@/features/student/services/studentService";
 import { MarkdownRenderer } from "@/features/student/components/MarkdownRenderer";
 import { SubjectOnboardingCelebration } from "@/features/onboarding/components/SubjectOnboardingCelebration";
@@ -50,13 +53,14 @@ interface OnboardingModalProps {
 }
 
 export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProps) {
-  const { messages, isAITyping, isVoiceOnly, sendVoiceMessage, sendMessage, streamingMessageId, startOnboarding, isComplete, clearSession, type, subject: storeSubject } = useOnboardingStore();
-  const { studentProfile } = useStudentStore();
+  const { messages, isAITyping, isVoiceOnly, sendVoiceMessage, sendMessage, streamingMessageId, startOnboarding, isComplete, clearSession, type, subject: storeSubject, error } = useOnboardingStore();
+  const { studentProfile, refreshAvailableAgents, fetchOnboardingStatus } = useStudentStore();
 
   const [showCelebration, setShowCelebration] = useState(false);
   const [input, setInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
+  const [completionError, setCompletionError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -82,28 +86,44 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
   }, [isComplete, showCelebration, clearSession, studentProfile?.user_id]);
 
   const handleCelebrationDismiss = async () => {
-    // The chat-completion POST just told us this subject is done, but the
-    // Hub re-reads status from a separate GET path (fetchOnboardingStatus /
-    // fetchAvailableAgents) after reload. If that read hasn't caught up yet,
-    // reloading immediately can show onboarding as still pending — poll the
-    // cheap, uncached status endpoint briefly to confirm before reloading.
+    // Confirm the durable marker for the exact current board before unlocking
+    // learning; the final assessment response and scoring worker are separate.
     const studentId = studentProfile?.user_id;
+    let confirmed = false;
     if (studentId) {
+      let expectedBoard: string | undefined;
+      try {
+        const agents = await studentService.fetchAvailableAgents(studentId);
+        expectedBoard = selectEffectiveLearningPartner(agents?.partners || [])?.board;
+      } catch {
+        // The confirmation loop below remains fail-closed.
+      }
       const MAX_ATTEMPTS = 5;
       const DELAY_MS = 700;
       for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
         try {
           const status = await studentService.fetchOnboardingStatus(studentId);
           const entry = status?.subjects?.find((s: { subject: string }) => s.subject === subject);
-          if (!entry || entry.status !== "PENDING") break; // confirmed, or subject not tracked — proceed
+          if (
+            expectedBoard &&
+            status?.board === expectedBoard &&
+            entry?.status === "COMPLETED"
+          ) {
+            confirmed = true;
+            break;
+          }
         } catch {
-          break; // don't let a status-check failure block the dismiss flow
+          // Retry: a failed or incomplete authority read must not be treated as success.
         }
         await new Promise((r) => setTimeout(r, DELAY_MS));
       }
     }
+    if (!confirmed) {
+      setCompletionError("We finished the assessment, but could not confirm it yet. Please try again.");
+      return;
+    }
+    await Promise.all([refreshAvailableAgents(), fetchOnboardingStatus()]);
     onClose();
-    window.location.reload();
   };
 
   useEffect(() => {
@@ -196,6 +216,11 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
             subject={subject}
             onDismiss={handleCelebrationDismiss}
           />
+        )}
+        {(error || completionError) && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[70] max-w-lg rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm font-semibold text-red-700 shadow-lg">
+            {completionError || error}
+          </div>
         )}
 
         {/* Left Panel */}
@@ -292,7 +317,7 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-5">
-            {messages.length === 0 && (
+            {messages.length === 0 && !error && (
               <div className="flex flex-col items-center justify-center h-full gap-4">
                 <div className="w-10 h-10 rounded-full border-4 border-[#042E5C]/10 border-t-[#042E5C]/40 animate-spin" />
                 <p className="text-xs font-bold text-[#042E5C]/30 uppercase tracking-widest animate-pulse">

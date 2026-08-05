@@ -14,7 +14,6 @@ import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { StreakStats } from "./StreakStats";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
-import { PartnerRequestModal } from "./PartnerRequestModal";
 import { updateProfile, fetchProfile } from "@/features/auth/authService";
 import { studentService } from "@/features/student/services/studentService";
 import { fetchVoices } from "@/features/student/services/voiceCatalogService";
@@ -572,6 +571,9 @@ export function StudentProfile() {
   };
 
   const isLoading = partnerRequestStatus === "loading";
+  const pendingPartners = availablePartners.filter(
+    (partner) => partner.association_status === "PENDING",
+  );
 
   const username      = studentProfile?.username      ?? "Student";
   const displayName   = getStudentDisplayName(studentProfile);
@@ -850,6 +852,16 @@ export function StudentProfile() {
                 <p style={{ fontSize: 12, color: C.textMuted, textAlign: "center" as const, padding: "8px 0" }}>No school connected yet.</p>
               )}
 
+              {pendingPartners.map((partner) => (
+                <div key={`pending-${partner.partner_id ?? partner.id}`} style={{
+                  marginTop: 10, padding: "10px 12px", borderRadius: 12,
+                  background: `${C.sun}10`, border: `1px solid ${C.sun}30`,
+                  fontSize: 11, fontWeight: 700, color: C.textMid,
+                }}>
+                  Request pending with {partner.organization}
+                </div>
+              ))}
+
               {/* Partner request */}
               <div style={{ marginTop: 14 }}>
                 <div style={{ position: "relative" as const }}>
@@ -867,7 +879,13 @@ export function StudentProfile() {
                   >
                     <option value="" disabled>Connect to a school...</option>
                     {availablePartners.map((p, i) => (
-                      <option key={p.partner_id ?? p.id ?? `avp-${i}`} value={p.partner_id ?? p.id}>{p.organization}</option>
+                      <option
+                        key={p.partner_id ?? p.id ?? `avp-${i}`}
+                        value={p.partner_id ?? p.id}
+                        disabled={p.association_status === "PENDING" || p.association_status === "APPROVED"}
+                      >
+                        {p.organization}{p.association_status === "PENDING" ? " — Request pending" : p.association_status === "APPROVED" ? " — Connected" : ""}
+                      </option>
                     ))}
                   </select>
                   <div style={{ position: "absolute" as const, right: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: C.textMuted, fontSize: 12 }}>▾</div>
@@ -1077,7 +1095,6 @@ export function StudentProfile() {
         </div>
       </main>
 
-      <PartnerRequestModal />
       <DevicePairingModal isOpen={pairingModalOpen} onClose={() => setPairingModalOpen(false)} />
       <AvatarPickerModal
         isOpen={avatarPickerOpen}

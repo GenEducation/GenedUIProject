@@ -1,10 +1,11 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useState, useEffect } from "react";
 import { Eye, EyeOff, ArrowLeft, ArrowRight } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 import { motion, AnimatePresence } from "framer-motion";
 import { RoleCard } from "./RoleCard";
+import { fetchAllTaxonomyGrades } from "@/features/subjects/subjectCatalog";
 
 interface SignUpData {
   username?: string;
@@ -67,7 +68,14 @@ export function SignUp({
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [otpSentMessage, setOtpSentMessage] = useState("");
   const [hasPersonalEmail, setHasPersonalEmail] = useState(false);
+  const [availableGrades, setAvailableGrades] = useState<number[]>([3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   const isSignupEnabled = process.env.NEXT_PUBLIC_ENABLE_SIGNUP !== "false";
+
+  useEffect(() => {
+    fetchAllTaxonomyGrades()
+      .then(setAvailableGrades)
+      .catch((err) => console.warn("Failed to load taxonomy grades during signup:", err));
+  }, []);
 
   // -- Signup disabled state --------------------------------------------------
   if (!isSignupEnabled) {
@@ -457,16 +465,11 @@ export function SignUp({
                 Deliberately literal, unlike every other grade picker. The
                 catalogue comes from `/rag/taxonomy/subjects`, which the gateway
                 requires a JWT for, and sign-up runs before one exists: the
-                fetch would 401, and `authFetch` answers a 401 by clearing the
-                session and redirecting to `/?error=session_expired` — ejecting
-                the user out of the form they are filling in. Deriving this from
-                the taxonomy needs `/rag/taxonomy` added to the gateway's
-                `_PUBLIC_PREFIXES` first (it carries no user data, so this is
-                viable — see `gateway-service/src/gateway_service/auth.py`).
-                Grades here select the student's own year, not a subject, so a
-                taxonomy change that adds a subject does not invalidate them.
+              {/*
+                Grades here select the student's own year, not a subject.
+                We fetch the list dynamically from the unauthenticated taxonomy endpoint.
               */}
-              {[3, 4, 5, 6, 7, 8].map((grade) => (
+              {availableGrades.map((grade) => (
                 <button
                   key={grade}
                   type="button"

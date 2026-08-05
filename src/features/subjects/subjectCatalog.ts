@@ -14,7 +14,6 @@ export interface TaxonomySubject {
   name: ExactSubject;
   grades: number[];
 }
-
 interface RawTaxonomySubject {
   name?: unknown;
   grades?: unknown;
@@ -177,8 +176,9 @@ export function requireExactSubject(
 export async function requireLoadedExactSubject(
   subject: unknown,
   grade: unknown,
+  board?: string,
 ): Promise<ExactSubject> {
-  const catalog = await loadSubjectCatalog();
+  const catalog = await loadSubjectCatalog(board);
   return requireExactSubject(subject, grade, catalog);
 }
 
@@ -200,4 +200,22 @@ export function useTaxonomySubjects(board?: string): TaxonomySubject[] {
 export function resetSubjectCatalogForTests(): void {
   catalogRequests.clear();
   useSubjectCatalog.setState({ subjects: [], isLoaded: false, error: null });
+}
+
+/**
+ * Fetches all grades across all boards. Used by unauthenticated flows (e.g. signup).
+ */
+export async function fetchAllTaxonomyGrades(): Promise<number[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/rag/taxonomy/subjects`);
+    if (!response.ok) return [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    const data = await response.json();
+    const catalog = data.subjects.map((row: any) => ({
+      name: row.name as ExactSubject,
+      grades: [...row.grades]
+    }));
+    return allTaxonomyGrades(catalog);
+  } catch {
+    return [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; // Fallback
+  }
 }

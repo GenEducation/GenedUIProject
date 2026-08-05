@@ -161,6 +161,26 @@ export interface PartnerItem {
   id: string;
   partner_id?: string;
   organization: string;
+  board?: string;
+  association_status?: "NOT_REQUESTED" | "PENDING" | "APPROVED" | "REJECTED" | "REVOKED";
+  is_effective?: boolean;
+}
+
+const SENTINEL_PARTNER_ID = "00000000-0000-0000-0000-000000000000";
+
+/** Resolve the one content-bearing partner, tolerating legacy sentinel+school responses. */
+export function selectEffectiveLearningPartner(partners: any[]): any | undefined {
+  const realPartners = partners.filter(
+    (partner) => String(partner?.partner_id ?? partner?.id) !== SENTINEL_PARTNER_ID,
+  );
+  if (realPartners.length > 1) {
+    throw new Error("The server returned more than one effective learning partner.");
+  }
+  if (realPartners.length === 1) return realPartners[0];
+  if (partners.length > 1) {
+    throw new Error("The server returned an invalid effective-partner response.");
+  }
+  return partners[0];
 }
 
 // parseContent, generateHistoricalSVG, normalizeSvg are imported from ../utils/parseContent
@@ -196,6 +216,7 @@ export interface OnboardingSubject {
 }
 
 export interface OnboardingStatus {
+  board: string;
   subjects: OnboardingSubject[];
 }
 
@@ -294,6 +315,7 @@ export interface StudentState {
   fetchEnrolledPartners: () => Promise<void>;
   fetchChatHistory: (sessionId: string) => Promise<void>;
   fetchOnboardingStatus: () => Promise<void>;
+  refreshAvailableAgents: () => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
   openChatById: (sessionId: string, agentId?: string) => Promise<void>;
   openNewChat: (agent: AgentItem) => string;
@@ -630,15 +652,24 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       if (!Number.isInteger(studentProfile.grade)) {
         throw new Error("A valid student grade is required to load subjects.");
       }
-      const catalog = await loadSubjectCatalog();
       const data = await studentService.fetchAvailableAgents(
         studentProfile.user_id,
       );
 
+      // Extract the exact board of the enrolled partner (if available) to ensure the
+      // frontend loads the matching subject catalog and accepts its agents.
+      const effectivePartners = Array.isArray(data.partners) ? data.partners : [];
+      const effectivePartner = selectEffectiveLearningPartner(effectivePartners);
+      const partnerBoard = effectivePartner?.board;
+      if (effectivePartner && !partnerBoard) {
+        throw new Error("The effective learning partner is missing its education board.");
+      }
+      const catalog = await loadSubjectCatalog(partnerBoard);
+
       // Flatten the nested structure: data.partners[].subjects[].agents[]
       const agents: AgentItem[] = [];
-      if (data.partners && Array.isArray(data.partners)) {
-        data.partners.forEach((partner: any) => {
+      if (effectivePartner) {
+        [effectivePartner].forEach((partner: any) => {
           if (partner.subjects && Array.isArray(partner.subjects)) {
             partner.subjects.forEach((subject: any) => {
               if (subject.agents && Array.isArray(subject.agents)) {
@@ -657,8 +688,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                           ? subject.subject_coverage_percentage
                           : undefined,
                     });
-                  } catch {
-                    // Fail closed for malformed or historical agent rows.
+                  } catch (error) {
+                    console.error("Invalid agent subject returned by available-agents", {
+                      partner_id: partner.partner_id,
+                      subject: agent.subject,
+                      grade: agent.grade,
+                      error,
+                    });
                   }
                 });
               }
@@ -674,10 +710,20 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
   },
 
+  refreshAvailableAgents: async () => {
+    set({ hasFetchedAgents: false });
+    await get().fetchAvailableAgents();
+  },
+
   fetchAvailablePartners: async () => {
+    const { studentProfile } = get();
+    if (!studentProfile) return;
     try {
-      const data: PartnerItem[] = await studentService.fetchAvailablePartners();
-      set({ availablePartners: data });
+      const data: PartnerItem[] = await studentService.fetchStudentPartners(studentProfile.user_id);
+      set({
+        availablePartners: data,
+        enrolledPartners: data.filter((partner) => partner.is_effective),
+      });
     } catch (error: any) {
       console.error("Fetch Partners Error:", error?.request_id, error?.message ?? error);
     }
@@ -689,11 +735,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
     set({ isEnrolledPartnersLoading: true });
     try {
-      const data = await studentService.fetchEnrolledPartners(
-        studentProfile.user_id,
-      );
+      const data: PartnerItem[] = await studentService.fetchStudentPartners(studentProfile.user_id);
       set({
-        enrolledPartners: data.partners || [],
+        availablePartners: data,
+        enrolledPartners: data.filter((partner) => partner.is_effective),
         isEnrolledPartnersLoading: false,
       });
     } catch (error: any) {
@@ -735,7 +780,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       });
 
       // Refresh the enrolled partners list so the UI reflects the new connection
-      await get().fetchEnrolledPartners();
+      await get().fetchAvailablePartners();
     } catch (error: any) {
       console.error("Partner Request Error:", error?.request_id, error?.message ?? error);
       set({

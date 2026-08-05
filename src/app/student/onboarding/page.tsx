@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
+import { useEffect, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { useStudentStore } from "@/features/student/store/useStudentStore";
+import {
+  selectEffectiveLearningPartner,
+  useStudentStore,
+} from "@/features/student/store/useStudentStore";
+import { studentService } from "@/features/student/services/studentService";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { OnboardingChatView } from "@/features/onboarding/components/OnboardingChatView";
 import { WavingStudentCharacter } from "@/components/shared/loaders/StudentLoader/WavingStudentCharacter";
 import { BookOpen, MessageSquare, Clock, ShieldCheck } from "lucide-react";
-import { requireExactSubject } from "@/features/subjects/subjectCatalog";
 
 const SUBJECT_ICONS: Record<string, string> = {
   Mathematics: "📐",
@@ -24,7 +27,7 @@ const SUBJECT_ICONS: Record<string, string> = {
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { studentProfile } = useStudentStore();
+  const { studentProfile, refreshAvailableAgents, fetchOnboardingStatus } = useStudentStore();
   const {
     startOnboarding,
     isComplete,
@@ -37,15 +40,10 @@ function OnboardingContent() {
   const rawQuerySubject = searchParams?.get("subject") || undefined;
   const rawQueryGrade = Number(searchParams?.get("grade"));
   const queryGrade = Number.isInteger(rawQueryGrade) ? rawQueryGrade : undefined;
-  let querySubject;
-  try {
-    querySubject =
-      queryType === "subject"
-        ? requireExactSubject(rawQuerySubject, queryGrade)
-        : undefined;
-  } catch {
-    querySubject = undefined;
-  }
+  const querySubject = queryType === "subject" && rawQuerySubject && queryGrade
+    ? rawQuerySubject
+    : undefined;
+  const [completionError, setCompletionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!studentProfile || (queryType === "subject" && !querySubject)) {
@@ -59,13 +57,42 @@ function OnboardingContent() {
 
   useEffect(() => {
     if (isComplete) {
-      if (studentProfile?.user_id) {
-        useOnboardingStore.getState().checkDNAStatus(studentProfile.user_id);
-      }
-      clearSession();
-      router.replace("/student");
+      void (async () => {
+        if (studentProfile?.user_id) {
+          useOnboardingStore.getState().checkDNAStatus(studentProfile.user_id);
+          if (queryType === "subject") {
+            try {
+              const [agents, status] = await Promise.all([
+                studentService.fetchAvailableAgents(studentProfile.user_id),
+                studentService.fetchOnboardingStatus(studentProfile.user_id),
+              ]);
+              const expectedBoard = selectEffectiveLearningPartner(
+                agents?.partners || [],
+              )?.board;
+              const completed = status?.subjects?.some(
+                (item: { subject: string; status: string }) =>
+                  item.subject === querySubject && item.status === "COMPLETED",
+              );
+              if (!expectedBoard || status?.board !== expectedBoard || !completed) {
+                setCompletionError(
+                  "We finished the assessment, but could not confirm it yet. Please try again.",
+                );
+                return;
+              }
+            } catch {
+              setCompletionError(
+                "We finished the assessment, but could not confirm it yet. Please try again.",
+              );
+              return;
+            }
+            await Promise.all([refreshAvailableAgents(), fetchOnboardingStatus()]);
+          }
+        }
+        clearSession();
+        router.replace("/student");
+      })();
     }
-  }, [isComplete, queryType, router, clearSession, studentProfile?.user_id]);
+  }, [isComplete, queryType, querySubject, router, clearSession, studentProfile?.user_id, refreshAvailableAgents, fetchOnboardingStatus]);
 
   if (!studentProfile) return null;
 
@@ -143,6 +170,21 @@ function OnboardingContent() {
 
       {/* Right Panel — Chat */}
       <div className="flex-1 flex flex-col overflow-hidden">
+        {completionError && (
+          <div className="mx-4 mt-4 flex items-center justify-between gap-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            <span>{completionError}</span>
+            <button
+              type="button"
+              className="shrink-0 rounded-lg border border-red-300 bg-white px-3 py-1.5"
+              onClick={() => {
+                clearSession();
+                router.replace("/student");
+              }}
+            >
+              Return home
+            </button>
+          </div>
+        )}
         <OnboardingChatView />
       </div>
     </div>

@@ -54,6 +54,11 @@ export const studentService = {
     return response.json();
   },
 
+  fetchStudentPartners: async (userId: string) => {
+    const response = await authFetch(`${API_BASE_URL}/student/partners?student_id=${userId}`);
+    return response.json();
+  },
+
   fetchEnrolledPartners: async (userId: string) => {
     const response = await authFetch(`${API_BASE_URL}/api/students/${userId}/available-agents`);
     return response.json();
@@ -296,6 +301,15 @@ export const studentService = {
       chapter_name: chapterName,
     });
     const response = await authFetch(`${API_BASE_URL}/rag/api/ncert/pdf-url?${params}`);
+    return response.json();
+  },
+
+  fetchPartnerIngestionPdfUrl: async (
+    ingestionBatchId: string
+  ): Promise<{ pdf_url: string; chapter_name: string; grade: number; subject: string; ttl_seconds: number }> => {
+    const response = await authFetch(
+      `${API_BASE_URL}/rag/api/partner/ingestions/${encodeURIComponent(ingestionBatchId)}/pdf-url`
+    );
     return response.json();
   },
 
