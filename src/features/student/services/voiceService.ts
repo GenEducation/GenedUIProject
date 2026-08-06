@@ -220,6 +220,12 @@ class VoiceService {
     const wsBaseUrl = apiBaseUrl.replace(/^http/, "ws").replace(/\/$/, "");
     
     const token = getAuthToken();
+    if (!token) {
+      console.error("🎙️ [VoiceService] Missing auth token. Cannot connect to websocket.");
+      this.onEventCallback?.({ type: "error", error: new Error("Not authenticated") });
+      return;
+    }
+
     const endpoint = this.wsEndpoint || "/ws/april-live";
     
     // Ensure endpoint starts with a slash
