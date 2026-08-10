@@ -282,6 +282,21 @@ class VoiceService {
             return;
           }
 
+          if (data.type === "flush") {
+            // The backend is reopening the tutor's realtime session — a plan upgrade, a
+            // focal-skill change, a provider socket rotation, a reconnect. The old session
+            // streamed faster than realtime, so seconds of its speech are still sitting in
+            // our scheduler; left alone, the child hears the tail of a conversation that
+            // has already ended and then the new session talking over it.
+            //
+            // The backend has emitted this on every one of those paths since swaps were
+            // introduced. Nothing on this side had ever listened for it.
+            this.interruptPlayback();
+            this.pendingAssistantText = "";
+            this.revealedAssistantText = "";
+            return;
+          }
+
           if (data.type === "session_id" && data.session_id) {
             this.currentSessionId = data.session_id;
           }
