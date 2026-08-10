@@ -196,11 +196,27 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
         </div>
       )}
 
-      {currentSlot.status === "SCHEDULED" && capacity && startBlocked === null && (
+      {currentSlot.status === "SCHEDULED" && capacity && startBlocked === null && capacity.healthy_devices === 0 && (
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-border bg-warning-bg p-4 text-[13px] text-warning-ink">
+          <TriangleAlert className="mt-0.5 shrink-0" size={17} />
+          <div>
+            <p className="font-bold">No devices are online in this lab.</p>
+            <p className="mt-1">
+              You can still start, but no student is seated until a Deskbot connects — devices that come online during the
+              period are seated automatically.
+              {capacity.spare > 0 && ` ${capacity.spare} spare ${capacity.spare === 1 ? "device is" : "devices are"} held in reserve.`}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {currentSlot.status === "SCHEDULED" && capacity && startBlocked === null && capacity.healthy_devices > 0 && (
         <div className="mb-5 flex items-center gap-4 rounded-xl bg-emerald-50 p-4 text-[13px] text-emerald-600">
           <Users size={16} />
           <span>
-            Ready to reserve <strong>{capacity.required}</strong> of <strong>{capacity.limit}</strong> voice places when you start.
+            <strong>{capacity.healthy_devices}</strong> of <strong>{capacity.roster}</strong> desks online · ready to reserve{" "}
+            <strong>{capacity.required}</strong> of <strong>{capacity.limit}</strong> voice places when you start.
+            {capacity.spare > 0 && ` (${capacity.spare} spare in reserve.)`}
           </span>
         </div>
       )}
