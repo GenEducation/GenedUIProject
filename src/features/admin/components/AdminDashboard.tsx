@@ -16,6 +16,7 @@ import {
   Presentation,
   UsersRound,
   AudioLines,
+  MonitorSmartphone,
 } from "lucide-react";
 
 import { StatsOverview } from "./StatsOverview";
@@ -29,6 +30,8 @@ import { AssignmentsView } from "./AssignmentsView";
 import { AgentsView } from "./AgentsView";
 import { IngestionsView } from "./IngestionsView";
 import { WakeWordModelsView } from "./WakeWordModelsView";
+import { DevicesView } from "./DevicesView";
+import { DeviceDetailView } from "./DeviceDetailView";
 
 interface NavItem {
   label: string;
@@ -42,6 +45,7 @@ const NAV: NavItem[] = [
   { label: "Students", href: "/admin/students", icon: GraduationCap },
   { label: "Parents", href: "/admin/parents", icon: Contact },
   { label: "Partners", href: "/admin/partners", icon: Building2 },
+  { label: "Devices", href: "/admin/devices", icon: MonitorSmartphone },
   { label: "Teachers", href: "/admin/teachers", icon: Presentation },
   { label: "Enrollments", href: "/admin/enrollments", icon: Link2 },
   { label: "Assignments", href: "/admin/assignments", icon: UsersRound },
@@ -63,6 +67,12 @@ export function AdminDashboard() {
   };
 
   const renderView = () => {
+    // Nested detail routes have to be matched before the exact-match switch,
+    // which would otherwise drop them through to the default.
+    if (pathname.startsWith("/admin/devices/")) {
+      return <DeviceDetailView deviceId={decodeURIComponent(pathname.split("/")[3] ?? "")} />;
+    }
+
     switch (pathname) {
       case "/admin":
         return <StatsOverview />;
@@ -74,6 +84,8 @@ export function AdminDashboard() {
         return <ParentsView />;
       case "/admin/partners":
         return <PartnersView />;
+      case "/admin/devices":
+        return <DevicesView />;
       case "/admin/teachers":
         return <TeachersView />;
       case "/admin/enrollments":

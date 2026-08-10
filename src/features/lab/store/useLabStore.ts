@@ -29,6 +29,8 @@ interface LabState {
   isLoadingLabs: boolean;
   devicesByLab: Record<string, DeviceResponse[]>;
   isLoadingDevices: boolean;
+  /** Epoch ms of the last successful device fetch per lab, for the "updated Ns ago" label. */
+  devicesFetchedAt: Record<string, number>;
   /** Set once right after registration/rotation so the UI can show it exactly once. */
   lastMintedToken: { deviceId: string; token: string } | null;
 
@@ -60,7 +62,8 @@ interface LabState {
   updateLab: (labId: string, payload: LabUpdateRequest) => Promise<void>;
 
   // -- Device actions -------------------------------------------------------------
-  fetchDevices: (labId: string) => Promise<void>;
+  /** `silent` suppresses the loading flag and error banner — used by the health poll. */
+  fetchDevices: (labId: string, opts?: { silent?: boolean }) => Promise<void>;
   registerDevice: (payload: RegisterDeviceRequest) => Promise<DeviceProvisionResponse>;
   rotateToken: (labId: string, deviceId: string) => Promise<DeviceProvisionResponse>;
   updateDevice: (labId: string, deviceId: string, payload: DeviceUpdateRequest) => Promise<void>;
@@ -112,6 +115,7 @@ export const useLabStore = create<LabState>((set, get) => ({
   isLoadingLabs: false,
   devicesByLab: {},
   isLoadingDevices: false,
+  devicesFetchedAt: {},
   lastMintedToken: null,
 
   slots: [],
@@ -157,16 +161,22 @@ export const useLabStore = create<LabState>((set, get) => ({
     set((state) => ({ labs: state.labs.map((l) => (l.id === labId ? updated : l)) }));
   },
 
-  fetchDevices: async (labId) => {
-    set({ isLoadingDevices: true, lastError: null });
+  fetchDevices: async (labId, opts) => {
+    const silent = opts?.silent === true;
+    if (!silent) set({ isLoadingDevices: true, lastError: null });
     try {
       const devices = await labService.listDevices(labId);
-      set((state) => ({ devicesByLab: { ...state.devicesByLab, [labId]: devices } }));
+      set((state) => ({
+        devicesByLab: { ...state.devicesByLab, [labId]: devices },
+        devicesFetchedAt: { ...state.devicesFetchedAt, [labId]: Date.now() },
+      }));
     } catch (error) {
       console.error("Fetch Devices Error:", error);
-      set({ lastError: errorMessage(error) });
+      // A dropped background poll keeps the last-known devices and stays quiet;
+      // the staleness of the "updated" label is what tells the operator.
+      if (!silent) set({ lastError: errorMessage(error) });
     } finally {
-      set({ isLoadingDevices: false });
+      if (!silent) set({ isLoadingDevices: false });
     }
   },
 

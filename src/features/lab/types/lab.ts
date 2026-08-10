@@ -85,6 +85,54 @@ export interface LabUpdateRequest {
 
 // -- Devices --------------------------------------------------------------
 
+/**
+ * Normalized subsystem verdict. The wire format sends free-form strings, so
+ * always funnel them through `normalizeStatus` in `../utils/deviceHealth`
+ * rather than casting — field firmware ships new vocabulary without us.
+ */
+export type HealthComponentStatus = "ok" | "warn" | "fail" | "unknown";
+
+/** Arbitrary per-subsystem metric. Scalars, or one level of nesting (e.g. `mixer`). */
+export type HealthMetricValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Record<string, unknown>
+  | unknown[];
+
+export interface DeviceHealthComponent {
+  /** Deliberately not narrowed — normalize at read time. */
+  status: string;
+  detail?: string | null;
+  metrics?: Record<string, HealthMetricValue> | null;
+}
+
+/**
+ * The device's last self-test, verbatim from the gateway. Every field is
+ * optional: this is produced by firmware in the field that versions
+ * independently of the portal.
+ */
+export interface DeviceHealthReport {
+  type?: string;
+  status?: string;
+  /** "periodic" | "boot" | "manual" | future values. */
+  trigger?: string;
+  /** "SCHOOL_LAB" | future values. */
+  mode?: string;
+  checked_at?: string;
+  uptime_s?: number;
+  device_id?: string;
+  serial?: string;
+  ip?: string;
+  firmware_version?: string;
+  schema_version?: number;
+  failed?: string[];
+  components?: Record<string, DeviceHealthComponent>;
+  /** Forward-compat: the server may add fields ahead of the client. */
+  [key: string]: unknown;
+}
+
 export interface DeviceResponse {
   id: string;
   partner_id: string;
@@ -101,6 +149,10 @@ export interface DeviceResponse {
   provisioning_source?: "MANUAL" | "PAIRING";
   is_spare: boolean;
   revoked_at: string | null;
+  /** Last self-test the device reported about itself. Null until it first reports. */
+  last_health_report?: DeviceHealthReport | null;
+  last_health_at?: string | null;
+  last_ip?: string | null;
 }
 
 export interface DeviceProvisionResponse {
