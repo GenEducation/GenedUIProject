@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Mic } from "lucide-react";
 import { ChatMessage } from "../store/useStudentStore";
 import { MessageElements } from "./MessageElements";
+import { MarkdownRenderer } from "./MarkdownRenderer";
 
 interface VoiceTranscriptProps {
   messages: ChatMessage[];
@@ -65,8 +66,10 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
               // History messages carry the transcript as interleaved text *elements*
               // (from parseContent) and render those. Live messages keep the whole
               // transcript in `text` with visual-only elements — so render the plain text
-              // span whenever the elements don't already include the text, keeping the
-              // font consistent and the text unbroken when a visual is present.
+              // block whenever the elements don't already include the text, keeping the
+              // text unbroken when a visual is present. That block goes through the same
+              // MarkdownRenderer the chat bubbles use, so spoken turns containing LaTeX
+              // ($$…$$) or emphasis render instead of showing raw markup.
               const hasTextElements = !!m.elements?.some((el) => el.type === "text");
               const showPlainText = !!text && !hasTextElements;
               if (!text && !hasElements) return null;
@@ -79,7 +82,11 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
                     {label}
                   </span>
                   <div className="flex-1 flex flex-col gap-3">
-                    {showPlainText && <span className="text-[#1A202C]">{text}</span>}
+                    {showPlainText && (
+                      <div className="text-[#1A202C] voice-transcript-md">
+                        <MarkdownRenderer content={text} />
+                      </div>
+                    )}
                     {hasElements && <MessageElements elements={m.elements!} />}
                   </div>
                 </div>

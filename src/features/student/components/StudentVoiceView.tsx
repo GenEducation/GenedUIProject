@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, BookOpen, Mic, Sparkles, Menu } from "lucide-react";
+import { ArrowLeft, BookOpen, Loader2, Mic, Sparkles, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
@@ -57,11 +57,11 @@ export function StudentVoiceView() {
     chapterPdfUrl,
     chapterPdfError,
     clearPdfError,
+    isHistoryLoading,
   } = useStudentStore();
 
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const [isMobile, setIsMobile] = useState(false);
-  const openSidebar = () => setSidebarOpen(true);
   const closeSidebar = () => setSidebarOpen(false);
 
   /* responsive sidebar */
@@ -128,6 +128,11 @@ export function StudentVoiceView() {
   // A reopened voice session arrives with transcript history but an idle pipeline.
   // We must NOT auto-listen — the student resumes explicitly (spec requirement).
   const hasHistory = messages.length > 0;
+  // Until the transcript arrives, a reopened session is indistinguishable from a
+  // brand-new one (hasHistory is false either way) — which flashed the fresh
+  // "Tap to start" orb, and worse, armed it. Everything derived from hasHistory
+  // must wait for the fetch to land.
+  const isRestoringHistory = isHistoryLoading && !hasHistory;
   const isIdle = voiceSessionStatus === "idle";
   // Treat a non-rate-limit error as "needs retry" (e.g. network failure mid-resume).
   const isError = voiceSessionStatus === "error" && !isRateLimitHit;
@@ -145,7 +150,8 @@ export function StudentVoiceView() {
 
   // Ambient tap-to-start is only for a brand-new session (no history, not completed).
   // Reopened/completed/errored sessions use explicit buttons so we don't surprise-start the mic.
-  const ambientStart = isIdle && !hasHistory && !isCompleted ? startVoiceSession : undefined;
+  const ambientStart =
+    isIdle && !hasHistory && !isCompleted && !isRestoringHistory ? startVoiceSession : undefined;
 
   const handleResume = () => {
     setRateLimitHit(false);
@@ -171,7 +177,8 @@ export function StudentVoiceView() {
   // Show the orb landing stage only for a fresh session before the conversation starts.
   // Reopened sessions (history) and completed sessions show the transcript + a CTA instead.
   const showOrb =
-    !hasHistory && !isCompleted && !(voiceSessionStatus === "active" && messages.length > 0);
+    !hasHistory && !isCompleted && !isRestoringHistory &&
+    !(voiceSessionStatus === "active" && messages.length > 0);
 
   const caption = isRateLimitHit
     ? (rateLimitMessage || "Daily limit reached. Upgrade to Pro for more.")
@@ -258,16 +265,17 @@ export function StudentVoiceView() {
       <header style={{ background: "#FFFFFF", borderBottom: "1px solid #E2E8F0", flexShrink: 0 }}>
         <div className="flex items-center justify-between" style={{ padding: "10px 12px" }}>
           <div className="flex items-center gap-2">
-            {!sidebarOpen && (
-              <button
-                onClick={openSidebar}
-                title="Open sidebar"
-                className="transition-all flex-shrink-0"
-                style={{ width: 32, height: 32, borderRadius: 10, background: "#F7F8FC", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", color: "#4A5568", cursor: "pointer" }}
-              >
-                <Menu size={15} strokeWidth={1.75} />
-              </button>
-            )}
+            {/* Always rendered, and a real toggle — it used to be open-only
+                ({!sidebarOpen && …}), leaving no way to collapse the sidebar
+                from the voice view. Matches StudentChatMain's header button. */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              title={sidebarOpen ? "Collapse sidebar" : "Open sidebar"}
+              className="transition-all flex-shrink-0"
+              style={{ width: 32, height: 32, borderRadius: 10, background: "#F7F8FC", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", color: "#4A5568", cursor: "pointer" }}
+            >
+              <Menu size={15} strokeWidth={1.75} />
+            </button>
             <button
               onClick={handleEnd}
               title="Back to subjects"
@@ -306,7 +314,19 @@ export function StudentVoiceView() {
 
       {/* Middle — Conversation feed (fills remaining space; full height once orb is hidden) */}
       <section className="flex-1 min-h-[140px] px-3 sm:px-6 overflow-hidden">
-        <VoiceTranscript messages={messages} agentName={agentName} />
+        {isRestoringHistory ? (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+            <Loader2 className="w-7 h-7 animate-spin" style={{ color: "var(--tutor)" }} />
+            <p
+              className="text-[12px] font-bold uppercase"
+              style={{ color: "rgba(4,46,92,0.4)", letterSpacing: "0.15em" }}
+            >
+              Loading transcript…
+            </p>
+          </div>
+        ) : (
+          <VoiceTranscript messages={messages} agentName={agentName} />
+        )}
       </section>
 
       {/* Bottom — Controls (live), Resume CTA (reopened), or Completed CTA */}
@@ -316,7 +336,11 @@ export function StudentVoiceView() {
           onClose={() => setRateLimitHit(false)}
         />
 
-        {showCompleted ? (
+        {isRestoringHistory ? (
+          // Which CTA belongs here (Resume / Completed / live controls) depends on
+          // the transcript we're still fetching — show none rather than the wrong one.
+          null
+        ) : showCompleted ? (
           <div className="flex flex-col items-center gap-3">
             <p className="text-[13px] font-bold uppercase tracking-widest text-[var(--primary-ink)]/50">
               Session Completed
@@ -422,7 +446,6 @@ export function StudentVoiceView() {
         activeChatId={activeChat?.id || "none"}
         isOpen={sidebarOpen}
         onClose={closeSidebar}
-        sessionType="voice"
       />
       {/* The sidebar-open toggle now lives in the voice header itself
           (matches the chat header) instead of floating outside it. */}

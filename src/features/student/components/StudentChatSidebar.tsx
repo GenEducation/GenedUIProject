@@ -200,12 +200,10 @@ export const StudentChatSidebar = React.memo(({
   activeChatId,
   isOpen,
   onClose,
-  sessionType = "chat",
 }: {
   activeChatId: string;
   isOpen: boolean;
   onClose: () => void;
-  sessionType?: "voice" | "chat";
 }) => {
   // Selected via useShallow (not a plain destructure of the whole store) —
   // this component is React.memo'd, but subscribing to the entire store
@@ -216,6 +214,7 @@ export const StudentChatSidebar = React.memo(({
     closeChat,
     recentChats,
     isSessionsLoading,
+    voiceSessionStatus,
     logoutStudent,
     studentProfile,
     avatarId
@@ -225,6 +224,7 @@ export const StudentChatSidebar = React.memo(({
       closeChat: s.closeChat,
       recentChats: s.recentChats,
       isSessionsLoading: s.isSessionsLoading,
+      voiceSessionStatus: s.voiceSessionStatus,
       logoutStudent: s.logoutStudent,
       studentProfile: s.studentProfile,
       avatarId: s.avatarId,
@@ -273,9 +273,11 @@ export const StudentChatSidebar = React.memo(({
   const w = isOpen ? sidebarWidth : 0;
   const mobileWidth = Math.min(sidebarWidth, 300);
 
-  const filteredChats = recentChats.filter(
-    (chat) => isVoiceSession(chat) === (sessionType === "voice")
-  );
+  // Both modalities are listed here, in the chat view and the voice view alike —
+  // this sidebar used to be filtered to one modality per surface, which hid a
+  // student's chat threads while they were in a call and vice versa. The click
+  // handler routes each session by its own `source` via sessionRoutePath, so a
+  // mixed list navigates correctly from either side.
 
   return (
     <>
@@ -344,15 +346,28 @@ export const StudentChatSidebar = React.memo(({
               <div className="flex justify-center py-8">
                 <Loader2 size={20} style={{ color: "rgba(255,255,255,0.2)" }} className="animate-spin" />
               </div>
-            ) : filteredChats.length > 0 ? (
+            ) : recentChats.length > 0 ? (
               <div className="flex flex-col" style={{ gap: 0 }}>
-                {filteredChats.map((chat, idx) => {
+                {recentChats.map((chat, idx) => {
                   const isActive = activeChatId === chat.id;
-                  const { emoji, color } = getSubjectMeta(chat.subject);
+                  const { color } = getSubjectMeta(chat.subject);
                   return (
                     <button
                       key={chat.id}
                       onClick={() => {
+                        // Leaving the voice view for a chat session unmounts
+                        // StudentVoiceView, whose cleanup calls stopVoiceSession().
+                        // Every other exit from a live call confirms first
+                        // (StudentVoiceView's handleEnd) — match that rather than
+                        // dropping the call silently. Opening another voice session
+                        // stays on the voice route, so it needs no prompt.
+                        if (
+                          voiceSessionStatus === "active" &&
+                          !isVoiceSession(chat) &&
+                          !window.confirm("End this voice session?")
+                        ) {
+                          return;
+                        }
                         openExistingChat(chat);
                         // Reopen in the modality the session was created with.
                         // router.push (not window.location.href) — the full
@@ -369,7 +384,7 @@ export const StudentChatSidebar = React.memo(({
                         fontSize: 13,
                         fontWeight: isActive ? 800 : 700,
                         fontFamily: "var(--font-body)",
-                        borderBottom: idx < filteredChats.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
+                        borderBottom: idx < recentChats.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
                         display: "flex",
                         alignItems: "center",
                         gap: 10,
@@ -377,12 +392,19 @@ export const StudentChatSidebar = React.memo(({
                       onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = C.sidebarHover; }}
                       onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
                     >
-                      <div style={{
-                        width: 32, height: 32, borderRadius: 9, flexShrink: 0,
-                        background: `${color}18`, display: "flex", alignItems: "center",
-                        justifyContent: "center", fontSize: 15,
-                      }}>
-                        {emoji}
+                      {/* Modality, not subject: this list interleaves voice and
+                          chat sessions that often share a title, and the subject
+                          is already spelled out on the second line below. The
+                          tile keeps the subject's color tint. */}
+                      <div
+                        title={isVoiceSession(chat) ? "Voice session" : "Chat session"}
+                        style={{
+                          width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+                          background: `${color}18`, display: "flex", alignItems: "center",
+                          justifyContent: "center", fontSize: 15,
+                        }}
+                      >
+                        {isVoiceSession(chat) ? "🎤" : "💬"}
                       </div>
                       <div style={{ minWidth: 0, textAlign: "left" as const, flex: 1 }}>
                         <div className="truncate" title={chat.title} style={{ lineHeight: 1.35 }}>
@@ -411,7 +433,7 @@ export const StudentChatSidebar = React.memo(({
             ) : (
               <div className="px-2 py-5 text-center">
                 <p style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontStyle: "italic" }}>
-                  {sessionType === "voice" ? "No recent voice sessions yet." : "No recent sessions yet."}
+                  No recent sessions yet.
                 </p>
               </div>
             )}

@@ -837,8 +837,20 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     const controller = new AbortController();
     set({ isHistoryLoading: true, historyAbortController: controller });
 
-    const chat = get().recentChats.find((c) => c.id === sessionId);
-    const isVoice = isVoiceSession(chat) || (typeof window !== "undefined" && window.location.pathname.includes("/student/voice/"));
+    // Modality decides which endpoint serves the history, so it must come from
+    // the session itself. The URL is not a reliable source during a cross-modality
+    // switch: the sidebar calls openExistingChat -> fetchChatHistory *before*
+    // router.push settles, so opening a chat session from the voice view still
+    // saw "/student/voice/…" here and fetched the voice-restore endpoint for a
+    // text session — which came back empty and rendered as a blank chat.
+    // Fall back to the pathname only for a session we don't know yet (cold load
+    // by URL, before recentChats has arrived).
+    const chat =
+      get().recentChats.find((c) => c.id === sessionId) ??
+      (get().activeChat?.id === sessionId ? get().activeChat : undefined);
+    const isVoice = chat
+      ? isVoiceSession(chat)
+      : typeof window !== "undefined" && window.location.pathname.includes("/student/voice/");
 
     try {
       let data;

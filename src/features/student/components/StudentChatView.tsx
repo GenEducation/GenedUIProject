@@ -164,7 +164,6 @@ export function StudentChatView() {
         activeChatId={activeChat?.id || "none"}
         isOpen={isSidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        sessionType="chat"
       />
 
       {/* Main Area: Hub vs Chat (with optional PDF split pane) */}
