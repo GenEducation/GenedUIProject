@@ -4,6 +4,7 @@ import { formatRelativeTime, formatUptime, isFresh } from "@/utils/datetime";
 import {
   displayHardwareId,
   humanizeKey,
+  isRevokedDevice,
   normalizeStatus,
   orderedComponents,
   resolveAddresses,
@@ -243,6 +244,26 @@ describe("displayHardwareId", () => {
     expect(displayHardwareId("DEV-BF5A-A492")).toBe("DEV-BF5A-A492");
     expect(displayHardwareId(null)).toBe("");
     expect(displayHardwareId(undefined)).toBe("");
+  });
+});
+
+describe("isRevokedDevice", () => {
+  it("detects the revocation prefix even without a timestamp", () => {
+    expect(
+      isRevokedDevice(
+        makeDevice({ hardware_id: "revoked:24931e7a-46e6-416b-8796-ff23ea583861:DEV-BF5A-A492" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("detects a revoked timestamp even without the prefix", () => {
+    expect(isRevokedDevice(makeDevice({ revoked_at: "2026-08-05T16:35:00.733700Z" }))).toBe(true);
+  });
+
+  it("leaves active devices alone", () => {
+    expect(isRevokedDevice(makeDevice())).toBe(false);
+    expect(isRevokedDevice({ hardware_id: null, revoked_at: null })).toBe(false);
+    expect(isRevokedDevice({})).toBe(false);
   });
 });
 
