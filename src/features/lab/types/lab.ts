@@ -12,9 +12,13 @@ export type ObjectiveMode =
 export const OBJECTIVE_MODES: { value: ObjectiveMode; label: string }[] = [
   { value: "CHAPTER_PRACTICE", label: "Chapter Practice" },
   { value: "GAP_RECOVERY", label: "Gap Recovery" },
-  { value: "REVISION", label: "Revision" },
+  // Hidden until the backend implements distinct behavior. Today REVISION and
+  // AI_EXPLORATION have no dedicated device-graph logic — they silently run as
+  // plain Chapter Practice — so we don't offer them in the scheduler yet.
+  // (Backend enum still accepts them; re-enable here once implemented.)
+  // { value: "REVISION", label: "Revision" },
   { value: "DOUBT_SOLVING", label: "Doubt Solving" },
-  { value: "AI_EXPLORATION", label: "AI Exploration" },
+  // { value: "AI_EXPLORATION", label: "AI Exploration" },
   { value: "SYSTEM_RECOMMENDED", label: "System Recommended" },
 ];
 
