@@ -79,6 +79,39 @@ describe("labService physical-device commissioning", () => {
     expect(result.limit).toBe(24);
   });
 
+  it("loads the pre-activation roster", async () => {
+    const fetchMock = stubFetch([{ student_id: "student-1", name: "Aarav" }]);
+
+    const result = await labService.getSlotRoster("slot/1");
+
+    expect(firstCall(fetchMock).url).toContain("/lab/slots/slot%2F1/roster");
+    expect(result).toEqual([{ student_id: "student-1", name: "Aarav" }]);
+  });
+
+  it("submits only explicit pre-activation seat assignments", async () => {
+    const fetchMock = stubFetch({ assigned: 2, idle: 0, sessions: [] });
+
+    await labService.activateSlot("slot-1", [
+      { student_id: "student-1", device_id: "device-2" },
+    ]);
+
+    const call = firstCall(fetchMock);
+    expect(call.method).toBe("POST");
+    expect(call.body).toEqual({
+      assignments: [{ student_id: "student-1", device_id: "device-2" }],
+    });
+  });
+
+  it("keeps legacy no-body activation when every student is automatic", async () => {
+    const fetchMock = stubFetch({ assigned: 2, idle: 0, sessions: [] });
+
+    await labService.activateSlot("slot-1");
+
+    const call = firstCall(fetchMock);
+    expect(call.method).toBe("POST");
+    expect(call.body).toBeUndefined();
+  });
+
   it("moves a device by target Lab without rotating its credential", async () => {
     const fetchMock = stubFetch({
       id: "device-1",

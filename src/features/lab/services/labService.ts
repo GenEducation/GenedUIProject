@@ -20,6 +20,8 @@ import type {
   ClassReportResponse,
   CatalogResponse,
   LabCapacityResponse,
+  RosterStudent,
+  SeatAssignment,
 } from "../types/lab";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
@@ -174,9 +176,20 @@ export const labService = {
     return res.json();
   },
 
-  activateSlot: async (slotId: string): Promise<ActivateResponse> => {
+  getSlotRoster: async (slotId: string): Promise<RosterStudent[]> => {
+    const res = await authFetch(`${BASE_URL}/lab/slots/${encodeURIComponent(slotId)}/roster`);
+    return res.json();
+  },
+
+  activateSlot: async (
+    slotId: string,
+    assignments: SeatAssignment[] = [],
+  ): Promise<ActivateResponse> => {
     const res = await authFetch(`${BASE_URL}/lab/slots/${encodeURIComponent(slotId)}/activate`, {
       method: "POST",
+      ...(assignments.length > 0
+        ? { headers: jsonHeaders, body: JSON.stringify({ assignments }) }
+        : {}),
     });
     return res.json();
   },

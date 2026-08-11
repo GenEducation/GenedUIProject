@@ -300,6 +300,16 @@ export interface ActivateResponse {
   sessions: SessionResponse[];
 }
 
+export interface RosterStudent {
+  student_id: string;
+  name: string;
+}
+
+export interface SeatAssignment {
+  student_id: string;
+  device_id: string;
+}
+
 export interface LabCapacityResponse {
   slot_id: string;
   limit: number;
