@@ -16,18 +16,14 @@ describe("ConnectionQualityBanner", () => {
     expect(container.textContent).toBe("");
   });
 
-  it("shows the backend's own words for a planned rotation", () => {
-    // The copy is authored server-side (`RECONNECT_PAYLOAD`) and written for a child.
-    // Re-wording it here would put two different voices in front of the same student.
+  it("shows a non-terminal backend notice", () => {
     render(
       <ConnectionQualityBanner
         quality={null}
-        notice={rotating(
-          "Aanya is finding a quieter spot for us to learn! We will be right back in a second.",
-        )}
+        notice={rotating("We have five minutes left in today's lesson.")}
       />,
     );
-    expect(screen.getByText(/finding a quieter spot/i)).toBeInTheDocument();
+    expect(screen.getByText(/five minutes left/i)).toBeInTheDocument();
   });
 
   it("does not dress a planned rotation as a connection failure", () => {

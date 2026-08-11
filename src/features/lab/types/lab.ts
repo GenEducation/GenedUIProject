@@ -305,6 +305,10 @@ export interface LabCapacityResponse {
   reserved: number;
   available: number;
   can_start: boolean;
+  // Device-pool preflight: desks online vs the class roster, plus spares held in reserve.
+  roster: number;
+  healthy_devices: number;
+  spare: number;
 }
 
 // -- Sessions / board -------------------------------------------------------

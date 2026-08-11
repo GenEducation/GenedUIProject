@@ -9,7 +9,11 @@ import type { ExactSubject } from "@/features/subjects/subjectCatalog";
 /**
  * Resamples floating point audio data to a target rate using linear interpolation.
  */
-function resample(input: any, fromRate: number, toRate: number): any {
+function resample(
+  input: Float32Array<ArrayBufferLike>,
+  fromRate: number,
+  toRate: number,
+): Float32Array<ArrayBufferLike> {
   if (fromRate === toRate) return input;
   const ratio = fromRate / toRate;
   const newLength = Math.round(input.length / ratio);
@@ -23,6 +27,23 @@ function resample(input: any, fromRate: number, toRate: number): any {
   }
   return result;
 }
+
+type VoiceEvent = {
+  type?: string;
+  error?: unknown;
+  message?: string;
+  content?: string;
+  session_id?: string;
+  role?: "user" | "assistant";
+  reason?: string;
+  [key: string]: unknown;
+};
+
+type NetworkInformation = {
+  effectiveType?: string;
+  rtt?: number;
+  downlink?: number;
+};
 
 class VoiceService {
   private ws: WebSocket | null = null;
@@ -40,7 +61,7 @@ class VoiceService {
   private currentAgentId: string | null = null;
   private currentGrade: number | null = null;
   private wsEndpoint: string = "/ws/april-live";
-  private onEventCallback: ((event: any) => void) | null = null;
+  private onEventCallback: ((event: VoiceEvent) => void) | null = null;
   private onTextRevealCallback: ((text: string, role: "user" | "assistant") => void) | null = null;
   private isMuted = false;
 
@@ -48,6 +69,9 @@ class VoiceService {
   // Connection & Retry State
   private retryCount = 0;
   private readonly MAX_RETRIES = 5;
+  private readonly STABLE_CONNECTION_MS = 15_000;
+  private retryResetTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastServerError: VoiceEvent | null = null;
   private currentConnectionId: string | null = null;
   
   // Jitter Buffer & Sync State
@@ -84,7 +108,7 @@ class VoiceService {
 
   async startSession(
     studentId: string,
-    onEvent: (event: any) => void,
+    onEvent: (event: VoiceEvent) => void,
     onTextReveal: (text: string, role: "user" | "assistant") => void,
     sessionId?: string,
     subject?: ExactSubject,
@@ -114,12 +138,20 @@ class VoiceService {
 
     this.isSessionActive = true;
     this.retryCount = 0;
+    this.lastServerError = null;
     this.currentQuality = null;
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
 
     if (!this.audioCtx) {
-      this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
+      const AudioContextCtor =
+        window.AudioContext ||
+        (
+          window as unknown as Window & {
+            webkitAudioContext: typeof AudioContext;
+          }
+        ).webkitAudioContext;
+      this.audioCtx = new AudioContextCtor({
         sampleRate: 24000,
       });
     }
@@ -148,20 +180,22 @@ class VoiceService {
       // together remove a large chunk of fan/keyboard/distant-voice noise on
       // every modern browser. Chromium-specific `google*` hints are harmless
       // elsewhere.
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
+      const audioConstraints: MediaTrackConstraints & {
+        googHighpassFilter: boolean;
+        googNoiseSuppression2: boolean;
+        googEchoCancellation2: boolean;
+      } = {
           channelCount: 1,
           sampleRate: 16000,
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          // @ts-ignore — Chromium-only, but harmless on other UAs.
           googHighpassFilter: true,
-          // @ts-ignore — Chromium-only.
           googNoiseSuppression2: true,
-          // @ts-ignore — Chromium-only.
           googEchoCancellation2: true,
-        },
+      };
+      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: audioConstraints,
       });
 
       // Staleness guard: session may have been stopped while getUserMedia was awaiting
@@ -177,7 +211,7 @@ class VoiceService {
       this.processor.onaudioprocess = (e) => {
         if (this.ws?.readyState !== WebSocket.OPEN) return;
 
-        let input = e.inputBuffer.getChannelData(0);
+        let input: Float32Array<ArrayBufferLike> = e.inputBuffer.getChannelData(0);
         const bufferSampleRate = e.inputBuffer.sampleRate;
         if (bufferSampleRate !== 16000) {
           input = resample(input, bufferSampleRate, 16000);
@@ -239,17 +273,31 @@ class VoiceService {
 
     this.ws.onopen = () => {
       const wasReconnecting = this.retryCount > 0;
-      this.retryCount = 0;
+      this.lastServerError = null;
       this.sendInitMessage();
       this.onEventCallback?.({ type: "connected" });
       if (wasReconnecting) this.setQuality("good");
+      // An `open` immediately followed by another close is not recovery. Reset the
+      // retry budget only after the connection proves stable, otherwise flapping loops
+      // forever at "attempt 1".
+      if (this.retryResetTimer) clearTimeout(this.retryResetTimer);
+      this.retryResetTimer = setTimeout(() => {
+        if (this.ws?.readyState === WebSocket.OPEN && this.currentConnectionId === connId) {
+          this.retryCount = 0;
+        }
+        this.retryResetTimer = null;
+      }, this.STABLE_CONNECTION_MS);
       this.startQualityMonitoring();
     };
 
     this.ws.onmessage = (event) => {
       if (typeof event.data === "string") {
         try {
-          const data = JSON.parse(event.data);
+          const data = JSON.parse(event.data) as VoiceEvent;
+
+          if (data.type === "error") {
+            this.lastServerError = data;
+          }
           
           if (data.error === "rate_limit_exceeded") {
             console.warn("🎙️ [VoiceService] Rate limit exceeded. Stopping session.");
@@ -283,11 +331,9 @@ class VoiceService {
           }
 
           if (data.type === "flush") {
-            // The backend is reopening the tutor's realtime session — a plan upgrade, a
-            // focal-skill change, a provider socket rotation, a reconnect. The old session
-            // streamed faster than realtime, so seconds of its speech are still sitting in
-            // our scheduler; left alone, the child hears the tail of a conversation that
-            // has already ended and then the new session talking over it.
+            // The backend is deliberately replacing the tutor's teaching plan or
+            // switching surfaces. Provider rotations do not flush: their queued speech
+            // remains valid and cutting it would make audio diverge from persisted text.
             //
             // The backend has emitted this on every one of those paths since swaps were
             // introduced. Nothing on this side had ever listened for it.
@@ -297,11 +343,11 @@ class VoiceService {
             return;
           }
 
-          if (data.type === "session_id" && data.session_id) {
+          if (data.type === "session_id" && typeof data.session_id === "string") {
             this.currentSessionId = data.session_id;
           }
 
-          if (data.type === "transcript") {
+          if (data.type === "transcript" && typeof data.content === "string") {
             if (data.role === "user") {
               // User transcript is shown immediately as it's not tied to playback
               this.onTextRevealCallback?.(data.content, "user");
@@ -312,7 +358,7 @@ class VoiceService {
           }
           
           this.onEventCallback?.(data);
-        } catch (err) {
+        } catch {
           console.error("[VoiceService] Error parsing JSON:", event.data);
         }
       } else {
@@ -321,14 +367,23 @@ class VoiceService {
     };
 
     this.ws.onclose = (event) => {
+      if (this.retryResetTimer) {
+        clearTimeout(this.retryResetTimer);
+        this.retryResetTimer = null;
+      }
       if (event.code === 1008) {
         const callback = this.onEventCallback;
+        const serverError = this.lastServerError;
         this.stopSession();
-        callback?.({
-          type: "error",
-          error: "SUBJECT_NOT_IN_TAXONOMY",
-          message: "This subject is not available for the selected grade.",
-        });
+        // 1008 means generic policy rejection, not a specific taxonomy failure. Prefer
+        // the structured backend frame; use a neutral fallback if the close raced it.
+        if (!serverError) {
+          callback?.({
+            type: "error",
+            error: "SESSION_POLICY_REJECTED",
+            message: "This voice session could not be started.",
+          });
+        }
         return;
       }
       if (this.isSessionActive && this.retryCount < this.MAX_RETRIES && this.currentConnectionId === connId) {
@@ -351,7 +406,7 @@ class VoiceService {
 
   private sendInitMessage() {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    const payload: Record<string, any> = {
+    const payload: Record<string, unknown> = {
       type: "init",
       student_id: this.currentStudentId,
       session_id: this.currentSessionId,
@@ -455,10 +510,13 @@ class VoiceService {
       return;
     }
 
-    const conn = typeof navigator !== "undefined" ? (navigator as any).connection : null;
+    const conn =
+      typeof navigator !== "undefined"
+        ? (navigator as Navigator & { connection?: NetworkInformation }).connection
+        : undefined;
     if (conn) {
       const poorType = conn.effectiveType === "slow-2g" || conn.effectiveType === "2g";
-      const highRtt  = conn.rtt  > this.NETWORK_RTT_POOR_MS;
+      const highRtt  = (conn.rtt ?? 0) > this.NETWORK_RTT_POOR_MS;
       const lowDown  = conn.downlink !== undefined && conn.downlink < this.NETWORK_DOWNLINK_POOR_MBPS;
       if (poorType || highRtt || lowDown) {
         this.setQuality("poor");
@@ -523,6 +581,11 @@ class VoiceService {
     this.currentGrade = null;
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
+    this.lastServerError = null;
+    if (this.retryResetTimer) {
+      clearTimeout(this.retryResetTimer);
+      this.retryResetTimer = null;
+    }
     
     if (this.ws) {
       this.ws.close();

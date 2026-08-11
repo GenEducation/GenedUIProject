@@ -5,6 +5,10 @@ import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import { parseContent, generateHistoricalSVG, normalizeSvg } from "../utils/parseContent";
 import { voiceService } from "../services/voiceService";
 import { appendStreamedText } from "../utils/voiceStreamMerge";
+import {
+  isCompatibleVoiceSessionId,
+  promoteTemporaryVoiceSession,
+} from "../utils/sessionIdentity";
 import { parsePointerEvent, type PointerSpec } from "../components/pdf-viewer/pointerGeometry";
 import { getStudentDisplayName } from "../utils/displayName";
 import {
@@ -1331,15 +1335,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
               isAITyping: false,
             }));
           } else if (event.type === "reconnect") {
-            // Planned provider socket rotation (GoAway), not a fault. Deliberately not
-            // `connectionQuality: "reconnecting"` — that banner is red and alarming
-            // because it means the child's own connection is failing. This is routine
-            // and the backend sends warm, child-facing copy for it; use that copy.
-            set({
-              sessionNotice: event.message
-                ? { message: event.message, kind: "rotating" as const }
-                : null,
-            });
+            // Backward compatibility during a rolling deployment: older backends may
+            // still announce an internal provider rotation. Never expose it, and clear
+            // a notice left by an older frame immediately.
+            set({ sessionNotice: null });
           } else if (event.type === "session_limit") {
             // A duration or daily-budget cap ended the lesson on purpose, and the
             // backend already said so kindly. The session is over: voiceService has
@@ -1376,7 +1375,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
               set({ voiceSessionStatus: "error" });
             }
           } else if (event.type === "session_id") {
-            // Update activeChat with the real session_id from backend
+            // Atomically promote the temporary conversation to the one canonical ID
+            // assigned by the backend. `id`, `session_id`, cache ownership, URL, and
+            // sidebar identity must move together; leaving `id === "new"` splits live
+            // messages and later history reloads across two client-side conversations.
             const { activeChat, fetchSessions } = get();
             if (
               activeChat &&
@@ -1384,23 +1386,38 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             ) {
               const newSessionId = event.session_id;
 
-              // 1. Update the store
-              set((state) => ({
-                activeChat: state.activeChat
-                  ? { ...state.activeChat, session_id: newSessionId }
-                  : null,
-              }));
+              set((state) => {
+                if (!state.activeChat) return state;
+                const promoted = promoteTemporaryVoiceSession(
+                  state.activeChat,
+                  state.messages,
+                  state.chatMessagesCache,
+                  newSessionId,
+                );
+                return {
+                  activeChat: promoted.activeChat,
+                  chatMessagesCache: promoted.cache,
+                };
+              });
 
-              // 2. Update the URL
               window.history.pushState(
                 {},
                 "",
-                `/student?session=${newSessionId}`,
+                `/student/voice/${newSessionId}`,
               );
 
-              // 3. Refresh sidebar to show the new chat (reset guard so chapter_name gets populated)
+              // Refresh the sidebar so persisted metadata merges into this same ID.
               set({ hasFetchedSessions: false });
               fetchSessions();
+            } else if (activeChat && !isCompatibleVoiceSessionId(activeChat, event.session_id)) {
+              // The canonical identity cannot change after promotion. Treat a second,
+              // different ID as a protocol violation instead of silently moving the
+              // conversation and losing its history.
+              console.error("Voice session identity changed after assignment", {
+                current: activeChat.session_id || activeChat.id,
+                received: event.session_id,
+              });
+              set({ voiceSessionStatus: "error" });
             }
           } else if (event.type === "entry_resolved") {
             // Update chat metadata when entry phase completes.

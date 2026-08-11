@@ -174,7 +174,7 @@ function VoicePicker({
   currentVoice: string;
   onSelect: (id: string) => void;
   saving: boolean;
-  savedVoice: string;
+  savedVoice?: string;
 }) {
   const [playingId, setPlayingId] = useState<string | null>(null);
   // Tracks which voice's sample is being fetched-and-rendered for the first
@@ -243,7 +243,7 @@ function VoicePicker({
         background: `${C.coral}08`, border: `1.5px solid ${C.coral}30`,
         fontSize: 12, color: C.coral, fontWeight: 600,
       }}>
-        Couldn't load voices: {loadError}
+        Couldn&apos;t load voices: {loadError}
       </div>
     );
   }
@@ -257,12 +257,20 @@ function VoicePicker({
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+      gap: 8,
+      maxHeight: 520,
+      overflowY: "auto",
+      paddingRight: 4,
+    }}>
       {voices.map(v => {
         const isSelected = currentVoice === v.id;
         const isPlaying  = playingId === v.id;
         const isLoadingSample = loadingSampleId === v.id;
         const isSaved    = savedVoice === v.id;
+        const isDefault  = !savedVoice && DEFAULT_GEMINI_VOICE === v.id;
         return (
           <div
             key={v.id}
@@ -298,12 +306,12 @@ function VoicePicker({
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.text, fontFamily: "var(--font-body)" }}>
                 {v.label}
-                {isSaved && (
+                {(isSaved || isDefault) && (
                   <span style={{
                     marginLeft: 8, fontSize: 9, fontWeight: 800, color: C.growth,
                     background: `${C.growth}15`, padding: "2px 6px", borderRadius: 6,
                     textTransform: "uppercase" as const, letterSpacing: 0.5,
-                  }}>Current</span>
+                  }}>{isSaved ? "Current" : "Default"}</span>
                 )}
               </div>
               <div style={{ fontSize: 11, color: C.textMid, marginTop: 2 }}>{v.description}</div>
@@ -533,9 +541,9 @@ export function StudentProfile() {
         if (cancelled) return;
         setVoices(list);
         setVoicesFetched(true);
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (cancelled) return;
-        setVoicesLoadError(err?.message || "Network error");
+        setVoicesLoadError(err instanceof Error ? err.message : "Network error");
       } finally {
         voicesInFlightRef.current = false;
         if (!cancelled) setVoicesLoading(false);
@@ -544,10 +552,19 @@ export function StudentProfile() {
     return () => { cancelled = true; };
   }, [voiceExpanded, voicesFetched]);
 
-  const savedVoice = studentProfile?.preferred_voice || DEFAULT_GEMINI_VOICE;
+  const profileVoice = studentProfile?.preferred_voice;
+  const savedVoice = profileVoice && (!voicesFetched || voices.some((voice) => voice.id === profileVoice))
+    ? profileVoice
+    : undefined;
+  const unavailableSavedVoice = Boolean(profileVoice && voicesFetched && !savedVoice);
+  const displayedVoice = savedVoice || DEFAULT_GEMINI_VOICE;
+
+  useEffect(() => {
+    if (unavailableSavedVoice) setPendingVoice(DEFAULT_GEMINI_VOICE);
+  }, [unavailableSavedVoice]);
 
   const handleSelectVoice = async (voiceId: string) => {
-    if (!studentProfile || voiceId === savedVoice || savingVoice) {
+    if (!studentProfile || voiceId === displayedVoice || savingVoice) {
       setPendingVoice(voiceId);
       return;
     }
@@ -562,9 +579,9 @@ export function StudentProfile() {
       if (response.access_token) {
         localStorage.setItem("gened_auth_token", response.access_token);
       }
-    } catch (err: any) {
-      setPendingVoice(savedVoice);
-      setVoiceError(err?.message || "Couldn't save voice. Please try again.");
+    } catch (err: unknown) {
+      setPendingVoice(displayedVoice);
+      setVoiceError(err instanceof Error ? err.message : "Couldn't save voice. Please try again.");
     } finally {
       setSavingVoice(false);
     }
@@ -764,12 +781,12 @@ export function StudentProfile() {
                 }}>
                   Tutor Voice
                 </span>
-                {savedVoice && (
+                {displayedVoice && (
                   <span style={{
                     fontSize: 14, fontWeight: 700, color: C.genPurple,
                     fontFamily: "var(--font-body)",
                   }}>
-                    {savedVoice}
+                    {displayedVoice}{!savedVoice ? " (Default)" : ""}
                   </span>
                 )}
                 <ChevronDown
@@ -795,8 +812,22 @@ export function StudentProfile() {
               >
                 <div style={{ minHeight: 0 }}>
                   <p style={{ fontSize: 11, color: C.textMid, marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
-                    Tap any voice to preview it. The voice you pick applies to every AI tutor across all your subjects.
+                    Use the play button to preview a voice. Tap a voice to select it for live voice tutoring across all subjects. Changes apply from your next voice session.
                   </p>
+                  {unavailableSavedVoice && (
+                    <p style={{
+                      margin: "0 0 12px",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      color: C.textMid,
+                      background: C.pageBg,
+                      border: `1px solid ${C.border}`,
+                      fontSize: 11,
+                      lineHeight: 1.5,
+                    }}>
+                      Your previous voice is no longer available. {DEFAULT_GEMINI_VOICE} is selected as the default.
+                    </p>
+                  )}
                   <VoicePicker
                     voices={voices}
                     loading={voicesLoading}
