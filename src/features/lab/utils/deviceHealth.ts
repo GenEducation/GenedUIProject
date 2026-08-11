@@ -223,6 +223,19 @@ export function displayHardwareId(hardwareId: string | null | undefined): string
   return match ? match[1] : hardwareId;
 }
 
+/**
+ * True once a device has been revoked. The backend signals this two ways — the
+ * `revoked:` hardware-id prefix and the `revoked_at` timestamp — so accept
+ * either rather than assuming they always land together.
+ */
+export function isRevokedDevice(device: {
+  hardware_id?: string | null;
+  revoked_at?: string | null;
+}): boolean {
+  if (device.revoked_at) return true;
+  return /^revoked:/i.test(device.hardware_id ?? "");
+}
+
 /** Best-known address for the device, preferring the live value over the report's. */
 export function resolveAddresses(device: DeviceResponse): {
   current: string | null;

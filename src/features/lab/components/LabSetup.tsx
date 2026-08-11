@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, MonitorSmartphone, Wifi, WifiOff, TriangleAlert, Link2, ArrowRightLeft, Settings2, Ban, X, ChevronRight, RefreshCw, type LucideIcon } from "lucide-react";
 import { useLabStore } from "../store/useLabStore";
@@ -9,7 +9,7 @@ import { LabDevicePairingWizard } from "./LabDevicePairingWizard";
 import { MoveDeviceModal } from "./MoveDeviceModal";
 import { DeviceHealthStrip } from "./DeviceHealthStrip";
 import { DeviceDiagnosticsModal } from "./DeviceDiagnosticsModal";
-import { displayHardwareId, summarizeHealth } from "../utils/deviceHealth";
+import { displayHardwareId, isRevokedDevice, summarizeHealth } from "../utils/deviceHealth";
 import { RelativeTime } from "@/components/shared/RelativeTime";
 import { useNow } from "@/utils/useNow";
 import type { DeviceResponse, LabDeviceHealth } from "../types/lab";
@@ -137,7 +137,14 @@ export function LabSetup({ partnerId }: LabSetupProps) {
   }, [selectedLabId, isRefreshing]);
 
   const selectedLab = labs.find((l) => l.id === selectedLabId);
-  const devices = selectedLabId ? devicesByLab[selectedLabId] || [] : [];
+  const devices = useMemo(
+    () => (selectedLabId ? devicesByLab[selectedLabId] || [] : []),
+    [selectedLabId, devicesByLab],
+  );
+  // Revoked devices stay in the store — modals, the minted-token lookup and the
+  // pairing wizard's duplicate check all still need them — but they are dead
+  // rows to an operator, so the grid and the sidebar counts hide them.
+  const visibleDevices = useMemo(() => devices.filter((d) => !isRevokedDevice(d)), [devices]);
   const mintedDevice = lastMintedToken ? devices.find((d) => d.id === lastMintedToken.deviceId) : null;
   // Track the polled copy so an open diagnostics panel keeps updating rather
   // than freezing on the snapshot taken when it was opened.
@@ -169,24 +176,32 @@ export function LabSetup({ partnerId }: LabSetupProps) {
           <p className="text-sm text-[#1A3D2C]/40">No labs yet. Create one to register devices.</p>
         ) : (
           <div className="space-y-2">
-            {labs.map((lab) => (
-              <button
-                key={lab.id}
-                onClick={() => setSelectedLabId(lab.id)}
-                className={`flex w-full items-center justify-between rounded-xl p-3.5 text-left transition-colors ${
-                  selectedLabId === lab.id ? "bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)]" : "hover:bg-white/60"
-                }`}
-              >
-                <div>
-                  <p className="text-sm font-bold text-[#1A3D2C]">{lab.name}</p>
-                  <p className="mt-0.5 text-[11px] text-[#1A3D2C]/50">
-                    {lab.device_count} device{lab.device_count === 1 ? "" : "s"}
-                    {lab.location ? ` · ${lab.location}` : ""}
-                  </p>
-                </div>
-                <ChevronRight size={16} className="shrink-0 text-[#1A3D2C]/30" />
-              </button>
-            ))}
+            {labs.map((lab) => {
+              // `device_count` comes from the API and still counts revoked rows.
+              // Once this lab's devices are loaded, count what we actually show.
+              const loaded = devicesByLab[lab.id];
+              const deviceCount = loaded
+                ? loaded.filter((d) => !isRevokedDevice(d)).length
+                : lab.device_count;
+              return (
+                <button
+                  key={lab.id}
+                  onClick={() => setSelectedLabId(lab.id)}
+                  className={`flex w-full items-center justify-between rounded-xl p-3.5 text-left transition-colors ${
+                    selectedLabId === lab.id ? "bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)]" : "hover:bg-white/60"
+                  }`}
+                >
+                  <div>
+                    <p className="text-sm font-bold text-[#1A3D2C]">{lab.name}</p>
+                    <p className="mt-0.5 text-[11px] text-[#1A3D2C]/50">
+                      {deviceCount} device{deviceCount === 1 ? "" : "s"}
+                      {lab.location ? ` · ${lab.location}` : ""}
+                    </p>
+                  </div>
+                  <ChevronRight size={16} className="shrink-0 text-[#1A3D2C]/30" />
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -244,11 +259,11 @@ export function LabSetup({ partnerId }: LabSetupProps) {
               <div className="mb-4 rounded-xl bg-danger-bg p-3 text-sm text-danger-ink">{error}</div>
             )}
 
-            {devices.length === 0 ? (
+            {visibleDevices.length === 0 ? (
               <p className="text-sm text-[#1A3D2C]/40">No devices registered yet.</p>
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {devices.map((device) => {
+                {visibleDevices.map((device) => {
                   const health = healthStyles[device.health_status];
                   const HealthIcon = health.icon;
                   const summary = summarizeHealth(device);
