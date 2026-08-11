@@ -19,6 +19,10 @@ import {
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
+const VOICE_WS_ENDPOINT =
+  process.env.NEXT_PUBLIC_VOICE_V2_ENABLED === "true"
+    ? "/ws/v2/april-live-graph"
+    : "/ws/april-live-graph";
 
 // -- Types --------------------------------------------------------------------
 
@@ -1742,9 +1746,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         },
         effectiveChat.session_id,
         effectiveChat.subject,
-        // Explicit webapp voice endpoint — do not rely on voiceService's default,
-        // which is the tool-free device endpoint (/ws/april-live-graph-device).
-        "/ws/april-live-graph",
+        // V2 is opt-in while it is under frontend testing. Both paths remain explicit;
+        // do not rely on voiceService's default device endpoint.
+        VOICE_WS_ENDPOINT,
         studentProfile.preferred_voice,
         // Pass chapter context so backend can bypass entry phase when chapter is pre-selected
         // and resolve document access in both new and resumed sessions.

@@ -406,13 +406,21 @@ class VoiceService {
 
   private sendInitMessage() {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    const usesV2LaunchContract = this.wsEndpoint === "/ws/v2/april-live-graph";
     const payload: Record<string, unknown> = {
       type: "init",
       student_id: this.currentStudentId,
-      session_id: this.currentSessionId,
       voice: this.currentVoice,
       token: getAuthToken(),
     };
+    if (usesV2LaunchContract) {
+      // A transport reconnect continues the immutable application session assigned by
+      // the backend. A first connection has no identity and creates exactly one.
+      payload.launch_mode = this.currentSessionId ? "continue_session" : "new";
+      if (this.currentSessionId) payload.session_id = this.currentSessionId;
+    } else {
+      payload.session_id = this.currentSessionId;
+    }
     if (this.currentSubject) payload.subject = this.currentSubject;
     if (this.currentDocumentTitle) payload.document_title = this.currentDocumentTitle;
     if (this.currentAgentId) payload.agent_id = this.currentAgentId;
