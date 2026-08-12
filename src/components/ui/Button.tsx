@@ -1,20 +1,25 @@
 "use client";
 
 import React from "react";
+import { STUDENT_COLORS } from "@/features/student/theme/colors";
 
 type Variant = "primary" | "secondary" | "tertiary" | "destructive";
 type Size = "sm" | "md" | "lg";
 
 const VARIANT_STYLES: Record<Variant, React.CSSProperties> = {
   primary: {
-    background: "var(--primary)",
-    color: "#FFFFFF",
+    // Keep the CTA visible even if a route is briefly rendered before the global
+    // token stylesheet arrives (dev HMR and streamed route CSS can expose that gap).
+    // Without the fallback the declaration is invalid while the text stays white,
+    // producing an apparently empty button on a white card.
+    background: `var(--primary, ${STUDENT_COLORS.primary})`,
+    color: STUDENT_COLORS.card,
     border: "1.5px solid transparent",
   },
   secondary: {
     background: "transparent",
-    color: "var(--primary)",
-    border: "1.5px solid var(--primary)",
+    color: `var(--primary, ${STUDENT_COLORS.primary})`,
+    border: `1.5px solid var(--primary, ${STUDENT_COLORS.primary})`,
   },
   tertiary: {
     background: "transparent",
@@ -23,15 +28,15 @@ const VARIANT_STYLES: Record<Variant, React.CSSProperties> = {
   },
   destructive: {
     background: "rgba(232,99,90,0.08)",
-    color: "#E8635A",
+    color: STUDENT_COLORS.danger,
     border: "1px solid rgba(232,99,90,0.15)",
   },
 };
 
 const SIZE_STYLES: Record<Size, React.CSSProperties> = {
-  sm: { padding: "6px 12px", fontSize: 12, borderRadius: "var(--radius-control)" },
-  md: { padding: "9px 16px", fontSize: 13.5, borderRadius: "var(--radius-control)" },
-  lg: { padding: "12px 20px", fontSize: 15, borderRadius: "var(--radius-control)" },
+  sm: { padding: "6px 12px", fontSize: 12, borderRadius: "var(--radius-control, 10px)" },
+  md: { padding: "9px 16px", fontSize: 13.5, borderRadius: "var(--radius-control, 10px)" },
+  lg: { padding: "12px 20px", fontSize: 15, borderRadius: "var(--radius-control, 10px)" },
 };
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -57,9 +62,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
     <button
       ref={ref}
       disabled={disabled}
-      className={`inline-flex items-center justify-center gap-2 cursor-pointer font-semibold transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)] disabled:opacity-40 disabled:cursor-not-allowed ${fullWidth ? "w-full" : ""} ${className ?? ""}`}
+      className={`inline-flex items-center justify-center gap-2 cursor-pointer font-semibold transition-all duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-40 disabled:cursor-not-allowed ${fullWidth ? "w-full" : ""} ${className ?? ""}`}
       style={{
         fontFamily: "var(--font-body)",
+        outlineColor: `var(--primary, ${STUDENT_COLORS.primary})`,
         ...VARIANT_STYLES[variant],
         ...SIZE_STYLES[size],
         ...style,

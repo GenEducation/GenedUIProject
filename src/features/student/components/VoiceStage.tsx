@@ -2,6 +2,11 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { useStudentStore } from "../store/useStudentStore";
+import { STUDENT_COLORS } from "../theme/colors";
+
+const TUTOR = `var(--tutor, ${STUDENT_COLORS.tutor})`;
+const TUTOR_SOFT = `var(--tutor-soft, ${STUDENT_COLORS.tutorSoft})`;
+const TUTOR_LIGHT = `var(--tutor-light, ${STUDENT_COLORS.tutorLight})`;
 
 interface VoiceStageProps {
   caption: string;
@@ -33,7 +38,7 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd,
       {agentName && (
         <span
           className="text-[12px] font-extrabold tracking-wide mb-3"
-          style={{ color: "var(--tutor)", fontFamily: "var(--font-display)" }}
+          style={{ color: TUTOR, fontFamily: "var(--font-display)" }}
         >
           {agentName}
         </span>
@@ -96,7 +101,7 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd,
               ? "conic-gradient(from 220deg at 50% 50%, #34C759, #30d158, #4cd964, #34C759)"
               : isMuted && voiceSessionStatus === "active"
                 ? "conic-gradient(from 220deg at 50% 50%, #E8635A, #c0392b, #e57373, #E8635A)"
-                : "conic-gradient(from 220deg at 50% 50%, var(--tutor), var(--tutor-soft), var(--tutor-light), var(--tutor))",
+                : `conic-gradient(from 220deg at 50% 50%, ${TUTOR}, ${TUTOR_SOFT}, ${TUTOR_LIGHT}, ${TUTOR})`,
             boxShadow: pttHeld
               ? "inset -20px -30px 60px rgba(0,0,0,0.25), inset 12px 16px 40px rgba(255,255,255,0.25), 0 12px 48px rgba(52,199,89,0.5)"
               : "inset -20px -30px 60px rgba(0,0,0,0.25), inset 12px 16px 40px rgba(255,255,255,0.25), 0 12px 40px rgba(91,77,199,0.35)",
@@ -128,8 +133,8 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd,
             style={{
               padding: "10px 28px",
               borderRadius: 999,
-              background: "var(--tutor)",
-              color: "#fff",
+              background: TUTOR,
+              color: STUDENT_COLORS.card,
               border: "none",
               cursor: "pointer",
               letterSpacing: "0.12em",
@@ -141,7 +146,7 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd,
         ) : (
           <p
             className="text-[13px] font-bold tracking-[0.12em] uppercase text-center"
-            style={{ color: "var(--tutor)", opacity: voiceSessionStatus === "active" ? 0.9 : 0.45 }}
+            style={{ color: TUTOR, opacity: voiceSessionStatus === "active" ? 0.9 : 0.45 }}
           >
             {caption}
           </p>
