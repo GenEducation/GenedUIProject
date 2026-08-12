@@ -25,6 +25,7 @@ export interface TeacherStudent {
   email?: string;
   grade?: number;
   requested_at?: string;
+  school_status?: string | null;
   [key: string]: any;
 }
 

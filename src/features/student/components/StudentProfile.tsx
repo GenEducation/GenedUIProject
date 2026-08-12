@@ -21,6 +21,7 @@ import { DEFAULT_GEMINI_VOICE, type GeminiVoice } from "@/constants/geminiVoices
 import { PttHotkeyConfig } from "./PttHotkeyConfig";
 import { DevicePairingModal } from "./DevicePairingModal";
 import { AvatarPickerModal } from "./AvatarPickerModal";
+import { TeacherConnections } from "./TeacherConnections";
 import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
 import { GeneralOnboardingWizard } from "@/features/onboarding/components/GeneralOnboarding/GeneralOnboardingWizard";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
@@ -942,6 +943,14 @@ export function StudentProfile() {
                 </button>
               </div>
             </Card>
+
+            {/* ── MY TEACHERS ── */}
+            {studentProfile?.user_id && (
+              <Card style={{ ...fade(0.29) }}>
+                <SectionHeader icon="🧑‍🏫" label="My Teachers" />
+                <TeacherConnections studentId={studentProfile.user_id} />
+              </Card>
+            )}
 
             {/* ── MY FAMILY ── */}
             <Card style={{ ...fade(0.32) }}>

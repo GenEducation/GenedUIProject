@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, X, Clock, Ban, PlayCircle, CalendarX2, FlaskConical } from "lucide-react";
+import { Plus, X, Clock, Ban, PlayCircle, CalendarX2, FlaskConical, Users } from "lucide-react";
 import { useLabStore } from "../store/useLabStore";
 import { OBJECTIVE_MODES, type ObjectiveMode, type SlotResponse } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
+import { CreateClassModal } from "./CreateClassModal";
 import {
   requireExactSubject,
   type ExactSubject,
@@ -76,6 +77,7 @@ export function SlotScheduler({ teacherId, partnerId, onOpenSlot }: SlotSchedule
     useLabStore();
   const [onDate, setOnDate] = useState(todayIso());
   const [isCreateOpen, setCreateOpen] = useState(false);
+  const [isClassCreateOpen, setClassCreateOpen] = useState(false);
 
   useEffect(() => {
     if (partnerId) {
@@ -118,6 +120,12 @@ export function SlotScheduler({ teacherId, partnerId, onOpenSlot }: SlotSchedule
             onChange={(e) => setOnDate(e.target.value)}
             className="rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-ink outline-none focus:border-emerald"
           />
+          <button
+            onClick={() => setClassCreateOpen(true)}
+            className="flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-3 text-sm font-semibold text-ink hover:border-emerald"
+          >
+            <Users size={17} /> Create class
+          </button>
           <button
             onClick={() => setCreateOpen(true)}
             disabled={labs.length === 0}
@@ -227,6 +235,14 @@ export function SlotScheduler({ teacherId, partnerId, onOpenSlot }: SlotSchedule
         labs={labs}
         defaultDate={onDate}
         onClose={() => setCreateOpen(false)}
+      />
+      <CreateClassModal
+        isOpen={isClassCreateOpen}
+        partnerId={partnerId}
+        onClose={() => setClassCreateOpen(false)}
+        onCreated={async () => {
+          await fetchCatalog(partnerId);
+        }}
       />
     </motion.div>
   );

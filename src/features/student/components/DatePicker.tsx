@@ -114,7 +114,7 @@ export function DatePicker({ value, min, onChange, themeColor = "#042E5C", popov
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className={`z-50 mt-2 w-full min-w-[320px] bg-white rounded-[24px] border border-[var(--primary-ink)]/5 shadow-2xl shadow-[var(--primary-ink)]/10 p-4 relative ${popoverDirection === "right" ? "md:absolute md:-top-4 md:left-[calc(100%+16px)] md:mt-0" : "absolute top-full left-0"}`}
+            className={`z-50 mt-2 w-full min-w-[320px] bg-white rounded-[24px] border border-[rgba(4,46,92,0.05)] shadow-2xl shadow-[rgba(4,46,92,0.10)] p-4 relative ${popoverDirection === "right" ? "md:absolute md:-top-4 md:left-[calc(100%+16px)] md:mt-0" : "absolute top-full left-0"}`}
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">

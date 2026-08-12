@@ -1,5 +1,6 @@
 import { authFetch } from "@/utils/authFetch";
 import type {
+  AddRosterStudentsResponse,
   LabResponse,
   CreateLabRequest,
   LabUpdateRequest,
@@ -7,6 +8,7 @@ import type {
   DeviceProvisionResponse,
   RegisterDeviceRequest,
   DeviceUpdateRequest,
+  EligibleRosterStudent,
   ConfirmLabDevicePairingRequest,
   ConfirmLabDevicePairingResponse,
   LabDevicePairingRecord,
@@ -19,6 +21,9 @@ import type {
   BoardResponse,
   ClassReportResponse,
   CatalogResponse,
+  ClassEligibleStudent,
+  CreateClassRequest,
+  CreateClassResponse,
   LabCapacityResponse,
   RosterStudent,
   SeatAssignment,
@@ -141,6 +146,21 @@ export const labService = {
     return res.json();
   },
 
+  getClassEligibleStudents: async (partnerId: string): Promise<ClassEligibleStudent[]> => {
+    const qs = new URLSearchParams({ partner_id: partnerId });
+    const res = await authFetch(`${BASE_URL}/lab/classes/eligible-students?${qs.toString()}`);
+    return res.json();
+  },
+
+  createClass: async (payload: CreateClassRequest): Promise<CreateClassResponse> => {
+    const res = await authFetch(`${BASE_URL}/lab/classes`, {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
   // -- Slots ------------------------------------------------------------------
   createSlot: async (payload: CreateSlotRequest): Promise<SlotResponse> => {
     const res = await authFetch(`${BASE_URL}/lab/slots`, {
@@ -178,6 +198,23 @@ export const labService = {
 
   getSlotRoster: async (slotId: string): Promise<RosterStudent[]> => {
     const res = await authFetch(`${BASE_URL}/lab/slots/${encodeURIComponent(slotId)}/roster`);
+    return res.json();
+  },
+
+  getEligibleStudents: async (slotId: string): Promise<EligibleRosterStudent[]> => {
+    const res = await authFetch(`${BASE_URL}/lab/slots/${encodeURIComponent(slotId)}/eligible-students`);
+    return res.json();
+  },
+
+  addRosterStudents: async (
+    slotId: string,
+    studentIds: string[],
+  ): Promise<AddRosterStudentsResponse> => {
+    const res = await authFetch(`${BASE_URL}/lab/slots/${encodeURIComponent(slotId)}/roster/students`, {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify({ student_ids: studentIds }),
+    });
     return res.json();
   },
 

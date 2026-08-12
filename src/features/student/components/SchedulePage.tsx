@@ -237,7 +237,7 @@ export function SchedulePage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.97 }}
-        className="bg-white p-4 sm:p-6 rounded-3xl border border-[var(--primary-ink)]/5 shadow-sm space-y-4"
+        className="bg-white p-4 sm:p-6 rounded-3xl border border-[rgba(4,46,92,0.05)] shadow-sm space-y-4"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 space-y-1">
@@ -308,7 +308,7 @@ export function SchedulePage() {
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 custom-scrollbar">
           <PageContainer className="space-y-8 sm:space-y-12">
             {/* Booking Form */}
-            <div className="bg-white p-4 sm:p-6 md:p-8 rounded-[28px] sm:rounded-[40px] border border-[var(--primary-ink)]/5 shadow-sm space-y-6">
+            <div className="bg-white p-4 sm:p-6 md:p-8 rounded-[28px] sm:rounded-[40px] border border-[rgba(4,46,92,0.05)] shadow-sm space-y-6">
               <h2 className="text-sm font-black text-[var(--primary-ink)] uppercase tracking-widest flex items-center gap-2">
                 <Sparkles size={14} />
                 Book a Session
@@ -326,8 +326,8 @@ export function SchedulePage() {
                       // Session CTA below. A solid navy block here read as a
                       // second, competing primary color on the same screen.
                       sessionType === type
-                        ? "bg-white text-[var(--primary-ink)] border-[var(--primary-ink)]/25 shadow-sm"
-                        : "bg-[#F4F3EE]/50 text-[var(--primary-ink)]/40 border-[var(--primary-ink)]/5 hover:text-[var(--primary-ink)]"
+                        ? "bg-white text-[var(--primary-ink)] border-[rgba(4,46,92,0.25)] shadow-sm"
+                        : "bg-[#F4F3EE]/50 text-[var(--primary-ink)]/40 border-[rgba(4,46,92,0.05)] hover:text-[var(--primary-ink)]"
                     }`}
                   >
                     {type === "TEST" ? <GraduationCap size={16} className="shrink-0" /> : <BookOpen size={16} className="shrink-0" />}
@@ -447,7 +447,7 @@ export function SchedulePage() {
                   <span className="text-sm font-bold uppercase tracking-widest">Loading sessions...</span>
                 </div>
               ) : upcomingSessions.length === 0 && pastSessions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 space-y-4 bg-white/40 rounded-[40px] border border-dashed border-[var(--primary-ink)]/10">
+                <div className="flex flex-col items-center justify-center py-24 space-y-4 bg-white/40 rounded-[40px] border border-dashed border-[rgba(4,46,92,0.10)]">
                   <div className="w-16 h-16 rounded-full bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]/20">
                     <CalendarClock size={32} />
                   </div>
@@ -456,7 +456,7 @@ export function SchedulePage() {
               ) : (
                 <>
                   {upcomingSessions.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 space-y-3 bg-white/40 rounded-[32px] border border-dashed border-[var(--primary-ink)]/10">
+                    <div className="flex flex-col items-center justify-center py-12 space-y-3 bg-white/40 rounded-[32px] border border-dashed border-[rgba(4,46,92,0.10)]">
                       <div className="w-12 h-12 rounded-full bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]/20">
                         <CalendarClock size={24} />
                       </div>

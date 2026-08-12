@@ -707,6 +707,7 @@ export function StudentHome() {
                               border: `1.5px solid ${vis.color}40`,
                               background: hov ? `${vis.color}10` : "transparent",
                               color: vis.color,
+                              borderRadius: 10,
                               fontSize: "clamp(11px, 1.1vw, 13px)",
                             }}
                           >
@@ -717,6 +718,10 @@ export function StudentHome() {
                             fullWidth
                             onClick={() => handleAgentVoiceClick(agent)}
                             style={{
+                              background: STUDENT_COLORS.primary,
+                              color: STUDENT_COLORS.card,
+                              border: "1.5px solid transparent",
+                              borderRadius: 10,
                               fontSize: "clamp(11px, 1.1vw, 13px)",
                               boxShadow: hov ? `0 4px 12px ${STUDENT_COLORS.primary}30` : "none",
                             }}

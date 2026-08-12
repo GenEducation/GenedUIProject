@@ -12,10 +12,6 @@ import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { ResizableSplitPane } from "./ResizableSplitPane";
 import dynamic from "next/dynamic";
 import { ConnectionQualityBanner } from "./ConnectionQualityBanner";
-import { STUDENT_COLORS } from "../theme/colors";
-
-const TUTOR = `var(--tutor, ${STUDENT_COLORS.tutor})`;
-const TUTOR_SOFT = `var(--tutor-soft, ${STUDENT_COLORS.tutorSoft})`;
 
 // Lazy-loaded: pulls in pdfjs-dist, which is heavy. Only fetched when a
 // chapter PDF is actually opened.
@@ -218,9 +214,9 @@ export function StudentVoiceView() {
         style={{
           padding: "5px 14px",
           borderRadius: 20,
-          border: isPdfViewerOpen ? `1.5px solid ${TUTOR}` : "1.5px solid #D6D3F0",
-          background: isPdfViewerOpen ? TUTOR : "#EDE9FE",
-          color: isPdfViewerOpen ? "#FFFFFF" : TUTOR,
+          border: isPdfViewerOpen ? "1.5px solid var(--tutor)" : "1.5px solid #D6D3F0",
+          background: isPdfViewerOpen ? "var(--tutor)" : "#EDE9FE",
+          color: isPdfViewerOpen ? "#FFFFFF" : "var(--tutor)",
           fontSize: 12,
           fontWeight: 700,
           fontFamily: "var(--font-body)",
@@ -234,7 +230,7 @@ export function StudentVoiceView() {
             width: 11,
             height: 11,
             border: `2px solid ${isPdfViewerOpen ? "rgba(255,255,255,0.4)" : "#C4B8F5"}`,
-            borderTopColor: isPdfViewerOpen ? "#fff" : TUTOR,
+            borderTopColor: isPdfViewerOpen ? "#fff" : "var(--tutor)",
             borderRadius: "50%",
             animation: "spin 0.7s linear infinite",
           }} />
@@ -320,7 +316,7 @@ export function StudentVoiceView() {
       <section className="flex-1 min-h-[140px] px-3 sm:px-6 overflow-hidden">
         {isRestoringHistory ? (
           <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-            <Loader2 className="w-7 h-7 animate-spin" style={{ color: TUTOR }} />
+            <Loader2 className="w-7 h-7 animate-spin" style={{ color: "var(--tutor)" }} />
             <p
               className="text-[12px] font-bold uppercase"
               style={{ color: "rgba(4,46,92,0.4)", letterSpacing: "0.15em" }}
@@ -352,7 +348,7 @@ export function StudentVoiceView() {
             <button
               onClick={handleStartNew}
               className="flex items-center gap-2 px-6 h-12 rounded-full font-bold text-[14px] text-white transition-all shadow-lg"
-              style={{ background: `linear-gradient(135deg, ${TUTOR}, ${TUTOR_SOFT})` }}
+              style={{ background: "linear-gradient(135deg, #059F6D, #048A5D)" }}
             >
               <Sparkles size={16} />
               Start New Session
@@ -374,8 +370,8 @@ export function StudentVoiceView() {
               onClick={handleResume}
               className="flex items-center gap-2.5 px-7 h-13 sm:h-14 rounded-full font-bold text-[15px] text-white transition-all select-none"
               style={{
-                background: `linear-gradient(135deg, ${TUTOR}, ${TUTOR_SOFT})`,
-                boxShadow: "0 8px 24px rgba(91,77,199,0.40)",
+                background: "linear-gradient(135deg, #059F6D, #048A5D)",
+                boxShadow: "0 8px 24px rgba(5,159,109,0.40)",
                 paddingTop: 14,
                 paddingBottom: 14,
               }}
