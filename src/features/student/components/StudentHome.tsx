@@ -260,7 +260,20 @@ export function StudentHome() {
   const [showAllSessions,setShowAllSessions]= useState(false);
   const subjectsScrollRef = useRef<HTMLDivElement>(null);
   const scrollSubjects = (dir: "left" | "right") => {
-    subjectsScrollRef.current?.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" });
+    const el = subjectsScrollRef.current;
+    if (!el) return;
+    const cards = Array.from(el.children) as HTMLElement[];
+    if (!cards.length) return;
+    // Align to the next/previous card edge so a full subject card lands in view.
+    const current = el.scrollLeft;
+    const tolerance = 2;
+    const target = dir === "right"
+      ? cards.find((c) => c.offsetLeft > current + tolerance)
+      : [...cards].reverse().find((c) => c.offsetLeft < current - tolerance);
+    const left = target
+      ? target.offsetLeft
+      : dir === "right" ? el.scrollWidth : 0;
+    el.scrollTo({ left, behavior: "smooth" });
   };
 
   // Filters
@@ -656,7 +669,7 @@ export function StudentHome() {
                       </button>
                     </>
                   )}
-                  <div ref={subjectsScrollRef} className="flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)" }}>
+                  <div ref={subjectsScrollRef} className="flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)", scrollSnapType: "x mandatory" }}>
                     {agents.map((agent) => {
                     const vis = agent.vis;
                     const hov = hoveredAgent === agent.agent_id;
@@ -676,6 +689,7 @@ export function StudentHome() {
                           transform: hov ? "translateY(-3px)" : "none",
                           boxShadow: hov ? `0 10px 30px ${vis.color}18` : "0 1px 5px rgba(0,0,0,0.04)",
                           transition: "all 0.25s ease",
+                          scrollSnapAlign: "start",
                         }}>
                         <div className="flex items-center mb-4" style={{ gap: "clamp(10px, 1.2vw, 14px)" }}>
                           <div className="rounded-[14px] flex items-center justify-center flex-shrink-0"
