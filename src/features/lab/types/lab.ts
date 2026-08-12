@@ -391,6 +391,10 @@ export interface ClassReportStudent {
   document_title?: string | null;
   device_label?: string | null;
   end_reason: EndReason | null;
+  evaluation_available: boolean;
+  mastery_score?: number | null;
+  completion_percentage?: number | null;
+  chapter_report?: string | null;
 }
 
 export interface CommonGap {
