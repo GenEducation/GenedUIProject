@@ -111,7 +111,7 @@ export function PdfPage({ pdfDoc, pageNumber, scale, isVisible, width, height, p
         // Placeholder while off-screen
         <div
           className="flex items-center justify-center w-full h-full"
-          style={{ background: "#F1F5F9", color: "#CBD5E1", fontSize: 12, fontFamily: "'DM Sans', sans-serif" }}
+          style={{ background: "#F1F5F9", color: "#CBD5E1", fontSize: 12, fontFamily: "var(--font-body)" }}
         >
           {pageNumber}
         </div>

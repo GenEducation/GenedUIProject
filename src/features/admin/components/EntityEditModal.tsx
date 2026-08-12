@@ -5,7 +5,8 @@ import { useState } from "react";
 export interface EditField {
   key: string;
   label: string;
-  type?: "text" | "number";
+  type?: "text" | "number" | "select";
+  options?: readonly string[];
 }
 
 interface Props {
@@ -57,12 +58,25 @@ export function EntityEditModal({ title, fields, initial, onClose, onSave }: Pro
           {fields.map((f) => (
             <div key={f.key}>
               <label className={labelCls}>{f.label}</label>
-              <input
-                className={inputCls}
-                type={f.type === "number" ? "number" : "text"}
-                value={vals[f.key] ?? ""}
-                onChange={(e) => setVals((v) => ({ ...v, [f.key]: e.target.value }))}
-              />
+              {f.type === "select" ? (
+                <select
+                  className={inputCls}
+                  value={vals[f.key] ?? ""}
+                  onChange={(e) => setVals((v) => ({ ...v, [f.key]: e.target.value }))}
+                >
+                  <option value="">Select…</option>
+                  {f.options?.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  className={inputCls}
+                  type={f.type === "number" ? "number" : "text"}
+                  value={vals[f.key] ?? ""}
+                  onChange={(e) => setVals((v) => ({ ...v, [f.key]: e.target.value }))}
+                />
+              )}
             </div>
           ))}
           {error ? (

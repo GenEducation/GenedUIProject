@@ -5,8 +5,11 @@ import { X, MessageSquare, BookOpen, Clock, ShieldCheck, User, TrendingUp, Shiel
 import { useEffect, useRef, useState } from "react";
 import { Send, Mic, Square } from "lucide-react";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
-import { useStudentStore } from "@/features/student/store/useStudentStore";
-import { WavingStudentCharacter } from "@/components/shared/loaders/StudentLoader/WavingStudentCharacter";
+import {
+  selectEffectiveLearningPartner,
+  useStudentStore,
+} from "@/features/student/store/useStudentStore";
+import { studentService } from "@/features/student/services/studentService";
 import { MarkdownRenderer } from "@/features/student/components/MarkdownRenderer";
 import { SubjectOnboardingCelebration } from "@/features/onboarding/components/SubjectOnboardingCelebration";
 
@@ -50,13 +53,14 @@ interface OnboardingModalProps {
 }
 
 export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProps) {
-  const { messages, isAITyping, isVoiceOnly, sendVoiceMessage, sendMessage, streamingMessageId, startOnboarding, isComplete, type, subject: storeSubject } = useOnboardingStore();
-  const { studentProfile } = useStudentStore();
+  const { messages, isAITyping, isVoiceOnly, sendVoiceMessage, sendMessage, streamingMessageId, startOnboarding, isComplete, clearSession, type, subject: storeSubject, error } = useOnboardingStore();
+  const { studentProfile, refreshAvailableAgents, fetchOnboardingStatus } = useStudentStore();
 
   const [showCelebration, setShowCelebration] = useState(false);
   const [input, setInput] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
+  const [completionError, setCompletionError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -86,9 +90,45 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
     }
   }, [isComplete, showCelebration, studentProfile?.user_id]);
 
-  const handleCelebrationDismiss = () => {
+  const handleCelebrationDismiss = async () => {
+    // Confirm the durable marker for the exact current board before unlocking
+    // learning; the final assessment response and scoring worker are separate.
+    const studentId = studentProfile?.user_id;
+    let confirmed = false;
+    if (studentId) {
+      let expectedBoard: string | undefined;
+      try {
+        const agents = await studentService.fetchAvailableAgents(studentId);
+        expectedBoard = selectEffectiveLearningPartner(agents?.partners || [])?.board;
+      } catch {
+        // The confirmation loop below remains fail-closed.
+      }
+      const MAX_ATTEMPTS = 5;
+      const DELAY_MS = 700;
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        try {
+          const status = await studentService.fetchOnboardingStatus(studentId);
+          const entry = status?.subjects?.find((s: { subject: string }) => s.subject === subject);
+          if (
+            expectedBoard &&
+            status?.board === expectedBoard &&
+            entry?.status === "COMPLETED"
+          ) {
+            confirmed = true;
+            break;
+          }
+        } catch {
+          // Retry: a failed or incomplete authority read must not be treated as success.
+        }
+        await new Promise((r) => setTimeout(r, DELAY_MS));
+      }
+    }
+    if (!confirmed) {
+      setCompletionError("We finished the assessment, but could not confirm it yet. Please try again.");
+      return;
+    }
+    await Promise.all([refreshAvailableAgents(), fetchOnboardingStatus()]);
     onClose();
-    window.location.reload();
   };
 
   useEffect(() => {
@@ -182,6 +222,11 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
             onDismiss={handleCelebrationDismiss}
           />
         )}
+        {(error || completionError) && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[70] max-w-lg rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm font-semibold text-red-700 shadow-lg">
+            {completionError || error}
+          </div>
+        )}
 
         {/* Left Panel */}
         <div className="hidden md:flex w-[320px] shrink-0 flex-col bg-gradient-to-br from-[#059F6D] to-[#042e5c] text-white relative overflow-hidden p-8">
@@ -206,7 +251,12 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
           <div className="relative z-10 flex flex-1 items-center justify-center min-h-0 -mt-10">
             <div className="relative scale-90">
               <div className="absolute inset-0 rounded-full bg-white/5 blur-2xl scale-110" />
-              <WavingStudentCharacter />
+              <img
+                src="/illustrations/student-waving.png"
+                alt=""
+                aria-hidden="true"
+                className="relative w-[180px] h-auto object-contain"
+              />
             </div>
           </div>
 
@@ -272,7 +322,7 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-5">
-            {messages.length === 0 && (
+            {messages.length === 0 && !error && (
               <div className="flex flex-col items-center justify-center h-full gap-4">
                 <div className="w-10 h-10 rounded-full border-4 border-[#042E5C]/10 border-t-[#042E5C]/40 animate-spin" />
                 <p className="text-xs font-bold text-[#042E5C]/30 uppercase tracking-widest animate-pulse">

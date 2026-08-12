@@ -44,20 +44,6 @@ export const studentService = {
     return response.json();
   },
 
-  /** Downloads the report card as a PDF, rendered server-side and routed
-   * through the gateway. Pass `parentId` when a parent is downloading a
-   * linked child's report; omit it for a student downloading their own. */
-  downloadReportCardPdf: async (studentId: string, parentId?: string): Promise<Blob> => {
-    const url = parentId
-      ? `${API_BASE_URL}/parent/students/${studentId}/report-card/pdf?parent_id=${parentId}`
-      : `${API_BASE_URL}/students/${studentId}/report-card/pdf`;
-    const response = await authFetch(url, {
-      method: parentId ? "POST" : "GET",
-      headers: { accept: "application/pdf" },
-    });
-    return response.blob();
-  },
-
   fetchStudentStreak: async (studentId: string) => {
     const response = await authFetch(`${API_BASE_URL}/students/${studentId}/streak`);
     return response.json();
@@ -65,6 +51,11 @@ export const studentService = {
 
   fetchAvailablePartners: async () => {
     const response = await authFetch(`${API_BASE_URL}/partners`);
+    return response.json();
+  },
+
+  fetchStudentPartners: async (userId: string) => {
+    const response = await authFetch(`${API_BASE_URL}/student/partners?student_id=${userId}`);
     return response.json();
   },
 
@@ -107,6 +98,9 @@ export const studentService = {
   sendChatMessage: async (payload: {
     text: string;
     user_id: string;
+    // Resolved, title-cased student display name (prefers real name over the
+    // login handle). TODO(backend): greet with display_name instead of username.
+    display_name?: string;
     session_id?: string;
     agent_id?: string;
     subject: string;
@@ -303,10 +297,19 @@ export const studentService = {
   ): Promise<{ pdf_url: string; chapter_name: string; grade: number; subject: string; ttl_seconds: number }> => {
     const params = new URLSearchParams({
       grade: String(grade),
-      subject: subject.toLowerCase(),
+      subject,
       chapter_name: chapterName,
     });
     const response = await authFetch(`${API_BASE_URL}/rag/api/ncert/pdf-url?${params}`);
+    return response.json();
+  },
+
+  fetchPartnerIngestionPdfUrl: async (
+    ingestionBatchId: string
+  ): Promise<{ pdf_url: string; chapter_name: string; grade: number; subject: string; ttl_seconds: number }> => {
+    const response = await authFetch(
+      `${API_BASE_URL}/rag/api/partner/ingestions/${encodeURIComponent(ingestionBatchId)}/pdf-url`
+    );
     return response.json();
   },
 

@@ -4,6 +4,7 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useTestStore } from "@/features/student/store/useTestStore";
 import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { useRouter } from "next/navigation";
+import { requireExactSubject } from "@/features/subjects/subjectCatalog";
 
 interface ChapterMasteryViewProps {
   mode?: "student" | "parent";
@@ -22,12 +23,13 @@ export const ChapterMasteryView: React.FC<ChapterMasteryViewProps> = ({ mode = "
   };
 
   const handleStartTest = (documentTitle: string) => {
-    if (!studentProfile) return;
+    if (!Number.isInteger(studentProfile?.grade)) return;
+    const subject = requireExactSubject(selectedAnalyticsSubject, studentProfile?.grade);
     startTest({
-      student_id: studentProfile.user_id,
+      student_id: studentProfile!.user_id,
       chapter_query: documentTitle,
-      subject: selectedAnalyticsSubject,
-      grade: studentProfile.grade || 5,
+      subject,
+      grade: studentProfile!.grade!,
       questions_per_section: 3
     });
     router.push("/student/test?from=assessments");
@@ -45,7 +47,8 @@ export const ChapterMasteryView: React.FC<ChapterMasteryViewProps> = ({ mode = "
           coverage={item.completion_percentage}
           sessions={item.study_count}
           onAction={() => { 
-            const newId = startFocusedSession(item.document_title, selectedAnalyticsSubject); 
+            const subject = requireExactSubject(selectedAnalyticsSubject, studentProfile?.grade);
+            const newId = startFocusedSession(item.document_title, subject);
             router.push(`/student/chat/${newId}`); 
           }}
           onTestAction={() => handleStartTest(item.document_title)}

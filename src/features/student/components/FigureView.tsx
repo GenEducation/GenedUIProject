@@ -3,25 +3,46 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { authFetch } from "@/utils/authFetch";
+import { useStudentStore } from "../store/useStudentStore";
 
 interface FigureViewProps {
   uuid: string;
 }
 
 /**
- * FigureView handles authenticated image fetching for historical figures
+ * FigureView handles authenticated image fetching for historical figures.
+ *
+ * subject/grade are required by the backend (rag-service 422s without them) —
+ * sourced from the active chat session rather than threaded down as props,
+ * since every caller of this component already renders inside that session's
+ * context. partner_id is deliberately NOT sent: rag-service resolves it
+ * server-side from the authenticated student when omitted (same fallback
+ * chat/rag_node.py already relies on), and the frontend has no reliable
+ * source for it on the student side anyway.
  */
 export const FigureView = React.memo(({ uuid }: FigureViewProps) => {
   const [src, setSrc] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+  const subject = useStudentStore((s) => s.activeChat?.subject);
+  const grade = useStudentStore((s) => s.activeChat?.grade);
 
   useEffect(() => {
     let objectUrl: string | null = null;
-    
+
+    if (!subject || !grade) {
+      // Nothing to scope the request to yet (e.g. activeChat hasn't loaded).
+      // Not a fetch failure — just not ready — so stay in the loading state
+      // rather than flashing the error card.
+      return;
+    }
+
     const fetchImage = async () => {
       try {
-        const res = await authFetch(`${API_URL}/rag/retrieve/figure/${uuid}`);
+        const params = new URLSearchParams({ subject, grade: String(grade) });
+        const res = await authFetch(
+          `${API_URL}/rag/retrieve/figure/${uuid}?${params.toString()}`
+        );
         if (!res.ok) throw new Error("Failed to fetch figure");
         const blob = await res.blob();
         objectUrl = URL.createObjectURL(blob);
@@ -36,7 +57,7 @@ export const FigureView = React.memo(({ uuid }: FigureViewProps) => {
     return () => {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [uuid, API_URL]);
+  }, [uuid, API_URL, subject, grade]);
 
   if (error) {
     return (

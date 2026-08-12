@@ -71,19 +71,20 @@ test.describe("Test flow — assessments to results (real browser)", () => {
     await page.waitForLoadState("networkidle");
 
     // The chapter card appears once chapter-mastery resolves
-    await expect(page.getByText("Chapter 3: Photosynthesis")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Chapter 3: Photosynthesis").first()).toBeVisible({ timeout: 10_000 });
     await page.getByRole("button", { name: /start test/i }).first().click();
 
     // ── 2. Wait for the test page (handleStartTest uses a 2s setTimeout) ──
     await page.waitForURL(/\/student\/test/, { timeout: 10_000 });
-    await expect(page.getByText(/Photosynthesis/)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Photosynthesis/).first()).toBeVisible({ timeout: 10_000 });
 
     // ── 3. Answer MCQ (q1): click the first option "Glucose" ──
-    await page.getByText("Glucose").click();
+    await page.getByText("Glucose").first().click();
 
     // ── 4. Answer true/false (q2): click "False" then fill justification ──
     await page.getByRole("button", { name: /false/i }).click();
-    const justifyInput = page.locator('textarea').first();
+    // Justification textarea only renders after an answer is picked
+    const justifyInput = page.getByPlaceholder("Write your justification here...");
     await justifyInput.fill("Chlorophyll primarily absorbs red and blue light.");
 
     // ── 5. Submit (q3 match is unanswered → warning modal appears) ──
@@ -95,18 +96,24 @@ test.describe("Test flow — assessments to results (real browser)", () => {
 
     // ── 6. Results view ──
     // TestResultsView renders after submit; it should show the score
-    await expect(page.getByText(/75%|0\.75/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/75%|0\.75/i).first()).toBeVisible({ timeout: 10_000 });
 
     // Verify the payload actually reached the submit route
     expect(submitPayload).not.toBeNull();
   });
 
-  test("no-auth direct nav to /student/test redirects to login", async ({ page: freshPage }) => {
-    // Fresh page with no localStorage seed
+  test("no-auth direct nav to /student/test redirects to login", async ({ browser }) => {
+    // The describe's beforeEach seeds auth onto the default `page` via addInitScript,
+    // which re-runs on every navigation — so we can't get an unauthenticated state on
+    // that page. Use a brand-new context with no seed instead.
+    const context = await browser.newContext();
+    const freshPage = await context.newPage();
     await freshPage.route(`${API}/**`, (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
     );
     await freshPage.goto("/student/test");
+    // AuthGuard sees no token and redirects to /?redirect=<encoded path>
     await expect(freshPage).toHaveURL(/\?redirect=.*test/, { timeout: 5_000 });
+    await context.close();
   });
 });

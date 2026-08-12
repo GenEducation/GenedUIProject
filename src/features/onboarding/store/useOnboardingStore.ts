@@ -1,5 +1,15 @@
 import { create } from "zustand";
 import { onboardingService } from "../services/onboardingService";
+import { studentService } from "@/features/student/services/studentService";
+import {
+  requireExactSubject,
+  loadSubjectCatalog,
+  type ExactSubject,
+} from "@/features/subjects/subjectCatalog";
+import {
+  selectEffectiveLearningPartner,
+  useStudentStore,
+} from "@/features/student/store/useStudentStore";
 
 export interface OnboardingMessage {
   id: string;
@@ -10,7 +20,7 @@ export interface OnboardingMessage {
 
 interface OnboardingState {
   type: "general" | "subject" | null;
-  subject: string | null;
+  subject: ExactSubject | null;
   grade: number | null;
   dnaStatus: "PENDING" | "GENERAL_COMPLETED" | "COMPLETED" | string | null;
   
@@ -19,6 +29,7 @@ interface OnboardingState {
   isComplete: boolean;
   isVoiceOnly: boolean;
   streamingMessageId: string | null;
+  error: string | null;
 
   checkDNAStatus: (studentId: string) => Promise<void>;
   startOnboarding: (
@@ -43,6 +54,7 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
   isComplete: false,
   isVoiceOnly: false,
   streamingMessageId: null,
+  error: null,
 
   checkDNAStatus: async (studentId: string) => {
     try {
@@ -54,14 +66,29 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
   },
 
   startOnboarding: async (studentId, type, subject, grade) => {
-    set({ type, subject: subject || null, grade: grade || null, messages: [], isComplete: false, isVoiceOnly: false });
     try {
+      set({ error: null });
       let data;
       if (type === "general") {
+        set({ type, subject: null, grade: null, messages: [], isComplete: false, isVoiceOnly: false });
         data = await onboardingService.startGeneralOnboarding(studentId);
       } else {
-        if (!subject || !grade) throw new Error("Subject and grade required for subject onboarding");
-        data = await onboardingService.startSubjectOnboarding(studentId, subject, grade);
+        const studentStore = useStudentStore.getState();
+        let partnerBoard = studentStore.availablePartners.find((partner) => partner.is_effective)?.board;
+        if (!partnerBoard && studentStore.enrolledPartners.length === 1) {
+          partnerBoard = studentStore.enrolledPartners[0].board;
+        }
+        if (!partnerBoard) {
+          // If the student hasn't visited the Profile page yet, enrolledPartners might be empty
+          const data = await studentService.fetchAvailableAgents(studentId);
+          partnerBoard = selectEffectiveLearningPartner(data.partners || [])?.board;
+        }
+        if (!partnerBoard) throw new Error("Could not determine your school's education board.");
+        const catalog = await loadSubjectCatalog(partnerBoard);
+        const exactSubject = requireExactSubject(subject, grade, catalog);
+
+        set({ type, subject: exactSubject, grade: grade!, messages: [], isComplete: false, isVoiceOnly: false, error: null });
+        data = await onboardingService.startSubjectOnboarding(studentId, exactSubject, grade!);
       }
 
       let responseText = data.response || "";
@@ -81,8 +108,9 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
         isComplete: data.is_complete || false,
         isVoiceOnly: voiceOnly
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to start onboarding:", error);
+      set({ error: error?.message || "Subject onboarding could not be started. Please try again." });
     }
   },
 
@@ -235,7 +263,7 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
     set({
       type: null, subject: null, grade: null, messages: [], 
       isAITyping: false, isComplete: false, isVoiceOnly: false,
-      streamingMessageId: null
+      streamingMessageId: null, error: null
     });
   }
 }));

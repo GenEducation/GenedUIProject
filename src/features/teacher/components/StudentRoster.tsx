@@ -5,7 +5,7 @@ import { Search, UserX, UserPlus } from "lucide-react";
 import { useTeacherStore, StatusFilter, SortOption } from "../store/useTeacherStore";
 import { TeacherStudent } from "../services/teacherService";
 import { StudentCard } from "./StudentCard";
-import { SUBJECTS } from "../constants";
+import { useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
 import { rosterCounts, filterAndSortRoster } from "../utils/rosterUtils";
 
 interface StudentRosterProps {
@@ -30,6 +30,11 @@ export function StudentRoster({
   removingId,
   onInviteClick,
 }: StudentRosterProps) {
+  const catalog = useTaxonomySubjects();
+  const subjects = useMemo(
+    () => Array.from(new Set(catalog.map((entry) => entry.name))),
+    [catalog],
+  );
   const {
     students,
     statusFilter,
@@ -97,7 +102,7 @@ export function StudentRoster({
             }}
           >
             <option value="all">All subjects</option>
-            {SUBJECTS.map((s) => (
+            {subjects.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>

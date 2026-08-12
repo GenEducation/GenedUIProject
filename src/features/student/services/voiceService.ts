@@ -1,4 +1,5 @@
 import { getAuthToken } from "@/utils/authFetch";
+import type { ExactSubject } from "@/features/subjects/subjectCatalog";
 
 /**
  * VoiceService handles the real-time audio interaction with the April backend.
@@ -8,7 +9,11 @@ import { getAuthToken } from "@/utils/authFetch";
 /**
  * Resamples floating point audio data to a target rate using linear interpolation.
  */
-function resample(input: any, fromRate: number, toRate: number): any {
+function resample(
+  input: Float32Array<ArrayBufferLike>,
+  fromRate: number,
+  toRate: number,
+): Float32Array<ArrayBufferLike> {
   if (fromRate === toRate) return input;
   const ratio = fromRate / toRate;
   const newLength = Math.round(input.length / ratio);
@@ -23,6 +28,23 @@ function resample(input: any, fromRate: number, toRate: number): any {
   return result;
 }
 
+type VoiceEvent = {
+  type?: string;
+  error?: unknown;
+  message?: string;
+  content?: string;
+  session_id?: string;
+  role?: "user" | "assistant";
+  reason?: string;
+  [key: string]: unknown;
+};
+
+type NetworkInformation = {
+  effectiveType?: string;
+  rtt?: number;
+  downlink?: number;
+};
+
 class VoiceService {
   private ws: WebSocket | null = null;
   private audioCtx: AudioContext | null = null;
@@ -31,14 +53,15 @@ class VoiceService {
   private processor: ScriptProcessorNode | null = null;
   private isSessionActive = false;
   private currentStudentId: string | null = null;
+  private currentDisplayName: string | null = null;
   private currentSessionId: string | null = null;
-  private currentSubject: string | null = null;
+  private currentSubject: ExactSubject | null = null;
   private currentVoice: string | null = null;
   private currentDocumentTitle: string | null = null;
   private currentAgentId: string | null = null;
   private currentGrade: number | null = null;
   private wsEndpoint: string = "/ws/april-live";
-  private onEventCallback: ((event: any) => void) | null = null;
+  private onEventCallback: ((event: VoiceEvent) => void) | null = null;
   private onTextRevealCallback: ((text: string, role: "user" | "assistant") => void) | null = null;
   private isMuted = false;
 
@@ -46,6 +69,9 @@ class VoiceService {
   // Connection & Retry State
   private retryCount = 0;
   private readonly MAX_RETRIES = 5;
+  private readonly STABLE_CONNECTION_MS = 15_000;
+  private retryResetTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastServerError: VoiceEvent | null = null;
   private currentConnectionId: string | null = null;
   
   // Jitter Buffer & Sync State
@@ -72,12 +98,20 @@ class VoiceService {
   private readonly NETWORK_RTT_POOR_MS            = 500;    // navigator.connection.rtt threshold (ms)
   private readonly NETWORK_DOWNLINK_POOR_MBPS     = 0.15;   // navigator.connection.downlink threshold (Mbps)
 
+  /**
+   * Set the resolved student display name to send with the voice init payload.
+   * Call before startSession. TODO(backend): greet with display_name, not username.
+   */
+  setStudentDisplayName(name: string | null) {
+    this.currentDisplayName = name;
+  }
+
   async startSession(
     studentId: string,
-    onEvent: (event: any) => void,
+    onEvent: (event: VoiceEvent) => void,
     onTextReveal: (text: string, role: "user" | "assistant") => void,
     sessionId?: string,
-    subject?: string,
+    subject?: ExactSubject,
     wsEndpoint: string = "/ws/april-live-graph",
     voice?: string,
     documentTitle?: string,
@@ -104,12 +138,20 @@ class VoiceService {
 
     this.isSessionActive = true;
     this.retryCount = 0;
+    this.lastServerError = null;
     this.currentQuality = null;
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
 
     if (!this.audioCtx) {
-      this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({
+      const AudioContextCtor =
+        window.AudioContext ||
+        (
+          window as unknown as Window & {
+            webkitAudioContext: typeof AudioContext;
+          }
+        ).webkitAudioContext;
+      this.audioCtx = new AudioContextCtor({
         sampleRate: 24000,
       });
     }
@@ -138,20 +180,22 @@ class VoiceService {
       // together remove a large chunk of fan/keyboard/distant-voice noise on
       // every modern browser. Chromium-specific `google*` hints are harmless
       // elsewhere.
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
+      const audioConstraints: MediaTrackConstraints & {
+        googHighpassFilter: boolean;
+        googNoiseSuppression2: boolean;
+        googEchoCancellation2: boolean;
+      } = {
           channelCount: 1,
           sampleRate: 16000,
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          // @ts-ignore — Chromium-only, but harmless on other UAs.
           googHighpassFilter: true,
-          // @ts-ignore — Chromium-only.
           googNoiseSuppression2: true,
-          // @ts-ignore — Chromium-only.
           googEchoCancellation2: true,
-        },
+      };
+      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: audioConstraints,
       });
 
       // Staleness guard: session may have been stopped while getUserMedia was awaiting
@@ -167,7 +211,7 @@ class VoiceService {
       this.processor.onaudioprocess = (e) => {
         if (this.ws?.readyState !== WebSocket.OPEN) return;
 
-        let input = e.inputBuffer.getChannelData(0);
+        let input: Float32Array<ArrayBufferLike> = e.inputBuffer.getChannelData(0);
         const bufferSampleRate = e.inputBuffer.sampleRate;
         if (bufferSampleRate !== 16000) {
           input = resample(input, bufferSampleRate, 16000);
@@ -210,6 +254,12 @@ class VoiceService {
     const wsBaseUrl = apiBaseUrl.replace(/^http/, "ws").replace(/\/$/, "");
     
     const token = getAuthToken();
+    if (!token) {
+      console.error("🎙️ [VoiceService] Missing auth token. Cannot connect to websocket.");
+      this.onEventCallback?.({ type: "error", error: new Error("Not authenticated") });
+      return;
+    }
+
     const endpoint = this.wsEndpoint || "/ws/april-live";
     
     // Ensure endpoint starts with a slash
@@ -223,17 +273,31 @@ class VoiceService {
 
     this.ws.onopen = () => {
       const wasReconnecting = this.retryCount > 0;
-      this.retryCount = 0;
+      this.lastServerError = null;
       this.sendInitMessage();
       this.onEventCallback?.({ type: "connected" });
       if (wasReconnecting) this.setQuality("good");
+      // An `open` immediately followed by another close is not recovery. Reset the
+      // retry budget only after the connection proves stable, otherwise flapping loops
+      // forever at "attempt 1".
+      if (this.retryResetTimer) clearTimeout(this.retryResetTimer);
+      this.retryResetTimer = setTimeout(() => {
+        if (this.ws?.readyState === WebSocket.OPEN && this.currentConnectionId === connId) {
+          this.retryCount = 0;
+        }
+        this.retryResetTimer = null;
+      }, this.STABLE_CONNECTION_MS);
       this.startQualityMonitoring();
     };
 
     this.ws.onmessage = (event) => {
       if (typeof event.data === "string") {
         try {
-          const data = JSON.parse(event.data);
+          const data = JSON.parse(event.data) as VoiceEvent;
+
+          if (data.type === "error") {
+            this.lastServerError = data;
+          }
           
           if (data.error === "rate_limit_exceeded") {
             console.warn("🎙️ [VoiceService] Rate limit exceeded. Stopping session.");
@@ -247,16 +311,43 @@ class VoiceService {
             return;
           }
 
+          if (data.type === "session_limit") {
+            // The backend ended the lesson on purpose (duration or daily-budget cap) and
+            // has already sent the child a warm explanation. It closes the socket right
+            // after. Stop the session BEFORE that close lands: `onclose` cannot tell a
+            // deliberate ending from a dropped connection, so left alone it would fire
+            // up to MAX_RETRIES silent reconnects and then report "Connection lost" —
+            // replacing the message above with an error, for a session that ended
+            // exactly as designed. This ordering is why the cap is safe to enable.
+            const callback = this.onEventCallback;
+            this.stopSession();
+            callback?.(data);
+            return;
+          }
+
           if (data.type === "interrupted") {
             this.interruptPlayback();
             return;
           }
 
-          if (data.type === "session_id" && data.session_id) {
+          if (data.type === "flush") {
+            // The backend is deliberately replacing the tutor's teaching plan or
+            // switching surfaces. Provider rotations do not flush: their queued speech
+            // remains valid and cutting it would make audio diverge from persisted text.
+            //
+            // The backend has emitted this on every one of those paths since swaps were
+            // introduced. Nothing on this side had ever listened for it.
+            this.interruptPlayback();
+            this.pendingAssistantText = "";
+            this.revealedAssistantText = "";
+            return;
+          }
+
+          if (data.type === "session_id" && typeof data.session_id === "string") {
             this.currentSessionId = data.session_id;
           }
 
-          if (data.type === "transcript") {
+          if (data.type === "transcript" && typeof data.content === "string") {
             if (data.role === "user") {
               // User transcript is shown immediately as it's not tied to playback
               this.onTextRevealCallback?.(data.content, "user");
@@ -267,7 +358,7 @@ class VoiceService {
           }
           
           this.onEventCallback?.(data);
-        } catch (err) {
+        } catch {
           console.error("[VoiceService] Error parsing JSON:", event.data);
         }
       } else {
@@ -275,7 +366,26 @@ class VoiceService {
       }
     };
 
-    this.ws.onclose = () => {
+    this.ws.onclose = (event) => {
+      if (this.retryResetTimer) {
+        clearTimeout(this.retryResetTimer);
+        this.retryResetTimer = null;
+      }
+      if (event.code === 1008) {
+        const callback = this.onEventCallback;
+        const serverError = this.lastServerError;
+        this.stopSession();
+        // 1008 means generic policy rejection, not a specific taxonomy failure. Prefer
+        // the structured backend frame; use a neutral fallback if the close raced it.
+        if (!serverError) {
+          callback?.({
+            type: "error",
+            error: "SESSION_POLICY_REJECTED",
+            message: "This voice session could not be started.",
+          });
+        }
+        return;
+      }
       if (this.isSessionActive && this.retryCount < this.MAX_RETRIES && this.currentConnectionId === connId) {
         this.retryCount++;
         const delay = Math.pow(2, this.retryCount - 1) * 1000;
@@ -296,17 +406,26 @@ class VoiceService {
 
   private sendInitMessage() {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    const payload: Record<string, any> = {
+    const usesV2LaunchContract = this.wsEndpoint === "/ws/v2/april-live-graph";
+    const payload: Record<string, unknown> = {
       type: "init",
       student_id: this.currentStudentId,
-      session_id: this.currentSessionId,
-      subject: this.currentSubject,
       voice: this.currentVoice,
       token: getAuthToken(),
     };
+    if (usesV2LaunchContract) {
+      // A transport reconnect continues the immutable application session assigned by
+      // the backend. A first connection has no identity and creates exactly one.
+      payload.launch_mode = this.currentSessionId ? "continue_session" : "new";
+      if (this.currentSessionId) payload.session_id = this.currentSessionId;
+    } else {
+      payload.session_id = this.currentSessionId;
+    }
+    if (this.currentSubject) payload.subject = this.currentSubject;
     if (this.currentDocumentTitle) payload.document_title = this.currentDocumentTitle;
     if (this.currentAgentId) payload.agent_id = this.currentAgentId;
     if (this.currentGrade != null) payload.grade = this.currentGrade;
+    if (this.currentDisplayName) payload.display_name = this.currentDisplayName;
     this.ws.send(JSON.stringify(payload));
   }
 
@@ -399,10 +518,13 @@ class VoiceService {
       return;
     }
 
-    const conn = typeof navigator !== "undefined" ? (navigator as any).connection : null;
+    const conn =
+      typeof navigator !== "undefined"
+        ? (navigator as Navigator & { connection?: NetworkInformation }).connection
+        : undefined;
     if (conn) {
       const poorType = conn.effectiveType === "slow-2g" || conn.effectiveType === "2g";
-      const highRtt  = conn.rtt  > this.NETWORK_RTT_POOR_MS;
+      const highRtt  = (conn.rtt ?? 0) > this.NETWORK_RTT_POOR_MS;
       const lowDown  = conn.downlink !== undefined && conn.downlink < this.NETWORK_DOWNLINK_POOR_MBPS;
       if (poorType || highRtt || lowDown) {
         this.setQuality("poor");
@@ -458,6 +580,7 @@ class VoiceService {
   stopSession() {
     this.isSessionActive = false;
     this.currentStudentId = null;
+    this.currentDisplayName = null;
     this.currentSessionId = null;
     this.currentSubject = null;
     this.currentVoice = null;
@@ -466,6 +589,11 @@ class VoiceService {
     this.currentGrade = null;
     this.pendingAssistantText = "";
     this.revealedAssistantText = "";
+    this.lastServerError = null;
+    if (this.retryResetTimer) {
+      clearTimeout(this.retryResetTimer);
+      this.retryResetTimer = null;
+    }
     
     if (this.ws) {
       this.ws.close();

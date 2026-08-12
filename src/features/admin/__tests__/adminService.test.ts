@@ -8,6 +8,10 @@ import {
   updateAssignment,
   importUsers,
   downloadImportTemplate,
+  listFleetDevices,
+  getFleetDevice,
+  getLabStats,
+  getDeviceLogs,
 } from "../adminService";
 import { seedAuthLocalStorage } from "@/test/helpers/auth";
 
@@ -92,6 +96,66 @@ describe("adminService — send()-based mutations", () => {
     const { url, init } = firstCall(fetchMock);
     expect(url).toMatch(/\/admin\/teacher-students\/t1\/s1$/);
     expect(JSON.parse(init.body)).toEqual({ status: "APPROVED", subject: "Math", cascade: true });
+  });
+});
+
+describe("adminService — device fleet routes (spec §6.7)", () => {
+  it("listFleetDevices defaults to page 1 / page_size 25 and omits unset filters", async () => {
+    const fetchMock = stubFetch({ items: [], total: 0, page: 1, page_size: 25 });
+    await listFleetDevices();
+    const { url } = firstCall(fetchMock);
+    expect(url).toContain("/admin/lab/devices?");
+    expect(url).toContain("page=1");
+    expect(url).toContain("page_size=25");
+    expect(url).not.toContain("partner_id=");
+    expect(url).not.toContain("health_status=");
+    expect(url).not.toContain("has_fault=");
+    expect(url).not.toContain("include_revoked=");
+  });
+
+  it("threads every filter through, including an explicit has_fault=false", async () => {
+    const fetchMock = stubFetch({ items: [], total: 0, page: 2, page_size: 200 });
+    await listFleetDevices({
+      partner_id: "p1",
+      lab_id: "l1",
+      health_status: "OFFLINE",
+      q: "desk",
+      has_fault: false,
+      stale_minutes: 15,
+      include_revoked: true,
+      page: 2,
+      page_size: 200,
+    });
+    const { url } = firstCall(fetchMock);
+    expect(url).toContain("partner_id=p1");
+    expect(url).toContain("lab_id=l1");
+    expect(url).toContain("health_status=OFFLINE");
+    expect(url).toContain("q=desk");
+    // `false` is meaningful here (self-test says ok), so it must survive.
+    expect(url).toContain("has_fault=false");
+    expect(url).toContain("stale_minutes=15");
+    expect(url).toContain("include_revoked=true");
+    expect(url).toContain("page=2");
+    expect(url).toContain("page_size=200");
+  });
+
+  it("getLabStats hits the fleet rollup route", async () => {
+    const fetchMock = stubFetch({ total_devices: 0 });
+    await getLabStats();
+    expect(firstCall(fetchMock).url).toMatch(/\/admin\/lab\/stats$/);
+  });
+
+  it("getFleetDevice hits /admin/lab/devices/:id with an encoded id", async () => {
+    const fetchMock = stubFetch({ id: "d 1" });
+    await getFleetDevice("d 1");
+    expect(firstCall(fetchMock).url).toMatch(/\/admin\/lab\/devices\/d%201$/);
+  });
+
+  it("getDeviceLogs uses the non-fleet route that already admits ADMIN", async () => {
+    const fetchMock = stubFetch({ lines: [] });
+    await getDeviceLogs("d1");
+    expect(firstCall(fetchMock).url).toMatch(/\/lab\/devices\/d1\/logs$/);
+    expect(firstCall(fetchMock).url).not.toContain("/admin/");
   });
 });
 

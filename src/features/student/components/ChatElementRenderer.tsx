@@ -82,7 +82,7 @@ function PointerRefCallout({ text, textEnd, label, page }: {
             textTransform: "uppercase",
             letterSpacing: "0.06em",
             marginBottom: 2,
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "var(--font-body)",
           }}>
             {label}
           </p>
@@ -95,7 +95,7 @@ function PointerRefCallout({ text, textEnd, label, page }: {
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
-          fontFamily: "'DM Sans', sans-serif",
+          fontFamily: "var(--font-body)",
         }}>
           &ldquo;{snippet}&rdquo;
         </p>
@@ -108,7 +108,7 @@ function PointerRefCallout({ text, textEnd, label, page }: {
         fontWeight: 600,
         color: "#1A6BBF",
         whiteSpace: "nowrap",
-        fontFamily: "'DM Sans', sans-serif",
+        fontFamily: "var(--font-body)",
       }}>
         View in textbook →
       </span>
@@ -146,7 +146,7 @@ function FigureDescribeBlock({ figureAssetUrl, prompt, directiveId }: {
           🖼️ Image unavailable
         </div>
       )}
-      <p className="text-sm font-semibold text-[#042E5C]/80 text-center">{prompt}</p>
+      <p className="text-sm font-semibold text-[var(--primary-ink)]/80 text-center">{prompt}</p>
     </div>
   );
 }

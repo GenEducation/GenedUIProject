@@ -33,7 +33,7 @@ describe("InviteStudentModal", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /send invite/i }));
 
-    await waitFor(() => expect(onInvite).toHaveBeenCalledWith("kid@x.com", "Mathematics"));
+    await waitFor(() => expect(onInvite).toHaveBeenCalledWith("kid@x.com", "English"));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 

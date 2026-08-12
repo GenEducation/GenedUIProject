@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { createUser, listPartners, CreateUserPayload, PartnerRow } from "../adminService";
+import { useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
+import { EDUCATION_BOARDS, isEducationBoard } from "@/types/education";
 
 interface Props {
   onClose: () => void;
@@ -22,12 +24,20 @@ export function CreateAccountModal({ onClose, onCreated }: Props) {
   const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const selectedPartnerBoard = partners.find((partner) => partner.id === form.partner_id)?.board;
+  const catalog = useTaxonomySubjects(
+    role === "TEACHER" ? selectedPartnerBoard : undefined,
+  );
+  const taxonomySubjects = useMemo(
+    () => Array.from(new Set(catalog.map((entry) => entry.name))),
+    [catalog],
+  );
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  // Teachers must be scoped to a school — load partners for the picker.
+  // Teachers and admin-provisioned students can be scoped to a school.
   useEffect(() => {
-    if (role === "TEACHER" && partners.length === 0) {
+    if ((role === "TEACHER" || role === "STUDENT") && partners.length === 0) {
       listPartners()
         .then(setPartners)
         .catch(() => {});
@@ -44,34 +54,60 @@ export function CreateAccountModal({ onClose, onCreated }: Props) {
       setError("A teacher must be assigned to a school.");
       return;
     }
+    if (role === "PARTNER" && !isEducationBoard(form.board)) {
+      setError("An education board is required for a partner.");
+      return;
+    }
 
-    const payload: CreateUserPayload = {
-      role,
+    const base = {
       email: form.email,
       password: form.password,
       ...(form.username ? { username: form.username } : {}),
     };
+    let payload: CreateUserPayload | undefined;
     if (role === "STUDENT") {
-      if (form.age) payload.age = Number(form.age);
-      if (form.grade) payload.grade = Number(form.grade);
-      if (form.school_board) payload.school_board = form.school_board;
-      if (form.parent_email) payload.parent_email = form.parent_email;
+      payload = {
+        ...base,
+        role,
+        ...(form.age ? { age: Number(form.age) } : {}),
+        ...(form.grade ? { grade: Number(form.grade) } : {}),
+        ...(form.parent_email ? { parent_email: form.parent_email } : {}),
+        ...(form.partner_id ? { partner_id: form.partner_id } : {}),
+      };
     } else if (role === "PARENT") {
-      if (form.phone) payload.phone = form.phone;
+      payload = { ...base, role, ...(form.phone ? { phone: form.phone } : {}) };
     } else if (role === "PARTNER") {
-      if (form.organization) payload.organization = form.organization;
-      if (form.website) payload.website = form.website;
-    } else if (role === "TEACHER") {
-      payload.partner_id = form.partner_id;
-      if (form.full_name) payload.full_name = form.full_name;
-      if (form.title) payload.title = form.title;
-      if (form.subjects) {
-        payload.subjects = form.subjects
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
+      const board = form.board;
+      if (!isEducationBoard(board)) {
+        setError("An education board is required for a partner.");
+        return;
       }
+      payload = {
+        ...base,
+        role,
+        board,
+        ...(form.organization ? { organization: form.organization } : {}),
+        ...(form.website ? { website: form.website } : {}),
+      };
+    } else if (role === "TEACHER") {
+      payload = {
+        ...base,
+        role,
+        partner_id: form.partner_id,
+        ...(form.full_name ? { full_name: form.full_name } : {}),
+        ...(form.title ? { title: form.title } : {}),
+        ...(form.subjects
+          ? {
+              subjects: form.subjects
+                .split(",")
+                .map((subject) => subject.trim())
+                .filter(Boolean),
+            }
+          : {}),
+      };
     }
+
+    if (!payload) return;
 
     setSaving(true);
     try {
@@ -156,12 +192,26 @@ export function CreateAccountModal({ onClose, onCreated }: Props) {
                 <input className={inputCls} value={form.grade ?? ""} onChange={(e) => set("grade", e.target.value)} />
               </div>
               <div>
-                <label className={labelCls}>School board</label>
-                <input className={inputCls} value={form.school_board ?? ""} onChange={(e) => set("school_board", e.target.value)} />
-              </div>
-              <div>
                 <label className={labelCls}>Parent email</label>
                 <input className={inputCls} value={form.parent_email ?? ""} onChange={(e) => set("parent_email", e.target.value)} />
+              </div>
+              <div className="col-span-2">
+                <label className={labelCls}>School (partner)</label>
+                <select
+                  className={inputCls}
+                  value={form.partner_id ?? ""}
+                  onChange={(e) => set("partner_id", e.target.value)}
+                >
+                  <option value="">GenEd (default)</option>
+                  {partners.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.organization ?? p.username}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1.5 text-xs text-white/40">
+                  The student&apos;s board is set automatically from this school.
+                </p>
               </div>
             </div>
           )}
@@ -182,6 +232,19 @@ export function CreateAccountModal({ onClose, onCreated }: Props) {
               <div>
                 <label className={labelCls}>Website</label>
                 <input className={inputCls} value={form.website ?? ""} onChange={(e) => set("website", e.target.value)} />
+              </div>
+              <div className="col-span-2">
+                <label className={labelCls}>Education board *</label>
+                <select
+                  className={inputCls}
+                  value={form.board ?? ""}
+                  onChange={(e) => set("board", e.target.value)}
+                >
+                  <option value="">Select a board…</option>
+                  {EDUCATION_BOARDS.map((board) => (
+                    <option key={board} value={board}>{board}</option>
+                  ))}
+                </select>
               </div>
             </div>
           )}
@@ -213,8 +276,27 @@ export function CreateAccountModal({ onClose, onCreated }: Props) {
                   <input className={inputCls} value={form.title ?? ""} onChange={(e) => set("title", e.target.value)} placeholder="HOD Science" />
                 </div>
                 <div className="col-span-2">
-                  <label className={labelCls}>Subjects (comma-separated)</label>
-                  <input className={inputCls} value={form.subjects ?? ""} onChange={(e) => set("subjects", e.target.value)} placeholder="Math, Science" />
+                  <label className={labelCls}>Subjects</label>
+                  <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/15 bg-white/5 p-3">
+                    {taxonomySubjects.map((subject) => {
+                      const selected = (form.subjects ?? "").split(",").filter(Boolean);
+                      return (
+                        <label key={subject} className="flex items-center gap-2 text-xs text-white/80">
+                          <input
+                            type="checkbox"
+                            checked={selected.includes(subject)}
+                            onChange={(event) => {
+                              const next = event.target.checked
+                                ? [...selected, subject]
+                                : selected.filter((item) => item !== subject);
+                              set("subjects", next.join(","));
+                            }}
+                          />
+                          {subject}
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </>

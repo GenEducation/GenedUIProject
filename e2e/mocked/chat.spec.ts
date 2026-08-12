@@ -6,6 +6,9 @@ import { makeAuthToken } from "../fixtures";
 const API = process.env.NEXT_PUBLIC_API_URL || "https://gateway-service-dev-479218009109.asia-south1.run.app";
 
 const chunk = (text: string) => ({ type: "chunk", text });
+// Emitting the real session_id frame is what drives the new-session navigation
+// to /student/chat/{id} (see useStudentStore.startNewChatSession → sendMessage).
+const sessionFrame = { type: "session_id", session_id: "sess-1", subject: "Science" };
 const done = { type: "done", status: "success" };
 
 test.describe("Chat — SSE streaming (real browser)", () => {
@@ -14,11 +17,23 @@ test.describe("Chat — SSE streaming (real browser)", () => {
     await page.route(`${API}/**`, (route) => {
       const url = route.request().url();
       if (url.includes("/api/students/") && url.includes("/available-agents")) {
+        // Shape must match the store's flattener: partners[].subjects[].agents[]
         return route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({
-            partners: [{ subjects: [{ subject: "Science", agent_id: "a1", name: "Aanya", grade: 6 }] }],
+            partners: [
+              {
+                subjects: [
+                  {
+                    subject: "Science",
+                    is_onboarding_complete: true,
+                    subject_coverage_percentage: 50,
+                    agents: [{ agent_id: "a1", name: "Aanya", subject: "Science", grade: 6 }],
+                  },
+                ],
+              },
+            ],
           }),
         });
       }
@@ -30,32 +45,31 @@ test.describe("Chat — SSE streaming (real browser)", () => {
     await seedAuth(page, "student", token);
   });
 
-  test("user bubble appears immediately; assistant bubble shows accumulated text", async ({ page }) => {
+  // Clicking a subject card's "Chat" button auto-sends "Hello", opening a new
+  // session; the SSE reply streams the assistant's greeting and, via the
+  // session_id frame, navigates to /student/chat/{id}.
+  async function startChat(page: import("@playwright/test").Page) {
+    await page.goto("/student");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Chat", exact: true }).first().click();
+    await page.waitForURL(/\/student\/chat\//, { timeout: 10_000 });
+  }
+
+  test("assistant bubble shows accumulated text from streamed chunks", async ({ page }) => {
     // Register the chat SSE handler — must override the catch-all above
     await page.route(`${API}/text/april-query`, (route) => {
       return route.fulfill({
         status: 200,
         contentType: "text/event-stream",
         headers: { "Cache-Control": "no-cache" },
-        body: joinSseFrames([chunk("Photo"), chunk("synthesis"), done]),
+        body: joinSseFrames([sessionFrame, chunk("Photo"), chunk("synthesis"), done]),
       });
     });
 
-    await page.goto("/student");
-    await page.waitForLoadState("networkidle");
+    await startChat(page);
 
-    // Find the chat input — it's a textarea in the hub or chat view
-    const input = page.locator('textarea').first();
-    await input.fill("What is photosynthesis?");
-
-    // Submit with Enter (the form submits on Enter without Shift)
-    await input.press("Enter");
-
-    // User bubble renders synchronously before the stream resolves
-    await expect(page.getByText("What is photosynthesis?")).toBeVisible({ timeout: 5_000 });
-
-    // Wait for the assembled AI response
-    await expect(page.getByText("Photosynthesis")).toBeVisible({ timeout: 10_000 });
+    // The two chunks are assembled into the assistant's greeting bubble
+    await expect(page.getByText("Photosynthesis").first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("multiple chunks are concatenated into a single assistant bubble", async ({ page }) => {
@@ -64,17 +78,12 @@ test.describe("Chat — SSE streaming (real browser)", () => {
         status: 200,
         contentType: "text/event-stream",
         headers: { "Cache-Control": "no-cache" },
-        body: joinSseFrames([chunk("Part 1. "), chunk("Part 2."), done]),
+        body: joinSseFrames([sessionFrame, chunk("Part 1. "), chunk("Part 2."), done]),
       });
     });
 
-    await page.goto("/student");
-    await page.waitForLoadState("networkidle");
+    await startChat(page);
 
-    const input = page.locator('textarea').first();
-    await input.fill("Tell me something");
-    await input.press("Enter");
-
-    await expect(page.getByText("Part 1. Part 2.")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Part 1. Part 2.").first()).toBeVisible({ timeout: 10_000 });
   });
 });

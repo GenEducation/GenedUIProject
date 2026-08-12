@@ -44,7 +44,7 @@ export const VisualBlock: React.FC<VisualBlockProps> = ({ svg, image, meta }) =>
             marginTop: 8, textAlign: "center",
             fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
             textTransform: "uppercase", color: "#94A3B8",
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "var(--font-body)",
           }}
         >
           {meta.shape.replace(/_/g, ' ')}

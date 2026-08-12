@@ -5,6 +5,11 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const SIMULATED_CAP = 90;
 const LOOP_INTERVAL_MS = 800;
+// Minimum time the trophy + confetti must stay on screen before onCelebrated
+// fires, so the celebration is always visible regardless of how fast the
+// destination route would otherwise be ready. Roughly matches the 1.1s
+// confetti burst animation below.
+const MIN_CELEBRATION_MS = 1200;
 
 // Cycles independently of progress % so the character keeps moving even
 // when the backend takes far longer than the simulated progress expects.
@@ -17,23 +22,35 @@ const LOOP_STEPS = [
 interface LoaderJourneyProps {
   isVisible: boolean;
   isComplete: boolean;
+  // True while a post-auth navigation is in flight. Suppresses the
+  // self-dismiss timer below — the destination route owns dismissal instead.
+  isHandoff?: boolean;
+  // Called once the trophy celebration has held for MIN_CELEBRATION_MS.
+  // This is when the caller should actually navigate.
+  onCelebrated?: () => void;
   onFinished: () => void;
 }
 
 export const LoaderJourney: React.FC<LoaderJourneyProps> = ({
   isVisible,
   isComplete,
+  isHandoff = false,
+  onCelebrated,
   onFinished,
 }) => {
   const [progress, setProgress] = useState(0);
   const [loopStep, setLoopStep] = useState(0);
   const finishedRef = useRef(false);
+  const celebratedRef = useRef(false);
 
   // Steady progress climb, decoupled from which character pose is showing.
+  // Once complete, snap to 100 quickly so the trophy phase starts promptly
+  // instead of easing in over ~2.4s.
   useEffect(() => {
     if (!isVisible) {
       setProgress(0);
       finishedRef.current = false;
+      celebratedRef.current = false;
       return;
     }
 
@@ -41,7 +58,7 @@ export const LoaderJourney: React.FC<LoaderJourneyProps> = ({
     const tick = () => {
       setProgress((prev) => {
         const target = isComplete ? 100 : SIMULATED_CAP;
-        const step = isComplete ? 0.35 : 0.08;
+        const step = isComplete ? 0.6 : 0.08;
         const next = prev + (target - prev) * step;
         return target - next < 0.15 ? target : next;
       });
@@ -67,13 +84,26 @@ export const LoaderJourney: React.FC<LoaderJourneyProps> = ({
     return () => clearInterval(id);
   }, [isVisible, isComplete]);
 
+  // Fires onCelebrated once the trophy has held for MIN_CELEBRATION_MS —
+  // this is when the handoff caller should actually navigate.
   useEffect(() => {
+    if (isVisible && isComplete && progress >= 99.9 && !celebratedRef.current) {
+      celebratedRef.current = true;
+      const t = setTimeout(() => onCelebrated?.(), MIN_CELEBRATION_MS);
+      return () => clearTimeout(t);
+    }
+  }, [isVisible, isComplete, progress, onCelebrated]);
+
+  // Self-dismiss only outside a handoff. During a handoff, the destination
+  // route (via AuthGuard) owns calling stopLoading() once it has rendered.
+  useEffect(() => {
+    if (isHandoff) return;
     if (isVisible && isComplete && progress >= 99.9 && !finishedRef.current) {
       finishedRef.current = true;
       const t = setTimeout(onFinished, 1200);
       return () => clearTimeout(t);
     }
-  }, [isVisible, isComplete, progress, onFinished]);
+  }, [isVisible, isComplete, isHandoff, progress, onFinished]);
 
   const pct = Math.min(100, progress);
   const isTrophyPhase = isComplete && pct >= 100;

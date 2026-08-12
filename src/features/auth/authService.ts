@@ -1,3 +1,5 @@
+import type { EducationBoard } from "@/types/education";
+
 export const AUTH_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL|| "";
 
 if (!AUTH_API_BASE_URL) {
@@ -15,7 +17,6 @@ export interface SignUpFields {
   role: "student" | "parent";
   age?: string;
   grade?: string;
-  school_board?: string;
   phone?: string;
   otp_code?: string;
   parent_email?: string;
@@ -30,9 +31,10 @@ export interface AuthTokenResponse {
   status: string;
   role: string;
   grade?: number;
+  school_board?: EducationBoard;
+  board?: EducationBoard;
   organization?: string;
   website?: string | null;
-  school_board?: string;
   age?: number;
   name?: string;
   ai_name?: string;
@@ -239,7 +241,6 @@ export async function updateProfile(data: {
   user_id: string;
   name?: string;
   age?: number;
-  school_board?: string;
   ai_name?: string;
   preferred_voice?: string;
 }): Promise<AuthTokenResponse> {

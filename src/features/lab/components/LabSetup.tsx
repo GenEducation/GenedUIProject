@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, MonitorSmartphone, Wifi, WifiOff, TriangleAlert, RotateCw, Ban, X, ChevronRight, type LucideIcon } from "lucide-react";
+import { Plus, MonitorSmartphone, Wifi, WifiOff, TriangleAlert, Link2, ArrowRightLeft, Settings2, Ban, X, ChevronRight, RefreshCw, type LucideIcon } from "lucide-react";
 import { useLabStore } from "../store/useLabStore";
 import { DeviceTokenModal } from "./DeviceTokenModal";
-import type { LabDeviceHealth } from "../types/lab";
+import { LabDevicePairingWizard } from "./LabDevicePairingWizard";
+import { MoveDeviceModal } from "./MoveDeviceModal";
+import { DeviceHealthStrip } from "./DeviceHealthStrip";
+import { DeviceDiagnosticsModal } from "./DeviceDiagnosticsModal";
+import { displayHardwareId, isRevokedDevice, summarizeHealth } from "../utils/deviceHealth";
+import { RelativeTime } from "@/components/shared/RelativeTime";
+import { useNow } from "@/utils/useNow";
+import type { DeviceResponse, LabDeviceHealth } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
 
 const healthStyles: Record<LabDeviceHealth, { icon: LucideIcon; className: string; label: string }> = {
@@ -14,8 +21,41 @@ const healthStyles: Record<LabDeviceHealth, { icon: LucideIcon; className: strin
   NEEDS_ATTENTION: { icon: TriangleAlert, className: "bg-danger-bg text-danger-ink", label: "Needs attention" },
 };
 
+/**
+ * Health changes on a heartbeat cadence, not a UI one — deliberately slower
+ * than the live board's 5s poll.
+ */
+const DEVICE_POLL_MS = 20_000;
+
 interface LabSetupProps {
   partnerId: string;
+}
+
+/**
+ * "updated 12s ago" beside the refresh control. Turns amber once two poll
+ * cycles have passed without a successful fetch — the only signal that the
+ * silent background poll is failing.
+ */
+function LastUpdatedLabel({ fetchedAt }: { fetchedAt?: number }) {
+  const now = useNow();
+
+  // `0` means the shared clock has not started yet (server render / first paint).
+  if (!fetchedAt || now === 0) return null;
+
+  const seconds = Math.max(0, Math.round((now - fetchedAt) / 1000));
+  const isLagging = now - fetchedAt > DEVICE_POLL_MS * 2;
+  const label = seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m`;
+
+  return (
+    <span
+      className={`mr-1 text-[11px] font-semibold tabular-nums ${
+        isLagging ? "text-warning-ink" : "text-[#1A3D2C]/35"
+      }`}
+      title={isLagging ? "The device list has not refreshed recently" : undefined}
+    >
+      updated {label} ago
+    </span>
+  );
 }
 
 export function LabSetup({ partnerId }: LabSetupProps) {
@@ -23,11 +63,11 @@ export function LabSetup({ partnerId }: LabSetupProps) {
     labs,
     isLoadingLabs,
     devicesByLab,
+    devicesFetchedAt,
     fetchLabs,
     createLab,
     fetchDevices,
     registerDevice,
-    rotateToken,
     revokeDevice,
     lastMintedToken,
     clearMintedToken,
@@ -36,6 +76,11 @@ export function LabSetup({ partnerId }: LabSetupProps) {
   const [selectedLabId, setSelectedLabId] = useState<string | null>(null);
   const [isCreateLabOpen, setCreateLabOpen] = useState(false);
   const [isRegisterDeviceOpen, setRegisterDeviceOpen] = useState(false);
+  const [isPairingOpen, setPairingOpen] = useState(false);
+  const [reconnectDevice, setReconnectDevice] = useState<DeviceResponse | null>(null);
+  const [movingDevice, setMovingDevice] = useState<DeviceResponse | null>(null);
+  const [diagnosticsDevice, setDiagnosticsDevice] = useState<DeviceResponse | null>(null);
+  const [isRefreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,14 +88,69 @@ export function LabSetup({ partnerId }: LabSetupProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [partnerId]);
 
+  // Poll the device list so health metrics reflect the present, pausing while
+  // the tab is hidden and catching up the moment it comes back.
   useEffect(() => {
-    if (selectedLabId) fetchDevices(selectedLabId);
+    if (!selectedLabId) return;
+    const labId = selectedLabId;
+    let handle: ReturnType<typeof setInterval> | null = null;
+
+    const poll = () => void fetchDevices(labId, { silent: true });
+    const start = () => {
+      if (handle === null) handle = setInterval(poll, DEVICE_POLL_MS);
+    };
+    const stop = () => {
+      if (handle !== null) {
+        clearInterval(handle);
+        handle = null;
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        stop();
+      } else {
+        poll();
+        start();
+      }
+    };
+
+    void fetchDevices(labId);
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLabId]);
 
+  const handleManualRefresh = useCallback(async () => {
+    if (!selectedLabId || isRefreshing) return;
+    setRefreshing(true);
+    try {
+      await fetchDevices(selectedLabId, { silent: true });
+    } finally {
+      setRefreshing(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLabId, isRefreshing]);
+
   const selectedLab = labs.find((l) => l.id === selectedLabId);
-  const devices = selectedLabId ? devicesByLab[selectedLabId] || [] : [];
+  const devices = useMemo(
+    () => (selectedLabId ? devicesByLab[selectedLabId] || [] : []),
+    [selectedLabId, devicesByLab],
+  );
+  // Revoked devices stay in the store — modals, the minted-token lookup and the
+  // pairing wizard's duplicate check all still need them — but they are dead
+  // rows to an operator, so the grid and the sidebar counts hide them.
+  const visibleDevices = useMemo(() => devices.filter((d) => !isRevokedDevice(d)), [devices]);
   const mintedDevice = lastMintedToken ? devices.find((d) => d.id === lastMintedToken.deviceId) : null;
+  // Track the polled copy so an open diagnostics panel keeps updating rather
+  // than freezing on the snapshot taken when it was opened.
+  const liveDiagnosticsDevice = diagnosticsDevice
+    ? (devices.find((d) => d.id === diagnosticsDevice.id) ?? diagnosticsDevice)
+    : null;
 
   return (
     <div className="flex h-full">
@@ -76,24 +176,32 @@ export function LabSetup({ partnerId }: LabSetupProps) {
           <p className="text-sm text-[#1A3D2C]/40">No labs yet. Create one to register devices.</p>
         ) : (
           <div className="space-y-2">
-            {labs.map((lab) => (
-              <button
-                key={lab.id}
-                onClick={() => setSelectedLabId(lab.id)}
-                className={`flex w-full items-center justify-between rounded-xl p-3.5 text-left transition-colors ${
-                  selectedLabId === lab.id ? "bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)]" : "hover:bg-white/60"
-                }`}
-              >
-                <div>
-                  <p className="text-sm font-bold text-[#1A3D2C]">{lab.name}</p>
-                  <p className="mt-0.5 text-[11px] text-[#1A3D2C]/50">
-                    {lab.device_count} device{lab.device_count === 1 ? "" : "s"}
-                    {lab.location ? ` · ${lab.location}` : ""}
-                  </p>
-                </div>
-                <ChevronRight size={16} className="shrink-0 text-[#1A3D2C]/30" />
-              </button>
-            ))}
+            {labs.map((lab) => {
+              // `device_count` comes from the API and still counts revoked rows.
+              // Once this lab's devices are loaded, count what we actually show.
+              const loaded = devicesByLab[lab.id];
+              const deviceCount = loaded
+                ? loaded.filter((d) => !isRevokedDevice(d)).length
+                : lab.device_count;
+              return (
+                <button
+                  key={lab.id}
+                  onClick={() => setSelectedLabId(lab.id)}
+                  className={`flex w-full items-center justify-between rounded-xl p-3.5 text-left transition-colors ${
+                    selectedLabId === lab.id ? "bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)]" : "hover:bg-white/60"
+                  }`}
+                >
+                  <div>
+                    <p className="text-sm font-bold text-[#1A3D2C]">{lab.name}</p>
+                    <p className="mt-0.5 text-[11px] text-[#1A3D2C]/50">
+                      {deviceCount} device{deviceCount === 1 ? "" : "s"}
+                      {lab.location ? ` · ${lab.location}` : ""}
+                    </p>
+                  </div>
+                  <ChevronRight size={16} className="shrink-0 text-[#1A3D2C]/30" />
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -115,26 +223,55 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                   {Math.round(selectedLab.default_session_seconds / 60)} min
                 </p>
               </div>
-              <button
-                onClick={() => setRegisterDeviceOpen(true)}
-                className="flex items-center gap-2 rounded-xl bg-[#1A3D2C] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#0f2a1d]"
-              >
-                <Plus size={16} />
-                Register device
-              </button>
+              <div className="flex items-center gap-2">
+                <LastUpdatedLabel fetchedAt={devicesFetchedAt[selectedLab.id]} />
+                <button
+                  onClick={handleManualRefresh}
+                  disabled={isRefreshing}
+                  aria-label="Refresh device health"
+                  title="Refresh device health"
+                  className="flex items-center justify-center rounded-xl border border-[#1A3D2C]/10 p-2.5 text-[#1A3D2C]/60 hover:bg-[#1A3D2C]/5 disabled:opacity-50"
+                >
+                  <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
+                </button>
+                <button
+                  onClick={() => setRegisterDeviceOpen(true)}
+                  className="flex items-center gap-2 rounded-xl border border-[#1A3D2C]/10 px-3 py-2.5 text-xs font-bold text-[#1A3D2C]/60 hover:bg-[#1A3D2C]/5"
+                  title="Manual token registration is retained only as a pilot fallback"
+                >
+                  <Settings2 size={14} />
+                  Advanced
+                </button>
+                <button
+                  onClick={() => {
+                    setReconnectDevice(null);
+                    setPairingOpen(true);
+                  }}
+                  className="flex items-center gap-2 rounded-xl bg-[#1A3D2C] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#0f2a1d]"
+                >
+                  <Plus size={16} />
+                  Pair devices
+                </button>
+              </div>
             </div>
 
             {error && (
               <div className="mb-4 rounded-xl bg-danger-bg p-3 text-sm text-danger-ink">{error}</div>
             )}
 
-            {devices.length === 0 ? (
+            {visibleDevices.length === 0 ? (
               <p className="text-sm text-[#1A3D2C]/40">No devices registered yet.</p>
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {devices.map((device) => {
+                {visibleDevices.map((device) => {
                   const health = healthStyles[device.health_status];
                   const HealthIcon = health.icon;
+                  const summary = summarizeHealth(device);
+                  const faultCount = summary.failedNames.length;
+                  const waitingForFirstConnection =
+                    device.provisioning_source === "PAIRING" &&
+                    !device.first_connected_at &&
+                    !device.revoked_at;
                   return (
                     <div
                       key={device.id}
@@ -145,7 +282,9 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="text-sm font-bold text-[#1A3D2C]">{device.device_label}</p>
-                          <p className="mt-0.5 font-mono text-[11px] text-[#1A3D2C]/40">{device.hardware_id}</p>
+                          <p className="mt-0.5 font-mono text-[11px] text-[#1A3D2C]/40">
+                            {displayHardwareId(device.hardware_id)}
+                          </p>
                         </div>
                         {device.is_spare && (
                           <span className="rounded-full bg-[#1A3D2C]/5 px-2 py-0.5 text-[10px] font-bold uppercase text-[#1A3D2C]/50">
@@ -154,26 +293,50 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                         )}
                       </div>
                       <span
-                        className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${health.className}`}
+                        className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                          waitingForFirstConnection
+                            ? "bg-amber-50 text-amber-700"
+                            : health.className
+                        }`}
                       >
                         <HealthIcon size={12} />
-                        {health.label}
+                        {waitingForFirstConnection ? "Approved · waiting for device" : health.label}
+                        {!waitingForFirstConnection && faultCount > 0 && (
+                          <span className="font-bold">
+                            · {faultCount} fault{faultCount === 1 ? "" : "s"}
+                          </span>
+                        )}
                       </span>
+                      <div className="mt-2 space-y-0.5 text-[11px] text-[#1A3D2C]/45">
+                        {device.device_model && <p>{device.device_model}</p>}
+                        {device.firmware_version && <p>Software {device.firmware_version}</p>}
+                        {device.last_connected_at && (
+                          <p>
+                            <RelativeTime value={device.last_connected_at} prefix="Last connected " />
+                          </p>
+                        )}
+                      </div>
+
+                      <DeviceHealthStrip device={device} onOpenDiagnostics={setDiagnosticsDevice} />
 
                       {!device.revoked_at && (
-                        <div className="mt-4 flex gap-2">
+                        <div className="mt-4 grid grid-cols-3 gap-2">
                           <button
-                            onClick={async () => {
-                              try {
-                                await rotateToken(selectedLab.id, device.id);
-                              } catch (err) {
-                                setError(err instanceof ApiRequestError ? err.message : "Failed to rotate token.");
-                              }
+                            onClick={() => {
+                              setReconnectDevice(device);
+                              setPairingOpen(true);
                             }}
-                            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#1A3D2C]/5 py-2 text-[11px] font-bold text-[#1A3D2C] hover:bg-[#1A3D2C]/10"
+                            className="flex items-center justify-center gap-1 rounded-lg bg-[#1A3D2C]/5 py-2 text-[10px] font-bold text-[#1A3D2C] hover:bg-[#1A3D2C]/10"
                           >
-                            <RotateCw size={12} />
-                            Rotate token
+                            <Link2 size={12} />
+                            Reconnect
+                          </button>
+                          <button
+                            onClick={() => setMovingDevice(device)}
+                            className="flex items-center justify-center gap-1 rounded-lg bg-[#1A3D2C]/5 py-2 text-[10px] font-bold text-[#1A3D2C] hover:bg-[#1A3D2C]/10"
+                          >
+                            <ArrowRightLeft size={12} />
+                            Move
                           </button>
                           <button
                             onClick={async () => {
@@ -183,7 +346,7 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                                 setError(err instanceof ApiRequestError ? err.message : "Failed to revoke device.");
                               }
                             }}
-                            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-danger-bg py-2 text-[11px] font-bold text-danger-ink hover:bg-[#fbdcd3]"
+                            className="flex items-center justify-center gap-1 rounded-lg bg-danger-bg py-2 text-[10px] font-bold text-danger-ink hover:bg-[#fbdcd3]"
                           >
                             <Ban size={12} />
                             Revoke
@@ -221,6 +384,34 @@ export function LabSetup({ partnerId }: LabSetupProps) {
           }}
         />
       )}
+
+      {selectedLab && (
+        <LabDevicePairingWizard
+          isOpen={isPairingOpen}
+          lab={selectedLab}
+          existingDevices={devices}
+          reconnectDevice={reconnectDevice}
+          onClose={() => {
+            setPairingOpen(false);
+            setReconnectDevice(null);
+          }}
+        />
+      )}
+
+      {selectedLab && (
+        <MoveDeviceModal
+          device={movingDevice}
+          sourceLab={selectedLab}
+          labs={labs}
+          onClose={() => setMovingDevice(null)}
+          onMoved={(targetLabId) => setSelectedLabId(targetLabId)}
+        />
+      )}
+
+      <DeviceDiagnosticsModal
+        device={liveDiagnosticsDevice}
+        onClose={() => setDiagnosticsDevice(null)}
+      />
 
       {lastMintedToken && (
         <DeviceTokenModal

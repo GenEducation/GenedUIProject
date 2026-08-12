@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, Send, Sparkles, Loader2, ArrowLeft, AlertTriangle } from "lucide-react";
+import { ChevronRight, ChevronLeft, Send, Sparkles, Loader2, ArrowLeft, AlertTriangle, Menu } from "lucide-react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTestStore } from "@/features/student/store/useTestStore";
@@ -12,6 +12,7 @@ import { PaperHeader } from "@/features/student/components/test/PaperHeader";
 import { SectionDivider } from "@/features/student/components/test/SectionDivider";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { StudentHomeSidebar } from "@/features/student/components/StudentHomeSidebar";
+import { useSidebarStore } from "@/features/student/store/useSidebarStore";
 import { Question, PaperSection } from "@/features/student/types/test";
 
 interface GroupedSection {
@@ -41,15 +42,15 @@ function TestPageContent() {
 
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0);
   const [showSubmitWarning, setShowSubmitWarning] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
 
   /* responsive sidebar */
   useEffect(() => {
-    const handle = () => setSidebarOpen(window.innerWidth >= 1024);
+    const handle = () => applyResponsive(window.innerWidth >= 1024);
     handle();
     window.addEventListener("resize", handle);
     return () => window.removeEventListener("resize", handle);
-  }, []);
+  }, [applyResponsive]);
 
   const sidebarToggle = !sidebarOpen && (
     <button
@@ -58,7 +59,7 @@ function TestPageContent() {
       style={{ width: 38, height: 38, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#042E5C" }}
       title="Open sidebar"
     >
-      ☰
+      <Menu size={16} strokeWidth={1.75} />
     </button>
   );
 
@@ -161,7 +162,7 @@ function TestPageContent() {
   if (isLoading) {
     return (
       <div className="h-screen flex overflow-hidden">
-        <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
         {sidebarToggle}
         <div className="flex-1 min-w-0 bg-[#F8FAFC] flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
           <motion.div
@@ -189,7 +190,7 @@ function TestPageContent() {
 
   return (
     <div className="h-screen flex overflow-hidden">
-      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
       {sidebarToggle}
     <div className="min-h-screen flex-1 min-w-0 bg-[#F8FAFC] flex flex-col overflow-y-auto">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-[#042E5C]/5 px-6 py-4">

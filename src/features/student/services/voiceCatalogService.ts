@@ -29,5 +29,5 @@ export async function fetchVoices(): Promise<GeminiVoice[]> {
       v.sample_url.startsWith("http://") || v.sample_url.startsWith("https://")
         ? v.sample_url
         : `${API_BASE_URL}${v.sample_url}`,
-  }));
+  })).sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }));
 }

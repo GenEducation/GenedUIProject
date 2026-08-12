@@ -100,7 +100,7 @@ export function GeneralOnboardingWizard({
         backdropFilter: "blur(6px)",
         WebkitBackdropFilter: "blur(6px)",
         padding: "32px 20px",
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        fontFamily: "var(--font-body)",
       }}
     >
       {/* Subtle dot grid */}

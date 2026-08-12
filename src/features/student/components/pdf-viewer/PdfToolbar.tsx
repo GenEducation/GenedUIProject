@@ -33,7 +33,7 @@ const ICON_BTN: React.CSSProperties = {
 const ACTIVE_BTN: React.CSSProperties = {
   ...ICON_BTN,
   background: "#EDE9FE",
-  color: "#5B4DC7",
+  color: "var(--tutor)",
 };
 
 const DIVIDER: React.CSSProperties = {
@@ -63,7 +63,7 @@ export function PdfToolbar({
         padding: "4px 8px",
         background: "#FFFFFF",
         borderBottom: "1px solid #E2E8F0",
-        fontFamily: "'DM Sans', sans-serif",
+        fontFamily: "var(--font-body)",
       }}
     >
       {/* Sidebar toggle */}

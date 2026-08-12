@@ -65,7 +65,7 @@ export default function ExpressionBuilder({ directiveId, meta, disabled, readOnl
 const tileBtn = (lock: boolean | undefined, _c: string): React.CSSProperties => ({
   display: "flex", alignItems: "center", gap: 4, fontSize: 14, fontWeight: 700, padding: "8px 14px",
   borderRadius: 12, border: `1px solid ${COLORS.border}`, background: "#FFFFFF", color: COLORS.ink,
-  cursor: lock ? "default" : "pointer", fontFamily: "'DM Sans', sans-serif",
+  cursor: lock ? "default" : "pointer", fontFamily: "var(--font-body)",
 });
 const tile = (bg: string): React.CSSProperties => ({
   background: bg, color: "#FFFFFF", padding: "8px 14px", borderRadius: 8, fontSize: 15, fontWeight: 700,

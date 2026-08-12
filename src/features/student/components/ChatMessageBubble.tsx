@@ -145,6 +145,12 @@ const SmoothMarkdown = ({ content, isStreaming }: { content: string; isStreaming
 export const ChatMessageBubble = React.memo(
   ({ message, isStreaming, onOptionSelect }: ChatMessageBubbleProps) => {
     const isUser = message.sender === "user";
+    // The safety gate withheld the tutor's turn and sent this instead. Warm amber, not
+    // warning-red: the child asked something the tutor is steering away from, and the
+    // product's job at that moment is to redirect them kindly, not to make them feel
+    // caught. Distinct from a normal reply because it IS distinct — treating it as
+    // ordinary tutor speech is how a redirect gets mistaken for an answer.
+    const isSafetyRedirect = !isUser && !!message.isSafetyRedirect;
     const [copied, setCopied] = useState(false);
 
     // Decide once per mount (render-time ref latch, StrictMode-safe) whether
@@ -194,7 +200,7 @@ export const ChatMessageBubble = React.memo(
         {!isUser && (
           <div className="relative flex-shrink-0 mt-0.5">
             {isStreaming && (
-              <div className="absolute -inset-[3px] rounded-full border-[2px] border-transparent border-t-[#5B4DC7] border-r-[#5B4DC7]/20 animate-spin" style={{ animationDuration: '1s' }} />
+              <div className="absolute -inset-[3px] rounded-full border-[2px] border-transparent border-t-[var(--tutor)] border-r-[var(--tutor)]/20 animate-spin" style={{ animationDuration: '1s' }} />
             )}
             <div className="rounded-full overflow-hidden relative z-10 bg-white" style={{ border: "1px solid #E2E8F0", width: "clamp(32px, 8vw, 40px)", height: "clamp(32px, 8vw, 40px)" }}>
               <Image src="/Favicon1.jpg" alt="AI Agent" width={40} height={40} className="object-cover w-full h-full" />
@@ -206,15 +212,20 @@ export const ChatMessageBubble = React.memo(
           {/* Message Content Bin */}
           {(isStreaming || message.statusText || message.text.length > 0 || (message.elements && message.elements.length > 0)) && (
             <div
-              className="px-4 py-3 sm:px-6 sm:py-5 leading-relaxed text-[13px] sm:text-[15px] transition-all duration-300 w-full"
+              className="px-4 py-3 sm:px-6 sm:py-5 leading-relaxed text-[13px] sm:text-[15px] w-full"
               style={{
                 borderRadius: "1.75rem",
                 borderTopRightRadius: isUser ? 6 : undefined,
                 borderTopLeftRadius: !isUser ? 6 : undefined,
-                background: isUser ? "#5B4DC7" : "#FFFFFF",
-                color: isUser ? "#FFFFFF" : "#1A202C",
-                border: isUser ? "none" : "1px solid #E2E8F0",
+                background: isUser ? "var(--tutor)" : isSafetyRedirect ? "#FFF8EC" : "#FFFFFF",
+                color: isUser ? "#FFFFFF" : isSafetyRedirect ? "#7C4A11" : "#1A202C",
+                border: isUser ? "none" : isSafetyRedirect ? "1px solid #F3D9AE" : "1px solid #E2E8F0",
                 boxShadow: isUser ? "0 2px 10px rgba(91,77,199,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
+                // Scoped to color/shadow only — `transition-all` here used to
+                // tween the bubble's width on every revealed character
+                // (the column is shrink-to-fit up to max-w-[85%]), making the
+                // bubble visibly lag the streamed text.
+                transition: "background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease",
               }}
             >
               {message.text.length === 0 && !message.statusText && !message.elements && isStreaming ? (
@@ -255,7 +266,7 @@ export const ChatMessageBubble = React.memo(
               <button
                 onClick={handleCopy}
                 style={{ width: 28, height: 28, borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8" }}
-                className="transition-all hover:bg-[#F7F8FC] hover:text-[#5B4DC7]"
+                className="transition-all hover:bg-[#F7F8FC] hover:text-[var(--tutor)]"
               >
                 {copied ? <Check size={14} className="text-[#00B894]" /> : <Copy size={14} />}
               </button>
@@ -278,7 +289,7 @@ export const ChatMessageBubble = React.memo(
                 <button
                   onClick={handleCopy}
                   style={{ width: 32, height: 32, borderRadius: 10, background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", transition: "all 0.2s" }}
-                  className="hover:bg-[#F7F8FC] hover:text-[#5B4DC7]"
+                  className="hover:bg-[#F7F8FC] hover:text-[var(--tutor)]"
                 >
                   {copied ? <Check size={15} className="text-[#00B894]" /> : <Copy size={15} />}
                 </button>
@@ -297,13 +308,13 @@ export const ChatMessageBubble = React.memo(
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: speakState === "speaking" ? "#5B4DC7" : "#94A3B8",
+                    color: speakState === "speaking" ? "var(--tutor)" : "#94A3B8",
                     transition: "all 0.2s",
                   }}
-                  className="hover:bg-[#F7F8FC] hover:text-[#5B4DC7]"
+                  className="hover:bg-[#F7F8FC] hover:text-[var(--tutor)]"
                 >
                   {speakState === "loading" ? (
-                    <Loader2 size={15} className="animate-spin text-[#5B4DC7]" />
+                    <Loader2 size={15} className="animate-spin text-[var(--tutor)]" />
                   ) : speakState === "speaking" ? (
                     <VolumeX size={15} />
                   ) : (

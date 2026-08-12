@@ -6,17 +6,6 @@ import { Sparkles } from "lucide-react";
 
 const CONFETTI_COLORS = ["#059F6D", "#042E5C", "#FFD700", "#FF6B6B", "#A78BFA", "#38BDF8"];
 
-const SUBJECT_ICONS: Record<string, string> = {
-  Mathematics: "📐",
-  English: "📖",
-  Science: "🔬",
-  History: "🏛️",
-  Physics: "⚛️",
-  Chemistry: "⚗️",
-  Biology: "🧬",
-  Geography: "🌍",
-};
-
 function ConfettiParticle({ index }: { index: number }) {
   const color = CONFETTI_COLORS[index % CONFETTI_COLORS.length];
   const randomX = (Math.random() - 0.5) * 800;
@@ -51,7 +40,6 @@ interface SubjectOnboardingCelebrationProps {
 
 export function SubjectOnboardingCelebration({ subject, onDismiss }: SubjectOnboardingCelebrationProps) {
   const [showConfetti, setShowConfetti] = useState(true);
-  const icon = SUBJECT_ICONS[subject] ?? "🎓";
 
   useEffect(() => {
     const timer = setTimeout(() => setShowConfetti(false), 3500);
@@ -87,14 +75,15 @@ export function SubjectOnboardingCelebration({ subject, onDismiss }: SubjectOnbo
           </motion.div>
 
           {/* Subject icon */}
-          <motion.div
+          <motion.img
+            src="/loaders/journey/char-trophy.svg"
+            alt=""
+            aria-hidden="true"
             initial={{ scale: 0, rotate: -20 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 400, damping: 16, delay: 0.3 }}
-            className="relative z-10 text-6xl mb-4 inline-block"
-          >
-            {icon}
-          </motion.div>
+            className="relative z-10 mx-auto mb-4 w-40 h-40 object-contain drop-shadow-xl"
+          />
 
           <motion.h2
             initial={{ opacity: 0, y: 10 }}

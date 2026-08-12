@@ -1,4 +1,13 @@
 import { authFetch } from "@/utils/authFetch";
+import type { EducationBoard } from "@/types/education";
+import type {
+  AdminDeviceDetail,
+  AdminDeviceListItem,
+  AdminLabListItem,
+  AdminLabStats,
+  DeviceQuery,
+  Paginated,
+} from "./devices/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -68,7 +77,7 @@ export interface StudentRow {
   name: string | null;
   age: number | null;
   grade: number | null;
-  school_board: string | null;
+  school_board: EducationBoard;
   parent_email: string | null;
   plan: Plan;
 }
@@ -87,6 +96,7 @@ export interface PartnerRow {
   email: string;
   organization: string | null;
   website: string | null;
+  board: EducationBoard;
   student_count: number;
 }
 
@@ -99,6 +109,7 @@ export interface TeacherRow {
   title: string | null;
   partner_id: string | null;
   partner_org: string | null;
+  board: EducationBoard;
   student_count: number;
   plan: Plan;
 }
@@ -128,24 +139,37 @@ export interface Ingestion {
   ingested_at: string;
 }
 
-export interface CreateUserPayload {
-  role: "STUDENT" | "PARENT" | "PARTNER" | "TEACHER";
+interface CreateUserBase {
   email: string;
   password: string;
   username?: string;
-  age?: number;
-  grade?: number;
-  school_board?: string;
-  parent_email?: string;
-  phone?: string;
-  organization?: string;
-  website?: string;
-  // Teacher fields
-  partner_id?: string;
-  full_name?: string;
-  subjects?: string[];
-  title?: string;
 }
+
+export type CreateUserPayload =
+  | (CreateUserBase & {
+      role: "STUDENT";
+      age?: number;
+      grade?: number;
+      parent_email?: string;
+      partner_id?: string;
+    })
+  | (CreateUserBase & {
+      role: "PARENT";
+      phone?: string;
+    })
+  | (CreateUserBase & {
+      role: "PARTNER";
+      organization?: string;
+      website?: string;
+      board: EducationBoard;
+    })
+  | (CreateUserBase & {
+      role: "TEACHER";
+      partner_id: string;
+      full_name?: string;
+      subjects?: string[];
+      title?: string;
+    });
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -207,7 +231,7 @@ export const listParents = () => getJson<ParentRow[]>("/admin/parents");
 
 export const updateStudent = (
   id: string,
-  payload: { name?: string; age?: number; grade?: number; school_board?: string; parent_email?: string },
+  payload: { name?: string; age?: number; grade?: number; parent_email?: string },
 ) => send<{ message: string }>(`/admin/students/${id}`, "PATCH", payload);
 
 export const updateParent = (id: string, payload: { phone?: string }) =>
@@ -220,6 +244,7 @@ export const updatePartner = (
     website?: string;
     enable_teachers?: boolean;
     allow_transcript_access?: boolean;
+    board?: EducationBoard;
   },
 ) => send<{ message: string }>(`/admin/partners/${id}`, "PATCH", payload);
 
@@ -323,6 +348,51 @@ export async function downloadWakewordModel(jobId: string, modelName: string): P
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+// ── Device fleet (ADMIN-ONLY cross-school views, spec §6.7) ────
+
+export const getLabStats = () => getJson<AdminLabStats>("/admin/lab/stats");
+
+export function listFleetDevices(
+  params: DeviceQuery = {},
+): Promise<Paginated<AdminDeviceListItem>> {
+  const qs = new URLSearchParams();
+  if (params.partner_id) qs.set("partner_id", params.partner_id);
+  if (params.lab_id) qs.set("lab_id", params.lab_id);
+  if (params.health_status) qs.set("health_status", params.health_status);
+  if (params.q) qs.set("q", params.q);
+  // `has_fault` is meaningful as an explicit false, so test for undefined.
+  if (params.has_fault !== undefined) qs.set("has_fault", String(params.has_fault));
+  if (params.stale_minutes !== undefined) qs.set("stale_minutes", String(params.stale_minutes));
+  if (params.include_revoked !== undefined) {
+    qs.set("include_revoked", String(params.include_revoked));
+  }
+  qs.set("page", String(params.page ?? 1));
+  qs.set("page_size", String(params.page_size ?? 25));
+  return getJson<Paginated<AdminDeviceListItem>>(`/admin/lab/devices?${qs.toString()}`);
+}
+
+export const getFleetDevice = (id: string) =>
+  getJson<AdminDeviceDetail>(`/admin/lab/devices/${encodeURIComponent(id)}`);
+
+export function listFleetLabs(
+  params: { partner_id?: string; q?: string; page?: number; page_size?: number } = {},
+): Promise<Paginated<AdminLabListItem>> {
+  const qs = new URLSearchParams();
+  if (params.partner_id) qs.set("partner_id", params.partner_id);
+  if (params.q) qs.set("q", params.q);
+  qs.set("page", String(params.page ?? 1));
+  qs.set("page_size", String(params.page_size ?? 25));
+  return getJson<Paginated<AdminLabListItem>>(`/admin/lab/labs?${qs.toString()}`);
+}
+
+/**
+ * Device logs. Not a fleet route — `/lab/devices/{id}/logs` already admits ADMIN
+ * and keys on the device id, so it needs no `/admin` variant (spec §6.7).
+ * The response shape is undocumented; callers render it defensively.
+ */
+export const getDeviceLogs = (id: string) =>
+  getJson<unknown>(`/lab/devices/${encodeURIComponent(id)}/logs`);
 
 // ── Bulk import ────────────────────────────────────────────────
 

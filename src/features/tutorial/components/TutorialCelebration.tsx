@@ -75,15 +75,16 @@ export function TutorialCelebration({ onDismiss }: TutorialCelebrationProps) {
             <div className="w-40 h-40 rounded-full border-2 border-white/10" />
           </motion.div>
 
-          {/* Trophy emoji */}
-          <motion.div
+          {/* Trophy character */}
+          <motion.img
+            src="/loaders/journey/char-trophy.svg"
+            alt=""
+            aria-hidden="true"
             initial={{ scale: 0, rotate: -20 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: "spring", stiffness: 400, damping: 16, delay: 0.3 }}
-            className="relative z-10 text-6xl mb-4 inline-block"
-          >
-            🎉
-          </motion.div>
+            className="relative z-10 mx-auto mb-4 w-40 h-40 object-contain drop-shadow-xl"
+          />
           <motion.h2
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

@@ -12,9 +12,13 @@ export type ObjectiveMode =
 export const OBJECTIVE_MODES: { value: ObjectiveMode; label: string }[] = [
   { value: "CHAPTER_PRACTICE", label: "Chapter Practice" },
   { value: "GAP_RECOVERY", label: "Gap Recovery" },
-  { value: "REVISION", label: "Revision" },
+  // Hidden until the backend implements distinct behavior. Today REVISION and
+  // AI_EXPLORATION have no dedicated device-graph logic — they silently run as
+  // plain Chapter Practice — so we don't offer them in the scheduler yet.
+  // (Backend enum still accepts them; re-enable here once implemented.)
+  // { value: "REVISION", label: "Revision" },
   { value: "DOUBT_SOLVING", label: "Doubt Solving" },
-  { value: "AI_EXPLORATION", label: "AI Exploration" },
+  // { value: "AI_EXPLORATION", label: "AI Exploration" },
   { value: "SYSTEM_RECOMMENDED", label: "System Recommended" },
 ];
 
@@ -32,6 +36,12 @@ export type LabSessionState =
   | "ABSENT";
 
 export type LabDeviceHealth = "ONLINE" | "OFFLINE" | "NEEDS_ATTENTION";
+export type LabDevicePairingStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "CONNECTED"
+  | "EXPIRED"
+  | "CANCELLED";
 
 export type EndReason =
   | "completed"
@@ -79,6 +89,54 @@ export interface LabUpdateRequest {
 
 // -- Devices --------------------------------------------------------------
 
+/**
+ * Normalized subsystem verdict. The wire format sends free-form strings, so
+ * always funnel them through `normalizeStatus` in `../utils/deviceHealth`
+ * rather than casting — field firmware ships new vocabulary without us.
+ */
+export type HealthComponentStatus = "ok" | "warn" | "fail" | "unknown";
+
+/** Arbitrary per-subsystem metric. Scalars, or one level of nesting (e.g. `mixer`). */
+export type HealthMetricValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Record<string, unknown>
+  | unknown[];
+
+export interface DeviceHealthComponent {
+  /** Deliberately not narrowed — normalize at read time. */
+  status: string;
+  detail?: string | null;
+  metrics?: Record<string, HealthMetricValue> | null;
+}
+
+/**
+ * The device's last self-test, verbatim from the gateway. Every field is
+ * optional: this is produced by firmware in the field that versions
+ * independently of the portal.
+ */
+export interface DeviceHealthReport {
+  type?: string;
+  status?: string;
+  /** "periodic" | "boot" | "manual" | future values. */
+  trigger?: string;
+  /** "SCHOOL_LAB" | future values. */
+  mode?: string;
+  checked_at?: string;
+  uptime_s?: number;
+  device_id?: string;
+  serial?: string;
+  ip?: string;
+  firmware_version?: string;
+  schema_version?: number;
+  failed?: string[];
+  components?: Record<string, DeviceHealthComponent>;
+  /** Forward-compat: the server may add fields ahead of the client. */
+  [key: string]: unknown;
+}
+
 export interface DeviceResponse {
   id: string;
   partner_id: string;
@@ -87,9 +145,18 @@ export interface DeviceResponse {
   hardware_id: string;
   health_status: LabDeviceHealth;
   last_heartbeat_at: string | null;
+  device_model?: string | null;
   firmware_version?: string | null;
+  provisioned_at?: string | null;
+  first_connected_at?: string | null;
+  last_connected_at?: string | null;
+  provisioning_source?: "MANUAL" | "PAIRING";
   is_spare: boolean;
   revoked_at: string | null;
+  /** Last self-test the device reported about itself. Null until it first reports. */
+  last_health_report?: DeviceHealthReport | null;
+  last_health_at?: string | null;
+  last_ip?: string | null;
 }
 
 export interface DeviceProvisionResponse {
@@ -111,6 +178,41 @@ export interface DeviceUpdateRequest {
   is_spare?: boolean;
   firmware_version?: string;
   health_status?: LabDeviceHealth;
+}
+
+export interface ConfirmLabDevicePairingRequest {
+  lab_id: string;
+  user_code: string;
+  device_label: string;
+  is_spare?: boolean;
+  existing_device_id?: string | null;
+}
+
+export interface LabDevicePairingRecord {
+  id: string;
+  status: LabDevicePairingStatus;
+  hardware_id: string;
+  device_model?: string | null;
+  firmware_version?: string | null;
+  expires_at: string;
+  approved_at?: string | null;
+  connected_at?: string | null;
+  cancelled_at?: string | null;
+  partner_id?: string | null;
+  lab_id?: string | null;
+  lab_device_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConfirmLabDevicePairingResponse {
+  status: LabDevicePairingStatus;
+  pairing_id: string;
+  device: DeviceResponse;
+}
+
+export interface MoveDeviceRequest {
+  target_lab_id: string;
 }
 
 // -- Teaching catalog (deterministic dropdown source) -----------------------
@@ -155,6 +257,7 @@ export interface SlotResponse {
   session_seconds: number;
   status: LabSlotStatus;
   auto_allocated: boolean;
+  board_version: number;
 }
 
 export interface CreateSlotRequest {
@@ -192,7 +295,34 @@ export interface ActivateResponse {
   slot_id: string;
   assigned: number;
   idle: number;
+  capacity_reserved: number;
+  capacity_limit: number;
   sessions: SessionResponse[];
+}
+
+export interface RosterStudent {
+  student_id: string;
+  name: string;
+}
+
+export interface SeatAssignment {
+  student_id: string;
+  device_id: string;
+}
+
+export interface LabCapacityResponse {
+  slot_id: string;
+  limit: number;
+  required: number;
+  active: number;
+  lab_active: number;
+  reserved: number;
+  available: number;
+  can_start: boolean;
+  // Device-pool preflight: desks online vs the class roster, plus spares held in reserve.
+  roster: number;
+  healthy_devices: number;
+  spare: number;
 }
 
 // -- Sessions / board -------------------------------------------------------

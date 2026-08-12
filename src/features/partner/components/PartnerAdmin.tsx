@@ -27,7 +27,7 @@ export function PartnerAdmin() {
   const partnerId = rawPartnerId?.replace(/['"]+/g, "");
 
   return (
-    <div className="flex h-screen bg-[#F8F9F8] overflow-hidden">
+    <div className="portal-legacy-type flex h-screen bg-[#F8F9F8] overflow-hidden">
       {/* Navigation Sidebar */}
       <SideBar
         activeView={activeView}

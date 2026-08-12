@@ -25,6 +25,39 @@
   --danger-ink: #b3411f;
   --danger-bg: #fdeeea;
   --info: #1d5aa8;
+
+  /* Student app product token layer. Replaces the per-file `const C = {...}`
+     palettes in StudentHome.tsx / StudentHomeSidebar.tsx /
+     StudentChatSidebar.tsx / StudentProfile.tsx, which each re-declared a
+     similar-but-diverging purple/blue/green palette instead of using the
+     brand navy/emerald above. */
+  --primary: #059F6D;        /* every primary CTA — brand emerald (= --emerald) */
+  --primary-ink: #042E5C;    /* body text ink (= --navy) */
+  --tutor: #5B4DC7;          /* Nia only: chat bubbles, voice orb, presence */
+  --tutor-light: #8B7FE8;
+  --tutor-soft: #4A90D9;     /* secondary accent used alongside --tutor in gradients */
+  --warn-2: #F0AD4E;         /* streak-at-risk / celebratory accent */
+  --danger-2: #E8635A;       /* destructive actions, distinct shade from --danger */
+  --growth: #00B894;         /* success / PRO badge */
+
+  --subject-english: #4A90D9;
+  --subject-math: #2D6A4F;
+  --subject-science: #D4820A;
+  --subject-social: #B0543F;
+  --subject-hindi: #7B5EA7;
+
+  --text-primary: #1a2332;
+  --text-mid: #4a5568;
+  --text-muted: #94a3b8;
+  --text-faint: #cbd5e1;
+  --surface-page: #F7F8FC;
+  --surface-card: #FFFFFF;
+  --surface-border: #e2e8f0;
+  --surface-sunken: #F4F3EE; /* recessed field bg (inputs/selects); only the 5 FIELD_CLASSNAME sites use this token today */
+
+  --radius-card: 24px; /* matches Profile's list cards, the actual majority usage — nothing consumed the old 16px value */
+  --radius-control: 10px;
+  --radius-pill: 999px;
 }
 
 @theme inline {
@@ -53,19 +86,46 @@
   --color-danger-bg: var(--danger-bg);
   --color-info: var(--info);
 
-  --font-sans: "Inter", var(--font-inter), ui-sans-serif, system-ui;
+  /* Tailwind utility generation (font-sans, font-serif) reads these — the
+     real, inheritable custom properties are declared on :root above so
+     plain CSS rules and inline `var(--font-body)` styles work too. */
+  --font-sans: var(--font-body);
   --font-serif: "Playfair Display", var(--font-playfair), ui-serif, Georgia, serif;
 }
 
+/* Student app + onboarding + auth type system, declared on `body` (not
+   :root) because next/font's --font-baloo/--font-mukta/etc. variables are
+   themselves attached via CSS-module classes on <body> in layout.tsx.
+   Custom properties only see var() references defined on the SAME element
+   or an ancestor — :root is body's ancestor, so a var(--font-baloo)
+   reference declared on :root would be invalid at that scope and the whole
+   property would compute to nothing. Declaring them here, alongside the
+   variables they reference, keeps every var() resolvable. */
 body {
+  --font-display: var(--font-baloo), ui-sans-serif, system-ui;
+  --font-body: var(--font-mukta), ui-sans-serif, system-ui;
+  /* Report Card "document" typography — distinct on purpose. */
+  --font-report-display: var(--font-source-serif), Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* Improve base scaling */
-  font-size: 16px; 
+  font-size: 16px;
   line-height: 1.6;
+}
+
+/* Pin the out-of-scope teacher/parent/lab portals to the pre-P1 Inter +
+   Playfair pairing so the font-token migration doesn't change how they
+   look. Apply this class to those portals' root elements — they're
+   descendants of body, so var(--font-inter)/var(--font-playfair) (also
+   declared on body) resolve fine here. */
+.portal-legacy-type {
+  --font-display: "Playfair Display", var(--font-playfair), ui-serif, Georgia, serif;
+  --font-body: "Inter", var(--font-inter), ui-sans-serif, system-ui;
 }
 
 /* Sidebar Transition Utilities */
@@ -82,7 +142,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-weight: 700;
 }
 

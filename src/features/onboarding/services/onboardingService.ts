@@ -47,7 +47,10 @@ export const onboardingService = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ student_id: studentId, subject, grade }),
     });
-    if (!response.ok) throw new Error("Failed to start subject onboarding");
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data?.message || data?.detail || "Failed to start subject onboarding");
+    }
     return response.json();
   },
 

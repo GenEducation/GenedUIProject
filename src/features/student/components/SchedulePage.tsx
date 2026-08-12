@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useScheduleStore } from "@/features/student/store/useScheduleStore";
 import { useTestStore } from "@/features/student/store/useTestStore";
+import { useSidebarStore } from "@/features/student/store/useSidebarStore";
 import {
   CalendarClock,
-  ArrowLeft,
   Loader2,
   Sparkles,
   BookOpen,
@@ -23,6 +23,16 @@ import { DatePicker } from "./DatePicker";
 import { TimePicker } from "./TimePicker";
 import { RescheduleModal, RescheduleModalTarget } from "@/components/shared/RescheduleModal";
 import { SessionType } from "../types/schedule";
+import { Button } from "@/components/ui/Button";
+import { STRINGS } from "../constants/strings";
+import {
+  requireExactSubject,
+  type ExactSubject,
+} from "@/features/subjects/subjectCatalog";
+import { PageHeader } from "@/components/student/PageHeader";
+import { SidebarToggle } from "@/components/student/SidebarToggle";
+import { PageContainer } from "@/components/student/PageContainer";
+import { FIELD_CLASSNAME, FIELD_FOCUS_CLASSNAME } from "@/components/ui/fieldStyles";
 
 function tomorrowDateString(): string {
   const d = new Date();
@@ -57,9 +67,9 @@ export function SchedulePage() {
   const { sessions, isLoading, isBooking, bookError, loadScheduledSessions, bookSession, isRescheduling, rescheduleError, rescheduleSession } = useScheduleStore();
   const { loadTest } = useTestStore();
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const [sessionType, setSessionType] = useState<SessionType>("TEST");
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState<ExactSubject | "">("");
   const [topic, setTopic] = useState("");
   const [scheduledDate, setScheduledDate] = useState(tomorrowDateString());
   const [scheduledTime, setScheduledTime] = useState("");
@@ -69,11 +79,11 @@ export function SchedulePage() {
   const [rescheduleConfirmation, setRescheduleConfirmation] = useState(false);
 
   useEffect(() => {
-    const handle = () => setSidebarOpen(window.innerWidth >= 1024);
+    const handle = () => applyResponsive(window.innerWidth >= 1024);
     handle();
     window.addEventListener("resize", handle);
     return () => window.removeEventListener("resize", handle);
-  }, []);
+  }, [applyResponsive]);
 
   useEffect(() => {
     if (studentProfile?.user_id) {
@@ -95,14 +105,15 @@ export function SchedulePage() {
   }, [chapters]);
 
   const handleBook = async () => {
-    if (!studentProfile?.user_id || !subject || !scheduledDate) return;
+    if (!studentProfile?.user_id || !Number.isInteger(studentProfile.grade) || !subject || !scheduledDate) return;
     if (sessionType === "TEST" && !topic) return;
+    const exactSubject = requireExactSubject(subject, studentProfile.grade);
 
     setBookedConfirmation(false);
     const result = await bookSession({
       user_id: studentProfile.user_id,
       session_type: sessionType,
-      subject,
+      subject: exactSubject,
       topic: topic || undefined,
       scheduled_date: scheduledDate,
       scheduled_time: scheduledTime || undefined,
@@ -152,45 +163,153 @@ export function SchedulePage() {
     }
   };
 
-  const sortedSessions = [...sessions].sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
+  // Classify a session by its lifecycle so genuinely upcoming sessions are
+  // separated from ones that already failed prep or slipped into the past.
+  const classify = (s: (typeof sessions)[number]) => {
+    const startTs = getSessionStartTimestamp(s.scheduled_date, s.scheduled_time);
+    const isExpired = Date.now() - startTs > 24 * 60 * 60 * 1000;
+    const isFailed = s.preparation_status === "FAILED";
+    const isReady = s.preparation_status === "COMPLETED" && !!s.session_id;
+    return { startTs, isExpired, isFailed, isReady };
+  };
+
+  // The backend can emit several rows for the same topic/date when prep is
+  // retried; collapse them, keeping the "most ready" row.
+  const readinessRank = (s: (typeof sessions)[number]) => {
+    const { isReady, isFailed, isExpired } = classify(s);
+    if (isReady) return 3;
+    if (isExpired) return 1;
+    if (isFailed) return 0;
+    return 2; // being prepared / pending
+  };
+  const validSessions = sessions.filter((session) => {
+    try {
+      requireExactSubject(session.subject, studentProfile?.grade);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  const dedupedSessions = Object.values(
+    validSessions.reduce<Record<string, (typeof sessions)[number]>>((acc, s) => {
+      const key = `${s.subject}|${s.topic ?? ""}|${s.scheduled_date}|${s.scheduled_time ?? ""}`;
+      if (!acc[key] || readinessRank(s) > readinessRank(acc[key])) acc[key] = s;
+      return acc;
+    }, {})
+  );
+
+  const upcomingSessions = dedupedSessions
+    .filter((s) => {
+      const c = classify(s);
+      return !c.isExpired && !c.isFailed;
+    })
+    .sort((a, b) => classify(a).startTs - classify(b).startTs);
+
+  const pastSessions = dedupedSessions
+    .filter((s) => {
+      const c = classify(s);
+      return c.isExpired || c.isFailed;
+    })
+    .sort((a, b) => classify(b).startTs - classify(a).startTs);
+
+  // Single card renderer reused by both the Upcoming and Past sections.
+  const renderSessionCard = (s: (typeof sessions)[number]) => {
+    const { isExpired, isReady, isFailed } = classify(s);
+
+    const statusConfig = isFailed
+      ? { bg: "bg-amber-50", text: "text-amber-600", label: "Couldn't set up" }
+      : isExpired
+      ? { bg: "bg-gray-100", text: "text-gray-500", label: "Missed" }
+      : isReady
+      ? { bg: "bg-emerald-50", text: "text-emerald-600", label: "Ready" }
+      : { bg: "bg-[var(--primary-ink)]/5", text: "text-[var(--primary-ink)]/40", label: "Being Prepared" };
+
+    const progressLabel: Record<string, string> = {
+      PENDING: isExpired ? "Incomplete" : "Not started",
+      STARTED: "In progress",
+      "STARTED-EARLY": "Started early",
+      COMPLETED: "Finished",
+    };
+
+    return (
+      <motion.div
+        key={s.id}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.97 }}
+        className="bg-white p-4 sm:p-6 rounded-3xl border border-[var(--primary-ink)]/5 shadow-sm space-y-4"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 space-y-1">
+            <h3 className="text-sm font-black text-[var(--primary-ink)] truncate">
+              {s.topic || s.subject}
+            </h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">
+                {s.subject}
+              </span>
+              <span className="text-[10px] font-black text-[var(--primary-ink)]/30 uppercase tracking-widest px-2 py-0.5 rounded-full bg-[var(--primary-ink)]/5">
+                {s.session_type}
+              </span>
+            </div>
+          </div>
+          <span className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${statusConfig.bg} ${statusConfig.text} text-[10px] font-black uppercase tracking-wider`}>
+            {isFailed ? <AlertTriangle size={10} /> : isReady ? <CheckCircle2 size={10} /> : <Clock size={10} />}
+            {statusConfig.label}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <p className="text-xs font-bold text-[var(--primary-ink)]/60">
+              {new Date(s.scheduled_date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+              {s.scheduled_time && <span className="ml-1.5 text-[var(--primary-ink)]/40">· {s.scheduled_time} IST</span>}
+            </p>
+            <p className="text-[10px] font-medium text-[var(--primary-ink)]/30 uppercase tracking-widest">
+              {progressLabel[s.status] ?? s.status}
+            </p>
+          </div>
+
+          {isFailed || isExpired ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleReschedule(s.id, s.session_type, s.subject, s.topic)}
+            >
+              Reschedule
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => handleStartSession(s.session_type, s.session_id!)}
+              disabled={!isReady || isStartingSession}
+            >
+              {s.session_type === "TEST" ? STRINGS.practice.startCta : "Open Session"}
+            </Button>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      {!sidebarOpen && (
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="fixed top-6 left-4 z-30 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
-          style={{ width: 40, height: 40, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#042E5C" }}
-          title="Open sidebar"
-        >
-          ☰
-        </button>
-      )}
-      <div className="flex-1 min-w-0 flex flex-col h-full bg-[#F4F3EE]/30 overflow-hidden font-sans">
-        {/* Header */}
-        <header className={`px-4 sm:px-8 py-6 flex items-center gap-3 sm:gap-6 bg-white border-b border-[#042E5C]/5 sticky top-0 z-20 transition-all ${!sidebarOpen ? "pl-16 sm:pl-8" : ""}`}>
-          <button
-            onClick={() => window.location.href = '/student'}
-            className="w-10 h-10 rounded-full bg-[#042E5C]/5 text-[#042E5C] flex items-center justify-center hover:bg-[#042E5C]/10 transition-all"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-[#042E5C]/5 flex items-center justify-center text-[#042E5C]">
-                <CalendarClock size={16} />
-              </div>
-              <h1 className="text-xl font-black text-[#042E5C] tracking-tight">Schedule</h1>
-            </div>
-          </div>
-        </header>
+      <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
+      <SidebarToggle />
+      <div className="flex-1 min-w-0 flex flex-col h-full bg-[var(--surface-page)] overflow-hidden font-sans">
+        <PageHeader
+          icon={<CalendarClock size={16} />}
+          title="Schedule"
+          onBack={() => window.location.href = '/student'}
+          sidebarOpen={sidebarOpen}
+        />
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 custom-scrollbar">
-          <div className="max-w-5xl mx-auto space-y-8 sm:space-y-12">
+          <PageContainer className="space-y-8 sm:space-y-12">
             {/* Booking Form */}
-            <div className="bg-white p-4 sm:p-6 md:p-8 rounded-[28px] sm:rounded-[40px] border border-[#042E5C]/5 shadow-sm space-y-6">
-              <h2 className="text-sm font-black text-[#042E5C] uppercase tracking-widest flex items-center gap-2">
+            <div className="bg-white p-4 sm:p-6 md:p-8 rounded-[28px] sm:rounded-[40px] border border-[var(--primary-ink)]/5 shadow-sm space-y-6">
+              <h2 className="text-sm font-black text-[var(--primary-ink)] uppercase tracking-widest flex items-center gap-2">
                 <Sparkles size={14} />
                 Book a Session
               </h2>
@@ -202,9 +321,13 @@ export function SchedulePage() {
                     key={type}
                     onClick={() => setSessionType(type)}
                     className={`flex-1 flex items-center justify-center text-center gap-1.5 sm:gap-2 px-2 sm:px-6 py-3 sm:py-4 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-wide sm:tracking-[0.2em] leading-tight transition-all border ${
+                      // Neutral ink selection, not a second brand accent — the
+                      // page's one colored "action" is the emerald Schedule
+                      // Session CTA below. A solid navy block here read as a
+                      // second, competing primary color on the same screen.
                       sessionType === type
-                        ? "bg-[#042E5C] text-white border-[#042E5C] shadow-lg shadow-[#042E5C]/10"
-                        : "bg-[#F4F3EE]/50 text-[#042E5C]/40 border-[#042E5C]/5 hover:text-[#042E5C]"
+                        ? "bg-white text-[var(--primary-ink)] border-[var(--primary-ink)]/25 shadow-sm"
+                        : "bg-[#F4F3EE]/50 text-[var(--primary-ink)]/40 border-[var(--primary-ink)]/5 hover:text-[var(--primary-ink)]"
                     }`}
                   >
                     {type === "TEST" ? <GraduationCap size={16} className="shrink-0" /> : <BookOpen size={16} className="shrink-0" />}
@@ -216,11 +339,13 @@ export function SchedulePage() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Subject */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[#042E5C]/40 uppercase tracking-widest">Subject</label>
+                  <label className="text-[10px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">Subject</label>
                   <select
                     value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    className="w-full bg-[#F4F3EE]/50 border border-[#042E5C]/5 rounded-2xl py-3.5 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#042E5C]/10 focus:bg-white transition-all"
+                    onChange={(e) => {
+                      setSubject(requireExactSubject(e.target.value, studentProfile?.grade));
+                    }}
+                    className={`${FIELD_CLASSNAME} ${FIELD_FOCUS_CLASSNAME} px-4`}
                   >
                     {isAgentsLoading && <option value="">Loading...</option>}
                     {!isAgentsLoading && availableAgents.length === 0 && <option value="">No subjects available</option>}
@@ -232,14 +357,14 @@ export function SchedulePage() {
 
                 {/* Topic */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[#042E5C]/40 uppercase tracking-widest">
+                  <label className="text-[10px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">
                     Chapter {sessionType === "LEARNING" && "(optional)"}
                   </label>
                   <select
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
                     disabled={isAgentsLoading}
-                    className="w-full bg-[#F4F3EE]/50 border border-[#042E5C]/5 rounded-2xl py-3.5 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#042E5C]/10 focus:bg-white transition-all disabled:opacity-50"
+                    className={`${FIELD_CLASSNAME} ${FIELD_FOCUS_CLASSNAME} px-4 disabled:opacity-50`}
                   >
                     {isAgentsLoading && <option value="">Loading...</option>}
                     {!isAgentsLoading && chapters.length === 0 && <option value="">No chapters available</option>}
@@ -251,7 +376,7 @@ export function SchedulePage() {
 
                 {/* Date */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[#042E5C]/40 uppercase tracking-widest">Date</label>
+                  <label className="text-[10px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">Date</label>
                   <DatePicker
                     value={scheduledDate}
                     min={tomorrowDateString()}
@@ -261,7 +386,7 @@ export function SchedulePage() {
 
                 {/* Time (optional) */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[#042E5C]/40 uppercase tracking-widest">Start Time <span className="font-medium normal-case">(optional, IST)</span></label>
+                  <label className="text-[10px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">Start Time <span className="font-medium normal-case">(optional, IST)</span></label>
                   <TimePicker
                     value={scheduledTime}
                     onChange={setScheduledTime}
@@ -283,10 +408,13 @@ export function SchedulePage() {
                 </div>
               )}
 
-              <button
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
                 onClick={handleBook}
                 disabled={isBooking || !subject || !scheduledDate || (sessionType === "TEST" && !topic)}
-                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-[#042E5C] text-white rounded-3xl text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-[#042E5C]/10 hover:bg-[#064282] hover:shadow-[#042E5C]/20 disabled:opacity-50 transition-all"
+                trailingIcon={!isBooking && <ArrowRight size={16} />}
               >
                 {isBooking ? (
                   <>
@@ -294,12 +422,9 @@ export function SchedulePage() {
                     Scheduling...
                   </>
                 ) : (
-                  <>
-                    Schedule Session
-                    <ArrowRight size={16} />
-                  </>
+                  "Schedule Session"
                 )}
-              </button>
+              </Button>
             </div>
 
             {/* Scheduled Sessions List */}
@@ -311,111 +436,57 @@ export function SchedulePage() {
                 </div>
               )}
 
-              <h2 className="text-sm font-black text-[#042E5C] uppercase tracking-widest flex items-center gap-2">
+              <h2 className="text-sm font-black text-[var(--primary-ink)] uppercase tracking-widest flex items-center gap-2">
                 <CalendarClock size={14} />
                 Upcoming Sessions
               </h2>
 
               {isLoading ? (
-                <div className="flex items-center gap-3 py-6 text-[#042E5C]/40">
+                <div className="flex items-center gap-3 py-6 text-[var(--primary-ink)]/40">
                   <Loader2 size={20} className="animate-spin" />
                   <span className="text-sm font-bold uppercase tracking-widest">Loading sessions...</span>
                 </div>
-              ) : sortedSessions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 space-y-4 bg-white/40 rounded-[40px] border border-dashed border-[#042E5C]/10">
-                  <div className="w-16 h-16 rounded-full bg-[#042E5C]/5 flex items-center justify-center text-[#042E5C]/20">
+              ) : upcomingSessions.length === 0 && pastSessions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 space-y-4 bg-white/40 rounded-[40px] border border-dashed border-[var(--primary-ink)]/10">
+                  <div className="w-16 h-16 rounded-full bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]/20">
                     <CalendarClock size={32} />
                   </div>
-                  <p className="text-sm font-medium text-[#042E5C]/40">No sessions scheduled yet.</p>
+                  <p className="text-sm font-medium text-[var(--primary-ink)]/40">No sessions scheduled yet.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <AnimatePresence mode="popLayout">
-                    {sortedSessions.map((s) => {
-                      const startTs = getSessionStartTimestamp(s.scheduled_date, s.scheduled_time);
-                      const isExpired = Date.now() - startTs > 24 * 60 * 60 * 1000;
-                      const isReady = s.preparation_status === "COMPLETED" && !!s.session_id;
-                      const isFailed = s.preparation_status === "FAILED";
+                <>
+                  {upcomingSessions.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 space-y-3 bg-white/40 rounded-[32px] border border-dashed border-[var(--primary-ink)]/10">
+                      <div className="w-12 h-12 rounded-full bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)]/20">
+                        <CalendarClock size={24} />
+                      </div>
+                      <p className="text-sm font-medium text-[var(--primary-ink)]/40">Nothing coming up — book a session above.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <AnimatePresence mode="popLayout">
+                        {upcomingSessions.map((s) => renderSessionCard(s))}
+                      </AnimatePresence>
+                    </div>
+                  )}
 
-                      const statusConfig = isFailed
-                        ? { bg: "bg-red-50", text: "text-red-600", label: "Preparation Failed" }
-                        : isExpired
-                        ? { bg: "bg-gray-100", text: "text-gray-500", label: "Expired" }
-                        : isReady
-                        ? { bg: "bg-emerald-50", text: "text-emerald-600", label: "Ready" }
-                        : { bg: "bg-[#042E5C]/5", text: "text-[#042E5C]/40", label: "Being Prepared" };
-
-                      const progressLabel: Record<string, string> = {
-                        PENDING: isExpired ? "Incomplete" : "Not started",
-                        STARTED: "In progress",
-                        "STARTED-EARLY": "Started early",
-                        COMPLETED: "Finished",
-                      };
-
-                      return (
-                        <motion.div
-                          key={s.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.97 }}
-                          className="bg-white p-4 sm:p-6 rounded-3xl border border-[#042E5C]/5 shadow-sm space-y-4"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="min-w-0 space-y-1">
-                              <h3 className="text-sm font-black text-[#042E5C] truncate">
-                                {s.topic || s.subject}
-                              </h3>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-[10px] font-black text-[#042E5C]/40 uppercase tracking-widest">
-                                  {s.subject}
-                                </span>
-                                <span className="text-[10px] font-black text-[#042E5C]/30 uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#042E5C]/5">
-                                  {s.session_type}
-                                </span>
-                              </div>
-                            </div>
-                            <span className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full ${statusConfig.bg} ${statusConfig.text} text-[10px] font-black uppercase tracking-wider`}>
-                              {isFailed ? <AlertTriangle size={10} /> : isReady ? <CheckCircle2 size={10} /> : <Clock size={10} />}
-                              {statusConfig.label}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="space-y-0.5">
-                              <p className="text-xs font-bold text-[#042E5C]/60">
-                                {new Date(s.scheduled_date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
-                                {s.scheduled_time && <span className="ml-1.5 text-[#042E5C]/40">· {s.scheduled_time} IST</span>}
-                              </p>
-                              <p className="text-[10px] font-medium text-[#042E5C]/30 uppercase tracking-widest">
-                                {progressLabel[s.status] ?? s.status}
-                              </p>
-                            </div>
-
-                            {isFailed ? (
-                              <button
-                                onClick={() => handleReschedule(s.id, s.session_type, s.subject, s.topic)}
-                                className="px-4 py-2 rounded-xl bg-[#042E5C]/5 text-[#042E5C] text-[10px] font-black uppercase tracking-widest hover:bg-[#042E5C]/10 transition-all"
-                              >
-                                Reschedule
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleStartSession(s.session_type, s.session_id!)}
-                                disabled={!isReady || isStartingSession || isExpired}
-                                className="px-4 py-2 rounded-xl bg-[#042E5C] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#064282] disabled:opacity-30 transition-all"
-                              >
-                                {s.session_type === "TEST" ? "Start Test" : "Open Session"}
-                              </button>
-                            )}
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </AnimatePresence>
-                </div>
+                  {pastSessions.length > 0 && (
+                    <div className="space-y-4 pt-8">
+                      <h2 className="text-sm font-black text-[var(--primary-ink)]/50 uppercase tracking-widest flex items-center gap-2">
+                        <Clock size={14} />
+                        Past &amp; Needs Attention
+                      </h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <AnimatePresence mode="popLayout">
+                          {pastSessions.map((s) => renderSessionCard(s))}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
-          </div>
+          </PageContainer>
         </div>
       </div>
 

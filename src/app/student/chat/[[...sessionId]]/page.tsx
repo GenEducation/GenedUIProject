@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { StudentChatView } from "@/features/student/components/StudentChatView";
-import { PartnerRequestModal } from "@/features/student/components/PartnerRequestModal";
 
 /**
  * Unified Chat Page using Optional Catch-all routes.
@@ -97,7 +96,6 @@ export default function StudentChatUnifiedPage({
     <AuthGuard requiredRole="student">
       <div className="h-screen overflow-hidden">
         <StudentChatView />
-        <PartnerRequestModal />
       </div>
     </AuthGuard>
   );

@@ -5,10 +5,24 @@ import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import { parseContent, generateHistoricalSVG, normalizeSvg } from "../utils/parseContent";
 import { voiceService } from "../services/voiceService";
 import { appendStreamedText } from "../utils/voiceStreamMerge";
+import {
+  isCompatibleVoiceSessionId,
+  promoteTemporaryVoiceSession,
+} from "../utils/sessionIdentity";
 import { parsePointerEvent, type PointerSpec } from "../components/pdf-viewer/pointerGeometry";
+import { getStudentDisplayName } from "../utils/displayName";
+import {
+  loadSubjectCatalog,
+  requireExactSubject,
+  type ExactSubject,
+} from "@/features/subjects/subjectCatalog";
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
+const VOICE_WS_ENDPOINT =
+  process.env.NEXT_PUBLIC_VOICE_V2_ENABLED === "true"
+    ? "/ws/v2/april-live-graph"
+    : "/ws/april-live-graph";
 
 // -- Types --------------------------------------------------------------------
 
@@ -91,6 +105,12 @@ export interface ChatMessage {
   sender: "user" | "ai";
   timestamp: string;
   isPlanning?: boolean;
+  // The tutor's turn was withheld by the safety gate and this redirect was sent in its
+  // place (backend frame `safety_redirect`). Styled differently from ordinary tutor
+  // speech because it is not the tutor answering — it is the tutor declining to, and a
+  // child who cannot tell those apart learns the wrong lesson about what was refused.
+  // Never has audio: the same gate that produced it suppressed the spoken turn.
+  isSafetyRedirect?: boolean;
   // Set on the finalized greeting message when it was sent via the deferred
   // new-session navigation flow (see startNewChatSession) — signals
   // ChatMessageBubble to replay the typing effect on its first mount, since
@@ -115,7 +135,7 @@ export interface ChatSession {
   agent_id?: string;
   isFocused?: boolean;
   document_title?: string;
-  subject?: string;
+  subject?: ExactSubject;
   chatMode?: "text" | "voice";
   chapter_completion_percentage?: number;
   chapter_name?: string;
@@ -135,18 +155,10 @@ export const isVoiceSession = (chat?: { source?: string } | null): boolean =>
 export const sessionRoutePath = (chat: { id: string; source?: string }): string =>
   isVoiceSession(chat) ? `/student/voice/${chat.id}` : `/student/chat/${chat.id}`;
 
-export interface SubjectItem {
-  id: string;
-  name: string;
-  grade: string;
-  icon: string;
-  chaptersCount: number;
-}
-
 export interface AgentItem {
   agent_id: string;
   name: string;
-  subject: string;
+  subject: ExactSubject;
   grade: number;
   is_onboarding_complete?: boolean;
   subject_coverage_percentage?: number;
@@ -157,80 +169,27 @@ export interface PartnerItem {
   id: string;
   partner_id?: string;
   organization: string;
+  board?: string;
+  association_status?: "NOT_REQUESTED" | "PENDING" | "APPROVED" | "REJECTED" | "REVOKED";
+  is_effective?: boolean;
 }
 
-export const AVAILABLE_SUBJECTS: SubjectItem[] = [
-  {
-    id: "sub-1",
-    name: "Quantum Physics",
-    grade: "Grade 12",
-    icon: "⚛",
-    chaptersCount: 12,
-  },
-  {
-    id: "sub-2",
-    name: "Medieval History",
-    grade: "Grade 10",
-    icon: "🏰",
-    chaptersCount: 8,
-  },
-  {
-    id: "sub-3",
-    name: "Advanced Calculus",
-    grade: "Grade 12",
-    icon: "∑",
-    chaptersCount: 15,
-  },
-  {
-    id: "sub-4",
-    name: "Essay Writing",
-    grade: "Grade 9–12",
-    icon: "✍️",
-    chaptersCount: 6,
-  },
-  {
-    id: "sub-5",
-    name: "Research Methods",
-    grade: "Grade 11",
-    icon: "🔍",
-    chaptersCount: 5,
-  },
-  {
-    id: "sub-6",
-    name: "Computer Science",
-    grade: "Grade 10",
-    icon: "💻",
-    chaptersCount: 10,
-  },
-  {
-    id: "sub-7",
-    name: "Biology",
-    grade: "Grade 11",
-    icon: "🧬",
-    chaptersCount: 14,
-  },
-  {
-    id: "sub-8",
-    name: "Economics",
-    grade: "Grade 12",
-    icon: "📊",
-    chaptersCount: 9,
-  },
-  {
-    id: "sub-9",
-    name: "Chemistry",
-    grade: "Grade 11",
-    icon: "⚗️",
-    chaptersCount: 11,
-  },
-  {
-    id: "sub-10",
-    name: "Literature",
-    grade: "Grade 10",
-    icon: "📖",
-    chaptersCount: 7,
-  },
-];
+const SENTINEL_PARTNER_ID = "00000000-0000-0000-0000-000000000000";
+
+/** Resolve the one content-bearing partner, tolerating legacy sentinel+school responses. */
+export function selectEffectiveLearningPartner(partners: any[]): any | undefined {
+  const realPartners = partners.filter(
+    (partner) => String(partner?.partner_id ?? partner?.id) !== SENTINEL_PARTNER_ID,
+  );
+  if (realPartners.length > 1) {
+    throw new Error("The server returned more than one effective learning partner.");
+  }
+  if (realPartners.length === 1) return realPartners[0];
+  if (partners.length > 1) {
+    throw new Error("The server returned an invalid effective-partner response.");
+  }
+  return partners[0];
+}
 
 // parseContent, generateHistoricalSVG, normalizeSvg are imported from ../utils/parseContent
 
@@ -265,6 +224,7 @@ export interface OnboardingSubject {
 }
 
 export interface OnboardingStatus {
+  board: string;
   subjects: OnboardingSubject[];
 }
 
@@ -294,6 +254,16 @@ export interface StudentState {
   chatAbortController: AbortController | null;
   voiceSessionStatus: "idle" | "connecting" | "active" | "error";
   connectionQuality: "good" | "poor" | "reconnecting" | null;
+  // A backend-authored line to show the child when the session does something they
+  // would otherwise experience as a fault. Held separately from `connectionQuality` so
+  // the two cannot overwrite each other, and so the copy stays the backend's rather than
+  // being re-invented here — it is written for a nine-year-old and we should not
+  // paraphrase it.
+  //   "rotating" — the provider's planned socket rotation. Routine; the lesson resumes.
+  //   "ended"    — a duration/budget cap closed the lesson deliberately. Nothing resumes.
+  // The kind matters because the two need opposite treatments: one is "hold on", the
+  // other is "we're done for now", and a spinner on the second is a lie.
+  sessionNotice: { message: string; kind: "rotating" | "ended" } | null;
   hasFetchedSessions: boolean;
   hasFetchedAgents: boolean;
   isMuted: boolean;
@@ -353,11 +323,12 @@ export interface StudentState {
   fetchEnrolledPartners: () => Promise<void>;
   fetchChatHistory: (sessionId: string) => Promise<void>;
   fetchOnboardingStatus: () => Promise<void>;
+  refreshAvailableAgents: () => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
   openChatById: (sessionId: string, agentId?: string) => Promise<void>;
   openNewChat: (agent: AgentItem) => string;
   initNewChat: (agentId: string) => void;
-  startFocusedSession: (documentTitle: string, subject: string) => string;
+  startFocusedSession: (documentTitle: string, subject: ExactSubject) => string;
   closeChat: () => void;
   setProfileOpen: (open: boolean) => void;
   setAgentPickerOpen: (open: boolean) => void;
@@ -474,6 +445,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   chatAbortController: null,
   voiceSessionStatus: "idle",
   connectionQuality: null,
+  sessionNotice: null,
   hasFetchedSessions: false,
   hasFetchedAgents: false,
   isMuted: false,
@@ -617,23 +589,23 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
     set({ isSessionsLoading: true });
     try {
+      if (!Number.isInteger(studentProfile.grade)) {
+        throw new Error("A valid student grade is required to load subject sessions.");
+      }
+      const catalog = await loadSubjectCatalog();
       const data = await studentService.fetchSessions(studentProfile.user_id);
       console.log("📂 [StudentStore] Raw Sessions Data:", data);
 
-      const mappedChats: ChatSession[] = data.sessions.map((s: any) => {
-        // Prefer the backend's canonical subject (mirrored from the orchestrator,
-        // e.g. "Social Science"). The agent-id substring guess is only a legacy
-        // fallback for old rows — and must check "social" before "science".
-        const raw = (s.subject_agent || "").toLowerCase();
-        const derivedSubject = s.subject
-          || (raw.includes("math") ? "mathematics"
-            : raw.includes("english") ? "english"
-              : (raw.includes("social") || raw.includes("sst")) ? "social science"
-                : raw.includes("science") ? "science"
-                  : raw.includes("hindi") ? "hindi"
-                    : "");
-
-        return {
+      const mappedChats: ChatSession[] = data.sessions.flatMap((s: any) => {
+        let subject: ExactSubject;
+        try {
+          subject = requireExactSubject(s.subject, studentProfile.grade, catalog);
+        } catch {
+          // Historical aliases remain untouched on the server but are not
+          // selectable or resumable in new subject-scoped flows.
+          return [];
+        }
+        return [{
           id: s.session_id,
           session_id: s.session_id,
           title: s.title || s.agent_name || "Learning Session",
@@ -643,7 +615,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           lastTopic: s.chapter_name || "Continued Learning",
           grade: "",
           agent_id: s.subject_agent,
-          subject: derivedSubject,
+          subject,
           chapter_completion_percentage: typeof s.chapter_completion_percentage === "number"
             ? s.chapter_completion_percentage
             : undefined,
@@ -652,7 +624,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           is_complete: !!s.is_complete,
           // Mirror persisted modality onto the client-only chatMode flag.
           chatMode: (s.source === "voice" || s.source === "device") ? "voice" : "text",
-        };
+        }];
       });
 
       set((state) => {
@@ -685,26 +657,53 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
     set({ isAgentsLoading: true });
     try {
+      if (!Number.isInteger(studentProfile.grade)) {
+        throw new Error("A valid student grade is required to load subjects.");
+      }
       const data = await studentService.fetchAvailableAgents(
         studentProfile.user_id,
       );
 
+      // Extract the exact board of the enrolled partner (if available) to ensure the
+      // frontend loads the matching subject catalog and accepts its agents.
+      const effectivePartners = Array.isArray(data.partners) ? data.partners : [];
+      const effectivePartner = selectEffectiveLearningPartner(effectivePartners);
+      const partnerBoard = effectivePartner?.board;
+      if (effectivePartner && !partnerBoard) {
+        throw new Error("The effective learning partner is missing its education board.");
+      }
+      const catalog = await loadSubjectCatalog(partnerBoard);
+
       // Flatten the nested structure: data.partners[].subjects[].agents[]
       const agents: AgentItem[] = [];
-      if (data.partners && Array.isArray(data.partners)) {
-        data.partners.forEach((partner: any) => {
+      if (effectivePartner) {
+        [effectivePartner].forEach((partner: any) => {
           if (partner.subjects && Array.isArray(partner.subjects)) {
             partner.subjects.forEach((subject: any) => {
               if (subject.agents && Array.isArray(subject.agents)) {
                 subject.agents.forEach((agent: any) => {
-                  agents.push({
-                    ...agent,
-                    is_onboarding_complete: subject.is_onboarding_complete,
-                    subject_coverage_percentage:
-                      typeof subject.subject_coverage_percentage === "number"
-                        ? subject.subject_coverage_percentage
-                        : undefined,
-                  });
+                  try {
+                    const grade = Number(agent.grade);
+                    const exactSubject = requireExactSubject(agent.subject, grade, catalog);
+                    if (grade !== studentProfile.grade) return;
+                    agents.push({
+                      ...agent,
+                      grade,
+                      subject: exactSubject,
+                      is_onboarding_complete: subject.is_onboarding_complete,
+                      subject_coverage_percentage:
+                        typeof subject.subject_coverage_percentage === "number"
+                          ? subject.subject_coverage_percentage
+                          : undefined,
+                    });
+                  } catch (error) {
+                    console.error("Invalid agent subject returned by available-agents", {
+                      partner_id: partner.partner_id,
+                      subject: agent.subject,
+                      grade: agent.grade,
+                      error,
+                    });
+                  }
                 });
               }
             });
@@ -719,10 +718,20 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
   },
 
+  refreshAvailableAgents: async () => {
+    set({ hasFetchedAgents: false });
+    await get().fetchAvailableAgents();
+  },
+
   fetchAvailablePartners: async () => {
+    const { studentProfile } = get();
+    if (!studentProfile) return;
     try {
-      const data: PartnerItem[] = await studentService.fetchAvailablePartners();
-      set({ availablePartners: data });
+      const data: PartnerItem[] = await studentService.fetchStudentPartners(studentProfile.user_id);
+      set({
+        availablePartners: data,
+        enrolledPartners: data.filter((partner) => partner.is_effective),
+      });
     } catch (error: any) {
       console.error("Fetch Partners Error:", error?.request_id, error?.message ?? error);
     }
@@ -734,11 +743,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
     set({ isEnrolledPartnersLoading: true });
     try {
-      const data = await studentService.fetchEnrolledPartners(
-        studentProfile.user_id,
-      );
+      const data: PartnerItem[] = await studentService.fetchStudentPartners(studentProfile.user_id);
       set({
-        enrolledPartners: data.partners || [],
+        availablePartners: data,
+        enrolledPartners: data.filter((partner) => partner.is_effective),
         isEnrolledPartnersLoading: false,
       });
     } catch (error: any) {
@@ -780,7 +788,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       });
 
       // Refresh the enrolled partners list so the UI reflects the new connection
-      await get().fetchEnrolledPartners();
+      await get().fetchAvailablePartners();
     } catch (error: any) {
       console.error("Partner Request Error:", error?.request_id, error?.message ?? error);
       set({
@@ -837,8 +845,20 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     const controller = new AbortController();
     set({ isHistoryLoading: true, historyAbortController: controller });
 
-    const chat = get().recentChats.find((c) => c.id === sessionId);
-    const isVoice = isVoiceSession(chat) || (typeof window !== "undefined" && window.location.pathname.includes("/student/voice/"));
+    // Modality decides which endpoint serves the history, so it must come from
+    // the session itself. The URL is not a reliable source during a cross-modality
+    // switch: the sidebar calls openExistingChat -> fetchChatHistory *before*
+    // router.push settles, so opening a chat session from the voice view still
+    // saw "/student/voice/…" here and fetched the voice-restore endpoint for a
+    // text session — which came back empty and rendered as a blank chat.
+    // Fall back to the pathname only for a session we don't know yet (cold load
+    // by URL, before recentChats has arrived).
+    const chat =
+      get().recentChats.find((c) => c.id === sessionId) ??
+      (get().activeChat?.id === sessionId ? get().activeChat : undefined);
+    const isVoice = chat
+      ? isVoiceSession(chat)
+      : typeof window !== "undefined" && window.location.pathname.includes("/student/voice/");
 
     try {
       let data;
@@ -856,9 +876,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         });
         data = await response.json();
       }
-
-      // Extract subject from history if activeChat is missing it or has "General"
-      const historySubject = data.history?.[0]?.meta_data?.subject;
 
       const mappedMessages: ChatMessage[] = (data.history || []).map(
         (h: any, i: number) => {
@@ -904,11 +921,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         const isActive = state.activeChat?.id === sessionId;
         const activeChat = state.activeChat;
 
-        // Recover subject from history if current state is generic or missing
         let updatedActiveChat = activeChat;
-        if (isActive && activeChat && historySubject && (!activeChat.subject || activeChat.subject === "General")) {
-          updatedActiveChat = { ...activeChat, subject: historySubject };
-        }
         // Carry persisted modality + completion from the history payload so the voice
         // resume UI (Resume vs. "Session Completed") is correct even on a cold URL load.
         if (isActive && updatedActiveChat) {
@@ -995,13 +1008,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       if (targetAgent) {
         openNewChat(targetAgent);
       } else {
-        // Absolute fallback only if no agents are loaded yet
-        openNewChat({
-          name: "Socratic Tutor",
-          agent_id: agentId || "eng-grade-4",
-          subject: "",
-          grade: profile?.grade || 4,
-        });
+        window.location.href = "/student";
       }
       return;
     }
@@ -1013,7 +1020,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       if (savedContext) {
         try {
           const { subject, documentTitle } = JSON.parse(savedContext);
-          startFocusedSession(subject, documentTitle);
+          const grade = get().studentProfile?.grade;
+          const exactSubject = requireExactSubject(subject, grade);
+          startFocusedSession(documentTitle, exactSubject);
           return;
         } catch {
           console.error("Failed to recover focused session context");
@@ -1110,11 +1119,18 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   startFocusedSession: (documentTitle, subject) => {
     const { availableAgents, studentProfile } = get();
+    if (!Number.isInteger(studentProfile?.grade)) {
+      throw new Error("A valid student grade is required to start this session.");
+    }
+    const exactSubject = requireExactSubject(subject, studentProfile?.grade);
 
     // Find matching agent for the subject
     const matchingAgent = availableAgents.find(
-      (a) => a.subject.toLowerCase() === subject.toLowerCase(),
+      (a) => a.subject === exactSubject && a.grade === studentProfile?.grade,
     );
+    if (!matchingAgent) {
+      throw new Error(`No ${exactSubject} learning agent is available for this grade.`);
+    }
 
     const tempId = "new-focused";
     const newSession: ChatSession = {
@@ -1124,14 +1140,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       agentType: "Focused Tutor",
       agentIcon: "🎯",
       lastActive: "Just now",
-      lastTopic: subject,
-      grade: studentProfile?.grade
-        ? `Grade ${studentProfile.grade}`
-        : "General",
-      agent_id: matchingAgent?.agent_id || "eng-grade-4", // Fallback
+      lastTopic: exactSubject,
+      grade: `Grade ${studentProfile!.grade}`,
+      agent_id: matchingAgent.agent_id,
       isFocused: true,
       document_title: documentTitle,
-      subject: subject,
+      subject: exactSubject,
     };
 
     // Navigation to /student/chat is handled by the calling component via router.push
@@ -1139,7 +1153,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     // Save context for refresh recovery
     sessionStorage.setItem(
       "pending_focused_session",
-      JSON.stringify({ subject, documentTitle }),
+      JSON.stringify({ subject: exactSubject, documentTitle }),
     );
 
     set((state) => ({
@@ -1262,26 +1276,14 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   startVoiceSession: async () => {
     const { activeChat, studentProfile, voicePrefs } = get();
-    if (!studentProfile) return;
+    if (!studentProfile || !Number.isInteger(studentProfile.grade) || !activeChat) {
+      set({ voiceSessionStatus: "error" });
+      return;
+    }
 
-    // Handle Hub start
-    const isHubStart = !activeChat;
-    const effectiveChat: ChatSession = activeChat || {
-      id: "new",
-      title: "New Session",
-      subject: "General",
-      agent_id: undefined,
-      isFocused: false,
-      agentType: "General Assistant",
-      agentIcon: "🤖",
-      lastActive: "Just now",
-      lastTopic: "Continued Learning",
-      chatMode: "voice"
-    };
-
-    // Force transition from Hub to Chat view immediately
-    if (isHubStart) {
-      set({ activeChat: { ...effectiveChat, chatMode: "voice" } });
+    const effectiveChat = activeChat;
+    if (effectiveChat.subject) {
+      requireExactSubject(effectiveChat.subject, studentProfile.grade);
     }
 
     console.log("🎙️ [StudentStore] Starting Voice Session for Chat:", effectiveChat);
@@ -1303,12 +1305,65 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     try {
       // Initialize the mute state in voiceService as well
       voiceService.setMuted(isPtt);
+      // TODO(backend): greet with display_name instead of username.
+      voiceService.setStudentDisplayName(getStudentDisplayName(studentProfile));
 
       await voiceService.startSession(
         studentProfile.user_id,
         (event: any) => {
           if (event.type === "connected") {
-            set({ voiceSessionStatus: "active" });
+            // Clears any rotation notice from the socket we just replaced.
+            set({ voiceSessionStatus: "active", sessionNotice: null });
+          } else if (event.type === "safety_redirect") {
+            // The tutor's spoken turn was withheld and this was sent in its place. It
+            // must NOT go through the transcript path: that buffers assistant text and
+            // reveals it in step with audio playback, and this frame is defined by
+            // having no audio — the text would sit in the buffer and never appear,
+            // which is the exact silence the backend change exists to end.
+            if (!event.content) return;
+            set((state) => ({
+              messages: [
+                ...state.messages,
+                {
+                  id: `voice-safety-${Date.now()}`,
+                  text: event.content,
+                  sender: "ai" as const,
+                  timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                  isSafetyRedirect: true,
+                },
+              ],
+              // End the turn. Nothing further is coming for it, and leaving
+              // streamingMessageId set would let the NEXT turn's first text append
+              // itself onto the redirect as though the tutor were continuing it.
+              streamingMessageId: null,
+              isAITyping: false,
+            }));
+          } else if (event.type === "reconnect") {
+            // Backward compatibility during a rolling deployment: older backends may
+            // still announce an internal provider rotation. Never expose it, and clear
+            // a notice left by an older frame immediately.
+            set({ sessionNotice: null });
+          } else if (event.type === "session_limit") {
+            // A duration or daily-budget cap ended the lesson on purpose, and the
+            // backend already said so kindly. The session is over: voiceService has
+            // stopped it so the close does not read as a drop, and all that is left is
+            // to show the child why. `reason` is "session_cap" | "daily_budget".
+            set({
+              voiceSessionStatus: "idle",
+              isAITyping: false,
+              streamingMessageId: null,
+              sessionNotice: event.message
+                ? { message: event.message, kind: "ended" as const }
+                : null,
+            });
+          } else if (event.type === "session_limit_warning") {
+            // Heads-up before the cap lands. Still "rotating" in treatment — the lesson
+            // is still going, so this must not look terminal.
+            set({
+              sessionNotice: event.message
+                ? { message: event.message, kind: "rotating" as const }
+                : null,
+            });
           } else if (event.type === "disconnected") {
             set({ voiceSessionStatus: "idle" });
           } else if (event.type === "error") {
@@ -1324,7 +1379,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
               set({ voiceSessionStatus: "error" });
             }
           } else if (event.type === "session_id") {
-            // Update activeChat with the real session_id from backend
+            // Atomically promote the temporary conversation to the one canonical ID
+            // assigned by the backend. `id`, `session_id`, cache ownership, URL, and
+            // sidebar identity must move together; leaving `id === "new"` splits live
+            // messages and later history reloads across two client-side conversations.
             const { activeChat, fetchSessions } = get();
             if (
               activeChat &&
@@ -1332,32 +1390,51 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             ) {
               const newSessionId = event.session_id;
 
-              // 1. Update the store
-              set((state) => ({
-                activeChat: state.activeChat
-                  ? { ...state.activeChat, session_id: newSessionId }
-                  : null,
-              }));
+              set((state) => {
+                if (!state.activeChat) return state;
+                const promoted = promoteTemporaryVoiceSession(
+                  state.activeChat,
+                  state.messages,
+                  state.chatMessagesCache,
+                  newSessionId,
+                );
+                return {
+                  activeChat: promoted.activeChat,
+                  chatMessagesCache: promoted.cache,
+                };
+              });
 
-              // 2. Update the URL
               window.history.pushState(
                 {},
                 "",
-                `/student?session=${newSessionId}`,
+                `/student/voice/${newSessionId}`,
               );
 
-              // 3. Refresh sidebar to show the new chat (reset guard so chapter_name gets populated)
+              // Refresh the sidebar so persisted metadata merges into this same ID.
               set({ hasFetchedSessions: false });
               fetchSessions();
+            } else if (activeChat && !isCompatibleVoiceSessionId(activeChat, event.session_id)) {
+              // The canonical identity cannot change after promotion. Treat a second,
+              // different ID as a protocol violation instead of silently moving the
+              // conversation and losing its history.
+              console.error("Voice session identity changed after assignment", {
+                current: activeChat.session_id || activeChat.id,
+                received: event.session_id,
+              });
+              set({ voiceSessionStatus: "error" });
             }
           } else if (event.type === "entry_resolved") {
             // Update chat metadata when entry phase completes.
             // chapter_name (not just lastTopic) must be set so the "View textbook" button activates.
+            const exactSubject = requireExactSubject(
+              event.subject,
+              studentProfile.grade,
+            );
             set((state) => ({
               activeChat: state.activeChat
                 ? {
                   ...state.activeChat,
-                  subject: event.subject,
+                  subject: exactSubject,
                   lastTopic: event.chapter,
                   // Preserve existing chapter_name on resume; set from event on new/entry-phase sessions.
                   chapter_name: state.activeChat.chapter_name || event.chapter || state.activeChat.chapter_name,
@@ -1669,9 +1746,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         },
         effectiveChat.session_id,
         effectiveChat.subject,
-        // Explicit webapp voice endpoint — do not rely on voiceService's default,
-        // which is the tool-free device endpoint (/ws/april-live-graph-device).
-        "/ws/april-live-graph",
+        // V2 is opt-in while it is under frontend testing. Both paths remain explicit;
+        // do not rely on voiceService's default device endpoint.
+        VOICE_WS_ENDPOINT,
         studentProfile.preferred_voice,
         // Pass chapter context so backend can bypass entry phase when chapter is pre-selected
         // and resolve document access in both new and resumed sessions.
@@ -1692,7 +1769,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     } catch (error) {
       console.error("Failed to stop voice session:", error);
     }
-    set({ voiceSessionStatus: "idle", connectionQuality: null, isMuted: false, pttHeld: false });
+    set({ voiceSessionStatus: "idle", connectionQuality: null, sessionNotice: null, isMuted: false, pttHeld: false });
   },
 
   toggleMute: () => {
@@ -2059,7 +2136,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   sendMessage: async (text?: string, activityInput?: any, opts?: { isTypedQuery?: boolean }): Promise<void> => {
     const { studentProfile, activeChat } = get();
-    if (!studentProfile) return;
+    if (!studentProfile || !Number.isInteger(studentProfile.grade)) return;
 
     // New student turn — drop any stale pointer so it never lingers on a spot
     // the AI is no longer talking about. The AI re-points in its response if it
@@ -2079,12 +2156,15 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       subject: defaultAgent?.subject,
       agent_id: defaultAgent?.agent_id,
       isFocused: false,
-      agentType: "General Assistant",
+      agentType: "Socratic Tutor",
       agentIcon: "🤖",
       lastActive: "Just now",
       lastTopic: "Continued Learning",
       chatMode: "text"
     };
+    if (effectiveChat.subject) {
+      requireExactSubject(effectiveChat.subject, studentProfile.grade);
+    }
 
     // Capture the ID of the chat where the message was sent
     const chatSentFromId = effectiveChat.id;
@@ -2208,6 +2288,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         {
           text,
           user_id: studentProfile.user_id,
+          // TODO(backend): greet with display_name instead of username.
+          display_name: getStudentDisplayName(studentProfile),
           grade: studentProfile.grade,
           activity_input: activityInput,
           // Only send mode fields when the user has locked it via the toggle.
@@ -2794,7 +2876,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                 agentIcon: "🤖",
                 lastActive: "Just now",
                 lastTopic: "Continued Learning",
-                subject: event.subject || "General",
+                subject: event.subject
+                  ? requireExactSubject(event.subject, studentProfile.grade)
+                  : effectiveChat.subject,
                 grade: "",
               };
 

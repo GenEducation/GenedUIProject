@@ -26,20 +26,21 @@ export function StepDone({ name, age, aiName, isSubmitting, onFinish }: StepDone
     <div className="text-center">
       {showConfetti && <Confetti />}
 
-      <span
-        className="text-[56px] block"
+      <img
+        src="/loaders/journey/char-trophy.svg"
+        alt=""
+        aria-hidden="true"
+        className="w-24 h-24 mx-auto block"
         style={{
           animation:
             "sparkPop 0.6s cubic-bezier(.34,1.56,.64,1)",
         }}
-      >
-        🎉
-      </span>
+      />
 
       <h2
         className="mt-3.5 mb-2"
         style={{
-          fontFamily: "'Space Grotesk', sans-serif",
+          fontFamily: "var(--font-display)",
           fontSize: "30px",
           fontWeight: 700,
           letterSpacing: "-0.02em",
@@ -139,7 +140,7 @@ export function StepDone({ name, age, aiName, isSubmitting, onFinish }: StepDone
         style={{
           background: "#1DB87B",
           color: "#062417",
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
+          fontFamily: "var(--font-body)",
         }}
         onMouseEnter={(e) => {
           if (!e.currentTarget.disabled) {

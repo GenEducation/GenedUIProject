@@ -1,10 +1,11 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useState, useEffect } from "react";
 import { Eye, EyeOff, ArrowLeft, ArrowRight } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 import { motion, AnimatePresence } from "framer-motion";
 import { RoleCard } from "./RoleCard";
+import { fetchAllTaxonomyGrades } from "@/features/subjects/subjectCatalog";
 
 interface SignUpData {
   username?: string;
@@ -14,7 +15,6 @@ interface SignUpData {
   role: "student" | "parent";
   age?: string;
   grade?: string;
-  school_board?: string;
   phone?: string;
   otp_code?: string;
   parent_email?: string;
@@ -68,7 +68,14 @@ export function SignUp({
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [otpSentMessage, setOtpSentMessage] = useState("");
   const [hasPersonalEmail, setHasPersonalEmail] = useState(false);
+  const [availableGrades, setAvailableGrades] = useState<number[]>([3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   const isSignupEnabled = process.env.NEXT_PUBLIC_ENABLE_SIGNUP !== "false";
+
+  useEffect(() => {
+    fetchAllTaxonomyGrades()
+      .then(setAvailableGrades)
+      .catch((err) => console.warn("Failed to load taxonomy grades during signup:", err));
+  }, []);
 
   // -- Signup disabled state --------------------------------------------------
   if (!isSignupEnabled) {
@@ -420,7 +427,7 @@ export function SignUp({
                 value={signupData.password}
                 onChange={onChange}
                 type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
+                placeholder="Create a password"
                 className={`${inputCls(!!errors.password || !!localErrors.password)} pr-12`}
               />
               <button
@@ -443,7 +450,7 @@ export function SignUp({
               value={signupData.confirmPassword || ""}
               onChange={onChange}
               type="password"
-              placeholder="••••••••"
+              placeholder="Confirm your password"
               className={inputCls(!!errors.confirmPassword || !!localErrors.confirmPassword)}
             />
             {(errors.confirmPassword || localErrors.confirmPassword) && (
@@ -454,7 +461,15 @@ export function SignUp({
           <div>
             <label className={labelCls}>What grade are you in?</label>
             <div className="grid grid-cols-3 gap-3">
-              {[3, 4, 5, 6, 7, 8].map((grade) => (
+              {/*
+                Deliberately literal, unlike every other grade picker. The
+                catalogue comes from `/rag/taxonomy/subjects`, which the gateway
+                requires a JWT for, and sign-up runs before one exists: the
+              {/*
+                Grades here select the student's own year, not a subject.
+                We fetch the list dynamically from the unauthenticated taxonomy endpoint.
+              */}
+              {availableGrades.map((grade) => (
                 <button
                   key={grade}
                   type="button"
@@ -614,7 +629,7 @@ export function SignUp({
                   value={signupData.password}
                   onChange={onChange}
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder="Create a password"
                   className={`${inputCls(!!errors.password || !!localErrors.password)} pr-12`}
                 />
                 <button
@@ -637,7 +652,7 @@ export function SignUp({
                 value={signupData.confirmPassword || ""}
                 onChange={onChange}
                 type="password"
-                placeholder="••••••••"
+                placeholder="Confirm your password"
                 className={`${inputCls(!!errors.confirmPassword || !!localErrors.confirmPassword)}`}
               />
               {(errors.confirmPassword || localErrors.confirmPassword) && (

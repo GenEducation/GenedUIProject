@@ -7,6 +7,7 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
 import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { useLoaderStore } from "@/stores/useLoaderStore";
+import { loadSubjectCatalog } from "@/features/subjects/subjectCatalog";
 
 type Role = "student" | "parent" | "partner" | "admin" | "teacher";
 
@@ -104,9 +105,17 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
       });
       Sentry.setTag("role", role);
 
+      // Warm the complete static taxonomy manifest once after authentication.
+      // Subject-scoped actions await the same de-duplicated promise themselves.
+      void loadSubjectCatalog().catch((error) => {
+        Sentry.captureException(error, { tags: { boundary: "subject_catalog" } });
+      });
+
       setIsAuthorized(true);
 
-      // Stop the global loader if it's running
+      // This route is now authorized and rendering — it's the destination of
+      // any post-auth handoff, so it owns tearing the overlay down. A short
+      // delay lets the first paint land before the loader fades out.
       const timeout = setTimeout(() => {
         useLoaderStore.getState().stopLoading();
       }, 500);

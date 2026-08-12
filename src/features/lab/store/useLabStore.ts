@@ -10,10 +10,13 @@ import type {
   DeviceProvisionResponse,
   RegisterDeviceRequest,
   DeviceUpdateRequest,
+  ConfirmLabDevicePairingRequest,
+  ConfirmLabDevicePairingResponse,
   SlotResponse,
   CreateSlotRequest,
   SlotUpdateRequest,
   ActivateResponse,
+  SeatAssignment,
   BoardResponse,
   ClassReportResponse,
   CatalogResponse,
@@ -27,6 +30,8 @@ interface LabState {
   isLoadingLabs: boolean;
   devicesByLab: Record<string, DeviceResponse[]>;
   isLoadingDevices: boolean;
+  /** Epoch ms of the last successful device fetch per lab, for the "updated Ns ago" label. */
+  devicesFetchedAt: Record<string, number>;
   /** Set once right after registration/rotation so the UI can show it exactly once. */
   lastMintedToken: { deviceId: string; token: string } | null;
 
@@ -58,11 +63,16 @@ interface LabState {
   updateLab: (labId: string, payload: LabUpdateRequest) => Promise<void>;
 
   // -- Device actions -------------------------------------------------------------
-  fetchDevices: (labId: string) => Promise<void>;
+  /** `silent` suppresses the loading flag and error banner — used by the health poll. */
+  fetchDevices: (labId: string, opts?: { silent?: boolean }) => Promise<void>;
   registerDevice: (payload: RegisterDeviceRequest) => Promise<DeviceProvisionResponse>;
   rotateToken: (labId: string, deviceId: string) => Promise<DeviceProvisionResponse>;
   updateDevice: (labId: string, deviceId: string, payload: DeviceUpdateRequest) => Promise<void>;
   revokeDevice: (labId: string, deviceId: string) => Promise<void>;
+  confirmDevicePairing: (
+    payload: ConfirmLabDevicePairingRequest,
+  ) => Promise<ConfirmLabDevicePairingResponse>;
+  moveDevice: (sourceLabId: string, deviceId: string, targetLabId: string) => Promise<void>;
   clearMintedToken: () => void;
 
   // -- Catalog ----------------------------------------------------------------------
@@ -73,7 +83,7 @@ interface LabState {
   createSlot: (payload: CreateSlotRequest) => Promise<SlotResponse>;
   updateSlot: (slotId: string, payload: SlotUpdateRequest) => Promise<void>;
   cancelSlot: (slotId: string) => Promise<void>;
-  activateSlot: (slotId: string) => Promise<ActivateResponse>;
+  activateSlot: (slotId: string, assignments?: SeatAssignment[]) => Promise<ActivateResponse>;
   endSlot: (slotId: string) => Promise<void>;
 
   // -- Board lifecycle ------------------------------------------------------------------
@@ -106,6 +116,7 @@ export const useLabStore = create<LabState>((set, get) => ({
   isLoadingLabs: false,
   devicesByLab: {},
   isLoadingDevices: false,
+  devicesFetchedAt: {},
   lastMintedToken: null,
 
   slots: [],
@@ -151,16 +162,22 @@ export const useLabStore = create<LabState>((set, get) => ({
     set((state) => ({ labs: state.labs.map((l) => (l.id === labId ? updated : l)) }));
   },
 
-  fetchDevices: async (labId) => {
-    set({ isLoadingDevices: true, lastError: null });
+  fetchDevices: async (labId, opts) => {
+    const silent = opts?.silent === true;
+    if (!silent) set({ isLoadingDevices: true, lastError: null });
     try {
       const devices = await labService.listDevices(labId);
-      set((state) => ({ devicesByLab: { ...state.devicesByLab, [labId]: devices } }));
+      set((state) => ({
+        devicesByLab: { ...state.devicesByLab, [labId]: devices },
+        devicesFetchedAt: { ...state.devicesFetchedAt, [labId]: Date.now() },
+      }));
     } catch (error) {
       console.error("Fetch Devices Error:", error);
-      set({ lastError: errorMessage(error) });
+      // A dropped background poll keeps the last-known devices and stays quiet;
+      // the staleness of the "updated" label is what tells the operator.
+      if (!silent) set({ lastError: errorMessage(error) });
     } finally {
-      set({ isLoadingDevices: false });
+      if (!silent) set({ isLoadingDevices: false });
     }
   },
 
@@ -209,6 +226,56 @@ export const useLabStore = create<LabState>((set, get) => ({
     }));
   },
 
+  confirmDevicePairing: async (payload) => {
+    const result = await labService.confirmDevicePairing(payload);
+    set((state) => {
+      const existing = state.devicesByLab[payload.lab_id] || [];
+      const nextDevices = existing.some((device) => device.id === result.device.id)
+        ? existing.map((device) => (device.id === result.device.id ? result.device : device))
+        : [...existing, result.device];
+      return {
+        devicesByLab: {
+          ...state.devicesByLab,
+          [payload.lab_id]: nextDevices,
+        },
+        labs: state.labs.map((lab) =>
+          lab.id === payload.lab_id && !existing.some((device) => device.id === result.device.id)
+            ? { ...lab, device_count: lab.device_count + 1 }
+            : lab,
+        ),
+      };
+    });
+    return result;
+  },
+
+  moveDevice: async (sourceLabId, deviceId, targetLabId) => {
+    const moved = await labService.moveDevice(deviceId, { target_lab_id: targetLabId });
+    set((state) => {
+      const sourceDevices = (state.devicesByLab[sourceLabId] || []).filter(
+        (device) => device.id !== deviceId,
+      );
+      const targetDevices = state.devicesByLab[targetLabId] || [];
+      return {
+        devicesByLab: {
+          ...state.devicesByLab,
+          [sourceLabId]: sourceDevices,
+          [targetLabId]: targetDevices.some((device) => device.id === deviceId)
+            ? targetDevices.map((device) => (device.id === deviceId ? moved : device))
+            : [...targetDevices, moved],
+        },
+        labs: state.labs.map((lab) => {
+          if (lab.id === sourceLabId) {
+            return { ...lab, device_count: Math.max(0, lab.device_count - 1) };
+          }
+          if (lab.id === targetLabId) {
+            return { ...lab, device_count: lab.device_count + 1 };
+          }
+          return lab;
+        }),
+      };
+    });
+  },
+
   clearMintedToken: () => set({ lastMintedToken: null }),
 
   fetchCatalog: async (partnerId) => {
@@ -255,8 +322,8 @@ export const useLabStore = create<LabState>((set, get) => ({
     set((state) => ({ slots: state.slots.map((s) => (s.id === slotId ? updated : s)) }));
   },
 
-  activateSlot: async (slotId) => {
-    const result = await labService.activateSlot(slotId);
+  activateSlot: async (slotId, assignments = []) => {
+    const result = await labService.activateSlot(slotId, assignments);
     set((state) => ({
       slots: state.slots.map((s) => (s.id === slotId ? { ...s, status: "ACTIVE" } : s)),
     }));

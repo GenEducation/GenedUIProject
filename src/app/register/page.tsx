@@ -9,6 +9,7 @@ import { signUp, SignUpFields } from "@/features/auth/authService";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useLoaderStore } from "@/stores/useLoaderStore";
+import { completeAndRedirect } from "@/features/auth/usePostAuthRedirect";
 
 const initialSignUpData: SignUpFields = {
   email: "",
@@ -119,7 +120,7 @@ export default function RegisterPage() {
         useTutorialStore.getState().startTutorial();
       }
 
-      router.replace(`/${role}`);
+      completeAndRedirect(router, `/${role}`);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
       const rawMsg = error instanceof Error ? error.message : "Unable to complete signup.";

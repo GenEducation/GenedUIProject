@@ -49,7 +49,7 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailab
       }}
     >
       <div className="flex items-center gap-6 justify-between">
-        <span style={{ fontWeight: 800, fontSize: 18, color: "#5B4DC7", lineHeight: 1.3, fontFamily: "'DM Sans', sans-serif" }}>
+        <span style={{ fontWeight: 800, fontSize: 18, color: "var(--tutor)", lineHeight: 1.3, fontFamily: "var(--font-body)" }}>
           {word}
         </span>
 
@@ -63,7 +63,7 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailab
                 fontSize: 10, fontWeight: 800, padding: "3px 10px",
                 borderRadius: 20, border: "1px solid #5B4DC730",
                 background: isPlaying && isSlow ? "#5B4DC720" : "#FFFFFF",
-                color: "#5B4DC7", cursor: "pointer", transition: "all 0.15s",
+                color: "var(--tutor)", cursor: "pointer", transition: "all 0.15s",
               }}
             >
               slow
@@ -75,7 +75,7 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailab
             title="Tap to hear pronunciation"
             style={{
               background: "none", border: "none", cursor: "pointer", padding: 4,
-              color: isPlaying && !isSlow ? "#5B4DC7" : "#8B7FE8",
+              color: isPlaying && !isSlow ? "var(--tutor)" : "var(--tutor-light)",
               transition: "all 0.15s",
               animation: isPlaying && !isSlow ? "pulse 1s infinite" : "none",
             }}
@@ -88,7 +88,7 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailab
       {((syllables && syllables.length > 0) || phonetic) && (
         <div className="flex items-center gap-2 mt-1.5">
           {syllables && syllables.length > 0 && (
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#8B7FE8", letterSpacing: "0.05em" }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--tutor-light)", letterSpacing: "0.05em" }}>
               {syllables.join(" · ")}
             </span>
           )}
@@ -139,7 +139,7 @@ function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: Com
         : { background: "#E53E3E", border: "1px solid #E53E3E", color: "#FFFFFF", boxShadow: "0 2px 8px rgba(229,62,62,0.2)" };
     }
     if (isSelected) {
-      return { background: "#5B4DC7", border: "1px solid #5B4DC7", color: "#FFFFFF", boxShadow: "0 2px 8px rgba(91,77,199,0.2)" };
+      return { background: "var(--tutor)", border: "1px solid var(--tutor)", color: "#FFFFFF", boxShadow: "0 2px 8px rgba(91,77,199,0.2)" };
     }
     return { background: "#F8F9FA", border: "1px solid #E2E8F0", color: "#1A202C" };
   };
@@ -154,7 +154,7 @@ function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: Com
       }}
     >
       {question && (
-        <p style={{ fontSize: 14, fontWeight: 700, color: "#1A202C", lineHeight: 1.5, marginBottom: 12, fontFamily: "'DM Sans', sans-serif" }}>
+        <p style={{ fontSize: 14, fontWeight: 700, color: "#1A202C", lineHeight: 1.5, marginBottom: 12, fontFamily: "var(--font-body)" }}>
           {question}
         </p>
       )}
@@ -168,7 +168,7 @@ function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: Com
               width: "100%", textAlign: "left", padding: "10px 16px",
               borderRadius: 14, fontSize: 14, fontWeight: 600,
               cursor: disabled || (effectiveSubmitted && !allowRetry) ? "default" : "pointer",
-              transition: "all 0.18s", fontFamily: "'DM Sans', sans-serif",
+              transition: "all 0.18s", fontFamily: "var(--font-body)",
               ...getChoiceStyle(choice),
             }}
           >
@@ -189,7 +189,7 @@ function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: Com
               fontSize: 12, fontWeight: 700, color: "#94A3B8", background: "none",
               border: "none", cursor: "pointer", transition: "color 0.15s",
             }}
-            onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = "#5B4DC7"}
+            onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = "var(--tutor)"}
             onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = "#94A3B8"}
           >
             <RefreshCw size={11} />
@@ -248,7 +248,7 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
     ? isCorrect
       ? { background: "#00B894", color: "#FFFFFF" }
       : { background: "#E53E3E", color: "#FFFFFF" }
-    : { background: "#5B4DC7", color: "#FFFFFF" };
+    : { background: "var(--tutor)", color: "#FFFFFF" };
 
   return (
     <motion.div
@@ -260,7 +260,7 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
       }}
     >
       {question && (
-        <p style={{ fontSize: 14, fontWeight: 700, color: "#1A202C", lineHeight: 1.5, marginBottom: 12, fontFamily: "'DM Sans', sans-serif" }}>
+        <p style={{ fontSize: 14, fontWeight: 700, color: "#1A202C", lineHeight: 1.5, marginBottom: 12, fontFamily: "var(--font-body)" }}>
           {question}
         </p>
       )}
@@ -275,7 +275,7 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
           style={{
             flex: 1, padding: "10px 16px", borderRadius: 14,
             fontSize: 14, fontWeight: 600, outline: "none",
-            fontFamily: "'DM Sans', sans-serif", transition: "all 0.18s",
+            fontFamily: "var(--font-body)", transition: "all 0.18s",
             ...inputStyle,
           }}
           onFocus={e => {
@@ -295,7 +295,7 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
             padding: "10px 18px", borderRadius: 14, fontSize: 14, fontWeight: 700,
             border: "none", cursor: disabled || effectiveSubmitted || !value.trim() ? "default" : "pointer",
             opacity: disabled || (!effectiveSubmitted && !value.trim()) ? 0.35 : 1,
-            transition: "all 0.18s", fontFamily: "'DM Sans', sans-serif",
+            transition: "all 0.18s", fontFamily: "var(--font-body)",
             minWidth: 64, display: "flex", alignItems: "center", justifyContent: "center",
             ...btnStyle,
           }}

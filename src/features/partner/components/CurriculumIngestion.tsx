@@ -3,6 +3,13 @@ import { Upload, X, FileText, Check, RotateCcw } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { usePartnerStore } from "../store/usePartnerStore";
 import { PageWisePreview } from "./PageWisePreview";
+import {
+  allTaxonomyGrades,
+  requireExactSubject,
+  resolveTaxonomyBoard,
+  subjectsForGrade,
+  useTaxonomySubjects,
+} from "@/features/subjects/subjectCatalog";
 
 interface CurriculumIngestionProps {
   onClose: () => void;
@@ -24,21 +31,15 @@ export function CurriculumIngestion({
   const [documentTitle, setDocumentTitle] = useState("");
   const [agentName, setAgentName] = useState("");
   const [grade, setGrade] = useState("");
-  const [board, setBoard] = useState("");
+  const board = resolveTaxonomyBoard();
   const [documentType, setDocumentType] = useState("chapter");
 
   const gradeNum = parseInt(grade, 10);
-  const isMiddleSchool = [6, 7, 8].includes(gradeNum);
-  const subjectOptions = [
-    { value: "english", label: "English" },
-    { value: "mathematics", label: "Mathematics" },
-    ...(isMiddleSchool
-      ? [
-          { value: "science", label: "Science" },
-          { value: "social_science", label: "Social Science" },
-        ]
-      : []),
-  ];
+  // Loads the catalogue on mount rather than assuming an earlier screen already
+  // did — ingestion is the boundary where an off-taxonomy name would be written.
+  const catalog = useTaxonomySubjects(board);
+  const gradeOptions = allTaxonomyGrades(catalog);
+  const subjectOptions = subjectsForGrade(gradeNum, catalog);
 
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -70,10 +71,10 @@ export function CurriculumIngestion({
 
   const handleProcess = async () => {
     if (!subjectName || !documentTitle || !agentName || !grade || !file) return;
-    
+    const exactSubject = requireExactSubject(subjectName, gradeNum, catalog);
     setIsProcessing(true);
     // Trigger upload (handles its own success/error state updates)
-    uploadCurriculum(file, subjectName, documentTitle, agentName, grade, board, documentType);
+    uploadCurriculum(file, exactSubject, documentTitle, agentName, grade, board, documentType);
     
     // Close immediately as per user request
     onClose();
@@ -177,15 +178,19 @@ export function CurriculumIngestion({
                       onChange={(e) => {
                         const next = e.target.value;
                         setGrade(next);
-                        const nextIsMiddle = [6, 7, 8].includes(parseInt(next, 10));
-                        if (!nextIsMiddle && (subjectName === "science" || subjectName === "social_science")) {
+                        if (
+                          subjectName &&
+                          !subjectsForGrade(parseInt(next, 10), catalog).some(
+                            (candidate) => candidate === subjectName,
+                          )
+                        ) {
                           setSubjectName("");
                         }
                       }}
                       className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
                     >
                       <option value="">Grade</option>
-                      {[3, 4, 5, 6, 7, 8].map((g) => (
+                      {gradeOptions.map((g) => (
                         <option key={g} value={g}>Grade {g}</option>
                       ))}
                     </select>
@@ -194,11 +199,10 @@ export function CurriculumIngestion({
                     <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Board</label>
                     <select
                       value={board}
-                      onChange={(e) => setBoard(e.target.value)}
+                      disabled
                       className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
                     >
-                      <option value="">Board</option>
-                      <option value="CBSE">CBSE</option>
+                      <option value={board}>{board}</option>
                     </select>
                   </div>
                 </div>
@@ -210,8 +214,8 @@ export function CurriculumIngestion({
                     className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
                   >
                     <option value="">Select Subject</option>
-                    {subjectOptions.map((s) => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
+                    {subjectOptions.map((subject) => (
+                      <option key={subject} value={subject}>{subject}</option>
                     ))}
                   </select>
                 </div>

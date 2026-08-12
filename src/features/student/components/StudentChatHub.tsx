@@ -8,52 +8,16 @@ import {
   useStudentStore,
 } from "../store/useStudentStore";
 import { StudentChatInput } from "./StudentChatInput";
-import { ChevronRight, Clock, Bot, Menu, Flame, BarChart2 } from "lucide-react";
+import { ChevronRight, Clock, Bot, Menu } from "lucide-react";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { ActivityHeatmap } from "./ActivityHeatmap";
-import { SUBJECT_CONFIG, Subject } from "@/constants/subjectConfig";
-import { EnglishIcon } from "@/components/icons/EnglishIcon";
-import { MathematicsIcon } from "@/components/icons/MathematicsIcon";
-import { ScienceIcon } from "@/components/icons/ScienceIcon";
-import { SocialScienceIcon } from "@/components/icons/SocialScienceIcon";
-import { HindiIcon } from "@/components/icons/HindiIcon";
+import { StreakStats } from "./StreakStats";
+import { getSubjectConfig } from "@/constants/subjectConfig";
+import { SubjectIcon } from "@/features/subjects/subjectPresentation";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
 
-
-type SubjectKey = "english" | "mathematics" | "science" | "social_science" | "hindi";
-
-const SUBJECT_ICON_MAP: Record<SubjectKey, React.ComponentType<{ size: number; style?: React.CSSProperties }>> = {
-  english: EnglishIcon,
-  mathematics: MathematicsIcon,
-  science: ScienceIcon,
-  social_science: SocialScienceIcon,
-  hindi: HindiIcon,
-};
-
-function normalizeSubject(subject: string): SubjectKey | null {
-  const lower = (subject ?? "").toLowerCase();
-  if (lower.includes("english")) return "english";
-  if (lower.includes("math")) return "mathematics";
-  // "social" must be checked before "science" — "social science" contains both
-  if (lower.includes("social") || lower.includes("sst")) return "social_science";
-  if (lower.includes("science")) return "science";
-  if (lower.includes("hindi")) return "hindi";
-  return null;
-}
-
-function resolveSubjectLabel(chat: { subject?: string; title?: string }): string {
-  if (chat.subject) return chat.subject;
-  // Extract from title as fallback
-  const hay = (chat.title ?? "").toLowerCase();
-  if (hay.includes("english")) return "English";
-  if (hay.includes("math")) return "Mathematics";
-  if (hay.includes("social") || hay.includes("sst")) return "Social Science";
-  if (hay.includes("science")) return "Science";
-  if (hay.includes("hindi")) return "Hindi";
-  return "Session";
-}
 
 interface StudentChatHubProps {
   toggleSidebar: () => void;
@@ -112,9 +76,9 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
   const onboardingSubjects = onboardingStatus?.subjects
     ? onboardingStatus.subjects
         .filter(s => s.status === "PENDING")
-        .map(s => {
-          const agent = availableAgents.find(a => a.subject === s.subject);
-          return agent || { subject: s.subject, agent_id: s.subject, grade: studentProfile?.grade };
+        .flatMap((item) => {
+          const agent = availableAgents.find((candidate) => candidate.subject === item.subject);
+          return agent ? [agent] : [];
         })
     : [];
 
@@ -127,11 +91,11 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
     .animate-gradient-text {
       background: linear-gradient(
         to right,
-        #042E5C,
+        var(--primary-ink),
         #03b1ed,
         #00a866,
         #430163,
-        #042E5C
+        var(--primary-ink)
       );
       background-size: 300% auto;
       -webkit-background-clip: text;
@@ -165,7 +129,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             }
           }}
           data-tutorial="hamburger-menu"
-          className="w-10 h-10 rounded-xl bg-[#F4F3EE] flex items-center justify-center text-[#042E5C]/60 hover:text-[#042E5C] transition-all"
+          className="w-10 h-10 rounded-xl bg-[#F4F3EE] flex items-center justify-center text-[var(--primary-ink)]/60 hover:text-[var(--primary-ink)] transition-all"
         >
           <Menu size={20} />
         </button>
@@ -185,7 +149,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight animate-gradient-text">
                 {greeting}, {username}!
               </h1>
-              <p className="text-sm sm:text-base font-bold text-[#042E5C]/50 tracking-tight">
+              <p className="text-sm sm:text-base font-bold text-[var(--primary-ink)]/50 tracking-tight">
                 You&apos;re on a <span className="text-[#00B894] font-extrabold">{studentStats?.currentStreak ?? 0}-day streak</span>. Ready to keep going?
               </p>
             </motion.header>
@@ -197,26 +161,8 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: 0.05 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4"
           >
-            <StatCard
-              icon={<Flame size={18} />}
-              label="Current Streak"
-              value={`${studentStats?.currentStreak ?? 0} days`}
-              accentColor="#FDCB6E"
-            />
-            <StatCard
-              icon={<BarChart2 size={18} />}
-              label="Total Sessions"
-              value={studentStats?.totalSessions ?? 0}
-              accentColor="#74B9FF"
-            />
-            <StatCard
-              icon={<Flame size={18} />}
-              label="Longest Streak"
-              value={`${studentStats?.longestStreak ?? 0} days`}
-              accentColor="#00B894"
-            />
+            <StreakStats data={studentStats} variant="card" />
           </motion.section>
 
           {/* 3. Activity Heatmap */}
@@ -226,10 +172,10 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             transition={{ duration: 0.2, delay: 0.1 }}
             className="space-y-3"
           >
-            <h2 className="text-sm font-extrabold text-[#042E5C]/40 uppercase tracking-widest px-2">
+            <h2 className="text-sm font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest px-2">
               Activity
             </h2>
-            <div className="bg-white rounded-2xl p-5 border border-[#042E5C]/5 shadow-sm">
+            <div className="bg-white rounded-2xl p-5 border border-[var(--primary-ink)]/5 shadow-sm">
               <ActivityHeatmap />
             </div>
           </motion.section>
@@ -242,10 +188,10 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             className="space-y-4"
           >
             <div className="flex items-center justify-between px-2">
-              <h2 className="text-sm font-extrabold text-[#042E5C]/40 uppercase tracking-widest">Quick Start</h2>
+              <h2 className="text-sm font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest">Quick Start</h2>
               <button
                 onClick={() => setAgentPickerOpen(true)}
-                className="text-[10px] font-bold text-[#042E5C]/40 hover:text-[#042E5C] uppercase tracking-widest flex items-center gap-1 transition-colors"
+                className="text-[10px] font-bold text-[var(--primary-ink)]/40 hover:text-[var(--primary-ink)] uppercase tracking-widest flex items-center gap-1 transition-colors"
               >
                 All Subjects <ChevronRight size={12} />
               </button>
@@ -253,19 +199,17 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             <div className="flex flex-wrap gap-3">
               {isAgentsLoading ? (
                 [1, 2, 3].map(n => (
-                  <div key={n} className="h-14 w-52 bg-white/50 rounded-2xl animate-pulse border border-[#042E5C]/5" />
+                  <div key={n} className="h-14 w-52 bg-white/50 rounded-2xl animate-pulse border border-[var(--primary-ink)]/5" />
                 ))
               ) : availableAgents.length > 0 ? (
                 availableAgents.slice(0, 3).map((agent, i) => {
-                  const subjectKey = normalizeSubject(agent.subject);
                   const isOnboardingComplete = agent.is_onboarding_complete !== false;
                   return (
                     <HubCard
                       key={agent.agent_id}
                       title={agent.subject || agent.name}
                       subtitle={`Grade ${agent.grade}`}
-                      icon={<Bot size={18} />}
-                      subjectKey={subjectKey}
+                      subject={agent.subject}
                       isOnboardingComplete={isOnboardingComplete}
                       onStartChat={() => {
                         // Wait for the real session_id before navigating so the
@@ -281,7 +225,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                       onOnboarding={() => {
                         setOnboardingModal({
                           subject: agent.subject,
-                          grade: agent.grade ?? studentProfile?.grade ?? 9,
+                          grade: agent.grade,
                         });
                       }}
                       delay={0.3 + i * 0.05}
@@ -289,12 +233,12 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                   );
                 })
               ) : (
-                <div className="col-span-full py-10 text-center bg-white/20 rounded-3xl border-2 border-dashed border-[#042E5C]/5 w-full">
+                <div className="col-span-full py-10 text-center bg-white/20 rounded-3xl border-2 border-dashed border-[var(--primary-ink)]/5 w-full">
                   <div className="max-w-xs mx-auto space-y-3">
-                    <Bot size={32} className="mx-auto text-[#042E5C]/20" />
-                    <p className="text-sm font-bold text-[#042E5C]/60">No subjects yet</p>
-                    <p className="text-xs text-[#042E5C]/40 leading-relaxed px-4">
-                      Connect to a school from your <button onClick={() => router.push("/student/profile")} className="underline underline-offset-2 hover:text-[#042E5C]/70 transition-colors">Profile</button> to see your subjects here.
+                    <Bot size={32} className="mx-auto text-[var(--primary-ink)]/20" />
+                    <p className="text-sm font-bold text-[var(--primary-ink)]/60">No subjects yet</p>
+                    <p className="text-xs text-[var(--primary-ink)]/40 leading-relaxed px-4">
+                      Connect to a school from your <button onClick={() => router.push("/student/profile")} className="underline underline-offset-2 hover:text-[var(--primary-ink)]/70 transition-colors">Profile</button> to see your subjects here.
                     </p>
                   </div>
                 </div>
@@ -333,42 +277,12 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
   );
 }
 
-// ── StatCard ──────────────────────────────────────────────────────────────────
-
-interface StatCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  accentColor: string;
-}
-
-function StatCard({ icon, label, value, accentColor }: StatCardProps) {
-  return (
-    <div
-      className="bg-white rounded-2xl px-4 py-3 border border-[#042E5C]/5 shadow-sm hover:shadow-md transition-all border-l-4 flex items-center justify-between gap-3"
-      style={{ borderLeftColor: accentColor }}
-    >
-      <div className="flex items-center gap-3 min-w-0">
-        <div
-          className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center"
-          style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
-        >
-          {icon}
-        </div>
-        <p className="text-[10px] font-extrabold text-[#042E5C]/40 uppercase tracking-widest leading-none truncate">{label}</p>
-      </div>
-      <p className="text-lg sm:text-xl font-extrabold text-[#042E5C] leading-none flex-shrink-0">{value}</p>
-    </div>
-  );
-}
-
 // ── HubCard ───────────────────────────────────────────────────────────────────
 
 interface HubCardProps {
   title: string;
   subtitle: string;
-  icon: React.ReactNode;
-  subjectKey: SubjectKey | null;
+  subject: string;
   onStartChat: () => void;
   onStartVoice: () => void;
   delay: number;
@@ -376,35 +290,31 @@ interface HubCardProps {
   onOnboarding?: () => void;
 }
 
-function HubCard({ title, subtitle, icon, subjectKey, onStartChat, onStartVoice, delay, isOnboardingComplete = true, onOnboarding }: HubCardProps) {
-  const config = subjectKey ? SUBJECT_CONFIG[subjectKey] : null;
-  const IconComponent = subjectKey ? SUBJECT_ICON_MAP[subjectKey] : null;
+function HubCard({ title, subtitle, subject, onStartChat, onStartVoice, delay, isOnboardingComplete = true, onOnboarding }: HubCardProps) {
+  const config = getSubjectConfig(subject);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="bg-white px-5 py-4 rounded-2xl border border-[#042E5C]/5 shadow-sm hover:shadow-md hover:border-[#042E5C]/10 transition-all text-left border-l-4 flex flex-col gap-3 flex-1 min-w-full sm:min-w-[280px] max-w-full sm:max-w-[340px]"
-      style={{ borderLeftColor: config?.color ?? "#042E5C20" }}
+      className="bg-white px-5 py-4 rounded-2xl border border-[var(--primary-ink)]/5 shadow-sm hover:shadow-md hover:border-[var(--primary-ink)]/10 transition-all text-left border-l-4 flex flex-col gap-3 flex-1 min-w-full sm:min-w-[280px] max-w-full sm:max-w-[340px]"
+      style={{ borderLeftColor: config.color }}
     >
       <div className="flex items-start gap-3">
         <div
           className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center"
-          style={{ backgroundColor: config ? config.bgColor : "rgba(4,46,92,0.05)" }}
+          style={{ backgroundColor: config.bgColor }}
         >
-          {IconComponent ? (
-            <IconComponent
-              size={20}
-              style={{ "--icon-color": config?.color ?? "#042E5C" } as React.CSSProperties}
-            />
-          ) : (
-            <span style={{ color: "#042E5C60" }}>{icon}</span>
-          )}
+          <SubjectIcon
+            subject={subject}
+            size={20}
+            style={{ "--icon-color": config.color, color: config.color } as React.CSSProperties}
+          />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-[#042E5C] text-sm line-clamp-1">{title}</h3>
-          <p className="text-[10px] font-bold text-[#042E5C]/40 uppercase tracking-widest leading-none mt-1">
+          <h3 className="font-bold text-[var(--primary-ink)] text-sm line-clamp-1">{title}</h3>
+          <p className="text-[10px] font-bold text-[var(--primary-ink)]/40 uppercase tracking-widest leading-none mt-1">
             {isOnboardingComplete ? subtitle : "Complete Onboarding"}
           </p>
         </div>

@@ -7,6 +7,10 @@ import type {
   DeviceProvisionResponse,
   RegisterDeviceRequest,
   DeviceUpdateRequest,
+  ConfirmLabDevicePairingRequest,
+  ConfirmLabDevicePairingResponse,
+  LabDevicePairingRecord,
+  MoveDeviceRequest,
   SlotResponse,
   CreateSlotRequest,
   SlotUpdateRequest,
@@ -15,6 +19,9 @@ import type {
   BoardResponse,
   ClassReportResponse,
   CatalogResponse,
+  LabCapacityResponse,
+  RosterStudent,
+  SeatAssignment,
 } from "../types/lab";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
@@ -88,6 +95,44 @@ export const labService = {
     return res.json();
   },
 
+  confirmDevicePairing: async (
+    payload: ConfirmLabDevicePairingRequest,
+  ): Promise<ConfirmLabDevicePairingResponse> => {
+    const res = await authFetch(`${BASE_URL}/lab/device-pairings/confirm`, {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  listDevicePairings: async (labId: string): Promise<LabDevicePairingRecord[]> => {
+    const res = await authFetch(
+      `${BASE_URL}/lab/labs/${encodeURIComponent(labId)}/device-pairings`,
+    );
+    return res.json();
+  },
+
+  cancelDevicePairing: async (pairingId: string): Promise<LabDevicePairingRecord> => {
+    const res = await authFetch(
+      `${BASE_URL}/lab/device-pairings/${encodeURIComponent(pairingId)}/cancel`,
+      { method: "POST" },
+    );
+    return res.json();
+  },
+
+  moveDevice: async (
+    deviceId: string,
+    payload: MoveDeviceRequest,
+  ): Promise<DeviceResponse> => {
+    const res = await authFetch(`${BASE_URL}/lab/devices/${encodeURIComponent(deviceId)}/move`, {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
   // -- Catalog ----------------------------------------------------------------
   getCatalog: async (partnerId: string, grade?: number): Promise<CatalogResponse> => {
     const qs = new URLSearchParams({ partner_id: partnerId });
@@ -131,10 +176,28 @@ export const labService = {
     return res.json();
   },
 
-  activateSlot: async (slotId: string): Promise<ActivateResponse> => {
+  getSlotRoster: async (slotId: string): Promise<RosterStudent[]> => {
+    const res = await authFetch(`${BASE_URL}/lab/slots/${encodeURIComponent(slotId)}/roster`);
+    return res.json();
+  },
+
+  activateSlot: async (
+    slotId: string,
+    assignments: SeatAssignment[] = [],
+  ): Promise<ActivateResponse> => {
     const res = await authFetch(`${BASE_URL}/lab/slots/${encodeURIComponent(slotId)}/activate`, {
       method: "POST",
+      ...(assignments.length > 0
+        ? { headers: jsonHeaders, body: JSON.stringify({ assignments }) }
+        : {}),
     });
+    return res.json();
+  },
+
+  getSlotCapacity: async (slotId: string): Promise<LabCapacityResponse> => {
+    const res = await authFetch(
+      `${BASE_URL}/lab/slots/${encodeURIComponent(slotId)}/capacity`,
+    );
     return res.json();
   },
 

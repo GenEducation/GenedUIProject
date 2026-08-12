@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createOrder, verifyPayment } from "./paymentService";
+import { loadRazorpayScript } from "./loadRazorpayScript";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 
 interface RazorpayOptions {
@@ -16,17 +17,19 @@ interface RazorpayOptions {
 export const useRazorpay = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const startPayment = async ({ 
-    userId, 
-    userName, 
-    userEmail, 
-    billingCycle, 
-    onSuccess, 
-    onError 
+  const startPayment = async ({
+    userId,
+    userName,
+    userEmail,
+    billingCycle,
+    onSuccess,
+    onError
   }: RazorpayOptions) => {
     setIsProcessing(true);
 
     try {
+      await loadRazorpayScript();
+
       // 1. Create Order
       const order = await createOrder(userId, billingCycle);
 

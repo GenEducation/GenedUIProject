@@ -5,7 +5,7 @@ import { Send, Square } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useStudentStore } from "../store/useStudentStore";
 import { InlineSubjectPicker } from "./InlineSubjectPicker";
-import { Subject } from "@/constants/subjectConfig";
+import type { ExactSubject } from "@/features/subjects/subjectCatalog";
 
 /* ── Text-only compositor ─────────────────────────────────────────────── */
 
@@ -30,8 +30,15 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
 
   const [input, setInput] = useState("");
   const [showSubjectPicker, setShowSubjectPicker] = useState(false);
-  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<ExactSubject | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // The keyboard hint below shows once, until the student's first send —
+  // it used to render permanently on every visit to the docked input.
+  const [hintDismissed, setHintDismissed] = useState(true);
+  useEffect(() => {
+    setHintDismissed(localStorage.getItem("gened_chat_hint_seen") === "1");
+  }, []);
 
 
   // Show picker only while user has text in hub mode; hide when cleared
@@ -59,16 +66,12 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
     if (!trimmed) return;
 
     // If in hub mode with a subject selected, route to that subject's agent.
-    // Picker keys use underscores ("social_science") while backend subjects use
-    // spaces ("Social Science"), so compare on a space-normalized form.
     if (isHub && selectedSubject) {
-      const wanted = selectedSubject.replace(/_/g, " ");
-      const agent = availableAgents.find(
-        a => a.subject.toLowerCase().replace(/_/g, " ") === wanted ||
-             (selectedSubject === "mathematics" && a.subject.toLowerCase() === "math")
-      );
+      const agent = availableAgents.find((candidate) => candidate.subject === selectedSubject);
       if (agent) {
         openNewChat(agent);
+      } else {
+        return;
       }
     }
 
@@ -76,6 +79,10 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
     setInput("");
     setSelectedSubject(null);
     setShowSubjectPicker(false);
+    if (!hintDismissed) {
+      localStorage.setItem("gened_chat_hint_seen", "1");
+      setHintDismissed(true);
+    }
 
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -107,7 +114,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
       )}
 
       <div
-        className="flex items-end gap-2 sm:gap-3 transition-all relative bg-white border border-[#E2E8F0] rounded-2xl focus-within:border-[#5B4DC7]/40 focus-within:shadow-sm"
+        className="flex items-end gap-2 sm:gap-3 transition-all relative bg-white border border-[#E2E8F0] rounded-2xl focus-within:border-[var(--tutor)]/40 focus-within:shadow-sm"
         style={{ padding: "10px clamp(12px, 3vw, 20px)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
       >
         <motion.textarea
@@ -153,7 +160,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
             className={`w-10 h-10 rounded-full flex-shrink-0 text-white flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm ${
               isAITyping
                 ? "bg-red-500 hover:bg-red-600"
-                : "bg-[#5B4DC7] hover:bg-[#4A3DB5]"
+                : "bg-[var(--tutor)] hover:bg-[#4A3DB5]"
             }`}
           >
             <AnimatePresence mode="wait" initial={false}>
@@ -182,7 +189,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
           </motion.button>
         </div>
       </div>
-      {!isCentered && !isHub && (
+      {!isCentered && !isHub && !hintDismissed && (
         <p className="text-[11px] font-bold text-center mt-3 uppercase tracking-[0.1em]" style={{ color: "#CBD5E1" }}>
           Press Enter to send &bull; Shift+Enter for new line
         </p>

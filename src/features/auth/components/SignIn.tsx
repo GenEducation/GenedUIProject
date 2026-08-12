@@ -108,7 +108,7 @@ export function SignIn({
               value={loginData.password}
               onChange={onChange}
               type={showPassword ? "text" : "password"}
-              placeholder="••••••••"
+              placeholder="Enter your password"
               className={`w-full rounded-xl border ${
                 errors.password
                   ? "border-rose-400 bg-rose-50/30"

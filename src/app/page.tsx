@@ -205,7 +205,8 @@ export default function HomePage() {
             </div>
             <div className="navcta">
               <Link className="btn btn-ghost" href="/login">Log in</Link>
-              <Link className="btn btn-primary" href="/register">Get started</Link>
+              <Link className="btn btn-ghost" href="/register">Get started</Link>
+              <Link className="btn btn-primary" href="/pre-order">Pre-order</Link>
             </div>
             <button className="hamburger" aria-label="Open menu" onClick={() => setMenuOpen(true)}>
               <svg className="icon" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
@@ -227,7 +228,8 @@ export default function HomePage() {
           <a href="#schools" onClick={closeMenu}>For Schools</a>
           <a href="#contact" onClick={closeMenu}>Contact</a>
           <Link className="btn btn-ghost" href="/login" onClick={closeMenu}>Log in</Link>
-          <Link className="btn btn-primary" href="/register" onClick={closeMenu}>Get started</Link>
+          <Link className="btn btn-ghost" href="/register" onClick={closeMenu}>Get started</Link>
+          <Link className="btn btn-primary" href="/pre-order" onClick={closeMenu}>Pre-order</Link>
         </div>
       </div>
 
@@ -240,7 +242,7 @@ export default function HomePage() {
             <h1 className="reveal in" data-d="1">Your child's personal AI tutor. <em>No distractions. Just learning.</em></h1>
             <p className="lead reveal in" data-d="2">GenEd is a dedicated AI learning device that sits on the desk — not a phone, not a tablet. It adapts to how your child learns, closes knowledge gaps, and keeps you informed. All without a browser in sight.</p>
             <div className="cta-row reveal in" data-d="3">
-              <Link className="btn btn-primary" href="/register">Get started <svg className="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></Link>
+              <Link className="btn btn-primary" href="/pre-order">Pre-order now <svg className="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></Link>
               <button type="button" className="btn btn-ghost" onClick={() => setShowVideo(true)}>
                 <svg className="icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor" stroke="none" /></svg> Meet the device
               </button>
@@ -420,7 +422,8 @@ export default function HomePage() {
           <h2>Give your child the learning companion they deserve.</h2>
           <p>GenEd is live and ready — a focused, distraction-free AI tutor that actually adapts to how your child learns.</p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-            <Link className="btn btn-primary" href="/register">Get started free <svg className="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></Link>
+            <Link className="btn btn-primary" href="/pre-order">Pre-order the Deskbot <svg className="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></Link>
+            <Link className="btn btn-ghost" href="/register" style={{ color: "#fff", borderColor: "rgba(255,255,255,0.35)" }}>Get started free</Link>
           </div>
         </div>
       </section>
@@ -433,7 +436,7 @@ export default function HomePage() {
               <a href="#top" className="logo" aria-label="GenEd home"><Image src="/Logo.svg" alt="GenEd" width={140} height={28} /></a>
               <p>A dedicated AI learning device that helps every child learn confidently, safely and at their own pace.</p>
             </div>
-            <div className="fcol"><h5>Product</h5><a href="#device">The Device</a><a href="#why">Why GenEd</a><a href="#parents">Parent App</a><a href="#safe">Safety</a></div>
+            <div className="fcol"><h5>Product</h5><Link href="/pre-order">Pre-order</Link><a href="#device">The Device</a><a href="#why">Why GenEd</a><a href="#parents">Parent App</a><a href="#safe">Safety</a></div>
             <div className="fcol"><h5>Company</h5><a href="#schools">For Schools</a><a href="#contact">Contact</a><a href="https://gened.ai" target="_blank" rel="noopener noreferrer">About</a><a href="https://gened.ai" target="_blank" rel="noopener noreferrer">Careers</a></div>
             <div className="fcol"><h5>Legal</h5><a href="https://gened.ai" target="_blank" rel="noopener noreferrer">Privacy</a><a href="https://gened.ai" target="_blank" rel="noopener noreferrer">Terms</a><a href="https://gened.ai" target="_blank" rel="noopener noreferrer">Child safety</a></div>
           </div>

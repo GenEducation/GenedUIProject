@@ -153,7 +153,7 @@ export function TeacherDashboard() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-paper">
+    <div className="portal-legacy-type flex h-screen overflow-hidden bg-paper">
       <TeacherSideBar
         activeView={view}
         onViewChange={handleSideBarNav}

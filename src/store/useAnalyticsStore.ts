@@ -1,5 +1,11 @@
 import { create } from "zustand";
 import { studentService } from "@/features/student/services/studentService";
+import {
+  loadSubjectCatalog,
+  requireExactSubject,
+  type ExactSubject,
+  type TaxonomySubject,
+} from "@/features/subjects/subjectCatalog";
 
 // -- Types --------------------------------------------------------------------
 
@@ -37,8 +43,8 @@ export interface OverallHistoryPoint {
 
 interface AnalyticsState {
   isAnalyticsOpen: boolean;
-  analyticsSubjects: string[];
-  selectedAnalyticsSubject: string;
+  analyticsSubjects: ExactSubject[];
+  selectedAnalyticsSubject: ExactSubject | "";
   skillSummary: SkillSummary | null;
   cgScores: Array<{ cg_id: string; cg_name: string; avg_mastery: number }>;
   skillTree: any[];
@@ -52,10 +58,28 @@ interface AnalyticsState {
 
   // Actions
   setAnalyticsOpen: (open: boolean) => void;
-  setSelectedAnalyticsSubject: (subject: string) => void;
+  setSelectedAnalyticsSubject: (subject: ExactSubject) => void;
   fetchAnalyticsSubjects: (studentId: string, signal?: AbortSignal) => Promise<void>;
   fetchAnalyticsData: (subject?: string, studentIdOverride?: string) => Promise<void>;
   fetchSkillProgressionData: (subject?: string, studentIdOverride?: string) => Promise<void>;
+}
+
+function extractExactSubjects(data: any, catalog: TaxonomySubject[]): ExactSubject[] {
+  const subjects = new Set<ExactSubject>();
+  for (const partner of Array.isArray(data?.partners) ? data.partners : []) {
+    for (const group of Array.isArray(partner?.subjects) ? partner.subjects : []) {
+      for (const agent of Array.isArray(group?.agents) ? group.agents : []) {
+        try {
+          subjects.add(
+            requireExactSubject(agent.subject ?? group.subject, Number(agent.grade), catalog),
+          );
+        } catch {
+          // Invalid historical rows are not analytics query options.
+        }
+      }
+    }
+  }
+  return Array.from(subjects).sort();
 }
 
 // -- Store --------------------------------------------------------------------
@@ -81,23 +105,9 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
 
   fetchAnalyticsSubjects: async (studentId, signal?) => {
     try {
+      const catalog = await loadSubjectCatalog();
       const data = await studentService.fetchAvailableAgents(studentId, signal);
-      
-      const subjectNames = new Set<string>();
-      if (data.partners && Array.isArray(data.partners)) {
-        data.partners.forEach((partner: any) => {
-          if (partner.subjects && Array.isArray(partner.subjects)) {
-            partner.subjects.forEach((sub: any) => {
-              const subjectName = sub.subject || sub.name;
-              if (subjectName && subjectName !== "General") {
-                subjectNames.add(subjectName);
-              }
-            });
-          }
-        });
-      }
-
-      const subjects = Array.from(subjectNames).sort();
+      const subjects = extractExactSubjects(data, catalog);
       set({ analyticsSubjects: subjects });
       
       // If no subject selected and we have subjects, select the first one
@@ -111,8 +121,11 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   },
 
   fetchAnalyticsData: async (subject, studentIdOverride) => {
-    const { selectedAnalyticsSubject } = get();
-    const targetSubject = subject || selectedAnalyticsSubject;
+    const { selectedAnalyticsSubject, analyticsSubjects } = get();
+    const requestedSubject = subject || selectedAnalyticsSubject;
+    const targetSubject = requestedSubject
+      ? analyticsSubjects.find((candidate) => candidate === requestedSubject)
+      : undefined;
     const effectiveStudentId = studentIdOverride;
 
     if (!effectiveStudentId) {
@@ -123,22 +136,9 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     if (!targetSubject) {
       // First, fetch subjects if none selected
       try {
+        const catalog = await loadSubjectCatalog();
         const agentData = await studentService.fetchAvailableAgents(effectiveStudentId);
-        const subjectNames = new Set<string>();
-        if (agentData.partners && Array.isArray(agentData.partners)) {
-          agentData.partners.forEach((partner: any) => {
-            if (partner.subjects && Array.isArray(partner.subjects)) {
-              partner.subjects.forEach((sub: any) => {
-                const subjectName = sub.subject || sub.name;
-                if (subjectName && subjectName !== "General") {
-                  subjectNames.add(subjectName);
-                }
-              });
-            }
-          });
-        }
-        
-        const subjects = Array.from(subjectNames).sort();
+        const subjects = extractExactSubjects(agentData, catalog);
         set({ analyticsSubjects: subjects });
         if (subjects.length > 0) {
           get().fetchAnalyticsData(subjects[0], studentIdOverride);
@@ -149,7 +149,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       return;
     }
 
-    if (subject) set({ selectedAnalyticsSubject: subject });
+    if (subject && targetSubject) set({ selectedAnalyticsSubject: targetSubject });
 
     set({ isAnalyticsLoading: true });
     try {
@@ -187,8 +187,11 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   },
 
   fetchSkillProgressionData: async (subject, studentIdOverride) => {
-    const { selectedAnalyticsSubject } = get();
-    const targetSubject = subject || selectedAnalyticsSubject;
+    const { selectedAnalyticsSubject, analyticsSubjects } = get();
+    const requestedSubject = subject || selectedAnalyticsSubject;
+    const targetSubject = requestedSubject
+      ? analyticsSubjects.find((candidate) => candidate === requestedSubject)
+      : undefined;
     const effectiveStudentId = studentIdOverride;
 
     if (!effectiveStudentId || !targetSubject) {

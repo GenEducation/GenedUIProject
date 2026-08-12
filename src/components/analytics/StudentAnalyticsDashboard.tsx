@@ -83,28 +83,31 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
   // -- Subject dropdown change --------------------------------------------------
   const handleSubjectChange = (newSubject: string) => {
     if (!effectiveStudentId) return;
+    const exactSubject = analyticsSubjects.find((subject) => subject === newSubject);
+    if (!exactSubject) return;
     
     // Always reload core analytics
-    fetchAnalyticsData(newSubject, effectiveStudentId);
+    fetchAnalyticsData(exactSubject, effectiveStudentId);
     // Also reload progression if the tab is active
     if (activeTab === "progression") {
-      fetchSkillProgressionData(newSubject, effectiveStudentId);
+      fetchSkillProgressionData(exactSubject, effectiveStudentId);
     }
   };
 
   const getSkillIndexConfig = () => {
-    const grade = studentProfile?.grade ?? 5;
+    const grade = studentProfile?.grade;
     const index = skillSummary?.skill_index ?? 0;
     const hasData = skillSummary !== null && skillSummary !== undefined;
 
     // Prefer backend provided values, fallback to client-side logic
     let denominator = skillSummary?.skill_index_max;
-    if (denominator === undefined) {
+    if (denominator === undefined && grade !== undefined) {
       if (grade >= 0 && grade <= 4) denominator = 2.00;
       else if (grade >= 5 && grade <= 8) denominator = 1.43;
       else if (grade >= 9 && grade <= 10) denominator = 1.14;
       else denominator = 1.00;
     }
+    denominator ??= 1.00;
 
     let status = skillSummary?.skill_index_status;
     let color = "#3B82F6"; // Blue

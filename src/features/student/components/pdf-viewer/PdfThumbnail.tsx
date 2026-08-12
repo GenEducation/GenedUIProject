@@ -88,7 +88,7 @@ export function PdfThumbnail({ pdfDoc, pageNumber, pageWidth, pageHeight, isActi
           borderRadius: 3,
           overflow: "hidden",
           boxShadow: isActive
-            ? "0 0 0 2px #5B4DC7, 0 2px 6px rgba(91,77,199,0.18)"
+            ? "0 0 0 2px var(--tutor), 0 2px 6px rgba(91,77,199,0.18)"
             : "0 1px 3px rgba(0,0,0,0.12)",
           flexShrink: 0,
         }}
@@ -101,8 +101,8 @@ export function PdfThumbnail({ pdfDoc, pageNumber, pageWidth, pageHeight, isActi
         style={{
           fontSize: 10,
           fontWeight: isActive ? 700 : 500,
-          color: isActive ? "#5B4DC7" : "#94A3B8",
-          fontFamily: "'DM Sans', sans-serif",
+          color: isActive ? "var(--tutor)" : "#94A3B8",
+          fontFamily: "var(--font-body)",
           lineHeight: 1,
         }}
       >
