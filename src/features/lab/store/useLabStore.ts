@@ -16,6 +16,7 @@ import type {
   CreateSlotRequest,
   SlotUpdateRequest,
   ActivateResponse,
+  SeatAssignment,
   BoardResponse,
   ClassReportResponse,
   CatalogResponse,
@@ -82,7 +83,7 @@ interface LabState {
   createSlot: (payload: CreateSlotRequest) => Promise<SlotResponse>;
   updateSlot: (slotId: string, payload: SlotUpdateRequest) => Promise<void>;
   cancelSlot: (slotId: string) => Promise<void>;
-  activateSlot: (slotId: string) => Promise<ActivateResponse>;
+  activateSlot: (slotId: string, assignments?: SeatAssignment[]) => Promise<ActivateResponse>;
   endSlot: (slotId: string) => Promise<void>;
 
   // -- Board lifecycle ------------------------------------------------------------------
@@ -321,8 +322,8 @@ export const useLabStore = create<LabState>((set, get) => ({
     set((state) => ({ slots: state.slots.map((s) => (s.id === slotId ? updated : s)) }));
   },
 
-  activateSlot: async (slotId) => {
-    const result = await labService.activateSlot(slotId);
+  activateSlot: async (slotId, assignments = []) => {
+    const result = await labService.activateSlot(slotId, assignments);
     set((state) => ({
       slots: state.slots.map((s) => (s.id === slotId ? { ...s, status: "ACTIVE" } : s)),
     }));

@@ -6,7 +6,8 @@ import { useLabStore } from "../store/useLabStore";
 import { labService } from "../services/labService";
 import { LiveBoard } from "./LiveBoard";
 import { ClassReport } from "./ClassReport";
-import type { LabCapacityResponse, SlotResponse } from "../types/lab";
+import { PreActivationSeating, type SeatingAssignments } from "./PreActivationSeating";
+import type { DeviceResponse, LabCapacityResponse, RosterStudent, SlotResponse } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
 import { ToastStack, ToastItem } from "@/features/teacher/components/Toast";
 
@@ -26,6 +27,11 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
   const [isLoadingCapacity, setIsLoadingCapacity] = useState(false);
   const [startBlocked, setStartBlocked] = useState<"feature" | "capacity" | null>(null);
   const [capacityCheckFailed, setCapacityCheckFailed] = useState(false);
+  const [roster, setRoster] = useState<RosterStudent[]>([]);
+  const [seatingDevices, setSeatingDevices] = useState<DeviceResponse[]>([]);
+  const [assignments, setAssignments] = useState<SeatingAssignments>({});
+  const [isLoadingSeating, setIsLoadingSeating] = useState(false);
+  const [seatingError, setSeatingError] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const currentSlot = slots.find((s) => s.id === slot.id) || slot;
@@ -65,6 +71,41 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
     void loadCapacity();
   }, [loadCapacity]);
 
+  const loadSeating = useCallback(async () => {
+    if (currentSlot.status !== "SCHEDULED") return;
+    setIsLoadingSeating(true);
+    setSeatingError(false);
+    try {
+      const [students, devices] = await Promise.all([
+        labService.getSlotRoster(slot.id),
+        labService.listDevices(currentSlot.lab_id),
+      ]);
+      setRoster(students);
+      setSeatingDevices(devices);
+      const studentIds = new Set(students.map((student) => student.student_id));
+      const availableDeviceIds = new Set(
+        devices
+          .filter((device) => device.health_status === "ONLINE" && !device.revoked_at && !device.is_spare)
+          .map((device) => device.id),
+      );
+      setAssignments((current) =>
+        Object.fromEntries(
+          Object.entries(current).filter(
+            ([studentId, deviceId]) => studentIds.has(studentId) && availableDeviceIds.has(deviceId),
+          ),
+        ),
+      );
+    } catch {
+      setSeatingError(true);
+    } finally {
+      setIsLoadingSeating(false);
+    }
+  }, [currentSlot.lab_id, currentSlot.status, slot.id]);
+
+  useEffect(() => {
+    void loadSeating();
+  }, [loadSeating]);
+
   useEffect(() => {
     if (currentSlot.status === "ACTIVE" || currentSlot.status === "COMPLETED") {
       openBoard(slot.id, userId);
@@ -78,12 +119,21 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
     setNoRosterError(false);
     setStartBlocked(null);
     try {
-      const result = await activateSlot(slot.id);
+      const requestedSeats = Object.entries(assignments).map(([student_id, device_id]) => ({
+        student_id,
+        device_id,
+      }));
+      const result = await activateSlot(slot.id, requestedSeats);
       setActivateResult({ assigned: result.assigned, idle: result.idle });
       pushToast({ type: "success", title: "Period activated", description: `${result.assigned} assigned · ${result.idle} waiting` });
     } catch (err) {
       if (err instanceof ApiRequestError && err.error_code === "LAB_1101") {
-        setNoRosterError(true);
+        if (err.message.toLowerCase().includes("no active enrollment roster")) {
+          setNoRosterError(true);
+        } else {
+          pushToast({ type: "error", title: "Check the seating plan", description: err.message });
+        }
+        await loadSeating();
       } else if (err instanceof ApiRequestError && err.error_code === "LAB_1120") {
         setStartBlocked("feature");
       } else if (err instanceof ApiRequestError && err.error_code === "LAB_1121") {
@@ -129,7 +179,7 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
         {currentSlot.status === "SCHEDULED" && (
           <button
             onClick={handleActivate}
-            disabled={isBusy || isLoadingCapacity || noRosterError || startBlocked !== null}
+            disabled={isBusy || isLoadingCapacity || isLoadingSeating || seatingError || noRosterError || startBlocked !== null}
             className="flex items-center gap-2 rounded-xl bg-emerald px-5 py-3.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(5,159,109,.28)] hover:-translate-y-0.5 hover:bg-emerald-600 disabled:opacity-50"
           >
             <PlayCircle size={18} />
@@ -228,6 +278,31 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
             <RefreshCw size={13} /> Retry
           </button>
         </div>
+      )}
+
+      {currentSlot.status === "SCHEDULED" && isLoadingSeating && (
+        <div className="mb-5 rounded-xl border border-border bg-white p-5 text-sm text-muted">
+          Loading students and devices…
+        </div>
+      )}
+
+      {currentSlot.status === "SCHEDULED" && !isLoadingSeating && seatingError && (
+        <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-border bg-white p-4 text-[13px] text-muted">
+          <span>Seating could not be loaded. Retry before activating the period.</span>
+          <button onClick={() => void loadSeating()} className="inline-flex items-center gap-1.5 font-bold text-ink">
+            <RefreshCw size={13} /> Retry
+          </button>
+        </div>
+      )}
+
+      {currentSlot.status === "SCHEDULED" && !isLoadingSeating && !seatingError && roster.length > 0 && (
+        <PreActivationSeating
+          students={roster}
+          devices={seatingDevices}
+          assignments={assignments}
+          disabled={isBusy}
+          onChange={setAssignments}
+        />
       )}
 
       {activateResult && currentSlot.status === "ACTIVE" && (

@@ -15,6 +15,49 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+const FALLBACK_TZ = "Asia/Kolkata";
+
+/**
+ * Minutes that `timeZone`'s wall clock is ahead of UTC at `date` (IST → +330).
+ * Uses Intl so it stays correct per IANA zone / DST instead of a hardcoded offset.
+ */
+function tzOffsetMinutes(date: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(date);
+  const map: Record<string, number> = {};
+  for (const part of parts) {
+    if (part.type !== "literal") map[part.type] = Number(part.value);
+  }
+  const asUtc = Date.UTC(map.year, map.month - 1, map.day, map.hour, map.minute, map.second);
+  return Math.round((asUtc - date.getTime()) / 60000);
+}
+
+/** Interpret a `YYYY-MM-DD` + `HH:MM` wall clock as local to `timeZone`; return the UTC instant as ISO. */
+function zonedWallClockToUtcIso(dateStr: string, timeStr: string, timeZone: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const [hh, mm] = timeStr.split(":").map(Number);
+  const guess = new Date(Date.UTC(y, m - 1, d, hh, mm, 0));
+  return new Date(guess.getTime() - tzOffsetMinutes(guess, timeZone) * 60000).toISOString();
+}
+
+/** Render a UTC ISO instant as `HH:MM` wall clock in `timeZone`. */
+function formatSlotTime(iso: string, timeZone: string): string {
+  return new Date(iso).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone,
+  });
+}
+
 const statusStyles: Record<string, string> = {
   SCHEDULED: "bg-border text-muted",
   ACTIVE: "bg-emerald-50 text-emerald-600",
@@ -51,6 +94,10 @@ export function SlotScheduler({ teacherId, partnerId, onOpenSlot }: SlotSchedule
     () => [...slots].sort((a, b) => a.start_time.localeCompare(b.start_time)),
     [slots],
   );
+
+  // Times are stored/returned as UTC instants; render each in its lab's timezone.
+  const labTimezone = (labId: string) =>
+    labs.find((l) => l.id === labId)?.timezone ?? FALLBACK_TZ;
 
   return (
     <motion.div
@@ -138,7 +185,8 @@ export function SlotScheduler({ teacherId, partnerId, onOpenSlot }: SlotSchedule
                   </p>
                   <p className="mt-0.5 text-[12.5px] text-muted">
                     <span className="font-serif font-semibold text-ink">
-                      {slot.start_time.slice(11, 16)}–{slot.end_time.slice(11, 16)}
+                      {formatSlotTime(slot.start_time, labTimezone(slot.lab_id))}–
+                      {formatSlotTime(slot.end_time, labTimezone(slot.lab_id))}
                     </span>{" "}
                     · {OBJECTIVE_MODES.find((m) => m.value === slot.objective_mode)?.label || slot.objective_mode}
                     {slot.chapter ? ` · ${slot.chapter}` : ""}
@@ -193,7 +241,7 @@ function CreateSlotModal({
 }: {
   isOpen: boolean;
   teacherId: string;
-  labs: { id: string; name: string }[];
+  labs: { id: string; name: string; timezone: string }[];
   defaultDate: string;
   onClose: () => void;
 }) {
@@ -211,6 +259,8 @@ function CreateSlotModal({
   const [scheduledDate, setScheduledDate] = useState(defaultDate);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("09:40");
+  // Per-student session budget in minutes (defaults to the 50-min lab default).
+  const [sessionMinutes, setSessionMinutes] = useState(50);
   const [isSubmitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -270,6 +320,9 @@ function CreateSlotModal({
     }
     setSubmitting(true);
     setError(null);
+    // Interpret the teacher's wall-clock entry in the selected lab's timezone,
+    // not a hardcoded IST offset, so non-IST labs schedule correctly too.
+    const labTz = labs.find((l) => l.id === labId)?.timezone ?? FALLBACK_TZ;
     try {
       await createSlot({
         lab_id: labId,
@@ -283,8 +336,9 @@ function CreateSlotModal({
         document_title: chapterValue || undefined,
         skill_focus: skillFocus.trim() || undefined,
         scheduled_date: scheduledDate,
-        start_time: `${scheduledDate}T${startTime}:00+05:30`,
-        end_time: `${scheduledDate}T${endTime}:00+05:30`,
+        start_time: zonedWallClockToUtcIso(scheduledDate, startTime, labTz),
+        end_time: zonedWallClockToUtcIso(scheduledDate, endTime, labTz),
+        session_seconds: Math.round(Math.min(240, Math.max(1, sessionMinutes || 1)) * 60),
       });
       await fetchSlots({ onDate: defaultDate });
       onClose();
@@ -429,6 +483,17 @@ function CreateSlotModal({
                 onChange={(e) => setEndTime(e.target.value)}
                 className="rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20"
               />
+              <label className="col-span-2 flex items-center justify-between gap-3 rounded-xl border border-border px-3.5 py-2.5 text-sm">
+                <span className="text-muted">Session length — minutes per student</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={240}
+                  value={sessionMinutes}
+                  onChange={(e) => setSessionMinutes(Number(e.target.value))}
+                  className="w-20 rounded-lg border border-border px-2.5 py-1.5 text-right text-sm text-ink outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20"
+                />
+              </label>
             </div>
             {error && <p className="mt-3 text-xs text-danger-ink">{error}</p>}
             <button
