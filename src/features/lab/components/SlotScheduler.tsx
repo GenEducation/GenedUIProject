@@ -7,6 +7,8 @@ import { useLabStore } from "../store/useLabStore";
 import { OBJECTIVE_MODES, type ObjectiveMode, type SlotResponse } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
 import { CreateClassModal } from "./CreateClassModal";
+import { DatePickerField } from "./DatePickerField";
+import { TimePickerField } from "./TimePickerField";
 import {
   requireExactSubject,
   type ExactSubject,
@@ -93,7 +95,12 @@ export function SlotScheduler({ teacherId, partnerId, onOpenSlot }: SlotSchedule
   }, [onDate]);
 
   const sortedSlots = useMemo(
-    () => [...slots].sort((a, b) => a.start_time.localeCompare(b.start_time)),
+    () =>
+      [...slots].sort((a, b) => {
+        const byTime = b.start_time.localeCompare(a.start_time);
+        if (byTime !== 0) return byTime;
+        return b.id.localeCompare(a.id);
+      }),
     [slots],
   );
 
@@ -114,12 +121,7 @@ export function SlotScheduler({ teacherId, partnerId, onOpenSlot }: SlotSchedule
           <h1 className="mt-1 font-serif text-3xl font-semibold text-ink sm:text-4xl">Today&apos;s Periods</h1>
         </div>
         <div className="flex items-center gap-3">
-          <input
-            type="date"
-            value={onDate}
-            onChange={(e) => setOnDate(e.target.value)}
-            className="rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-ink outline-none focus:border-emerald"
-          />
+          <DatePickerField value={onDate} onChange={setOnDate} />
           <button
             onClick={() => setClassCreateOpen(true)}
             className="flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-3 text-sm font-semibold text-ink hover:border-emerald"
@@ -481,24 +483,14 @@ function CreateSlotModal({
                   className="col-span-2 rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20"
                 />
               )}
-              <input
-                type="date"
+              <DatePickerField
                 value={scheduledDate}
-                onChange={(e) => setScheduledDate(e.target.value)}
-                className="col-span-2 rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20"
+                onChange={setScheduledDate}
+                className="col-span-2"
+                buttonClassName="w-full"
               />
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20"
-              />
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20"
-              />
+              <TimePickerField value={startTime} onChange={setStartTime} buttonClassName="w-full" />
+              <TimePickerField value={endTime} onChange={setEndTime} buttonClassName="w-full" />
               <label className="col-span-2 flex items-center justify-between gap-3 rounded-xl border border-border px-3.5 py-2.5 text-sm">
                 <span className="text-muted">Session length — minutes per student</span>
                 <input
