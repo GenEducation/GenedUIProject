@@ -8,6 +8,7 @@ import Image from "next/image";
 import { useStudentStore, sessionRoutePath, isVoiceSession, type AgentItem } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
 import { getStudentDisplayName } from "../utils/displayName";
+import { selectContinueSession } from "../utils/sessionSelection";
 import { STUDENT_COLORS } from "../theme/colors";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
@@ -353,13 +354,14 @@ export function StudentHome() {
     return true;
   });
 
-  /* Continue learning = most recent session (index 0) */
-  const continueSession = allSessions[0] ?? null;
+  /* Continue learning is independent of Recent Sessions filters and must be resumable. */
+  const continueSession = selectContinueSession(allSessionsRaw);
 
-  /* Session list shown below = index 1..3 (next 3) by default, expand to all */
-  const previewSessions = allSessions.slice(1, 4);
-  const displayedSessions = showAllSessions ? allSessions.slice(1) : previewSessions;
-  const hasMoreSessions = allSessions.length > 4;
+  /* Recent Sessions retains completed sessions and only removes the card shown above. */
+  const recentSessions = allSessions.filter(session => session.id !== continueSession?.id);
+  const previewSessions = recentSessions.slice(0, 3);
+  const displayedSessions = showAllSessions ? recentSessions : previewSessions;
+  const hasMoreSessions = recentSessions.length > 3;
 
   const getGreeting = () => {
     const h = new Date().getHours();
