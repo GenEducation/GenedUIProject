@@ -13,6 +13,7 @@ interface TimePickerFieldProps {
 }
 
 const PANEL_WIDTH = 200;
+const PANEL_HEIGHT_ESTIMATE = 100; // entry row + "Done" button + padding
 const VIEWPORT_MARGIN = 12;
 
 function parseValue(value: string): number {
@@ -98,7 +99,16 @@ export function TimePickerField({ value, onChange, className, buttonClassName }:
         Math.max(rect.left, VIEWPORT_MARGIN),
         window.innerWidth - PANEL_WIDTH - VIEWPORT_MARGIN,
       );
-      setPanelPos({ top: rect.bottom + 8, left });
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+      const top =
+        spaceBelow >= PANEL_HEIGHT_ESTIMATE || spaceBelow >= spaceAbove
+          ? rect.bottom + 8
+          : rect.top - 8 - PANEL_HEIGHT_ESTIMATE;
+      setPanelPos({
+        top: Math.min(Math.max(top, VIEWPORT_MARGIN), window.innerHeight - VIEWPORT_MARGIN - PANEL_HEIGHT_ESTIMATE),
+        left,
+      });
     };
     reposition();
     window.addEventListener("resize", reposition);

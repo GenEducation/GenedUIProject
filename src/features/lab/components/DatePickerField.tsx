@@ -40,6 +40,7 @@ function formatDisplay(iso: string): string {
  * replaces the native <input type="date"> whose popover can't be themed.
  */
 const PANEL_WIDTH = 288; // w-72
+const PANEL_HEIGHT_ESTIMATE = 400; // header + weekday row + up to 6 week rows + "Today" button
 const VIEWPORT_MARGIN = 12;
 
 export function DatePickerField({ value, onChange, className, buttonClassName }: DatePickerFieldProps) {
@@ -77,7 +78,9 @@ export function DatePickerField({ value, onChange, className, buttonClassName }:
 
   // Position the panel relative to the viewport (not the trigger) and clamp it
   // within screen bounds — anchoring to the trigger with right-0/left-0 alone
-  // pushes it off-screen on narrow viewports.
+  // pushes it off-screen on narrow viewports, and anchoring only below the
+  // trigger overflows the bottom edge when the trigger sits low on screen
+  // (e.g. inside a modal), so flip above the trigger when there's more room there.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -88,7 +91,16 @@ export function DatePickerField({ value, onChange, className, buttonClassName }:
         Math.max(rect.left, VIEWPORT_MARGIN),
         window.innerWidth - PANEL_WIDTH - VIEWPORT_MARGIN,
       );
-      setPanelPos({ top: rect.bottom + 8, left });
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+      const top =
+        spaceBelow >= PANEL_HEIGHT_ESTIMATE || spaceBelow >= spaceAbove
+          ? rect.bottom + 8
+          : rect.top - 8 - PANEL_HEIGHT_ESTIMATE;
+      setPanelPos({
+        top: Math.min(Math.max(top, VIEWPORT_MARGIN), window.innerHeight - VIEWPORT_MARGIN - PANEL_HEIGHT_ESTIMATE),
+        left,
+      });
     };
 
     reposition();
@@ -129,8 +141,14 @@ export function DatePickerField({ value, onChange, className, buttonClassName }:
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 8, scale: 0.97 }}
       transition={{ type: "spring", stiffness: 420, damping: 32 }}
-      style={{ position: "fixed", top: panelPos.top, left: panelPos.left, width: PANEL_WIDTH }}
-      className="z-[110] rounded-2xl border border-border bg-white p-4 shadow-xl"
+      style={{
+        position: "fixed",
+        top: panelPos.top,
+        left: panelPos.left,
+        width: PANEL_WIDTH,
+        maxHeight: `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
+      }}
+      className="z-[110] overflow-y-auto rounded-2xl border border-border bg-white p-4 shadow-xl"
     >
       <div className="mb-3 flex items-center justify-between">
         <button
