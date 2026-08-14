@@ -7,6 +7,20 @@ if (!API_BASE_URL) {
 }
 
 export const studentService = {
+  fetchAvailableTeachers: async () => {
+    const response = await authFetch(`${API_BASE_URL}/student/available-teachers`);
+    return response.json();
+  },
+
+  requestTeacher: async (studentId: string, teacherId: string, subject?: string) => {
+    const response = await authFetch(`${API_BASE_URL}/student/teacher`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ student_id: studentId, teacher_id: teacherId, subject: subject || null }),
+    });
+    return response.json();
+  },
+
   fetchSessions: async (userId: string) => {
     try {
       const response = await authFetch(`${API_BASE_URL}/get-session`, {

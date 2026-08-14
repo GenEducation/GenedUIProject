@@ -8,6 +8,7 @@ import Image from "next/image";
 import { useStudentStore, sessionRoutePath, isVoiceSession, type AgentItem } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
 import { getStudentDisplayName } from "../utils/displayName";
+import { selectContinueSession } from "../utils/sessionSelection";
 import { STUDENT_COLORS } from "../theme/colors";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
@@ -260,7 +261,20 @@ export function StudentHome() {
   const [showAllSessions,setShowAllSessions]= useState(false);
   const subjectsScrollRef = useRef<HTMLDivElement>(null);
   const scrollSubjects = (dir: "left" | "right") => {
-    subjectsScrollRef.current?.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" });
+    const el = subjectsScrollRef.current;
+    if (!el) return;
+    const cards = Array.from(el.children) as HTMLElement[];
+    if (!cards.length) return;
+    // Align to the next/previous card edge so a full subject card lands in view.
+    const current = el.scrollLeft;
+    const tolerance = 2;
+    const target = dir === "right"
+      ? cards.find((c) => c.offsetLeft > current + tolerance)
+      : [...cards].reverse().find((c) => c.offsetLeft < current - tolerance);
+    const left = target
+      ? target.offsetLeft
+      : dir === "right" ? el.scrollWidth : 0;
+    el.scrollTo({ left, behavior: "smooth" });
   };
 
   // Filters
@@ -340,13 +354,14 @@ export function StudentHome() {
     return true;
   });
 
-  /* Continue learning = most recent session (index 0) */
-  const continueSession = allSessions[0] ?? null;
+  /* Continue learning is independent of Recent Sessions filters and must be resumable. */
+  const continueSession = selectContinueSession(allSessionsRaw);
 
-  /* Session list shown below = index 1..3 (next 3) by default, expand to all */
-  const previewSessions = allSessions.slice(1, 4);
-  const displayedSessions = showAllSessions ? allSessions.slice(1) : previewSessions;
-  const hasMoreSessions = allSessions.length > 4;
+  /* Recent Sessions retains completed sessions and only removes the card shown above. */
+  const recentSessions = allSessions.filter(session => session.id !== continueSession?.id);
+  const previewSessions = recentSessions.slice(0, 3);
+  const displayedSessions = showAllSessions ? recentSessions : previewSessions;
+  const hasMoreSessions = recentSessions.length > 3;
 
   const getGreeting = () => {
     const h = new Date().getHours();
@@ -656,7 +671,7 @@ export function StudentHome() {
                       </button>
                     </>
                   )}
-                  <div ref={subjectsScrollRef} className="flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)" }}>
+                  <div ref={subjectsScrollRef} className="flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)", scrollSnapType: "x mandatory" }}>
                     {agents.map((agent) => {
                     const vis = agent.vis;
                     const hov = hoveredAgent === agent.agent_id;
@@ -676,6 +691,7 @@ export function StudentHome() {
                           transform: hov ? "translateY(-3px)" : "none",
                           boxShadow: hov ? `0 10px 30px ${vis.color}18` : "0 1px 5px rgba(0,0,0,0.04)",
                           transition: "all 0.25s ease",
+                          scrollSnapAlign: "start",
                         }}>
                         <div className="flex items-center mb-4" style={{ gap: "clamp(10px, 1.2vw, 14px)" }}>
                           <div className="rounded-[14px] flex items-center justify-center flex-shrink-0"
@@ -707,6 +723,7 @@ export function StudentHome() {
                               border: `1.5px solid ${vis.color}40`,
                               background: hov ? `${vis.color}10` : "transparent",
                               color: vis.color,
+                              borderRadius: 10,
                               fontSize: "clamp(11px, 1.1vw, 13px)",
                             }}
                           >
@@ -717,6 +734,10 @@ export function StudentHome() {
                             fullWidth
                             onClick={() => handleAgentVoiceClick(agent)}
                             style={{
+                              background: STUDENT_COLORS.primary,
+                              color: STUDENT_COLORS.card,
+                              border: "1.5px solid transparent",
+                              borderRadius: 10,
                               fontSize: "clamp(11px, 1.1vw, 13px)",
                               boxShadow: hov ? `0 4px 12px ${STUDENT_COLORS.primary}30` : "none",
                             }}

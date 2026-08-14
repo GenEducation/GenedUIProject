@@ -42,11 +42,11 @@ export function VoiceControls({ onEnd }: VoiceControlsProps) {
           style={{
             background: pttHeld
               ? "linear-gradient(135deg, #34C759, #30d158)"
-              : "linear-gradient(135deg, var(--tutor), var(--tutor-soft))",
+              : "linear-gradient(135deg, #059F6D, #048A5D)",
             color: "white",
             boxShadow: pttHeld
               ? "0 6px 20px rgba(52,199,89,0.45)"
-              : "0 6px 20px rgba(91,77,199,0.35)",
+              : "0 6px 20px rgba(5,159,109,0.35)",
             transform: pttHeld ? "scale(0.97)" : "scale(1)",
           }}
         >

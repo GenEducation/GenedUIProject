@@ -348,7 +348,7 @@ export function StudentVoiceView() {
             <button
               onClick={handleStartNew}
               className="flex items-center gap-2 px-6 h-12 rounded-full font-bold text-[14px] text-white transition-all shadow-lg"
-              style={{ background: "linear-gradient(135deg, var(--tutor), var(--tutor-soft))" }}
+              style={{ background: "linear-gradient(135deg, #059F6D, #048A5D)" }}
             >
               <Sparkles size={16} />
               Start New Session
@@ -370,8 +370,8 @@ export function StudentVoiceView() {
               onClick={handleResume}
               className="flex items-center gap-2.5 px-7 h-13 sm:h-14 rounded-full font-bold text-[15px] text-white transition-all select-none"
               style={{
-                background: "linear-gradient(135deg, var(--tutor), var(--tutor-soft))",
-                boxShadow: "0 8px 24px rgba(91,77,199,0.40)",
+                background: "linear-gradient(135deg, #059F6D, #048A5D)",
+                boxShadow: "0 8px 24px rgba(5,159,109,0.40)",
                 paddingTop: 14,
                 paddingBottom: 14,
               }}

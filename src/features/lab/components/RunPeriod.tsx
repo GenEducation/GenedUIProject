@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, PlayCircle, StopCircle, Users, ExternalLink, RefreshCw, TriangleAlert } from "lucide-react";
+import { ArrowLeft, PlayCircle, StopCircle, Users, ExternalLink, RefreshCw, TriangleAlert, UserPlus } from "lucide-react";
 import { useLabStore } from "../store/useLabStore";
 import { labService } from "../services/labService";
 import { LiveBoard } from "./LiveBoard";
 import { ClassReport } from "./ClassReport";
 import { PreActivationSeating, type SeatingAssignments } from "./PreActivationSeating";
+import { AddStudentsToClass } from "./AddStudentsToClass";
 import type { DeviceResponse, LabCapacityResponse, RosterStudent, SlotResponse } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
 import { ToastStack, ToastItem } from "@/features/teacher/components/Toast";
@@ -33,6 +34,7 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
   const [isLoadingSeating, setIsLoadingSeating] = useState(false);
   const [seatingError, setSeatingError] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [isAddStudentsOpen, setIsAddStudentsOpen] = useState(false);
 
   const currentSlot = slots.find((s) => s.id === slot.id) || slot;
 
@@ -158,6 +160,12 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
     }
   };
 
+  const handleStudentsAdded = async (message: string) => {
+    setNoRosterError(false);
+    await Promise.all([loadSeating(), loadCapacity()]);
+    pushToast({ type: "success", title: "Class roster updated", description: message });
+  };
+
   return (
     <div className="flex min-h-full flex-col px-6 py-8 lg:px-10">
       <button onClick={onBack} className="mb-4 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-muted hover:text-ink">
@@ -210,13 +218,17 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
 
       {noRosterError && (
         <div className="mb-5 flex items-center justify-between gap-3 rounded-xl bg-warning-bg p-4 text-[13px] text-warning-ink">
-          <span>No roster found for this grade/section. Import the class register first.</span>
-          {onRosterImportClick && (
-            <button onClick={onRosterImportClick} className="flex shrink-0 items-center gap-1 font-bold underline">
-              Import roster
-              <ExternalLink size={12} />
+          <span>No students are assigned to Grade {currentSlot.grade}{currentSlot.section} yet.</span>
+          <div className="flex shrink-0 items-center gap-3">
+            <button onClick={() => setIsAddStudentsOpen(true)} className="flex items-center gap-1 font-bold underline">
+              Add my students <UserPlus size={12} />
             </button>
-          )}
+            {onRosterImportClick && (
+              <button onClick={onRosterImportClick} className="flex items-center gap-1 font-bold underline">
+                Import full roster <ExternalLink size={12} />
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -296,13 +308,32 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
       )}
 
       {currentSlot.status === "SCHEDULED" && !isLoadingSeating && !seatingError && roster.length > 0 && (
-        <PreActivationSeating
-          students={roster}
-          devices={seatingDevices}
-          assignments={assignments}
-          disabled={isBusy}
-          onChange={setAssignments}
-        />
+        <>
+          <div className="mb-3 flex justify-end">
+            <button onClick={() => setIsAddStudentsOpen(true)} className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm font-bold text-ink hover:border-emerald">
+              <UserPlus size={16} /> Add students
+            </button>
+          </div>
+          <PreActivationSeating
+            students={roster}
+            devices={seatingDevices}
+            assignments={assignments}
+            disabled={isBusy}
+            onChange={setAssignments}
+          />
+        </>
+      )}
+
+      {currentSlot.status === "SCHEDULED" && !isLoadingSeating && !seatingError && roster.length === 0 && !noRosterError && (
+        <div className="mb-5 rounded-2xl border border-dashed border-border bg-white p-8 text-center">
+          <Users className="mx-auto text-muted" size={24} />
+          <p className="mt-3 font-semibold text-ink">No students in Grade {currentSlot.grade}{currentSlot.section}</p>
+          <p className="mt-1 text-sm text-muted">Add students associated with you, or import a complete class register.</p>
+          <div className="mt-4 flex justify-center gap-3">
+            <button onClick={() => setIsAddStudentsOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-emerald px-4 py-2.5 text-sm font-bold text-white"><UserPlus size={16} /> Add my students</button>
+            {onRosterImportClick && <button onClick={onRosterImportClick} className="rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-ink">Import full roster</button>}
+          </div>
+        </div>
       )}
 
       {activateResult && currentSlot.status === "ACTIVE" && (
@@ -330,6 +361,14 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
       )}
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      <AddStudentsToClass
+        slotId={slot.id}
+        grade={currentSlot.grade}
+        section={currentSlot.section}
+        isOpen={isAddStudentsOpen}
+        onClose={() => setIsAddStudentsOpen(false)}
+        onAdded={handleStudentsAdded}
+      />
     </div>
   );
 }

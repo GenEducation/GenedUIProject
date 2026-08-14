@@ -19,7 +19,7 @@ interface PageHeaderProps {
 export function PageHeader({ icon, title, onBack, sidebarOpen = true, actions }: PageHeaderProps) {
   return (
     <header
-      className={`px-4 sm:px-8 py-6 flex items-center gap-3 sm:gap-6 bg-white border-b border-[var(--primary-ink)]/5 sticky top-0 z-20 transition-all ${!sidebarOpen ? "pl-16 sm:pl-8" : ""}`}
+      className={`px-4 sm:px-8 py-6 flex items-center gap-3 sm:gap-6 bg-white border-b border-[rgba(4,46,92,0.05)] sticky top-0 z-20 transition-all ${!sidebarOpen ? "pl-16 sm:pl-8" : ""}`}
     >
       {onBack && (
         <button

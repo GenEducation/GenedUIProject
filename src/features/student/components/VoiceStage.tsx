@@ -128,12 +128,12 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd,
             style={{
               padding: "10px 28px",
               borderRadius: 999,
-              background: "var(--tutor)",
+              background: "#059F6D",
               color: "#fff",
               border: "none",
               cursor: "pointer",
               letterSpacing: "0.12em",
-              boxShadow: "0 4px 20px rgba(91,77,199,0.35)",
+              boxShadow: "0 4px 20px rgba(5,159,109,0.35)",
             }}
           >
             Tap to start

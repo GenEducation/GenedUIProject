@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Users, CheckCircle2, TriangleAlert, UserX, Circle, TrendingDown, type LucideIcon } from "lucide-react";
 import { useLabStore } from "../store/useLabStore";
@@ -19,6 +19,7 @@ interface ClassReportProps {
 
 export function ClassReport({ slotId }: ClassReportProps) {
   const { report, isLoadingReport, fetchReport } = useLabStore();
+  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchReport(slotId);
@@ -79,8 +80,13 @@ export function ClassReport({ slotId }: ClassReportProps) {
                 {students.map((s) => {
                   const style = statusStyles[s.status];
                   const StatusIcon = style.icon;
+                  const expanded = expandedStudentId === s.student_id;
                   return (
-                    <tr key={s.student_id}>
+                    <Fragment key={s.student_id}>
+                    <tr
+                      className={s.evaluation_available ? "cursor-pointer hover:bg-paper/60" : undefined}
+                      onClick={() => s.evaluation_available && setExpandedStudentId(expanded ? null : s.student_id)}
+                    >
                       <td className="px-4 py-2.5 font-semibold text-ink">
                         #{s.roll_no} {s.student_name}
                       </td>
@@ -90,8 +96,30 @@ export function ClassReport({ slotId }: ClassReportProps) {
                           {style.label}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5 text-muted">{s.device_label || "—"}</td>
+                      <td className="px-4 py-2.5 text-muted">
+                        <p>{s.device_label || "—"}</p>
+                        {s.evaluation_available && (
+                          <p className="mt-1 text-[10.5px] font-semibold text-info">
+                            {expanded ? "Hide learning report" : "View learning report"}
+                          </p>
+                        )}
+                      </td>
                     </tr>
+                    {expanded && (
+                      <tr>
+                        <td colSpan={3} className="bg-paper/50 px-4 py-3">
+                          <div className="rounded-xl border border-border bg-white p-3 text-xs text-ink">
+                            <div className="mb-2 flex flex-wrap gap-3 text-[11px] font-semibold text-muted">
+                              {s.mastery_score != null && <span>Mastery {Math.round(s.mastery_score * 100)}%</span>}
+                              {s.completion_percentage != null && <span>Chapter covered {Math.round(s.completion_percentage)}%</span>}
+                              {s.end_reason && <span>Session ended: {s.end_reason.replaceAll("_", " ")}</span>}
+                            </div>
+                            <p className="whitespace-pre-wrap leading-relaxed">{s.chapter_report}</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>

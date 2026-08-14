@@ -10,7 +10,7 @@
 // this constant would not reliably win. Each call site supplies its own
 // horizontal padding class alongside this constant.
 export const FIELD_CLASSNAME =
-  "w-full bg-[var(--surface-sunken)] border border-[var(--primary-ink)]/5 rounded-2xl py-3.5 text-sm font-medium transition-all";
+  "w-full bg-[var(--surface-sunken)] border border-[rgba(4,46,92,0.05)] rounded-2xl py-3.5 text-sm font-medium transition-all";
 
 // Focus treatment for plain form fields (search input, selects). Kept
 // separate from FIELD_CLASSNAME: DatePicker/TimePicker use a different,

@@ -236,6 +236,31 @@ export interface CatalogResponse {
   classes: CatalogClass[];
 }
 
+export interface ClassEligibleStudent {
+  student_id: string;
+  name: string;
+  grade?: number | null;
+  school_status?: string | null;
+  teacher_status: string;
+  eligible: boolean;
+  ineligibility_reason?: string | null;
+}
+
+export interface CreateClassRequest {
+  partner_id: string;
+  grade: number;
+  section: string;
+  academic_year: string;
+  student_ids: string[];
+}
+
+export interface CreateClassResponse {
+  grade: number;
+  section: string;
+  academic_year: string;
+  student_count: number;
+}
+
 // -- Slots ------------------------------------------------------------------
 
 export interface SlotResponse {
@@ -303,6 +328,24 @@ export interface ActivateResponse {
 export interface RosterStudent {
   student_id: string;
   name: string;
+}
+
+export interface EligibleRosterStudent extends RosterStudent {
+  grade?: number | null;
+  subject?: string | null;
+  teacher_status: string;
+  school_status?: string | null;
+  already_in_roster: boolean;
+  eligible: boolean;
+  ineligibility_reason?: string | null;
+  current_grade?: number | null;
+  current_section?: string | null;
+}
+
+export interface AddRosterStudentsResponse {
+  added: number;
+  already_present: number;
+  roster: RosterStudent[];
 }
 
 export interface SeatAssignment {
@@ -391,6 +434,10 @@ export interface ClassReportStudent {
   document_title?: string | null;
   device_label?: string | null;
   end_reason: EndReason | null;
+  evaluation_available: boolean;
+  mastery_score?: number | null;
+  completion_percentage?: number | null;
+  chapter_report?: string | null;
 }
 
 export interface CommonGap {

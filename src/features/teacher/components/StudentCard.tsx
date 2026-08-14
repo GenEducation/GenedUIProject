@@ -41,6 +41,7 @@ export function StudentCard({
   const name = displayName(student);
   const color = subjectColor(student.subject);
   const isPending = student.status === "PENDING";
+  const awaitingSchool = isPending && student.school_status !== "APPROVED";
 
   return (
     <article
@@ -92,7 +93,9 @@ export function StudentCard({
             {student.requested_at
               ? `Requested ${new Date(student.requested_at).toLocaleDateString()}. `
               : ""}
-            Approve to start tracking this student&apos;s progress.
+            {awaitingSchool
+              ? "Waiting for the school administrator to approve membership. You can accept this student after that."
+              : "Ready for you to accept and start tracking this student’s progress."}
           </span>
         </div>
       )}
@@ -110,11 +113,11 @@ export function StudentCard({
             </button>
             <button
               onClick={onApprove}
-              disabled={isApproving || isRemoving}
+              disabled={isApproving || isRemoving || awaitingSchool}
               className="inline-flex items-center gap-1.5 rounded-lg bg-emerald px-3.5 py-1.5 text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(5,159,109,.28)] transition-colors hover:bg-emerald-600 disabled:opacity-50"
             >
               {isApproving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-              Approve
+              {awaitingSchool ? "Awaiting school" : "Accept student"}
             </button>
           </>
         ) : (
