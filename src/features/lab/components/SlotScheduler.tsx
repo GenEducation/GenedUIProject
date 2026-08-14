@@ -20,6 +20,26 @@ function todayIso(): string {
 
 const FALLBACK_TZ = "Asia/Kolkata";
 
+/** Default period length used to derive the end time from the start time. */
+const DEFAULT_PERIOD_MINUTES = 40;
+
+/** Current wall clock in `timeZone` as "HH:MM" (24h). */
+function nowWallClock(timeZone: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hourCycle: "h23",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date());
+}
+
+/** Shift an "HH:MM" wall clock by `minutes`, wrapping within the day. */
+function addMinutes(hhmm: string, minutes: number): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const total = (((h * 60 + m + minutes) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
 /**
  * Minutes that `timeZone`'s wall clock is ahead of UTC at `date` (IST → +330).
  * Uses Intl so it stays correct per IANA zone / DST instead of a hardcoded offset.
@@ -275,8 +295,12 @@ function CreateSlotModal({
   const [chapter, setChapter] = useState("");
   const [skillFocus, setSkillFocus] = useState("");
   const [scheduledDate, setScheduledDate] = useState(defaultDate);
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("09:40");
+  // Defaults track the lab's local "now" (IST for our labs); the teacher can
+  // still edit both fields freely.
+  const [startTime, setStartTime] = useState(() => nowWallClock(labs[0]?.timezone ?? FALLBACK_TZ));
+  const [endTime, setEndTime] = useState(() =>
+    addMinutes(nowWallClock(labs[0]?.timezone ?? FALLBACK_TZ), DEFAULT_PERIOD_MINUTES),
+  );
   // Per-student session budget in minutes (defaults to the 50-min lab default).
   const [sessionMinutes, setSessionMinutes] = useState(50);
   const [isSubmitting, setSubmitting] = useState(false);
@@ -311,6 +335,17 @@ function CreateSlotModal({
   useEffect(() => {
     setScheduledDate(defaultDate);
   }, [defaultDate, isOpen]);
+
+  // Re-seed the times each time the modal opens so "now" is actually now.
+  useEffect(() => {
+    if (!isOpen) return;
+    const tz = labs.find((l) => l.id === labId)?.timezone ?? FALLBACK_TZ;
+    const now = nowWallClock(tz);
+    setStartTime(now);
+    setEndTime(addMinutes(now, DEFAULT_PERIOD_MINUTES));
+    // Only on open — editing the lab mid-form shouldn't clobber typed times.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // Keep selections consistent with the catalog: drop a subject that isn't
   // offered for the chosen grade, and a chapter that doesn't belong to the
