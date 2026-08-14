@@ -7,12 +7,14 @@ import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { getSubjectConfig } from "@/constants/subjectConfig";
 import { SubjectIcon } from "@/features/subjects/subjectPresentation";
+import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 import React from "react";
 
 export function AgentPickerModal() {
   const router = useRouter();
   const { setAgentPickerOpen, openNewSession, startNewChatSession, startVoiceSession, availableAgents } = useStudentStore();
   const [query, setQuery] = useState("");
+  const [onboardingModal, setOnboardingModal] = useState<{ subject: string; grade: number } | null>(null);
 
   const filtered = query.trim()
     ? (Array.isArray(availableAgents) ? availableAgents.filter(
@@ -23,6 +25,7 @@ export function AgentPickerModal() {
     : (Array.isArray(availableAgents) ? availableAgents : []);
 
   return (
+    <>
     <AnimatePresence>
       {/* Backdrop */}
       <motion.div
@@ -80,6 +83,7 @@ export function AgentPickerModal() {
           ) : (
             filtered.map((agent, i) => {
               const config = getSubjectConfig(agent.subject);
+              const isOnboardingComplete = agent.is_onboarding_complete !== false;
 
               return (
                 <motion.div
@@ -105,30 +109,43 @@ export function AgentPickerModal() {
                     <p className="text-xs text-[var(--primary-ink)]/45 mt-1">Grade {agent.grade}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => {
-                        setAgentPickerOpen(false);
-                        // Wait for the real session_id before navigating so the
-                        // greeting streams into a stable chat view (typing intact).
-                        startNewChatSession(agent, (sessionId) => {
-                          router.push(`/student/chat/${sessionId}`);
-                        });
-                      }}
-                      className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[var(--primary-ink)]/8 text-[var(--primary-ink)] hover:bg-[var(--primary-ink)]/15 transition-all cursor-pointer"
-                    >
-                      Chat
-                    </button>
-                    <button
-                      onClick={() => {
-                        openNewSession(agent, "voice");
-                        setAgentPickerOpen(false);
-                        startVoiceSession();
-                        router.push(`/student/voice?agent=${agent.agent_id}`);
-                      }}
-                      className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[var(--tutor)] text-white hover:bg-[var(--tutor)]/90 shadow-sm transition-all cursor-pointer"
-                    >
-                      Voice
-                    </button>
+                    {isOnboardingComplete ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            setAgentPickerOpen(false);
+                            // Wait for the real session_id before navigating so the
+                            // greeting streams into a stable chat view (typing intact).
+                            startNewChatSession(agent, (sessionId) => {
+                              router.push(`/student/chat/${sessionId}`);
+                            });
+                          }}
+                          className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[var(--primary-ink)]/8 text-[var(--primary-ink)] hover:bg-[var(--primary-ink)]/15 transition-all cursor-pointer"
+                        >
+                          Chat
+                        </button>
+                        <button
+                          onClick={() => {
+                            openNewSession(agent, "voice");
+                            setAgentPickerOpen(false);
+                            startVoiceSession();
+                            router.push(`/student/voice?agent=${agent.agent_id}`);
+                          }}
+                          className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[var(--tutor)] text-white hover:bg-[var(--tutor)]/90 shadow-sm transition-all cursor-pointer"
+                        >
+                          Voice
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setOnboardingModal({ subject: agent.subject, grade: agent.grade });
+                        }}
+                        className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[var(--tutor)] text-white hover:bg-[var(--tutor)]/90 shadow-sm transition-all cursor-pointer"
+                      >
+                        Complete Onboarding
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               );
@@ -144,5 +161,17 @@ export function AgentPickerModal() {
         </div>
       </motion.div>
     </AnimatePresence>
+
+    {/* Onboarding gate — a chapter/agent can't be entered until its subject's onboarding is done */}
+    <AnimatePresence>
+      {onboardingModal && (
+        <OnboardingModal
+          subject={onboardingModal.subject}
+          grade={onboardingModal.grade}
+          onClose={() => setOnboardingModal(null)}
+        />
+      )}
+    </AnimatePresence>
+    </>
   );
 }

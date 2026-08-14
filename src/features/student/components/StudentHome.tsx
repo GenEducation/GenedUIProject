@@ -316,6 +316,33 @@ export function StudentHome() {
     return { ...agent, vis: subjectVisual(agent.subject) };
   });
 
+  // The backend already groups agents by subject in the API response; the
+  // store flattens that into one entry per agent so other consumers (the
+  // "All Subjects" browse picker, chat/voice session start) can keep
+  // operating on individual agents. Re-group here so the dashboard shows one
+  // card per subject with its chapters aggregated, instead of one card per
+  // chapter-agent.
+  const subjectGroupsMap = new Map<string, typeof agents>();
+  for (const agent of agents) {
+    const key = `${agent.subject}__${agent.grade}`;
+    const existing = subjectGroupsMap.get(key);
+    if (existing) existing.push(agent);
+    else subjectGroupsMap.set(key, [agent]);
+  }
+  const subjectGroups = Array.from(subjectGroupsMap.entries()).map(([key, groupAgents]) => {
+    const first = groupAgents[0];
+    return {
+      key,
+      subject: first.subject,
+      grade: first.grade,
+      vis: first.vis,
+      agents: groupAgents,
+      mastery: typeof first.subject_coverage_percentage === "number"
+        ? Math.round(first.subject_coverage_percentage)
+        : 0,
+    };
+  });
+
   /* All sessions mapped with relative time */
   const allSessionsRaw = recentChats.map(chat => {
     return {
@@ -401,6 +428,17 @@ export function StudentHome() {
       openNewSession(agent, "voice");
       router.push(`/student/voice?agent=${agent.agent_id}`);
     }
+  };
+
+  // A subject card can back multiple chapter-agents; the tutor asks which
+  // chapter to work on as its opening question, so any agent in the group
+  // is a fine entry point — no chapter picker needed on the dashboard.
+  const handleSubjectChatClick = (group: typeof subjectGroups[0]) => {
+    handleAgentChatClick(group.agents[0]);
+  };
+
+  const handleSubjectVoiceClick = (group: typeof subjectGroups[0]) => {
+    handleAgentVoiceClick(group.agents[0]);
   };
 
   const handleSessionClick = (session: typeof allSessions[0]) => {
@@ -641,9 +679,9 @@ export function StudentHome() {
                     </div>
                   ))}
                 </div>
-              ) : agents.length > 0 ? (
+              ) : subjectGroups.length > 0 ? (
                 <div className="relative">
-                  {agents.length > 2 && (
+                  {subjectGroups.length > 2 && (
                     <>
                       <button
                         onClick={() => scrollSubjects("left")}
@@ -672,15 +710,13 @@ export function StudentHome() {
                     </>
                   )}
                   <div ref={subjectsScrollRef} className="flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)", scrollSnapType: "x mandatory" }}>
-                    {agents.map((agent) => {
-                    const vis = agent.vis;
-                    const hov = hoveredAgent === agent.agent_id;
-                    const mastery = typeof agent.subject_coverage_percentage === "number"
-                      ? Math.round(agent.subject_coverage_percentage)
-                      : 0;
+                    {subjectGroups.map((group) => {
+                    const vis = group.vis;
+                    const hov = hoveredAgent === group.key;
+                    const mastery = group.mastery;
                     return (
-                      <div key={agent.agent_id}
-                        onMouseEnter={() => setHoveredAgent(agent.agent_id)}
+                      <div key={group.key}
+                        onMouseEnter={() => setHoveredAgent(group.key)}
                         onMouseLeave={() => setHoveredAgent(null)}
                         className="rounded-[18px] cursor-pointer flex-shrink-0"
                         style={{
@@ -703,7 +739,7 @@ export function StudentHome() {
                               {vis.label}
                             </div>
                             <div className="font-medium mt-0.5" style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>
-                              Grade {agent.grade} · {agent.document_titles?.length ?? 0} chapters
+                              Grade {group.grade} · {group.agents.length} chapter{group.agents.length !== 1 ? "s" : ""}
                             </div>
                           </div>
                         </div>
@@ -718,7 +754,7 @@ export function StudentHome() {
                           <Button
                             variant="secondary"
                             fullWidth
-                            onClick={() => handleAgentChatClick(agent)}
+                            onClick={() => handleSubjectChatClick(group)}
                             style={{
                               border: `1.5px solid ${vis.color}40`,
                               background: hov ? `${vis.color}10` : "transparent",
@@ -732,7 +768,7 @@ export function StudentHome() {
                           <Button
                             variant="primary"
                             fullWidth
-                            onClick={() => handleAgentVoiceClick(agent)}
+                            onClick={() => handleSubjectVoiceClick(group)}
                             style={{
                               background: STUDENT_COLORS.primary,
                               color: STUDENT_COLORS.card,
