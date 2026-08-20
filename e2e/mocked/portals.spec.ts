@@ -1,35 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { seedAuth, type Role } from "../helpers/auth";
 import { makeAuthToken } from "../fixtures";
-
-const API = process.env.NEXT_PUBLIC_API_URL || "https://gateway-service-dev-479218009109.asia-south1.run.app";
-
-/**
- * Registers a catch-all fallback route that returns empty-but-valid JSON for any
- * API request the portal fires on mount that we haven't explicitly mocked.
- * More-specific routes registered AFTER this call take precedence in Playwright.
- */
-async function stubApiCatchAll(page: Parameters<typeof seedAuth>[0]) {
-  await page.route(`${API}/**`, (route) => {
-    const url = route.request().url();
-    // Pass through non-API resources (Next.js chunks, _next/static, etc.)
-    if (!url.includes(API)) return route.continue();
-    // The sessions endpoint (POST /get-session) is read as `data.sessions.map(...)`,
-    // so it needs an object with a `sessions` array, not a bare list.
-    if (url.includes("/get-session")) {
-      return route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ sessions: [] }),
-      });
-    }
-    return route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: "[]",
-    });
-  });
-}
+import { stubApiCatchAll } from "../helpers/api";
 
 const PORTALS: { role: Role; path: string; landmark: string | RegExp }[] = [
   { role: "student", path: "/student", landmark: /study|learn|chat|hello|subject/i },

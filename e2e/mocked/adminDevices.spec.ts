@@ -1,7 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { seedAuth } from "../helpers/auth";
-
-const API = process.env.NEXT_PUBLIC_API_URL || "https://gateway-service-dev-479218009109.asia-south1.run.app";
+import { API, stubApiCatchAll } from "../helpers/api";
 
 const minutesAgo = (n: number) => new Date(Date.now() - n * 60_000).toISOString();
 
@@ -122,9 +121,7 @@ const STATS = {
 
 async function mockFleet(page: Page) {
   // Catch-all first; more specific routes registered after it take precedence.
-  await page.route(`${API}/**`, (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
-  );
+  await stubApiCatchAll(page);
 
   await page.route(`${API}/admin/lab/stats`, (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(STATS) }),
@@ -163,9 +160,14 @@ async function mockFleet(page: Page) {
         device_token_rotated_at: null,
         provisioning_source: "PAIRING",
         last_health_report: {
-          speaker: { status: "service_required", detail: "No output detected on test tone" },
-          mic: { status: "ok", metrics: { gain_db: 12 } },
-          storage: { status: "ok", metrics: { free_mb: 24_310 } },
+          // Per HealthReport in src/features/admin/devices/types.ts, per-component
+          // results live under `.components`; anything else here is report-level
+          // metadata. DeviceDetailView reads `last_health_report.components`.
+          components: {
+            speaker: { status: "service_required", detail: "No output detected on test tone" },
+            mic: { status: "ok", metrics: { gain_db: 12 } },
+            storage: { status: "ok", metrics: { free_mb: 24_310 } },
+          },
         },
       }),
     });

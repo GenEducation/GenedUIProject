@@ -2,8 +2,7 @@ import { test, expect } from "@playwright/test";
 import { seedAuth } from "../helpers/auth";
 import { joinSseFrames } from "../helpers/sse";
 import { makeAuthToken } from "../fixtures";
-
-const API = process.env.NEXT_PUBLIC_API_URL || "https://gateway-service-dev-479218009109.asia-south1.run.app";
+import { API, stubApiCatchAll } from "../helpers/api";
 
 const chunk = (text: string) => ({ type: "chunk", text });
 // Emitting the real session_id frame is what drives the new-session navigation
@@ -13,33 +12,7 @@ const done = { type: "done", status: "success" };
 
 test.describe("Chat — SSE streaming (real browser)", () => {
   test.beforeEach(async ({ page }) => {
-    // Stub all API calls that fire on portal mount (sessions, notifications, etc.)
-    await page.route(`${API}/**`, (route) => {
-      const url = route.request().url();
-      if (url.includes("/api/students/") && url.includes("/available-agents")) {
-        // Shape must match the store's flattener: partners[].subjects[].agents[]
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            partners: [
-              {
-                subjects: [
-                  {
-                    subject: "Science",
-                    is_onboarding_complete: true,
-                    subject_coverage_percentage: 50,
-                    agents: [{ agent_id: "a1", name: "Aanya", subject: "Science", grade: 6 }],
-                  },
-                ],
-              },
-            ],
-          }),
-        });
-      }
-      // Default: empty JSON for anything else
-      return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
-    });
+    await stubApiCatchAll(page);
 
     const token = makeAuthToken({ role: "student" });
     await seedAuth(page, "student", token);
