@@ -6,6 +6,12 @@ import { listUsers, deleteUser, updateUser, AdminUser, Role, Plan, ImportRole } 
 import { CreateAccountModal } from "./CreateAccountModal";
 import { BulkImportModal } from "./BulkImportModal";
 import { DataTable, Column } from "./DataTable";
+import { Select } from "@/components/ui/Select";
+
+const toOptions = (values: readonly string[]) => values.map((v) => ({ value: v, label: v }));
+const BULK_ROLE_OPTIONS = toOptions(["STUDENT", "PARENT", "PARTNER", "TEACHER"]);
+const ROLE_OPTIONS = toOptions(["STUDENT", "PARENT", "PARTNER", "TEACHER", "ADMIN"]);
+const PLAN_OPTIONS = toOptions(["FREE", "PRO"]);
 
 interface Props {
   fixedRole?: Role;
@@ -90,17 +96,15 @@ export function UsersView({ title }: Props) {
         error={error}
         headerRight={
           <div className="flex items-center gap-2">
-            <select
+            <Select
+              theme="dark"
+              size="sm"
+              aria-label="Bulk import role"
+              className="min-w-[120px]"
               value={bulkRoleSel}
-              onChange={(e) => setBulkRoleSel(e.target.value as ImportRole)}
-              className="rounded-lg border border-white/15 bg-white/5 px-2 py-2.5 text-xs text-white/80"
-            >
-              {["STUDENT", "PARENT", "PARTNER", "TEACHER"].map((r) => (
-                <option key={r} value={r} className="bg-[#13283a]">
-                  {r}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setBulkRoleSel(v as ImportRole)}
+              options={BULK_ROLE_OPTIONS}
+            />
             <button
               onClick={() => setBulkOpen(true)}
               className="flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2.5 text-sm font-semibold text-white/80 hover:bg-white/5"
@@ -208,23 +212,25 @@ function EditUserModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Role</label>
-              <select className={inputCls} value={role} onChange={(e) => setRole(e.target.value as Role)}>
-                {["STUDENT", "PARENT", "PARTNER", "TEACHER", "ADMIN"].map((r) => (
-                  <option key={r} value={r} className="bg-[#13283a]">
-                    {r}
-                  </option>
-                ))}
-              </select>
+              <Select
+                theme="dark"
+                size="lg"
+                aria-label="Role"
+                value={role}
+                onChange={(v) => setRole(v as Role)}
+                options={ROLE_OPTIONS}
+              />
             </div>
             <div>
               <label className={labelCls}>Plan</label>
-              <select className={inputCls} value={plan} onChange={(e) => setPlan(e.target.value as Plan)}>
-                {["FREE", "PRO"].map((p) => (
-                  <option key={p} value={p} className="bg-[#13283a]">
-                    {p}
-                  </option>
-                ))}
-              </select>
+              <Select
+                theme="dark"
+                size="lg"
+                aria-label="Plan"
+                value={plan}
+                onChange={(v) => setPlan(v as Plan)}
+                options={PLAN_OPTIONS}
+              />
             </div>
           </div>
           {error ? (

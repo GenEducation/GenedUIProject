@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Bell, CheckCircle2, MessageSquare, Info, AlertCircle, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotificationStore } from "../store/useNotificationStore";
+import { PANEL_CLASSNAME } from "@/components/ui/Select";
 
 interface NotificationBellProps {
   userId: string;
@@ -82,7 +83,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, alig
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-3 w-80 sm:w-96 bg-white rounded-3xl shadow-[0_20px_60px_rgba(26,58,42,0.12)] border border-[#1a3a2a]/5 overflow-hidden z-50`}
+            className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-3 w-80 sm:w-96 z-50 ${PANEL_CLASSNAME}`}
           >
             <div className="p-5 border-b border-[#1a3a2a]/5 flex items-center justify-between bg-[#FBFBFA]">
               <div>

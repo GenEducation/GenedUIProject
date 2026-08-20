@@ -13,6 +13,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, RotateCcw, UserRound, WifiOff } from "lucide-react";
 import type { DeviceResponse, RosterStudent } from "../types/lab";
+import { Select } from "@/components/ui/Select";
 
 export type SeatingAssignments = Record<string, string>;
 
@@ -142,19 +143,27 @@ function DeviceSeat({
 
       <label className="mt-2 block text-[11px] font-semibold text-muted">
         Assign without dragging
-        <select
+        <Select
+          aria-label="Assign student to seat"
+          className="mt-1"
+          size="sm"
           value={student?.student_id ?? ""}
           disabled={disabled || !available}
-          onChange={(event) => onSelect(event.target.value)}
-          className="mt-1 w-full rounded-lg border border-border bg-white px-2 py-2 text-xs text-ink disabled:cursor-not-allowed"
-        >
-          <option value="">Automatic allocation</option>
-          {students.map((candidate) => (
-            <option key={candidate.student_id} value={candidate.student_id}>
-              {candidate.name}
-            </option>
-          ))}
-        </select>
+          onChange={onSelect}
+          options={[
+            { value: "", label: "Automatic allocation" },
+            ...students.map((candidate) => ({
+              value: candidate.student_id,
+              label: candidate.name,
+            })),
+          ]}
+          buttonStyle={{
+            background: "#FFFFFF",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            color: "var(--ink)",
+          }}
+        />
       </label>
     </article>
   );

@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { createUser, listPartners, CreateUserPayload, PartnerRow } from "../adminService";
 import { useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
 import { EDUCATION_BOARDS, isEducationBoard } from "@/types/education";
+import { Select } from "@/components/ui/Select";
 
 interface Props {
   onClose: () => void;
@@ -197,18 +198,20 @@ export function CreateAccountModal({ onClose, onCreated }: Props) {
               </div>
               <div className="col-span-2">
                 <label className={labelCls}>School (partner)</label>
-                <select
-                  className={inputCls}
+                <Select
+                  theme="dark"
+                  size="lg"
+                  aria-label="School (partner)"
                   value={form.partner_id ?? ""}
-                  onChange={(e) => set("partner_id", e.target.value)}
-                >
-                  <option value="">GenEd (default)</option>
-                  {partners.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.organization ?? p.username}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => set("partner_id", v)}
+                  options={[
+                    { value: "", label: "GenEd (default)" },
+                    ...partners.map((p) => ({
+                      value: p.id,
+                      label: p.organization ?? p.username,
+                    })),
+                  ]}
+                />
                 <p className="mt-1.5 text-xs text-white/40">
                   The student&apos;s board is set automatically from this school.
                 </p>
@@ -235,16 +238,15 @@ export function CreateAccountModal({ onClose, onCreated }: Props) {
               </div>
               <div className="col-span-2">
                 <label className={labelCls}>Education board *</label>
-                <select
-                  className={inputCls}
+                <Select
+                  theme="dark"
+                  size="lg"
+                  aria-label="Education board"
+                  placeholder="Select a board…"
                   value={form.board ?? ""}
-                  onChange={(e) => set("board", e.target.value)}
-                >
-                  <option value="">Select a board…</option>
-                  {EDUCATION_BOARDS.map((board) => (
-                    <option key={board} value={board}>{board}</option>
-                  ))}
-                </select>
+                  onChange={(v) => set("board", v)}
+                  options={EDUCATION_BOARDS.map((board) => ({ value: board, label: board }))}
+                />
               </div>
             </div>
           )}
@@ -253,18 +255,18 @@ export function CreateAccountModal({ onClose, onCreated }: Props) {
             <>
               <div>
                 <label className={labelCls}>School (partner) *</label>
-                <select
-                  className={inputCls}
+                <Select
+                  theme="dark"
+                  size="lg"
+                  aria-label="School (partner)"
+                  placeholder="Select a school…"
                   value={form.partner_id ?? ""}
-                  onChange={(e) => set("partner_id", e.target.value)}
-                >
-                  <option value="">Select a school…</option>
-                  {partners.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.organization ?? p.username}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => set("partner_id", v)}
+                  options={partners.map((p) => ({
+                    value: p.id,
+                    label: p.organization ?? p.username,
+                  }))}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

@@ -2,10 +2,11 @@
 
 import { ChangeEvent, FormEvent, useState, useEffect } from "react";
 import { Eye, EyeOff, ArrowLeft, ArrowRight } from "lucide-react";
-import { GoogleLogin } from "@react-oauth/google";
+import { GoogleAuthButton } from "./GoogleAuthButton";
 import { motion, AnimatePresence } from "framer-motion";
 import { RoleCard } from "./RoleCard";
 import { fetchAllTaxonomyGrades } from "@/features/subjects/subjectCatalog";
+import { Select } from "@/components/ui/Select";
 
 interface SignUpData {
   username?: string;
@@ -80,7 +81,7 @@ export function SignUp({
   // -- Signup disabled state --------------------------------------------------
   if (!isSignupEnabled) {
     return (
-      <div className="rounded-2xl border border-[#042e5c]/10 bg-white/80 backdrop-blur-xl p-8 sm:p-10 shadow-[0_8px_40px_rgba(4,46,92,0.07)] text-center py-20 flex flex-col items-center justify-center">
+      <div className="text-center py-10 flex flex-col items-center justify-center">
         <div className="w-20 h-20 bg-[#059F6D]/8 rounded-full flex items-center justify-center mb-6">
           <svg
             className="w-10 h-10 text-[#059F6D]"
@@ -122,41 +123,60 @@ export function SignUp({
 
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
 
-  const nextStep = () => {
-    setLocalErrors({});
-    if (step === 1) {
-      setStep(2);
-    } else if (step === 2) {
-      const errors: Record<string, string> = {};
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      
-      if (signupData.role === "student") {
-        if (hasPersonalEmail) {
-          if (!signupData.email?.trim()) {
-            errors.email = "Personal email is required";
-          } else if (!emailRegex.test(signupData.email)) {
-            errors.email = "Invalid email format";
-          }
-          if (signupData.username?.trim() && signupData.username.trim().length < 3) {
-            errors.username = "Username must be at least 3 characters";
-          }
-          if (signupData.parent_email?.trim() && !emailRegex.test(signupData.parent_email)) {
-            errors.parent_email = "Invalid parent email format";
-          }
-          if (isOtpSent && !signupData.otp_code?.trim()) {
-            errors.email = "Please enter the OTP code sent to your email";
-          }
-        } else {
-          if (!signupData.username?.trim()) {
-            errors.username = "Username is required";
-          } else if (signupData.username.trim().length < 3) {
-            errors.username = "Username must be at least 3 characters";
-          }
-          if (!signupData.parent_email?.trim()) {
-            errors.parent_email = "Parent email is required";
-          } else if (!emailRegex.test(signupData.parent_email)) {
-            errors.parent_email = "Invalid parent email format";
-          }
+  /**
+   * Client-side gate for the final step. Both roles now finish at step 2, so
+   * this runs on submit rather than on a "next" transition.
+   */
+  const validateStep2 = () => {
+    const errors: Record<string, string> = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    
+    if (signupData.role === "student") {
+      if (hasPersonalEmail) {
+        if (!signupData.email?.trim()) {
+          errors.email = "Personal email is required";
+        } else if (!emailRegex.test(signupData.email)) {
+          errors.email = "Invalid email format";
+        }
+        if (signupData.username?.trim() && signupData.username.trim().length < 3) {
+          errors.username = "Username must be at least 3 characters";
+        }
+        if (signupData.parent_email?.trim() && !emailRegex.test(signupData.parent_email)) {
+          errors.parent_email = "Invalid parent email format";
+        }
+        if (isOtpSent && !signupData.otp_code?.trim()) {
+          errors.email = "Please enter the OTP code sent to your email";
+        }
+      } else {
+        if (!signupData.username?.trim()) {
+          errors.username = "Username is required";
+        } else if (signupData.username.trim().length < 3) {
+          errors.username = "Username must be at least 3 characters";
+        }
+        if (!signupData.parent_email?.trim()) {
+          errors.parent_email = "Parent email is required";
+        } else if (!emailRegex.test(signupData.parent_email)) {
+          errors.parent_email = "Invalid parent email format";
+        }
+      }
+      if (!signupData.password.trim()) {
+        errors.password = "Password is required";
+      } else if (signupData.password.length < 6) {
+        errors.password = "Password must be at least 6 characters";
+      }
+      if (signupData.password !== signupData.confirmPassword) {
+        errors.confirmPassword = "Passwords do not match";
+      }
+      if (!signupData.grade) {
+        errors.grade = "Please select your grade";
+      }
+    } else {
+      if (!googleToken) {
+        if (!signupData.email.trim()) {
+          errors.email = "Email is required";
+        } else if (!emailRegex.test(signupData.email)) {
+          errors.email = "Invalid email format";
         }
         if (!signupData.password.trim()) {
           errors.password = "Password is required";
@@ -166,39 +186,13 @@ export function SignUp({
         if (signupData.password !== signupData.confirmPassword) {
           errors.confirmPassword = "Passwords do not match";
         }
-        if (!signupData.grade) {
-          errors.grade = "Please select your grade";
+        if (isOtpSent && !signupData.otp_code?.trim()) {
+          errors.email = "Please enter the OTP code sent to your email";
         }
-      } else {
-        if (!googleToken) {
-          if (!signupData.email.trim()) {
-            errors.email = "Email is required";
-          } else if (!emailRegex.test(signupData.email)) {
-            errors.email = "Invalid email format";
-          }
-          if (!signupData.password.trim()) {
-            errors.password = "Password is required";
-          } else if (signupData.password.length < 6) {
-            errors.password = "Password must be at least 6 characters";
-          }
-          if (signupData.password !== signupData.confirmPassword) {
-            errors.confirmPassword = "Passwords do not match";
-          }
-          if (isOtpSent && !signupData.otp_code?.trim()) {
-            errors.email = "Please enter the OTP code sent to your email";
-          }
-        }
-      }
-
-      if (Object.keys(errors).length > 0) {
-        setLocalErrors(errors);
-        return;
-      }
-
-      if (signupData.role !== "student") {
-        setStep(3);
       }
     }
+
+    return errors;
   };
 
   const prevStep = () => setStep((s) => s - 1);
@@ -249,19 +243,14 @@ export function SignUp({
     if (signupData.role === "student") {
       return (
         <div className="space-y-6">
-          <div className="flex items-center gap-4 mb-2">
-            <button
-              type="button"
-              onClick={prevStep}
-              className="p-2 rounded-full hover:bg-[#042e5c]/5 text-[#042e5c]/40 transition-colors"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div>
-              <h3 className="text-lg font-bold text-[#042e5c] font-serif">Student Details</h3>
-              <p className="text-[10px] uppercase tracking-widest text-[#059F6D] font-bold">Step 2 of 2</p>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={prevStep}
+            aria-label="Back to role selection"
+            className="-ml-2 p-2 rounded-full hover:bg-[#042e5c]/5 text-[#042e5c]/40 transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
 
           <div className="flex items-center gap-2.5 bg-[#042e5c]/5 p-4 rounded-xl border border-[#042e5c]/10">
             <input
@@ -419,74 +408,69 @@ export function SignUp({
             </>
           )}
 
-          <div>
-            <label className={labelCls}>Password</label>
-            <div className="relative">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Password</label>
+              <div className="relative">
+                <input
+                  name="password"
+                  value={signupData.password}
+                  onChange={onChange}
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Create a password"
+                  className={`${inputCls(!!errors.password || !!localErrors.password)} pr-12`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {(errors.password || localErrors.password) && (
+                <p className={errorCls}>{errors.password || localErrors.password}</p>
+              )}
+            </div>
+
+            <div>
+              <label className={labelCls}>Confirm Password</label>
               <input
-                name="password"
-                value={signupData.password}
+                name="confirmPassword"
+                value={signupData.confirmPassword || ""}
                 onChange={onChange}
                 type={showPassword ? "text" : "password"}
-                placeholder="Create a password"
-                className={`${inputCls(!!errors.password || !!localErrors.password)} pr-12`}
+                placeholder="Confirm your password"
+                className={inputCls(!!errors.confirmPassword || !!localErrors.confirmPassword)}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+              {(errors.confirmPassword || localErrors.confirmPassword) && (
+                <p className={errorCls}>{errors.confirmPassword || localErrors.confirmPassword}</p>
+              )}
             </div>
-            {(errors.password || localErrors.password) && (
-              <p className={errorCls}>{errors.password || localErrors.password}</p>
-            )}
-          </div>
-
-          <div>
-            <label className={labelCls}>Confirm Password</label>
-            <input
-              name="confirmPassword"
-              value={signupData.confirmPassword || ""}
-              onChange={onChange}
-              type="password"
-              placeholder="Confirm your password"
-              className={inputCls(!!errors.confirmPassword || !!localErrors.confirmPassword)}
-            />
-            {(errors.confirmPassword || localErrors.confirmPassword) && (
-              <p className={errorCls}>{errors.confirmPassword || localErrors.confirmPassword}</p>
-            )}
           </div>
 
           <div>
             <label className={labelCls}>What grade are you in?</label>
-            <div className="grid grid-cols-3 gap-3">
-              {/*
-                Deliberately literal, unlike every other grade picker. The
-                catalogue comes from `/rag/taxonomy/subjects`, which the gateway
-                requires a JWT for, and sign-up runs before one exists: the
-              {/*
-                Grades here select the student's own year, not a subject.
-                We fetch the list dynamically from the unauthenticated taxonomy endpoint.
-              */}
-              {availableGrades.map((grade) => (
-                <button
-                  key={grade}
-                  type="button"
-                  onClick={() => handleGradeSelect(grade)}
-                  className={`py-3.5 rounded-xl text-sm font-bold transition-all duration-200 ${
-                    signupData.grade === String(grade)
-                      ? "bg-[#059F6D] text-white shadow-lg shadow-[#059F6D]/30 scale-105"
-                      : "bg-[#042e5c]/5 text-[#042e5c] hover:bg-[#059F6D]/10 hover:text-[#059F6D]"
-                  }`}
-                >
-                  {grade}
-                </button>
-              ))}
-            </div>
-            {(errors.grade || localErrors.grade) && (
-              <p className={errorCls}>{errors.grade || localErrors.grade}</p>
-            )}
+            {/*
+              Grades here pick the student's own year, not a subject. The list
+              is fetched from the unauthenticated taxonomy endpoint because
+              sign-up runs before a JWT exists. Uses the shared Select so the
+              control matches every other dropdown in the app.
+            */}
+            <Select
+              size="lg"
+              accentColor="#059F6D"
+              searchable={false}
+              aria-label="What grade are you in?"
+              placeholder="Select your grade"
+              value={signupData.grade ?? ""}
+              onChange={(value) => handleGradeSelect(Number(value))}
+              options={availableGrades.map((grade) => ({
+                value: String(grade),
+                label: `Grade ${grade}`,
+              }))}
+              error={errors.grade || localErrors.grade}
+            />
           </div>
 
           {errors.root && (
@@ -498,7 +482,7 @@ export function SignUp({
           <button
             type="submit"
             disabled={isSubmitting || !signupData.grade}
-            className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
+            className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-3.5 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
           >
             <span className="relative z-10 flex items-center justify-center gap-2">
               {isSubmitting ? "Creating account…" : "Create Account"}
@@ -511,48 +495,17 @@ export function SignUp({
 
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4 mb-2">
-          <button
-            type="button"
-            onClick={prevStep}
-            className="p-2 rounded-full hover:bg-[#042e5c]/5 text-[#042e5c]/40 transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h3 className="text-lg font-bold text-[#042e5c] font-serif">Account Credentials</h3>
-            <p className="text-[10px] uppercase tracking-widest text-[#059F6D] font-bold">Step 2 of 3</p>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={prevStep}
+          aria-label="Back to role selection"
+          className="-ml-2 p-2 rounded-full hover:bg-[#042e5c]/5 text-[#042e5c]/40 transition-colors"
+        >
+          <ArrowLeft size={20} />
+        </button>
 
         {!googleToken && (
           <>
-            <div className="flex justify-center w-full">
-              <GoogleLogin
-                onSuccess={(credentialResponse) => {
-                  if (credentialResponse.credential) {
-                    setGoogleToken(credentialResponse.credential);
-                    onGoogleSuccess(credentialResponse.credential);
-                    setStep(3);
-                  }
-                }}
-                onError={() => console.error("Google Sign-up Failed")}
-                width="320"
-                theme="outline"
-                text="signup_with"
-                shape="rectangular"
-              />
-            </div>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200" />
-              </div>
-              <div className="relative flex justify-center text-[10px]">
-                <span className="bg-white px-3 text-gray-400 font-bold uppercase tracking-widest">Or continue with</span>
-              </div>
-            </div>
-
             <div>
               <label className={labelCls}>Email Address</label>
               <div className="flex gap-3">
@@ -621,77 +574,49 @@ export function SignUp({
               </div>
             )}
 
-            <div>
-              <label className={labelCls}>Password</label>
-              <div className="relative">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Password</label>
+                <div className="relative">
+                  <input
+                    name="password"
+                    value={signupData.password}
+                    onChange={onChange}
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Create a password"
+                    className={`${inputCls(!!errors.password || !!localErrors.password)} pr-12`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {(errors.password || localErrors.password) && (
+                  <p className={errorCls}>{errors.password || localErrors.password}</p>
+                )}
+              </div>
+
+              <div>
+                <label className={labelCls}>Confirm Password</label>
                 <input
-                  name="password"
-                  value={signupData.password}
+                  name="confirmPassword"
+                  value={signupData.confirmPassword || ""}
                   onChange={onChange}
                   type={showPassword ? "text" : "password"}
-                  placeholder="Create a password"
-                  className={`${inputCls(!!errors.password || !!localErrors.password)} pr-12`}
+                  placeholder="Confirm your password"
+                  className={`${inputCls(!!errors.confirmPassword || !!localErrors.confirmPassword)}`}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+                {(errors.confirmPassword || localErrors.confirmPassword) && (
+                  <p className={errorCls}>{errors.confirmPassword || localErrors.confirmPassword}</p>
+                )}
               </div>
-              {(errors.password || localErrors.password) && (
-                <p className={errorCls}>{errors.password || localErrors.password}</p>
-              )}
-            </div>
-
-            <div>
-              <label className={labelCls}>Confirm Password</label>
-              <input
-                name="confirmPassword"
-                value={signupData.confirmPassword || ""}
-                onChange={onChange}
-                type="password"
-                placeholder="Confirm your password"
-                className={`${inputCls(!!errors.confirmPassword || !!localErrors.confirmPassword)}`}
-              />
-              {(errors.confirmPassword || localErrors.confirmPassword) && (
-                <p className={errorCls}>{errors.confirmPassword || localErrors.confirmPassword}</p>
-              )}
             </div>
           </>
         )}
 
-        <button
-          type="button"
-          onClick={nextStep}
-          className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
-        >
-          <span className="relative z-10 flex items-center justify-center gap-2">
-            Continue <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-          </span>
-        </button>
-      </div>
-    );
-  };
-
-  const renderStep3 = () => (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4 mb-2">
-        <button
-          type="button"
-          onClick={prevStep}
-          className="p-2 rounded-full hover:bg-[#042e5c]/5 text-[#042e5c]/40 transition-colors"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div>
-          <h3 className="text-lg font-bold text-[#042e5c] font-serif">Complete Profile</h3>
-          <p className="text-[10px] uppercase tracking-widest text-[#059F6D] font-bold">Step 3 of 3</p>
-        </div>
-      </div>
-
-      {signupData.role === "parent" && (
         <div>
           <label className={labelCls}>Phone Number</label>
           <input
@@ -699,69 +624,78 @@ export function SignUp({
             value={signupData.phone || ""}
             onChange={onChange}
             type="tel"
-            placeholder="e.g. +1 234 567 8900"
+            placeholder="10-digit mobile number"
             className={inputCls(!!errors.phone)}
           />
           {errors.phone && <p className={errorCls}>{errors.phone}</p>}
         </div>
-      )}
 
+        {errors.root && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50/80 px-5 py-3.5 text-sm font-medium text-rose-700">
+            {errors.root}
+          </div>
+        )}
 
-      {!googleToken && (errors.email || errors.password || errors.confirmPassword) && (
-        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-bold flex items-center gap-2 animate-pulse">
-          <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
-          There are errors in your account credentials. Please go back to Step 2.
-        </div>
-      )}
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-3.5 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
+        >
+          <span className="relative z-10 flex items-center justify-center gap-2">
+            {isSubmitting ? "Creating account…" : "Create Account"}
+            {!isSubmitting && <ArrowRight size={16} />}
+          </span>
+        </button>
 
-      {errors.root && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-700">
-          {errors.root}
-        </div>
-      )}
+        {!googleToken && (
+          <>
+            {/* Divider — no opaque fill, the card surface is translucent */}
+            <div className="flex items-center gap-3">
+              <span className="h-px flex-1 bg-[#042e5c]/10" />
+              <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/35">
+                or
+              </span>
+              <span className="h-px flex-1 bg-[#042e5c]/10" />
+            </div>
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
-      >
-        <span className="relative z-10 flex items-center justify-center gap-2">
-          {isSubmitting ? "Creating account…" : "Create Account"}
-          {!isSubmitting && <ArrowRight size={16} />}
-        </span>
-      </button>
-    </div>
-  );
+            <GoogleAuthButton
+              label="Sign up with Google"
+              onSuccess={(credential) => {
+                setGoogleToken(credential);
+                onGoogleSuccess(credential);
+              }}
+            />
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        console.log("Form submission triggered at step", step);
-        if (signupData.role === "student" && step === 2) {
-          console.log("Calling student onSubmit with data:", signupData);
-          onSubmit(e);
-        } else if (step === 3) {
-          console.log("Calling onSubmit with data:", signupData);
-          onSubmit(e);
+        if (step !== 2) return;
+        const stepErrors = validateStep2();
+        if (Object.keys(stepErrors).length > 0) {
+          setLocalErrors(stepErrors);
+          return;
         }
+        setLocalErrors({});
+        onSubmit(e);
       }}
-      className="space-y-8 rounded-[2.5rem] border border-[#042e5c]/10 bg-white/90 backdrop-blur-xl p-8 sm:p-12 shadow-[0_32px_80px_rgba(4,46,92,0.08)] relative overflow-hidden min-h-[500px]"
+      className="space-y-7 relative"
     >
       {/* Progress Bar */}
-      <div className="absolute top-0 left-0 w-full h-1.5 flex gap-1 px-1">
-        {[1, 2, 3].map((s) => {
-          // If role is student, only show 2 progress bars
-          if (signupData.role === "student" && s === 3) return null;
-          return (
-            <div
-              key={s}
-              className={`h-full flex-1 transition-all duration-500 rounded-full ${
-                s <= step ? "bg-[#059F6D]" : "bg-[#042e5c]/5"
-              }`}
-            />
-          );
-        })}
+      <div className="w-full h-1.5 flex gap-1">
+        {[1, 2].map((s) => (
+          <div
+            key={s}
+            className={`h-full flex-1 transition-all duration-500 rounded-full ${
+              s <= step ? "bg-[#059F6D]" : "bg-[#042e5c]/5"
+            }`}
+          />
+        ))}
       </div>
 
       <div className="pt-2">
@@ -775,7 +709,6 @@ export function SignUp({
           >
             {step === 1 && renderStep1()}
             {step === 2 && renderStep2()}
-            {step === 3 && renderStep3()}
           </motion.div>
         </AnimatePresence>
       </div>

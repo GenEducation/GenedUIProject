@@ -2,8 +2,8 @@
 
 import { useState, FormEvent } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { AuthShell } from "@/features/auth/components/AuthShell";
 import { requestPasswordReset, resetPassword } from "@/features/auth/authService";
 
 export default function ForgotPasswordPage() {
@@ -57,32 +57,18 @@ export default function ForgotPasswordPage() {
   const labelCls = "block text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/45 mb-2.5 pl-0.5";
 
   return (
-    <div className="min-h-screen bg-[#F7F9FB] flex flex-col">
-      {/* Nav — centered logo */}
-      <header className="w-full bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-center">
-        <Link href="/">
-          <Image src="/GenEd Logo Colored.svg" alt="GenEd" width={100} height={36} />
-        </Link>
-      </header>
-
-      {/* Form */}
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-[#042E5C] mb-2">
-              {isSuccess ? "Password Reset" : step === 1 ? "Forgot Password" : "Reset Password"}
-            </h1>
-            {!isSuccess && (
-              <p className="text-gray-500 text-sm">
-                {step === 1
-                  ? "Enter your email and we'll send you a code."
-                  : `Code sent to ${email}`}
-              </p>
-            )}
-          </div>
-
+    <AuthShell
+      title={isSuccess ? "Password Reset" : step === 1 ? "Forgot Password" : "Reset Password"}
+      subtitle={
+        isSuccess
+          ? undefined
+          : step === 1
+            ? "Enter your email and we'll send you a code."
+            : `Code sent to ${email}`
+      }
+    >
           {isSuccess ? (
-            <div className="space-y-8 rounded-2xl border border-[#042e5c]/10 bg-white/80 backdrop-blur-xl p-8 sm:p-10 shadow-[0_8px_40px_rgba(4,46,92,0.07)]">
+            <div className="space-y-6">
               <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-5 py-6 text-center">
                 <div className="mx-auto w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mb-4 text-emerald-600">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -103,7 +89,7 @@ export default function ForgotPasswordPage() {
           ) : (
             <form
               onSubmit={step === 1 ? handleRequestOtp : handleResetPassword}
-              className="space-y-8 rounded-2xl border border-[#042e5c]/10 bg-white/80 backdrop-blur-xl p-8 sm:p-10 shadow-[0_8px_40px_rgba(4,46,92,0.07)]"
+              className="space-y-6"
             >
               {/* Step dots */}
               <div className="flex gap-2 justify-center">
@@ -216,14 +202,8 @@ export default function ForgotPasswordPage() {
                   </Link>
                 </div>
               </div>
-            </form>
-          )}
-        </div>
-      </main>
-
-      <footer className="text-center text-xs text-gray-400 py-6">
-        &copy; {new Date().getFullYear()} GenEd. All rights reserved.
-      </footer>
-    </div>
+        </form>
+      )}
+    </AuthShell>
   );
 }

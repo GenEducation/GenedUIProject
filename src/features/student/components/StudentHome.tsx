@@ -3,12 +3,15 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronLeft, ChevronRight, Menu } from "lucide-react";
+import { ChevronLeft, ChevronRight, Menu } from "lucide-react";
 import Image from "next/image";
 import { useStudentStore, sessionRoutePath, isVoiceSession, type AgentItem } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
 import { getStudentDisplayName } from "../utils/displayName";
-import { selectContinueSession } from "../utils/sessionSelection";
+import { selectContinueSession, selectImminentSession } from "../utils/sessionSelection";
+import { useScheduleStore } from "../store/useScheduleStore";
+import { UpcomingSessionPanel } from "./UpcomingSessionPanel";
+import { useNow } from "@/utils/useNow";
 import { STUDENT_COLORS } from "../theme/colors";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
@@ -20,6 +23,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
 import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 
 /* ═══ DESIGN TOKENS ═══ — sourced from STUDENT_COLORS (see theme/colors.ts) */
 const C = {
@@ -186,52 +190,34 @@ function Confetti({ active, onDone }: { active: boolean; onDone?: () => void }) 
   return <canvas ref={ref} className="absolute inset-0 z-50 pointer-events-none w-full h-full" />;
 }
 
-/* ═══ CUSTOM DROPDOWN ═══ */
+/* ═══ FILTER DROPDOWN ═══ */
+/**
+ * Thin adapter over the shared <Select>. This used to be a bespoke
+ * button+panel implementation with its own radius, shadow and hover colors —
+ * one of several such copies across the app. The call-site API (plain string
+ * options, active/default color) is kept so the three usages below read the
+ * same as before.
+ */
 function FilterDropdown({ value, options, onChange, activeColor, defaultColor }: { value: string, options: string[], onChange: (v: string) => void, activeColor: string, defaultColor: string }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const handle = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, []);
-  
   const isActive = value !== options[0];
   return (
-    <div className="relative" ref={ref}>
-      <button 
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 bg-white border border-[#e2e8f0] rounded-full px-4 py-1.5 text-sm font-medium outline-none cursor-pointer hover:bg-gray-50 focus:border-[var(--tutor)] focus:ring-1 focus:ring-[var(--tutor)] transition-all"
-        style={{ color: isActive ? activeColor : defaultColor }}
-      >
-        {value}
-        <ChevronDown className="w-4 h-4 text-gray-400" />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div 
-            initial={{ opacity: 0, y: -5, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -5, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="absolute z-50 mt-2 left-0 min-w-full bg-white rounded-[16px] border border-[var(--primary-ink)]/10 shadow-xl overflow-hidden py-1"
-          >
-            {options.map(opt => (
-              <div 
-                key={opt}
-                onClick={() => { onChange(opt); setOpen(false); }}
-                className="px-4 py-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors whitespace-nowrap"
-                style={{ color: opt === value ? activeColor : "#1a2332", fontWeight: opt === value ? 600 : 500 }}
-              >
-                {opt}
-              </div>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+    <Select
+      variant="filter"
+      size="sm"
+      aria-label={options[0]}
+      value={value}
+      onChange={onChange}
+      options={options.map((o) => ({ value: o, label: o }))}
+      accentColor={activeColor}
+      panelWidth={180}
+      className="w-auto"
+      buttonClassName="!w-auto"
+      buttonStyle={{
+        color: isActive ? activeColor : defaultColor,
+        padding: "6px 16px",
+        fontSize: 14,
+      }}
+    />
   );
 }
 
@@ -246,6 +232,7 @@ export function StudentHome() {
     avatarId,
   } = useStudentStore();
   const { checkDNAStatus } = useOnboardingStore();
+  const { sessions: scheduledSessions, loadScheduledSessions } = useScheduleStore();
   const { hasEnded, hasDismissedCelebration, dismissCelebration } = useTutorialStore();
 
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
@@ -294,6 +281,7 @@ export function StudentHome() {
       fetchStudentStats();
       fetchOnboardingStatus();
       checkDNAStatus(studentProfile.user_id);
+      loadScheduledSessions(studentProfile.user_id);
     }
     return () => { cancelled = true; };
   }, [studentProfile]);
@@ -383,6 +371,15 @@ export function StudentHome() {
 
   /* Continue learning is independent of Recent Sessions filters and must be resumable. */
   const continueSession = selectContinueSession(allSessionsRaw);
+
+  // `useNow` (5s) is enough to decide *whether* a countdown belongs in the hero
+  // slot; the clock inside the panel runs its own 1s tick. Before mount it
+  // returns 0, so the server renders Continue Learning and the panel swaps in
+  // on the client — never a hydration mismatch.
+  const now = useNow();
+  const imminentSession = now === 0
+    ? null
+    : selectImminentSession(scheduledSessions, now);
 
   /* Recent Sessions retains completed sessions and only removes the card shown above. */
   const recentSessions = allSessions.filter(session => session.id !== continueSession?.id);
@@ -582,7 +579,11 @@ export function StudentHome() {
             </div>
 
             {/* ── CONTINUE LEARNING ── */}
-            {isSessionsLoading && !continueSession && (
+            {imminentSession && (
+              <UpcomingSessionPanel session={imminentSession} style={fade(0.22)} />
+            )}
+
+            {!imminentSession && isSessionsLoading && !continueSession && (
               <div className="rounded-[20px] mb-8 animate-pulse"
                 style={{ background: C.card, border: `1px solid ${C.border}`, padding: "clamp(16px, 2vw, 24px)" }}>
                 <div className="flex items-center pl-3" style={{ gap: "clamp(12px, 2vw, 20px)" }}>
@@ -596,7 +597,7 @@ export function StudentHome() {
                 </div>
               </div>
             )}
-            {continueSession && (
+            {!imminentSession && continueSession && (
               <div
                 className="rounded-[20px] relative overflow-hidden cursor-pointer mb-8"
                 style={{

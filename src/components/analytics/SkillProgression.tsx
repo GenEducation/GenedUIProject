@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { Activity, BookOpen, ChevronDown } from "lucide-react";
 import { useAnalyticsStore, SkillProgressionEntry, OverallHistoryPoint } from "@/store/useAnalyticsStore";
+import { Select } from "@/components/ui/Select";
 
 // -- Constants ----------------------------------------------------------------
 
@@ -199,17 +200,23 @@ export const SkillProgression: React.FC = () => {
           </div>
           
           <div className="relative group">
-            <select 
+            <Select
+              aria-label="Focus skill"
               value={selectedSkillId}
-              onChange={(e) => setSelectedSkillId(e.target.value)}
-              className="w-full bg-[#F4F3EE] border-none rounded-2xl px-5 py-4 text-sm font-bold text-[#1a3a2a] appearance-none cursor-pointer focus:ring-2 focus:ring-[#059669]/20 transition-all"
-            >
-              {skillProgression.map(skill => (
-                <option key={skill.skill_id} value={skill.skill_id}>
-                  {skill.skill_name}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedSkillId}
+              options={skillProgression.map((skill) => ({
+                value: skill.skill_id,
+                label: skill.skill_name,
+              }))}
+              buttonStyle={{
+                background: "var(--surface-sunken)",
+                border: "none",
+                borderRadius: 16,
+                padding: "16px 20px",
+                fontWeight: 700,
+                color: "var(--primary-ink)",
+              }}
+            />
             <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-[#1a3a2a]/30 group-hover:text-[#059669] transition-colors">
               <ChevronDown size={18} />
             </div>

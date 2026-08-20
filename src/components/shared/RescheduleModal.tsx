@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, AlertTriangle, BookOpen, GraduationCap, Loader2 } from "lucide-react";
-import { DatePicker } from "@/features/student/components/DatePicker";
-import { TimePicker } from "@/features/student/components/TimePicker";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { TimePicker } from "@/components/ui/TimePicker";
 import { SessionType } from "@/features/student/types/schedule";
+import { bookingWindowEnd, tomorrowDateString } from "@/utils/datetime";
 
 export interface RescheduleModalTarget {
   id: string; // scheduled_session row id
@@ -22,12 +23,6 @@ interface RescheduleModalProps {
   isSubmitting: boolean;
   errorMessage?: string | null;
   themeColor?: string; // default "#042E5C"
-}
-
-function tomorrowDateString(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
 }
 
 export function RescheduleModal({
@@ -151,9 +146,9 @@ export function RescheduleModal({
                     <DatePicker
                       value={scheduledDate}
                       min={tomorrowDateString()}
+                      max={bookingWindowEnd()}
                       onChange={setScheduledDate}
-                      themeColor={themeColor}
-                      popoverDirection="right"
+                      accentColor={themeColor}
                     />
                   </div>
 
@@ -165,8 +160,7 @@ export function RescheduleModal({
                     <TimePicker
                       value={scheduledTime}
                       onChange={setScheduledTime}
-                      themeColor={themeColor}
-                      popoverDirection="right"
+                      accentColor={themeColor}
                     />
                   </div>
                 </div>

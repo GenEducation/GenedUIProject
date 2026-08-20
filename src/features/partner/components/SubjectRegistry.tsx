@@ -7,6 +7,8 @@ import { usePartnerStore, SubjectFilters, restorePendingIngestions } from "../st
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Skeleton } from "./Skeleton";
 import { IngestedPdfViewer } from "./IngestedPdfViewer";
+import { Select } from "@/components/ui/Select";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 interface SubjectRegistryProps {
   onUploadClick: () => void;
@@ -194,38 +196,38 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                 {/* Status */}
                 <div>
                   <label className={labelClass}>Status</label>
-                  <select
+                  <Select
+                    aria-label="Status"
                     value={draft.status ?? ""}
-                    onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value || undefined }))}
-                    className={`${inputClass} appearance-none cursor-pointer`}
-                  >
-                    {STATUS_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => setDraft((d) => ({ ...d, status: v || undefined }))}
+                    options={STATUS_OPTIONS.map((opt) => ({
+                      value: opt.value,
+                      label: opt.label,
+                    }))}
+                  />
                 </div>
 
                 {/* From Date */}
                 <div>
                   <label className={labelClass}>From Date</label>
-                  <input
-                    type="date"
+                  <DatePicker
+                    aria-label="From date"
                     value={draft.from_date ?? ""}
-                    onChange={(e) => setDraft((d) => ({ ...d, from_date: e.target.value || undefined }))}
-                    className={inputClass}
+                    max={draft.to_date || undefined}
+                    onChange={(v) => setDraft((d) => ({ ...d, from_date: v || undefined }))}
+                    clearable
                   />
                 </div>
 
                 {/* To Date */}
                 <div>
                   <label className={labelClass}>To Date</label>
-                  <input
-                    type="date"
+                  <DatePicker
+                    aria-label="To date"
                     value={draft.to_date ?? ""}
-                    onChange={(e) => setDraft((d) => ({ ...d, to_date: e.target.value || undefined }))}
-                    className={inputClass}
+                    min={draft.from_date || undefined}
+                    onChange={(v) => setDraft((d) => ({ ...d, to_date: v || undefined }))}
+                    clearable
                   />
                 </div>
               </div>

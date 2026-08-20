@@ -25,9 +25,9 @@
   --line: rgba(4, 46, 92, 0.1);
 
   /* studio grey — matches the device clip's baked-in background */
-  --studio-1: #edeef0;
-  --studio-2: #e0e1e4;
-  --studio-3: #d3d4d8;
+  --studio-1: #aeadab;
+  --studio-2: #a3a3a3;
+  --studio-3: #939393;
 
   --r: 18px;
   --maxw: 1180px;
@@ -389,6 +389,7 @@
   display: block;
   border-radius: 24px;
   background: radial-gradient(circle at 50% 45%, var(--studio-1), var(--studio-3));
+  aspect-ratio: 16 / 9;
 }
 .po-fallback-list {
   display: grid;

@@ -5,6 +5,12 @@ import { Search, Users, X } from "lucide-react";
 import { labService } from "../services/labService";
 import type { ClassEligibleStudent } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
+import { Select } from "@/components/ui/Select";
+
+const GRADE_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
+  value: String(index + 1),
+  label: `Grade ${index + 1}`,
+}));
 
 function currentAcademicYear() {
   const now = new Date();
@@ -89,7 +95,23 @@ export function CreateClassModal({ isOpen, partnerId, onClose, onCreated }: Prop
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <label className="text-xs font-bold text-muted">Grade<select value={grade} onChange={(event) => setGrade(Number(event.target.value))} className="mt-1 w-full rounded-xl border border-border px-3 py-2.5 text-sm text-ink">{Array.from({ length: 12 }, (_, index) => index + 1).map((value) => <option key={value} value={value}>Grade {value}</option>)}</select></label>
+            <div className="text-xs font-bold text-muted">
+              Grade
+              <Select
+                aria-label="Grade"
+                className="mt-1"
+                value={String(grade)}
+                onChange={(v) => setGrade(Number(v))}
+                options={GRADE_OPTIONS}
+                buttonStyle={{
+                  background: "#FFFFFF",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                  padding: "10px 12px",
+                  color: "var(--ink)",
+                }}
+              />
+            </div>
             <label className="text-xs font-bold text-muted">Section<input value={section} onChange={(event) => setSection(event.target.value)} maxLength={32} className="mt-1 w-full rounded-xl border border-border px-3 py-2.5 text-sm uppercase text-ink" /></label>
             <label className="text-xs font-bold text-muted">Academic year<input value={academicYear} onChange={(event) => setAcademicYear(event.target.value)} maxLength={16} className="mt-1 w-full rounded-xl border border-border px-3 py-2.5 text-sm text-ink" /></label>
           </div>

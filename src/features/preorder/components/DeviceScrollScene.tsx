@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { PreorderFeature } from "../types";
 
-const FRAME_COUNT = 68;
+const FRAME_COUNT = 120;
 const FRAME_SRC = (i: number) =>
   `/preorder/frames/frame-${String(i).padStart(3, "0")}.webp`;
 
@@ -34,7 +34,7 @@ export function DeviceScrollScene({ features }: Props) {
   // Decide between the scrub experience and the static fallback.
   useEffect(() => {
     const mq = window.matchMedia(
-      "(max-width: 820px), (prefers-reduced-motion: reduce)"
+      "(max-width: 860px), (prefers-reduced-motion: reduce)"
     );
     const apply = () => setScrub(!mq.matches);
     apply();
@@ -81,11 +81,11 @@ export function DeviceScrollScene({ features }: Props) {
     const scale = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
     const dw = img.naturalWidth * scale;
     const dh = img.naturalHeight * scale;
-    // Horizontally centered. Vertically biased toward the top of the frame so
-    // the device (which sits high in the source) drops into view with headroom
-    // and its face never clips the top edge.
+    // Centered on both axes: the source frames are pre-padded so the device sits
+    // dead centre with margin on every side, which keeps it clear of the viewport
+    // edges under this cover fit at any aspect ratio.
     const dx = (cw - dw) / 2;
-    const dy = (ch - dh) * 0.2;
+    const dy = (ch - dh) * 0.5;
     ctx.drawImage(img, dx, dy, dw, dh);
   };
 
@@ -104,7 +104,7 @@ export function DeviceScrollScene({ features }: Props) {
         const progress = total > 0 ? clamp(-rect.top / total, 0, 1) : 0;
 
         // Single mapping: frames and feature bands advance together across the
-        // scrub range, so each feature gets an equal share of the 68 frames.
+        // scrub range, so each feature gets an equal share of the 120 frames.
         const p = clamp(
           (progress - SCRUB_START) / (SCRUB_END - SCRUB_START),
           0,
