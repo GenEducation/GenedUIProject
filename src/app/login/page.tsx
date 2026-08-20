@@ -2,8 +2,7 @@
 
 import { useState, ChangeEvent, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
+import { AuthShell } from "@/features/auth/components/AuthShell";
 import { SignIn } from "@/features/auth/components/SignIn";
 import { signIn } from "@/features/auth/authService";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
@@ -137,37 +136,17 @@ export default function LoginPage() {
 
   return (
     <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
-      <div className="min-h-screen bg-[#F7F9FB] flex flex-col">
-        {/* Nav */}
-        <header className="w-full bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-center">
-          <Link href="/">
-            <Image src="/GenEd Logo Colored.svg" alt="GenEd" width={100} height={36} />
-          </Link>
-        </header>
-
-        {/* Form */}
-        <main className="flex-1 flex items-center justify-center px-4 py-12">
-          <div className="w-full max-w-md">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-[#042E5C] mb-2">Welcome back</h1>
-            </div>
-
-            <SignIn
+      <AuthShell title="Welcome back" subtitle="Sign in to continue your learning journey.">
+        <SignIn
               loginData={loginData}
               onChange={handleChange}
               onSubmit={handleSubmit}
               onSwitchToSignup={() => router.push("/register")}
               isSigningIn={isSigningIn}
               errors={errors}
-              onGoogleSuccess={handleGoogleSuccess}
-            />
-          </div>
-        </main>
-
-        <footer className="text-center text-xs text-gray-400 py-6">
-          &copy; {new Date().getFullYear()} GenEd. All rights reserved.
-        </footer>
-      </div>
+          onGoogleSuccess={handleGoogleSuccess}
+        />
+      </AuthShell>
     </GoogleOAuthProvider>
   );
 }

@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { makeAuthToken } from "../fixtures";
+import { API } from "../helpers/api";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "https://gateway-service-dev-479218009109.asia-south1.run.app";
 
 test.describe("Auth — login flow", () => {
   test("successful login stores token and redirects to the role portal", async ({ page }) => {

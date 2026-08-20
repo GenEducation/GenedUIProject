@@ -31,6 +31,7 @@ import { ParentProfileView } from "./ParentProfileView";
 import { ParentScheduleView } from "./ParentScheduleView";
 import { ParentMomentsView } from "./ParentMomentsView";
 import { NotificationBell } from "@/components/NotificationBell";
+import { Select } from "@/components/ui/Select";
 
 // Lazy-loaded: both are large and only shown on specific tabs.
 // StudentReportCard is ~160KB; StudentAnalyticsDashboard pulls in recharts.
@@ -353,15 +354,21 @@ export function ParentHome() {
                 <div className="relative">
                   <p className="text-[8px] lg:text-[10px] font-black text-[#1a3a2a]/30 uppercase tracking-[0.25em] leading-none mb-1.5">Learning Subject</p>
                   <div className="flex items-center gap-1 group">
-                    <select 
+                    <Select
+                      variant="inline"
+                      aria-label="Analytics subject"
+                      panelWidth={200}
                       value={selectedAnalyticsSubject}
-                      onChange={(e) => fetchAnalyticsData(e.target.value, selectedStudentId!)}
-                      className="text-sm lg:text-xl font-black text-[#1a3a2a] bg-transparent border-none focus:ring-0 cursor-pointer appearance-none p-0 pr-6 lg:pr-8 hover:text-[#059669] transition-colors"
-                    >
-                      {analyticsSubjects.map(sub => (
-                        <option key={sub} value={sub}>{sub}</option>
-                      ))}
-                    </select>
+                      onChange={(v) => fetchAnalyticsData(v, selectedStudentId!)}
+                      options={analyticsSubjects.map((sub) => ({ value: sub, label: sub }))}
+                      buttonClassName="text-sm lg:text-xl"
+                      buttonStyle={{
+                        padding: 0,
+                        fontWeight: 900,
+                        fontSize: "inherit",
+                        color: "var(--primary-ink)",
+                      }}
+                    />
                     <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-[#1a3a2a]/30 group-hover:text-[#059669] transition-colors">
                       <ChevronDown size={16} strokeWidth={3} />
                     </div>

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, ChangeEvent, FormEvent } from "react";
+import { useEffect, useState, type CSSProperties, ChangeEvent, FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { PreorderFields } from "../types";
 import { createPreorder, verifyPreorder } from "../services/preorderService";
 import { loadRazorpayScript } from "@/features/billing/loadRazorpayScript";
 import { ApiRequestError } from "@/utils/authFetch";
+import { Select, type SelectOption } from "@/components/ui/Select";
 
 interface Props {
   isOpen: boolean;
@@ -13,6 +14,30 @@ interface Props {
 }
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/* The preorder page's design tokens are scoped to `.gened-preorder`, and the
+   Select panel portals to <body> — outside that scope — so the palette has to
+   be passed as literal values rather than var() references. */
+const PO_GREEN = "#059f6d";
+const PO_SELECT_TRIGGER_STYLE: CSSProperties = {
+  background: "var(--cream)",
+  border: "1px solid var(--line)",
+  borderRadius: 12,
+  padding: "12px 14px",
+  fontSize: "0.95rem",
+  color: "var(--ink)",
+  fontFamily: "var(--body)",
+};
+const PO_SELECT_PANEL_STYLE: CSSProperties = {
+  fontFamily: "Manrope, system-ui, sans-serif",
+  color: "#0a2a4a",
+};
+
+const BUYER_TYPE_OPTIONS: SelectOption[] = [
+  { value: "parent", label: "Parent" },
+  { value: "school", label: "School" },
+  { value: "other", label: "Other" },
+];
 
 function messageForError(err: unknown): string {
   if (err instanceof ApiRequestError) {
@@ -279,19 +304,16 @@ export function PreorderModal({ isOpen, onClose }: Props) {
                         onChange={handleChange}
                         error={errors.quantity}
                       />
-                      <div className="po-field">
-                        <label htmlFor="buyerType">I&apos;m ordering as</label>
-                        <select
-                          id="buyerType"
-                          name="buyerType"
-                          value={data.buyerType}
-                          onChange={handleChange}
-                        >
-                          <option value="parent">A parent</option>
-                          <option value="school">A school</option>
-                          <option value="other">Other</option>
-                        </select>
-                      </div>
+                      <Field
+                        label="I'm ordering as"
+                        name="buyerType"
+                        value={data.buyerType}
+                        onChange={handleChange}
+                        options={BUYER_TYPE_OPTIONS}
+                        onSelectChange={(v) =>
+                          setData((d) => ({ ...d, buyerType: v as PreorderFields["buyerType"] }))
+                        }
+                      />
                     </div>
                     <Field
                       label="How did you hear about us? (optional)"
@@ -412,6 +434,9 @@ interface FieldProps {
   placeholder?: string;
   autoComplete?: string;
   min?: number;
+  /** When present, the field renders a Select instead of an <input>. */
+  options?: SelectOption[];
+  onSelectChange?: (value: string) => void;
 }
 
 function Field({
@@ -424,7 +449,29 @@ function Field({
   placeholder,
   autoComplete,
   min,
+  options,
+  onSelectChange,
 }: FieldProps) {
+  if (options) {
+    return (
+      <div className={`po-field${error ? " has-error" : ""}`}>
+        <label htmlFor={name}>{label}</label>
+        <Select
+          id={name}
+          name={name}
+          value={value}
+          options={options}
+          onChange={(v) => onSelectChange?.(v)}
+          placeholder={placeholder}
+          error={error}
+          accentColor={PO_GREEN}
+          buttonStyle={PO_SELECT_TRIGGER_STYLE}
+          panelStyle={PO_SELECT_PANEL_STYLE}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={`po-field${error ? " has-error" : ""}`}>
       <label htmlFor={name}>{label}</label>

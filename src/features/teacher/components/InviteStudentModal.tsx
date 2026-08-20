@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2 } from "lucide-react";
 import { useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
+import { Select } from "@/components/ui/Select";
 
 interface InviteStudentModalProps {
   isOpen: boolean;
@@ -89,21 +90,19 @@ export function InviteStudentModal({ isOpen, onClose, onInvite }: InviteStudentM
               </div>
               <div>
                 <label className="mb-1.5 block text-[12.5px] font-semibold text-ink">Subject</label>
-                <select
+                <Select
+                  aria-label="Subject"
                   value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="w-full appearance-none rounded-xl border border-border bg-paper bg-[length:12px] bg-[right_14px_center] bg-no-repeat px-3.5 py-3 text-sm font-medium text-ink outline-none transition-colors focus:border-emerald focus:bg-white"
-                  style={{
-                    backgroundImage:
-                      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7d91' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
+                  onChange={setSubject}
+                  options={subjects.map((s) => ({ value: s, label: s }))}
+                  buttonStyle={{
+                    background: "var(--paper)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    padding: "12px 14px",
+                    color: "var(--ink)",
                   }}
-                >
-                  {subjects.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               {error && (
                 <p className="mt-3 rounded-lg bg-danger-bg px-3 py-2 text-[12.5px] font-medium text-danger-ink">

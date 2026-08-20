@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 import { InviteStudentModal } from "../InviteStudentModal";
+import { chooseSelectOption } from "@/test/helpers/select";
 
 function setup(onInvite = vi.fn().mockResolvedValue(undefined)) {
   const onClose = vi.fn();
@@ -40,7 +41,7 @@ describe("InviteStudentModal", () => {
   it("passes the chosen subject", async () => {
     const { onInvite } = setup();
     fireEvent.change(screen.getByPlaceholderText(/student@school/i), { target: { value: "kid" } });
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "Science" } });
+    chooseSelectOption(screen.getByRole("combobox"), "Science");
     fireEvent.click(screen.getByRole("button", { name: /send invite/i }));
 
     await waitFor(() => expect(onInvite).toHaveBeenCalledWith("kid", "Science"));

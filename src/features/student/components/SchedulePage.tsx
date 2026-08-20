@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
@@ -19,8 +20,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
-import { DatePicker } from "./DatePicker";
-import { TimePicker } from "./TimePicker";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { TimePicker } from "@/components/ui/TimePicker";
 import { RescheduleModal, RescheduleModalTarget } from "@/components/shared/RescheduleModal";
 import { SessionType } from "../types/schedule";
 import { Button } from "@/components/ui/Button";
@@ -32,34 +33,9 @@ import {
 import { PageHeader } from "@/components/student/PageHeader";
 import { SidebarToggle } from "@/components/student/SidebarToggle";
 import { PageContainer } from "@/components/student/PageContainer";
-import { FIELD_CLASSNAME, FIELD_FOCUS_CLASSNAME } from "@/components/ui/fieldStyles";
+import { Select } from "@/components/ui/Select";
+import { bookingWindowEnd, formatDateDisplay, scheduledSessionStartMs, tomorrowDateString } from "@/utils/datetime";
 
-function tomorrowDateString(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
-}
-
-function getSessionStartTimestamp(scheduledDateStr: string, scheduledTimeStr?: string | null): number {
-  const d = new Date(scheduledDateStr);
-  const year = d.getUTCFullYear();
-  const month = d.getUTCMonth();
-  const dateVal = d.getUTCDate();
-
-  let hours = 9;
-  let minutes = 0;
-  if (scheduledTimeStr) {
-    const parts = scheduledTimeStr.split(":");
-    if (parts.length === 2) {
-      hours = parseInt(parts[0], 10);
-      minutes = parseInt(parts[1], 10);
-    }
-  }
-
-  const istDate = new Date(Date.UTC(year, month, dateVal, hours, minutes));
-  const utcDate = new Date(istDate.getTime() - (5 * 60 + 30) * 60 * 1000);
-  return utcDate.getTime();
-}
 
 export function SchedulePage() {
   const router = useRouter();
@@ -166,7 +142,7 @@ export function SchedulePage() {
   // Classify a session by its lifecycle so genuinely upcoming sessions are
   // separated from ones that already failed prep or slipped into the past.
   const classify = (s: (typeof sessions)[number]) => {
-    const startTs = getSessionStartTimestamp(s.scheduled_date, s.scheduled_time);
+    const startTs = scheduledSessionStartMs(s.scheduled_date, s.scheduled_time);
     const isExpired = Date.now() - startTs > 24 * 60 * 60 * 1000;
     const isFailed = s.preparation_status === "FAILED";
     const isReady = s.preparation_status === "COMPLETED" && !!s.session_id;
@@ -262,7 +238,7 @@ export function SchedulePage() {
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-0.5">
             <p className="text-xs font-bold text-[var(--primary-ink)]/60">
-              {new Date(s.scheduled_date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+              {formatDateDisplay(s.scheduled_date)}
               {s.scheduled_time && <span className="ml-1.5 text-[var(--primary-ink)]/40">· {s.scheduled_time} IST</span>}
             </p>
             <p className="text-[10px] font-medium text-[var(--primary-ink)]/30 uppercase tracking-widest">
@@ -308,123 +284,136 @@ export function SchedulePage() {
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 custom-scrollbar">
           <PageContainer className="space-y-8 sm:space-y-12">
             {/* Booking Form */}
-            <div className="bg-white p-4 sm:p-6 md:p-8 rounded-[28px] sm:rounded-[40px] border border-[rgba(4,46,92,0.05)] shadow-sm space-y-6">
-              <h2 className="text-sm font-black text-[var(--primary-ink)] uppercase tracking-widest flex items-center gap-2">
-                <Sparkles size={14} />
-                Book a Session
-              </h2>
+            <div className="bg-white rounded-[28px] sm:rounded-[40px] border border-[rgba(4,46,92,0.05)] shadow-sm overflow-hidden">
+              <div className="grid grid-cols-1 lg:grid-cols-5">
+                <div className="lg:col-span-3 p-4 sm:p-6 md:p-8 space-y-6">
+                <h2 className="text-sm font-black text-[var(--primary-ink)] uppercase tracking-widest flex items-center gap-2">
+                  <Sparkles size={14} />
+                  Book a Session
+                </h2>
 
-              {/* Session Type Toggle */}
-              <div className="flex gap-2 sm:gap-3">
-                {(["TEST", "LEARNING"] as SessionType[]).map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setSessionType(type)}
-                    className={`flex-1 flex items-center justify-center text-center gap-1.5 sm:gap-2 px-2 sm:px-6 py-3 sm:py-4 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-wide sm:tracking-[0.2em] leading-tight transition-all border ${
-                      // Neutral ink selection, not a second brand accent — the
-                      // page's one colored "action" is the emerald Schedule
-                      // Session CTA below. A solid navy block here read as a
-                      // second, competing primary color on the same screen.
-                      sessionType === type
-                        ? "bg-white text-[var(--primary-ink)] border-[rgba(4,46,92,0.25)] shadow-sm"
-                        : "bg-[#F4F3EE]/50 text-[var(--primary-ink)]/40 border-[rgba(4,46,92,0.05)] hover:text-[var(--primary-ink)]"
-                    }`}
-                  >
-                    {type === "TEST" ? <GraduationCap size={16} className="shrink-0" /> : <BookOpen size={16} className="shrink-0" />}
-                    <span className="whitespace-nowrap">{type === "TEST" ? "Test" : "Learning Session"}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {/* Subject */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">Subject</label>
-                  <select
-                    value={subject}
-                    onChange={(e) => {
-                      setSubject(requireExactSubject(e.target.value, studentProfile?.grade));
-                    }}
-                    className={`${FIELD_CLASSNAME} ${FIELD_FOCUS_CLASSNAME} px-4`}
-                  >
-                    {isAgentsLoading && <option value="">Loading...</option>}
-                    {!isAgentsLoading && availableAgents.length === 0 && <option value="">No subjects available</option>}
-                    {availableAgents.map((a) => (
-                      <option key={a.subject} value={a.subject}>{a.subject}</option>
-                    ))}
-                  </select>
+                {/* Session Type Toggle */}
+                <div className="flex gap-2 sm:gap-3">
+                  {(["TEST", "LEARNING"] as SessionType[]).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setSessionType(type)}
+                      className={`flex-1 flex items-center justify-center text-center gap-1.5 sm:gap-2 px-2 sm:px-6 py-3 sm:py-4 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-wide sm:tracking-[0.2em] leading-tight transition-all border ${
+                        // A tinted emerald fill, not a solid block: the card's one
+                        // saturated "action" is still the Schedule Session CTA
+                        // below, and the emerald panel alongside already carries
+                        // the color. A solid fill here would compete with both.
+                        sessionType === type
+                          ? "bg-[var(--emerald)]/8 text-[var(--emerald)] border-[var(--emerald)]/30 shadow-sm"
+                          : "bg-[#F4F3EE]/50 text-[var(--primary-ink)]/40 border-[rgba(4,46,92,0.05)] hover:text-[var(--primary-ink)]"
+                      }`}
+                    >
+                      {type === "TEST" ? <GraduationCap size={16} className="shrink-0" /> : <BookOpen size={16} className="shrink-0" />}
+                      <span className="whitespace-nowrap">{type === "TEST" ? "Test" : "Learning Session"}</span>
+                    </button>
+                  ))}
                 </div>
 
-                {/* Topic */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">
-                    Chapter {sessionType === "LEARNING" && "(optional)"}
-                  </label>
-                  <select
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    disabled={isAgentsLoading}
-                    className={`${FIELD_CLASSNAME} ${FIELD_FOCUS_CLASSNAME} px-4 disabled:opacity-50`}
-                  >
-                    {isAgentsLoading && <option value="">Loading...</option>}
-                    {!isAgentsLoading && chapters.length === 0 && <option value="">No chapters available</option>}
-                    {chapters.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Subject */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">Subject</label>
+                    <Select
+                      aria-label="Subject"
+                      value={subject}
+                      onChange={(v) => {
+                        setSubject(requireExactSubject(v, studentProfile?.grade));
+                      }}
+                      disabled={isAgentsLoading}
+                      placeholder={isAgentsLoading ? "Loading…" : "No subjects available"}
+                      options={availableAgents.map((a) => ({ value: a.subject, label: a.subject }))}
+                    />
+                  </div>
+
+                  {/* Topic */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">
+                      Chapter {sessionType === "LEARNING" && "(optional)"}
+                    </label>
+                    <Select
+                      aria-label="Chapter"
+                      value={topic}
+                      onChange={setTopic}
+                      disabled={isAgentsLoading}
+                      placeholder={isAgentsLoading ? "Loading…" : "No chapters available"}
+                      options={chapters.map((c) => ({ value: c, label: c }))}
+                    />
+                  </div>
+
+                  {/* Date */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">Date</label>
+                    <DatePicker
+                      value={scheduledDate}
+                      min={tomorrowDateString()}
+                      max={bookingWindowEnd()}
+                      onChange={setScheduledDate}
+                    />
+                  </div>
+
+                  {/* Time (optional) */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">Start Time <span className="font-medium normal-case">(optional, IST)</span></label>
+                    <TimePicker
+                      value={scheduledTime}
+                      onChange={setScheduledTime}
+                    />
+                  </div>
                 </div>
 
-                {/* Date */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">Date</label>
-                  <DatePicker
-                    value={scheduledDate}
-                    min={tomorrowDateString()}
-                    onChange={setScheduledDate}
-                  />
-                </div>
-
-                {/* Time (optional) */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">Start Time <span className="font-medium normal-case">(optional, IST)</span></label>
-                  <TimePicker
-                    value={scheduledTime}
-                    onChange={setScheduledTime}
-                  />
-                </div>
-              </div>
-
-              {bookError && (
-                <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-red-50 text-red-600 text-sm font-medium">
-                  <AlertTriangle size={16} />
-                  {bookError}
-                </div>
-              )}
-
-              {bookedConfirmation && (
-                <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-50 text-emerald-600 text-sm font-bold">
-                  <CheckCircle2 size={16} />
-                  Session scheduled! It will be prepared the night before.
-                </div>
-              )}
-
-              <Button
-                variant="primary"
-                size="lg"
-                fullWidth
-                onClick={handleBook}
-                disabled={isBooking || !subject || !scheduledDate || (sessionType === "TEST" && !topic)}
-                trailingIcon={!isBooking && <ArrowRight size={16} />}
-              >
-                {isBooking ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Scheduling...
-                  </>
-                ) : (
-                  "Schedule Session"
+                {bookError && (
+                  <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-red-50 text-red-600 text-sm font-medium">
+                    <AlertTriangle size={16} />
+                    {bookError}
+                  </div>
                 )}
-              </Button>
+
+                {bookedConfirmation && (
+                  <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-50 text-emerald-600 text-sm font-bold">
+                    <CheckCircle2 size={16} />
+                    Session scheduled! It will be prepared the night before.
+                  </div>
+                )}
+
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  onClick={handleBook}
+                  disabled={isBooking || !subject || !scheduledDate || (sessionType === "TEST" && !topic)}
+                  trailingIcon={!isBooking && <ArrowRight size={16} />}
+                >
+                  {isBooking ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Scheduling...
+                    </>
+                  ) : (
+                    "Schedule Session"
+                  )}
+                </Button>
+                </div>
+
+                {/* Decorative half — illustration only, no controls. */}
+                <aside
+                  aria-hidden="true"
+                  className="hidden lg:flex lg:col-span-2 illustration-panel items-center justify-center p-6"
+                >
+                  <Image
+                    src="/illustrations/schedule-planner-v2.webp"
+                    alt=""
+                    width={340}
+                    height={340}
+                    className="w-full max-w-[340px] h-auto select-none"
+                    draggable={false}
+                  />
+                </aside>
+              </div>
             </div>
 
             {/* Scheduled Sessions List */}

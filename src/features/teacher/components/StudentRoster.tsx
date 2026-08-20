@@ -7,6 +7,7 @@ import { TeacherStudent } from "../services/teacherService";
 import { StudentCard } from "./StudentCard";
 import { useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
 import { rosterCounts, filterAndSortRoster } from "../utils/rosterUtils";
+import { Select } from "@/components/ui/Select";
 
 interface StudentRosterProps {
   onApprove: (student: TeacherStudent) => void;
@@ -17,9 +18,6 @@ interface StudentRosterProps {
   removingId: string | null;
   onInviteClick?: () => void;
 }
-
-const selectChevron =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7d91' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")";
 
 export function StudentRoster({
   onApprove,
@@ -91,40 +89,44 @@ export function StudentRoster({
 
         <div className="flex flex-col gap-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Subject</span>
-          <select
+          <Select
+            aria-label="Filter by subject"
+            className="min-w-[150px]"
             value={subjectFilter}
-            onChange={(e) => setSubjectFilter(e.target.value)}
-            className="appearance-none rounded-[11px] border border-border bg-paper px-3.5 py-2.5 pr-8 text-[13.5px] font-medium text-ink outline-none"
-            style={{
-              backgroundImage: selectChevron,
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right 12px center",
+            onChange={setSubjectFilter}
+            options={[
+              { value: "all", label: "All subjects" },
+              ...subjects.map((s) => ({ value: s, label: s })),
+            ]}
+            buttonStyle={{
+              background: "var(--paper)",
+              border: "1px solid var(--border)",
+              borderRadius: 11,
+              padding: "10px 14px",
+              color: "var(--ink)",
             }}
-          >
-            <option value="all">All subjects</option>
-            {subjects.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         <div className="flex flex-col gap-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Sort</span>
-          <select
+          <Select
+            aria-label="Sort roster"
+            className="min-w-[150px]"
             value={sort}
-            onChange={(e) => setSort(e.target.value as SortOption)}
-            className="appearance-none rounded-[11px] border border-border bg-paper px-3.5 py-2.5 pr-8 text-[13.5px] font-medium text-ink outline-none"
-            style={{
-              backgroundImage: selectChevron,
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right 12px center",
+            onChange={(v) => setSort(v as SortOption)}
+            options={[
+              { value: "status", label: "Pending first" },
+              { value: "name", label: "Name (A–Z)" },
+            ]}
+            buttonStyle={{
+              background: "var(--paper)",
+              border: "1px solid var(--border)",
+              borderRadius: 11,
+              padding: "10px 14px",
+              color: "var(--ink)",
             }}
-          >
-            <option value="status">Pending first</option>
-            <option value="name">Name (A–Z)</option>
-          </select>
+          />
         </div>
 
         <div className="flex min-w-[200px] flex-1 flex-col gap-1.5">

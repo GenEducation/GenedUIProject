@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useMomentsStore } from "../store/useMomentsStore";
 import { Moment } from "../types/moments";
+import { TimePicker } from "@/components/ui/TimePicker";
+import { formatTimeDisplay } from "@/utils/datetime";
 import {
   Bell,
   Plus,
@@ -22,13 +24,6 @@ interface ParentMomentsViewProps {
 }
 
 const DEFAULT_PURPOSE = "a cheerful good-morning to start the day";
-
-function formatTime12(time: string): string {
-  const [h, m] = time.split(":").map(Number);
-  const period = h >= 12 ? "PM" : "AM";
-  const hour = h % 12 || 12;
-  return `${hour}:${m.toString().padStart(2, "0")} ${period}`;
-}
 
 export function ParentMomentsView({ studentId, studentName }: ParentMomentsViewProps) {
   const { moments, isLoading, isSaving, error, loadMoments, createMoment, updateMoment, deleteMoment, clearError } =
@@ -156,11 +151,18 @@ export function ParentMomentsView({ studentId, studentName }: ParentMomentsViewP
 
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest">Wake-Up Time (IST)</label>
-                <input
-                  type="time"
+                <TimePicker
                   value={newTime}
-                  onChange={(e) => setNewTime(e.target.value)}
-                  className="w-full bg-[#F4F3EE]/50 border border-[#1a3a2a]/5 rounded-2xl py-3.5 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1a3a2a]/10 focus:bg-white transition-all"
+                  onChange={setNewTime}
+                  aria-label="Wake-up time"
+                  accentColor="#1a3a2a"
+                  clearable={false}
+buttonStyle={{
+                    background: "color-mix(in srgb, var(--surface-sunken) 50%, transparent)",
+                    border: "1px solid rgba(26,58,42,0.05)",
+                    borderRadius: 16,
+                    padding: "14px 16px",
+                  }}
                 />
               </div>
 
@@ -259,11 +261,20 @@ export function ParentMomentsView({ studentId, studentName }: ParentMomentsViewP
                           <div className="p-5 space-y-4">
                             <div className="space-y-1.5">
                               <label className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest">Time (IST)</label>
-                              <input
-                                type="time"
+                              <TimePicker
                                 value={editTime}
-                                onChange={(e) => setEditTime(e.target.value)}
-                                className="w-full bg-[#F4F3EE]/50 border border-[#1a3a2a]/5 rounded-xl py-2.5 px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1a3a2a]/10 focus:bg-white transition-all"
+                                onChange={setEditTime}
+                                aria-label="Moment time"
+                                accentColor="#1a3a2a"
+                                size="sm"
+                                clearable={false}
+                                buttonStyle={{
+                                  background:
+                                    "color-mix(in srgb, var(--surface-sunken) 50%, transparent)",
+                                  border: "1px solid rgba(26,58,42,0.05)",
+                                  borderRadius: 12,
+                                  padding: "10px 12px",
+                                }}
                               />
                             </div>
                             <div className="space-y-1.5">
@@ -319,7 +330,7 @@ export function ParentMomentsView({ studentId, studentName }: ParentMomentsViewP
                             <div className="flex-1 min-w-0">
                               <div className="flex items-baseline gap-2">
                                 <span className="text-2xl font-black text-[#1a3a2a] tabular-nums">
-                                  {formatTime12(moment.scheduled_time)}
+                                  {(formatTimeDisplay(moment.scheduled_time) ?? moment.scheduled_time)}
                                 </span>
                                 <span className="text-[10px] font-black text-[#1a3a2a]/30 uppercase tracking-widest">
                                   {moment.scheduled_date ? `on ${moment.scheduled_date}` : "Daily"}

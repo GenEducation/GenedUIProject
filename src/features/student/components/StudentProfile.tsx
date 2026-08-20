@@ -26,6 +26,18 @@ import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
 import { GeneralOnboardingWizard } from "@/features/onboarding/components/GeneralOnboarding/GeneralOnboardingWizard";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { useTestStore } from "../store/useTestStore";
+import { Select } from "@/components/ui/Select";
+
+const LANGUAGE_OPTIONS = [
+  { value: "en", label: "English (English)" },
+  { value: "hi", label: "Hindi (हिन्दी)" },
+  { value: "hi-Latn", label: "Hinglish (Hinglish)" },
+  { value: "mr", label: "Marathi (मराठी)" },
+  { value: "pa", label: "Punjabi (ਪੰਜਾਬੀ)" },
+  { value: "ta", label: "Tamil (தமிழ்)" },
+  { value: "te", label: "Telugu (తెలుగు)" },
+  { value: "kn", label: "Kannada (ಕನ್ನಡ)" },
+];
 
 /* ─── Design Tokens ─── sourced from STUDENT_COLORS (see theme/colors.ts),
    now byte-for-byte identical to the home screen's palette. */
@@ -896,32 +908,34 @@ export function StudentProfile() {
 
               {/* Partner request */}
               <div style={{ marginTop: 14 }}>
-                <div style={{ position: "relative" as const }}>
-                  <select
-                    value={selectedPartner}
-                    onChange={e => setSelectedPartner(e.target.value)}
-                    disabled={isLoading}
-                    style={{
-                      width: "100%", padding: "10px 38px 10px 14px", borderRadius: 12,
-                      border: `1.5px solid ${C.border}`, background: C.pageBg,
-                      fontSize: 12, fontWeight: 600, color: C.textMid,
-                      outline: "none", cursor: "pointer", appearance: "none" as const,
-                      fontFamily: "var(--font-body)",
-                    }}
-                  >
-                    <option value="" disabled>Connect to a school...</option>
-                    {availablePartners.map((p, i) => (
-                      <option
-                        key={p.partner_id ?? p.id ?? `avp-${i}`}
-                        value={p.partner_id ?? p.id}
-                        disabled={p.association_status === "PENDING" || p.association_status === "APPROVED"}
-                      >
-                        {p.organization}{p.association_status === "PENDING" ? " — Request pending" : p.association_status === "APPROVED" ? " — Connected" : ""}
-                      </option>
-                    ))}
-                  </select>
-                  <div style={{ position: "absolute" as const, right: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: C.textMuted, fontSize: 12 }}>▾</div>
-                </div>
+                <Select
+                  aria-label="Connect to a school"
+                  placeholder="Connect to a school..."
+                  value={selectedPartner}
+                  onChange={setSelectedPartner}
+                  disabled={isLoading}
+                  options={availablePartners.map((p, i) => ({
+                    value: String(p.partner_id ?? p.id ?? `avp-${i}`),
+                    label: p.organization ?? "",
+                    hint:
+                      p.association_status === "PENDING"
+                        ? "Request pending"
+                        : p.association_status === "APPROVED"
+                          ? "Connected"
+                          : undefined,
+                    disabled:
+                      p.association_status === "PENDING" || p.association_status === "APPROVED",
+                  }))}
+                  buttonStyle={{
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    border: `1.5px solid ${C.border}`,
+                    background: C.pageBg,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: C.textMid,
+                  }}
+                />
                 <button
                   onClick={async () => {
                     if (!selectedPartner) return;
@@ -1078,46 +1092,24 @@ export function StudentProfile() {
                       {isLanguageLoading ? (
                         <span style={{ fontSize: 12, color: C.textMuted }}>Loading...</span>
                       ) : (
-                        <div style={{ position: "relative" as const }}>
-                          <select
-                            value={preferredLanguage || "en"}
-                            disabled={isLanguageSaving}
-                            onChange={(e) => handleLanguageChange(e.target.value)}
-                            style={{
-                              padding: "6px 32px 6px 12px",
-                              borderRadius: 10,
-                              background: "white",
-                              border: `1.5px solid ${C.border}`,
-                              color: C.text,
-                              fontSize: 12,
-                              fontWeight: 700,
-                              cursor: "pointer",
-                              outline: "none",
-                              appearance: "none",
-                              fontFamily: "var(--font-body)"
-                            }}
-                          >
-                            <option value="en">English (English)</option>
-                            <option value="hi">Hindi (हिन्दी)</option>
-                            <option value="hi-Latn">Hinglish (Hinglish)</option>
-                            <option value="mr">Marathi (मराठी)</option>
-                            <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
-                            <option value="ta">Tamil (தமிழ்)</option>
-                            <option value="te">Telugu (తెలుగు)</option>
-                            <option value="kn">Kannada (ಕನ್ನಡ)</option>
-                          </select>
-                          <ChevronDown
-                            size={14}
-                            style={{
-                              position: "absolute" as const,
-                              right: 10,
-                              top: "50%",
-                              transform: "translateY(-50%)",
-                              pointerEvents: "none",
-                              color: C.textMuted
-                            }}
-                          />
-                        </div>
+                        <Select
+                          aria-label="Preferred language"
+                          size="sm"
+                          panelWidth={200}
+                          value={preferredLanguage || "en"}
+                          disabled={isLanguageSaving}
+                          onChange={handleLanguageChange}
+                          options={LANGUAGE_OPTIONS}
+                          buttonStyle={{
+                            padding: "6px 12px",
+                            borderRadius: 10,
+                            background: "white",
+                            border: `1.5px solid ${C.border}`,
+                            color: C.text,
+                            fontSize: 12,
+                            fontWeight: 700,
+                          }}
+                        />
                       )}
                     </div>
                   </div>

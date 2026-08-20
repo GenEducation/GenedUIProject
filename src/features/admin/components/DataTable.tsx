@@ -2,6 +2,7 @@
 
 import { ReactNode, useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { Select } from "@/components/ui/Select";
 
 export interface Column<T> {
   key: string;
@@ -105,23 +106,29 @@ export function DataTable<T>({
           />
         </div>
         {filterCols.map((c) => (
-          <select
+          <Select
             key={c.key}
+            theme="dark"
+            variant="filter"
+            panelWidth={220}
+            className="min-w-[160px]"
+            aria-label={`Filter by ${c.header}`}
             value={filters[c.key] ?? ""}
-            onChange={(e) => setFilters((f) => ({ ...f, [c.key]: e.target.value }))}
-            className={`rounded-lg border px-3 py-2.5 text-sm focus:outline-none ${
+            onChange={(v) => setFilters((f) => ({ ...f, [c.key]: v }))}
+            options={[
+              { value: "", label: `${c.header}: All` },
+              ...(distinct[c.key] ?? []).map((v) => ({ value: v, label: v })),
+            ]}
+            buttonStyle={
               filters[c.key]
-                ? "border-[#059F6D]/60 bg-[#059F6D]/10 text-[#059F6D]"
-                : "border-white/15 bg-white/5 text-white/70 focus:border-[#059F6D]"
-            }`}
-          >
-            <option value="" className="bg-[#13283a]">{c.header}: All</option>
-            {distinct[c.key]?.map((v) => (
-              <option key={v} value={v} className="bg-[#13283a]">
-                {v}
-              </option>
-            ))}
-          </select>
+                ? {
+                    borderColor: "rgba(5,159,109,0.6)",
+                    background: "rgba(5,159,109,0.10)",
+                    color: "#059F6D",
+                  }
+                : undefined
+            }
+          />
         ))}
         {(activeFilters > 0 || q) && (
           <button

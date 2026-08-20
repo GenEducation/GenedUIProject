@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 
 import { DataTable, type Column } from "../DataTable";
+import { chooseSelectOption, getSelectOptionLabels } from "@/test/helpers/select";
 
 interface Row {
   id: string;
@@ -46,12 +47,11 @@ describe("DataTable", () => {
 
   it("a filterable column offers distinct sorted values and filters on selection", () => {
     renderTable();
-    // The Role filter <select> — find the combobox whose options include STUDENT/TEACHER
+    // The Role filter dropdown — the first combobox in the toolbar
     const roleSelect = screen.getAllByRole("combobox")[0];
-    const optionText = within(roleSelect).getAllByRole("option").map((o) => o.textContent);
-    expect(optionText).toEqual(["Role: All", "STUDENT", "TEACHER"]); // distinct + sorted
+    expect(getSelectOptionLabels(roleSelect)).toEqual(["Role: All", "STUDENT", "TEACHER"]); // distinct + sorted
 
-    fireEvent.change(roleSelect, { target: { value: "STUDENT" } });
+    chooseSelectOption(roleSelect, "STUDENT");
     expect(screen.getByText("Bob Stone")).toBeInTheDocument();
     expect(screen.getByText("Cara Diaz")).toBeInTheDocument();
     expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();

@@ -1,46 +1,33 @@
 import { test, expect } from "@playwright/test";
 import { seedAuth } from "../helpers/auth";
 import { makeAuthToken, makeChapterTest, makeSubmitResult } from "../fixtures";
-
-const API = process.env.NEXT_PUBLIC_API_URL || "https://gateway-service-dev-479218009109.asia-south1.run.app";
+import { API, json, stubApiCatchAll } from "../helpers/api";
 
 test.describe("Test flow — assessments to results (real browser)", () => {
   test.beforeEach(async ({ page }) => {
     const token = makeAuthToken({ role: "student", user_id: "u1", grade: 6 });
     await seedAuth(page, "student", token);
 
-    // Stub all portal-boot calls that fire before we can register specific mocks
-    await page.route(`${API}/**`, (route) => {
-      const url = route.request().url();
-
-      if (url.includes("/api/students/") && url.includes("/available-agents")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            partners: [{ subjects: [{ subject: "Science" }] }],
-          }),
-        });
-      }
-
-      if (url.includes("/students/") && url.includes("/chapter-mastery")) {
-        return route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify([
-            { document_title: "Chapter 3: Photosynthesis", mastery_score: 0.6, completion_percentage: 80, study_count: 3 },
-          ]),
-        });
-      }
-
-      if (url.includes("/students/") && url.includes("/tests") && !url.includes("/submit")) {
-        // listStudentTests — no past tests
-        return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
-      }
-
-      // Default: empty-but-valid JSON for anything else (notifications, sessions, etc.)
-      return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
-    });
+    // Only the endpoints this flow actually asserts on; everything else
+    // (agents, taxonomy, sessions) comes from the shared defaults.
+    await stubApiCatchAll(page, [
+      (url, route) =>
+        url.includes("/students/") && url.includes("/chapter-mastery")
+          ? json(route, [
+              {
+                document_title: "Chapter 3: Photosynthesis",
+                mastery_score: 0.6,
+                completion_percentage: 80,
+                study_count: 3,
+              },
+            ])
+          : undefined,
+      // listStudentTests — no past tests
+      (url, route) =>
+        url.includes("/students/") && url.includes("/tests") && !url.includes("/submit")
+          ? json(route, [])
+          : undefined,
+    ]);
   });
 
   test("completes a test: start → answer → submit → results", async ({ page }) => {

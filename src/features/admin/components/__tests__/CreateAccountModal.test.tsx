@@ -12,6 +12,7 @@ vi.mock("@/features/subjects/subjectCatalog", () => ({
 
 import { createUser } from "../../adminService";
 import { CreateAccountModal } from "../CreateAccountModal";
+import { chooseSelectOption } from "@/test/helpers/select";
 
 const createUserMock = vi.mocked(createUser);
 
@@ -43,7 +44,7 @@ describe("CreateAccountModal partner contract", () => {
   it("includes the selected board in the partner creation payload", async () => {
     render(<CreateAccountModal onClose={vi.fn()} onCreated={vi.fn()} />);
     fillPartnerCredentials();
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "ICSE" } });
+    chooseSelectOption(screen.getByRole("combobox"), "ICSE");
 
     fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 

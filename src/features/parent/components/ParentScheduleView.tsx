@@ -3,11 +3,13 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useScheduleStore } from "@/features/student/store/useScheduleStore";
-import { DatePicker } from "@/features/student/components/DatePicker";
-import { TimePicker } from "@/features/student/components/TimePicker";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { TimePicker } from "@/components/ui/TimePicker";
 import { studentService } from "@/features/student/services/studentService";
 import { RescheduleModal, RescheduleModalTarget } from "@/components/shared/RescheduleModal";
 import { SessionType } from "@/features/student/types/schedule";
+import { Select } from "@/components/ui/Select";
+import { bookingWindowEnd, formatDateDisplay, tomorrowDateString } from "@/utils/datetime";
 import {
   CalendarClock,
   Loader2,
@@ -34,12 +36,6 @@ interface ParentScheduleViewProps {
   studentId: string;
   parentId: string;
   studentName?: string;
-}
-
-function tomorrowDateString(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
 }
 
 export function ParentScheduleView({ studentId, parentId, studentName }: ParentScheduleViewProps) {
@@ -191,21 +187,23 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
             {/* Subject */}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest">Subject</label>
-              <select
+              <Select
+                aria-label="Subject"
                 value={subject}
-                onChange={(e) => {
-                  const match = agentSubjects.find((item) => item.subject === e.target.value);
+                onChange={(v) => {
+                  const match = agentSubjects.find((item) => item.subject === v);
                   if (match) setSubject(match.subject);
                 }}
                 disabled={isLoadingAgents}
-                className="w-full bg-[#F4F3EE]/50 border border-[#1a3a2a]/5 rounded-2xl py-3.5 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1a3a2a]/10 focus:bg-white transition-all disabled:opacity-50"
-              >
-                {isLoadingAgents && <option value="">Loading...</option>}
-                {!isLoadingAgents && agentSubjects.length === 0 && <option value="">No subjects available</option>}
-                {agentSubjects.map((a) => (
-                  <option key={a.subject} value={a.subject}>{a.subject}</option>
-                ))}
-              </select>
+                placeholder={isLoadingAgents ? "Loading…" : "No subjects available"}
+                options={agentSubjects.map((a) => ({ value: a.subject, label: a.subject }))}
+                buttonStyle={{
+                  background: "color-mix(in srgb, var(--surface-sunken) 50%, transparent)",
+                  border: "1px solid rgba(4,46,92,0.05)",
+                  borderRadius: 16,
+                  padding: "14px 16px",
+                }}
+              />
             </div>
 
             {/* Topic */}
@@ -213,18 +211,20 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
               <label className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest">
                 Chapter {sessionType === "LEARNING" && "(optional)"}
               </label>
-              <select
+              <Select
+                aria-label="Chapter"
                 value={topic}
-                onChange={(e) => setTopic(e.target.value)}
+                onChange={setTopic}
                 disabled={isLoadingAgents}
-                className="w-full bg-[#F4F3EE]/50 border border-[#1a3a2a]/5 rounded-2xl py-3.5 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1a3a2a]/10 focus:bg-white transition-all disabled:opacity-50"
-              >
-                {isLoadingAgents && <option value="">Loading...</option>}
-                {!isLoadingAgents && chapters.length === 0 && <option value="">No chapters available</option>}
-                {chapters.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+                placeholder={isLoadingAgents ? "Loading…" : "No chapters available"}
+                options={chapters.map((c) => ({ value: c, label: c }))}
+                buttonStyle={{
+                  background: "color-mix(in srgb, var(--surface-sunken) 50%, transparent)",
+                  border: "1px solid rgba(4,46,92,0.05)",
+                  borderRadius: 16,
+                  padding: "14px 16px",
+                }}
+              />
             </div>
 
             {/* Date */}
@@ -233,6 +233,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
               <DatePicker
                 value={scheduledDate}
                 min={tomorrowDateString()}
+                max={bookingWindowEnd()}
                 onChange={setScheduledDate}
               />
             </div>
@@ -243,7 +244,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
               <TimePicker
                 value={scheduledTime}
                 onChange={setScheduledTime}
-                themeColor="#1a3a2a"
+                accentColor="#1a3a2a"
               />
             </div>
           </div>
@@ -358,7 +359,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
                       <div className="flex items-center justify-between gap-4">
                         <div className="space-y-0.5">
                           <p className="text-xs font-bold text-[#1a3a2a]/60">
-                            {new Date(s.scheduled_date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+                            {formatDateDisplay(s.scheduled_date)}
                             {s.scheduled_time && <span className="ml-1.5 text-[#1a3a2a]/40">· {s.scheduled_time} IST</span>}
                           </p>
                           <p className="text-[10px] font-medium text-[#1a3a2a]/30 uppercase tracking-widest">

@@ -5,6 +5,7 @@ import { ArrowLeftRight, Check, Monitor, UserCheck, UserX, Zap, RefreshCw } from
 import { useLabStore } from "../store/useLabStore";
 import type { BoardResponse, LabSessionState } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
+import { Select } from "@/components/ui/Select";
 
 const stateStyles: Record<LabSessionState, string> = {
   IDLE: "bg-border text-muted",
@@ -290,22 +291,26 @@ function BindSelect({
   placeholder: string;
 }) {
   return (
-    <select
+    <Select
+      aria-label={placeholder}
+      placeholder={placeholder}
+      size="sm"
+      panelWidth={200}
       disabled={isBusy}
-      defaultValue=""
-      onChange={(e) => {
-        if (e.target.value) onBind(e.target.value);
+      value=""
+      onChange={(deviceId) => {
+        if (deviceId) onBind(deviceId);
       }}
-      className="rounded-lg border border-border px-2 py-1 text-[10.5px] font-semibold text-ink disabled:opacity-50"
-    >
-      <option value="" disabled>
-        {placeholder}
-      </option>
-      {freeDevices.map((d) => (
-        <option key={d.device_id} value={d.device_id}>
-          {d.device_label}
-        </option>
-      ))}
-    </select>
+      options={freeDevices.map((d) => ({ value: d.device_id, label: d.device_label }))}
+      buttonStyle={{
+        border: "1px solid var(--border)",
+        borderRadius: 8,
+        padding: "4px 8px",
+        fontSize: 10.5,
+        fontWeight: 600,
+        background: "transparent",
+        color: "var(--ink)",
+      }}
+    />
   );
 }

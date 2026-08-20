@@ -7,8 +7,10 @@ import { useLabStore } from "../store/useLabStore";
 import { OBJECTIVE_MODES, type ObjectiveMode, type SlotResponse } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
 import { CreateClassModal } from "./CreateClassModal";
-import { DatePickerField } from "./DatePickerField";
-import { TimePickerField } from "./TimePickerField";
+import { DatePicker } from "@/components/ui/DatePicker";
+import { TimePicker } from "@/components/ui/TimePicker";
+import { Select } from "@/components/ui/Select";
+import { bookingWindowEnd } from "@/utils/datetime";
 import {
   requireExactSubject,
   type ExactSubject,
@@ -19,6 +21,26 @@ function todayIso(): string {
 }
 
 const FALLBACK_TZ = "Asia/Kolkata";
+
+/** Default period length used to derive the end time from the start time. */
+const DEFAULT_PERIOD_MINUTES = 40;
+
+/** Current wall clock in `timeZone` as "HH:MM" (24h). */
+function nowWallClock(timeZone: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hourCycle: "h23",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date());
+}
+
+/** Shift an "HH:MM" wall clock by `minutes`, wrapping within the day. */
+function addMinutes(hhmm: string, minutes: number): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const total = (((h * 60 + m + minutes) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
 
 /**
  * Minutes that `timeZone`'s wall clock is ahead of UTC at `date` (IST → +330).
@@ -121,7 +143,19 @@ export function SlotScheduler({ teacherId, partnerId, onOpenSlot }: SlotSchedule
           <h1 className="mt-1 font-serif text-3xl font-semibold text-ink sm:text-4xl">Today&apos;s Periods</h1>
         </div>
         <div className="flex items-center gap-3">
-          <DatePickerField value={onDate} onChange={setOnDate} />
+          <DatePicker
+            value={onDate}
+            onChange={setOnDate}
+            aria-label="Show periods for date"
+            accentColor="var(--emerald)"
+            buttonStyle={{
+              background: "#FFFFFF",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: "12px 14px",
+              color: "var(--ink)",
+            }}
+          />
           <button
             onClick={() => setClassCreateOpen(true)}
             className="flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-3 text-sm font-semibold text-ink hover:border-emerald"
@@ -275,8 +309,12 @@ function CreateSlotModal({
   const [chapter, setChapter] = useState("");
   const [skillFocus, setSkillFocus] = useState("");
   const [scheduledDate, setScheduledDate] = useState(defaultDate);
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("09:40");
+  // Defaults track the lab's local "now" (IST for our labs); the teacher can
+  // still edit both fields freely.
+  const [startTime, setStartTime] = useState(() => nowWallClock(labs[0]?.timezone ?? FALLBACK_TZ));
+  const [endTime, setEndTime] = useState(() =>
+    addMinutes(nowWallClock(labs[0]?.timezone ?? FALLBACK_TZ), DEFAULT_PERIOD_MINUTES),
+  );
   // Per-student session budget in minutes (defaults to the 50-min lab default).
   const [sessionMinutes, setSessionMinutes] = useState(50);
   const [isSubmitting, setSubmitting] = useState(false);
@@ -311,6 +349,17 @@ function CreateSlotModal({
   useEffect(() => {
     setScheduledDate(defaultDate);
   }, [defaultDate, isOpen]);
+
+  // Re-seed the times each time the modal opens so "now" is actually now.
+  useEffect(() => {
+    if (!isOpen) return;
+    const tz = labs.find((l) => l.id === labId)?.timezone ?? FALLBACK_TZ;
+    const now = nowWallClock(tz);
+    setStartTime(now);
+    setEndTime(addMinutes(now, DEFAULT_PERIOD_MINUTES));
+    // Only on open — editing the lab mid-form shouldn't clobber typed times.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // Keep selections consistent with the catalog: drop a subject that isn't
   // offered for the chosen grade, and a chapter that doesn't belong to the
@@ -392,89 +441,110 @@ function CreateSlotModal({
               </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <select
+              <Select
+                aria-label="Lab"
+                className="col-span-2"
                 value={labId}
-                onChange={(e) => setLabId(e.target.value)}
-                className="col-span-2 rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20"
-              >
-                {labs.map((lab) => (
-                  <option key={lab.id} value={lab.id}>
-                    {lab.name}
-                  </option>
-                ))}
-              </select>
-              <select
+                onChange={setLabId}
+                options={labs.map((lab) => ({ value: lab.id, label: lab.name }))}
+                buttonStyle={{
+                  background: "#FFFFFF",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  color: "var(--ink)",
+                }}
+              />
+              <Select
+                aria-label="Class"
+                className="col-span-2"
                 value={classKey}
-                onChange={(e) => setClassKey(e.target.value)}
+                onChange={setClassKey}
                 disabled={catalog.classes.length === 0}
-                className="col-span-2 rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20 disabled:cursor-not-allowed disabled:bg-ink/5 disabled:text-muted"
-              >
-                <option value="">
-                  {catalog.classes.length === 0
+                placeholder={
+                  catalog.classes.length === 0
                     ? "No classes with a roster yet"
-                    : "Select class…"}
-                </option>
-                {catalog.classes.map((c) => (
-                  <option key={`${c.grade}|${c.section}`} value={`${c.grade}|${c.section}`}>
-                    Grade {c.grade} · {c.section}
-                  </option>
-                ))}
-              </select>
-              <select
+                    : "Select class…"
+                }
+                options={catalog.classes.map((c) => ({
+                  value: `${c.grade}|${c.section}`,
+                  label: `Grade ${c.grade} · ${c.section}`,
+                }))}
+                buttonStyle={{
+                  background: "#FFFFFF",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  color: "var(--ink)",
+                }}
+              />
+              <Select
+                aria-label="Subject"
+                className="col-span-2"
                 value={subject}
-                onChange={(e) => {
-                  const match = gradeSubjects.find((candidate) => candidate === e.target.value);
+                onChange={(v) => {
+                  const match = gradeSubjects.find((candidate) => candidate === v);
                   setSubject(match ?? "");
                   setChapter("");
                 }}
                 disabled={gradeSubjects.length === 0}
-                className="col-span-2 rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20 disabled:cursor-not-allowed disabled:bg-ink/5 disabled:text-muted"
-              >
-                <option value="">
-                  {!classKey
+                placeholder={
+                  !classKey
                     ? "Select a class first"
                     : gradeSubjects.length === 0
                       ? "No subjects available for this grade"
-                      : "Select subject…"}
-                </option>
-                {gradeSubjects.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-              <select
+                      : "Select subject…"
+                }
+                options={gradeSubjects.map((s) => ({ value: s, label: s }))}
+                buttonStyle={{
+                  background: "#FFFFFF",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  color: "var(--ink)",
+                }}
+              />
+              <Select
+                aria-label="Objective mode"
+                className="col-span-2"
                 value={objectiveMode}
-                onChange={(e) => setObjectiveMode(e.target.value as ObjectiveMode)}
-                className="col-span-2 rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20"
-              >
-                {OBJECTIVE_MODES.map((mode) => (
-                  <option key={mode.value} value={mode.value}>
-                    {mode.label}
-                  </option>
-                ))}
-              </select>
-              <select
+                onChange={(v) => setObjectiveMode(v as ObjectiveMode)}
+                options={OBJECTIVE_MODES.map((mode) => ({
+                  value: mode.value,
+                  label: mode.label,
+                }))}
+                buttonStyle={{
+                  background: "#FFFFFF",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  color: "var(--ink)",
+                }}
+              />
+              <Select
+                aria-label="Chapter"
+                className="col-span-2"
                 value={chapter}
-                onChange={(e) => setChapter(e.target.value)}
+                onChange={setChapter}
                 disabled={subjectChapters.length === 0}
-                className="col-span-2 rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20 disabled:cursor-not-allowed disabled:bg-ink/5 disabled:text-muted"
-              >
-                <option value="">
-                  {subjectChapters.length > 0
+                placeholder={
+                  subjectChapters.length > 0
                     ? isGapRecovery
                       ? "Select chapter…"
                       : "Select chapter (optional)…"
                     : subject
                       ? "No chapters available for this subject"
-                      : "Select a subject first"}
-                </option>
-                {subjectChapters.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+                      : "Select a subject first"
+                }
+                options={subjectChapters.map((c) => ({ value: c, label: c }))}
+                buttonStyle={{
+                  background: "#FFFFFF",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  color: "var(--ink)",
+                }}
+              />
               {isGapRecovery && (
                 <input
                   value={skillFocus}
@@ -483,14 +553,49 @@ function CreateSlotModal({
                   className="col-span-2 rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/20"
                 />
               )}
-              <DatePickerField
+              <DatePicker
                 value={scheduledDate}
                 onChange={setScheduledDate}
+                max={bookingWindowEnd()}
+                aria-label="Session date"
+                accentColor="var(--emerald)"
                 className="col-span-2"
-                buttonClassName="w-full"
+                buttonStyle={{
+                  background: "#FFFFFF",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  color: "var(--ink)",
+                }}
               />
-              <TimePickerField value={startTime} onChange={setStartTime} buttonClassName="w-full" />
-              <TimePickerField value={endTime} onChange={setEndTime} buttonClassName="w-full" />
+              <TimePicker
+                value={startTime}
+                onChange={setStartTime}
+                aria-label="Start time"
+                accentColor="var(--emerald)"
+                clearable={false}
+                buttonStyle={{
+                  background: "#FFFFFF",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  color: "var(--ink)",
+                }}
+              />
+              <TimePicker
+                value={endTime}
+                onChange={setEndTime}
+                aria-label="End time"
+                accentColor="var(--emerald)"
+                clearable={false}
+                buttonStyle={{
+                  background: "#FFFFFF",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  color: "var(--ink)",
+                }}
+              />
               <label className="col-span-2 flex items-center justify-between gap-3 rounded-xl border border-border px-3.5 py-2.5 text-sm">
                 <span className="text-muted">Session length — minutes per student</span>
                 <input

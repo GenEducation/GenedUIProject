@@ -18,6 +18,7 @@ import {
   type FirmwareRow,
   type StackedRow,
 } from "./DeviceCharts";
+import { Select } from "@/components/ui/Select";
 import {
   ConnBadge,
   connLabel,
@@ -491,17 +492,14 @@ export function DevicesView() {
               />
               Show revoked
             </label>
-            <select
+            <Select
+              theme="dark"
+              aria-label="Sort devices"
+              className="min-w-[170px]"
               value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
-              className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/70 focus:border-[#059F6D] focus:outline-none"
-            >
-              {SORTS.map((s) => (
-                <option key={s.value} value={s.value} className="bg-[#13283a]">
-                  {s.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setSort(v as SortKey)}
+              options={SORTS.map((s) => ({ value: s.value, label: s.label }))}
+            />
           </div>
         }
         actions={(d) => (

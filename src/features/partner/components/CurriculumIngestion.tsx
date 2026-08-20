@@ -3,6 +3,7 @@ import { Upload, X, FileText, Check, RotateCcw } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { usePartnerStore } from "../store/usePartnerStore";
 import { PageWisePreview } from "./PageWisePreview";
+import { Select } from "@/components/ui/Select";
 import {
   allTaxonomyGrades,
   requireExactSubject,
@@ -173,10 +174,12 @@ export function CurriculumIngestion({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Grade</label>
-                    <select
+                    <Select
+                      aria-label="Grade"
+                      placeholder="Grade"
+                      accentColor="#1A3D2C"
                       value={grade}
-                      onChange={(e) => {
-                        const next = e.target.value;
+                      onChange={(next) => {
                         setGrade(next);
                         if (
                           subjectName &&
@@ -187,37 +190,58 @@ export function CurriculumIngestion({
                           setSubjectName("");
                         }
                       }}
-                      className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
-                    >
-                      <option value="">Grade</option>
-                      {gradeOptions.map((g) => (
-                        <option key={g} value={g}>Grade {g}</option>
-                      ))}
-                    </select>
+                      options={gradeOptions.map((g) => ({ value: String(g), label: `Grade ${g}` }))}
+                      buttonStyle={{
+                        background: "#F8F9F8",
+                        border: "1px solid rgba(26,61,44,0.10)",
+                        borderRadius: 16,
+                        padding: "14px 20px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#1A3D2C",
+                      }}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Board</label>
-                    <select
-                      value={board}
+                    <Select
+                      aria-label="Education board"
+                      accentColor="#1A3D2C"
                       disabled
-                      className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
-                    >
-                      <option value={board}>{board}</option>
-                    </select>
+                      value={board}
+                      onChange={() => {}}
+                      options={[{ value: board, label: board }]}
+                      buttonStyle={{
+                        background: "#F8F9F8",
+                        border: "1px solid rgba(26,61,44,0.10)",
+                        borderRadius: 16,
+                        padding: "14px 20px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#1A3D2C",
+                      }}
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Subject</label>
-                  <select
+                  <Select
+                    aria-label="Subject"
+                    placeholder="Select Subject"
+                    accentColor="#1A3D2C"
                     value={subjectName}
-                    onChange={(e) => setSubjectName(e.target.value)}
-                    className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="">Select Subject</option>
-                    {subjectOptions.map((subject) => (
-                      <option key={subject} value={subject}>{subject}</option>
-                    ))}
-                  </select>
+                    onChange={setSubjectName}
+                    options={subjectOptions.map((subject) => ({ value: subject, label: subject }))}
+                    buttonStyle={{
+                      background: "#F8F9F8",
+                      border: "1px solid rgba(26,61,44,0.10)",
+                      borderRadius: 16,
+                      padding: "14px 20px",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#1A3D2C",
+                    }}
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Document Title</label>

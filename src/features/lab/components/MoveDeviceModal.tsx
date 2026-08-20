@@ -5,6 +5,7 @@ import { Loader2, X } from "lucide-react";
 import { ApiRequestError } from "@/utils/authFetch";
 import { useLabStore } from "../store/useLabStore";
 import type { DeviceResponse, LabResponse } from "../types/lab";
+import { Select } from "@/components/ui/Select";
 
 interface MoveDeviceModalProps {
   device: DeviceResponse | null;
@@ -82,17 +83,19 @@ export function MoveDeviceModal({
               <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#1A3D2C]/50">
                 Target Lab
               </span>
-              <select
+              <Select
+                aria-label="Target lab"
                 value={targetLabId}
-                onChange={(event) => setTargetLabId(event.target.value)}
-                className="w-full rounded-xl border border-[#1A3D2C]/10 bg-white px-3 py-2.5 text-sm"
-              >
-                {targets.map((lab) => (
-                  <option key={lab.id} value={lab.id}>
-                    {lab.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setTargetLabId}
+                options={targets.map((lab) => ({ value: lab.id, label: lab.name }))}
+                accentColor="#1A3D2C"
+                buttonStyle={{
+                  background: "#FFFFFF",
+                  border: "1px solid rgba(26,61,44,0.10)",
+                  borderRadius: 12,
+                  padding: "10px 12px",
+                }}
+              />
             </label>
             {error && <p className="mt-3 text-sm text-danger-ink">{error}</p>}
             <button

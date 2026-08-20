@@ -58,6 +58,23 @@
   --radius-card: 24px; /* matches Profile's list cards, the actual majority usage — nothing consumed the old 16px value */
   --radius-control: 10px;
   --radius-pill: 999px;
+
+  /* --- Button system ---------------------------------------------------
+     Interaction shades for the Button component. Before these existed each
+     call site invented its own hover (e.g. #0f2a1d, `/90`, `bg-[#1A3D2C]/10`),
+     so the same action darkened by a different amount on every screen. */
+  --primary-hover: #04835a;
+  --primary-active: #036c4a;
+  --primary-soft: rgba(5, 159, 109, 0.08);   /* tertiary/secondary hover wash */
+  --primary-ring: rgba(5, 159, 109, 0.35);   /* focus-visible ring */
+  --danger-2-hover: #d9524a;
+  --danger-2-active: #c2453e;
+  --danger-2-soft: rgba(232, 99, 90, 0.08);
+  --danger-2-border: rgba(232, 99, 90, 0.2);
+  --btn-neutral-border: rgba(4, 46, 92, 0.12);
+  --btn-neutral-hover: rgba(4, 46, 92, 0.05);
+  --btn-disabled-opacity: 0.45;   /* one value, replacing opacity-30/40/50/60/70 */
+  --btn-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @theme inline {
@@ -224,3 +241,102 @@ h1, h2, h3, h4, h5, h6 {
   50% { transform: translate(-30px, -40px); }
 }
 
+
+/* Time picker wheels: hide the scrollbar without the per-instance
+   <style dangerouslySetInnerHTML> block the old student TimePicker injected. */
+.time-wheel::-webkit-scrollbar {
+  display: none;
+}
+
+
+/* ── Auth canvas ─────────────────────────────────────────────────────────
+   Tiled doodle illustration behind /login, /register, /forgot-password.
+   The tile is 1536x1024 and is drawn at an exact 2x downscale so the doodles
+   read small and crisp on HiDPI — never upscaled or stretched. The artwork is
+   already emerald line-art on white, so ::before only needs a light tint to
+   push the field off pure white (otherwise the white card would have nothing
+   to sit against) plus a dim halo for the card's backdrop-blur. */
+.auth-canvas {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--surface-page, #F7F8FC);
+  background-image: url("/patterns/auth-doodles-v2.webp");
+  background-repeat: repeat;
+  background-size: 768px 512px;
+  background-position: center top;
+}
+
+.auth-canvas::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(closest-side at 50% 46%,
+      rgb(255 255 255 / 0.34) 0%,
+      rgb(255 255 255 / 0.14) 55%,
+      rgb(255 255 255 / 0) 100%),
+    linear-gradient(155deg,
+      color-mix(in srgb, var(--navy) 6%, transparent) 0%,
+      color-mix(in srgb, var(--academic-grey) 60%, transparent) 45%,
+      color-mix(in srgb, var(--emerald) 6%, transparent) 100%);
+}
+
+/* Vignette so the tile fades out at the edges and any repeat seam that
+   lands near the viewport border is never a hard line. */
+.auth-canvas::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(120% 100% at 50% 50%,
+    transparent 40%,
+    color-mix(in srgb, var(--navy) 7%, transparent) 100%);
+}
+
+/* Google's widget renders inside an iframe we cannot style. We paint our
+   own on-brand button and stretch the real widget over it at opacity 0 so
+   it stays the actual click target (and keeps its personalised session
+   state) while the visible surface is entirely ours. */
+.google-overlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+.google-overlay > div,
+.google-overlay iframe {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  transform: scale(1.6);
+  transform-origin: center;
+}
+
+/* ── Illustration panel ──────────────────────────────────────────────────
+   Decorative half of a split card (see the Schedule booking form). A single
+   scene illustration sits on this ground, so the ground is a soft lavender
+   lifted from the artwork's own palette — light enough that the drawing's
+   white background melts into it instead of showing as a pasted square. No
+   wash overlay: a tint over a full-colour illustration only muddies it. */
+.illustration-panel {
+  position: relative;
+  background:
+    radial-gradient(120% 90% at 50% 15%,
+      rgb(255 255 255 / 0.85) 0%,
+      rgb(255 255 255 / 0) 65%),
+    linear-gradient(155deg, #EFEAFB 0%, #F6F2FE 48%, #FDF6E6 100%);
+}
+
+/* Hairline seam between the form half and the illustration half. */
+.illustration-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 1px;
+  pointer-events: none;
+  background: rgb(4 46 92 / 0.06);
+}

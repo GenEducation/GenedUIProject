@@ -20,6 +20,7 @@ import { DeviceTokenModal } from "@/features/lab/components/DeviceTokenModal";
 import { getDeviceLogs, getFleetDevice, listFleetLabs } from "../adminService";
 import type { AdminDeviceDetail, AdminLabListItem, HealthComponentReport } from "../devices/types";
 import { ConnBadge, ServiceChip, absoluteTime, relativeTime } from "./deviceHealth";
+import { Select } from "@/components/ui/Select";
 
 function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
@@ -458,29 +459,26 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
 
           {moving ? (
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <select
-                defaultValue=""
-                onChange={async (e) => {
-                  const target = e.target.value;
+              <Select
+                theme="dark"
+                aria-label="Move to lab"
+                placeholder="Move to lab…"
+                className="min-w-[240px]"
+                value=""
+                onChange={async (target) => {
                   if (!target) return;
                   await act("move", () =>
                     labService.moveDevice(device.id, { target_lab_id: target }),
                   );
                   setMoving(false);
                 }}
-                className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/70 focus:border-[#059F6D] focus:outline-none"
-              >
-                <option value="" className="bg-[#13283a]">
-                  Move to lab…
-                </option>
-                {labs
+                options={labs
                   .filter((l) => l.id !== device.lab_id)
-                  .map((l) => (
-                    <option key={l.id} value={l.id} className="bg-[#13283a]">
-                      {l.partner_organization ?? "—"} › {l.name}
-                    </option>
-                  ))}
-              </select>
+                  .map((l) => ({
+                    value: l.id,
+                    label: `${l.partner_organization ?? "—"} › ${l.name}`,
+                  }))}
+              />
               <button
                 onClick={() => setMoving(false)}
                 className="rounded-lg border border-white/15 px-3 py-2 text-sm text-white/60 hover:bg-white/5"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Select } from "@/components/ui/Select";
 
 export interface EditField {
   key: string;
@@ -59,16 +60,14 @@ export function EntityEditModal({ title, fields, initial, onClose, onSave }: Pro
             <div key={f.key}>
               <label className={labelCls}>{f.label}</label>
               {f.type === "select" ? (
-                <select
-                  className={inputCls}
+                <Select
+                  theme="dark"
+                  size="lg"
+                  aria-label={f.label}
                   value={vals[f.key] ?? ""}
-                  onChange={(e) => setVals((v) => ({ ...v, [f.key]: e.target.value }))}
-                >
-                  <option value="">Select…</option>
-                  {f.options?.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
+                  onChange={(v) => setVals((prev) => ({ ...prev, [f.key]: v }))}
+                  options={(f.options ?? []).map((option) => ({ value: option, label: option }))}
+                />
               ) : (
                 <input
                   className={inputCls}

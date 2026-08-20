@@ -13,6 +13,7 @@ import { useAnalyticsStore } from "@/store/useAnalyticsStore";
 import { MetricCard } from "./MetricCard";
 import { ChapterMasteryView } from "./ChapterMasteryView";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
+import { Select } from "@/components/ui/Select";
 
 // Lazy-loaded: these are the recharts-backed views. Deferring them keeps
 // recharts out of the dashboard's initial bundle.
@@ -236,19 +237,22 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
               <div className="relative">
                 <p className="text-[10px] font-black text-[#1a3a2a]/30 uppercase tracking-[0.25em] leading-none mb-1.5">Learning Subject</p>
                 <div className="flex items-center gap-1 group">
-                  <select 
+                  <Select
+                    variant="inline"
+                    aria-label="Analytics subject"
+                    panelWidth={220}
+                    placeholder="No Subjects Found"
                     value={selectedAnalyticsSubject}
-                    onChange={(e) => handleSubjectChange(e.target.value)}
-                    className="text-xl font-black text-[#1a3a2a] bg-transparent border-none focus:ring-0 cursor-pointer appearance-none p-0 pr-8 hover:text-[#059669] transition-colors"
-                  >
-                    {analyticsSubjects.length > 0 ? (
-                      analyticsSubjects.map(sub => (
-                        <option key={sub} value={sub}>{sub}</option>
-                      ))
-                    ) : (
-                      <option value="">No Subjects Found</option>
-                    )}
-                  </select>
+                    onChange={handleSubjectChange}
+                    options={analyticsSubjects.map((sub) => ({ value: sub, label: sub }))}
+                    buttonClassName="text-xl"
+                    buttonStyle={{
+                      padding: 0,
+                      fontWeight: 900,
+                      fontSize: "inherit",
+                      color: "var(--primary-ink)",
+                    }}
+                  />
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-[#1a3a2a]/30 group-hover:text-[#059669] transition-colors">
                     <ChevronDown size={18} strokeWidth={3} />
                   </div>
