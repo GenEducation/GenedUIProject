@@ -2,7 +2,8 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, AlertTriangle, Loader2 } from "lucide-react";
+import { X, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean;
@@ -64,38 +65,32 @@ export function DeleteConfirmationModal({
 
               {/* Actions */}
               <div className="flex flex-col w-full gap-3">
-                <button
+                <Button
+                  variant="destructiveSolid"
+                  size="lg"
+                  fullWidth
+                  loading={isLoading}
                   onClick={onConfirm}
-                  disabled={isLoading}
-                  className="w-full py-4 bg-red-500 hover:bg-red-600 disabled:opacity-70 disabled:cursor-not-allowed text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-red-500/20 flex items-center justify-center gap-2"
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      Deleting…
-                    </>
-                  ) : (
-                    "Delete Permanently"
-                  )}
-                </button>
-                <button
-                  onClick={onClose}
+                  Delete Permanently
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  fullWidth
                   disabled={isLoading}
-                  className="w-full py-4 bg-[#F8F9F8] hover:bg-[#F2F3F2] disabled:opacity-50 disabled:cursor-not-allowed text-[#1A3D2C]/60 rounded-2xl font-bold text-sm transition-all"
+                  onClick={onClose}
                 >
                   Keep It
-                </button>
+                </Button>
               </div>
             </div>
 
             {/* Close Button — hidden while loading */}
             {!isLoading && (
-              <button
-                onClick={onClose}
-                className="absolute top-4 right-4 p-2 text-[#1A3D2C]/20 hover:text-[#1A3D2C]/40 transition-colors"
-              >
+              <Button iconOnly size="sm" variant="tertiary" className="absolute top-4 right-4" aria-label="Close" onClick={onClose}>
                 <X size={20} />
-              </button>
+              </Button>
             )}
           </motion.div>
         </>

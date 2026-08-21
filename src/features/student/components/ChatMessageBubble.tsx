@@ -263,7 +263,7 @@ export const ChatMessageBubble = React.memo(
           <div className="flex items-center gap-3 px-2">
             <span style={{ fontSize: "clamp(9px, 2vw, 11px)", fontWeight: 700, color: "#CBD5E1", textTransform: "uppercase", letterSpacing: "0.06em" }}>{message.timestamp}</span>
             {isUser && (
-              <button
+              <button aria-label="Copy message"
                 onClick={handleCopy}
                 style={{ width: 28, height: 28, borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8" }}
                 className="transition-all hover:bg-[#F7F8FC] hover:text-[var(--tutor)]"
@@ -286,7 +286,7 @@ export const ChatMessageBubble = React.memo(
 
               {/* Feedback row — clipboard + read aloud */}
               <div className="flex items-center gap-2">
-                <button
+                <button aria-label="Copy message"
                   onClick={handleCopy}
                   style={{ width: 32, height: 32, borderRadius: 10, background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", transition: "all 0.2s" }}
                   className="hover:bg-[#F7F8FC] hover:text-[var(--tutor)]"

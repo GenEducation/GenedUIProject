@@ -4,6 +4,7 @@ import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { requestPasswordReset, resetPassword } from "../authService";
+import { Button } from "@/components/ui/Button";
 
 export function ForgotPassword() {
   const [step, setStep] = useState(1);
@@ -158,7 +159,7 @@ export function ForgotPassword() {
                   placeholder="Enter your new password"
                   className="w-full rounded-xl border border-[#042e5c]/15 bg-white/70 px-5 py-3.5 text-sm text-[#0E1F2B] transition-all duration-200 placeholder:text-[#0E1F2B]/25 hover:border-[#059F6D]/40 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/15 font-mono tracking-widest"
                 />
-                <button
+                <button aria-label={showPassword ? "Hide password" : "Show password"}
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
@@ -195,27 +196,25 @@ export function ForgotPassword() {
         )}
 
         <div className="space-y-6 pt-2">
-          <button
+          <Button
             type="submit"
-            disabled={isSubmitting || (step === 1 && !email) || (step === 2 && (!otpCode || !newPassword || !confirmPassword))}
-            className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
+            size="lg"
+            fullWidth
+            loading={isSubmitting}
+            disabled={(step === 1 && !email) || (step === 2 && (!otpCode || !newPassword || !confirmPassword))}
           >
-            <span className="relative z-10 flex items-center justify-center gap-2">
-              {isSubmitting 
-                ? (step === 1 ? "Sending OTP…" : "Updating Password…") 
-                : (step === 1 ? "Send OTP Code" : "Reset Password")}
-            </span>
-          </button>
+            {step === 1 ? "Send OTP Code" : "Reset Password"}
+          </Button>
 
           <div className="text-center flex flex-col gap-4">
             {step === 2 && (
-              <button
-                type="button"
+              <Button
+                variant="tertiary"
                 onClick={() => setStep(1)}
-                className="flex items-center justify-center gap-2 text-sm font-bold text-[#042e5c]/50 hover:text-[#042e5c] transition-colors"
+                leadingIcon={<ArrowLeft size={16} />}
               >
-                <ArrowLeft size={16} /> Use different email
-              </button>
+                Use different email
+              </Button>
             )}
             <Link
               href="/"

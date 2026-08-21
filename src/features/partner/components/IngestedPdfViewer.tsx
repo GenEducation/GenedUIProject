@@ -66,7 +66,7 @@ export function IngestedPdfViewer() {
                 </div>
               </div>
 
-              <button
+              <button aria-label="Close"
                 onClick={closePdfViewer}
                 title="Close"
                 className="flex items-center justify-center rounded-xl transition-colors hover:bg-[#1A3D2C]/5 flex-shrink-0 w-9 h-9 text-[#1A3D2C]/50"

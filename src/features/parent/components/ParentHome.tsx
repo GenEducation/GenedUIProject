@@ -194,7 +194,7 @@ export function ParentHome() {
       `}>
         <div className="p-8 pb-4 flex items-center justify-between">
           <img src="/Logo.svg" alt="GenEd Logo" className="h-8 w-auto" />
-          <button 
+          <button aria-label="Close sidebar" 
             onClick={() => setIsSidebarOpen(false)}
             className="lg:hidden p-2 rounded-xl bg-[#F4F3EE] text-[#1a3a2a]"
           >
@@ -338,7 +338,7 @@ export function ParentHome() {
         {/* Global Parent Header */}
         <header className="px-6 lg:px-10 py-6 bg-white border-b border-[#1a3a2a]/5 flex items-center justify-between z-20">
           <div className="flex items-center gap-4">
-            <button 
+            <button aria-label="Open sidebar" 
               onClick={() => setIsSidebarOpen(true)}
               className="lg:hidden p-3 rounded-2xl bg-[#F4F3EE] text-[#1a3a2a] hover:bg-[#E5F2E9] transition-all"
             >

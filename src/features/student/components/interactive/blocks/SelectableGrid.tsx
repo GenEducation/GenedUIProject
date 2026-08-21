@@ -42,6 +42,10 @@ export default function SelectableGrid({ directiveId, meta, disabled, readOnly }
           key={i}
           onClick={() => toggle(i)}
           aria-pressed={isOn(i)}
+          // Cells render no text, so without this they are unnamed buttons —
+          // unusable with a screen reader, and only addressable in tests by
+          // DOM position.
+          aria-label={`cell ${i + 1}`}
           disabled={lock}
           style={{
             height: 54, borderRadius: 12, cursor: lock ? "default" : "pointer",

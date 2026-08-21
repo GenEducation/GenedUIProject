@@ -56,9 +56,11 @@ describe("history / read-only rehydration (the 'show my last answer' behavior)",
 describe("network failure is not a wrong answer", () => {
   it("a failed submit shows a retry-able error, not the red 'Not quite' banner", async () => {
     submitInteractiveAnswer.mockResolvedValue(null); // store returns null on failure
-    const { container } = render(<InteractiveBlock directiveId="d1" meta={gridMeta() as any} />);
+    render(<InteractiveBlock directiveId="d1" meta={gridMeta() as any} />);
 
-    fireEvent.click(container.querySelector("button")!); // shade a cell
+    // By name, not DOM position: `container.querySelector("button")` silently
+    // retargets if any button is ever rendered earlier in the tree.
+    fireEvent.click(screen.getByRole("button", { name: /cell 1/i })); // shade a cell
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /check/i }));
     });

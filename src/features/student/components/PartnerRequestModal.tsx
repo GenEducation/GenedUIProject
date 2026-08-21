@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, CheckCircle2, XCircle, X } from "lucide-react";
 import { useStudentStore } from "../store/useStudentStore";
+import { Button } from "@/components/ui/Button";
 
 export function PartnerRequestModal() {
   const { isPartnerModalOpen, setPartnerModalOpen, partnerRequestStatus, partnerRequestMessage } = useStudentStore();
@@ -32,12 +33,9 @@ export function PartnerRequestModal() {
             {/* Header (Optional, but good for closing) */}
             {partnerRequestStatus !== "loading" && (
               <div className="absolute top-4 right-4 z-10">
-                <button
-                  onClick={() => setPartnerModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-[#f4f3ee] flex items-center justify-center text-[#1a3a2a]/60 hover:text-[#1a3a2a] hover:bg-[#1a3a2a]/10 transition-colors"
-                >
+                <Button iconOnly size="sm" variant="tertiary" aria-label="Close" onClick={() => setPartnerModalOpen(false)}>
                   <X size={16} />
-                </button>
+                </Button>
               </div>
             )}
 

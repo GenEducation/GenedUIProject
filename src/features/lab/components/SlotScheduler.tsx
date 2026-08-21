@@ -15,6 +15,7 @@ import {
   requireExactSubject,
   type ExactSubject,
 } from "@/features/subjects/subjectCatalog";
+import { Button } from "@/components/ui/Button";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -436,9 +437,9 @@ function CreateSlotModal({
           >
             <div className="mb-5 flex items-center justify-between">
               <h3 className="font-serif text-lg font-semibold text-ink">Schedule a period</h3>
-              <button onClick={onClose} className="text-muted-light hover:text-muted">
+              <Button iconOnly size="sm" variant="tertiary" aria-label="Close" onClick={onClose}>
                 <X size={18} />
-              </button>
+              </Button>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Select

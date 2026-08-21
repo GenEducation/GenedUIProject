@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 
 import { GoogleAuthButton } from "./GoogleAuthButton";
+import { Button } from "@/components/ui/Button";
 
 interface SignInProps {
   loginData: {
@@ -82,7 +83,7 @@ export function SignIn({
                 : "border-[#042e5c]/15 bg-white/70"
             } px-5 py-3.5 text-sm text-[#0E1F2B] transition-all duration-200 placeholder:text-[#0E1F2B]/25 hover:border-[#059F6D]/40 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/15`}
           />
-          <button
+          <button aria-label={showPassword ? "Hide password" : "Show password"}
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
@@ -120,15 +121,9 @@ export function SignIn({
       ) : null}
 
       {/* Liquid Emerald CTA button */}
-      <button
-        type="submit"
-        disabled={isSigningIn}
-        className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-3.5 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
-      >
-        <span className="relative z-10 flex items-center justify-center gap-2">
-          {isSigningIn ? "Signing in…" : "Continue to GenEd"}
-        </span>
-      </button>
+      <Button type="submit" size="lg" fullWidth loading={isSigningIn}>
+        Continue to GenEd
+      </Button>
 
       {/* Divider — no opaque fill, the card surface is translucent */}
       <div className="flex items-center gap-3">

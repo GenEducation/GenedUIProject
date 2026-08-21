@@ -22,7 +22,7 @@ export function PageHeader({ icon, title, onBack, sidebarOpen = true, actions }:
       className={`px-4 sm:px-8 py-6 flex items-center gap-3 sm:gap-6 bg-white border-b border-[rgba(4,46,92,0.05)] sticky top-0 z-20 transition-all ${!sidebarOpen ? "pl-16 sm:pl-8" : ""}`}
     >
       {onBack && (
-        <button
+        <button aria-label="Go back"
           onClick={onBack}
           className="w-10 h-10 rounded-full bg-[var(--primary-ink)]/5 text-[var(--primary-ink)] flex items-center justify-center hover:bg-[var(--primary-ink)]/10 transition-all flex-shrink-0"
         >

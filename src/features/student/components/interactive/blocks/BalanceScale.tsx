@@ -42,9 +42,9 @@ export default function BalanceScale({ directiveId, meta, disabled, readOnly }: 
         <text x={250} y={62 - tilt} fontSize={12} fill={COLORS.ink} textAnchor="middle" fontWeight={600}>{rightUnits}</text>
       </svg>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
-        <button onClick={() => !lock && setX(Math.max(0, x - 1))} disabled={lock} style={step(lock)}><Minus size={14} /></button>
+        <button aria-label="Decrease" onClick={() => !lock && setX(Math.max(0, x - 1))} disabled={lock} style={step(lock)}><Minus size={14} /></button>
         <span style={{ fontSize: 16, fontWeight: 700, color: COLORS.brand, minWidth: 60, textAlign: "center" }}>x = {x}</span>
-        <button onClick={() => !lock && setX(x + 1)} disabled={lock} style={step(lock)}><Plus size={14} /></button>
+        <button aria-label="Increase" onClick={() => !lock && setX(x + 1)} disabled={lock} style={step(lock)}><Plus size={14} /></button>
         <span style={{ fontSize: 13, color: balanced ? COLORS.success : COLORS.muted, fontWeight: 600 }}>{balanced ? "balanced" : "not balanced"}</span>
       </div>
       <InteractiveFooter

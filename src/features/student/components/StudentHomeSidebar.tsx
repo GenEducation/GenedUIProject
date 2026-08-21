@@ -168,10 +168,10 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
         <div className="flex flex-col h-full" style={{ padding: "16px 12px" }}>
           {/* Header: logo + close */}
           <div className="flex items-center justify-between mb-7 px-0.5 py-1">
-            <button onClick={() => navigate("/student")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
+            <button aria-label="GenEd home" onClick={() => navigate("/student")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
               <GenEdLogo />
             </button>
-            <button
+            <button aria-label="Close sidebar"
               onClick={onClose}
               className="flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-all"
               style={{
@@ -295,7 +295,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
       {!isOpen && !isMobile && (
         <div className="flex flex-col items-center h-full" style={{ padding: "16px 8px" }}>
           {/* Expand button */}
-          <button
+          <button aria-label="Open sidebar"
             onClick={onOpen}
             className="flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-all mb-7"
             style={{
@@ -350,7 +350,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                 <StudentAvatarIllustration bg={C.sun} />
               )}
             </button>
-            <button
+            <button aria-label="Logout"
               onClick={logoutStudent}
               title="Logout"
               className="flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-all"

@@ -51,7 +51,7 @@ export function InlineSubjectPicker({ selectedSubject, onSelectSubject, onDismis
           );
         })}
       </div>
-      <button
+      <button aria-label="Dismiss"
         onClick={onDismiss}
         className="w-5 h-5 rounded-full flex items-center justify-center text-[var(--primary-ink)]/30 hover:text-[var(--primary-ink)]/60 hover:bg-[var(--primary-ink)]/5 transition-all flex-shrink-0"
       >

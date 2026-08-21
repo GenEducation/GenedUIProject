@@ -119,7 +119,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
 
       {/* Mobile header */}
       <header className="lg:hidden flex items-center px-6 py-4 bg-white flex-shrink-0">
-        <button
+        <button aria-label="Open sidebar"
           onClick={() => {
             toggleSidebar();
             const currentStep = getCurrentStep();

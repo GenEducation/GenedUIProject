@@ -11,6 +11,7 @@ import {
   subjectsForGrade,
   useTaxonomySubjects,
 } from "@/features/subjects/subjectCatalog";
+import { Button } from "@/components/ui/Button";
 
 interface CurriculumIngestionProps {
   onClose: () => void;
@@ -93,12 +94,9 @@ export function CurriculumIngestion({
         className={`relative w-full ${hasFile ? "max-w-7xl h-[90vh]" : "max-w-2xl max-h-[90vh]"} bg-white rounded-[2.5rem] shadow-[0_20px_70px_rgba(26,61,44,0.15)] overflow-hidden flex flex-col transition-all duration-500`}
       >
         {/* Close Button */}
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 md:top-8 md:right-8 p-2 text-gray-300 hover:text-[#1A3D2C] hover:bg-gray-50 rounded-xl transition-all z-50"
-        >
+        <Button iconOnly size="sm" variant="tertiary" className="absolute top-4 right-4 z-50" aria-label="Close" onClick={onClose}>
           <X size={20} />
-        </button>
+        </Button>
 
         <div className="flex-1 flex overflow-hidden">
           {/* Left Column: Form */}
@@ -159,13 +157,9 @@ export function CurriculumIngestion({
                       <p className="text-[9px] font-black text-[#1A3D2C]/40 uppercase tracking-widest">Ready to process</p>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => { setFile(null); setFileError(null); }}
-                    className="p-2 text-[#1A3D2C]/20 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                    title="Change File"
-                  >
+                  <Button iconOnly size="sm" variant="destructive" aria-label="Change File" onClick={() => { setFile(null); setFileError(null); }}>
                     <RotateCcw size={16} />
-                  </button>
+                  </Button>
                 </div>
               )}
 

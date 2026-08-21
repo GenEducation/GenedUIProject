@@ -39,7 +39,7 @@ function AudioStatusPill({ state, onStop }: { state: string; onStop: () => void 
         <>
           <Volume2 size={13} className="text-emerald-600 animate-pulse" />
           <span className="text-xs font-bold text-emerald-700">Listening...</span>
-          <button
+          <button aria-label="Stop playback"
             onClick={onStop}
             className="ml-1 w-4 h-4 rounded-full bg-emerald-200 flex items-center justify-center hover:bg-emerald-300 transition-colors"
             title="Stop playback"
@@ -390,14 +390,14 @@ export function StudentChatMain({
       >
         <div className="flex items-center justify-between" style={{ padding: "10px 12px" }}>
           <div className="flex items-center gap-2">
-            <button
+            <button aria-label="Toggle sidebar"
               onClick={toggleSidebar}
               className="transition-all flex-shrink-0"
               style={{ width: 32, height: 32, borderRadius: 10, background: "#F7F8FC", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", color: "#4A5568", cursor: "pointer" }}
             >
               <Menu size={15} />
             </button>
-            <button
+            <button aria-label="Back to home"
               onClick={() => { closeChat(); router.push('/student'); }}
               className="transition-all flex-shrink-0"
               style={{ width: 32, height: 32, borderRadius: 10, background: "#F7F8FC", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", color: "#4A5568", cursor: "pointer" }}

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { RoleCard } from "./RoleCard";
 import { fetchAllTaxonomyGrades } from "@/features/subjects/subjectCatalog";
 import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
 
 interface SignUpData {
   username?: string;
@@ -109,14 +110,14 @@ export function SignUp({
             support@geneducation.ai
           </a>
         </p>
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="lg"
           onClick={onSwitchToSignin}
-          className="group flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-white border border-[#042e5c]/12 text-[#042e5c] text-sm font-bold shadow-sm transition-all hover:border-[#059F6D]/30 hover:text-[#059F6D] active:scale-[0.98]"
+          leadingIcon={<ArrowLeft className="w-4 h-4" />}
         >
-          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
           Back to Login
-        </button>
+        </Button>
       </div>
     );
   }
@@ -420,7 +421,7 @@ export function SignUp({
                   placeholder="Create a password"
                   className={`${inputCls(!!errors.password || !!localErrors.password)} pr-12`}
                 />
-                <button
+                <button aria-label={showPassword ? "Hide password" : "Show password"}
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
@@ -479,16 +480,16 @@ export function SignUp({
             </div>
           )}
 
-          <button
+          <Button
             type="submit"
-            disabled={isSubmitting || !signupData.grade}
-            className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-3.5 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
+            size="lg"
+            fullWidth
+            loading={isSubmitting}
+            disabled={!signupData.grade}
+            trailingIcon={<ArrowRight size={16} />}
           >
-            <span className="relative z-10 flex items-center justify-center gap-2">
-              {isSubmitting ? "Creating account…" : "Create Account"}
-              {!isSubmitting && <ArrowRight size={16} />}
-            </span>
-          </button>
+            Create Account
+          </Button>
         </div>
       );
     }
@@ -586,7 +587,7 @@ export function SignUp({
                     placeholder="Create a password"
                     className={`${inputCls(!!errors.password || !!localErrors.password)} pr-12`}
                   />
-                  <button
+                  <button aria-label={showPassword ? "Hide password" : "Show password"}
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
@@ -636,16 +637,15 @@ export function SignUp({
           </div>
         )}
 
-        <button
+        <Button
           type="submit"
-          disabled={isSubmitting}
-          className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-3.5 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
+          size="lg"
+          fullWidth
+          loading={isSubmitting}
+          trailingIcon={<ArrowRight size={16} />}
         >
-          <span className="relative z-10 flex items-center justify-center gap-2">
-            {isSubmitting ? "Creating account…" : "Create Account"}
-            {!isSubmitting && <ArrowRight size={16} />}
-          </span>
-        </button>
+          Create Account
+        </Button>
 
         {!googleToken && (
           <>
@@ -659,7 +659,7 @@ export function SignUp({
             </div>
 
             <GoogleAuthButton
-              label="Sign up with Google"
+              text="signup_with"
               onSuccess={(credential) => {
                 setGoogleToken(credential);
                 onGoogleSuccess(credential);

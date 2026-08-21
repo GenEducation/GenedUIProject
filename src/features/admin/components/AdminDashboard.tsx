@@ -119,7 +119,7 @@ export function AdminDashboard() {
               (item.href !== "/admin" && pathname.startsWith(item.href));
             const Icon = item.icon;
             return (
-              <button
+              <button aria-label={item.label}
                 key={item.href}
                 onClick={() => router.push(item.href)}
                 title={item.label}

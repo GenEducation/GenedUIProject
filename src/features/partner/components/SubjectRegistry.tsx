@@ -9,6 +9,7 @@ import { Skeleton } from "./Skeleton";
 import { IngestedPdfViewer } from "./IngestedPdfViewer";
 import { Select } from "@/components/ui/Select";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { Button } from "@/components/ui/Button";
 
 interface SubjectRegistryProps {
   onUploadClick: () => void;
@@ -332,29 +333,16 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
                         {isProcessing && (
                           <div className="flex items-center gap-2 mr-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                cancelIngestion(subject.id);
-                              }}
-                              className="p-2 text-[#1A3D2C]/40 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all group/stop"
-                              title="Stop Ingestion"
-                            >
+                            <Button iconOnly size="sm" variant="destructive" aria-label="Stop Ingestion" onClick={(e) => { e.stopPropagation(); cancelIngestion(subject.id); }}>
                               <Square size={14} className="fill-current group-hover/stop:scale-90 transition-transform" />
-                            </button>
+                            </Button>
                           </div>
                         )}
 
                         {(isActive || isFailed) && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteId(subject.id);
-                            }}
-                            className="p-2 text-[#1A3D2C]/20 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                          >
+                          <Button iconOnly size="sm" variant="destructive" aria-label="Delete" onClick={(e) => { e.stopPropagation(); setDeleteId(subject.id); }}>
                             <Trash2 size={18} />
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -385,23 +373,15 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
               {offset + 1}–{Math.min(offset + limit, total_count)} of {total_count}
             </span>
             <div className="flex items-center gap-1">
-              <button
-                onClick={handlePrev}
-                disabled={offset === 0}
-                className="p-1.5 rounded-xl text-[#1A3D2C]/40 hover:text-[#1A3D2C] hover:bg-[#1A3D2C]/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              >
+              <Button iconOnly size="sm" variant="tertiary" aria-label="Previous page" onClick={handlePrev} disabled={offset === 0}>
                 <ChevronLeft size={16} />
-              </button>
+              </Button>
               <span className="text-[11px] font-bold text-[#1A3D2C]/60 px-2">
                 {currentPage} / {totalPages}
               </span>
-              <button
-                onClick={handleNext}
-                disabled={offset + limit >= total_count}
-                className="p-1.5 rounded-xl text-[#1A3D2C]/40 hover:text-[#1A3D2C] hover:bg-[#1A3D2C]/5 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              >
+              <Button iconOnly size="sm" variant="tertiary" aria-label="Next page" onClick={handleNext} disabled={offset + limit >= total_count}>
                 <ChevronRight size={16} />
-              </button>
+              </Button>
             </div>
           </div>
         )}

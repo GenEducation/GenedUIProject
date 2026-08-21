@@ -14,6 +14,7 @@ import { RelativeTime } from "@/components/shared/RelativeTime";
 import { useNow } from "@/utils/useNow";
 import type { DeviceResponse, LabDeviceHealth } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
+import { Button } from "@/components/ui/Button";
 
 const healthStyles: Record<LabDeviceHealth, { icon: LucideIcon; className: string; label: string }> = {
   ONLINE: { icon: Wifi, className: "bg-[#E5F2E9] text-[#1A3D2C]", label: "Online" },
@@ -158,7 +159,7 @@ export function LabSetup({ partnerId }: LabSetupProps) {
       <div className="w-80 shrink-0 border-r border-[#1A3D2C]/5 bg-white/40 p-6 overflow-y-auto">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-xs font-black uppercase tracking-widest text-[#1A3D2C]/60">Labs</h3>
-          <button
+          <button aria-label="Create lab"
             onClick={() => setCreateLabOpen(true)}
             className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1A3D2C] text-white hover:bg-[#0f2a1d]"
           >
@@ -475,9 +476,9 @@ function CreateLabModal({
           >
             <div className="mb-5 flex items-center justify-between">
               <h3 className="font-serif text-lg font-semibold text-[#1A3D2C]">New lab</h3>
-              <button onClick={onClose} className="text-[#1A3D2C]/30 hover:text-[#1A3D2C]">
+              <Button iconOnly size="sm" variant="tertiary" aria-label="Close" onClick={onClose}>
                 <X size={18} />
-              </button>
+              </Button>
             </div>
             <div className="space-y-3">
               <input
@@ -560,9 +561,9 @@ function RegisterDeviceModal({
           >
             <div className="mb-5 flex items-center justify-between">
               <h3 className="font-serif text-lg font-semibold text-[#1A3D2C]">Register device</h3>
-              <button onClick={onClose} className="text-[#1A3D2C]/30 hover:text-[#1A3D2C]">
+              <Button iconOnly size="sm" variant="tertiary" aria-label="Close" onClick={onClose}>
                 <X size={18} />
-              </button>
+              </Button>
             </div>
             <div className="space-y-3">
               <input

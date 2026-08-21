@@ -487,7 +487,7 @@ export function StudentHome() {
             style={{ padding: "12px 16px", borderColor: C.border, background: C.card }}
           >
             {/* hamburger on left */}
-            <button
+            <button aria-label="Open sidebar"
               onClick={() => setSidebarOpen(true)}
               className="flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all flex-shrink-0"
               style={{ width: 38, height: 38, background: C.pageBg, border: `1px solid ${C.border}`, color: C.textMid }}

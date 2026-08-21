@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 import { requestPasswordReset, resetPassword } from "@/features/auth/authService";
+import { Button } from "@/components/ui/Button";
 
 export default function ForgotPasswordPage() {
   const [step, setStep] = useState(1);
@@ -139,7 +140,7 @@ export default function ForgotPasswordPage() {
                           placeholder="••••••••"
                           className={inputCls()}
                         />
-                        <button
+                        <button aria-label={showPassword ? "Hide password" : "Show password"}
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
@@ -170,29 +171,28 @@ export default function ForgotPasswordPage() {
               </div>
 
               <div className="space-y-4 pt-2">
-                <button
+                <Button
                   type="submit"
+                  size="lg"
+                  fullWidth
+                  loading={isSubmitting}
                   disabled={
-                    isSubmitting ||
                     (step === 1 && !email) ||
                     (step === 2 && (!otpCode || !newPassword || !confirmPassword))
                   }
-                  className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
                 >
-                  {isSubmitting
-                    ? step === 1 ? "Sending…" : "Updating Password…"
-                    : step === 1 ? "Send OTP Code" : "Reset Password"}
-                </button>
+                  {step === 1 ? "Send OTP Code" : "Reset Password"}
+                </Button>
 
                 <div className="flex flex-col items-center gap-3">
                   {step === 2 && (
-                    <button
-                      type="button"
+                    <Button
+                      variant="tertiary"
                       onClick={() => setStep(1)}
-                      className="flex items-center gap-2 text-sm font-semibold text-[#042e5c]/50 hover:text-[#042e5c] transition-colors"
+                      leadingIcon={<ArrowLeft size={15} />}
                     >
-                      <ArrowLeft size={15} /> Use different email
-                    </button>
+                      Use different email
+                    </Button>
                   )}
                   <Link
                     href="/login"

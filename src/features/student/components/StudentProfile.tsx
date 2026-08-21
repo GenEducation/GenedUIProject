@@ -647,7 +647,7 @@ export function StudentProfile() {
         {/* Mobile topbar */}
         {!sidebarOpen && (
           <div className="flex md:hidden" style={{ alignItems: "center", padding: "12px 16px", borderBottom: `1px solid ${C.border}`, background: C.card, flexShrink: 0, gap: 12 }}>
-            <button
+            <button aria-label="Open sidebar"
               onClick={() => setSidebarOpen(true)}
               style={{ width: 38, height: 38, borderRadius: 10, border: `1px solid ${C.border}`, background: C.pageBg, color: C.textMid, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}
             ><Menu size={16} strokeWidth={1.75} /></button>

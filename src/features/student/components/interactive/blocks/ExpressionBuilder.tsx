@@ -39,7 +39,7 @@ export default function ExpressionBuilder({ directiveId, meta, disabled, readOnl
       <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
         {palette.includes("x") && <button onClick={() => !lock && setXs(xs + 1)} disabled={lock} style={tileBtn(lock, "#534AB7")}>+ x</button>}
         {palette.includes("unit") && <button onClick={() => !lock && setOs(os + 1)} disabled={lock} style={tileBtn(lock, "#1D9E75")}>+ 1</button>}
-        <button onClick={() => { if (lock) return; setXs(0); setOs(0); }} disabled={lock} style={tileBtn(lock, COLORS.muted)}><RefreshCw size={13} /></button>
+        <button aria-label="Reset" onClick={() => { if (lock) return; setXs(0); setOs(0); }} disabled={lock} style={tileBtn(lock, COLORS.muted)}><RefreshCw size={13} /></button>
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", minHeight: 42, alignItems: "center" }}>
         {Array.from({ length: xs }).map((_, i) => <span key={`x${i}`} style={tile("#534AB7")}>x</span>)}

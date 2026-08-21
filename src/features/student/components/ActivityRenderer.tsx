@@ -46,7 +46,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
       
       {!isCompleted && (
         <div className="flex items-center gap-2">
-          <button
+          <button aria-label="Toggle microphone"
             onClick={handleToggleMic}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm ${
               isListening ? "bg-red-500 text-white animate-pulse" : "bg-white text-[var(--primary-ink)] border border-[var(--primary-ink)]/10 hover:bg-[var(--primary-ink)] hover:text-white"
@@ -60,7 +60,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
           </div>
 
           {localTranscript && (
-            <button
+            <button aria-label="Send answer"
               onClick={handleSubmit}
               className="w-10 h-10 rounded-full bg-[var(--primary-ink)] text-white flex items-center justify-center hover:bg-[#064282] transition-all"
             >
@@ -81,7 +81,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
   const renderListening = () => (
     <div className="flex flex-col gap-4 p-4 bg-white rounded-2xl border border-[var(--primary-ink)]/10 shadow-sm mt-3">
       <div className="flex items-center gap-4">
-        <button
+        <button aria-label={isPlaying ? "Pause" : "Play"}
           onClick={() => setIsPlaying(!isPlaying)}
           className="w-12 h-12 rounded-full bg-[var(--primary-ink)] text-white flex items-center justify-center hover:bg-[#064282] transition-all shadow-md"
         >
@@ -171,7 +171,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
 
       {!isCompleted && (
         <div className="flex items-center gap-2">
-          <button
+          <button aria-label="Toggle microphone"
             onClick={handleToggleMic}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm ${
               isListening ? "bg-red-500 text-white animate-pulse" : "bg-white text-[var(--primary-ink)] border border-[var(--primary-ink)]/10 hover:bg-[var(--primary-ink)] hover:text-white"
@@ -185,7 +185,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
           </div>
 
           {localTranscript && (
-            <button
+            <button aria-label="Send answer"
               onClick={handleSubmit}
               className="w-10 h-10 rounded-full bg-[var(--primary-ink)] text-white flex items-center justify-center hover:bg-[#064282] transition-all"
             >

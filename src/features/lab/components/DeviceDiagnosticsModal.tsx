@@ -13,6 +13,8 @@ import {
   summarizeHealth,
 } from "../utils/deviceHealth";
 import type { DeviceResponse, HealthComponentStatus, LabDeviceHealth } from "../types/lab";
+import { Button } from "@/components/ui/Button";
+import { LEGACY_FOREST_BUTTON } from "@/components/ui/legacyBrandOverride";
 
 const PILL_TONE: Record<HealthComponentStatus, string> = {
   ok: "bg-[#E5F2E9] text-[#1A3D2C]",
@@ -225,13 +227,9 @@ export function DeviceDiagnosticsModal({ device, onClose }: DeviceDiagnosticsMod
                 >
                   {link.label}
                 </span>
-                <button
-                  onClick={onClose}
-                  aria-label="Close diagnostics"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[#1A3D2C]/40 transition-colors hover:bg-[#1A3D2C]/5 hover:text-[#1A3D2C]"
-                >
+                <Button iconOnly size="sm" variant="tertiary" onClick={onClose} aria-label="Close diagnostics">
                   <X size={16} />
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -414,20 +412,18 @@ export function DeviceDiagnosticsModal({ device, onClose }: DeviceDiagnosticsMod
               </p>
               <div className="flex items-center gap-2">
                 {summary.hasReport && (
-                  <button
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={handleCopy}
-                    className="flex items-center gap-1.5 rounded-xl border border-[#1A3D2C]/10 px-3 py-2 text-xs font-bold text-[#1A3D2C]/60 transition-colors hover:bg-[#1A3D2C]/5"
+                    leadingIcon={copied ? <Check size={13} /> : <Copy size={13} />}
                   >
-                    {copied ? <Check size={13} /> : <Copy size={13} />}
                     {copied ? "Copied" : "Copy JSON"}
-                  </button>
+                  </Button>
                 )}
-                <button
-                  onClick={onClose}
-                  className="rounded-xl bg-[#1A3D2C] px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[#0f2a1d]"
-                >
+                <Button size="sm" onClick={onClose} style={LEGACY_FOREST_BUTTON}>
                   Close
-                </button>
+                </Button>
               </div>
             </div>
           </motion.div>

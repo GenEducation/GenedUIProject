@@ -89,7 +89,7 @@ export function DevicePairingModal({ isOpen, onClose }: DevicePairingModalProps)
         boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
         display: 'flex', flexDirection: 'column', position: 'relative'
       }}>
-        <button
+        <button aria-label="Close"
           onClick={handleClose}
           style={{
             position: 'absolute', top: 16, right: 16,

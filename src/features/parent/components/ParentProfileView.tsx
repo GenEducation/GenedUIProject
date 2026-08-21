@@ -111,13 +111,13 @@ export function ParentProfileView({ profile }: { profile: any }) {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
+                    <button aria-label="Approve request"
                       onClick={() => updateStudentStatus(request.student_id, "APPROVED")}
                       className="p-3 rounded-xl bg-[#059669] text-white hover:bg-[#047857] transition-all shadow-sm hover:shadow-md active:scale-95"
                     >
                       <Check size={18} strokeWidth={3} />
                     </button>
-                    <button
+                    <button aria-label="Reject request"
                       onClick={() => updateStudentStatus(request.student_id, "REJECTED")}
                       className="p-3 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-all border border-red-500/10 active:scale-95"
                     >
@@ -162,7 +162,7 @@ export function ParentProfileView({ profile }: { profile: any }) {
                         </div>
                       </div>
                     </div>
-                    <button 
+                    <button aria-label="Remove Student" 
                       onClick={() => {
                         setUnlinkModal({
                           isOpen: true,

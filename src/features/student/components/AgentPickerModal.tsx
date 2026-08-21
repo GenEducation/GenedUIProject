@@ -9,6 +9,7 @@ import { getSubjectConfig } from "@/constants/subjectConfig";
 import { SubjectIcon } from "@/features/subjects/subjectPresentation";
 import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 import React from "react";
+import { Button } from "@/components/ui/Button";
 
 export function AgentPickerModal() {
   const router = useRouter();
@@ -52,12 +53,9 @@ export function AgentPickerModal() {
             <h2 className="text-xl font-extrabold text-[var(--primary-ink)]">All Subjects</h2>
             <p className="text-sm text-[var(--primary-ink)]/50 mt-0.5">Select what you'd like to learn today</p>
           </div>
-          <button
-            onClick={() => setAgentPickerOpen(false)}
-            className="w-9 h-9 rounded-xl bg-[#F4F3EE] flex items-center justify-center text-[var(--primary-ink)]/50 hover:text-[var(--primary-ink)] hover:bg-[var(--primary-ink)]/8 transition-all"
-          >
+          <Button iconOnly size="sm" variant="tertiary" aria-label="Close" onClick={() => setAgentPickerOpen(false)}>
             <X size={18} />
-          </button>
+          </Button>
         </div>
 
         {/* Search */}

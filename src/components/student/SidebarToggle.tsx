@@ -11,7 +11,7 @@ export function SidebarToggle() {
   if (sidebarOpen) return null;
 
   return (
-    <button
+    <button aria-label="Open sidebar"
       onClick={() => setSidebarOpen(true)}
       className="fixed top-6 left-4 z-30 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
       style={{ width: 40, height: 40, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "var(--primary-ink)" }}

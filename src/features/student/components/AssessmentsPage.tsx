@@ -178,7 +178,7 @@ export function AssessmentsPage() {
             className={`${FIELD_CLASSNAME} ${FIELD_FOCUS_CLASSNAME} pl-12 pr-4`}
           />
         </div>
-        <button className="w-12 h-12 rounded-2xl bg-white border border-[rgba(4,46,92,0.05)] flex items-center justify-center text-[var(--primary-ink)]/40 hover:text-[var(--primary-ink)] transition-all">
+        <button aria-label="Filter" className="w-12 h-12 rounded-2xl bg-white border border-[rgba(4,46,92,0.05)] flex items-center justify-center text-[var(--primary-ink)]/40 hover:text-[var(--primary-ink)] transition-all">
           <Filter size={18} />
         </button>
       </div>

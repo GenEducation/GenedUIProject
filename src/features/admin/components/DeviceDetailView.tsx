@@ -316,7 +316,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
           <p className="mt-1 text-sm text-white/40">
             {device.partner_organization ?? "Unassigned"} › {device.lab_name ?? "—"}
           </p>
-          <button
+          <button aria-label="Copy"
             onClick={async () => {
               await navigator.clipboard.writeText(device.hardware_id);
               setCopied(true);

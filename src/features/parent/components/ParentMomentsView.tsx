@@ -128,7 +128,7 @@ export function ParentMomentsView({ studentId, studentName }: ParentMomentsViewP
                 <AlertTriangle size={16} />
                 {error}
               </div>
-              <button onClick={clearError} className="hover:text-red-800">
+              <button aria-label="Dismiss error" onClick={clearError} className="hover:text-red-800">
                 <X size={14} />
               </button>
             </motion.div>
@@ -348,7 +348,7 @@ buttonStyle={{
 
                             {/* Actions */}
                             <div className="flex items-center gap-1 shrink-0">
-                              <button
+                              <button aria-label="Toggle moment visibility"
                                 onClick={() => handleToggle(moment)}
                                 disabled={isSaving}
                                 title={moment.enabled ? "Disable" : "Enable"}
@@ -360,14 +360,14 @@ buttonStyle={{
                               >
                                 <Power size={14} />
                               </button>
-                              <button
+                              <button aria-label="Edit"
                                 onClick={() => startEdit(moment)}
                                 title="Edit"
                                 className="w-9 h-9 rounded-xl bg-[#F4F3EE] text-[#1a3a2a]/50 flex items-center justify-center hover:bg-[#E5F2E9] hover:text-[#1a3a2a] transition-all"
                               >
                                 <Edit2 size={14} />
                               </button>
-                              <button
+                              <button aria-label="Delete"
                                 onClick={() => setConfirmDeleteId(moment.id)}
                                 title="Delete"
                                 className="w-9 h-9 rounded-xl bg-[#F4F3EE] text-[#1a3a2a]/30 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all"

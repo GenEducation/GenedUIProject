@@ -71,6 +71,7 @@
   --danger-2-active: #c2453e;
   --danger-2-soft: rgba(232, 99, 90, 0.08);
   --danger-2-border: rgba(232, 99, 90, 0.2);
+  --danger-2-on-dark: #F8A9A2;               /* lifted for dark admin/partner shells */
   --btn-neutral-border: rgba(4, 46, 92, 0.12);
   --btn-neutral-hover: rgba(4, 46, 92, 0.05);
   --btn-disabled-opacity: 0.45;   /* one value, replacing opacity-30/40/50/60/70 */
@@ -195,6 +196,19 @@ h1, h2, h3, h4, h5, h6 {
   scrollbar-color: #E0F2FE transparent;
 }
 
+/* Button loading spinner. Deliberately NOT Tailwind's `animate-spin`: tests
+   assert on `.animate-spin` to detect a page's own loading state, and a Button
+   in those trees would otherwise match that selector. See Button.tsx Spinner. */
+@keyframes btnSpin {
+  to { transform: rotate(360deg); }
+}
+.btn-spinner {
+  animation: btnSpin 0.7s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-spinner { animation-duration: 2s; }
+}
+
 /* Streaming cursor blink animation — used by ChatMessageBubble */
 @keyframes blink {
   0%, 100% { opacity: 1; }
@@ -296,25 +310,6 @@ h1, h2, h3, h4, h5, h6 {
     color-mix(in srgb, var(--navy) 7%, transparent) 100%);
 }
 
-/* Google's widget renders inside an iframe we cannot style. We paint our
-   own on-brand button and stretch the real widget over it at opacity 0 so
-   it stays the actual click target (and keeps its personalised session
-   state) while the visible surface is entirely ours. */
-.google-overlay {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  overflow: hidden;
-}
-.google-overlay > div,
-.google-overlay iframe {
-  width: 100% !important;
-  height: 100% !important;
-  max-width: none !important;
-  margin: 0 !important;
-  transform: scale(1.6);
-  transform-origin: center;
-}
 
 /* ── Illustration panel ──────────────────────────────────────────────────
    Decorative half of a split card (see the Schedule booking form). A single

@@ -67,7 +67,7 @@ export function PdfToolbar({
       }}
     >
       {/* Sidebar toggle */}
-      <button
+      <button aria-label="Toggle sidebar"
         style={isSidebarOpen ? ACTIVE_BTN : ICON_BTN}
         onClick={onToggleSidebar}
         title={isSidebarOpen ? "Hide page panel" : "Show page panel"}
@@ -80,7 +80,7 @@ export function PdfToolbar({
       <div style={DIVIDER} />
 
       {/* Page navigation */}
-      <button
+      <button aria-label="Previous page"
         style={ICON_BTN}
         onClick={onPrevPage}
         disabled={currentPage <= 1}
@@ -95,7 +95,7 @@ export function PdfToolbar({
         {numPages > 0 ? `${currentPage} / ${numPages}` : "—"}
       </span>
 
-      <button
+      <button aria-label="Next page"
         style={ICON_BTN}
         onClick={onNextPage}
         disabled={currentPage >= numPages}
@@ -109,7 +109,7 @@ export function PdfToolbar({
       <div style={DIVIDER} />
 
       {/* Zoom controls */}
-      <button
+      <button aria-label="Zoom out"
         style={ICON_BTN}
         onClick={onZoomOut}
         title="Zoom out"
@@ -123,7 +123,7 @@ export function PdfToolbar({
         {percent}%
       </span>
 
-      <button
+      <button aria-label="Zoom in"
         style={ICON_BTN}
         onClick={onZoomIn}
         title="Zoom in"

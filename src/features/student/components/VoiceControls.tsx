@@ -15,7 +15,7 @@ export function VoiceControls({ onEnd }: VoiceControlsProps) {
   return (
     <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
       {/* Mute toggle — compact circle, left */}
-      <button
+      <button aria-label="Toggle microphone"
         onClick={toggleMute}
         disabled={!sessionActive}
         className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-40 flex-shrink-0"

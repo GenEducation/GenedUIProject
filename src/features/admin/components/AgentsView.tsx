@@ -5,6 +5,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { listAgents, updateAgent, deleteAgent, AdminAgent } from "../adminService";
 import { DataTable, Column } from "./DataTable";
 import { EntityEditModal } from "./EntityEditModal";
+import { Button } from "@/components/ui/Button";
 
 export function AgentsView() {
   const [rows, setRows] = useState<AdminAgent[]>([]);
@@ -94,20 +95,12 @@ export function AgentsView() {
         error={error}
         actions={(a) => (
           <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={() => setEditing(a)}
-              className="rounded-md p-1.5 text-white/40 hover:bg-white/10 hover:text-white"
-              title="Edit"
-            >
+            <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Edit" onClick={() => setEditing(a)}>
               <Pencil size={15} />
-            </button>
-            <button
-              onClick={() => remove(a)}
-              className="rounded-md p-1.5 text-white/40 hover:bg-rose-500/15 hover:text-rose-300"
-              title="Delete"
-            >
+            </Button>
+            <Button iconOnly size="sm" variant="destructive" tone="onDark" aria-label="Delete" onClick={() => remove(a)}>
               <Trash2 size={15} />
-            </button>
+            </Button>
           </div>
         )}
       />

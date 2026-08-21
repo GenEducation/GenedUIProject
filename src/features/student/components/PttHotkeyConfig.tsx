@@ -51,7 +51,7 @@ export function PttHotkeyConfig({ compact = false }: PttHotkeyConfigProps) {
       >
         {label}
       </kbd>
-      <button
+      <button aria-label="Configure push-to-talk hotkey"
         onClick={() => setCapturing((v) => !v)}
         className="w-7 h-7 rounded-md flex items-center justify-center text-[#94A3B8] hover:text-[var(--tutor)] hover:bg-[var(--tutor)]/8 transition-all"
         title={capturing ? "Cancel" : "Change hotkey"}

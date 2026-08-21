@@ -91,14 +91,17 @@ afterEach(() => {
 
 /**
  * KPI tiles and self-test chips can carry the same words ("Service required"),
- * so match the tile's uppercase label element specifically.
+ * so address the tile by its `data-kpi-tile` hook rather than by styling
+ * classes — the previous `className.includes("uppercase")` walk broke on any
+ * unrelated style change, and threw outright on SVG nodes (whose `className`
+ * is an SVGAnimatedString, not a string).
  */
 function tile(label: string) {
-  const el = screen
-    .getAllByText(label)
-    .find((n) => n.className.includes("uppercase"));
+  const el = document.querySelector<HTMLButtonElement>(
+    `[data-kpi-tile="${label}"]`
+  );
   if (!el) throw new Error(`No KPI tile labelled "${label}"`);
-  return el.closest("button") as HTMLButtonElement;
+  return el;
 }
 
 describe("DevicesView", () => {

@@ -64,7 +64,7 @@ export function VisualCard({ engine, label, children }: VisualCardProps) {
             {meta.label}
           </span>
         </div>
-        <button
+        <button aria-label={isExpanded ? "Collapse" : "Expand"}
           onClick={() => setIsExpanded(!isExpanded)}
           style={{
             width: 30, height: 30, borderRadius: 9, border: "none", cursor: "pointer",

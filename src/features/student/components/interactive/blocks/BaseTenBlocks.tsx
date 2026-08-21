@@ -40,7 +40,7 @@ export default function BaseTenBlocks({ directiveId, meta, disabled, readOnly }:
         {available.includes("hundred") && <button onClick={() => !lock && setH(h + 1)} disabled={lock} style={btn(lock)}><Plus size={13} /> hundred</button>}
         {available.includes("ten") && <button onClick={() => !lock && setT(t + 1)} disabled={lock} style={btn(lock)}><Plus size={13} /> ten</button>}
         {available.includes("one") && <button onClick={() => !lock && setO(o + 1)} disabled={lock} style={btn(lock)}><Plus size={13} /> one</button>}
-        <button onClick={() => { if (lock) return; setH(0); setT(0); setO(0); }} disabled={lock} style={btn(lock)}><RefreshCw size={13} /></button>
+        <button aria-label="Reset" onClick={() => { if (lock) return; setH(0); setT(0); setO(0); }} disabled={lock} style={btn(lock)}><RefreshCw size={13} /></button>
       </div>
       <div style={{ display: "flex", gap: 14, alignItems: "flex-end" }}>
         <Col label="100s" count={h} color="#534AB7" w={20} hgt={60} onAdd={() => setH(h + 1)} show={available.includes("hundred")} />

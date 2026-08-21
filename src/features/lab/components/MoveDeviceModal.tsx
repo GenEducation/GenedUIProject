@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { ApiRequestError } from "@/utils/authFetch";
 import { useLabStore } from "../store/useLabStore";
 import type { DeviceResponse, LabResponse } from "../types/lab";
+import { Button } from "@/components/ui/Button";
+import { LEGACY_FOREST_BUTTON } from "@/components/ui/legacyBrandOverride";
 import { Select } from "@/components/ui/Select";
 
 interface MoveDeviceModalProps {
@@ -72,9 +74,9 @@ export function MoveDeviceModal({
               Its Lab credential stays installed. No re-pairing is required.
             </p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="p-1 text-[#1A3D2C]/40">
+          <Button iconOnly size="sm" variant="tertiary" onClick={onClose} aria-label="Close">
             <X size={18} />
-          </button>
+          </Button>
         </div>
 
         {targets.length > 0 ? (
@@ -98,14 +100,17 @@ export function MoveDeviceModal({
               />
             </label>
             {error && <p className="mt-3 text-sm text-danger-ink">{error}</p>}
-            <button
+            <Button
+              className="mt-5"
+              fullWidth
+              size="lg"
+              loading={isMoving}
               onClick={submit}
-              disabled={!targetLabId || isMoving}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#1A3D2C] py-3 text-sm font-bold text-white disabled:opacity-50"
+              disabled={!targetLabId}
+              style={LEGACY_FOREST_BUTTON}
             >
-              {isMoving && <Loader2 size={16} className="animate-spin" />}
               Move device
-            </button>
+            </Button>
           </>
         ) : (
           <p className="mt-5 rounded-xl bg-[#F4F3EE] p-3 text-sm text-[#1A3D2C]/60">

@@ -1,12 +1,61 @@
 "use client";
 
 import React from "react";
+import { STUDENT_COLORS } from "@/features/student/theme/colors";
+
+/**
+ * `var(--token, literal)` with the literal always supplied.
+ *
+ * During dev HMR and streamed route CSS a route can render before the global
+ * token stylesheet arrives. An unresolved `var()` makes the whole declaration
+ * invalid, which on a primary CTA means white text on a white card — an
+ * apparently empty button. Commit a522018 fixed this; 7d9cddd reverted it by
+ * accident while doing unrelated lab work. Do not drop these fallbacks again.
+ */
+const t = (token: string, fallback: string) => `var(${token}, ${fallback})`;
+
+/**
+ * Literal values mirroring src/app/globals.css. Keep in sync with that file.
+ *
+ * The repo's hex guard is disabled for this block specifically. The rule exists
+ * to stop files re-growing local hex palettes *instead of* tokens; these are the
+ * opposite — the literal last-resort values for the tokens themselves, which by
+ * definition cannot be expressed as `var()`. Every one is paired with its token
+ * through `t()` below; none is used on its own.
+ */
+/* eslint-disable no-restricted-syntax -- documented token fallbacks, see above */
+const FALLBACK = {
+  primary: STUDENT_COLORS.primary, // #059F6D
+  primaryHover: "#04835a",
+  primaryActive: "#036c4a",
+  primarySoft: "rgba(5,159,109,0.08)",
+  primaryRing: "rgba(5,159,109,0.35)",
+  primaryInk: "#042E5C",
+  neutralHover: "rgba(4,46,92,0.05)",
+  neutralBorder: "rgba(4,46,92,0.12)",
+  danger: STUDENT_COLORS.danger, // #E8635A
+  dangerHover: "#d9524a",
+  dangerActive: "#c2453e",
+  dangerSoft: "rgba(232,99,90,0.08)",
+  dangerBorder: "rgba(232,99,90,0.2)",
+  dangerOnDark: "#F8A9A2",
+} as const;
+/* eslint-enable no-restricted-syntax */
 
 export type ButtonVariant =
+  /** Solid brand fill. The one main action per view. */
   | "primary"
+  /** Brand-coloured outline. A deliberate alternative to the primary action. */
   | "secondary"
+  /** Neutral hairline outline. Cancel/Back beside a primary — the audit's
+   *  single largest pattern (~45 sites) and the reason this variant exists
+   *  separately from `secondary`, which pulls brand colour it should not. */
+  | "outline"
+  /** No border, no fill. Toolbars, pagination, low-emphasis text actions. */
   | "tertiary"
+  /** Soft red wash. Delete/Revoke in lists, where a solid red would shout. */
   | "destructive"
+  /** Solid red. The final confirm in a delete dialog. */
   | "destructiveSolid";
 export type ButtonSize = "sm" | "md" | "lg";
 export type ButtonTone = "light" | "onDark";
@@ -22,42 +71,50 @@ type Surface = React.CSSProperties & Record<string, string>;
 
 const VARIANT_SURFACE: Record<ButtonVariant, Surface> = {
   primary: {
-    "--btn-bg": "var(--primary)",
-    "--btn-bg-hover": "var(--primary-hover)",
-    "--btn-bg-active": "var(--primary-active)",
-    "--btn-fg": "#FFFFFF",
+    "--btn-bg": t("--primary", FALLBACK.primary),
+    "--btn-bg-hover": t("--primary-hover", FALLBACK.primaryHover),
+    "--btn-bg-active": t("--primary-active", FALLBACK.primaryActive),
+    "--btn-fg": STUDENT_COLORS.card,
     "--btn-border": "transparent",
-    "--btn-ring": "var(--primary-ring)",
+    "--btn-ring": t("--primary-ring", FALLBACK.primaryRing),
   },
   secondary: {
     "--btn-bg": "transparent",
-    "--btn-bg-hover": "var(--primary-soft)",
+    "--btn-bg-hover": t("--primary-soft", FALLBACK.primarySoft),
     "--btn-bg-active": "rgba(5,159,109,0.14)",
-    "--btn-fg": "var(--primary)",
-    "--btn-border": "var(--primary)",
-    "--btn-ring": "var(--primary-ring)",
+    "--btn-fg": t("--primary", FALLBACK.primary),
+    "--btn-border": t("--primary", FALLBACK.primary),
+    "--btn-ring": t("--primary-ring", FALLBACK.primaryRing),
+  },
+  outline: {
+    "--btn-bg": "transparent",
+    "--btn-bg-hover": t("--btn-neutral-hover", FALLBACK.neutralHover),
+    "--btn-bg-active": "rgba(4,46,92,0.09)",
+    "--btn-fg": t("--primary-ink", FALLBACK.primaryInk),
+    "--btn-border": t("--btn-neutral-border", FALLBACK.neutralBorder),
+    "--btn-ring": t("--primary-ring", FALLBACK.primaryRing),
   },
   tertiary: {
     "--btn-bg": "transparent",
-    "--btn-bg-hover": "var(--btn-neutral-hover)",
+    "--btn-bg-hover": t("--btn-neutral-hover", FALLBACK.neutralHover),
     "--btn-bg-active": "rgba(4,46,92,0.09)",
-    "--btn-fg": "var(--primary-ink)",
+    "--btn-fg": t("--primary-ink", FALLBACK.primaryInk),
     "--btn-border": "transparent",
-    "--btn-ring": "var(--primary-ring)",
+    "--btn-ring": t("--primary-ring", FALLBACK.primaryRing),
   },
   destructive: {
-    "--btn-bg": "var(--danger-2-soft)",
+    "--btn-bg": t("--danger-2-soft", FALLBACK.dangerSoft),
     "--btn-bg-hover": "rgba(232,99,90,0.16)",
     "--btn-bg-active": "rgba(232,99,90,0.22)",
-    "--btn-fg": "var(--danger-2)",
-    "--btn-border": "var(--danger-2-border)",
+    "--btn-fg": t("--danger-2", FALLBACK.danger),
+    "--btn-border": t("--danger-2-border", FALLBACK.dangerBorder),
     "--btn-ring": "rgba(232,99,90,0.35)",
   },
   destructiveSolid: {
-    "--btn-bg": "var(--danger-2)",
-    "--btn-bg-hover": "var(--danger-2-hover)",
-    "--btn-bg-active": "var(--danger-2-active)",
-    "--btn-fg": "#FFFFFF",
+    "--btn-bg": t("--danger-2", FALLBACK.danger),
+    "--btn-bg-hover": t("--danger-2-hover", FALLBACK.dangerHover),
+    "--btn-bg-active": t("--danger-2-active", FALLBACK.dangerActive),
+    "--btn-fg": STUDENT_COLORS.card,
     "--btn-border": "transparent",
     "--btn-ring": "rgba(232,99,90,0.35)",
   },
@@ -69,6 +126,13 @@ const VARIANT_SURFACE: Record<ButtonVariant, Surface> = {
  * change; primary emerald reads correctly on both.
  */
 const ON_DARK_SURFACE: Partial<Record<ButtonVariant, Surface>> = {
+  outline: {
+    "--btn-fg": "rgba(255,255,255,0.8)",
+    "--btn-border": "rgba(255,255,255,0.15)",
+    "--btn-bg-hover": "rgba(255,255,255,0.08)",
+    "--btn-bg-active": "rgba(255,255,255,0.14)",
+    "--btn-ring": "rgba(255,255,255,0.5)",
+  },
   secondary: {
     "--btn-fg": "rgba(255,255,255,0.85)",
     "--btn-border": "rgba(255,255,255,0.18)",
@@ -83,7 +147,7 @@ const ON_DARK_SURFACE: Partial<Record<ButtonVariant, Surface>> = {
     "--btn-ring": "rgba(255,255,255,0.5)",
   },
   destructive: {
-    "--btn-fg": "#F8A9A2",
+    "--btn-fg": t("--danger-2-on-dark", FALLBACK.dangerOnDark),
     "--btn-border": "rgba(232,99,90,0.3)",
     "--btn-ring": "rgba(248,169,162,0.5)",
   },
@@ -119,7 +183,7 @@ const BASE_CLASS = [
   // those set `--tw-outline-style: none`, which the `outline-2` utility then
   // reads, leaving the focus ring 2px wide but styleless (i.e. invisible).
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--btn-ring)]",
-  "disabled:cursor-not-allowed disabled:opacity-[var(--btn-disabled-opacity)]",
+  "disabled:cursor-not-allowed disabled:opacity-[var(--btn-disabled-opacity,0.45)]",
 ].join(" ");
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -142,11 +206,19 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   loading?: boolean;
 }
 
+/**
+ * Uses `.btn-spinner` (globals.css) rather than Tailwind's `animate-spin`.
+ * Several tests assert on `.animate-spin` to detect a *page's* own loading
+ * state — e.g. ConnectionQualityBanner.test.tsx expects none — and a Button
+ * placed in those trees would otherwise satisfy that selector and flip the
+ * assertion. Keeping our spinner on its own class makes that impossible.
+ */
 function Spinner({ size }: { size: number }) {
   return (
     <span
       aria-hidden
-      className="absolute animate-spin rounded-full border-2 border-current border-r-transparent"
+      data-button-spinner
+      className="btn-spinner absolute rounded-full border-2 border-current border-r-transparent"
       style={{ width: size, height: size, opacity: 0.9 }}
     />
   );
@@ -185,6 +257,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
   };
 
   return (
+    // eslint-disable-next-line no-restricted-syntax -- this IS the shared Button
     <button
       ref={ref}
       type={type}
@@ -193,8 +266,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
       data-variant={variant}
       className={`${BASE_CLASS} ${fullWidth ? "w-full" : ""} ${className ?? ""}`}
       style={{
-        fontFamily: "var(--font-body)",
-        borderRadius: pill ? "var(--radius-pill)" : "var(--radius-control)",
+        fontFamily: t("--font-body", "ui-sans-serif, system-ui"),
+        borderRadius: pill
+          ? t("--radius-pill", "999px")
+          : t("--radius-control", "10px"),
         ...surface,
         ...SIZE_STYLES[size],
         ...(iconOnly ? ICON_ONLY_STYLES[size] : null),
