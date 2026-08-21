@@ -296,25 +296,6 @@ h1, h2, h3, h4, h5, h6 {
     color-mix(in srgb, var(--navy) 7%, transparent) 100%);
 }
 
-/* Google's widget renders inside an iframe we cannot style. We paint our
-   own on-brand button and stretch the real widget over it at opacity 0 so
-   it stays the actual click target (and keeps its personalised session
-   state) while the visible surface is entirely ours. */
-.google-overlay {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  overflow: hidden;
-}
-.google-overlay > div,
-.google-overlay iframe {
-  width: 100% !important;
-  height: 100% !important;
-  max-width: none !important;
-  margin: 0 !important;
-  transform: scale(1.6);
-  transform-origin: center;
-}
 
 /* ── Illustration panel ──────────────────────────────────────────────────
    Decorative half of a split card (see the Schedule booking form). A single

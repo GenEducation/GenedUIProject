@@ -58,17 +58,9 @@ export function SignIn({
 
       {/* Password field */}
       <div>
-        <div className="flex items-center justify-between mb-2 pr-1">
-          <label className="text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/45">
-            Password
-          </label>
-          <Link
-            href="/forgot-password"
-            className="text-[10px] font-semibold text-[#059F6D] hover:text-[#047a54] hover:underline transition-colors tracking-wide"
-          >
-            Forgot password?
-          </Link>
-        </div>
+        <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/45 mb-2 pl-0.5">
+          Password
+        </label>
         <div className="relative">
           <input
             name="password"
@@ -95,6 +87,14 @@ export function SignIn({
             {errors.password}
           </p>
         )}
+        <div className="mt-2 flex justify-end pr-1">
+          <Link
+            href="/forgot-password"
+            className="text-[10px] font-semibold text-[#059F6D] hover:text-[#047a54] hover:underline transition-colors tracking-wide"
+          >
+            Forgot password?
+          </Link>
+        </div>
       </div>
 
       {/* Remember session */}

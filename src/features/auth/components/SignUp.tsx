@@ -659,7 +659,7 @@ export function SignUp({
             </div>
 
             <GoogleAuthButton
-              label="Sign up with Google"
+              text="signup_with"
               onSuccess={(credential) => {
                 setGoogleToken(credential);
                 onGoogleSuccess(credential);
