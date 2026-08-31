@@ -43,9 +43,19 @@ export interface SpeechPipelineInit {
 // backchannel ("haan", "okay") and must not interrupt; only a sustained one barges in.
 const BARGE_IN_MIN_MS = 400;
 
+// Must match core-service's shared_utils.speech.config.OUTPUT_SAMPLE_RATE_HZ -- the
+// rate TTS actually synthesizes at. Live bug: the playback AudioContext used to be
+// created with no explicit rate, which browsers default to the hardware's native rate
+// (commonly 48000Hz). The worklet wrote 24kHz samples straight into that buffer with no
+// resampling, so every utterance played at ~2x speed and pitch -- "very very fast" and
+// squeaky, reported live. Constructing this context AT the TTS rate makes the browser's
+// own output stage do the resampling, correctly, once, instead of us getting it wrong.
+const PLAYBACK_SAMPLE_RATE = 24000;
+
 class SpeechPipelineService {
   private ws: WebSocket | null = null;
-  private audioCtx: AudioContext | null = null;
+  private micCtx: AudioContext | null = null;
+  private playbackCtx: AudioContext | null = null;
   private micNode: AudioWorkletNode | null = null;
   private playbackNode: AudioWorkletNode | null = null;
   private mediaStream: MediaStream | null = null;
@@ -115,8 +125,10 @@ class SpeechPipelineService {
     this.micNode = null;
     this.playbackNode?.disconnect();
     this.playbackNode = null;
-    await this.audioCtx?.close();
-    this.audioCtx = null;
+    await this.micCtx?.close();
+    this.micCtx = null;
+    await this.playbackCtx?.close();
+    this.playbackCtx = null;
     this.ws?.close();
     this.ws = null;
     this.state = "idle";
@@ -143,20 +155,25 @@ class SpeechPipelineService {
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     });
 
-    this.audioCtx = new AudioContext();
-    await this.audioCtx.audioWorklet.addModule("/worklets/mic-processor.js");
-    await this.audioCtx.audioWorklet.addModule("/worklets/playback-processor.js");
+    // Two contexts, deliberately: the mic wants the device's native rate (best capture
+    // quality/compatibility; mic-processor.js resamples to 16k itself, so it does not
+    // care what that native rate is), and playback wants to run AT the TTS rate so the
+    // browser's own output stage resamples correctly instead of us skipping that step.
+    this.micCtx = new AudioContext();
+    await this.micCtx.audioWorklet.addModule("/worklets/mic-processor.js");
 
-    const source = this.audioCtx.createMediaStreamSource(this.mediaStream);
-    this.micNode = new AudioWorkletNode(this.audioCtx, "mic-processor");
+    const source = this.micCtx.createMediaStreamSource(this.mediaStream);
+    this.micNode = new AudioWorkletNode(this.micCtx, "mic-processor");
     this.micNode.port.onmessage = (e) => this._onMicMessage(e.data);
     source.connect(this.micNode);
     // The mic node produces no output; connecting it to nothing is intentional -- it
     // only needs to run, not to be audible.
 
-    this.playbackNode = new AudioWorkletNode(this.audioCtx, "playback-processor");
+    this.playbackCtx = new AudioContext({ sampleRate: PLAYBACK_SAMPLE_RATE });
+    await this.playbackCtx.audioWorklet.addModule("/worklets/playback-processor.js");
+    this.playbackNode = new AudioWorkletNode(this.playbackCtx, "playback-processor");
     this.playbackNode.port.onmessage = (e) => this._onPlaybackMessage(e.data);
-    this.playbackNode.connect(this.audioCtx.destination);
+    this.playbackNode.connect(this.playbackCtx.destination);
   }
 
   private _onMicMessage(msg: { type: string; preroll?: ArrayBuffer; pcm?: ArrayBuffer }) {
