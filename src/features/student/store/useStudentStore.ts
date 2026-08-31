@@ -1,9 +1,13 @@
-import { create } from "zustand";
+import { create, type StoreApi } from "zustand";
 import * as Sentry from "@sentry/nextjs";
 import { studentService } from "../services/studentService";
 import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import { parseContent, generateHistoricalSVG, normalizeSvg } from "../utils/parseContent";
 import { voiceService } from "../services/voiceService";
+import {
+  speechPipelineService,
+  type SpeechPipelineEvent,
+} from "../services/speechPipelineService";
 import { appendStreamedText } from "../utils/voiceStreamMerge";
 import {
   isCompatibleVoiceSessionId,
@@ -417,6 +421,136 @@ const getInitialVoicePrefs = () => {
   }
   return { listenMode: "continuous" as const, pttHotkey: "Space" };
 };
+
+// Which voice backend is actually connected right now -- module scope, not store state,
+// because nothing in the UI reads it; only stopVoiceSession/toggleMute/PTT need to know
+// which service to call. Defaults to the legacy client so a stale value from a prior
+// session (module state, not component state, survives remounts) never accidentally
+// routes a call at the wrong client.
+let activeVoiceClient: "legacy" | "cascade" = "legacy";
+
+// ADR-0015's cascade (/ws/v3/voice) does not implement entry/RAG/ZPD, math visuals,
+// pointer sync, or session-duration caps yet -- see docs/speech-pipeline-architecture.md
+// §9 and core_service/voice/pipeline/brain.py's _no_visual_route. Routing every voice
+// session through it would silently drop those features. So this only fires for the one
+// case the pipeline actually supports end-to-end: resuming an existing session that
+// already has a resolved chapter, in hands-free mode (push-to-talk needs a "force
+// listening" mode the mic worklet's autonomous VAD does not have yet).
+export function isResumableForCascade(chat: ChatSession, isPtt: boolean): boolean {
+  return (
+    !isPtt &&
+    !!chat.chapter_name &&
+    chat.id !== "new" &&
+    chat.id !== "new-focused"
+  );
+}
+
+async function startCascadeVoiceSession(
+  set: StoreApi<StudentState>["setState"],
+  get: StoreApi<StudentState>["getState"],
+  chat: ChatSession,
+  studentProfile: StudentProfile,
+): Promise<void> {
+  const sessionId = chat.session_id || chat.id;
+
+  const onEvent = (event: SpeechPipelineEvent) => {
+    switch (event.type) {
+      case "connected":
+        set({ voiceSessionStatus: "active", sessionNotice: null });
+        break;
+      case "disconnected":
+        set({ voiceSessionStatus: "idle" });
+        break;
+      case "state":
+        set({ isAITyping: event.state === "thinking" || event.state === "speaking" });
+        break;
+      case "final_transcript": {
+        if (!event.text.trim()) break;
+        set((state) => ({
+          messages: [
+            ...state.messages,
+            {
+              id: `voice-${Date.now()}`,
+              text: event.text,
+              sender: "user" as const,
+              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            },
+          ],
+          streamingMessageId: null,
+        }));
+        break;
+      }
+      case "utterance_start": {
+        const newId = `voice-assistant-${event.utteranceId}`;
+        set((state) => ({
+          messages: [
+            ...state.messages,
+            {
+              id: newId,
+              text: "",
+              sender: "ai" as const,
+              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            },
+          ],
+          streamingMessageId: newId,
+          isAITyping: true,
+        }));
+        break;
+      }
+      case "assistant_transcript": {
+        const expectedId = `voice-assistant-${event.utteranceId}`;
+        set((state) => {
+          const idx = state.messages.findIndex((m) => m.id === expectedId);
+          if (idx === -1) return state; // a segment for an utterance we never announced
+          const updated = [...state.messages];
+          const prev = updated[idx];
+          updated[idx] = { ...prev, text: `${prev.text}${prev.text ? " " : ""}${event.text}` };
+          return { messages: updated };
+        });
+        break;
+      }
+      case "utterance_end":
+        set({ streamingMessageId: null, isAITyping: false });
+        break;
+      case "safety_redirect":
+        if (!event.content) break;
+        set((state) => ({
+          messages: [
+            ...state.messages,
+            {
+              id: `voice-safety-${Date.now()}`,
+              text: event.content,
+              sender: "ai" as const,
+              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              isSafetyRedirect: true,
+            },
+          ],
+          streamingMessageId: null,
+          isAITyping: false,
+        }));
+        break;
+      case "error":
+        console.error("🎙️ [StudentStore] Cascade voice session error:", event.message);
+        set({ voiceSessionStatus: "error" });
+        break;
+      // "session_id" and "partial_transcript" are read but need no state change here:
+      // the session id is already known (this path only runs for an existing session),
+      // and there is no live-caption UI to feed a partial into yet.
+      default:
+        break;
+    }
+  };
+
+  try {
+    await speechPipelineService.connect(
+      { sessionId, studentId: studentProfile.user_id, language: undefined, voice: studentProfile.preferred_voice },
+      onEvent,
+    );
+  } catch (error) {
+    console.error("Failed to start cascade voice session:", error);
+    set({ voiceSessionStatus: "error" });
+  }
+}
 
 export const useStudentStore = create<StudentState>()((set, get) => ({
   studentProfile: null,
@@ -1302,6 +1436,15 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     const isPtt = voicePrefs.listenMode === "ptt";
     set({ isMuted: isPtt, pttHeld: false });
 
+    // ADR-0015 cascade: only for resuming an existing, already-planned session in
+    // hands-free mode -- see isResumableForCascade's docstring for exactly why.
+    if (isResumableForCascade(effectiveChat, isPtt)) {
+      activeVoiceClient = "cascade";
+      await startCascadeVoiceSession(set, get, effectiveChat, studentProfile);
+      return;
+    }
+    activeVoiceClient = "legacy";
+
     try {
       // Initialize the mute state in voiceService as well
       voiceService.setMuted(isPtt);
@@ -1765,10 +1908,15 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   stopVoiceSession: () => {
     try {
-      voiceService.stopSession();
+      if (activeVoiceClient === "cascade") {
+        speechPipelineService.disconnect();
+      } else {
+        voiceService.stopSession();
+      }
     } catch (error) {
       console.error("Failed to stop voice session:", error);
     }
+    activeVoiceClient = "legacy";
     set({ voiceSessionStatus: "idle", connectionQuality: null, sessionNotice: null, isMuted: false, pttHeld: false });
   },
 
@@ -1777,7 +1925,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     const newMutedState = !isMuted;
 
     try {
-      voiceService.setMuted(newMutedState);
+      if (activeVoiceClient === "cascade") {
+        speechPipelineService.setMuted(newMutedState);
+      } else {
+        voiceService.setMuted(newMutedState);
+      }
       set({ isMuted: newMutedState });
     } catch (error) {
       console.error("Failed to toggle mute:", error);
@@ -1786,12 +1938,23 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   beginPttUtterance: () => {
     set({ pttHeld: true });
-    voiceService.setMuted(false);
+    // Cascade sessions never start in PTT mode (isResumableForCascade excludes it), so
+    // activeVoiceClient is always "legacy" here today -- branching anyway rather than
+    // assuming, so this stays correct the day PTT support is added to the cascade.
+    if (activeVoiceClient === "cascade") {
+      speechPipelineService.setMuted(false);
+    } else {
+      voiceService.setMuted(false);
+    }
   },
 
   endPttUtterance: () => {
     set({ pttHeld: false });
-    voiceService.setMuted(true);
+    if (activeVoiceClient === "cascade") {
+      speechPipelineService.setMuted(true);
+    } else {
+      voiceService.setMuted(true);
+    }
   },
 
   openNewSession: (agent: AgentItem, mode: "chat" | "voice") => {

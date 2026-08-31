@@ -24,7 +24,8 @@ export type SpeechPipelineEvent =
   | { type: "state"; state: PipelineState }
   | { type: "partial_transcript"; text: string }
   | { type: "final_transcript"; text: string; confidence: number | null; language: string }
-  | { type: "utterance_start"; utteranceId: number; text: string; estDurationMs: number }
+  | { type: "utterance_start"; utteranceId: number }
+  | { type: "assistant_transcript"; utteranceId: number; text: string }
   | { type: "utterance_end"; utteranceId: number; reason: "complete" | "cancelled" }
   | { type: "safety_redirect"; content: string }
   | { type: "error"; message: string };
@@ -85,7 +86,19 @@ class SpeechPipelineService {
         }),
       );
       onEvent({ type: "connected" });
-      await this._startAudio();
+      try {
+        await this._startAudio();
+      } catch (err) {
+        // getUserMedia permission denial, no AudioWorklet support, etc. WebSocket's
+        // onopen handler is fire-and-forget -- nothing awaits this closure's promise --
+        // so a rejection here would otherwise vanish as an unhandled rejection instead
+        // of ever reaching the caller.
+        console.error("[SpeechPipelineService] Failed to start audio:", err);
+        onEvent({
+          type: "error",
+          message: err instanceof Error ? err.message : "Could not access the microphone",
+        });
+      }
     };
 
     ws.onmessage = (event) => this._onMessage(event);
@@ -108,6 +121,15 @@ class SpeechPipelineService {
   }
 
   setMuted(muted: boolean) {
+    // Push-to-talk is built on this, the same way voiceService's is: unmute on press,
+    // mute on release. Releasing mid-utterance must close the turn explicitly -- the
+    // worklet's own end_of_speech only fires after 700ms of silence, which a PTT
+    // release does not wait for, and _onMicMessage drops everything the instant
+    // `this.muted` flips, so without this the server would be left holding an
+    // AudioFeed open forever waiting for a close that was never going to arrive.
+    if (muted && !this.muted && this.state === "listening") {
+      this._sendJson({ type: "end_of_speech", client_ts_ms: Date.now() });
+    }
     this.muted = muted;
     this._sendJson({ type: muted ? "mute" : "unmute" });
   }
@@ -255,11 +277,13 @@ class SpeechPipelineService {
       case "utterance_start":
         this.activeUtteranceId = Number(payload.utterance_id);
         this.lastPlayedUntilMs = 0;
+        this.onEvent?.({ type: "utterance_start", utteranceId: this.activeUtteranceId });
+        break;
+      case "assistant_transcript":
         this.onEvent?.({
-          type: "utterance_start",
-          utteranceId: this.activeUtteranceId,
+          type: "assistant_transcript",
+          utteranceId: Number(payload.utterance_id),
           text: String(payload.text ?? ""),
-          estDurationMs: Number(payload.est_duration_ms ?? 0),
         });
         break;
       case "utterance_end":
