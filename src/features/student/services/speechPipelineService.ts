@@ -14,6 +14,7 @@ import {
   packUplinkFrame,
   parseDownlinkFrame,
 } from "@/features/student/services/speechPipelineProtocol";
+import { isSustained, ownsTheTurn } from "@/features/student/services/speechPipelineVad";
 
 export type PipelineState = "idle" | "listening" | "thinking" | "speaking";
 
@@ -55,6 +56,7 @@ class SpeechPipelineService {
   private activeUtteranceId: number | null = null;
   private lastPlayedUntilMs = 0;
   private speechOnsetAt: number | null = null;
+  private pendingPreroll: ArrayBuffer | null = null;
   private muted = false;
 
   async connect(init: SpeechPipelineInit, onEvent: (event: SpeechPipelineEvent) => void) {
@@ -160,52 +162,76 @@ class SpeechPipelineService {
   private _onMicMessage(msg: { type: string; preroll?: ArrayBuffer; pcm?: ArrayBuffer }) {
     if (this.muted) return;
 
+    const interrupting = ownsTheTurn(this.state);
+
     if (msg.type === "speech_start") {
       this.speechOnsetAt = performance.now();
-      if (this.state === "speaking" || this.state === "thinking") {
-        // Double-talk / interrupting the pause -- decide backchannel vs. real
-        // interruption once we know the duration (see _maybeConfirmBargeIn below).
-        // Capture continues regardless; the transcript is discarded server-side if
-        // this turns out to be noise.
-      } else {
-        this.state = "listening";
-        this.onEvent?.({ type: "state", state: "listening" });
+      if (interrupting) {
+        // Do NOT tell the server yet. A bug here (found live, session
+        // 5d058c6c-...): the worklet's VAD only requires 250ms + an RMS threshold to
+        // fire, and any cough, chair creak or mic self-noise during the tutor's
+        // multi-second "thinking" pause used to be forwarded as speech_start
+        // immediately -- which the server treats as a real interruption on sight
+        // (connection.py cancels the in-flight brain generation the instant it sees
+        // one). The child's real question was silently discarded, no error, no
+        // audio, ever. Buffering the preroll and waiting for BARGE_IN_MIN_MS of
+        // sustained voice (_maybeConfirmInterruption) is the same gate the SPEAKING
+        // path already had; THINKING just never got it.
+        this.pendingPreroll = msg.preroll ?? null;
+        return;
       }
+      this.state = "listening";
+      this.onEvent?.({ type: "state", state: "listening" });
       this._sendJson({ type: "speech_start", client_ts_ms: Date.now() });
       if (msg.preroll) this._sendBinary(msg.preroll);
       return;
     }
 
     if (msg.type === "frame" && msg.pcm) {
-      this._maybeConfirmBargeIn();
-      this._sendBinary(msg.pcm);
+      if (this.speechOnsetAt !== null && interrupting) {
+        this._maybeConfirmInterruption();
+      }
+      // Only forward audio once a turn is actually open server-side. Before
+      // confirmation there is no open AudioFeed on the other end to receive it.
+      if (this.state === "listening") {
+        this._sendBinary(msg.pcm);
+      }
       return;
     }
 
     if (msg.type === "speech_end") {
+      const wasUnconfirmed = this.speechOnsetAt !== null && this.state !== "listening";
       this.speechOnsetAt = null;
+      this.pendingPreroll = null;
+      if (wasUnconfirmed) return; // never opened a server-side turn; nothing to close
       this._sendJson({ type: "end_of_speech", client_ts_ms: Date.now() });
     }
   }
 
-  private _maybeConfirmBargeIn() {
+  private _maybeConfirmInterruption() {
     if (this.speechOnsetAt === null) return;
-    if (this.state !== "speaking") return;
-    if (performance.now() - this.speechOnsetAt < BARGE_IN_MIN_MS) return;
+    if (!isSustained(this.speechOnsetAt, performance.now(), BARGE_IN_MIN_MS)) return;
 
-    // Sustained voice while the tutor is speaking: a real interruption. Stop playback
-    // locally FIRST (design doc A11 -- never wait for the server round trip), then tell
-    // the server what was actually heard.
-    this.playbackNode?.port.postMessage({ type: "clear" });
-    if (this.activeUtteranceId !== null) {
-      this._sendJson({
-        type: "barge_in",
-        utterance_id: this.activeUtteranceId,
-        played_until_ms: this.lastPlayedUntilMs,
-      });
+    if (this.state === "speaking") {
+      // Sustained voice while the tutor is speaking: a real interruption. Stop
+      // playback locally FIRST (design doc A11 -- never wait for the server round
+      // trip), then tell the server what was actually heard.
+      this.playbackNode?.port.postMessage({ type: "clear" });
+      if (this.activeUtteranceId !== null) {
+        this._sendJson({
+          type: "barge_in",
+          utterance_id: this.activeUtteranceId,
+          played_until_ms: this.lastPlayedUntilMs,
+        });
+      }
     }
+    // Either way (interrupting SPEAKING or THINKING), open the new turn now that
+    // we've confirmed this is real speech, not a stray noise.
     this.state = "listening";
     this.onEvent?.({ type: "state", state: "listening" });
+    this._sendJson({ type: "speech_start", client_ts_ms: Date.now() });
+    if (this.pendingPreroll) this._sendBinary(this.pendingPreroll);
+    this.pendingPreroll = null;
     this.speechOnsetAt = null; // one confirmation per onset
   }
 
