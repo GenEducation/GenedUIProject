@@ -429,20 +429,17 @@ const getInitialVoicePrefs = () => {
 // routes a call at the wrong client.
 let activeVoiceClient: "legacy" | "cascade" = "legacy";
 
-// ADR-0015's cascade (/ws/v3/voice) does not implement entry/RAG/ZPD, math visuals,
-// pointer sync, or session-duration caps yet -- see docs/speech-pipeline-architecture.md
-// §9 and core_service/voice/pipeline/brain.py's _no_visual_route. Routing every voice
-// session through it would silently drop those features. So this only fires for the one
-// case the pipeline actually supports end-to-end: resuming an existing session that
-// already has a resolved chapter, in hands-free mode (push-to-talk needs a "force
-// listening" mode the mic worklet's autonomous VAD does not have yet).
+// ADR-0015's cascade (/ws/v3/voice) does not implement math visuals, pointer sync, or
+// session-duration caps yet -- see docs/speech-pipeline-architecture.md §9 and
+// core_service/voice/pipeline/brain.py's _no_visual_route. Routing every voice session
+// through it would silently drop those features. So this only fires for hands-free mode
+// (push-to-talk needs a "force listening" mode the mic worklet's autonomous VAD does not
+// have yet) -- not on whether a chapter is already resolved: core_service/voice/pipeline
+// /router.py now drives the entry conversation itself (entry_turn.run_entry_turn) when
+// one isn't, the same way it always has for an existing lesson. A brand-new chat (id
+// "new"/"new-focused") is exactly the cold-start case that now works end-to-end.
 export function isResumableForCascade(chat: ChatSession, isPtt: boolean): boolean {
-  return (
-    !isPtt &&
-    !!chat.chapter_name &&
-    chat.id !== "new" &&
-    chat.id !== "new-focused"
-  );
+  return !isPtt;
 }
 
 async function startCascadeVoiceSession(
@@ -451,7 +448,13 @@ async function startCascadeVoiceSession(
   chat: ChatSession,
   studentProfile: StudentProfile,
 ): Promise<void> {
-  const sessionId = chat.session_id || chat.id;
+  // A brand-new chat's "new"/"new-focused" id is a local placeholder, not a real session
+  // -- passing it as sessionId would send it to the server as a session_id to continue,
+  // which core_service/voice/v2/session_contract.py rejects (continue_session requires a
+  // real UUID). Omitting it triggers a cold start instead; the real id comes back as a
+  // "session_id" event below.
+  const isColdStart = chat.id === "new" || chat.id === "new-focused";
+  const sessionId = isColdStart ? undefined : chat.session_id || chat.id;
 
   const onEvent = (event: SpeechPipelineEvent) => {
     switch (event.type) {
@@ -533,9 +536,20 @@ async function startCascadeVoiceSession(
         console.error("🎙️ [StudentStore] Cascade voice session error:", event.message);
         set({ voiceSessionStatus: "error" });
         break;
-      // "session_id" and "partial_transcript" are read but need no state change here:
-      // the session id is already known (this path only runs for an existing session),
-      // and there is no live-caption UI to feed a partial into yet.
+      case "session_id": {
+        // Cold start only: router.py creates the session server-side and reports its
+        // real id back here, once, right after connecting. Mirrors the chat SSE path's
+        // identical "late-binding session ID sync" (this file's streamChatMessage).
+        if (!isColdStart) break;
+        const current = get().activeChat;
+        if (!current || current.id !== "new" && current.id !== "new-focused") break;
+        set({
+          activeChat: { ...current, id: event.sessionId, session_id: event.sessionId },
+        });
+        break;
+      }
+      // "partial_transcript" is read but needs no state change here -- there is no
+      // live-caption UI to feed it into yet.
       default:
         break;
     }
@@ -543,7 +557,17 @@ async function startCascadeVoiceSession(
 
   try {
     await speechPipelineService.connect(
-      { sessionId, studentId: studentProfile.user_id, language: undefined, voice: studentProfile.preferred_voice },
+      {
+        sessionId,
+        studentId: studentProfile.user_id,
+        // Cold start only (sessionId undefined) -- an existing session's subject is
+        // already resolved server-side, so sending it again would be redundant, not
+        // wrong, but chat.subject is only reliably THIS session's subject pre-connect
+        // in the cold-start case.
+        subject: isColdStart ? chat.subject : undefined,
+        language: undefined,
+        voice: studentProfile.preferred_voice,
+      },
       onEvent,
     );
   } catch (error) {
@@ -1436,8 +1460,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     const isPtt = voicePrefs.listenMode === "ptt";
     set({ isMuted: isPtt, pttHeld: false });
 
-    // ADR-0015 cascade: only for resuming an existing, already-planned session in
-    // hands-free mode -- see isResumableForCascade's docstring for exactly why.
+    // ADR-0015 cascade: hands-free mode only (see isResumableForCascade's docstring) --
+    // covers both resuming an already-planned session and a cold start (a brand-new
+    // chat, no chapter yet), since core_service/voice/pipeline/router.py now drives the
+    // entry conversation itself for the latter.
     if (isResumableForCascade(effectiveChat, isPtt)) {
       activeVoiceClient = "cascade";
       await startCascadeVoiceSession(set, get, effectiveChat, studentProfile);

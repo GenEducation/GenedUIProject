@@ -25,15 +25,19 @@ describe("isResumableForCascade", () => {
     expect(isResumableForCascade(makeChat(), true)).toBe(false);
   });
 
-  it("is false with no resolved chapter -- the cascade has no entry flow", () => {
-    expect(isResumableForCascade(makeChat({ chapter_name: undefined }), false)).toBe(false);
+  // core_service/voice/pipeline/router.py now drives the entry conversation itself
+  // (entry_turn.run_entry_turn) when no chapter is resolved yet, so these three used to
+  // fall back to the legacy Gemini Live path are cold-start cases the cascade now
+  // supports end-to-end.
+  it("is true with no resolved chapter -- the cascade now runs entry/RAG/ZPD itself", () => {
+    expect(isResumableForCascade(makeChat({ chapter_name: undefined }), false)).toBe(true);
   });
 
-  it("is false for a brand-new session (id 'new')", () => {
-    expect(isResumableForCascade(makeChat({ id: "new" }), false)).toBe(false);
+  it("is true for a brand-new session (id 'new') -- a cold start", () => {
+    expect(isResumableForCascade(makeChat({ id: "new" }), false)).toBe(true);
   });
 
-  it("is false for a brand-new focused session (id 'new-focused')", () => {
-    expect(isResumableForCascade(makeChat({ id: "new-focused" }), false)).toBe(false);
+  it("is true for a brand-new focused session (id 'new-focused') -- a cold start", () => {
+    expect(isResumableForCascade(makeChat({ id: "new-focused" }), false)).toBe(true);
   });
 });
