@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { isSustained, ownsTheTurn } from "../speechPipelineVad";
+import { frameAction, isSustained, ownsTheTurn } from "../speechPipelineVad";
+import type { PipelineState } from "../speechPipelineService";
 
 describe("ownsTheTurn", () => {
   it("is true while the tutor is speaking", () => {
@@ -28,5 +29,33 @@ describe("isSustained", () => {
 
   it("is true well past the threshold", () => {
     expect(isSustained(1000, 5000, 400)).toBe(true);
+  });
+});
+
+describe("frameAction", () => {
+  it("sends once the turn is open server-side", () => {
+    expect(frameAction("listening", true)).toBe("send");
+    expect(frameAction("listening", false)).toBe("send");
+  });
+
+  it("BUFFERS audio captured while an interruption is still being confirmed", () => {
+    // The regression: these frames used to be dropped, punching a 400ms hole into the
+    // start of every utterance spoken over the tutor and producing clipped transcripts
+    // like "with data" / "with the".
+    expect(frameAction("thinking", true)).toBe("buffer");
+    expect(frameAction("speaking", true)).toBe("buffer");
+  });
+
+  it("drops audio only when there is no onset at all", () => {
+    expect(frameAction("thinking", false)).toBe("drop");
+    expect(frameAction("speaking", false)).toBe("drop");
+    expect(frameAction("idle", false)).toBe("drop");
+  });
+
+  it("never drops a frame while the child is mid-word", () => {
+    const states: PipelineState[] = ["idle", "listening", "thinking", "speaking"];
+    for (const s of states) {
+      expect(frameAction(s, true)).not.toBe("drop");
+    }
   });
 });

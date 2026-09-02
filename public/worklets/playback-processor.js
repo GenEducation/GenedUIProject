@@ -14,6 +14,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
     this._readOffset = 0;
     this._playedSamples = 0;
     this._started = false;
+    this._paused = false;
     this.port.onmessage = (event) => this._onMessage(event.data);
   }
 
@@ -23,11 +24,25 @@ class PlaybackProcessor extends AudioWorkletProcessor {
       if (!this._started && this._bufferedChunks() >= JITTER_CHUNKS) {
         this._started = true;
       }
+    } else if (msg.type === "pause") {
+      // An interruption the CLIENT believes in but the server has not confirmed yet.
+      // Silences output instantly (design doc A11 -- never wait for a round trip) while
+      // keeping the queue intact, because that belief is often wrong: the 400ms energy
+      // gate fires on playback echo and room noise too. This used to be a "clear", and
+      // since the server streams audio faster than real time the buffer routinely holds
+      // several seconds of speech -- so a single false positive silently destroyed a
+      // large chunk of the reply. That is what "it only ever speaks part of the
+      // response" was.
+      this._paused = true;
+    } else if (msg.type === "resume") {
+      // The server read the transcript and there was no interruption after all.
+      this._paused = false;
     } else if (msg.type === "clear") {
-      // Local barge-in or a server `cancel`: drop everything not yet played.
+      // A CONFIRMED cancel: this audio is genuinely stale, drop it.
       this._queue = [];
       this._readOffset = 0;
       this._started = false;
+      this._paused = false;
     }
   }
 
@@ -39,7 +54,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
     const output = outputs[0][0];
     if (!output) return true;
 
-    if (!this._started) {
+    if (!this._started || this._paused) {
       output.fill(0);
       return true;
     }

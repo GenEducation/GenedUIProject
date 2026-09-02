@@ -14,7 +14,7 @@ import {
   packUplinkFrame,
   parseDownlinkFrame,
 } from "@/features/student/services/speechPipelineProtocol";
-import { isSustained, ownsTheTurn } from "@/features/student/services/speechPipelineVad";
+import { frameAction, isSustained, ownsTheTurn } from "@/features/student/services/speechPipelineVad";
 
 export type PipelineState = "idle" | "listening" | "thinking" | "speaking";
 
@@ -32,8 +32,15 @@ export type SpeechPipelineEvent =
   | { type: "error"; message: string };
 
 export interface SpeechPipelineInit {
-  sessionId: string;
+  // Omitted for a cold start (core_service/voice/pipeline/router.py now creates a
+  // session when none is given) -- the server assigns one and reports it back as a
+  // "session_id" event, which the caller must adopt.
+  sessionId?: string;
   chapterId?: string;
+  // Cold start only: the subject the student already picked in the agent picker, so
+  // entry doesn't re-ask "which subject" -- core_service/voice/pipeline/router.py
+  // validates it the same way V2's voice/router.py does (require_taxonomy_subject).
+  subject?: string;
   language?: string;
   voice?: string;
   studentId: string;
@@ -42,6 +49,11 @@ export interface SpeechPipelineInit {
 // Design doc §7.5: a voice onset shorter than this while the tutor is speaking is a
 // backchannel ("haan", "okay") and must not interrupt; only a sustained one barges in.
 const BARGE_IN_MIN_MS = 400;
+
+// Cap on the audio held while an interruption is being confirmed. BARGE_IN_MIN_MS of
+// 20ms frames is 20; this is ~1.5s, so a confirmation that never arrives (stray noise)
+// cannot grow this without bound, and speech_end clears it either way.
+const MAX_PENDING_FRAMES = 75;
 
 // Must match core-service's shared_utils.speech.config.OUTPUT_SAMPLE_RATE_HZ -- the
 // rate TTS actually synthesizes at. Live bug: the playback AudioContext used to be
@@ -67,9 +79,24 @@ class SpeechPipelineService {
   private lastPlayedUntilMs = 0;
   private speechOnsetAt: number | null = null;
   private pendingPreroll: ArrayBuffer | null = null;
+  /** Audio captured while an interruption is still being confirmed -- see
+   * MAX_PENDING_FRAMES and _onMicMessage's "frame" branch. */
+  private pendingFrames: ArrayBuffer[] = [];
   private muted = false;
 
   async connect(init: SpeechPipelineInit, onEvent: (event: SpeechPipelineEvent) => void) {
+    // Live bug: a second connect() while one was already open (React StrictMode's
+    // double-invoked effects in dev, or any other double-call) never closed the first
+    // socket -- `this.ws = ws` below just overwrote the reference, leaving the old
+    // connection's own server-side session alive and its frames still arriving into
+    // this.onEvent (a single shared field, always the latest closure) interleaved with
+    // the new session's -- two independent cold-start entry conversations, two sets of
+    // utterance_start/assistant_transcript frames on one message handler: a literal
+    // "double response". Tearing down any existing connection first makes connect()
+    // idempotent under a double-call the way it was always assumed to be.
+    if (this.ws) {
+      await this.disconnect();
+    }
     this.onEvent = onEvent;
 
     const apiBaseUrl =
@@ -89,10 +116,14 @@ class SpeechPipelineService {
       ws.send(
         JSON.stringify({
           type: "init",
-          launch_mode: "continue_session",
+          // No sessionId -> cold start: no chapter resolved yet, nothing to continue.
+          // core_service/voice/v2/session_contract.py's VoiceLaunchContract forbids
+          // "new" from carrying a session_id, mirroring continue_session's requiring one.
+          launch_mode: init.sessionId ? "continue_session" : "new",
           session_id: init.sessionId,
           student_id: init.studentId,
           chapter_id: init.chapterId,
+          subject: init.subject,
           language: init.language,
           voice: init.voice,
         }),
@@ -132,6 +163,9 @@ class SpeechPipelineService {
     this.ws?.close();
     this.ws = null;
     this.state = "idle";
+    this.speechOnsetAt = null;
+    this.pendingPreroll = null;
+    this.pendingFrames = [];
   }
 
   setMuted(muted: boolean) {
@@ -152,7 +186,18 @@ class SpeechPipelineService {
 
   private async _startAudio() {
     this.mediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      // autoGainControl is OFF deliberately, and it is half of why the cascade could not
+      // hold a single turn: AGC continuously renormalizes gain, so in a quiet room it
+      // raises the noise floor until room tone alone reads as speech to any energy VAD
+      // downstream. That produced a stream of phantom "barge-ins" which destroyed three
+      // consecutive tutor replies before one byte of audio was ever spoken (live, 2 Sep
+      // 2026 -- see mic-processor.js's RMS_ABSOLUTE_FLOOR comment for the evidence).
+      // The VAD there now measures against a tracked noise floor instead of a constant,
+      // which tolerates AGC far better, but a mic whose gain is stable is still the input
+      // that decision wants -- the two fixes belong together. echoCancellation stays ON
+      // and is load-bearing: without it the tutor's own playback re-enters the mic and
+      // barges in on itself.
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
     });
 
     // Two contexts, deliberately: the mic wants the device's native rate (best capture
@@ -210,8 +255,15 @@ class SpeechPipelineService {
       }
       // Only forward audio once a turn is actually open server-side. Before
       // confirmation there is no open AudioFeed on the other end to receive it.
-      if (this.state === "listening") {
+      // "cannot send it yet" is not "throw it away" -- see frameAction, which carries the
+      // full story of the 400ms hole this used to punch into the start of every
+      // interrupting utterance.
+      const action = frameAction(this.state, this.speechOnsetAt !== null);
+      if (action === "send") {
         this._sendBinary(msg.pcm);
+      } else if (action === "buffer") {
+        this.pendingFrames.push(msg.pcm);
+        if (this.pendingFrames.length > MAX_PENDING_FRAMES) this.pendingFrames.shift();
       }
       return;
     }
@@ -220,6 +272,7 @@ class SpeechPipelineService {
       const wasUnconfirmed = this.speechOnsetAt !== null && this.state !== "listening";
       this.speechOnsetAt = null;
       this.pendingPreroll = null;
+      this.pendingFrames = [];
       if (wasUnconfirmed) return; // never opened a server-side turn; nothing to close
       this._sendJson({ type: "end_of_speech", client_ts_ms: Date.now() });
     }
@@ -230,10 +283,13 @@ class SpeechPipelineService {
     if (!isSustained(this.speechOnsetAt, performance.now(), BARGE_IN_MIN_MS)) return;
 
     if (this.state === "speaking") {
-      // Sustained voice while the tutor is speaking: a real interruption. Stop
-      // playback locally FIRST (design doc A11 -- never wait for the server round
-      // trip), then tell the server what was actually heard.
-      this.playbackNode?.port.postMessage({ type: "clear" });
+      // Sustained voice while the tutor is speaking: probably a real interruption.
+      // Silence playback locally FIRST (design doc A11 -- never wait for the server
+      // round trip), but PAUSE rather than discard: "probably" is doing real work in
+      // that sentence, and if the transcript comes back empty the server tells us to
+      // resume and nothing was lost. Discarding here meant every false positive
+      // permanently ate whatever was buffered, which is seconds of speech.
+      this.playbackNode?.port.postMessage({ type: "pause" });
       if (this.activeUtteranceId !== null) {
         this._sendJson({
           type: "barge_in",
@@ -248,6 +304,10 @@ class SpeechPipelineService {
     this.onEvent?.({ type: "state", state: "listening" });
     this._sendJson({ type: "speech_start", client_ts_ms: Date.now() });
     if (this.pendingPreroll) this._sendBinary(this.pendingPreroll);
+    // Then everything captured while we were deciding, in order, so the utterance the
+    // server sees runs preroll -> confirmation window -> live with no gap in it.
+    for (const frame of this.pendingFrames) this._sendBinary(frame);
+    this.pendingFrames = [];
     this.pendingPreroll = null;
     this.speechOnsetAt = null; // one confirmation per onset
   }
@@ -304,6 +364,18 @@ class SpeechPipelineService {
         break;
       case "state":
         this.state = payload.state as PipelineState;
+        // The server re-sends this when it has read an interruption's transcript and
+        // found nothing in it, which is both halves of undoing a false positive: it
+        // restores the state _maybeConfirmInterruption optimistically set to
+        // "listening" (without which ownsTheTurn stays false, the 400ms barge-in gate
+        // never applies again for the rest of the turn, and the next stray noise
+        // cancels the reply outright), and it lets the paused audio play on.
+        if (ownsTheTurn(this.state)) {
+          this.playbackNode?.port.postMessage({ type: "resume" });
+          this.speechOnsetAt = null;
+          this.pendingPreroll = null;
+          this.pendingFrames = [];
+        }
         this.onEvent?.({ type: "state", state: this.state });
         break;
       case "partial_transcript":
@@ -329,14 +401,21 @@ class SpeechPipelineService {
           text: String(payload.text ?? ""),
         });
         break;
-      case "utterance_end":
+      case "utterance_end": {
+        const reason = payload.reason === "cancelled" ? "cancelled" : "complete";
+        if (reason === "cancelled") {
+          // Confirmed stale: now it really can go. (A "complete" utterance must NOT be
+          // cleared -- its tail is still queued and still owed to the child.)
+          this.playbackNode?.port.postMessage({ type: "clear" });
+        }
         this.onEvent?.({
           type: "utterance_end",
           utteranceId: Number(payload.utterance_id),
-          reason: payload.reason === "cancelled" ? "cancelled" : "complete",
+          reason,
         });
         this.activeUtteranceId = null;
         break;
+      }
       case "cancel":
         // Server-initiated cancel (distinct from our own local barge-in): clear
         // whatever is still queued for that utterance.
