@@ -219,7 +219,19 @@ class MicProcessor extends AudioWorkletProcessor {
       // No decision here. Every frame goes up with its energy verdict and the float
       // samples Silero needs (the model wants float32, not the PCM16 the uplink wants,
       // and converting back on the main thread would lose precision for no reason).
-      this._prerollFrames.push(pcm16);
+      // A COPY, not pcm16 itself. The postMessage below TRANSFERS pcm16.buffer, and a
+      // transfer detaches it: every frame still held in the ring buffer would become
+      // zero-length, so the preroll flushed on the next onset would be empty. That is not
+      // a subtle degradation -- it silently removes the whole ~500ms before the onset,
+      // which is the entire reason the ring exists.
+      //
+      // Live, 3 Sep 2026: "Let's start fresh" transcribed as "Start fresh", "I want to
+      // study ML Aggarwal test only" as "to study ML Aggarwal test only", "So how will it
+      // grow?" as "How will it grow", and "four hundred" as "hundred" -- one or two
+      // leading words gone from every single utterance. The internal-mode path never hit
+      // this because it never posts the frames it retains: it returns before the send
+      // while unvoiced, so nothing it keeps is ever transferred.
+      this._prerollFrames.push(new Int16Array(pcm16));
       if (this._prerollFrames.length > this._prerollMaxFrames) this._prerollFrames.shift();
       const floats = new Float32Array(resampled);
       this.port.postMessage(
