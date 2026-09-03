@@ -29,6 +29,9 @@ interface ServiceInternals {
   clockOffsetMs: number | null;
   clockRttMs: number | null;
   scheduledVisuals: unknown[];
+  awaitingPreroll: boolean;
+  micNode: unknown;
+  _handleCaptureFrame(pcm: ArrayBuffer): void;
   playbackNode: unknown;
   onEvent: ((event: Record<string, unknown>) => void) | null;
   startPushToTalk(): void;
@@ -390,5 +393,126 @@ describe("visual scheduling against the playback clock", () => {
     service._onPlaybackMessage({ type: "position", playedUntilMs: 9999, bufferedMs: 0 });
 
     expect(events.filter((e) => e.type === "visual")).toHaveLength(0);
+  });
+});
+
+describe("preroll ordering on a confirmed onset", () => {
+  beforeEach(() => {
+    reset();
+    service.awaitingPreroll = false;
+    service.micNode = { port: { postMessage: () => {} } };
+  });
+
+  function onsetFrame(): ArrayBuffer {
+    return new Int16Array([1, 2, 3]).buffer;
+  }
+
+  /** _sendBinary wraps each payload in a 12-byte uplink header, so the frames recorded by
+   * the fake socket are not the buffers that went in. Compare payloads, not identity. */
+  function payloads(sent: Sent): number[][] {
+    return sent.binary.map((frame) => Array.from(new Int16Array(frame.slice(12))));
+  }
+
+  it("holds live frames until the preroll arrives, then sends preroll first", () => {
+    /* Asking the worklet for the preroll is a postMessage round trip, so the reply lands
+     * a tick later -- by which point the turn is open and a live frame would already have
+     * gone out AHEAD of the audio that precedes it. The uplink read
+     * [live][preroll][live...], splicing the start of the utterance in after a later
+     * chunk.
+     *
+     * Live, 3 Sep 2026: "I believe it will be ₹400" came back as "believe it will be
+     * ₹400", and "four hundred" as "hundred" -- persisted and shown to the child as ₹100
+     * on a turn where ₹400 was the correct answer. A dropped leading syllable does not
+     * read as damage; it reads as a different, plausible answer. */
+    const sent = attachFakeSocket();
+    service.state = "listening";
+    service.awaitingPreroll = true;
+
+    service._handleCaptureFrame(onsetFrame());
+    expect(sent.binary).toHaveLength(0);
+
+    const preroll = new Int16Array([9, 9]).buffer;
+    service._onMicMessage({ type: "preroll", preroll });
+
+    expect(payloads(sent)).toEqual([
+      [9, 9], // the preroll -- the audio that PRECEDES the onset, sent first
+      [1, 2, 3], // then the frame captured while waiting for it
+    ]);
+    expect(service.awaitingPreroll).toBe(false);
+  });
+
+  it("preserves capture order across several held frames", () => {
+    const sent = attachFakeSocket();
+    service.state = "listening";
+    service.awaitingPreroll = true;
+    const a = new Int16Array([1]).buffer;
+    const b = new Int16Array([2]).buffer;
+
+    service._handleCaptureFrame(a);
+    service._handleCaptureFrame(b);
+    const preroll = new Int16Array([0]).buffer;
+    service._onMicMessage({ type: "preroll", preroll });
+
+    expect(payloads(sent)).toEqual([[0], [1], [2]]);
+  });
+
+  it("releases held frames if the preroll never arrives", () => {
+    /* Losing the preroll costs the leading few hundred milliseconds; holding every frame
+     * forever would cost the whole utterance. */
+    const sent = attachFakeSocket();
+    service.state = "listening";
+    service.awaitingPreroll = true;
+
+    for (let i = 0; i < 200; i++) service._handleCaptureFrame(new Int16Array([i]).buffer);
+
+    expect(service.awaitingPreroll).toBe(false);
+    expect(sent.binary.length).toBeGreaterThan(0);
+  });
+
+  it("does not hold frames when no onset is pending", () => {
+    const sent = attachFakeSocket();
+    service.state = "listening";
+
+    service._handleCaptureFrame(onsetFrame());
+
+    expect(sent.binary).toHaveLength(1);
+  });
+});
+
+describe("session limits are not connection errors", () => {
+  beforeEach(reset);
+
+  it("reports an exceeded budget as a session_limit, never as an error", () => {
+    /* Routing it through the error path told the child "Couldn't reconnect the voice
+     * session. Your transcript is safe -- try again" for a session that ended exactly as
+     * designed. */
+    attachFakeSocket();
+    const events: Record<string, unknown>[] = [];
+    service.onEvent = (e) => events.push(e);
+
+    service._onControlFrame({
+      type: "session_limit",
+      kind: "silence_duration",
+      severity: "exceeded",
+      message: "nobody has spoken for a long time",
+    });
+
+    expect(events.some((e) => e.type === "error")).toBe(false);
+    expect(events[0]).toMatchObject({ type: "session_limit", severity: "exceeded" });
+  });
+
+  it("passes a warning through as a warning", () => {
+    attachFakeSocket();
+    const events: Record<string, unknown>[] = [];
+    service.onEvent = (e) => events.push(e);
+
+    service._onControlFrame({
+      type: "session_limit",
+      kind: "lesson_duration",
+      severity: "warning",
+      message: "nearly out of time",
+    });
+
+    expect(events[0]).toMatchObject({ severity: "warning" });
   });
 });

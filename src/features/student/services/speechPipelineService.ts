@@ -48,6 +48,7 @@ export type SpeechPipelineEvent =
   | { type: "utterance_end"; utteranceId: number; reason: "complete" | "cancelled" }
   | { type: "safety_redirect"; content: string }
   | { type: "visual"; kind: string; eventId: string; payload: Record<string, unknown> }
+  | { type: "session_limit"; kind: string; severity: "warning" | "exceeded"; message: string }
   | { type: "error"; message: string };
 
 export interface SpeechPipelineInit {
@@ -153,6 +154,9 @@ class SpeechPipelineService {
   /** Latest detector health, surfaced for diagnostics -- a session spent on the energy
    * fallback behaves measurably differently from one on Silero. */
   private vadHealth = "starting";
+  /** True between asking the worklet for the preroll and receiving it. Frames captured
+   * in that window are held, never sent -- see _handleCaptureFrame. */
+  private awaitingPreroll = false;
 
   async connect(init: SpeechPipelineInit, onEvent: (event: SpeechPipelineEvent) => void) {
     // Live bug: a second connect() while one was already open (React StrictMode's
@@ -249,6 +253,7 @@ class SpeechPipelineService {
     this.clockOffsetMs = null;
     this.clockRttMs = null;
     this.clockPingsSent = 0;
+    this.awaitingPreroll = false;
     this.scheduledVisuals = [];
     this._setMicState("initializing");
     this.pushToTalk = false;
@@ -524,8 +529,17 @@ class SpeechPipelineService {
 
     if (msg.type === "preroll" && msg.preroll) {
       // Arrived because _onVadVerdict asked for it on a confirmed onset.
-      if (ownsTheTurn(this.state)) this.pendingPreroll = msg.preroll;
-      else this._sendBinary(msg.preroll);
+      this.awaitingPreroll = false;
+      if (ownsTheTurn(this.state)) {
+        // Interruption still unconfirmed: _maybeConfirmInterruption owns the ordering
+        // and will send the preroll ahead of the held frames when it commits.
+        this.pendingPreroll = msg.preroll;
+        return;
+      }
+      // Preroll FIRST, then everything captured while waiting for it, in capture order.
+      this._sendBinary(msg.preroll);
+      for (const frame of this.pendingFrames) this._sendBinary(frame);
+      this.pendingFrames = [];
       return;
     }
 
@@ -575,6 +589,32 @@ class SpeechPipelineService {
     if (this.speechOnsetAt !== null && ownsTheTurn(this.state)) {
       this._maybeConfirmInterruption();
     }
+
+    if (this.awaitingPreroll) {
+      // Held, not sent. Asking the worklet for the preroll is a round trip through
+      // postMessage, so the reply lands a tick or more later -- and by then the turn is
+      // already open, so this frame would go out AHEAD of the audio that precedes it.
+      // The uplink would read [live frame][preroll][live frames...], splicing the start
+      // of the utterance in after a later chunk.
+      //
+      // That is not a theoretical reordering. Live, 3 Sep 2026: "I believe it will be
+      // ₹400" was transcribed "believe it will be ₹400", and "four hundred" came back as
+      // "hundred" -- persisted and shown to the child as ₹100, on a turn where the answer
+      // ₹400 was correct. Both are the same clipped first word, and a discarded leading
+      // syllable does not read as damage: it reads as a different, plausible answer.
+      this.pendingFrames.push(pcm);
+      if (this.pendingFrames.length > MAX_PENDING_FRAMES) {
+        // The preroll never came (a torn-down worklet, say). Losing it costs the leading
+        // few hundred milliseconds; continuing to hold every frame would cost the whole
+        // utterance, so give up on it and let the audio through.
+        console.warn("[SpeechPipelineService] preroll never arrived -- releasing held frames");
+        this.awaitingPreroll = false;
+        for (const frame of this.pendingFrames) this._sendBinary(frame);
+        this.pendingFrames = [];
+      }
+      return;
+    }
+
     const action = frameAction(this.state, this.speechOnsetAt !== null);
     if (action === "send") {
       this._sendBinary(pcm);
@@ -599,7 +639,11 @@ class SpeechPipelineService {
     if (verdict.onset) {
       this.speechOnsetAt = performance.now();
       // The preroll lives in the worklet's ring buffer; ask for it now that the onset is
-      // real. Inference necessarily trails the audio, which is exactly why it exists.
+      // real. Inference necessarily trails the audio -- Silero needs a full 512-sample
+      // window plus minSpeechMs of sustained voice before it will commit -- which is
+      // exactly what the preroll exists to recover. Frames are held until it arrives so
+      // the uplink stays in capture order.
+      this.awaitingPreroll = true;
       this.micNode?.port.postMessage({ type: "flush_preroll" });
       if (!ownsTheTurn(this.state)) {
         this.state = "listening";
@@ -654,6 +698,7 @@ class SpeechPipelineService {
     for (const frame of this.pendingFrames) this._sendBinary(frame);
     this.pendingFrames = [];
     this.pendingPreroll = null;
+    this.awaitingPreroll = false;
     this.speechOnsetAt = null; // one confirmation per onset
   }
 
@@ -844,9 +889,16 @@ class SpeechPipelineService {
         break;
       }
       case "session_limit":
+        // Deliberately NOT an "error". A lesson reaching its time limit, or a session
+        // being wound up after a long silence, is the system working -- and routing it
+        // through the error path told the child "Couldn't reconnect the voice session.
+        // Your transcript is safe -- try again", which is both wrong and alarming for a
+        // session that ended exactly as designed (live, 3 Sep 2026).
         this.onEvent?.({
-          type: "error",
-          message: String(payload.message ?? "session limit reached"),
+          type: "session_limit",
+          kind: String(payload.kind ?? ""),
+          severity: payload.severity === "exceeded" ? "exceeded" : "warning",
+          message: String(payload.message ?? ""),
         });
         break;
       case "safety_redirect":

@@ -546,6 +546,25 @@ async function startCascadeVoiceSession(
         console.error("🎙️ [StudentStore] Cascade voice session error:", event.message);
         set({ voiceSessionStatus: "error" });
         break;
+      case "session_limit":
+        // A budget being reached is not a failure. "exceeded" means the server is winding
+        // the lesson down gracefully -- it finishes the utterance in flight and closes
+        // between turns -- so it ends the session as idle with an explanation, rather
+        // than as an error offering a reconnect the child does not need.
+        //
+        // Only the exceeded case gets a banner. A warning ("nearly out of time") is for
+        // the tutor to act on by bringing the topic to a close; showing it with the
+        // "rotating" styling would put a spinner in front of the child implying something
+        // is pending, and there is nothing to wait for.
+        if (event.severity === "exceeded") {
+          set({
+            voiceSessionStatus: "idle",
+            sessionNotice: { message: event.message, kind: "ended" },
+          });
+        } else {
+          console.info("🎙️ [StudentStore] session budget warning:", event.message);
+        }
+        break;
       case "session_id": {
         // Cold start only: router.py creates the session server-side and reports its
         // real id back here, once, right after connecting. Mirrors the chat SSE path's
