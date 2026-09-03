@@ -21,8 +21,12 @@ describe("isResumableForCascade", () => {
     expect(isResumableForCascade(makeChat(), false)).toBe(true);
   });
 
-  it("is false in push-to-talk mode -- the mic worklet has no forced-listen mode yet", () => {
-    expect(isResumableForCascade(makeChat(), true)).toBe(false);
+  // Push-to-talk was excluded until the cascade had a forced-listening mode. It has one
+  // now on both sides -- speechPipelineService.startPushToTalk bypasses the worklet's
+  // onset detection, and core_service/voice/pipeline/endpointer.py arbitrates the turn
+  // from press/release -- so PTT children no longer get routed to the legacy path.
+  it("is true in push-to-talk mode -- the cascade has forced listening now", () => {
+    expect(isResumableForCascade(makeChat(), true)).toBe(true);
   });
 
   // core_service/voice/pipeline/router.py now drives the entry conversation itself

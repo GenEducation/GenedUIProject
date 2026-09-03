@@ -18,11 +18,27 @@ import { frameAction, isSustained, ownsTheTurn } from "@/features/student/servic
 
 export type PipelineState = "idle" | "listening" | "thinking" | "speaking";
 
+/**
+ * What the microphone itself is doing, which is NOT the same question as what the turn
+ * is doing (PipelineState).
+ *
+ * The UI previously had only the latter, so it could show a live-looking microphone
+ * before capture existed: connect() resolves when the WebSocket opens, but _startAudio()
+ * -- getUserMedia's permission prompt, two AudioContexts, two addModule() fetches -- runs
+ * afterwards and can take hundreds of milliseconds or fail outright. Anything a child
+ * says in that window goes nowhere, and the interface told them it was listening.
+ *
+ * "ready" therefore means every one of capture, preprocessing and the socket is up, and
+ * nothing before that point may present as ready.
+ */
+export type MicState = "initializing" | "ready" | "listening" | "unavailable";
+
 export type SpeechPipelineEvent =
   | { type: "connected" }
   | { type: "disconnected" }
   | { type: "session_id"; sessionId: string }
   | { type: "state"; state: PipelineState }
+  | { type: "mic_state"; micState: MicState; detail?: string }
   | { type: "partial_transcript"; text: string }
   | { type: "final_transcript"; text: string; confidence: number | null; language: string }
   | { type: "utterance_start"; utteranceId: number }
@@ -64,6 +80,11 @@ const MAX_PENDING_FRAMES = 75;
 // own output stage do the resampling, correctly, once, instead of us getting it wrong.
 const PLAYBACK_SAMPLE_RATE = 24000;
 
+// How often buffer depth is reported to the server. The worklet already throttles its
+// own reports; this bounds the WebSocket traffic independently of the audio callback
+// rate, which changes with the device's block size.
+const BUFFER_REPORT_INTERVAL_MS = 250;
+
 class SpeechPipelineService {
   private ws: WebSocket | null = null;
   private micCtx: AudioContext | null = null;
@@ -83,6 +104,9 @@ class SpeechPipelineService {
    * MAX_PENDING_FRAMES and _onMicMessage's "frame" branch. */
   private pendingFrames: ArrayBuffer[] = [];
   private muted = false;
+  private micState: MicState = "initializing";
+  private pushToTalk = false;
+  private lastBufferReportAt = 0;
 
   async connect(init: SpeechPipelineInit, onEvent: (event: SpeechPipelineEvent) => void) {
     // Live bug: a second connect() while one was already open (React StrictMode's
@@ -129,14 +153,22 @@ class SpeechPipelineService {
         }),
       );
       onEvent({ type: "connected" });
+      // Explicitly NOT "ready" yet -- the socket being open says nothing about whether
+      // the microphone is. See MicState.
+      this._setMicState("initializing");
       try {
         await this._startAudio();
+        this._setMicState("ready");
       } catch (err) {
         // getUserMedia permission denial, no AudioWorklet support, etc. WebSocket's
         // onopen handler is fire-and-forget -- nothing awaits this closure's promise --
         // so a rejection here would otherwise vanish as an unhandled rejection instead
         // of ever reaching the caller.
         console.error("[SpeechPipelineService] Failed to start audio:", err);
+        this._setMicState(
+          "unavailable",
+          err instanceof Error ? err.message : "Could not access the microphone",
+        );
         onEvent({
           type: "error",
           message: err instanceof Error ? err.message : "Could not access the microphone",
@@ -163,6 +195,8 @@ class SpeechPipelineService {
     this.ws?.close();
     this.ws = null;
     this.state = "idle";
+    this._setMicState("initializing");
+    this.pushToTalk = false;
     this.speechOnsetAt = null;
     this.pendingPreroll = null;
     this.pendingFrames = [];
@@ -180,6 +214,56 @@ class SpeechPipelineService {
     }
     this.muted = muted;
     this._sendJson({ type: muted ? "mute" : "unmute" });
+  }
+
+  /**
+   * Begin a forced-listening turn: the child is holding the talk button.
+   *
+   * Capture is started BEFORE any visual acknowledgement the caller renders, because the
+   * opposite order loses the first syllable -- a child starts talking as they press, not
+   * after the button finishes animating. The worklet's preroll ring buffer covers the
+   * remaining few tens of milliseconds.
+   */
+  startPushToTalk() {
+    if (this.pushToTalk) return; // stuck/repeat pointer events must be idempotent
+    this.pushToTalk = true;
+    this.muted = false;
+    this.state = "listening";
+    this._setMicState("listening");
+    this.onEvent?.({ type: "state", state: "listening" });
+    this._sendJson({ type: "ptt_press", client_ts_ms: Date.now() });
+    // Anything the mic worklet had already buffered toward an onset belongs to this
+    // turn -- the child may well have started speaking before the press landed.
+    if (this.pendingPreroll) this._sendBinary(this.pendingPreroll);
+    for (const frame of this.pendingFrames) this._sendBinary(frame);
+    this.pendingFrames = [];
+    this.pendingPreroll = null;
+    this.speechOnsetAt = null;
+  }
+
+  /**
+   * Release, cancel, blur, disconnect, pointer loss -- every one of these ends the turn,
+   * and they can arrive together, so this is idempotent by construction.
+   *
+   * The server keeps a short trailing grace after the release (its
+   * ptt_release_grace_ms), because a release reliably lands slightly before the speaker
+   * actually stops.
+   */
+  stopPushToTalk() {
+    if (!this.pushToTalk) return;
+    this.pushToTalk = false;
+    this._sendJson({ type: "ptt_release", client_ts_ms: Date.now() });
+    this._setMicState("ready");
+  }
+
+  get microphoneState(): MicState {
+    return this.micState;
+  }
+
+  private _setMicState(next: MicState, detail?: string) {
+    if (this.micState === next) return;
+    this.micState = next;
+    this.onEvent?.({ type: "mic_state", micState: next, detail });
   }
 
   // ── Audio setup ──────────────────────────────────────────────────────────────
@@ -223,6 +307,15 @@ class SpeechPipelineService {
 
   private _onMicMessage(msg: { type: string; preroll?: ArrayBuffer; pcm?: ArrayBuffer }) {
     if (this.muted) return;
+
+    if (this.pushToTalk) {
+      // Forced listening: the button owns the turn boundary, so onset/end decisions from
+      // the energy VAD are ignored entirely and every captured frame is forwarded. This
+      // is the "bypasses autonomous onset decisions while preserving preroll" rule -- the
+      // preroll still applies, it was just already flushed at press time.
+      if (msg.type === "frame" && msg.pcm) this._sendBinary(msg.pcm);
+      return;
+    }
 
     const interrupting = ownsTheTurn(this.state);
 
@@ -274,7 +367,19 @@ class SpeechPipelineService {
       this.pendingPreroll = null;
       this.pendingFrames = [];
       if (wasUnconfirmed) return; // never opened a server-side turn; nothing to close
-      this._sendJson({ type: "end_of_speech", client_ts_ms: Date.now() });
+      if (this.pushToTalk) return; // the button, not the VAD, ends a push-to-talk turn
+      // `candidate: true` hands the decision to the server's endpoint arbiter instead of
+      // finalizing the turn outright. The local VAD only knows that 700ms of silence
+      // passed, which is not the same thing as the child having finished: they pause
+      // mid-sentence to think, and low-energy terminal phonemes fall under the threshold
+      // while the word is still being said. The arbiter weighs this against the
+      // provider's own endpoint signal and its partials before committing, and keeps the
+      // audio feed open meanwhile so nothing spoken during the window is lost.
+      //
+      // A server that does not understand the flag treats this as a plain end_of_speech,
+      // which is exactly the previous behaviour -- so this is safe to ship ahead of the
+      // backend.
+      this._sendJson({ type: "end_of_speech", candidate: true, client_ts_ms: Date.now() });
     }
   }
 
@@ -312,10 +417,43 @@ class SpeechPipelineService {
     this.speechOnsetAt = null; // one confirmation per onset
   }
 
-  private _onPlaybackMessage(msg: { type: string; playedUntilMs: number }) {
-    if (msg.type === "position") {
-      this.lastPlayedUntilMs = msg.playedUntilMs;
+  private _onPlaybackMessage(msg: {
+    type: string;
+    playedUntilMs?: number;
+    bufferedMs?: number;
+    wantMore?: boolean;
+    saturated?: boolean;
+    droppedChunks?: number;
+  }) {
+    if (msg.type === "overflow") {
+      // The bounded queue refused audio, which can only happen if the server ignored
+      // backpressure. Surfaced rather than swallowed: a hole in the middle of an
+      // utterance is indistinguishable to the child from the tutor being wrong.
+      console.error(
+        "[SpeechPipelineService] playback buffer overflow -- dropped",
+        msg.droppedChunks,
+        "chunk(s)",
+      );
+      this.onEvent?.({ type: "error", message: "Audio buffer overflowed" });
+      return;
     }
+    if (msg.type !== "position") return;
+    this.lastPlayedUntilMs = msg.playedUntilMs ?? this.lastPlayedUntilMs;
+
+    // Report depth so the server can stop synthesizing ahead of playback. Without this
+    // the server has no idea how far in front it is running and will happily queue the
+    // whole reply into concurrent provider calls, all of which a barge-in then discards.
+    const now = Date.now();
+    if (now - this.lastBufferReportAt < BUFFER_REPORT_INTERVAL_MS) return;
+    this.lastBufferReportAt = now;
+    this._sendJson({
+      type: "playback_buffer",
+      buffered_ms: msg.bufferedMs ?? 0,
+      played_until_ms: this.lastPlayedUntilMs,
+      want_more: msg.wantMore ?? true,
+      saturated: msg.saturated ?? false,
+      utterance_id: this.activeUtteranceId,
+    });
   }
 
   // ── Wire framing ─────────────────────────────────────────────────────────────

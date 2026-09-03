@@ -33,12 +33,45 @@ export function VoiceControls({ onEnd }: VoiceControlsProps) {
       {/* Push to Talk — center, dominant, only when muted */}
       {showPtt && (
         <button
-          onMouseDown={beginPttUtterance}
-          onMouseUp={endPttUtterance}
-          onMouseLeave={endPttUtterance}
-          onTouchStart={(e) => { e.preventDefault(); beginPttUtterance(); }}
-          onTouchEnd={(e) => { e.preventDefault(); endPttUtterance(); }}
-          className="flex items-center gap-2 px-4 sm:px-7 h-11 sm:h-12 rounded-full font-bold text-[12px] sm:text-[13px] select-none transition-all whitespace-nowrap flex-shrink-0"
+          type="button"
+          // Pointer events rather than mouse+touch: one code path for mouse, touch and
+          // pen, and -- the reason this matters -- onPointerCancel and onLostPointerCapture
+          // fire for the cases a mouseup never arrives at all (the browser taking over the
+          // gesture as a scroll, a phone call interrupting, the element being unmounted
+          // mid-press). Without them the button stays visually held and the turn stays
+          // open server-side until the utterance cap eventually closes it.
+          onPointerDown={(e) => {
+            // Capture keeps the release bound to this element even if the finger slides
+            // off it, which is the common case on a phone -- a child holding a button
+            // does not hold still.
+            e.currentTarget.setPointerCapture?.(e.pointerId);
+            beginPttUtterance();
+          }}
+          onPointerUp={endPttUtterance}
+          onPointerCancel={endPttUtterance}
+          onLostPointerCapture={endPttUtterance}
+          // Focus loss ends the turn too: alt-tabbing away mid-press must not leave the
+          // microphone open.
+          onBlur={endPttUtterance}
+          // Keyboard activation. A button that can only be operated by holding a pointer
+          // is unusable with a keyboard or a switch device, and the default click
+          // handling would fire begin and end together with nothing in between.
+          onKeyDown={(e) => {
+            if ((e.key === " " || e.key === "Enter") && !e.repeat) {
+              e.preventDefault();
+              beginPttUtterance();
+            }
+          }}
+          onKeyUp={(e) => {
+            if (e.key === " " || e.key === "Enter") {
+              e.preventDefault();
+              endPttUtterance();
+            }
+          }}
+          onContextMenu={(e) => e.preventDefault()} // long-press menu would strand the hold
+          aria-pressed={pttHeld}
+          aria-label={pttHeld ? "Recording — release to send" : "Hold to talk"}
+          className="flex items-center gap-2 px-4 sm:px-7 h-11 sm:h-12 rounded-full font-bold text-[12px] sm:text-[13px] select-none transition-all whitespace-nowrap flex-shrink-0 touch-none"
           style={{
             background: pttHeld
               ? "linear-gradient(135deg, #34C759, #30d158)"
@@ -50,8 +83,13 @@ export function VoiceControls({ onEnd }: VoiceControlsProps) {
             transform: pttHeld ? "scale(0.97)" : "scale(1)",
           }}
         >
-          <Mic size={16} />
+          <Mic size={16} aria-hidden="true" />
           {pttHeld ? "Speaking…" : "Hold to Talk"}
+          {/* The visual state is colour and scale, neither of which a screen reader
+              conveys; aria-pressed covers the toggle but not the transition. */}
+          <span className="sr-only" role="status" aria-live="polite">
+            {pttHeld ? "Recording" : "Not recording"}
+          </span>
         </button>
       )}
 

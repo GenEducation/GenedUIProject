@@ -429,17 +429,27 @@ const getInitialVoicePrefs = () => {
 // routes a call at the wrong client.
 let activeVoiceClient: "legacy" | "cascade" = "legacy";
 
-// ADR-0015's cascade (/ws/v3/voice) does not implement math visuals, pointer sync, or
-// session-duration caps yet -- see docs/speech-pipeline-architecture.md §9 and
-// core_service/voice/pipeline/brain.py's _no_visual_route. Routing every voice session
-// through it would silently drop those features. So this only fires for hands-free mode
-// (push-to-talk needs a "force listening" mode the mic worklet's autonomous VAD does not
-// have yet) -- not on whether a chapter is already resolved: core_service/voice/pipeline
-// /router.py now drives the entry conversation itself (entry_turn.run_entry_turn) when
-// one isn't, the same way it always has for an existing lesson. A brand-new chat (id
-// "new"/"new-focused") is exactly the cold-start case that now works end-to-end.
-export function isResumableForCascade(chat: ChatSession, isPtt: boolean): boolean {
-  return !isPtt;
+// ADR-0015's cascade (/ws/v3/voice) does not implement math visuals or pointer sync yet
+// -- see docs/speech-pipeline-architecture.md §9 and core_service/voice/pipeline/brain.py's
+// _no_visual_route -- which is why this predicate still exists at all rather than every
+// session simply using the cascade.
+//
+// Push-to-talk USED to be excluded here, on the grounds that it needs a forced-listening
+// mode the mic worklet's autonomous VAD did not have. It has one now, on both sides: the
+// client bypasses onset detection entirely while the button is held
+// (speechPipelineService.startPushToTalk) and the server arbitrates the turn boundary
+// from the press/release rather than from the energy VAD
+// (core_service/voice/pipeline/endpointer.py's PTT_PRESS / PTT_RELEASE, which finalize
+// through the same normalized turn contract as a hands-free turn, with a trailing grace
+// so a release landing slightly before the speaker stops does not clip the last word).
+// Keeping the exclusion after building the thing it was waiting for would leave every
+// push-to-talk child on the legacy path for no reason.
+//
+// Not gated on whether a chapter is resolved: core_service/voice/pipeline/router.py drives
+// the entry conversation itself (entry_turn.run_entry_turn) when one isn't. A brand-new
+// chat (id "new"/"new-focused") is exactly that cold-start case.
+export function isResumableForCascade(_chat: ChatSession, _isPtt: boolean): boolean {
+  return true;
 }
 
 async function startCascadeVoiceSession(
@@ -1964,11 +1974,14 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   beginPttUtterance: () => {
     set({ pttHeld: true });
-    // Cascade sessions never start in PTT mode (isResumableForCascade excludes it), so
-    // activeVoiceClient is always "legacy" here today -- branching anyway rather than
-    // assuming, so this stays correct the day PTT support is added to the cascade.
     if (activeVoiceClient === "cascade") {
-      speechPipelineService.setMuted(false);
+      // Real forced listening, not mute/unmute. setMuted(false) only stopped DISCARDING
+      // frames -- the worklet's autonomous VAD still had to decide an onset had happened
+      // before anything opened a turn, so holding the button and speaking immediately
+      // still lost the first 250ms (MIN_SPEECH_MS) to onset confirmation, and a quiet
+      // start could lose the word entirely. startPushToTalk bypasses that decision and
+      // flushes the preroll straight away.
+      speechPipelineService.startPushToTalk();
     } else {
       voiceService.setMuted(false);
     }
@@ -1977,7 +1990,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   endPttUtterance: () => {
     set({ pttHeld: false });
     if (activeVoiceClient === "cascade") {
-      speechPipelineService.setMuted(true);
+      speechPipelineService.stopPushToTalk();
     } else {
       voiceService.setMuted(true);
     }
