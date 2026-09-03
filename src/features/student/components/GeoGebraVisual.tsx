@@ -7,6 +7,10 @@ interface GeoGebraVisualProps {
   options?: any;
 }
 
+/** Display caps, matching P5Visual — see the note there. */
+const MAX_WIDTH = 480;
+const MAX_HEIGHT = 340;
+
 export function GeoGebraVisual({ id, commands, options = {} }: GeoGebraVisualProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
@@ -92,8 +96,18 @@ export function GeoGebraVisual({ id, commands, options = {} }: GeoGebraVisualPro
     };
   }, [commands, options, containerId]);
 
+  // The applet is injected at these dimensions (see params above), so the
+  // container takes the same proportions and the applet fills it exactly.
+  const ratio = (options.width ?? 600) / (options.height ?? 320);
+
   return (
-    <div className="w-full min-h-[200px] relative flex items-center justify-center overflow-hidden geogebra-container">
+    <div
+      className="relative flex items-center justify-center overflow-hidden geogebra-container"
+      style={{
+        width: `min(100%, ${MAX_WIDTH}px, ${Math.round(MAX_HEIGHT * ratio)}px)`,
+        aspectRatio: String(ratio),
+      }}
+    >
       {loading && (
         <div className="absolute inset-0 z-10" style={{ background: "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }}>
           <style>{`

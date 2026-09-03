@@ -151,6 +151,9 @@ export const ChatMessageBubble = React.memo(
     // caught. Distinct from a normal reply because it IS distinct — treating it as
     // ordinary tutor speech is how a redirect gets mistaken for an answer.
     const isSafetyRedirect = !isUser && !!message.isSafetyRedirect;
+    // Only the student's turn and a redirect sit on a surface; an ordinary
+    // tutor reply runs free in the page.
+    const isBoxed = isUser || isSafetyRedirect;
     const [copied, setCopied] = useState(false);
 
     // Decide once per mount (render-time ref latch, StrictMode-safe) whether
@@ -208,19 +211,31 @@ export const ChatMessageBubble = React.memo(
           </div>
         )}
 
-        <div className={`max-w-[85%] space-y-2 ${isUser ? "items-end" : "items-start"} flex flex-col`}>
+        <div className={`${isUser ? "max-w-[85%]" : "w-full"} space-y-2 ${isUser ? "items-end" : "items-start"} flex flex-col`}>
           {/* Message Content Bin */}
           {(isStreaming || message.statusText || message.text.length > 0 || (message.elements && message.elements.length > 0)) && (
             <div
-              className="px-4 py-3 sm:px-6 sm:py-5 leading-relaxed text-[13px] sm:text-[15px] w-full"
+              data-testid="message-surface"
+              data-boxed={isBoxed ? "true" : "false"}
+              className={`leading-relaxed text-[13px] sm:text-[15px] w-full ${
+                isBoxed ? "px-4 py-3 sm:px-6 sm:py-5" : "py-1 sm:py-2"
+              }`}
               style={{
-                borderRadius: "1.75rem",
+                // An ordinary tutor reply carries no card: it is long-form
+                // content (prose, sketches, graphs, widgets) that reads as part
+                // of the page rather than as a chat bubble. Only the student's
+                // turn and a safety redirect keep a surface.
+                borderRadius: isBoxed ? "1.75rem" : undefined,
                 borderTopRightRadius: isUser ? 6 : undefined,
-                borderTopLeftRadius: !isUser ? 6 : undefined,
-                background: isUser ? "var(--tutor)" : isSafetyRedirect ? "#FFF8EC" : "#FFFFFF",
+                borderTopLeftRadius: isSafetyRedirect ? 6 : undefined,
+                background: isUser ? "var(--tutor)" : isSafetyRedirect ? "#FFF8EC" : undefined,
                 color: isUser ? "#FFFFFF" : isSafetyRedirect ? "#7C4A11" : "#1A202C",
-                border: isUser ? "none" : isSafetyRedirect ? "1px solid #F3D9AE" : "1px solid #E2E8F0",
-                boxShadow: isUser ? "0 2px 10px rgba(91,77,199,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
+                border: isSafetyRedirect ? "1px solid #F3D9AE" : "none",
+                boxShadow: isUser
+                  ? "0 2px 10px rgba(91,77,199,0.18)"
+                  : isSafetyRedirect
+                    ? "0 1px 4px rgba(0,0,0,0.05)"
+                    : "none",
                 // Scoped to color/shadow only — `transition-all` here used to
                 // tween the bubble's width on every revealed character
                 // (the column is shrink-to-fit up to max-w-[85%]), making the
@@ -260,7 +275,7 @@ export const ChatMessageBubble = React.memo(
             </div>
           )}
 
-          <div className="flex items-center gap-3 px-2">
+          <div className={`flex items-center gap-3 ${isBoxed ? "px-2" : "px-0"}`}>
             <span style={{ fontSize: "clamp(9px, 2vw, 11px)", fontWeight: 700, color: "#CBD5E1", textTransform: "uppercase", letterSpacing: "0.06em" }}>{message.timestamp}</span>
             {isUser && (
               <button aria-label="Copy message"
@@ -275,7 +290,7 @@ export const ChatMessageBubble = React.memo(
 
           {/* AI message extras — held back until replay typing (if any) finishes */}
           {!isUser && !isStreaming && replayFinished && (
-            <div className="space-y-3 w-full px-1">
+            <div className={`space-y-3 w-full ${isBoxed ? "px-1" : "px-0"}`}>
               {/* Option chips */}
               {message.options && message.options.length > 0 && (
                 <ChapterOptionPicker

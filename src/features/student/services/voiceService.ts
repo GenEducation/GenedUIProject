@@ -1,4 +1,5 @@
 import { getAuthToken } from "@/utils/authFetch";
+import { appendTranscriptChunk } from "../utils/voiceStreamMerge";
 import type { ExactSubject } from "@/features/subjects/subjectCatalog";
 
 /**
@@ -352,8 +353,12 @@ class VoiceService {
               // User transcript is shown immediately as it's not tied to playback
               this.onTextRevealCallback?.(data.content, "user");
             } else {
-              // Assistant transcript is buffered for synchronized typewriter
-              this.pendingAssistantText += (this.pendingAssistantText ? " " : "") + data.content;
+              // Assistant transcript is buffered for the synchronized typewriter.
+              // See appendTranscriptChunk for why chunks are joined verbatim.
+              this.pendingAssistantText = appendTranscriptChunk(
+                this.pendingAssistantText,
+                data.content,
+              );
             }
           }
           

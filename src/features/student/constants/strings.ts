@@ -15,6 +15,7 @@ export const STRINGS = {
     schedule: "Schedule",
     reportCard: "Report Card",
     me: "Me",
+    profile: "Profile",
   },
 
   streak: {
