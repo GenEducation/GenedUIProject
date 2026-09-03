@@ -91,9 +91,24 @@ const RMS_THRESHOLD_MAX = 0.05;
 // opener is being generated: the one turn that must not be destroyed.
 const VAD_WARMUP_MS = NOISE_BUCKET_MS;
 
+// Two modes. In "internal" (the original, and still the fallback) this worklet makes the
+// onset decision itself from energy alone. In "external" it makes no decision at all: it
+// streams every frame with its energy verdict attached and lets the main thread arbitrate
+// between that and Silero's probability (see services/vad/vadDecision.ts).
+//
+// The split exists because ONNX cannot run here. The AudioWorklet scope has no path to
+// instantiate WebAssembly, and blocking the render thread would drop audio outright -- so
+// the model has to live in a Worker, which means the decision has to live on the main
+// thread with it. What stays here is what genuinely belongs on the audio thread: capture,
+// resampling, the energy floor estimate, and the preroll ring buffer.
+const MODE_INTERNAL = "internal";
+const MODE_EXTERNAL = "external";
+
 class MicProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
+    this._mode = MODE_INTERNAL;
+    this.port.onmessage = (event) => this._onMessage(event.data);
     this._inBuf = new Float32Array(0);
     this._voiced = false;
     this._voicedStreakMs = 0;
@@ -105,6 +120,18 @@ class MicProcessor extends AudioWorkletProcessor {
     this._bucketMin = Infinity;
     this._bucketMs = 0;
     this._elapsedMs = 0;
+  }
+
+  _onMessage(msg) {
+    if (msg && msg.type === "set_mode") {
+      this._mode = msg.mode === MODE_EXTERNAL ? MODE_EXTERNAL : MODE_INTERNAL;
+    } else if (msg && msg.type === "flush_preroll") {
+      // The main thread confirmed an onset. Hand it everything that led up to it -- the
+      // ring buffer is the only place the audio BEFORE the decision still exists.
+      const preroll = _concatInt16(this._prerollFrames);
+      this._prerollFrames = [];
+      this.port.postMessage({ type: "preroll", preroll: preroll.buffer }, [preroll.buffer]);
+    }
   }
 
   /** Quietest 500ms bucket in the last ~5s, bias-corrected -- see NOISE_BUCKET_MS. */
@@ -187,6 +214,26 @@ class MicProcessor extends AudioWorkletProcessor {
       Math.max(RMS_ABSOLUTE_FLOOR, noiseFloor * RMS_SNR_FACTOR),
     );
     const isVoiced = this._elapsedMs >= VAD_WARMUP_MS && rms >= threshold;
+
+    if (this._mode === MODE_EXTERNAL) {
+      // No decision here. Every frame goes up with its energy verdict and the float
+      // samples Silero needs (the model wants float32, not the PCM16 the uplink wants,
+      // and converting back on the main thread would lose precision for no reason).
+      this._prerollFrames.push(pcm16);
+      if (this._prerollFrames.length > this._prerollMaxFrames) this._prerollFrames.shift();
+      const floats = new Float32Array(resampled);
+      this.port.postMessage(
+        {
+          type: "analysis_frame",
+          pcm: pcm16.buffer,
+          floats: floats.buffer,
+          energyVoiced: isVoiced,
+          seq: this._seq++,
+        },
+        [pcm16.buffer, floats.buffer],
+      );
+      return;
+    }
 
     if (isVoiced) {
       this._voicedStreakMs += 20;

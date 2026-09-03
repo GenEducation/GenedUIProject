@@ -47,13 +47,34 @@ const ABSOLUTE_MAX_MS = 30000;
 
 const BUFFER_REPORT_INTERVAL_MS = 100;
 
+// How many utterances' played-sample counters to retain. Only the current utterance is
+// ever reported, but a couple of previous ones are kept because a cancel can be
+// reconciled slightly after the fact. Bounded because a lesson is hundreds of turns long
+// and an unbounded Map here would be a slow leak on the audio thread -- the one place in
+// the system where allocation pressure is least acceptable.
+const PLAYED_HISTORY_UTTERANCES = 4;
+
 class PlaybackProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
     this._queue = [];
     this._queuedSamples = 0;
     this._readOffset = 0;
-    this._playedSamples = 0;
+    // Played samples are counted PER UTTERANCE, keyed by the utterance each chunk
+    // belongs to. A single cumulative counter -- what this used to be -- is wrong for
+    // both of its consumers: barge_in reports played_until_ms as "how far into THIS
+    // utterance the child got" and the server's heard-text ledger measures segment
+    // offsets within one utterance. With a session-cumulative counter, every utterance
+    // after the first reported a position far beyond its own length, so truncation
+    // looked complete and every segment looked fully heard.
+    //
+    // Resetting on utterance_start would not fix it either: at that moment the previous
+    // utterance's tail is still queued and still playing, so the counter would be zeroed
+    // for audio that belongs to the old utterance. Attributing each chunk to its own
+    // utterance as it is CONSUMED is the only version that stays correct across that
+    // overlap.
+    this._playedByUtterance = new Map();
+    this._currentUtteranceId = null;
     this._started = false;
     this._paused = false;
     this._droppedChunks = 0;
@@ -69,6 +90,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
   _onMessage(msg) {
     if (msg.type === "enqueue") {
       const chunk = new Int16Array(msg.pcm);
+      const utteranceId = msg.utteranceId ?? null;
       if (this._bufferedMs() >= ABSOLUTE_MAX_MS) {
         // Never silent -- see the header. The main thread turns this into a visible
         // error, because a hole in the middle of an utterance that nobody reports is
@@ -81,7 +103,7 @@ class PlaybackProcessor extends AudioWorkletProcessor {
         });
         return;
       }
-      this._queue.push(chunk);
+      this._queue.push({ pcm: chunk, utteranceId });
       this._queuedSamples += chunk.length;
       if (!this._started && this._bufferedMs() >= MIN_JITTER_MS) {
         this._started = true;
@@ -100,7 +122,10 @@ class PlaybackProcessor extends AudioWorkletProcessor {
       // The server read the transcript and there was no interruption after all.
       this._paused = false;
     } else if (msg.type === "clear") {
-      // A CONFIRMED cancel: this audio is genuinely stale, drop it.
+      // A CONFIRMED cancel: this audio is genuinely stale, drop it. The played counters
+      // are deliberately KEPT -- how much of the cancelled utterance the child actually
+      // heard is exactly what the server needs to reconcile against, and clearing it
+      // would report a truncated utterance as never having played at all.
       this._queue = [];
       this._queuedSamples = 0;
       this._readOffset = 0;
@@ -127,12 +152,23 @@ class PlaybackProcessor extends AudioWorkletProcessor {
         continue;
       }
       const current = this._queue[0];
-      output[i] = current[this._readOffset] / 0x8000;
+      output[i] = current.pcm[this._readOffset] / 0x8000;
       this._readOffset++;
-      this._playedSamples++;
-      if (this._readOffset >= current.length) {
+      if (current.utteranceId !== this._currentUtteranceId) {
+        // Trim on utterance change rather than every sample: this runs in the render
+        // loop, 24000 times a second per channel.
+        while (this._playedByUtterance.size >= PLAYED_HISTORY_UTTERANCES) {
+          this._playedByUtterance.delete(this._playedByUtterance.keys().next().value);
+        }
+      }
+      this._playedByUtterance.set(
+        current.utteranceId,
+        (this._playedByUtterance.get(current.utteranceId) || 0) + 1,
+      );
+      this._currentUtteranceId = current.utteranceId;
+      if (this._readOffset >= current.pcm.length) {
         this._queue.shift();
-        this._queuedSamples -= current.length;
+        this._queuedSamples -= current.pcm.length;
         this._readOffset = 0;
       }
     }
@@ -147,9 +183,11 @@ class PlaybackProcessor extends AudioWorkletProcessor {
     if (this._elapsedMs - this._lastReportMs < BUFFER_REPORT_INTERVAL_MS) return;
     this._lastReportMs = this._elapsedMs;
     const bufferedMs = Math.round(this._bufferedMs());
+    const played = this._playedByUtterance.get(this._currentUtteranceId) || 0;
     this.port.postMessage({
       type: "position",
-      playedUntilMs: Math.round((this._playedSamples / SAMPLE_RATE) * 1000),
+      utteranceId: this._currentUtteranceId,
+      playedUntilMs: Math.round((played / SAMPLE_RATE) * 1000),
       queueEmpty: this._queue.length === 0,
       bufferedMs,
       // The server's cue to stop or resume synthesizing ahead. Computed here rather than

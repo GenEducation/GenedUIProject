@@ -15,6 +15,8 @@ import {
   parseDownlinkFrame,
 } from "@/features/student/services/speechPipelineProtocol";
 import { frameAction, isSustained, ownsTheTurn } from "@/features/student/services/speechPipelineVad";
+import { SileroVadController } from "@/features/student/services/vad/sileroVadController";
+import type { VadVerdict } from "@/features/student/services/vad/vadDecision";
 
 export type PipelineState = "idle" | "listening" | "thinking" | "speaking";
 
@@ -45,6 +47,7 @@ export type SpeechPipelineEvent =
   | { type: "assistant_transcript"; utteranceId: number; text: string }
   | { type: "utterance_end"; utteranceId: number; reason: "complete" | "cancelled" }
   | { type: "safety_redirect"; content: string }
+  | { type: "visual"; kind: string; eventId: string; payload: Record<string, unknown> }
   | { type: "error"; message: string };
 
 export interface SpeechPipelineInit {
@@ -85,6 +88,37 @@ const PLAYBACK_SAMPLE_RATE = 24000;
 // rate, which changes with the device's block size.
 const BUFFER_REPORT_INTERVAL_MS = 250;
 
+// How often the clock exchange runs. Frequent at first so an estimate exists early in the
+// lesson, then steady -- clocks drift slowly, but laptops sleep and tabs get throttled, so
+// it never stops entirely.
+const CLOCK_PING_INTERVAL_MS = 15000;
+const CLOCK_PING_INITIAL_INTERVAL_MS = 2000;
+const CLOCK_PING_FAST_COUNT = 4;
+const NEGATIVE_RTT_TOLERANCE_MS = 50;
+
+/**
+ * Visual kinds this client can render. Sent at init so the server drops what we cannot
+ * draw rather than sending it for us to ignore -- a mismatch is then visible on the
+ * server's side as a count, instead of being invisible on both.
+ */
+const SUPPORTED_VISUAL_KINDS = [
+  "visual",
+  "pointer",
+  "pointer_clear",
+  "show_figure",
+  "math_draw",
+  "clear",
+];
+
+interface ScheduledVisual {
+  eventId: string;
+  kind: string;
+  utteranceId: number;
+  sequence: number;
+  playAtMs: number;
+  payload: Record<string, unknown>;
+}
+
 class SpeechPipelineService {
   private ws: WebSocket | null = null;
   private micCtx: AudioContext | null = null;
@@ -107,6 +141,18 @@ class SpeechPipelineService {
   private micState: MicState = "initializing";
   private pushToTalk = false;
   private lastBufferReportAt = 0;
+  private clockTimer: ReturnType<typeof setTimeout> | null = null;
+  private clockPingsSent = 0;
+  /** Add to a local timestamp to express it on the server's timeline. Null until the
+   * estimator has enough evidence -- callers must degrade rather than assume zero. */
+  private clockOffsetMs: number | null = null;
+  private clockRttMs: number | null = null;
+  /** Visuals waiting for playback to reach them, ordered by sequence within utterance. */
+  private scheduledVisuals: ScheduledVisual[] = [];
+  private vad: SileroVadController | null = null;
+  /** Latest detector health, surfaced for diagnostics -- a session spent on the energy
+   * fallback behaves measurably differently from one on Silero. */
+  private vadHealth = "starting";
 
   async connect(init: SpeechPipelineInit, onEvent: (event: SpeechPipelineEvent) => void) {
     // Live bug: a second connect() while one was already open (React StrictMode's
@@ -150,9 +196,11 @@ class SpeechPipelineService {
           subject: init.subject,
           language: init.language,
           voice: init.voice,
+          supported_visuals: SUPPORTED_VISUAL_KINDS,
         }),
       );
       onEvent({ type: "connected" });
+      this._startClockSync();
       // Explicitly NOT "ready" yet -- the socket being open says nothing about whether
       // the microphone is. See MicState.
       this._setMicState("initializing");
@@ -182,6 +230,9 @@ class SpeechPipelineService {
   }
 
   async disconnect() {
+    this._stopClockSync();
+    this.vad?.stop();
+    this.vad = null;
     this.mediaStream?.getTracks().forEach((t) => t.stop());
     this.mediaStream = null;
     this.micNode?.disconnect();
@@ -195,6 +246,10 @@ class SpeechPipelineService {
     this.ws?.close();
     this.ws = null;
     this.state = "idle";
+    this.clockOffsetMs = null;
+    this.clockRttMs = null;
+    this.clockPingsSent = 0;
+    this.scheduledVisuals = [];
     this._setMicState("initializing");
     this.pushToTalk = false;
     this.speechOnsetAt = null;
@@ -256,6 +311,78 @@ class SpeechPipelineService {
     this._setMicState("ready");
   }
 
+  /**
+   * A local timestamp expressed on the server's timeline, or null while unsynchronised.
+   *
+   * Null rather than the raw value on purpose: silently returning an unconverted local
+   * timestamp is the meaningless cross-clock comparison the whole exchange exists to
+   * prevent, and it fails invisibly.
+   */
+  toServerMs(localMs: number): number | null {
+    return this.clockOffsetMs === null ? null : localMs + this.clockOffsetMs;
+  }
+
+  get clockSync(): { offsetMs: number | null; rttMs: number | null } {
+    return { offsetMs: this.clockOffsetMs, rttMs: this.clockRttMs };
+  }
+
+  /**
+   * Emit every visual whose moment in the audio has arrived.
+   *
+   * Scheduled against the PLAYBACK position the worklet reports -- not the server's
+   * clock, not a setTimeout from the frame's arrival. Arrival time is meaningless here:
+   * the server streams several seconds ahead of playback, so a visual arrives long
+   * before the sentence that introduces it is heard.
+   */
+  private _applyDueVisuals() {
+    if (this.scheduledVisuals.length === 0) return;
+    const remaining: ScheduledVisual[] = [];
+    for (const visual of this.scheduledVisuals) {
+      const isCurrent = visual.utteranceId === this.activeUtteranceId;
+      // A visual for an utterance that has already finished is LATE, not obsolete -- the
+      // server cancels genuinely stale ones explicitly (visual_cancel). Applying it
+      // immediately is better than dropping it: the figure the tutor just described
+      // should still appear, even a beat behind.
+      const due = !isCurrent || this.lastPlayedUntilMs >= visual.playAtMs;
+      if (!due) {
+        remaining.push(visual);
+        continue;
+      }
+      this.onEvent?.({
+        type: "visual",
+        kind: visual.kind,
+        eventId: visual.eventId,
+        payload: visual.payload,
+      });
+      // Acknowledged only once handed to the renderer, so "applied" on the server means
+      // the child saw it rather than that a frame was delivered.
+      this._sendJson({ type: "visual_ack", event_id: visual.eventId });
+    }
+    this.scheduledVisuals = remaining;
+  }
+
+  private _startClockSync() {
+    this._stopClockSync();
+    const tick = () => {
+      this._sendJson({ type: "ping", client_ts_ms: Date.now() });
+      this.clockPingsSent++;
+      // Fast at first so an estimate exists before the first turn needs one, then steady.
+      const next =
+        this.clockPingsSent < CLOCK_PING_FAST_COUNT
+          ? CLOCK_PING_INITIAL_INTERVAL_MS
+          : CLOCK_PING_INTERVAL_MS;
+      this.clockTimer = setTimeout(tick, next);
+    };
+    tick();
+  }
+
+  private _stopClockSync() {
+    if (this.clockTimer !== null) {
+      clearTimeout(this.clockTimer);
+      this.clockTimer = null;
+    }
+  }
+
   get microphoneState(): MicState {
     return this.micState;
   }
@@ -281,6 +408,30 @@ class SpeechPipelineService {
       // that decision wants -- the two fixes belong together. echoCancellation stays ON
       // and is load-bearing: without it the tutor's own playback re-enters the mic and
       // barges in on itself.
+      // echoCancellation stays ON and is load-bearing: without it the tutor's own
+      // playback re-enters the mic and barges in on itself.
+      //
+      // noiseSuppression stays ON, and this is the denoising decision rather than an
+      // omission. RNNoise was considered and NOT added:
+      //
+      //  - The browser's WebRTC noise suppressor is already here, runs natively off the
+      //    main thread, costs no bundle size, and is the "technically justified
+      //    equivalent" the requirement allows for.
+      //  - RNNoise would mean another WASM module competing for the same CPU as Silero
+      //    inference on low-end devices -- which is precisely the population that noise
+      //    suppression is supposed to help.
+      //  - The actual failure being fixed was never insufficient denoising. It was that
+      //    an ENERGY detector cannot tell speech from loud steady noise at any SNR
+      //    (mic-processor.js's RMS_THRESHOLD_MAX names that limit outright). Silero
+      //    answers the real question, which is the change that matters here.
+      //
+      // What has NOT been established, and must not be claimed: whether suppression
+      // helps or harms RECOGNITION. Aggressive NS distorts speech, and it is entirely
+      // plausible that STT would score better on the unsuppressed signal while detection
+      // scores better on the suppressed one -- which is what the requirement to separate
+      // detection audio from STT audio anticipates. Deciding that without measurement
+      // would be a guess dressed as a design choice. It needs the benchmark harness
+      // (tools/speech_benchmark) run over a real noisy corpus, which does not exist yet.
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
     });
 
@@ -294,6 +445,21 @@ class SpeechPipelineService {
     const source = this.micCtx.createMediaStreamSource(this.mediaStream);
     this.micNode = new AudioWorkletNode(this.micCtx, "mic-processor");
     this.micNode.port.onmessage = (e) => this._onMicMessage(e.data);
+
+    // Silero is the primary detector; the worklet's energy VAD becomes the fallback.
+    // start() never throws -- every failure path (no Worker, no WASM, a model that 404s,
+    // a device that cannot keep up) lands on the energy detector rather than on a
+    // microphone that has stopped working.
+    this.vad = new SileroVadController({ onVerdict: (v) => this._onVadVerdict(v) });
+    const sileroStarted = await this.vad.start();
+    if (sileroStarted) {
+      // Only now does the worklet stop deciding for itself. Switching before the worker
+      // is up would leave nobody making the decision at all.
+      this.micNode.port.postMessage({ type: "set_mode", mode: "external" });
+    } else {
+      console.warn("[SpeechPipelineService] Silero unavailable -- using the energy VAD");
+      this.vad = null;
+    }
     source.connect(this.micNode);
     // The mic node produces no output; connecting it to nothing is intentional -- it
     // only needs to run, not to be audible.
@@ -305,7 +471,13 @@ class SpeechPipelineService {
     this.playbackNode.connect(this.playbackCtx.destination);
   }
 
-  private _onMicMessage(msg: { type: string; preroll?: ArrayBuffer; pcm?: ArrayBuffer }) {
+  private _onMicMessage(msg: {
+    type: string;
+    preroll?: ArrayBuffer;
+    pcm?: ArrayBuffer;
+    floats?: ArrayBuffer;
+    energyVoiced?: boolean;
+  }) {
     if (this.muted) return;
 
     if (this.pushToTalk) {
@@ -339,6 +511,21 @@ class SpeechPipelineService {
       this.onEvent?.({ type: "state", state: "listening" });
       this._sendJson({ type: "speech_start", client_ts_ms: Date.now() });
       if (msg.preroll) this._sendBinary(msg.preroll);
+      return;
+    }
+
+    if (msg.type === "analysis_frame" && msg.pcm && msg.floats) {
+      // External mode: the worklet made no decision, so route the frame through the
+      // arbiter and act on its verdict below. The uplink still only carries PCM16.
+      this.vad?.pushFrame(new Float32Array(msg.floats), Boolean(msg.energyVoiced));
+      this._handleCaptureFrame(msg.pcm);
+      return;
+    }
+
+    if (msg.type === "preroll" && msg.preroll) {
+      // Arrived because _onVadVerdict asked for it on a confirmed onset.
+      if (ownsTheTurn(this.state)) this.pendingPreroll = msg.preroll;
+      else this._sendBinary(msg.preroll);
       return;
     }
 
@@ -383,6 +570,59 @@ class SpeechPipelineService {
     }
   }
 
+  /** One captured frame, once a decision about it has been made (or deferred). */
+  private _handleCaptureFrame(pcm: ArrayBuffer) {
+    if (this.speechOnsetAt !== null && ownsTheTurn(this.state)) {
+      this._maybeConfirmInterruption();
+    }
+    const action = frameAction(this.state, this.speechOnsetAt !== null);
+    if (action === "send") {
+      this._sendBinary(pcm);
+    } else if (action === "buffer") {
+      this.pendingFrames.push(pcm);
+      if (this.pendingFrames.length > MAX_PENDING_FRAMES) this.pendingFrames.shift();
+    }
+  }
+
+  /**
+   * The arbiter's verdict for the frame just pushed.
+   *
+   * Mirrors what the worklet used to do internally, with one difference that matters: the
+   * decision is now Silero's whenever Silero is healthy, and the energy detector's only
+   * when it is not. The turn-shaping around it -- preroll, the barge-in confirmation
+   * gate, forced listening -- is unchanged, because none of it was ever the problem.
+   */
+  private _onVadVerdict(verdict: VadVerdict) {
+    this.vadHealth = verdict.health;
+    if (this.pushToTalk) return; // the button owns the turn boundary
+
+    if (verdict.onset) {
+      this.speechOnsetAt = performance.now();
+      // The preroll lives in the worklet's ring buffer; ask for it now that the onset is
+      // real. Inference necessarily trails the audio, which is exactly why it exists.
+      this.micNode?.port.postMessage({ type: "flush_preroll" });
+      if (!ownsTheTurn(this.state)) {
+        this.state = "listening";
+        this.onEvent?.({ type: "state", state: "listening" });
+        this._sendJson({ type: "speech_start", client_ts_ms: Date.now() });
+      }
+      return;
+    }
+
+    if (verdict.offset) {
+      const wasUnconfirmed = this.speechOnsetAt !== null && this.state !== "listening";
+      this.speechOnsetAt = null;
+      this.pendingPreroll = null;
+      this.pendingFrames = [];
+      if (wasUnconfirmed) return;
+      this._sendJson({ type: "end_of_speech", candidate: true, client_ts_ms: Date.now() });
+    }
+  }
+
+  get vadStatus(): string {
+    return this.vadHealth;
+  }
+
   private _maybeConfirmInterruption() {
     if (this.speechOnsetAt === null) return;
     if (!isSustained(this.speechOnsetAt, performance.now(), BARGE_IN_MIN_MS)) return;
@@ -420,6 +660,7 @@ class SpeechPipelineService {
   private _onPlaybackMessage(msg: {
     type: string;
     playedUntilMs?: number;
+    utteranceId?: number | null;
     bufferedMs?: number;
     wantMore?: boolean;
     saturated?: boolean;
@@ -438,7 +679,12 @@ class SpeechPipelineService {
       return;
     }
     if (msg.type !== "position") return;
+    // Only trust a position that is about the utterance we currently believe is playing.
+    // A report for the previous utterance's tail would otherwise be read as progress
+    // through the new one.
+    if (msg.utteranceId != null && msg.utteranceId !== this.activeUtteranceId) return;
     this.lastPlayedUntilMs = msg.playedUntilMs ?? this.lastPlayedUntilMs;
+    this._applyDueVisuals();
 
     // Report depth so the server can stop synthesizing ahead of playback. Without this
     // the server has no idea how far in front it is running and will happily queue the
@@ -491,7 +737,14 @@ class SpeechPipelineService {
       // "the one I meant to stop" from a later utterance that has already started.
       return;
     }
-    this.playbackNode?.port.postMessage({ type: "enqueue", pcm: parsed.pcm }, [parsed.pcm]);
+    // The utterance id travels WITH the audio so the worklet can attribute played
+    // samples to the utterance they belong to -- see playback-processor.js. The main
+    // thread cannot do that attribution itself: at any moment the queue may still hold
+    // the tail of the previous utterance.
+    this.playbackNode?.port.postMessage(
+      { type: "enqueue", pcm: parsed.pcm, utteranceId: parsed.utteranceId },
+      [parsed.pcm],
+    );
   }
 
   private _onControlFrame(payload: Record<string, unknown>) {
@@ -561,14 +814,90 @@ class SpeechPipelineService {
           this.playbackNode?.port.postMessage({ type: "clear" });
         }
         break;
+      case "visual_event":
+        this.scheduledVisuals.push({
+          eventId: String(payload.event_id),
+          kind: String(payload.kind),
+          utteranceId: Number(payload.utterance_id),
+          sequence: Number(payload.sequence),
+          playAtMs: Number(payload.play_at_ms) || 0,
+          payload: (payload.payload as Record<string, unknown>) ?? {},
+        });
+        // Sorted by the server's sequence, not arrival order: model tokens, tool calls,
+        // TTS segments and network frames all complete out of order, and applying a
+        // pointer before the figure it points at is exactly what that would produce.
+        this.scheduledVisuals.sort((a, b) =>
+          a.utteranceId === b.utteranceId
+            ? a.sequence - b.sequence
+            : a.utteranceId - b.utteranceId,
+        );
+        // Deliberately NOT flushed here. Firing on arrival would apply each event in
+        // ARRIVAL order, which makes the sort above pointless -- an already-due event
+        // that arrived second would still be emitted second. Flushing only on playback
+        // ticks means every event pending at that moment is ordered together. The
+        // playback worklet reports every ~100ms whether or not audio is playing, so a
+        // late visual waits at most that long.
+        break;
+      case "visual_cancel": {
+        const ids = new Set((payload.event_ids as string[]) ?? []);
+        this.scheduledVisuals = this.scheduledVisuals.filter((v) => !ids.has(v.eventId));
+        break;
+      }
+      case "session_limit":
+        this.onEvent?.({
+          type: "error",
+          message: String(payload.message ?? "session limit reached"),
+        });
+        break;
       case "safety_redirect":
         this.onEvent?.({ type: "safety_redirect", content: String(payload.content ?? "") });
         break;
       case "error":
         this.onEvent?.({ type: "error", message: String(payload.message ?? payload.code ?? "error") });
         break;
-      case "pong":
-        break; // clock-sync offset estimation is a later refinement (design doc A14)
+      case "pong": {
+        // t3 is read HERE, at the moment of receipt, not later in the handler chain --
+        // any work done first is charged to the network as delay it did not cause.
+        const t3 = Date.now();
+        const t0 = Number(payload.client_ts_ms);
+        const t1 = Number(payload.server_recv_ms);
+        const t2 = Number(payload.server_send_ms);
+        if (!Number.isFinite(t0) || !Number.isFinite(t1) || !Number.isFinite(t2)) break;
+        // Every difference below is between two readings of the SAME clock, which is
+        // what makes the result meaningful: (t3-t0) is measured entirely on this
+        // machine, (t2-t1) entirely on the server's. Subtracting the second from the
+        // first removes server processing time without ever mixing the two clocks.
+        const rtt = t3 - t0 - (t2 - t1);
+        const offset = (t1 - t0 + (t2 - t3)) / 2;
+        // Tolerant of a slightly negative result rather than demanding >= 0. Both clocks
+        // are read at millisecond granularity, so on a fast link where the true round
+        // trip is under a millisecond, rounding alone can make (t3-t0) smaller than
+        // (t2-t1). Rejecting those would discard the lowest-delay samples -- exactly the
+        // ones the estimate most wants. A genuinely inconsistent exchange is off by
+        // orders of magnitude more.
+        if (rtt >= -NEGATIVE_RTT_TOLERANCE_MS) {
+          this.clockRttMs = Math.max(0, rtt);
+          this.clockOffsetMs = offset;
+        }
+        // The server keeps its own filtered estimate (outlier rejection, step
+        // detection); it needs all four timestamps to do that, not our conclusion.
+        this._sendJson({
+          type: "clock_sync",
+          t0_client_ms: t0,
+          t1_server_ms: t1,
+          t2_server_ms: t2,
+          t3_client_ms: t3,
+        });
+        break;
+      }
+      case "clock_sync":
+        // The server's filtered view. Preferred over our own single-sample estimate
+        // because it has rejected outliers across a window we cannot see.
+        if (payload.synchronised) {
+          this.clockOffsetMs = Number(payload.offset_ms);
+          this.clockRttMs = Number(payload.rtt_ms);
+        }
+        break;
       default:
         break;
     }

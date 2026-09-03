@@ -10,7 +10,37 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { speechPipelineService } from "@/features/student/services/speechPipelineService";
 
-const service = speechPipelineService as any;
+/**
+ * The internals these tests drive. Only the singleton instance is exported, so the
+ * alternative to naming these is standing up getUserMedia and two AudioContexts to assert
+ * on a wire contract that needs neither.
+ */
+interface ServiceInternals {
+  ws: { readyState: number; send: (payload: string | ArrayBuffer) => void; close: () => void } | null;
+  state: string;
+  muted: boolean;
+  pushToTalk: boolean;
+  speechOnsetAt: number | null;
+  pendingPreroll: ArrayBuffer | null;
+  pendingFrames: ArrayBuffer[];
+  activeUtteranceId: number | null;
+  lastPlayedUntilMs: number;
+  lastBufferReportAt: number;
+  clockOffsetMs: number | null;
+  clockRttMs: number | null;
+  scheduledVisuals: unknown[];
+  playbackNode: unknown;
+  onEvent: ((event: Record<string, unknown>) => void) | null;
+  startPushToTalk(): void;
+  stopPushToTalk(): void;
+  toServerMs(localMs: number): number | null;
+  _onMicMessage(msg: Record<string, unknown>): void;
+  _onControlFrame(payload: Record<string, unknown>): void;
+  _onPlaybackMessage(msg: Record<string, unknown>): void;
+  _stopClockSync(): void;
+}
+
+const service = speechPipelineService as unknown as ServiceInternals;
 
 interface Sent {
   json: Record<string, unknown>[];
@@ -173,11 +203,192 @@ describe("playback backpressure reporting", () => {
 
   it("surfaces an overflow instead of letting audio vanish quietly", () => {
     attachFakeSocket();
-    const events: any[] = [];
-    service.onEvent = (e: any) => events.push(e);
+    const events: Record<string, unknown>[] = [];
+    service.onEvent = (e) => events.push(e);
 
     service._onPlaybackMessage({ type: "overflow", droppedChunks: 3, bufferedMs: 30000 });
 
     expect(events.some((e) => e.type === "error")).toBe(true);
+  });
+});
+
+describe("clock synchronisation", () => {
+  beforeEach(() => {
+    reset();
+    service.clockOffsetMs = null;
+    service.clockRttMs = null;
+    service._stopClockSync();
+  });
+
+  it("solves a pong into skew and delay separately", () => {
+    /* A client clock 50s behind the server with a healthy 100ms link must read as 50s of
+     * SKEW and 100ms of DELAY. Comparing the two wall clocks directly would report a
+     * 50-second latency on a perfectly good connection. */
+    const sent = attachFakeSocket();
+    const t0 = Date.now();
+    const t3Estimate = t0; // Date.now() inside the handler; the maths below is skew-only
+
+    service._onControlFrame({
+      type: "pong",
+      client_ts_ms: t0,
+      server_recv_ms: t0 + 50_000 + 50,
+      server_send_ms: t0 + 50_000 + 51,
+    });
+
+    expect(service.clockOffsetMs).not.toBeNull();
+    expect(service.clockOffsetMs).toBeGreaterThan(49_000);
+    expect(service.clockRttMs).toBeLessThan(1_000);
+    expect(t3Estimate).toBeLessThanOrEqual(Date.now());
+
+    const report = sent.json.find((m) => m.type === "clock_sync");
+    expect(report).toBeDefined();
+    // All four timestamps, not our conclusion -- the server filters outliers across a
+    // window this client cannot see.
+    expect(report).toMatchObject({ t0_client_ms: t0 });
+    expect(report!.t3_client_ms).toBeDefined();
+  });
+
+  it("prefers the server's filtered estimate over its own single sample", () => {
+    attachFakeSocket();
+    service.clockOffsetMs = 999;
+
+    service._onControlFrame({
+      type: "clock_sync",
+      offset_ms: 4242,
+      rtt_ms: 80,
+      synchronised: true,
+    });
+
+    expect(service.clockOffsetMs).toBe(4242);
+  });
+
+  it("ignores an unsynchronised server estimate", () => {
+    attachFakeSocket();
+    service.clockOffsetMs = 111;
+
+    service._onControlFrame({ type: "clock_sync", offset_ms: 0, rtt_ms: 0, synchronised: false });
+
+    expect(service.clockOffsetMs).toBe(111);
+  });
+
+  it("refuses to convert a timestamp while unsynchronised", () => {
+    /* Returning the raw local value would be the meaningless cross-clock comparison the
+     * exchange exists to prevent, and it would fail invisibly. */
+    expect(service.toServerMs(1000)).toBeNull();
+
+    service.clockOffsetMs = 250;
+    expect(service.toServerMs(1000)).toBe(1250);
+  });
+
+  it("discards a pong implying a negative round trip", () => {
+    attachFakeSocket();
+    service.clockOffsetMs = null;
+    const t0 = Date.now();
+
+    service._onControlFrame({
+      type: "pong",
+      client_ts_ms: t0,
+      server_recv_ms: t0,
+      server_send_ms: t0 + 10_000_000,
+    });
+
+    expect(service.clockOffsetMs).toBeNull();
+  });
+});
+
+describe("visual scheduling against the playback clock", () => {
+  beforeEach(() => {
+    reset();
+    service.scheduledVisuals = [];
+    service.lastPlayedUntilMs = 0;
+    service.activeUtteranceId = 1;
+  });
+
+  function visualFrame(overrides: Record<string, unknown> = {}) {
+    return {
+      type: "visual_event",
+      event_id: "v1",
+      kind: "math_draw",
+      utterance_id: 1,
+      sequence: 1,
+      play_at_ms: 2000,
+      payload: { visual_id: "tri-1" },
+      ...overrides,
+    };
+  }
+
+  it("holds a visual until playback reaches its moment", () => {
+    /* Arrival time is meaningless: the server streams seconds ahead of playback, so a
+     * visual arrives long before the sentence introducing it is heard. */
+    attachFakeSocket();
+    const events: Record<string, unknown>[] = [];
+    service.onEvent = (e) => events.push(e);
+
+    service._onControlFrame(visualFrame());
+
+    expect(events.filter((e) => e.type === "visual")).toHaveLength(0);
+    expect(service.scheduledVisuals).toHaveLength(1);
+  });
+
+  it("emits the visual once playback passes its offset", () => {
+    attachFakeSocket();
+    const events: Record<string, unknown>[] = [];
+    service.onEvent = (e) => events.push(e);
+    service._onControlFrame(visualFrame());
+
+    service._onPlaybackMessage({ type: "position", playedUntilMs: 2100, bufferedMs: 0 });
+
+    const visual = events.find((e) => e.type === "visual");
+    expect(visual).toMatchObject({ kind: "math_draw", eventId: "v1" });
+    expect(service.scheduledVisuals).toHaveLength(0);
+  });
+
+  it("acknowledges only once the renderer has been handed the event", () => {
+    /* So "applied" on the server means the child saw it, not that a frame was delivered. */
+    const sent = attachFakeSocket();
+    service.onEvent = () => {};
+    service._onControlFrame(visualFrame({ play_at_ms: 0 }));
+    service._onPlaybackMessage({ type: "position", playedUntilMs: 10, bufferedMs: 0 });
+
+    expect(sent.json.find((m) => m.type === "visual_ack")).toMatchObject({ event_id: "v1" });
+  });
+
+  it("applies events in server sequence, not arrival order", () => {
+    /* Applying a pointer before the figure it points at is exactly what arrival order
+     * would produce. */
+    attachFakeSocket();
+    const events: Record<string, unknown>[] = [];
+    service.onEvent = (e) => events.push(e);
+
+    service._onControlFrame(visualFrame({ event_id: "v2", sequence: 2, play_at_ms: 0 }));
+    service._onControlFrame(visualFrame({ event_id: "v1", sequence: 1, play_at_ms: 0 }));
+    service._onPlaybackMessage({ type: "position", playedUntilMs: 10, bufferedMs: 0 });
+
+    expect(events.filter((e) => e.type === "visual").map((e) => e.eventId)).toEqual(["v1", "v2"]);
+  });
+
+  it("applies a late visual immediately rather than dropping it", () => {
+    /* The server cancels genuinely stale ones explicitly; a visual for a finished
+     * utterance is late, and the figure just described should still appear. */
+    attachFakeSocket();
+    const events: Record<string, unknown>[] = [];
+    service.onEvent = (e) => events.push(e);
+
+    service._onControlFrame(visualFrame({ utterance_id: 99, play_at_ms: 999999 }));
+    service._onPlaybackMessage({ type: "position", playedUntilMs: 0, bufferedMs: 0 });
+
+    expect(events.filter((e) => e.type === "visual")).toHaveLength(1);
+  });
+
+  it("drops cancelled visuals without emitting them", () => {
+    attachFakeSocket();
+    const events: Record<string, unknown>[] = [];
+    service.onEvent = (e) => events.push(e);
+    service._onControlFrame(visualFrame());
+
+    service._onControlFrame({ type: "visual_cancel", utterance_id: 1, event_ids: ["v1"] });
+    service._onPlaybackMessage({ type: "position", playedUntilMs: 9999, bufferedMs: 0 });
+
+    expect(events.filter((e) => e.type === "visual")).toHaveLength(0);
   });
 });
