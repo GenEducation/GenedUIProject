@@ -241,3 +241,64 @@ describe("SileroVadController", () => {
     expect(verdict.voiced).toBe(true);
   });
 });
+
+describe("a healthy but WRONG Silero must not make the microphone deaf", () => {
+  it("falls back to energy when Silero calls sustained loud audio silence", () => {
+    /* The failure this closes. Energy was only ever consulted when Silero was UNHEALTHY,
+     * so a Silero returning confident low probabilities for real speech made the
+     * microphone silently, permanently deaf -- and the detector that used to work was
+     * never asked. Live, 3 Sep 2026 (session d4986d19): the tutor delivered its opening
+     * turn, the child spoke, not one speech_start reached the server, and the session was
+     * closed 120s later by the silence budget with nothing in the logs but quiet. */
+    const decider = new VadDecider();
+
+    // Loud, sustained, and Silero insists it is silence.
+    const verdict = feed(
+      decider,
+      Array.from({ length: 40 }, () => ({ probability: 0.01, energy: true })),
+    );
+
+    expect(verdict.source).toBe("energy");
+    expect(verdict.voiced).toBe(true);
+  });
+
+  it("does not distrust Silero for disagreeing in the other direction", () => {
+    /* Silero saying speech where energy hears none is Silero doing its job -- that is the
+     * entire reason it is primary in a noisy room. */
+    const decider = new VadDecider();
+
+    const verdict = feed(
+      decider,
+      Array.from({ length: 40 }, () => ({ probability: 0.95, energy: false })),
+    );
+
+    expect(verdict.source).toBe("silero");
+    expect(verdict.voiced).toBe(true);
+  });
+
+  it("does not latch on a brief disagreement", () => {
+    /* A few frames of disagreement at an onset boundary is normal, not evidence of a
+     * broken model. */
+    const decider = new VadDecider();
+
+    const verdict = feed(decider, [
+      ...speech(10),
+      ...Array.from({ length: 3 }, () => ({ probability: 0.01, energy: true })),
+      ...speech(5),
+    ]);
+
+    expect(verdict.source).toBe("silero");
+  });
+
+  it("stays on energy once latched, across utterances", () => {
+    /* A model this wrong will not become right mid-session, and flapping between
+     * detectors mid-utterance would split the utterance. */
+    const decider = new VadDecider();
+    feed(decider, Array.from({ length: 40 }, () => ({ probability: 0.01, energy: true })));
+
+    decider.reset();
+    const verdict = feed(decider, speech(10));
+
+    expect(verdict.source).toBe("energy");
+  });
+});

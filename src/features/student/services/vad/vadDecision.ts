@@ -71,6 +71,9 @@ export interface VadThresholds {
   /** Frames processed before Silero's verdict is trusted. The model carries LSTM state
    * and its first outputs are produced from a zeroed one. */
   warmupFrames: number;
+  /** Sustained energy-voiced audio that Silero calls silence before Silero is distrusted
+   * outright. See the disagreement latch in `push`. */
+  disagreementMs: number;
 }
 
 export const DEFAULT_THRESHOLDS: VadThresholds = {
@@ -81,6 +84,7 @@ export const DEFAULT_THRESHOLDS: VadThresholds = {
   maxBacklogFrames: 8,
   maxInferenceMs: 40,
   warmupFrames: 4,
+  disagreementMs: 600,
 };
 
 /**
@@ -97,6 +101,8 @@ export class VadDecider {
   private silenceMs = 0;
   private framesSeen = 0;
   private consecutiveDegraded = 0;
+  private disagreementMs = 0;
+  private energyOnlyLatched = false;
 
   constructor(thresholds: Partial<VadThresholds> = {}) {
     this.thresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
@@ -112,6 +118,10 @@ export class VadDecider {
     this.voicedMs = 0;
     this.silenceMs = 0;
     this.framesSeen = 0;
+    this.disagreementMs = 0;
+    // energyOnlyLatched is deliberately NOT cleared: it is a verdict about the model, not
+    // about this utterance, and re-trusting a detector that has already proven deaf would
+    // just lose the next utterance too.
   }
 
   private health(input: VadFrameInput): VadHealth {
@@ -151,8 +161,38 @@ export class VadDecider {
 
     // Energy is the fallback and it is genuinely load-bearing: while Silero is starting,
     // degraded or unavailable, this is the only thing keeping the microphone working.
+    // A model that is HEALTHY but WRONG was the gap here, and it is the worst possible
+    // failure for this component: energy was only ever consulted when Silero was
+    // unhealthy, so a Silero returning confident low probabilities for real speech made
+    // the microphone silently, permanently deaf -- and the detector that used to work was
+    // never asked. Live, 3 Sep 2026 (session d4986d19): the tutor delivered its opening
+    // turn, the child spoke, not one speech_start reached the server, and the session was
+    // closed 120s later by the silence budget with nothing in the logs but quiet.
+    //
+    // Energy cannot arbitrate for Silero in noise -- that is the whole reason Silero is
+    // primary. But sustained loud audio that Silero insists is silence is not a close
+    // call, it is evidence the model is not working, and it is the one disagreement worth
+    // acting on.
+    if (!this.energyOnlyLatched && input.energyVoiced && input.probability !== null) {
+      const sileroSaysSilence = input.probability < this.thresholds.negative;
+      this.disagreementMs = sileroSaysSilence ? this.disagreementMs + input.frameMs : 0;
+      if (this.disagreementMs >= this.thresholds.disagreementMs) {
+        // Latched rather than re-evaluated per frame: a model this wrong will not become
+        // right mid-session, and flapping between detectors mid-utterance would split it.
+        this.energyOnlyLatched = true;
+        console.warn(
+          "[VadDecider] Silero called",
+          this.disagreementMs,
+          "ms of energy-voiced audio silence -- distrusting it and using the energy detector",
+        );
+      }
+    }
+
     const useSilero =
-      health === "healthy" && input.probability !== null && this.framesSeen > this.thresholds.warmupFrames;
+      !this.energyOnlyLatched &&
+      health === "healthy" &&
+      input.probability !== null &&
+      this.framesSeen > this.thresholds.warmupFrames;
     const source: VadSource = useSilero ? "silero" : "energy";
 
     let frameVoiced: boolean;
