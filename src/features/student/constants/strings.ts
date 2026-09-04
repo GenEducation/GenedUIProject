@@ -19,8 +19,8 @@ export const STRINGS = {
   },
 
   streak: {
-    dayStreak: "Day Streak",
-    sessions: "Sessions",
+    dayStreak: "Current Streak",
+    sessions: "Sessions Done",
     longestStreak: "Longest Streak",
   },
 

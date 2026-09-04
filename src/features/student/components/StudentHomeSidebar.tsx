@@ -8,7 +8,15 @@ import { getStudentDisplayName } from "../utils/displayName";
 import { STUDENT_COLORS } from "../theme/colors";
 import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
 import { STRINGS } from "../constants/strings";
-import { LogOut, Menu } from "lucide-react";
+import {
+  LogOut,
+  Menu,
+  Home as HomeIcon,
+  Target,
+  CalendarDays,
+  BarChart3,
+  User,
+} from "lucide-react";
 import { UpgradeButton } from "@/features/billing/UpgradeButton";
 
 /* ═══ TOKENS ═══ — sourced from STUDENT_COLORS (see theme/colors.ts) */
@@ -18,9 +26,13 @@ const C = {
   edGreen: STUDENT_COLORS.subjectMath,
   sparkle: STUDENT_COLORS.tutorLight,
   sun: STUDENT_COLORS.warn,
-  sidebarBg: STUDENT_COLORS.sidebarBg,
-  sidebarText: STUDENT_COLORS.sidebarText,
-  sidebarActive: STUDENT_COLORS.sidebarActive,
+  sidebarBg: STUDENT_COLORS.sidebarLightBg,
+  sidebarText: STUDENT_COLORS.sidebarLightText,
+  sidebarActive: STUDENT_COLORS.sidebarLightActive,
+  sidebarActiveBg: STUDENT_COLORS.sidebarLightActiveBg,
+  sidebarBorder: STUDENT_COLORS.sidebarLightBorder,
+  sidebarHover: STUDENT_COLORS.sidebarLightHover,
+  sidebarName: STUDENT_COLORS.sidebarLightName,
 };
 
 /* ═══ GENED LOGO ═══ */
@@ -31,7 +43,7 @@ function GenEdLogo() {
       alt="GenEd"
       width={96}
       height={32}
-      style={{ height: 30, width: "auto", filter: "brightness(0) invert(1)" }}
+      style={{ height: 30, width: "auto" }}
       priority
     />
   );
@@ -44,7 +56,7 @@ function NavItem({
   active,
   onClick,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   active: boolean;
   onClick: () => void;
@@ -54,20 +66,28 @@ function NavItem({
       onClick={onClick}
       className="w-full flex items-center gap-3 rounded-xl border-none cursor-pointer transition-all text-left"
       style={{
-        padding: "10px 14px",
-        background: active ? "rgba(255,255,255,0.1)" : "transparent",
+        padding: "11px 14px",
+        background: active ? C.sidebarActiveBg : "transparent",
         color: active ? C.sidebarActive : C.sidebarText,
         fontSize: 14,
         fontWeight: active ? 700 : 500,
         fontFamily: "var(--font-body)",
       }}
+      onMouseEnter={(e) => {
+        if (!active) e.currentTarget.style.background = C.sidebarHover;
+      }}
+      onMouseLeave={(e) => {
+        if (!active) e.currentTarget.style.background = "transparent";
+      }}
     >
-      <span className="text-lg w-[22px] text-center">{icon}</span>
+      <span className="w-[22px] flex items-center justify-center flex-shrink-0">
+        {icon}
+      </span>
       <span>{label}</span>
       {active && (
         <div
           className="ml-auto w-1.5 h-1.5 rounded-full"
-          style={{ background: C.sparkle }}
+          style={{ background: C.genPurple }}
         />
       )}
     </button>
@@ -124,15 +144,15 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
     if (window.innerWidth < 1024) onClose();
   };
 
-  const sidebarW = isOpen ? 260 : RAIL_W;
-  const mobileWidth = Math.min(260, 300);
+  const sidebarW = isOpen ? 264 : RAIL_W;
+  const mobileWidth = Math.min(264, 300);
 
   const navItems = [
-    { icon: "🏠", label: STRINGS.nav.home, key: "home", path: "/student" },
-    { icon: "🎯", label: STRINGS.nav.practice, key: "practice", path: "/student/assessments" },
-    { icon: "🗓️", label: STRINGS.nav.schedule, key: "schedule", path: "/student/schedule" },
-    { icon: "📋", label: STRINGS.nav.reportCard, key: "report", path: "/student/report-card" },
-    { icon: "😊", label: STRINGS.nav.me, key: "me", path: "/student/profile" },
+    { icon: <HomeIcon size={18} strokeWidth={1.9} />,     label: STRINGS.nav.home,       key: "home",     path: "/student" },
+    { icon: <Target size={18} strokeWidth={1.9} />,       label: STRINGS.nav.practice,   key: "practice", path: "/student/assessments" },
+    { icon: <CalendarDays size={18} strokeWidth={1.9} />, label: STRINGS.nav.schedule,   key: "schedule", path: "/student/schedule" },
+    { icon: <BarChart3 size={18} strokeWidth={1.9} />,    label: STRINGS.nav.reportCard, key: "report",   path: "/student/report-card" },
+    { icon: <User size={18} strokeWidth={1.9} />,         label: STRINGS.nav.profile,    key: "me",       path: "/student/profile" },
   ];
 
   return (
@@ -140,7 +160,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
       {isMobile && isOpen && (
         <div
           className="fixed inset-0 z-30"
-          style={{ background: "rgba(0,0,0,0.45)" }}
+          style={{ background: "rgba(16,20,32,0.35)" }}
           onClick={onClose}
         />
       )}
@@ -155,17 +175,19 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                 minWidth: isOpen ? mobileWidth : 0,
                 maxWidth: "85vw",
                 background: C.sidebarBg,
-                boxShadow: isOpen ? "0 0 32px rgba(0,0,0,0.35)" : "none",
+                borderRight: `1px solid ${C.sidebarBorder}`,
+                boxShadow: isOpen ? "0 0 32px rgba(16,20,32,0.14)" : "none",
               }
             : {
                 width: sidebarW,
                 minWidth: sidebarW,
                 background: C.sidebarBg,
+                borderRight: `1px solid ${C.sidebarBorder}`,
               }
         }
       >
       {isOpen && (
-        <div className="flex flex-col h-full" style={{ padding: "16px 12px" }}>
+        <div className="flex flex-col h-full" style={{ padding: "18px 14px" }}>
           {/* Header: logo + close */}
           <div className="flex items-center justify-between mb-7 px-0.5 py-1">
             <button aria-label="GenEd home" onClick={() => navigate("/student")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
@@ -175,7 +197,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
               onClick={onClose}
               className="flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-all"
               style={{
-                background: "rgba(255,255,255,0.06)",
+                background: C.sidebarHover,
                 color: C.sidebarText,
                 fontSize: 16,
               }}
@@ -198,12 +220,13 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
             ))}
           </nav>
 
-          {/* Student info */}
-          <div className="mt-auto pt-3.5" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          {/* Student info — display only. The nav "Profile" item above is the
+              single entry point to /student/profile. */}
+          <div className="mt-auto pt-3.5" style={{ borderTop: `1px solid ${C.sidebarBorder}` }}>
             <div className="flex items-center gap-2.5 px-1">
               <div
                 className="w-[34px] h-[34px] rounded-full overflow-hidden flex-shrink-0"
-                style={{ border: "1.5px solid rgba(255,255,255,0.12)" }}
+                style={{ border: `1.5px solid ${C.sidebarBorder}` }}
               >
                 {avatarId === "graduate-girl" ? (
                   <img
@@ -218,7 +241,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
               <div className="flex-1 min-w-0">
                 {/* Name + plan badge */}
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <div className="text-[13px] font-semibold truncate" style={{ color: C.sidebarActive }}>
+                  <div className="text-[13px] font-semibold truncate" style={{ color: C.sidebarName }}>
                     {getStudentDisplayName(studentProfile)}
                   </div>
                   <span style={{
@@ -229,14 +252,14 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                     fontWeight: 800,
                     letterSpacing: "0.08em",
                     textTransform: "uppercase",
-                    background: isPro ? "#00B89420" : `${C.genPurple}25`,
-                    color:      isPro ? "#00B894"   : C.sparkle,
-                    border:     `1px solid ${isPro ? "#00B89440" : C.sparkle + "40"}`,
+                    background: isPro ? "#00B89418" : `${C.genPurple}12`,
+                    color:      isPro ? "#00997A"   : C.genPurple,
+                    border:     `1px solid ${isPro ? "#00B89440" : C.genPurple + "30"}`,
                   }}>
                     {plan}
                   </span>
                 </div>
-                <div className="text-[10px]" style={{ color: C.sidebarText, opacity: 0.6 }}>
+                <div className="text-[10px]" style={{ color: C.sidebarText, opacity: 0.75 }}>
                   Grade {studentProfile?.grade ?? "—"} · {studentProfile?.school_board ?? "—"}
                 </div>
               </div>
@@ -248,7 +271,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                 const d = new Date(studentProfile.plan_expires_at!);
                 if (isNaN(d.getTime())) return null;
                 return (
-                  <div className="text-[10px] mt-2 px-1" style={{ color: C.sidebarText, opacity: 0.55 }}>
+                  <div className="text-[10px] mt-2 px-1" style={{ color: C.sidebarText, opacity: 0.7 }}>
                     Renews {d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
                   </div>
                 );
@@ -277,7 +300,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                 fontWeight: 500,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(232,99,90,0.12)";
+                e.currentTarget.style.background = "rgba(232,99,90,0.10)";
                 e.currentTarget.style.color = "#E8635A";
               }}
               onMouseLeave={(e) => {
@@ -293,13 +316,13 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
       )}
 
       {!isOpen && !isMobile && (
-        <div className="flex flex-col items-center h-full" style={{ padding: "16px 8px" }}>
+        <div className="flex flex-col items-center h-full" style={{ padding: "18px 8px" }}>
           {/* Expand button */}
           <button aria-label="Open sidebar"
             onClick={onOpen}
             className="flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-all mb-7"
             style={{
-              background: "rgba(255,255,255,0.06)",
+              background: C.sidebarHover,
               color: C.sidebarText,
               fontSize: 16,
             }}
@@ -321,9 +344,14 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                   style={{
                     width: 44,
                     height: 44,
-                    background: active ? "rgba(255,255,255,0.1)" : "transparent",
+                    background: active ? C.sidebarActiveBg : "transparent",
                     color: active ? C.sidebarActive : C.sidebarText,
-                    fontSize: 18,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!active) e.currentTarget.style.background = C.sidebarHover;
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!active) e.currentTarget.style.background = "transparent";
                   }}
                 >
                   {item.icon}
@@ -332,31 +360,16 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
             })}
           </nav>
 
-          {/* Avatar + logout */}
-          <div className="mt-auto flex flex-col items-center gap-2 pt-3.5" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-            <button
-              onClick={() => navigate("/student/profile")}
-              title={getStudentDisplayName(studentProfile)}
-              className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border-none cursor-pointer p-0"
-              style={{ border: "1.5px solid rgba(255,255,255,0.12)" }}
-            >
-              {avatarId === "graduate-girl" ? (
-                <img
-                  src="/avatars/girl-graduate.png"
-                  alt="Student avatar"
-                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                />
-              ) : (
-                <StudentAvatarIllustration bg={C.sun} />
-              )}
-            </button>
+          {/* Logout — the rail's Profile nav icon above is the only profile
+              affordance, so no duplicate avatar button here. */}
+          <div className="mt-auto flex flex-col items-center gap-2 pt-3.5 w-full" style={{ borderTop: `1px solid ${C.sidebarBorder}` }}>
             <button aria-label="Logout"
               onClick={logoutStudent}
               title="Logout"
               className="flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-all"
               style={{ background: "transparent", color: C.sidebarText }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(232,99,90,0.12)";
+                e.currentTarget.style.background = "rgba(232,99,90,0.10)";
                 e.currentTarget.style.color = "#E8635A";
               }}
               onMouseLeave={(e) => {

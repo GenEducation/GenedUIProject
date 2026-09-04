@@ -11,6 +11,7 @@ import { getStudentDisplayName } from "../utils/displayName";
 import { selectContinueSession, selectImminentSession } from "../utils/sessionSelection";
 import { useScheduleStore } from "../store/useScheduleStore";
 import { UpcomingSessionPanel } from "./UpcomingSessionPanel";
+import { ContinueLearningCard } from "./ContinueLearningCard";
 import { useNow } from "@/utils/useNow";
 import { STUDENT_COLORS } from "../theme/colors";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
@@ -21,9 +22,15 @@ import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
-import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
+import { subjectMascot } from "@/features/subjects/subjectPresentation";
+
+/* Subject-card mascot: display size, and how far it bleeds above the card.
+   The bleed is mirrored as paddingTop on the horizontal scroller, which would
+   otherwise clip it — overflow-x:auto forces the vertical axis to auto too. */
+const MASCOT_SIZE = "clamp(52px, 6.4vw, 92px)";
+const MASCOT_BLEED = 34;
 
 /* ═══ DESIGN TOKENS ═══ — sourced from STUDENT_COLORS (see theme/colors.ts) */
 const C = {
@@ -501,29 +508,12 @@ export function StudentHome() {
               <Image src="/Logo.svg" alt="GenEd" width={90} height={32} style={{ height: 32, width: "auto" }} priority />
             </div>
 
-            {/* Notification bell + profile on right, balancing the hamburger */}
-            <div className="flex-shrink-0 flex items-center gap-2">
+            {/* Notification bell on right, balancing the hamburger. The
+                sidebar's Profile nav item is the only profile entry point. */}
+            <div className="flex-shrink-0 flex items-center justify-end" style={{ minWidth: 38 }}>
               {studentProfile?.user_id && (
                 <NotificationBell userId={studentProfile.user_id} align="right" />
               )}
-              <div
-                className="cursor-pointer"
-                onClick={() => router.push("/student/profile")}
-                style={{
-                  width: 38, height: 38, borderRadius: "50%", overflow: "hidden",
-                  border: "2px solid white", boxShadow: `0 2px 8px ${C.sun}30`,
-                }}
-              >
-                {avatarId === "graduate-girl" ? (
-                  <img
-                    src="/avatars/girl-graduate.png"
-                    alt="Student avatar"
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                  />
-                ) : (
-                  <StudentAvatarIllustration bg={C.sun} />
-                )}
-              </div>
             </div>
           </div>
         )}
@@ -535,7 +525,7 @@ export function StudentHome() {
             style={{ background: `radial-gradient(circle, ${C.genPurple}06 0%, transparent 70%)` }} />
 
           {/* Content container — wider on large screens, proper padding */}
-          <div className="w-full mx-auto" style={{ maxWidth: 860, padding: sidebarOpen ? "36px 40px 48px" : "24px 16px 40px" }}>
+          <div className="w-full mx-auto" style={{ maxWidth: 1360, padding: sidebarOpen ? "32px clamp(20px, 3vw, 40px) 48px" : "24px clamp(16px, 3vw, 40px) 40px" }}>
 
             {/* ── GREETING HEADER ── */}
             <div className="flex items-start justify-between mb-8 relative z-20" style={fade(0.06)}>
@@ -552,102 +542,46 @@ export function StudentHome() {
                 {studentProfile?.user_id && (
                   <NotificationBell userId={studentProfile.user_id} align="right" />
                 )}
-                <div
-                  className="cursor-pointer"
-                  onClick={() => router.push("/student/profile")}
-                  style={{
-                    width: 56, height: 56, borderRadius: "50%", overflow: "hidden",
-                    border: "3px solid white", boxShadow: `0 8px 24px ${C.sun}30`,
-                  }}
-                >
-                  {avatarId === "graduate-girl" ? (
-                    <img
-                      src="/avatars/girl-graduate.png"
-                      alt="Student avatar"
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                    />
-                  ) : (
-                    <StudentAvatarIllustration bg={C.sun} />
-                  )}
-                </div>
               </div>
-            </div>
-
-            {/* ── STAT STRIP ── */}
-            <div className="mb-8" style={{ ...fade(0.14) }}>
-              <StreakStats data={studentStats} isLoading={isStatsLoading} variant="card" />
             </div>
 
             {/* ── CONTINUE LEARNING ── */}
             {imminentSession && (
-              <UpcomingSessionPanel session={imminentSession} style={fade(0.22)} />
+              <UpcomingSessionPanel session={imminentSession} style={fade(0.14)} />
             )}
 
             {!imminentSession && isSessionsLoading && !continueSession && (
-              <div className="rounded-[20px] mb-8 animate-pulse"
-                style={{ background: C.card, border: `1px solid ${C.border}`, padding: "clamp(16px, 2vw, 24px)" }}>
-                <div className="flex items-center pl-3" style={{ gap: "clamp(12px, 2vw, 20px)" }}>
-                  <div className="rounded-full flex-shrink-0" style={{ width: 60, height: 60, background: C.border + "50" }} />
-                  <div className="flex-1 flex flex-col gap-2">
-                    <div className="rounded" style={{ height: 10, width: 100, background: C.border + "40" }} />
-                    <div className="rounded" style={{ height: 16, width: "70%", background: C.border + "60" }} />
-                    <div className="rounded" style={{ height: 10, width: 120, background: C.border + "30" }} />
-                  </div>
-                  <div className="rounded-xl flex-shrink-0" style={{ width: 40, height: 40, background: C.border + "40" }} />
+              <div className="rounded-[22px] mb-8 animate-pulse"
+                style={{ background: C.card, border: `1px solid ${C.border}`, padding: "clamp(18px, 2.4vw, 28px)" }}>
+                <div className="flex flex-col gap-3" style={{ maxWidth: "min(66%, 800px)" }}>
+                  <div className="rounded" style={{ height: 10, width: 150, background: C.border + "40" }} />
+                  <div className="rounded" style={{ height: 26, width: "70%", background: C.border + "60" }} />
+                  <div className="rounded" style={{ height: 12, width: 220, background: C.border + "30" }} />
+                  <div className="rounded-full mt-3" style={{ height: 8, width: "100%", background: C.border + "40" }} />
+                  <div className="rounded-full mt-3" style={{ height: 44, width: 200, background: C.border + "50" }} />
                 </div>
               </div>
             )}
             {!imminentSession && continueSession && (
-              <div
-                className="rounded-[20px] relative overflow-hidden cursor-pointer mb-8"
-                style={{
-                  background: C.card, border: `1px solid ${C.border}`,
-                  padding: "clamp(16px, 2vw, 24px)",
-                  boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-                  ...fade(0.22),
-                  transition: `all 0.55s cubic-bezier(0.22,1,0.36,1) 0.22s, box-shadow 0.2s, transform 0.2s`,
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 6px 24px rgba(91,77,199,0.12)"; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 10px rgba(0,0,0,0.05)"; (e.currentTarget as HTMLDivElement).style.transform = "none"; }}
-                onClick={() => handleSessionClick(continueSession)}
-              >
-                <div className="absolute top-0 left-0 w-1 h-full"
-                  style={{ background: `linear-gradient(to bottom, ${C.genPurple}, ${C.genBlue})`, borderRadius: "20px 0 0 20px" }} />
-                <div className="flex items-center pl-3" style={{ gap: "clamp(12px, 2vw, 20px)" }}>
-                  <div className="relative flex-shrink-0">
-                    <ProgressRing percent={continueSession.mastery} size={60} stroke={5} color={C.genPurple} />
-                    <div className="absolute inset-0 flex items-center justify-center font-extrabold"
-                      style={{ color: C.genPurple, fontFamily: "var(--font-display)", fontSize: "clamp(11px, 1.2vw, 14px)" }}>
-                      {continueSession.mastery}%
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold uppercase mb-1"
-                      style={{ color: C.genPurple, letterSpacing: "1.2px", fontSize: "clamp(9px, 0.9vw, 11px)" }}>
-                      Continue learning
-                    </div>
-                    <div className="font-bold truncate"
-                      style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(14px, 1.6vw, 18px)" }}>
-                      <span title={isVoiceSession(continueSession) ? "Voice session" : "Chat session"} style={{ marginRight: 5 }}>
-                        {isVoiceSession(continueSession) ? "🎤" : "💬"}
-                      </span>
-                      {continueSession.title} — {continueSession.vis.label}
-                    </div>
-                    <div className="mt-1" style={{ color: C.textMuted, fontSize: "clamp(11px, 1vw, 13px)" }}>
-                      Last studied {timeAgo(continueSession.lastActive)}
-                    </div>
-                  </div>
-                  <div className="rounded-xl flex-shrink-0 flex items-center justify-center text-white font-semibold"
-                    style={{
-                      background: `linear-gradient(135deg, ${C.genPurple}, ${C.genBlue})`,
-                      width: "clamp(36px, 3.5vw, 46px)", height: "clamp(36px, 3.5vw, 46px)",
-                      fontSize: "clamp(14px, 1.4vw, 18px)",
-                    }}>
-                    →
-                  </div>
-                </div>
-              </div>
+              <ContinueLearningCard
+                session={continueSession}
+                gradeLabel={
+                  studentProfile?.grade
+                    ? `Grade ${studentProfile.grade}${studentProfile.school_board ? ` ${studentProfile.school_board}` : ""}`
+                    : undefined
+                }
+                onStart={() => handleSessionClick(continueSession)}
+                style={fade(0.14)}
+              />
             )}
+
+            {/* ── STAT STRIP ── */}
+            <div className="mb-8" style={{ ...fade(0.22) }}>
+              <h2 className="font-bold uppercase m-0 mb-4" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
+                Your progress
+              </h2>
+              <StreakStats data={studentStats} isLoading={isStatsLoading} variant="card" />
+            </div>
 
             {/* ── MY SUBJECTS ── */}
             <div className="mb-8" style={fade(0.30)}>
@@ -661,7 +595,7 @@ export function StudentHome() {
                 <div className="flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)" }}>
                   {[1, 2].map((n) => (
                     <div key={n} className="rounded-[18px] animate-pulse flex-shrink-0"
-                      style={{ background: C.card, border: `1px solid ${C.border}`, padding: "clamp(16px, 2vw, 22px)", width: "clamp(280px, calc(50% - 8px), 460px)" }}>
+                      style={{ background: C.card, border: `1px solid ${C.border}`, padding: "clamp(16px, 2vw, 22px)", width: "clamp(240px, calc(25% - 12px), 300px)" }}>
                       <div className="flex items-center mb-4" style={{ gap: "clamp(10px, 1.2vw, 14px)" }}>
                         <div className="rounded-[14px]" style={{ background: C.border + "50", width: "clamp(40px, 4vw, 48px)", height: "clamp(40px, 4vw, 48px)" }} />
                         <div className="flex flex-col gap-2">
@@ -682,7 +616,7 @@ export function StudentHome() {
                 </div>
               ) : subjectGroups.length > 0 ? (
                 <div className="relative">
-                  {subjectGroups.length > 2 && (
+                  {subjectGroups.length > 4 && (
                     <>
                       <button
                         onClick={() => scrollSubjects("left")}
@@ -710,7 +644,7 @@ export function StudentHome() {
                       </button>
                     </>
                   )}
-                  <div ref={subjectsScrollRef} className="flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)", scrollSnapType: "x mandatory" }}>
+                  <div ref={subjectsScrollRef} className="flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)", scrollSnapType: "x mandatory", paddingTop: MASCOT_BLEED }}>
                     {subjectGroups.map((group) => {
                     const vis = group.vis;
                     const hov = hoveredAgent === group.key;
@@ -719,27 +653,49 @@ export function StudentHome() {
                       <div key={group.key}
                         onMouseEnter={() => setHoveredAgent(group.key)}
                         onMouseLeave={() => setHoveredAgent(null)}
-                        className="rounded-[18px] cursor-pointer flex-shrink-0"
+                        className="rounded-[18px] cursor-pointer flex-shrink-0 relative"
                         style={{
                           background: C.card,
                           border: `1px solid ${hov ? vis.color + "60" : C.border}`,
                           padding: "clamp(16px, 2vw, 22px)",
-                          width: "clamp(280px, calc(50% - 8px), 460px)",
+                          width: "clamp(240px, calc(25% - 12px), 300px)",
                           transform: hov ? "translateY(-3px)" : "none",
                           boxShadow: hov ? `0 10px 30px ${vis.color}18` : "0 1px 5px rgba(0,0,0,0.04)",
                           transition: "all 0.25s ease",
                           scrollSnapAlign: "start",
                         }}>
-                        <div className="flex items-center mb-4" style={{ gap: "clamp(10px, 1.2vw, 14px)" }}>
+                        <Image
+                          src={subjectMascot(group.subject)}
+                          alt=""
+                          aria-hidden="true"
+                          width={300}
+                          height={300}
+                          // Already a hand-sized 300px WebP (~24KB); the Next
+                          // optimizer only accepts widths from its device/image
+                          // size arrays and 400s on 300, so serve it directly.
+                          unoptimized
+                          className="absolute pointer-events-none select-none"
+                          style={{
+                            width: MASCOT_SIZE,
+                            height: MASCOT_SIZE,
+                            objectFit: "contain",
+                            top: `calc(-1 * ${MASCOT_BLEED}px)`,
+                            right: 8,
+                            transform: hov ? "translateY(-4px) scale(1.04)" : "none",
+                            transition: "transform 0.25s ease",
+                            filter: "drop-shadow(0 6px 14px rgba(16,20,32,0.12))",
+                          }}
+                        />
+                        <div className="flex items-center mb-4" style={{ gap: "clamp(10px, 1.2vw, 14px)", paddingRight: "calc(" + MASCOT_SIZE + " - 26px)" }}>
                           <div className="rounded-[14px] flex items-center justify-center flex-shrink-0"
                             style={{ background: vis.bg, width: "clamp(40px, 4vw, 48px)", height: "clamp(40px, 4vw, 48px)", fontSize: "clamp(18px, 2vw, 24px)" }}>
                             {vis.icon}
                           </div>
-                          <div>
-                            <div className="font-bold" style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(14px, 1.5vw, 17px)" }}>
+                          <div className="min-w-0">
+                            <div className="font-bold truncate" title={vis.label} style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(14px, 1.5vw, 17px)" }}>
                               {vis.label}
                             </div>
-                            <div className="font-medium mt-0.5" style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>
+                            <div className="font-medium mt-0.5 truncate" style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>
                               Grade {group.grade} · {group.agents.length} chapter{group.agents.length !== 1 ? "s" : ""}
                             </div>
                           </div>

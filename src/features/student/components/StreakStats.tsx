@@ -16,9 +16,9 @@ export interface StreakStatsData {
 }
 
 const STATS = [
-  { key: "currentStreak" as const, icon: "🔥", label: STRINGS.streak.dayStreak, color: STUDENT_COLORS.warn },
-  { key: "totalSessions" as const, icon: "📚", label: STRINGS.streak.sessions, color: STUDENT_COLORS.tutorSoft },
-  { key: "longestStreak" as const, icon: "⭐", label: STRINGS.streak.longestStreak, color: STUDENT_COLORS.subjectMath },
+  { key: "currentStreak" as const, icon: "🔥", label: STRINGS.streak.dayStreak, color: STUDENT_COLORS.warn, unit: "Days" },
+  { key: "totalSessions" as const, icon: "📚", label: STRINGS.streak.sessions, color: STUDENT_COLORS.tutorSoft, unit: "" },
+  { key: "longestStreak" as const, icon: "⭐", label: STRINGS.streak.longestStreak, color: STUDENT_COLORS.subjectMath, unit: "Days" },
 ];
 
 export function StreakStats({
@@ -71,72 +71,83 @@ export function StreakStats({
   }
 
   return (
-    <div className="grid grid-cols-3" style={{ gap: "clamp(8px, 1.5vw, 16px)" }}>
+    <div className="grid grid-cols-3" style={{ gap: "clamp(8px, 1.2vw, 14px)" }}>
       {isLoading
         ? [1, 2, 3].map((n) => (
             <div
               key={n}
-              className="rounded-2xl flex items-center animate-pulse"
+              className="rounded-2xl animate-pulse"
               style={{
                 background: STUDENT_COLORS.card,
                 border: `1px solid ${STUDENT_COLORS.border}`,
-                padding: "clamp(12px, 2vw, 20px) clamp(10px, 1.8vw, 18px)",
-                gap: "clamp(8px, 1.2vw, 14px)",
+                padding: "clamp(14px, 1.6vw, 20px)",
               }}
             >
-              <div
-                className="rounded-xl flex-shrink-0"
-                style={{
-                  background: STUDENT_COLORS.border + "50",
-                  width: "clamp(34px, 3.5vw, 44px)",
-                  height: "clamp(34px, 3.5vw, 44px)",
-                }}
-              />
-              <div className="min-w-0 flex flex-col gap-2">
-                <div className="rounded" style={{ background: STUDENT_COLORS.border + "60", height: 20, width: 40 }} />
-                <div className="rounded" style={{ background: STUDENT_COLORS.border + "40", height: 10, width: 64 }} />
+              <div className="flex items-start justify-between" style={{ gap: 10 }}>
+                <div className="rounded" style={{ background: STUDENT_COLORS.border + "40", height: 11, width: 84 }} />
+                <div
+                  className="rounded-lg flex-shrink-0"
+                  style={{ background: STUDENT_COLORS.border + "50", width: 28, height: 28 }}
+                />
               </div>
+              <div className="rounded mt-3" style={{ background: STUDENT_COLORS.border + "60", height: 22, width: 68 }} />
             </div>
           ))
-        : STATS.map((s) => (
-            <div
-              key={s.key}
-              className="rounded-2xl flex items-center"
-              style={{
-                background: STUDENT_COLORS.card,
-                border: `1px solid ${STUDENT_COLORS.border}`,
-                padding: "clamp(12px, 2vw, 20px) clamp(10px, 1.8vw, 18px)",
-                gap: "clamp(8px, 1.2vw, 14px)",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-              }}
-            >
+        : STATS.map((s) => {
+            const value = data?.[s.key] ?? 0;
+            return (
               <div
-                className="rounded-xl flex items-center justify-center flex-shrink-0"
+                key={s.key}
+                className="rounded-2xl"
                 style={{
-                  background: s.color + "14",
-                  width: "clamp(34px, 3.5vw, 44px)",
-                  height: "clamp(34px, 3.5vw, 44px)",
-                  fontSize: "clamp(15px, 1.8vw, 20px)",
+                  background: STUDENT_COLORS.card,
+                  border: `1px solid ${STUDENT_COLORS.border}`,
+                  padding: "clamp(14px, 1.6vw, 20px)",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
                 }}
               >
-                {s.icon}
-              </div>
-              <div className="min-w-0">
-                <div
-                  className="font-extrabold leading-none"
-                  style={{ color: STUDENT_COLORS.text, fontFamily: "var(--font-display)", fontSize: "clamp(18px, 2.4vw, 26px)" }}
-                >
-                  {data?.[s.key] ?? 0}
+                {/* Label left, icon well right */}
+                <div className="flex items-start justify-between" style={{ gap: 10 }}>
+                  <span
+                    className="font-medium"
+                    style={{
+                      color: STUDENT_COLORS.textMuted,
+                      fontSize: "clamp(11px, 1.05vw, 13px)",
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {s.label}
+                  </span>
+                  <span
+                    className="rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: s.color + "1F",
+                      width: "clamp(24px, 2.2vw, 30px)",
+                      height: "clamp(24px, 2.2vw, 30px)",
+                      fontSize: "clamp(12px, 1.2vw, 15px)",
+                    }}
+                  >
+                    {s.icon}
+                  </span>
                 </div>
+
+                {/* Value, with its unit carried in the value as the design does */}
                 <div
-                  className="font-semibold mt-1 whitespace-nowrap"
-                  style={{ color: STUDENT_COLORS.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}
+                  className="font-extrabold leading-none mt-2.5"
+                  style={{
+                    color: STUDENT_COLORS.text,
+                    fontFamily: "var(--font-display)",
+                    fontSize: "clamp(19px, 2.1vw, 26px)",
+                  }}
                 >
-                  {s.label}
+                  {value}
+                  {s.unit && (
+                    <span style={{ fontSize: "0.72em", marginLeft: 5 }}>{s.unit}</span>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
     </div>
   );
 }
