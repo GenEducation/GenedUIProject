@@ -70,6 +70,18 @@ export interface SpeechPipelineInit {
 // backchannel ("haan", "okay") and must not interrupt; only a sustained one barges in.
 const BARGE_IN_MIN_MS = 400;
 
+// The same gate when the ENERGY fallback is deciding, which is far longer for one
+// specific reason: energy cannot distinguish the child's voice from the tutor's own
+// voice coming back through the speakers. Live, 3 Sep 2026 (session 04aac2cd): the tutor
+// was cut off 0.5s after it started speaking, on turn after turn -- "turn 1 interrupted
+// after 0 segment(s)" -- and the audio that "interrupted" it transcribed to nothing at
+// all (`fields seen: none`). 400ms of sustained echo is trivially easy to produce; a full
+// second of it, while the child is supposedly talking over the tutor, is not.
+//
+// Silero keeps the short gate. It can tell speech from noise, which is the entire reason
+// it is primary, and slowing it down would make real interruptions feel unresponsive.
+const BARGE_IN_MIN_MS_ENERGY = 1000;
+
 // Cap on the audio held while an interruption is being confirmed. BARGE_IN_MIN_MS of
 // 20ms frames is 20; this is ~1.5s, so a confirmation that never arrives (stray noise)
 // cannot grow this without bound, and speech_end clears it either way.
@@ -154,6 +166,7 @@ class SpeechPipelineService {
   /** Latest detector health, surfaced for diagnostics -- a session spent on the energy
    * fallback behaves measurably differently from one on Silero. */
   private vadHealth = "starting";
+  private vadSource: "silero" | "energy" = "energy";
   /** True between asking the worklet for the preroll and receiving it. Frames captured
    * in that window are held, never sent -- see _handleCaptureFrame. */
   private awaitingPreroll = false;
@@ -634,6 +647,7 @@ class SpeechPipelineService {
    */
   private _onVadVerdict(verdict: VadVerdict) {
     this.vadHealth = verdict.health;
+    this.vadSource = verdict.source;
     if (this.pushToTalk) return; // the button owns the turn boundary
 
     if (verdict.onset) {
@@ -669,7 +683,10 @@ class SpeechPipelineService {
 
   private _maybeConfirmInterruption() {
     if (this.speechOnsetAt === null) return;
-    if (!isSustained(this.speechOnsetAt, performance.now(), BARGE_IN_MIN_MS)) return;
+    // Which detector is deciding changes how much evidence an interruption needs -- see
+    // BARGE_IN_MIN_MS_ENERGY.
+    const gate = this.vadSource === "energy" ? BARGE_IN_MIN_MS_ENERGY : BARGE_IN_MIN_MS;
+    if (!isSustained(this.speechOnsetAt, performance.now(), gate)) return;
 
     if (this.state === "speaking") {
       // Sustained voice while the tutor is speaking: probably a real interruption.

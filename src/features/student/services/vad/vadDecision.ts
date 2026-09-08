@@ -58,8 +58,13 @@ export interface VadThresholds {
    * hysteresis band: a single value makes the verdict chatter on every frame whose
    * probability sits near it, and chatter at the onset boundary is a false barge-in. */
   negative: number;
-  /** Sustained speech required before an onset is declared. */
+  /** Sustained speech required before an onset is declared, when SILERO is deciding.
+   * It is discriminative, so it can commit sooner. */
   minSpeechMs: number;
+  /** The same, when the ENERGY fallback is deciding. Longer on purpose: energy cannot
+   * tell speech from any other loud sound, so committing as fast as Silero does turns
+   * every cough, chair creak and echo of the tutor's own voice into an interruption. */
+  minSpeechEnergyMs: number;
   /** Silence tolerated inside speech before an offset. Matches the worklet's HANGOVER_MS
    * so the two detectors agree on turn shape and only disagree about what is speech. */
   hangoverMs: number;
@@ -80,6 +85,10 @@ export const DEFAULT_THRESHOLDS: VadThresholds = {
   positive: 0.5,
   negative: 0.35,
   minSpeechMs: 160,
+  // Matches mic-processor.js's own MIN_SPEECH_MS. That value was tuned against real
+  // rooms on the energy detector and this path is the same detector, so running it at
+  // Silero's 160ms made the fallback MORE trigger-happy than the code it replaced.
+  minSpeechEnergyMs: 250,
   hangoverMs: 700,
   maxBacklogFrames: 8,
   maxInferenceMs: 40,
@@ -213,9 +222,13 @@ export class VadDecider {
       this.voicedMs = 0;
     }
 
+    const onsetThreshold = useSilero
+      ? this.thresholds.minSpeechMs
+      : this.thresholds.minSpeechEnergyMs;
+
     let onset = false;
     let offset = false;
-    if (!this.voiced && this.voicedMs >= this.thresholds.minSpeechMs) {
+    if (!this.voiced && this.voicedMs >= onsetThreshold) {
       this.voiced = true;
       onset = true;
     } else if (this.voiced && this.silenceMs >= this.thresholds.hangoverMs) {
