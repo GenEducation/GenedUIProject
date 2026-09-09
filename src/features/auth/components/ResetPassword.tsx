@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { resetPassword } from "../authService";
 import { Button } from "@/components/ui/Button";
+import { asError } from "@/utils/errors";
 
 interface ResetPasswordProps {
   token: string;
@@ -45,8 +46,8 @@ export function ResetPassword({ token, initialEmail = "" }: ResetPasswordProps) 
         new_password: password
       });
       setIsSuccess(true);
-    } catch (err: any) {
-      setError(err.message || "Failed to reset password");
+    } catch (err) {
+      setError(asError(err).message || "Failed to reset password");
     } finally {
       setIsSubmitting(false);
     }

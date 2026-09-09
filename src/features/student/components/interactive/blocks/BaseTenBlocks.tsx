@@ -14,7 +14,7 @@ export default function BaseTenBlocks({ directiveId, meta, disabled, readOnly }:
   const it = meta?.interaction_type || "build";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ hundreds?: number; tens?: number; ones?: number }>(directiveId, it, allowRetry);
 
   const [h, setH] = useState<number>(studentAnswer?.hundreds ?? 0);
   const [t, setT] = useState<number>(studentAnswer?.tens ?? 0);

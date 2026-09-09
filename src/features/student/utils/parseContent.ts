@@ -13,7 +13,48 @@ const LEARNING_BLUEPRINT = `
 </svg>
 `;
 
-export function generateHistoricalSVG(type: string, params: any): string {
+/** A point in a coordinate diagram, either {x, y} or a [x, y] pair. */
+type SvgPoint = { x?: number; y?: number } | number[];
+
+/**
+ * Parameters for `generateHistoricalSVG`, as emitted by the tutor alongside a
+ * visual directive. Which fields are present depends entirely on `type`
+ * (a "polygon" carries `vertices`, a "clock" carries `hour`/`minute`, ...),
+ * so every field is optional and each branch reads only its own with a default.
+ */
+export interface HistoricalSvgParams {
+  a?: number;
+  h?: number;
+  k?: number;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  radius?: number;
+  degrees?: number;
+  numerator?: number;
+  denominator?: number;
+  start?: number;
+  end?: number;
+  hour?: number;
+  minute?: number;
+  month?: number;
+  year?: number;
+  label?: string;
+  expression?: string;
+  intersection_label?: string;
+  sets?: string[];
+  bins?: number[];
+  data?: number[];
+  frequencies?: number[];
+  probabilities?: number[];
+  points?: { x: number; y: number }[];
+  lines?: { p1: number[]; p2: number[] }[];
+  vertices?: SvgPoint[];
+  branches?: string[][];
+}
+
+export function generateHistoricalSVG(type: string, params: HistoricalSvgParams): string {
   const width = 400;
   const height = 280;
 
@@ -115,16 +156,16 @@ export function generateHistoricalSVG(type: string, params: any): string {
       g += `<line x1="${margin}" y1="${toY(i)}" x2="${width-margin}" y2="${toY(i)}" stroke="${gridGray}" stroke-width="0.5" />`;
     }
     const axes = `<line x1="${margin}" y1="${toY(0)}" x2="${width-margin}" y2="${toY(0)}" stroke="${textDark}" stroke-opacity="0.3" /><line x1="${toX(0)}" y1="${margin}" x2="${toX(0)}" y2="${height-margin}" stroke="${textDark}" stroke-opacity="0.3" />`;
-    let m = ""; pts.forEach((p: any) => m += `<circle cx="${toX(p.x)}" cy="${toY(p.y)}" r="5" fill="${highlightOrange}" stroke="white" stroke-width="2" />`);
-    lns.forEach((l: any) => m += `<line x1="${toX(l.p1[0])}" y1="${toY(l.p1[1])}" x2="${toX(l.p2[0])}" y2="${toY(l.p2[1])}" stroke="${primaryBlue}" stroke-width="2.5" />`);
+    let m = ""; pts.forEach((p) => m += `<circle cx="${toX(p.x)}" cy="${toY(p.y)}" r="5" fill="${highlightOrange}" stroke="white" stroke-width="2" />`);
+    lns.forEach((l) => m += `<line x1="${toX(l.p1[0])}" y1="${toY(l.p1[1])}" x2="${toX(l.p2[0])}" y2="${toY(l.p2[1])}" stroke="${primaryBlue}" stroke-width="2.5" />`);
     shapeMarkup = g + axes + m;
   } else if (type === "point" || type === "coordinate") {
     const x = width/2 + (params.x||0)*20, y = height/2 - (params.y||0)*20;
     shapeMarkup = `<circle cx="${x}" cy="${y}" r="6" fill="${highlightOrange}" stroke="white" stroke-width="2" /><circle cx="${x}" cy="${y}" r="12" fill="${highlightOrange}" fill-opacity="0.15" />`;
   } else if (type === "polygon") {
-    const vs: any[] = params.vertices || [];
+    const vs: SvgPoint[] = params.vertices || [];
     if (vs.length >= 3) {
-      const coords = vs.map((v: any) => ({
+      const coords = vs.map((v) => ({
         x: Array.isArray(v) ? v[0] : (v.x ?? 0),
         y: Array.isArray(v) ? v[1] : (v.y ?? 0),
       }));
@@ -187,19 +228,20 @@ export function generateHistoricalSVG(type: string, params: any): string {
       `<text x="${x2+r/2}" y="${cy+5}" text-anchor="middle" fill="${highlightOrange}" font-size="18" font-weight="800">${sets[1]||"B"}</text>` +
       (params.intersection_label ? `<text x="${cx}" y="${cy+5}" text-anchor="middle" fill="${textDark}" font-size="11" font-weight="700">${params.intersection_label}</text>` : "");
   } else if (type === "probability_tree") {
-    const branches: string[] = params.branches || [["H","T"],["H","T"]];
+    const branches: string[] | string[][] = params.branches || [["H","T"],["H","T"]];
     const probs: number[] = params.probabilities || [0.5,0.5];
     const startX = 60, startY = height/2;
     const level1X = 180, level2X = 320;
     let g = `<circle cx="${startX}" cy="${startY}" r="6" fill="${primaryBlue}" />`;
-    const b1 = Array.isArray(branches[0]) ? branches[0] : (branches as any);
-    const yPositions = b1.map((_:any, i:number) => startY - ((b1.length-1)/2 - i) * 80);
+    // `branches` is either one list of labels per level, or a single flat list.
+    const b1: string[] = Array.isArray(branches[0]) ? branches[0] : (branches as unknown as string[]);
+    const yPositions = b1.map((_, i) => startY - ((b1.length-1)/2 - i) * 80);
     yPositions.forEach((y1: number, i: number) => {
       g += `<line x1="${startX}" y1="${startY}" x2="${level1X}" y2="${y1}" stroke="${primaryBlue}" stroke-width="2" />`;
       g += `<circle cx="${level1X}" cy="${y1}" r="5" fill="${highlightOrange}" stroke="white" stroke-width="1.5" />`;
       g += `<text x="${(startX+level1X)/2}" y="${(startY+y1)/2-6}" text-anchor="middle" fill="${textDark}" font-size="10" font-weight="700">${probs[i]||""}</text>`;
       const b2 = Array.isArray(branches[1]) ? branches[1] : ["H","T"];
-      const yPos2 = b2.map((_:any, j:number) => y1 - ((b2.length-1)/2 - j) * 40);
+      const yPos2 = b2.map((_, j) => y1 - ((b2.length-1)/2 - j) * 40);
       yPos2.forEach((y2: number, j: number) => {
         g += `<line x1="${level1X}" y1="${y1}" x2="${level2X}" y2="${y2}" stroke="${textDark}" stroke-width="1.5" stroke-opacity="0.5" />`;
         g += `<circle cx="${level2X}" cy="${y2}" r="4" fill="${primaryBlue}" fill-opacity="0.4" />`;
@@ -276,7 +318,18 @@ export function parseContent(content: string): ChatElement[] {
       // rehydrate the same ChatElement shape from the stored JSON body.
       const label = match[2];
       const payload = match[3].trim();
-      let block: any = {};
+      /** The persisted interactive block body; shape follows `interactive_type`. */
+      let block: {
+        interactive_type?: string;
+        directive_id?: string;
+        label?: string;
+        prompt?: string;
+        render?: ChatElement["meta"];
+        interaction?: ChatElement["meta"];
+        validation?: ChatElement["meta"];
+        interaction_type?: string;
+        meta?: { interaction_type?: string };
+      } = {};
       try { block = JSON.parse(payload); } catch (e) { block = {}; }
       elements.push({
         id: `interactive-${elementCount++}-${Date.now()}`,
@@ -355,7 +408,7 @@ export function parseContent(content: string): ChatElement[] {
       }
     } else if (match[6]) {
       const type = match[6];
-      let attrsRaw = match[7];
+      const attrsRaw = match[7];
 
       if (type === "math_interactive") {
         // Raw interactive directive emitted as text (model wrote the tool call inline
@@ -398,7 +451,7 @@ export function parseContent(content: string): ChatElement[] {
       } else if (type === "MATH_DRAW") {
         const typeMatch = attrsRaw.match(/type\s*=\s*[\\"]*([^\\"\s\>]+)[\\"]*/i);
         const paramsStart = attrsRaw.indexOf("params=");
-        let params: any = {};
+        let params: HistoricalSvgParams & { expression?: string } = {};
         if (paramsStart >= 0) {
           const jsonStart = attrsRaw.indexOf("{", paramsStart);
           if (jsonStart >= 0) {
@@ -479,7 +532,7 @@ export function parseContent(content: string): ChatElement[] {
               type: "comprehension_widget",
               content: payload.word,
               meta: {
-                widget_type: "difficult_word" as any,
+                widget_type: "difficult_word",
                 word: payload.word,
                 syllables: payload.syllables,
                 phonetic: payload.phonetic,

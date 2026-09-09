@@ -173,10 +173,10 @@ export const OnboardingSliderView: React.FC<OnboardingSliderViewProps> = ({
                 </div>
                 <div className="mb-auto">
                   <h2 className="font-serif text-2xl md:text-3xl font-extrabold text-[#042e5c] leading-tight mb-4">
-                    Let's build your <br /><span className="text-[#059F6D]">learning profile</span>
+                    Let&apos;s build your <br /><span className="text-[#059F6D]">learning profile</span>
                   </h2>
                   <p className="text-sm text-[#042e5c]/60 leading-relaxed font-medium">
-                    I'll ask you a few simple questions to understand how you learn best. This helps me teach you in the most effective way.
+                    I&apos;ll ask you a few simple questions to understand how you learn best. This helps me teach you in the most effective way.
                   </p>
 
                   <div className="mt-10 space-y-3">

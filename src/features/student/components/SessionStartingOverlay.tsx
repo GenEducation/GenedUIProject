@@ -1,6 +1,7 @@
 "use client";
 
 import { useStudentStore } from "../store/useStudentStore";
+import { FunFactCard } from "@/components/shared/loaders/FunFactCard";
 
 /**
  * Full-screen overlay shown while a brand-new chat session is being created.
@@ -10,6 +11,8 @@ import { useStudentStore } from "../store/useStudentStore";
  */
 export function SessionStartingOverlay() {
   const isStartingSession = useStudentStore((s) => s.isStartingSession);
+  const grade = useStudentStore((s) => s.studentProfile?.grade);
+  const subject = useStudentStore((s) => s.activeChat?.subject);
 
   if (!isStartingSession) return null;
 
@@ -31,6 +34,7 @@ export function SessionStartingOverlay() {
         >
           Starting Session...
         </p>
+        <FunFactCard grade={grade} subject={subject} className="mt-4 px-4" />
       </div>
     </div>
   );

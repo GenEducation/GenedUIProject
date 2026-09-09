@@ -12,7 +12,7 @@ export interface TeacherOverview {
   total_students: number;
   pending: number;
   approved: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface TeacherStudent {
@@ -26,7 +26,7 @@ export interface TeacherStudent {
   grade?: number;
   requested_at?: string;
   school_status?: string | null;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface TeacherStudentsResponse {
@@ -34,7 +34,7 @@ export interface TeacherStudentsResponse {
   total_count?: number;
   pending_count?: number;
   approved_count?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface TeacherRequest {
@@ -42,7 +42,7 @@ export interface TeacherRequest {
   subject?: string;
   status?: LinkStatus;
   requested_at?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface InvitePayload {
@@ -56,7 +56,7 @@ export interface InviteResponse {
   status: LinkStatus;
   subject: string;
   requested_at: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface AssignPayload {
@@ -78,15 +78,15 @@ export interface ChatSession {
   last_active?: string;
   updated_at?: string;
   message_count?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ChatMessage {
   message_id?: string;
   role?: string;
   content?: string;
-  meta_data?: Record<string, any>;
-  [key: string]: any;
+  meta_data?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 const jsonHeaders = { accept: "application/json" };

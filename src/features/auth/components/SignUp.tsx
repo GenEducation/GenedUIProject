@@ -8,6 +8,7 @@ import { RoleCard } from "./RoleCard";
 import { fetchAllTaxonomyGrades } from "@/features/subjects/subjectCatalog";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
+import { asError } from "@/utils/errors";
 
 interface SignUpData {
   username?: string;
@@ -71,6 +72,7 @@ export function SignUp({
   const [otpSentMessage, setOtpSentMessage] = useState("");
   const [hasPersonalEmail, setHasPersonalEmail] = useState(false);
   const [availableGrades, setAvailableGrades] = useState<number[]>([3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
   const isSignupEnabled = process.env.NEXT_PUBLIC_ENABLE_SIGNUP !== "false";
 
   useEffect(() => {
@@ -121,8 +123,6 @@ export function SignUp({
       </div>
     );
   }
-
-  const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
 
   /**
    * Client-side gate for the final step. Both roles now finish at step 2, so
@@ -199,9 +199,12 @@ export function SignUp({
   const prevStep = () => setStep((s) => s - 1);
 
   const handleRoleSelect = (role: "student" | "parent") => {
+    // The parent's handler only reads `target.name` / `target.value`; these
+    // selectors are custom buttons, not real inputs, so a minimal synthetic
+    // event stands in for a DOM change event.
     const event = {
       target: { name: "role", value: role },
-    } as any;
+    } as ChangeEvent<HTMLInputElement>;
     onChange(event);
     setStep(2);
   };
@@ -236,7 +239,7 @@ export function SignUp({
   const handleGradeSelect = (grade: number) => {
     const event = {
       target: { name: "grade", value: String(grade) },
-    } as any;
+    } as ChangeEvent<HTMLInputElement>;
     onChange(event);
   };
 
@@ -299,8 +302,8 @@ export function SignUp({
                         await sendOtp(signupData.email);
                         setIsOtpSent(true);
                         setOtpSentMessage("OTP sent to your email!");
-                      } catch (err: any) {
-                        setLocalErrors({ email: err.message || "Failed to send OTP" });
+                      } catch (err) {
+                        setLocalErrors({ email: asError(err).message || "Failed to send OTP" });
                       } finally {
                         setIsSendingOtp(false);
                       }
@@ -355,7 +358,7 @@ export function SignUp({
               </div>
 
               <div>
-                <label className={labelCls}>Parent or Guardian's Email Address (Optional)</label>
+                <label className={labelCls}>Parent or Guardian&apos;s Email Address (Optional)</label>
                 <input
                   name="parent_email"
                   value={signupData.parent_email || ""}
@@ -390,7 +393,7 @@ export function SignUp({
               </div>
 
               <div>
-                <label className={labelCls}>Parent or Guardian's Email Address</label>
+                <label className={labelCls}>Parent or Guardian&apos;s Email Address</label>
                 <input
                   name="parent_email"
                   value={signupData.parent_email || ""}
@@ -535,8 +538,8 @@ export function SignUp({
                       await sendOtp(signupData.email);
                       setIsOtpSent(true);
                       setOtpSentMessage("OTP sent to your email!");
-                    } catch (err: any) {
-                      setLocalErrors({ email: err.message || "Failed to send OTP" });
+                    } catch (err) {
+                      setLocalErrors({ email: asError(err).message || "Failed to send OTP" });
                     } finally {
                       setIsSendingOtp(false);
                     }

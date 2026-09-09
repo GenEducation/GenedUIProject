@@ -51,7 +51,7 @@ export function AgentPickerModal() {
         <div className="flex items-center justify-between px-7 pt-7 pb-5 border-b border-[var(--primary-ink)]/8">
           <div>
             <h2 className="text-xl font-extrabold text-[var(--primary-ink)]">All Subjects</h2>
-            <p className="text-sm text-[var(--primary-ink)]/50 mt-0.5">Select what you'd like to learn today</p>
+            <p className="text-sm text-[var(--primary-ink)]/50 mt-0.5">Select what you&apos;d like to learn today</p>
           </div>
           <Button iconOnly size="sm" variant="tertiary" aria-label="Close" onClick={() => setAgentPickerOpen(false)}>
             <X size={18} />

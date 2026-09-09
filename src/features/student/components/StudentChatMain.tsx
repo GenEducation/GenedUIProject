@@ -6,7 +6,13 @@ import React, { useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { STUDENT_COLORS } from "../theme/colors";
-import { useStudentStore, ChatMessage, ChatSession } from "../store/useStudentStore";
+import {
+  useStudentStore,
+  ChatMessage,
+  ChatSession,
+  type OralAnalysisResult,
+  type SkillDirective,
+} from "../store/useStudentStore";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import { KaraokeRenderer } from "./KaraokeRenderer";
 import { StudentChatInput } from "./StudentChatInput";
@@ -15,6 +21,7 @@ import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { useSessionHeartbeat } from "@/hooks/useSessionHeartbeat";
 import { STRINGS } from "../constants/strings";
 import { getSubjectConfig } from "@/constants/subjectConfig";
+import { FunFactCard } from "@/components/shared/loaders/FunFactCard";
 
 interface StudentChatMainProps {
   activeChat: ChatSession;
@@ -72,9 +79,9 @@ function ReadingSkillModal({
 }: { 
   state: string; 
   prompt: "silence" | "cap" | null; 
-  skillData: any;
+  skillData: SkillDirective | null;
   error: string | null;
-  analysisResult: any | null;
+  analysisResult: OralAnalysisResult | null;
   playbackState: string;
   onStart: () => void;
   onStop: () => void;
@@ -164,7 +171,7 @@ function ReadingSkillModal({
               )}
               {prompt === "cap" && (
                 <div className="bg-blue-50 text-blue-800 text-xs px-4 py-3 rounded-xl text-center font-bold border border-blue-200">
-                  Time's up! Tap done to send your recording.
+                  Time&apos;s up! Tap done to send your recording.
                 </div>
               )}
 
@@ -234,10 +241,10 @@ function ReadingSkillModal({
               <div className="p-3 sm:p-4 bg-orange-50/30 rounded-xl sm:rounded-2xl border border-orange-100/50">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-6 h-6 rounded-full bg-orange-200 flex items-center justify-center text-[10px] font-bold text-orange-700 flex-shrink-0">A</div>
-                  <span className="text-xs font-bold text-orange-800">Aanya's Feedback</span>
+                  <span className="text-xs font-bold text-orange-800">Aanya&apos;s Feedback</span>
                 </div>
                 <p className="text-sm text-orange-900/80 italic leading-relaxed">
-                  "{analysisResult.feedback || "Great job reading! Keep it up."}"
+                  &quot;{analysisResult.feedback || "Great job reading! Keep it up."}&quot;
                 </p>
               </div>
 
@@ -610,6 +617,12 @@ export function StudentChatMain({
               >
                 <Loader2 className="animate-spin" style={{ width: 36, height: 36, color: "#5B4DC720" }} />
                 <p style={{ fontSize: 13, color: "#94A3B8", fontWeight: 700, letterSpacing: "0.05em" }}>Retrieving history...</p>
+                <FunFactCard
+                  grade={studentProfile?.grade}
+                  subject={activeChat.subject}
+                  variant="inline"
+                  className="pt-2"
+                />
               </motion.div>
             ) : isNewChat ? (
               <motion.div

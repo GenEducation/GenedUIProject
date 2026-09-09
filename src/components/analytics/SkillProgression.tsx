@@ -100,7 +100,8 @@ interface TooltipPayloadItem {
   name?: string;
   color?: string;
   value?: number;
-  payload?: any;
+  /** The original data row recharts charted; carries the display label. */
+  payload?: { fullLabel?: string };
 }
 
 interface CustomTooltipProps {
@@ -112,7 +113,7 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
   if (!active || !payload || payload.length === 0) return null;
 
   // The label is stored in the payload's original data object
-  const label = payload[0].payload.fullLabel;
+  const label = payload[0]?.payload?.fullLabel;
 
   return (
     <div className="bg-[#1a3a2a] rounded-2xl px-4 py-3 shadow-xl border border-white/10">

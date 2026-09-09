@@ -6,6 +6,7 @@ import { updateProfile } from "@/features/auth/authService";
 import { useStudentStore, StudentProfile } from "../store/useStudentStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { Button } from "@/components/ui/Button";
+import { asError } from "@/utils/errors";
 
 interface CompleteProfileBannerProps {
   studentProfile: StudentProfile;
@@ -77,8 +78,8 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
       localStorage.setItem(`gened_profile_banner_skipped_${studentProfile.user_id}`, "true");
       setSkipped(true);
       maybeLaunchTutorial();
-    } catch (err: any) {
-      setError(err.message || "Failed to update profile");
+    } catch (err) {
+      setError(asError(err).message || "Failed to update profile");
     } finally {
       setIsSaving(false);
     }

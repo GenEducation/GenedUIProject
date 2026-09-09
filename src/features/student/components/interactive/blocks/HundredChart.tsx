@@ -25,7 +25,7 @@ export default function HundredChart({ directiveId, meta, disabled, readOnly }: 
   const selFill = hasHighlights ? COLORS.brand : fill;
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ selected?: number[] }>(directiveId, it, allowRetry);
 
   const initial: number[] = Array.isArray(studentAnswer?.selected) ? studentAnswer.selected : [];
   const [selected, setSelected] = useState<number[]>(initial);

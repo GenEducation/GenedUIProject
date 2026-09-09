@@ -61,7 +61,10 @@ test.describe("Test flow — assessments to results (real browser)", () => {
     await expect(page.getByText("Chapter 3: Photosynthesis").first()).toBeVisible({ timeout: 10_000 });
     await page.getByRole("button", { name: /start test/i }).first().click();
 
-    // ── 2. Wait for the test page (handleStartTest uses a 2s setTimeout) ──
+    // ── 2. Generation finishes → TestReadyModal asks before navigating ──
+    await expect(page.getByRole("dialog", { name: /your test is ready/i })).toBeVisible({ timeout: 10_000 });
+    await page.getByRole("button", { name: /continue to test/i }).click();
+
     await page.waitForURL(/\/student\/test/, { timeout: 10_000 });
     await expect(page.getByText(/Photosynthesis/).first()).toBeVisible({ timeout: 10_000 });
 
@@ -87,6 +90,50 @@ test.describe("Test flow — assessments to results (real browser)", () => {
 
     // Verify the payload actually reached the submit route
     expect(submitPayload).not.toBeNull();
+  });
+
+  test("slow generation does not hijack the page the student moved to", async ({ page }) => {
+    const test_ = makeChapterTest();
+
+    // Hold the response open so the student can navigate away mid-generation,
+    // which is exactly the race that used to fire a stray router.push.
+    let release: () => void = () => {};
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    await page.route(`${API}/create-chapter-test`, async (route) => {
+      await held;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(test_),
+      });
+    });
+
+    // Reach Assessments via a client-side push, so going back is a popstate
+    // that keeps the store (and the in-flight generation) alive.
+    await page.goto("/student");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: /^practice$/i }).first().click();
+    await page.waitForURL(/\/student\/assessments/, { timeout: 10_000 });
+
+    await expect(page.getByText("Chapter 3: Photosynthesis").first()).toBeVisible({ timeout: 10_000 });
+    await page.getByRole("button", { name: /start test/i }).first().click();
+
+    // The student gets impatient and backs out. (The "preparing" overlay covers
+    // the sidebar, so browser back is the way out that a real student has.)
+    await page.goBack();
+    await page.waitForURL(/\/student$/, { timeout: 10_000 });
+
+    release();
+
+    // The prompt must appear where the student actually is, and the URL must
+    // not change on its own.
+    await expect(page.getByRole("dialog", { name: /your test is ready/i })).toBeVisible({ timeout: 10_000 });
+    expect(new URL(page.url()).pathname).toBe("/student");
+
+    // Declining leaves them where they are.
+    await page.getByRole("button", { name: /^later$/i }).click();
+    await expect(page.getByRole("dialog", { name: /your test is ready/i })).toBeHidden();
+    expect(new URL(page.url()).pathname).toBe("/student");
   });
 
   test("no-auth direct nav to /student/test redirects to login", async ({ browser }) => {

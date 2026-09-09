@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { PDFDocumentProxy } from "pdfjs-dist";
+import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
+import { asError } from "@/utils/errors";
 
 interface PdfPageProps {
   pdfDoc: PDFDocumentProxy;
@@ -15,7 +16,7 @@ interface PdfPageProps {
 
 export function PdfPage({ pdfDoc, pageNumber, scale, isVisible, width, height, pageRef }: PdfPageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const renderTaskRef = useRef<any>(null);
+  const renderTaskRef = useRef<RenderTask | null>(null);
   const renderedScaleRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -60,8 +61,8 @@ export function PdfPage({ pdfDoc, pageNumber, scale, isVisible, width, height, p
         await renderTask.promise;
         renderedScaleRef.current = scale;
         page.cleanup();
-      } catch (err: any) {
-        if (err?.name === "RenderingCancelledException") return;
+      } catch (err) {
+        if (asError(err).name === "RenderingCancelledException") return;
         console.warn(`[PdfPage] Render error on page ${pageNumber}:`, err);
       }
     };

@@ -10,6 +10,7 @@
  */
 
 import { authFetch } from "@/utils/authFetch";
+import { asError } from "@/utils/errors";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
@@ -131,10 +132,10 @@ class AudioPlayerService {
       this.pausedAt = 0;
       source.start(0);
       this.setState("playing");
-    } catch (err: any) {
+    } catch (err) {
       if (this.activeDirectiveId === directiveId) {
         this.setState("error");
-        callbacks.onError?.(directiveId, err?.message || "Playback error");
+        callbacks.onError?.(directiveId, asError(err).message || "Playback error");
       }
     }
   }

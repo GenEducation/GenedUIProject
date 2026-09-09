@@ -3,7 +3,8 @@ import { splitExpressions, contentBounds } from '../utils/desmosPayload';
 
 interface MathWidgetProps {
   expression: string;
-  meta?: any;
+  /** Loose tutor-supplied metadata; only `error` and `message` are read. */
+  meta?: { error?: boolean; message?: string; [key: string]: unknown };
   minimal?: boolean;
 }
 

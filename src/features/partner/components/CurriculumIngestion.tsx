@@ -16,9 +16,9 @@ import { Button } from "@/components/ui/Button";
 interface CurriculumIngestionProps {
   onClose: () => void;
   activeAgentId: string | null;
-  agents: any[];
+  agents: unknown[];
   onAddAgent: () => void;
-  onExtractionComplete: (data: any) => void;
+  onExtractionComplete: (data: unknown) => void;
 }
 
 export function CurriculumIngestion({

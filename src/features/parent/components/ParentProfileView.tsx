@@ -14,10 +14,10 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useParentStore } from "../store/useParentStore";
+import { useParentStore, type ParentProfile } from "../store/useParentStore";
 import { UnlinkConfirmationModal } from "./UnlinkConfirmationModal";
 
-export function ParentProfileView({ profile }: { profile: any }) {
+export function ParentProfileView({ profile }: { profile?: ParentProfile | null }) {
   const linkedStudents = useParentStore((state) => state.linkedStudents);
   const updateStudentStatus = useParentStore((state) => state.updateStudentStatus);
   const unlinkStudent = useParentStore((state) => state.unlinkStudent);
@@ -188,7 +188,7 @@ export function ParentProfileView({ profile }: { profile: any }) {
               ))
             ) : (
               <div className="col-span-1 md:col-span-2 bg-white/50 border border-dashed border-[#1a3a2a]/10 rounded-[32px] p-12 text-center">
-                <p className="text-sm font-bold text-[#1a3a2a]/20 italic">You haven't linked any students yet</p>
+                <p className="text-sm font-bold text-[#1a3a2a]/20 italic">You haven&apos;t linked any students yet</p>
               </div>
             )}
           </div>

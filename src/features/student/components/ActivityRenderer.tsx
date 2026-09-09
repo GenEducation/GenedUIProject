@@ -166,7 +166,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
       </div>
       
       <div className="text-[15px] font-medium text-[var(--primary-ink)]/90 leading-relaxed border-l-2 border-[var(--primary-ink)]/20 pl-3 italic">
-        "{action.content}"
+        &quot;{action.content}&quot;
       </div>
 
       {!isCompleted && (

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { requestPasswordReset, resetPassword } from "../authService";
 import { Button } from "@/components/ui/Button";
+import { asError } from "@/utils/errors";
 
 export function ForgotPassword() {
   const [step, setStep] = useState(1);
@@ -28,8 +29,8 @@ export function ForgotPassword() {
     try {
       await requestPasswordReset(email);
       setStep(2);
-    } catch (err: any) {
-      setError(err.message || "Failed to send OTP code");
+    } catch (err) {
+      setError(asError(err).message || "Failed to send OTP code");
     } finally {
       setIsSubmitting(false);
     }
@@ -59,8 +60,8 @@ export function ForgotPassword() {
         new_password: newPassword
       });
       setIsSuccess(true);
-    } catch (err: any) {
-      setError(err.message || "Failed to reset password");
+    } catch (err) {
+      setError(asError(err).message || "Failed to reset password");
     } finally {
       setIsSubmitting(false);
     }

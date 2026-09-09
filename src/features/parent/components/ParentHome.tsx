@@ -32,6 +32,7 @@ import { ParentScheduleView } from "./ParentScheduleView";
 import { ParentMomentsView } from "./ParentMomentsView";
 import { NotificationBell } from "@/components/NotificationBell";
 import { Select } from "@/components/ui/Select";
+import { asError } from "@/utils/errors";
 
 // Lazy-loaded: both are large and only shown on specific tabs.
 // StudentReportCard is ~160KB; StudentAnalyticsDashboard pulls in recharts.
@@ -130,9 +131,9 @@ export function ParentHome() {
           const newUrl = window.location.pathname;
           window.history.replaceState({}, "", newUrl);
         }
-      } catch (err: any) {
-        if (!cancelled && err?.name !== "AbortError") {
-          setLinkingError(err.message || "Failed to establish parent-student link.");
+      } catch (err) {
+        if (!cancelled && asError(err).name !== "AbortError") {
+          setLinkingError(asError(err).message || "Failed to establish parent-student link.");
         }
       } finally {
         if (!cancelled) setIsLinking(false);

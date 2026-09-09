@@ -6,6 +6,7 @@ import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 import { requestPasswordReset, resetPassword } from "@/features/auth/authService";
 import { Button } from "@/components/ui/Button";
+import { asError } from "@/utils/errors";
 
 export default function ForgotPasswordPage() {
   const [step, setStep] = useState(1);
@@ -26,8 +27,8 @@ export default function ForgotPasswordPage() {
     try {
       await requestPasswordReset(email);
       setStep(2);
-    } catch (err: any) {
-      setError(err.message || "Failed to send OTP code");
+    } catch (err) {
+      setError(asError(err).message || "Failed to send OTP code");
     } finally {
       setIsSubmitting(false);
     }
@@ -43,8 +44,8 @@ export default function ForgotPasswordPage() {
     try {
       await resetPassword({ email, otp_code: otpCode, new_password: newPassword });
       setIsSuccess(true);
-    } catch (err: any) {
-      setError(err.message || "Failed to reset password");
+    } catch (err) {
+      setError(asError(err).message || "Failed to reset password");
     } finally {
       setIsSubmitting(false);
     }

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { studentService } from "@/features/student/services/studentService";
 import { TypingStudentCharacter } from "@/components/shared/loaders/StudentLoader/TypingStudentCharacter";
+import { FunFactCard } from "@/components/shared/loaders/FunFactCard";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { Button } from "@/components/ui/Button";
 import { STRINGS } from "../constants/strings";
@@ -29,6 +30,11 @@ import { PageHeader } from "@/components/student/PageHeader";
 import { SidebarToggle } from "@/components/student/SidebarToggle";
 import { PageContainer } from "@/components/student/PageContainer";
 import { FIELD_CLASSNAME, FIELD_FOCUS_CLASSNAME } from "@/components/ui/fieldStyles";
+import { asError } from "@/utils/errors";
+import type { ChapterMastery } from "@/features/student/services/studentService";
+
+/** A chapter-mastery row tagged with the subject it was fetched for. */
+type ChapterMasteryWithSubject = ChapterMastery & { subject: string };
 
 export function AssessmentsPage() {
   const router = useRouter();
@@ -42,10 +48,11 @@ export function AssessmentsPage() {
   const { startTest, loadTest, loadSubmission, loadStudentTests, studentTests, isLoadingTests } = useTestStore();
   const [isLoadingResult, setIsLoadingResult] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [allChapters, setAllChapters] = useState<any[]>([]);
+  const [allChapters, setAllChapters] = useState<ChapterMasteryWithSubject[]>([]);
   const [isLoadingAll, setIsLoadingAll] = useState(false);
   const [isStartingTest, setIsStartingTest] = useState(false);
-  const testNavTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  /** Subject of the test being generated, so the fun fact can match it. */
+  const [startingTestSubject, setStartingTestSubject] = useState<string | null>(null);
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
 
   /* responsive sidebar */
@@ -55,10 +62,6 @@ export function AssessmentsPage() {
     window.addEventListener("resize", handle);
     return () => window.removeEventListener("resize", handle);
   }, [applyResponsive]);
-
-  useEffect(() => {
-    return () => { if (testNavTimerRef.current) clearTimeout(testNavTimerRef.current); };
-  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -87,16 +90,16 @@ export function AssessmentsPage() {
           analyticsSubjects.map(async (subject) => {
             try {
               const chapters = await studentService.fetchChapterMastery(studentProfile.user_id, subject, controller.signal);
-              return chapters.map((c: any) => ({ ...c, subject }));
-            } catch (e: any) {
-              if (e?.name !== "AbortError") console.error(`Failed to fetch chapters for ${subject}:`, e);
+              return chapters.map((c) => ({ ...c, subject }));
+            } catch (e) {
+              if (asError(e).name !== "AbortError") console.error(`Failed to fetch chapters for ${subject}:`, e);
               return [];
             }
           })
         );
         if (!cancelled) setAllChapters(results.flat());
-      } catch (error: any) {
-        if (!cancelled && error?.name !== "AbortError") console.error("Error fetching all chapters:", error);
+      } catch (error) {
+        if (!cancelled && asError(error).name !== "AbortError") console.error("Error fetching all chapters:", error);
       } finally {
         if (!cancelled) setIsLoadingAll(false);
       }
@@ -134,6 +137,7 @@ export function AssessmentsPage() {
   const handleStartTest = async (chapterTitle: string, subject: string) => {
     if (studentProfile?.user_id && Number.isInteger(studentProfile.grade)) {
       setIsStartingTest(true);
+      setStartingTestSubject(subject);
       try {
         const exactSubject = requireExactSubject(subject, studentProfile.grade);
         await startTest({
@@ -143,12 +147,12 @@ export function AssessmentsPage() {
           grade: studentProfile.grade!,
           questions_per_section: 3
         });
-        
-        testNavTimerRef.current = setTimeout(() => {
-          router.push("/student/test?from=assessments");
-        }, 2000);
+        // No navigation here. startTest raises testReadyPrompt and the globally
+        // mounted TestReadyModal asks the student what to do — this page may no
+        // longer be on screen by the time generation finishes.
       } catch (error) {
         console.error("Error starting test:", error);
+      } finally {
         setIsStartingTest(false);
       }
     }
@@ -255,7 +259,7 @@ export function AssessmentsPage() {
                         disabled={isLoadingResult}
                         className="shrink-0"
                       >
-                        View Test
+                        {t.submission_id ? "View Test" : "Start Test"}
                       </Button>
                     </div>
                     );
@@ -382,6 +386,13 @@ export function AssessmentsPage() {
                   />
                 </div>
               </div>
+              {/* Generation is always a multi-second LLM call, so no delay. */}
+              <FunFactCard
+                grade={studentProfile?.grade}
+                subject={startingTestSubject}
+                delayMs={0}
+                className="pt-4"
+              />
             </motion.div>
           </motion.div>
         )}

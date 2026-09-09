@@ -80,7 +80,7 @@ export function ParentSessionList() {
               <MessageSquare size={32} />
             </div>
             <p className="text-sm font-bold text-[#1a3a2a]/40 mb-1">No sessions found</p>
-            <p className="text-[10px] text-[#1a3a2a]/20 font-medium">This student hasn't started any explorations yet.</p>
+            <p className="text-[10px] text-[#1a3a2a]/20 font-medium">This student hasn&apos;t started any explorations yet.</p>
           </div>
         )}
       </div>

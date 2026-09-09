@@ -1,10 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ensureGeoGebraLoaded } from "@/utils/geogebraLoader";
+import {
+  ensureGeoGebraLoaded,
+  getGGBApplet,
+  type GeoGebraApi,
+  type GeoGebraAppletParameters,
+} from "@/utils/geogebraLoader";
 
 interface GeoGebraVisualProps {
   id: string;
   commands: string[];
-  options?: any;
+  options?: GeoGebraAppletParameters;
 }
 
 /** Display caps, matching P5Visual — see the note there. */
@@ -17,7 +22,7 @@ export function GeoGebraVisual({ id, commands, options = {} }: GeoGebraVisualPro
   const containerId = `ggb-${id.replace(/[^a-zA-Z0-9]/g, "-")}`;
 
   useEffect(() => {
-    let apiInstance: any = null;
+    let apiInstance: GeoGebraApi | null = null;
     let isMounted = true;
 
     async function loadApplet() {
@@ -25,7 +30,7 @@ export function GeoGebraVisual({ id, commands, options = {} }: GeoGebraVisualPro
         await ensureGeoGebraLoaded();
         if (!isMounted) return;
 
-        const params = {
+        const params: GeoGebraAppletParameters = {
           appName: "classic",
           width: 600, // Applet width will scale down via CSS 100% or GeoGebra handles it
           height: 320,
@@ -37,7 +42,7 @@ export function GeoGebraVisual({ id, commands, options = {} }: GeoGebraVisualPro
           preventFocus: true,
           scaleContainerClass: 'geogebra-container',
           ...options,
-          appletOnLoad: (api: any) => {
+          appletOnLoad: (api: GeoGebraApi) => {
             if (!isMounted) {
                api.remove();
                return;
@@ -73,8 +78,9 @@ export function GeoGebraVisual({ id, commands, options = {} }: GeoGebraVisualPro
           },
         };
 
-        // @ts-ignore
-        const applet = new window.GGBApplet(params, true);
+        const GGBApplet = getGGBApplet();
+        if (!GGBApplet) throw new Error("GeoGebra deployggb.js did not install GGBApplet");
+        const applet = new GGBApplet(params, true);
         applet.inject(containerId);
       } catch (err) {
         console.error("Failed to load GeoGebra applet", err);

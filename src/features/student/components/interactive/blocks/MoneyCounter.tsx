@@ -17,7 +17,7 @@ export default function MoneyCounter({ directiveId, meta, disabled, readOnly }: 
   const it = meta?.interaction_type || "build";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ coins?: number[] }>(directiveId, it, allowRetry);
 
   const [picks, setPicks] = useState<number[]>(Array.isArray(studentAnswer?.coins) ? studentAnswer.coins : []);
   const lock = disabled || submitted;

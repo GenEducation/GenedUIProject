@@ -58,7 +58,7 @@ export const SkillMasteryView: React.FC = () => {
                 axisLine={false} 
               />
               <Tooltip 
-                formatter={(value: any) => [`${value}%`, "Mastery"]}
+                formatter={(value) => [`${value}%`, "Mastery"]}
                 contentStyle={{ 
                   backgroundColor: "#1a3a2a", 
                   borderRadius: "12px", 
@@ -138,7 +138,7 @@ export const SkillMasteryView: React.FC = () => {
                 {/* Concepts List */}
                 {expandedCgs.includes(cg.cg_id) && (
                   <div className="px-8 pb-8 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                    {cg.concepts?.map((concept: any) => (
+                    {cg.concepts?.map((concept) => (
                       <div key={concept.c_id} className="space-y-4">
                         <div 
                           className="flex items-center justify-between cursor-pointer group"
@@ -156,7 +156,7 @@ export const SkillMasteryView: React.FC = () => {
                         {/* LOs under Concept */}
                         {expandedConcepts.includes(concept.c_id) && (
                           <div className="space-y-6 pl-2 animate-in fade-in duration-200">
-                            {concept.los?.map((lo: any, idx: number) => {
+                            {concept.los?.map((lo, idx) => {
                               const loMastery = Math.round((lo.mastery_level || 0) * 100);
                               const loId = `${concept.c_id}-${idx}`; // Unique ID for toggle state
                               return (
@@ -195,7 +195,7 @@ export const SkillMasteryView: React.FC = () => {
                                       {expandedLos.includes(loId) && (
                                         <div className="p-4 bg-[#F4F3EE] rounded-2xl animate-in slide-in-from-top-1 duration-200">
                                           <p className="text-xs italic text-[#1a3a2a]/70 font-medium leading-relaxed">
-                                            "{lo.justification || "Mastery based on consistent performance in recent practice sessions."}"
+                                            &quot;{lo.justification || "Mastery based on consistent performance in recent practice sessions."}&quot;
                                           </p>
                                         </div>
                                       )}

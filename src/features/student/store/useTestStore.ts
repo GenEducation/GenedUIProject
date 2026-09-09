@@ -8,6 +8,7 @@ import {
   Question,
   StudentTestSummary,
 } from "../types/test";
+import { asError } from "@/utils/errors";
 
 function buildAnswerString(
   question: Question,
@@ -43,6 +44,12 @@ interface TestState {
   isSubmitting: boolean;
   isLoadingTests: boolean;
   timerSeconds: number;
+  /**
+   * A freshly generated test is waiting for the student to say what to do with
+   * it. Lives in the store rather than the page that kicked generation off,
+   * because that page is often unmounted by the time preparation finishes.
+   */
+  testReadyPrompt: boolean;
 
   startTest: (request: CreateChapterTestRequest) => Promise<void>;
   updateAnswer: (questionId: string, answer: string) => void;
@@ -52,6 +59,10 @@ interface TestState {
   loadTest: (testId: string) => Promise<void>;
   loadSubmission: (submissionId: string) => Promise<void>;
   loadStudentTests: (studentId: string) => Promise<void>;
+  /** "Later" — close the prompt, leaving the test to be picked up from Practice. */
+  dismissTestReadyPrompt: () => void;
+  /** "Cancel" — close the prompt and drop the local copy of the test. */
+  discardPreparedTest: () => void;
   resetTest: () => void;
 }
 
@@ -66,13 +77,18 @@ export const useTestStore = create<TestState>((set, get) => ({
   isSubmitting: false,
   isLoadingTests: false,
   timerSeconds: 0,
+  testReadyPrompt: false,
 
   startTest: async (request) => {
-    set({ isLoading: true, testResult: null, answers: {}, justifications: {}, matchSelections: {} });
+    set({ isLoading: true, testResult: null, answers: {}, justifications: {}, matchSelections: {}, testReadyPrompt: false });
     try {
       const test = await testService.createChapterTest(request);
       const timerSeconds = (test.paper_meta?.suggested_time_minutes ?? 30) * 60;
-      set({ currentTest: test, timerSeconds });
+      // Raising the prompt here rather than navigating from the caller is what
+      // stops a slow generation from hijacking whatever page the student has
+      // moved on to. Only generation opts in — loadTest() is always a direct
+      // "open this test now" action and must stay immediate.
+      set({ currentTest: test, timerSeconds, testReadyPrompt: true });
     } catch (error) {
       console.error("Failed to start test:", error);
     } finally {
@@ -146,8 +162,8 @@ export const useTestStore = create<TestState>((set, get) => ({
     try {
       const result = await testService.getSubmission(submissionId);
       set({ testResult: result });
-    } catch (error: any) {
-      if (error?.status !== 404) {
+    } catch (error) {
+      if (asError(error).status !== 404) {
         console.error("Failed to load submission:", error);
       }
     } finally {
@@ -165,6 +181,13 @@ export const useTestStore = create<TestState>((set, get) => ({
     } finally {
       set({ isLoadingTests: false });
     }
+  },
+
+  dismissTestReadyPrompt: () => set({ testReadyPrompt: false }),
+
+  discardPreparedTest: () => {
+    set({ testReadyPrompt: false });
+    get().resetTest();
   },
 
   resetTest: () =>

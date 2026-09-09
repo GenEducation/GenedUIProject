@@ -1,4 +1,4 @@
-import { ApiRequestError } from "./authFetch";
+import { ApiRequestError, type ApiErrorBody } from "./authFetch";
 
 /**
  * Like `authFetch`, but for anonymous/public endpoints: no Authorization or
@@ -24,7 +24,7 @@ export async function publicFetch(
   if (!response.ok) {
     const requestId = response.headers.get("x-request-id") || "";
 
-    let body: any = {};
+    let body: ApiErrorBody = {};
     try {
       body = await response.json();
     } catch {

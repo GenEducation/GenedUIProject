@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { FunFactCard } from "../FunFactCard";
 
 const SIMULATED_CAP = 90;
 const LOOP_INTERVAL_MS = 800;
@@ -29,6 +30,10 @@ interface LoaderJourneyProps {
   // This is when the caller should actually navigate.
   onCelebrated?: () => void;
   onFinished: () => void;
+  // Student context for the fun fact. Passed in rather than read from a store
+  // so this component stays store-free and trivially testable.
+  factGrade?: number | null;
+  factSubject?: string | null;
 }
 
 export const LoaderJourney: React.FC<LoaderJourneyProps> = ({
@@ -37,6 +42,8 @@ export const LoaderJourney: React.FC<LoaderJourneyProps> = ({
   isHandoff = false,
   onCelebrated,
   onFinished,
+  factGrade,
+  factSubject,
 }) => {
   const [progress, setProgress] = useState(0);
   const [loopStep, setLoopStep] = useState(0);
@@ -191,6 +198,16 @@ export const LoaderJourney: React.FC<LoaderJourneyProps> = ({
             <div aria-live="polite" className="sr-only">
               {message}
             </div>
+
+            {/* Hidden during the celebration so it doesn't compete with the
+                trophy and confetti. */}
+            {!isTrophyPhase && (
+              <FunFactCard
+                grade={factGrade}
+                subject={factSubject}
+                className="mt-8 w-full"
+              />
+            )}
           </div>
         </motion.div>
       )}

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { createOrder, verifyPayment } from "./paymentService";
 import { loadRazorpayScript } from "./loadRazorpayScript";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { asError } from "@/utils/errors";
+import { getRazorpay, type RazorpayHandlerResponse } from "./loadRazorpayScript";
 
 interface RazorpayOptions {
   userId: string;
@@ -48,7 +50,7 @@ export const useRazorpay = () => {
         theme: {
           color: "#059F6D", // GenEd Green
         },
-        handler: async (response: any) => {
+        handler: async (response: RazorpayHandlerResponse) => {
           try {
             // 3. Verify Payment
             const result = await verifyPayment({
@@ -80,8 +82,8 @@ export const useRazorpay = () => {
             }
 
             onSuccess?.(result.plan_expires_at);
-          } catch (err: any) {
-            onError?.(err.message || "Verification failed");
+          } catch (err) {
+            onError?.(asError(err).message || "Verification failed");
           } finally {
             setIsProcessing(false);
           }
@@ -93,11 +95,13 @@ export const useRazorpay = () => {
         },
       };
 
-      const rzp = new (window as any).Razorpay(options);
+      const Razorpay = getRazorpay();
+      if (!Razorpay) throw new Error("Razorpay checkout script is not available");
+      const rzp = new Razorpay(options);
       rzp.open();
-    } catch (err: any) {
+    } catch (err) {
       setIsProcessing(false);
-      onError?.(err.message || "Failed to initiate payment");
+      onError?.(asError(err).message || "Failed to initiate payment");
     }
   };
 

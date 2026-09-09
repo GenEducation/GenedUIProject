@@ -18,7 +18,7 @@ export default function BalanceScale({ directiveId, meta, disabled, readOnly }: 
   const it = meta?.interaction_type || "build";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ solve_x?: number }>(directiveId, it, allowRetry);
 
   const [x, setX] = useState<number>(studentAnswer?.solve_x ?? 0);
   const lock = disabled || submitted;

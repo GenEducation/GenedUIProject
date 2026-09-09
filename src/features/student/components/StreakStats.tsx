@@ -1,5 +1,7 @@
 "use client";
 
+import { BookOpen, Flame, Star, type LucideIcon } from "lucide-react";
+
 import { STUDENT_COLORS } from "../theme/colors";
 import { STRINGS } from "../constants/strings";
 
@@ -15,10 +17,16 @@ export interface StreakStatsData {
   longestStreak: number;
 }
 
-const STATS = [
-  { key: "currentStreak" as const, icon: "🔥", label: STRINGS.streak.dayStreak, color: STUDENT_COLORS.warn, unit: "Days" },
-  { key: "totalSessions" as const, icon: "📚", label: STRINGS.streak.sessions, color: STUDENT_COLORS.tutorSoft, unit: "" },
-  { key: "longestStreak" as const, icon: "⭐", label: STRINGS.streak.longestStreak, color: STUDENT_COLORS.subjectMath, unit: "Days" },
+const STATS: {
+  key: "currentStreak" | "totalSessions" | "longestStreak";
+  Icon: LucideIcon;
+  label: string;
+  color: string;
+  unit: string;
+}[] = [
+  { key: "currentStreak", Icon: Flame, label: STRINGS.streak.dayStreak, color: STUDENT_COLORS.warn, unit: "Days" },
+  { key: "totalSessions", Icon: BookOpen, label: STRINGS.streak.sessions, color: STUDENT_COLORS.tutorSoft, unit: "" },
+  { key: "longestStreak", Icon: Star, label: STRINGS.streak.longestStreak, color: STUDENT_COLORS.subjectMath, unit: "Days" },
 ];
 
 export function StreakStats({
@@ -50,7 +58,8 @@ export function StreakStats({
                 fontFamily: "var(--font-display)",
               }}
             >
-              {s.icon} {isLoading ? "—" : (data?.[s.key] ?? 0)}
+              <s.Icon size={18} strokeWidth={2.2} style={{ display: "inline", verticalAlign: "-3px", marginRight: 4 }} />
+              {isLoading ? "—" : (data?.[s.key] ?? 0)}
             </div>
             <div
               style={{
@@ -124,10 +133,10 @@ export function StreakStats({
                       background: s.color + "1F",
                       width: "clamp(24px, 2.2vw, 30px)",
                       height: "clamp(24px, 2.2vw, 30px)",
-                      fontSize: "clamp(12px, 1.2vw, 15px)",
+                      color: s.color,
                     }}
                   >
-                    {s.icon}
+                    <s.Icon size={16} strokeWidth={2.2} />
                   </span>
                 </div>
 

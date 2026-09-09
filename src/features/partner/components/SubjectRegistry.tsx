@@ -10,6 +10,7 @@ import { IngestedPdfViewer } from "./IngestedPdfViewer";
 import { Select } from "@/components/ui/Select";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Button } from "@/components/ui/Button";
+import { asError } from "@/utils/errors";
 
 interface SubjectRegistryProps {
   onUploadClick: () => void;
@@ -84,8 +85,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
     try {
       await removeSubject(deleteId);
       setDeleteId(null);
-    } catch (err: any) {
-      setDeleteError(err?.message || "Failed to delete. Please try again.");
+    } catch (err) {
+      setDeleteError(asError(err).message || "Failed to delete. Please try again.");
     } finally {
       setIsDeleting(false);
     }

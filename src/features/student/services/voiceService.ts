@@ -29,7 +29,13 @@ function resample(
   return result;
 }
 
-type VoiceEvent = {
+/**
+ * One event from the voice WebSocket. `type` selects which of the remaining
+ * fields are populated — transcript events carry `content`, visual events
+ * carry engine/code/commands, and so on — so all of them are optional.
+ * The index signature stays for fields the backend adds ahead of the client.
+ */
+export type VoiceEvent = {
   type?: string;
   error?: unknown;
   message?: string;
@@ -37,6 +43,27 @@ type VoiceEvent = {
   session_id?: string;
   role?: "user" | "assistant";
   reason?: string;
+  phase?: string;
+  subject?: string;
+  chapter?: string;
+  directive_id?: string;
+  interactive_type?: string;
+  engine?: string;
+  code?: string;
+  image?: string;
+  label?: string;
+  expression?: string;
+  fallback_text?: string;
+  commands?: string[];
+  text?: string;
+  prompt?: string;
+  anchor?: string;
+  title?: string;
+  options?: Record<string, unknown>;
+  render?: Record<string, unknown>;
+  interaction?: Record<string, unknown>;
+  validation?: Record<string, unknown>;
+  meta?: { engine?: string; interaction_type?: string; [key: string]: unknown };
   [key: string]: unknown;
 };
 

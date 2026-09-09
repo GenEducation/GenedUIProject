@@ -112,15 +112,15 @@
 }
 
 /* Student app + onboarding + auth type system, declared on `body` (not
-   :root) because next/font's --font-baloo/--font-mukta/etc. variables are
+   :root) because next/font's --font-jakarta/--font-mukta/etc. variables are
    themselves attached via CSS-module classes on <body> in layout.tsx.
    Custom properties only see var() references defined on the SAME element
-   or an ancestor — :root is body's ancestor, so a var(--font-baloo)
+   or an ancestor — :root is body's ancestor, so a var(--font-jakarta)
    reference declared on :root would be invalid at that scope and the whole
    property would compute to nothing. Declaring them here, alongside the
    variables they reference, keeps every var() resolvable. */
 body {
-  --font-display: var(--font-baloo), ui-sans-serif, system-ui;
+  --font-display: var(--font-jakarta), var(--font-mukta), ui-sans-serif, system-ui;
   --font-body: var(--font-mukta), ui-sans-serif, system-ui;
   /* Report Card "document" typography — distinct on purpose. */
   --font-report-display: var(--font-source-serif), Georgia, serif;

@@ -324,14 +324,21 @@ export function pageRectToContent(rect: Rect, pageOffsetLeft: number, pageOffset
 }
 
 /**
+ * An unvalidated pointer event as it arrives from the model: an object whose
+ * fields are whatever the model emitted. Every read below is guarded.
+ */
+type LooseEvent = Record<string, unknown>;
+
+/**
  * Normalize a loose AI event object into a PointerSpec.
  *
  * Accepts either a structured `target` object or flat convenience fields
  * (`text`, `bbox`, `figure_id`, `x`/`y`). Returns null if no usable target is
  * present so callers can ignore malformed events.
  */
-export function parsePointerEvent(event: any): PointerSpec | null {
-  if (!event || typeof event !== "object") return null;
+export function parsePointerEvent(raw: unknown): PointerSpec | null {
+  if (!raw || typeof raw !== "object") return null;
+  const event = raw as LooseEvent;
 
   // Page is optional — preserved only when explicitly provided so text targets
   // can fall back to a cross-page search.
@@ -350,15 +357,15 @@ export function parsePointerEvent(event: any): PointerSpec | null {
   return { page, target, label, ttlMs };
 }
 
-function parseTarget(event: any): PointerTarget | null {
-  const t = event.target;
+function parseTarget(event: LooseEvent): PointerTarget | null {
+  const t = event.target as LooseEvent | undefined;
   if (t && typeof t === "object" && typeof t.kind === "string") {
     // Trust an already-structured target after a light validity check.
     if (t.kind === "text" && typeof t.text === "string" && t.text.trim()) {
       return { kind: "text", text: t.text, textEnd: strOrUndef(t.textEnd ?? t.text_end), occurrence: numOrUndef(t.occurrence) };
     }
     if (t.kind === "bbox" && isBbox(t.bbox)) return { kind: "bbox", bbox: t.bbox };
-    if (t.kind === "figure") return { kind: "figure", figureId: t.figureId ?? t.figure_id, bbox: isBbox(t.bbox) ? t.bbox : undefined };
+    if (t.kind === "figure") return { kind: "figure", figureId: strOrUndef(t.figureId ?? t.figure_id), bbox: isBbox(t.bbox) ? t.bbox : undefined };
     if (t.kind === "point" && isNum(t.x) && isNum(t.y)) return { kind: "point", x: t.x, y: t.y };
   }
 
@@ -368,7 +375,7 @@ function parseTarget(event: any): PointerTarget | null {
     return { kind: "text", text: event.text, textEnd: strOrUndef(event.text_end ?? event.textEnd), occurrence: numOrUndef(event.occurrence) };
   }
   if (event.figure_id || event.figureId) {
-    return { kind: "figure", figureId: event.figure_id ?? event.figureId, bbox: isBbox(event.bbox) ? event.bbox : undefined };
+    return { kind: "figure", figureId: strOrUndef(event.figure_id ?? event.figureId), bbox: isBbox(event.bbox) ? event.bbox : undefined };
   }
   if (isBbox(event.bbox)) return { kind: "bbox", bbox: event.bbox };
   if (isNum(event.x) && isNum(event.y)) return { kind: "point", x: event.x, y: event.y };
@@ -376,18 +383,18 @@ function parseTarget(event: any): PointerTarget | null {
   return null;
 }
 
-function isNum(v: any): v is number {
+function isNum(v: unknown): v is number {
   return typeof v === "number" && Number.isFinite(v);
 }
 
-function numOrUndef(v: any): number | undefined {
+function numOrUndef(v: unknown): number | undefined {
   return isNum(v) ? v : undefined;
 }
 
-function strOrUndef(v: any): string | undefined {
+function strOrUndef(v: unknown): string | undefined {
   return typeof v === "string" && v.trim() ? v : undefined;
 }
 
-function isBbox(v: any): v is [number, number, number, number] {
+function isBbox(v: unknown): v is [number, number, number, number] {
   return Array.isArray(v) && v.length === 4 && v.every(isNum);
 }

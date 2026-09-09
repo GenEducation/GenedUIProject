@@ -14,7 +14,7 @@ export default function ExpressionBuilder({ directiveId, meta, disabled, readOnl
   const it = meta?.interaction_type || "build";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ expression?: string }>(directiveId, it, allowRetry);
 
   const parseInit = () => {
     const expr: string = studentAnswer?.expression || "";

@@ -31,6 +31,11 @@ const eslintConfig = defineConfig([
     // Vendored tooling/skill code — not part of the app source.
     ".gemini/**",
     ".claude/**",
+    ".agents/**",
+    // Minified / emscripten-generated vendor bundles that postinstall copies
+    // into public/ (pdf.js worker, onnxruntime wasm glue). Not editable
+    // source, and linting them produced ~2000 meaningless findings.
+    "public/**",
   ]),
   // Button system guard. The shared <Button> (src/components/ui/Button.tsx) is
   // the single source of button styling, focus rings, disabled/loading states,
@@ -90,6 +95,68 @@ const eslintConfig = defineConfig([
       // later blocks replace the rule outright, so listing only the hex
       // selector here would switch the button guard off on these 12 files.
       "no-restricted-syntax": ["warn", HEX_LITERAL_SELECTOR, RAW_BUTTON_SELECTOR],
+    },
+  },
+  // Node build scripts under scripts/ are CommonJS by design (they are run
+  // directly with `node`, outside the Next bundler, and are not part of the
+  // app). Converting them to ESM buys nothing and risks breaking them, so
+  // allow require() here rather than rewriting them.
+  {
+    files: ["scripts/**/*.js", "scripts/**/*.cjs"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+  // Test files: `any` is allowed. Mocks, stubs and fixture builders are
+  // deliberately loose about shape, and typing them accurately produces noise
+  // without catching real defects. The rule stays on for all app source.
+  {
+    files: [
+      "**/__tests__/**",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.setup.ts",
+      "vitest.setup.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  // React Compiler lint rules, newly enabled by eslint-config-next 16.2.1.
+  //
+  // They flag 57 sites across ~35 components. Each needs a per-site judgement
+  // call rather than a sweep, and a good share of them are already-deliberate,
+  // already-commented patterns — see the six-line note on the StrictMode-safe
+  // render-time ref latch in ChatMessageBubble.tsx. Fixing them properly is the
+  // only part of the lint cleanup that changes runtime behaviour, so it gets
+  // its own pass; "warn" keeps them visible in review meanwhile without
+  // blocking CI on the whole backlog.
+  //
+  // What is deferred, highest value first:
+  //   - purity (16): Math.random() during render seeds the decorative particles
+  //     in Confetti.tsx, SubjectOnboardingCelebration.tsx and
+  //     TutorialCelebration.tsx. This is a real latent SSR-hydration mismatch
+  //     and should be fixed first — move generation into useState(() => ...).
+  //   - set-state-in-effect (30): ten identical admin-view data-load effects
+  //     (useCallback(load) + useEffect(() => load(), [load]), see
+  //     AgentsView.tsx), plus prop-sync effects in StudentChatInput.tsx,
+  //     StudentHome.tsx and MessageElements.tsx that are better expressed as
+  //     derived state or a key-based remount.
+  //   - static-components (5): hoist the component definitions out of the
+  //     parent bodies in BaseTenBlocks.tsx and FractionBar.tsx.
+  //   - refs (5) and immutability (1): mostly intentional; these likely just
+  //     need a documented eslint-disable-next-line each.
+  //
+  // rules-of-hooks stays an ERROR: its one violation (a useState after an early
+  // return in SignUp.tsx) was a genuine bug and is fixed.
+  {
+    files: ["src/**/*.ts", "src/**/*.tsx"],
+    rules: {
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/purity": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/static-components": "warn",
+      "react-hooks/immutability": "warn",
     },
   },
 ]);

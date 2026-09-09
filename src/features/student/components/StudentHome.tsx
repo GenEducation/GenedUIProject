@@ -361,7 +361,7 @@ export function StudentHome() {
     if (filterDate !== "All Time") {
       const now = new Date();
       // Handle the timestamp fields available
-      const dateVal = sess.lastActive || (sess as any).created_at || (sess as any).session_date;
+      const dateVal = sess.lastActive || sess.created_at || sess.session_date;
       if (dateVal) {
         const d = new Date(dateVal);
         if (!isNaN(d.getTime())) {

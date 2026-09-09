@@ -27,7 +27,7 @@ export default function NetFolding({ directiveId, meta, disabled, readOnly }: In
   const it = meta?.interaction_type || "match";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ pairs?: string[][] }>(directiveId, it, allowRetry);
 
   const initial: string | null = Array.isArray(studentAnswer?.pairs) && studentAnswer.pairs[0] ? studentAnswer.pairs[0][1] : null;
   const [choice, setChoice] = useState<string | null>(initial);

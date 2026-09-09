@@ -11,6 +11,7 @@
  */
 
 import { authFetch } from "@/utils/authFetch";
+import { asError } from "@/utils/errors";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
@@ -122,9 +123,9 @@ class AudioRecorderService {
       this.stream = stream;
       this.setState("ready");
       return true;
-    } catch (err: any) {
+    } catch (err) {
       this.setState("error");
-      const msg = err?.message || "Microphone permission denied";
+      const msg = asError(err).message || "Microphone permission denied";
       console.warn("[RecorderService] Permission failed:", err);
       this.callbacks.onError?.(msg);
       return false;
@@ -296,18 +297,18 @@ class AudioRecorderService {
           headers: putHeaders,
           body: blob,
         });
-      } catch (err: any) {
-        throw new Error(`GCS Network Error: ${err?.message || "Failed to connect to storage"}. This might be a CORS issue.`);
+      } catch (err) {
+        throw new Error(`GCS Network Error: ${asError(err).message || "Failed to connect to storage"}. This might be a CORS issue.`);
       }
 
       if (!uploadRes.ok) throw new Error(`GCS upload failed: ${uploadRes.status}`);
 
       this.setState("processing");
       this.callbacks.onUploadComplete?.(gcs_uri, directiveId);
-    } catch (err: any) {
+    } catch (err) {
       // Wave 4: upload failure → allow retry, never crash session
       this.setState("error");
-      this.callbacks.onError?.(err?.message || "Upload failed");
+      this.callbacks.onError?.(asError(err).message || "Upload failed");
     } finally {
       this.releaseStream();
     }

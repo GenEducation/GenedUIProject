@@ -6,6 +6,7 @@ import { usePartnerStore } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Skeleton } from "./Skeleton";
 import { Button } from "@/components/ui/Button";
+import { asError } from "@/utils/errors";
 
 export function StudentRegistryTable() {
   const students = usePartnerStore((state) => state.students);
@@ -24,8 +25,8 @@ export function StudentRegistryTable() {
     try {
       await removeStudent(deleteId);
       setDeleteId(null);
-    } catch (err: any) {
-      setDeleteError(err?.message || "Failed to delete. Please try again.");
+    } catch (err) {
+      setDeleteError(asError(err).message || "Failed to delete. Please try again.");
     } finally {
       setIsDeleting(false);
     }
