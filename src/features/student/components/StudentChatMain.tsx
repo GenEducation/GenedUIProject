@@ -617,12 +617,7 @@ export function StudentChatMain({
               >
                 <Loader2 className="animate-spin" style={{ width: 36, height: 36, color: "#5B4DC720" }} />
                 <p style={{ fontSize: 13, color: "#94A3B8", fontWeight: 700, letterSpacing: "0.05em" }}>Retrieving history...</p>
-                <FunFactCard
-                  grade={studentProfile?.grade}
-                  subject={activeChat.subject}
-                  variant="inline"
-                  className="pt-2"
-                />
+                <FunFactCard subject={activeChat.subject} />
               </motion.div>
             ) : isNewChat ? (
               <motion.div

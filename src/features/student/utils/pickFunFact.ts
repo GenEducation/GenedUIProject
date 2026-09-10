@@ -38,22 +38,7 @@ export function toFactSubject(subject?: string | null): FactSubject {
   return SUBJECT_BUCKETS[subject.trim().toLowerCase()] ?? "general";
 }
 
-/**
- * When the grade is unknown we exclude the 9-12 band rather than showing
- * everything: an abstract fact in front of a seven-year-old is a worse failure
- * than a simple fact in front of a teenager.
- */
-const UNKNOWN_GRADE_MAX_MIN_GRADE = 8;
-
-function fitsGrade(fact: FunFact, grade?: number | null): boolean {
-  if (typeof grade !== "number" || !Number.isFinite(grade)) {
-    return fact.minGrade <= UNKNOWN_GRADE_MAX_MIN_GRADE;
-  }
-  return grade >= fact.minGrade && grade <= fact.maxGrade;
-}
-
 export interface PickFunFactOptions {
-  grade?: number | null;
   /** Raw taxonomy subject name, or a `FactSubject`. Both are accepted. */
   subject?: string | null;
   /** Ids to avoid, on top of the ones remembered in sessionStorage. */
@@ -61,27 +46,30 @@ export interface PickFunFactOptions {
 }
 
 /**
- * Picks one age-appropriate fact, preferring the current subject.
+ * Picks one fact, preferring the current subject.
+ *
+ * Facts are deliberately not filtered by age: every fact in the dataset is
+ * written to be readable by the youngest student, so the only axis that
+ * narrows the pool is subject. See the authoring rules in `funFacts.ts`.
  *
  * Returns `null` only if the dataset is empty — every caller must render
  * correctly without a fact.
  */
 export function pickFunFact(options: PickFunFactOptions = {}): FunFact | null {
-  const { grade, subject, excludeIds = [] } = options;
+  const { subject, excludeIds = [] } = options;
 
-  const byGrade = FUN_FACTS.filter((fact) => fitsGrade(fact, grade));
-  if (byGrade.length === 0) return null;
+  if (FUN_FACTS.length === 0) return null;
 
   const bucket = toFactSubject(subject);
-  let pool = byGrade;
+  let pool: readonly FunFact[] = FUN_FACTS;
 
   if (bucket !== "general") {
-    const onSubject = byGrade.filter((fact) => fact.subject === bucket);
+    const onSubject = FUN_FACTS.filter((fact) => fact.subject === bucket);
     if (onSubject.length > 0) {
       pool =
         onSubject.length >= MIN_SUBJECT_POOL
           ? onSubject
-          : [...onSubject, ...byGrade.filter((fact) => fact.subject === "general")];
+          : [...onSubject, ...FUN_FACTS.filter((fact) => fact.subject === "general")];
     }
   }
 

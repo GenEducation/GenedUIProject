@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import { motion, AnimatePresence } from "framer-motion";
 import { getSubjectConfig } from "@/constants/subjectConfig";
 import { pickFunFact, rememberFactId } from "@/features/student/utils/pickFunFact";
+import { FACT_THEME_ICONS } from "@/features/student/constants/factThemes";
 import type { FunFact } from "@/features/student/constants/funFacts";
 
 /**
@@ -12,15 +13,21 @@ import type { FunFact } from "@/features/student/constants/funFacts";
  */
 const DEFAULT_DELAY_MS = 600;
 
+/**
+ * Lucide draws at 2; the hand-drawn subject icons in `src/components/icons/`
+ * are at 1.5. Splitting the difference lets the two sets share a screen without
+ * an obvious weight mismatch.
+ */
+const ICON_STROKE = 1.75;
+
+/** Nia's purple, used whenever no subject accent applies. */
+const FALLBACK_ACCENT = "var(--tutor)";
+
 export interface FunFactCardProps {
-  /** Student's grade, used to keep facts age-appropriate. */
-  grade?: number | null;
   /** Raw subject name of the current session, if any. */
   subject?: string | null;
   /** Suppress the delay (set 0) on waits that are always seconds long. */
   delayMs?: number;
-  /** `full` renders a card; `inline` a single muted line for cramped spots. */
-  variant?: "full" | "inline";
   className?: string;
 }
 
@@ -32,10 +39,8 @@ export interface FunFactCardProps {
  * wait ends before `delayMs`.
  */
 export const FunFactCard: React.FC<FunFactCardProps> = ({
-  grade,
   subject,
   delayMs = DEFAULT_DELAY_MS,
-  variant = "full",
   className = "",
 }) => {
   const [fact, setFact] = useState<FunFact | null>(null);
@@ -48,7 +53,7 @@ export const FunFactCard: React.FC<FunFactCardProps> = ({
 
     const choose = () => {
       pickedRef.current = true;
-      const chosen = pickFunFact({ grade, subject });
+      const chosen = pickFunFact({ subject });
       if (chosen) {
         rememberFactId(chosen.id);
         setFact(chosen);
@@ -62,12 +67,12 @@ export const FunFactCard: React.FC<FunFactCardProps> = ({
 
     const timer = setTimeout(choose, delayMs);
     return () => clearTimeout(timer);
-    // Chosen once per mount: re-picking when grade/subject settle in would
+    // Chosen once per mount: re-picking when the subject settles in would
     // swap the text out from under the reader.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const accent = subject ? getSubjectConfig(subject).color : "var(--tutor)";
+  const accent = subject ? getSubjectConfig(subject).color : FALLBACK_ACCENT;
 
   return (
     <div aria-live="polite" className={className}>
@@ -80,51 +85,37 @@ export const FunFactCard: React.FC<FunFactCardProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
-            {variant === "inline" ? (
-              <p
-                className="text-center text-xs leading-relaxed max-w-xs mx-auto"
-                style={{ color: "var(--text-muted, #94A3B8)" }}
-              >
-                <span aria-hidden="true">{fact.emoji}</span>{" "}
-                <span style={{ fontWeight: 700, color: accent }}>Did you know?</span>{" "}
-                {fact.text}
-              </p>
-            ) : (
-              <div
-                className="mx-auto max-w-sm px-5 py-4 text-center"
-                style={{
-                  background: "var(--surface-card, #FFFFFF)",
-                  border: "1px solid var(--surface-border, #E2E8F0)",
-                  borderRadius: "var(--radius-card, 24px)",
-                  boxShadow: "0 4px 20px rgba(4, 46, 92, 0.06)",
-                }}
-              >
-                <div
-                  className="text-2xl leading-none mb-2"
-                  aria-hidden="true"
-                >
-                  {fact.emoji}
-                </div>
-                <div
-                  className="text-[10px] font-bold uppercase mb-1.5"
-                  style={{ color: accent, letterSpacing: "0.14em" }}
-                >
-                  Did you know?
-                </div>
-                <p
-                  className="text-sm leading-relaxed"
-                  style={{ color: "var(--text-mid, #475569)" }}
-                >
-                  {fact.text}
-                </p>
-              </div>
-            )}
+            <FactBody fact={fact} accent={accent} />
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
 };
+
+/**
+ * One presentation everywhere — no card, no border, no shadow, no chip behind
+ * the icon. The fact is part of the screen rather than an object sitting on it,
+ * which is why every loader can show it without gaining a second surface.
+ */
+function FactBody({ fact, accent }: { fact: FunFact; accent: string }) {
+  const Icon = FACT_THEME_ICONS[fact.theme];
+
+  return (
+    <div className="flex flex-col items-center text-center max-w-sm mx-auto">
+      <Icon size={20} strokeWidth={ICON_STROKE} aria-hidden="true" style={{ color: accent }} />
+      <div
+        className="text-[10px] font-bold uppercase mt-2.5 mb-1.5"
+        style={{ color: accent, letterSpacing: "0.14em" }}
+      >
+        Did you know?
+      </div>
+      <p className="text-sm leading-relaxed" style={{ color: "var(--text-mid, #4a5568)" }}>
+        {fact.text}
+      </p>
+    </div>
+  );
+}
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 

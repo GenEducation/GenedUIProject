@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { pickFunFact, toFactSubject, rememberFactId } from "../pickFunFact";
 import { FUN_FACTS } from "../../constants/funFacts";
+import { FACT_THEME_ICONS } from "../../constants/factThemes";
 
 describe("FUN_FACTS data integrity", () => {
   it("has unique ids", () => {
@@ -15,19 +16,28 @@ describe("FUN_FACTS data integrity", () => {
     }
   });
 
-  it("has a coherent grade band and an emoji on every fact", () => {
+  it("tags every fact with a theme that has a registered icon", () => {
     for (const fact of FUN_FACTS) {
-      expect(fact.minGrade, fact.id).toBeLessThanOrEqual(fact.maxGrade);
-      expect(fact.minGrade, fact.id).toBeGreaterThanOrEqual(1);
-      expect(fact.maxGrade, fact.id).toBeLessThanOrEqual(12);
-      expect(fact.emoji, fact.id).toBeTruthy();
+      // Catches a mistyped theme here rather than rendering undefined as a
+      // React component at runtime. Lucide icons are forwardRef objects, not
+      // plain functions, so this checks presence rather than typeof.
+      expect(FACT_THEME_ICONS[fact.theme], fact.id).toBeTruthy();
     }
   });
 
-  it("covers every grade from 1 to 12", () => {
-    for (let grade = 1; grade <= 12; grade++) {
-      const available = FUN_FACTS.filter((f) => grade >= f.minGrade && grade <= f.maxGrade);
-      expect(available.length, `grade ${grade}`).toBeGreaterThan(0);
+  it("uses every theme in the registry at least once", () => {
+    const used = new Set(FUN_FACTS.map((f) => f.theme));
+    for (const theme of Object.keys(FACT_THEME_ICONS)) {
+      expect(used.has(theme as keyof typeof FACT_THEME_ICONS), theme).toBe(true);
+    }
+  });
+
+  it("keeps every subject pool big enough to avoid obvious repeats", () => {
+    // RECENT_LIMIT is 15, so a pool at or under that cycles fully within one
+    // sitting and the student starts seeing the same facts again.
+    for (const subject of ["Mathematics", "Science", "English", "Social Science"] as const) {
+      const pool = FUN_FACTS.filter((f) => f.subject === subject);
+      expect(pool.length, subject).toBeGreaterThan(15);
     }
   });
 });
@@ -53,29 +63,28 @@ describe("pickFunFact", () => {
     sessionStorage.clear();
   });
 
-  it("never returns a fact outside the requested grade", () => {
-    for (let grade = 1; grade <= 12; grade++) {
-      for (let i = 0; i < 40; i++) {
-        const fact = pickFunFact({ grade });
-        expect(fact).not.toBeNull();
-        expect(fact!.minGrade, `${fact!.id} for grade ${grade}`).toBeLessThanOrEqual(grade);
-        expect(fact!.maxGrade, `${fact!.id} for grade ${grade}`).toBeGreaterThanOrEqual(grade);
-      }
+  it("always returns a fact, with or without a subject", () => {
+    for (let i = 0; i < 40; i++) {
+      expect(pickFunFact({})).not.toBeNull();
+      expect(pickFunFact({ subject: "Science" })).not.toBeNull();
+      expect(pickFunFact({ subject: "Astrobiology" })).not.toBeNull();
     }
   });
 
-  it("excludes the abstract 9-12 band when the grade is unknown", () => {
-    for (let i = 0; i < 60; i++) {
-      const fact = pickFunFact({});
-      expect(fact!.minGrade).toBeLessThanOrEqual(8);
+  it("draws from the whole dataset when no subject is given", () => {
+    // Grades are deliberately not a filter, so nothing is held back here.
+    const seen = new Set<string>();
+    for (let i = 0; i < 400; i++) {
+      sessionStorage.clear();
+      seen.add(pickFunFact({})!.subject);
     }
+    expect(seen).toEqual(new Set(["general", "Mathematics", "Science", "English", "Social Science"]));
   });
 
   it("prefers the requested subject, topping up with general facts only", () => {
     const seen = new Set<string>();
     for (let i = 0; i < 60; i++) {
-      const fact = pickFunFact({ grade: 6, subject: "Science" });
-      seen.add(fact!.subject);
+      seen.add(pickFunFact({ subject: "Science" })!.subject);
     }
     expect(seen.has("Mathematics")).toBe(false);
     expect(seen.has("English")).toBe(false);
@@ -83,24 +92,24 @@ describe("pickFunFact", () => {
   });
 
   it("honours excludeIds", () => {
-    const all = FUN_FACTS.filter((f) => f.subject === "Science" && f.minGrade <= 6 && f.maxGrade >= 6);
+    const all = FUN_FACTS.filter((f) => f.subject === "Science");
     const excluded = all.slice(0, all.length - 1).map((f) => f.id);
     for (let i = 0; i < 20; i++) {
-      const fact = pickFunFact({ grade: 6, subject: "Science", excludeIds: excluded });
+      const fact = pickFunFact({ subject: "Science", excludeIds: excluded });
       expect(excluded).not.toContain(fact!.id);
     }
   });
 
   it("avoids ids remembered in sessionStorage", () => {
-    const target = FUN_FACTS.find((f) => f.minGrade <= 3 && f.maxGrade >= 3)!;
+    const target = FUN_FACTS[0];
     rememberFactId(target.id);
     for (let i = 0; i < 40; i++) {
-      expect(pickFunFact({ grade: 3 })!.id).not.toBe(target.id);
+      expect(pickFunFact({})!.id).not.toBe(target.id);
     }
   });
 
   it("starts the cycle over rather than returning null once everything is excluded", () => {
     const allIds = FUN_FACTS.map((f) => f.id);
-    expect(pickFunFact({ grade: 3, excludeIds: allIds })).not.toBeNull();
+    expect(pickFunFact({ excludeIds: allIds })).not.toBeNull();
   });
 });

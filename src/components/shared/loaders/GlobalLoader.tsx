@@ -8,8 +8,7 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 export const GlobalLoader = () => {
   const { isVisible, isComplete, isHandoff, onCelebrated, stopLoading } = useLoaderStore();
   // Undefined for non-student roles and during login, which is fine — the fact
-  // picker falls back to a safe, age-neutral pool.
-  const grade = useStudentStore((s) => s.studentProfile?.grade);
+  // picker falls back to the full pool when no subject applies.
   const subject = useStudentStore((s) => s.activeChat?.subject);
 
   return (
@@ -19,7 +18,6 @@ export const GlobalLoader = () => {
       isHandoff={isHandoff}
       onCelebrated={onCelebrated ?? undefined}
       onFinished={stopLoading}
-      factGrade={grade}
       factSubject={subject}
     />
   );

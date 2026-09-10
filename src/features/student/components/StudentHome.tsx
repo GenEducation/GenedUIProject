@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Menu } from "lucide-react";
+import { ChevronLeft, ChevronRight, Menu, Mic, MessageCircle } from "lucide-react";
 import Image from "next/image";
 import { useStudentStore, sessionRoutePath, isVoiceSession, type AgentItem } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
@@ -24,7 +24,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
-import { subjectMascot } from "@/features/subjects/subjectPresentation";
+import { subjectMascot, SubjectIcon } from "@/features/subjects/subjectPresentation";
 
 /* Subject-card mascot: display size, and how far it bleeds above the card.
    The bleed is mirrored as paddingTop on the horizontal scroller, which would
@@ -54,21 +54,22 @@ const C = {
 // Raw hex, not var() — these get alpha-suffix concatenated below
 // (`${vis.color}cc`, `vis.color + "14"`), which CSS custom properties can't
 // support.
-const SUBJECTS_VISUAL: Record<string, { color: string; bg: string; icon: string; label: string }> = {
-  English:        { color: STUDENT_COLORS.subjectEnglish, bg: "#EBF3FB", icon: "📖", label: "English" },
-  Mathematics:    { color: "#2D6A4F", bg: "#E8F5EF", icon: "🧮", label: "Mathematics" },
-  Science:        { color: "#D4820A", bg: "#FEF5E7", icon: "🔬", label: "Science" },
-  "Social Science": { color: "#B0543F", bg: "#FBEFEB", icon: "🌍", label: "Social Science" },
-  History:        { color: "#A6762D", bg: "#F6EFE4", icon: "📜", label: "History" },
-  Geography:      { color: "#1E8FA6", bg: "#E7F5F7", icon: "🧭", label: "Geography" },
-  "Social & Political Science": { color: "#8C4A6B", bg: "#F7EBF1", icon: "⚖️", label: "Social & Political Science" },
+// Colour/label only — the glyph comes from SubjectIcon (src/components/icons),
+// which already has a drawn icon per subject and a BookOpen fallback.
+const SUBJECTS_VISUAL: Record<string, { color: string; bg: string; label: string }> = {
+  English:        { color: STUDENT_COLORS.subjectEnglish, bg: "#EBF3FB", label: "English" },
+  Mathematics:    { color: "#2D6A4F", bg: "#E8F5EF", label: "Mathematics" },
+  Science:        { color: "#D4820A", bg: "#FEF5E7", label: "Science" },
+  "Social Science": { color: "#B0543F", bg: "#FBEFEB", label: "Social Science" },
+  History:        { color: "#A6762D", bg: "#F6EFE4", label: "History" },
+  Geography:      { color: "#1E8FA6", bg: "#E7F5F7", label: "Geography" },
+  "Social & Political Science": { color: "#8C4A6B", bg: "#F7EBF1", label: "Social & Political Science" },
 };
 
 function subjectVisual(subject: string) {
   return SUBJECTS_VISUAL[subject] ?? {
     color: STUDENT_COLORS.tutor,
     bg: "#F1EEF8",
-    icon: "📚",
     label: subject,
   };
 }
@@ -688,8 +689,8 @@ export function StudentHome() {
                         />
                         <div className="flex items-center mb-4" style={{ gap: "clamp(10px, 1.2vw, 14px)", paddingRight: "calc(" + MASCOT_SIZE + " - 26px)" }}>
                           <div className="rounded-[14px] flex items-center justify-center flex-shrink-0"
-                            style={{ background: vis.bg, width: "clamp(40px, 4vw, 48px)", height: "clamp(40px, 4vw, 48px)", fontSize: "clamp(18px, 2vw, 24px)" }}>
-                            {vis.icon}
+                            style={{ background: vis.bg, width: "clamp(40px, 4vw, 48px)", height: "clamp(40px, 4vw, 48px)", color: vis.color }}>
+                            <SubjectIcon subject={group.subject} size={22} />
                           </div>
                           <div className="min-w-0">
                             <div className="font-bold truncate" title={vis.label} style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(14px, 1.5vw, 17px)" }}>
@@ -866,13 +867,20 @@ export function StudentHome() {
                         onClick={() => handleSessionClick(sess)}
                       >
                         <div className="rounded-[11px] flex items-center justify-center flex-shrink-0"
-                          style={{ background: vis.bg, width: "clamp(34px, 3.2vw, 42px)", height: "clamp(34px, 3.2vw, 42px)", fontSize: "clamp(14px, 1.6vw, 18px)" }}>
-                          {vis.icon}
+                          style={{ background: vis.bg, width: "clamp(34px, 3.2vw, 42px)", height: "clamp(34px, 3.2vw, 42px)", color: vis.color }}>
+                          <SubjectIcon subject={sess.subject ?? ""} size={18} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold truncate" style={{ color: C.text, fontSize: "clamp(13px, 1.3vw, 15px)" }}>
-                            <span title={isVoiceSession(sess) ? "Voice session" : "Chat session"} style={{ marginRight: 5 }}>
-                              {isVoiceSession(sess) ? "🎤" : "💬"}
+                            <span
+                              title={isVoiceSession(sess) ? "Voice session" : "Chat session"}
+                              aria-label={isVoiceSession(sess) ? "Voice session" : "Chat session"}
+                              className="inline-flex align-middle"
+                              style={{ marginRight: 6, color: C.textMuted }}
+                            >
+                              {isVoiceSession(sess)
+                                ? <Mic size={14} strokeWidth={2} />
+                                : <MessageCircle size={14} strokeWidth={2} />}
                             </span>
                             {sess.title}
                           </div>
