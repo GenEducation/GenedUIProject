@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getSubjectConfig } from "@/constants/subjectConfig";
 import { pickFunFact, rememberFactId } from "@/features/student/utils/pickFunFact";
@@ -23,11 +23,26 @@ const ICON_STROKE = 1.75;
 /** Nia's purple, used whenever no subject accent applies. */
 const FALLBACK_ACCENT = "var(--tutor)";
 
+/**
+ * How long a question stays unanswered before the fact is shown anyway.
+ *
+ * The loader can be dismissed at any moment by whichever call finishes its
+ * work, so a child who never taps must still end up with the answer rather
+ * than a question that vanishes. Long enough to actually guess, short enough
+ * that a typical generation wait still reaches the reveal.
+ */
+const AUTO_REVEAL_MS = 5000;
+
 export interface FunFactCardProps {
   /** Raw subject name of the current session, if any. */
   subject?: string | null;
   /** Suppress the delay (set 0) on waits that are always seconds long. */
   delayMs?: number;
+  /**
+   * Pose the fact as a question with the answer a tap away. Only takes effect
+   * on facts that carry one; everything else renders plainly.
+   */
+  interactive?: boolean;
   className?: string;
 }
 
@@ -41,6 +56,7 @@ export interface FunFactCardProps {
 export const FunFactCard: React.FC<FunFactCardProps> = ({
   subject,
   delayMs = DEFAULT_DELAY_MS,
+  interactive = false,
   className = "",
 }) => {
   const [fact, setFact] = useState<FunFact | null>(null);
@@ -53,7 +69,7 @@ export const FunFactCard: React.FC<FunFactCardProps> = ({
 
     const choose = () => {
       pickedRef.current = true;
-      const chosen = pickFunFact({ subject });
+      const chosen = pickFunFact({ subject, requireQuestion: interactive });
       if (chosen) {
         rememberFactId(chosen.id);
         setFact(chosen);
@@ -85,7 +101,7 @@ export const FunFactCard: React.FC<FunFactCardProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
-            <FactBody fact={fact} accent={accent} />
+            <FactBody fact={fact} accent={accent} interactive={interactive} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -97,9 +113,32 @@ export const FunFactCard: React.FC<FunFactCardProps> = ({
  * One presentation everywhere — no card, no border, no shadow, no chip behind
  * the icon. The fact is part of the screen rather than an object sitting on it,
  * which is why every loader can show it without gaining a second surface.
+ *
+ * With `interactive`, the fact is posed as a question first. The two are never
+ * shown together: the fact text usually restates the question, so stacking both
+ * reads as repetition.
  */
-function FactBody({ fact, accent }: { fact: FunFact; accent: string }) {
+function FactBody({
+  fact,
+  accent,
+  interactive = false,
+}: {
+  fact: FunFact;
+  accent: string;
+  interactive?: boolean;
+}) {
   const Icon = FACT_THEME_ICONS[fact.theme];
+  const canAsk = interactive && Boolean(fact.question);
+  const [revealed, setRevealed] = useState(false);
+  const reveal = useCallback(() => setRevealed(true), []);
+
+  useEffect(() => {
+    if (!canAsk || revealed) return;
+    const timer = setTimeout(reveal, AUTO_REVEAL_MS);
+    return () => clearTimeout(timer);
+  }, [canAsk, revealed, reveal]);
+
+  const asking = canAsk && !revealed;
 
   return (
     <div className="flex flex-col items-center text-center max-w-sm mx-auto">
@@ -108,11 +147,24 @@ function FactBody({ fact, accent }: { fact: FunFact; accent: string }) {
         className="text-[10px] font-bold uppercase mt-2.5 mb-1.5"
         style={{ color: accent, letterSpacing: "0.14em" }}
       >
-        Did you know?
+        {asking ? "Take a guess" : "Did you know?"}
       </div>
       <p className="text-sm leading-relaxed" style={{ color: "var(--text-mid, #4a5568)" }}>
-        {fact.text}
+        {asking ? fact.question : fact.text}
       </p>
+      {asking && (
+        // A bare text control, not a pill — this block carries no chrome by
+        // design, and a filled button would reinstate exactly what was removed.
+        <button
+          type="button"
+          onClick={reveal}
+          aria-expanded={false}
+          className="mt-3 text-xs font-bold underline underline-offset-4 cursor-pointer"
+          style={{ color: accent }}
+        >
+          Tap to reveal →
+        </button>
+      )}
     </div>
   );
 }

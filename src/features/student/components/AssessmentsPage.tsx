@@ -367,7 +367,7 @@ export function AssessmentsPage() {
             >
               <h2 className="text-3xl font-black text-[var(--primary-ink)] tracking-tight">Preparing Your Test</h2>
               {/* Generation is always a multi-second LLM call, so no delay. */}
-              <FunFactCard subject={startingTestSubject} delayMs={0} className="pt-4" />
+              <FunFactCard subject={startingTestSubject} delayMs={0} interactive className="pt-4" />
             </motion.div>
           </motion.div>
         )}

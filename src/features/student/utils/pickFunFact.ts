@@ -43,6 +43,12 @@ export interface PickFunFactOptions {
   subject?: string | null;
   /** Ids to avoid, on top of the ones remembered in sessionStorage. */
   excludeIds?: readonly string[];
+  /**
+   * Prefer facts that carry a `question`, for surfaces that pose the fact as a
+   * teaser first. Falls back to the unfiltered pool rather than returning null,
+   * so a subject with no question-bearing facts still shows something.
+   */
+  requireQuestion?: boolean;
 }
 
 /**
@@ -56,7 +62,7 @@ export interface PickFunFactOptions {
  * correctly without a fact.
  */
 export function pickFunFact(options: PickFunFactOptions = {}): FunFact | null {
-  const { subject, excludeIds = [] } = options;
+  const { subject, excludeIds = [], requireQuestion = false } = options;
 
   if (FUN_FACTS.length === 0) return null;
 
@@ -71,6 +77,13 @@ export function pickFunFact(options: PickFunFactOptions = {}): FunFact | null {
           ? onSubject
           : [...onSubject, ...FUN_FACTS.filter((fact) => fact.subject === "general")];
     }
+  }
+
+  // Narrow to question-bearing facts, but never to nothing — a thin subject
+  // should degrade to a plain fact, not to an empty loader.
+  if (requireQuestion) {
+    const withQuestion = pool.filter((fact) => fact.question);
+    if (withQuestion.length > 0) pool = withQuestion;
   }
 
   const avoid = new Set([...excludeIds, ...readRecentFactIds()]);

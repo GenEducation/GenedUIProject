@@ -32,6 +32,20 @@ describe("FUN_FACTS data integrity", () => {
     }
   });
 
+  it("keeps every question well formed", () => {
+    for (const fact of FUN_FACTS.filter((f) => f.question)) {
+      expect(fact.question!.length, fact.id).toBeLessThanOrEqual(160);
+      expect(fact.question!.endsWith("?"), fact.id).toBe(true);
+    }
+  });
+
+  it("has question-bearing facts for every real subject", () => {
+    for (const subject of ["Mathematics", "Science", "English", "Social Science"] as const) {
+      const withQ = FUN_FACTS.filter((f) => f.subject === subject && f.question);
+      expect(withQ.length, subject).toBeGreaterThanOrEqual(5);
+    }
+  });
+
   it("keeps every subject pool big enough to avoid obvious repeats", () => {
     // RECENT_LIMIT is 15, so a pool at or under that cycles fully within one
     // sitting and the student starts seeing the same facts again.
@@ -89,6 +103,22 @@ describe("pickFunFact", () => {
     expect(seen.has("Mathematics")).toBe(false);
     expect(seen.has("English")).toBe(false);
     expect(seen.has("Science")).toBe(true);
+  });
+
+  it("returns only question-bearing facts when requireQuestion is set", () => {
+    for (const subject of ["Mathematics", "Science", "English", "Social Science"]) {
+      for (let i = 0; i < 30; i++) {
+        const fact = pickFunFact({ subject, requireQuestion: true });
+        expect(fact!.question, `${subject} -> ${fact!.id}`).toBeTruthy();
+      }
+    }
+  });
+
+  it("falls back to a plain fact rather than nothing when none has a question", () => {
+    // Excluding every question-bearing id simulates a subject with no questions.
+    const questionIds = FUN_FACTS.filter((f) => f.question).map((f) => f.id);
+    const fact = pickFunFact({ requireQuestion: true, excludeIds: questionIds });
+    expect(fact).not.toBeNull();
   });
 
   it("honours excludeIds", () => {
