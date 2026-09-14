@@ -4,7 +4,15 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { BookOpen, FileText, Brain, Activity, ChevronDown, Lock, User, Target, TrendingUp, Award, Sparkles, Clock } from "lucide-react";
-import type { ReportCardData, ReportCardUI, SubjectData } from "./types";
+import type {
+  AnalysisFocusArea,
+  AnalysisPattern,
+  AnalysisRecommendation,
+  EvolutionAnalysisJson,
+  ReportCardData,
+  ReportCardUI,
+  SubjectData,
+} from "./types";
 import {
   SUBJECT_ACCENTS, masteryColor, bandFor, bandClass, formatDate, ringArc,
   buildChapterArc, deriveTopicInsights, deriveUnlocks, testAggregate,
@@ -545,7 +553,7 @@ function SubjectCard({ subj, si, data, ui }: { subj: SubjectData; si: number; da
                         )}
                         {arc.dimensions.length > 0 && (
                           <div className="rc-dim-grid">
-                            {arc.dimensions.map((d: any, i: number) => {
+                            {arc.dimensions.map((d, i) => {
                               const delta = typeof d.delta === "number" ? Math.round(d.delta * 100) : null;
                               const name = d.dimension_name ?? d.dimension ?? d.name ?? "";
                               const obs = d.key_observation ?? d.analysis ?? d.desc ?? "";
@@ -681,10 +689,10 @@ export function ReportCardBody({ data, ui }: { data: ReportCardData; ui: ReportC
 
   const aiInsights = progressReport?.report_json || {};
   const isBrandNew = totalSessions === 0 && subjects.length === 0 && !progressReport;
-  const strengths: string[] = (aiInsights as any)?.universal_strengths ?? [];
-  const weaknesses: string[] = (aiInsights as any)?.universal_weaknesses ?? [];
-  const focusAreas: any[] = (aiInsights as any)?.focus_areas ?? [];
-  const patterns: any[] = (aiInsights as any)?.cross_subject_patterns ?? [];
+  const strengths: string[] = aiInsights.universal_strengths ?? [];
+  const weaknesses: string[] = aiInsights.universal_weaknesses ?? [];
+  const focusAreas: AnalysisFocusArea[] = aiInsights.focus_areas ?? [];
+  const patterns: AnalysisPattern[] = aiInsights.cross_subject_patterns ?? [];
   const agg = testAggregate(testSubmissions);
   const pendingSubjects = pendingTrendSubjects(subjects, subjectEvolutions);
   const unlocks = deriveUnlocks(data);
@@ -944,11 +952,11 @@ export function ReportCardBody({ data, ui }: { data: ReportCardData; ui: ReportC
             ) : (
               <>
                 {subjectEvolutions.map((evo) => {
-                  const sj = evo.analysis_json ?? ({} as any);
+                  const sj: EvolutionAnalysisJson = evo.analysis_json ?? {};
                   const s: string[] = sj.universal_strengths ?? sj.subject_strengths ?? [];
                   const w: string[] = sj.universal_weaknesses ?? sj.subject_weaknesses ?? [];
-                  const pats: any[] = sj.cross_chapter_patterns ?? [];
-                  const recs: any[] = sj.recommendations ?? [];
+                  const pats: AnalysisPattern[] = sj.cross_chapter_patterns ?? [];
+                  const recs: (string | AnalysisRecommendation)[] = sj.recommendations ?? [];
                   const key = `trend::${evo.subject}`;
                   const isOpen = ui.isExpOpen(key);
                   const clampKey = `trend-clamp::${evo.subject}`;
@@ -966,7 +974,7 @@ export function ReportCardBody({ data, ui }: { data: ReportCardData; ui: ReportC
                           )}
                           {evo.subject_skill_trajectory && (
                             <>
-                              <p className={`rc-clamp ${clampOpen ? "" : "collapsed"}`} style={{ WebkitLineClamp: clampOpen ? "unset" : 2 } as any}>{evo.subject_skill_trajectory}</p>
+                              <p className={`rc-clamp ${clampOpen ? "" : "collapsed"}`} style={{ WebkitLineClamp: clampOpen ? "unset" : 2 } as React.CSSProperties}>{evo.subject_skill_trajectory}</p>
                               {!print && (
                                 <button className="rc-more-btn" onClick={() => ui.toggleClamp(clampKey)}>
                                   {ui.isClampOpen(clampKey) ? "Show less" : "Read more"}
@@ -990,7 +998,7 @@ export function ReportCardBody({ data, ui }: { data: ReportCardData; ui: ReportC
                           )}
                           {pats.length > 0 && (
                             <div className="rc-dim-grid" style={{ marginTop: "14px" }}>
-                              {pats.slice(0, 4).map((p: any, i: number) => (
+                              {pats.slice(0, 4).map((p, i) => (
                                 <div className="rc-dim-card" key={i}>
                                   <div className="rc-dim-head"><span>{p.pattern_name}</span></div>
                                   <div className="rc-dim-obs">{p.summary ?? p.description}</div>

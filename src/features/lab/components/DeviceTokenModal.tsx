@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Copy, KeyRound, TriangleAlert } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { LEGACY_FOREST_BUTTON } from "@/components/ui/legacyBrandOverride";
 
 interface DeviceTokenModalProps {
   isOpen: boolean;
@@ -48,13 +50,15 @@ export function DeviceTokenModal({ isOpen, deviceLabel, token, onClose }: Device
 
               <div className="mt-5 flex w-full items-center gap-2 rounded-xl bg-[#F4F3EE] p-3">
                 <code className="flex-1 truncate text-left font-mono text-[13px] text-[#1A3D2C]">{token}</code>
-                <button
+                <Button
+                  size="sm"
+                  className="shrink-0"
                   onClick={handleCopy}
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#1A3D2C] px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-[#0f2a1d]"
+                  style={LEGACY_FOREST_BUTTON}
+                  leadingIcon={copied ? <Check size={14} /> : <Copy size={14} />}
                 >
-                  {copied ? <Check size={14} /> : <Copy size={14} />}
                   {copied ? "Copied" : "Copy"}
-                </button>
+                </Button>
               </div>
 
               <div className="mt-4 flex items-start gap-2 rounded-xl bg-danger-bg p-3 text-left text-[12px] text-danger-ink">
@@ -62,12 +66,15 @@ export function DeviceTokenModal({ isOpen, deviceLabel, token, onClose }: Device
                 <span>You will not be able to see this token again after closing this dialog.</span>
               </div>
 
-              <button
+              <Button
+                className="mt-6"
+                fullWidth
+                size="lg"
                 onClick={onClose}
-                className="mt-6 w-full rounded-xl bg-[#1A3D2C] py-3.5 text-sm font-bold text-white transition-all hover:bg-[#0f2a1d]"
+                style={LEGACY_FOREST_BUTTON}
               >
                 I&apos;ve copied the token — close
-              </button>
+              </Button>
             </div>
           </motion.div>
         </>

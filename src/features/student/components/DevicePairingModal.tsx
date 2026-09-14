@@ -3,6 +3,7 @@ import { Loader2, X, CheckCircle, AlertTriangle } from 'lucide-react';
 import { SegmentedInput } from '@/components/shared/SegmentedInput';
 import { confirmDevicePairing } from '@/features/auth/authService';
 import { useStudentStore } from '@/features/student/store/useStudentStore';
+import { asError } from "@/utils/errors";
 
 interface DevicePairingModalProps {
   isOpen: boolean;
@@ -41,10 +42,10 @@ export function DevicePairingModal({ isOpen, onClose }: DevicePairingModalProps)
         // Unexpected success shape fallback
         setErrorMsg('Pairing response was unexpected. Please try again.');
       }
-    } catch (err: any) {
+    } catch (err) {
       let msg = 'An unexpected error occurred. Please try again.';
-      if (err?.error_code) {
-        switch (err.error_code) {
+      if (asError(err).error_code) {
+        switch (asError(err).error_code) {
           case 'AUTH_1213':
             msg = 'That code is invalid or expired. Check the device screen — if it changed, enter the new code.';
             setCode(''); // Clear input for retry
@@ -59,7 +60,7 @@ export function DevicePairingModal({ isOpen, onClose }: DevicePairingModalProps)
             msg = 'Student profile not found.';
             break;
           default:
-            msg = err.message || msg;
+            msg = asError(err).message || msg;
         }
       }
       setErrorMsg(msg);
@@ -89,7 +90,7 @@ export function DevicePairingModal({ isOpen, onClose }: DevicePairingModalProps)
         boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
         display: 'flex', flexDirection: 'column', position: 'relative'
       }}>
-        <button
+        <button aria-label="Close"
           onClick={handleClose}
           style={{
             position: 'absolute', top: 16, right: 16,
@@ -110,7 +111,7 @@ export function DevicePairingModal({ isOpen, onClose }: DevicePairingModalProps)
                   </div>
                   <div>
                     <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', margin: '0 0 8px 0', fontFamily: "var(--font-display)" }}>Device Paired!</h2>
-                    <p style={{ fontSize: 14, color: '#4A5568', margin: 0, lineHeight: 1.5 }}>It'll be ready in a few seconds.</p>
+                    <p style={{ fontSize: 14, color: '#4A5568', margin: 0, lineHeight: 1.5 }}>It&apos;ll be ready in a few seconds.</p>
                   </div>
                 </>
               ) : (
@@ -121,7 +122,7 @@ export function DevicePairingModal({ isOpen, onClose }: DevicePairingModalProps)
                   <div>
                     <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1A202C', margin: '0 0 8px 0', fontFamily: "var(--font-display)" }}>Almost there...</h2>
                     <p style={{ fontSize: 14, color: '#4A5568', margin: 0, lineHeight: 1.5 }}>
-                      Pairing was approved, but we couldn't wake the device. Please restart your device and try again with the new code.
+                      Pairing was approved, but we couldn&apos;t wake the device. Please restart your device and try again with the new code.
                     </p>
                   </div>
                 </>

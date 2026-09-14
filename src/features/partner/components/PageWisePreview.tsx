@@ -78,7 +78,7 @@ export function PageWisePreview({ file }: PageWisePreviewProps) {
         </div>
 
         <div className="flex items-center gap-2">
-           <button 
+           <button aria-label="Open Original" 
              onClick={() => window.open(fileUrl, '_blank')}
              className="p-2 text-[#1A3D2C]/40 hover:text-[#1A3D2C] hover:bg-white rounded-lg transition-all"
              title="Open Original"
@@ -117,7 +117,7 @@ export function PageWisePreview({ file }: PageWisePreviewProps) {
       </div>
       {/* Pagination Footer */}
       <div className="shrink-0 p-6 bg-white border-t border-[#1A3D2C]/5 flex items-center justify-between">
-        <button 
+        <button aria-label="Previous page" 
           onClick={handlePrevPage}
           disabled={currentPage <= 1}
           className="w-14 h-14 flex items-center justify-center rounded-2xl bg-[#F8F9F8] text-[#1A3D2C]/40 hover:text-[#1A3D2C] hover:bg-[#D1E6D9]/30 disabled:opacity-30 transition-all shadow-sm"
@@ -133,7 +133,7 @@ export function PageWisePreview({ file }: PageWisePreviewProps) {
           </div>
         </div>
 
-        <button 
+        <button aria-label="Next page" 
           onClick={handleNextPage}
           disabled={currentPage >= totalPages}
           className="w-14 h-14 flex items-center justify-center rounded-2xl bg-[#F8F9F8] text-[#1A3D2C]/40 hover:text-[#1A3D2C] hover:bg-[#D1E6D9]/30 disabled:opacity-30 transition-all shadow-sm"

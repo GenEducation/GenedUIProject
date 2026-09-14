@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { FunFactCard } from "../FunFactCard";
 
 const SIMULATED_CAP = 90;
 const LOOP_INTERVAL_MS = 800;
@@ -13,10 +14,12 @@ const MIN_CELEBRATION_MS = 1200;
 
 // Cycles independently of progress % so the character keeps moving even
 // when the backend takes far longer than the simulated progress expects.
+// Poses only — the status text these used to carry was filler that the
+// progress bar already communicated, and it crowded out the fun fact.
 const LOOP_STEPS = [
-  { pose: "bike", message: "Getting things ready…" },
-  { pose: "read", message: "Fetching your content…" },
-  { pose: "read", message: "Putting on the finishing touches…" },
+  { pose: "bike" },
+  { pose: "read" },
+  { pose: "read" },
 ] as const;
 
 interface LoaderJourneyProps {
@@ -29,6 +32,9 @@ interface LoaderJourneyProps {
   // This is when the caller should actually navigate.
   onCelebrated?: () => void;
   onFinished: () => void;
+  // Subject context for the fun fact. Passed in rather than read from a store
+  // so this component stays store-free and trivially testable.
+  factSubject?: string | null;
 }
 
 export const LoaderJourney: React.FC<LoaderJourneyProps> = ({
@@ -37,6 +43,7 @@ export const LoaderJourney: React.FC<LoaderJourneyProps> = ({
   isHandoff = false,
   onCelebrated,
   onFinished,
+  factSubject,
 }) => {
   const [progress, setProgress] = useState(0);
   const [loopStep, setLoopStep] = useState(0);
@@ -69,7 +76,7 @@ export const LoaderJourney: React.FC<LoaderJourneyProps> = ({
     return () => clearTimeout(raf);
   }, [isVisible, isComplete]);
 
-  // Independent pose/message loop — keeps animating no matter how long the
+  // Independent pose loop — keeps animating no matter how long the
   // backend takes, instead of freezing once progress hits its simulated cap.
   useEffect(() => {
     if (!isVisible || isComplete) {
@@ -110,8 +117,6 @@ export const LoaderJourney: React.FC<LoaderJourneyProps> = ({
   const currentPose = isTrophyPhase ? "trophy" : LOOP_STEPS[loopStep].pose;
   const isBikePhase = currentPose === "bike";
   const isReadPhase = currentPose === "read";
-
-  const message = isTrophyPhase ? "All done!" : LOOP_STEPS[loopStep].message;
 
   return (
     <AnimatePresence>
@@ -169,28 +174,32 @@ export const LoaderJourney: React.FC<LoaderJourneyProps> = ({
               />
             </div>
 
-            <div className="mt-4 text-[#042e5c]/60 font-semibold text-sm tracking-wide">
-              {Math.round(pct)}%
+            {/* "All done!" is a completion state, not filler, so it earns the
+                one line of text here. Nothing shows while loading — the bar
+                already says what the old rotating message said. */}
+            {isTrophyPhase && (
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="mt-4 text-[#042e5c]/60 font-semibold text-sm tracking-wide"
+              >
+                All done!
+              </motion.p>
+            )}
+
+            {/* One stable status instead of a live region echoing rotating
+                text. FunFactCard has an aria-live of its own, and two chatty
+                live regions on one screen is worse than one quiet one. */}
+            <div role="status" className="sr-only">
+              {isTrophyPhase ? "Loading complete" : "Loading"}
             </div>
 
-            <div className="mt-1 h-6">
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={message}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-[#042e5c]/40 font-medium text-sm tracking-wide"
-                >
-                  {message}
-                </motion.p>
-              </AnimatePresence>
-            </div>
-
-            <div aria-live="polite" className="sr-only">
-              {message}
-            </div>
+            {/* Hidden during the celebration so it doesn't compete with the
+                trophy and confetti. */}
+            {!isTrophyPhase && (
+              <FunFactCard subject={factSubject} className="mt-8 w-full" />
+            )}
           </div>
         </motion.div>
       )}

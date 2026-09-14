@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { X, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 interface OnboardingPromptCardProps {
   onStart: () => void;
@@ -23,12 +24,9 @@ export function OnboardingPromptCard({ onStart, userId }: OnboardingPromptCardPr
   return (
     <div className="fixed bottom-6 right-6 z-30 max-w-sm animate-in slide-in-from-bottom-4 fade-in duration-500">
       <div className="relative bg-white rounded-2xl shadow-xl border border-[#059F6D]/15 p-5">
-        <button
-          onClick={handleDismiss}
-          className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-        >
+        <Button iconOnly size="sm" variant="tertiary" className="absolute top-3 right-3" aria-label="Dismiss" onClick={handleDismiss}>
           <X size={14} />
-        </button>
+        </Button>
 
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#059F6D]/10 flex items-center justify-center flex-shrink-0">

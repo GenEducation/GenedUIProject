@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { RoleCard } from "./RoleCard";
 import { fetchAllTaxonomyGrades } from "@/features/subjects/subjectCatalog";
 import { Select } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
+import { asError } from "@/utils/errors";
 
 interface SignUpData {
   username?: string;
@@ -70,6 +72,7 @@ export function SignUp({
   const [otpSentMessage, setOtpSentMessage] = useState("");
   const [hasPersonalEmail, setHasPersonalEmail] = useState(false);
   const [availableGrades, setAvailableGrades] = useState<number[]>([3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
   const isSignupEnabled = process.env.NEXT_PUBLIC_ENABLE_SIGNUP !== "false";
 
   useEffect(() => {
@@ -109,19 +112,17 @@ export function SignUp({
             support@geneducation.ai
           </a>
         </p>
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="lg"
           onClick={onSwitchToSignin}
-          className="group flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-white border border-[#042e5c]/12 text-[#042e5c] text-sm font-bold shadow-sm transition-all hover:border-[#059F6D]/30 hover:text-[#059F6D] active:scale-[0.98]"
+          leadingIcon={<ArrowLeft className="w-4 h-4" />}
         >
-          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
           Back to Login
-        </button>
+        </Button>
       </div>
     );
   }
-
-  const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
 
   /**
    * Client-side gate for the final step. Both roles now finish at step 2, so
@@ -198,9 +199,12 @@ export function SignUp({
   const prevStep = () => setStep((s) => s - 1);
 
   const handleRoleSelect = (role: "student" | "parent") => {
+    // The parent's handler only reads `target.name` / `target.value`; these
+    // selectors are custom buttons, not real inputs, so a minimal synthetic
+    // event stands in for a DOM change event.
     const event = {
       target: { name: "role", value: role },
-    } as any;
+    } as ChangeEvent<HTMLInputElement>;
     onChange(event);
     setStep(2);
   };
@@ -235,7 +239,7 @@ export function SignUp({
   const handleGradeSelect = (grade: number) => {
     const event = {
       target: { name: "grade", value: String(grade) },
-    } as any;
+    } as ChangeEvent<HTMLInputElement>;
     onChange(event);
   };
 
@@ -298,8 +302,8 @@ export function SignUp({
                         await sendOtp(signupData.email);
                         setIsOtpSent(true);
                         setOtpSentMessage("OTP sent to your email!");
-                      } catch (err: any) {
-                        setLocalErrors({ email: err.message || "Failed to send OTP" });
+                      } catch (err) {
+                        setLocalErrors({ email: asError(err).message || "Failed to send OTP" });
                       } finally {
                         setIsSendingOtp(false);
                       }
@@ -354,7 +358,7 @@ export function SignUp({
               </div>
 
               <div>
-                <label className={labelCls}>Parent or Guardian's Email Address (Optional)</label>
+                <label className={labelCls}>Parent or Guardian&apos;s Email Address (Optional)</label>
                 <input
                   name="parent_email"
                   value={signupData.parent_email || ""}
@@ -389,7 +393,7 @@ export function SignUp({
               </div>
 
               <div>
-                <label className={labelCls}>Parent or Guardian's Email Address</label>
+                <label className={labelCls}>Parent or Guardian&apos;s Email Address</label>
                 <input
                   name="parent_email"
                   value={signupData.parent_email || ""}
@@ -420,7 +424,7 @@ export function SignUp({
                   placeholder="Create a password"
                   className={`${inputCls(!!errors.password || !!localErrors.password)} pr-12`}
                 />
-                <button
+                <button aria-label={showPassword ? "Hide password" : "Show password"}
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
@@ -479,16 +483,16 @@ export function SignUp({
             </div>
           )}
 
-          <button
+          <Button
             type="submit"
-            disabled={isSubmitting || !signupData.grade}
-            className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-3.5 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
+            size="lg"
+            fullWidth
+            loading={isSubmitting}
+            disabled={!signupData.grade}
+            trailingIcon={<ArrowRight size={16} />}
           >
-            <span className="relative z-10 flex items-center justify-center gap-2">
-              {isSubmitting ? "Creating account…" : "Create Account"}
-              {!isSubmitting && <ArrowRight size={16} />}
-            </span>
-          </button>
+            Create Account
+          </Button>
         </div>
       );
     }
@@ -534,8 +538,8 @@ export function SignUp({
                       await sendOtp(signupData.email);
                       setIsOtpSent(true);
                       setOtpSentMessage("OTP sent to your email!");
-                    } catch (err: any) {
-                      setLocalErrors({ email: err.message || "Failed to send OTP" });
+                    } catch (err) {
+                      setLocalErrors({ email: asError(err).message || "Failed to send OTP" });
                     } finally {
                       setIsSendingOtp(false);
                     }
@@ -586,7 +590,7 @@ export function SignUp({
                     placeholder="Create a password"
                     className={`${inputCls(!!errors.password || !!localErrors.password)} pr-12`}
                   />
-                  <button
+                  <button aria-label={showPassword ? "Hide password" : "Show password"}
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
@@ -636,16 +640,15 @@ export function SignUp({
           </div>
         )}
 
-        <button
+        <Button
           type="submit"
-          disabled={isSubmitting}
-          className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-3.5 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
+          size="lg"
+          fullWidth
+          loading={isSubmitting}
+          trailingIcon={<ArrowRight size={16} />}
         >
-          <span className="relative z-10 flex items-center justify-center gap-2">
-            {isSubmitting ? "Creating account…" : "Create Account"}
-            {!isSubmitting && <ArrowRight size={16} />}
-          </span>
-        </button>
+          Create Account
+        </Button>
 
         {!googleToken && (
           <>
@@ -659,7 +662,7 @@ export function SignUp({
             </div>
 
             <GoogleAuthButton
-              label="Sign up with Google"
+              text="signup_with"
               onSuccess={(credential) => {
                 setGoogleToken(credential);
                 onGoogleSuccess(credential);

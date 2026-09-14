@@ -157,7 +157,7 @@ export function TutorialCelebration({ onDismiss }: TutorialCelebrationProps) {
             className="w-full bg-[#059F6D] hover:bg-[#048055] text-white rounded-2xl py-4 font-black text-[15px] shadow-lg shadow-[#059F6D]/25 transition-all flex items-center justify-center gap-2"
           >
             <Sparkles size={18} />
-            Got it, let's go!
+            Got it, let&apos;s go!
           </motion.button>
         </div>
       </motion.div>

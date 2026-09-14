@@ -16,6 +16,7 @@ import { Button, type ButtonSize, type ButtonVariant } from "@/components/ui/But
 const VARIANTS: ButtonVariant[] = [
   "primary",
   "secondary",
+  "outline",
   "tertiary",
   "destructive",
   "destructiveSolid",

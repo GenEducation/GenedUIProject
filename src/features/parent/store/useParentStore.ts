@@ -3,7 +3,20 @@ import { parentService, LinkedStudent } from "../services/parentService";
 import { studentService } from "../../student/services/studentService";
 import * as Sentry from "@sentry/nextjs";
 
-interface ParentProfile {
+/** One chat session belonging to a linked student. */
+export interface ParentStudentSession {
+  session_id: string;
+  title?: string;
+  created_at: string;
+}
+
+/** One message within a linked student's session transcript. */
+export interface ParentSessionMessage {
+  role?: string;
+  content: string;
+}
+
+export interface ParentProfile {
   user_id: string;
   username: string;
   email: string;
@@ -15,9 +28,9 @@ interface ParentState {
   linkedStudents: LinkedStudent[];
   selectedStudentId: string | null;
   activeDashboardView: "analytics" | "chat" | "profile" | "report" | "schedule" | "moments";
-  selectedStudentSessions: any[];
+  selectedStudentSessions: ParentStudentSession[];
   activeSessionId: string | null;
-  activeSessionHistory: any[];
+  activeSessionHistory: ParentSessionMessage[];
   isFetchingStudents: boolean;
   isFetchingSessions: boolean;
   isFetchingHistory: boolean;

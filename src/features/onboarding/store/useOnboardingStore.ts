@@ -10,6 +10,7 @@ import {
   selectEffectiveLearningPartner,
   useStudentStore,
 } from "@/features/student/store/useStudentStore";
+import { asError } from "@/utils/errors";
 
 export interface OnboardingMessage {
   id: string;
@@ -108,9 +109,9 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
         isComplete: data.is_complete || false,
         isVoiceOnly: voiceOnly
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to start onboarding:", error);
-      set({ error: error?.message || "Subject onboarding could not be started. Please try again." });
+      set({ error: asError(error).message || "Subject onboarding could not be started. Please try again." });
     }
   },
 
@@ -152,7 +153,7 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
       }
 
       let responseText = data.response || "";
-      let isCompleteFlag = data.is_complete || false;
+      const isCompleteFlag = data.is_complete || false;
       let voiceOnly = false;
       
       if (responseText.includes("<<VOICE_ONLY>>")) {
@@ -230,7 +231,7 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
       }
 
       let responseText = data.response || "";
-      let isCompleteFlag = data.is_complete || false;
+      const isCompleteFlag = data.is_complete || false;
       let voiceOnly = false;
       
       if (responseText.includes("<<VOICE_ONLY>>")) {

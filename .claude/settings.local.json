@@ -5,7 +5,9 @@
       "Skill(name-ui-ux-pro-max:*)",
       "mcp__Claude_Preview__preview_start",
       "Bash(cp /tmp/subject-icons-preview.html /tmp/hub-mockup/subject-icons-preview.html)",
-      "mcp__Desktop_Commander__read_file"
+      "mcp__Desktop_Commander__read_file",
+      "Bash(npx eslint *)",
+      "Bash(node -p \"require\\('./node_modules/axe-core/package.json'\\).version\")"
     ]
   }
 }

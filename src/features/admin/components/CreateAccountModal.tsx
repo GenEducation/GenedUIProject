@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { createUser, listPartners, CreateUserPayload, PartnerRow } from "../adminService";
 import { useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
 import { EDUCATION_BOARDS, isEducationBoard } from "@/types/education";
+import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 
 interface Props {
@@ -126,9 +127,9 @@ export function CreateAccountModal({ onClose, onCreated }: Props) {
       <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#13283a] p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold">Create account</h2>
-          <button onClick={onClose} className="text-white/40 hover:text-white">
+          <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Close" onClick={onClose}>
             <X size={20} />
-          </button>
+          </Button>
         </div>
 
         <div className="space-y-4">
@@ -311,19 +312,12 @@ export function CreateAccountModal({ onClose, onCreated }: Props) {
           ) : null}
 
           <div className="flex justify-end gap-3 pt-2">
-            <button
-              onClick={onClose}
-              className="rounded-lg px-4 py-2.5 text-sm font-semibold text-white/60 hover:text-white"
-            >
+            <Button variant="tertiary" tone="onDark" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={saving}
-              className="rounded-lg bg-[#059F6D] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
-            >
-              {saving ? "Creating…" : "Create account"}
-            </button>
+            </Button>
+            <Button variant="primary" tone="onDark" loading={saving} onClick={handleSubmit}>
+              Create account
+            </Button>
           </div>
         </div>
       </div>

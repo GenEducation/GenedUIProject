@@ -12,13 +12,6 @@ vi.mock("../VisualBlock", () => ({
 vi.mock("../MathWidget", () => ({
   MathWidget: (props: { expression: string }) => <div data-testid="math-widget">{props.expression}</div>,
 }));
-vi.mock("../VisualCard", () => ({
-  VisualCard: (props: { engine: string; label: string; children: React.ReactNode }) => (
-    <div data-testid="visual-card" data-engine={props.engine} data-label={props.label}>
-      {props.children}
-    </div>
-  ),
-}));
 vi.mock("../FigureView", () => ({ FigureView: (props: { uuid: string }) => <div data-testid="figure-view">{props.uuid}</div> }));
 vi.mock("../P5Visual", () => ({ P5Visual: () => <div data-testid="p5-visual" /> }));
 vi.mock("../GeoGebraVisual", () => ({ GeoGebraVisual: () => <div data-testid="geogebra-visual" /> }));
@@ -42,16 +35,17 @@ describe("MessageElements — dispatch by element type", () => {
     expect(screen.getByText("Hello world")).toBeInTheDocument();
   });
 
-  it("routes p5sketch visuals to VisualCard + P5Visual", () => {
+  it("routes p5sketch visuals straight to P5Visual, with no card chrome", () => {
     const els: ChatElement[] = [
       { id: "1", type: "visual", content: "p5sketch", meta: { engine: "p5sketch", label: "Graph", code: "draw()" } },
     ];
     render(<MessageElements elements={els} />);
-    expect(screen.getByTestId("visual-card")).toHaveAttribute("data-engine", "p5sketch");
     expect(screen.getByTestId("p5-visual")).toBeInTheDocument();
+    // Visuals are frameless — the label is not painted as a caption.
+    expect(screen.queryByText("Graph")).not.toBeInTheDocument();
   });
 
-  it("routes geogebra visuals to VisualCard + GeoGebraVisual", () => {
+  it("routes geogebra visuals to GeoGebraVisual", () => {
     const els: ChatElement[] = [
       { id: "1", type: "visual", content: "geogebra", meta: { engine: "geogebra", commands: ["A=(1,1)"] } },
     ];

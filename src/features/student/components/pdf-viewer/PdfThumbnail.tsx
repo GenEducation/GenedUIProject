@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { PDFDocumentProxy } from "pdfjs-dist";
+import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
+import { asError } from "@/utils/errors";
 
 const THUMB_WIDTH = 82; // px — fixed thumbnail width
 
@@ -25,7 +26,7 @@ export function PdfThumbnail({ pdfDoc, pageNumber, pageWidth, pageHeight, isActi
     if (!canvas) return;
 
     let cancelled = false;
-    let renderTask: any = null;
+    let renderTask: RenderTask | null = null;
 
     const render = async () => {
       try {
@@ -45,8 +46,8 @@ export function PdfThumbnail({ pdfDoc, pageNumber, pageWidth, pageHeight, isActi
         await renderTask.promise;
         renderTask = null;
         page.cleanup();
-      } catch (err: any) {
-        if (err?.name === "RenderingCancelledException") return;
+      } catch (err) {
+        if (asError(err).name === "RenderingCancelledException") return;
         console.warn(`[PdfThumbnail] Render error on page ${pageNumber}:`, err);
       }
     };

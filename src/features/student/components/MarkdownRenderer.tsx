@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeHighlight from "rehype-highlight";
@@ -27,35 +27,69 @@ interface MarkdownRendererProps {
  * - GenEd branded styling
  */
 
-const getMarkdownComponents = (showToolbar: boolean) => ({
+/**
+ * framer-motion redefines the drag and animation handlers with its own
+ * signatures, so React's DOM versions cannot be spread onto a `motion.*`
+ * element. Markdown never produces these handlers, so strip them from the
+ * passthrough rather than widening the props to `any`.
+ */
+type MotionConflictingProp =
+  | "onDrag"
+  | "onDragStart"
+  | "onDragEnd"
+  | "onAnimationStart"
+  | "onAnimationEnd"
+  | "onAnimationIteration";
+
+const MOTION_CONFLICTING_PROPS: MotionConflictingProp[] = [
+  "onDrag",
+  "onDragStart",
+  "onDragEnd",
+  "onAnimationStart",
+  "onAnimationEnd",
+  "onAnimationIteration",
+];
+
+function motionSafe<T extends object>(props: T): Omit<T, MotionConflictingProp> {
+  const rest = { ...props } as Record<string, unknown>;
+  for (const key of MOTION_CONFLICTING_PROPS) delete rest[key];
+  return rest as Omit<T, MotionConflictingProp>;
+}
+
+const getMarkdownComponents = (showToolbar: boolean): Components => ({
   // Header styles
-  h1: ({ ...props }: any) => <h1 className="text-lg font-black mt-4 mb-2 text-[#1a3a2a]" {...props} />,
-  h2: ({ ...props }: any) => <h2 className="text-md font-bold mt-3 mb-1 text-[#1a3a2a]" {...props} />,
-  h3: ({ ...props }: any) => <h3 className="text-sm font-bold mt-2 mb-1 text-[#1a3a2a]" {...props} />,
+  h1: ({ ...props }) => <h1 className="text-lg font-black mt-4 mb-2 text-[#1a3a2a]" {...props} />,
+  h2: ({ ...props }) => <h2 className="text-md font-bold mt-3 mb-1 text-[#1a3a2a]" {...props} />,
+  h3: ({ ...props }) => <h3 className="text-sm font-bold mt-2 mb-1 text-[#1a3a2a]" {...props} />,
   
   // List styles
-  ul: ({ node, ...props }: any) => <motion.ul initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="list-disc list-inside mb-3 space-y-1" {...(props as any)} />,
-  ol: ({ node, ...props }: any) => <motion.ol initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="list-decimal list-inside mb-3 space-y-1" {...(props as any)} />,
-  li: ({ node, ...props }: any) => <motion.li initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }} className="text-sm leading-relaxed" {...(props as any)} />,
+  ul: ({ node, ...props }) => <motion.ul initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="list-disc list-inside mb-3 space-y-1" {...motionSafe(props)} />,
+  ol: ({ node, ...props }) => <motion.ol initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="list-decimal list-inside mb-3 space-y-1" {...motionSafe(props)} />,
+  li: ({ node, ...props }) => <motion.li initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }} className="text-sm leading-relaxed" {...motionSafe(props)} />,
   
   // Table styles
-  table: ({ node, ...props }: any) => (
+  table: ({ node, ...props }) => (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="overflow-x-auto my-4 rounded-xl border border-[#1a3a2a]/10">
       <table className="w-full text-left border-collapse" {...props} />
     </motion.div>
   ),
-  thead: ({ ...props }: any) => <thead className="bg-[#1a3a2a]/5" {...props} />,
-  th: ({ ...props }: any) => <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#1a3a2a]/50 border-b border-[#1a3a2a]/10" {...props} />,
-  td: ({ ...props }: any) => <td className="px-4 py-2 text-sm border-b border-[#1a3a2a]/5" {...props} />,
+  thead: ({ ...props }) => <thead className="bg-[#1a3a2a]/5" {...props} />,
+  th: ({ ...props }) => <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#1a3a2a]/50 border-b border-[#1a3a2a]/10" {...props} />,
+  td: ({ ...props }) => <td className="px-4 py-2 text-sm border-b border-[#1a3a2a]/5" {...props} />,
   
   // Link styles
-  a: ({ ...props }: any) => <a className="text-emerald-600 hover:underline font-bold" target="_blank" rel="noopener noreferrer" {...props} />,
+  a: ({ ...props }) => <a className="text-emerald-600 hover:underline font-bold" target="_blank" rel="noopener noreferrer" {...props} />,
   
   // Blockquote styles
-  blockquote: ({ node, ...props }: any) => <motion.blockquote initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} className="border-l-4 border-emerald-400 pl-4 py-1 my-3 bg-emerald-50/50 rounded-r-lg italic text-[#1a3a2a]/70" {...(props as any)} />,
+  blockquote: ({ node, ...props }) => <motion.blockquote initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} className="border-l-4 border-emerald-400 pl-4 py-1 my-3 bg-emerald-50/50 rounded-r-lg italic text-[#1a3a2a]/70" {...motionSafe(props)} />,
   
   // Code styles
-  code: ({ node, inline, className, children, ...props }: any) => {
+  code: ({ node, className, children, ...props }) => {
+    // react-markdown v10 no longer passes an `inline` prop to `code`; this read
+    // preserves the previous behaviour rather than silently changing how inline
+    // code renders. With `inline` always undefined every span takes the block
+    // branch, which is what has been shipping.
+    const inline = (props as { inline?: boolean }).inline;
     const match = /language-(\w+)/.exec(className || "");
     return !inline ? (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="relative my-4 group">
@@ -78,7 +112,7 @@ const getMarkdownComponents = (showToolbar: boolean) => ({
   },
   
   // Paragraph styles
-  p: ({ node, children, ...props }: any) => {
+  p: ({ node, children, ...props }) => {
 
     return (
       <div className="relative group mb-3 last:mb-0">
@@ -88,10 +122,13 @@ const getMarkdownComponents = (showToolbar: boolean) => ({
   },
   
   // Image styles (supports resolved figures)
-  img: ({ src, alt, ...props }: any) => {
-    const isFigure = src?.includes("/rag/retrieve/figure/");
-    if (isFigure) {
-        const uuid = src.split('/').pop() || "";
+  img: ({ node, src, alt, ...props }) => {
+    // React's img typings widen `src` to `string | Blob`; markdown only ever
+    // produces a string URL.
+    const url = typeof src === "string" ? src : undefined;
+
+    if (url?.includes("/rag/retrieve/figure/")) {
+        const uuid = url.split('/').pop() || "";
         return <FigureView uuid={uuid} />;
     }
     return (
@@ -100,10 +137,10 @@ const getMarkdownComponents = (showToolbar: boolean) => ({
           initial={{ opacity: 0, scale: 0.95 }} 
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4 }}
-          src={src} 
+          src={url} 
           alt={alt || "Illustration"} 
           className="rounded-2xl border border-[#1a3a2a]/10 shadow-md w-full h-auto object-contain max-h-[400px] block mx-auto"
-          {...props} 
+          {...motionSafe(props)} 
         />
       </div>
     );

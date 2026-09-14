@@ -6,6 +6,7 @@ import { listUsers, deleteUser, updateUser, AdminUser, Role, Plan, ImportRole } 
 import { CreateAccountModal } from "./CreateAccountModal";
 import { BulkImportModal } from "./BulkImportModal";
 import { DataTable, Column } from "./DataTable";
+import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 
 const toOptions = (values: readonly string[]) => values.map((v) => ({ value: v, label: v }));
@@ -121,20 +122,12 @@ export function UsersView({ title }: Props) {
         }
         actions={(u) => (
           <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={() => setEditing(u)}
-              className="rounded-md p-1.5 text-white/40 hover:bg-white/10 hover:text-white"
-              title="Edit"
-            >
+            <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Edit" onClick={() => setEditing(u)}>
               <Pencil size={15} />
-            </button>
-            <button
-              onClick={() => handleDelete(u)}
-              className="rounded-md p-1.5 text-white/40 hover:bg-rose-500/15 hover:text-rose-300"
-              title="Delete"
-            >
+            </Button>
+            <Button iconOnly size="sm" variant="destructive" tone="onDark" aria-label="Delete" onClick={() => handleDelete(u)}>
               <Trash2 size={15} />
-            </button>
+            </Button>
           </div>
         )}
       />
@@ -239,12 +232,12 @@ function EditUserModal({
             </div>
           ) : null}
           <div className="flex justify-end gap-3 pt-2">
-            <button onClick={onClose} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-white/60 hover:text-white">
+            <Button variant="tertiary" tone="onDark" onClick={onClose}>
               Cancel
-            </button>
-            <button onClick={save} disabled={saving} className="rounded-lg bg-[#059F6D] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60">
-              {saving ? "Saving…" : "Save"}
-            </button>
+            </Button>
+            <Button variant="primary" tone="onDark" loading={saving} onClick={save}>
+              Save
+            </Button>
           </div>
         </div>
       </div>

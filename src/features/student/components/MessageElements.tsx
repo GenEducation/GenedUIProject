@@ -7,7 +7,6 @@ import { VisualBlock } from "./VisualBlock";
 import { MathWidget } from "./MathWidget";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { useSmoothStream } from "@/hooks/useSmoothStream";
-import { VisualCard } from "./VisualCard";
 import { FigureView } from "./FigureView";
 import { P5Visual } from "./P5Visual";
 import { GeoGebraVisual } from "./GeoGebraVisual";
@@ -106,25 +105,18 @@ function renderElementNode(el: ChatElement): React.ReactNode {
         </div>
       );
     }
+    // Visuals render frameless — no card, badge or caption — so they read as
+    // part of the message rather than an embedded widget. Each renderer sizes
+    // itself to its own content.
     if (el.meta?.engine === "p5sketch") {
-      return (
-        <VisualCard engine="p5sketch" label={el.meta.label || ""}>
-          <P5Visual code={el.meta.code || ""} />
-        </VisualCard>
-      );
+      return <P5Visual code={el.meta.code || ""} />;
     }
     if (el.meta?.engine === "geogebra") {
-      return (
-        <VisualCard engine="geogebra" label={el.meta.label || ""}>
-          <GeoGebraVisual id={el.id} commands={el.meta.commands || []} options={el.meta.options} />
-        </VisualCard>
-      );
+      return <GeoGebraVisual id={el.id} commands={el.meta.commands || []} options={el.meta.options} />;
     }
     if (el.meta?.engine === "desmos") {
       return (
-        <VisualCard engine="desmos" label={el.meta.label || "Graph"}>
-          <MathWidget expression={el.meta.options?.expression || el.meta.code || ""} meta={el.meta.options} minimal={true} />
-        </VisualCard>
+        <MathWidget expression={el.meta.options?.expression || el.meta.code || ""} meta={el.meta.options} minimal={true} />
       );
     }
     // show_figure renders a base64 figure from the textbook. The backend tags the
@@ -138,30 +130,26 @@ function renderElementNode(el: ChatElement): React.ReactNode {
         ? el.meta.image
         : (el.meta.image && !el.meta.figure_id ? `data:image/jpeg;base64,${el.meta.image}` : null);
       return (
-        <VisualCard engine="show_figure" label={el.meta.label || ""}>
-          <div className="flex flex-col items-center">
-            {el.meta.figure_id ? (
-              <FigureView uuid={el.meta.figure_id} />
-            ) : imgSource ? (
-              <img src={imgSource} alt={el.meta.label || "Figure"} className="max-w-full rounded-lg" />
-            ) : (
-              <div className="bg-[#FFF8E1] text-[#F57F17] px-3 py-2 rounded-lg text-xs font-medium">📐 Figure ID: unknown</div>
-            )}
-          </div>
-        </VisualCard>
+        <div className="flex flex-col items-start">
+          {el.meta.figure_id ? (
+            <FigureView uuid={el.meta.figure_id} />
+          ) : imgSource ? (
+            <img src={imgSource} alt={el.meta.label || "Figure"} className="max-w-full sm:max-w-[480px] h-auto rounded-xl" />
+          ) : (
+            <div className="bg-[#FFF8E1] text-[#F57F17] px-3 py-2 rounded-lg text-xs font-medium">📐 Figure ID: unknown</div>
+          )}
+        </div>
       );
     }
     if (el.meta?.engine === "show_figure_describe") {
       return (
-        <VisualCard engine="show_figure" label="Picture Description">
-          <div className="flex flex-col items-center gap-3">
-            <FigureDescribeBlock
-              figureAssetUrl={el.meta.figure_asset_url}
-              prompt={el.meta.label || "What do you see in this picture?"}
-              directiveId={el.meta.directive_id}
-            />
-          </div>
-        </VisualCard>
+        <div className="flex flex-col items-start gap-3">
+          <FigureDescribeBlock
+            figureAssetUrl={el.meta.figure_asset_url}
+            prompt={el.meta.label || "What do you see in this picture?"}
+            directiveId={el.meta.directive_id}
+          />
+        </div>
       );
     }
     return null;

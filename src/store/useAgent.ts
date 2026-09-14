@@ -38,6 +38,12 @@ export interface Message {
   timestamp: string;
 }
 
+/** One node of the `/mastery-map` response. */
+export interface MasteryNode {
+  label: string;
+  score: number;
+}
+
 interface AgentState {
   agents: Agent[];
   activeAgent: Agent | null;
@@ -47,7 +53,7 @@ interface AgentState {
   chatHistory: Message[];
   isAssessmentMode: boolean;
   activeTopic: string | null;
-  masteryNodes: any[];
+  masteryNodes: MasteryNode[];
   
   setActiveAgent: (agent: Agent | null) => void;
   setAssessmentMode: (mode: boolean) => void;

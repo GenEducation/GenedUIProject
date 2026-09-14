@@ -14,7 +14,7 @@ export default function ShapePartition({ directiveId, meta, disabled, readOnly }
   const it = meta?.interaction_type || "build";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ parts?: number }>(directiveId, it, allowRetry);
 
   const [parts, setParts] = useState<number>(studentAnswer?.parts ?? 1);
   const lock = disabled || submitted;

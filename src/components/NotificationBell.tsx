@@ -3,6 +3,7 @@ import { Bell, CheckCircle2, MessageSquare, Info, AlertCircle, X } from "lucide-
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotificationStore } from "../store/useNotificationStore";
 import { PANEL_CLASSNAME } from "@/components/ui/Select";
+import { Button } from "@/components/ui/Button";
 
 interface NotificationBellProps {
   userId: string;
@@ -66,6 +67,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, alig
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
+        aria-label="Notifications"
+        aria-expanded={isOpen}
         className="relative w-10 h-10 rounded-xl bg-[#F4F3EE] hover:bg-[#E5F2E9] flex items-center justify-center text-[#1a3a2a] transition-all group"
       >
         <Bell size={20} className={unreadCount > 0 ? "animate-swing" : ""} />
@@ -92,9 +95,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, alig
                   {unreadCount} UNREAD MESSAGES
                 </p>
               </div>
-              <button onClick={() => setIsOpen(false)} className="text-[#1a3a2a]/30 hover:text-[#1a3a2a] transition-colors">
+              <Button iconOnly size="sm" variant="tertiary" aria-label="Close notifications" onClick={() => setIsOpen(false)}>
                 <X size={16} />
-              </button>
+              </Button>
             </div>
 
             <div className="max-h-[400px] overflow-y-auto custom-scrollbar">

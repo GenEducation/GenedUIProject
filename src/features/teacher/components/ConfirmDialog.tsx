@@ -1,7 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, AlertTriangle, Loader2 } from "lucide-react";
+import { X, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -47,36 +48,30 @@ export function ConfirmDialog({
               <h3 className="font-serif text-xl font-semibold text-ink">{title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">{message}</p>
               <div className="mt-7 flex w-full flex-col gap-2.5">
-                <button
+                <Button
+                  variant="destructiveSolid"
+                  size="lg"
+                  fullWidth
+                  loading={isLoading}
                   onClick={onConfirm}
-                  disabled={isLoading}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-danger py-3.5 text-sm font-bold text-white shadow-lg shadow-danger/20 transition-all hover:bg-[#c84f3b] disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      Removing…
-                    </>
-                  ) : (
-                    confirmLabel
-                  )}
-                </button>
-                <button
-                  onClick={onClose}
+                  {confirmLabel}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  fullWidth
                   disabled={isLoading}
-                  className="w-full rounded-xl bg-paper py-3.5 text-sm font-bold text-muted transition-all hover:bg-border disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={onClose}
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
             {!isLoading && (
-              <button
-                onClick={onClose}
-                className="absolute right-4 top-4 p-2 text-muted-light transition-colors hover:text-muted"
-              >
+              <Button iconOnly size="sm" variant="tertiary" className="absolute right-4 top-4" aria-label="Close" onClick={onClose}>
                 <X size={18} />
-              </button>
+              </Button>
             )}
           </motion.div>
         </>

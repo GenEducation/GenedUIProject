@@ -83,6 +83,10 @@ function StatCard({
       type="button"
       onClick={onClick}
       disabled={!onClick}
+      // KPI tiles and self-test chips can carry the same words ("Service
+      // required"), so tests need a way to address the tile specifically that
+      // does not depend on its styling classes.
+      data-kpi-tile={label}
       className={`rounded-xl border p-4 text-left transition-colors ${
         active
           ? "border-[#059F6D]/60 bg-[#059F6D]/10"

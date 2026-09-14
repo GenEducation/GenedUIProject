@@ -1,9 +1,53 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+/**
+ * Minimal declarations for the Web Speech API. It is a non-standard,
+ * prefixed-in-Chrome API with no ambient types in lib.dom, so only the members
+ * this hook actually touches are declared here.
+ */
+interface SpeechRecognitionAlternativeLike {
+  transcript: string;
+}
+interface SpeechRecognitionResultLike {
+  [index: number]: SpeechRecognitionAlternativeLike;
+}
+interface SpeechRecognitionResultListLike {
+  readonly length: number;
+  [index: number]: SpeechRecognitionResultLike;
+}
+interface SpeechRecognitionEventLike {
+  resultIndex: number;
+  results: SpeechRecognitionResultListLike;
+}
+interface SpeechRecognitionErrorEventLike {
+  error: string;
+}
+interface SpeechRecognitionLike {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
+  start(): void;
+  stop(): void;
+}
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+/** Both the standard and the webkit-prefixed constructor, when present. */
+function getSpeechRecognition(): SpeechRecognitionConstructor | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const w = window as unknown as {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
+  return w.SpeechRecognition || w.webkitSpeechRecognition;
+}
+
 interface UseSpeechToTextOptions {
   onResult?: (transcript: string) => void;
   onEnd?: () => void;
-  onError?: (error: any) => void;
+  onError?: (error: SpeechRecognitionErrorEventLike) => void;
   language?: string;
   continuous?: boolean;
 }
@@ -11,10 +55,10 @@ interface UseSpeechToTextOptions {
 export function useSpeechToText(options: UseSpeechToTextOptions = {}) {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = getSpeechRecognition();
     if (!SpeechRecognition) {
       console.error('Speech Recognition not supported in this browser.');
       return;
@@ -25,7 +69,7 @@ export function useSpeechToText(options: UseSpeechToTextOptions = {}) {
     recognition.continuous = options.continuous !== undefined ? options.continuous : false;
     recognition.interimResults = true;
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEventLike) => {
       let currentTranscript = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         currentTranscript += event.results[i][0].transcript;
@@ -39,7 +83,7 @@ export function useSpeechToText(options: UseSpeechToTextOptions = {}) {
       if (options.onEnd) options.onEnd();
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEventLike) => {
       console.error('Speech Recognition Error:', event.error);
       setIsListening(false);
       if (options.onError) options.onError(event);
@@ -74,6 +118,6 @@ export function useSpeechToText(options: UseSpeechToTextOptions = {}) {
     transcript,
     startListening,
     stopListening,
-    isSupported: !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+    isSupported: !!getSpeechRecognition()
   };
 }

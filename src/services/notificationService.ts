@@ -54,7 +54,7 @@ export const notificationService = {
    */
   subscribeToStream: (
     userId: string,
-    onMessage: (data: any) => void,
+    onMessage: (data: unknown) => void,
   ): (() => void) => {
     const controller = new AbortController();
     const token = getAuthToken();

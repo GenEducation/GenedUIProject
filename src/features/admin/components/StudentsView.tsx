@@ -5,6 +5,7 @@ import { Pencil } from "lucide-react";
 import { listStudents, updateStudent, StudentRow } from "../adminService";
 import { DataTable, Column } from "./DataTable";
 import { EntityEditModal } from "./EntityEditModal";
+import { Button } from "@/components/ui/Button";
 
 export function StudentsView() {
   const [rows, setRows] = useState<StudentRow[]>([]);
@@ -62,13 +63,9 @@ export function StudentsView() {
         loading={loading}
         error={error}
         actions={(s) => (
-          <button
-            onClick={() => setEditing(s)}
-            className="rounded-md p-1.5 text-white/40 hover:bg-white/10 hover:text-white"
-            title="Edit"
-          >
+          <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Edit" onClick={() => setEditing(s)}>
             <Pencil size={15} />
-          </button>
+          </Button>
         )}
       />
       {editing && (

@@ -41,6 +41,11 @@ export interface AuthTokenResponse {
   preferred_voice?: string;
   plan?: "FREE" | "PRO";
   plan_expires_at?: string | null;
+  // Teacher-only fields, present when `role` is TEACHER.
+  full_name?: string;
+  title?: string;
+  subjects?: string[];
+  partner_id?: string;
 }
 
 export interface SignInFields {
@@ -57,7 +62,9 @@ async function handleAuthError(response: Response, defaultMsg: string): Promise<
       errorMessage = errorData.message;
     } else if (Array.isArray(errorData.detail)) {
       // Legacy: FastAPI validation error shape — remove once all endpoints migrated
-      errorMessage = errorData.detail.map((err: any) => err.msg).join(", ");
+      errorMessage = errorData.detail
+        .map((err: { msg?: string }) => err.msg)
+        .join(", ");
     } else if (typeof errorData.detail === "string") {
       // Legacy: old ad-hoc shape — remove once all endpoints migrated
       errorMessage = errorData.detail;
@@ -89,7 +96,7 @@ export async function signIn(data: SignInFields): Promise<AuthTokenResponse> {
 }
 
 export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
-  const body: any = {
+  const body: Record<string, unknown> = {
     password: data.password,
     role: data.role.toUpperCase(),
   };
@@ -141,7 +148,7 @@ export async function googleSignIn(token: string): Promise<AuthTokenResponse> {
 }
 
 export async function googleSignUp(token: string, data: Partial<SignUpFields>): Promise<AuthTokenResponse> {
-  const body: any = {
+  const body: Record<string, unknown> = {
     token,
     role: data.role?.toUpperCase(),
   };

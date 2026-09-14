@@ -3,7 +3,8 @@ import { FigureView } from './FigureView';
 interface VisualBlockProps {
   svg?: string;
   image?: string;
-  meta?: any;
+  /** Loose tutor-supplied metadata; only these fields are read. */
+  meta?: { source?: string; figure_id?: string; shape?: string; [key: string]: unknown };
 }
 
 export const VisualBlock: React.FC<VisualBlockProps> = ({ svg, image, meta }) => {
@@ -21,7 +22,7 @@ export const VisualBlock: React.FC<VisualBlockProps> = ({ svg, image, meta }) =>
       }}
     >
       {isShowFigure ? (
-        <FigureView uuid={meta.figure_id} />
+        <FigureView uuid={isShowFigure} />
       ) : image ? (
         <div className="w-full flex justify-center items-center">
           <img

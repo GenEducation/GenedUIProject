@@ -5,6 +5,7 @@ import { Search, UserPlus, X } from "lucide-react";
 import { labService } from "../services/labService";
 import type { EligibleRosterStudent } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
+import { Button } from "@/components/ui/Button";
 
 interface AddStudentsToClassProps {
   slotId: string;
@@ -73,7 +74,7 @@ export function AddStudentsToClass({ slotId, grade, section, isOpen, onClose, on
             <h2 id="add-students-title" className="font-serif text-xl font-semibold text-ink">Add students to Grade {grade}{section}</h2>
             <p className="mt-1 text-sm text-muted">Choose from students already associated with you.</p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="rounded-lg p-2 text-muted hover:bg-surface"><X size={18} /></button>
+          <Button iconOnly size="sm" variant="tertiary" onClick={onClose} aria-label="Close"><X size={18} /></Button>
         </div>
         <div className="p-5">
           <label className="flex items-center gap-2 rounded-xl border border-border px-3 py-2.5">
@@ -101,10 +102,16 @@ export function AddStudentsToClass({ slotId, grade, section, isOpen, onClose, on
           </div>
         </div>
         <div className="flex justify-end gap-3 border-t border-border p-5">
-          <button onClick={onClose} disabled={saving} className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-ink">Cancel</button>
-          <button onClick={() => void submit()} disabled={saving || selected.size === 0} className="inline-flex items-center gap-2 rounded-xl bg-emerald px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">
-            <UserPlus size={16} /> {saving ? "Adding…" : `Add selected (${selected.size})`}
-          </button>
+          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button
+            variant="primary"
+            loading={saving}
+            onClick={() => void submit()}
+            disabled={selected.size === 0}
+            leadingIcon={<UserPlus size={16} />}
+          >
+            {`Add selected (${selected.size})`}
+          </Button>
         </div>
       </div>
     </div>

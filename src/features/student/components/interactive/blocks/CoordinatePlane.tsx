@@ -16,7 +16,7 @@ export default function CoordinatePlane({ directiveId, meta, disabled, readOnly 
   const it = meta?.interaction_type || "place_point";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ points?: number[][] }>(directiveId, it, allowRetry);
 
   const initial: number[][] = Array.isArray(studentAnswer?.points) ? studentAnswer.points : [];
   const [points, setPoints] = useState<number[][]>(initial);

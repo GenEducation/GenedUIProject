@@ -16,7 +16,7 @@ export default function AreaModel({ directiveId, meta, disabled, readOnly }: Int
   const it = meta?.interaction_type || "select_cells";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ selected?: number[] }>(directiveId, it, allowRetry);
 
   const initial: number[] = Array.isArray(studentAnswer?.selected) ? studentAnswer.selected : [];
   const [selected, setSelected] = useState<number[]>(initial);

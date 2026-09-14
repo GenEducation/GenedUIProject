@@ -36,3 +36,28 @@ export function SubjectIcon({
   const Component = SUBJECT_ICONS[subject] ?? BookOpen;
   return createElement(Component, { size, style });
 }
+
+/**
+ * Mascot artwork per subject.
+ *
+ * Presentation only, exactly like SUBJECT_ICONS above — listing a subject here
+ * does not make it selectable, and a subject absent from the map still renders
+ * with the neutral reading pose rather than nothing. Geography is deliberately
+ * unmapped until its own pose exists; the two Social subjects share the globe
+ * pose because it reads correctly for both.
+ */
+const SUBJECT_MASCOTS: Readonly<Record<string, string>> = {
+  English: "/mascots/subjects/english.webp",
+  Mathematics: "/mascots/subjects/maths.webp",
+  Science: "/mascots/subjects/science.webp",
+  "Social Science": "/mascots/subjects/social-science.webp",
+  "Social & Political Science": "/mascots/subjects/social-science.webp",
+  History: "/mascots/subjects/history.webp",
+};
+
+const FALLBACK_MASCOT = "/mascots/subjects/reading.webp";
+
+/** Artwork URL for a subject, falling back to the neutral reading pose. */
+export function subjectMascot(subject: string): string {
+  return SUBJECT_MASCOTS[subject] ?? FALLBACK_MASCOT;
+}

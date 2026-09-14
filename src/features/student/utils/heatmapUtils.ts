@@ -41,7 +41,7 @@ export function buildHeatmapMonths(activityData: Record<string, number>): Heatma
   const processedMonths = new Set<string>();
 
   // Iterate through all months from 365 days ago to today
-  let current = new Date(startDate);
+  const current = new Date(startDate);
   while (current <= today) {
     const year = current.getFullYear();
     const month = current.getMonth();

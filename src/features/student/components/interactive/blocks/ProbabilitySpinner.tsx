@@ -17,7 +17,7 @@ export default function ProbabilitySpinner({ directiveId, meta, disabled, readOn
   const it = meta?.interaction_type || "select_cells";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ selected?: string[] }>(directiveId, it, allowRetry);
 
   const initial: string[] = Array.isArray(studentAnswer?.selected) ? studentAnswer.selected : [];
   const [selected, setSelected] = useState<string[]>(initial);

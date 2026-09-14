@@ -5,6 +5,7 @@ import { Search, Users, X } from "lucide-react";
 import { labService } from "../services/labService";
 import type { ClassEligibleStudent } from "../types/lab";
 import { ApiRequestError } from "@/utils/authFetch";
+import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 
 const GRADE_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
@@ -91,7 +92,7 @@ export function CreateClassModal({ isOpen, partnerId, onClose, onCreated }: Prop
       <div className="w-full max-w-2xl rounded-2xl border border-border bg-white shadow-xl">
         <div className="flex items-start justify-between border-b border-border p-6">
           <div><h2 id="create-class-title" className="font-serif text-xl font-semibold text-ink">Create class</h2><p className="mt-1 text-sm text-muted">Create a Grade/Section register by selecting its students.</p></div>
-          <button onClick={onClose} aria-label="Close" className="rounded-lg p-2 text-muted hover:bg-ink/5"><X size={18} /></button>
+          <Button iconOnly size="sm" variant="tertiary" onClick={onClose} aria-label="Close"><X size={18} /></Button>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -126,7 +127,7 @@ export function CreateClassModal({ isOpen, partnerId, onClose, onCreated }: Prop
             })}
           </div>
         </div>
-        <div className="flex items-center justify-between border-t border-border p-6"><span className="text-sm text-muted">{selected.size} selected · roll numbers follow this order</span><div className="flex gap-3"><button onClick={onClose} disabled={saving} className="rounded-xl border border-border px-4 py-2.5 text-sm font-bold text-ink">Cancel</button><button onClick={() => void submit()} disabled={saving || selected.size === 0 || !section.trim() || !academicYear.trim()} className="inline-flex items-center gap-2 rounded-xl bg-emerald px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Users size={16} />{saving ? "Creating…" : "Create class"}</button></div></div>
+        <div className="flex items-center justify-between border-t border-border p-6"><span className="text-sm text-muted">{selected.size} selected · roll numbers follow this order</span><div className="flex gap-3"><Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button><Button variant="primary" loading={saving} onClick={() => void submit()} disabled={selected.size === 0 || !section.trim() || !academicYear.trim()} leadingIcon={<Users size={16} />}>Create class</Button></div></div>
       </div>
     </div>
   );

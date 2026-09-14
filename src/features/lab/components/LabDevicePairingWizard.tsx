@@ -6,6 +6,7 @@ import { SegmentedInput } from "@/components/shared/SegmentedInput";
 import { ApiRequestError } from "@/utils/authFetch";
 import { useLabStore } from "../store/useLabStore";
 import type { DeviceResponse, LabResponse } from "../types/lab";
+import { Button } from "@/components/ui/Button";
 
 type RowStatus = "READY" | "SUBMITTING" | "APPROVED_WAITING" | "ONLINE" | "FAILED";
 
@@ -202,13 +203,9 @@ export function LabDevicePairingWizard({
               <strong>{lab.name}</strong> automatically.
             </p>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Close pairing wizard"
-            className="rounded-lg p-2 text-[#1A3D2C]/40 hover:bg-[#1A3D2C]/5 hover:text-[#1A3D2C]"
-          >
+          <Button iconOnly size="sm" variant="tertiary" onClick={onClose} aria-label="Close pairing wizard">
             <X size={20} />
-          </button>
+          </Button>
         </div>
 
         <div className="overflow-y-auto px-6 py-5">
@@ -225,15 +222,9 @@ export function LabDevicePairingWizard({
                     {row.existingDeviceId ? "Reconnect device" : `Device ${index + 1}`}
                   </p>
                   {rows.length > 1 && row.status !== "APPROVED_WAITING" && row.status !== "ONLINE" && (
-                    <button
-                      onClick={() =>
-                        setRows((current) => current.filter((item) => item.key !== row.key))
-                      }
-                      aria-label={`Remove device ${index + 1}`}
-                      className="rounded-lg p-1.5 text-danger-ink hover:bg-danger-bg"
-                    >
+                    <Button iconOnly size="sm" variant="destructive" onClick={() => setRows((current) => current.filter((item) => item.key !== row.key)) } aria-label={`Remove device ${index + 1}`}>
                       <Trash2 size={16} />
-                    </button>
+                    </Button>
                   )}
                 </div>
 

@@ -5,6 +5,9 @@ import type {
   ChapterMasteryItem,
   SubjectEvolutionData,
   SubjectData,
+  AnalysisDimension,
+  AnalysisSession,
+  EvolutionAnalysisJson,
 } from "./types";
 
 // ─────────────────────────────────────────────────────────
@@ -90,8 +93,8 @@ export interface ChapterArc {
   points: { x: number; y: number; level: SparkLevel }[];
   path: string;
   areaPath: string;
-  dimensions: any[];
-  sessionLog: any[];
+  dimensions: AnalysisDimension[];
+  sessionLog: AnalysisSession[];
   gridLines: { y: number; label: string }[];
 }
 
@@ -108,11 +111,11 @@ export function buildChapterArc(evo: EvolutionAnalysisData | undefined): Chapter
   };
   if (!evo) return empty;
 
-  const analysis = evo.analysis_json ?? ({} as any);
-  const dimensions: any[] = analysis.dimension_analyses ?? analysis.dimensions ?? [];
-  const sessionLog: any[] = analysis.per_conversation ?? [];
+  const analysis: EvolutionAnalysisJson = evo.analysis_json ?? {};
+  const dimensions: AnalysisDimension[] = analysis.dimension_analyses ?? analysis.dimensions ?? [];
+  const sessionLog: AnalysisSession[] = analysis.per_conversation ?? [];
 
-  const mappedLog = sessionLog.map((s: any, idx: number) => {
+  const mappedLog = sessionLog.map((s, idx) => {
     const rawScore = s.overall_score ?? idx / Math.max(sessionLog.length - 1, 1);
     return {
       n: idx + 1,

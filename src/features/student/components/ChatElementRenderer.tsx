@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { ChatElement } from "../store/useStudentStore";
 import { MarkdownRenderer } from "./MarkdownRenderer";
-import { VisualCard } from "./VisualCard";
 import { VisualBlock } from "./VisualBlock";
 import { FigureView } from "./FigureView";
 import { P5Visual } from "./P5Visual";
@@ -174,25 +173,24 @@ export const ChatElementRenderer = React.memo(({ elements, isReadOnly = false }:
               </div>
             );
           }
+          // Frameless, matching MessageElements — no card, badge or caption, so
+          // the visual reads as part of the message.
           if (el.meta?.engine === "p5sketch") {
-            return (
-              <VisualCard key={el.id} engine="p5sketch" label={el.meta.label || ""}>
-                <P5Visual code={el.meta.code || ""} />
-              </VisualCard>
-            );
+            return <P5Visual key={el.id} code={el.meta.code || ""} />;
           }
           if (el.meta?.engine === "geogebra") {
             return (
-              <VisualCard key={el.id} engine="geogebra" label={el.meta.label || ""}>
-                <GeoGebraVisual id={el.id} commands={el.meta.commands || []} options={el.meta.options} />
-              </VisualCard>
+              <GeoGebraVisual key={el.id} id={el.id} commands={el.meta.commands || []} options={el.meta.options} />
             );
           }
           if (el.meta?.engine === "desmos") {
             return (
-              <VisualCard key={el.id} engine="desmos" label={el.meta.label || "Graph"}>
-                <MathWidget expression={el.meta.options?.expression || el.meta.code || ""} meta={el.meta.options} minimal={true} />
-              </VisualCard>
+              <MathWidget
+                key={el.id}
+                expression={el.meta.options?.expression || el.meta.code || ""}
+                meta={el.meta.options}
+                minimal={true}
+              />
             );
           }
           if (el.meta?.engine === "show_figure") {
@@ -203,30 +201,26 @@ export const ChatElementRenderer = React.memo(({ elements, isReadOnly = false }:
               ? el.meta.image
               : (el.meta.image && !el.meta.figure_id ? `data:image/jpeg;base64,${el.meta.image}` : null);
             return (
-              <VisualCard key={el.id} engine="show_figure" label={el.meta.label || ""}>
-                <div className="flex flex-col items-center">
-                  {el.meta.figure_id ? (
-                    <FigureView uuid={el.meta.figure_id} />
-                  ) : imgSource ? (
-                    <img src={imgSource} alt={el.meta.label || "Figure"} className="max-w-full rounded-lg" />
-                  ) : (
-                    <div className="bg-[#FFF8E1] text-[#F57F17] px-3 py-2 rounded-lg text-xs font-medium">📐 Figure ID: unknown</div>
-                  )}
-                </div>
-              </VisualCard>
+              <div key={el.id} className="flex flex-col items-start">
+                {el.meta.figure_id ? (
+                  <FigureView uuid={el.meta.figure_id} />
+                ) : imgSource ? (
+                  <img src={imgSource} alt={el.meta.label || "Figure"} className="max-w-full sm:max-w-[480px] h-auto rounded-xl" />
+                ) : (
+                  <div className="bg-[#FFF8E1] text-[#F57F17] px-3 py-2 rounded-lg text-xs font-medium">📐 Figure ID: unknown</div>
+                )}
+              </div>
             );
           }
           if (el.meta?.engine === "show_figure_describe") {
             return (
-              <VisualCard key={el.id} engine="show_figure" label="Picture Description">
-                <div className="flex flex-col items-center gap-3">
-                  <FigureDescribeBlock
-                    figureAssetUrl={el.meta.figure_asset_url}
-                    prompt={el.meta.label || "What do you see in this picture?"}
-                    directiveId={el.meta.directive_id}
-                  />
-                </div>
-              </VisualCard>
+              <div key={el.id} className="flex flex-col items-start gap-3">
+                <FigureDescribeBlock
+                  figureAssetUrl={el.meta.figure_asset_url}
+                  prompt={el.meta.label || "What do you see in this picture?"}
+                  directiveId={el.meta.directive_id}
+                />
+              </div>
             );
           }
         }

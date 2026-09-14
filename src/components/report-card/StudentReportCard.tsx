@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { studentService } from "@/features/student/services/studentService";
 import { getStudentDisplayName, titleCase } from "@/features/student/utils/displayName";
+import { FunFactCard } from "@/components/shared/loaders/FunFactCard";
 import type {
   SubjectData, ChapterMasteryItem, SkillCGItem, TestSubmission, DashboardProfile,
   EvolutionAnalysisData, SubjectEvolutionData, StudentProgressData,
@@ -312,7 +313,7 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
         <div className="text-center">
           <RefreshCw size={28} className="text-[#059F6D] animate-spin mx-auto mb-3" />
           <p className="text-sm text-slate-500 font-medium">Generating your report card…</p>
-          <p className="text-xs text-slate-400 mt-1">Aggregating data across all subjects</p>
+          <FunFactCard className="mt-6" />
         </div>
       </div>
     );

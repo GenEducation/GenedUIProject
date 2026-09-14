@@ -51,4 +51,14 @@ export const STUDENT_COLORS = {
   sidebarBorder: "rgba(255,255,255,0.06)",
   sidebarHover: "rgba(255,255,255,0.06)",
   sidebarActiveBg: "rgba(255,255,255,0.10)",
+
+  // Light sidebar ground — the redesigned StudentHomeSidebar. Kept separate
+  // from the dark `sidebar*` keys above, which StudentChatSidebar still uses.
+  sidebarLightBg: "#FFFFFF",
+  sidebarLightText: "#5A6478",
+  sidebarLightActive: "#5B4DC7",
+  sidebarLightActiveBg: "#F1EFFC",
+  sidebarLightBorder: "#EEF0F6",
+  sidebarLightHover: "#F5F4FD",
+  sidebarLightName: "#1a2332",
 } as const;

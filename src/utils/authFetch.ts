@@ -5,7 +5,21 @@ export interface ApiError {
   request_id: string;
   retryable: boolean;
   retry_after?: number;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
+}
+
+/**
+ * Shape of the JSON error envelope the API returns on a non-2xx response.
+ * Every field is optional: the body may be absent, partial, or not JSON at
+ * all, so each read at the call site falls back to a derived default.
+ */
+export interface ApiErrorBody {
+  error_code?: string;
+  message?: string;
+  request_id?: string;
+  retryable?: boolean;
+  retry_after?: number;
+  details?: Record<string, unknown>;
 }
 
 export class ApiRequestError extends Error {
@@ -14,7 +28,7 @@ export class ApiRequestError extends Error {
   public readonly request_id: string;
   public readonly retryable: boolean;
   public readonly retry_after?: number;
-  public readonly details: Record<string, any>;
+  public readonly details: Record<string, unknown>;
 
   constructor(apiError: ApiError) {
     super(apiError.message);
@@ -133,7 +147,7 @@ export async function authFetch(
       });
     }
 
-    let body: any = {};
+    let body: ApiErrorBody = {};
     try {
       body = await response.json();
     } catch {

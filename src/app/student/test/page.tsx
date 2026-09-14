@@ -53,7 +53,7 @@ function TestPageContent() {
   }, [applyResponsive]);
 
   const sidebarToggle = !sidebarOpen && (
-    <button
+    <button aria-label="Open sidebar"
       onClick={() => setSidebarOpen(true)}
       className="fixed top-4 left-4 z-30 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
       style={{ width: 38, height: 38, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#042E5C" }}
@@ -196,7 +196,7 @@ function TestPageContent() {
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-[#042E5C]/5 px-6 py-4">
         <div className="max-w-[1400px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
+            <button aria-label="Close test"
               onClick={handleClose}
               className="w-10 h-10 rounded-full bg-[#042E5C]/5 text-[#042E5C] flex items-center justify-center hover:bg-[#042E5C]/10 transition-all"
             >
