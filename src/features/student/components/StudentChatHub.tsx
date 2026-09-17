@@ -1,9 +1,8 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 import {
   useStudentStore,
 } from "../store/useStudentStore";
@@ -11,7 +10,6 @@ import { StudentChatInput } from "./StudentChatInput";
 import { ChevronRight, Clock, Bot, Menu } from "lucide-react";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
-import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { ActivityHeatmap } from "./ActivityHeatmap";
 import { StreakStats } from "./StreakStats";
 import { getSubjectConfig } from "@/constants/subjectConfig";
@@ -41,26 +39,19 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
     isSessionsLoading,
     isAgentsLoading,
     logoutStudent,
-    onboardingStatus,
-    fetchOnboardingStatus,
     studentStats,
     fetchStudentStats
   } = useStudentStore();
-
-  const { dnaStatus, checkDNAStatus } = useOnboardingStore();
-  const [onboardingModal, setOnboardingModal] = useState<{ subject: string; grade: number } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     if (studentProfile && !cancelled) {
       fetchSessions();
       fetchAvailableAgents();
-      fetchOnboardingStatus();
       fetchStudentStats();
-      checkDNAStatus(studentProfile.user_id);
     }
     return () => { cancelled = true; };
-  }, [studentProfile, fetchSessions, fetchAvailableAgents, fetchOnboardingStatus, checkDNAStatus]);
+  }, [studentProfile, fetchSessions, fetchAvailableAgents, fetchStudentStats]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -72,15 +63,6 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
 
   const username = studentProfile?.username ?? "Scholar";
   const greeting = getGreeting();
-
-  const onboardingSubjects = onboardingStatus?.subjects
-    ? onboardingStatus.subjects
-        .filter(s => s.status === "PENDING")
-        .flatMap((item) => {
-          const agent = availableAgents.find((candidate) => candidate.subject === item.subject);
-          return agent ? [agent] : [];
-        })
-    : [];
 
   const animateGradientStyle = `
     @keyframes shiftGradient {
@@ -203,14 +185,12 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                 ))
               ) : availableAgents.length > 0 ? (
                 availableAgents.slice(0, 3).map((agent, i) => {
-                  const isOnboardingComplete = agent.is_onboarding_complete !== false;
                   return (
                     <HubCard
                       key={agent.agent_id}
                       title={agent.subject || agent.name}
                       subtitle={`Grade ${agent.grade}`}
                       subject={agent.subject}
-                      isOnboardingComplete={isOnboardingComplete}
                       onStartChat={() => {
                         // Wait for the real session_id before navigating so the
                         // greeting streams into a stable chat view (typing intact).
@@ -221,12 +201,6 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                       onStartVoice={() => {
                         openNewSession(agent, "voice");
                         router.push(`/student/voice?agent=${agent.agent_id}`);
-                      }}
-                      onOnboarding={() => {
-                        setOnboardingModal({
-                          subject: agent.subject,
-                          grade: agent.grade,
-                        });
                       }}
                       delay={0.3 + i * 0.05}
                     />
@@ -262,17 +236,6 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
         </div>
       )}
 
-      {/* Onboarding Modal */}
-      <AnimatePresence>
-        {onboardingModal && (
-          <OnboardingModal
-            subject={onboardingModal.subject}
-            grade={onboardingModal.grade}
-            onClose={() => setOnboardingModal(null)}
-          />
-        )}
-      </AnimatePresence>
-
     </div>
   );
 }
@@ -286,11 +249,9 @@ interface HubCardProps {
   onStartChat: () => void;
   onStartVoice: () => void;
   delay: number;
-  isOnboardingComplete?: boolean;
-  onOnboarding?: () => void;
 }
 
-function HubCard({ title, subtitle, subject, onStartChat, onStartVoice, delay, isOnboardingComplete = true, onOnboarding }: HubCardProps) {
+function HubCard({ title, subtitle, subject, onStartChat, onStartVoice, delay }: HubCardProps) {
   const config = getSubjectConfig(subject);
 
   return (
@@ -315,34 +276,25 @@ function HubCard({ title, subtitle, subject, onStartChat, onStartVoice, delay, i
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-[var(--primary-ink)] text-sm line-clamp-1">{title}</h3>
           <p className="text-[10px] font-bold text-[var(--primary-ink)]/40 uppercase tracking-widest leading-none mt-1">
-            {isOnboardingComplete ? subtitle : "Complete Onboarding"}
+            {subtitle}
           </p>
         </div>
       </div>
 
-      {isOnboardingComplete ? (
-        <div className="flex gap-2 w-full">
-          <button
-            onClick={onStartChat}
-            className="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-[#00B894]/10 text-[#00B894] hover:bg-[#00B894]/20 border border-[#00B894]/20 cursor-pointer"
-          >
-            Chat
-          </button>
-          <button
-            onClick={onStartVoice}
-            className="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-[#00B894] text-white hover:bg-[#00B894]/90 cursor-pointer"
-          >
-            Voice
-          </button>
-        </div>
-      ) : (
+      <div className="flex gap-2 w-full">
         <button
-          onClick={onOnboarding}
-          className="px-4 py-2 rounded-lg font-semibold text-sm transition-all w-full bg-[#00B894]/15 text-[#00B894] hover:bg-[#00B894]/25 cursor-pointer"
+          onClick={onStartChat}
+          className="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-[#00B894]/10 text-[#00B894] hover:bg-[#00B894]/20 border border-[#00B894]/20 cursor-pointer"
         >
-          Start Onboarding
+          Chat
         </button>
-      )}
+        <button
+          onClick={onStartVoice}
+          className="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-[#00B894] text-white hover:bg-[#00B894]/90 cursor-pointer"
+        >
+          Voice
+        </button>
+      </div>
     </motion.div>
   );
 }

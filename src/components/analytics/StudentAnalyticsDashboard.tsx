@@ -265,7 +265,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
 
       {/* -- DASHBOARD CONTENT ------------------------------------------------ */}
       <main className="flex-1 px-8 py-10 max-w-7xl mx-auto w-full space-y-12 pb-20">
-        {/* Empty state for students who haven't completed subject onboarding */}
+        {/* Empty state for students with no graded work yet */}
         {analyticsSubjects.length === 0 && !isAnalyticsLoading && (
           <div className="flex flex-col items-center justify-center py-24 space-y-6 text-center">
             <div className="w-20 h-20 rounded-full bg-[#E5F2E9] flex items-center justify-center text-[#059669]">
@@ -275,8 +275,8 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
               <h3 className="text-xl font-bold text-[#1a3a2a]">No data yet</h3>
               <p className="text-sm text-[#1a3a2a]/50 leading-relaxed">
                 {mode === "parent"
-                  ? "This student hasn't completed their English or Mathematics onboarding yet. Once they do, progress data will appear here."
-                  : "Complete your English or Mathematics onboarding to start tracking your progress here."}
+                  ? "This student hasn't finished their placement test yet. Once they do, progress data will appear here."
+                  : "Finish your placement test to start tracking your progress here."}
               </p>
             </div>
             {mode !== "parent" && (
@@ -284,7 +284,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                 href="/student"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-[#059F6D] text-white rounded-2xl text-sm font-bold shadow-lg shadow-[#059F6D]/20 hover:bg-[#048055] transition-colors"
               >
-                Go to Onboarding
+                Go to my dashboard
               </a>
             )}
           </div>

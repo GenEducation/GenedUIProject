@@ -99,7 +99,7 @@ describe("StudentAnalyticsDashboard, as rendered by ParentHome (mode=\"parent\")
     render(<StudentAnalyticsDashboard mode="parent" studentId="child-1" />);
 
     await waitFor(() =>
-      expect(screen.getByText(/this student hasn't completed their english or mathematics onboarding/i)).toBeInTheDocument(),
+      expect(screen.getByText(/this student hasn't finished their placement test/i)).toBeInTheDocument(),
     );
   });
 });

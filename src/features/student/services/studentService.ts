@@ -26,7 +26,6 @@ export interface AvailableAgent {
 export interface AvailableAgentSubject {
   subject?: string;
   agents?: AvailableAgent[];
-  is_onboarding_complete?: boolean;
   subject_coverage_percentage?: number;
 }
 
@@ -164,11 +163,6 @@ export const studentService = {
 
   fetchEnrolledPartners: async (userId: string) => {
     const response = await authFetch(`${API_BASE_URL}/api/students/${userId}/available-agents`);
-    return response.json();
-  },
-
-  fetchOnboardingStatus: async (studentId: string) => {
-    const response = await authFetch(`${API_BASE_URL}/api/onboarding/subject/status/${studentId}`);
     return response.json();
   },
 

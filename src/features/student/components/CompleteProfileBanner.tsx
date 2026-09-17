@@ -30,7 +30,6 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
     const isNewUser = localStorage.getItem("gened_new_user") === "true";
     if (isNewUser) {
       localStorage.removeItem("gened_new_user");
-      localStorage.removeItem("start_tutorial_after_onboarding");
       startTutorial();
     }
   };

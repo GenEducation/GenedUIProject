@@ -275,7 +275,6 @@ export interface AgentItem {
   name: string;
   subject: ExactSubject;
   grade: number;
-  is_onboarding_complete?: boolean;
   subject_coverage_percentage?: number;
   document_titles?: string[];
 }
@@ -335,16 +334,6 @@ const manageCacheEviction = (cache: Record<string, ChatMessage[]>, newSessionId:
 
 // -- Store interface ----------------------------------------------------------─
 
-export interface OnboardingSubject {
-  subject: string;
-  status: "PENDING" | "COMPLETED";
-}
-
-export interface OnboardingStatus {
-  board: string;
-  subjects: OnboardingSubject[];
-}
-
 export interface StudentState {
   studentProfile: StudentProfile | null;
   recentChats: ChatSession[];
@@ -387,8 +376,6 @@ export interface StudentState {
   isRateLimitHit: boolean;
   rateLimitMessage: string | null;
   activeActivity: ActivityAction | null;
-  onboardingStatus: OnboardingStatus | null;
-  isOnboardingLoading: boolean;
   studentStats: { currentStreak: number; longestStreak: number; totalSessions: number } | null;
   isStatsLoading: boolean;
   sessionMode: "chat" | "voice" | null;
@@ -439,7 +426,6 @@ export interface StudentState {
   fetchAvailablePartners: () => Promise<void>;
   fetchEnrolledPartners: () => Promise<void>;
   fetchChatHistory: (sessionId: string) => Promise<void>;
-  fetchOnboardingStatus: () => Promise<void>;
   refreshAvailableAgents: () => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
   openChatById: (sessionId: string, agentId?: string) => Promise<void>;
@@ -567,8 +553,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   hasFetchedAgents: false,
   isMuted: false,
   rateLimitMessage: null,
-  onboardingStatus: null,
-  isOnboardingLoading: false,
   studentStats: null,
   isStatsLoading: false,
   sessionMode: null,
@@ -619,7 +603,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       hasFetchedAgents: false,
       sessionMode: null,
       pttHeld: false,
-      onboardingStatus: null,
       isRateLimitHit: false,
       rateLimitMessage: null,
       comprehensionResults: {},
@@ -651,21 +634,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       isAITyping: false,
       streamingMessageId: null,
     });
-  },
-
-  fetchOnboardingStatus: async () => {
-    const { studentProfile, isOnboardingLoading } = get();
-    if (!studentProfile || isOnboardingLoading) return;
-
-    set({ isOnboardingLoading: true });
-    try {
-      const status = await studentService.fetchOnboardingStatus(studentProfile.user_id);
-      set({ onboardingStatus: status });
-    } catch (error) {
-      console.error("Failed to fetch onboarding status:", asError(error).request_id, asError(error).message ?? error);
-    } finally {
-      set({ isOnboardingLoading: false });
-    }
   },
 
   fetchStudentStats: async () => {
@@ -807,7 +775,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                       ...agent,
                       grade,
                       subject: exactSubject,
-                      is_onboarding_complete: subject.is_onboarding_complete,
                       subject_coverage_percentage:
                         typeof subject.subject_coverage_percentage === "number"
                           ? subject.subject_coverage_percentage

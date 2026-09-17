@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Menu, Mic, MessageCircle } from "lucide-react";
 import Image from "next/image";
 import { useStudentStore, sessionRoutePath, isVoiceSession, type AgentItem } from "../store/useStudentStore";
@@ -14,12 +14,10 @@ import { UpcomingSessionPanel } from "./UpcomingSessionPanel";
 import { ContinueLearningCard } from "./ContinueLearningCard";
 import { useNow } from "@/utils/useNow";
 import { STUDENT_COLORS } from "../theme/colors";
-import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { StreakStats } from "./StreakStats";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
-import { OnboardingModal } from "@/features/onboarding/components/OnboardingModal";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
 import { Button } from "@/components/ui/Button";
@@ -234,12 +232,11 @@ export function StudentHome() {
   const router = useRouter();
   const {
     studentProfile, recentChats, availableAgents,
-    fetchSessions, fetchAvailableAgents, fetchStudentStats, fetchOnboardingStatus,
+    fetchSessions, fetchAvailableAgents, fetchStudentStats,
     openNewChat, openExistingChat, openNewSession, startNewChatSession,
     studentStats, isAgentsLoading, isSessionsLoading, isStatsLoading,
     avatarId,
   } = useStudentStore();
-  const { checkDNAStatus } = useOnboardingStore();
   const { sessions: scheduledSessions, loadScheduledSessions } = useScheduleStore();
   const { hasEnded, hasDismissedCelebration, dismissCelebration } = useTutorialStore();
 
@@ -252,7 +249,6 @@ export function StudentHome() {
   // the blank screen indefinitely. The stagger transition above still plays
   // on genuine visibility changes; it just no longer gates first paint.
   const [mounted,        setMounted]        = useState(true);
-  const [onboardingModal,setOnboardingModal]= useState<{ originalSubject: string; grade: number } | null>(null);
   const [showAllSessions,setShowAllSessions]= useState(false);
   const subjectsScrollRef = useRef<HTMLDivElement>(null);
   const scrollSubjects = (dir: "left" | "right") => {
@@ -287,8 +283,6 @@ export function StudentHome() {
       fetchSessions();
       fetchAvailableAgents();
       fetchStudentStats();
-      fetchOnboardingStatus();
-      checkDNAStatus(studentProfile.user_id);
       loadScheduledSessions(studentProfile.user_id);
     }
     return () => { cancelled = true; };
@@ -408,31 +402,17 @@ export function StudentHome() {
     : "Scholar";
 
   const handleAgentChatClick = (agent: typeof agents[0]) => {
-    if (agent.is_onboarding_complete === false) {
-      setOnboardingModal({
-        originalSubject: agent.subject,
-        grade:           agent.grade,
-      });
-    } else {
-      // Hold navigation until the backend assigns the real session_id, then
-      // jump straight to /student/chat/{id} so the greeting streams with the
-      // normal typing effect (no mid-stream URL swap / remount).
-      startNewChatSession(agent, (sessionId) => {
-        router.push(`/student/chat/${sessionId}`);
-      });
-    }
+    // Hold navigation until the backend assigns the real session_id, then
+    // jump straight to /student/chat/{id} so the greeting streams with the
+    // normal typing effect (no mid-stream URL swap / remount).
+    startNewChatSession(agent, (sessionId) => {
+      router.push(`/student/chat/${sessionId}`);
+    });
   };
 
   const handleAgentVoiceClick = (agent: typeof agents[0]) => {
-    if (agent.is_onboarding_complete === false) {
-      setOnboardingModal({
-        originalSubject: agent.subject,
-        grade:           agent.grade,
-      });
-    } else {
-      openNewSession(agent, "voice");
-      router.push(`/student/voice?agent=${agent.agent_id}`);
-    }
+    openNewSession(agent, "voice");
+    router.push(`/student/voice?agent=${agent.agent_id}`);
   };
 
   // A subject card can back multiple chapter-agents; the tutor asks which
@@ -912,17 +892,6 @@ export function StudentHome() {
           </div>
         </div>
       </main>
-
-      {/* ── ONBOARDING MODAL ── */}
-      <AnimatePresence>
-        {onboardingModal && (
-          <OnboardingModal
-            subject={onboardingModal.originalSubject}
-            grade={onboardingModal.grade}
-            onClose={() => setOnboardingModal(null)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }

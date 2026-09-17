@@ -220,42 +220,6 @@ h1, h2, h3, h4, h5, h6 {
   100% { transform: translateX(100%); }
 }
 
-/* General Onboarding Wizard animations */
-@keyframes sagePulse {
-  0% { opacity: 0; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(1.06); }
-  100% { opacity: 0; transform: scale(1.12); }
-}
-@keyframes bubbleIn {
-  from { opacity: 0; transform: translateY(6px) scale(0.97); }
-  to { opacity: 1; transform: none; }
-}
-@keyframes tcursorBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-@keyframes confFall {
-  0% { transform: translateY(-40px) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
-}
-@keyframes sparkPop {
-  from { transform: scale(0) rotate(-20deg); opacity: 0; }
-  to { transform: scale(1) rotate(0deg); opacity: 1; }
-}
-@keyframes barGrow {
-  from { width: 0; }
-  to { width: 8%; }
-}
-@keyframes b1 {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(40px, 30px); }
-}
-@keyframes b2 {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(-30px, -40px); }
-}
-
-
 /* Time picker wheels: hide the scrollbar without the per-instance
    <style dangerouslySetInnerHTML> block the old student TimePicker injected. */
 .time-wheel::-webkit-scrollbar {
@@ -334,4 +298,59 @@ h1, h2, h3, h4, h5, h6 {
   width: 1px;
   pointer-events: none;
   background: rgb(4 46 92 / 0.06);
+}
+
+
+/* ── Placement form theme ────────────────────────────────────────────────
+   Deep Ocean + Citron, scoped to the placement (onboarding) surface only.
+   The rest of the app keeps the emerald/navy brand, so these live on a class
+   rather than :root. Light theme by design — there is no dark variant.
+
+   The --btn-* overrides retarget the shared Button component inside this
+   scope, the same mechanism legacyBrandOverride.ts uses at the call site,
+   but declared once here because every button in the flow wants it. */
+.placement-theme {
+  --pl-primary: #075E63;          /* deep ocean — headings, selected state, CTA fill */
+  --pl-primary-hover: #064C50;
+  --pl-primary-active: #053C40;
+  --pl-accent: #D9F279;           /* citron — progress fill, highlights, correct marks */
+  --pl-canvas: #F6F7F2;           /* sheet ground */
+  --pl-surface: #DCEBE7;          /* soft surface — rails, chips, answered ticks */
+  --pl-card: #FFFFFF;
+  --pl-ink: #122D30;              /* body text */
+  --pl-ink-mid: rgb(18 45 48 / 0.66);
+  --pl-ink-faint: rgb(18 45 48 / 0.34);
+  --pl-border: rgb(7 94 99 / 0.14);
+  --pl-primary-soft: rgb(7 94 99 / 0.08);
+  --pl-primary-wash: rgb(7 94 99 / 0.14);
+  --pl-ring: rgb(7 94 99 / 0.32);
+
+  --btn-bg: var(--pl-primary);
+  --btn-bg-hover: var(--pl-primary-hover);
+  --btn-bg-active: var(--pl-primary-active);
+  --btn-ring: var(--pl-ring);
+
+  color: var(--pl-ink);
+  /* Jakarta for Latin text, falling through to Mukta for anything it can't
+     shape (Devanagari) — the same stack `--font-display` already declares.
+     Set here, not just on the prompt/heading elements, so every default
+     (buttons, labels, the rail) inherits it instead of the browser's system
+     sans whenever a component forgets to opt in. */
+  font-family: var(--font-display);
+}
+
+/* Secondary/outline/tertiary Buttons inside the flow read --primary for their
+   ink and border; without this they would sit emerald on a deep-ocean sheet. */
+.placement-theme :is(.pl-btn-quiet) {
+  --btn-bg: transparent;
+  --btn-bg-hover: var(--pl-primary-soft);
+  --btn-bg-active: var(--pl-primary-wash);
+  --btn-fg: var(--pl-primary);
+  --btn-border: var(--pl-border);
+}
+
+/* Devanagari items are authored in Hindi and must never be transliterated;
+   Mukta is the only loaded face with full Devanagari coverage. */
+.placement-theme [lang="hi"] {
+  font-family: var(--font-mukta), ui-sans-serif, system-ui, sans-serif;
 }

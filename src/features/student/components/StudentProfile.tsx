@@ -23,8 +23,6 @@ import { DevicePairingModal } from "./DevicePairingModal";
 import { AvatarPickerModal } from "./AvatarPickerModal";
 import { TeacherConnections } from "./TeacherConnections";
 import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
-import { GeneralOnboardingWizard } from "@/features/onboarding/components/GeneralOnboarding/GeneralOnboardingWizard";
-import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
 import { useTestStore } from "../store/useTestStore";
 import { Select } from "@/components/ui/Select";
 
@@ -61,7 +59,11 @@ const C = {
 /* ─── "How {tutor} sees you" — derived from the profile API ─────────────────
  * The /students/{id}/profile endpoint returns a `general_onboarding` block
  * with the student's self-reported preferences. We turn each non-empty list
- * into a trait card instead of hardcoding generic learner archetypes. */
+ * into a trait card instead of hardcoding generic learner archetypes.
+ *
+ * Read-only. The questionnaire that used to populate it was removed with the
+ * old onboarding; the block is still served for students who filled it in
+ * before that, and the backend may populate it from elsewhere later. */
 interface GeneralOnboarding {
   learning_preferences?: string[];
   interests?: string[];
@@ -397,8 +399,6 @@ export function StudentProfile() {
   const [isLanguageSaving, setIsLanguageSaving] = useState<boolean>(false);
   const [pairingModalOpen, setPairingModalOpen] = useState<boolean>(false);
   const [avatarPickerOpen, setAvatarPickerOpen] = useState<boolean>(false);
-  const [showOnboardingWizard, setShowOnboardingWizard] = useState<boolean>(false);
-  const checkDNAStatus = useOnboardingStore((s) => s.checkDNAStatus);
 
   /* responsive sidebar */
   useDebouncedResize(() => applyResponsive(window.innerWidth >= 1024));
@@ -751,24 +751,13 @@ export function StudentProfile() {
                       </div>
                     ))}
                   </div>
-                  <p style={{ fontSize: 10, color: C.textMuted, marginTop: 12, fontStyle: "italic", textAlign: "center" as const }}>Based on your onboarding and learning patterns</p>
+                  <p style={{ fontSize: 10, color: C.textMuted, marginTop: 12, fontStyle: "italic", textAlign: "center" as const }}>Based on your learning patterns</p>
                 </>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 12, padding: "8px 0" }}>
                   <p style={{ fontSize: 12, color: C.textMuted, textAlign: "center" as const, margin: 0 }}>
-                    Complete onboarding to see how {aiTutorName} understands your learning style.
+                    {aiTutorName} builds this picture as you learn together. Keep going and it&apos;ll fill in.
                   </p>
-                  <button
-                    onClick={() => setShowOnboardingWizard(true)}
-                    style={{
-                      padding: "10px 20px", borderRadius: 12, border: "none",
-                      background: C.genPurple, color: "white", fontSize: 13, fontWeight: 700,
-                      fontFamily: "var(--font-display)", cursor: "pointer",
-                      boxShadow: `0 4px 14px ${C.genPurple}40`,
-                    }}
-                  >
-                    ✨ Start Questionnaire
-                  </button>
                 </div>
               )}
             </div>
@@ -1134,18 +1123,6 @@ export function StudentProfile() {
         selectedId={avatarId}
         onSelect={setAvatarId}
       />
-
-      {/* General onboarding questionnaire — launched from the "How AI sees you" empty state */}
-      {showOnboardingWizard && studentProfile && (
-        <GeneralOnboardingWizard
-          studentProfile={studentProfile}
-          onComplete={() => {
-            setShowOnboardingWizard(false);
-            checkDNAStatus(studentProfile.user_id);
-            loadDashboardProfile();
-          }}
-        />
-      )}
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

@@ -28,7 +28,7 @@ export const STRINGS = {
     pageTitle: "Practice",
     pastSectionTitle: "Past Tests",
     startCta: "Start Test",
-    lockedMessage: "Complete your English or Mathematics onboarding to unlock assessments.",
+    lockedMessage: "Finish your placement test to unlock assessments.",
   },
 
   chat: {

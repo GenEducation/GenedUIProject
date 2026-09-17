@@ -4,6 +4,7 @@ import { teacherHandlers } from "./teacher";
 import { parentHandlers } from "./parent";
 import { subjectHandlers } from "./subjects";
 import { preorderHandlers } from "./preorder";
+import { placementHandlers } from "./placement";
 
 export const handlers = [
   ...authHandlers,
@@ -12,4 +13,5 @@ export const handlers = [
   ...parentHandlers,
   ...subjectHandlers,
   ...preorderHandlers,
+  ...placementHandlers,
 ];
