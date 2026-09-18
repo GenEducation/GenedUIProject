@@ -31,18 +31,11 @@ export type PlacementItemType =
 /**
  * A batch's slot names are `<family>_<ordinal>` (`mcq_1`, `mcq_2`,
  * `true_false_1`, `visual_1`, `flex_1`, and ordinals climb when a batch
- * backfills — `mcq_3`). Layout keys off `item.slot`'s family, never
- * `item_type` — see `slotGrid.ts`. Kept as an opaque string rather than a
- * closed union because the ordinal is unbounded.
+ * backfills — `mcq_3`). Kept as an opaque string rather than a closed union
+ * because the ordinal is unbounded; the item screen's own layout doesn't
+ * key off it (a CSS multi-column masonry, see `PlacementBoard.tsx`).
  */
 export type PlacementSlot = string;
-
-export type PlacementSlotFamily = "mcq" | "true_false" | "visual" | "flex";
-
-/** Strips the `_<ordinal>` suffix to get the family a slot belongs to. */
-export function slotFamily(slot: string): PlacementSlotFamily {
-  return slot.replace(/_\d+$/, "") as PlacementSlotFamily;
-}
 
 export interface PlacementOption {
   id: string;

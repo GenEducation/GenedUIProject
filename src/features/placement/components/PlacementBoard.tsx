@@ -3,13 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { usePlacementStore } from "../store/usePlacementStore";
 import { ItemRenderer } from "./items/ItemRenderer";
+import { PlacementHeader } from "./PlacementHeader";
 import { PlacementIntro } from "./PlacementIntro";
+import { PlacementCompleteView } from "./PlacementCompleteView";
 import { PlacementProgressRail } from "./PlacementProgressRail";
-import { PlacementResultView } from "./PlacementResultView";
-import { isFullWidthSlot, splitVisual } from "../utils/slotGrid";
+import type { PlacementItem } from "../types/placement";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -20,39 +22,45 @@ function focusableWithin(root: HTMLElement): HTMLElement[] {
   );
 }
 
+/** "Q3", "Q3 and Q7", "Q3, Q7 and Q9" — the same item's own "Q{n}" label the card shows. */
+function formatQuestionList(items: PlacementItem[]): string {
+  const labels = items.map((it) => `Q${it.index + 1}`);
+  if (labels.length === 1) return labels[0];
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+}
+
 /**
  * The placement form's shell.
  *
  * **Deliberately not `@/components/ui/Modal`.** That primitive is sized (and
  * named) for a dialog — a narrow, portrait-ish box. This is a wide board: a
- * subject block's items sit in a slot-keyed grid (see `slotGrid.ts`), several
- * regions side by side, the way the wireframe called for. Reusing Modal
+ * subject block's items flow through a masonry of several columns, the way
+ * the wireframe called for. Reusing Modal
  * would mean fighting its width and its single-column body on every screen,
  * so this is its own — deliberately minimal — overlay: a portal, a backdrop,
  * a focus trap, a scroll lock. It has no dismiss path (no Escape, no
  * backdrop click) for the same reason the rest of this form doesn't: a
  * graded item a student can dismiss mid-answer is an item they lose.
  *
- * **The layout is CSS-only, not a measured one — and not a single flat grid
- * either.** A batch has at most one item per slot, one per family (`mcq`,
- * `true_false`, `visual`, `flex`) with a climbing ordinal, and the
- * composition genuinely varies (a backfilled third `mcq`, a grade with no
- * `true_false`). Two things were tried and broke on real compositions before
- * landing on nested grids:
+ * **The layout is CSS-only, not a measured one — and not a grid at all.** A
+ * batch mixes several item types of differing natural height (a short mcq
+ * next to a tall chart or map), and the reference layout packs them densely:
+ * whichever item comes next in reading order starts right under the
+ * previous one in the same column, no matter how short that one was. Two
+ * grid-based approaches were tried and dropped before landing here:
  *   1. A `grid-template-areas` string keyed by exact slot values — CSS
  *      requires every area name to form one rectangle, so the string had to
  *      be hand-built per composition and broke on shapes the pairing rule
  *      didn't anticipate.
- *   2. A single 3-column grid (`visual` explicitly placed in column 3,
- *      everything else left to auto-place) — the browser's own
- *      auto-placement doesn't know column 3 is reserved and happily filled
- *      it with a third `mcq`, pushing the actual visual item (and
- *      everything after it) down and off the bottom of the panel.
- * The fix: **two independent grids.** The left items sit in their own
- * 2-column grid (so there is structurally no third column for the browser
- * to place them into); that grid is itself one cell in an outer 2-column
- * grid whose second cell holds the `visual` item, sized to match by
- * ordinary grid row-stretch — no row-count math anywhere.
+ *   2. Splitting items into a dedicated 2-column "left" grid plus a
+ *      separate "visual" column — a grid row's height is set by its
+ *      tallest cell, so a short visual item left a column mostly empty
+ *      under it while the left column still needed scrolling.
+ * The fix: a **CSS multi-column masonry** (`column-count: 3`). The browser
+ * balances column heights on its own and items flow through in the batch's
+ * own order — no per-family placement rule to keep in sync with the item
+ * types the backend actually sends.
  *
  * **The panel's height is intrinsic, capped, not fixed — and only the
  * content region scrolls, never the whole panel.** `max-h` on the outer
@@ -67,20 +75,22 @@ function focusableWithin(root: HTMLElement): HTMLElement[] {
  */
 export function PlacementBoard({ studentId, subjects }: { studentId: string; subjects: string[] }) {
   const phase = usePlacementStore((s) => s.phase);
-  const blocks = usePlacementStore((s) => s.blocks);
   const currentBlock = usePlacementStore((s) => s.currentBlock);
   const currentIndex = usePlacementStore((s) => s.currentIndex);
   const totalItems = usePlacementStore((s) => s.totalItems);
   const totalBlocks = usePlacementStore((s) => s.totalBlocks);
   const draftResponses = usePlacementStore((s) => s.draftResponses);
-  const result = usePlacementStore((s) => s.result);
   const errorMessage = usePlacementStore((s) => s.errorMessage);
   const isSubmitting = usePlacementStore((s) => s.isSubmitting);
+  const grade = usePlacementStore((s) => s.grade);
+  const board = usePlacementStore((s) => s.board);
+  const startedAt = usePlacementStore((s) => s.startedAt);
+  const completedAt = usePlacementStore((s) => s.completedAt);
 
   const startOrResume = usePlacementStore((s) => s.startOrResume);
   const setItemDraft = usePlacementStore((s) => s.setItemDraft);
   const goNext = usePlacementStore((s) => s.goNext);
-  const dismissResult = usePlacementStore((s) => s.dismissResult);
+  const finish = usePlacementStore((s) => s.finish);
   const reset = usePlacementStore((s) => s.reset);
 
   const [isStarting, setIsStarting] = useState(false);
@@ -88,13 +98,16 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
 
   // Every remaining item in the block, in the block's own fixed order.
   const remainingItems = currentBlock ? currentBlock.items.slice(currentBlock.answered) : [];
-  const { left: leftItems, visual: visualItems } = splitVisual(remainingItems);
 
   const open = phase !== "idle" && phase !== "checking" && phase !== "unavailable";
+  // The intro and complete screens are single-column bookend cards, not the
+  // item screen's multi-subject grid — sized to the reference's narrower
+  // dialog rather than stretching to the item screen's 1180px board width.
+  const isNarrowPhase = phase === "intro" || phase === "complete";
   const isLastBlock = currentBlock ? currentBlock.block_index >= totalBlocks - 1 : false;
   const isLastScreen = isLastBlock;
-  const blockComplete =
-    remainingItems.length > 0 && remainingItems.every((it) => draftResponses[it.item_id] !== undefined);
+  const missingItems = remainingItems.filter((it) => draftResponses[it.item_id] === undefined);
+  const blockComplete = remainingItems.length > 0 && missingItems.length === 0;
 
   const handleStart = async () => {
     setIsStarting(true);
@@ -163,13 +176,15 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
               ref={panelRef}
               role="dialog"
               aria-modal="true"
-              aria-label="Placement test"
+              aria-label="Onboarding test"
               tabIndex={-1}
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.97 }}
               transition={{ type: "spring", stiffness: 400, damping: 34 }}
-              className="placement-theme w-[1180px] max-w-[95vw] max-h-[min(760px,92vh)] flex flex-col rounded-[24px] overflow-hidden pointer-events-auto outline-none"
+              className={`placement-theme max-h-[min(760px,92vh)] flex flex-col rounded-[24px] overflow-hidden pointer-events-auto outline-none ${
+                isNarrowPhase ? "w-[640px] max-w-[92vw]" : "w-[1180px] max-w-[95vw]"
+              }`}
               style={{ background: "var(--pl-canvas)", boxShadow: "0 30px 80px rgb(16 20 32 / 0.28)" }}
             >
               {phase === "intro" && (
@@ -177,6 +192,8 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
                   <PlacementIntro
                     totalItems={totalItems}
                     subjects={subjects}
+                    grade={grade}
+                    board={board}
                     isStarting={isStarting}
                     onStart={handleStart}
                   />
@@ -185,63 +202,35 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
 
               {phase === "item" && currentBlock && (
                 <div className="flex flex-col min-h-0 flex-1">
-                  <div className="px-6 sm:px-10 pt-7 pb-4 shrink-0">
-                    <PlacementProgressRail
-                      blocks={blocks}
-                      activeBlockIndex={currentBlock.block_index}
-                      answeredInActiveBlock={currentBlock.answered}
-                      currentIndex={currentIndex}
-                      totalItems={totalItems}
-                    />
+                  <div className="px-6 sm:px-10 pt-6 pb-4 shrink-0 space-y-4">
+                    <PlacementHeader />
+                    <PlacementProgressRail currentIndex={currentIndex} totalItems={totalItems} />
                   </div>
 
-                  {/* Two independent grids, not one flat multi-column one —
-                      a single grid with 3 explicit columns would let the
-                      browser's own auto-placement fill all 3 per row,
-                      dropping a left item straight into the visual's column.
-                      Nesting the left items in their own 2-column grid makes
-                      that structurally impossible: this grid genuinely only
-                      has 2 columns to place into. */}
+                  {/* A CSS multi-column masonry, not a grid — the reference
+                      layout packs every item (mcq, map, chart, whatever)
+                      into the same 3 columns by reading order, each column
+                      filling to roughly the same height, so a short card is
+                      immediately followed by the next item rather than
+                      leaving a gap under it. A grid can't do this: a grid
+                      row's height is set by its tallest cell, so any card
+                      shorter than its row-mate wastes the rest of that row.
+                      `break-inside: avoid` keeps a single item from being
+                      split across two columns. */}
                   <div
-                    className="px-6 sm:px-10 pb-6 overflow-y-auto grid flex-1 min-h-0"
-                    style={{
-                      gridTemplateColumns: visualItems.length > 0 ? "2fr 1.3fr" : "1fr",
-                      gap: 16,
-                      alignContent: "start",
-                    }}
+                    className="px-6 sm:px-10 pb-6 overflow-y-auto flex-1 min-h-0"
+                    style={{ columnCount: 3, columnGap: 16 }}
                   >
-                    <div className="grid content-start" style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                      {leftItems.map((item) => (
-                        <div
-                          key={item.item_id}
-                          style={{ gridColumn: isFullWidthSlot(item.slot) ? "1 / 3" : undefined }}
-                        >
-                          <ItemRenderer
-                            item={item}
-                            value={draftResponses[item.item_id] ?? null}
-                            onChange={(response) => setItemDraft(item.item_id, response)}
-                            disabled={isSubmitting}
-                          />
-                        </div>
-                      ))}
-                    </div>
-
-                    {visualItems.length > 0 && (
-                      // In the same outer grid row as the left column above,
-                      // so it stretches to match that column's real height —
-                      // no row-count math needed.
-                      <div className="space-y-4">
-                        {visualItems.map((item) => (
-                          <ItemRenderer
-                            key={item.item_id}
-                            item={item}
-                            value={draftResponses[item.item_id] ?? null}
-                            onChange={(response) => setItemDraft(item.item_id, response)}
-                            disabled={isSubmitting}
-                          />
-                        ))}
+                    {remainingItems.map((item) => (
+                      <div key={item.item_id} style={{ breakInside: "avoid", marginBottom: 16 }}>
+                        <ItemRenderer
+                          item={item}
+                          value={draftResponses[item.item_id] ?? null}
+                          onChange={(response) => setItemDraft(item.item_id, response)}
+                          disabled={isSubmitting}
+                        />
                       </div>
-                    )}
+                    ))}
                   </div>
 
                   <div
@@ -250,13 +239,19 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
                   >
                     {/* A send that failed leaves the student exactly where
                         they were; pressing the button again re-sends the
-                        same block, which the backend treats as a no-op. */}
-                    <p
-                      className="m-0 text-[12px] font-medium"
-                      role="alert"
-                      style={{ color: "var(--pl-ink-mid)", visibility: errorMessage ? "visible" : "hidden" }}
-                    >
-                      {errorMessage} Tap the button again.
+                        same block, which the backend treats as a no-op.
+                        Otherwise, while the block is incomplete, name the
+                        exact questions still blocking Next/Finish — "answer
+                        Q18, Q20" is something a student can act on; a
+                        disabled button with no explanation is not. The
+                        static hint is the fallback once nothing is missing,
+                        so the footer isn't empty space either way. */}
+                    <p className="m-0 text-[12px] font-medium" role="alert" style={{ color: "var(--pl-ink-mid)" }}>
+                      {errorMessage
+                        ? `${errorMessage} Tap the button again.`
+                        : missingItems.length > 0
+                          ? `Answer ${formatQuestionList(missingItems)} to continue.`
+                          : "Questions are tailored to your grade and curriculum."}
                     </p>
 
                     <Button
@@ -267,6 +262,7 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
                       // skip, and no partial submit.
                       disabled={!blockComplete || isSubmitting}
                       onClick={goNext}
+                      trailingIcon={<ArrowRight size={18} strokeWidth={2.4} />}
                     >
                       {isLastScreen ? "Finish" : "Next"}
                     </Button>
@@ -274,9 +270,17 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
                 </div>
               )}
 
-              {phase === "result" && result && (
+              {phase === "complete" && (
                 <div className="overflow-y-auto flex-1 min-h-0">
-                  <PlacementResultView result={result} onDone={dismissResult} />
+                  <PlacementCompleteView
+                    subjectCount={subjects.length}
+                    totalItems={totalItems}
+                    grade={grade}
+                    board={board}
+                    startedAt={startedAt}
+                    completedAt={completedAt}
+                    onContinue={finish}
+                  />
                 </div>
               )}
 

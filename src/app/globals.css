@@ -302,9 +302,11 @@ h1, h2, h3, h4, h5, h6 {
 
 
 /* ── Placement form theme ────────────────────────────────────────────────
-   Deep Ocean + Citron, scoped to the placement (onboarding) surface only.
-   The rest of the app keeps the emerald/navy brand, so these live on a class
-   rather than :root. Light theme by design — there is no dark variant.
+   Deep Ocean + Citron, scoped to the placement (onboarding) surface only —
+   matching the vendored SVG asset pack's own palette (see
+   `public/placement/icons/`), rather than the app's default emerald/navy
+   brand, so these live on a class rather than :root. Light theme by
+   design — there is no dark variant.
 
    The --btn-* overrides retarget the shared Button component inside this
    scope, the same mechanism legacyBrandOverride.ts uses at the call site,
@@ -353,4 +355,46 @@ h1, h2, h3, h4, h5, h6 {
    Mukta is the only loaded face with full Devanagari coverage. */
 .placement-theme [lang="hi"] {
   font-family: var(--font-mukta), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ── Learning Signal (admin analytics) ──────────────────────────
+   The admin shell is dark, but this dashboard is a light reading surface: it
+   is dense with charts, tables and small type, and the reference design it
+   implements is light. Scoped to one class so the shell, the sidebar and every
+   other admin view are untouched. */
+.learning-signal {
+  --ls-canvas: #F6F8F6;
+  --ls-card: #FFFFFF;
+  --ls-border: #E4EBE6;
+  --ls-border-strong: #D3DED7;
+  --ls-ink: #12291F;
+  --ls-muted: #6B7F74;
+  --ls-faint: #9BAAA1;
+
+  --ls-emerald: #059F6D;
+  --ls-emerald-soft: #E6F4EE;
+  --ls-blue: #4A90D9;
+  --ls-blue-soft: #E8F1FA;
+  --ls-amber: #E8A33D;
+  --ls-amber-soft: #FDF3E2;
+  --ls-teal: #2FA98A;
+  --ls-teal-soft: #E4F3EF;
+  --ls-danger: #D9534F;
+  --ls-danger-soft: #FCEDEC;
+  --ls-track: #EDF2EE;
+
+  background: var(--ls-canvas);
+  color: var(--ls-ink);
+  font-family: var(--font-display);
+}
+
+.learning-signal .ls-card {
+  background: var(--ls-card);
+  border: 1px solid var(--ls-border);
+  border-radius: 14px;
+}
+
+/* Recharts draws its own focus-less surfaces; keep its text on our ramp. */
+.learning-signal .recharts-text {
+  fill: var(--ls-faint);
 }

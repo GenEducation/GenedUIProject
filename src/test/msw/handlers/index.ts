@@ -5,6 +5,7 @@ import { parentHandlers } from "./parent";
 import { subjectHandlers } from "./subjects";
 import { preorderHandlers } from "./preorder";
 import { placementHandlers } from "./placement";
+import { analyticsHandlers } from "./analytics";
 
 export const handlers = [
   ...authHandlers,
@@ -14,4 +15,5 @@ export const handlers = [
   ...subjectHandlers,
   ...preorderHandlers,
   ...placementHandlers,
+  ...analyticsHandlers,
 ];

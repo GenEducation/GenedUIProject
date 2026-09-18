@@ -275,8 +275,8 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
               <h3 className="text-xl font-bold text-[#1a3a2a]">No data yet</h3>
               <p className="text-sm text-[#1a3a2a]/50 leading-relaxed">
                 {mode === "parent"
-                  ? "This student hasn't finished their placement test yet. Once they do, progress data will appear here."
-                  : "Finish your placement test to start tracking your progress here."}
+                  ? "This student hasn't finished their onboarding test yet. Once they do, progress data will appear here."
+                  : "Finish your onboarding test to start tracking your progress here."}
               </p>
             </div>
             {mode !== "parent" && (

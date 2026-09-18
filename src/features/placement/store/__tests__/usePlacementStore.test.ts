@@ -165,14 +165,13 @@ describe("usePlacementStore", () => {
       expect(state.blocks).toEqual(BLOCKS);
     });
 
-    it("goes straight to the result when the attempt is already complete", async () => {
+    it("closes silently, with no celebration screen, resuming into an attempt already complete", async () => {
       mocked.start.mockResolvedValue(attempt({ is_complete: true, current_block: null }));
-      mocked.getResult.mockResolvedValue({ correct: 6, total: 10 } as never);
 
       await usePlacementStore.getState().startOrResume("student-1");
 
-      expect(mocked.getResult).toHaveBeenCalledWith("attempt-1");
-      expect(usePlacementStore.getState().phase).toBe("result");
+      expect(mocked.getResult).not.toHaveBeenCalled();
+      expect(usePlacementStore.getState().phase).toBe("unavailable");
     });
   });
 
@@ -283,7 +282,7 @@ describe("usePlacementStore", () => {
       expect(JSON.stringify(usePlacementStore.getState())).not.toMatch(/is_correct/);
     });
 
-    it("loads the result once the last batch is submitted", async () => {
+    it("lands on the completed screen once the last batch is submitted — the last thing the student sees", async () => {
       mocked.submitBlock.mockResolvedValue({
         accepted: 2,
         current_index: 10,
@@ -291,14 +290,57 @@ describe("usePlacementStore", () => {
         is_complete: true,
         next_block: null,
       });
-      mocked.getResult.mockResolvedValue({ correct: 6, total: 10 } as never);
 
       const store = usePlacementStore.getState();
       store.setItemDraft("CBSE-G6-MATH-01", { value: 405 });
       store.setItemDraft("CBSE-G6-ENG-03", { text: "but" });
       await usePlacementStore.getState().goNext();
 
-      expect(usePlacementStore.getState().phase).toBe("result");
+      const state = usePlacementStore.getState();
+      expect(state.phase).toBe("complete");
+      expect(state.completedAt).not.toBeNull();
+      // There is no separate results screen — nothing ever fetches the full
+      // per-item breakdown from this flow.
+      expect(mocked.getResult).not.toHaveBeenCalled();
+    });
+
+    it("closes the flow when the completed screen's own button is used", async () => {
+      mocked.submitBlock.mockResolvedValue({
+        accepted: 2,
+        current_index: 10,
+        total_items: 10,
+        is_complete: true,
+        next_block: null,
+      });
+
+      const store = usePlacementStore.getState();
+      store.setItemDraft("CBSE-G6-MATH-01", { value: 405 });
+      store.setItemDraft("CBSE-G6-ENG-03", { text: "but" });
+      await usePlacementStore.getState().goNext();
+      usePlacementStore.getState().finish();
+
+      expect(usePlacementStore.getState().phase).toBe("unavailable");
+    });
+
+    it("stamps startedAt once the student reaches an item, and completedAt once the form is finished", async () => {
+      const before = Date.now();
+      mocked.submitBlock.mockResolvedValue({
+        accepted: 2,
+        current_index: 10,
+        total_items: 10,
+        is_complete: true,
+        next_block: null,
+      });
+
+      expect(usePlacementStore.getState().startedAt).toBeGreaterThanOrEqual(before);
+      expect(usePlacementStore.getState().completedAt).toBeNull();
+
+      const store = usePlacementStore.getState();
+      store.setItemDraft("CBSE-G6-MATH-01", { value: 405 });
+      store.setItemDraft("CBSE-G6-ENG-03", { text: "but" });
+      await usePlacementStore.getState().goNext();
+
+      expect(usePlacementStore.getState().completedAt).toBeGreaterThanOrEqual(before);
     });
   });
 
@@ -321,16 +363,6 @@ describe("usePlacementStore", () => {
       const state = usePlacementStore.getState();
       expect(state.phase).toBe("error");
       expect(state.errorMessage).toMatch(/teacher/i);
-    });
-
-    it("keeps the student in the form if results are asked for too early", async () => {
-      mocked.start.mockResolvedValue(attempt());
-      await usePlacementStore.getState().startOrResume("student-1");
-
-      mocked.getResult.mockRejectedValue(apiError(PLACEMENT_ERROR.IN_PROGRESS));
-      await usePlacementStore.getState().loadResult();
-
-      expect(usePlacementStore.getState().phase).toBe("item");
     });
 
     it("offers a retry for an unrecognised failure rather than giving up", async () => {

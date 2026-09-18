@@ -7,8 +7,9 @@ import { Check } from "lucide-react";
  * The selectable-option look shared by mcq, true_false and multi_select.
  *
  * Retokenised from the test paper's MultipleChoiceQuestion so the placement
- * form reads as the same family of control, in Deep Ocean rather than navy —
- * but sized down from it: several of these questions render on one screen at
+ * form reads as the same family of control, in the placement theme's Deep
+ * Ocean rather than the test paper's navy — but sized down from it: several of
+ * these questions render on one screen at
  * once, so a full-page question's roomy touch target would only fit one or
  * two of them. Still comfortably tappable (a ~40px row), just not padded for
  * a question with the whole screen to itself.

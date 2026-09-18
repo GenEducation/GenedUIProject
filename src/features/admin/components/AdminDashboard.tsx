@@ -17,9 +17,11 @@ import {
   UsersRound,
   AudioLines,
   MonitorSmartphone,
+  Activity,
 } from "lucide-react";
 
 import { StatsOverview } from "./StatsOverview";
+import { LearningSignalView } from "./analytics/LearningSignalView";
 import { UsersView } from "./UsersView";
 import { StudentsView } from "./StudentsView";
 import { ParentsView } from "./ParentsView";
@@ -41,6 +43,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard },
+  { label: "Learning Signal", href: "/admin/analytics", icon: Activity },
   { label: "Users", href: "/admin/users", icon: Users },
   { label: "Students", href: "/admin/students", icon: GraduationCap },
   { label: "Parents", href: "/admin/parents", icon: Contact },
@@ -66,6 +69,12 @@ export function AdminDashboard() {
     router.replace("/admin/login");
   };
 
+  // Learning Signal is a dense, chart-heavy dashboard designed to use the
+  // full width of the content area; every other view is a form/table console
+  // that reads better capped and centered. Rather than have each view fight
+  // its parent's width, the parent defers to the view.
+  const isFullBleed = pathname === "/admin/analytics";
+
   const renderView = () => {
     // Nested detail routes have to be matched before the exact-match switch,
     // which would otherwise drop them through to the default.
@@ -76,6 +85,8 @@ export function AdminDashboard() {
     switch (pathname) {
       case "/admin":
         return <StatsOverview />;
+      case "/admin/analytics":
+        return <LearningSignalView />;
       case "/admin/users":
         return <UsersView />;
       case "/admin/students":
@@ -149,7 +160,15 @@ export function AdminDashboard() {
 
       {/* Main */}
       <main className="flex-1 overflow-auto">
-        <div className="mx-auto max-w-6xl px-8 py-8">{renderView()}</div>
+        <div
+          className={
+            isFullBleed
+              ? "min-h-full"
+              : "mx-auto max-w-6xl px-8 py-8"
+          }
+        >
+          {renderView()}
+        </div>
       </main>
     </div>
   );

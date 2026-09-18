@@ -8,7 +8,6 @@ import {
   type PlacementBlockSummary,
   type PlacementItem,
   type PlacementResponse,
-  type PlacementResult,
 } from "../types/placement";
 
 export type PlacementPhase =
@@ -16,7 +15,7 @@ export type PlacementPhase =
   | "checking"      // status call in flight
   | "intro"         // "N questions, no timer" — before the first item
   | "item"          // a page of the current block is on screen
-  | "result"
+  | "complete"       // the finishing screen — the last thing a student sees
   | "unavailable"   // ONBD_1104 — no form for this board+grade. Render nothing.
   | "error";
 
@@ -41,11 +40,21 @@ interface PlacementState {
   draftResponses: Record<string, PlacementResponse>;
   /** When each item was first rendered — feeds the advisory `elapsed_ms`. */
   itemShownAt: Record<string, number>;
-  result: PlacementResult | null;
+  /**
+   * When the student first reached the item screen (not the intro screen —
+   * there is no timer promise on the intro copy, so "time taken" should
+   * measure test-taking, not time spent reading). Client-only wall-clock;
+   * the backend has no cumulative duration field anywhere. Feeds the
+   * "Test Completed" summary's Time Taken card — a rough figure, not
+   * something to over-engineer around (pausing/backgrounding isn't excluded).
+   */
+  startedAt: number | null;
+  /** Stamped the moment the last block's submit reports `is_complete` —
+   *  feeds the "Test Completed" summary's Status card date. */
+  completedAt: number | null;
   errorCode: string | null;
   errorMessage: string | null;
   isSubmitting: boolean;
-  isLoadingResult: boolean;
 
   checkStatus: (studentId: string) => Promise<void>;
   startOrResume: (studentId: string) => Promise<void>;
@@ -56,8 +65,8 @@ interface PlacementState {
    * this — there is no separate submit action for callers to get wrong.
    */
   goNext: () => Promise<void>;
-  loadResult: () => Promise<void>;
-  dismissResult: () => void;
+  /** Leaving the finishing screen ends the flow for this session. */
+  finish: () => void;
   reset: () => void;
 }
 
@@ -74,11 +83,11 @@ const INITIAL = {
   currentBlock: null,
   draftResponses: {} as Record<string, PlacementResponse>,
   itemShownAt: {} as Record<string, number>,
-  result: null,
+  startedAt: null as number | null,
+  completedAt: null as number | null,
   errorCode: null,
   errorMessage: null,
   isSubmitting: false,
-  isLoadingResult: false,
 };
 
 export const usePlacementStore = create<PlacementState>((set, get) => ({
@@ -133,12 +142,14 @@ export const usePlacementStore = create<PlacementState>((set, get) => ({
       });
 
       if (attempt.is_complete || !attempt.current_block) {
-        set({ currentIndex: attempt.current_index, totalItems: attempt.total_items });
-        await get().loadResult();
+        // Already finished in an earlier session — there is no celebration
+        // screen or result to show for a plain resume, only for just now
+        // finishing. Close the same way `checkStatus`'s COMPLETED branch does.
+        set({ ...INITIAL, phase: "unavailable" });
         return;
       }
 
-      applyBlock(set, attempt.current_block, attempt.current_index, attempt.total_items);
+      applyBlock(set, get, attempt.current_block, attempt.current_index, attempt.total_items);
     } catch (error) {
       applyError(set, error);
     }
@@ -163,21 +174,7 @@ export const usePlacementStore = create<PlacementState>((set, get) => ({
     await submitCurrentBlock(set, get);
   },
 
-  loadResult: async () => {
-    const { attemptId } = get();
-    if (!attemptId) return;
-    set({ isLoadingResult: true });
-    try {
-      const result = await placementService.getResult(attemptId);
-      set({ result, phase: "result", isLoadingResult: false });
-    } catch (error) {
-      set({ isLoadingResult: false });
-      applyError(set, error);
-    }
-  },
-
-  /** Closing the score screen ends the flow for this session. */
-  dismissResult: () => set({ ...INITIAL, phase: "unavailable" }),
+  finish: () => set({ ...INITIAL, phase: "unavailable" }),
 
   reset: () => set({ ...INITIAL }),
 }));
@@ -203,6 +200,7 @@ function stampShown(items: PlacementItem[]): Record<string, number> {
  */
 function applyBlock(
   set: Setter,
+  get: Getter,
   block: PlacementBlockContent,
   currentIndex: number,
   totalItems: number,
@@ -215,6 +213,9 @@ function applyBlock(
     totalItems,
     draftResponses: {},
     itemShownAt: stampShown(remaining),
+    // Stamped once, the first time the student actually reaches an item —
+    // a resumed attempt's later blocks must not push this forward.
+    startedAt: get().startedAt ?? Date.now(),
     errorCode: null,
     errorMessage: null,
   });
@@ -252,12 +253,16 @@ async function submitCurrentBlock(set: Setter, get: Getter) {
     set({ isSubmitting: false });
 
     if (res.is_complete || !res.next_block) {
-      set({ currentIndex: res.current_index, currentBlock: null });
-      await get().loadResult();
+      set({
+        currentIndex: res.current_index,
+        currentBlock: null,
+        phase: "complete",
+        completedAt: Date.now(),
+      });
       return;
     }
 
-    applyBlock(set, res.next_block, res.current_index, res.total_items);
+    applyBlock(set, get, res.next_block, res.current_index, res.total_items);
   } catch (error) {
     set({ isSubmitting: false });
 
