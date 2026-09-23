@@ -5,6 +5,10 @@ import { updateProfile } from "@/features/auth/authService";
 import { useStudentStore, StudentProfile } from "../store/useStudentStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { asError } from "@/utils/errors";
+import { sleepy, surprised, thinking, happy } from "blobatar/expression";
+import { StudentBlobatar } from "./StudentBlobatar";
+import { usePetStore } from "../store/usePetStore";
+import { blobatarSeed } from "../theme/blobatar";
 
 interface CompleteProfileBannerProps {
   studentProfile: StudentProfile;
@@ -23,7 +27,9 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
   const [aiName, setAiName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
   const setStudentProfile = useStudentStore((s) => s.setStudentProfile);
+  const setPetSeed = usePetStore((s) => s.setPetSeed);
   const { startTutorial } = useTutorialStore();
 
   const maybeLaunchTutorial = () => {
@@ -62,6 +68,11 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
         ai_name: response.ai_name,
       };
       setStudentProfile(updatedProfile);
+      // Freeze the buddy the student just watched appear. From here the
+      // creature is theirs: editing their name later changes the greeting,
+      // not the companion.
+      setPetSeed(blobatarSeed(studentProfile, response.name));
+      setSaved(true);
       localStorage.setItem("gened_user_profile", JSON.stringify(response));
       if (response.access_token) {
         localStorage.setItem("gened_auth_token", response.access_token);
@@ -74,9 +85,36 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
     }
   };
 
+  /**
+   * The buddy is generated from the name as it is typed, so it visibly becomes
+   * a different creature with each keystroke — this is the moment the whole
+   * feature exists for. The pose ladder rides on top: asleep until the student
+   * says who they are, awake at the name, waiting while the save is in flight,
+   * pleased once it lands.
+   */
+  const pose = saved
+    ? happy
+    : isSaving
+      ? thinking
+      : name.trim()
+        ? surprised
+        : sleepy;
+
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20 backdrop-blur-sm">
       <div className="relative w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl border border-gray-100 p-8">
+        <div className="flex flex-col items-center mb-4">
+          <StudentBlobatar
+            size={96}
+            animate="always"
+            expression={pose}
+            seed={blobatarSeed(studentProfile, name)}
+          />
+          <p className="mt-2 text-xs font-semibold text-gray-400">
+            Say hello — this one&apos;s yours.
+          </p>
+        </div>
+
         <h3 className="text-lg font-bold text-[var(--primary-ink)] mb-1">
           Tell us a bit about yourself
         </h3>

@@ -23,6 +23,9 @@ import { DevicePairingModal } from "./DevicePairingModal";
 import { AvatarPickerModal } from "./AvatarPickerModal";
 import { TeacherConnections } from "./TeacherConnections";
 import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
+import { PetTunerModal } from "./PetTunerModal";
+import { usePetStore } from "../store/usePetStore";
+import { useHydrated } from "@/hooks/useHydrated";
 import { useTestStore } from "../store/useTestStore";
 import { Select } from "@/components/ui/Select";
 
@@ -372,6 +375,13 @@ export function StudentProfile() {
 
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const avatarColor = C.sun;
+  // Rendered as off until hydration: the stored value is invisible to the
+  // server, and the knob's position would otherwise mismatch on first paint.
+  const petHydrated = useHydrated();
+  const petEnabled = usePetStore((s) => s.petEnabled) && petHydrated;
+  const setPetEnabled = usePetStore((s) => s.setPetEnabled);
+  const resetPetPosition = usePetStore((s) => s.resetPetPosition);
+  const [petTunerOpen, setPetTunerOpen] = useState(false);
   const [soundEnabled,     setSoundEnabled]      = useState(true);
   const [parentInput,      setParentInput]       = useState("");
   const [selectedPartner,  setSelectedPartner]   = useState("");
@@ -1020,6 +1030,62 @@ export function StudentProfile() {
                   </button>
                 </div>
 
+                {/* Two rows, because these are two different things.
+                    Appearance belongs to the *creature*, which a student meets
+                    in onboarding and sees again on their test results whether
+                    or not the desk pet is switched on — and on a phone, where
+                    the desk pet never renders. Gating it behind the pet toggle
+                    left students looking at a buddy they could not change. */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 14, background: C.pageBg, border: `1px solid ${C.border}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 16 }}>🫧</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Your Buddy</div>
+                      <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
+                        Shape, colour and eyes
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => setPetTunerOpen(true)}>
+                    Customize
+                  </Button>
+                </div>
+
+                {/* The floating companion itself. Desktop only: it has no
+                    cursor to watch on a phone and would cover content, so the
+                    row is hidden there rather than offering a switch that does
+                    nothing. */}
+                <div className="hidden md:flex" style={{ alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 14, background: C.pageBg, border: `1px solid ${C.border}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 16 }}>🪄</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Desk Buddy</div>
+                      <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
+                        Let it float on your screen
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {petEnabled && (
+                      // eslint-disable-next-line no-restricted-syntax -- low-emphasis inline action inside a settings row; <Button>'s min-height would break the row's alignment.
+                      <button
+                        onClick={resetPetPosition}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 11, fontWeight: 700, color: C.textMid }}
+                      >
+                        Reset position
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setPetEnabled(!petEnabled)}
+                      aria-pressed={petEnabled}
+                      aria-label="Desk Buddy"
+                      style={{ width: 44, height: 26, borderRadius: 13, cursor: "pointer", border: "none", background: petEnabled ? C.growth : C.border, position: "relative" as const, transition: "background 0.2s", flexShrink: 0 }}
+                    >
+                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: "white", position: "absolute" as const, top: 3, left: petEnabled ? 21 : 3, transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }} />
+                    </button>
+                  </div>
+                </div>
+
                 {/* Voice Settings */}
                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 10, borderTop: `1px solid ${C.border}`, paddingTop: 14, marginTop: 4 }}>
                   <SectionHeader icon="🎙️" label="Voice Settings" />
@@ -1117,6 +1183,10 @@ export function StudentProfile() {
       </main>
 
       <DevicePairingModal isOpen={pairingModalOpen} onClose={() => setPairingModalOpen(false)} />
+      {/* Tunes the buddy, not the profile picture — reachable here as well as
+          from the pet's own gear, so it does not vanish with the pet. */}
+      <PetTunerModal isOpen={petTunerOpen} onClose={() => setPetTunerOpen(false)} showPetSettings={petEnabled} />
+
       <AvatarPickerModal
         isOpen={avatarPickerOpen}
         onClose={() => setAvatarPickerOpen(false)}

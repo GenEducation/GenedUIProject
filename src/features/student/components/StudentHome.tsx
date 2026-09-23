@@ -13,6 +13,7 @@ import { useScheduleStore } from "../store/useScheduleStore";
 import { UpcomingSessionPanel } from "./UpcomingSessionPanel";
 import { ContinueLearningCard } from "./ContinueLearningCard";
 import { useNow } from "@/utils/useNow";
+import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
 import { STUDENT_COLORS } from "../theme/colors";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
@@ -510,14 +511,30 @@ export function StudentHome() {
 
             {/* ── GREETING HEADER ── */}
             <div className="flex items-start justify-between mb-8 relative z-20" style={fade(0.06)}>
-              <div>
-                <h1 className="font-extrabold leading-tight m-0"
-                  style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(22px, 3vw, 34px)" }}>
-                  {getGreeting()}, {username}!
-                </h1>
-                <p className="mt-2 font-medium leading-relaxed" style={{ color: C.textMid, fontSize: "clamp(13px, 1.4vw, 15px)" }}>
-                  What would you like to learn today?
-                </p>
+              <div className="flex items-center gap-4">
+                {/* Hidden on small screens: the greeting already clamps down to
+                    22px there and a creature beside it crowds the line. */}
+                <div className="hidden md:flex flex-shrink-0 rounded-full overflow-hidden"
+                  style={{ width: 56, height: 56, border: "2px solid white", boxShadow: `0 4px 12px ${C.sun}30` }}>
+                  {avatarId === "graduate-girl" ? (
+                    <img
+                      src="/avatars/girl-graduate.png"
+                      alt="Student avatar"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                  ) : (
+                    <StudentAvatarIllustration bg={C.sun} />
+                  )}
+                </div>
+                <div>
+                  <h1 className="font-extrabold leading-tight m-0"
+                    style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(22px, 3vw, 34px)" }}>
+                    {getGreeting()}, {username}!
+                  </h1>
+                  <p className="mt-2 font-medium leading-relaxed" style={{ color: C.textMid, fontSize: "clamp(13px, 1.4vw, 15px)" }}>
+                    What would you like to learn today?
+                  </p>
+                </div>
               </div>
               <div className={`flex-shrink-0 items-center gap-3 ml-4 ${sidebarOpen ? "flex" : "hidden md:flex"}`}>
                 {studentProfile?.user_id && (

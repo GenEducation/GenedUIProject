@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display, Plus_Jakarta_Sans, Mukta, Source_Serif_4, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+// Blobatar's motion layer. Required — an `animate` prop renders inline SVG but
+// nothing moves without this stylesheet. `gaze.css` arms the cursor-tracking
+// layer; it registers `--mo-track-travel` at 0px, so every blobatar still
+// holds still until something sets an excursion.
+import "blobatar/motion.css";
+import "blobatar/gaze.css";
 import { GlobalLoader } from "@/components/shared/loaders/GlobalLoader";
 import { TutorialVideoModal } from "@/components/shared/TutorialVideoModal";
 

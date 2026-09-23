@@ -5,6 +5,8 @@ import { TestReadyModal } from "@/features/student/components/TestReadyModal";
 import { CompleteProfileBanner } from "@/features/student/components/CompleteProfileBanner";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { PlacementGate } from "@/features/placement/components/PlacementGate";
+import { usePlacementStore } from "@/features/placement/store/usePlacementStore";
+import { PetCompanion } from "@/features/student/components/PetCompanion";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useNotificationStore } from "@/store/useNotificationStore";
@@ -60,6 +62,15 @@ export default function StudentLayout({
 
   const isProfileIncomplete = studentProfile && !studentProfile.name;
 
+  // The same condition PlacementBoard itself opens on (see its `open`), so the
+  // pet is suppressed exactly while the placement form owns the screen rather
+  // than on a second, drifting definition of "in placement".
+  const placementPhase = usePlacementStore((s) => s.phase);
+  const placementOpen =
+    placementPhase !== "idle" &&
+    placementPhase !== "checking" &&
+    placementPhase !== "unavailable";
+
   // Only prompt for a missing profile on the main student home page.
   // Sub-pages (report card, settings, sessions, etc.) shouldn't be interrupted.
   const isHomePage = pathname === "/student";
@@ -85,6 +96,12 @@ export default function StudentLayout({
           CompleteProfileBanner above to finish collecting the student's name
           and their AI companion's name first. */}
       <PlacementGate />
+
+      {/* Opt-in desk pet. Mounted here rather than on a page so dragging it
+          survives navigation, and suppressed while a blocking flow owns the
+          screen — onboarding shows its own creature inside the modal, and a
+          draggable toy during a mandatory placement test is a distraction. */}
+      <PetCompanion suppressed={Boolean(isProfileIncomplete) || placementOpen} />
 
       {/* Global Real-time Toasts stack */}
       <ToastStack toasts={toasts} onDismiss={dismissToast} />

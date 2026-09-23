@@ -492,14 +492,27 @@ export interface StudentState {
 
 // -- Store --------------------------------------------------------------------─
 
+/**
+ * Which of the two profile illustrations the student picked.
+ *
+ * This is their *profile picture* — who they are, on the sidebar chip, the
+ * chat header and the profile hero. Deliberately separate from the desk
+ * buddy's appearance, which lives in `usePetStore`: a companion and an
+ * identity are different things, and collapsing them made the profile feel
+ * like a toy.
+ */
 export type AvatarId = "graduate-boy" | "graduate-girl";
 
 const getInitialAvatarId = (): AvatarId => {
   if (typeof window === "undefined") {
     return "graduate-boy";
   }
-  const saved = localStorage.getItem("gened_avatar_id");
-  return saved === "graduate-girl" ? "graduate-girl" : "graduate-boy";
+  try {
+    const saved = localStorage.getItem("gened_avatar_id");
+    return saved === "graduate-girl" ? "graduate-girl" : "graduate-boy";
+  } catch {
+    return "graduate-boy";
+  }
 };
 
 const getInitialVoicePrefs = () => {
@@ -588,6 +601,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     localStorage.removeItem("gened_auth_token");
     localStorage.removeItem("gened_user_profile");
     localStorage.removeItem("gened_partner_id");
+    localStorage.removeItem("gened_avatar_id");
     set({
       studentProfile: null,
       activeChat: null,
@@ -1978,7 +1992,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   setAvatarId: (id) => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("gened_avatar_id", id);
+      try {
+        localStorage.setItem("gened_avatar_id", id);
+      } catch {
+        // Private mode / blocked storage: the choice still holds this session.
+      }
     }
     set({ avatarId: id });
   },

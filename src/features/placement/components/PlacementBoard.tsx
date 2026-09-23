@@ -10,6 +10,8 @@ import { ItemRenderer } from "./items/ItemRenderer";
 import { PlacementHeader } from "./PlacementHeader";
 import { PlacementIntro } from "./PlacementIntro";
 import { PlacementCompleteView } from "./PlacementCompleteView";
+import { StudentBlobatar } from "@/features/student/components/StudentBlobatar";
+import { thinking, happy, idle } from "blobatar/expression";
 import { PlacementProgressRail } from "./PlacementProgressRail";
 import type { PlacementItem } from "../types/placement";
 
@@ -204,7 +206,30 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
                 <div className="flex flex-col min-h-0 flex-1">
                   <div className="px-6 sm:px-10 pt-6 pb-4 shrink-0 space-y-4">
                     <PlacementHeader />
-                    <PlacementProgressRail currentIndex={currentIndex} totalItems={totalItems} />
+                    <div className="flex items-center gap-3">
+                      {/* Company through a long mandatory test. It reacts to
+                          PROGRESS only — never to correctness. This store
+                          deliberately carries no per-answer `is_correct`
+                          client-side (see types/placement.ts, asserted by a
+                          store test), and the creature is not a reason to
+                          change that. */}
+                      <div className="hidden sm:flex shrink-0">
+                        <StudentBlobatar
+                          size={40}
+                          animate="hover"
+                          expression={
+                            isSubmitting
+                              ? thinking
+                              : totalItems > 0 && currentIndex >= totalItems / 2
+                                ? happy
+                                : idle
+                          }
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <PlacementProgressRail currentIndex={currentIndex} totalItems={totalItems} />
+                      </div>
+                    </div>
                   </div>
 
                   {/* A CSS multi-column masonry, not a grid — the reference

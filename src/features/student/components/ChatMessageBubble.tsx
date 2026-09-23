@@ -10,6 +10,8 @@ import { useSmoothStream } from "@/hooks/useSmoothStream";
 import { ActivityRenderer } from "./ActivityRenderer";
 import { MessageElements } from "./MessageElements";
 import { ChapterOptionPicker } from "./ChapterOptionPicker";
+import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
+import { useStudentStore } from "../store/useStudentStore";
 
 // ── Web Speech API TTS hook ───────────────────────────────────────────────────
 type SpeakState = "idle" | "loading" | "speaking";
@@ -155,6 +157,8 @@ export const ChatMessageBubble = React.memo(
     // tutor reply runs free in the page.
     const isBoxed = isUser || isSafetyRedirect;
     const [copied, setCopied] = useState(false);
+    // The student's profile avatar, for their own turns only.
+    const userAvatarId = useStudentStore((st) => st.avatarId);
 
     // Decide once per mount (render-time ref latch, StrictMode-safe) whether
     // this message should replay its typing effect: the finalized greeting
@@ -340,6 +344,29 @@ export const ChatMessageBubble = React.memo(
             </div>
           )}
         </div>
+
+        {/* The student's own turn, using their profile avatar — the tutor keeps
+            its own identity on the other side. */}
+        {isUser && (
+          <div
+            className="flex-shrink-0 mt-0.5 rounded-full overflow-hidden hidden sm:block"
+            style={{ border: "1px solid #E2E8F0", width: 32, height: 32 }}
+          >
+            {userAvatarId === "graduate-girl" ? (
+              // `next/image`, matching the tutor avatar above rather than the
+              // raw <img> the sidebars use — this one sits in a long list.
+              <Image
+                src="/avatars/girl-graduate.png"
+                alt="Student avatar"
+                width={32}
+                height={32}
+                className="object-cover w-full h-full"
+              />
+            ) : (
+              <StudentAvatarIllustration bg="#F0AD4E" />
+            )}
+          </div>
+        )}
       </motion.div>
     );
   }
