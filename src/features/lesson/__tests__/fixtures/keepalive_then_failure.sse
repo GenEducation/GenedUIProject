@@ -1,0 +1,13 @@
+retry: 1000
+
+id: 00000000-0000-0000-0000-0000000000a1:1
+event: turn_started
+data: {"v":2,"turn_id":"00000000-0000-0000-0000-0000000000a1","seq":1,"type":"turn_started","kind":"opening","instance_node_id":"00000000-0000-0000-0000-0000000000b1","session_id":"00000000-0000-0000-0000-0000000000c1","instance_revision":3,"protocol":"teacher_turn_stream_v2","regenerates":null}
+
+event: keepalive
+data: {"v":2,"type":"keepalive","turn_id":"00000000-0000-0000-0000-0000000000a1","committed_through_seq":1}
+
+id: 00000000-0000-0000-0000-0000000000a1:2
+event: turn_failed
+data: {"v":2,"turn_id":"00000000-0000-0000-0000-0000000000a1","seq":2,"type":"turn_failed","reason":"first_token_timeout","retryable":true,"retry":"regenerate"}
+

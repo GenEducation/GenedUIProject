@@ -1,0 +1,18 @@
+retry: 1000
+
+id: 00000000-0000-0000-0000-0000000000a1:1
+event: turn_started
+data: {"v":2,"turn_id":"00000000-0000-0000-0000-0000000000a1","seq":1,"type":"turn_started","kind":"regenerate","instance_node_id":"00000000-0000-0000-0000-0000000000b1","session_id":"00000000-0000-0000-0000-0000000000c1","instance_revision":3,"protocol":"teacher_turn_stream_v2","regenerates":"00000000-0000-0000-0000-0000000000a0"}
+
+id: 00000000-0000-0000-0000-0000000000a1:2
+event: answer_recorded
+data: {"v":2,"turn_id":"00000000-0000-0000-0000-0000000000a1","seq":2,"replayed_from":"00000000-0000-0000-0000-0000000000a0","type":"answer_recorded","attempt_id":"00000000-0000-0000-0000-0000000000d1","item_id":"00000000-0000-0000-0000-0000000000e1","outcome":"incorrect","correct":false,"round_state":"open"}
+
+id: 00000000-0000-0000-0000-0000000000a1:3
+event: text_delta
+data: {"v":2,"turn_id":"00000000-0000-0000-0000-0000000000a1","seq":3,"type":"text_delta","text":"Not quite. Look at how many parts there are.","redacted":false,"suppressed":false}
+
+id: 00000000-0000-0000-0000-0000000000a1:4
+event: turn_completed
+data: {"v":2,"turn_id":"00000000-0000-0000-0000-0000000000a1","seq":4,"type":"turn_completed","status":"completed","finish_reason":"stop","first_token_ms":null,"duration_ms":null}
+
