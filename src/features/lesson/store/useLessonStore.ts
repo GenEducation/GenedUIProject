@@ -157,7 +157,11 @@ export const useLessonStore = create<LessonState>((set, get) => ({
         request_id: newRequestId(),
         item_id: itemId,
         expected_revision: instance.revision,
-        channel: "typed",
+        // A choice response must carry channel "choice"; every other kind
+        // is "typed" (domains/assessment/src/gened_assessment/interpret.py
+        // in the backend: `expected = ChoiceResponse if channel == "choice"
+        // else typed`, so an MCQ sent as "typed" 422s with CORE_3105).
+        channel: response.kind === "choice" ? "choice" : "typed",
         latency_ms: latencyMs,
         response,
       });

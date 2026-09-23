@@ -256,7 +256,7 @@ describe("useLessonStore", () => {
 
     expect(service.submitAnswer).toHaveBeenCalledWith(
       "inst-1",
-      expect.objectContaining({ item_id: "item-1", response: { kind: "numeric", value: "1/2" } }),
+      expect.objectContaining({ item_id: "item-1", channel: "typed", response: { kind: "numeric", value: "1/2" } }),
     );
     expect(useLessonStore.getState().lastAnswerFeedback).toEqual({
       itemId: "item-1",
@@ -268,6 +268,32 @@ describe("useLessonStore", () => {
     const [, reactionRequest] = openStream.mock.calls[0] as [string, TurnRequest, unknown];
     expect(reactionRequest.kind).toBe("result_reaction");
     expect(reactionRequest.attempt_id).toBe("attempt-1");
+  });
+
+  it("sends channel 'choice' for an mcq answer, never 'typed' (backend 422s CORE_3105 otherwise)", async () => {
+    const instance = activeInstance();
+    service.openInstance.mockResolvedValue(instance);
+    service.getTeacherPayload.mockResolvedValue(payload);
+    service.getTeacherTurns.mockResolvedValue([]);
+    service.submitAnswer.mockResolvedValue({
+      attempt_id: "attempt-2",
+      outcome: "correct",
+      correct: true,
+      eligibility_reason: null,
+      round_id: "round-1",
+      round_state: "passed",
+      replayed: false,
+      instance,
+    });
+    captureHandlers(openStream);
+    await useLessonStore.getState().loadChapter("ch-1");
+
+    await useLessonStore.getState().submitAnswer("item-2", { kind: "choice", option_ids: ["opt-1"] }, 500);
+
+    expect(service.submitAnswer).toHaveBeenCalledWith(
+      "inst-1",
+      expect.objectContaining({ channel: "choice", response: { kind: "choice", option_ids: ["opt-1"] } }),
+    );
   });
 
   it("reloads the whole chapter on a stale_node error from sendMessage", async () => {
