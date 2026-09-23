@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useLessonStore } from "../store/useLessonStore";
+import { deriveStep } from "../store/lessonFlow";
 import { LessonHeader } from "./LessonHeader";
-import { LessonChat } from "./LessonChat";
-import { LessonPanel } from "./LessonPanel";
+import { LessonThread } from "./LessonThread";
+import { TextbookDrawer } from "./TextbookDrawer";
 import { ChapterReportView } from "./ChapterReportView";
 
 interface LessonScreenProps {
@@ -14,15 +15,15 @@ interface LessonScreenProps {
 }
 
 /**
- * The learner's lesson screen: the textbook content and checks for the
- * active node on the left, the AI Tutor conversation on the right — the
- * conversation is a helper alongside the lesson, not the only thing on
- * screen (ADR 0006's only prior teaching loop was an uncommitted prototype,
- * so there was no existing layout to match).
+ * The learner's lesson: one conversation with the tutor that carries the
+ * whole chapter. Questions appear in the thread when the lesson reaches them,
+ * the next part is one button once this one is done, and the textbook is a
+ * drawer to open for reference rather than a second place to look.
  */
 export function LessonScreen({ chapterId }: LessonScreenProps) {
-  const { phase, instance, payload, transcript, openTurnId, report, errorMessage, isSending, ...actions } =
+  const { phase, instance, payload, transcript, earlier, openTurnId, report, errorMessage, isSending, ...actions } =
     useLessonStore();
+  const [textbookOpen, setTextbookOpen] = useState(false);
 
   useEffect(() => {
     useLessonStore.getState().loadChapter(chapterId);
@@ -48,12 +49,12 @@ export function LessonScreen({ chapterId }: LessonScreenProps) {
 
   if (phase === "blocked" && instance) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-[#64748B]">
-        <p className="font-bold text-[var(--primary-ink)]">This part is blocked.</p>
+      <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-[#64748B]">
+        <p className="font-bold text-[var(--primary-ink)]">Let&apos;s pause here.</p>
         <p>
           {instance.blocked?.blocked_reason === "content_gap"
-            ? "There's a gap in the content this student would need next."
-            : "This student needs support before continuing."}
+            ? "The next part of this chapter isn't ready yet."
+            : "This part needs a little help from your teacher before you continue."}
         </p>
       </div>
     );
@@ -69,29 +70,32 @@ export function LessonScreen({ chapterId }: LessonScreenProps) {
 
   if (!instance || !payload) return null;
 
+  const step = deriveStep(instance, payload, openTurnId !== null);
+
   return (
     <div className="flex h-full flex-col">
-      <LessonHeader instance={instance} />
-      <div className="flex min-h-0 flex-1">
-        <div className="min-w-0 flex-1 overflow-y-auto">
-          <LessonPanel
-            instance={instance}
-            payload={payload}
-            isSending={isSending}
-            onAnswer={actions.submitAnswer}
-            onHint={actions.requestHint}
-            onDone={actions.markNodeDone}
-          />
-        </div>
-        <div className="w-[380px] flex-none border-l border-[rgba(4,46,92,0.06)]">
-          <LessonChat
+      <LessonHeader instance={instance} textbookOpen={textbookOpen} onToggleTextbook={() => setTextbookOpen((o) => !o)} />
+      <div className="relative flex min-h-0 flex-1">
+        <div className="min-w-0 flex-1">
+          <LessonThread
+            earlier={earlier}
+            partTitle={instance.active_node?.title ?? "This part"}
             transcript={transcript}
-            openTurnId={openTurnId}
+            step={step}
+            isSending={isSending}
             onSend={actions.sendMessage}
             onStop={actions.stopTeacher}
             onRegenerate={actions.regenerateLastTurn}
+            onAnswer={actions.submitAnswer}
+            onHint={actions.requestHint}
+            onContinue={actions.markNodeDone}
           />
         </div>
+        {textbookOpen && (
+          <div className="absolute inset-0 z-10 sm:static sm:inset-auto">
+            <TextbookDrawer payload={payload} onClose={() => setTextbookOpen(false)} />
+          </div>
+        )}
       </div>
       {errorMessage && (
         <div className="border-t border-red-100 bg-red-50 px-4 py-2 text-xs text-red-600">{errorMessage}</div>

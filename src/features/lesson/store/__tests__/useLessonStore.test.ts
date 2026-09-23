@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useLessonStore } from "../useLessonStore";
 import { lessonService } from "../../services/lessonService";
-import { openTeacherTurnStream, resumeTeacherTurnStream } from "../../services/teacherTurnStream";
+import { openTeacherTurnStream, resumeTeacherTurnStream, TurnRejected } from "../../services/teacherTurnStream";
 import type { InstanceState, TeacherPayload, TeacherTurnStreamFrame, TurnRequest } from "../../types/lesson";
 
 vi.mock("../../services/lessonService", () => ({
@@ -19,7 +19,8 @@ vi.mock("../../services/lessonService", () => ({
   },
 }));
 
-vi.mock("../../services/teacherTurnStream", () => ({
+vi.mock("../../services/teacherTurnStream", async (importActual) => ({
+  TurnRejected: (await importActual<typeof import("../../services/teacherTurnStream")>()).TurnRejected,
   openTeacherTurnStream: vi.fn(),
   resumeTeacherTurnStream: vi.fn(),
 }));
@@ -169,12 +170,11 @@ describe("useLessonStore", () => {
     expect(useLessonStore.getState().transcript[0].teacherText).toBe("Partial reply");
   });
 
-  it("sends a learner message as engagement, then opens a learner_message turn interrupting the open one", async () => {
+  it("sends a learner message as a turn only (the server counts it), interrupting the open one", async () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
     service.getTeacherTurns.mockResolvedValue([]);
-    service.recordEngagement.mockResolvedValue({ ...instance, revision: 2 });
     const getHandlers = captureHandlers(openStream);
     await useLessonStore.getState().loadChapter("ch-1");
     const openingTurnId = useLessonStore.getState().openTurnId!;
@@ -191,11 +191,8 @@ describe("useLessonStore", () => {
 
     await useLessonStore.getState().sendMessage("why is that?");
 
-    expect(service.recordEngagement).toHaveBeenCalledWith(
-      "inst-1",
-      expect.objectContaining({ expected_revision: 1, source: "student_text" }),
-    );
-    expect(useLessonStore.getState().instance?.revision).toBe(2);
+    // The turn records the message as engagement or an answer; a client call too counted it twice.
+    expect(service.recordEngagement).not.toHaveBeenCalled();
 
     const [, secondRequest] = openStream.mock.calls[1] as [string, TurnRequest, unknown];
     expect(secondRequest.kind).toBe("learner_message");
@@ -296,20 +293,55 @@ describe("useLessonStore", () => {
     );
   });
 
-  it("reloads the whole chapter on a stale_node error from sendMessage", async () => {
+  it("reloads the whole chapter when a turn is rejected as stale_node", async () => {
+    const instance = activeInstance();
+    service.openInstance.mockResolvedValue(instance);
+    service.getTeacherPayload.mockResolvedValue(payload);
+    service.getTeacherTurns.mockResolvedValue([]);
+    const getHandlers = captureHandlers(openStream);
+    await useLessonStore.getState().loadChapter("ch-1");
+    getHandlers().onFrame({
+      v: 2, type: "turn_completed", turn_id: useLessonStore.getState().openTurnId!, seq: 1,
+      status: "completed", finish_reason: "stop", first_token_ms: null, duration_ms: null,
+    });
+
+    await useLessonStore.getState().sendMessage("hi");
+    const sentTurnId = useLessonStore.getState().openTurnId;
+    service.openInstance.mockClear();
+    getHandlers().onGiveUp?.(new TurnRejected(409, "stale_node", "stale"));
+
+    expect(useLessonStore.getState().transcript.some((t) => t.turnId === sentTurnId)).toBe(false);
+    expect(service.openInstance).toHaveBeenCalledWith("ch-1");
+  });
+
+  it("shows the server's message when a turn is rejected for another reason", async () => {
+    const instance = activeInstance();
+    service.openInstance.mockResolvedValue(instance);
+    service.getTeacherPayload.mockResolvedValue(payload);
+    service.getTeacherTurns.mockResolvedValue([]);
+    const getHandlers = captureHandlers(openStream);
+    await useLessonStore.getState().loadChapter("ch-1");
+
+    getHandlers().onGiveUp?.(new TurnRejected(503, "teacher_busy", "Your tutor is busy."));
+
+    expect(useLessonStore.getState().errorMessage).toBe("Your tutor is busy.");
+    expect(useLessonStore.getState().openTurnId).toBeNull();
+  });
+
+  it("asks for a hint with a hint turn only (the server records it)", async () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
     service.getTeacherTurns.mockResolvedValue([]);
     captureHandlers(openStream);
     await useLessonStore.getState().loadChapter("ch-1");
+    openStream.mockClear();
 
-    service.recordEngagement.mockRejectedValue(Object.assign(new Error("stale"), { error_code: "stale_node" }));
-    service.openInstance.mockClear();
+    await useLessonStore.getState().requestHint("item-1");
 
-    await useLessonStore.getState().sendMessage("hi");
-
-    expect(service.openInstance).toHaveBeenCalledWith("ch-1");
+    expect(service.recordHint).not.toHaveBeenCalled();
+    const [, request] = openStream.mock.calls[0] as [string, TurnRequest, unknown];
+    expect(request).toMatchObject({ kind: "hint", item_id: "item-1" });
   });
 
   it("marks the open turn failed when the stream gives up", async () => {

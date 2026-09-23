@@ -9,7 +9,8 @@ interface CheckCardProps {
   ordinal: number;
   total: number;
   disabled?: boolean;
-  onSubmit: (response: AnswerResponse, latencyMs: number) => void;
+  /** `displayText` is how the answer reads in the conversation. */
+  onSubmit: (response: AnswerResponse, latencyMs: number, displayText: string) => void;
   onHint: () => void;
 }
 
@@ -36,20 +37,25 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
 
   const handleSubmit = () => {
     let response: AnswerResponse;
+    const optionText = (id: string) => check.options.find((o) => o.id === id)?.text ?? id;
+    let displayText = text.trim();
     switch (check.response_type) {
       case "numeric":
         response = { kind: "numeric", value: text.trim() };
         break;
       case "mcq":
         response = { kind: "choice", option_ids: selected };
+        displayText = selected.map(optionText).join(", ");
         break;
       case "sequence":
         response = { kind: "ordered", items: order };
+        displayText = order.map(optionText).join(" → ");
         break;
       case "matching":
         // No pairing UI yet (left/right lists render, but drag-to-match is a
         // later pass) — submit the identity pairing so the flow stays testable.
         response = { kind: "pairs", pairs: check.options.map((o) => ({ left: o.id, right: o.id })) };
+        displayText = "Matched the pairs";
         break;
       case "symbolic":
       case "string_set":
@@ -57,7 +63,7 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
         response = { kind: "text", text: text.trim() };
         break;
     }
-    onSubmit(response, latency());
+    onSubmit(response, latency(), displayText);
   };
 
   const toggleOption = (id: string) => {
@@ -124,6 +130,8 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
           value={text}
           disabled={disabled}
           onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && !submitDisabled && handleSubmit()}
+          autoFocus
           placeholder={check.response_type === "numeric" ? "e.g. 1/2" : "Type your answer"}
           className="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none"
           style={{ borderColor: "#E2E8F0" }}

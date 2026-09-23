@@ -10,6 +10,32 @@ const INSTANCES_BASE = `${API_BASE_URL}/v1/instances`;
 const RESUME_RETRY_DELAY_MS = 1000;
 const MAX_RESUME_ATTEMPTS = 5;
 
+/**
+ * The server refused to admit the turn (an HTTP error before the stream,
+ * TEACHER_TURN_v1 §1: stale_node, teacher_busy, too_many_streams, …). Nothing
+ * was admitted, so there is nothing to resume.
+ */
+export class TurnRejected extends Error {
+  constructor(
+    readonly status: number,
+    readonly error_code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "TurnRejected";
+  }
+}
+
+async function rejection(response: Response): Promise<TurnRejected> {
+  let body: { error_code?: string; message?: string } = {};
+  try {
+    body = await response.json();
+  } catch {
+    // not JSON: fall back to the status alone
+  }
+  return new TurnRejected(response.status, body.error_code ?? `HTTP_${response.status}`, body.message ?? "Your tutor couldn't start that reply.");
+}
+
 export interface TeacherTurnStreamHandlers {
   /** Every frame in seq order, after gap/duplicate filtering — nothing else touches `last_seq`. */
   onFrame: (frame: TeacherTurnStreamFrame) => void;
@@ -58,6 +84,7 @@ export function openTeacherTurnStream(
       }),
     (afterSeq) => resumeFetch(instanceId, turnRequest.turn_id, afterSeq, controller.signal),
     handlers,
+    true,
   );
   return { close: () => controller.abort() };
 }
@@ -105,14 +132,21 @@ async function runStream(
   openFirst: () => Promise<Response>,
   openResume: (afterSeq: number) => Promise<Response>,
   handlers: TeacherTurnStreamHandlers,
+  firstIsAdmission = false,
 ): Promise<void> {
   let lastSeq = 0;
+  let admitted = !firstIsAdmission;
   let attempt = 0;
   let opener = openFirst;
 
   while (!signal.aborted) {
     try {
       const response = await opener();
+      if (!admitted && !response.ok) {
+        handlers.onGiveUp?.(await rejection(response));
+        return;
+      }
+      admitted = true;
       if (!response.ok || !response.body) {
         throw new Error(`teacher-turn stream failed to open: ${response.status}`);
       }
@@ -153,7 +187,9 @@ async function runStream(
         return;
       }
       handlers.onReconnecting?.();
-      opener = () => openResume(lastSeq);
+      // Until the admission POST has answered, retry that same POST (idempotent
+      // by turn_id); once admitted, resume the log from the last accepted seq.
+      opener = admitted ? () => openResume(lastSeq) : openFirst;
       await delay(RESUME_RETRY_DELAY_MS, signal);
     }
   }

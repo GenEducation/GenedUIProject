@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import { asError } from "@/utils/errors";
 import { lessonService } from "../services/lessonService";
-import { openTeacherTurnStream, resumeTeacherTurnStream, type TeacherTurnStreamHandle } from "../services/teacherTurnStream";
+import {
+  openTeacherTurnStream,
+  resumeTeacherTurnStream,
+  TurnRejected,
+  type TeacherTurnStreamHandle,
+} from "../services/teacherTurnStream";
 import type {
   AnswerResponse,
   ChapterReport,
@@ -24,6 +29,14 @@ export interface TranscriptTurn {
   failedReason?: TurnFailedReason;
   retryable?: boolean;
   createdAt: string;
+  /** Set on a result_reaction turn: how the learner's answer scored, shown beside their answer. */
+  answer?: { outcome: AnswerFeedback["outcome"]; correct: boolean | null };
+}
+
+export interface EarlierPart {
+  instanceNodeId: string;
+  title: string;
+  turns: TranscriptTurn[];
 }
 
 interface AnswerFeedback {
@@ -41,6 +54,8 @@ interface LessonState {
   instance: InstanceState | null;
   payload: TeacherPayload | null;
   transcript: TranscriptTurn[];
+  /** Parts finished during this visit, kept above the current part's conversation. */
+  earlier: EarlierPart[];
   /** The turn currently streaming, if any — drives the Stop button and the resume-on-reload check. */
   openTurnId: string | null;
   /** Highest seq the learner has actually seen rendered for the open turn (§4/§5 "visible_seq"). */
@@ -54,7 +69,8 @@ interface LessonState {
   loadChapter: (chapterId: string) => Promise<void>;
   sendMessage: (text: string) => Promise<void>;
   stopTeacher: () => Promise<void>;
-  submitAnswer: (itemId: string, response: AnswerResponse, latencyMs: number) => Promise<void>;
+  /** `displayText` is how the answer reads in the conversation (the option's text, not its id). */
+  submitAnswer: (itemId: string, response: AnswerResponse, latencyMs: number, displayText?: string) => Promise<void>;
   requestHint: (itemId: string) => Promise<void>;
   markNodeDone: () => Promise<void>;
   regenerateLastTurn: () => Promise<void>;
@@ -69,6 +85,7 @@ const INITIAL = {
   instance: null as InstanceState | null,
   payload: null as TeacherPayload | null,
   transcript: [] as TranscriptTurn[],
+  earlier: [] as EarlierPart[],
   openTurnId: null as string | null,
   visibleSeq: 0,
   lastAnswerFeedback: null as AnswerFeedback | null,
@@ -102,20 +119,12 @@ export const useLessonStore = create<LessonState>((set, get) => ({
   sendMessage: async (text: string) => {
     const { instance } = get();
     if (!instance?.active_node || !text.trim()) return;
+    set({ errorCode: null, errorMessage: null });
 
-    try {
-      const updated = await lessonService.recordEngagement(instance.id, {
-        request_id: newRequestId(),
-        expected_revision: instance.revision,
-        source: "student_text",
-      });
-      set({ instance: updated });
-    } catch (error) {
-      const e = asError(error);
-      if (e.error_code === "stale_node") return void (await get().loadChapter(instance.chapter_id));
-      set({ errorCode: e.error_code ?? null, errorMessage: e.message ?? "Could not send that message." });
-      return;
-    }
+    // No separate /engagement call: the turn itself records the message as
+    // one engagement, or as an answer to a pending check
+    // (gened_learning.chat.record_chat_message, ADR 0006 D3/D4). Calling
+    // both counted every message twice.
 
     // Captured before beginTurn resets `visibleSeq` for the new turn — this
     // is what the learner had actually seen rendered of the turn it interrupts.
@@ -148,7 +157,7 @@ export const useLessonStore = create<LessonState>((set, get) => ({
     }
   },
 
-  submitAnswer: async (itemId: string, response: AnswerResponse, latencyMs: number) => {
+  submitAnswer: async (itemId: string, response: AnswerResponse, latencyMs: number, displayText?: string) => {
     const { instance } = get();
     if (!instance) return;
     set({ isSending: true, errorCode: null, errorMessage: null });
@@ -166,7 +175,7 @@ export const useLessonStore = create<LessonState>((set, get) => ({
         response,
       });
       set({
-        instance: result.instance,
+        instance: sameNodeOrKeep(get().instance, result.instance),
         isSending: false,
         lastAnswerFeedback: {
           itemId,
@@ -180,7 +189,10 @@ export const useLessonStore = create<LessonState>((set, get) => ({
       // The teacher's reaction is bound to this attempt's own node and
       // revision, never the currently active node (TEACHER_TURN_v1 §3).
       const turnId = newRequestId();
-      beginTurn(set, get, turnId, "result_reaction", null);
+      beginTurn(set, get, turnId, "result_reaction", displayText ?? null, {
+        outcome: result.outcome,
+        correct: result.correct,
+      });
       startTurnStream(set, get, instance.id, {
         turn_id: turnId,
         kind: "result_reaction",
@@ -197,21 +209,18 @@ export const useLessonStore = create<LessonState>((set, get) => ({
   requestHint: async (itemId: string) => {
     const { instance } = get();
     if (!instance?.active_node) return;
-    try {
-      const updated = await lessonService.recordHint(instance.id, { request_id: newRequestId(), item_id: itemId });
-      set({ instance: updated });
-      const turnId = newRequestId();
-      beginTurn(set, get, turnId, "hint", null);
-      startTurnStream(set, get, instance.id, {
-        turn_id: turnId,
-        kind: "hint",
-        instance_node_id: instance.active_node.instance_node_id,
-        item_id: itemId,
-      });
-    } catch (error) {
-      const e = asError(error);
-      set({ errorCode: e.error_code ?? null, errorMessage: e.message ?? "Could not record that hint." });
-    }
+    set({ errorCode: null, errorMessage: null });
+    // No separate /hints call: a `hint` turn records the request on the
+    // server before the prompt is built (TEACHER_TURN_v1 §3,
+    // ASSISTANCE_TRACKING_v1), so calling both recorded it twice.
+    const turnId = newRequestId();
+    beginTurn(set, get, turnId, "hint", "Can I have a hint?");
+    startTurnStream(set, get, instance.id, {
+      turn_id: turnId,
+      kind: "hint",
+      instance_node_id: instance.active_node.instance_node_id,
+      item_id: itemId,
+    });
   },
 
   markNodeDone: async () => {
@@ -254,11 +263,19 @@ export const useLessonStore = create<LessonState>((set, get) => ({
 // Kept as module functions, not store actions, so they can take the fresh
 // `instance`/`turnId` a caller just computed without a second store read.
 
-function beginTurn(set: Set, get: Get, turnId: string, kind: TurnKind, learnerText: string | null): void {
+function beginTurn(
+  set: Set,
+  get: Get,
+  turnId: string,
+  kind: TurnKind,
+  learnerText: string | null,
+  answer?: TranscriptTurn["answer"],
+): void {
   const turn: TranscriptTurn = {
     turnId,
     kind,
     learnerText,
+    answer,
     teacherText: "",
     status: "streaming",
     createdAt: new Date().toISOString(),
@@ -275,7 +292,7 @@ function startTurnStream(
   attachStream(
     openTeacherTurnStream(instanceId, request, {
       onFrame: (frame) => handleFrame(set, get, frame),
-      onGiveUp: () => markOpenTurnFailed(set, get, "stream_interrupted"),
+      onGiveUp: (error) => giveUp(set, get, error),
     }),
   );
 }
@@ -302,7 +319,19 @@ async function refreshForNode(set: Set, get: Get, instance: InstanceState): Prom
     lessonService.getTeacherTurns(instance.id, instance.active_node.instance_node_id),
   ]);
 
-  const transcript = recorded.map(recordedTurnToTranscript);
+  const previous = get();
+  const sameNode = previous.instance?.active_node?.instance_node_id === instance.active_node.instance_node_id;
+  const transcript = mergeTranscript(recorded.map(recordedTurnToTranscript), sameNode ? previous.transcript : []);
+  if (!sameNode && previous.instance?.active_node && previous.transcript.length > 0) {
+    // Moving on keeps the finished part's conversation on screen above the new one,
+    // so the lesson reads as one continuous thread rather than resetting.
+    set({
+      earlier: [
+        ...previous.earlier,
+        { instanceNodeId: previous.instance.active_node.instance_node_id, title: previous.instance.active_node.title, turns: previous.transcript },
+      ],
+    });
+  }
   const openTurn = recorded.find((t) => t.closed_at === null);
 
   set({
@@ -320,7 +349,7 @@ async function refreshForNode(set: Set, get: Get, instance: InstanceState): Prom
     attachStream(
       resumeTeacherTurnStream(instance.id, openTurn.turn_id, openTurn.committed_through_seq ?? 0, {
         onFrame: (frame) => handleFrame(set, get, frame),
-        onGiveUp: () => markOpenTurnFailed(set, get, "stream_interrupted"),
+        onGiveUp: (error) => giveUp(set, get, error),
       }),
     );
   } else if (transcript.length === 0) {
@@ -376,27 +405,69 @@ function handleFrame(set: Set, get: Get, frame: TeacherTurnStreamFrame): void {
       transcript,
       openTurnId: stillOpen ? state.openTurnId : null,
       visibleSeq: "seq" in frame ? frame.seq : state.visibleSeq,
-      instance: closedInstance ?? state.instance,
+      instance: closedInstance ? sameNodeOrKeep(state.instance, closedInstance) : state.instance,
     };
   });
 
   if (frame.type === "turn_completed" || frame.type === "turn_interrupted") {
     // The current teacher finishes its reaction on the source node
     // (finish_source_reaction); this reload picks up whatever node is now
-    // active and opens its turn if it hasn't been opened yet.
+    // active and opens its turn if it hasn't been opened yet. The instance is
+    // read fresh: the turn recorded engagement or an answer on the server,
+    // which no stream frame is guaranteed to carry.
     const instance = get().instance;
-    if (instance) void refreshForNode(set, get, instance);
+    if (instance) void reloadAfterTurn(set, get, instance.id);
+  } else if (frame.type === "turn_failed") {
+    const instance = get().instance;
+    if (instance) void lessonService.getInstance(instance.id).then((fresh) => set({ instance: fresh })).catch(() => {});
   }
 }
 
-function markOpenTurnFailed(set: Set, get: Get, reason: TurnFailedReason): void {
+async function reloadAfterTurn(set: Set, get: Get, instanceId: string): Promise<void> {
+  try {
+    const fresh = await lessonService.getInstance(instanceId);
+    await refreshForNode(set, get, fresh);
+  } catch {
+    // The transcript on screen is still correct; the next action retries the read.
+  }
+}
+
+/**
+ * Take a newer lesson state only while it is still on the same part. When an
+ * answer finishes a part, the tutor's reaction still belongs to that part
+ * (finish_source_reaction), so the switch waits for the reload after the turn.
+ */
+function sameNodeOrKeep(current: InstanceState | null, next: InstanceState): InstanceState {
+  if (!current?.active_node || current.active_node.instance_node_id === next.active_node?.instance_node_id) return next;
+  return current;
+}
+
+function giveUp(set: Set, get: Get, error: unknown): void {
+  if (error instanceof TurnRejected) {
+    // Never admitted: drop the placeholder turn rather than leaving a dead bubble.
+    set((state) => ({
+      transcript: state.transcript.filter((t) => t.turnId !== state.openTurnId),
+      openTurnId: null,
+    }));
+    if (error.error_code === "stale_node") {
+      // The lesson moved on (another tab, or an answer that advanced it): reload it.
+      const chapterId = get().instance?.chapter_id;
+      if (chapterId) void get().loadChapter(chapterId);
+      return;
+    }
+    set({ errorCode: error.error_code, errorMessage: error.message });
+    return;
+  }
+  markOpenTurnFailed(set, "stream_interrupted");
+}
+
+function markOpenTurnFailed(set: Set, reason: TurnFailedReason): void {
   set((state) => ({
     transcript: state.transcript.map((t) =>
       t.turnId === state.openTurnId ? { ...t, status: "failed" as const, failedReason: reason, retryable: true } : t,
     ),
     openTurnId: null,
   }));
-  void get; // reserved for parity with the other handlers; nothing else to read here today
 }
 
 function attachStream(handle: TeacherTurnStreamHandle): void {
@@ -410,12 +481,24 @@ function stopActiveStream(): void {
 }
 
 function recordedTurnToTranscript(t: RecordedTurnOut): TranscriptTurn {
+  const closedStatus = t.status === "interrupted" ? "interrupted" : t.status === "failed" ? "failed" : "completed";
   return {
     turnId: t.turn_id,
     kind: t.kind,
-    learnerText: t.learner_text,
+    learnerText: t.learner_text ?? (t.kind === "hint" ? "Can I have a hint?" : null),
     teacherText: t.teacher_text ?? "",
-    status: t.closed_at ? (t.status === "interrupted" ? "interrupted" : "completed") : "streaming",
+    status: t.closed_at ? closedStatus : "streaming",
     createdAt: t.created_at,
+    answer: t.outcome ? { outcome: t.outcome, correct: t.correct } : undefined,
   };
+}
+
+/** Recorded turns are canonical, but keep what only this client knows: the text of an answer given in a card. */
+function mergeTranscript(recorded: TranscriptTurn[], local: TranscriptTurn[]): TranscriptTurn[] {
+  const byId = new Map(local.map((t) => [t.turnId, t]));
+  return recorded.map((t) => {
+    const mine = byId.get(t.turnId);
+    if (!mine) return t;
+    return { ...t, learnerText: t.learnerText ?? mine.learnerText, answer: t.answer ?? mine.answer };
+  });
 }
