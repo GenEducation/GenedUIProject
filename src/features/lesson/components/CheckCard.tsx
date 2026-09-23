@@ -74,15 +74,26 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
     });
   };
 
+  const isCheckpoint = check.role === "checkpoint";
+  const accent = isCheckpoint ? "var(--primary)" : "var(--tutor)";
+
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-2 flex items-center justify-between text-xs font-medium text-slate-500">
+    <div
+      className="rounded-2xl border-l-[3px] bg-white p-4 shadow-[0_1px_3px_rgba(4,46,92,0.04)]"
+      style={{ borderColor: accent, borderTop: "1px solid rgba(4,46,92,0.06)", borderRight: "1px solid rgba(4,46,92,0.06)", borderBottom: "1px solid rgba(4,46,92,0.06)" }}
+    >
+      <div className="mb-2 flex items-center justify-between text-xs font-semibold text-[#94A3B8]">
         <span>
           Check {ordinal} of {total}
         </span>
-        <span className="uppercase tracking-wide">{check.role === "checkpoint" ? "checkpoint" : "quick check"}</span>
+        <span
+          className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+          style={{ background: `${accent}14`, color: accent }}
+        >
+          {isCheckpoint ? "Checkpoint" : "Quick check"}
+        </span>
       </div>
-      <p className="mb-3 text-sm font-medium text-slate-800">{check.prompt}</p>
+      <p className="mb-3 text-sm font-semibold text-[var(--primary-ink)]">{check.prompt}</p>
 
       {check.response_type === "mcq" && (
         <div className="flex flex-col gap-2">
@@ -94,11 +105,12 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
               type="button"
               disabled={disabled}
               onClick={() => toggleOption(option.id)}
-              className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+              className="rounded-xl border px-3 py-2.5 text-left text-sm transition-colors"
+              style={
                 selected.includes(option.id)
-                  ? "border-indigo-500 bg-indigo-50 text-indigo-900"
-                  : "border-slate-200 hover:border-slate-300"
-              }`}
+                  ? { borderColor: "var(--tutor)", background: "rgba(91,77,199,0.08)", color: "var(--tutor)" }
+                  : { borderColor: "#E2E8F0", color: "#1A202C" }
+              }
             >
               {option.text}
             </button>
@@ -113,7 +125,8 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
           disabled={disabled}
           onChange={(e) => setText(e.target.value)}
           placeholder={check.response_type === "numeric" ? "e.g. 1/2" : "Type your answer"}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none"
+          className="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none"
+          style={{ borderColor: "#E2E8F0" }}
         />
       )}
 
@@ -122,14 +135,14 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
           {order.map((id, index) => {
             const option = check.options.find((o) => o.id === id);
             return (
-              <li key={id} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+              <li key={id} className="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm" style={{ borderColor: "#E2E8F0" }}>
                 {/* A reorder control, not a design-system action button. */}
                 {/* eslint-disable-next-line no-restricted-syntax */}
                 <button
                   type="button"
                   disabled={disabled}
                   onClick={() => moveUp(index)}
-                  className="text-slate-400 hover:text-slate-700"
+                  className="text-[#94A3B8] hover:text-[var(--primary-ink)]"
                   aria-label="Move up"
                 >
                   ↑
@@ -142,7 +155,7 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
       )}
 
       {check.response_type === "matching" && (
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-[#94A3B8]">
           Matching pairs isn&apos;t built yet — Submit sends an unpaired identity match so the rest of the flow
           (scoring, teacher reaction) can still be exercised.
         </p>

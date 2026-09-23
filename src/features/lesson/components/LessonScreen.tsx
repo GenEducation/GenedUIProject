@@ -11,18 +11,16 @@ import { ChapterReportView } from "./ChapterReportView";
 
 interface LessonScreenProps {
   chapterId: string;
-  chapterTitle?: string;
 }
 
 /**
- * The developer-facing lesson screen: exercises every learner endpoint and
- * every teacher-turn stream rule end to end (TEACHER_TURN_v1,
- * TEXT_STREAMING_TRANSPORT_v1 in the backend repo). Not a final design —
- * there was no prior UI here to extend (ADR 0006's only teaching loop was
- * an uncommitted prototype), so this is built for manual verification of
- * the real conversation first.
+ * The learner's lesson screen: the textbook content and checks for the
+ * active node on the left, the AI Tutor conversation on the right — the
+ * conversation is a helper alongside the lesson, not the only thing on
+ * screen (ADR 0006's only prior teaching loop was an uncommitted prototype,
+ * so there was no existing layout to match).
  */
-export function LessonScreen({ chapterId, chapterTitle = "Lesson" }: LessonScreenProps) {
+export function LessonScreen({ chapterId }: LessonScreenProps) {
   const { phase, instance, payload, transcript, openTurnId, report, errorMessage, isSending, ...actions } =
     useLessonStore();
 
@@ -33,7 +31,7 @@ export function LessonScreen({ chapterId, chapterTitle = "Lesson" }: LessonScree
 
   if (phase === "idle" || phase === "loading") {
     return (
-      <div className="flex h-full items-center justify-center text-slate-400">
+      <div className="flex h-full items-center justify-center text-[#94A3B8]">
         <Loader2 className="animate-spin" size={20} />
       </div>
     );
@@ -41,7 +39,7 @@ export function LessonScreen({ chapterId, chapterTitle = "Lesson" }: LessonScree
 
   if (phase === "error") {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-slate-500">
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-sm text-[#64748B]">
         <p>{errorMessage ?? "Something went wrong loading this lesson."}</p>
         <Button onClick={() => useLessonStore.getState().loadChapter(chapterId)}>Retry</Button>
       </div>
@@ -50,8 +48,8 @@ export function LessonScreen({ chapterId, chapterTitle = "Lesson" }: LessonScree
 
   if (phase === "blocked" && instance) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-slate-500">
-        <p className="font-medium text-slate-700">This part is blocked.</p>
+      <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-[#64748B]">
+        <p className="font-bold text-[var(--primary-ink)]">This part is blocked.</p>
         <p>
           {instance.blocked?.blocked_reason === "content_gap"
             ? "There's a gap in the content this student would need next."
@@ -62,25 +60,20 @@ export function LessonScreen({ chapterId, chapterTitle = "Lesson" }: LessonScree
   }
 
   if (phase === "completed" && report) {
-    return <ChapterReportView report={report} />;
+    return (
+      <div className="h-full overflow-y-auto">
+        <ChapterReportView report={report} />
+      </div>
+    );
   }
 
   if (!instance || !payload) return null;
 
   return (
     <div className="flex h-full flex-col">
-      <LessonHeader chapterTitle={chapterTitle} instance={instance} />
+      <LessonHeader instance={instance} />
       <div className="flex min-h-0 flex-1">
-        <div className="flex min-w-0 flex-[2] flex-col">
-          <LessonChat
-            transcript={transcript}
-            openTurnId={openTurnId}
-            onSend={actions.sendMessage}
-            onStop={actions.stopTeacher}
-            onRegenerate={actions.regenerateLastTurn}
-          />
-        </div>
-        <div className="w-80 flex-none">
+        <div className="min-w-0 flex-1 overflow-y-auto">
           <LessonPanel
             instance={instance}
             payload={payload}
@@ -88,6 +81,15 @@ export function LessonScreen({ chapterId, chapterTitle = "Lesson" }: LessonScree
             onAnswer={actions.submitAnswer}
             onHint={actions.requestHint}
             onDone={actions.markNodeDone}
+          />
+        </div>
+        <div className="w-[380px] flex-none border-l border-[rgba(4,46,92,0.06)]">
+          <LessonChat
+            transcript={transcript}
+            openTurnId={openTurnId}
+            onSend={actions.sendMessage}
+            onStop={actions.stopTeacher}
+            onRegenerate={actions.regenerateLastTurn}
           />
         </div>
       </div>

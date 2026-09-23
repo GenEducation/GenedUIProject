@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
-import type { AnswerResponse, InstanceState, TeacherPayload } from "../types/lesson";
+import type { AnswerResponse, Chunk, InstanceState, TeacherPayload } from "../types/lesson";
 import { CheckCard } from "./CheckCard";
 
 interface LessonPanelProps {
@@ -11,6 +11,36 @@ interface LessonPanelProps {
   onAnswer: (itemId: string, response: AnswerResponse, latencyMs: number) => void;
   onHint: (itemId: string) => void;
   onDone: () => void;
+}
+
+/** Chunk types that read as a callout rather than a plain paragraph — mirrors the boxed "Key Properties" style. */
+const CALLOUT_TYPES = new Set(["note", "summary", "worked_example"]);
+const HEADING_TYPES = new Set(["chapter_heading", "section_heading", "subsection_heading"]);
+
+function ChunkBlock({ chunk }: { chunk: Chunk }) {
+  if (HEADING_TYPES.has(chunk.element_type)) {
+    return <h3 className="mb-2 mt-5 text-[15px] font-bold text-[var(--primary-ink)] first:mt-0">{chunk.text}</h3>;
+  }
+  if (CALLOUT_TYPES.has(chunk.element_type)) {
+    return (
+      <div
+        className="my-3 rounded-xl border-l-4 px-4 py-3 text-[13.5px] leading-relaxed"
+        style={{ borderColor: "var(--primary)", background: "rgba(5,159,109,0.06)", color: "#1A202C" }}
+      >
+        {chunk.text}
+      </div>
+    );
+  }
+  if (chunk.element_type === "figure") {
+    // No image URL on the payload today — a labeled placeholder keeps the
+    // reading order intact rather than silently dropping the figure.
+    return (
+      <div className="my-3 rounded-xl border border-dashed border-[#E2E8F0] px-4 py-6 text-center text-xs text-[#94A3B8]">
+        Figure — {chunk.text || "not shown yet"}
+      </div>
+    );
+  }
+  return <p className="mb-3 text-[13.5px] leading-relaxed text-[#334155]">{chunk.text}</p>;
 }
 
 export function LessonPanel({ instance, payload, isSending, onAnswer, onHint, onDone }: LessonPanelProps) {
@@ -24,24 +54,35 @@ export function LessonPanel({ instance, payload, isSending, onAnswer, onHint, on
   const canFinish = node.type === "teach" ? engagementMet : checksMet;
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-y-auto border-l border-slate-200 bg-slate-50 p-4">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{node.type}</p>
-        <h2 className="text-base font-semibold text-slate-800">{node.title}</h2>
-      </div>
+    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6 sm:px-8">
+      {node.sections.length > 0 && (
+        <article className="rounded-2xl border border-[rgba(4,46,92,0.06)] bg-white p-5 shadow-[0_1px_3px_rgba(4,46,92,0.04)]">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-[#94A3B8]">From the textbook</p>
+          {node.sections.map((section) => (
+            <div key={section.id}>
+              {section.chunks.map((chunk) => (
+                <ChunkBlock key={chunk.id} chunk={chunk} />
+              ))}
+            </div>
+          ))}
+        </article>
+      )}
 
       {node.type === "teach" && (
-        <div>
-          <div className="mb-1 flex justify-between text-xs text-slate-500">
+        <div className="rounded-2xl border border-[rgba(4,46,92,0.06)] bg-white p-4">
+          <div className="mb-1.5 flex justify-between text-xs font-semibold text-[#94A3B8]">
             <span>Engagement</span>
             <span>
               {activeNode.engagement_count} / {activeNode.engagement_required}
             </span>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+          <div className="h-1.5 overflow-hidden rounded-full bg-[#EDEFF5]">
             <div
-              className="h-full rounded-full bg-emerald-500"
-              style={{ width: `${Math.min(100, (activeNode.engagement_count / Math.max(1, activeNode.engagement_required)) * 100)}%` }}
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${Math.min(100, (activeNode.engagement_count / Math.max(1, activeNode.engagement_required)) * 100)}%`,
+                background: "var(--primary)",
+              }}
             />
           </div>
         </div>
@@ -63,7 +104,7 @@ export function LessonPanel({ instance, payload, isSending, onAnswer, onHint, on
         </div>
       )}
 
-      <Button className="mt-auto" fullWidth disabled={!canFinish} onClick={onDone}>
+      <Button fullWidth disabled={!canFinish} onClick={onDone}>
         {node.type === "teach" ? "I'm ready to move on" : "Done with this part"}
       </Button>
     </div>
