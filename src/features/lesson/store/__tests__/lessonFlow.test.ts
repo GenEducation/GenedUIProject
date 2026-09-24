@@ -8,6 +8,7 @@ const probe = (id: string): CheckItem => ({
   response_type: "numeric",
   role: "formative_probe",
   options: [],
+  figure_groups: [],
 });
 
 function state(node: Partial<ActiveNode>, checks: CheckItem[]): [InstanceState, TeacherPayload] {
@@ -44,7 +45,8 @@ function state(node: Partial<ActiveNode>, checks: CheckItem[]): [InstanceState, 
       type: activeNode.type,
       teach_only: checks.length === 0,
       sections: [],
-      assets: [],
+      figure_groups: [],
+      reference_groups: [],
       tools: [],
       check_items: checks,
       bloom: "understand",

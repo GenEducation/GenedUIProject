@@ -1,10 +1,11 @@
 "use client";
 
-import { ImageIcon, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import type { Chunk, Section, TeacherPayload } from "../types/lesson";
+import type { Chunk, FigureGroup, PresentationManifest, Section, TeacherPayload } from "../types/lesson";
 import { isAlreadyCoveredNote } from "../store/transcript";
 import { joinPageBreaks, prettifyMath } from "../display";
+import { FigureBlock } from "./FigureBlock";
 
 /** Chunk types that read as a callout rather than a plain paragraph. */
 const CALLOUT_TYPES = new Set(["note", "summary", "worked_example"]);
@@ -29,37 +30,62 @@ function ChunkBlock({ chunk }: { chunk: Chunk }) {
     return <p className="my-2 rounded-lg bg-[#F7F8FC] px-3 py-2 font-medium tabular-nums text-[var(--primary-ink)]">{text}</p>;
   }
   if (chunk.element_type === "figure") {
-    // Images are not served to learners yet; the figure's description (read from the page
-    // at ingestion) is shown instead, so "as shown in the picture" still has something to point at.
-    return (
-      <div className="my-3 flex gap-3 rounded-xl border border-[#E2E8F0] bg-[#FAFBFD] px-4 py-3 text-[13px] leading-relaxed text-[#475569]">
-        <ImageIcon size={16} className="mt-0.5 flex-shrink-0 text-[#94A3B8]" />
-        <span>
-          <span className="font-semibold text-[#64748B]">Picture: </span>
-          {text || "a picture from the textbook"}
-        </span>
-      </div>
-    );
+    // The figure itself now renders as its own FigureBlock, interleaved by `after_chunk_id`
+    // (see `figuresAfter` below) — a bare "figure" chunk carries no text worth showing on its own.
+    return null;
   }
   return <p className="mb-3 text-[13.5px] leading-relaxed text-[#334155]">{text}</p>;
+}
+
+/** Every reference group keyed by the chunk it follows, in reading order — group(s) with no matching chunk
+ * in the sections actually shown (e.g. `after_chunk_id` null, or pointing at a cached-elsewhere section)
+ * fall back to a trailing "more from this page" list rather than being dropped. */
+function groupsByChunk(groups: FigureGroup[]): { byChunk: Map<string, FigureGroup[]>; unplaced: FigureGroup[] } {
+  const sorted = [...groups].sort((a, b) => a.reading_order - b.reading_order);
+  const byChunk = new Map<string, FigureGroup[]>();
+  const unplaced: FigureGroup[] = [];
+  for (const group of sorted) {
+    if (!group.after_chunk_id) {
+      unplaced.push(group);
+      continue;
+    }
+    const list = byChunk.get(group.after_chunk_id) ?? [];
+    list.push(group);
+    byChunk.set(group.after_chunk_id, list);
+  }
+  return { byChunk, unplaced };
 }
 
 interface TextbookDrawerProps {
   payload: TeacherPayload;
   /** Sections seen earlier this visit, for parts whose pages were already covered. */
   sectionCache: Record<string, Section>;
+  manifest: PresentationManifest | null;
+  onExpiredManifest: () => void;
+  /** Figure groups already shown in the conversation — marked "discussed above" here rather than hidden,
+   * so the textbook still reads as the complete page. */
+  presentedGroupIds: ReadonlySet<string>;
   onClose: () => void;
   /** Asks the tutor to go over the earlier pages again, right from the empty state. */
   onAskTutor: () => void;
 }
 
 /** The textbook pages behind the current part: reference material the learner opens, not the task itself. */
-export function TextbookDrawer({ payload, sectionCache, onClose, onAskTutor }: TextbookDrawerProps) {
+export function TextbookDrawer({
+  payload,
+  sectionCache,
+  manifest,
+  onExpiredManifest,
+  presentedGroupIds,
+  onClose,
+  onAskTutor,
+}: TextbookDrawerProps) {
   const sections = payload.node.sections.map((section) =>
     isAlreadyCoveredNote(section) ? (sectionCache[section.version_id] ?? null) : section,
   );
   const shown = sections.filter((s): s is Section => s !== null);
   const coveredElsewhere = sections.length - shown.length;
+  const { byChunk, unplaced } = groupsByChunk(payload.node.reference_groups);
 
   return (
     <aside className="flex h-full w-full flex-col border-l border-[rgba(4,46,92,0.06)] bg-white sm:w-[400px]">
@@ -90,11 +116,38 @@ export function TextbookDrawer({ payload, sectionCache, onClose, onAskTutor }: T
         {shown.map((section) => (
           <div key={section.id}>
             {joinPageBreaks(section.chunks).map((chunk) => (
-              <ChunkBlock key={chunk.id} chunk={chunk} />
+              <div key={chunk.id}>
+                <ChunkBlock chunk={chunk} />
+                {(byChunk.get(chunk.id) ?? []).map((group) => (
+                  <FigureBlock
+                    key={group.id}
+                    group={group}
+                    manifest={manifest}
+                    onExpired={onExpiredManifest}
+                    discussedElsewhere={presentedGroupIds.has(group.id)}
+                  />
+                ))}
+              </div>
             ))}
           </div>
         ))}
-        {sections.length === 0 && <p className="text-sm text-[#94A3B8]">No textbook pages for this part.</p>}
+        {unplaced.length > 0 && (
+          <div className="mt-4">
+            {shown.length > 0 && <h3 className="mb-2 text-[13px] font-bold text-[var(--primary-ink)]">More from this page</h3>}
+            {unplaced.map((group) => (
+              <FigureBlock
+                key={group.id}
+                group={group}
+                manifest={manifest}
+                onExpired={onExpiredManifest}
+                discussedElsewhere={presentedGroupIds.has(group.id)}
+              />
+            ))}
+          </div>
+        )}
+        {sections.length === 0 && unplaced.length === 0 && (
+          <p className="text-sm text-[#94A3B8]">No textbook pages for this part.</p>
+        )}
       </div>
     </aside>
   );

@@ -47,7 +47,7 @@ export interface InstanceState {
   blocked: Blocked | null;
 }
 
-// ── Teacher payload (teacher_node_v2) ───────────────────────────────────────
+// ── Teacher payload (teacher_node_v3) ───────────────────────────────────────
 // Only the fields the screen renders. The payload also carries mastery,
 // misconceptions and routing reasons meant for the model, not the learner —
 // those are read by the store for logic (e.g. check rendering) but never
@@ -61,12 +61,38 @@ export interface CheckOption {
   text: string;
 }
 
+/**
+ * One crop of a figure group. Never a URL — `sha256` only identifies which
+ * bytes this is; the actual image address comes from the presentation
+ * manifest (`lessonService.getPresentationManifest`) and expires, so it is
+ * never cached on this type.
+ */
+export interface FigureCrop {
+  id: string;
+  sha256: string;
+  width_px: number;
+  height_px: number;
+  mime: string;
+  printed_text: string;
+  learner_alt_text: string;
+  tutor_description: string;
+}
+
+/** One instructional figure: its reading position among the node's content, and every crop it holds. */
+export interface FigureGroup {
+  id: string;
+  reading_order: number;
+  after_chunk_id: string | null;
+  figures: FigureCrop[];
+}
+
 export interface CheckItem {
   id: string;
   prompt: string;
   response_type: CheckResponseType;
   role: CheckRole;
   options: CheckOption[];
+  figure_groups: FigureGroup[];
 }
 
 export interface ToolConfig {
@@ -82,14 +108,6 @@ export interface LessonTool {
   version: string;
   component_ids: string[];
   config: ToolConfig;
-}
-
-export interface Asset {
-  id: string;
-  kind: "textbook_extract" | "verified_render";
-  sha256: string;
-  caption: string;
-  alt_text: string;
 }
 
 export interface Chunk {
@@ -113,7 +131,10 @@ export interface TeacherPayloadNode {
   type: NodeType;
   teach_only: boolean;
   sections: Section[];
-  assets: Asset[];
+  /** Teaching figures, in reading order. */
+  figure_groups: FigureGroup[];
+  /** Textbook-only figures (referenced from the node's sections, not taught directly). */
+  reference_groups: FigureGroup[];
   tools: LessonTool[];
   check_items: CheckItem[];
   bloom: string;
@@ -123,6 +144,25 @@ export interface TeacherPayloadNode {
 export interface TeacherPayload {
   node: TeacherPayloadNode;
   [key: string]: unknown;
+}
+
+// ── Presentation manifest (FIGURES_IN_TEACHING_v1 §9.2) ────────────────────
+// Signed, short-lived URLs for exactly the crops in the learner's current
+// payload. Never frozen: refetch it whenever an image 403s (its signature
+// expired) rather than treating that as a hard failure.
+
+export interface ManifestFigure {
+  figure_group_id: string;
+  url: string;
+  width_px: number;
+  height_px: number;
+  mime: string;
+  sha256: string;
+}
+
+export interface PresentationManifest {
+  expires_at: number;
+  figures: Record<string, ManifestFigure>;
 }
 
 // ── Answers ──────────────────────────────────────────────────────────────
@@ -280,6 +320,8 @@ export interface RecordedTurnOut {
   transcript_through_seq: number | null;
   learner_visible_through_seq: number | null;
   visibility_source: "learner_reported" | "unknown" | null;
+  /** Figure groups the teacher presented during this turn (FigurePolicy), oldest first. */
+  figure_group_ids: string[];
 }
 
 export interface TurnInterruptRequest {
@@ -294,13 +336,13 @@ export interface TurnInterruptOut {
   visibility_source: "learner_reported" | "unknown" | null;
 }
 
-// ── Stream events (teacher_turn_stream_v2) ──────────────────────────────────
+// ── Stream events (teacher_turn_stream_v3) ──────────────────────────────────
 // docs/specs/TEXT_STREAMING_TRANSPORT_v1.md §4. Every sequenced frame carries
 // v, type, turn_id, seq; a keepalive carries no seq/id and must never move
 // Last-Event-ID.
 
 export interface TurnStartedEvent {
-  v: 2;
+  v: 3;
   type: "turn_started";
   turn_id: string;
   seq: number;
@@ -313,7 +355,7 @@ export interface TurnStartedEvent {
 }
 
 export interface SafetyAppliedEvent {
-  v: 2;
+  v: 3;
   type: "safety_applied";
   turn_id: string;
   seq: number;
@@ -322,7 +364,7 @@ export interface SafetyAppliedEvent {
 }
 
 export interface AnswerRecordedEvent {
-  v: 2;
+  v: 3;
   type: "answer_recorded";
   turn_id: string;
   seq: number;
@@ -335,7 +377,7 @@ export interface AnswerRecordedEvent {
 }
 
 export interface StateChangedEvent {
-  v: 2;
+  v: 3;
   type: "state_changed";
   turn_id: string;
   seq: number;
@@ -343,8 +385,18 @@ export interface StateChangedEvent {
   instance: InstanceState;
 }
 
+/** A figure the teacher chose to show this turn (FigurePolicy, at most one per turn). */
+export interface FigurePresentedEvent {
+  v: 3;
+  type: "figure_presented";
+  turn_id: string;
+  seq: number;
+  replayed_from: string | null;
+  figure_group_id: string;
+}
+
 export interface TextDeltaEvent {
-  v: 2;
+  v: 3;
   type: "text_delta";
   turn_id: string;
   seq: number;
@@ -365,7 +417,7 @@ export type TurnFailedReason =
   | "context_drift";
 
 export interface TurnCompletedEvent {
-  v: 2;
+  v: 3;
   type: "turn_completed";
   turn_id: string;
   seq: number;
@@ -376,7 +428,7 @@ export interface TurnCompletedEvent {
 }
 
 export interface TurnFailedEvent {
-  v: 2;
+  v: 3;
   type: "turn_failed";
   turn_id: string;
   seq: number;
@@ -394,7 +446,7 @@ export type TurnInterruptedCause =
   | "server_shutdown";
 
 export interface TurnInterruptedEvent {
-  v: 2;
+  v: 3;
   type: "turn_interrupted";
   turn_id: string;
   seq: number;
@@ -403,7 +455,7 @@ export interface TurnInterruptedEvent {
 }
 
 export interface KeepaliveEvent {
-  v: 2;
+  v: 3;
   type: "keepalive";
   turn_id: string;
   committed_through_seq: number;
@@ -414,6 +466,7 @@ export type SequencedTeacherTurnEvent =
   | SafetyAppliedEvent
   | AnswerRecordedEvent
   | StateChangedEvent
+  | FigurePresentedEvent
   | TextDeltaEvent
   | TurnCompletedEvent
   | TurnFailedEvent

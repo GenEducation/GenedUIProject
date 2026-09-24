@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Send, Square } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import type { AnswerResponse } from "../types/lesson";
+import type { AnswerResponse, PresentationManifest, TeacherPayload } from "../types/lesson";
 import type { EarlierPart, TranscriptTurn } from "../store/useLessonStore";
 import type { LessonStep } from "../store/lessonFlow";
 import { CheckCard } from "./CheckCard";
@@ -15,6 +15,9 @@ interface LessonThreadProps {
   transcript: TranscriptTurn[];
   step: LessonStep;
   isSending: boolean;
+  payload: TeacherPayload;
+  manifest: PresentationManifest | null;
+  onExpiredManifest: () => void;
   onSend: (text: string) => void;
   onStop: () => void;
   onRegenerate: () => void;
@@ -30,8 +33,22 @@ interface LessonThreadProps {
  * box stays available for questions, and its label always says what it is for.
  */
 export function LessonThread(props: LessonThreadProps) {
-  const { earlier, partLabel, transcript, step, isSending, onSend, onStop, onRegenerate, onAnswer, onHint, onContinue } =
-    props;
+  const {
+    earlier,
+    partLabel,
+    transcript,
+    step,
+    isSending,
+    payload,
+    manifest,
+    onExpiredManifest,
+    onSend,
+    onStop,
+    onRegenerate,
+    onAnswer,
+    onHint,
+    onContinue,
+  } = props;
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -72,7 +89,14 @@ export function LessonThread(props: LessonThreadProps) {
 
             <PartDivider label={partLabel} />
             {transcript.map((turn, i) => (
-              <TurnView key={turn.turnId} turn={turn} onRegenerate={i === lastIndex ? onRegenerate : undefined} />
+              <TurnView
+                key={turn.turnId}
+                turn={turn}
+                onRegenerate={i === lastIndex ? onRegenerate : undefined}
+                payload={payload}
+                manifest={manifest}
+                onExpiredManifest={onExpiredManifest}
+              />
             ))}
 
             {step.kind === "check" && (
@@ -83,6 +107,8 @@ export function LessonThread(props: LessonThreadProps) {
                   ordinal={step.ordinal}
                   total={step.total}
                   disabled={isSending}
+                  manifest={manifest}
+                  onExpiredManifest={onExpiredManifest}
                   onSubmit={(response, latencyMs, displayText) => onAnswer(step.check.id, response, latencyMs, displayText)}
                   onHint={() => onHint(step.check.id)}
                 />

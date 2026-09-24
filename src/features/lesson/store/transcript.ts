@@ -16,6 +16,8 @@ export interface TranscriptTurn {
   answer?: { outcome: AnswerOutcome; correct: boolean | null };
   /** Shown only on this screen, never recorded as a turn (an answer that could not be read). */
   localOnly?: boolean;
+  /** The figure FigurePolicy chose to show alongside this turn's reply, if any (at most one per turn). */
+  figureGroupId?: string | null;
 }
 
 /** A part finished during this visit, kept above the current part's conversation. */
@@ -38,6 +40,7 @@ export function recordedTurnToTranscript(t: RecordedTurnOut): TranscriptTurn {
     retryable: closedStatus === "failed" ? true : undefined,
     createdAt: t.created_at,
     answer: t.outcome ? { outcome: t.outcome, correct: t.correct } : undefined,
+    figureGroupId: t.figure_group_ids[0] ?? null,
   };
 }
 

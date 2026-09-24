@@ -6,7 +6,10 @@ import { AlertCircle, CheckCircle2, ChevronDown, RotateCcw, XCircle } from "luci
 import { Button } from "@/components/ui/Button";
 import { MarkdownRenderer } from "@/features/student/components/MarkdownRenderer";
 import type { EarlierPart, TranscriptTurn } from "../store/useLessonStore";
+import type { PresentationManifest, TeacherPayload } from "../types/lesson";
+import { findFigureGroup } from "../store/figures";
 import { normalizeHeading } from "../display";
+import { FigureBlock } from "./FigureBlock";
 
 /** What happened, in the learner's terms. `connection_lost` is this client; every other reason is the server's. */
 const FAILURE_COPY: Record<string, string> = {
@@ -58,7 +61,17 @@ function AnswerBadge({ answer }: { answer: NonNullable<TranscriptTurn["answer"]>
   return <span className="text-xs font-semibold text-[#94A3B8]">Answer saved</span>;
 }
 
-export function TurnView({ turn, onRegenerate }: { turn: TranscriptTurn; onRegenerate?: () => void }) {
+interface TurnViewProps {
+  turn: TranscriptTurn;
+  onRegenerate?: () => void;
+  /** Needed to resolve `turn.figureGroupId` to its crops and their signed URLs. Omitted, no figure renders. */
+  payload?: TeacherPayload;
+  manifest?: PresentationManifest | null;
+  onExpiredManifest?: () => void;
+}
+
+export function TurnView({ turn, onRegenerate, payload, manifest, onExpiredManifest }: TurnViewProps) {
+  const figureGroup = turn.figureGroupId && payload ? findFigureGroup(payload, turn.figureGroupId) : null;
   return (
     <div className="mb-6">
       {turn.learnerText && (
@@ -87,6 +100,9 @@ export function TurnView({ turn, onRegenerate }: { turn: TranscriptTurn; onRegen
         <div className="flex items-start gap-3">
           <Avatar />
           <div className="min-w-0 flex-1 pt-0.5 text-[14.5px] leading-relaxed text-[#1A202C]">
+            {figureGroup && (
+              <FigureBlock group={figureGroup} manifest={manifest ?? null} onExpired={onExpiredManifest ?? (() => {})} />
+            )}
             {turn.teacherText ? (
               <MarkdownRenderer content={turn.teacherText} />
             ) : (

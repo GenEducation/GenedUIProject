@@ -9,6 +9,7 @@ vi.mock("../../services/lessonService", () => ({
     openInstance: vi.fn(),
     getInstance: vi.fn(),
     getTeacherPayload: vi.fn(),
+    getPresentationManifest: vi.fn(),
     submitAnswer: vi.fn(),
     recordEngagement: vi.fn(),
     recordHint: vi.fn(),
@@ -64,13 +65,16 @@ const payload: TeacherPayload = {
     type: "teach",
     teach_only: true,
     sections: [],
-    assets: [],
+    figure_groups: [],
+    reference_groups: [],
     tools: [],
     check_items: [],
     bloom: "understand",
     est_minutes: 5,
   },
 };
+
+const manifest = { expires_at: 0, figures: {} };
 
 /** Captures the handlers a stream-open call was given, so a test can feed it frames directly. */
 function captureHandlers(mock: typeof openStream | typeof resumeStream) {
@@ -96,6 +100,7 @@ describe("useLessonStore", () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
+    service.getPresentationManifest.mockResolvedValue(manifest);
     service.getTeacherTurns.mockResolvedValue([]);
     const getHandlers = captureHandlers(openStream);
 
@@ -112,7 +117,7 @@ describe("useLessonStore", () => {
 
     // Streaming text_delta frames append to the transcript in seq order.
     getHandlers().onFrame({
-      v: 2,
+      v: 3,
       type: "text_delta",
       turn_id: request.turn_id,
       seq: 1,
@@ -121,7 +126,7 @@ describe("useLessonStore", () => {
       suppressed: false,
     });
     getHandlers().onFrame({
-      v: 2,
+      v: 3,
       type: "turn_completed",
       turn_id: request.turn_id,
       seq: 2,
@@ -140,6 +145,7 @@ describe("useLessonStore", () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
+    service.getPresentationManifest.mockResolvedValue(manifest);
     service.getTeacherTurns.mockResolvedValue([
       {
         turn_id: "open-turn",
@@ -159,6 +165,7 @@ describe("useLessonStore", () => {
         transcript_through_seq: null,
         learner_visible_through_seq: null,
         visibility_source: null,
+        figure_group_ids: [],
       },
     ]);
 
@@ -174,13 +181,14 @@ describe("useLessonStore", () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
+    service.getPresentationManifest.mockResolvedValue(manifest);
     service.getTeacherTurns.mockResolvedValue([]);
     const getHandlers = captureHandlers(openStream);
     await useLessonStore.getState().loadChapter("ch-1");
     const openingTurnId = useLessonStore.getState().openTurnId!;
 
     getHandlers().onFrame({
-      v: 2,
+      v: 3,
       type: "text_delta",
       turn_id: openingTurnId,
       seq: 1,
@@ -204,6 +212,7 @@ describe("useLessonStore", () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
+    service.getPresentationManifest.mockResolvedValue(manifest);
     service.getTeacherTurns.mockResolvedValue([]);
     service.interruptTurn.mockResolvedValue({
       turn_id: "t",
@@ -216,7 +225,7 @@ describe("useLessonStore", () => {
     await useLessonStore.getState().loadChapter("ch-1");
     const turnId = useLessonStore.getState().openTurnId!;
     getHandlers().onFrame({
-      v: 2,
+      v: 3,
       type: "text_delta",
       turn_id: turnId,
       seq: 1,
@@ -234,6 +243,7 @@ describe("useLessonStore", () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
+    service.getPresentationManifest.mockResolvedValue(manifest);
     service.getTeacherTurns.mockResolvedValue([]);
     service.submitAnswer.mockResolvedValue({
       attempt_id: "attempt-1",
@@ -271,6 +281,7 @@ describe("useLessonStore", () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
+    service.getPresentationManifest.mockResolvedValue(manifest);
     service.getTeacherTurns.mockResolvedValue([]);
     service.submitAnswer.mockResolvedValue({
       attempt_id: "attempt-2",
@@ -297,11 +308,12 @@ describe("useLessonStore", () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
+    service.getPresentationManifest.mockResolvedValue(manifest);
     service.getTeacherTurns.mockResolvedValue([]);
     const getHandlers = captureHandlers(openStream);
     await useLessonStore.getState().loadChapter("ch-1");
     getHandlers().onFrame({
-      v: 2, type: "turn_completed", turn_id: useLessonStore.getState().openTurnId!, seq: 1,
+      v: 3, type: "turn_completed", turn_id: useLessonStore.getState().openTurnId!, seq: 1,
       status: "completed", finish_reason: "stop", first_token_ms: null, duration_ms: null,
     });
 
@@ -318,6 +330,7 @@ describe("useLessonStore", () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
+    service.getPresentationManifest.mockResolvedValue(manifest);
     service.getTeacherTurns.mockResolvedValue([]);
     const getHandlers = captureHandlers(openStream);
     await useLessonStore.getState().loadChapter("ch-1");
@@ -332,6 +345,7 @@ describe("useLessonStore", () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
+    service.getPresentationManifest.mockResolvedValue(manifest);
     service.getTeacherTurns.mockResolvedValue([]);
     captureHandlers(openStream);
     await useLessonStore.getState().loadChapter("ch-1");
@@ -348,6 +362,7 @@ describe("useLessonStore", () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
+    service.getPresentationManifest.mockResolvedValue(manifest);
     service.getTeacherTurns.mockResolvedValue([]);
     const getHandlers = captureHandlers(openStream);
     await useLessonStore.getState().loadChapter("ch-1");
@@ -363,6 +378,7 @@ describe("useLessonStore", () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
+    service.getPresentationManifest.mockResolvedValue(manifest);
     service.getTeacherTurns.mockResolvedValue([]);
     service.submitAnswer.mockResolvedValue({
       attempt_id: "attempt-3",
@@ -389,18 +405,19 @@ describe("useLessonStore", () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
+    service.getPresentationManifest.mockResolvedValue(manifest);
     service.getTeacherTurns.mockResolvedValue([]);
     const getHandlers = captureHandlers(openStream);
     await useLessonStore.getState().loadChapter("ch-1");
     getHandlers().onFrame({
-      v: 2, type: "turn_completed", turn_id: useLessonStore.getState().openTurnId!, seq: 1,
+      v: 3, type: "turn_completed", turn_id: useLessonStore.getState().openTurnId!, seq: 1,
       status: "completed", finish_reason: "stop", first_token_ms: null, duration_ms: null,
     });
 
     await useLessonStore.getState().sendMessage("3");
     const turnId = useLessonStore.getState().openTurnId!;
     getHandlers().onFrame({
-      v: 2, type: "answer_recorded", turn_id: turnId, seq: 1, replayed_from: null,
+      v: 3, type: "answer_recorded", turn_id: turnId, seq: 1, replayed_from: null,
       attempt_id: "a", item_id: "i", outcome: "correct", correct: true, round_state: "passed",
     });
 
@@ -414,6 +431,7 @@ describe("useLessonStore", () => {
     const instance = activeInstance();
     service.openInstance.mockResolvedValue(instance);
     service.getTeacherPayload.mockResolvedValue(payload);
+    service.getPresentationManifest.mockResolvedValue(manifest);
     service.getTeacherTurns.mockResolvedValue([]);
     const getHandlers = captureHandlers(openStream);
     await useLessonStore.getState().loadChapter("ch-1");

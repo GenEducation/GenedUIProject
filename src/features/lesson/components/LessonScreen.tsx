@@ -25,6 +25,7 @@ export function LessonScreen({ chapterId }: LessonScreenProps) {
     phase,
     instance,
     payload,
+    manifest,
     transcript,
     earlier,
     openTurnId,
@@ -85,6 +86,7 @@ export function LessonScreen({ chapterId }: LessonScreenProps) {
   const last = transcript[transcript.length - 1] ?? null;
   const step = deriveStep(instance, payload, openTurnId !== null, last);
   const partNumber = Math.min(instance.nodes_done + 1, instance.nodes_total);
+  const presentedGroupIds = new Set(transcript.map((t) => t.figureGroupId).filter((id): id is string => Boolean(id)));
 
   return (
     <div className="flex h-full flex-col">
@@ -97,6 +99,9 @@ export function LessonScreen({ chapterId }: LessonScreenProps) {
             transcript={transcript}
             step={step}
             isSending={isSending}
+            payload={payload}
+            manifest={manifest}
+            onExpiredManifest={actions.refreshManifest}
             onSend={actions.sendMessage}
             onStop={actions.stopTeacher}
             onRegenerate={actions.regenerateLastTurn}
@@ -110,6 +115,9 @@ export function LessonScreen({ chapterId }: LessonScreenProps) {
             <TextbookDrawer
               payload={payload}
               sectionCache={sectionCache}
+              manifest={manifest}
+              onExpiredManifest={actions.refreshManifest}
+              presentedGroupIds={presentedGroupIds}
               onClose={() => setTextbookOpen(false)}
               onAskTutor={() => {
                 setTextbookOpen(false);

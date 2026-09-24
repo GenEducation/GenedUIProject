@@ -18,6 +18,7 @@ import type {
   AnswerResponse,
   ChapterReport,
   InstanceState,
+  PresentationManifest,
   Section,
   TeacherPayload,
   TeacherTurnStreamFrame,
@@ -40,6 +41,8 @@ interface LessonState {
   phase: LessonPhase;
   instance: InstanceState | null;
   payload: TeacherPayload | null;
+  /** Signed URLs for the current payload's crops. Never frozen — refetch on an image 403. */
+  manifest: PresentationManifest | null;
   transcript: TranscriptTurn[];
   /** Parts finished during this visit, kept above the current part's conversation. */
   earlier: EarlierPart[];
@@ -65,6 +68,8 @@ interface LessonState {
   requestHint: (itemId: string) => Promise<void>;
   markNodeDone: () => Promise<void>;
   regenerateLastTurn: () => Promise<void>;
+  /** A figure's signed URL expired (its <img> 403'd). Reissues the manifest, TTL-bucketed so this is cheap. */
+  refreshManifest: () => Promise<void>;
   reset: () => void;
 }
 
@@ -75,6 +80,7 @@ const INITIAL = {
   phase: "idle" as LessonPhase,
   instance: null as InstanceState | null,
   payload: null as TeacherPayload | null,
+  manifest: null as PresentationManifest | null,
   transcript: [] as TranscriptTurn[],
   earlier: [] as EarlierPart[],
   chapterTitle: null as string | null,
@@ -262,6 +268,18 @@ export const useLessonStore = create<LessonState>((set, get) => ({
     });
   },
 
+  refreshManifest: async () => {
+    const { instance } = get();
+    if (!instance) return;
+    try {
+      const manifest = await lessonService.getPresentationManifest(instance.id);
+      set({ manifest });
+    } catch {
+      // The images that were already showing keep their (possibly now-expired) URLs;
+      // the next render attempt (or a full reload) will pick up a fresh manifest.
+    }
+  },
+
   reset: () => {
     stopActiveStream();
     set(INITIAL);
@@ -323,9 +341,10 @@ async function refreshForNode(set: Set, get: Get, instance: InstanceState): Prom
     return;
   }
 
-  const [payload, recorded] = await Promise.all([
+  const [payload, recorded, manifest] = await Promise.all([
     lessonService.getTeacherPayload(instance.id),
     lessonService.getTeacherTurns(instance.id, instance.active_node.instance_node_id),
+    lessonService.getPresentationManifest(instance.id),
   ]);
 
   const previous = get();
@@ -353,6 +372,7 @@ async function refreshForNode(set: Set, get: Get, instance: InstanceState): Prom
     phase: instance.blocked ? "blocked" : "ready",
     instance,
     payload,
+    manifest,
     sectionCache,
     chapterTitle,
     transcript,
@@ -410,6 +430,9 @@ function handleFrame(set: Set, get: Get, frame: TeacherTurnStreamFrame): void {
       case "answer_recorded":
         // A chat message the server read as an answer to the open question.
         turn.answer = { outcome: frame.outcome, correct: frame.correct };
+        break;
+      case "figure_presented":
+        turn.figureGroupId = frame.figure_group_id;
         break;
       case "state_changed":
         // Authoritative: represents the plan moving to a new active node,

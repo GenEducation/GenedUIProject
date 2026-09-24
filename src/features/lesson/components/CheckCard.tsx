@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import type { AnswerResponse, CheckItem } from "../types/lesson";
+import type { AnswerResponse, CheckItem, PresentationManifest } from "../types/lesson";
 import { cleanPrompt, isReadableNumber } from "../display";
+import { FigureBlock } from "./FigureBlock";
 
 interface CheckCardProps {
   check: CheckItem;
   ordinal: number;
   total: number;
   disabled?: boolean;
+  manifest?: PresentationManifest | null;
+  onExpiredManifest?: () => void;
   /** `displayText` is how the answer reads in the conversation. */
   onSubmit: (response: AnswerResponse, latencyMs: number, displayText: string) => void;
   onHint: () => void;
@@ -22,7 +25,7 @@ interface CheckCardProps {
  * in the backend: both are graded from free text, one by exact algebraic
  * equivalence, one by a normalized string set).
  */
-export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }: CheckCardProps) {
+export function CheckCard({ check, ordinal, total, disabled, manifest, onExpiredManifest, onSubmit, onHint }: CheckCardProps) {
   const [text, setText] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [order, setOrder] = useState<string[]>(check.options.map((o) => o.id));
@@ -102,6 +105,15 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
         Check {ordinal} of {total}
       </div>
       <p className="mb-3 text-sm font-semibold text-[var(--primary-ink)]">{cleanPrompt(check.prompt)}</p>
+
+      {check.figure_groups.map((group) => (
+        <FigureBlock
+          key={group.id}
+          group={group}
+          manifest={manifest ?? null}
+          onExpired={onExpiredManifest ?? (() => {})}
+        />
+      ))}
 
       {check.response_type === "mcq" && (
         <div className="flex flex-col gap-2">

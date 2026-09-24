@@ -7,6 +7,7 @@ import type {
   EngagementBody,
   HintBody,
   InstanceState,
+  PresentationManifest,
   RecordedTurnOut,
   TeacherPayload,
   TurnInterruptOut,
@@ -48,6 +49,26 @@ export const lessonService = {
   getTeacherPayload: async (instanceId: string): Promise<TeacherPayload> => {
     const response = await authFetch(`${INSTANCES_BASE}/${instanceId}/teacher-payload`);
     return response.json();
+  },
+
+  /**
+   * Signed, short-lived URLs for exactly the crops in the current teacher
+   * payload (§9.2). Never frozen: refetch it whenever an image 403s (its
+   * signature's TTL window passed) — the asset route itself takes no auth
+   * header, so an `<img>` tag can use its `url` directly.
+   */
+  getPresentationManifest: async (instanceId: string): Promise<PresentationManifest> => {
+    const response = await authFetch(`${INSTANCES_BASE}/${instanceId}/teacher-payload/presentation-manifest`);
+    const manifest: PresentationManifest = await response.json();
+    // The API returns each `url` relative to its own origin; resolve it against
+    // API_BASE_URL here so every caller can use it as-is in an <img src>.
+    if (!API_BASE_URL) return manifest;
+    return {
+      ...manifest,
+      figures: Object.fromEntries(
+        Object.entries(manifest.figures).map(([id, f]) => [id, { ...f, url: `${API_BASE_URL}${f.url}` }]),
+      ),
+    };
   },
 
   submitAnswer: async (instanceId: string, body: AnswerBody): Promise<AnswerResult> => {
