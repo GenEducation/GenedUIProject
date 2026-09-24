@@ -22,6 +22,13 @@ import { PlacementBoard } from "./PlacementBoard";
  * COMPLETED and ONBD_1104 (ICSE, or a grade outside 3–9) both resolve to
  * "render nothing, quietly".
  */
+/**
+ * Placement is served by the MVP onboarding service. Against a backend without it (the
+ * new gened stack run locally), every student page opens a "couldn't load your test"
+ * dialog, so it can be switched off with NEXT_PUBLIC_PLACEMENT_ENABLED=false. On by default.
+ */
+const PLACEMENT_ENABLED = process.env.NEXT_PUBLIC_PLACEMENT_ENABLED !== "false";
+
 export function PlacementGate() {
   const studentProfile = useStudentStore((s) => s.studentProfile);
   const checkStatus = usePlacementStore((s) => s.checkStatus);
@@ -35,13 +42,13 @@ export function PlacementGate() {
   const hasName = Boolean(studentProfile?.name);
 
   useEffect(() => {
-    if (!studentId || !hasName) return;
+    if (!PLACEMENT_ENABLED || !studentId || !hasName) return;
     if (checkedFor.current === studentId) return;
     checkedFor.current = studentId;
     void checkStatus(studentId);
   }, [studentId, hasName, checkStatus]);
 
-  if (!studentId || !hasName) return null;
+  if (!PLACEMENT_ENABLED || !studentId || !hasName) return null;
 
   return <PlacementBoard studentId={studentId} subjects={subjects} />;
 }

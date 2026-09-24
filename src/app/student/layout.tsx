@@ -12,6 +12,14 @@ import { usePathname } from "next/navigation";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { ToastStack, ToastItem } from "@/features/teacher/components/Toast";
 
+/**
+ * The notification service is part of the MVP stack. Against a backend without it
+ * (the new gened stack run locally), the stream fails on every page and floods the
+ * console, so it can be switched off with NEXT_PUBLIC_NOTIFICATIONS_ENABLED=false.
+ * On by default: nothing changes unless the variable is set.
+ */
+const NOTIFICATIONS_ENABLED = process.env.NEXT_PUBLIC_NOTIFICATIONS_ENABLED !== "false";
+
 export default function StudentLayout({
   children,
 }: {
@@ -32,7 +40,7 @@ export default function StudentLayout({
 
   // Fetch notification history so the bell's unread badge is correct before the bell mounts
   useEffect(() => {
-    if (!studentProfile?.user_id) return;
+    if (!NOTIFICATIONS_ENABLED || !studentProfile?.user_id) return;
     fetchNotifications(studentProfile.user_id);
 
     const onFocus = () => fetchNotifications(studentProfile.user_id);
@@ -42,7 +50,7 @@ export default function StudentLayout({
 
   // Subscribe to real-time notification stream (SSE) via the shared notification store
   useEffect(() => {
-    if (!studentProfile?.user_id) return;
+    if (!NOTIFICATIONS_ENABLED || !studentProfile?.user_id) return;
 
     console.log("Initializing SSE notification stream for student layout...");
     const unsubscribe = initStream(studentProfile.user_id, (data) => {

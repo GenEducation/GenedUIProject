@@ -21,8 +21,20 @@ interface LessonScreenProps {
  * drawer to open for reference rather than a second place to look.
  */
 export function LessonScreen({ chapterId }: LessonScreenProps) {
-  const { phase, instance, payload, transcript, earlier, openTurnId, report, errorMessage, isSending, ...actions } =
-    useLessonStore();
+  const {
+    phase,
+    instance,
+    payload,
+    transcript,
+    earlier,
+    openTurnId,
+    report,
+    errorMessage,
+    isSending,
+    chapterTitle,
+    sectionCache,
+    ...actions
+  } = useLessonStore();
   const [textbookOpen, setTextbookOpen] = useState(false);
 
   useEffect(() => {
@@ -63,14 +75,16 @@ export function LessonScreen({ chapterId }: LessonScreenProps) {
   if (phase === "completed" && report) {
     return (
       <div className="h-full overflow-y-auto">
-        <ChapterReportView report={report} />
+        <ChapterReportView report={report} chapterTitle={chapterTitle} earlier={earlier} transcript={transcript} />
       </div>
     );
   }
 
   if (!instance || !payload) return null;
 
-  const step = deriveStep(instance, payload, openTurnId !== null);
+  const last = transcript[transcript.length - 1] ?? null;
+  const step = deriveStep(instance, payload, openTurnId !== null, last);
+  const partNumber = Math.min(instance.nodes_done + 1, instance.nodes_total);
 
   return (
     <div className="flex h-full flex-col">
@@ -79,7 +93,7 @@ export function LessonScreen({ chapterId }: LessonScreenProps) {
         <div className="min-w-0 flex-1">
           <LessonThread
             earlier={earlier}
-            partTitle={instance.active_node?.title ?? "This part"}
+            partLabel={`Part ${partNumber}`}
             transcript={transcript}
             step={step}
             isSending={isSending}
@@ -93,7 +107,7 @@ export function LessonScreen({ chapterId }: LessonScreenProps) {
         </div>
         {textbookOpen && (
           <div className="absolute inset-0 z-10 sm:static sm:inset-auto">
-            <TextbookDrawer payload={payload} onClose={() => setTextbookOpen(false)} />
+            <TextbookDrawer payload={payload} sectionCache={sectionCache} onClose={() => setTextbookOpen(false)} />
           </div>
         )}
       </div>

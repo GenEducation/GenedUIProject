@@ -2,6 +2,13 @@ import { create } from "zustand";
 import { asError } from "@/utils/errors";
 import { lessonService } from "../services/lessonService";
 import {
+  isAlreadyCoveredNote,
+  mergeTranscript,
+  recordedTurnToTranscript,
+  type EarlierPart,
+  type TranscriptTurn,
+} from "./transcript";
+import {
   openTeacherTurnStream,
   resumeTeacherTurnStream,
   TurnRejected,
@@ -11,33 +18,13 @@ import type {
   AnswerResponse,
   ChapterReport,
   InstanceState,
-  RecordedTurnOut,
+  Section,
   TeacherPayload,
   TeacherTurnStreamFrame,
-  TurnFailedReason,
   TurnKind,
 } from "../types/lesson";
 
-/** One line of the on-screen transcript. A turn contributes at most one. */
-export interface TranscriptTurn {
-  turnId: string;
-  kind: TurnKind;
-  learnerText: string | null;
-  teacherText: string;
-  /** Live while its stream is open; frozen once a terminal event lands. */
-  status: "streaming" | "completed" | "interrupted" | "failed";
-  failedReason?: TurnFailedReason;
-  retryable?: boolean;
-  createdAt: string;
-  /** Set on a result_reaction turn: how the learner's answer scored, shown beside their answer. */
-  answer?: { outcome: AnswerFeedback["outcome"]; correct: boolean | null };
-}
-
-export interface EarlierPart {
-  instanceNodeId: string;
-  title: string;
-  turns: TranscriptTurn[];
-}
+export type { EarlierPart, TranscriptTurn } from "./transcript";
 
 interface AnswerFeedback {
   itemId: string;
@@ -56,6 +43,10 @@ interface LessonState {
   transcript: TranscriptTurn[];
   /** Parts finished during this visit, kept above the current part's conversation. */
   earlier: EarlierPart[];
+  /** The chapter's name, from the textbook path of the first section seen. */
+  chapterTitle: string | null;
+  /** Textbook sections seen this visit, by section version, so a later part that reuses them can show them. */
+  sectionCache: Record<string, Section>;
   /** The turn currently streaming, if any — drives the Stop button and the resume-on-reload check. */
   openTurnId: string | null;
   /** Highest seq the learner has actually seen rendered for the open turn (§4/§5 "visible_seq"). */
@@ -86,6 +77,8 @@ const INITIAL = {
   payload: null as TeacherPayload | null,
   transcript: [] as TranscriptTurn[],
   earlier: [] as EarlierPart[],
+  chapterTitle: null as string | null,
+  sectionCache: {} as Record<string, Section>,
   openTurnId: null as string | null,
   visibleSeq: 0,
   lastAnswerFeedback: null as AnswerFeedback | null,
@@ -174,6 +167,22 @@ export const useLessonStore = create<LessonState>((set, get) => ({
         latency_ms: latencyMs,
         response,
       });
+      if (result.outcome === "unscorable") {
+        // Nothing was scored and the question is still open. There is nothing for the
+        // tutor to react to (the attempt has no feedback), so say so here, without a model call.
+        const turn: TranscriptTurn = {
+          turnId: newRequestId(),
+          kind: "result_reaction",
+          learnerText: displayText ?? null,
+          teacherText: "",
+          status: "completed",
+          createdAt: new Date().toISOString(),
+          answer: { outcome: "unscorable", correct: null },
+          localOnly: true,
+        };
+        set({ instance: sameNodeOrKeep(get().instance, result.instance), isSending: false, transcript: [...get().transcript, turn] });
+        return;
+      }
       set({
         instance: sameNodeOrKeep(get().instance, result.instance),
         isSending: false,
@@ -334,10 +343,18 @@ async function refreshForNode(set: Set, get: Get, instance: InstanceState): Prom
   }
   const openTurn = recorded.find((t) => t.closed_at === null);
 
+  const sectionCache = { ...previous.sectionCache };
+  for (const section of payload.node.sections) {
+    if (!isAlreadyCoveredNote(section)) sectionCache[section.version_id] = section;
+  }
+  const chapterTitle = previous.chapterTitle ?? payload.node.sections.find((sec) => sec.path.length > 1)?.path[0] ?? null;
+
   set({
     phase: instance.blocked ? "blocked" : "ready",
     instance,
     payload,
+    sectionCache,
+    chapterTitle,
     transcript,
     openTurnId: openTurn?.turn_id ?? null,
     visibleSeq: openTurn?.committed_through_seq ?? 0,
@@ -389,6 +406,10 @@ function handleFrame(set: Set, get: Get, frame: TeacherTurnStreamFrame): void {
         turn.status = "failed";
         turn.failedReason = frame.reason;
         turn.retryable = frame.retryable;
+        break;
+      case "answer_recorded":
+        // A chat message the server read as an answer to the open question.
+        turn.answer = { outcome: frame.outcome, correct: frame.correct };
         break;
       case "state_changed":
         // Authoritative: represents the plan moving to a new active node,
@@ -458,10 +479,11 @@ function giveUp(set: Set, get: Get, error: unknown): void {
     set({ errorCode: error.error_code, errorMessage: error.message });
     return;
   }
-  markOpenTurnFailed(set, "stream_interrupted");
+  // The server may well have finished the reply; this client just couldn't reach it.
+  markOpenTurnFailed(set, "connection_lost");
 }
 
-function markOpenTurnFailed(set: Set, reason: TurnFailedReason): void {
+function markOpenTurnFailed(set: Set, reason: TranscriptTurn["failedReason"]): void {
   set((state) => ({
     transcript: state.transcript.map((t) =>
       t.turnId === state.openTurnId ? { ...t, status: "failed" as const, failedReason: reason, retryable: true } : t,
@@ -478,27 +500,4 @@ function attachStream(handle: TeacherTurnStreamHandle): void {
 function stopActiveStream(): void {
   activeStream?.close();
   activeStream = null;
-}
-
-function recordedTurnToTranscript(t: RecordedTurnOut): TranscriptTurn {
-  const closedStatus = t.status === "interrupted" ? "interrupted" : t.status === "failed" ? "failed" : "completed";
-  return {
-    turnId: t.turn_id,
-    kind: t.kind,
-    learnerText: t.learner_text ?? (t.kind === "hint" ? "Can I have a hint?" : null),
-    teacherText: t.teacher_text ?? "",
-    status: t.closed_at ? closedStatus : "streaming",
-    createdAt: t.created_at,
-    answer: t.outcome ? { outcome: t.outcome, correct: t.correct } : undefined,
-  };
-}
-
-/** Recorded turns are canonical, but keep what only this client knows: the text of an answer given in a card. */
-function mergeTranscript(recorded: TranscriptTurn[], local: TranscriptTurn[]): TranscriptTurn[] {
-  const byId = new Map(local.map((t) => [t.turnId, t]));
-  return recorded.map((t) => {
-    const mine = byId.get(t.turnId);
-    if (!mine) return t;
-    return { ...t, learnerText: t.learnerText ?? mine.learnerText, answer: t.answer ?? mine.answer };
-  });
 }

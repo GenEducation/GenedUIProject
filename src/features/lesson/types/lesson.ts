@@ -101,6 +101,7 @@ export interface Chunk {
 
 export interface Section {
   id: string;
+  version_id: string;
   title: string;
   path: string[];
   chunks: Chunk[];

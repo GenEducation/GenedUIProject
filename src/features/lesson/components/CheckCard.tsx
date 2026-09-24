@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import type { AnswerResponse, CheckItem } from "../types/lesson";
+import { cleanPrompt, isReadableNumber } from "../display";
 
 interface CheckCardProps {
   check: CheckItem;
@@ -29,11 +30,17 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
 
   const latency = () => Date.now() - shownAt;
 
+  const typed = check.response_type === "numeric" || check.response_type === "symbolic" || check.response_type === "string_set";
+  // A number question accepts only what the marker can read (see display.isReadableNumber).
+  const unreadable = check.response_type === "numeric" && text.trim().length > 0 && !isReadableNumber(text);
+
   const submitDisabled =
     disabled ||
     (check.response_type === "mcq" && selected.length === 0) ||
-    ((check.response_type === "numeric" || check.response_type === "symbolic" || check.response_type === "string_set") &&
-      text.trim().length === 0);
+    (typed && text.trim().length === 0) ||
+    // No pairing control exists yet, and a guessed pairing would be marked as a real answer.
+    check.response_type === "matching" ||
+    unreadable;
 
   const handleSubmit = () => {
     let response: AnswerResponse;
@@ -99,7 +106,7 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
           {isCheckpoint ? "Checkpoint" : "Quick check"}
         </span>
       </div>
-      <p className="mb-3 text-sm font-semibold text-[var(--primary-ink)]">{check.prompt}</p>
+      <p className="mb-3 text-sm font-semibold text-[var(--primary-ink)]">{cleanPrompt(check.prompt)}</p>
 
       {check.response_type === "mcq" && (
         <div className="flex flex-col gap-2">
@@ -124,7 +131,7 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
         </div>
       )}
 
-      {(check.response_type === "numeric" || check.response_type === "symbolic" || check.response_type === "string_set") && (
+      {typed && (
         <input
           type="text"
           value={text}
@@ -132,10 +139,14 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && !submitDisabled && handleSubmit()}
           autoFocus
-          placeholder={check.response_type === "numeric" ? "e.g. 1/2" : "Type your answer"}
+          placeholder={check.response_type === "numeric" ? "Type a number" : "Type your answer"}
           className="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none"
-          style={{ borderColor: "#E2E8F0" }}
+          style={{ borderColor: unreadable ? "#E8635A" : "#E2E8F0" }}
+          aria-invalid={unreadable}
         />
+      )}
+      {unreadable && (
+        <p className="mt-1.5 text-xs text-[#B83F37]">Write your answer with digits, like 2, 1/2 or 1 1/2.</p>
       )}
 
       {check.response_type === "sequence" && (
@@ -164,8 +175,7 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
 
       {check.response_type === "matching" && (
         <p className="text-xs text-[#94A3B8]">
-          Matching pairs isn&apos;t built yet — Submit sends an unpaired identity match so the rest of the flow
-          (scoring, teacher reaction) can still be exercised.
+          Matching questions can&apos;t be answered here yet. Talk it through with your tutor instead.
         </p>
       )}
 

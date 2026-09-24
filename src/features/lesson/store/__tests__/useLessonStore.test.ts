@@ -358,4 +358,69 @@ describe("useLessonStore", () => {
     expect(useLessonStore.getState().transcript.find((t) => t.turnId === turnId)?.status).toBe("failed");
     expect(useLessonStore.getState().openTurnId).toBeNull();
   });
+
+  it("does not ask the tutor to react to an answer it could not read, and keeps the question open", async () => {
+    const instance = activeInstance();
+    service.openInstance.mockResolvedValue(instance);
+    service.getTeacherPayload.mockResolvedValue(payload);
+    service.getTeacherTurns.mockResolvedValue([]);
+    service.submitAnswer.mockResolvedValue({
+      attempt_id: "attempt-3",
+      outcome: "unscorable",
+      correct: null,
+      eligibility_reason: null,
+      round_id: "round-1",
+      round_state: "open",
+      replayed: false,
+      instance,
+    });
+    captureHandlers(openStream);
+    await useLessonStore.getState().loadChapter("ch-1");
+    openStream.mockClear();
+
+    await useLessonStore.getState().submitAnswer("item-1", { kind: "numeric", value: "two" }, 500, "two");
+
+    expect(openStream).not.toHaveBeenCalled();
+    const last = useLessonStore.getState().transcript.at(-1)!;
+    expect(last).toMatchObject({ learnerText: "two", answer: { outcome: "unscorable" }, localOnly: true });
+  });
+
+  it("marks a chat message the server read as an answer", async () => {
+    const instance = activeInstance();
+    service.openInstance.mockResolvedValue(instance);
+    service.getTeacherPayload.mockResolvedValue(payload);
+    service.getTeacherTurns.mockResolvedValue([]);
+    const getHandlers = captureHandlers(openStream);
+    await useLessonStore.getState().loadChapter("ch-1");
+    getHandlers().onFrame({
+      v: 2, type: "turn_completed", turn_id: useLessonStore.getState().openTurnId!, seq: 1,
+      status: "completed", finish_reason: "stop", first_token_ms: null, duration_ms: null,
+    });
+
+    await useLessonStore.getState().sendMessage("3");
+    const turnId = useLessonStore.getState().openTurnId!;
+    getHandlers().onFrame({
+      v: 2, type: "answer_recorded", turn_id: turnId, seq: 1, replayed_from: null,
+      attempt_id: "a", item_id: "i", outcome: "correct", correct: true, round_state: "passed",
+    });
+
+    expect(useLessonStore.getState().transcript.find((t) => t.turnId === turnId)?.answer).toEqual({
+      outcome: "correct",
+      correct: true,
+    });
+  });
+
+  it("says the connection was lost, not that the tutor failed, when this client gives up", async () => {
+    const instance = activeInstance();
+    service.openInstance.mockResolvedValue(instance);
+    service.getTeacherPayload.mockResolvedValue(payload);
+    service.getTeacherTurns.mockResolvedValue([]);
+    const getHandlers = captureHandlers(openStream);
+    await useLessonStore.getState().loadChapter("ch-1");
+    const turnId = useLessonStore.getState().openTurnId!;
+
+    getHandlers().onGiveUp?.(new Error("network"));
+
+    expect(useLessonStore.getState().transcript.find((t) => t.turnId === turnId)?.failedReason).toBe("connection_lost");
+  });
 });
