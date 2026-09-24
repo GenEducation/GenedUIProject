@@ -3,6 +3,7 @@
 import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { InstanceState } from "../types/lesson";
+import { normalizeHeading } from "../display";
 
 const NODE_TYPE_LABEL: Record<string, string> = {
   teach: "Learn",
@@ -30,7 +31,9 @@ export function LessonHeader({ instance, textbookOpen, onToggleTextbook }: Lesso
             Part {partNumber} of {instance.nodes_total}
             {node && ` · ${NODE_TYPE_LABEL[node.type] ?? node.type}`}
           </p>
-          <h2 className="truncate text-base font-black text-[var(--primary-ink)]">{node?.title ?? "Lesson"}</h2>
+          <h2 className="truncate text-base font-black text-[var(--primary-ink)]">
+            {node ? normalizeHeading(node.title) : "Lesson"}
+          </h2>
         </div>
         <Button
           size="sm"

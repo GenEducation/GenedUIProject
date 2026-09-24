@@ -107,7 +107,15 @@ export function LessonScreen({ chapterId }: LessonScreenProps) {
         </div>
         {textbookOpen && (
           <div className="absolute inset-0 z-10 sm:static sm:inset-auto">
-            <TextbookDrawer payload={payload} sectionCache={sectionCache} onClose={() => setTextbookOpen(false)} />
+            <TextbookDrawer
+              payload={payload}
+              sectionCache={sectionCache}
+              onClose={() => setTextbookOpen(false)}
+              onAskTutor={() => {
+                setTextbookOpen(false);
+                actions.sendMessage("Can you go over that earlier part again?");
+              }}
+            />
           </div>
         )}
       </div>

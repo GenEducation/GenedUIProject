@@ -27,12 +27,15 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
   const [selected, setSelected] = useState<string[]>([]);
   const [order, setOrder] = useState<string[]>(check.options.map((o) => o.id));
   const [shownAt] = useState(() => Date.now());
+  const [touched, setTouched] = useState(false);
 
   const latency = () => Date.now() - shownAt;
 
   const typed = check.response_type === "numeric" || check.response_type === "symbolic" || check.response_type === "string_set";
   // A number question accepts only what the marker can read (see display.isReadableNumber).
-  const unreadable = check.response_type === "numeric" && text.trim().length > 0 && !isReadableNumber(text);
+  const invalidNumber = check.response_type === "numeric" && text.trim().length > 0 && !isReadableNumber(text);
+  // Only flag it once the learner has paused (blur or Enter), not while they're still typing a prefix like "1/".
+  const showNumberError = invalidNumber && touched;
 
   const submitDisabled =
     disabled ||
@@ -40,7 +43,7 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
     (typed && text.trim().length === 0) ||
     // No pairing control exists yet, and a guessed pairing would be marked as a real answer.
     check.response_type === "matching" ||
-    unreadable;
+    invalidNumber;
 
   const handleSubmit = () => {
     let response: AnswerResponse;
@@ -95,16 +98,8 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
       className="rounded-2xl border-l-[3px] bg-white p-4 shadow-[0_1px_3px_rgba(4,46,92,0.04)]"
       style={{ borderColor: accent, borderTop: "1px solid rgba(4,46,92,0.06)", borderRight: "1px solid rgba(4,46,92,0.06)", borderBottom: "1px solid rgba(4,46,92,0.06)" }}
     >
-      <div className="mb-2 flex items-center justify-between text-xs font-semibold text-[#94A3B8]">
-        <span>
-          Check {ordinal} of {total}
-        </span>
-        <span
-          className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-          style={{ background: `${accent}14`, color: accent }}
-        >
-          {isCheckpoint ? "Checkpoint" : "Quick check"}
-        </span>
+      <div className="mb-2 text-xs font-semibold" style={{ color: accent }}>
+        Check {ordinal} of {total}
       </div>
       <p className="mb-3 text-sm font-semibold text-[var(--primary-ink)]">{cleanPrompt(check.prompt)}</p>
 
@@ -137,15 +132,20 @@ export function CheckCard({ check, ordinal, total, disabled, onSubmit, onHint }:
           value={text}
           disabled={disabled}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !submitDisabled && handleSubmit()}
+          onBlur={() => setTouched(true)}
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            if (invalidNumber) setTouched(true);
+            else if (!submitDisabled) handleSubmit();
+          }}
           autoFocus
           placeholder={check.response_type === "numeric" ? "Type a number" : "Type your answer"}
           className="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none"
-          style={{ borderColor: unreadable ? "#E8635A" : "#E2E8F0" }}
-          aria-invalid={unreadable}
+          style={{ borderColor: showNumberError ? "#E8635A" : "#E2E8F0" }}
+          aria-invalid={showNumberError}
         />
       )}
-      {unreadable && (
+      {showNumberError && (
         <p className="mt-1.5 text-xs text-[#B83F37]">Write your answer with digits, like 2, 1/2 or 1 1/2.</p>
       )}
 

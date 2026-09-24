@@ -6,6 +6,7 @@ import { AlertCircle, CheckCircle2, ChevronDown, RotateCcw, XCircle } from "luci
 import { Button } from "@/components/ui/Button";
 import { MarkdownRenderer } from "@/features/student/components/MarkdownRenderer";
 import type { EarlierPart, TranscriptTurn } from "../store/useLessonStore";
+import { normalizeHeading } from "../display";
 
 /** What happened, in the learner's terms. `connection_lost` is this client; every other reason is the server's. */
 const FAILURE_COPY: Record<string, string> = {
@@ -136,7 +137,9 @@ export function EarlierPartSummary({ part }: { part: EarlierPart }) {
         aria-expanded={open}
       >
         <CheckCircle2 size={15} className="flex-shrink-0 text-[var(--primary)]" />
-        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--primary-ink)]">{part.title}</span>
+        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--primary-ink)]">
+          {normalizeHeading(part.title)}
+        </span>
         <span className="text-xs text-[#94A3B8]">{messages} messages</span>
         <ChevronDown size={15} className={`text-[#94A3B8] transition-transform ${open ? "rotate-180" : ""}`} />
       </button>

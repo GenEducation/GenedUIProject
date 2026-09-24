@@ -27,6 +27,16 @@ export function cleanPrompt(prompt: string): string {
   return prompt.replace(/^\s*(figure it out\s*)?\d{1,2}\s*[.)]\s+/i, "").replace(/^\s*figure it out[:.]?\s+/i, "");
 }
 
+/**
+ * A node title carried in from a textbook chapter heading arrives in print case
+ * ("7 FRACTIONS"), unlike a section title ("7.1 Fractional Units..."). Title-casing
+ * only the all-caps ones keeps both readable without touching titles that are fine.
+ */
+export function normalizeHeading(text: string): string {
+  if (!text || text !== text.toUpperCase() || text === text.toLowerCase()) return text;
+  return text.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+}
+
 /** Multiplication written as `*` or `x` between numbers becomes `×`; nothing else changes. */
 export function prettifyMath(text: string): string {
   return text.replace(/(\d|\))\s*[*xX]\s*(?=[\d(])/g, "$1 × ");

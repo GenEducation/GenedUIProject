@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanPrompt, isReadableNumber, joinPageBreaks, prettifyMath } from "../display";
+import { cleanPrompt, isReadableNumber, joinPageBreaks, normalizeHeading, prettifyMath } from "../display";
 import type { Chunk } from "../types/lesson";
 
 describe("isReadableNumber mirrors the backend's numeric grammar", () => {
@@ -35,6 +35,23 @@ describe("prettifyMath", () => {
 
   it("leaves words alone", () => {
     expect(prettifyMath("the next box")).toBe("the next box");
+  });
+});
+
+describe("normalizeHeading title-cases a print-case chapter heading", () => {
+  it("title-cases an all-caps heading", () => {
+    expect(normalizeHeading("7 FRACTIONS")).toBe("7 Fractions");
+  });
+
+  it("leaves a title that isn't all-caps alone", () => {
+    expect(normalizeHeading("7.1 Fractional Units and Equal Shares (part 2)")).toBe(
+      "7.1 Fractional Units and Equal Shares (part 2)",
+    );
+  });
+
+  it("leaves text with no letters alone", () => {
+    expect(normalizeHeading("7.1")).toBe("7.1");
+    expect(normalizeHeading("")).toBe("");
   });
 });
 

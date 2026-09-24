@@ -49,10 +49,12 @@ interface TextbookDrawerProps {
   /** Sections seen earlier this visit, for parts whose pages were already covered. */
   sectionCache: Record<string, Section>;
   onClose: () => void;
+  /** Asks the tutor to go over the earlier pages again, right from the empty state. */
+  onAskTutor: () => void;
 }
 
 /** The textbook pages behind the current part: reference material the learner opens, not the task itself. */
-export function TextbookDrawer({ payload, sectionCache, onClose }: TextbookDrawerProps) {
+export function TextbookDrawer({ payload, sectionCache, onClose, onAskTutor }: TextbookDrawerProps) {
   const sections = payload.node.sections.map((section) =>
     isAlreadyCoveredNote(section) ? (sectionCache[section.version_id] ?? null) : section,
   );
@@ -72,11 +74,18 @@ export function TextbookDrawer({ payload, sectionCache, onClose }: TextbookDrawe
       </div>
       <div className="flex-1 overflow-y-auto px-5 py-4">
         {coveredElsewhere > 0 && (
-          <p className="mb-4 rounded-xl bg-[#F7F8FC] px-4 py-3 text-[13px] text-[#64748B]">
-            {shown.length > 0
-              ? "Some of these pages came up in an earlier part of the chapter."
-              : "This part uses textbook pages from an earlier part of the chapter. Ask your tutor if you want to go over them again."}
-          </p>
+          <div className="mb-4 rounded-xl bg-[#F7F8FC] px-4 py-3 text-[13px] text-[#64748B]">
+            <p>
+              {shown.length > 0
+                ? "Some of these pages came up in an earlier part of the chapter."
+                : "This part uses textbook pages from an earlier part of the chapter."}
+            </p>
+            {shown.length === 0 && (
+              <Button size="sm" className="mt-2.5" onClick={onAskTutor}>
+                Ask my tutor to go over it again
+              </Button>
+            )}
+          </div>
         )}
         {shown.map((section) => (
           <div key={section.id}>

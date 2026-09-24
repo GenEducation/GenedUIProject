@@ -135,15 +135,18 @@ export function LessonThread(props: LessonThreadProps) {
               </span>
             )}
             {step.kind === "reply" && step.canMoveOn && (
-              // A quiet secondary choice: answering the tutor stays the main action.
-              // eslint-disable-next-line no-restricted-syntax
-              <button
-                type="button"
-                onClick={onContinue}
-                className="text-xs font-semibold text-[#94A3B8] underline-offset-2 hover:text-[var(--primary-ink)] hover:underline"
-              >
-                {step.isLastPart ? "Skip and finish the chapter" : "Skip to the next part"}
-              </button>
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-[#94A3B8]">
+                You&apos;ve replied enough for this part ·
+                {/* A quiet secondary choice: answering the tutor stays the main action. */}
+                {/* eslint-disable-next-line no-restricted-syntax */}
+                <button
+                  type="button"
+                  onClick={onContinue}
+                  className="underline-offset-2 hover:text-[var(--primary-ink)] hover:underline"
+                >
+                  {step.isLastPart ? "skip and finish the chapter" : "skip to the next part"}
+                </button>
+              </span>
             )}
           </div>
           <div className="flex items-center gap-2">
