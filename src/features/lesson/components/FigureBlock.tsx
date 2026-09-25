@@ -51,7 +51,10 @@ function Crop({
       type="button"
       onClick={onOpen}
       className="group relative block w-full overflow-hidden rounded-xl border border-[#E2E8F0] bg-[#FAFBFD] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--tutor)]"
-      style={{ aspectRatio, minHeight: 44 }}
+      // maxWidth caps the thumbnail at the crop's own stored pixels: `w-full` lets it shrink on a narrow
+      // screen, but never grows past its native resolution (a small scanned crop stretched to fill a wide
+      // chat column would just look blurry).
+      style={{ aspectRatio, minHeight: 44, maxWidth: crop.width_px }}
       aria-label={`Enlarge: ${crop.learner_alt_text}`}
     >
       {/* Plain img, not next/image: the source is a short-lived signed URL from
