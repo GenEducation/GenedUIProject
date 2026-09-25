@@ -87,6 +87,18 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
                         <MarkdownRenderer content={text} />
                       </div>
                     )}
+                    {/* Debugging the pet-emotion leak reports: not the reply text, just
+                        the backend `pet_emotion` frame(s) (see ChatMessage.debugPetEmotions)
+                        that arrived alongside it — emotion and cause, in the order they
+                        came in. Remove once debugged. */}
+                    {!!m.debugPetEmotions?.length && (
+                      <div
+                        className="text-[10px] font-mono leading-snug whitespace-pre-wrap break-words rounded-lg px-2 py-1.5"
+                        style={{ background: "#FEF3C7", color: "#78350F", border: "1px dashed #F59E0B" }}
+                      >
+                        [{m.debugPetEmotions.map((e) => `${e.emotion} ← ${e.cause}`).join(", ")}]
+                      </div>
+                    )}
                     {hasElements && <MessageElements elements={m.elements!} />}
                   </div>
                 </div>

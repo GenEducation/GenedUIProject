@@ -357,6 +357,39 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-mukta), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* The perched pet (PlacementPerchPet): a finish flag on the board's top edge
+   that lights up citron when the pet reaches it, and a citron halo behind the
+   pet. Citron is the sheet's own highlight colour, so the celebration reads as
+   part of this surface rather than a trophy bolted onto it. */
+.placement-theme { --pl-perch-pole: #E7ECE4; --pl-perch-glow: var(--pl-accent); }
+.pl-perch-pennant {
+  fill: var(--pl-surface);
+  transform-origin: 4.4px 8.5px;
+  animation: pl-perch-flutter 1.8s ease-in-out infinite;
+  transition: fill 0.4s ease;
+}
+.pl-perch-flag[data-reached] .pl-perch-pennant { fill: var(--pl-perch-glow); }
+@keyframes pl-perch-flutter {
+  0%, 100% { transform: scaleX(1) skewY(0); }
+  50% { transform: scaleX(0.9) skewY(-5deg); }
+}
+.pl-perch-halo {
+  background: radial-gradient(closest-side, rgb(217 242 121 / 0.7), rgb(217 242 121 / 0));
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pl-perch-halo[data-on] {
+  opacity: 1;
+  transform: scale(1);
+  animation: pl-perch-halo 2.4s ease-in-out 0.6s infinite;
+}
+@keyframes pl-perch-halo { 50% { transform: scale(1.12); opacity: 0.7; } }
+@media (prefers-reduced-motion: reduce) {
+  .pl-perch-pennant,
+  .pl-perch-halo[data-on] { animation: none; }
+}
+
 /* ── Learning Signal (admin analytics) ──────────────────────────
    The admin shell is dark, but this dashboard is a light reading surface: it
    is dense with charts, tables and small type, and the reference design it
@@ -397,4 +430,327 @@ h1, h2, h3, h4, h5, h6 {
 /* Recharts draws its own focus-less surfaces; keep its text on our ramp. */
 .learning-signal .recharts-text {
   fill: var(--ls-faint);
+}
+
+/* ── Desk pet: emotion motion ────────────────────────────────────────────
+   Physics moves (hop, run, jump…) are drawn by `usePetLocomotion`. These are
+   the rest: one-shot `pet-move-*` keyframes added and removed by that hook,
+   and held `pet-loop-*` keyframes that last as long as an emotion does. All
+   transform from the creature's feet, so a squash reads as weight. */
+.pet-body,
+.pet-css-move,
+.pet-loop {
+  transform-origin: 50% 90%;
+}
+
+@keyframes pet-move-wobble {
+  0%, 100% { transform: rotate(0); }
+  15% { transform: rotate(-6deg); }
+  35% { transform: rotate(5deg); }
+  55% { transform: rotate(-3deg); }
+  75% { transform: rotate(1deg); }
+}
+@keyframes pet-move-nod {
+  0%, 50%, 100% { transform: rotate(0); }
+  12%, 34% { transform: rotate(8deg) translateY(2px); }
+  23%, 45% { transform: rotate(0); }
+}
+/* Proud: chest out and standing tall, held a beat, then settling. */
+@keyframes pet-move-puff {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.14, 1.08) translateY(-5px); }
+  40%, 75% { transform: scale(1.06, 1.16) translateY(-6px); }
+}
+@keyframes pet-move-sink {
+  0% { transform: translateY(0) scale(1); }
+  60% { transform: translateY(4px) scale(1.03, 0.95); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes pet-move-pop {
+  0%, 100% { transform: scale(1); }
+  30% { transform: scale(1.14) translateY(-6px); }
+  60% { transform: scale(1.04); }
+}
+@keyframes pet-move-lean {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(var(--pet-lean, -6deg)); }
+}
+.pet-move-wobble { animation: pet-move-wobble 0.9s ease-in-out; }
+.pet-move-nod    { animation: pet-move-nod 1.4s ease-in-out; }
+.pet-move-puff   { animation: pet-move-puff 1.2s ease-in-out; }
+.pet-move-sink   { animation: pet-move-sink 1.4s ease-in-out; }
+.pet-move-pop    { animation: pet-move-pop 0.6s ease-out; }
+.pet-move-lean   { animation: pet-move-lean 1.2s ease-in-out; }
+
+/* Cheer: "arms up" — a quick tall stretch after the hop, then a springy settle. */
+@keyframes pet-move-stretch {
+  0%, 100% { transform: scale(1); }
+  30% { transform: scale(0.9, 1.2) translateY(-6px); }
+  55% { transform: scale(1.08, 0.94); }
+  75% { transform: scale(0.98, 1.03); }
+}
+/* Impressed: "whoa" — rocks back and up, holds, and eases forward again. */
+@keyframes pet-move-recoil {
+  0%, 100% { transform: rotate(0) translateY(0); }
+  25%, 65% { transform: rotate(calc(var(--pet-lean, -6deg) * -1.6)) translateY(-5px) scale(1.04); }
+}
+/* Apologetic: a bashful "oops" — squashes small and sinks, then eases back. */
+@keyframes pet-move-shrink {
+  0%, 100% { transform: scale(1) translateY(0); }
+  30%, 70% { transform: scale(0.88, 0.84) translateY(5px); }
+}
+.pet-move-shrink  { animation: pet-move-shrink 1.2s ease-in-out; }
+.pet-move-stretch { animation: pet-move-stretch 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.pet-move-recoil  { animation: pet-move-recoil 1.3s ease-in-out; }
+
+@keyframes pet-loop-breathe { 50% { transform: scale(1.03, 0.98); } }
+/* `--pet-talk` (0–1) is written from the tutor's playback level, so the bob
+   swells with the voice rather than ticking on a fixed beat. */
+@keyframes pet-loop-talk {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(calc(var(--pet-talk, 0.4) * -5px)) scaleY(calc(1 - var(--pet-talk, 0.4) * 0.06)); }
+}
+@keyframes pet-loop-lean {
+  0%, 100% { transform: rotate(var(--pet-lean, -5deg)); }
+  50% { transform: rotate(calc(var(--pet-lean, -5deg) * 1.4)) scale(1.02); }
+}
+@keyframes pet-loop-rock { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+@keyframes pet-loop-doze {
+  0%, 100% { transform: translateY(2px) scale(1, 0.98); }
+  50% { transform: translateY(3px) scale(1.02, 0.96); }
+}
+@keyframes pet-loop-tilt { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+@keyframes pet-loop-beat {
+  0%, 40%, 100% { transform: scale(1); }
+  10%, 30% { transform: scale(1.08); }
+  20% { transform: scale(1.02); }
+}
+@keyframes pet-loop-sway {
+  0%, 100% { transform: translateY(3px) rotate(-2deg); }
+  50% { transform: translateY(4px) rotate(2deg); }
+}
+.pet-loop-breathe { animation: pet-loop-breathe 4s ease-in-out infinite; }
+.pet-loop-talk    { animation: pet-loop-talk 0.34s ease-in-out infinite; }
+.pet-loop-lean    { animation: pet-loop-lean 2.4s ease-in-out infinite; }
+.pet-loop-rock    { animation: pet-loop-rock 1.6s ease-in-out infinite; }
+.pet-loop-doze    { animation: pet-loop-doze 4s ease-in-out infinite; }
+.pet-loop-tilt    { animation: pet-loop-tilt 2.2s ease-in-out infinite; }
+.pet-loop-beat    { animation: pet-loop-beat 1.4s ease-in-out infinite; }
+.pet-loop-sway    { animation: pet-loop-sway 3.4s ease-in-out infinite; }
+
+/* Curious: head tilts one way, *stays* there thinking, then back — not the
+   even metronome of `tilt`, which is Reconnecting's. */
+@keyframes pet-loop-ponder {
+  0%, 100% { transform: rotate(0); }
+  20%, 60% { transform: rotate(-11deg) translateY(-1px); }
+  75% { transform: rotate(3deg); }
+}
+/* Supportive: a slow, calming sway-and-breathe — the "it's okay" rhythm. */
+@keyframes pet-loop-soothe {
+  0%, 100% { transform: rotate(-2.5deg) scale(1, 1); }
+  50% { transform: rotate(2.5deg) scale(1.03, 0.98); }
+}
+/* Amused: a giggle — fast, small, uneven jiggle. */
+@keyframes pet-loop-giggle {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  20% { transform: translateY(-3px) rotate(-2deg); }
+  40% { transform: translateY(0) rotate(1deg); }
+  60% { transform: translateY(-2px) rotate(2deg); }
+  80% { transform: translateY(0) rotate(-1deg); }
+}
+.pet-loop-ponder { animation: pet-loop-ponder 2.2s ease-in-out infinite; }
+.pet-loop-soothe { animation: pet-loop-soothe 3.2s ease-in-out infinite; }
+.pet-loop-giggle { animation: pet-loop-giggle 0.42s linear infinite; }
+
+/* ── Desk pet: face marks (PetFaceAccents) ──────────────────────────────── */
+/* An eye mark sits inside blobatar's `.mo-eyes` (so it glances with it) and
+   re-applies its own eye's offsets from the same inherited `--mo-*` vars the
+   eye does — the pose's `edx`/`edy` and that eye's gaze (`--mo-gz-*1` for the
+   left, `*2` for the right) — mirroring `.mo-eye`'s `translate` in blobatar's
+   motion.css and gaze.css. Those vars are what a pose morph transitions, so
+   the mark moves in lockstep with its eye. `--pg-wrap` is the eye's side
+   (−1/+1), as `--mo-wrap` is for the eye; `--pg-sel` picks its gaze var. */
+.pet-mark-eye {
+  --pg-sel: calc((var(--pg-wrap) + 1) / 2);
+  translate:
+    calc((var(--mo-edx, 0) * var(--pg-wrap)
+      + var(--mo-gz-dx1, 0) + (var(--mo-gz-dx2, 0) - var(--mo-gz-dx1, 0)) * var(--pg-sel)) * 1px)
+    calc((var(--mo-edy, 0)
+      + var(--mo-gz-dy1, 0) + (var(--mo-gz-dy2, 0) - var(--mo-gz-dy1, 0)) * var(--pg-sel)) * 1px);
+}
+/* The mark's anchor offset is in the eye's radii, scaled by the eye's live
+   size — so a blush hung off the bottom edge rises as the eye squints shut. */
+.pet-mark-offset {
+  translate:
+    calc(var(--pg-ox) * (var(--mo-esx, 1) + var(--mo-esx2, 0) * var(--pg-sel)) * 1px)
+    calc(var(--pg-oy) * (var(--mo-esy, 1) + var(--mo-esy2, 0) * var(--pg-sel)) * 1px);
+}
+@keyframes pet-accent-in { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
+.pet-accent-blush,
+.pet-accent-crease,
+.pet-accent-tear {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pet-accent-in 0.3s ease-out both;
+}
+/* The blush warms in a little after the face does. */
+.pet-accent-blush { animation-delay: 0.08s; }
+/* The happy tear rolls a little way down the cheek. */
+@keyframes pet-accent-tear-roll { 0%, 30% { transform: translateY(0); } 100% { transform: translateY(3px); opacity: 0.4; } }
+.pet-accent-tear { animation: pet-accent-in 0.25s ease-out both, pet-accent-tear-roll 1.6s ease-in 0.3s both; }
+/* Star glints twinkle: scale and turn a quarter, twice a second-ish. */
+@keyframes pet-accent-glint {
+  0%, 100% { transform: scale(1) rotate(0); opacity: 1; }
+  50% { transform: scale(0.55) rotate(45deg); opacity: 0.75; }
+}
+.pet-accent-glint { transform-box: fill-box; transform-origin: center; animation: pet-accent-glint 0.9s ease-in-out infinite; }
+/* The "?" pops in, then bobs. */
+@keyframes pet-accent-question {
+  0% { opacity: 0; transform: translateY(6px) scale(0.5); }
+  18% { opacity: 1; transform: translateY(-1px) scale(1.1); }
+  28%, 100% { transform: translateY(0) scale(1); }
+}
+@keyframes pet-accent-bob { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-3px) rotate(6deg); } }
+.pet-accent-question {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pet-accent-question 0.7s ease-out both, pet-accent-bob 1.4s ease-in-out 0.7s infinite;
+}
+/* Curious's "…": three dots lighting up in turn, like a thought forming. */
+@keyframes pet-accent-dot {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-1.5px); }
+}
+.pet-accent-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0.3;
+  animation: pet-accent-dot 1.2s ease-in-out infinite;
+}
+.pet-accent-dot-2 { animation-delay: 0.2s; }
+.pet-accent-dot-3 { animation-delay: 0.4s; }
+/* Apologetic's sweat drop: appears, then slips a little way down. */
+@keyframes pet-accent-sweat {
+  0% { opacity: 0; transform: translateY(-2px) scale(0.6); }
+  20% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0.85; transform: translateY(3px) scale(1); }
+}
+.pet-accent-sweat { transform-box: fill-box; transform-origin: center; animation: pet-accent-sweat 1.8s ease-in both; }
+/* Proud's shine: one band of light sweeping across the face, then gone. */
+@keyframes pet-accent-sheen {
+  0% { transform: translateX(-60px); opacity: 0; }
+  15% { opacity: 0.6; }
+  85% { opacity: 0.6; }
+  100% { transform: translateX(60px); opacity: 0; }
+}
+.pet-accent-sheen { animation: pet-accent-sheen 1.1s ease-in-out 0.35s both; }
+
+/* ── Desk pet: emotion particles (usePetLocomotion.burst) ───────────────── */
+.pet-particle {
+  position: absolute;
+  margin-left: -0.5em;
+  line-height: 1;
+  font-weight: 800;
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.18);
+}
+/* Cheer: green sparks pop up and out. */
+.pet-p-spark { font-size: 15px; color: #1D9E75; animation: pet-p-pop 0.8s ease-out both; }
+/* Encouraging: two small warm sparks rising slowly — "go on, you've got this". */
+.pet-p-lift { font-size: 11px; color: #E8A33D; animation: pet-p-lift 1.4s ease-out both; }
+/* Excited: a fast, multicolour spray, farther and wider. */
+.pet-p-burst { font-size: 12px; color: var(--c); animation: pet-p-spray 1s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+/* Supportive: one heart drifting slowly up, swaying. */
+.pet-p-heart { font-size: 18px; color: #FF6F91; animation: pet-p-float 1.9s ease-out both; }
+/* Amused: little "ha"s bubbling up at an angle. */
+.pet-p-ha { font-size: 11px; color: #7F5AF0; font-style: italic; animation: pet-p-ha 1.1s ease-out both; }
+/* Impressed: twinkles that appear in place around the head and wink out. */
+.pet-p-twinkle { font-size: 13px; color: #9B7BFF; animation: pet-p-twinkle 1.3s ease-in-out both; }
+
+@keyframes pet-p-pop {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.3); }
+  25% { opacity: 1; transform: translate(calc(var(--dx) * 0.5), calc(var(--dy) * 0.6)) scale(1.2); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.6) rotate(90deg); }
+}
+@keyframes pet-p-lift {
+  0% { opacity: 0; transform: translate(0, 4px) scale(0.5); }
+  25% { opacity: 1; transform: translate(0, -6px) scale(1); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * 0.3), -34px) scale(0.8); }
+}
+@keyframes pet-p-spray {
+  0% { opacity: 1; transform: translate(0, 0) scale(0.6); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * 1.8), calc(var(--dy) * 1.3)) scale(1) rotate(200deg); }
+}
+@keyframes pet-p-float {
+  0% { opacity: 0; transform: translate(0, 4px) scale(0.5); }
+  20% { opacity: 1; transform: translate(-3px, -8px) scale(1); }
+  60% { transform: translate(4px, -26px) scale(1); }
+  100% { opacity: 0; transform: translate(-2px, -44px) scale(0.9); }
+}
+@keyframes pet-p-ha {
+  0% { opacity: 0; transform: translate(0, 0) rotate(-10deg) scale(0.6); }
+  25% { opacity: 1; transform: translate(calc(var(--dx) * 0.4), calc(var(--dy) * 0.4)) rotate(8deg) scale(1.05); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(-6deg) scale(0.9); }
+}
+@keyframes pet-p-twinkle {
+  0%, 100% { opacity: 0; transform: translate(calc(var(--dx) * 0.8), calc(var(--dy) * 0.6)) scale(0.2) rotate(0); }
+  45% { opacity: 1; transform: translate(calc(var(--dx) * 0.8), calc(var(--dy) * 0.6)) scale(1.1) rotate(60deg); }
+}
+
+.pet-dust {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.55);
+  pointer-events: none;
+  animation: pet-dust 0.55s ease-out forwards;
+}
+@keyframes pet-dust {
+  to { opacity: 0; transform: translate(var(--dx), -10px) scale(1.8); }
+}
+.pet-confetti {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--c);
+  pointer-events: none;
+  opacity: 0;
+  animation: pet-confetti 1.4s ease-in forwards;
+}
+@keyframes pet-confetti {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(300deg); }
+}
+
+@keyframes pet-badge-in {
+  from { opacity: 0; transform: scale(0.6) translateY(4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes pet-badge-zzz {
+  0% { opacity: 0; transform: translate(0, 6px); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translate(6px, -10px); }
+}
+@keyframes pet-badge-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.pet-badge { animation: pet-badge-in 0.25s ease-out; }
+.pet-badge-zzz { animation: pet-badge-zzz 2.4s ease-in-out infinite; }
+.pet-badge-blink { animation: pet-badge-blink 1.2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="pet-move-"],
+  [class*="pet-loop-"],
+  [class*="pet-accent-"],
+  .pet-badge-zzz,
+  .pet-badge-blink { animation: none !important; }
+  .pet-dust,
+  .pet-confetti,
+  .pet-particle,
+  /* A sweep with no motion is just a stripe across the face: hide it, and
+     the rest of the marks (blush, glints, "?", laugh lines) show static. */
+  .pet-accent-sheen { display: none; }
 }

@@ -1,128 +1,118 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { idle, thinking, happy, unsure, sleepy, wink, surprised } from "blobatar/expression";
-import type { Expression } from "blobatar";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useTestStore } from "@/features/student/store/useTestStore";
+import { usePetStore } from "@/features/student/store/usePetStore";
+import { usePlacementStore } from "@/features/placement/store/usePlacementStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
-import { useIdle } from "@/hooks/useIdle";
-import { useHydrated } from "@/hooks/useHydrated";
+import { useStudentTalking } from "./useVoiceLevels";
+import {
+  BACKEND_EMOTIONS,
+  EMOTION_HANDOFF,
+  PET_EMOTIONS,
+  type PetEmotion,
+} from "../theme/petExpressions";
+import { LOCAL_SOURCES, fromStreakChange, fromTestVerdict } from "../utils/petEvents";
 
 /**
- * The pose the student's creature is holding, derived from state the app
- * already keeps. Adds no state of its own.
+ * What the student's pet is feeling right now.
  *
- * Expressions are a **state, not an event** — blobatar has no timers and
- * nothing returns to `idle` by itself. Anything that should read as a burst
- * (a celebration, a result) therefore schedules its own clear here, mirroring
- * the 3s pattern `StudentHome` already uses for its AI companion.
+ * Two kinds of emotion, resolved in one precedence list:
  *
- * Two of the triggers here watch a number *increase* rather than a value, and
- * both deliberately ignore their first observation — see `prevStreak` below.
+ *  - **Bursts** — a reaction that holds for a moment and ends: everything that
+ *    arrives through `usePetStore.fireEmotion`, whether from a backend
+ *    `pet_emotion` frame or from a local source (a widget answer, a test
+ *    verdict, a streak, a notification). Each emotion's hold comes from the
+ *    registry.
+ *  - **Sustained states** — derived from state the app already keeps, lasting
+ *    exactly as long as their condition: the tutor talking, the student
+ *    talking, a muted mic, the tutor generating, the student gone quiet.
  *
- * Tone: `sad`, `sick` and `scared` are deliberately absent from this app's
- * roster. A creature that looks ill at a child who scored badly is a worse
- * product, not a cuter one — a weak result gets `unsure`, which reads as
- * "hmm, let's look at this" rather than as a verdict on the student.
+ * Gesture reactions (pat, shake, hover) sit above all of this and live in
+ * `PetCompanion`, which owns the pointer.
+ *
+ * Tone: positive only, matching the tutor. A wrong answer is `encouraging`
+ * ("so close, go on"), reassurance is `supportive`; nothing frowns.
  */
 
-/** How long a celebratory burst holds before easing back to `idle`. */
-const BURST_MS = 2000;
-/** A streak milestone is rare and earned, so it holds a little longer. */
-const WINK_MS = 2600;
-/** Noticing a notification is a glance, not an event. */
-const NOTICE_MS = 1400;
 /** Notifications can arrive in bursts; the buddy reacts to at most one a minute. */
 const NOTICE_COOLDOWN_MS = 60000;
-/** No pointer, key or scroll for this long and the buddy dozes off. */
-const IDLE_MS = 3 * 60 * 1000;
-/** Streak lengths worth a reaction, beyond simply beating your own record. */
-const STREAK_MILESTONES = [3, 7, 30];
+/**
+ * The longest the pet will think after the child finishes speaking, waiting
+ * for the tutor's first word. The wait is the tutor's whole think — the model,
+ * any tools, and the backend's hold for the pet reaction (≤ 2.5 s) — so it is
+ * sized generously; it only exists so a reply that never comes (a barge-in
+ * drops it) cannot leave the pet thinking forever.
+ */
+export const AWAIT_REPLY_MS = 12_000;
+/** On one test question this long without an answer changing: think along. */
+export const STUCK_MS = 25_000;
 
-export function usePetExpression(): Expression {
+/**
+ * How strongly a burst holds its ground. A newer burst replaces the current
+ * one unless it ranks lower — a notification must not cut a celebration short.
+ */
+const BURST_RANK: Partial<Record<PetEmotion, number>> = {
+  // Every backend reaction ranks alike — derived, so a roster addition can
+  // never land unranked and be cut short by a notification.
+  ...Object.fromEntries(BACKEND_EMOTIONS.map((e) => [e, 2])),
+  celebration: 3,
+  noticing: 1, love: 1,
+};
 
-  // The clock is deliberately not read on the first render: client components
-  // are still server-rendered, the server's timezone is not the student's, and
-  // a different pose on each side is different SVG — a hydration mismatch.
-  const hydrated = useHydrated();
+export function usePetExpression(): PetEmotion {
   const isAITyping = useStudentStore((s) => s.isAITyping);
+  const voiceSessionStatus = useStudentStore((s) => s.voiceSessionStatus);
+  const connectionQuality = useStudentStore((s) => s.connectionQuality);
+  const isMuted = useStudentStore((s) => s.isMuted);
+  const pttHeld = useStudentStore((s) => s.pttHeld);
+  const studentStats = useStudentStore((s) => s.studentStats);
   const isSubmitting = useTestStore((s) => s.isSubmitting);
   const testResult = useTestStore((s) => s.testResult);
-  const studentStats = useStudentStore((s) => s.studentStats);
+  const currentTest = useTestStore((s) => s.currentTest);
+  const testAnswers = useTestStore((s) => s.answers);
+  const placementPhase = usePlacementStore((s) => s.phase);
+  const placementCompletedAt = usePlacementStore((s) => s.completedAt);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const notificationsFetched = useNotificationStore((s) => s.hasFetched);
-  const isIdle = useIdle(IDLE_MS);
+  const petBurst = usePetStore((s) => s.petBurst);
+  const fireEmotion = usePetStore((s) => s.fireEmotion);
 
-  // A burst is a pose plus an expiry. Held in state so the clear re-renders.
-  const [burst, setBurst] = useState<Expression | null>(null);
+  const voiceActive = voiceSessionStatus === "active";
+  const micOpen = voiceActive && (!isMuted || pttHeld);
+  const studentTalking = useStudentTalking(micOpen);
+
+  // ── Bursts ────────────────────────────────────────────────────────────────
+
+  const [burst, setBurst] = useState<PetEmotion | null>(null);
+  const burstRef = useRef<PetEmotion | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fire = (pose: Expression, holdMs: number = BURST_MS) => {
+  /** Show a burst for its registered hold, then hand off or clear. */
+  const show = (emotion: PetEmotion) => {
     if (timer.current) clearTimeout(timer.current);
-    setBurst(pose);
-    timer.current = setTimeout(() => setBurst(null), holdMs);
+    burstRef.current = emotion;
+    setBurst(emotion);
+    timer.current = setTimeout(() => {
+      const next = EMOTION_HANDOFF[emotion];
+      if (next) {
+        show(next);
+      } else {
+        burstRef.current = null;
+        setBurst(null);
+      }
+    }, PET_EMOTIONS[emotion].holdMs ?? 2000);
   };
 
-  /**
-   * Previous values for the two triggers that watch a number go **up**.
-   *
-   * `null` means "not yet observed", and that distinction is the whole point.
-   * On mount both jump from nothing to their real value — the first stats
-   * fetch sets a streak of 7, the first notification fetch sets an unread
-   * count of 5 — and compared against an initial `0` that reads as an
-   * increase. The buddy would then wink and act startled *every time the app
-   * loads*, which looks like a charming greeting rather than the bug it is.
-   * So the first observation seeds the ref and fires nothing.
-   */
-  const prevStreak = useRef<number | null>(null);
-  const prevUnread = useRef<number | null>(null);
-  const lastNoticeAt = useRef(0);
-
-  // A result arriving is the event; the graded submission id is what changes.
-  // Keyed on the id rather than the object so a re-fetch of the same
-  // submission does not re-fire the burst on every render.
-  const submissionId = testResult?.submission_id ?? null;
+  const burstId = petBurst?.id ?? null;
   useEffect(() => {
-    if (!submissionId || !testResult) return;
-    // `overall_verdict` is the app's own notion of how it went, which is a
-    // better signal than an arbitrary cutoff on `overall_score`.
-    fire(testResult.overall_verdict === "BELOW" ? unsure : happy);
+    if (!petBurst) return;
+    const current = burstRef.current;
+    if (current && (BURST_RANK[petBurst.emotion] ?? 0) < (BURST_RANK[current] ?? 0)) return;
+    show(petBurst.emotion);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submissionId]);
-
-  // A streak the student just extended past their own record, or past a round
-  // number worth noticing.
-  const currentStreak = studentStats?.currentStreak ?? null;
-  const longestStreak = studentStats?.longestStreak ?? null;
-  useEffect(() => {
-    if (currentStreak === null) return;
-    const prev = prevStreak.current;
-    prevStreak.current = currentStreak;
-    if (prev === null || currentStreak <= prev) return;
-
-    const beatOwnRecord = longestStreak !== null && currentStreak >= longestStreak;
-    const hitMilestone = STREAK_MILESTONES.includes(currentStreak);
-    if (beatOwnRecord || hitMilestone) fire(wink, WINK_MS);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStreak]);
-
-  // Something landed in the notification stream and the buddy noticed.
-  //
-  // Gated on `hasFetched` because `unreadCount` starts at 0 and a genuine zero
-  // is indistinguishable from "not loaded yet" — without it the first fetch
-  // reads as an arrival and the buddy is startled on every app open.
-  useEffect(() => {
-    if (!notificationsFetched) return;
-    const prev = prevUnread.current;
-    prevUnread.current = unreadCount;
-    if (prev === null || unreadCount <= prev) return;
-
-    const now = Date.now();
-    if (now - lastNoticeAt.current < NOTICE_COOLDOWN_MS) return;
-    lastNoticeAt.current = now;
-    fire(surprised, NOTICE_MS);
-  }, [unreadCount, notificationsFetched]);
+  }, [burstId]);
 
   useEffect(() => {
     return () => {
@@ -130,22 +120,147 @@ export function usePetExpression(): Expression {
     };
   }, []);
 
-  // Precedence: a burst outranks an ongoing process, which outranks the clock.
-  if (burst) return burst;
-  if (isAITyping || isSubmitting) return thinking;
-  // Dozing because the student went quiet reads as far more alive than dozing
-  // because of the wall clock — but both count.
-  if (isIdle) return sleepy;
-  if (hydrated && isLateEvening()) return sleepy;
-  return idle;
-}
+  // ── Local sources ─────────────────────────────────────────────────────────
 
-/**
- * After 21:00, matching the upper band of `StudentHome`'s `getGreeting()`
- * ("Hey" rather than "Evening"), so the greeting and the creature agree about
- * how late it is.
- */
-function isLateEvening(): boolean {
-  const h = new Date().getHours();
-  return h >= 21 || h < 5;
+  // A result arriving is the event; the graded submission id is what changes.
+  // Keyed on the id rather than the object so a re-fetch of the same
+  // submission does not re-fire on every render.
+  const submissionId = testResult?.submission_id ?? null;
+  useEffect(() => {
+    if (!submissionId || !testResult || !LOCAL_SOURCES.test) return;
+    const emotion = fromTestVerdict(testResult.overall_verdict);
+    if (emotion) fireEmotion(emotion, "local:test");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submissionId]);
+
+  /**
+   * The day streak, compared against the last value seen — in this session,
+   * or on this device last visit.
+   *
+   * The first in-session observation must not be compared against `0`: the
+   * first stats fetch jumps from nothing to a streak of 7, and read naively
+   * that is a streak event on every app load. With no remembered value it
+   * fires nothing; with one, a streak gained or lost *between* visits is real.
+   */
+  const prevStreak = useRef<number | null>(null);
+  const currentStreak = studentStats?.currentStreak ?? null;
+  useEffect(() => {
+    if (currentStreak === null) return;
+    const store = usePetStore.getState();
+    const prev = prevStreak.current ?? store.petLastSeenStreak;
+    prevStreak.current = currentStreak;
+    if (store.petLastSeenStreak !== currentStreak) store.setPetLastSeenStreak(currentStreak);
+    if (!LOCAL_SOURCES.dayStreak) return;
+    const emotion = fromStreakChange(prev, currentStreak);
+    if (emotion) fireEmotion(emotion, "local:dayStreak");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStreak]);
+
+  /**
+   * Placement complete. The pet is suppressed while the placement flow owns the
+   * screen, so the celebration waits until the student leaves the completion
+   * screen and the pet is back. Requires having *seen* `complete` this session,
+   * so resuming an already-finished attempt never celebrates.
+   */
+  const pendingPlacement = useRef<number | null>(null);
+  useEffect(() => {
+    if (placementPhase === "complete" && placementCompletedAt) {
+      pendingPlacement.current = placementCompletedAt;
+      return;
+    }
+    // `finish()` resets the store to "unavailable" — the same closed set the
+    // student layout uses to un-suppress the pet.
+    const closed =
+      placementPhase === "idle" || placementPhase === "checking" || placementPhase === "unavailable";
+    if (pendingPlacement.current !== null && closed) {
+      pendingPlacement.current = null;
+      if (LOCAL_SOURCES.placement) fireEmotion("celebration", "local:placement");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placementPhase, placementCompletedAt]);
+
+  /**
+   * Something landed in the notification stream and the buddy noticed.
+   *
+   * Gated on `hasFetched` because `unreadCount` starts at 0 and a genuine zero
+   * is indistinguishable from "not loaded yet" — without it the first fetch
+   * reads as an arrival. The first observation seeds and fires nothing.
+   */
+  const prevUnread = useRef<number | null>(null);
+  const lastNoticeAt = useRef(0);
+  useEffect(() => {
+    if (!notificationsFetched) return;
+    const prev = prevUnread.current;
+    prevUnread.current = unreadCount;
+    if (prev === null || unreadCount <= prev) return;
+    const now = Date.now();
+    if (now - lastNoticeAt.current < NOTICE_COOLDOWN_MS) return;
+    lastNoticeAt.current = now;
+    fireEmotion("noticing", "local:notification");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unreadCount, notificationsFetched]);
+
+  /**
+   * Stuck on a test question: no answer has changed for `STUCK_MS`. The timer
+   * records *which* answers object it expired on, so any change in answers
+   * un-sticks immediately without a synchronous reset.
+   */
+  const testInProgress = !!currentTest && !testResult;
+  const [stuckOn, setStuckOn] = useState<object | null>(null);
+  useEffect(() => {
+    if (!testInProgress) return;
+    const t = setTimeout(() => setStuckOn(testAnswers), STUCK_MS);
+    return () => clearTimeout(t);
+  }, [testInProgress, testAnswers]);
+  const stuck = testInProgress && stuckOn === testAnswers;
+
+  /**
+   * Where the voice turn is, read off the transcript the store already keeps.
+   * `isAITyping` alone cannot say: the store sets it for the tutor's
+   * "Thinking…" (`planning`) bubble and its tool status as well as for its
+   * words, and a `status` frame can clear it mid-think — which is how the pet
+   * used to show Speaking while the tutor thought, then drop to Idle.
+   *
+   *  - `child`: the child spoke last; the tutor has not answered yet.
+   *  - `tutorThinking`: the tutor's latest message has no words yet — a
+   *    "Thinking…" bubble or a tool status.
+   *  - `tutorTalking`: the tutor's reply has words.
+   */
+  const voiceTurn = useStudentStore((s) => {
+    const m = s.messages[s.messages.length - 1];
+    if (!m) return null;
+    if (m.sender === "user") return `child:${m.id}:${m.text.length}`;
+    if (m.isPlanning || (!m.text.trim() && m.toolStatus)) return `tutorThinking:${m.id}`;
+    return "tutorTalking";
+  });
+  // Each wait is bounded, keyed on what it is waiting on (as `stuck` is), so
+  // a reply that never comes cannot leave the pet thinking forever.
+  const [waitExpiredOn, setWaitExpiredOn] = useState<string | null>(null);
+  const waiting = voiceTurn?.startsWith("child:") || voiceTurn?.startsWith("tutorThinking:");
+  useEffect(() => {
+    if (!voiceActive || !waiting || !voiceTurn) return;
+    const t = setTimeout(() => setWaitExpiredOn(voiceTurn), AWAIT_REPLY_MS);
+    return () => clearTimeout(t);
+  }, [voiceActive, waiting, voiceTurn]);
+  const tutorThinking = voiceActive && !!waiting && waitExpiredOn !== voiceTurn;
+  // No transcript yet (a session's opening line) counts as talking too.
+  const tutorTalking = voiceActive && isAITyping && (voiceTurn === "tutorTalking" || voiceTurn === null);
+
+  // ── Resolve ───────────────────────────────────────────────────────────────
+
+  if (burst) return burst;
+  if (tutorTalking) return "speaking";
+  if (micOpen && (studentTalking || pttHeld)) return "listening";
+  if (
+    voiceSessionStatus === "connecting" ||
+    (voiceActive && (connectionQuality === "poor" || connectionQuality === "reconnecting"))
+  ) {
+    return "reconnecting";
+  }
+  // Waiting on the tutor outranks Muted: in push-to-talk the mic closes the
+  // moment the child lets go, and that pause is thinking, not a muted mic.
+  if (tutorThinking) return "thinking";
+  if (voiceActive && isMuted && !pttHeld) return "muted";
+  if (isAITyping || isSubmitting || stuck) return "thinking";
+  return "idle";
 }

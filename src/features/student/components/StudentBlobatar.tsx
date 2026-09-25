@@ -48,6 +48,13 @@ interface StudentBlobatarProps {
    * before anything has been saved. Everywhere else omits it.
    */
   seed?: string;
+  /**
+   * Leave out the name. Blobatar draws it as an SVG `<title>`, which browsers
+   * also show as a hover tooltip — right for an avatar, wrong on the desk
+   * pet, where hovering is how you play with it and its layer is already
+   * `aria-hidden`.
+   */
+  decorative?: boolean;
 }
 
 export function StudentBlobatar({
@@ -58,6 +65,7 @@ export function StudentBlobatar({
   style,
   gazeRef,
   seed: seedOverride,
+  decorative = false,
 }: StudentBlobatarProps) {
   const studentProfile = useStudentStore((s) => s.studentProfile);
   const petTraits = usePetStore((s) => s.petTraits);
@@ -72,7 +80,7 @@ export function StudentBlobatar({
   // Names the creature for assistive tech. Expressions deliberately do not
   // reach AT — a pose is decoration, and whatever it reflects (the tutor
   // responding, a test being graded) is announced by real DOM elsewhere.
-  const title = getStudentDisplayName(studentProfile);
+  const title = decorative ? undefined : getStudentDisplayName(studentProfile);
 
   // The prop union is discriminated on `animate`: the static branch takes
   // <img> attributes, the animated branch takes <svg> ones. Passing

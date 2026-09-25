@@ -17,16 +17,56 @@ import type { ChatMessage } from "../store/useStudentStore";
  * and never changes font when a visual appears.
  */
 /**
- * Appends one assistant transcript chunk to the pending buffer.
+ * A handful of real English words short enough to be mistaken for a
+ * tokenizer fragment (below). Checked lowercase.
+ */
+const SHORT_WHOLE_WORDS = new Set([
+  "a", "i", "am", "an", "as", "at", "be", "by", "do", "go", "he", "hi", "if",
+  "in", "is", "it", "me", "my", "no", "of", "oh", "ok", "on", "or", "so",
+  "to", "up", "us", "we",
+]);
+
+/** Punctuation that always attaches to what precedes it, never preceded by a space. */
+const ATTACHES_LEFT = /^['’.,!?;:)\]}%-]/;
+
+/** The run of letters/digits at the very start of `s`. */
+function leadingWord(s: string): string {
+  const m = /^[A-Za-z0-9]+/.exec(s);
+  return m ? m[0] : "";
+}
+
+/**
+ * Appends one assistant transcript chunk to the pending buffer, inserting a
+ * space between chunks unless there's a good reason not to.
  *
- * Verbatim, with NO separator. The provider streams token fragments, not
- * words: a single word routinely arrives split across packets — "Bu" then
- * "t sometimes" — and each chunk already carries whatever leading space it
- * needs. Joining chunks with " " is what turned "just", "different" and "it"
- * into "jus t", "differen t" and "i t" in the live transcript.
+ * The provider chunks by token, not by word, and a word is occasionally
+ * split mid-token across packets — "Bu" then "t sometimes" — with no space
+ * of its own at that seam. But that's the rare case: the overwhelmingly
+ * common one is a chunk boundary that IS a word boundary — "read" then "the"
+ * — which needs a space that neither chunk supplies. Always joining verbatim
+ * (trusting the provider for every seam) fixes the first case by breaking
+ * the second — see the reported bug, where a whole live transcript rendered
+ * with virtually every word run together.
+ *
+ * So: insert a space, unless the chunk already starts with one (or the
+ * buffer already ends with one), starts with punctuation that attaches to
+ * what came before, or is a short run of letters that isn't itself a real
+ * word — the token-fragment case ("t", "s", "g") this buffer exists to
+ * rejoin without a gap. A 1–2 letter fragment that IS a real word ("to",
+ * "be", "a", "I", …) still gets its space; there are only so many of those
+ * in English and `SHORT_WHOLE_WORDS` lists them.
  */
 export function appendTranscriptChunk(buffer: string, chunk: string): string {
-  return buffer + chunk;
+  if (!chunk) return buffer;
+  if (!buffer) return chunk;
+
+  if (/\s$/.test(buffer) || /^\s/.test(chunk) || ATTACHES_LEFT.test(chunk)) {
+    return buffer + chunk;
+  }
+
+  const lead = leadingWord(chunk);
+  const isFragment = lead.length > 0 && lead.length <= 2 && !SHORT_WHOLE_WORDS.has(lead.toLowerCase());
+  return isFragment ? buffer + chunk : buffer + " " + chunk;
 }
 
 export function appendStreamedText<T extends ChatMessage>(

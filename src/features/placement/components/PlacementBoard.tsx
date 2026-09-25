@@ -10,9 +10,8 @@ import { ItemRenderer } from "./items/ItemRenderer";
 import { PlacementHeader } from "./PlacementHeader";
 import { PlacementIntro } from "./PlacementIntro";
 import { PlacementCompleteView } from "./PlacementCompleteView";
-import { StudentBlobatar } from "@/features/student/components/StudentBlobatar";
-import { thinking, happy, idle } from "blobatar/expression";
 import { PlacementProgressRail } from "./PlacementProgressRail";
+import { PERCH_SIZE, PlacementPerchPet } from "./PlacementPerchPet";
 import type { PlacementItem } from "../types/placement";
 
 const FOCUSABLE =
@@ -106,6 +105,7 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
   // item screen's multi-subject grid — sized to the reference's narrower
   // dialog rather than stretching to the item screen's 1180px board width.
   const isNarrowPhase = phase === "intro" || phase === "complete";
+  const showPerch = phase === "intro" || phase === "item" || phase === "complete";
   const isLastBlock = currentBlock ? currentBlock.block_index >= totalBlocks - 1 : false;
   const isLastScreen = isLastBlock;
   const missingItems = remainingItems.filter((it) => draftResponses[it.item_id] === undefined);
@@ -174,156 +174,155 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
           />
 
           <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+            {/* The panel plus, perched on its top edge, the student's pet —
+                outside the panel because the panel clips (`overflow-hidden`),
+                and outside the dialog because it is decoration. The wrapper
+                carries the enter/exit motion so the two scale as one; the top
+                margin (and the matching cut to the panel's max height) keeps
+                the pet on screen on a short window. */}
             <motion.div
-              ref={panelRef}
-              role="dialog"
-              aria-modal="true"
-              aria-label="Onboarding test"
-              tabIndex={-1}
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.97 }}
               transition={{ type: "spring", stiffness: 400, damping: 34 }}
-              className={`placement-theme max-h-[min(760px,92vh)] flex flex-col rounded-[24px] overflow-hidden pointer-events-auto outline-none ${
-                isNarrowPhase ? "w-[640px] max-w-[92vw]" : "w-[1180px] max-w-[95vw]"
-              }`}
-              style={{ background: "var(--pl-canvas)", boxShadow: "0 30px 80px rgb(16 20 32 / 0.28)" }}
+              className="placement-theme relative"
+              style={{ marginTop: PERCH_SIZE }}
             >
-              {phase === "intro" && (
-                <div className="overflow-y-auto flex-1 min-h-0">
-                  <PlacementIntro
-                    totalItems={totalItems}
-                    subjects={subjects}
-                    grade={grade}
-                    board={board}
-                    isStarting={isStarting}
-                    onStart={handleStart}
-                  />
-                </div>
+              {showPerch && (
+                <PlacementPerchPet
+                  progress={totalItems > 0 ? currentIndex / totalItems : 0}
+                  finished={phase === "complete"}
+                  submitting={isSubmitting}
+                />
               )}
+              <div
+                ref={panelRef}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Onboarding test"
+                tabIndex={-1}
+                className={`flex flex-col rounded-[24px] overflow-hidden pointer-events-auto outline-none ${
+                  isNarrowPhase ? "w-[640px] max-w-[92vw]" : "w-[1180px] max-w-[95vw]"
+                }`}
+                style={{
+                  maxHeight: `min(760px, calc(92vh - ${PERCH_SIZE}px))`,
+                  background: "var(--pl-canvas)",
+                  boxShadow: "0 30px 80px rgb(16 20 32 / 0.28)",
+                }}
+              >
+                {phase === "intro" && (
+                  <div className="overflow-y-auto flex-1 min-h-0">
+                    <PlacementIntro
+                      totalItems={totalItems}
+                      subjects={subjects}
+                      grade={grade}
+                      board={board}
+                      isStarting={isStarting}
+                      onStart={handleStart}
+                    />
+                  </div>
+                )}
 
-              {phase === "item" && currentBlock && (
-                <div className="flex flex-col min-h-0 flex-1">
-                  <div className="px-6 sm:px-10 pt-6 pb-4 shrink-0 space-y-4">
-                    <PlacementHeader />
-                    <div className="flex items-center gap-3">
-                      {/* Company through a long mandatory test. It reacts to
-                          PROGRESS only — never to correctness. This store
-                          deliberately carries no per-answer `is_correct`
-                          client-side (see types/placement.ts, asserted by a
-                          store test), and the creature is not a reason to
-                          change that. */}
-                      <div className="hidden sm:flex shrink-0">
-                        <StudentBlobatar
-                          size={40}
-                          animate="hover"
-                          expression={
-                            isSubmitting
-                              ? thinking
-                              : totalItems > 0 && currentIndex >= totalItems / 2
-                                ? happy
-                                : idle
-                          }
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <PlacementProgressRail currentIndex={currentIndex} totalItems={totalItems} />
-                      </div>
+                {phase === "item" && currentBlock && (
+                  <div className="flex flex-col min-h-0 flex-1">
+                    <div className="px-6 sm:px-10 pt-6 pb-4 shrink-0 space-y-4">
+                      <PlacementHeader />
+                      <PlacementProgressRail currentIndex={currentIndex} totalItems={totalItems} />
+                    </div>
+
+                    {/* A CSS multi-column masonry, not a grid — the reference
+                        layout packs every item (mcq, map, chart, whatever)
+                        into the same 3 columns by reading order, each column
+                        filling to roughly the same height, so a short card is
+                        immediately followed by the next item rather than
+                        leaving a gap under it. A grid can't do this: a grid
+                        row's height is set by its tallest cell, so any card
+                        shorter than its row-mate wastes the rest of that row.
+                        `break-inside: avoid` keeps a single item from being
+                        split across two columns. */}
+                    <div
+                      className="px-6 sm:px-10 pb-6 overflow-y-auto flex-1 min-h-0"
+                      style={{ columnCount: 3, columnGap: 16 }}
+                    >
+                      {remainingItems.map((item) => (
+                        <div key={item.item_id} style={{ breakInside: "avoid", marginBottom: 16 }}>
+                          <ItemRenderer
+                            item={item}
+                            value={draftResponses[item.item_id] ?? null}
+                            onChange={(response) => setItemDraft(item.item_id, response)}
+                            disabled={isSubmitting}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div
+                      className="px-6 sm:px-10 py-5 shrink-0 border-t flex items-center justify-between gap-4"
+                      style={{ borderColor: "var(--pl-border)" }}
+                    >
+                      {/* A send that failed leaves the student exactly where
+                          they were; pressing the button again re-sends the
+                          same block, which the backend treats as a no-op.
+                          Otherwise, while the block is incomplete, name the
+                          exact questions still blocking Next/Finish — "answer
+                          Q18, Q20" is something a student can act on; a
+                          disabled button with no explanation is not. The
+                          static hint is the fallback once nothing is missing,
+                          so the footer isn't empty space either way. */}
+                      <p className="m-0 text-[12px] font-medium" role="alert" style={{ color: "var(--pl-ink-mid)" }}>
+                        {errorMessage
+                          ? `${errorMessage} Tap the button again.`
+                          : missingItems.length > 0
+                            ? `Answer ${formatQuestionList(missingItems)} to continue.`
+                            : "Questions are tailored to your grade and curriculum."}
+                      </p>
+
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        loading={isSubmitting}
+                        // Every item in the block needs an answer — there is no
+                        // skip, and no partial submit.
+                        disabled={!blockComplete || isSubmitting}
+                        onClick={goNext}
+                        trailingIcon={<ArrowRight size={18} strokeWidth={2.4} />}
+                      >
+                        {isLastScreen ? "Finish" : "Next"}
+                      </Button>
                     </div>
                   </div>
+                )}
 
-                  {/* A CSS multi-column masonry, not a grid — the reference
-                      layout packs every item (mcq, map, chart, whatever)
-                      into the same 3 columns by reading order, each column
-                      filling to roughly the same height, so a short card is
-                      immediately followed by the next item rather than
-                      leaving a gap under it. A grid can't do this: a grid
-                      row's height is set by its tallest cell, so any card
-                      shorter than its row-mate wastes the rest of that row.
-                      `break-inside: avoid` keeps a single item from being
-                      split across two columns. */}
-                  <div
-                    className="px-6 sm:px-10 pb-6 overflow-y-auto flex-1 min-h-0"
-                    style={{ columnCount: 3, columnGap: 16 }}
-                  >
-                    {remainingItems.map((item) => (
-                      <div key={item.item_id} style={{ breakInside: "avoid", marginBottom: 16 }}>
-                        <ItemRenderer
-                          item={item}
-                          value={draftResponses[item.item_id] ?? null}
-                          onChange={(response) => setItemDraft(item.item_id, response)}
-                          disabled={isSubmitting}
-                        />
-                      </div>
-                    ))}
+                {phase === "complete" && (
+                  <div className="overflow-y-auto flex-1 min-h-0">
+                    <PlacementCompleteView
+                      subjectCount={subjects.length}
+                      totalItems={totalItems}
+                      grade={grade}
+                      board={board}
+                      startedAt={startedAt}
+                      completedAt={completedAt}
+                      onContinue={finish}
+                    />
                   </div>
+                )}
 
-                  <div
-                    className="px-6 sm:px-10 py-5 shrink-0 border-t flex items-center justify-between gap-4"
-                    style={{ borderColor: "var(--pl-border)" }}
-                  >
-                    {/* A send that failed leaves the student exactly where
-                        they were; pressing the button again re-sends the
-                        same block, which the backend treats as a no-op.
-                        Otherwise, while the block is incomplete, name the
-                        exact questions still blocking Next/Finish — "answer
-                        Q18, Q20" is something a student can act on; a
-                        disabled button with no explanation is not. The
-                        static hint is the fallback once nothing is missing,
-                        so the footer isn't empty space either way. */}
-                    <p className="m-0 text-[12px] font-medium" role="alert" style={{ color: "var(--pl-ink-mid)" }}>
-                      {errorMessage
-                        ? `${errorMessage} Tap the button again.`
-                        : missingItems.length > 0
-                          ? `Answer ${formatQuestionList(missingItems)} to continue.`
-                          : "Questions are tailored to your grade and curriculum."}
+                {phase === "error" && (
+                  <div className="flex-1 flex flex-col items-center justify-center px-6 sm:px-10 py-14 text-center">
+                    <h2 className="m-0 font-extrabold text-[22px]" style={{ color: "var(--pl-primary)" }}>
+                      We couldn&apos;t load your test
+                    </h2>
+                    <p className="mt-3 mb-0 max-w-[40ch] text-[15px]" style={{ color: "var(--pl-ink-mid)" }}>
+                      {errorMessage}
                     </p>
-
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      loading={isSubmitting}
-                      // Every item in the block needs an answer — there is no
-                      // skip, and no partial submit.
-                      disabled={!blockComplete || isSubmitting}
-                      onClick={goNext}
-                      trailingIcon={<ArrowRight size={18} strokeWidth={2.4} />}
-                    >
-                      {isLastScreen ? "Finish" : "Next"}
-                    </Button>
+                    <div className="mt-8 w-full max-w-[280px]">
+                      <Button variant="outline" size="lg" fullWidth className="pl-btn-quiet" onClick={reset}>
+                        Close
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              )}
-
-              {phase === "complete" && (
-                <div className="overflow-y-auto flex-1 min-h-0">
-                  <PlacementCompleteView
-                    subjectCount={subjects.length}
-                    totalItems={totalItems}
-                    grade={grade}
-                    board={board}
-                    startedAt={startedAt}
-                    completedAt={completedAt}
-                    onContinue={finish}
-                  />
-                </div>
-              )}
-
-              {phase === "error" && (
-                <div className="flex-1 flex flex-col items-center justify-center px-6 sm:px-10 py-14 text-center">
-                  <h2 className="m-0 font-extrabold text-[22px]" style={{ color: "var(--pl-primary)" }}>
-                    We couldn&apos;t load your test
-                  </h2>
-                  <p className="mt-3 mb-0 max-w-[40ch] text-[15px]" style={{ color: "var(--pl-ink-mid)" }}>
-                    {errorMessage}
-                  </p>
-                  <div className="mt-8 w-full max-w-[280px]">
-                    <Button variant="outline" size="lg" fullWidth className="pl-btn-quiet" onClick={reset}>
-                      Close
-                    </Button>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </motion.div>
           </div>
         </>

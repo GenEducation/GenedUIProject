@@ -88,6 +88,8 @@ export function PetTunerModal({ isOpen, onClose, showPetSettings }: PetTunerModa
   const setPetSize = usePetStore((s) => s.setPetSize);
   const petTraits = usePetStore((s) => s.petTraits);
   const setPetTraits = usePetStore((s) => s.setPetTraits);
+  const petWander = usePetStore((s) => s.petWander);
+  const setPetWander = usePetStore((s) => s.setPetWander);
 
   const seed = useBuddySeed();
 
@@ -316,6 +318,25 @@ export function PetTunerModal({ isOpen, onClose, showPetSettings }: PetTunerModa
                   onChange={setPetSize}
                   onReset={() => setPetSize(PET_SIZE_DEFAULT)}
                 />
+                <label
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    gap: 12, cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.ink,
+                  }}
+                >
+                  <span>
+                    let it wander
+                    <span style={{ display: "block", fontSize: 11, fontWeight: 400, color: C.muted }}>
+                      strolls and hops around its spot while you&apos;re idle
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={petWander}
+                    onChange={(e) => setPetWander(e.target.checked)}
+                    style={{ width: 16, height: 16, accentColor: C.accent, cursor: "pointer" }}
+                  />
+                </label>
               </Section>
             )}
 

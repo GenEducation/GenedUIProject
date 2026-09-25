@@ -23,12 +23,20 @@ import { useState } from "react";
 import { Blobatar } from "@blobatar/react";
 import { happy, thinking, sleepy, surprised, unsure, idle } from "blobatar/expression";
 import { PetCompanion } from "@/features/student/components/PetCompanion";
+import { PetFaceAccents } from "@/features/student/components/PetFaceAccents";
+import { StudentBlobatar } from "@/features/student/components/StudentBlobatar";
 import { PetTunerModal } from "@/features/student/components/PetTunerModal";
 import { CompleteProfileBanner } from "@/features/student/components/CompleteProfileBanner";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { usePetStore } from "@/features/student/store/usePetStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { useHydrated } from "@/hooks/useHydrated";
+import {
+  PET_EMOTIONS,
+  BACKEND_EMOTIONS,
+  type PetEmotion,
+} from "@/features/student/theme/petExpressions";
+import { resolveMove } from "@/features/student/utils/petLocomotion";
 import {
   SILHOUETTES,
   SILHOUETTE_NAMES,
@@ -168,6 +176,78 @@ export default function BlobatarHarness() {
         </div>
       </Section>
 
+      <Section
+        title="Pet emotions — face, marks, tint, move, particles"
+        note="Every emotion in the roster, on the student's own creature, with its face marks and tint. Motion and particles are listed; play them on the desk pet with the “Fire backend frames” buttons below."
+      >
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
+          {(Object.keys(PET_EMOTIONS) as PetEmotion[]).map((e) => <EmotionCard key={e} emotion={e} />)}
+        </div>
+      </Section>
+
+      <Section
+        title="Fire backend frames"
+        note="Injects a `pet_emotion` frame through the same ingest the chat stream and voice socket use (seq de-dupe and damper included). Enable the desk pet first."
+      >
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {BACKEND_EMOTIONS.map((e) => (
+            <button
+              key={e}
+              style={btn}
+              onClick={() => {
+                devSeq += 1;
+                usePetStore.getState().ingestPetFrame(
+                  { type: "pet_emotion", emotion: e, cause: "dev.harness", seq: devSeq },
+                  "dev",
+                );
+              }}
+            >
+              {e}
+            </button>
+          ))}
+          <button
+            style={btn}
+            onClick={() => usePetStore.getState().ingestPetFrame(
+              { type: "pet_emotion", emotion: "cheer", cause: "dev.replay", seq: devSeq },
+              "dev",
+            )}
+          >
+            replay last seq (should do nothing)
+          </button>
+        </div>
+      </Section>
+
+      <Section
+        title="Local sources and presence"
+        note="Frontend-derived triggers and browser-detected states."
+      >
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <button style={btn} onClick={() => usePetStore.getState().recordWidgetAnswer({ directiveId: `w${Date.now()}`, isCorrect: true })}>
+            widget: right
+          </button>
+          <button style={btn} onClick={() => usePetStore.getState().recordWidgetAnswer({ directiveId: `w${Date.now()}`, isCorrect: false })}>
+            widget: wrong
+          </button>
+          <button style={btn} onClick={() => usePetStore.getState().fireEmotion("noticing", "dev")}>notification</button>
+          <button style={btn} onClick={() => usePetStore.getState().fireEmotion("love", "dev")}>love</button>
+          {([
+            ["speaking", { voiceSessionStatus: "active", isAITyping: true, isMuted: false, pttHeld: false, connectionQuality: null }],
+            ["listening (ptt)", { voiceSessionStatus: "active", isAITyping: false, isMuted: true, pttHeld: true, connectionQuality: null }],
+            ["muted", { voiceSessionStatus: "active", isAITyping: false, isMuted: true, pttHeld: false, connectionQuality: null }],
+            ["reconnecting", { voiceSessionStatus: "active", isAITyping: false, isMuted: false, pttHeld: false, connectionQuality: "reconnecting" }],
+            ["thinking", { voiceSessionStatus: "idle", isAITyping: true, isMuted: false, pttHeld: false, connectionQuality: null }],
+            ["clear", { voiceSessionStatus: "idle", isAITyping: false, isMuted: false, pttHeld: false, connectionQuality: null }],
+          ] as const).map(([label, state]) => (
+            <button key={label} style={btn} onClick={() => useStudentStore.setState(state)}>
+              {label}
+            </button>
+          ))}
+          <button style={btn} onClick={() => usePetStore.getState().setPetWander(!usePetStore.getState().petWander)}>
+            toggle wander
+          </button>
+        </div>
+      </Section>
+
       <Section title="Sizes" note="The sizes the app actually renders at.">
         <div style={{ display: "flex", alignItems: "flex-end", gap: 18 }}>
           {[28, 32, 34, 48, 64, 76, 112, 120].map((size) => (
@@ -193,6 +273,9 @@ export default function BlobatarHarness() {
   );
 }
 
+/** Monotonic like the backend's, so the harness exercises the real seq de-dupe. */
+let devSeq = 0;
+
 const btn: React.CSSProperties = {
   padding: "8px 14px", borderRadius: 10, border: "1px solid #E2E8F0",
   background: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
@@ -208,5 +291,27 @@ function Section({ title, note, children }: { title: string; note: string; child
         {children}
       </div>
     </section>
+  );
+}
+
+/** One roster entry: the creature in that emotion, its face marks drawn inside it. */
+function EmotionCard({ emotion }: { emotion: PetEmotion }) {
+  const spec = PET_EMOTIONS[emotion];
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
+  return (
+    <div style={{ textAlign: "center", width: 96 }}>
+      <div ref={setHost} style={{ width: 64, height: 64, margin: "0 auto" }}>
+        <StudentBlobatar size={64} animate="always" expression={spec.face} />
+        {spec.accent && <PetFaceAccents accent={spec.accent} host={host} />}
+      </div>
+      <div style={cap}>{emotion}</div>
+      <div style={{ ...cap, marginTop: 0 }}>
+        {spec.move ?? "—"}
+        {spec.then && ` → ${spec.then}`}
+        {spec.move && ` / ${resolveMove(spec.move, spec.inPlace, true) ?? "none"}`}
+        {spec.loop && ` · ${spec.loop}`}
+        {spec.particles && ` · ${spec.particles.count}× ${spec.particles.kind}`}
+      </div>
+    </div>
   );
 }

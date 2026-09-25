@@ -1,5 +1,16 @@
 import { create } from "zustand";
 import type { TraitOverrides } from "blobatar";
+import type { PetEmotion } from "../theme/petExpressions";
+import {
+  EMPTY_TALLY,
+  LOCAL_SOURCES,
+  acceptSeq,
+  fromWidgetResult,
+  parsePetFrame,
+  passDamper,
+  type DamperState,
+  type WidgetTally,
+} from "../utils/petEvents";
 
 /**
  * The desk pet's own state: whether it is loose on screen, and where.
@@ -23,6 +34,8 @@ const POSITION_KEY = "gened_pet_position";
 const SIZE_KEY = "gened_pet_size";
 const TRAITS_KEY = "gened_pet_traits";
 const SEED_KEY = "gened_pet_seed";
+const WANDER_KEY = "gened_pet_wander";
+const LAST_STREAK_KEY = "gened_pet_last_streak";
 
 /** Distance kept from every viewport edge, in px. */
 export const PET_MARGIN = 16;
@@ -103,6 +116,33 @@ const getInitialSize = (): number => {
   }
 };
 
+/** Off unless the student turns it on: a pet that roams is not for everyone. */
+const getInitialWander = (): boolean => {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(WANDER_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * The day streak as of the last visit, so a streak gained or lost *between*
+ * visits can be noticed. Without it the first observation in a session has
+ * nothing to compare against and must be ignored.
+ */
+const getInitialLastSeenStreak = (): number | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(LAST_STREAK_KEY);
+    if (raw === null) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  } catch {
+    return null;
+  }
+};
+
 const getInitialPosition = (): PetPosition | null => {
   if (typeof window === "undefined") return null;
   try {
@@ -118,6 +158,19 @@ const getInitialPosition = (): PetPosition | null => {
   }
 };
 
+/**
+ * One requested reaction. `id` increments on every fire, so the same emotion
+ * twice in a row is still two events to whoever is watching.
+ */
+export interface PetBurst {
+  emotion: PetEmotion;
+  id: number;
+  /** `backend:<cause>` or `local:<source>` — for logs and the dev harness. */
+  source: string;
+}
+
+let burstSeq = 0;
+
 interface PetState {
   petEnabled: boolean;
   /** `null` until the student has moved it — the default corner is computed. */
@@ -131,9 +184,33 @@ interface PetState {
   setPetTraits: (traits: TraitOverrides | null) => void;
   setPetSeed: (seed: string | null) => void;
   resetPetPosition: () => void;
+
+  /** Roams around its home spot while idle. */
+  petWander: boolean;
+  setPetWander: (wander: boolean) => void;
+
+  petLastSeenStreak: number | null;
+  setPetLastSeenStreak: (streak: number) => void;
+
+  /** The latest requested reaction; `usePetExpression` decides whether it shows. */
+  petBurst: PetBurst | null;
+  /** Request a reaction. Returns `false` when the damper swallowed it. */
+  fireEmotion: (emotion: PetEmotion, source?: string) => boolean;
+  /**
+   * Feed one event from the chat stream or voice socket. Anything that is not
+   * a pet frame is ignored, so callers can hand over every event unfiltered.
+   */
+  ingestPetFrame: (event: unknown, sessionKey: string) => void;
+  /** A graded math or comprehension widget answer (a local source). */
+  recordWidgetAnswer: (result: { directiveId: string; isCorrect: boolean; attempts?: number }) => void;
+
+  /** Internal bookkeeping for the functions above. */
+  lastSeqBySession: Record<string, number>;
+  damper: DamperState;
+  widgetTally: WidgetTally;
 }
 
-export const usePetStore = create<PetState>((set) => ({
+export const usePetStore = create<PetState>((set, get) => ({
   petEnabled: getInitialEnabled(),
   petPosition: getInitialPosition(),
   petSize: getInitialSize(),
@@ -207,5 +284,65 @@ export const usePetStore = create<PetState>((set) => ({
       }
     }
     set({ petPosition: null });
+  },
+
+  petWander: getInitialWander(),
+  setPetWander: (wander) => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(WANDER_KEY, String(wander));
+      } catch {
+        /* see above */
+      }
+    }
+    set({ petWander: wander });
+  },
+
+  petLastSeenStreak: getInitialLastSeenStreak(),
+  setPetLastSeenStreak: (streak) => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(LAST_STREAK_KEY, String(streak));
+      } catch {
+        /* see above */
+      }
+    }
+    set({ petLastSeenStreak: streak });
+  },
+
+  petBurst: null,
+  lastSeqBySession: {},
+  damper: {},
+  widgetTally: EMPTY_TALLY,
+
+  fireEmotion: (emotion, source = "local") => {
+    const r = passDamper(get().damper, emotion, Date.now());
+    if (!r.pass) return false;
+    burstSeq += 1;
+    set({ damper: r.lastAt, petBurst: { emotion, id: burstSeq, source } });
+    if (process.env.NODE_ENV !== "production") {
+      console.debug(`[pet] ${emotion} ← ${source}`);
+    }
+    return true;
+  },
+
+  ingestPetFrame: (event, sessionKey) => {
+    const frame = parsePetFrame(event);
+    if (!frame) return;
+    const seq = acceptSeq(get().lastSeqBySession, sessionKey, frame.seq);
+    if (!seq.accept) return;
+    set({ lastSeqBySession: seq.lastSeqBySession });
+    // `answer_graded` only advances the sequence: the pet shows exactly the
+    // emotions the backend sends, and derives nothing from a running score.
+    if (frame.type === "pet_emotion") {
+      get().fireEmotion(frame.emotion, `backend:${frame.cause}`);
+    }
+  },
+
+  recordWidgetAnswer: (result) => {
+    if (!LOCAL_SOURCES.interactive) return;
+    const r = fromWidgetResult(get().widgetTally, result);
+    set({ widgetTally: r.tally });
+    get().fireEmotion(r.emotion, "local:interactive");
   },
 }));

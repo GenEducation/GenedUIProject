@@ -1,13 +1,27 @@
 "use client";
 
 import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { happy, mad, unsure, love, shy } from "blobatar/expression";
+import { happy, mad, unsure, love, shy, surprised } from "blobatar/expression";
 import type { Expression } from "blobatar";
 import { useGaze } from "@blobatar/react/gaze";
+import { useReducedMotion } from "framer-motion";
 import { Settings2 } from "lucide-react";
 import { StudentBlobatar } from "./StudentBlobatar";
 import { PetTunerModal } from "./PetTunerModal";
+import { PetEmotionLabel } from "./PetOverlayBadge";
+import { PetFaceAccents } from "./PetFaceAccents";
 import { usePetExpression } from "../hooks/usePetExpression";
+import { usePetLocomotion, type LocoPhase } from "../hooks/usePetLocomotion";
+import { useTutorLevelVar } from "../hooks/useVoiceLevels";
+import {
+  PET_EMOTIONS,
+  cheerPose,
+  encouragingPose,
+  excitedPose,
+  type PetEmotion,
+} from "../theme/petExpressions";
+import { resolveMove, wanderPick, PHYSICS } from "../utils/petLocomotion";
+import { useTestStore } from "../store/useTestStore";
 import {
   detectShake,
   createMood,
@@ -75,7 +89,13 @@ export function PetCompanion({ suppressed = false }: PetCompanionProps) {
   // the clamp, the resting corner and the gear's offset all depend on it.
   const petSize = usePetStore((s) => s.petSize);
 
-  const ambientPose = usePetExpression();
+  const emotion = usePetExpression();
+  const spec = PET_EMOTIONS[emotion];
+  const petWander = usePetStore((s) => s.petWander);
+  const burstId = usePetStore((s) => s.petBurst?.id ?? null);
+  const burstEmotion = usePetStore((s) => s.petBurst?.emotion ?? null);
+  const testInProgress = useTestStore((s) => !!s.currentTest && !s.testResult);
+  const reducedMotion = useReducedMotion() ?? false;
   /** A gesture's reaction, which outranks the ambient pose while it holds. */
   const [reactionPose, setReactionPose] = useState<Expression | null>(null);
   const petTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -152,6 +172,121 @@ export function PetCompanion({ suppressed = false }: PetCompanionProps) {
     };
   }, []);
 
+  // ── Movement ──────────────────────────────────────────────────────────────
+
+  const {
+    moverRef, bodyRef, cssMoveRef, shadowRef, fxRef,
+    play, goTo, reset: resetLoco, burst, phase, moving,
+  } = usePetLocomotion({ home: pos, size: petSize, reducedMotion });
+  /** What the creature wears right now; the face marks are laid on the same pose. */
+  const face = reactionPose ?? faceFor(emotion, phase);
+  // Primitives, because `pos` is a fresh object every render.
+  const homeX = pos?.x ?? null;
+  const homeY = pos?.y ?? null;
+  // Read inside timers without re-arming them on every trip.
+  const movingRef = useRef(moving);
+  const [loopEl, setLoopEl] = useState<HTMLDivElement | null>(null);
+  useTutorLevelVar(loopEl, emotion === "speaking");
+  const typing = useTyping();
+
+  /**
+   * Whether crossing the screen would get in the way right now. The emotion
+   * still plays — `resolveMove` swaps a travelling move for its in-place
+   * version — but the pet stays put while the student is working.
+   */
+  const travelSuppressed = useCallback(
+    () =>
+      typing ||
+      testInProgress ||
+      dragging ||
+      hovered ||
+      emotion === "listening" ||
+      emotion === "speaking" ||
+      isModalOpen(),
+    [typing, testInProgress, dragging, hovered, emotion],
+  );
+
+  /** Play an emotion's move, then its follow-up once the first has had its moment. */
+  const followUp = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const performEmotion = useCallback(
+    (e: PetEmotion) => {
+      const s = PET_EMOTIONS[e];
+      const suppressed = travelSuppressed();
+      const first = resolveMove(s.move, s.inPlace, suppressed);
+      if (followUp.current) clearTimeout(followUp.current);
+      if (first) play(first);
+      // Particles are this emotion's own, whatever the move degraded to: a
+      // Cheer mid-test still sparkles, it just does not cross the screen.
+      if (s.particles && !reducedMotion) burst(s.particles.kind, s.particles.count);
+      if (s.then) {
+        const second = resolveMove(s.then, undefined, suppressed);
+        if (second) {
+          followUp.current = setTimeout(() => play(second), first && PHYSICS.has(first) ? 750 : 450);
+        }
+      }
+    },
+    [play, burst, reducedMotion, travelSuppressed],
+  );
+
+  // Perform on every new emotion, and again when the same burst fires twice
+  // (two correct answers in a row are two hops, not one).
+  const performedBurst = useRef<number | null>(null);
+  const performedEmotion = useRef<PetEmotion | null>(null);
+  const hasHome = homeX !== null;
+  useEffect(() => {
+    if (!hasHome) return;
+    const repeatBurst = burstId !== null && burstId !== performedBurst.current && burstEmotion === emotion;
+    if (emotion === performedEmotion.current && !repeatBurst) return;
+    performedEmotion.current = emotion;
+    if (burstEmotion === emotion) performedBurst.current = burstId;
+    performEmotion(emotion);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emotion, burstId, hasHome]);
+
+  useEffect(() => () => {
+    if (followUp.current) clearTimeout(followUp.current);
+  }, []);
+
+  // Thinking paces while it lasts, unless pacing would be in the way.
+  useEffect(() => {
+    if (emotion !== "thinking" || reducedMotion) return;
+    const id = window.setInterval(() => {
+      if (!travelSuppressed() && !movingRef.current) play("pace");
+    }, 4200);
+    return () => window.clearInterval(id);
+  }, [emotion, reducedMotion, travelSuppressed, play]);
+
+  // Wander, if the student turned it on: small excursions around home while idle.
+  useEffect(() => {
+    if (!petWander || emotion !== "idle" || reducedMotion || homeX === null || homeY === null) return;
+    let t: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      t = setTimeout(() => {
+        if (!travelSuppressed() && !movingRef.current) {
+          const pick = wanderPick(
+            { minX: 16 - homeX, maxX: window.innerWidth - petSize - 16 - homeX, maxRise: homeY - 16 },
+            Math.random,
+            (x) => overlapsAvoidZone(homeX + x, homeY, petSize),
+          );
+          if (pick.target !== undefined && (pick.move === "walk" || pick.move === "run")) {
+            goTo(pick.target, pick.move);
+          } else {
+            play(pick.move);
+          }
+        }
+        schedule();
+      }, 4000 + Math.random() * 4000);
+    };
+    schedule();
+    return () => clearTimeout(t);
+  }, [petWander, emotion, reducedMotion, homeX, homeY, petSize, travelSuppressed, play, goTo]);
+
+  useEffect(() => {
+    movingRef.current = moving;
+    // The gaze driver caches the creature's box; re-read it once a trip ends.
+    if (!moving) remeasure();
+  }, [moving, remeasure]);
+
   /** Hold a pose for a while, then hand the buddy back to its ambient mood. */
   const fireReaction = (pose: Expression, holdMs: number) => {
     if (petTimer.current) clearTimeout(petTimer.current);
@@ -176,6 +311,8 @@ export function PetCompanion({ suppressed = false }: PetCompanionProps) {
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!pos) return;
+    // Picked up mid-trip: it comes home first, so the drag starts under the cursor.
+    resetLoco();
     shakeSamples.current = [];
     shookThisDrag.current = false;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -281,6 +418,8 @@ export function PetCompanion({ suppressed = false }: PetCompanionProps) {
 
   if (!petEnabled || suppressed || !pos) return null;
 
+  const leanTowardStudent = pos.x + petSize / 2 < window.innerWidth / 2 ? "6deg" : "-6deg";
+
   return (
     <div
       // Decorative: everything the pet conveys — who the student is, that the
@@ -306,21 +445,68 @@ export function PetCompanion({ suppressed = false }: PetCompanionProps) {
           width: petSize,
           height: petSize,
           transform: `translate(${pos.x}px, ${pos.y}px)`,
-          pointerEvents: "auto",
+          // The home box itself takes no pointer: the creature (`mover`) does,
+          // wherever it has walked to, and its events bubble up here.
+          pointerEvents: "none",
           cursor: dragging ? "grabbing" : "grab",
           touchAction: "none",
           // Eased while idle so a clamp glides, instant while dragging so the
           // creature stays under the cursor instead of trailing it.
           transition: dragging ? "none" : "transform 0.25s cubic-bezier(0.22,1,0.36,1)",
-          filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.18))",
         }}
       >
-        <StudentBlobatar
-          size={petSize}
-          animate="always"
-          expression={reactionPose ?? ambientPose}
-          gazeRef={gazeRef}
+        {/* Contact shadow: stays on the ground and shrinks as the pet leaves it. */}
+        <div
+          ref={shadowRef}
+          style={{
+            position: "absolute",
+            left: petSize * 0.2,
+            top: petSize - 8,
+            width: petSize * 0.6,
+            height: 10,
+            borderRadius: "50%",
+            background: "radial-gradient(closest-side, rgba(15,23,42,0.22), rgba(15,23,42,0))",
+            pointerEvents: "none",
+          }}
         />
+        {/* Dust and confetti land here, not on the moving creature. */}
+        <div ref={fxRef} style={{ position: "absolute", inset: 0, overflow: "visible", pointerEvents: "none" }} />
+
+        <div ref={moverRef} style={{ position: "absolute", inset: 0, pointerEvents: "auto", willChange: "transform" }}>
+          <div ref={bodyRef} className="pet-body" style={{ width: "100%", height: "100%" }}>
+            <div ref={cssMoveRef} className="pet-css-move" style={{ width: "100%", height: "100%" }}>
+              <div
+                ref={setLoopEl}
+                className={`pet-loop${spec.loop && !reducedMotion ? ` pet-loop-${spec.loop}` : ""}`}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.18))",
+                  // Lean toward the middle of the screen, where the student's work is.
+                  "--pet-lean": leanTowardStudent,
+                } as React.CSSProperties}
+              >
+                <StudentBlobatar
+                  size={petSize}
+                  animate="always"
+                  expression={face}
+                  gazeRef={gazeRef}
+                  decorative
+                />
+                {/* The emotion's own marks (blush, glints, "?"…), on the face
+                    it is wearing — not during a gesture reaction, whose face
+                    is someone else's. */}
+                {!reactionPose && spec.accent && (
+                  <PetFaceAccents accent={spec.accent} host={loopEl} />
+                )}
+              </div>
+            </div>
+          </div>
+          {/* Debugging: the emotion's name instead of its icon badge. To bring
+              the icons back, swap this for
+              `{!reactionPose && spec.overlay && <PetOverlayBadge overlay={spec.overlay} size={petSize} />}`. */}
+          <PetEmotionLabel emotion={emotion} reacting={reactionPose !== null} size={petSize} />
+        </div>
 
         {/* Tune, without leaving the page. Revealed on hover so the pet is a
             creature at rest rather than a widget with chrome bolted on.
@@ -383,4 +569,65 @@ export function PetCompanion({ suppressed = false }: PetCompanionProps) {
       </div>
     </div>
   );
+}
+
+/**
+ * The face to wear, given the emotion and where the body is in a move.
+ *
+ * Most emotions keep their own face throughout. The ambient ones borrow a face
+ * from the move instead — a wandering pet looks up as it rises and grins as it
+ * lands — and Cheer is wide-eyed on the way up, its "yes!" on the way down.
+ */
+function faceFor(emotion: PetEmotion, phase: LocoPhase): Expression {
+  if (emotion === "idle") {
+    if (phase === "rising") return excitedPose;
+    if (phase === "falling") return happy;
+    if (phase === "running") return encouragingPose;
+  }
+  if (emotion === "cheer" && phase === "rising") return surprised;
+  if (emotion === "cheer") return cheerPose;
+  return PET_EMOTIONS[emotion].face;
+}
+
+/** Whether a modal dialog is open — the pet never runs about behind one. */
+function isModalOpen(): boolean {
+  if (typeof document === "undefined") return false;
+  return !!document.querySelector('[aria-modal="true"], [role="dialog"]:not([aria-hidden="true"])');
+}
+
+/** Whether a pet box at (x, y) would sit on anything marked `data-pet-avoid`. */
+function overlapsAvoidZone(x: number, y: number, size: number): boolean {
+  if (typeof document === "undefined") return false;
+  const zones = document.querySelectorAll<HTMLElement>("[data-pet-avoid]");
+  for (const z of zones) {
+    const r = z.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) continue;
+    if (x < r.right && x + size > r.left && y < r.bottom && y + size > r.top) return true;
+  }
+  return false;
+}
+
+/**
+ * Whether the student is typing somewhere — tracked from focus, so the pet
+ * stays put while a text field has the caret.
+ */
+function useTyping(): boolean {
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const isEditable = (el: Element | null) =>
+      !!el &&
+      (el instanceof HTMLTextAreaElement ||
+        (el instanceof HTMLInputElement && !["button", "checkbox", "radio", "range", "submit"].includes(el.type)) ||
+        (el as HTMLElement).isContentEditable);
+    const sync = () => setTyping(isEditable(document.activeElement));
+    // On focusout the new element is not focused yet; read after it settles.
+    const onOut = () => window.setTimeout(sync, 0);
+    document.addEventListener("focusin", sync);
+    document.addEventListener("focusout", onOut);
+    return () => {
+      document.removeEventListener("focusin", sync);
+      document.removeEventListener("focusout", onOut);
+    };
+  }, []);
+  return typing;
 }
