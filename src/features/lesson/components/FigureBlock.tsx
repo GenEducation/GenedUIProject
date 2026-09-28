@@ -29,6 +29,7 @@ function Crop({
   const { failed, onError } = useLoadFailure();
   const entry = manifestFigure(manifest, crop.id);
   const aspectRatio = `${crop.width_px} / ${crop.height_px}`;
+  const aspectNumber = crop.width_px / crop.height_px;
 
   if (!entry || failed) {
     return (
@@ -44,36 +45,41 @@ function Crop({
     );
   }
 
+  const caption = /^Figure on PDF page \d+$/.test(crop.printed_text) ? null : crop.printed_text;
   return (
-    // A figure the learner can enlarge, not a design-system action button.
-    // eslint-disable-next-line no-restricted-syntax
-    <button
-      type="button"
-      onClick={onOpen}
-      className="group relative block w-full overflow-hidden rounded-xl border border-[#E2E8F0] bg-[#FAFBFD] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--tutor)]"
-      // maxWidth caps the thumbnail at the crop's own stored pixels: `w-full` lets it shrink on a narrow
-      // screen, but never grows past its native resolution (a small scanned crop stretched to fill a wide
-      // chat column would just look blurry).
-      style={{ aspectRatio, minHeight: 44, maxWidth: crop.width_px }}
-      aria-label={`Enlarge: ${crop.learner_alt_text}`}
+    <figure
+      // Cells share a row height: width follows aspect ratio, capped at the crop's own pixels (never upscaled).
+      style={{ flex: `${aspectNumber} 1 ${Math.round(aspectNumber * 110)}px`, maxWidth: crop.width_px }}
+      className="m-0 min-w-0"
     >
-      {/* Plain img, not next/image: the source is a short-lived signed URL from
-          our own asset route, not a static/optimizable asset. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={entry.url}
-        alt={crop.learner_alt_text}
-        onError={() => {
-          onError();
-          onExpired();
-        }}
-        className="h-full w-full object-contain"
-        loading="lazy"
-      />
-      <span className="pointer-events-none absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-[#475569] opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-        <ZoomIn size={13} aria-hidden />
-      </span>
-    </button>
+      {/* A figure the learner can enlarge, not a design-system action button. */}
+      {/* eslint-disable-next-line no-restricted-syntax */}
+      <button
+        type="button"
+        onClick={onOpen}
+        className="group relative block w-full overflow-hidden rounded-xl border border-[#E2E8F0] bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--tutor)]"
+        style={{ aspectRatio, minHeight: 44 }}
+        aria-label={`Enlarge: ${crop.learner_alt_text}`}
+      >
+        {/* Plain img, not next/image: the source is a short-lived signed URL from
+            our own asset route, not a static/optimizable asset. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={entry.url}
+          alt={crop.learner_alt_text}
+          onError={() => {
+            onError();
+            onExpired();
+          }}
+          className="h-full w-full object-contain"
+          loading="lazy"
+        />
+        <span className="pointer-events-none absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-[#475569] opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+          <ZoomIn size={13} aria-hidden />
+        </span>
+      </button>
+      {caption && <figcaption className="mt-1 text-[12px] leading-snug text-[#64748B]">{caption}</figcaption>}
+    </figure>
   );
 }
 
@@ -164,11 +170,11 @@ export function FigureBlock({ group, manifest, onExpired, discussedElsewhere }: 
   const grid = group.figures.length > 1;
 
   return (
-    <div className="my-3 max-w-sm">
+    <div className="my-3 max-w-xl">
       {discussedElsewhere && (
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">Discussed above</p>
       )}
-      <div className={grid ? "grid grid-cols-2 gap-2" : ""}>
+      <div className={grid ? "flex flex-wrap items-start gap-3" : ""}>
         {group.figures.map((crop) => (
           <Crop key={crop.id} crop={crop} manifest={manifest} onOpen={() => setOpen(crop)} onExpired={onExpired} />
         ))}
