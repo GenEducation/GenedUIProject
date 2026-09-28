@@ -35,9 +35,10 @@ export function recordedTurnToTranscript(t: RecordedTurnOut): TranscriptTurn {
     learnerText: t.learner_text ?? (t.kind === "hint" ? "Can I have a hint?" : null),
     teacherText: t.teacher_text ?? "",
     status: t.closed_at ? closedStatus : "streaming",
-    // The recorded turn does not carry its failure reason; offering a retry is safe,
-    // because a regenerate the server cannot run is refused with a readable message.
+    // Offering a retry is safe even when we're unsure: a regenerate the server cannot run
+    // is refused with a readable message.
     retryable: closedStatus === "failed" ? true : undefined,
+    failedReason: closedStatus === "failed" ? (t.failure_reason ?? undefined) : undefined,
     createdAt: t.created_at,
     answer: t.outcome ? { outcome: t.outcome, correct: t.correct } : undefined,
     figureGroupId: t.figure_group_ids[0] ?? null,

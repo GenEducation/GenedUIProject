@@ -314,6 +314,8 @@ export interface RecordedTurnOut {
   item_id: string | null;
   outcome: "correct" | "incorrect" | "quarantined" | null;
   correct: boolean | null;
+  /** Why a `status: "failed"` turn failed — null for anything else. */
+  failure_reason: TurnFailedReason | null;
   route: RecordedTurnRoute | null;
   redacted: boolean;
   committed_through_seq: number;
