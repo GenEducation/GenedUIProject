@@ -17,8 +17,20 @@ import {
 import { ApiRequestError } from "@/utils/authFetch";
 import { labService } from "@/features/lab/services/labService";
 import { DeviceTokenModal } from "@/features/lab/components/DeviceTokenModal";
-import { getDeviceLogs, getFleetDevice, listFleetLabs } from "../adminService";
-import type { AdminDeviceDetail, AdminLabListItem, HealthComponentReport } from "../devices/types";
+import {
+  getDeviceDiagnostic,
+  getDeviceLogs,
+  getFleetDevice,
+  listFleetLabs,
+} from "../adminService";
+import type {
+  AdminDeviceDetail,
+  AdminLabListItem,
+  DeviceDiagnostic,
+  DiagnosticFinding,
+  DiagnosticStatus,
+  HealthComponentReport,
+} from "../devices/types";
 import { ConnBadge, ServiceChip, absoluteTime, relativeTime } from "./deviceHealth";
 import { Select } from "@/components/ui/Select";
 
@@ -180,6 +192,203 @@ function ComponentRow({ name, report }: { name: string; report: HealthComponentR
   );
 }
 
+// ── gened-health system diagnostic ─────────────────────────────
+
+/**
+ * Status colours for the gened-health vocabulary.
+ *
+ * UNKNOWN is amber, never green. It means the tool could not look — for audio
+ * and display specifically it means the app was unreachable, so the hardware
+ * verdict is genuinely unknown rather than fine. EXPECTED is an operator having
+ * declared a deviation on purpose, so it reads as neutral-good; SKIP and INFO
+ * are not verdicts at all.
+ */
+const DIAG_STYLES: Record<DiagnosticStatus, string> = {
+  PASS: "bg-[#059F6D]/15 text-[#059F6D]",
+  WARN: "bg-amber-500/15 text-amber-300",
+  FAIL: "bg-rose-500/15 text-rose-300",
+  UNKNOWN: "bg-amber-500/10 text-amber-200/80",
+  STALE: "bg-amber-500/10 text-amber-200/80",
+  EXPECTED: "bg-sky-500/15 text-sky-300",
+  SKIP: "bg-white/10 text-white/40",
+  INFO: "bg-white/10 text-white/50",
+};
+
+/** Worst-first, so the counts that matter are not buried under PASS. */
+const TALLY_ORDER: DiagnosticStatus[] = [
+  "FAIL",
+  "WARN",
+  "UNKNOWN",
+  "STALE",
+  "PASS",
+  "EXPECTED",
+  "SKIP",
+  "INFO",
+];
+
+function DiagnosticBadge({
+  status,
+  label,
+}: {
+  status: DiagnosticStatus;
+  /** Accessible name. A bare "WARN" is ambiguous on its own, and the same
+   *  string also appears as a tally label, so the overall verdict names itself. */
+  label?: string;
+}) {
+  return (
+    <span
+      aria-label={label}
+      className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
+        DIAG_STYLES[status] ?? "bg-white/10 text-white/50"
+      }`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function FindingRow({ finding }: { finding: DiagnosticFinding }) {
+  const status = (finding.status ?? "UNKNOWN") as DiagnosticStatus;
+  const severe = status === "FAIL";
+
+  return (
+    <div
+      className={`rounded-lg border p-3 ${
+        severe ? "border-rose-500/30 bg-rose-500/[0.07]" : "border-white/10 bg-white/[0.02]"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <span className="text-sm font-medium text-white">{finding.title ?? finding.id}</span>
+          {finding.subsystem ? (
+            <span className="ml-2 text-[11px] uppercase tracking-wider text-white/35">
+              {finding.subsystem}
+            </span>
+          ) : null}
+        </div>
+        <DiagnosticBadge status={status} />
+      </div>
+      {finding.detail ? <p className="mt-1.5 text-xs text-white/50">{finding.detail}</p> : null}
+      {finding.next_step ? (
+        <p className="mt-2 text-xs text-white/40">
+          <span className="text-white/30">Next step: </span>
+          {finding.next_step}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The gened-health card. Additive — it sits alongside the Lab self-test card
+ * and neither replaces nor reinterprets it.
+ *
+ * `diagnostic === null` is the ordinary "has not reported yet" state, not an
+ * error, and must render as a sentence rather than an empty card. The freshness
+ * verdict is the SERVER's (`fresh`); nothing here recomputes it from timestamps.
+ */
+function SystemDiagnosticCard({
+  diagnostic,
+  error,
+}: {
+  diagnostic: DeviceDiagnostic | null;
+  error: string;
+}) {
+  if (error) {
+    return (
+      <Card title="System diagnostic" subtitle="powered by gened-health">
+        <p className="text-sm text-rose-300">{error}</p>
+      </Card>
+    );
+  }
+
+  if (!diagnostic) {
+    return (
+      <Card title="System diagnostic" subtitle="powered by gened-health">
+        <p className="text-sm text-white/40">
+          No gened-health report received yet. This device&apos;s diagnostic state is{" "}
+          <strong className="text-amber-300">unknown</strong> — not confirmed healthy.
+        </p>
+      </Card>
+    );
+  }
+
+  const tally = TALLY_ORDER.filter((s) => (diagnostic.tally?.[s] ?? 0) > 0);
+
+  return (
+    <Card
+      title="System diagnostic"
+      subtitle="powered by gened-health"
+      right={
+        <DiagnosticBadge
+          status={diagnostic.overall}
+          label={`Overall diagnostic verdict: ${diagnostic.overall}`}
+        />
+      }
+    >
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/40">
+        <span>
+          Reported{" "}
+          <span className="text-white/70">{relativeTime(diagnostic.received_at)}</span>
+        </span>
+        {!diagnostic.fresh ? (
+          <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-amber-300">
+            Stale — no report in over {Math.round(diagnostic.fresh_after_seconds / 60)}m
+          </span>
+        ) : null}
+        {diagnostic.firmware_version ? (
+          <span className="font-mono text-white/50">fw {diagnostic.firmware_version}</span>
+        ) : null}
+        {diagnostic.mode ? <span className="text-white/50">{diagnostic.mode}</span> : null}
+      </div>
+
+      {/* The device's own clock, shown only as context for `received_at` above. */}
+      <p className="mt-1 text-[11px] text-white/30">
+        Device clock: {absoluteTime(diagnostic.collected_at)}
+      </p>
+
+      {diagnostic.clock_synced === false ? (
+        <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          This device reported that its clock is not synchronised, so the device clock above
+          is unreliable. Report age is measured by the server and is unaffected.
+        </div>
+      ) : null}
+
+      {tally.length > 0 ? (
+        <dl className="mt-4 flex flex-wrap gap-2">
+          {tally.map((s) => (
+            <div
+              key={s}
+              className={`flex items-baseline gap-1.5 rounded-md px-2 py-1 ${DIAG_STYLES[s]}`}
+            >
+              <dt className="text-[11px] font-medium">{s}</dt>
+              <dd className="text-xs font-semibold">{diagnostic.tally[s]}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+
+      <div className="mt-4">
+        <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-white/35">
+          Findings
+        </p>
+        {diagnostic.findings.length === 0 ? (
+          <p className="text-sm text-white/40">
+            Nothing actionable in the latest report.
+            {diagnostic.overall === "PASS" ? " All checks passed." : null}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {diagnostic.findings.map((f, i) => (
+              <FindingRow key={f.id ?? i} finding={f} />
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 export function DeviceDetailView({ deviceId }: { deviceId: string }) {
   const router = useRouter();
   const [device, setDevice] = useState<AdminDeviceDetail | null>(null);
@@ -199,12 +408,35 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
   const [logsOpen, setLogsOpen] = useState(false);
   const [logsError, setLogsError] = useState("");
 
+  const [diagnostic, setDiagnostic] = useState<DeviceDiagnostic | null>(null);
+  const [diagnosticError, setDiagnosticError] = useState("");
+
   const load = useCallback(async () => {
     try {
       const d = await getFleetDevice(deviceId);
       setDevice(d);
       setLabelDraft(d.device_label);
       setError("");
+
+      /**
+       * Fetched separately and keyed on `hardware_id`, not the LabDevice UUID:
+       * the diagnostic is mode-independent and lives outside the Lab tables.
+       *
+       * Deliberately after the device load and in its own try — a device with no
+       * gened-health report, or a diagnostic endpoint that is unhappy, must not
+       * take down the page that renders every Lab action. getDeviceDiagnostic
+       * already resolves null for "never reported", so reaching the catch means
+       * something actually went wrong.
+       */
+      try {
+        setDiagnostic(await getDeviceDiagnostic(d.hardware_id));
+        setDiagnosticError("");
+      } catch (e) {
+        setDiagnostic(null);
+        setDiagnosticError(
+          e instanceof Error ? e.message : "Failed to load system diagnostic",
+        );
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load device");
     } finally {
@@ -410,6 +642,10 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
             </div>
           )}
         </Card>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4">
+        <SystemDiagnosticCard diagnostic={diagnostic} error={diagnosticError} />
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4">
