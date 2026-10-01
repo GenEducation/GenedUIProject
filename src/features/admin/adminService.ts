@@ -1,10 +1,11 @@
-import { authFetch } from "@/utils/authFetch";
+import { ApiRequestError, authFetch } from "@/utils/authFetch";
 import type { EducationBoard } from "@/types/education";
 import type {
   AdminDeviceDetail,
   AdminDeviceListItem,
   AdminLabListItem,
   AdminLabStats,
+  DeviceDiagnostic,
   DeviceQuery,
   Paginated,
 } from "./devices/types";
@@ -393,6 +394,32 @@ export function listFleetLabs(
  */
 export const getDeviceLogs = (id: string) =>
   getJson<unknown>(`/lab/devices/${encodeURIComponent(id)}/logs`);
+
+/**
+ * The latest gened-health system diagnostic for one device.
+ *
+ * Keyed on the DEVICE KEY, not the LabDevice UUID the rest of this file uses:
+ * this record is mode-independent and exists for devices that have no Lab row
+ * at all, so it cannot hang off the Lab primary key. `hardware_id` from the
+ * device detail payload is the right thing to pass. The server also accepts the
+ * raw SoC serial or the device's own reported id.
+ *
+ * Resolves to `null` when the device has never reported, because that is an
+ * ordinary state for a unit that has not been updated yet — not a failure worth
+ * showing an error for. Every other status still throws.
+ */
+export async function getDeviceDiagnostic(
+  deviceKey: string,
+): Promise<DeviceDiagnostic | null> {
+  try {
+    return await getJson<DeviceDiagnostic>(
+      `/admin/devices/${encodeURIComponent(deviceKey)}/diagnostic`,
+    );
+  } catch (e) {
+    if (e instanceof ApiRequestError && e.status === 404) return null;
+    throw e;
+  }
+}
 
 // ── Bulk import ────────────────────────────────────────────────
 

@@ -110,6 +110,80 @@ export interface Paginated<T> {
   page_size: number;
 }
 
+// ── gened-health system diagnostic ─────────────────────────────
+//
+// A different system from the self-test above, not a newer version of it. The
+// self-test reports a DISPATCH verdict (`ok`/`service_required`) for the Lab
+// pipeline. gened-health reports a DIAGNOSTIC classification and exists for
+// every device regardless of mode. Both render on this page, side by side.
+
+/**
+ * `UNKNOWN` means the tool could not look — notably for audio and display it
+ * means the app was unreachable, so the hardware verdict is genuinely unknown
+ * rather than fine. It must never render as green.
+ */
+export type DiagnosticStatus =
+  | "PASS"
+  | "WARN"
+  | "FAIL"
+  | "UNKNOWN"
+  | "EXPECTED"
+  | "SKIP"
+  | "INFO"
+  | "STALE";
+
+/** One actionable result the device already triaged. */
+export interface DiagnosticFinding {
+  id: string | null;
+  status: DiagnosticStatus | null;
+  subsystem: string | null;
+  title: string | null;
+  detail: string | null;
+  next_step: string | null;
+}
+
+/**
+ * `GET /admin/devices/{device_key}/diagnostic` — the server's projection, not
+ * the raw canonical document. The full report stays in the database.
+ *
+ * Two clocks, deliberately distinct. `received_at` is the server's and is the
+ * only thing freshness is computed from. `collected_at` is the device's and is
+ * display-only: a Pi that booted offline can report a timestamp years off,
+ * which is what `clock_synced: false` is warning about.
+ *
+ * `fresh` is the SERVER's decision. Render it; do not recompute one here. The
+ * Lab surface already has a 15-minute backend threshold and a separate
+ * 10-minute frontend constant that disagree, and this is the mistake not to
+ * repeat.
+ */
+export interface DeviceDiagnostic {
+  serial: string;
+  device_key: string;
+  reported_device_id: string | null;
+  hostname: string | null;
+  device_model: string | null;
+  mode: string | null;
+  firmware_version: string | null;
+  tool_version: string | null;
+  deployed_version: string | null;
+  overall: DiagnosticStatus;
+  /** Open-keyed per-status counts. Render what is present, not a fixed list. */
+  tally: Partial<Record<DiagnosticStatus, number>>;
+  /** Only FAIL/WARN/UNKNOWN; PASS and INFO live in the tally. */
+  findings: DiagnosticFinding[];
+  /** Total before the actionable filter, so the UI can say "showing N of M". */
+  findings_total: number;
+  received_at: string | null;
+  report_age_seconds: number | null;
+  fresh: boolean;
+  fresh_after_seconds: number;
+  collected_at: string | null;
+  clock_synced: boolean | null;
+  last_ip: string | null;
+  schema_version: number | null;
+  redaction: string | null;
+}
+
 export interface DeviceQuery {
   partner_id?: string;
   lab_id?: string;

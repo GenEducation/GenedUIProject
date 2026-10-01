@@ -1,15 +1,31 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 
 import { DeviceDetailView } from "../DeviceDetailView";
-import type { AdminDeviceDetail } from "../../devices/types";
+import type { AdminDeviceDetail, DeviceDiagnostic } from "../../devices/types";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const getFleetDevice = vi.hoisted(() => vi.fn());
 const getDeviceLogs = vi.hoisted(() => vi.fn());
 const listFleetLabs = vi.hoisted(() => vi.fn());
-vi.mock("../../adminService", () => ({ getFleetDevice, getDeviceLogs, listFleetLabs }));
+const getDeviceDiagnostic = vi.hoisted(() => vi.fn());
+vi.mock("../../adminService", () => ({
+  getFleetDevice,
+  getDeviceLogs,
+  listFleetLabs,
+  getDeviceDiagnostic,
+}));
+
+/**
+ * Default: no gened-health report. The self-test suite below predates this
+ * system and must keep passing for a device that has never sent one, so the
+ * default is the empty state rather than a populated fixture.
+ */
+beforeEach(() => {
+  getDeviceDiagnostic.mockReset();
+  getDeviceDiagnostic.mockResolvedValue(null);
+});
 
 /**
  * Mirrors the live payload observed in production: a wrapper object with
@@ -146,5 +162,260 @@ describe("DeviceDetailView — self-test parsing", () => {
       expect(screen.getByText(/never reported a self-test/i)).toBeInTheDocument(),
     );
     expect(screen.queryByText("Self-test report")).not.toBeInTheDocument();
+  });
+});
+
+// ── gened-health system diagnostic ─────────────────────────────
+
+function diagnostic(overrides: Partial<DeviceDiagnostic> = {}): DeviceDiagnostic {
+  return {
+    serial: "10000000aabbccdd",
+    device_key: "DEV-0001",
+    reported_device_id: "gened-mk2",
+    hostname: "genedmk2",
+    device_model: "Raspberry Pi 4 Model B Rev 1.4",
+    mode: "PERSONAL",
+    firmware_version: "de4f862",
+    tool_version: "de4f862",
+    deployed_version: "de4f862",
+    overall: "WARN",
+    tally: { PASS: 30, WARN: 2, FAIL: 0, UNKNOWN: 2, INFO: 5, SKIP: 1 },
+    findings: [
+      {
+        id: "provenance.deploy.runtime_divergence",
+        status: "WARN",
+        subsystem: "provenance",
+        title: "OTA deployment drift",
+        detail: "3 files differ between /opt/gened-src and /opt/gened",
+        next_step: "Run the same rsync with --dry-run yourself to see the file list.",
+      },
+    ],
+    findings_total: 1,
+    received_at: new Date(Date.now() - 2 * 60_000).toISOString(),
+    report_age_seconds: 120,
+    fresh: true,
+    fresh_after_seconds: 900,
+    collected_at: new Date(Date.now() - 2 * 60_000).toISOString(),
+    clock_synced: true,
+    last_ip: "10.0.3.19",
+    schema_version: 1,
+    redaction: "default",
+    ...overrides,
+  };
+}
+
+function diagCard() {
+  return screen.getByText("System diagnostic").closest("section") as HTMLElement;
+}
+
+/**
+ * The overall verdict, by accessible name. Querying the bare status text would
+ * be ambiguous: the same string also appears as a tally label, which is correct
+ * in the UI (one is the verdict, one is a count) but matches twice.
+ */
+function overallVerdict() {
+  return within(diagCard()).getByLabelText(/^Overall diagnostic verdict:/);
+}
+
+/** A tally label, which renders as the `dt` of its count. */
+function tallyLabel(status: string) {
+  return within(diagCard()).queryByText(status, { selector: "dt" });
+}
+
+describe("DeviceDetailView — gened-health system diagnostic", () => {
+  it("keys the diagnostic lookup on hardware_id, not the LabDevice UUID", async () => {
+    getFleetDevice.mockResolvedValue(detail({ hardware_id: "DEV-ABCD-1234" }));
+    getDeviceDiagnostic.mockResolvedValue(diagnostic());
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(getDeviceDiagnostic).toHaveBeenCalled());
+    // "d1" is the Lab row's UUID and would find nothing — the diagnostic is
+    // mode-independent and lives outside the Lab tables.
+    expect(getDeviceDiagnostic).toHaveBeenCalledWith("DEV-ABCD-1234");
+  });
+
+  it("renders the verdict, tally and findings", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getDeviceDiagnostic.mockResolvedValue(diagnostic());
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    const card = diagCard();
+
+    expect(within(card).getByText("powered by gened-health")).toBeInTheDocument();
+    expect(overallVerdict()).toHaveTextContent("WARN");
+    expect(within(card).getByText(/Reported/)).toBeInTheDocument();
+
+    // Tally counts present in the payload render; a zero one does not.
+    expect(within(card).getByText("30")).toBeInTheDocument();
+    expect(tallyLabel("PASS")).toBeInTheDocument();
+    expect(tallyLabel("FAIL")).not.toBeInTheDocument();
+
+    // The finding, with its next step.
+    expect(within(card).getByText("OTA deployment drift")).toBeInTheDocument();
+    expect(within(card).getByText(/3 files differ/)).toBeInTheDocument();
+    expect(within(card).getByText(/Next step:/)).toBeInTheDocument();
+  });
+
+  it("renders a PASS device without inventing findings", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getDeviceDiagnostic.mockResolvedValue(
+      diagnostic({
+        overall: "PASS",
+        tally: { PASS: 38, WARN: 0, FAIL: 0 },
+        findings: [],
+        findings_total: 0,
+      }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    const card = diagCard();
+
+    expect(overallVerdict()).toHaveTextContent("PASS");
+    expect(within(card).getByText(/Nothing actionable/)).toBeInTheDocument();
+  });
+
+  it("shows FAIL findings for a failing device", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getDeviceDiagnostic.mockResolvedValue(
+      diagnostic({
+        overall: "FAIL",
+        tally: { PASS: 15, FAIL: 3, WARN: 4, UNKNOWN: 2 },
+        findings: [
+          {
+            id: "audio.card.enumeration",
+            status: "FAIL",
+            subsystem: "audio",
+            title: "The WM8960 audio HAT enumerates",
+            detail: "no card matching 'wm8960' in /proc/asound/cards",
+            next_step: "Check the dtoverlay in /boot/firmware/config.txt.",
+          },
+        ],
+        findings_total: 1,
+      }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    const card = diagCard();
+
+    expect(overallVerdict()).toHaveTextContent("FAIL");
+    expect(within(card).getByText("The WM8960 audio HAT enumerates")).toBeInTheDocument();
+    expect(within(card).getByText("audio")).toBeInTheDocument();
+    // UNKNOWN is a real count and must be visible, not folded into healthy.
+    expect(tallyLabel("UNKNOWN")).toBeInTheDocument();
+  });
+
+  it("never renders UNKNOWN with the healthy colour", async () => {
+    /**
+     * Contract requirement, not a style preference: UNKNOWN means gened-health
+     * could not look. For audio and display it specifically means the app was
+     * unreachable, so the hardware verdict is genuinely unknown rather than
+     * fine. Painting it the PASS colour would report a confident wrong answer.
+     * See the device repo docs/17-gened-health-schema.md, ingestion note 5.
+     */
+    const HEALTHY = "059F6D"; // the PASS green
+    getFleetDevice.mockResolvedValue(detail());
+    getDeviceDiagnostic.mockResolvedValue(
+      diagnostic({ overall: "UNKNOWN", tally: { UNKNOWN: 4, PASS: 10 } }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+
+    expect(overallVerdict().className).not.toContain(HEALTHY);
+
+    const label = tallyLabel("UNKNOWN") as HTMLElement;
+    expect(label).toBeInTheDocument();
+    // The colour lives on the chip wrapping the dt/dd pair.
+    expect(label.parentElement?.className).not.toContain(HEALTHY);
+
+    // The PASS tally in the same report still gets the healthy colour, so this
+    // is asserting UNKNOWN specifically and not just that nothing is green.
+    expect(tallyLabel("PASS")?.parentElement?.className).toContain(HEALTHY);
+  });
+
+  it("renders the no-report state as unknown, not healthy", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getDeviceDiagnostic.mockResolvedValue(null);
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    const card = diagCard();
+
+    expect(within(card).getByText(/No gened-health report received yet/)).toBeInTheDocument();
+    expect(within(card).getByText("unknown")).toBeInTheDocument();
+  });
+
+  it("marks a stale report using the server's verdict", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getDeviceDiagnostic.mockResolvedValue(
+      diagnostic({
+        fresh: false,
+        report_age_seconds: 28 * 60,
+        fresh_after_seconds: 900,
+        received_at: new Date(Date.now() - 28 * 60_000).toISOString(),
+      }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    const card = diagCard();
+
+    // The threshold shown comes from the server payload, not a local constant.
+    expect(within(card).getByText(/Stale — no report in over 15m/)).toBeInTheDocument();
+    // A stale report still shows its last known verdict.
+    expect(overallVerdict()).toHaveTextContent("WARN");
+  });
+
+  it("warns when the device clock is not synchronised", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getDeviceDiagnostic.mockResolvedValue(
+      diagnostic({ clock_synced: false, collected_at: "1999-01-01T00:00:00Z" }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    const card = diagCard();
+
+    expect(within(card).getByText(/clock is not synchronised/)).toBeInTheDocument();
+    // Report age is the server's and must still be presented normally.
+    expect(within(card).getByText(/Reported/)).toBeInTheDocument();
+  });
+
+  it("does not warn about the clock when it is synchronised", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getDeviceDiagnostic.mockResolvedValue(diagnostic({ clock_synced: true }));
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    expect(screen.queryByText(/clock is not synchronised/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the Lab self-test card intact alongside the diagnostic", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getDeviceDiagnostic.mockResolvedValue(diagnostic());
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+
+    // Both systems render. The new card is additive, not a replacement.
+    expect(screen.getByText("Self-test")).toBeInTheDocument();
+    expect(screen.getByText("audio_hat")).toBeInTheDocument();
+    expect(screen.getByText("Actions")).toBeInTheDocument();
+  });
+
+  it("a failing diagnostic fetch does not take down the rest of the page", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getDeviceDiagnostic.mockRejectedValue(new Error("diagnostic service unavailable"));
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+
+    expect(within(diagCard()).getByText(/diagnostic service unavailable/)).toBeInTheDocument();
+    // The Lab actions and self-test are unaffected.
+    expect(screen.getByText("Actions")).toBeInTheDocument();
+    expect(screen.getByText("audio_hat")).toBeInTheDocument();
   });
 });
