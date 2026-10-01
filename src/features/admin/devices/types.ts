@@ -177,11 +177,105 @@ export interface DeviceDiagnostic {
   report_age_seconds: number | null;
   fresh: boolean;
   fresh_after_seconds: number;
+  /** Explicit tri-state. NEVER_REPORTED only appears at the device level. */
+  diagnostic_freshness: DiagnosticFreshness;
+  /**
+   * The cadence freshness is derived from (`fresh_after_seconds` is 3x this).
+   * Published so the UI can say "expected hourly" rather than inventing one.
+   */
+  report_interval_seconds: number;
   collected_at: string | null;
   clock_synced: boolean | null;
   last_ip: string | null;
   schema_version: number | null;
   redaction: string | null;
+}
+
+// ── Canonical device registry (Phase 2) ────────────────────────
+
+/**
+ * Reachability RIGHT NOW, from a transport that owns a live channel.
+ *
+ * `UNKNOWN` is not a soft `OFFLINE`. It means no transport could answer — the
+ * normal state for a healthy PERSONAL device on an hourly diagnostic cadence,
+ * since nothing holds a socket open to it. Rendering that as OFFLINE would
+ * report working hardware as dead. Never colour it green either: we do not know.
+ */
+export type ConnectivityState = "ONLINE" | "OFFLINE" | "UNKNOWN";
+
+export type ConnectivitySource = "LAB_WS" | "MQTT_STATUS" | "NONE";
+
+/** How old our diagnostic DATA is. Says nothing about reachability. */
+export type DiagnosticFreshness = "FRESH" | "STALE" | "NEVER_REPORTED";
+
+/** How we know this device exists at all. */
+export type DeviceProvenance =
+  | "PRE_PROVISIONED"
+  | "SELF_REGISTERED"
+  | "ENROLLED";
+
+/** Which transport produced `last_seen_at`. */
+export type LastSeenSource =
+  | "LAB_WS"
+  | "MQTT_STATUS"
+  | "MQTT_HEALTH"
+  | "HEALTH_POST";
+
+export interface DeviceConnectivity {
+  state: ConnectivityState;
+  source: ConnectivitySource;
+  /**
+   * Why the state is UNKNOWN. `ambiguous_multi_unit` is worth surfacing: the
+   * MQTT status topic is student-keyed, so with two units per child the online
+   * flag is not merely imprecise but wrong.
+   */
+  reason: string | null;
+  last_heartbeat_at?: string | null;
+  heartbeat_age_seconds?: number;
+  /** The Lab grace window, server-supplied. Do not hardcode a client copy. */
+  grace_seconds?: number;
+  units_sharing_topic?: number;
+}
+
+/**
+ * `GET /admin/devices/{device_key}` — one physical device as FOUR independent
+ * dimensions: connectivity, diagnostic freshness, diagnostic verdict, and
+ * registry provenance.
+ *
+ * Do not collapse them into one health light. Every pair occurs in production:
+ * online+stale is a broken reporting pipeline on a working device, offline+fresh
+ * is a unit unplugged a minute ago, and "never reported" is not "reported
+ * healthy". A single boolean loses the distinction an operator needs to act on.
+ *
+ * `serial` is the canonical identity. `reported_device_id`, `lab_hardware_id`
+ * and `derived_device_key` are mutable aliases — fine to display and search by,
+ * never to treat as identity.
+ */
+export interface CanonicalDevice {
+  id: string;
+  serial: string;
+  reported_device_id: string | null;
+  lab_hardware_id: string | null;
+  derived_device_key: string;
+  label: string | null;
+  device_model: string | null;
+  /** Mode the device REPORTED. Observed, not assigned. */
+  last_reported_mode: string | null;
+  provenance: DeviceProvenance;
+  connectivity: DeviceConnectivity;
+  /**
+   * Last time the device was observed making CONTACT, on the server's clock,
+   * strictly monotonic. An MQTT Last Will does not advance it — that is the
+   * broker speaking, not the device.
+   */
+  last_seen_at: string | null;
+  last_seen_source: LastSeenSource | null;
+  last_seen_age_seconds: number | null;
+  first_seen_at: string | null;
+  diagnostic_freshness: DiagnosticFreshness;
+  diagnostic_verdict: DiagnosticStatus | null;
+  /** null means never reported — not an empty report. */
+  diagnostic: DeviceDiagnostic | null;
 }
 
 export interface DeviceQuery {

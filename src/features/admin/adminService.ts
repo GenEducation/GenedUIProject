@@ -5,6 +5,7 @@ import type {
   AdminDeviceListItem,
   AdminLabListItem,
   AdminLabStats,
+  CanonicalDevice,
   DeviceDiagnostic,
   DeviceQuery,
   Paginated,
@@ -420,6 +421,47 @@ export async function getDeviceDiagnostic(
     throw e;
   }
 }
+
+/**
+ * The canonical device: four independent dimensions plus the nested diagnostic.
+ *
+ * Prefer this over `getDeviceDiagnostic` for anything that needs to know whether
+ * a device is REACHABLE. The diagnostic alone cannot answer that — it says when
+ * the device last spoke, and a healthy unit on an hourly cadence is silent most
+ * of the time.
+ *
+ * `deviceKey` accepts a serial, a reported device id, a Lab hardware id, or the
+ * derived DEV-XXXX-XXXX. Resolves to `null` on 404, which here means "no device
+ * is registered under this identifier" — a device that exists but has never
+ * reported still returns a full record with `diagnostic: null`.
+ */
+export async function getCanonicalDevice(
+  deviceKey: string,
+): Promise<CanonicalDevice | null> {
+  try {
+    return await getJson<CanonicalDevice>(
+      `/admin/devices/${encodeURIComponent(deviceKey)}`,
+    );
+  } catch (e) {
+    if (e instanceof ApiRequestError && e.status === 404) return null;
+    throw e;
+  }
+}
+
+/**
+ * Pre-register a physical device before it has ever reported.
+ *
+ * Throws on a malformed serial (400) and on an already-registered one (409).
+ * The conflict is deliberate on the server side — "register" and "update" are
+ * different intents, and a silent upsert would discard observed history the
+ * operator cannot see on the form.
+ */
+export const registerCanonicalDevice = (body: {
+  serial: string;
+  label?: string;
+  reported_device_id?: string;
+  device_model?: string;
+}) => send<CanonicalDevice>("/admin/devices", "POST", body);
 
 // ── Bulk import ────────────────────────────────────────────────
 
