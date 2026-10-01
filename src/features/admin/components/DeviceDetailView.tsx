@@ -18,7 +18,7 @@ import { ApiRequestError } from "@/utils/authFetch";
 import { labService } from "@/features/lab/services/labService";
 import { DeviceTokenModal } from "@/features/lab/components/DeviceTokenModal";
 import {
-  getDeviceDiagnostic,
+  getCanonicalDevice,
   getDeviceLogs,
   getFleetDevice,
   listFleetLabs,
@@ -26,8 +26,11 @@ import {
 import type {
   AdminDeviceDetail,
   AdminLabListItem,
-  DeviceDiagnostic,
+  CanonicalDevice,
+  ConnectivityState,
+  DeviceProvenance as DeviceProvenanceT,
   DiagnosticFinding,
+  DiagnosticFreshness,
   DiagnosticStatus,
   HealthComponentReport,
 } from "../devices/types";
@@ -280,18 +283,105 @@ function FindingRow({ finding }: { finding: DiagnosticFinding }) {
 }
 
 /**
+ * Connectivity colours. `UNKNOWN` is amber and never green: we do not know, and
+ * the normal cause is that this device has no presence transport at all rather
+ * than anything being wrong.
+ */
+const CONNECTIVITY_STYLES: Record<ConnectivityState, string> = {
+  ONLINE: "bg-emerald-500/15 text-emerald-300",
+  OFFLINE: "bg-rose-500/15 text-rose-300",
+  UNKNOWN: "bg-amber-500/15 text-amber-300",
+};
+
+/** Why connectivity could not be determined, in words an operator can act on. */
+const CONNECTIVITY_REASONS: Record<string, string> = {
+  no_presence_channel:
+    "No live connection channel. This device reports diagnostics on a schedule " +
+    "but holds no socket open, so reachability cannot be confirmed either way.",
+  never_connected: "Enrolled, but has never connected.",
+  no_status_seen: "Has reported health, but no connection status has been seen.",
+  ambiguous_multi_unit:
+    "Two or more units share this student's status topic, so the online flag " +
+    "cannot name a single device. Reachability is genuinely ambiguous, not offline.",
+};
+
+const FRESHNESS_STYLES: Record<DiagnosticFreshness, string> = {
+  FRESH: "bg-emerald-500/15 text-emerald-300",
+  STALE: "bg-amber-500/15 text-amber-300",
+  NEVER_REPORTED: "bg-amber-500/15 text-amber-300",
+};
+
+const PROVENANCE_LABELS: Record<DeviceProvenanceT, string> = {
+  PRE_PROVISIONED: "Pre-registered — awaiting first contact",
+  SELF_REGISTERED: "Self-registered on first contact",
+  ENROLLED: "Enrolled in a lab",
+};
+
+/**
+ * The reachability row. Separate from the diagnostic verdict on purpose.
+ *
+ * A health report says when a device last SPOKE, which is not whether it is
+ * reachable now — so this reads the server's transport-derived answer and never
+ * infers one from report age. The server supplies the grace window too, which
+ * is why no threshold is hardcoded here.
+ */
+function ConnectivityRow({ device }: { device: CanonicalDevice }) {
+  const { connectivity: c } = device;
+  const reason = c.reason ? CONNECTIVITY_REASONS[c.reason] ?? c.reason : null;
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span
+          aria-label={`Connectivity: ${c.state}`}
+          className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+            CONNECTIVITY_STYLES[c.state]
+          }`}
+        >
+          {c.state}
+        </span>
+        {c.source !== "NONE" ? (
+          <span className="text-[11px] text-white/35">
+            via {c.source === "LAB_WS" ? "lab connection" : "device status"}
+          </span>
+        ) : null}
+        {device.last_seen_at ? (
+          <span className="text-[11px] text-white/35">
+            last contact{" "}
+            <span className="text-white/60">{relativeTime(device.last_seen_at)}</span>
+            {device.last_seen_source ? (
+              /* The source is not decoration. A 3-second lab poll and an hourly
+                 POST mean very different things by the same "40 minutes ago". */
+              <span className="text-white/25"> ({device.last_seen_source})</span>
+            ) : null}
+          </span>
+        ) : (
+          <span className="text-[11px] text-white/35">never heard from</span>
+        )}
+      </div>
+      {reason ? <p className="mt-1 text-[11px] text-white/35">{reason}</p> : null}
+    </div>
+  );
+}
+
+/**
  * The gened-health card. Additive — it sits alongside the Lab self-test card
  * and neither replaces nor reinterprets it.
  *
- * `diagnostic === null` is the ordinary "has not reported yet" state, not an
- * error, and must render as a sentence rather than an empty card. The freshness
- * verdict is the SERVER's (`fresh`); nothing here recomputes it from timestamps.
+ * Renders FOUR independent dimensions: reachability, data freshness, the
+ * device's verdict, and how we know the device exists. They are deliberately not
+ * collapsed into one light — "online but stale" is a broken reporting pipeline
+ * on a working device, and "never reported" is not "reported healthy".
+ *
+ * Every threshold here comes from the server. Nothing recomputes freshness or
+ * reachability from timestamps locally: that is the specific mistake the Lab
+ * surface made with its own hardcoded constant.
  */
 function SystemDiagnosticCard({
-  diagnostic,
+  device,
   error,
 }: {
-  diagnostic: DeviceDiagnostic | null;
+  device: CanonicalDevice | null;
   error: string;
 }) {
   if (error) {
@@ -302,12 +392,43 @@ function SystemDiagnosticCard({
     );
   }
 
-  if (!diagnostic) {
+  if (!device) {
     return (
       <Card title="System diagnostic" subtitle="powered by gened-health">
         <p className="text-sm text-white/40">
+          This device is not in the canonical registry yet, so no mode-independent
+          diagnostic is available. Its state is{" "}
+          <strong className="text-amber-300">unknown</strong> — not confirmed healthy.
+        </p>
+      </Card>
+    );
+  }
+
+  const diagnostic = device.diagnostic;
+
+  if (!diagnostic) {
+    return (
+      <Card
+        title="System diagnostic"
+        subtitle="powered by gened-health"
+        right={
+          <span
+            aria-label={`Diagnostic freshness: ${device.diagnostic_freshness}`}
+            className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+              FRESHNESS_STYLES[device.diagnostic_freshness]
+            }`}
+          >
+            NEVER REPORTED
+          </span>
+        }
+      >
+        <ConnectivityRow device={device} />
+        <p className="mt-3 text-sm text-white/40">
           No gened-health report received yet. This device&apos;s diagnostic state is{" "}
           <strong className="text-amber-300">unknown</strong> — not confirmed healthy.
+        </p>
+        <p className="mt-2 text-[11px] text-white/30">
+          {PROVENANCE_LABELS[device.provenance]}
         </p>
       </Card>
     );
@@ -326,14 +447,20 @@ function SystemDiagnosticCard({
         />
       }
     >
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/40">
+      <ConnectivityRow device={device} />
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/40">
         <span>
           Reported{" "}
           <span className="text-white/70">{relativeTime(diagnostic.received_at)}</span>
         </span>
-        {!diagnostic.fresh ? (
-          <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-amber-300">
-            Stale — no report in over {Math.round(diagnostic.fresh_after_seconds / 60)}m
+        {device.diagnostic_freshness === "STALE" ? (
+          <span
+            aria-label="Diagnostic freshness: STALE"
+            className="rounded-md bg-amber-500/15 px-2 py-0.5 text-amber-300"
+          >
+            Stale data — expected every{" "}
+            {Math.round(diagnostic.report_interval_seconds / 60)}m
           </span>
         ) : null}
         {diagnostic.firmware_version ? (
@@ -385,6 +512,11 @@ function SystemDiagnosticCard({
           </div>
         )}
       </div>
+
+      <p className="mt-4 border-t border-white/5 pt-2 text-[11px] text-white/25">
+        {PROVENANCE_LABELS[device.provenance]} · serial{" "}
+        <span className="font-mono">{device.serial}</span>
+      </p>
     </Card>
   );
 }
@@ -408,7 +540,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
   const [logsOpen, setLogsOpen] = useState(false);
   const [logsError, setLogsError] = useState("");
 
-  const [diagnostic, setDiagnostic] = useState<DeviceDiagnostic | null>(null);
+  const [canonical, setCanonical] = useState<CanonicalDevice | null>(null);
   const [diagnosticError, setDiagnosticError] = useState("");
 
   const load = useCallback(async () => {
@@ -420,19 +552,20 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
 
       /**
        * Fetched separately and keyed on `hardware_id`, not the LabDevice UUID:
-       * the diagnostic is mode-independent and lives outside the Lab tables.
+       * the canonical device is mode-independent and lives outside the Lab
+       * tables. The server resolves that alias back to a serial for us.
        *
-       * Deliberately after the device load and in its own try — a device with no
-       * gened-health report, or a diagnostic endpoint that is unhappy, must not
-       * take down the page that renders every Lab action. getDeviceDiagnostic
-       * already resolves null for "never reported", so reaching the catch means
+       * Deliberately after the device load and in its own try — a device absent
+       * from the registry, or a registry endpoint that is unhappy, must not take
+       * down the page that renders every Lab action. getCanonicalDevice already
+       * resolves null for "not registered", so reaching the catch means
        * something actually went wrong.
        */
       try {
-        setDiagnostic(await getDeviceDiagnostic(d.hardware_id));
+        setCanonical(await getCanonicalDevice(d.hardware_id));
         setDiagnosticError("");
       } catch (e) {
-        setDiagnostic(null);
+        setCanonical(null);
         setDiagnosticError(
           e instanceof Error ? e.message : "Failed to load system diagnostic",
         );
@@ -645,7 +778,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4">
-        <SystemDiagnosticCard diagnostic={diagnostic} error={diagnosticError} />
+        <SystemDiagnosticCard device={canonical} error={diagnosticError} />
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4">
