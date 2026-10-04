@@ -16,6 +16,19 @@ vi.mock("../../devices/fetchAllDevices", () => ({
   FLEET_FETCH_CAP: 2000,
 }));
 
+/**
+ * The mode-independent fleet table is stubbed, so this file stays about the
+ * Lab-scoped surface it was written for.
+ *
+ * Not merely for isolation: both tables legitimately offer a "Show revoked"
+ * control, so rendering the real one makes `getByLabelText(/show revoked/i)`
+ * ambiguous and assertions here start failing for a reason unrelated to what
+ * they test. FleetTable has its own suite.
+ */
+vi.mock("../FleetTable", () => ({
+  FleetTable: () => <div data-testid="fleet-table" />,
+}));
+
 // recharts needs a real layout box, which jsdom doesn't provide.
 vi.mock("../DeviceCharts", () => ({
   ChartCard: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

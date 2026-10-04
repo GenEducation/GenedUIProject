@@ -8,7 +8,10 @@ import type {
   CanonicalDevice,
   DeviceDiagnostic,
   DeviceQuery,
+  FleetDeviceQuery,
+  FleetStats,
   Paginated,
+  PaginatedFleet,
 } from "./devices/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
@@ -462,6 +465,55 @@ export const registerCanonicalDevice = (body: {
   reported_device_id?: string;
   device_model?: string;
 }) => send<CanonicalDevice>("/admin/devices", "POST", body);
+
+// ── The mode-independent fleet view (Phase 4) ──────────────────
+
+/**
+ * One page of the whole fleet: every physical device, across every mode.
+ *
+ * Distinct from `listFleetDevices` above, which lists Lab ENROLLMENTS and so can
+ * only ever show SCHOOL_LAB units. This one also covers PERSONAL devices,
+ * pre-provisioned units that have never spoken, and legacy devices with no
+ * canonical registry row.
+ *
+ * Everything is server-side: filtering, sorting and paging all happen in the
+ * query, and `total` is the match count before paging. Do NOT fetch every page
+ * and filter in the browser — the attention flag and connectivity are derived
+ * server-side from transports, and a client-side copy of either would be a
+ * second set of rules free to disagree with the first.
+ */
+export function listFleetRegistryDevices(
+  params: FleetDeviceQuery = {},
+): Promise<PaginatedFleet> {
+  const qs = new URLSearchParams();
+  if (params.q) qs.set("q", params.q);
+  if (params.record) qs.set("record", params.record);
+  if (params.mode) qs.set("mode", params.mode);
+  if (params.provenance) qs.set("provenance", params.provenance);
+  if (params.connectivity) qs.set("connectivity", params.connectivity);
+  if (params.freshness) qs.set("freshness", params.freshness);
+  if (params.verdict) qs.set("verdict", params.verdict);
+  // Meaningful as an explicit false ("show me only the calm ones"), so this
+  // tests for undefined rather than falsiness.
+  if (params.needs_attention !== undefined) {
+    qs.set("needs_attention", String(params.needs_attention));
+  }
+  if (params.include_revoked !== undefined) {
+    qs.set("include_revoked", String(params.include_revoked));
+  }
+  if (params.sort) qs.set("sort", params.sort);
+  qs.set("page", String(params.page ?? 1));
+  qs.set("page_size", String(params.page_size ?? 25));
+  return getJson<PaginatedFleet>(`/admin/devices?${qs.toString()}`);
+}
+
+/**
+ * Fleet-wide counts per dimension, independent of any list filter.
+ *
+ * Unfiltered on purpose — see `FleetStats`. The tiles' job is to let an operator
+ * check that the filtered rows add up, which a self-recounting tile cannot do.
+ */
+export const getFleetDeviceStats = () => getJson<FleetStats>("/admin/devices/stats");
 
 // ── Bulk import ────────────────────────────────────────────────
 

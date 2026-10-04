@@ -35,6 +35,17 @@ import type {
   HealthComponentReport,
 } from "../devices/types";
 import { ConnBadge, ServiceChip, absoluteTime, relativeTime } from "./deviceHealth";
+// Shared with the fleet table rather than redefined here. A second copy of these
+// colour tables is how UNKNOWN ends up amber on one screen and green on another.
+import {
+  CONNECTIVITY_REASONS,
+  CONNECTIVITY_STYLES,
+  DIAG_STYLES,
+  DiagnosticBadge,
+  FRESHNESS_STYLES,
+  PROVENANCE_LABELS,
+  TALLY_ORDER,
+} from "../devices/canonicalBadges";
 import { Select } from "@/components/ui/Select";
 
 function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
@@ -197,59 +208,6 @@ function ComponentRow({ name, report }: { name: string; report: HealthComponentR
 
 // ── gened-health system diagnostic ─────────────────────────────
 
-/**
- * Status colours for the gened-health vocabulary.
- *
- * UNKNOWN is amber, never green. It means the tool could not look — for audio
- * and display specifically it means the app was unreachable, so the hardware
- * verdict is genuinely unknown rather than fine. EXPECTED is an operator having
- * declared a deviation on purpose, so it reads as neutral-good; SKIP and INFO
- * are not verdicts at all.
- */
-const DIAG_STYLES: Record<DiagnosticStatus, string> = {
-  PASS: "bg-[#059F6D]/15 text-[#059F6D]",
-  WARN: "bg-amber-500/15 text-amber-300",
-  FAIL: "bg-rose-500/15 text-rose-300",
-  UNKNOWN: "bg-amber-500/10 text-amber-200/80",
-  STALE: "bg-amber-500/10 text-amber-200/80",
-  EXPECTED: "bg-sky-500/15 text-sky-300",
-  SKIP: "bg-white/10 text-white/40",
-  INFO: "bg-white/10 text-white/50",
-};
-
-/** Worst-first, so the counts that matter are not buried under PASS. */
-const TALLY_ORDER: DiagnosticStatus[] = [
-  "FAIL",
-  "WARN",
-  "UNKNOWN",
-  "STALE",
-  "PASS",
-  "EXPECTED",
-  "SKIP",
-  "INFO",
-];
-
-function DiagnosticBadge({
-  status,
-  label,
-}: {
-  status: DiagnosticStatus;
-  /** Accessible name. A bare "WARN" is ambiguous on its own, and the same
-   *  string also appears as a tally label, so the overall verdict names itself. */
-  label?: string;
-}) {
-  return (
-    <span
-      aria-label={label}
-      className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
-        DIAG_STYLES[status] ?? "bg-white/10 text-white/50"
-      }`}
-    >
-      {status}
-    </span>
-  );
-}
-
 function FindingRow({ finding }: { finding: DiagnosticFinding }) {
   const status = (finding.status ?? "UNKNOWN") as DiagnosticStatus;
   const severe = status === "FAIL";
@@ -281,41 +239,6 @@ function FindingRow({ finding }: { finding: DiagnosticFinding }) {
     </div>
   );
 }
-
-/**
- * Connectivity colours. `UNKNOWN` is amber and never green: we do not know, and
- * the normal cause is that this device has no presence transport at all rather
- * than anything being wrong.
- */
-const CONNECTIVITY_STYLES: Record<ConnectivityState, string> = {
-  ONLINE: "bg-emerald-500/15 text-emerald-300",
-  OFFLINE: "bg-rose-500/15 text-rose-300",
-  UNKNOWN: "bg-amber-500/15 text-amber-300",
-};
-
-/** Why connectivity could not be determined, in words an operator can act on. */
-const CONNECTIVITY_REASONS: Record<string, string> = {
-  no_presence_channel:
-    "No live connection channel. This device reports diagnostics on a schedule " +
-    "but holds no socket open, so reachability cannot be confirmed either way.",
-  never_connected: "Enrolled, but has never connected.",
-  no_status_seen: "Has reported health, but no connection status has been seen.",
-  ambiguous_multi_unit:
-    "Two or more units share this student's status topic, so the online flag " +
-    "cannot name a single device. Reachability is genuinely ambiguous, not offline.",
-};
-
-const FRESHNESS_STYLES: Record<DiagnosticFreshness, string> = {
-  FRESH: "bg-emerald-500/15 text-emerald-300",
-  STALE: "bg-amber-500/15 text-amber-300",
-  NEVER_REPORTED: "bg-amber-500/15 text-amber-300",
-};
-
-const PROVENANCE_LABELS: Record<DeviceProvenanceT, string> = {
-  PRE_PROVISIONED: "Pre-registered — awaiting first contact",
-  SELF_REGISTERED: "Self-registered on first contact",
-  ENROLLED: "Enrolled in a lab",
-};
 
 /**
  * The reachability row. Separate from the diagnostic verdict on purpose.
