@@ -9,6 +9,7 @@ import { getLabStats } from "../adminService";
 import { fetchAllDevices, FLEET_FETCH_CAP } from "../devices/fetchAllDevices";
 import type { AdminDeviceListItem, AdminLabStats } from "../devices/types";
 import { Column, DataTable } from "./DataTable";
+import { FleetTable } from "./FleetTable";
 import {
   BySchoolChart,
   ChartCard,
@@ -515,6 +516,19 @@ export function DevicesView() {
           </button>
         )}
       />
+
+      {/*
+        The mode-independent fleet, below the Lab-scoped table rather than
+        instead of it. The two answer different questions and neither subsumes
+        the other: everything above is a Lab ENROLLMENT, with the school, lab,
+        spare and revoked state that only makes sense for a tenancy; this is the
+        HARDWARE, including personal units, devices still in their box, and
+        devices with no canonical registry row at all.
+
+        It is server-driven end to end — its own filters, sort and pagination are
+        queries, not array operations on the snapshot above.
+      */}
+      <FleetTable />
     </div>
   );
 }
