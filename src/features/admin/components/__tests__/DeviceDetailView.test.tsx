@@ -1,15 +1,36 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 
 import { DeviceDetailView } from "../DeviceDetailView";
-import type { AdminDeviceDetail } from "../../devices/types";
+import type {
+  AdminDeviceDetail,
+  CanonicalDevice,
+  DeviceDiagnostic,
+} from "../../devices/types";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 const getFleetDevice = vi.hoisted(() => vi.fn());
 const getDeviceLogs = vi.hoisted(() => vi.fn());
 const listFleetLabs = vi.hoisted(() => vi.fn());
-vi.mock("../../adminService", () => ({ getFleetDevice, getDeviceLogs, listFleetLabs }));
+const getCanonicalDevice = vi.hoisted(() => vi.fn());
+vi.mock("../../adminService", () => ({
+  getFleetDevice,
+  getDeviceLogs,
+  listFleetLabs,
+  getCanonicalDevice,
+}));
+
+/**
+ * Default: not in the canonical registry. The self-test suite below predates
+ * this system and must keep passing for a device that has never sent a
+ * gened-health report, so the default is the empty state rather than a
+ * populated fixture.
+ */
+beforeEach(() => {
+  getCanonicalDevice.mockReset();
+  getCanonicalDevice.mockResolvedValue(null);
+});
 
 /**
  * Mirrors the live payload observed in production: a wrapper object with
@@ -146,5 +167,524 @@ describe("DeviceDetailView — self-test parsing", () => {
       expect(screen.getByText(/never reported a self-test/i)).toBeInTheDocument(),
     );
     expect(screen.queryByText("Self-test report")).not.toBeInTheDocument();
+  });
+});
+
+// ── gened-health system diagnostic ─────────────────────────────
+
+function diagnostic(overrides: Partial<DeviceDiagnostic> = {}): DeviceDiagnostic {
+  return {
+    serial: "10000000aabbccdd",
+    device_key: "DEV-0001",
+    reported_device_id: "gened-mk2",
+    hostname: "genedmk2",
+    device_model: "Raspberry Pi 4 Model B Rev 1.4",
+    mode: "PERSONAL",
+    firmware_version: "de4f862",
+    tool_version: "de4f862",
+    deployed_version: "de4f862",
+    overall: "WARN",
+    tally: { PASS: 30, WARN: 2, FAIL: 0, UNKNOWN: 2, INFO: 5, SKIP: 1 },
+    findings: [
+      {
+        id: "provenance.deploy.runtime_divergence",
+        status: "WARN",
+        subsystem: "provenance",
+        title: "OTA deployment drift",
+        detail: "3 files differ between /opt/gened-src and /opt/gened",
+        next_step: "Run the same rsync with --dry-run yourself to see the file list.",
+      },
+    ],
+    findings_total: 1,
+    received_at: new Date(Date.now() - 2 * 60_000).toISOString(),
+    report_age_seconds: 120,
+    fresh: true,
+    fresh_after_seconds: 10_800,
+    diagnostic_freshness: "FRESH",
+    report_interval_seconds: 3600,
+    collected_at: new Date(Date.now() - 2 * 60_000).toISOString(),
+    clock_synced: true,
+    last_ip: "10.0.3.19",
+    schema_version: 1,
+    redaction: "default",
+    ...overrides,
+  };
+}
+
+/**
+ * The canonical device wrapper. Defaults to a device with NO presence transport,
+ * because that is the ordinary state of a PERSONAL unit on a scheduled cadence —
+ * and the case most likely to be wrongly rendered as offline.
+ */
+function canonical(overrides: Partial<CanonicalDevice> = {}): CanonicalDevice {
+  // `"diagnostic" in overrides` rather than `??`: an explicit null means
+  // "registered but has never reported", which is a state this card renders
+  // differently from the default. `??` would silently replace it with a
+  // populated report and the never-reported branch would never be tested.
+  const diag = "diagnostic" in overrides ? overrides.diagnostic! : diagnostic();
+  return {
+    id: "11111111-1111-1111-1111-111111111111",
+    serial: "10000000aabbccdd",
+    reported_device_id: "gened-mk2",
+    lab_hardware_id: null,
+    derived_device_key: "DEV-AABB-CCDD",
+    label: null,
+    device_model: "Raspberry Pi 4 Model B Rev 1.4",
+    last_reported_mode: "PERSONAL",
+    provenance: "SELF_REGISTERED",
+    connectivity: { state: "UNKNOWN", source: "NONE", reason: "no_presence_channel" },
+    last_seen_at: new Date(Date.now() - 2 * 60_000).toISOString(),
+    last_seen_source: "HEALTH_POST",
+    last_seen_age_seconds: 120,
+    first_seen_at: new Date(Date.now() - 86_400_000).toISOString(),
+    diagnostic_freshness: diag?.diagnostic_freshness ?? "NEVER_REPORTED",
+    diagnostic_verdict: diag?.overall ?? null,
+    ...overrides,
+    diagnostic: diag,
+  };
+}
+
+function diagCard() {
+  return screen.getByText("System diagnostic").closest("section") as HTMLElement;
+}
+
+/** The connectivity state, by accessible name. */
+function connState() {
+  return within(diagCard()).getByLabelText(/^Connectivity:/);
+}
+
+/**
+ * The overall verdict, by accessible name. Querying the bare status text would
+ * be ambiguous: the same string also appears as a tally label, which is correct
+ * in the UI (one is the verdict, one is a count) but matches twice.
+ */
+function overallVerdict() {
+  return within(diagCard()).getByLabelText(/^Overall diagnostic verdict:/);
+}
+
+/** A tally label, which renders as the `dt` of its count. */
+function tallyLabel(status: string) {
+  return within(diagCard()).queryByText(status, { selector: "dt" });
+}
+
+describe("DeviceDetailView — gened-health system diagnostic", () => {
+  it("keys the diagnostic lookup on hardware_id, not the LabDevice UUID", async () => {
+    getFleetDevice.mockResolvedValue(detail({ hardware_id: "DEV-ABCD-1234" }));
+    getCanonicalDevice.mockResolvedValue(
+      canonical({ diagnostic: diagnostic() }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(getCanonicalDevice).toHaveBeenCalled());
+    // "d1" is the Lab row's UUID and would find nothing — the canonical device
+    // is mode-independent and lives outside the Lab tables.
+    expect(getCanonicalDevice).toHaveBeenCalledWith("DEV-ABCD-1234");
+  });
+
+  it("renders the verdict, tally and findings", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({ diagnostic: diagnostic() }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    const card = diagCard();
+
+    expect(within(card).getByText("powered by gened-health")).toBeInTheDocument();
+    expect(overallVerdict()).toHaveTextContent("WARN");
+    expect(within(card).getByText(/Reported/)).toBeInTheDocument();
+
+    // Tally counts present in the payload render; a zero one does not.
+    expect(within(card).getByText("30")).toBeInTheDocument();
+    expect(tallyLabel("PASS")).toBeInTheDocument();
+    expect(tallyLabel("FAIL")).not.toBeInTheDocument();
+
+    // The finding, with its next step.
+    expect(within(card).getByText("OTA deployment drift")).toBeInTheDocument();
+    expect(within(card).getByText(/3 files differ/)).toBeInTheDocument();
+    expect(within(card).getByText(/Next step:/)).toBeInTheDocument();
+  });
+
+  it("renders a PASS device without inventing findings", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({ diagnostic: diagnostic({
+        overall: "PASS",
+        tally: { PASS: 38, WARN: 0, FAIL: 0 },
+        findings: [],
+        findings_total: 0,
+      }), }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    const card = diagCard();
+
+    expect(overallVerdict()).toHaveTextContent("PASS");
+    expect(within(card).getByText(/Nothing actionable/)).toBeInTheDocument();
+  });
+
+  it("shows FAIL findings for a failing device", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({ diagnostic: diagnostic({
+        overall: "FAIL",
+        tally: { PASS: 15, FAIL: 3, WARN: 4, UNKNOWN: 2 },
+        findings: [
+          {
+            id: "audio.card.enumeration",
+            status: "FAIL",
+            subsystem: "audio",
+            title: "The WM8960 audio HAT enumerates",
+            detail: "no card matching 'wm8960' in /proc/asound/cards",
+            next_step: "Check the dtoverlay in /boot/firmware/config.txt.",
+          },
+        ],
+        findings_total: 1,
+      }), }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    const card = diagCard();
+
+    expect(overallVerdict()).toHaveTextContent("FAIL");
+    expect(within(card).getByText("The WM8960 audio HAT enumerates")).toBeInTheDocument();
+    expect(within(card).getByText("audio")).toBeInTheDocument();
+    // UNKNOWN is a real count and must be visible, not folded into healthy.
+    expect(tallyLabel("UNKNOWN")).toBeInTheDocument();
+  });
+
+  it("never renders UNKNOWN with the healthy colour", async () => {
+    /**
+     * Contract requirement, not a style preference: UNKNOWN means gened-health
+     * could not look. For audio and display it specifically means the app was
+     * unreachable, so the hardware verdict is genuinely unknown rather than
+     * fine. Painting it the PASS colour would report a confident wrong answer.
+     * See the device repo docs/17-gened-health-schema.md, ingestion note 5.
+     */
+    const HEALTHY = "059F6D"; // the PASS green
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({ diagnostic: diagnostic({ overall: "UNKNOWN", tally: { UNKNOWN: 4, PASS: 10 } }), }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+
+    expect(overallVerdict().className).not.toContain(HEALTHY);
+
+    const label = tallyLabel("UNKNOWN") as HTMLElement;
+    expect(label).toBeInTheDocument();
+    // The colour lives on the chip wrapping the dt/dd pair.
+    expect(label.parentElement?.className).not.toContain(HEALTHY);
+
+    // The PASS tally in the same report still gets the healthy colour, so this
+    // is asserting UNKNOWN specifically and not just that nothing is green.
+    expect(tallyLabel("PASS")?.parentElement?.className).toContain(HEALTHY);
+  });
+
+  it("renders the no-report state as unknown, not healthy", async () => {
+    /**
+     * Registered but has never reported — distinct from "not in the registry",
+     * which Phase 2 added as its own state and which is asserted separately.
+     */
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(canonical({ diagnostic: null }));
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    const card = diagCard();
+
+    expect(within(card).getByText(/No gened-health report received yet/)).toBeInTheDocument();
+    expect(within(card).getByText("unknown")).toBeInTheDocument();
+    // The sentence as a whole, since <strong> splits the text node.
+    expect(card.textContent).toContain("not confirmed healthy");
+  });
+
+  it("marks a stale report using the server's verdict", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({ diagnostic: diagnostic({
+        fresh: false,
+        diagnostic_freshness: "STALE",
+        report_age_seconds: 5 * 3600,
+        fresh_after_seconds: 10_800,
+        report_interval_seconds: 3600,
+        received_at: new Date(Date.now() - 5 * 3600_000).toISOString(),
+      }), }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    const card = diagCard();
+
+    // The cadence shown comes from the server payload, not a local constant.
+    expect(within(card).getByLabelText("Diagnostic freshness: STALE")).toBeInTheDocument();
+    expect(card.textContent).toContain("expected every 60m");
+    // A stale report still shows its last known verdict.
+    expect(overallVerdict()).toHaveTextContent("WARN");
+  });
+
+  it("warns when the device clock is not synchronised", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({ diagnostic: diagnostic({ clock_synced: false, collected_at: "1999-01-01T00:00:00Z" }), }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    const card = diagCard();
+
+    expect(within(card).getByText(/clock is not synchronised/)).toBeInTheDocument();
+    // Report age is the server's and must still be presented normally.
+    expect(within(card).getByText(/Reported/)).toBeInTheDocument();
+  });
+
+  it("does not warn about the clock when it is synchronised", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({ diagnostic: diagnostic({ clock_synced: true }) }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    expect(screen.queryByText(/clock is not synchronised/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the Lab self-test card intact alongside the diagnostic", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({ diagnostic: diagnostic() }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+
+    // Both systems render. The new card is additive, not a replacement.
+    expect(screen.getByText("Self-test")).toBeInTheDocument();
+    expect(screen.getByText("audio_hat")).toBeInTheDocument();
+    expect(screen.getByText("Actions")).toBeInTheDocument();
+  });
+
+  it("a failing diagnostic fetch does not take down the rest of the page", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockRejectedValue(new Error("diagnostic service unavailable"));
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+
+    expect(within(diagCard()).getByText(/diagnostic service unavailable/)).toBeInTheDocument();
+    // The Lab actions and self-test are unaffected.
+    expect(screen.getByText("Actions")).toBeInTheDocument();
+    expect(screen.getByText("audio_hat")).toBeInTheDocument();
+  });
+});
+
+// ── The four dimensions stay independent ───────────────────────
+//
+// A single health light cannot express these, which is why the card does not
+// have one. Each test below is a combination that occurs in production and
+// would be rendered wrongly by a collapsed model.
+
+const HEALTHY_COLOUR = "emerald";
+
+describe("DeviceDetailView — connectivity vs diagnostic freshness", () => {
+  it("renders UNKNOWN rather than OFFLINE when no presence channel exists", async () => {
+    /**
+     * THE case. A healthy PERSONAL device on a scheduled cadence holds no socket
+     * open, so nothing can confirm reachability either way. Calling that OFFLINE
+     * would report working hardware as dead — and no freshness window, however
+     * generous, substitutes for a presence signal.
+     */
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({
+        connectivity: { state: "UNKNOWN", source: "NONE", reason: "no_presence_channel" },
+      }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+
+    expect(connState()).toHaveTextContent("UNKNOWN");
+    expect(within(diagCard()).queryByText("OFFLINE")).not.toBeInTheDocument();
+    // And it explains itself, because "unknown" with no cause is indistinguishable
+    // from a bug.
+    expect(within(diagCard()).getByText(/No live connection channel/i)).toBeInTheDocument();
+  });
+
+  it("never colours UNKNOWN connectivity as healthy", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({
+        connectivity: { state: "UNKNOWN", source: "NONE", reason: "no_presence_channel" },
+      }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    expect(connState().className).not.toContain(HEALTHY_COLOUR);
+  });
+
+  it("shows online and stale together without implying the device is broken", async () => {
+    /** A broken reporting pipeline on a working device. */
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({
+        connectivity: {
+          state: "ONLINE",
+          source: "LAB_WS",
+          reason: null,
+          heartbeat_age_seconds: 4,
+          grace_seconds: 90,
+        },
+        diagnostic: diagnostic({
+          overall: "PASS",
+          tally: { PASS: 41 },
+          findings: [],
+          findings_total: 0,
+          diagnostic_freshness: "STALE",
+          fresh: false,
+        }),
+      }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+
+    expect(connState()).toHaveTextContent("ONLINE");
+    expect(overallVerdict()).toHaveTextContent("PASS");
+    expect(
+      within(diagCard()).getByLabelText("Diagnostic freshness: STALE"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows offline with a fresh report, which a report-derived model would call online", async () => {
+    /** The dangerous direction: unplugged 20s ago, still holding a 1-minute-old report. */
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({
+        connectivity: { state: "OFFLINE", source: "LAB_WS", reason: null },
+        diagnostic: diagnostic({ overall: "PASS", diagnostic_freshness: "FRESH" }),
+      }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+
+    expect(connState()).toHaveTextContent("OFFLINE");
+    expect(overallVerdict()).toHaveTextContent("PASS");
+    expect(
+      within(diagCard()).queryByLabelText("Diagnostic freshness: STALE"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("surfaces the multi-unit ambiguity rather than guessing", async () => {
+    /**
+     * The MQTT status topic is student-keyed and carries no device id, so with
+     * two units per child one box's Last Will marks both offline. The flag is
+     * wrong there, not merely imprecise.
+     */
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({
+        connectivity: {
+          state: "UNKNOWN",
+          source: "MQTT_STATUS",
+          reason: "ambiguous_multi_unit",
+          units_sharing_topic: 2,
+        },
+      }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+
+    expect(connState()).toHaveTextContent("UNKNOWN");
+    expect(within(diagCard()).getByText(/cannot name a single device/i)).toBeInTheDocument();
+  });
+
+  it("reports last-contact provenance alongside the timestamp", async () => {
+    /**
+     * "Last contact 2 minutes ago" is uninterpretable alone: a 3-second lab poll
+     * and an hourly POST mean very different things by the same number.
+     */
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({ last_seen_source: "LAB_WS" }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    expect(within(diagCard()).getByText(/LAB_WS/)).toBeInTheDocument();
+  });
+
+  it("distinguishes a pre-registered device from one that has gone silent", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({
+        provenance: "PRE_PROVISIONED",
+        diagnostic: null,
+        last_seen_at: null,
+        last_seen_source: null,
+        last_seen_age_seconds: null,
+      }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    const card = diagCard();
+
+    expect(within(card).getByText(/Pre-registered/i)).toBeInTheDocument();
+    expect(within(card).getByText(/never heard from/i)).toBeInTheDocument();
+    // "Never reported" must not read as "reported healthy". Asserted on the
+    // card's text because <strong> splits the sentence across nodes.
+    expect(card.textContent).toContain("not confirmed healthy");
+  });
+
+  it("renders the server's cadence rather than a hardcoded threshold", async () => {
+    /**
+     * The Lab surface's bug was a hardcoded 10-minute frontend constant against a
+     * 15-minute backend. This card must read the server's number.
+     */
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({
+        diagnostic: diagnostic({
+          diagnostic_freshness: "STALE",
+          fresh: false,
+          report_interval_seconds: 1800, // 30m, deliberately not the default
+        }),
+      }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    expect(within(diagCard()).getByText(/every 30m/)).toBeInTheDocument();
+  });
+
+  it("shows the canonical serial, not just an alias", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(canonical());
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    expect(within(diagCard()).getByText("10000000aabbccdd")).toBeInTheDocument();
+  });
+
+  it("renders an informative empty state when the device is not in the registry", async () => {
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(null);
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+    const card = diagCard();
+
+    expect(within(card).getByText(/not in the canonical registry/i)).toBeInTheDocument();
+    expect(within(card).getByText(/not confirmed healthy/i)).toBeInTheDocument();
+    // Still must not take the Lab page down.
+    expect(screen.getByText("Actions")).toBeInTheDocument();
   });
 });

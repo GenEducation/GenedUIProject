@@ -1,12 +1,17 @@
-import { authFetch } from "@/utils/authFetch";
+import { ApiRequestError, authFetch } from "@/utils/authFetch";
 import type { EducationBoard } from "@/types/education";
 import type {
   AdminDeviceDetail,
   AdminDeviceListItem,
   AdminLabListItem,
   AdminLabStats,
+  CanonicalDevice,
+  DeviceDiagnostic,
   DeviceQuery,
+  FleetDeviceQuery,
+  FleetStats,
   Paginated,
+  PaginatedFleet,
 } from "./devices/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
@@ -393,6 +398,122 @@ export function listFleetLabs(
  */
 export const getDeviceLogs = (id: string) =>
   getJson<unknown>(`/lab/devices/${encodeURIComponent(id)}/logs`);
+
+/**
+ * The latest gened-health system diagnostic for one device.
+ *
+ * Keyed on the DEVICE KEY, not the LabDevice UUID the rest of this file uses:
+ * this record is mode-independent and exists for devices that have no Lab row
+ * at all, so it cannot hang off the Lab primary key. `hardware_id` from the
+ * device detail payload is the right thing to pass. The server also accepts the
+ * raw SoC serial or the device's own reported id.
+ *
+ * Resolves to `null` when the device has never reported, because that is an
+ * ordinary state for a unit that has not been updated yet — not a failure worth
+ * showing an error for. Every other status still throws.
+ */
+export async function getDeviceDiagnostic(
+  deviceKey: string,
+): Promise<DeviceDiagnostic | null> {
+  try {
+    return await getJson<DeviceDiagnostic>(
+      `/admin/devices/${encodeURIComponent(deviceKey)}/diagnostic`,
+    );
+  } catch (e) {
+    if (e instanceof ApiRequestError && e.status === 404) return null;
+    throw e;
+  }
+}
+
+/**
+ * The canonical device: four independent dimensions plus the nested diagnostic.
+ *
+ * Prefer this over `getDeviceDiagnostic` for anything that needs to know whether
+ * a device is REACHABLE. The diagnostic alone cannot answer that — it says when
+ * the device last spoke, and a healthy unit on an hourly cadence is silent most
+ * of the time.
+ *
+ * `deviceKey` accepts a serial, a reported device id, a Lab hardware id, or the
+ * derived DEV-XXXX-XXXX. Resolves to `null` on 404, which here means "no device
+ * is registered under this identifier" — a device that exists but has never
+ * reported still returns a full record with `diagnostic: null`.
+ */
+export async function getCanonicalDevice(
+  deviceKey: string,
+): Promise<CanonicalDevice | null> {
+  try {
+    return await getJson<CanonicalDevice>(
+      `/admin/devices/${encodeURIComponent(deviceKey)}`,
+    );
+  } catch (e) {
+    if (e instanceof ApiRequestError && e.status === 404) return null;
+    throw e;
+  }
+}
+
+/**
+ * Pre-register a physical device before it has ever reported.
+ *
+ * Throws on a malformed serial (400) and on an already-registered one (409).
+ * The conflict is deliberate on the server side — "register" and "update" are
+ * different intents, and a silent upsert would discard observed history the
+ * operator cannot see on the form.
+ */
+export const registerCanonicalDevice = (body: {
+  serial: string;
+  label?: string;
+  reported_device_id?: string;
+  device_model?: string;
+}) => send<CanonicalDevice>("/admin/devices", "POST", body);
+
+// ── The mode-independent fleet view (Phase 4) ──────────────────
+
+/**
+ * One page of the whole fleet: every physical device, across every mode.
+ *
+ * Distinct from `listFleetDevices` above, which lists Lab ENROLLMENTS and so can
+ * only ever show SCHOOL_LAB units. This one also covers PERSONAL devices,
+ * pre-provisioned units that have never spoken, and legacy devices with no
+ * canonical registry row.
+ *
+ * Everything is server-side: filtering, sorting and paging all happen in the
+ * query, and `total` is the match count before paging. Do NOT fetch every page
+ * and filter in the browser — the attention flag and connectivity are derived
+ * server-side from transports, and a client-side copy of either would be a
+ * second set of rules free to disagree with the first.
+ */
+export function listFleetRegistryDevices(
+  params: FleetDeviceQuery = {},
+): Promise<PaginatedFleet> {
+  const qs = new URLSearchParams();
+  if (params.q) qs.set("q", params.q);
+  if (params.record) qs.set("record", params.record);
+  if (params.mode) qs.set("mode", params.mode);
+  if (params.provenance) qs.set("provenance", params.provenance);
+  if (params.connectivity) qs.set("connectivity", params.connectivity);
+  if (params.freshness) qs.set("freshness", params.freshness);
+  if (params.verdict) qs.set("verdict", params.verdict);
+  // Meaningful as an explicit false ("show me only the calm ones"), so this
+  // tests for undefined rather than falsiness.
+  if (params.needs_attention !== undefined) {
+    qs.set("needs_attention", String(params.needs_attention));
+  }
+  if (params.include_revoked !== undefined) {
+    qs.set("include_revoked", String(params.include_revoked));
+  }
+  if (params.sort) qs.set("sort", params.sort);
+  qs.set("page", String(params.page ?? 1));
+  qs.set("page_size", String(params.page_size ?? 25));
+  return getJson<PaginatedFleet>(`/admin/devices?${qs.toString()}`);
+}
+
+/**
+ * Fleet-wide counts per dimension, independent of any list filter.
+ *
+ * Unfiltered on purpose — see `FleetStats`. The tiles' job is to let an operator
+ * check that the filtered rows add up, which a self-recounting tile cannot do.
+ */
+export const getFleetDeviceStats = () => getJson<FleetStats>("/admin/devices/stats");
 
 // ── Bulk import ────────────────────────────────────────────────
 
