@@ -657,7 +657,7 @@ describe("pagination", () => {
     await renderFleet();
 
     expect(screen.getByText(/Showing 1–10 of 5000\+/)).toBeInTheDocument();
-    expect(screen.getByText(/count below is a floor/)).toBeInTheDocument();
+    expect(screen.getByText(/are floors rather than totals/)).toBeInTheDocument();
   });
 });
 
@@ -675,6 +675,44 @@ describe("stats tiles", () => {
     expect(tile("Online")).toContain("3");
     expect(tile("Unknown reach")).toContain("7");
     expect(tile("No serial yet")).toContain("3");
+  });
+
+  it("gives OFFLINE its own tile, because attention deliberately excludes it", async () => {
+    // needs_attention is diagnostic-only: a classroom is offline every evening,
+    // so folding connectivity in would flag the fleet nightly. That is only a
+    // safe decision while the offline count stays visible on its own — if this
+    // tile goes, the decision silently becomes "offline is not shown".
+    await renderFleet();
+
+    const offline = document.querySelector('[data-fleet-tile="Offline"]')!;
+    expect(offline.textContent).toContain("1");
+    expect(offline.textContent).toMatch(/not counted as attention/i);
+    expect(document.querySelector('[data-fleet-tile="Needs attention"]')!.textContent).toContain(
+      "2",
+    );
+  });
+
+  it("marks the tiles as floors when the stats scan truncated but the list did not", async () => {
+    // The two payloads carry independent flags and legitimately disagree: a
+    // narrow search makes the list exact while the fleet-wide stats stay capped.
+    // Reading only the list's flag showed six capped counts as a census.
+    getFleetDeviceStats.mockResolvedValue({ ...STATS, total: 5000, truncated: true });
+    listFleetRegistryDevices.mockResolvedValue(page(ALL_ROWS, { truncated: false }));
+    await renderFleet();
+
+    expect(document.querySelector('[data-fleet-tile="Fleet size"]')!.textContent).toContain(
+      "5000+",
+    );
+    expect(screen.getByText(/are floors rather than totals/)).toBeInTheDocument();
+  });
+
+  it("shows a bare count when nothing truncated", async () => {
+    await renderFleet();
+
+    expect(document.querySelector('[data-fleet-tile="Fleet size"]')!.textContent).not.toContain(
+      "+",
+    );
+    expect(screen.queryByText(/are floors rather than totals/)).toBeNull();
   });
 
   it("does not re-request stats scoped to a filter", async () => {

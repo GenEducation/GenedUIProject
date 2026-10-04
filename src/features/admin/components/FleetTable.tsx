@@ -115,11 +115,18 @@ function Tile({
   value,
   sub,
   accent = "neutral",
+  floor = false,
 }: {
   label: string;
   value: number | string;
   sub?: string;
   accent?: "neutral" | "good" | "warn" | "bad";
+  /**
+   * The server capped its scan, so this count is a lower bound. Rendered as
+   * "N+" because a tile that shows a bare number IS a claim to have counted the
+   * fleet, and an operator cannot tell a capped 6 from a complete one.
+   */
+  floor?: boolean;
 }) {
   const valueColor = {
     neutral: "text-white",
@@ -133,7 +140,9 @@ function Tile({
       data-fleet-tile={label}
       className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
     >
-      <div className={`text-2xl font-bold ${valueColor}`}>{value}</div>
+      <div className={`text-2xl font-bold ${valueColor}`}>
+        {floor ? `${value}+` : value}
+      </div>
       <div className="mt-1 text-[11px] font-medium uppercase tracking-wider text-white/40">
         {label}
       </div>
@@ -391,46 +400,71 @@ export function FleetTable() {
         </button>
       </div>
 
-      {data?.truncated ? (
+      {/*
+        Each payload carries its own truncation flag and they legitimately
+        disagree: the list query pushes the search into SQL, so a narrow term
+        returns an exact answer, while the stats query is fleet-wide by design
+        and stays capped. Reading only `data.truncated` would therefore show six
+        capped tiles as exact counts the moment someone typed in the search box.
+      */}
+      {data?.truncated || stats?.truncated ? (
         <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200">
           <TriangleAlert size={16} className="mt-0.5 shrink-0" />
           <span>
             This fleet is larger than the server will scan in one request, so the
-            count below is a floor rather than a total. Narrow the search to get an
-            exact answer.
+            counts marked “+” are floors rather than totals. Narrow the search to
+            get an exact answer for the table.
           </span>
         </div>
       ) : null}
 
       {stats ? (
-        <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
           <Tile
             label="Fleet size"
             value={stats.total}
             sub={`${stats.revoked} revoked enrollment${stats.revoked === 1 ? "" : "s"}`}
+            floor={stats.truncated}
           />
           <Tile
             label="Needs attention"
             value={stats.needs_attention}
             sub="Diagnostic only"
             accent={stats.needs_attention > 0 ? "bad" : "good"}
+            floor={stats.truncated}
           />
           <Tile
             label="Online"
             value={stats.by_connectivity.ONLINE ?? 0}
             sub="Confirmed by a transport"
             accent="good"
+            floor={stats.truncated}
+          />
+          {/*
+            Offline gets its own tile precisely BECAUSE needs_attention excludes
+            connectivity. A classroom is offline every evening, so folding it
+            into attention would flag the fleet nightly and mean nothing — but
+            that decision is only safe if the count stays visible on its own.
+          */}
+          <Tile
+            label="Offline"
+            value={stats.by_connectivity.OFFLINE ?? 0}
+            sub="Not counted as attention"
+            accent="warn"
+            floor={stats.truncated}
           />
           <Tile
             label="Unknown reach"
             value={stats.by_connectivity.UNKNOWN ?? 0}
             sub="No presence channel"
             accent="warn"
+            floor={stats.truncated}
           />
           <Tile
             label="Never reported"
             value={stats.by_freshness.NEVER_REPORTED ?? 0}
             sub="Boxed or legacy firmware"
+            floor={stats.truncated}
           />
           <Tile
             label="No serial yet"
@@ -439,6 +473,7 @@ export function FleetTable() {
             }
             sub="Awaiting first gened-health"
             accent="warn"
+            floor={stats.truncated}
           />
         </div>
       ) : null}
