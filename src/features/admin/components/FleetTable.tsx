@@ -418,24 +418,40 @@ export function FleetTable() {
         </div>
       ) : null}
 
+      {/*
+        Every read below is guarded, including the scalars.
+
+        `getFleetDeviceStats().catch(() => null)` only covers a REJECTED request:
+        a non-2xx leaves `stats` null and these tiles are skipped. It does not
+        cover a 200 whose body is not a FleetStats — and that is the case that
+        used to matter, because `stats.by_connectivity.ONLINE` on such a body
+        throws during render, and this is a client component with no error
+        boundary above it. The throw therefore unmounted the entire
+        /admin/devices route, taking the unrelated Lab table down with it. A
+        tile that cannot count is a cosmetic problem; a blank Devices page is an
+        outage, so these must degrade rather than throw.
+
+        The counts fall back to 0 and `total` is still read for the row count, so
+        a malformed body shows an honest empty fleet instead of "undefined".
+      */}
       {stats ? (
         <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
           <Tile
             label="Fleet size"
-            value={stats.total}
-            sub={`${stats.revoked} revoked enrollment${stats.revoked === 1 ? "" : "s"}`}
+            value={stats.total ?? 0}
+            sub={`${stats.revoked ?? 0} revoked enrollment${stats.revoked === 1 ? "" : "s"}`}
             floor={stats.truncated}
           />
           <Tile
             label="Needs attention"
-            value={stats.needs_attention}
+            value={stats.needs_attention ?? 0}
             sub="Diagnostic only"
-            accent={stats.needs_attention > 0 ? "bad" : "good"}
+            accent={(stats.needs_attention ?? 0) > 0 ? "bad" : "good"}
             floor={stats.truncated}
           />
           <Tile
             label="Online"
-            value={stats.by_connectivity.ONLINE ?? 0}
+            value={stats.by_connectivity?.ONLINE ?? 0}
             sub="Confirmed by a transport"
             accent="good"
             floor={stats.truncated}
@@ -448,28 +464,28 @@ export function FleetTable() {
           */}
           <Tile
             label="Offline"
-            value={stats.by_connectivity.OFFLINE ?? 0}
+            value={stats.by_connectivity?.OFFLINE ?? 0}
             sub="Not counted as attention"
             accent="warn"
             floor={stats.truncated}
           />
           <Tile
             label="Unknown reach"
-            value={stats.by_connectivity.UNKNOWN ?? 0}
+            value={stats.by_connectivity?.UNKNOWN ?? 0}
             sub="No presence channel"
             accent="warn"
             floor={stats.truncated}
           />
           <Tile
             label="Never reported"
-            value={stats.by_freshness.NEVER_REPORTED ?? 0}
+            value={stats.by_freshness?.NEVER_REPORTED ?? 0}
             sub="Boxed or legacy firmware"
             floor={stats.truncated}
           />
           <Tile
             label="No serial yet"
             value={
-              (stats.by_record.LEGACY_LAB ?? 0) + (stats.by_record.LEGACY_PERSONAL ?? 0)
+              (stats.by_record?.LEGACY_LAB ?? 0) + (stats.by_record?.LEGACY_PERSONAL ?? 0)
             }
             sub="Awaiting first gened-health"
             accent="warn"
@@ -564,6 +580,13 @@ export function FleetTable() {
             }}
             options={SORTS}
           />
+          {/*
+            "Include revoked", not "Show revoked": the Lab table above this one
+            has its own revoked toggle, and two controls with the same accessible
+            name on one page cannot be told apart — not by a screen reader, and
+            not by a test. The wording also matches the `include_revoked` query
+            this actually sends.
+          */}
           <label className="flex items-center gap-2 text-xs text-white/50">
             <input
               type="checkbox"
@@ -573,7 +596,7 @@ export function FleetTable() {
                 setPage(1);
               }}
             />
-            Show revoked
+            Include revoked
           </label>
         </div>
 
