@@ -87,6 +87,33 @@ export const CONNECTIVITY_STYLES: Record<ConnectivityState, string> = {
   UNKNOWN: "bg-amber-500/15 text-amber-300",
 };
 
+/**
+ * The device's connectivity, as the server derived it from a transport.
+ *
+ * Distinct from `deviceHealth.ConnBadge`, which reads a `lab_devices` row and
+ * recomputes staleness on the client. Both are correct about different things
+ * and the difference matters: the Lab badge describes the Lab's record of a
+ * desk, this one describes whether the physical unit is reachable now. A page
+ * that shows the Lab badge as the device's status will contradict itself the
+ * moment the enrollment stops being current.
+ */
+export function CanonicalConnBadge({
+  connectivity,
+}: {
+  connectivity: { state: ConnectivityState };
+}) {
+  return (
+    <span
+      aria-label={`Connectivity: ${connectivity.state}`}
+      className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${
+        CONNECTIVITY_STYLES[connectivity.state] ?? "bg-white/10 text-white/50"
+      }`}
+    >
+      {connectivity.state}
+    </span>
+  );
+}
+
 /** Why connectivity could not be determined, in words an operator can act on. */
 export const CONNECTIVITY_REASONS: Record<string, string> = {
   no_presence_channel:

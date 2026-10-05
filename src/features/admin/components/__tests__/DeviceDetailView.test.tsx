@@ -100,6 +100,11 @@ function detail(overrides: Partial<AdminDeviceDetail> = {}): AdminDeviceDetail {
     first_connected_at: "2026-05-01T00:10:00Z",
     last_connected_at: "2026-08-06T02:06:00Z",
     provisioning_source: "PAIRING",
+    // Explicit rather than leaning on the "absent means ACTIVE" fallback: these
+    // suites describe a device that IS currently in a Lab, and the historical
+    // suite at the bottom of this file is testing the opposite.
+    lab_tenancy_state: "ACTIVE",
+    lab_tenancy_reason: null,
     ...overrides,
   };
 }
@@ -109,7 +114,7 @@ describe("DeviceDetailView — self-test parsing", () => {
     getFleetDevice.mockResolvedValue(detail());
     render(<DeviceDetailView deviceId="d1" />);
 
-    await waitFor(() => expect(screen.getByText("Self-test")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Lab self-test")).toBeInTheDocument());
 
     // The two real components render as component cards.
     expect(screen.getByText("display")).toBeInTheDocument();
@@ -126,13 +131,13 @@ describe("DeviceDetailView — self-test parsing", () => {
     expect(screen.queryByText(".", { selector: "dt" })).not.toBeInTheDocument();
   });
 
-  it("surfaces report-level metadata as real fields in the Identity card, not fake components", async () => {
+  it("surfaces report-level metadata as real fields in the Lab enrollment card, not fake components", async () => {
     getFleetDevice.mockResolvedValue(detail());
     render(<DeviceDetailView deviceId="d1" />);
 
-    await waitFor(() => expect(screen.getByText("Self-test report")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Lab self-test report/)).toBeInTheDocument());
 
-    const identity = screen.getByText("Identity").closest("section") as HTMLElement;
+    const identity = screen.getByText("Lab enrollment").closest("section") as HTMLElement;
     expect(within(identity).getByText("10.0.3.19")).toBeInTheDocument();
     expect(within(identity).getByText("SHOULD_ALWAYS_BE")).toBeInTheDocument();
     expect(within(identity).getByText("1d297c7")).toBeInTheDocument();
@@ -164,9 +169,9 @@ describe("DeviceDetailView — self-test parsing", () => {
     render(<DeviceDetailView deviceId="d1" />);
 
     await waitFor(() =>
-      expect(screen.getByText(/never reported a self-test/i)).toBeInTheDocument(),
+      expect(screen.getByText(/never reported a Lab self-test/i)).toBeInTheDocument(),
     );
-    expect(screen.queryByText("Self-test report")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Lab self-test report/)).not.toBeInTheDocument();
   });
 });
 
@@ -239,6 +244,11 @@ function canonical(overrides: Partial<CanonicalDevice> = {}): CanonicalDevice {
     first_seen_at: new Date(Date.now() - 86_400_000).toISOString(),
     diagnostic_freshness: diag?.diagnostic_freshness ?? "NEVER_REPORTED",
     diagnostic_verdict: diag?.overall ?? null,
+    // Default NONE: the canonical fixture is a PERSONAL unit with no Lab
+    // history at all. The historical case is built explicitly below, so a
+    // default of HISTORICAL here would silently put every other test in this
+    // file into the repurposed-hardware branch.
+    lab_tenancy: { state: "NONE", reason: null, enrollment: null },
     ...overrides,
     diagnostic: diag,
   };
@@ -463,9 +473,9 @@ describe("DeviceDetailView — gened-health system diagnostic", () => {
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
 
     // Both systems render. The new card is additive, not a replacement.
-    expect(screen.getByText("Self-test")).toBeInTheDocument();
+    expect(screen.getByText("Lab self-test")).toBeInTheDocument();
     expect(screen.getByText("audio_hat")).toBeInTheDocument();
-    expect(screen.getByText("Actions")).toBeInTheDocument();
+    expect(screen.getByText("Lab actions")).toBeInTheDocument();
   });
 
   it("a failing diagnostic fetch does not take down the rest of the page", async () => {
@@ -477,7 +487,7 @@ describe("DeviceDetailView — gened-health system diagnostic", () => {
 
     expect(within(diagCard()).getByText(/diagnostic service unavailable/)).toBeInTheDocument();
     // The Lab actions and self-test are unaffected.
-    expect(screen.getByText("Actions")).toBeInTheDocument();
+    expect(screen.getByText("Lab actions")).toBeInTheDocument();
     expect(screen.getByText("audio_hat")).toBeInTheDocument();
   });
 });
@@ -685,6 +695,264 @@ describe("DeviceDetailView — connectivity vs diagnostic freshness", () => {
     expect(within(card).getByText(/not in the canonical registry/i)).toBeInTheDocument();
     expect(within(card).getByText(/not confirmed healthy/i)).toBeInTheDocument();
     // Still must not take the Lab page down.
-    expect(screen.getByText("Actions")).toBeInTheDocument();
+    expect(screen.getByText("Lab actions")).toBeInTheDocument();
+  });
+});
+
+// ── Current state vs historical Lab state ──────────────────────
+//
+// The genedpi case, as a component test. One physical Pi served a term as
+// "Desk 2" in Modern-Lab and came back as a PERSONAL unit; because the Lab
+// alias is derived from the serial, the old enrollment still matches. The page
+// used to render that enrollment as the device's identity, so it showed
+// SCHOOL_LAB and a07b03c beside a canonical PERSONAL on 7dad1fd, and offered
+// every Lab mutation on hardware that had left the Lab.
+
+/** The Modern-Lab enrollment, as production holds it. */
+function historicalLabDetail(overrides: Partial<AdminDeviceDetail> = {}) {
+  return detail({
+    device_label: "Desk 2",
+    lab_name: "Modern-Lab",
+    partner_organization: "Modern-Academy",
+    hardware_id: "DEV-1E6B-2CE2",
+    health_status: "OFFLINE",
+    firmware_version: "a07b03c",
+    last_ip: "10.10.33.215",
+    last_heartbeat_at: "2026-08-24T09:12:00Z",
+    last_connected_at: "2026-08-24T09:12:00Z",
+    last_health_at: "2026-08-24T09:12:00Z",
+    lab_tenancy_state: "HISTORICAL",
+    lab_tenancy_reason: "enrollment_abandoned",
+    ...overrides,
+  });
+}
+
+/** The same hardware now: PERSONAL, 7dad1fd, no presence channel. */
+function genedpiCanonical(overrides: Partial<CanonicalDevice> = {}) {
+  return canonical({
+    serial: "100000001e6b2ce2",
+    derived_device_key: "DEV-1E6B-2CE2",
+    lab_hardware_id: "DEV-1E6B-2CE2",
+    provenance: "ENROLLED",
+    last_reported_mode: "PERSONAL",
+    connectivity: { state: "UNKNOWN", source: "NONE", reason: "no_presence_channel" },
+    last_seen_source: "HEALTH_POST",
+    diagnostic: diagnostic({
+      serial: "100000001e6b2ce2",
+      hostname: "gened-pi",
+      mode: "PERSONAL",
+      firmware_version: "7dad1fd",
+      overall: "WARN",
+    }),
+    lab_tenancy: {
+      state: "HISTORICAL",
+      reason: "enrollment_abandoned",
+      enrollment: {
+        lab_device_id: "d1",
+        device_label: "Desk 2",
+        hardware_id: "DEV-1E6B-2CE2",
+        lab_id: "l1",
+        partner_id: "p1",
+        firmware_version: "a07b03c",
+        health_status: "OFFLINE",
+        last_heartbeat_at: "2026-08-24T09:12:00Z",
+        evidence_at: "2026-08-24T09:12:00Z",
+      },
+    },
+    ...overrides,
+  });
+}
+
+async function renderGenedpi(
+  detailOverrides: Partial<AdminDeviceDetail> = {},
+  canonicalOverrides: Partial<CanonicalDevice> = {},
+) {
+  getFleetDevice.mockResolvedValue(historicalLabDetail(detailOverrides));
+  getCanonicalDevice.mockResolvedValue(genedpiCanonical(canonicalOverrides));
+  render(<DeviceDetailView deviceId="d1" />);
+  await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+}
+
+describe("DeviceDetailView — historical Lab tenancy", () => {
+  it("names the physical device, not the desk it used to be", async () => {
+    await renderGenedpi();
+
+    // Case 11: identity comes from the canonical side.
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("gened-pi");
+    expect(screen.getByRole("heading", { level: 1 })).not.toHaveTextContent("Desk 2");
+  });
+
+  it("shows the current mode and firmware, labelled as current", async () => {
+    await renderGenedpi();
+    const card = diagCard();
+
+    // Case 11. Both values appear, and the ones that say "current" are the
+    // canonical ones -- not the Lab's a07b03c / SCHOOL_LAB.
+    expect(within(card).getByText("Current mode")).toBeInTheDocument();
+    expect(within(card).getByText("PERSONAL")).toBeInTheDocument();
+    expect(within(card).getByText("Current firmware")).toBeInTheDocument();
+    expect(within(card).getByText("7dad1fd")).toBeInTheDocument();
+    expect(within(card).queryByText("a07b03c")).not.toBeInTheDocument();
+  });
+
+  it("keeps the Lab's firmware and mode but scopes every label", async () => {
+    await renderGenedpi();
+    const lab = screen.getByText("Previous Lab enrollment").closest("section") as HTMLElement;
+
+    // Case 12: history preserved, never presented as current.
+    expect(within(lab).getByText("a07b03c")).toBeInTheDocument();
+    expect(within(lab).getByText("Firmware at last Lab contact")).toBeInTheDocument();
+    expect(within(lab).getByText("IP at last Lab contact")).toBeInTheDocument();
+    expect(within(lab).getByText("Mode at self-test")).toBeInTheDocument();
+    expect(within(lab).getByText("10.10.33.215")).toBeInTheDocument();
+
+    // The unqualified labels are what made two values look like one answer.
+    expect(within(lab).queryByText("Firmware")).not.toBeInTheDocument();
+    expect(within(lab).queryByText("Mode")).not.toBeInTheDocument();
+    expect(within(lab).queryByText("Last IP")).not.toBeInTheDocument();
+  });
+
+  it("explains the previous enrollment in a banner", async () => {
+    await renderGenedpi();
+
+    // Case 14: the old desk is named, dated, and marked as not current.
+    const banner = screen.getByText(/Previously enrolled in a Lab/i).closest("div")!;
+    expect(banner).toHaveTextContent("Desk 2");
+    expect(banner).toHaveTextContent("Modern-Lab");
+    expect(banner).toHaveTextContent(/not this device's current state/i);
+  });
+
+  it("renders old Lab timestamps absolutely, never as a relative age", async () => {
+    await renderGenedpi();
+    const lab = screen.getByText("Previous Lab enrollment").closest("section") as HTMLElement;
+
+    // Case 14. relativeTime() on an August heartbeat is what made it read as
+    // though it were live, so the heartbeat field must carry a real date and
+    // none of the "x ago" phrasing.
+    expect(within(lab).getByText("Last Lab heartbeat")).toBeInTheDocument();
+    // Locale-agnostic: assert the year is rendered and that no field in this
+    // card carries a bare relative age. absoluteTime() goes through
+    // toLocaleString(), so matching a month name would only pass under en-US.
+    expect(within(lab).getAllByText(/2026/).length).toBeGreaterThan(0);
+    expect(within(lab).queryByText(/\bago\b/)).not.toBeInTheDocument();
+  });
+
+  it("does not show the Lab connectivity verdict as the device's status", async () => {
+    await renderGenedpi();
+
+    // Case 13. The header verdict is the canonical one; the Lab's OFFLINE is
+    // confined to the Lab card, where it is labelled "(then)".
+    const heading = screen.getByRole("heading", { level: 1 }).closest("div")!;
+    expect(within(heading).getByLabelText("Connectivity: UNKNOWN")).toBeInTheDocument();
+
+    const lab = screen.getByText("Previous Lab enrollment").closest("section") as HTMLElement;
+    expect(within(lab).getByText("(then)")).toBeInTheDocument();
+  });
+
+  it("reports no presence channel rather than offline", async () => {
+    await renderGenedpi();
+
+    // Case 13: a recent HEALTH_POST is shown as contact, not as presence.
+    expect(connState()).toHaveTextContent("UNKNOWN");
+    expect(within(diagCard()).getByText(/HEALTH_POST/)).toBeInTheDocument();
+    expect(within(diagCard()).getByText(/No live connection channel/i)).toBeInTheDocument();
+  });
+
+  it("marks the historical self-test so it cannot pass for a fresh one", async () => {
+    await renderGenedpi();
+
+    expect(screen.getByText("Lab self-test (historical)")).toBeInTheDocument();
+    expect(
+      screen.getByText(/From the previous Lab enrollment/i),
+    ).toBeInTheDocument();
+  });
+
+  it("disables every Lab mutation except revoke", async () => {
+    await renderGenedpi();
+
+    // Cases 7 and 8, at the UI layer. lab-service rejects these with LAB_1116
+    // regardless -- this is the courtesy half of the pair.
+    expect(screen.getByRole("button", { name: /Force online/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Move lab/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Rename/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /spare/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Rotate token/i })).toBeDisabled();
+
+    // The way out of this state must stay available.
+    expect(screen.getByRole("button", { name: /Revoke/i })).toBeEnabled();
+  });
+
+  it("says why the Lab actions are unavailable", async () => {
+    await renderGenedpi();
+
+    expect(screen.getByText(/this Lab enrollment is historical/i)).toBeInTheDocument();
+    expect(screen.getByText(/Revoke is still available/i)).toBeInTheDocument();
+  });
+
+  it("falls back to the Lab payload's tenancy when the registry fetch fails", async () => {
+    // A page that cannot reach the registry must still refuse to present Lab
+    // data as current -- otherwise the one time the fix matters most (the
+    // registry is down) is the one time it is absent.
+    getFleetDevice.mockResolvedValue(historicalLabDetail());
+    getCanonicalDevice.mockRejectedValue(new Error("registry unavailable"));
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Previous Lab enrollment")).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("button", { name: /Force online/i })).toBeDisabled();
+  });
+});
+
+describe("DeviceDetailView — active Lab tenancy is unchanged", () => {
+  it("keeps the desk label, the present-tense card and every action", async () => {
+    // Case 10. The fix must not cost a genuine Lab device anything.
+    getFleetDevice.mockResolvedValue(detail());
+    getCanonicalDevice.mockResolvedValue(
+      canonical({
+        last_reported_mode: "SCHOOL_LAB",
+        connectivity: { state: "ONLINE", source: "LAB_WS", reason: null },
+        lab_tenancy: {
+          state: "ACTIVE",
+          reason: null,
+          enrollment: {
+            lab_device_id: "d1",
+            device_label: "Desk 1",
+            hardware_id: "DEV-0001",
+            lab_id: "l1",
+            partner_id: "p1",
+            firmware_version: "1.4.2",
+            health_status: "ONLINE",
+            last_heartbeat_at: new Date(Date.now() - 3000).toISOString(),
+            evidence_at: new Date(Date.now() - 3000).toISOString(),
+          },
+        },
+      }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
+
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Desk 1");
+    expect(screen.getByText("Lab enrollment")).toBeInTheDocument();
+    expect(screen.getByText("Spring Dale › Computer Lab 1")).toBeInTheDocument();
+    expect(screen.queryByText(/Previously enrolled in a Lab/i)).not.toBeInTheDocument();
+
+    expect(screen.getByRole("button", { name: /Force online/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Move lab/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Rename/i })).toBeEnabled();
+  });
+
+  it("still blocks Lab actions on a revoked enrollment", async () => {
+    // The old gate was not wrong, only incomplete. It must still hold.
+    getFleetDevice.mockResolvedValue(
+      detail({ revoked_at: "2026-09-01T00:00:00Z", lab_tenancy_state: "ACTIVE" }),
+    );
+    render(<DeviceDetailView deviceId="d1" />);
+
+    await waitFor(() => expect(screen.getByText("Lab actions")).toBeInTheDocument());
+
+    expect(screen.getByRole("button", { name: /Force online/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Move lab/i })).toBeDisabled();
   });
 });
