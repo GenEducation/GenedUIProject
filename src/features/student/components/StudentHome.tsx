@@ -1,5 +1,6 @@
 "use client";
 
+import { FEATURES } from "@/constants/features";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -13,7 +14,7 @@ import { useScheduleStore } from "../store/useScheduleStore";
 import { UpcomingSessionPanel } from "./UpcomingSessionPanel";
 import { ContinueLearningCard } from "./ContinueLearningCard";
 import { useNow } from "@/utils/useNow";
-import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
+import { StudentAvatar } from "./StudentAvatar";
 import { STUDENT_COLORS } from "../theme/colors";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
@@ -284,7 +285,7 @@ export function StudentHome() {
       fetchSessions();
       fetchAvailableAgents();
       fetchStudentStats();
-      loadScheduledSessions(studentProfile.user_id);
+      if (FEATURES.schedule) loadScheduledSessions(studentProfile.user_id);
     }
     return () => { cancelled = true; };
   }, [studentProfile]);
@@ -380,7 +381,7 @@ export function StudentHome() {
   // returns 0, so the server renders Continue Learning and the panel swaps in
   // on the client — never a hydration mismatch.
   const now = useNow();
-  const imminentSession = now === 0
+  const imminentSession = now === 0 || !FEATURES.schedule
     ? null
     : selectImminentSession(scheduledSessions, now);
 
@@ -516,15 +517,7 @@ export function StudentHome() {
                     22px there and a creature beside it crowds the line. */}
                 <div className="hidden md:flex flex-shrink-0 rounded-full overflow-hidden"
                   style={{ width: 56, height: 56, border: "2px solid white", boxShadow: `0 4px 12px ${C.sun}30` }}>
-                  {avatarId === "graduate-girl" ? (
-                    <img
-                      src="/avatars/girl-graduate.png"
-                      alt="Student avatar"
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                    />
-                  ) : (
-                    <StudentAvatarIllustration bg={C.sun} />
-                  )}
+                  <StudentAvatar id={avatarId} size={56} />
                 </div>
                 <div>
                   <h1 className="font-extrabold leading-tight m-0"

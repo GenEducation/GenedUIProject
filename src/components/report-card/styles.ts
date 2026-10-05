@@ -346,3 +346,40 @@ export const RC_PRINT_PORTAL_STYLES = `
   }
   .rc-print-footer { display: none; }
 `;
+
+// On-screen dashboard (ReportCardScreen). Mostly Tailwind; this block holds
+// the palette tokens and re-points the legacy `rc-*` parts (chapter analysis,
+// topic tree, tests) that the screen embeds at the same typeface.
+export const RC_SCREEN_STYLES = `
+  .rc-screen {
+    --rs-ink:#13293D; --rs-ink-soft:#5E7186;
+    --rs-line:#E3EEEA; --rs-line-strong:#CFE3DB;
+    --rs-mint:#E4F5EE; --rs-track:#E9F0EE; --rs-surface-2:#F7FBFA;
+    --rs-brand:#13997F; --rs-brand-deep:#0B6B5E;
+    --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+    --font-body: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+    --sans: var(--font-body); --display: var(--font-display);
+    --navy: var(--rs-ink); --muted: var(--rs-ink-soft); --rule: var(--rs-line); --border: var(--rs-line);
+    font-family: var(--font-body);
+    color: var(--rs-ink);
+    font-size: 15px;
+    line-height: 1.5;
+    font-feature-settings: "ss01", "cv11";
+    background:
+      radial-gradient(900px 420px at 0% -10%, rgba(19,153,127,.10), transparent 60%),
+      radial-gradient(700px 380px at 105% 8%, rgba(37,99,235,.06), transparent 60%),
+      linear-gradient(180deg, #F3F9F7 0%, #F7FAF9 100%);
+  }
+  .rc-screen h1, .rc-screen h2, .rc-screen h3, .rc-screen h4 { font-family: var(--font-display); }
+
+  @keyframes rc-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .rc-rise { animation: rc-rise .55s cubic-bezier(.22,1,.36,1) both; }
+  @media (prefers-reduced-motion: reduce) { .rc-rise { animation: none; } }
+
+  /* Legacy parts embedded in the screen */
+  .rc-screen .rc-legacy .rc-expander { margin-top: 12px !important; background: #fff; border-color: var(--rs-line); border-radius: 14px; }
+  .rc-screen .rc-legacy--flush .rc-expander { margin-top: 0 !important; border: 0; }
+  .rc-screen .rc-legacy--flush .rc-expander > .rc-expander-btn { display: none; }
+  .rc-screen .rc-legacy--flush .rc-expander > div > .rc-expander-panel { border-top: 0; padding: 0; }
+  .rc-screen .rc-legacy .rc-test-item { border-radius: 14px; border-color: var(--rs-line); }
+`;

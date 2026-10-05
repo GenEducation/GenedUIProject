@@ -22,7 +22,7 @@ import { PttHotkeyConfig } from "./PttHotkeyConfig";
 import { DevicePairingModal } from "./DevicePairingModal";
 import { AvatarPickerModal } from "./AvatarPickerModal";
 import { TeacherConnections } from "./TeacherConnections";
-import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
+import { StudentAvatar } from "./StudentAvatar";
 import { PetTunerModal } from "./PetTunerModal";
 import { usePetStore } from "../store/usePetStore";
 import { useHydrated } from "@/hooks/useHydrated";
@@ -697,15 +697,7 @@ export function StudentProfile() {
                   boxShadow: `0 8px 24px ${avatarColor}30`, border: "3px solid white",
                   overflow: "hidden",
                 }}>
-                  {avatarId === "graduate-girl" ? (
-                    <img
-                      src="/avatars/girl-graduate.png"
-                      alt="Girl graduate avatar"
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                    />
-                  ) : (
-                    <StudentAvatarIllustration bg={avatarColor} />
-                  )}
+                  <StudentAvatar id={avatarId} size={88} />
                 </div>
                 <button
                   onClick={() => setAvatarPickerOpen(true)}

@@ -30,6 +30,7 @@ import {
   type ExactSubject,
 } from "@/features/subjects/subjectCatalog";
 import { asError } from "@/utils/errors";
+import { isStudentAvatarId, type StudentAvatarId } from "@/constants/studentAvatars";
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
@@ -514,17 +515,21 @@ export interface StudentState {
  * identity are different things, and collapsing them made the profile feel
  * like a toy.
  */
-export type AvatarId = "graduate-boy" | "graduate-girl";
+export type AvatarId = StudentAvatarId;
+
+const DEFAULT_AVATAR_ID: AvatarId = "boy_01_green_hoodie";
 
 const getInitialAvatarId = (): AvatarId => {
   if (typeof window === "undefined") {
-    return "graduate-boy";
+    return DEFAULT_AVATAR_ID;
   }
   try {
     const saved = localStorage.getItem("gened_avatar_id");
-    return saved === "graduate-girl" ? "graduate-girl" : "graduate-boy";
+    if (isStudentAvatarId(saved)) return saved;
+    // Choices saved before the illustrated set replaced the two graduates.
+    return saved === "graduate-girl" ? "girl_01_yellow_hoodie" : DEFAULT_AVATAR_ID;
   } catch {
-    return "graduate-boy";
+    return DEFAULT_AVATAR_ID;
   }
 };
 

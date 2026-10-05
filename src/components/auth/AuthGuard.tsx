@@ -8,6 +8,7 @@ import { useParentStore } from "@/features/parent/store/useParentStore";
 import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 import { loadSubjectCatalog } from "@/features/subjects/subjectCatalog";
+import { ParentLoaderBackdrop } from "@/features/parent/components/loader/ParentLoader";
 
 type Role = "student" | "parent" | "partner" | "admin" | "teacher";
 
@@ -77,6 +78,7 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
             username: profile.username || "",
             email: profile.email || "",
             role: profile.role || "parent",
+            name: profile.name || profile.full_name || undefined,
           });
         }
       } else if (role === "teacher") {
@@ -113,6 +115,18 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
 
       setIsAuthorized(true);
 
+      // The parent portal keeps its loader up until the family has loaded
+      // (ParentHome finishes it). On a refresh or a new tab nothing is
+      // showing yet, so start it here — after a short delay, so a fast load
+      // never flashes it.
+      if (requiredRole === "parent") {
+        const loader = useLoaderStore.getState();
+        if (!loader.isVisible) {
+          loader.startLoading({ variant: "parent", stage: "entry", appearDelayMs: 200 });
+        }
+        return;
+      }
+
       // This route is now authorized and rendering — it's the destination of
       // any post-auth handoff, so it owns tearing the overlay down. A short
       // delay lets the first paint land before the loader fades out.
@@ -130,6 +144,14 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
   }, [requiredRole, router]);
 
   if (!isAuthorized) {
+    if (requiredRole === "parent") {
+      // Same atmosphere as the parent loader, so nothing flashes between them.
+      return (
+        <div className="relative h-screen w-full">
+          <ParentLoaderBackdrop />
+        </div>
+      );
+    }
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#F7F6F1]">
         <div className="flex flex-col items-center gap-4">

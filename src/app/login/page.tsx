@@ -77,7 +77,15 @@ export default function LoginPage() {
         username: token.username || "",
         email: token.email || "",
         role: token.role || "parent",
+        name: token.name || token.full_name || undefined,
       });
+    }
+
+    // The role is only known now, so login starts on the shared loader; a
+    // parent is handed over to the parent loader for the rest of the way.
+    if (role === "parent") {
+      useLoaderStore.getState().setVariant("parent");
+      useLoaderStore.getState().setParentStage("signin-handoff");
     }
 
     const redirectPath = getRedirectParam();

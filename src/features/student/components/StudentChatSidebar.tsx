@@ -1,13 +1,14 @@
 "use client";
 
+import { FEATURES } from "@/constants/features";
 import { Loader2, LogOut, User, ClipboardCheck } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useStudentStore, isVoiceSession, sessionRoutePath } from "../store/useStudentStore";
+import { useStudentStore, isVoiceSession, sessionRoutePath, type AvatarId } from "../store/useStudentStore";
 import { useShallow } from "zustand/react/shallow";
 import { getStudentDisplayName } from "../utils/displayName";
 import { STUDENT_COLORS } from "../theme/colors";
-import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
+import { StudentAvatar } from "./StudentAvatar";
 import { STRINGS } from "../constants/strings";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import React, { useState, useRef, useCallback, useEffect } from "react";
@@ -30,7 +31,7 @@ const C = {
 
 const NAV_ITEMS = [
   { id: "home",      icon: "🏠", label: "Home",     path: "/student" },
-  { id: "practice",  icon: "🎯", label: "Practice",  path: "/student/assessments" },
+  ...(FEATURES.practice ? [{ id: "practice",  icon: "🎯", label: "Practice",  path: "/student/assessments" }] : []),
   { id: "me",        icon: "😊", label: "Me",        path: "/student/profile" },
 ];
 
@@ -85,7 +86,7 @@ function ProfilePopup({
   onClose,
 }: {
   profile: { name?: string; username?: string; grade?: number; plan?: string } | null;
-  avatarId?: string;
+  avatarId: AvatarId;
   onLogout: () => void;
   onClose: () => void;
 }) {
@@ -106,7 +107,7 @@ function ProfilePopup({
 
   const menuItems = [
     { icon: <User size={14} />,         label: STRINGS.nav.me,       path: "/student/profile" },
-    { icon: <ClipboardCheck size={14}/>,label: STRINGS.nav.practice, path: "/student/assessments" },
+    ...(FEATURES.practice ? [{ icon: <ClipboardCheck size={14}/>,label: STRINGS.nav.practice, path: "/student/assessments" }] : []),
   ];
 
   return (
@@ -135,15 +136,7 @@ function ProfilePopup({
           width: 48, height: 48, borderRadius: "50%", margin: "0 auto 10px", overflow: "hidden",
           border: "1.5px solid rgba(255,255,255,0.12)",
         }}>
-          {avatarId === "graduate-girl" ? (
-            <img
-              src="/avatars/girl-graduate.png"
-              alt="Student avatar"
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-            />
-          ) : (
-            <StudentAvatarIllustration bg={C.sun} />
-          )}
+          <StudentAvatar id={avatarId} size={48} />
         </div>
         <div style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF", lineHeight: 1.3 }}>
           {displayName}
@@ -469,15 +462,7 @@ export const StudentChatSidebar = React.memo(({
                   width: 32, height: 32, borderRadius: "50%", flexShrink: 0, overflow: "hidden",
                   border: "1.5px solid rgba(255,255,255,0.12)",
                 }}>
-                  {avatarId === "graduate-girl" ? (
-                    <img
-                      src="/avatars/girl-graduate.png"
-                      alt="Student avatar"
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                    />
-                  ) : (
-                    <StudentAvatarIllustration bg={C.sun} />
-                  )}
+                  <StudentAvatar id={avatarId} size={32} />
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   {/* Row 1: name + PRO */}

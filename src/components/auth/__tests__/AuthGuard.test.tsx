@@ -4,6 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { seedAuthLocalStorage } from "@/test/helpers/auth";
 import { autoResetStore } from "@/test/helpers/resetStores";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { useLoaderStore } from "@/stores/useLoaderStore";
 
 // Hoisted so the next/navigation factory (also hoisted) can close over it, and the
 // tests can assert on router.replace.
@@ -25,6 +26,7 @@ vi.mock("next/navigation", () => ({
 import { AuthGuard } from "../AuthGuard";
 
 autoResetStore(useStudentStore);
+autoResetStore(useLoaderStore);
 
 const SECRET = "PROTECTED_CONTENT";
 const renderGuard = (role: Parameters<typeof AuthGuard>[0]["requiredRole"]) =>
@@ -121,5 +123,33 @@ describe("AuthGuard — authorized", () => {
     await waitFor(() => expect(screen.getByText(SECRET)).toBeInTheDocument());
     expect(setSpy).not.toHaveBeenCalled();
     setSpy.mockRestore();
+  });
+});
+
+describe("AuthGuard — parent portal loader", () => {
+  beforeEach(() => window.history.pushState({}, "", "/parent"));
+
+  it("starts the parent loader on a fresh load and leaves dismissal to the portal", async () => {
+    seedAuthLocalStorage("parent", { profile: { user_id: "p1" } });
+    renderGuard("parent");
+
+    await waitFor(() => expect(screen.getByText(SECRET)).toBeInTheDocument());
+    const loader = useLoaderStore.getState();
+    expect(loader.isVisible).toBe(true);
+    expect(loader.variant).toBe("parent");
+    expect(loader.parentStage).toBe("entry");
+
+    await new Promise((r) => setTimeout(r, 600));
+    expect(useLoaderStore.getState().isVisible).toBe(true); // not stopped after 500ms like other portals
+  });
+
+  it("doesn't restart a loader that's already handing off", async () => {
+    useLoaderStore.getState().startLoading({ variant: "parent", stage: "signin-handoff" });
+    const { loadId } = useLoaderStore.getState();
+    seedAuthLocalStorage("parent", { profile: { user_id: "p1" } });
+    renderGuard("parent");
+
+    await waitFor(() => expect(screen.getByText(SECRET)).toBeInTheDocument());
+    expect(useLoaderStore.getState().loadId).toBe(loadId);
   });
 });

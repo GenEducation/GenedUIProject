@@ -79,7 +79,10 @@ export default function RegisterPage() {
       return;
     }
     setIsSubmitting(true);
-    useLoaderStore.getState().startLoading();
+    // Parents get their own loader from the first moment of sign-up.
+    useLoaderStore.getState().startLoading(
+      signupData.role === "parent" ? { variant: "parent", stage: "signup" } : undefined,
+    );
     try {
       let authResponse;
       if (googleSignUpToken) {

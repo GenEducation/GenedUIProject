@@ -11,7 +11,8 @@ import {
   X, 
   Clock,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  LogOut
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParentStore, type ParentProfile } from "../store/useParentStore";
@@ -21,6 +22,7 @@ export function ParentProfileView({ profile }: { profile?: ParentProfile | null 
   const linkedStudents = useParentStore((state) => state.linkedStudents);
   const updateStudentStatus = useParentStore((state) => state.updateStudentStatus);
   const unlinkStudent = useParentStore((state) => state.unlinkStudent);
+  const logoutParent = useParentStore((state) => state.logoutParent);
   
   // Use the passed prop if available, otherwise fallback to store
   const storeProfile = useParentStore((state) => state.parentProfile);
@@ -39,9 +41,18 @@ export function ParentProfileView({ profile }: { profile?: ParentProfile | null 
     <div className="flex-1 overflow-y-auto bg-[#FBFBFA] p-6 lg:p-10">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
-        <header className="mb-10">
-          <h1 className="text-3xl font-black text-[#1a3a2a] mb-2">Account & Connections</h1>
-          <p className="text-sm font-medium text-[#1a3a2a]/40">Manage your profile, linked students, and connection requests.</p>
+        <header className="mb-10 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-[#1a3a2a] mb-2">Account & Connections</h1>
+            <p className="text-sm font-medium text-[#1a3a2a]/40">Manage your profile, linked students, and connection requests.</p>
+          </div>
+          <button
+            onClick={() => logoutParent()}
+            className="flex items-center gap-2 rounded-xl border border-red-100 bg-white px-4 py-2.5 text-sm font-bold text-red-500 transition-colors hover:bg-red-50"
+          >
+            <LogOut size={16} />
+            Log out
+          </button>
         </header>
 
         {/* Account Details Section */}

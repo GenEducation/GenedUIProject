@@ -110,6 +110,20 @@ function extractExactSubjects(data: unknown, catalog: TaxonomySubject[]): ExactS
   return Array.from(subjects).sort();
 }
 
+/**
+ * Every subject a student can study, validated against the taxonomy. Exposed
+ * for views that need all subjects at once (the parent Home page) without
+ * touching this store's single-subject selection.
+ */
+export async function loadStudentSubjects(
+  studentId: string,
+  signal?: AbortSignal,
+): Promise<ExactSubject[]> {
+  const catalog = await loadSubjectCatalog();
+  const data = await studentService.fetchAvailableAgents(studentId, signal);
+  return extractExactSubjects(data, catalog);
+}
+
 // -- Store --------------------------------------------------------------------
 
 export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
@@ -133,9 +147,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
 
   fetchAnalyticsSubjects: async (studentId, signal?) => {
     try {
-      const catalog = await loadSubjectCatalog();
-      const data = await studentService.fetchAvailableAgents(studentId, signal);
-      const subjects = extractExactSubjects(data, catalog);
+      const subjects = await loadStudentSubjects(studentId, signal);
       set({ analyticsSubjects: subjects });
       
       // If no subject selected and we have subjects, select the first one

@@ -1,12 +1,13 @@
 "use client";
 
+import { FEATURES } from "@/constants/features";
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { getStudentDisplayName } from "../utils/displayName";
 import { STUDENT_COLORS } from "../theme/colors";
-import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
+import { StudentAvatar } from "./StudentAvatar";
 import { STRINGS } from "../constants/strings";
 import {
   LogOut,
@@ -149,8 +150,8 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
 
   const navItems = [
     { icon: <HomeIcon size={18} strokeWidth={1.9} />,     label: STRINGS.nav.home,       key: "home",     path: "/student" },
-    { icon: <Target size={18} strokeWidth={1.9} />,       label: STRINGS.nav.practice,   key: "practice", path: "/student/assessments" },
-    { icon: <CalendarDays size={18} strokeWidth={1.9} />, label: STRINGS.nav.schedule,   key: "schedule", path: "/student/schedule" },
+    ...(FEATURES.practice ? [{ icon: <Target size={18} strokeWidth={1.9} />,       label: STRINGS.nav.practice,   key: "practice", path: "/student/assessments" }] : []),
+    ...(FEATURES.schedule ? [{ icon: <CalendarDays size={18} strokeWidth={1.9} />, label: STRINGS.nav.schedule,   key: "schedule", path: "/student/schedule" }] : []),
     { icon: <BarChart3 size={18} strokeWidth={1.9} />,    label: STRINGS.nav.reportCard, key: "report",   path: "/student/report-card" },
     { icon: <User size={18} strokeWidth={1.9} />,         label: STRINGS.nav.profile,    key: "me",       path: "/student/profile" },
   ];
@@ -228,15 +229,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                 className="w-[34px] h-[34px] rounded-full overflow-hidden flex-shrink-0"
                 style={{ border: `1.5px solid ${C.sidebarBorder}` }}
               >
-                {avatarId === "graduate-girl" ? (
-                  <img
-                    src="/avatars/girl-graduate.png"
-                    alt="Student avatar"
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                  />
-                ) : (
-                  <StudentAvatarIllustration bg={C.sun} />
-                )}
+                <StudentAvatar id={avatarId} size={34} />
               </div>
               <div className="flex-1 min-w-0">
                 {/* Name + plan badge */}

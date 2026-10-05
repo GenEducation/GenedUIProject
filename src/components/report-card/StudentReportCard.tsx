@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, type Dispatch, type SetStateAction } from "react";
+import { useState, useEffect, useCallback, useMemo, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
@@ -12,9 +12,11 @@ import type {
   EvolutionAnalysisData, SubjectEvolutionData, StudentProgressData,
   ReportCardData, ReportCardUI, ReportRole,
 } from "./types";
-import { RC_STYLES } from "./styles";
+import { RC_STYLES, RC_SCREEN_STYLES } from "./styles";
 import { applySimulation } from "./utils";
-import { ReportCardBody } from "./ReportCardBody";
+import { ReportCardScreen } from "./screen/ReportCardScreen";
+import { Icon } from "./screen/icons";
+import { Button } from "@/components/ui/Button";
 import { usePrintPdf } from "./usePrintPdf";
 import {
   loadSubjectCatalog,
@@ -38,7 +40,20 @@ function hasExactReportSubject(
   }
 }
 
-export function StudentReportCard({ parentId, teacherId, childId, childName }: { parentId?: string; teacherId?: string; childId?: string; childName?: string } = {}) {
+export function StudentReportCard({
+  parentId,
+  teacherId,
+  childId,
+  childName,
+  loadingFallback,
+}: {
+  parentId?: string;
+  teacherId?: string;
+  childId?: string;
+  childName?: string;
+  /** Replaces the default loading screen (the parent portal has its own). */
+  loadingFallback?: ReactNode;
+} = {}) {
   const { studentProfile } = useStudentStore();
   const router = useRouter();
 
@@ -308,6 +323,7 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
 
   // ── Loading / Error ─────────────────────────────────────
   if (isLoading) {
+    if (loadingFallback) return <>{loadingFallback}</>;
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
         <div className="text-center">
@@ -324,12 +340,13 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
       <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
         <div className="text-center max-w-sm">
           <p className="text-sm text-red-500 font-medium mb-3">{error}</p>
-          <button
+          <Button
+            variant="outline"
             onClick={() => (childId && (parentId || teacherId) ? fetchParentReportData() : fetchAll())}
-            className="px-4 py-2 rounded-lg bg-[#042E5C] text-white text-sm font-medium hover:bg-[#031d3a] transition-colors"
+            leadingIcon={<Icon name="misc/refresh" size={16} />}
           >
             Retry
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -337,11 +354,12 @@ export function StudentReportCard({ parentId, teacherId, childId, childName }: {
 
   // ── Render ─────────────────────────────────────────────
   return (
-    <div className="report-root" data-ready="true" style={{ background: "var(--bg)", color: "var(--text)", fontFamily: "Inter, sans-serif" }}>
+    <>
+      {/* Source Serif + JetBrains Mono for the print layout and the legacy rc-* parts. */}
       <link rel="stylesheet" href={FONT_HREF} />
-      <style>{RC_STYLES}</style>
-      <ReportCardBody data={data} ui={ui} />
+      <style>{RC_STYLES + RC_SCREEN_STYLES}</style>
+      <ReportCardScreen data={data} ui={ui} />
       {printPortal}
-    </div>
+    </>
   );
 }

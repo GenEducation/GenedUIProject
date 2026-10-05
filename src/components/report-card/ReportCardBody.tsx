@@ -1,9 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import ReactMarkdown from "react-markdown";
-import { BookOpen, FileText, Brain, Activity, ChevronDown, Lock, User, Target, TrendingUp, Award, Sparkles, Clock } from "lucide-react";
+import { BookOpen, FileText, Brain, Activity, Clock } from "lucide-react";
 import type {
   AnalysisFocusArea,
   AnalysisPattern,
@@ -14,228 +12,17 @@ import type {
   SubjectData,
 } from "./types";
 import {
-  SUBJECT_ACCENTS, masteryColor, bandFor, bandClass, formatDate, ringArc,
-  buildChapterArc, deriveTopicInsights, deriveUnlocks, testAggregate,
-  subjectAdapted, pendingTrendSubjects, SPARK_COLORS, type SparkLevel,
+  SUBJECT_ACCENTS, masteryColor, bandFor, bandClass, ringArc,
+  testAggregate, subjectAdapted, pendingTrendSubjects,
 } from "./utils";
+import { Reveal, Chevron } from "./parts/Reveal";
+import { TopicMastery } from "./parts/TopicMastery";
+import { TestItem } from "./parts/TestItem";
+import { ChapterAnalysis } from "./parts/ChapterAnalysis";
 
-// ─────────────────────────────────────────────────────────
-// STRUCTURED SESSION REPORT RENDERER
-// ─────────────────────────────────────────────────────────
+// The print/PDF layout: one long, fully-expanded document rendered by
+// usePrintPdf. The on-screen report card is ReportCardScreen.
 
-function SessionReportViewer({ reportText }: { reportText: string }) {
-  if (!reportText) return null;
-
-  // Helper to parse key-value lines
-  const getValue = (pattern: RegExp, text: string) => {
-    const match = text.match(pattern);
-    return match ? match[1].trim() : null;
-  };
-
-  // Extract Summary
-  const summaryMatch = reportText.match(/### Summary of Current Session \((.*?)\)\n([\s\S]*?)(?=\n### |$)/);
-  const completionBadge = summaryMatch ? summaryMatch[1] : null;
-  const summaryBody = summaryMatch ? summaryMatch[2].trim() : "";
-
-  // Extract Student Traits
-  const traitsSection = reportText.match(/### Student Traits & Engagement\n([\s\S]*?)(?=\n### |$)/)?.[1] || "";
-  const mood = getValue(/- \*\*Mood\*\*: (.*)/, traitsSection);
-  const engagement = getValue(/- \*\*Engagement\*\*: (.*)/, traitsSection);
-  const questioning = getValue(/- \*\*Questioning Style\*\*: (.*)/, traitsSection);
-  const evidence = getValue(/- \*\*Evidence\*\*: (.*)/, traitsSection);
-
-  // Extract Pedagogical Points
-  const pedagogySection = reportText.match(/### Pedagogical Key Points\n([\s\S]*?)(?=\n### |$)/)?.[1] || "";
-  const pedagogyBlocks: { title: string; friction?: string; breakthrough?: string; misconception?: string }[] = [];
-  const pRegex = /#### (.*?)\n([\s\S]*?)(?=(#### |$))/g;
-  let pMatch;
-  while ((pMatch = pRegex.exec(pedagogySection)) !== null) {
-    const blockText = pMatch[2];
-    pedagogyBlocks.push({
-      title: pMatch[1].trim(),
-      friction: getValue(/- \*\*Friction Points\*\*: (.*)/, blockText) || undefined,
-      breakthrough: getValue(/- \*\*Breakthroughs\*\*: (.*)/, blockText) || undefined,
-      misconception: getValue(/- \*\*Misconceptions\*\*: (.*)/, blockText) || undefined,
-    });
-  }
-
-  // Extract Concept Trajectory
-  const trajSection = reportText.match(/### Concept Trajectory\n([\s\S]*?)(?=\n### |$)/)?.[1] || "";
-  const trajLines: { concept: string; transition: string; desc: string }[] = [];
-  const tRegex = /- \*\*(.*?)\*\*: (.*?) — (.*)/g;
-  let tMatch;
-  while ((tMatch = tRegex.exec(trajSection)) !== null) {
-    trajLines.push({
-      concept: tMatch[1].trim(),
-      transition: tMatch[2].trim(),
-      desc: tMatch[3].trim(),
-    });
-  }
-
-  // Extract Updated Overall Summary
-  const overallSummary = reportText.match(/### Updated Overall Summary\n([\s\S]*?)(?=\n### |$)/)?.[1]?.trim();
-
-  // If text structure doesn't match standard headings, fall back gracefully to Markdown
-  const isStructured = summaryMatch || traitsSection || pedagogyBlocks.length > 0 || trajLines.length > 0;
-
-  if (!isStructured) {
-    return (
-      <div className={MD_CLASSES}>
-        <ReactMarkdown>{reportText}</ReactMarkdown>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rc-session-report">
-      {/* Session Summary Header */}
-      <div className="rc-sr-header">
-        <div className="rc-sr-header-top">
-          <div className="rc-sr-title">
-            <Sparkles size={13} />
-            <span>Session Overview</span>
-          </div>
-          {completionBadge && <span className="rc-sr-badge">{completionBadge}</span>}
-        </div>
-        {summaryBody && <p className="rc-sr-summary-text">{summaryBody}</p>}
-      </div>
-
-      {/* Student Traits & Engagement */}
-      {(mood || engagement || questioning || evidence) && (
-        <div>
-          <div className="rc-sr-section-title">
-            <User size={13} />
-            <span>Learner Traits &amp; Engagement</span>
-          </div>
-          <div className="rc-sr-traits-grid">
-            {mood && (
-              <div className="rc-sr-trait-card">
-                <div className="rc-sr-trait-label">Mood</div>
-                <div className="rc-sr-trait-value">{mood}</div>
-              </div>
-            )}
-            {engagement && (
-              <div className="rc-sr-trait-card">
-                <div className="rc-sr-trait-label">Engagement</div>
-                <div className="rc-sr-trait-value">{engagement}</div>
-              </div>
-            )}
-            {questioning && (
-              <div className="rc-sr-trait-card">
-                <div className="rc-sr-trait-label">Questioning Style</div>
-                <div className="rc-sr-trait-value">{questioning}</div>
-              </div>
-            )}
-          </div>
-          {evidence && (
-            <div className="rc-sr-evidence">
-              <p className="rc-sr-evidence-quote">{evidence}</p>
-              <div className="rc-sr-evidence-cap">Observed evidence</div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Pedagogical Key Points */}
-      {pedagogyBlocks.length > 0 && (
-        <div>
-          <div className="rc-sr-section-title">
-            <Target size={13} />
-            <span>Pedagogical Key Points</span>
-          </div>
-          {pedagogyBlocks.map((block, idx) => (
-            <div className="rc-sr-pedagogy-card" key={idx}>
-              <div className="rc-sr-pedagogy-head">{block.title}</div>
-              <div className="rc-sr-pedagogy-details">
-                {block.friction && (
-                  <div className="rc-sr-point-item">
-                    <span className="rc-sr-point-tag friction">Friction</span>
-                    <span>{block.friction}</span>
-                  </div>
-                )}
-                {block.breakthrough && (
-                  <div className="rc-sr-point-item">
-                    <span className="rc-sr-point-tag breakthrough">Breakthrough</span>
-                    <span>{block.breakthrough}</span>
-                  </div>
-                )}
-                {block.misconception && (
-                  <div className="rc-sr-point-item">
-                    <span className="rc-sr-point-tag misconception">Misconception</span>
-                    <span>{block.misconception}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Concept Trajectory */}
-      {trajLines.length > 0 && (
-        <div>
-          <div className="rc-sr-section-title">
-            <TrendingUp size={13} />
-            <span>Concept Trajectory</span>
-          </div>
-          {trajLines.map((traj, idx) => (
-            <div className="rc-sr-trajectory-card" key={idx}>
-              <div className="rc-sr-traj-head">
-                <span>{traj.concept}</span>
-                <span className="rc-sr-traj-badge">{traj.transition}</span>
-              </div>
-              <div className="rc-sr-traj-desc">{traj.desc}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Overall Chapter Progress Summary */}
-      {overallSummary && (
-        <div className="rc-sr-final">
-          <div className="rc-sr-final-cap">Cumulative Chapter Assessment</div>
-          <p>{overallSummary}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
-// SHARED HELPERS — collapse to plain markup in print variant
-// ─────────────────────────────────────────────────────────
-
-function Reveal({ open, print, children }: { open: boolean; print: boolean; children: React.ReactNode }) {
-  if (print) return open ? <div>{children}</div> : null;
-  return (
-    <AnimatePresence initial={false}>
-      {open && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: "auto", opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.22 }}
-          style={{ overflow: "hidden" }}
-        >
-          {children}
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-
-function Chevron({ open, print }: { open: boolean; print: boolean }) {
-  if (print) return <ChevronDown size={18} style={{ color: "var(--muted)" }} />;
-  return (
-    <motion.span
-      animate={{ rotate: open ? 180 : 0 }}
-      transition={{ duration: 0.2 }}
-      style={{ display: "flex", color: "var(--muted)" }}
-    >
-      <ChevronDown size={18} />
-    </motion.span>
-  );
-}
 
 /** A single labelled dial: an SVG ring with the number centered inside and the
  *  caption below the circle. Shared by the mastery + coverage chapter gauges. */
@@ -268,12 +55,6 @@ function ChapterGauge({ masteryPct, coveragePct, accent }: { masteryPct: number;
   );
 }
 
-const MD_CLASSES = `rc-markdown prose prose-sm max-w-none
-  prose-h3:font-serif prose-h3:text-[var(--navy)] prose-h3:font-medium prose-h3:text-base prose-h3:mt-4 prose-h3:mb-2 prose-h3:first:mt-0
-  prose-h4:text-[var(--navy)] prose-h4:font-semibold prose-h4:text-xs prose-h4:mt-3 prose-h4:mb-1
-  prose-p:text-[var(--ink-2)] prose-p:my-1.5
-  prose-li:text-[var(--ink-2)] prose-li:my-0.5
-  prose-strong:text-[var(--navy)] prose-ul:my-1 prose-ul:pl-4`;
 
 // ─────────────────────────────────────────────────────────
 // PER-SECTION EMPTY STATE
@@ -318,98 +99,6 @@ function SectionHead({ n, title, sub }: { n: string; title: string; sub: string 
 }
 
 // ─────────────────────────────────────────────────────────
-// TOPIC MASTERY (skill tree, collapsed by default)
-// ─────────────────────────────────────────────────────────
-
-function TopicMastery({ subject, data, ui }: { subject: string; data: ReportCardData; ui: ReportCardUI }) {
-  const print = ui.variant === "print";
-  const insights = deriveTopicInsights(data.skillTree, subject);
-  if (insights.cgs.length === 0) return null;
-
-  const key = `${subject}::topics`;
-  const open = ui.isExpOpen(key);
-
-  return (
-    <div className="rc-expander rc-expander--tm" style={{ marginTop: "14px" }}>
-      <button className="rc-expander-btn" onClick={() => ui.toggleExp(key)}>
-        <span>🧠 Skill Mastery — {insights.cgs.length} topic group{insights.cgs.length !== 1 ? "s" : ""}</span>
-        <span className="plus" style={{ transform: open ? "rotate(45deg)" : "none" }}>+</span>
-      </button>
-      <Reveal open={open} print={print}>
-        <div className="rc-expander-panel">
-          {(insights.strong.length > 0 || insights.weak.length > 0) && (
-            <div className="rc-topic-strip">
-              {insights.strong.length > 0 && (
-                <div className="rc-topic-line">
-                  <span className="cap">Strong</span>
-                  <span className="rc-topic-chips">
-                    {insights.strong.map((t, i) => (
-                      <span key={i} className={`rc-chip sm ${bandClass(t.level * 100)}`}>{t.name}</span>
-                    ))}
-                  </span>
-                </div>
-              )}
-              {insights.weak.length > 0 && (
-                <div className="rc-topic-line">
-                  <span className="cap">Needs work</span>
-                  <span className="rc-topic-chips">
-                    {insights.weak.map((t, i) => (
-                      <span key={i} className={`rc-chip sm ${bandClass(t.level * 100)}`}>{t.name}</span>
-                    ))}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {insights.cgs.map((cg) => {
-            const cgKey = `${subject}::cg::${cg.cg_id}`;
-            const cgOpen = ui.isExpOpen(cgKey);
-            const cgScore = Math.round(cg.avg_mastery * 100);
-            return (
-              <div key={cg.cg_id}>
-                <div className="rc-cg-row">
-                  <button className="rc-cg-toggle" onClick={() => ui.toggleExp(cgKey)}>
-                    <span className="plus">{cgOpen ? "−" : "+"}</span>
-                    <span className="rc-cg-name">{cg.cg_name}</span>
-                  </button>
-                  <span className="rc-lo-pct" style={{ color: masteryColor(cg.avg_mastery) }}>{cgScore}%</span>
-                  <div className="rc-bar-track">
-                    <div className="rc-bar-fill" style={{ width: `${cgScore}%`, background: masteryColor(cg.avg_mastery) }} />
-                  </div>
-                </div>
-                <Reveal open={cgOpen} print={print}>
-                  <div className="rc-cg-panel">
-                    {(cg.concepts ?? []).map((concept) => (
-                      <div key={concept.c_id}>
-                        <div className="rc-concept-name">{concept.c_name}</div>
-                        {(concept.los ?? []).map((lo) => (
-                          <div className="rc-lo-row" key={lo.skill_id}>
-                            <span className="rc-lo-dot" style={{ background: masteryColor(lo.mastery_level) }} />
-                            <span className="rc-lo-name">{lo.skill_name}</span>
-                            <span className="rc-lo-pct" style={{ color: masteryColor(lo.mastery_level) }}>
-                              {Math.round(lo.mastery_level * 100)}%
-                            </span>
-                            <span className="rc-lo-meta">
-                              ×{lo.assessment_count}{lo.last_assessed_at ? ` · ${formatDate(lo.last_assessed_at)}` : ""}
-                            </span>
-                            {lo.justification && <p className="rc-lo-just">{lo.justification}</p>}
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </Reveal>
-              </div>
-            );
-          })}
-        </div>
-      </Reveal>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
 // SUBJECT CARD (chapters + learning arc + topic mastery)
 // ─────────────────────────────────────────────────────────
 
@@ -422,7 +111,6 @@ function SubjectCard({ subj, si, data, ui }: { subj: SubjectData; si: number; da
   // (summary tile, deriveUnlocks) still read data.chapters and are unaffected.
   const subjChapters = data.chapters.filter((c) => c.subject === subj.subject && c.completion_percentage > 0);
   const adapted = subjectAdapted(data.subjectEvolutions, subj.subject);
-  const obsLimit = print ? 1 : 3;
 
   return (
     <div className="rc-subject-card">
@@ -455,10 +143,6 @@ function SubjectCard({ subj, si, data, ui }: { subj: SubjectData; si: number; da
               (e) => e.subject === subj.subject && e.document_title === ch.document_title
             );
             const chapterKey = `${subj.subject}::${ch.document_title}`;
-            const arcOpen = ui.isExpOpen(`${chapterKey}::arc`);
-            const logOpen = ui.isExpOpen(`${chapterKey}::log`);
-            const reportOpen = ui.isExpOpen(`${chapterKey}::report`);
-            const arc = buildChapterArc(evo);
 
             return (
               <div key={chapterKey}>
@@ -496,125 +180,7 @@ function SubjectCard({ subj, si, data, ui }: { subj: SubjectData; si: number; da
                   <ChapterGauge masteryPct={chScore} coveragePct={Math.round(ch.completion_percentage)} accent={accent} />
                 </div>
 
-                {!evo && !ch.chapter_report && ch.study_count < 2 && (
-                  <p className="rc-ch-hint">Learning arc unlocks after 2+ sessions on this chapter.</p>
-                )}
-                {!evo && !ch.chapter_report && ch.study_count >= 2 && (
-                  <p className="rc-ch-hint">Analysis pending — the learning arc is being generated.</p>
-                )}
-
-                {/* Direct Chapter Report Expander (available immediately whenever chapter_report exists, even without full multi-session evolution arc) */}
-                {ch.chapter_report && !evo && (
-                  <div className="rc-expander rc-expander--sr" style={{ marginTop: "10px" }}>
-                    <button className="rc-expander-btn" onClick={() => ui.toggleExp(`${chapterKey}::report`)}>
-                      <span>📄 Latest Session Report — {ch.document_title}</span>
-                      <span className="plus" style={{ transform: reportOpen ? "rotate(45deg)" : "none" }}>+</span>
-                    </button>
-                    <Reveal open={reportOpen} print={print}>
-                      <div className="rc-expander-panel">
-                        <SessionReportViewer reportText={ch.chapter_report} />
-                      </div>
-                    </Reveal>
-                  </div>
-                )}
-
-                {evo && (
-                  <div className="rc-expander" style={{ marginTop: "10px" }}>
-                    <button className="rc-expander-btn" onClick={() => ui.toggleExp(`${chapterKey}::arc`)}>
-                      <span>📈 Learning arc &amp; skill dimensions — {ch.document_title}</span>
-                      <span className="plus" style={{ transform: arcOpen ? "rotate(45deg)" : "none" }}>+</span>
-                    </button>
-                    <Reveal open={arcOpen} print={print}>
-                      <div className="rc-expander-panel">
-                        {evo.headline && (
-                          <p style={{ fontFamily: "var(--display)", fontStyle: "italic", color: "var(--pro-fg)", fontSize: "14.5px", margin: "0 0 10px" }}>{evo.headline}</p>
-                        )}
-                        {arc.mappedLog.length > 1 && (
-                          <div className="rc-spark-wrap">
-                            <svg viewBox="0 0 480 100" width="100%" height="100" preserveAspectRatio="none">
-                              {arc.gridLines.map((g, i) => (
-                                <g key={i}>
-                                  <line x1="20" y1={g.y} x2="460" y2={g.y} stroke="#EDEAE0" strokeWidth="1" strokeDasharray="2 3" />
-                                  <text x="4" y={g.y + 3} className="rc-spark-grid-label">{g.label.slice(0, 3)}</text>
-                                </g>
-                              ))}
-                              {arc.areaPath && <path d={arc.areaPath} fill="rgba(29,78,216,.06)" stroke="none" />}
-                              <path d={arc.path} fill="none" stroke="#1D4ED8" strokeWidth="2.5" />
-                              {arc.points.map((p, i) => (
-                                <circle key={i} cx={p.x} cy={p.y} r="4" fill={SPARK_COLORS[p.level]} />
-                              ))}
-                            </svg>
-                            <div className="rc-spark-legend">
-                              {(["beginning", "developing", "approaching", "proficient", "advanced"] as SparkLevel[]).map((l) => (
-                                <span key={l}><i style={{ background: SPARK_COLORS[l] }} />{l.charAt(0).toUpperCase() + l.slice(1)}</span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {arc.dimensions.length > 0 && (
-                          <div className="rc-dim-grid">
-                            {arc.dimensions.map((d, i) => {
-                              const delta = typeof d.delta === "number" ? Math.round(d.delta * 100) : null;
-                              const name = d.dimension_name ?? d.dimension ?? d.name ?? "";
-                              const obs = d.key_observation ?? d.analysis ?? d.desc ?? "";
-                              return (
-                                <div className="rc-dim-card" key={i}>
-                                  <div className="rc-dim-head">
-                                    <span>{name}</span>
-                                    {delta != null && delta !== 0 && (
-                                      <span className={`rc-dim-delta ${delta > 0 ? "up" : "down"}`}>{delta > 0 ? "+" : ""}{delta}</span>
-                                    )}
-                                  </div>
-                                  {obs && <div className="rc-dim-obs">{obs}</div>}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {arc.sessionLog.length > 0 && (
-                          <div className="rc-expander" style={{ marginTop: "14px" }}>
-                            <button className="rc-expander-btn" onClick={() => ui.toggleExp(`${chapterKey}::log`)}>
-                              <span>🗒 Session log ({arc.sessionLog.length} session{arc.sessionLog.length !== 1 ? "s" : ""})</span>
-                              <span className="plus" style={{ transform: logOpen ? "rotate(45deg)" : "none" }}>+</span>
-                            </button>
-                            <Reveal open={logOpen} print={print}>
-                              <div className="rc-expander-panel">
-                                {arc.mappedLog.map((s, i) => (
-                                  <div className="rc-log-row" key={i}>
-                                    <span className="rc-log-idx">{s.n}</span>
-                                    <div style={{ flex: 1 }}>
-                                      <div className="rc-log-stage">{s.stage}</div>
-                                      {s.obs.length > 0 && (
-                                        <ul className="rc-log-obs">
-                                          {s.obs.slice(0, obsLimit).map((o: string, j: number) => <li key={j}>{o}</li>)}
-                                        </ul>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </Reveal>
-                          </div>
-                        )}
-
-                        {ch.chapter_report && (
-                          <div className="rc-expander rc-expander--sr" style={{ marginTop: "10px" }}>
-                            <button className="rc-expander-btn" onClick={() => ui.toggleExp(`${chapterKey}::report`)}>
-                              <span>📄 Full chapter report</span>
-                              <span className="plus" style={{ transform: reportOpen ? "rotate(45deg)" : "none" }}>+</span>
-                            </button>
-                            <Reveal open={reportOpen} print={print}>
-                              <div className="rc-expander-panel">
-                                <SessionReportViewer reportText={ch.chapter_report} />
-                              </div>
-                            </Reveal>
-                          </div>
-                        )}
-                      </div>
-                    </Reveal>
-                  </div>
-                )}
+                <ChapterAnalysis ch={ch} evo={evo} chapterKey={chapterKey} ui={ui} />
               </div>
             );
           })}
@@ -622,55 +188,6 @@ function SubjectCard({ subj, si, data, ui }: { subj: SubjectData; si: number; da
           <TopicMastery subject={subj.subject} data={data} ui={ui} />
         </div>
       </Reveal>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
-// TEST ITEM (expandable to section-wise breakdown)
-// ─────────────────────────────────────────────────────────
-
-function TestItem({ t, ui }: { t: ReportCardData["testSubmissions"][number]; ui: ReportCardUI }) {
-  const print = ui.variant === "print";
-  const results = Object.entries(t.section_results ?? {});
-  const correct = results.reduce((sum, [, r]) => sum + (r.correct ?? 0), 0);
-  const total = results.reduce((sum, [, r]) => sum + (r.total ?? 0), 0);
-  const pass = t.overall_verdict === "PASS" || t.overall_verdict === "pass";
-  const key = `test::${t.submission_id}`;
-  const open = ui.isExpOpen(key);
-  const hasBreakdown = results.length > 0;
-
-  return (
-    <div className="rc-test-item">
-      <div className="rc-test-row" onClick={() => hasBreakdown && ui.toggleExp(key)} style={{ cursor: hasBreakdown ? "pointer" : "default" }}>
-        <div>
-          <div className="rc-test-title">{t.document_title}</div>
-          <div className="rc-test-sub">{t.subject}{total > 0 ? ` · ${correct}/${total} correct` : ""}</div>
-        </div>
-        <div className="rc-test-score">{Math.round(t.overall_score * 100)}%</div>
-        <span className={`rc-verdict ${pass ? "pass" : "fail"}`}>{pass ? "PASS" : "FAIL"}</span>
-        <div className="rc-test-date">{formatDate(t.submitted_at)}</div>
-        <span className="rc-test-plus">{hasBreakdown ? (open ? "−" : "+") : ""}</span>
-      </div>
-      {hasBreakdown && (
-        <Reveal open={open} print={print}>
-          <div className="rc-test-panel">
-            {results.map(([section, r]) => {
-              const s = typeof r.score === "number" ? r.score : (r.correct ?? 0) / (r.total ?? 1);
-              return (
-                <div className="rc-sec-bar-row" key={section}>
-                  <span className="rc-sec-bar-name">{section}</span>
-                  <div className="rc-bar-track" style={{ width: 60 }}>
-                    <div className="rc-bar-fill" style={{ width: `${Math.round(s * 100)}%`, background: masteryColor(s) }} />
-                  </div>
-                  <span className="rc-sec-bar-count">{r.correct != null && r.total != null ? `${r.correct}/${r.total}` : ""}</span>
-                  <span className="rc-lo-pct" style={{ color: masteryColor(s), textAlign: "right" }}>{Math.round(s * 100)}%</span>
-                </div>
-              );
-            })}
-          </div>
-        </Reveal>
-      )}
     </div>
   );
 }
@@ -695,7 +212,6 @@ export function ReportCardBody({ data, ui }: { data: ReportCardData; ui: ReportC
   const patterns: AnalysisPattern[] = aiInsights.cross_subject_patterns ?? [];
   const agg = testAggregate(testSubmissions);
   const pendingSubjects = pendingTrendSubjects(subjects, subjectEvolutions);
-  const unlocks = deriveUnlocks(data);
   const insightCoverage = progressReport?.subject_count ?? 0;
 
   const bandLegend = [
@@ -1020,49 +536,6 @@ export function ReportCardBody({ data, ui }: { data: ReportCardData; ui: ReportC
               </>
             )}
           </section>
-
-          {/* ── FOOTER (screen only) ── */}
-          {!print && (
-            <>
-              {unlocks.length > 0 && (
-                <div className="rc-unlocks">
-                  <div className="rc-unlocks-title"><Lock size={11} /> What unlocks next</div>
-                  {unlocks.map((u, i) => (
-                    <div className="rc-unlock-row" key={i}>
-                      <span className="rc-unlock-lock">○</span>
-                      <span className="rc-unlock-label">{u.label}</span>
-                      <span className="rc-unlock-detail">{u.detail}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <footer className="rc-foot">
-                {ui.canDownload && (
-                  <>
-                    <button className="rc-print-btn" onClick={ui.onPrint} disabled={ui.isPdfGenerating}>
-                      {ui.isPdfGenerating ? (
-                        <>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "rc-spin 1s linear infinite" }}>
-                            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                          </svg>
-                          Preparing PDF…
-                        </>
-                      ) : (
-                        <>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z" />
-                          </svg>
-                          Download PDF
-                        </>
-                      )}
-                    </button>
-                    <div className="rc-foot-note">Opens your browser&apos;s print dialog — choose “Save as PDF”.</div>
-                  </>
-                )}
-                <div className="rc-foot-note">GenEducation Report Card v2</div>
-              </footer>
-            </>
-          )}
 
           {print && (
             <div className="rc-print-footer">{displayName} · GenEducation Learner Report · {generatedAt}</div>

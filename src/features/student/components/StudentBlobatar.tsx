@@ -13,9 +13,9 @@ import { useHydrated } from "@/hooks/useHydrated";
 /**
  * The student's buddy — the creature, wherever it appears.
  *
- * **Not a profile picture.** That is `StudentAvatarIllustration` and the
- * `graduate-*` assets, chosen via `AvatarPickerModal` and shown on the sidebar
- * chip, the chat header and the profile hero. This is the companion: the desk
+ * **Not a profile picture.** That is `StudentAvatar` (one of the illustrated
+ * icons in `@/constants/studentAvatars`), chosen via `AvatarPickerModal` and
+ * shown on the sidebar chip, the chat header and the profile hero. This is the companion: the desk
  * pet, and the three places it reacts to something (onboarding, test results,
  * the placement test).
  *

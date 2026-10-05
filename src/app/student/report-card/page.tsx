@@ -12,9 +12,9 @@ import { PageHeader } from "@/components/student/PageHeader";
 import { SidebarToggle } from "@/components/student/SidebarToggle";
 
 export default function ReportCardPage() {
-  // StudentReportCard reads useSearchParams() (dev `?simulate=`), which must
-  // be inside a Suspense boundary or Next.js fails the production build when
-  // statically prerendering this route.
+  // This page reads useSearchParams() (`?print=1`), which must be inside a
+  // Suspense boundary or Next.js fails the production build when statically
+  // prerendering this route.
   return (
     <Suspense fallback={null}>
       <ReportCardPageInner />

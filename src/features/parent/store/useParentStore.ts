@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { parentService, LinkedStudent } from "../services/parentService";
 import { studentService } from "../../student/services/studentService";
 import * as Sentry from "@sentry/nextjs";
+import { clearPortalEntry } from "../utils/portalEntry";
 
 /** One chat session belonging to a linked student. */
 export interface ParentStudentSession {
@@ -21,17 +22,21 @@ export interface ParentProfile {
   username: string;
   email: string;
   role: string;
+  /** Real name, once login returns one; the greeting falls back to username. */
+  name?: string;
 }
 
 interface ParentState {
   parentProfile: ParentProfile | null;
   linkedStudents: LinkedStudent[];
   selectedStudentId: string | null;
-  activeDashboardView: "analytics" | "chat" | "profile" | "report" | "schedule" | "moments";
+  activeDashboardView: "analytics" | "subject" | "chat" | "profile" | "report" | "schedule" | "moments";
   selectedStudentSessions: ParentStudentSession[];
   activeSessionId: string | null;
   activeSessionHistory: ParentSessionMessage[];
   isFetchingStudents: boolean;
+  /** True once the first linked-students fetch has settled (success or failure). */
+  hasFetchedStudents: boolean;
   isFetchingSessions: boolean;
   isFetchingHistory: boolean;
   
@@ -39,7 +44,7 @@ interface ParentState {
   setParentProfile: (profile: ParentProfile) => void;
   fetchLinkedStudents: () => Promise<void>;
   setSelectedStudentId: (id: string | null) => void;
-  setDashboardView: (view: "analytics" | "chat" | "profile" | "report" | "schedule" | "moments") => void;
+  setDashboardView: (view: "analytics" | "subject" | "chat" | "profile" | "report" | "schedule" | "moments") => void;
   setActiveSessionId: (id: string | null) => void;
   fetchStudentSessions: (studentId: string) => Promise<void>;
   fetchSessionHistory: (studentId: string, sessionId: string) => Promise<void>;
@@ -54,6 +59,7 @@ export const useParentStore = create<ParentState>((set, get) => ({
   linkedStudents: [],
   selectedStudentId: null,
   isFetchingStudents: false,
+  hasFetchedStudents: false,
   activeDashboardView: "analytics",
   selectedStudentSessions: [],
   activeSessionId: null,
@@ -82,7 +88,7 @@ export const useParentStore = create<ParentState>((set, get) => ({
     } catch (error) {
       console.error("Fetch Linked Students Error:", error);
     } finally {
-      set({ isFetchingStudents: false });
+      set({ isFetchingStudents: false, hasFetchedStudents: true });
     }
   },
 
@@ -194,6 +200,7 @@ export const useParentStore = create<ParentState>((set, get) => ({
     localStorage.removeItem("gened_user_role");
     localStorage.removeItem("gened_auth_token");
     localStorage.removeItem("gened_user_profile");
+    clearPortalEntry();
     set({
       parentProfile: null,
       linkedStudents: [],

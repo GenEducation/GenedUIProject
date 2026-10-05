@@ -6,6 +6,7 @@ import { server } from "@/test/msw/server";
 import { makeAuthToken } from "@/test/fixtures/authToken";
 import { autoResetStore } from "@/test/helpers/resetStores";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { useLoaderStore } from "@/stores/useLoaderStore";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 
@@ -28,6 +29,7 @@ import LoginPage from "@/app/login/page";
 import { GlobalLoader } from "@/components/shared/loaders/GlobalLoader";
 
 autoResetStore(useStudentStore);
+autoResetStore(useLoaderStore);
 
 // Post-auth redirect is handed off to GlobalLoader (normally mounted once in
 // the root layout) — mount it alongside the page so the celebration timing
@@ -54,6 +56,35 @@ beforeEach(() => {
 });
 
 describe("login flow (integration)", () => {
+  it("hands a parent over to the parent loader before navigating", async () => {
+    server.use(
+      http.post(`${BASE}/auth/sign-in`, () => HttpResponse.json(makeAuthToken({ role: "parent", user_id: "u_p" }))),
+    );
+    let variantAtNavigation: string | null = null;
+    routerMock.replace.mockImplementation(() => {
+      variantAtNavigation = useLoaderStore.getState().variant;
+    });
+    const { container } = renderLoginPage();
+
+    fillAndSubmit(container);
+
+    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/parent"), { timeout: 4000 });
+    expect(variantAtNavigation).toBe("parent");
+  });
+
+  it("keeps the shared loader for a student login", async () => {
+    let variantAtNavigation: string | null = null;
+    routerMock.replace.mockImplementation(() => {
+      variantAtNavigation = useLoaderStore.getState().variant;
+    });
+    const { container } = renderLoginPage();
+
+    fillAndSubmit(container);
+
+    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/student"), { timeout: 4000 });
+    expect(variantAtNavigation).toBe("default");
+  });
+
   it("persists the token/profile/role and redirects to the role home on success", async () => {
     const { container } = renderLoginPage();
 

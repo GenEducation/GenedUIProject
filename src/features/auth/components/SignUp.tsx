@@ -311,7 +311,12 @@ export function SignUp({
                     disabled={isSendingOtp || !signupData.email}
                     className="px-6 py-3.5 rounded-xl bg-[#042e5c]/5 text-[#042e5c] text-xs font-bold transition-all hover:bg-[#042e5c]/10 active:scale-95 disabled:opacity-50"
                   >
-                    {isSendingOtp ? "Sending..." : isOtpSent ? "Resend" : "Verify"}
+                    {isSendingOtp ? (
+                    <span className="inline-flex items-center gap-1.5" aria-live="polite">
+                      <span aria-hidden className="h-3 w-3 rounded-full border-2 border-[#042e5c]/25 border-t-[#042e5c] motion-safe:animate-spin" />
+                      Sending code…
+                    </span>
+                  ) : isOtpSent ? "Resend" : "Verify"}
                   </button>
                 </div>
                 {otpSentMessage && (
@@ -547,7 +552,12 @@ export function SignUp({
                   disabled={isSendingOtp || !signupData.email}
                   className="px-6 py-3.5 rounded-xl bg-[#042e5c]/5 text-[#042e5c] text-xs font-bold transition-all hover:bg-[#042e5c]/10 active:scale-95 disabled:opacity-50"
                 >
-                  {isSendingOtp ? "Sending..." : isOtpSent ? "Resend" : "Verify"}
+                  {isSendingOtp ? (
+                    <span className="inline-flex items-center gap-1.5" aria-live="polite">
+                      <span aria-hidden className="h-3 w-3 rounded-full border-2 border-[#042e5c]/25 border-t-[#042e5c] motion-safe:animate-spin" />
+                      Sending code…
+                    </span>
+                  ) : isOtpSent ? "Resend" : "Verify"}
                 </button>
               </div>
               {otpSentMessage && (

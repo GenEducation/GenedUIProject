@@ -10,7 +10,7 @@ import { useSmoothStream } from "@/hooks/useSmoothStream";
 import { ActivityRenderer } from "./ActivityRenderer";
 import { MessageElements } from "./MessageElements";
 import { ChapterOptionPicker } from "./ChapterOptionPicker";
-import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
+import { StudentAvatar } from "./StudentAvatar";
 import { useStudentStore } from "../store/useStudentStore";
 
 // ── Web Speech API TTS hook ───────────────────────────────────────────────────
@@ -352,19 +352,7 @@ export const ChatMessageBubble = React.memo(
             className="flex-shrink-0 mt-0.5 rounded-full overflow-hidden hidden sm:block"
             style={{ border: "1px solid #E2E8F0", width: 32, height: 32 }}
           >
-            {userAvatarId === "graduate-girl" ? (
-              // `next/image`, matching the tutor avatar above rather than the
-              // raw <img> the sidebars use — this one sits in a long list.
-              <Image
-                src="/avatars/girl-graduate.png"
-                alt="Student avatar"
-                width={32}
-                height={32}
-                className="object-cover w-full h-full"
-              />
-            ) : (
-              <StudentAvatarIllustration bg="#F0AD4E" />
-            )}
+            <StudentAvatar id={userAvatarId} size={32} />
           </div>
         )}
       </motion.div>

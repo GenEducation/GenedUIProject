@@ -30,7 +30,7 @@ import {
  * "Make it yours" — the desk buddy's character creator.
  *
  * **Tunes the companion, not the profile picture.** The student's profile
- * avatar is one of two illustrations picked in `AvatarPickerModal`; this tunes
+ * avatar is one of the illustrated icons picked in `AvatarPickerModal`; this tunes
  * the creature that lives on their screen. Keeping them separate is the whole
  * point — a buddy and an identity are different things.
  *
