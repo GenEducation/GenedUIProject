@@ -304,6 +304,24 @@ const CANONICAL_DETAIL: CanonicalDevice = {
   first_seen_at: minutesAgo(60 * 24 * 30),
   diagnostic_freshness: "FRESH",
   diagnostic_verdict: "WARN",
+  // ACTIVE: this fixture is a desk currently in a Lab, heartbeating a minute
+  // ago, so the detail page must keep rendering it in the present tense with
+  // every Lab action available.
+  lab_tenancy: {
+    state: "ACTIVE",
+    reason: null,
+    enrollment: {
+      lab_device_id: "99999999-0000-0000-0000-000000000009",
+      device_label: "Desk 2",
+      hardware_id: "DEV-11C2-77A0",
+      lab_id: "22222222-0000-0000-0000-000000000009",
+      partner_id: "33333333-0000-0000-0000-000000000009",
+      firmware_version: "1.4.2",
+      health_status: "ONLINE",
+      last_heartbeat_at: minutesAgo(1),
+      evidence_at: minutesAgo(1),
+    },
+  },
   diagnostic: {
     serial: "1000000000000009",
     device_key: "DEV-0000-0009",

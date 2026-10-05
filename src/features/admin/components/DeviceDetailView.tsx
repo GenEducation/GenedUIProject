@@ -33,6 +33,7 @@ import type {
   DiagnosticFreshness,
   DiagnosticStatus,
   HealthComponentReport,
+  LabTenancyState,
 } from "../devices/types";
 import { ConnBadge, ServiceChip, absoluteTime, relativeTime } from "./deviceHealth";
 // Shared with the fleet table rather than redefined here. A second copy of these
@@ -41,6 +42,7 @@ import {
   CONNECTIVITY_REASONS,
   CONNECTIVITY_STYLES,
   DIAG_STYLES,
+  CanonicalConnBadge,
   DiagnosticBadge,
   FRESHNESS_STYLES,
   PROVENANCE_LABELS,
@@ -241,6 +243,36 @@ function FindingRow({ finding }: { finding: DiagnosticFinding }) {
 }
 
 /**
+ * The Lab's own view of a desk: its health_status and its self-test verdict.
+ *
+ * These are the Lab components, used where they are actually correct — inside
+ * the Lab enrollment card, describing the Lab record. They were previously in
+ * the page header, where they read as the physical device's status and
+ * contradicted the canonical verdict.
+ *
+ * Suffixed "(then)" on a historical tenancy because `health_status` is not a
+ * timestamped field: OFFLINE there is the state at the last teardown, and
+ * nothing else on the badge says so.
+ */
+function LabRecordBadge({
+  device,
+  labIsCurrent,
+}: {
+  device: AdminDeviceDetail;
+  labIsCurrent: boolean;
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <ConnBadge device={device} />
+      <ServiceChip device={device} showComponents={false} />
+      {!labIsCurrent ? (
+        <span className="text-[11px] text-white/30">(then)</span>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * The reachability row. Separate from the diagnostic verdict on purpose.
  *
  * A health report says when a device last SPOKE, which is not whether it is
@@ -372,10 +404,22 @@ function SystemDiagnosticCard({
     >
       <ConnectivityRow device={device} />
 
+      {/*
+        Explicitly "current". These are the same two values the Lab card shows as
+        "at last Lab contact", and on a repurposed device they differ — so the
+        word that distinguishes them is the whole point and must not be dropped
+        to save space.
+      */}
+      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+        <Field label="Current mode" value={diagnostic.mode ?? "Not reported"} />
+        <Field label="Current firmware" value={diagnostic.firmware_version ?? "—"} mono />
+        <Field label="Last health report" value={relativeTime(diagnostic.received_at)} />
+        <Field label="Device model" value={diagnostic.device_model ?? "—"} />
+      </dl>
+
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/40">
         <span>
-          Reported{" "}
-          <span className="text-white/70">{relativeTime(diagnostic.received_at)}</span>
+          Reported {absoluteTime(diagnostic.received_at)}
         </span>
         {device.diagnostic_freshness === "STALE" ? (
           <span
@@ -386,10 +430,6 @@ function SystemDiagnosticCard({
             {Math.round(diagnostic.report_interval_seconds / 60)}m
           </span>
         ) : null}
-        {diagnostic.firmware_version ? (
-          <span className="font-mono text-white/50">fw {diagnostic.firmware_version}</span>
-        ) : null}
-        {diagnostic.mode ? <span className="text-white/50">{diagnostic.mode}</span> : null}
       </div>
 
       {/* The device's own clock, shown only as context for `received_at` above. */}
@@ -582,6 +622,52 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
   const neverConnected =
     device.provisioning_source === "PAIRING" && !device.first_connected_at && !device.revoked_at;
 
+  /**
+   * Is the Lab enrollment this page is showing the hardware's tenancy NOW?
+   *
+   * Taken from the server, never derived here. The LAB payload comes first and
+   * that is not a contradiction of "canonical is the source of current truth":
+   * the question is about a specific `lab_devices` row, and lab-service computed
+   * it from that exact row. The canonical device's `lab_tenancy` describes
+   * whichever enrollment the REGISTRY resolved to, which can be a different row
+   * or none at all when the aliases have not linked up -- so reading it first
+   * would let an unrelated resolution decide how this row is labelled.
+   *
+   * Both are produced by the same shared classifier, so they agree whenever
+   * they refer to the same row. Canonical is the fallback, and absent on both
+   * (an older API) means ACTIVE -- the server default, which preserves today's
+   * behaviour for real Lab devices.
+   */
+  const tenancyState: LabTenancyState =
+    device.lab_tenancy_state ?? canonical?.lab_tenancy?.state ?? "ACTIVE";
+  const labIsCurrent = tenancyState === "ACTIVE";
+
+  /**
+   * Gates every Lab-only mutation EXCEPT revoke.
+   *
+   * `revoked_at` alone was the old gate, and it never fired for the case that
+   * matters: a desk that was wiped and repurposed is not revoked, so the whole
+   * set stayed live on hardware that had left the Lab. Revoke is deliberately
+   * excluded — it is the supported way to retire a stale enrollment, and gating
+   * it would leave no route out of this state.
+   */
+  const labActionsDisabled = !!device.revoked_at || !labIsCurrent;
+
+  /**
+   * The title names the PHYSICAL device, which is what this page is about.
+   *
+   * While the Lab tenancy is current its desk label is the device's name and is
+   * the most useful thing to show. Once it is history, "Desk 2" names a desk in
+   * a classroom this unit left — so the canonical identity takes over and the
+   * old label moves into the historical block where it is dated.
+   */
+  const title = labIsCurrent
+    ? device.device_label
+    : canonical?.label ||
+      canonical?.diagnostic?.hostname ||
+      canonical?.serial ||
+      device.hardware_id;
+
   return (
     <div>
       <button
@@ -594,15 +680,42 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight">{device.device_label}</h1>
-            <ConnBadge device={device} />
-            <ServiceChip device={device} />
-            {device.is_spare ? (
+            <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+            {/*
+              The canonical, transport-derived verdict — the same one the fleet
+              table shows. The Lab-derived ConnBadge used to sit here and was
+              computed on the client from `health_status` + a hardcoded stale
+              window, so this page rendered two disagreeing connectivity
+              verdicts: a repurposed unit read OFFLINE up here while the card
+              below reported a health POST from minutes ago.
+
+              ConnBadge/ServiceChip are still the right components for the Lab's
+              own record, and that is where they now appear.
+            */}
+            {canonical ? (
+              <CanonicalConnBadge connectivity={canonical.connectivity} />
+            ) : null}
+            {labIsCurrent && device.is_spare ? (
               <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/50">Spare</span>
             ) : null}
           </div>
           <p className="mt-1 text-sm text-white/40">
-            {device.partner_organization ?? "Unassigned"} › {device.lab_name ?? "—"}
+            {labIsCurrent ? (
+              <>
+                {device.partner_organization ?? "Unassigned"} › {device.lab_name ?? "—"}
+              </>
+            ) : (
+              <>
+                {canonical?.diagnostic?.device_model ??
+                  canonical?.device_model ??
+                  device.device_model ??
+                  "Unknown model"}
+                {" · serial "}
+                <span className="font-mono text-xs">
+                  {canonical?.serial ?? "not in registry"}
+                </span>
+              </>
+            )}
           </p>
           <button
             onClick={async () => {
@@ -620,11 +733,31 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
 
       {device.revoked_at ? (
         <div className="mb-4 rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white/50">
-          This device was revoked {relativeTime(device.revoked_at)}. It can no longer connect.
+          This device&apos;s Lab enrollment was revoked on {absoluteTime(device.revoked_at)}. It can
+          no longer connect to the Lab.
         </div>
       ) : null}
 
-      {neverConnected ? (
+      {/*
+        The banner that explains the whole page. Without it, a reader who knows
+        this hardware as "Desk 2" sees a different name, a different firmware and
+        a different mode, and has no way to tell a data bug from a repurposed
+        device.
+      */}
+      {tenancyState === "HISTORICAL" ? (
+        <div className="mb-4 rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-2.5 text-sm text-sky-100">
+          <strong className="font-semibold">Previously enrolled in a Lab.</strong> This hardware was{" "}
+          <span className="font-medium">{device.device_label}</span>
+          {device.lab_name ? <> in {device.lab_name}</> : null}
+          {device.partner_organization ? <> ({device.partner_organization})</> : null}, last seen by
+          the Lab on {absoluteTime(canonical?.lab_tenancy?.enrollment?.last_heartbeat_at ?? device.last_heartbeat_at)}.
+          Everything in the Lab enrollment card below is from that period and is not this
+          device&apos;s current state. Lab settings can no longer be changed; revoke the enrollment
+          to retire it.
+        </div>
+      ) : null}
+
+      {labIsCurrent && neverConnected ? (
         <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200">
           Approved during pairing but has never connected. It will not be allocated to students
           until it comes online.
@@ -637,22 +770,56 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card title="Identity" subtitle="Provisioning and connection history">
+      {/*
+        Current state first, and from the canonical registry. This card used to
+        sit below two Lab cards that each showed a "Mode" and a "Firmware" of
+        their own, so the page offered three answers to both questions with
+        nothing to say which was now.
+      */}
+      <div className="grid grid-cols-1 gap-4">
+        <SystemDiagnosticCard device={canonical} error={diagnosticError} />
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card
+          title={labIsCurrent ? "Lab enrollment" : "Previous Lab enrollment"}
+          subtitle={
+            labIsCurrent
+              ? "The Lab's record of this desk"
+              : `Historical — the Lab's record from when this hardware was ${device.device_label}`
+          }
+          right={<LabRecordBadge device={device} labIsCurrent={labIsCurrent} />}
+        >
+          {/*
+            Every timestamp here is absolute.
+
+            A bare age is the problem, not the specific wording: "12d ago" next
+            to the canonical card's "8m ago" reads as two points on one timeline
+            when in fact the first belongs to a channel that no longer exists.
+            (relativeTime does fall back to a date past 30 days, so the very
+            oldest rows were already readable -- it is the recent-but-historical
+            ones that mislead, and those are exactly the repurposed units.)
+            An absolute stamp carries no implied freshness either way.
+          */}
           <dl className="grid grid-cols-2 gap-x-4 gap-y-4">
-            <Field label="Model" value={device.device_model ?? "—"} />
-            <Field label="Firmware" value={device.firmware_version ?? "—"} />
+            <Field label="Desk label" value={device.device_label} />
+            <Field label="Lab" value={device.lab_name ?? "—"} />
+            <Field label="School" value={device.partner_organization ?? "Unassigned"} />
             <Field label="Provisioned via" value={device.provisioning_source ?? "—"} />
-            <Field label="Last IP" value={device.last_ip ?? "—"} mono />
+            {/*
+              Scoped names. `Firmware` and `Reported IP` unqualified were read as
+              the device's current build and address; on a repurposed unit both
+              belong to a different machine state entirely.
+            */}
+            <Field label="Firmware at last Lab contact" value={device.firmware_version ?? "—"} mono />
+            <Field label="IP at last Lab contact" value={device.last_ip ?? "—"} mono />
             <Field label="Provisioned" value={absoluteTime(device.provisioned_at)} />
-            <Field label="First connected" value={absoluteTime(device.first_connected_at)} />
-            <Field label="Last connected" value={absoluteTime(device.last_connected_at)} />
+            <Field label="First connected to Lab" value={absoluteTime(device.first_connected_at)} />
+            <Field label="Last connected to Lab" value={absoluteTime(device.last_connected_at)} />
             <Field
-              label="Last heartbeat"
+              label="Last Lab heartbeat"
               value={
-                device.last_heartbeat_at
-                  ? `${relativeTime(device.last_heartbeat_at)} · ${absoluteTime(device.last_heartbeat_at)}`
-                  : "Never"
+                device.last_heartbeat_at ? absoluteTime(device.last_heartbeat_at) : "Never"
               }
             />
             <Field label="Token rotated" value={absoluteTime(device.device_token_rotated_at)} />
@@ -663,14 +830,23 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
             <>
               <div className="my-4 border-t border-white/10" />
               <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-white/35">
-                Self-test report
+                Lab self-test report · {absoluteTime(reportMeta.checked_at)}
               </p>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-4">
-                <Field label="Reported IP" value={reportMeta.ip ?? "—"} mono />
-                <Field label="Mode" value={reportMeta.mode ?? "—"} />
+                <Field label="IP at self-test" value={reportMeta.ip ?? "—"} mono />
+                {/*
+                  "Mode at self-test", never "Mode". This field reading SCHOOL_LAB
+                  beside a canonical PERSONAL was the headline contradiction: both
+                  were true, of different moments, and only one was labelled.
+                */}
+                <Field label="Mode at self-test" value={reportMeta.mode ?? "—"} />
                 <Field label="Type" value={reportMeta.type ?? "—"} />
                 <Field label="Checked" value={absoluteTime(reportMeta.checked_at)} />
-                <Field label="Self-test firmware" value={reportMeta.firmware_version ?? "—"} mono />
+                <Field
+                  label="Firmware at self-test"
+                  value={reportMeta.firmware_version ?? "—"}
+                  mono
+                />
                 <Field label="Schema version" value={String(reportMeta.schema_version ?? "—")} />
               </dl>
             </>
@@ -678,16 +854,27 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
         </Card>
 
         <Card
-          title="Self-test"
+          title={labIsCurrent ? "Lab self-test" : "Lab self-test (historical)"}
           subtitle={
             device.last_health_at
-              ? `Reported ${relativeTime(device.last_health_at)}`
+              ? `Reported ${absoluteTime(device.last_health_at)}`
               : "Never reported"
           }
         >
+          {/*
+            A stale self-test must not look like a fresh one. The canonical card
+            publishes its own freshness from the server; this report has no such
+            notion, so an explicit notice carries it rather than a colour.
+          */}
+          {!labIsCurrent && components.length > 0 ? (
+            <p className="mb-3 rounded-md border border-sky-500/25 bg-sky-500/10 px-2.5 py-1.5 text-[11px] text-sky-100">
+              From the previous Lab enrollment. These component verdicts describe the hardware as it
+              was then, not now — the current verdict is in the System diagnostic card above.
+            </p>
+          ) : null}
           {components.length === 0 ? (
             <p className="text-sm text-white/40">
-              This device has never reported a self-test. Its hardware state is{" "}
+              This device has never reported a Lab self-test. Its hardware state is{" "}
               <strong className="text-amber-300">unknown</strong> — not confirmed healthy.
             </p>
           ) : (
@@ -701,13 +888,13 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4">
-        <SystemDiagnosticCard device={canonical} error={diagnosticError} />
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 gap-4">
         <Card
-          title="Actions"
-          subtitle="These write to the device record and are audited"
+          title="Lab actions"
+          subtitle={
+            labIsCurrent
+              ? "These write to the Lab device record and are audited"
+              : "Unavailable: this Lab enrollment is historical"
+          }
           right={
             <button
               onClick={openLogs}
@@ -717,6 +904,25 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
             </button>
           }
         >
+          {/*
+            Disabling is the courtesy; lab-service rejects all of these with
+            LAB_1116 regardless. Both exist because the dangerous one is not the
+            pointless one: "Force online" writes health_status = ONLINE, and on
+            a desk this hardware no longer occupies that fabricates Lab presence
+            and — per its own confirm text — makes the unit eligible for student
+            allocation in a classroom it is not in.
+
+            Revoke stays enabled on purpose. Retiring the stale enrollment is the
+            supported fix for this state, so gating it would make the bad data
+            permanent.
+          */}
+          {!labIsCurrent ? (
+            <p className="mb-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/50">
+              This hardware is no longer in {device.lab_name ?? "this Lab"}, so renaming, moving,
+              forcing online and rotating its token would only edit a record no device will read.
+              Revoke is still available and is how you retire this enrollment.
+            </p>
+          ) : null}
           {renaming ? (
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <input
@@ -783,7 +989,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setRenaming(true)}
-              disabled={!!device.revoked_at}
+              disabled={labActionsDisabled}
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-sm text-white/70 hover:bg-white/5 disabled:opacity-40"
             >
               <Pencil size={14} /> Rename
@@ -792,14 +998,14 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
               onClick={() =>
                 act("spare", () => labService.updateDevice(device.id, { is_spare: !device.is_spare }))
               }
-              disabled={!!device.revoked_at || busy === "spare"}
+              disabled={labActionsDisabled || busy === "spare"}
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-sm text-white/70 hover:bg-white/5 disabled:opacity-40"
             >
               {device.is_spare ? "Unmark spare" : "Mark as spare"}
             </button>
             <button
               onClick={openMove}
-              disabled={!!device.revoked_at}
+              disabled={labActionsDisabled}
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-sm text-white/70 hover:bg-white/5 disabled:opacity-40"
             >
               <ArrowRightLeft size={14} /> Move lab
@@ -816,7 +1022,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
                   labService.updateDevice(device.id, { health_status: "ONLINE" }),
                 );
               }}
-              disabled={!!device.revoked_at || busy === "force"}
+              disabled={labActionsDisabled || busy === "force"}
               className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-2 text-sm text-amber-300 hover:bg-amber-500/10 disabled:opacity-40"
             >
               <Wifi size={14} /> Force online
@@ -834,7 +1040,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
                   setMintedToken(res.device_token);
                 });
               }}
-              disabled={!!device.revoked_at || busy === "rotate"}
+              disabled={labActionsDisabled || busy === "rotate"}
               className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-sm text-white/70 hover:bg-white/5 disabled:opacity-40"
             >
               <KeyRound size={14} /> Rotate token
