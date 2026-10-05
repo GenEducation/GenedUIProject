@@ -71,6 +71,17 @@ export interface AdminDeviceDetail extends AdminDeviceListItem {
   first_connected_at: string | null;
   last_connected_at: string | null;
   provisioning_source: "MANUAL" | "PAIRING" | null;
+  /**
+   * ACTIVE when this is the hardware's tenancy now; HISTORICAL once the Lab
+   * transport has stopped speaking for it. Everything else on this interface is
+   * the LAB's record of the device — on a HISTORICAL row it is all past tense,
+   * and Lab-only mutations are refused with LAB_1116.
+   *
+   * Optional so a client built against an older API still compiles; treated as
+   * ACTIVE when absent, which matches the server default.
+   */
+  lab_tenancy_state?: LabTenancyState;
+  lab_tenancy_reason?: string | null;
 }
 
 /** `GET /admin/lab/stats`. All counts exclude revoked except `revoked_devices`. */
@@ -276,6 +287,45 @@ export interface CanonicalDevice {
   diagnostic_verdict: DiagnosticStatus | null;
   /** null means never reported — not an empty report. */
   diagnostic: DeviceDiagnostic | null;
+  /**
+   * Whether a Lab enrollment is this hardware's tenancy NOW. Not a health
+   * signal: it decides whether Lab fields may be read as present tense, and
+   * whether Lab-only mutations are legitimate.
+   *
+   * Served by the API rather than derived here on purpose. The rule needs the
+   * abandonment window, and a second copy of it is how a page offers a button
+   * the API will reject.
+   */
+  lab_tenancy: LabTenancy;
+}
+
+export type LabTenancyState = "ACTIVE" | "HISTORICAL" | "REVOKED" | "NONE";
+
+/**
+ * The Lab's own record of a device, and how current it is.
+ *
+ * Every field inside `enrollment` belongs to the LAB's view of the hardware. On
+ * a HISTORICAL tenancy they are all past tense — `firmware_version` is the build
+ * the device ran when it last spoke to lab-service, which on a repurposed unit
+ * is not what it runs now. Never merge them into the device-level fields of the
+ * same name; that is the contradiction this type exists to prevent.
+ */
+export interface LabTenancy {
+  state: LabTenancyState;
+  reason: string | null;
+  max_age_seconds?: number;
+  enrollment: {
+    lab_device_id: string;
+    device_label: string;
+    hardware_id: string;
+    lab_id: string;
+    partner_id: string;
+    firmware_version: string | null;
+    health_status: string;
+    last_heartbeat_at: string | null;
+    /** What the abandonment rule measured, so "why historical" is answerable. */
+    evidence_at: string | null;
+  } | null;
 }
 
 // ── The mode-independent fleet view (Phase 4) ──────────────────

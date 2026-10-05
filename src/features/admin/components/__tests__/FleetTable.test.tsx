@@ -609,7 +609,10 @@ describe("server-driven controls", () => {
 
   it("sends include_revoked", async () => {
     await renderFleet();
-    fireEvent.click(screen.getByLabelText(/show revoked/i));
+    // "Include revoked", distinct from the Lab table's "Show revoked" — the two
+    // sit on the same page and an ambiguous name is unresolvable for both a
+    // screen reader and a test.
+    fireEvent.click(screen.getByLabelText(/include revoked/i));
     await waitFor(() => expect(lastQuery().include_revoked).toBe(true));
   });
 
@@ -734,6 +737,55 @@ describe("stats tiles", () => {
 
     expect(document.querySelector('[data-fleet-tile="Fleet size"]')).toBeNull();
     expect(document.querySelectorAll("[data-fleet-row]").length).toBeGreaterThan(0);
+  });
+
+  /*
+    A REJECTED stats request and a 200 carrying the wrong body are different
+    failures, and only the first one was covered.
+    `getFleetDeviceStats().catch(() => null)` handles the rejection: `stats`
+    stays null and the tiles are skipped. A 200 sets `stats` to something
+    truthy, so the tiles dereference whatever arrived.
+
+    This is not hypothetical. The frontend e2e catch-all answers every unmocked
+    API call with a bare `[]`, which is a 200, so `stats.by_connectivity.ONLINE`
+    threw during render — and because this is a client component with no error
+    boundary above it, the throw unmounted the WHOLE /admin/devices route and
+    took the unrelated Lab table down with it. Four e2e tests that never touch
+    the fleet table failed, reporting the Lab header as missing.
+  */
+  it("survives a 200 whose body is not a FleetStats, rather than blanking the page", async () => {
+    // Exactly what e2e/helpers/api.ts stubApiCatchAll() returns by default.
+    getFleetDeviceStats.mockResolvedValue([] as unknown as FleetStats);
+    await renderFleet();
+
+    // The table — the thing an operator came for — is still here.
+    expect(document.querySelectorAll("[data-fleet-row]").length).toBe(ALL_ROWS.length);
+    // And so is the rest of the page, which is the part that used to vanish.
+    expect(screen.getByLabelText("Search the fleet")).toBeInTheDocument();
+  });
+
+  it("counts a malformed stats body as zero rather than showing 'undefined'", async () => {
+    // Degrading to 0 is not cosmetic politeness: a tile reading "undefined" is a
+    // claim about the fleet that no operator can act on, and NaN would propagate
+    // into the accent colours.
+    getFleetDeviceStats.mockResolvedValue({ truncated: false } as unknown as FleetStats);
+    await renderFleet();
+
+    for (const label of ["Fleet size", "Needs attention", "Online", "Offline", "Unknown reach", "Never reported", "No serial yet"]) {
+      const text = document.querySelector(`[data-fleet-tile="${label}"]`)!.textContent ?? "";
+      expect(text).toContain("0");
+      expect(text).not.toMatch(/undefined|NaN/);
+    }
+  });
+
+  it("survives a 200 whose LIST body is not a PaginatedFleet", async () => {
+    // The same catch-all feeds `[]` to both endpoints, so the row path needs the
+    // same property. It already had it; this pins it so it keeps it.
+    listFleetRegistryDevices.mockResolvedValue([] as unknown as PaginatedFleet);
+    render(<FleetTable />);
+
+    expect(await screen.findByText("No devices")).toBeInTheDocument();
+    expect(document.querySelectorAll("[data-fleet-row]")).toHaveLength(0);
   });
 });
 

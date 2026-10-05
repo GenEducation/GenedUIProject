@@ -16,13 +16,13 @@ interface GoogleAuthButtonProps {
 /**
  * Google sign-in, rendered as Google's own button.
  *
- * Two earlier versions of this drew a custom surface and laid Google's widget
- * over it at `opacity: 0` to capture the clicks. Both shipped broken. Google's
- * widget lives in a cross-origin iframe whose internal layout we cannot see or
- * predict — measured at 300x150 with the button inset 40px from the top, not
- * the tidy box its outer wrapper suggests — so the invisible layer never quite
- * covered the visible one and clicks landed on dead space. Nothing surfaced
- * the failure: the button still looked perfect, which is precisely why it went
+ * An earlier version drew a custom surface and laid Google's widget over it at
+ * `opacity: 0` to capture the clicks. It shipped broken. Google's widget lives
+ * in a cross-origin iframe whose internal layout we cannot see or predict —
+ * measured at 300x150 with the button inset 40px from the top, not the tidy
+ * box its outer wrapper suggests — so the invisible layer never quite covered
+ * the visible one and clicks landed on dead space. Nothing surfaced the
+ * failure: the button still looked perfect, which is exactly why it went
  * unnoticed. That trade is not worth making on a login button.
  *
  * So the widget is real and visible. We control what we legitimately can — the
