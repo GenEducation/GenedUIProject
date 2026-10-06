@@ -8,9 +8,11 @@ import { PDFDocument } from 'pdf-lib';
 
 interface PageWisePreviewProps {
   file: File;
+  /** Called once the PDF's page count is known (the upload form defaults its page range to it). */
+  onPageCount?: (count: number) => void;
 }
 
-export function PageWisePreview({ file }: PageWisePreviewProps) {
+export function PageWisePreview({ file, onPageCount }: PageWisePreviewProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -26,8 +28,8 @@ export function PageWisePreview({ file }: PageWisePreviewProps) {
         const arrayBuffer = await file.arrayBuffer();
         const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
         const count = pdfDoc.getPageCount();
-        console.log("PDF loaded with pdf-lib, total pages:", count);
         setTotalPages(count);
+        onPageCount?.(count);
       } catch (error) {
         console.error("Error loading PDF for page count:", error);
       }
@@ -37,6 +39,8 @@ export function PageWisePreview({ file }: PageWisePreviewProps) {
     return () => {
       URL.revokeObjectURL(url);
     };
+    // onPageCount is a callback prop; re-reading the file when it changes identity would be wasted work.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file]);
 
   // Reset loading state after a brief delay to mask the PDF jump

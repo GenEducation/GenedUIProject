@@ -6,6 +6,8 @@ import { subjectHandlers } from "./subjects";
 import { preorderHandlers } from "./preorder";
 import { placementHandlers } from "./placement";
 import { analyticsHandlers } from "./analytics";
+import { visualsHandlers } from "./visuals";
+import { sourcesHandlers } from "./sources";
 
 export const handlers = [
   ...authHandlers,
@@ -16,4 +18,6 @@ export const handlers = [
   ...preorderHandlers,
   ...placementHandlers,
   ...analyticsHandlers,
+  ...visualsHandlers,
+  ...sourcesHandlers,
 ];

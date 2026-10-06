@@ -409,15 +409,6 @@ export const studentService = {
     return response.json();
   },
 
-  fetchPartnerIngestionPdfUrl: async (
-    ingestionBatchId: string
-  ): Promise<{ pdf_url: string; chapter_name: string; grade: number; subject: string; ttl_seconds: number }> => {
-    const response = await authFetch(
-      `${API_BASE_URL}/rag/api/partner/ingestions/${encodeURIComponent(ingestionBatchId)}/pdf-url`
-    );
-    return response.json();
-  },
-
   // ── AI Analysis Reports ─────────────────────────────────────────────────────
 
   fetchProgressReport: async (studentId: string) => {

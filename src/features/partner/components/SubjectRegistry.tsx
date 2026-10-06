@@ -1,27 +1,47 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, Images, Play, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { usePartnerStore, SubjectFilters, restorePendingIngestions } from "../store/usePartnerStore";
+import { usePartnerStore, SubjectFilters, type Subject } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Skeleton } from "./Skeleton";
 import { IngestedPdfViewer } from "./IngestedPdfViewer";
 import { Select } from "@/components/ui/Select";
-import { DatePicker } from "@/components/ui/DatePicker";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
+import { resolveTaxonomyBoard, useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
+import { useVisualsIndex } from "../hooks/useVisualsIndex";
+import { VisualsModal } from "./visuals/VisualsModal";
+import {
+  ACTIVE_STATES,
+  DELETABLE_STATES,
+  SOURCE_STATE_LABELS,
+  STARTABLE_STATES,
+  type SourceState,
+} from "../types/sources";
 
 interface SubjectRegistryProps {
   onUploadClick: () => void;
 }
 
-const STATUS_OPTIONS = [
+/** While a run is queued or running, re-read the list this often. */
+export const LIST_POLL_MS = 10_000;
+
+const STATE_OPTIONS = [
   { value: "", label: "All Statuses" },
-  { value: "completed", label: "Active" },
-  { value: "failed", label: "Failed" },
-  { value: "in-progress", label: "Processing" },
+  ...(Object.entries(SOURCE_STATE_LABELS) as [SourceState, string][]).map(([value, label]) => ({ value, label })),
 ];
+
+const STATE_CHIP: Record<SourceState, string> = {
+  registered: "bg-[#1A3D2C]/5 text-[#1A3D2C]/60 border-[#1A3D2C]/10",
+  queued: "bg-amber-50 text-amber-600 border-amber-200",
+  running: "bg-amber-50 text-amber-600 border-amber-200",
+  review_needed: "bg-sky-50 text-sky-700 border-sky-200",
+  invalid: "bg-red-50 text-red-600 border-red-200",
+  ready: "bg-[#D1E6D9]/30 text-[#1A3D2C] border-[#1A3D2C]/5",
+  failed: "bg-red-50 text-red-600 border-red-200",
+};
 
 const inputClass =
   "w-full px-3 py-2 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-xl text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/30";
@@ -34,6 +54,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const fetchSubjects = usePartnerStore((state) => state.fetchSubjects);
   const removeSubject = usePartnerStore((state) => state.removeSubject);
   const cancelIngestion = usePartnerStore((state) => state.cancelIngestion);
+  const startIngestion = usePartnerStore((state) => state.startIngestion);
   const openIngestedPdf = usePartnerStore((state) => state.openIngestedPdf);
   const setSubjectFilters = usePartnerStore((state) => state.setSubjectFilters);
   const setSubjectOffset = usePartnerStore((state) => state.setSubjectOffset);
@@ -44,17 +65,40 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [visualsFor, setVisualsFor] = useState<Subject | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const visualsIndex = useVisualsIndex(subjects);
+  const subjectNames = [...new Set(useTaxonomySubjects(resolveTaxonomyBoard()).map((s) => s.name))];
 
   // Local draft state for filter inputs — committed on Apply
   const [draft, setDraft] = useState<SubjectFilters>({});
 
   useEffect(() => {
     fetchSubjects();
-    restorePendingIngestions(
-      (updater) => usePartnerStore.setState((state) => ({ subjects: updater(state.subjects) })),
-      fetchSubjects,
-    );
   }, [fetchSubjects]);
+
+  // The worker reports run state to the server; poll while any run is still going.
+  const hasActiveRun = subjects.some((s) => ACTIVE_STATES.has(s.state));
+  useEffect(() => {
+    if (!hasActiveRun) return;
+    const timer = setInterval(() => void fetchSubjects(), LIST_POLL_MS);
+    return () => clearInterval(timer);
+  }, [hasActiveRun, fetchSubjects]);
+
+  /** Start or stop a run, showing the server's reason when it doesn't fit (409). */
+  const runAction = async (subject: Subject, action: (id: string) => Promise<void>) => {
+    setBusyId(subject.id);
+    setActionError(null);
+    try {
+      await action(subject.id);
+    } catch (err) {
+      setActionError(asError(err).message || "That didn't work. Please try again.");
+      void fetchSubjects();
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   // Re-fetch whenever offset changes (pagination)
   useEffect(() => {
@@ -148,7 +192,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             className="overflow-hidden"
           >
             <div className="bg-[#FBFCFB] border border-[#1A3D2C]/5 rounded-[1.5rem] p-5">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
                 {/* Search */}
                 <div className="lg:col-span-2">
                   <label className={labelClass}>Search</label>
@@ -156,7 +200,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                     <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1A3D2C]/30" />
                     <input
                       type="text"
-                      placeholder="Document title or file..."
+                      placeholder="Book or chapter title..."
                       value={draft.search ?? ""}
                       onChange={(e) => setDraft((d) => ({ ...d, search: e.target.value || undefined }))}
                       className={`${inputClass} pl-8`}
@@ -167,12 +211,11 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                 {/* Subject */}
                 <div>
                   <label className={labelClass}>Subject</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. English"
+                  <Select
+                    aria-label="Subject"
                     value={draft.subject ?? ""}
-                    onChange={(e) => setDraft((d) => ({ ...d, subject: e.target.value || undefined }))}
-                    className={inputClass}
+                    onChange={(v) => setDraft((d) => ({ ...d, subject: v || undefined }))}
+                    options={[{ value: "", label: "All Subjects" }, ...subjectNames.map((name) => ({ value: name, label: name }))]}
                   />
                 </div>
 
@@ -200,36 +243,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                   <label className={labelClass}>Status</label>
                   <Select
                     aria-label="Status"
-                    value={draft.status ?? ""}
-                    onChange={(v) => setDraft((d) => ({ ...d, status: v || undefined }))}
-                    options={STATUS_OPTIONS.map((opt) => ({
-                      value: opt.value,
-                      label: opt.label,
-                    }))}
-                  />
-                </div>
-
-                {/* From Date */}
-                <div>
-                  <label className={labelClass}>From Date</label>
-                  <DatePicker
-                    aria-label="From date"
-                    value={draft.from_date ?? ""}
-                    max={draft.to_date || undefined}
-                    onChange={(v) => setDraft((d) => ({ ...d, from_date: v || undefined }))}
-                    clearable
-                  />
-                </div>
-
-                {/* To Date */}
-                <div>
-                  <label className={labelClass}>To Date</label>
-                  <DatePicker
-                    aria-label="To date"
-                    value={draft.to_date ?? ""}
-                    min={draft.from_date || undefined}
-                    onChange={(v) => setDraft((d) => ({ ...d, to_date: v || undefined }))}
-                    clearable
+                    value={draft.state ?? ""}
+                    onChange={(v) => setDraft((d) => ({ ...d, state: (v || undefined) as SourceState | undefined }))}
+                    options={STATE_OPTIONS}
                   />
                 </div>
               </div>
@@ -253,6 +269,16 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {actionError && (
+        <div role="alert" className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-700">
+          <AlertCircle size={14} className="shrink-0" aria-hidden />
+          <span className="flex-1">{actionError}</span>
+          <Button iconOnly size="sm" variant="tertiary" aria-label="Dismiss" onClick={() => setActionError(null)}>
+            <X size={14} />
+          </Button>
+        </div>
+      )}
 
       {/* Registry List */}
       <div className="flex-1 flex flex-col bg-[#FBFCFB] rounded-[2rem] md:rounded-[2.5rem] p-3 md:p-4 border border-gray-100/50 shadow-[0_8px_40px_rgba(0,0,0,0.02)] min-h-0 overflow-hidden">
@@ -279,9 +305,12 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             ))
           )}
           {subjects.map((subject, i) => {
-            const isActive = subject.status === "active";
-            const isProcessing = subject.status === "in-progress";
-            const isFailed = subject.status === "failed";
+            const isRunning = ACTIVE_STATES.has(subject.state);
+            const visualCounts = visualsIndex.countsFor(subject);
+            const hasVisuals = !!visualCounts && visualCounts.pending + visualCounts.accepted + visualCounts.rejected > 0;
+            const pendingVisuals = visualCounts?.pending ?? 0;
+            const busy = busyId === subject.id;
+            const explain = subject.detail && ["failed", "invalid", "review_needed"].includes(subject.state);
 
             return (
               <motion.div
@@ -289,58 +318,100 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                onClick={() => {
-                  if (isActive) openIngestedPdf(subject);
-                }}
-                className={`group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-transparent hover:border-[#1A3D2C]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all overflow-hidden ${
-                  isActive ? "cursor-pointer" : "cursor-default"
-                }`}
+                onClick={() => openIngestedPdf(subject)}
+                className="group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-transparent hover:border-[#1A3D2C]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all overflow-hidden cursor-pointer"
               >
-                <div className="flex-1 flex items-center gap-3 md:gap-4">
+                <div className="flex-1 flex items-center gap-3 md:gap-4 min-w-0">
                   {/* Left Side Highlight bar */}
                   <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-[#1A3D2C] opacity-0 group-hover:opacity-100 transition-opacity rounded-r-full" />
 
-                  {/* Subject Details */}
-                  <div className="flex-1 flex flex-col">
-                    <div className="flex items-center justify-between pr-4 w-full">
-                      {/* Left: Agent Name & Grade */}
-                      <div className="flex flex-col gap-0.5 group-hover:translate-x-1 transition-transform w-[280px] md:w-[320px] shrink-0">
-                        <h3 className="text-base md:text-lg font-bold text-[#1A3D2C] tracking-tight flex items-center gap-2">
-                          {subject.agent}
+                  {/* Chapter Details */}
+                  <div className="flex-1 flex flex-col min-w-0">
+                    <div className="flex items-center justify-between pr-4 w-full gap-3">
+                      {/* Left: Chapter, book & grade */}
+                      <div className="flex flex-col gap-0.5 group-hover:translate-x-1 transition-transform w-[240px] md:w-[320px] shrink-0 min-w-0">
+                        <h3 className="text-base md:text-lg font-bold text-[#1A3D2C] tracking-tight truncate">
+                          {subject.title}
                         </h3>
-                        <p className="text-[11px] font-bold text-[#1A3D2C]/50 ml-[2px] uppercase tracking-wider">
-                          Grade {subject.grade}
+                        <p className="text-[11px] font-bold text-[#1A3D2C]/50 ml-[2px] uppercase tracking-wider truncate">
+                          {subject.book_title} · Ch {subject.chapter_ordinal} · Grade {subject.grade}
                         </p>
+                        {explain && (
+                          <p
+                            className={`text-[11px] ml-[2px] truncate ${subject.state === "review_needed" ? "text-sky-700/80" : "text-red-600/80"}`}
+                            title={subject.detail ?? undefined}
+                          >
+                            {subject.detail}
+                          </p>
+                        )}
                       </div>
 
                       {/* Middle: Subject */}
-                      <div className="hidden sm:flex flex-1 items-center">
-                        <span className="text-sm font-bold text-[#1A3D2C]/70 bg-[#1A3D2C]/5 px-4 py-1.5 rounded-xl border border-[#1A3D2C]/10 capitalize">
+                      <div className="hidden sm:flex flex-1 items-center min-w-0">
+                        <span className="text-sm font-bold text-[#1A3D2C]/70 bg-[#1A3D2C]/5 px-4 py-1.5 rounded-xl border border-[#1A3D2C]/10 truncate">
                           {subject.subject}
                         </span>
                       </div>
 
-                      {/* Right: Status & Actions */}
-                      <div className="flex shrink-0 items-center gap-4 ml-4">
+                      {/* Right: State & Actions */}
+                      <div className="flex shrink-0 items-center gap-3 ml-4">
                         <span
-                          className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors ${
-                            isActive ? "bg-[#D1E6D9]/30 text-[#1A3D2C] border-[#1A3D2C]/5" :
-                            isProcessing ? "bg-amber-50 text-amber-600 border-amber-200" :
-                            "bg-red-50 text-red-600 border-red-200"
-                          }`}
+                          className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-colors ${STATE_CHIP[subject.state]}`}
                         >
-                          {subject.status}
+                          {SOURCE_STATE_LABELS[subject.state]}
                         </span>
 
-                        {isProcessing && (
-                          <div className="flex items-center gap-2 mr-2">
-                            <Button iconOnly size="sm" variant="destructive" aria-label="Stop Ingestion" onClick={(e) => { e.stopPropagation(); cancelIngestion(subject.id); }}>
-                              <Square size={14} className="fill-current group-hover/stop:scale-90 transition-transform" />
-                            </Button>
-                          </div>
+                        {STARTABLE_STATES.has(subject.state) && (
+                          <Button
+                            iconOnly
+                            size="sm"
+                            variant="outline"
+                            aria-label={subject.state === "registered" ? "Start ingestion" : "Run ingestion again"}
+                            title={subject.state === "registered" ? "Start ingestion" : "Run again"}
+                            loading={busy}
+                            onClick={(e) => { e.stopPropagation(); void runAction(subject, startIngestion); }}
+                          >
+                            <Play size={14} />
+                          </Button>
                         )}
 
-                        {(isActive || isFailed) && (
+                        {subject.state === "queued" && (
+                          <Button
+                            iconOnly
+                            size="sm"
+                            variant="destructive"
+                            aria-label="Stop Ingestion"
+                            loading={busy}
+                            onClick={(e) => { e.stopPropagation(); void runAction(subject, cancelIngestion); }}
+                          >
+                            <Square size={14} className="fill-current" />
+                          </Button>
+                        )}
+
+                        {hasVisuals && (
+                          <span className="relative inline-flex">
+                            <Button
+                              iconOnly
+                              size="sm"
+                              variant="outline"
+                              aria-label={pendingVisuals > 0 ? `Review visuals (${pendingVisuals} to review)` : "Review visuals"}
+                              title="Teaching visuals"
+                              onClick={(e) => { e.stopPropagation(); setVisualsFor(subject); }}
+                            >
+                              <Images size={16} />
+                            </Button>
+                            {pendingVisuals > 0 && (
+                              <span
+                                aria-hidden
+                                className="pointer-events-none absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center"
+                              >
+                                {pendingVisuals}{visualsIndex.pendingFull ? "+" : ""}
+                              </span>
+                            )}
+                          </span>
+                        )}
+
+                        {DELETABLE_STATES.has(subject.state) && (
                           <Button iconOnly size="sm" variant="destructive" aria-label="Delete" onClick={(e) => { e.stopPropagation(); setDeleteId(subject.id); }}>
                             <Trash2 size={18} />
                           </Button>
@@ -350,8 +421,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                   </div>
                 </div>
 
-                {/* Progress bar for in-progress */}
-                {isProcessing && (
+                {/* Progress bar while queued or running */}
+                {isRunning && (
                   <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#D1E6D9]/20 overflow-hidden">
                     <motion.div
                       animate={{ x: ["-100%", "100%"] }}
@@ -393,10 +464,21 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         isOpen={!!deleteId}
         onClose={() => { setDeleteId(null); setDeleteError(null); }}
         onConfirm={handleDelete}
-        title="Delete Curriculum?"
-        message="This will permanently remove this subject and all associated learning materials from your registry."
+        title="Delete this chapter?"
+        message="It will be removed from your registry. Only chapters that haven't produced reviewable content can be deleted."
         isLoading={isDeleting}
         error={deleteError}
+      />
+
+      {/* Visual review popup */}
+      <VisualsModal
+        subject={visualsFor}
+        counts={visualsFor ? visualsIndex.countsFor(visualsFor) : null}
+        onClose={() => {
+          setVisualsFor(null);
+          void visualsIndex.refresh();
+        }}
+        onChanged={() => void visualsIndex.refresh()}
       />
 
       {/* Ingested PDF Viewer */}

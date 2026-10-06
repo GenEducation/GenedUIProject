@@ -90,13 +90,7 @@ export function PartnerAdmin() {
         {/* Modals */}
         <AnimatePresence>
           {showUploadModal && (
-            <CurriculumIngestion 
-              onClose={() => setShowUploadModal(false)}
-              activeAgentId={null} // Passing null as per initial structure
-              agents={[]} // Placeholder for now
-              onAddAgent={() => {}} 
-              onExtractionComplete={() => {}}
-            />
+            <CurriculumIngestion onClose={() => setShowUploadModal(false)} />
           )}
         </AnimatePresence>
       </main>

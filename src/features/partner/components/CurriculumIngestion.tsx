@@ -1,8 +1,11 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, X, FileText, Check, RotateCcw } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { Upload, X, FileText, RotateCcw, AlertCircle } from "lucide-react";
+import { useState, useRef } from "react";
 import { usePartnerStore } from "../store/usePartnerStore";
 import { PageWisePreview } from "./PageWisePreview";
+import { LearningOutcomePicker } from "./LearningOutcomePicker";
+import { MAX_UPLOAD_BYTES } from "../types/sources";
+import { asError } from "@/utils/errors";
 import { Select } from "@/components/ui/Select";
 import {
   allTaxonomyGrades,
@@ -15,26 +18,34 @@ import { Button } from "@/components/ui/Button";
 
 interface CurriculumIngestionProps {
   onClose: () => void;
-  activeAgentId: string | null;
-  agents: unknown[];
-  onAddAgent: () => void;
-  onExtractionComplete: (data: unknown) => void;
 }
 
-export function CurriculumIngestion({
-  onClose,
-  activeAgentId,
-  agents,
-  onAddAgent,
-  onExtractionComplete,
-}: CurriculumIngestionProps) {
+const fieldLabel = "text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1";
+const textInput =
+  "w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/30 transition-all";
+
+/**
+ * Upload a chapter as a partner source (ADR 0014): the PDF, what it is (board,
+ * publisher, subject, grade, book, edition, chapter and its pages) and which
+ * learning outcomes and strand it maps to. Submitting registers it and queues
+ * its first ingestion run; errors from the server stay on the form.
+ */
+export function CurriculumIngestion({ onClose }: CurriculumIngestionProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [subjectName, setSubjectName] = useState("");
-  const [documentTitle, setDocumentTitle] = useState("");
-  const [agentName, setAgentName] = useState("");
   const [grade, setGrade] = useState("");
   const board = resolveTaxonomyBoard();
-  const [documentType, setDocumentType] = useState("chapter");
+  const [publisher, setPublisher] = useState("NCERT");
+  const [bookTitle, setBookTitle] = useState("");
+  const [edition, setEdition] = useState("");
+  const [chapterNo, setChapterNo] = useState("");
+  const [chapterTitle, setChapterTitle] = useState("");
+  const [firstPage, setFirstPage] = useState("1");
+  const [lastPage, setLastPage] = useState("");
+  const [pageCount, setPageCount] = useState<number | null>(null);
+  const [loCodes, setLoCodes] = useState<string[]>([]);
+  const [strand, setStrand] = useState("");
 
   const gradeNum = parseInt(grade, 10);
   // Loads the catalogue on mount rather than assuming an earlier screen already
@@ -47,12 +58,7 @@ export function CurriculumIngestion({
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const uploadCurriculum = usePartnerStore((state) => state.uploadCurriculum);
-
-  useEffect(() => {
-    console.log("CurriculumIngestion: Mounted");
-    return () => console.log("CurriculumIngestion: Unmounted");
-  }, []);
+  const uploadSource = usePartnerStore((state) => state.uploadSource);
 
   const validateFile = (selectedFile: File) => {
     if (selectedFile.type !== "application/pdf" && !selectedFile.name.toLowerCase().endsWith(".pdf")) {
@@ -60,10 +66,35 @@ export function CurriculumIngestion({
       setFile(null);
       return false;
     }
+    if (selectedFile.size > MAX_UPLOAD_BYTES) {
+      setFileError(`This PDF is larger than ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB. Upload just the chapter's pages.`);
+      setFile(null);
+      return false;
+    }
     setFileError(null);
     setFile(selectedFile);
+    setPageCount(null);
+    setFirstPage("1");
+    setLastPage("");
     return true;
   };
+
+  const handlePageCount = (count: number) => {
+    setPageCount(count);
+    setLastPage((current) => current || String(count));
+  };
+
+  const first = parseInt(firstPage, 10);
+  const last = parseInt(lastPage, 10);
+  const pageRangeError =
+    firstPage && lastPage && (!(first >= 1 && first <= last) || (pageCount !== null && last > pageCount))
+      ? `Pages must be within 1 to ${pageCount ?? "the last page"}, first before last.`
+      : null;
+  const chapterNumber = parseInt(chapterNo, 10);
+  const canSubmit =
+    !!file && !!grade && !!subjectName && !!publisher.trim() && !!bookTitle.trim() && !!edition.trim() &&
+    chapterNumber >= 1 && !!chapterTitle.trim() && first >= 1 && last >= 1 && !pageRangeError &&
+    loCodes.length > 0 && !!strand;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -72,14 +103,31 @@ export function CurriculumIngestion({
   };
 
   const handleProcess = async () => {
-    if (!subjectName || !documentTitle || !agentName || !grade || !file) return;
-    const exactSubject = requireExactSubject(subjectName, gradeNum, catalog);
+    if (!canSubmit || !file) return;
     setIsProcessing(true);
-    // Trigger upload (handles its own success/error state updates)
-    uploadCurriculum(file, exactSubject, documentTitle, agentName, grade, board, documentType);
-    
-    // Close immediately as per user request
-    onClose();
+    setSubmitError(null);
+    try {
+      await uploadSource({
+        file,
+        board,
+        publisher: publisher.trim(),
+        subject: requireExactSubject(subjectName, gradeNum, catalog),
+        grade: gradeNum,
+        book_title: bookTitle.trim(),
+        edition_label: edition.trim(),
+        chapter_ordinal: chapterNumber,
+        chapter_title: chapterTitle.trim(),
+        first_pdf_page: first,
+        last_pdf_page: last,
+        strand,
+        lo_codes: loCodes,
+      });
+      onClose();
+    } catch (error) {
+      setSubmitError(asError(error).message || "The upload didn't go through. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const hasFile = !!file;
@@ -175,6 +223,7 @@ export function CurriculumIngestion({
                       value={grade}
                       onChange={(next) => {
                         setGrade(next);
+                        setLoCodes([]);
                         if (
                           subjectName &&
                           !subjectsForGrade(parseInt(next, 10), catalog).some(
@@ -224,7 +273,10 @@ export function CurriculumIngestion({
                     placeholder="Select Subject"
                     accentColor="#1A3D2C"
                     value={subjectName}
-                    onChange={setSubjectName}
+                    onChange={(next) => {
+                      setSubjectName(next);
+                      setLoCodes([]);
+                    }}
                     options={subjectOptions.map((subject) => ({ value: subject, label: subject }))}
                     buttonStyle={{
                       background: "#F8F9F8",
@@ -237,36 +289,64 @@ export function CurriculumIngestion({
                     }}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Document Title</label>
-                  <input 
-                    value={documentTitle}
-                    onChange={(e) => setDocumentTitle(e.target.value)}
-                    placeholder="e.g. NCERT Science Class 10"
-                    className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/30 transition-all"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="src-publisher" className={fieldLabel}>Publisher</label>
+                    <input id="src-publisher" value={publisher} onChange={(e) => setPublisher(e.target.value)} placeholder="e.g. NCERT" className={textInput} />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="src-edition" className={fieldLabel}>Edition</label>
+                    <input id="src-edition" value={edition} onChange={(e) => setEdition(e.target.value)} placeholder="e.g. Reprint 2025-26" className={textInput} />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Agent Name</label>
-                  <input 
-                    value={agentName}
-                    onChange={(e) => setAgentName(e.target.value)}
-                    placeholder="e.g. Bio-Bot 3000"
-                    className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/30 transition-all"
-                  />
+                  <label htmlFor="src-book" className={fieldLabel}>Book Title</label>
+                  <input id="src-book" value={bookTitle} onChange={(e) => setBookTitle(e.target.value)} placeholder="e.g. Ganita Prakash" className={textInput} />
+                </div>
+                <div className="grid grid-cols-[110px_1fr] gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="src-chapter-no" className={fieldLabel}>Chapter No.</label>
+                    <input id="src-chapter-no" type="number" min={1} value={chapterNo} onChange={(e) => setChapterNo(e.target.value)} placeholder="e.g. 2" className={textInput} />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="src-chapter-title" className={fieldLabel}>Chapter Title</label>
+                    <input id="src-chapter-title" value={chapterTitle} onChange={(e) => setChapterTitle(e.target.value)} placeholder="e.g. Lines and Angles" className={textInput} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label htmlFor="src-first-page" className={fieldLabel}>First Page</label>
+                      <input id="src-first-page" type="number" min={1} value={firstPage} onChange={(e) => setFirstPage(e.target.value)} className={textInput} />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="src-last-page" className={fieldLabel}>Last Page</label>
+                      <input id="src-last-page" type="number" min={1} max={pageCount ?? undefined} value={lastPage} onChange={(e) => setLastPage(e.target.value)} className={textInput} />
+                    </div>
+                  </div>
+                  <p className={`text-[10px] px-1 ${pageRangeError ? "font-bold text-red-600" : "text-[#1A3D2C]/45"}`}>
+                    {pageRangeError ?? (pageCount ? `The PDF has ${pageCount} pages. Only the chapter's pages are read.` : "The pages of the PDF that hold the chapter.")}
+                  </p>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[#1A3D2C] uppercase tracking-widest px-1">Document Type</label>
-                  <input 
-                    value={documentType}
-                    onChange={(e) => setDocumentType(e.target.value)}
-                    placeholder="e.g. chapter"
-                    className="w-full px-5 py-3.5 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-2xl text-xs font-bold text-[#1A3D2C] outline-none transition-all"
-                  />
-                </div>
+                <LearningOutcomePicker
+                  board={board}
+                  subject={subjectName}
+                  grade={Number.isInteger(gradeNum) ? gradeNum : null}
+                  selected={loCodes}
+                  onSelectedChange={setLoCodes}
+                  strand={strand}
+                  onStrandChange={setStrand}
+                />
               </div>
             </div>
+
+            {submitError && (
+              <div role="alert" className="mx-6 md:mx-10 mb-2 flex items-start gap-2 px-4 py-3 rounded-2xl bg-red-50 border border-red-200 text-xs font-bold text-red-700">
+                <AlertCircle size={14} className="mt-px shrink-0" aria-hidden />
+                {submitError}
+              </div>
+            )}
 
             {/* Footer inside Left Column */}
             <div className="mt-auto p-6 md:p-10 bg-white border-t border-gray-50 flex gap-3">
@@ -279,10 +359,10 @@ export function CurriculumIngestion({
               </button>
               <button 
                 onClick={handleProcess}
-                disabled={isProcessing || !subjectName || !documentTitle || !agentName || !grade || !board || !documentType || !file}
+                disabled={isProcessing || !canSubmit}
                 className="flex-[2] py-4 bg-[#1A3D2C] text-white text-xs font-black rounded-2xl hover:bg-[#1A3D2C]/90 transition-all shadow-[0_8px_30px_rgba(26,61,44,0.2)] uppercase tracking-widest disabled:opacity-30"
               >
-                {isProcessing ? "Processing..." : "Process Artifact"}
+                {isProcessing ? "Uploading..." : "Upload & Start"}
               </button>
             </div>
           </div>
@@ -297,7 +377,7 @@ export function CurriculumIngestion({
                 transition={{ type: "spring", damping: 25, stiffness: 120 }}
                 className="hidden md:flex flex-1 flex-col p-6 md:p-8 lg:p-10 bg-[#F8F9F8]"
               >
-                <PageWisePreview file={file} />
+                <PageWisePreview file={file} onPageCount={handlePageCount} />
               </motion.div>
             )}
           </AnimatePresence>

@@ -54,6 +54,14 @@ export default defineConfig({
         "src/features/placement/components/items/FillBlankItem.tsx": { lines: 95 },
         "src/features/placement/components/items/MatchItem.tsx": { lines: 85 },
         "src/features/placement/components/items/OrderItem.tsx": { lines: 75 },
+        // Visual library review (partner) — decision bodies are the contract
+        // with the review backend; regeneration polling must stop on its own.
+        "src/features/partner/services/visualsService.ts": { lines: 85, functions: 80 },
+        "src/features/partner/services/sourcesService.ts": { lines: 85, functions: 85 },
+        "src/features/partner/hooks/useVisualDetail.ts": { lines: 95, functions: 95 },
+        "src/features/partner/hooks/useVisualsIndex.ts": { lines: 85 },
+        "src/features/partner/hooks/useVisualsList.ts": { lines: 85 },
+        "src/features/partner/components/visuals/DecisionPanel.tsx": { lines: 85 },
       },
     },
   },
