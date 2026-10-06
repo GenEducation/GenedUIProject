@@ -5,6 +5,8 @@ import { X } from "lucide-react";
 import { updateProfile } from "@/features/auth/authService";
 import { useStudentStore, StudentProfile } from "../store/useStudentStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
+import { Button } from "@/components/ui/Button";
+import { asError } from "@/utils/errors";
 
 interface CompleteProfileBannerProps {
   studentProfile: StudentProfile;
@@ -76,8 +78,8 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
       localStorage.setItem(`gened_profile_banner_skipped_${studentProfile.user_id}`, "true");
       setSkipped(true);
       maybeLaunchTutorial();
-    } catch (err: any) {
-      setError(err.message || "Failed to update profile");
+    } catch (err) {
+      setError(asError(err).message || "Failed to update profile");
     } finally {
       setIsSaving(false);
     }
@@ -86,12 +88,9 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20 backdrop-blur-sm">
       <div className="relative w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl border border-gray-100 p-8">
-        <button
-          onClick={handleDismiss}
-          className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-        >
+        <Button iconOnly size="sm" variant="tertiary" className="absolute top-4 right-4" aria-label="Dismiss" onClick={handleDismiss}>
           <X size={18} />
-        </button>
+        </Button>
 
         <h3 className="text-lg font-bold text-[var(--primary-ink)] mb-1">
           Tell us a bit about yourself

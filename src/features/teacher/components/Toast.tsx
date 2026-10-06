@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, AlertTriangle, X } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 export interface ToastItem {
   id: number;
@@ -65,9 +66,9 @@ function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: num
           </span>
         )}
       </div>
-      <button onClick={() => onDismiss(toast.id)} className="flex-none text-muted-light hover:text-muted">
+      <Button iconOnly size="sm" variant="tertiary" className="flex-none" aria-label="Dismiss notification" onClick={() => onDismiss(toast.id)}>
         <X size={14} />
-      </button>
+      </Button>
     </motion.div>
   );
 }

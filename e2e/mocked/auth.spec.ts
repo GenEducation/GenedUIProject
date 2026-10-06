@@ -16,7 +16,10 @@ test.describe("Auth — login flow", () => {
     // Fill the username/password form
     await page.fill('input[name="username"]', "ada");
     await page.fill('input[name="password"]', "password123");
-    await page.click('button[type="submit"]');
+    // Selected by accessible name, not `[type=submit]`: the shared Button
+    // component defaults to type="button", so an attribute selector here would
+    // silently stop matching the moment this CTA is migrated.
+    await page.getByRole("button", { name: /continue to gened/i }).click();
 
     // AuthGuard redirects to /student after successful login
     await expect(page).toHaveURL(/\/student/);
@@ -37,7 +40,10 @@ test.describe("Auth — login flow", () => {
     await page.goto("/login");
     await page.fill('input[name="username"]', "ada");
     await page.fill('input[name="password"]', "wrongpass");
-    await page.click('button[type="submit"]');
+    // Selected by accessible name, not `[type=submit]`: the shared Button
+    // component defaults to type="button", so an attribute selector here would
+    // silently stop matching the moment this CTA is migrated.
+    await page.getByRole("button", { name: /continue to gened/i }).click();
 
     await expect(page.getByText("Invalid credentials")).toBeVisible();
     // Stays on the login page — must not have navigated to a portal

@@ -7,6 +7,7 @@ import { DataTable, Column } from "./DataTable";
 import { EntityEditModal } from "./EntityEditModal";
 import { BulkImportModal } from "./BulkImportModal";
 import { EDUCATION_BOARDS, isEducationBoard } from "@/types/education";
+import { Button } from "@/components/ui/Button";
 
 const columns: Column<PartnerRow>[] = [
   { key: "organization", header: "Organization", accessor: (p) => p.organization },
@@ -48,27 +49,15 @@ export function PartnersView() {
         error={error}
         actions={(p) => (
           <div className="flex items-center justify-end gap-1.5">
-            <button
-              onClick={() => setBulk({ role: "STUDENT", id: p.id, label: p.organization ?? p.username })}
-              className="rounded-md p-1.5 text-white/40 hover:bg-white/10 hover:text-white"
-              title="Import students"
-            >
+            <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Import students" onClick={() => setBulk({ role: "STUDENT", id: p.id, label: p.organization ?? p.username })}>
               <GraduationCap size={15} />
-            </button>
-            <button
-              onClick={() => setBulk({ role: "TEACHER", id: p.id, label: p.organization ?? p.username })}
-              className="rounded-md p-1.5 text-white/40 hover:bg-white/10 hover:text-white"
-              title="Import teachers"
-            >
+            </Button>
+            <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Import teachers" onClick={() => setBulk({ role: "TEACHER", id: p.id, label: p.organization ?? p.username })}>
               <Presentation size={15} />
-            </button>
-            <button
-              onClick={() => setEditing(p)}
-              className="rounded-md p-1.5 text-white/40 hover:bg-white/10 hover:text-white"
-              title="Edit"
-            >
+            </Button>
+            <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Edit" onClick={() => setEditing(p)}>
               <Pencil size={15} />
-            </button>
+            </Button>
           </div>
         )}
       />

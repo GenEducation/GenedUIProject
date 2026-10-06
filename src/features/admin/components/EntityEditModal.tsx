@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 
 export interface EditField {
@@ -84,19 +85,12 @@ export function EntityEditModal({ title, fields, initial, onClose, onSave }: Pro
             </div>
           ) : null}
           <div className="flex justify-end gap-3 pt-2">
-            <button
-              onClick={onClose}
-              className="rounded-lg px-4 py-2.5 text-sm font-semibold text-white/60 hover:text-white"
-            >
+            <Button variant="tertiary" tone="onDark" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              onClick={save}
-              disabled={saving}
-              className="rounded-lg bg-[#059F6D] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
-            >
-              {saving ? "Saving…" : "Save"}
-            </button>
+            </Button>
+            <Button variant="primary" tone="onDark" loading={saving} onClick={save}>
+              Save
+            </Button>
           </div>
         </div>
       </div>

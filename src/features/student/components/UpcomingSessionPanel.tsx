@@ -80,11 +80,11 @@ export function UpcomingSessionPanel({ session, style }: UpcomingSessionPanelPro
 
   return (
     <div
-      className="rounded-[20px] relative overflow-hidden mb-8"
+      className="rounded-[22px] relative overflow-hidden mb-8"
       style={{
         background: C.card,
         border: `1px solid ${C.border}`,
-        padding: "clamp(16px, 2vw, 24px)",
+        padding: "clamp(18px, 2.4vw, 28px)",
         boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
         ...style,
       }}
@@ -93,7 +93,7 @@ export function UpcomingSessionPanel({ session, style }: UpcomingSessionPanelPro
         className="absolute top-0 left-0 w-1 h-full"
         style={{
           background: `linear-gradient(to bottom, ${C.tutor}, ${C.tutorSoft})`,
-          borderRadius: "20px 0 0 20px",
+          borderRadius: "22px 0 0 22px",
         }}
       />
 

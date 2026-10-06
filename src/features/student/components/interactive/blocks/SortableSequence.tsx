@@ -71,7 +71,7 @@ export default function SortableSequence({ directiveId, meta, disabled, readOnly
   const it = meta?.interaction_type || "order";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ order?: string[] }>(directiveId, it, allowRetry);
 
   // An ordering activity must NOT present items already in answer order, or the
   // student can "solve" it by clicking Check without doing anything. Shuffle the

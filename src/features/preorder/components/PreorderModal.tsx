@@ -7,6 +7,7 @@ import { createPreorder, verifyPreorder } from "../services/preorderService";
 import { loadRazorpayScript } from "@/features/billing/loadRazorpayScript";
 import { ApiRequestError } from "@/utils/authFetch";
 import { Select, type SelectOption } from "@/components/ui/Select";
+import { getRazorpay, type RazorpayHandlerResponse } from "@/features/billing/loadRazorpayScript";
 
 interface Props {
   isOpen: boolean;
@@ -151,7 +152,9 @@ export function PreorderModal({ isOpen, onClose }: Props) {
         return;
       }
 
-      const rzp = new (window as any).Razorpay({
+      const Razorpay = getRazorpay();
+      if (!Razorpay) throw new Error("Razorpay checkout script is not available");
+      const rzp = new Razorpay({
         key: order.key_id,
         amount: order.amount,
         currency: order.currency,
@@ -166,7 +169,7 @@ export function PreorderModal({ isOpen, onClose }: Props) {
         theme: {
           color: "#059F6D",
         },
-        handler: async (response: any) => {
+        handler: async (response: RazorpayHandlerResponse) => {
           try {
             const result = await verifyPreorder({
               reference: order.reference,

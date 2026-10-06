@@ -15,11 +15,12 @@ export const STRINGS = {
     schedule: "Schedule",
     reportCard: "Report Card",
     me: "Me",
+    profile: "Profile",
   },
 
   streak: {
-    dayStreak: "Day Streak",
-    sessions: "Sessions",
+    dayStreak: "Current Streak",
+    sessions: "Sessions Done",
     longestStreak: "Longest Streak",
   },
 

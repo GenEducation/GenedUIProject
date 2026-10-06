@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 
 import { signIn } from "@/features/auth/authService";
+import { Button } from "@/components/ui/Button";
 
 /**
  * Dedicated admin console login. Separate from the public login flow:
@@ -93,7 +94,7 @@ export default function AdminLoginPage() {
                 placeholder="••••••••"
                 className="w-full rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm text-white transition-all duration-200 placeholder:text-white/25 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/20"
               />
-              <button
+              <button aria-label={showPassword ? "Hide password" : "Show password"}
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-[#059F6D] transition-colors"
@@ -109,13 +110,9 @@ export default function AdminLoginPage() {
             </div>
           ) : null}
 
-          <button
-            type="submit"
-            disabled={isSigningIn}
-            className="w-full rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/30"
-          >
-            {isSigningIn ? "Signing in…" : "Sign in to console"}
-          </button>
+          <Button type="submit" size="lg" fullWidth loading={isSigningIn}>
+            Sign in to console
+          </Button>
         </form>
       </div>
     </div>

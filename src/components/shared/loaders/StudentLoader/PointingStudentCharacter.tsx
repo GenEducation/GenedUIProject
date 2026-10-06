@@ -11,7 +11,7 @@ interface PointingStudentCharacterProps {
 export const PointingStudentCharacter: React.FC<PointingStudentCharacterProps> = ({ direction, className = "" }) => {
   // Determine arm rotations based on pointing direction
   let leftArmRotate = -45; // Default resting
-  let rightArmRotate = 5;
+  const rightArmRotate = 5;
 
   switch (direction) {
     case "up":

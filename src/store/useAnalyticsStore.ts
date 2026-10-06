@@ -1,11 +1,15 @@
 import { create } from "zustand";
-import { studentService } from "@/features/student/services/studentService";
+import {
+  studentService,
+  type ChapterMastery,
+} from "@/features/student/services/studentService";
 import {
   loadSubjectCatalog,
   requireExactSubject,
   type ExactSubject,
   type TaxonomySubject,
 } from "@/features/subjects/subjectCatalog";
+import { asError } from "@/utils/errors";
 
 // -- Types --------------------------------------------------------------------
 
@@ -41,14 +45,37 @@ export interface OverallHistoryPoint {
 
 // -- Store Interface ----------------------------------------------------------
 
+/** One learning objective under a concept, as returned by the skill-tree API. */
+export interface SkillTreeLo {
+  skill_name?: string;
+  mastery_level?: number;
+  assessment_count?: number;
+  justification?: string;
+}
+
+/** A concept groups the learning objectives assessed together. */
+export interface SkillTreeConcept {
+  c_id: string;
+  c_name?: string;
+  los?: SkillTreeLo[];
+}
+
+/** A concept group is the top level of the skill tree. */
+export interface SkillTreeConceptGroup {
+  cg_id: string;
+  cg_name?: string;
+  avg_mastery?: number;
+  concepts?: SkillTreeConcept[];
+}
+
 interface AnalyticsState {
   isAnalyticsOpen: boolean;
   analyticsSubjects: ExactSubject[];
   selectedAnalyticsSubject: ExactSubject | "";
   skillSummary: SkillSummary | null;
   cgScores: Array<{ cg_id: string; cg_name: string; avg_mastery: number }>;
-  skillTree: any[];
-  analyticsChapterMastery: any[];
+  skillTree: SkillTreeConceptGroup[];
+  analyticsChapterMastery: ChapterMastery[];
   isAnalyticsLoading: boolean;
 
   // Skill Progression state
@@ -64,9 +91,10 @@ interface AnalyticsState {
   fetchSkillProgressionData: (subject?: string, studentIdOverride?: string) => Promise<void>;
 }
 
-function extractExactSubjects(data: any, catalog: TaxonomySubject[]): ExactSubject[] {
+function extractExactSubjects(data: unknown, catalog: TaxonomySubject[]): ExactSubject[] {
   const subjects = new Set<ExactSubject>();
-  for (const partner of Array.isArray(data?.partners) ? data.partners : []) {
+  const partners = (data as { partners?: unknown })?.partners;
+  for (const partner of Array.isArray(partners) ? partners : []) {
     for (const group of Array.isArray(partner?.subjects) ? partner.subjects : []) {
       for (const agent of Array.isArray(group?.agents) ? group.agents : []) {
         try {
@@ -114,9 +142,9 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       if (subjects.length > 0 && !get().selectedAnalyticsSubject) {
         set({ selectedAnalyticsSubject: subjects[0] });
       }
-    } catch (error: any) {
-      if (error?.name === "AbortError") return;
-      console.error("Fetch Analytics Subjects Error:", error?.request_id, error?.message ?? error);
+    } catch (error) {
+      if (asError(error).name === "AbortError") return;
+      console.error("Fetch Analytics Subjects Error:", asError(error).request_id, asError(error).message ?? error);
     }
   },
 
@@ -143,8 +171,8 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
         if (subjects.length > 0) {
           get().fetchAnalyticsData(subjects[0], studentIdOverride);
         }
-      } catch (error: any) {
-        console.error("Fetch Analytics Subjects Error:", error?.request_id, error?.message ?? error);
+      } catch (error) {
+        console.error("Fetch Analytics Subjects Error:", asError(error).request_id, asError(error).message ?? error);
       }
       return;
     }
@@ -180,8 +208,8 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
         }
       });
 
-    } catch (error: any) {
-      console.error("Fetch Analytics Data Critical Error:", error?.request_id, error?.message ?? error);
+    } catch (error) {
+      console.error("Fetch Analytics Data Critical Error:", asError(error).request_id, asError(error).message ?? error);
       set({ isAnalyticsLoading: false });
     }
   },
@@ -223,8 +251,8 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       if (profileRes.status === "rejected") {
         console.error("Skill Profile History fetch failed:", profileRes.reason?.request_id, profileRes.reason?.message ?? profileRes.reason);
       }
-    } catch (error: any) {
-      console.error("fetchSkillProgressionData Critical Error:", error?.request_id, error?.message ?? error);
+    } catch (error) {
+      console.error("fetchSkillProgressionData Critical Error:", asError(error).request_id, asError(error).message ?? error);
       set({ isProgressionLoading: false });
     }
   },

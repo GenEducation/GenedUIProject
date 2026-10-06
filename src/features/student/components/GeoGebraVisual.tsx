@@ -1,11 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ensureGeoGebraLoaded } from "@/utils/geogebraLoader";
+import {
+  ensureGeoGebraLoaded,
+  getGGBApplet,
+  type GeoGebraApi,
+  type GeoGebraAppletParameters,
+} from "@/utils/geogebraLoader";
 
 interface GeoGebraVisualProps {
   id: string;
   commands: string[];
-  options?: any;
+  options?: GeoGebraAppletParameters;
 }
+
+/** Display caps, matching P5Visual — see the note there. */
+const MAX_WIDTH = 480;
+const MAX_HEIGHT = 340;
 
 export function GeoGebraVisual({ id, commands, options = {} }: GeoGebraVisualProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -13,7 +22,7 @@ export function GeoGebraVisual({ id, commands, options = {} }: GeoGebraVisualPro
   const containerId = `ggb-${id.replace(/[^a-zA-Z0-9]/g, "-")}`;
 
   useEffect(() => {
-    let apiInstance: any = null;
+    let apiInstance: GeoGebraApi | null = null;
     let isMounted = true;
 
     async function loadApplet() {
@@ -21,7 +30,7 @@ export function GeoGebraVisual({ id, commands, options = {} }: GeoGebraVisualPro
         await ensureGeoGebraLoaded();
         if (!isMounted) return;
 
-        const params = {
+        const params: GeoGebraAppletParameters = {
           appName: "classic",
           width: 600, // Applet width will scale down via CSS 100% or GeoGebra handles it
           height: 320,
@@ -33,7 +42,7 @@ export function GeoGebraVisual({ id, commands, options = {} }: GeoGebraVisualPro
           preventFocus: true,
           scaleContainerClass: 'geogebra-container',
           ...options,
-          appletOnLoad: (api: any) => {
+          appletOnLoad: (api: GeoGebraApi) => {
             if (!isMounted) {
                api.remove();
                return;
@@ -69,8 +78,9 @@ export function GeoGebraVisual({ id, commands, options = {} }: GeoGebraVisualPro
           },
         };
 
-        // @ts-ignore
-        const applet = new window.GGBApplet(params, true);
+        const GGBApplet = getGGBApplet();
+        if (!GGBApplet) throw new Error("GeoGebra deployggb.js did not install GGBApplet");
+        const applet = new GGBApplet(params, true);
         applet.inject(containerId);
       } catch (err) {
         console.error("Failed to load GeoGebra applet", err);
@@ -92,8 +102,18 @@ export function GeoGebraVisual({ id, commands, options = {} }: GeoGebraVisualPro
     };
   }, [commands, options, containerId]);
 
+  // The applet is injected at these dimensions (see params above), so the
+  // container takes the same proportions and the applet fills it exactly.
+  const ratio = (options.width ?? 600) / (options.height ?? 320);
+
   return (
-    <div className="w-full min-h-[200px] relative flex items-center justify-center overflow-hidden geogebra-container">
+    <div
+      className="relative flex items-center justify-center overflow-hidden geogebra-container"
+      style={{
+        width: `min(100%, ${MAX_WIDTH}px, ${Math.round(MAX_HEIGHT * ratio)}px)`,
+        aspectRatio: String(ratio),
+      }}
+    >
       {loading && (
         <div className="absolute inset-0 z-10" style={{ background: "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }}>
           <style>{`

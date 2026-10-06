@@ -51,7 +51,7 @@ export function usePrintPdf({ data, role, filename }: { data: ReportCardData; ro
     // button — fall through after 1.5s and print with whatever fonts loaded.
     await new Promise((r) => setTimeout(r, 60));
     try {
-      const fontsReady = (document as any).fonts?.ready ?? Promise.resolve();
+      const fontsReady = document.fonts?.ready ?? Promise.resolve();
       await Promise.race([fontsReady, new Promise((r) => setTimeout(r, 1500))]);
     } catch {
       /* fonts API unavailable — proceed */

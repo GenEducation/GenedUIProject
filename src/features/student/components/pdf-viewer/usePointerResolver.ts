@@ -87,7 +87,7 @@ export function usePointerResolver({
       const tc = await pg.getTextContent();
       pg.cleanup();
       const items = tc.items.filter(
-        (it: any) => typeof it?.str === "string"
+        (it) => typeof (it as TextItemLike)?.str === "string"
       ) as TextItemLike[];
       textCache.current.set(pageNum, items);
       return items;

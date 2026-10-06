@@ -14,10 +14,10 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useParentStore } from "../store/useParentStore";
+import { useParentStore, type ParentProfile } from "../store/useParentStore";
 import { UnlinkConfirmationModal } from "./UnlinkConfirmationModal";
 
-export function ParentProfileView({ profile }: { profile: any }) {
+export function ParentProfileView({ profile }: { profile?: ParentProfile | null }) {
   const linkedStudents = useParentStore((state) => state.linkedStudents);
   const updateStudentStatus = useParentStore((state) => state.updateStudentStatus);
   const unlinkStudent = useParentStore((state) => state.unlinkStudent);
@@ -111,13 +111,13 @@ export function ParentProfileView({ profile }: { profile: any }) {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
+                    <button aria-label="Approve request"
                       onClick={() => updateStudentStatus(request.student_id, "APPROVED")}
                       className="p-3 rounded-xl bg-[#059669] text-white hover:bg-[#047857] transition-all shadow-sm hover:shadow-md active:scale-95"
                     >
                       <Check size={18} strokeWidth={3} />
                     </button>
-                    <button
+                    <button aria-label="Reject request"
                       onClick={() => updateStudentStatus(request.student_id, "REJECTED")}
                       className="p-3 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-all border border-red-500/10 active:scale-95"
                     >
@@ -162,7 +162,7 @@ export function ParentProfileView({ profile }: { profile: any }) {
                         </div>
                       </div>
                     </div>
-                    <button 
+                    <button aria-label="Remove Student" 
                       onClick={() => {
                         setUnlinkModal({
                           isOpen: true,
@@ -188,7 +188,7 @@ export function ParentProfileView({ profile }: { profile: any }) {
               ))
             ) : (
               <div className="col-span-1 md:col-span-2 bg-white/50 border border-dashed border-[#1a3a2a]/10 rounded-[32px] p-12 text-center">
-                <p className="text-sm font-bold text-[#1a3a2a]/20 italic">You haven't linked any students yet</p>
+                <p className="text-sm font-bold text-[#1a3a2a]/20 italic">You haven&apos;t linked any students yet</p>
               </div>
             )}
           </div>

@@ -5,6 +5,7 @@ import {
   requireLoadedExactSubject,
   type ExactSubject,
 } from "@/features/subjects/subjectCatalog";
+import { asError } from "@/utils/errors";
 
 export interface Student {
   id: string;
@@ -22,6 +23,33 @@ export interface Subject {
   board?: string;
   status: "active" | "in-progress" | "failed";
   chapters?: number;
+}
+
+/**
+ * `/partner/students` returns student rows followed by a trailing metadata
+ * object carrying the *_count fields, so the array is heterogeneous.
+ */
+interface PartnerStudentRow {
+  id: string;
+  username: string;
+  grade: number | string;
+  status: "APPROVED" | "PENDING";
+}
+
+interface PartnerStudentsMeta {
+  approved_count?: number;
+  pending_count?: number;
+}
+
+/** One row of the `/partner/subjects` ingestion listing. */
+interface IngestionRow {
+  ingestion_batch_id: string;
+  subject: string;
+  document_title: string;
+  grade: string | number;
+  board?: string;
+  status: string;
+  chunks_created?: number;
 }
 
 export interface SubjectFilters {
@@ -259,11 +287,11 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       }
 
       set({ viewerPdfUrl: data.pdf_url, isViewerLoading: false });
-    } catch (error: any) {
+    } catch (error) {
       console.error("openIngestedPdf error:", error);
       set({
         isViewerLoading: false,
-        viewerError: error?.message || "PDF not available for this document.",
+        viewerError: asError(error).message || "PDF not available for this document.",
       });
     }
   },
@@ -286,15 +314,19 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       );
       if (!res.ok) throw new Error("Failed to fetch students");
 
-      const raw: any[] = await res.json();
+      const raw: Array<PartnerStudentRow | PartnerStudentsMeta> = await res.json();
 
       // Extract the trailing metadata object (which contains *_count)
-      const metaObj = raw.find((item) => "pending_count" in item);
+      const metaObj = raw.find(
+        (item): item is PartnerStudentsMeta => "pending_count" in item
+      );
       const totalEnrollments = metaObj?.approved_count ?? 0;
       const pendingCount = metaObj?.pending_count ?? 0;
 
       // Filter out the metadata trailer to parse strictly students
-      const studentItems = raw.filter((item) => "id" in item && "username" in item);
+      const studentItems = raw.filter(
+        (item): item is PartnerStudentRow => "id" in item && "username" in item
+      );
 
       const approved: Student[] = [];
       const pending: Student[] = [];
@@ -425,7 +457,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       }
 
       const data = await res.json();
-      const items: any[] = data.items ?? [];
+      const items: IngestionRow[] = data.items ?? [];
 
       const mappedSubjects: Subject[] = items.map((item) => ({
         id: item.ingestion_batch_id,
@@ -439,7 +471,10 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
             ? "in-progress"
             : item.status === "failed"
               ? "failed"
-              : item.status,
+              // Any other backend status falls through unmapped. It is not one of
+              // the three UI states, so the cast records the existing behaviour
+              // rather than silently reclassifying the row.
+              : (item.status as Subject["status"]),
         chapters: item.chunks_created ?? 0,
       }));
 
@@ -575,11 +610,11 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
             : s
         ),
       }));
-    } catch (error: any) {
+    } catch (error) {
       // Don't treat abort as an error that marks as failed
-      if (error.name === 'AbortError') return;
+      if (asError(error).name === 'AbortError') return;
 
-      const status = error?.status;
+      const status = asError(error).status;
       
       // Per user request: 429 and 504 errors should be ignored completely.
       // Do not update the state or show as failed.

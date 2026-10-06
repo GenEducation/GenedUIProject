@@ -1,6 +1,7 @@
 "use client";
 
 import { PartnerRequestModal } from "@/features/student/components/PartnerRequestModal";
+import { TestReadyModal } from "@/features/student/components/TestReadyModal";
 import { CompleteProfileBanner } from "@/features/student/components/CompleteProfileBanner";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
@@ -79,6 +80,10 @@ export default function StudentLayout({
 
       {/* Global Student Modals */}
       <PartnerRequestModal />
+
+      {/* Asks what to do with a test that finished generating — mounted here
+          because generation often outlives the page that started it. */}
+      <TestReadyModal />
 
       {/* Profile completion prompt for new users — home page only */}
       {isProfileIncomplete && isHomePage && (

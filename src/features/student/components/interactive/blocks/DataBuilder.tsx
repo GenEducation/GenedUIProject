@@ -14,7 +14,7 @@ export default function DataBuilder({ directiveId, meta, disabled, readOnly }: I
   const it = meta?.interaction_type || "build";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ values?: Record<string, number> }>(directiveId, it, allowRetry);
 
   const initValues: Record<string, number> = studentAnswer?.values || Object.fromEntries(categories.map((c) => [c, 0]));
   const [values, setValues] = useState<Record<string, number>>(initValues);

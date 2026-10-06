@@ -52,10 +52,10 @@ export default function LoginPage() {
         username: token.username || "",
         email: token.email || "",
         role: token.role || "TEACHER",
-        full_name: (token as any).full_name || token.username || "",
-        title: (token as any).title || "",
-        subjects: (token as any).subjects || [],
-        partner_id: (token as any).partner_id,
+        full_name: token.full_name || token.username || "",
+        title: token.title || "",
+        subjects: token.subjects || [],
+        partner_id: token.partner_id,
       });
     } else if (role === "student") {
       useStudentStore.getState().setStudentProfile({

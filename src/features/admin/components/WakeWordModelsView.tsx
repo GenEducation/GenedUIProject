@@ -13,6 +13,7 @@ import {
   WakewordReport,
 } from "../adminService";
 import { DataTable, Column } from "./DataTable";
+import { Button } from "@/components/ui/Button";
 
 const STATUS_STYLES: Record<string, string> = {
   SUCCEEDED: "bg-[#059F6D]/15 text-[#059F6D]",
@@ -137,12 +138,9 @@ export function WakeWordModelsView() {
                   {reportFor.phrase} · {reportFor.model_name}
                 </p>
               </div>
-              <button
-                onClick={() => setReportFor(null)}
-                className="rounded-md p-1.5 text-white/50 hover:bg-white/5 hover:text-white"
-              >
+              <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Close report" onClick={() => setReportFor(null)}>
                 <X size={18} />
-              </button>
+              </Button>
             </div>
 
             <div className="overflow-auto px-6 py-5">

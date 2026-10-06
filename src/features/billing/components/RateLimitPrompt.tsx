@@ -5,6 +5,7 @@ import { X, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { UpgradeButton } from "../UpgradeButton";
+import { Button } from "@/components/ui/Button";
 
 interface RateLimitPromptProps {
   isVisible: boolean;
@@ -36,12 +37,9 @@ export const RateLimitPrompt: React.FC<RateLimitPromptProps> = ({ isVisible, onC
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[80px] pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#03b1ed]/10 blur-[60px] pointer-events-none" />
 
-            <button 
-              onClick={onClose}
-              className="absolute top-6 right-6 w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-all text-white/30 hover:text-white"
-            >
+            <Button iconOnly size="sm" variant="tertiary" className="absolute top-6 right-6" aria-label="Close" onClick={onClose}>
               <X size={16} strokeWidth={2.5} />
-            </button>
+            </Button>
 
             <div className="flex items-center gap-8">
               <div className="flex flex-1 items-center gap-5">

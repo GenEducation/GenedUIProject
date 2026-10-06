@@ -71,6 +71,7 @@
   --danger-2-active: #c2453e;
   --danger-2-soft: rgba(232, 99, 90, 0.08);
   --danger-2-border: rgba(232, 99, 90, 0.2);
+  --danger-2-on-dark: #F8A9A2;               /* lifted for dark admin/partner shells */
   --btn-neutral-border: rgba(4, 46, 92, 0.12);
   --btn-neutral-hover: rgba(4, 46, 92, 0.05);
   --btn-disabled-opacity: 0.45;   /* one value, replacing opacity-30/40/50/60/70 */
@@ -111,15 +112,15 @@
 }
 
 /* Student app + onboarding + auth type system, declared on `body` (not
-   :root) because next/font's --font-baloo/--font-mukta/etc. variables are
+   :root) because next/font's --font-jakarta/--font-mukta/etc. variables are
    themselves attached via CSS-module classes on <body> in layout.tsx.
    Custom properties only see var() references defined on the SAME element
-   or an ancestor — :root is body's ancestor, so a var(--font-baloo)
+   or an ancestor — :root is body's ancestor, so a var(--font-jakarta)
    reference declared on :root would be invalid at that scope and the whole
    property would compute to nothing. Declaring them here, alongside the
    variables they reference, keeps every var() resolvable. */
 body {
-  --font-display: var(--font-baloo), ui-sans-serif, system-ui;
+  --font-display: var(--font-jakarta), var(--font-mukta), ui-sans-serif, system-ui;
   --font-body: var(--font-mukta), ui-sans-serif, system-ui;
   /* Report Card "document" typography — distinct on purpose. */
   --font-report-display: var(--font-source-serif), Georgia, serif;
@@ -193,6 +194,19 @@ h1, h2, h3, h4, h5, h6 {
 * {
   scrollbar-width: thin;
   scrollbar-color: #E0F2FE transparent;
+}
+
+/* Button loading spinner. Deliberately NOT Tailwind's `animate-spin`: tests
+   assert on `.animate-spin` to detect a page's own loading state, and a Button
+   in those trees would otherwise match that selector. See Button.tsx Spinner. */
+@keyframes btnSpin {
+  to { transform: rotate(360deg); }
+}
+.btn-spinner {
+  animation: btnSpin 0.7s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-spinner { animation-duration: 2s; }
 }
 
 /* Streaming cursor blink animation — used by ChatMessageBubble */

@@ -69,7 +69,7 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailab
               slow
             </button>
           )}
-          <button
+          <button aria-label="Tap to hear pronunciation"
             onClick={() => handlePlay(false)}
             disabled={isPlaying}
             title="Tap to hear pronunciation"

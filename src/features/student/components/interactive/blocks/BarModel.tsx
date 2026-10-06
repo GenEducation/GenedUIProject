@@ -15,7 +15,7 @@ export default function BarModel({ directiveId, meta, disabled, readOnly }: Inte
   const it = meta?.interaction_type || "place_point";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ value?: number }>(directiveId, it, allowRetry);
 
   const initUnits = typeof studentAnswer?.value === "number" ? Math.round((studentAnswer.value / whole) * ticks) : 0;
   const [units, setUnits] = useState<number>(initUnits);

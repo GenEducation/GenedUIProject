@@ -64,7 +64,7 @@ export function ChapterPdfViewer({ pdfUrl, chapterName, onClose }: ChapterPdfVie
           </div>
         </div>
 
-        <button
+        <button aria-label="Close textbook"
           onClick={onClose}
           title="Close textbook"
           className="flex items-center justify-center rounded-lg transition-colors hover:bg-gray-100 flex-shrink-0"

@@ -1,3 +1,5 @@
+import type { ChapterMastery } from "@/features/student/services/studentService";
+
 // Shared data shapes for the student report card and its print/PDF layout.
 // Scores from the API are 0–1 floats (multiply by 100 for display) EXCEPT
 // ChapterMasteryItem.completion_percentage, which is already 0–100.
@@ -10,21 +12,8 @@ export interface SubjectData {
   session_count: number;
 }
 
-export interface ChapterMasteryItem {
-  subject: string;
-  document_title: string;
-  completion_percentage: number;
-  mastery_score: number;
-  study_count: number;
-  grade: number;
-  chapter_report?: string | null;
-  status?: string | null;
-  is_curriculum?: boolean;
-  is_system?: boolean;
-  is_placeholder?: boolean;
-  time_minutes?: number;
-  time_sessions?: number;
-}
+/** The `/chapter-mastery` row. Defined in the service that fetches it. */
+export type ChapterMasteryItem = ChapterMastery;
 
 export interface SkillLOItem {
   skill_id: string;
@@ -68,6 +57,75 @@ export interface DashboardProfile {
   avatar_initials: string;
 }
 
+/**
+ * AI-authored analysis payloads (`analysis_json` / `report_json`).
+ *
+ * The generator's schema is not pinned and has drifted between runs, so every
+ * field is optional and the UI falls back across several spellings for the
+ * same value (`dimension_name` / `dimension` / `name`, and so on). These types
+ * record the fields the report card actually reads; unknown extras are simply
+ * ignored.
+ */
+export interface AnalysisDimension {
+  delta?: number;
+  dimension_name?: string;
+  dimension?: string;
+  name?: string;
+  key_observation?: string;
+  analysis?: string;
+  desc?: string;
+}
+
+export interface AnalysisSession {
+  overall_score?: number;
+  tutor_observations?: string[];
+  observations?: string[];
+  stage_label?: string;
+}
+
+export interface AnalysisPattern {
+  pattern_name?: string;
+  summary?: string;
+  description?: string;
+  is_positive?: boolean;
+  subjects?: string[] | string;
+}
+
+export interface AnalysisRecommendation {
+  action?: string;
+  recommendation?: string;
+  text?: string;
+}
+
+export interface AnalysisFocusArea {
+  priority?: string;
+  area?: string;
+  suggested_approach?: string;
+  rationale?: string;
+  subject?: string;
+}
+
+/** Shape of `analysis_json` on chapter and subject evolution records. */
+export interface EvolutionAnalysisJson {
+  dimension_analyses?: AnalysisDimension[];
+  dimensions?: AnalysisDimension[];
+  per_conversation?: AnalysisSession[];
+  universal_strengths?: string[];
+  universal_weaknesses?: string[];
+  subject_strengths?: string[];
+  subject_weaknesses?: string[];
+  cross_chapter_patterns?: AnalysisPattern[];
+  recommendations?: (string | AnalysisRecommendation)[];
+}
+
+/** Shape of `report_json` on the overall student progress record. */
+export interface StudentProgressJson {
+  universal_strengths?: string[];
+  universal_weaknesses?: string[];
+  focus_areas?: AnalysisFocusArea[];
+  cross_subject_patterns?: AnalysisPattern[];
+}
+
 export interface EvolutionAnalysisData {
   student_id: string;
   subject: string;
@@ -76,7 +134,7 @@ export interface EvolutionAnalysisData {
   adapted: boolean | null;
   headline: string | null;
   skill_score_trajectory: string | null;
-  analysis_json: Record<string, any> | null;
+  analysis_json: EvolutionAnalysisJson | null;
   analysis_markdown: string | null;
   updated_at: string | null;
 }
@@ -88,7 +146,7 @@ export interface SubjectEvolutionData {
   overall_adapted: boolean | null;
   headline: string | null;
   subject_skill_trajectory: string | null;
-  analysis_json: Record<string, any> | null;
+  analysis_json: EvolutionAnalysisJson | null;
   analysis_markdown: string | null;
   updated_at: string | null;
 }
@@ -99,7 +157,7 @@ export interface StudentProgressData {
   headline: string | null;
   overall_assessment: string | null;
   tutor_effectiveness: string | null;
-  report_json: Record<string, any> | null;
+  report_json: StudentProgressJson | null;
   report_markdown: string | null;
   updated_at: string | null;
 }

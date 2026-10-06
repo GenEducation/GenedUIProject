@@ -15,7 +15,7 @@ export default function ArrayBuilder({ directiveId, meta, disabled, readOnly }: 
   const it = meta?.interaction_type || "build";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ rows?: number; cols?: number }>(directiveId, it, allowRetry);
 
   const [rows, setRows] = useState<number>(studentAnswer?.rows ?? 1);
   const [cols, setCols] = useState<number>(studentAnswer?.cols ?? 1);

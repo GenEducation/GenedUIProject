@@ -5,6 +5,7 @@ import { Pencil } from "lucide-react";
 import { listParents, updateParent, ParentRow } from "../adminService";
 import { DataTable, Column } from "./DataTable";
 import { EntityEditModal } from "./EntityEditModal";
+import { Button } from "@/components/ui/Button";
 
 const columns: Column<ParentRow>[] = [
   { key: "username", header: "Username" },
@@ -42,13 +43,9 @@ export function ParentsView() {
         loading={loading}
         error={error}
         actions={(p) => (
-          <button
-            onClick={() => setEditing(p)}
-            className="rounded-md p-1.5 text-white/40 hover:bg-white/10 hover:text-white"
-            title="Edit"
-          >
+          <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Edit" onClick={() => setEditing(p)}>
             <Pencil size={15} />
-          </button>
+          </Button>
         )}
       />
       {editing && (

@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, AlertTriangle, BookOpen, GraduationCap, Loader2 } from "lucide-react";
+import { X, AlertTriangle, BookOpen, GraduationCap } from "lucide-react";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { TimePicker } from "@/components/ui/TimePicker";
 import { SessionType } from "@/features/student/types/schedule";
 import { bookingWindowEnd, tomorrowDateString } from "@/utils/datetime";
+import { Button } from "@/components/ui/Button";
 
 export interface RescheduleModalTarget {
   id: string; // scheduled_session row id
@@ -98,26 +99,9 @@ export function RescheduleModal({
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: `${themeColor}1a` }}>
                 <h3 className="text-xl font-black" style={{ color: themeColor }}>Reschedule Session</h3>
-                <button
-                  onClick={handleClose}
-                  disabled={isSubmitting}
-                  className="p-2 rounded-xl transition-colors disabled:opacity-50"
-                  style={{ color: `${themeColor}4d` }}
-                  onMouseEnter={(e) => {
-                    if (!isSubmitting) {
-                      e.currentTarget.style.backgroundColor = `${themeColor}0d`;
-                      e.currentTarget.style.color = themeColor;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSubmitting) {
-                      e.currentTarget.style.backgroundColor = "";
-                      e.currentTarget.style.color = `${themeColor}4d`;
-                    }
-                  }}
-                >
+                <Button iconOnly size="sm" variant="tertiary" aria-label="Close" onClick={handleClose} disabled={isSubmitting} style={{ color: `${themeColor}4d` }} onMouseEnter={(e) => { if (!isSubmitting) { e.currentTarget.style.backgroundColor = `${themeColor}0d`; e.currentTarget.style.color = themeColor; } }} onMouseLeave={(e) => { if (!isSubmitting) { e.currentTarget.style.backgroundColor = ""; e.currentTarget.style.color = `${themeColor}4d`; } }}>
                   <X size={20} />
-                </button>
+                </Button>
               </div>
 
               <div className="p-6 space-y-6 relative z-10">
@@ -176,47 +160,33 @@ export function RescheduleModal({
 
               {/* Footer */}
               <div className="p-6 border-t flex gap-3 rounded-b-[32px]" style={{ borderColor: `${themeColor}1a`, backgroundColor: `${themeColor}05` }}>
-                <button
-                  onClick={handleClose}
+                {/*
+                  `themeColor` still tints this dialog's chrome (border, header,
+                  footer wash) but no longer fills these buttons: subject colours
+                  may tint icons, progress bars, and card headers, never a button
+                  fill. Hover/active come from the component now — this pair used
+                  hand-written onMouseEnter/Leave handlers, which never fired for
+                  keyboard users.
+                */}
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="flex-1"
                   disabled={isSubmitting}
-                  className="flex-1 py-3.5 px-4 rounded-2xl bg-white text-sm font-black uppercase tracking-widest transition-all disabled:opacity-50"
-                  style={{ color: themeColor, border: `1px solid ${themeColor}1a` }}
-                  onMouseEnter={(e) => {
-                    if (!isSubmitting) e.currentTarget.style.backgroundColor = `${themeColor}05`;
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSubmitting) e.currentTarget.style.backgroundColor = "white";
-                  }}
+                  onClick={handleClose}
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="flex-[2]"
+                  loading={isSubmitting}
+                  disabled={!scheduledDate}
                   onClick={handleConfirm}
-                  disabled={isSubmitting || !scheduledDate}
-                  className="flex-[2] flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl text-white text-sm font-black uppercase tracking-widest transition-all disabled:opacity-50 shadow-lg"
-                  style={{ backgroundColor: themeColor, boxShadow: `0 8px 16px ${themeColor}33` }}
-                  onMouseEnter={(e) => {
-                    if (!isSubmitting && scheduledDate) {
-                      e.currentTarget.style.opacity = "0.9";
-                      e.currentTarget.style.transform = "translateY(-1px)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSubmitting && scheduledDate) {
-                      e.currentTarget.style.opacity = "1";
-                      e.currentTarget.style.transform = "translateY(0)";
-                    }
-                  }}
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin shrink-0" />
-                      Rescheduling...
-                    </>
-                  ) : (
-                    "Confirm Reschedule"
-                  )}
-                </button>
+                  Confirm Reschedule
+                </Button>
               </div>
               </motion.div>
             </div>

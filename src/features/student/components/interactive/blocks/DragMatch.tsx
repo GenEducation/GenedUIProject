@@ -65,7 +65,7 @@ export default function DragMatch({ directiveId, meta, disabled, readOnly }: Int
   const colors = ["#534AB7", "#1D9E75", "#D85A30", "#993556", "#185FA5"];
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ pairs?: string[][] }>(directiveId, it, allowRetry);
 
   const initial: Record<string, string> = {};
   if (Array.isArray(studentAnswer?.pairs)) studentAnswer.pairs.forEach((p: string[]) => { initial[p[1]] = p[0]; });

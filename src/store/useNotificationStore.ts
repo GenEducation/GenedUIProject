@@ -80,7 +80,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       console.log("🔔 [NotificationStore] Processing incoming data:", data);
 
       // Validate the incoming SSE data payload correctly
-      if (data && typeof data === 'object' && data.id) {
+      if (data && typeof data === 'object' && 'id' in data && data.id) {
         get().addNotification(data as Notification);
         if (isUserFacing(data as Notification)) {
           onNew?.(data as Notification);

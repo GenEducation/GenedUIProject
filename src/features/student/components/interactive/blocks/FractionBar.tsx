@@ -15,7 +15,7 @@ export default function FractionBar({ directiveId, meta, disabled, readOnly }: I
   const it = meta?.interaction_type || "select_cells";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ selected?: number[] }>(directiveId, it, allowRetry);
 
   const initial: number[] = Array.isArray(studentAnswer?.selected) ? studentAnswer.selected : (ans.shaded || []);
   const [selected, setSelected] = useState<number[]>(initial);

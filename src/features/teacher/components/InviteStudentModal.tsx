@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2 } from "lucide-react";
+import { X } from "lucide-react";
 import { useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
+import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 
 interface InviteStudentModalProps {
@@ -111,29 +112,16 @@ export function InviteStudentModal({ isOpen, onClose, onInvite }: InviteStudentM
               )}
             </div>
             <div className="flex justify-end gap-2.5 bg-paper px-6 py-4">
-              <button
-                onClick={handleClose}
-                disabled={isSubmitting}
-                className="rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-border disabled:opacity-50"
-              >
+              <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
                 Cancel
-              </button>
-              <button
-                onClick={handleSend}
-                disabled={isSubmitting}
-                className="flex items-center gap-2 rounded-xl bg-emerald px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald/20 transition-colors hover:bg-emerald-600 disabled:opacity-70"
-              >
-                {isSubmitting && <Loader2 size={15} className="animate-spin" />}
+              </Button>
+              <Button variant="primary" loading={isSubmitting} onClick={handleSend}>
                 Send invite
-              </button>
+              </Button>
             </div>
-            <button
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="absolute right-4 top-4 p-2 text-muted-light transition-colors hover:text-muted"
-            >
+            <Button iconOnly size="sm" variant="tertiary" className="absolute right-4 top-4" aria-label="Close" onClick={handleClose} disabled={isSubmitting}>
               <X size={18} />
-            </button>
+            </Button>
           </motion.div>
         </>
       )}

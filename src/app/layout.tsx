@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display, Baloo_2, Mukta, Source_Serif_4, JetBrains_Mono } from "next/font/google";
+import { Inter, Playfair_Display, Plus_Jakarta_Sans, Mukta, Source_Serif_4, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { GlobalLoader } from "@/components/shared/loaders/GlobalLoader";
 import { TutorialVideoModal } from "@/components/shared/TutorialVideoModal";
@@ -17,11 +17,12 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
 });
 
-// Student app + onboarding + auth type system. Both cover Devanagari so
-// Hindi subject/chapter content renders in-family instead of falling back.
-const baloo2 = Baloo_2({
-  variable: "--font-baloo",
-  subsets: ["latin", "devanagari"],
+// Student app + onboarding + auth type system. Jakarta is Latin-only, so
+// --font-display chains Mukta behind it (see globals.css) to keep Devanagari
+// headings in-family for Hindi subject/chapter content.
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
+  subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
 });
 
@@ -57,7 +58,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${playfair.variable} ${baloo2.variable} ${mukta.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} antialiased font-sans`}>
+      <body className={`${inter.variable} ${playfair.variable} ${jakarta.variable} ${mukta.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} antialiased font-sans`}>
         <GlobalLoader />
         {children}
         <TutorialVideoModal />

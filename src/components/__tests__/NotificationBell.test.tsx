@@ -65,7 +65,7 @@ describe("NotificationBell", () => {
     render(<NotificationBell userId="u1" />);
     await waitFor(() => expect(screen.getByText("1")).toBeInTheDocument());
 
-    fireEvent.click(screen.getAllByRole("button")[0]);
+    fireEvent.click(screen.getByRole("button", { name: /notifications/i }));
 
     expect(screen.getByText("New message")).toBeInTheDocument();
     expect(screen.getByText("You have a new update")).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe("NotificationBell", () => {
     render(<NotificationBell userId="u1" />);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 
-    fireEvent.click(screen.getAllByRole("button")[0]);
+    fireEvent.click(screen.getByRole("button", { name: /notifications/i }));
     expect(screen.getByText("No new notifications")).toBeInTheDocument();
   });
 
@@ -83,7 +83,7 @@ describe("NotificationBell", () => {
     fetchMock.mockResolvedValue([notif()]);
     render(<NotificationBell userId="u1" />);
     await waitFor(() => expect(screen.getByText("1")).toBeInTheDocument());
-    fireEvent.click(screen.getAllByRole("button")[0]);
+    fireEvent.click(screen.getByRole("button", { name: /notifications/i }));
 
     fireEvent.click(screen.getByRole("button", { name: /mark read/i }));
 

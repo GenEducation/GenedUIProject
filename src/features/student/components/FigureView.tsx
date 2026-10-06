@@ -82,7 +82,7 @@ export const FigureView = React.memo(({ uuid }: FigureViewProps) => {
       transition={{ duration: 0.5 }}
       src={src} 
       alt="Historical Figure" 
-      className="rounded-2xl border border-[#1a3a2a]/10 shadow-md w-full h-auto object-contain max-h-[500px] my-6 block mx-auto"
+      className="rounded-2xl border border-[#1a3a2a]/10 shadow-md w-full h-auto object-contain max-h-[340px] max-w-[480px] my-4 block"
     />
   );
 });

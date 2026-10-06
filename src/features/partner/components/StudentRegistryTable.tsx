@@ -5,6 +5,8 @@ import { Trash2 } from "lucide-react";
 import { usePartnerStore } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Skeleton } from "./Skeleton";
+import { Button } from "@/components/ui/Button";
+import { asError } from "@/utils/errors";
 
 export function StudentRegistryTable() {
   const students = usePartnerStore((state) => state.students);
@@ -23,8 +25,8 @@ export function StudentRegistryTable() {
     try {
       await removeStudent(deleteId);
       setDeleteId(null);
-    } catch (err: any) {
-      setDeleteError(err?.message || "Failed to delete. Please try again.");
+    } catch (err) {
+      setDeleteError(asError(err).message || "Failed to delete. Please try again.");
     } finally {
       setIsDeleting(false);
     }
@@ -90,15 +92,9 @@ export function StudentRegistryTable() {
                   </span>
                 </td>
                 <td className="py-2.5 md:py-3.5 text-right">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteId(student.id);
-                    }}
-                    className="p-2 text-[#1A3D2C]/20 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all inline-flex items-center justify-center translate-x-2"
-                  >
+                  <Button iconOnly size="sm" variant="destructive" aria-label="Delete" onClick={(e) => { e.stopPropagation(); setDeleteId(student.id); }}>
                     <Trash2 size={16} />
-                  </button>
+                  </Button>
                 </td>
               </tr>
             ))}

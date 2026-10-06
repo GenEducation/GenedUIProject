@@ -13,7 +13,7 @@ export default function AngleTool({ directiveId, meta, disabled, readOnly }: Int
   const it = meta?.interaction_type || "place_point";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ degrees?: number }>(directiveId, it, allowRetry);
 
   const [deg, setDeg] = useState<number>(studentAnswer?.degrees ?? render.base_ray_deg ?? 30);
   const lock = disabled || submitted;

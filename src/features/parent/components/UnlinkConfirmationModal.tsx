@@ -3,6 +3,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, X, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 interface UnlinkConfirmationModalProps {
   isOpen: boolean;
@@ -41,12 +42,9 @@ export function UnlinkConfirmationModal({
             >
               {/* Top Banner / Icon Area */}
               <div className="bg-red-50 p-8 flex flex-col items-center text-center relative border-b border-red-100/50">
-                <button 
-                  onClick={onClose}
-                  className="absolute top-6 right-6 p-2 rounded-xl hover:bg-white transition-colors text-[#1a3a2a]/30 hover:text-[#1a3a2a]"
-                >
+                <Button iconOnly size="sm" variant="tertiary" className="absolute top-6 right-6" aria-label="Close" onClick={onClose}>
                   <X size={20} />
-                </button>
+                </Button>
                 
                 <div className="w-20 h-20 rounded-[28px] bg-white flex items-center justify-center text-red-500 shadow-xl shadow-red-500/10 mb-6">
                   <Trash2 size={32} strokeWidth={2.5} />
@@ -66,21 +64,20 @@ export function UnlinkConfirmationModal({
                 </p>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={onClose}
-                    className="py-4 px-6 rounded-2xl bg-[#F4F3EE] text-[#1a3a2a] text-sm font-black uppercase tracking-widest hover:bg-[#E5F2E9] transition-all active:scale-95"
-                  >
+                  <Button variant="outline" size="lg" fullWidth onClick={onClose}>
                     Keep
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="destructiveSolid"
+                    size="lg"
+                    fullWidth
                     onClick={() => {
                       onConfirm();
                       onClose();
                     }}
-                    className="py-4 px-6 rounded-2xl bg-red-500 text-white text-sm font-black uppercase tracking-widest shadow-lg shadow-red-500/20 hover:bg-red-600 hover:shadow-xl hover:-translate-y-0.5 transition-all active:scale-95"
                   >
                     Unlink
-                  </button>
+                  </Button>
                 </div>
               </div>
             </motion.div>

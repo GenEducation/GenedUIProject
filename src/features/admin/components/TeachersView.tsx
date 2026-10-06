@@ -7,6 +7,7 @@ import { DataTable, Column } from "./DataTable";
 import { EntityEditModal } from "./EntityEditModal";
 import { BulkImportModal } from "./BulkImportModal";
 import { useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
+import { Button } from "@/components/ui/Button";
 
 const columns: Column<TeacherRow>[] = [
   { key: "full_name", header: "Name", accessor: (t) => t.full_name ?? t.username },
@@ -57,20 +58,12 @@ export function TeachersView() {
         error={error}
         actions={(t) => (
           <div className="flex items-center justify-end gap-1.5">
-            <button
-              onClick={() => setBulk(t)}
-              className="rounded-md p-1.5 text-white/40 hover:bg-white/10 hover:text-white"
-              title="Import students into this teacher's roster"
-            >
+            <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Import students into this teacher's roster" onClick={() => setBulk(t)}>
               <GraduationCap size={15} />
-            </button>
-            <button
-              onClick={() => setEditing(t)}
-              className="rounded-md p-1.5 text-white/40 hover:bg-white/10 hover:text-white"
-              title="Edit"
-            >
+            </Button>
+            <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Edit" onClick={() => setEditing(t)}>
               <Pencil size={15} />
-            </button>
+            </Button>
           </div>
         )}
       />

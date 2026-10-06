@@ -26,6 +26,7 @@ import {
   requireExactSubject,
   type ExactSubject,
 } from "@/features/subjects/subjectCatalog";
+import { asError } from "@/utils/errors";
 
 interface AgentSubject {
   subject: ExactSubject;
@@ -69,10 +70,10 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
 
         const subjects: AgentSubject[] = [];
         if (data?.partners && Array.isArray(data.partners)) {
-          data.partners.forEach((partner: any) => {
+          data.partners.forEach((partner) => {
             if (partner.subjects && Array.isArray(partner.subjects)) {
-              partner.subjects.forEach((sub: any) => {
-                sub.agents?.forEach((agent: any) => {
+              partner.subjects.forEach((sub) => {
+                sub.agents?.forEach((agent) => {
                   if (agent.subject) {
                     try {
                       subjects.push({
@@ -90,8 +91,8 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
         }
         setAgentSubjects(subjects);
         if (subjects.length > 0) setSubject((prev) => prev || subjects[0].subject);
-      } catch (e: any) {
-        if (e?.name !== "AbortError") console.error("Failed to fetch available agents:", e);
+      } catch (e) {
+        if (asError(e).name !== "AbortError") console.error("Failed to fetch available agents:", e);
       } finally {
         if (!cancelled) setIsLoadingAgents(false);
       }

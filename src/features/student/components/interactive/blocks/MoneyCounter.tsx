@@ -17,7 +17,7 @@ export default function MoneyCounter({ directiveId, meta, disabled, readOnly }: 
   const it = meta?.interaction_type || "build";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ coins?: number[] }>(directiveId, it, allowRetry);
 
   const [picks, setPicks] = useState<number[]>(Array.isArray(studentAnswer?.coins) ? studentAnswer.coins : []);
   const lock = disabled || submitted;
@@ -32,7 +32,7 @@ export default function MoneyCounter({ directiveId, meta, disabled, readOnly }: 
             {sym}{d}
           </button>
         ))}
-        <button onClick={() => !lock && setPicks([])} disabled={lock} style={{ padding: "8px 12px", borderRadius: 12, border: `1px solid ${COLORS.border}`, background: "#FFFFFF", color: COLORS.ink, cursor: lock ? "default" : "pointer" }}><RefreshCw size={13} /></button>
+        <button aria-label="Reset" onClick={() => !lock && setPicks([])} disabled={lock} style={{ padding: "8px 12px", borderRadius: 12, border: `1px solid ${COLORS.border}`, background: "#FFFFFF", color: COLORS.ink, cursor: lock ? "default" : "pointer" }}><RefreshCw size={13} /></button>
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", minHeight: 30 }}>
         {picks.map((v, i) => (

@@ -28,6 +28,7 @@ interface StudentDetailsModalProps {
 
 import { authFetch } from "@/utils/authFetch";
 import { usePartnerStore } from "@/features/partner/store/usePartnerStore";
+import { Button } from "@/components/ui/Button";
 
 const CORE_API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 if (!CORE_API_URL) {
@@ -148,13 +149,9 @@ export function StudentDetailsModal({
         {/* Header strip */}
         <div className="bg-[#1A3D2C] px-6 md:px-10 pt-8 pb-10 flex flex-col items-center text-center">
           {/* Close */}
-          <button
-            onClick={onClose}
-            disabled={isBusy}
-            className="absolute top-5 right-5 p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-xl transition-all disabled:opacity-40"
-          >
+          <Button iconOnly size="sm" variant="tertiary" tone="onDark" className="absolute top-5 right-5" aria-label="Close" onClick={onClose} disabled={isBusy}>
             <X size={18} />
-          </button>
+          </Button>
 
           {/* Avatar */}
           <div className="w-14 h-14 md:w-18 md:h-18 bg-white/15 rounded-[1.25rem] flex items-center justify-center mb-4">

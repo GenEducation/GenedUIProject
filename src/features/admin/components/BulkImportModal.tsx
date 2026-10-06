@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { X, Upload, Download, FileSpreadsheet } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import {
   downloadImportTemplate,
   importUsers,
@@ -102,9 +103,9 @@ export function BulkImportModal({ role, context, contextLabel, onClose, onDone }
             Bulk import {noun}
             {contextLabel ? <span className="text-white/50"> → {contextLabel}</span> : null}
           </h2>
-          <button onClick={onClose} className="text-white/40 hover:text-white">
+          <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Close" onClick={onClose}>
             <X size={20} />
-          </button>
+          </Button>
         </div>
         <p className="text-xs text-white/40 mb-4">
           Upload an .xlsx/.csv. Usernames are auto-generated from email. Blank passwords default to{" "}
@@ -214,34 +215,32 @@ export function BulkImportModal({ role, context, contextLabel, onClose, onDone }
         <div className="mt-4 flex justify-end gap-3">
           {committed ? (
             <>
-              <button
+              <Button
+                variant="outline"
+                tone="onDark"
                 onClick={downloadResults}
-                className="flex items-center gap-2 rounded-lg border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/5"
+                leadingIcon={<Download size={15} />}
               >
-                <Download size={15} /> Download results
-              </button>
-              <button
-                onClick={onClose}
-                className="rounded-lg bg-[#059F6D] px-5 py-2.5 text-sm font-bold text-white"
-              >
+                Download results
+              </Button>
+              <Button variant="primary" tone="onDark" onClick={onClose}>
                 Done
-              </button>
+              </Button>
             </>
           ) : (
             <>
-              <button
-                onClick={onClose}
-                className="rounded-lg px-4 py-2.5 text-sm font-semibold text-white/60 hover:text-white"
-              >
+              <Button variant="tertiary" tone="onDark" onClick={onClose}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                tone="onDark"
+                loading={loading}
                 onClick={commit}
-                disabled={loading || !preview || preview.valid === 0}
-                className="rounded-lg bg-[#059F6D] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40"
+                disabled={!preview || preview.valid === 0}
               >
-                {loading ? "Working…" : `Create ${preview?.valid ?? 0} ${noun}`}
-              </button>
+                {`Create ${preview?.valid ?? 0} ${noun}`}
+              </Button>
             </>
           )}
         </div>

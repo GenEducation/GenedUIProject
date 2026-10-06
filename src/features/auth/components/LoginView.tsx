@@ -14,6 +14,7 @@ import { useParentStore } from "@/features/parent/store/useParentStore";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 import { completeAndRedirect, getRedirectParam } from "../usePostAuthRedirect";
+import { asError } from "@/utils/errors";
 
 const initialSignUpData: SignUpFields = {
   email: "",
@@ -432,9 +433,9 @@ export function LoginView() {
 
                         const redirectPath = getRedirectParam();
                         completeAndRedirect(router, redirectPath || `/${role}`);
-                      } catch (err: any) {
+                      } catch (err) {
                         useLoaderStore.getState().stopLoading();
-                        console.error("Detailed Google Sign-in Error:", err.message);
+                        console.error("Detailed Google Sign-in Error:", asError(err).message);
                         setSigninErrors({ root: "Google Sign-In failed. Please try again or use your username/password." });
                       } finally {
                         setIsSigningIn(false);

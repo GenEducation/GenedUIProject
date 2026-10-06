@@ -22,17 +22,18 @@ export const ChapterMasteryView: React.FC<ChapterMasteryViewProps> = ({ mode = "
     return "NEEDS WORK";
   };
 
-  const handleStartTest = (documentTitle: string) => {
+  // Generation can take a while; TestReadyModal picks it up from the store and
+  // asks the student what to do, so there is no navigation here.
+  const handleStartTest = async (documentTitle: string) => {
     if (!Number.isInteger(studentProfile?.grade)) return;
     const subject = requireExactSubject(selectedAnalyticsSubject, studentProfile?.grade);
-    startTest({
+    await startTest({
       student_id: studentProfile!.user_id,
       chapter_query: documentTitle,
       subject,
       grade: studentProfile!.grade!,
       questions_per_section: 3
     });
-    router.push("/student/test?from=assessments");
   };
 
   return (

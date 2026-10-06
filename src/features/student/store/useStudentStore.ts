@@ -1,9 +1,21 @@
 import { create } from "zustand";
 import * as Sentry from "@sentry/nextjs";
-import { studentService } from "../services/studentService";
+import {
+  studentService,
+  type AvailableAgentPartner,
+  type ComprehensionInteractionType,
+  type ConversationActionType,
+  type SessionRow,
+} from "../services/studentService";
 import { authFetch, ApiRequestError } from "@/utils/authFetch";
-import { parseContent, generateHistoricalSVG, normalizeSvg } from "../utils/parseContent";
-import { voiceService } from "../services/voiceService";
+import {
+  parseContent,
+  generateHistoricalSVG,
+  normalizeSvg,
+  type HistoricalSvgParams,
+} from "../utils/parseContent";
+import type { GeoGebraAppletParameters } from "@/utils/geogebraLoader";
+import { voiceService, type VoiceEvent } from "../services/voiceService";
 import { appendStreamedText } from "../utils/voiceStreamMerge";
 import {
   isCompatibleVoiceSessionId,
@@ -16,6 +28,7 @@ import {
   requireExactSubject,
   type ExactSubject,
 } from "@/features/subjects/subjectCatalog";
+import { asError } from "@/utils/errors";
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
@@ -52,28 +65,44 @@ export interface ChatElement {
     engine?: string;
     label?: string;
     code?: string;
-    commands?: any[];
-    options?: any;
+    commands?: string[];
+    /**
+     * Engine-specific options: GeoGebra applet parameters, or the Desmos
+     * payload (which carries `expression`). Both engines share this field.
+     */
+    options?: GeoGebraAppletParameters & { expression?: string };
     image?: string;
     figure_id?: string;
     shape?: string;
-    params?: any;
+    params?: HistoricalSvgParams;
     is_historical?: boolean;
     isRawBackendSvg?: boolean;
     error?: boolean;
     message?: string;
     fallback_text?: string;
     // comprehension widget meta (Wave 2 §10)
-    widget_type?: "mcq" | "fill_blank" | "retell" | "free_response";
+    widget_type?: "mcq" | "fill_blank" | "retell" | "free_response" | "difficult_word";
     question?: string;
     choices?: Array<{ id: string; label: string }>;
     allow_retry?: boolean;
     directive_id?: string;
     // interactive math block meta (SDUI)
     interactive_type?: string;
+    /**
+     * Server-driven UI payloads for an interactive block. There is one schema
+     * per `interactive_type` (23 of them: snap_step and base_ray_deg for the
+     * angle tool, rows/cols for the array builder, and so on) and each block
+     * component reads its own fields directly off these objects.
+     *
+     * They stay `any` deliberately: modelling the 23 SDUI schemas is its own
+     * task, and `unknown` here would only push a cast into all 23 blocks
+     * without making any of them safer.
+     */
+    /* eslint-disable @typescript-eslint/no-explicit-any -- per-`interactive_type` SDUI schemas; see above */
     render?: any;
     interaction?: any;
     validation?: any;
+    /* eslint-enable @typescript-eslint/no-explicit-any */
     anchor?: string;
     interaction_type?: string;
     is_fallback?: boolean;
@@ -85,6 +114,9 @@ export interface ChatElement {
     syllables?: string[];
     phonetic?: string;
     slow_available?: boolean;
+    // The backend adds meta fields ahead of the frontend; blocks read them
+    // directly, so this passthrough matches the `render`/`interaction` note.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- open passthrough; see above
     [key: string]: any;
   };
 }
@@ -123,6 +155,85 @@ export interface ChatMessage {
   actions?: ActivityAction[];
 }
 
+/** The tutor's active read-aloud / karaoke directive. */
+/**
+ * One server-sent event from the chat / voice stream. `type` selects which of
+ * the remaining fields are populated (a "visual" event carries engine/code, an
+ * "interactive_block" carries render/interaction/validation, and so on), so
+ * every other field is optional and each handler branch reads its own.
+ */
+export interface StreamEvent {
+  type: string;
+  text?: string;
+  message?: string;
+  phase?: string;
+  engine?: string;
+  code?: string;
+  image?: string;
+  label?: string;
+  anchor?: string;
+  prompt?: string;
+  expression?: string;
+  commands?: string[];
+  options?: GeoGebraAppletParameters & { expression?: string };
+  directive_id?: string;
+  interactive_type?: string;
+  error_code?: string;
+  fallback_text?: string;
+  render?: ChatElement["meta"];
+  interaction?: ChatElement["meta"];
+  validation?: ChatElement["meta"];
+  meta?: ChatElement["meta"];
+  mode?: string;
+  status?: string;
+  error_type?: string;
+  response?: string;
+  session_id?: string;
+  session_mode?: string;
+  chapter_name?: string;
+  title?: string;
+  subject?: string;
+  expected_duration_ms?: number;
+  actions?: ActivityAction[];
+  /** Skill-mode payload; its fields depend on `mode`. */
+  payload?: SkillDirective & {
+    is_correct?: boolean;
+    answer?: string;
+    word?: string;
+    syllables?: string[];
+    phonetic?: string;
+    slow_available?: boolean;
+    question?: string;
+    prompt?: string;
+    options?: Array<{ id: string; label: string }>;
+    interaction_type?: string;
+    figure_id?: string;
+    figure_asset_url?: string;
+  };
+}
+
+/** The completed activity a turn is reporting, when the turn is not free text. */
+export interface ActivityInput {
+  activity_id: string;
+  activity_type: string;
+  transcript: string;
+}
+
+export interface SkillDirective {
+  directive_id: string;
+  type?: string;
+  source_text?: string;
+  text?: string;
+}
+
+/** Scoring returned after an oral-reading recording is analysed. */
+export interface OralAnalysisResult {
+  wer?: number;
+  pace_wpm?: number;
+  fluency?: string;
+  feedback?: string;
+}
+
 export interface ChatSession {
   id: string;
   session_id?: string;
@@ -130,6 +241,9 @@ export interface ChatSession {
   agentType: string;
   agentIcon: string;
   lastActive: string;
+  /** Alternative timestamps some historical session rows carry instead. */
+  created_at?: string;
+  session_date?: string;
   lastTopic: string;
   grade?: string;
   agent_id?: string;
@@ -144,7 +258,8 @@ export interface ChatSession {
   source?: string;
   // Whether the session has been completed (no further turns expected).
   is_complete?: boolean;
-  orchestrator_state?: any;
+  /** Opaque server-side orchestrator snapshot; the client only round-trips it. */
+  orchestrator_state?: unknown;
 }
 
 /** Voice-origin sessions reopen in the voice UI; everything else is chat. */
@@ -177,7 +292,9 @@ export interface PartnerItem {
 const SENTINEL_PARTNER_ID = "00000000-0000-0000-0000-000000000000";
 
 /** Resolve the one content-bearing partner, tolerating legacy sentinel+school responses. */
-export function selectEffectiveLearningPartner(partners: any[]): any | undefined {
+export function selectEffectiveLearningPartner(
+  partners: AvailableAgentPartner[],
+): AvailableAgentPartner | undefined {
   const realPartners = partners.filter(
     (partner) => String(partner?.partner_id ?? partner?.id) !== SENTINEL_PARTNER_ID,
   );
@@ -309,8 +426,8 @@ export interface StudentState {
   recordingPrompt: "silence" | "cap" | null;
   recordingError: string | null;
   activeDirectiveId: string | null;
-  activeSkillDirective: any | null;
-  oralAnalysisResult: any | null;
+  activeSkillDirective: SkillDirective | null;
+  oralAnalysisResult: OralAnalysisResult | null;
   comprehensionResults: Record<string, { is_correct: boolean; answer: string }>;
   interactiveResults: Record<string, { is_correct: boolean; attempts: number; student_answer: string }>;
 
@@ -338,7 +455,7 @@ export interface StudentState {
   setPartnerModalOpen: (open: boolean) => void;
   stopMessageGeneration: () => void;
   submitActivityResult: (activityId: string, activityType: string, transcript: string) => Promise<void>;
-  sendMessage: (text?: string, activityInput?: any, opts?: { isTypedQuery?: boolean }) => Promise<void>;
+  sendMessage: (text?: string, activityInput?: ActivityInput, opts?: { isTypedQuery?: boolean }) => Promise<void>;
   setChatQueryMode: (mode: "study" | "doubt", pinned?: boolean) => void;
   sendPartnerRequest: (partnerId: string) => Promise<void>;
   linkParent: (parentEmailOrPhone: string) => Promise<void>;
@@ -371,11 +488,11 @@ export interface StudentState {
   stopSkillRecording: () => void;
   dismissRecordingPrompt: () => void;
   confirmStartRecording: () => void;
-  reportConversationAction: (type: string, directiveId: string) => Promise<void>;
+  reportConversationAction: (type: ConversationActionType, directiveId: string) => Promise<void>;
   submitOralResult: (directiveId: string, gcsUri: string) => Promise<void>;
   submitComprehensionAnswer: (
     directiveId: string,
-    interactionType: string,
+    interactionType: ComprehensionInteractionType,
     answer: string
   ) => Promise<{ is_correct: boolean; id?: string; directive_id?: string; student_response?: string } | null>;
   clearComprehensionResult: (directiveId: string) => void;
@@ -383,7 +500,7 @@ export interface StudentState {
     directiveId: string,
     interactionType: string,
     answer: string
-  ) => Promise<{ is_correct: boolean; attempts?: number; directive_id?: string; interaction_type?: string; student_answer?: any } | null>;
+  ) => Promise<{ is_correct: boolean; attempts?: number; directive_id?: string; interaction_type?: string; student_answer?: string } | null>;
   clearInteractiveResult: (directiveId: string) => void;
 }
 
@@ -544,8 +661,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     try {
       const status = await studentService.fetchOnboardingStatus(studentProfile.user_id);
       set({ onboardingStatus: status });
-    } catch (error: any) {
-      console.error("Failed to fetch onboarding status:", error?.request_id, error?.message ?? error);
+    } catch (error) {
+      console.error("Failed to fetch onboarding status:", asError(error).request_id, asError(error).message ?? error);
     } finally {
       set({ isOnboardingLoading: false });
     }
@@ -565,8 +682,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           totalSessions: data.total_sessions ?? 0,
         },
       });
-    } catch (error: any) {
-      console.error("Failed to fetch student stats:", error?.request_id, error?.message ?? error);
+    } catch (error) {
+      console.error("Failed to fetch student stats:", asError(error).request_id, asError(error).message ?? error);
     } finally {
       set({ isStatsLoading: false });
     }
@@ -596,7 +713,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       const data = await studentService.fetchSessions(studentProfile.user_id);
       console.log("📂 [StudentStore] Raw Sessions Data:", data);
 
-      const mappedChats: ChatSession[] = data.sessions.flatMap((s: any) => {
+      const mappedChats: ChatSession[] = (data.sessions as SessionRow[]).flatMap((s) => {
         let subject: ExactSubject;
         try {
           subject = requireExactSubject(s.subject, studentProfile.grade, catalog);
@@ -645,8 +762,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         }
         return { recentChats: mappedChats, activeChat: updatedActiveChat, isSessionsLoading: false, hasFetchedSessions: true };
       });
-    } catch (error: any) {
-      console.error("Fetch Sessions Error:", error?.request_id, error?.message ?? error);
+    } catch (error) {
+      console.error("Fetch Sessions Error:", asError(error).request_id, asError(error).message ?? error);
       set({ isSessionsLoading: false, hasFetchedSessions: true });
     }
   },
@@ -677,11 +794,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       // Flatten the nested structure: data.partners[].subjects[].agents[]
       const agents: AgentItem[] = [];
       if (effectivePartner) {
-        [effectivePartner].forEach((partner: any) => {
+        [effectivePartner].forEach((partner) => {
           if (partner.subjects && Array.isArray(partner.subjects)) {
-            partner.subjects.forEach((subject: any) => {
+            partner.subjects.forEach((subject) => {
               if (subject.agents && Array.isArray(subject.agents)) {
-                subject.agents.forEach((agent: any) => {
+                subject.agents.forEach((agent) => {
                   try {
                     const grade = Number(agent.grade);
                     const exactSubject = requireExactSubject(agent.subject, grade, catalog);
@@ -712,8 +829,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       }
 
       set({ availableAgents: agents, isAgentsLoading: false, hasFetchedAgents: true });
-    } catch (error: any) {
-      console.error("Fetch Agents Error:", error?.request_id, error?.message ?? error);
+    } catch (error) {
+      console.error("Fetch Agents Error:", asError(error).request_id, asError(error).message ?? error);
       set({ availableAgents: [], isAgentsLoading: false, hasFetchedAgents: false });
     }
   },
@@ -732,8 +849,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         availablePartners: data,
         enrolledPartners: data.filter((partner) => partner.is_effective),
       });
-    } catch (error: any) {
-      console.error("Fetch Partners Error:", error?.request_id, error?.message ?? error);
+    } catch (error) {
+      console.error("Fetch Partners Error:", asError(error).request_id, asError(error).message ?? error);
     }
   },
 
@@ -749,8 +866,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         enrolledPartners: data.filter((partner) => partner.is_effective),
         isEnrolledPartnersLoading: false,
       });
-    } catch (error: any) {
-      console.error("Fetch Enrolled Partners Error:", error?.request_id, error?.message ?? error);
+    } catch (error) {
+      console.error("Fetch Enrolled Partners Error:", asError(error).request_id, asError(error).message ?? error);
       set({ isEnrolledPartnersLoading: false });
     }
   },
@@ -789,11 +906,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
       // Refresh the enrolled partners list so the UI reflects the new connection
       await get().fetchAvailablePartners();
-    } catch (error: any) {
-      console.error("Partner Request Error:", error?.request_id, error?.message ?? error);
+    } catch (error) {
+      console.error("Partner Request Error:", asError(error).request_id, asError(error).message ?? error);
       set({
         partnerRequestStatus: "error",
-        partnerRequestMessage: error?.message || "Failed to send partner request. Please try again.",
+        partnerRequestMessage: asError(error).message || "Failed to send partner request. Please try again.",
       });
     }
   },
@@ -824,11 +941,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         partnerRequestStatus: "success",
         partnerRequestMessage: "Parent successfully linked to your profile.",
       });
-    } catch (error: any) {
-      console.error("Link Parent Error:", error?.request_id, error?.message ?? error);
+    } catch (error) {
+      console.error("Link Parent Error:", asError(error).request_id, asError(error).message ?? error);
       set({
         partnerRequestStatus: "error",
-        partnerRequestMessage: error?.message || "Failed to link parent. Please check the ID and try again.",
+        partnerRequestMessage: asError(error).message || "Failed to link parent. Please check the ID and try again.",
       });
     }
   },
@@ -878,7 +995,15 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       }
 
       const mappedMessages: ChatMessage[] = (data.history || []).map(
-        (h: any, i: number) => {
+        (
+          h: {
+            content?: string;
+            role?: string;
+            created_at?: string;
+            meta_data?: Record<string, unknown>;
+          },
+          i: number
+        ) => {
           const content = h.content || "";
           const elements = parseContent(content);
 
@@ -907,7 +1032,12 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       // the blocks mount with their cached result already present (the widgets read
       // studentAnswer via useState initializer — a later update would be missed).
       const rehydratedResults: Record<string, { is_correct: boolean; attempts: number; student_answer: string }> = {};
-      for (const r of (data.interactive_results || []) as any[]) {
+      for (const r of (data.interactive_results || []) as Array<{
+        directive_id?: string;
+        is_correct?: boolean;
+        attempts?: number;
+        student_answer?: unknown;
+      }>) {
         if (!r?.directive_id) continue;
         rehydratedResults[r.directive_id] = {
           is_correct: !!r.is_correct,
@@ -948,11 +1078,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           historyAbortController: null,
         };
       });
-    } catch (error: any) {
-      if (error.name === "AbortError") {
+    } catch (error) {
+      if (asError(error).name === "AbortError") {
         console.debug("History fetch aborted for session:", sessionId);
       } else {
-        console.error("Fetch History Error:", error?.request_id, error?.message ?? error);
+        console.error("Fetch History Error:", asError(error).request_id, asError(error).message ?? error);
       }
       set({ isHistoryLoading: false, historyAbortController: null });
     }
@@ -1243,9 +1373,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         isPdfLoading: false,
         chapterPdfError: null,
       });
-    } catch (error: any) {
-      console.error("[openChapterPdf] Failed to fetch chapter PDF URL:", error?.status, error?.message);
-      const msg = error?.status === 404
+    } catch (error) {
+      console.error("[openChapterPdf] Failed to fetch chapter PDF URL:", asError(error).status, asError(error).message);
+      const msg = asError(error).status === 404
         ? "Textbook not available for this chapter."
         : "Could not load textbook. Please try again.";
       set({ isPdfLoading: false, chapterPdfError: msg });
@@ -1310,7 +1440,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
       await voiceService.startSession(
         studentProfile.user_id,
-        (event: any) => {
+        (event: VoiceEvent) => {
           if (event.type === "connected") {
             // Clears any rotation notice from the socket we just replaced.
             set({ voiceSessionStatus: "active", sessionNotice: null });
@@ -1321,12 +1451,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
             // having no audio — the text would sit in the buffer and never appear,
             // which is the exact silence the backend change exists to end.
             if (!event.content) return;
+            const safetyText = event.content;
             set((state) => ({
               messages: [
                 ...state.messages,
                 {
                   id: `voice-safety-${Date.now()}`,
-                  text: event.content,
+                  text: safetyText,
                   sender: "ai" as const,
                   timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                   isSafetyRedirect: true,
@@ -1388,7 +1519,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
               activeChat &&
               (activeChat.id === "new" || activeChat.id === "new-focused")
             ) {
-              const newSessionId = event.session_id;
+              // A session_created frame always names the session it created.
+              const newSessionId = event.session_id as string;
 
               set((state) => {
                 if (!state.activeChat) return state;
@@ -1413,7 +1545,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
               // Refresh the sidebar so persisted metadata merges into this same ID.
               set({ hasFetchedSessions: false });
               fetchSessions();
-            } else if (activeChat && !isCompatibleVoiceSessionId(activeChat, event.session_id)) {
+            } else if (activeChat && !isCompatibleVoiceSessionId(activeChat, event.session_id as string)) {
               // The canonical identity cannot change after promotion. Treat a second,
               // different ID as a protocol violation instead of silently moving the
               // conversation and losing its history.
@@ -1435,7 +1567,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                 ? {
                   ...state.activeChat,
                   subject: exactSubject,
-                  lastTopic: event.chapter,
+                  lastTopic: event.chapter as string,
                   // Preserve existing chapter_name on resume; set from event on new/entry-phase sessions.
                   chapter_name: state.activeChat.chapter_name || event.chapter || state.activeChat.chapter_name,
                 }
@@ -1455,7 +1587,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                 lastMsg.isPlanning &&
                 state.streamingMessageId === lastMsg.id;
 
-              let updatedMessages = [...state.messages];
+              const updatedMessages = [...state.messages];
               let newId = state.streamingMessageId;
 
               if (isContinuingPlanning) {
@@ -1719,7 +1851,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
               lastMsg.sender === sender &&
               state.streamingMessageId === lastMsg.id;
 
-            let updatedMessages = [...state.messages];
+            const updatedMessages = [...state.messages];
             let newId = state.streamingMessageId;
 
             if (isContinuing) {
@@ -2026,7 +2158,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     try {
       await studentService.reportConversationAction(
         sessionId,
-        type as any,
+        type,
         directiveId
       );
     } catch {
@@ -2066,7 +2198,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       const result = await studentService.submitComprehensionAnswer(
         sessionId,
         directiveId,
-        interactionType as any,
+        interactionType,
         answer
       );
       if (result) {
@@ -2134,7 +2266,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     });
   },
 
-  sendMessage: async (text?: string, activityInput?: any, opts?: { isTypedQuery?: boolean }): Promise<void> => {
+  sendMessage: async (text?: string, activityInput?: ActivityInput, opts?: { isTypedQuery?: boolean }): Promise<void> => {
     const { studentProfile, activeChat } = get();
     if (!studentProfile || !Number.isInteger(studentProfile.grade)) return;
 
@@ -2305,7 +2437,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           ...(effectiveChat.isFocused && {
             document_title: effectiveChat.document_title || "General",
           }),
-        } as any,
+        },
         abortController.signal,
       );
 
@@ -2324,7 +2456,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       let isPlanningUIPresented = false;
       let streamDone = false;
       const planningQueue: Array<{ text: string; phase?: string }> = [];
-      const bufferedEvents: any[] = [];
+      const bufferedEvents: StreamEvent[] = [];
       const elements: ChatElement[] = [];
       let bufferedText = "";
       let currentTextBuffer = "";
@@ -2410,7 +2542,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         }
       };
 
-      const handleEvent = (event: any) => {
+      const handleEvent = (event: StreamEvent) => {
         if (event.type === "planning") {
           const status = event.text || event.message || "";
           const phase = event.phase || "thinking";
@@ -2602,7 +2734,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                       type: "comprehension_widget",
                       content: payload.question || "",
                       meta: {
-                        widget_type: payload.interaction_type || "mcq",
+                        widget_type: (payload.interaction_type ||
+                  "mcq") as NonNullable<ChatElement["meta"]>["widget_type"],
                         question: payload.question || "",
                         choices: payload.options || [],
                         allow_retry: true,
@@ -2619,7 +2752,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                       type: "comprehension_widget",
                       content: payload.word,
                       meta: {
-                        widget_type: "difficult_word" as any,
+                        widget_type: "difficult_word",
                         word: payload.word,
                         syllables: payload.syllables,
                         phonetic: payload.phonetic,
@@ -2646,7 +2779,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           currentTextBuffer = "";
 
           // Mode Controller (The "What"): Prepare the UI state for a skill mode
-          const { mode, payload } = event;
+          // This branch only runs for skill-mode events, which always carry a
+          // payload; the cast records that precondition without adding a
+          // runtime guard the previous code did not have.
+          const mode = event.mode;
+          const payload = event.payload as NonNullable<StreamEvent["payload"]>;
           const directiveType = (mode || "").toUpperCase();
 
           set({ activeSkillDirective: { type: directiveType, ...payload } });
@@ -2672,7 +2809,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
               type: "comprehension_widget",
               content: payload.word,
               meta: {
-                widget_type: "difficult_word" as any,
+                widget_type: "difficult_word",
                 word: payload.word,
                 syllables: payload.syllables,
                 phonetic: payload.phonetic,
@@ -2691,7 +2828,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                 type: "comprehension_widget",
                 content: payload.question || "",
                 meta: {
-                  widget_type: payload.interaction_type || "mcq",
+                  widget_type: (payload.interaction_type ||
+                  "mcq") as NonNullable<ChatElement["meta"]>["widget_type"],
                   question: payload.question || "",
                   choices: payload.options || [],
                   allow_retry: true,
@@ -2723,10 +2861,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         } else if (event.type === "tts_start") {
           // Backend finished generating TTS — mark ready so the play button enables.
           // Student controls when to listen (no auto-play).
-          set((s) => ({ ttsReadyDirectiveIds: new Set(s.ttsReadyDirectiveIds).add(event.directive_id) }));
+          const ttsDirectiveId = event.directive_id as string;
+          set((s) => ({ ttsReadyDirectiveIds: new Set(s.ttsReadyDirectiveIds).add(ttsDirectiveId) }));
         } else if (event.type === "recording_open") {
           // Backend wants student to read aloud (Wave 2 §1.3)
-          get().startSkillRecording(event.directive_id, event.expected_duration_ms);
+          get().startSkillRecording(event.directive_id as string, event.expected_duration_ms);
         } else if (event.type === "recording_closed") {
           // Backend closed the recording window
           get().stopSkillRecording();
@@ -2740,14 +2879,18 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           // Oral reading / comprehension result — store for UI display
           set((state) => {
             const newResults = { ...state.comprehensionResults };
-            if (event.directive_id) {
-              newResults[event.directive_id] = {
+            const resultDirectiveId = event.directive_id;
+            if (resultDirectiveId) {
+              newResults[resultDirectiveId] = {
                 is_correct: event.payload?.is_correct ?? false,
                 answer: event.payload?.answer ?? ""
               };
             }
             return {
-              activeSkillDirective: { type: "skill_result", ...event.payload },
+              activeSkillDirective: {
+                type: "skill_result",
+                ...(event.payload as NonNullable<StreamEvent["payload"]>),
+              },
               comprehensionResults: newResults
             };
           });
@@ -2822,7 +2965,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         isPlanningUIPresented = true;
         // Process all events that were buffered during the planning phase
         while (bufferedEvents.length > 0) {
-          handleEvent(bufferedEvents.shift());
+          const buffered = bufferedEvents.shift();
+          if (buffered) handleEvent(buffered);
         }
         // Final sync for the switch from "Thinking" to "Streaming"
         pushTextElement(currentTextBuffer);
@@ -2850,7 +2994,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           const jsonStr = trimmed.slice(5).trim();
           if (!jsonStr) continue;
 
-          let event: any;
+          let event: StreamEvent;
           try {
             event = JSON.parse(jsonStr);
           } catch {
@@ -3081,8 +3225,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
           if (finalSessionId) pendingNav(finalSessionId);
         }
       }
-    } catch (error: any) {
-      const isAbort = error.name === "AbortError";
+    } catch (error) {
+      const isAbort = asError(error).name === "AbortError";
       const isRateLimit = error instanceof ApiRequestError && error.status === 429;
       const isRetryable = error instanceof ApiRequestError && error.retryable;
 
@@ -3101,10 +3245,10 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       } else if (isRateLimit) {
         set({ isRateLimitHit: true, rateLimitMessage: error.message || null });
       } else {
-        console.error("Chat API Error:", error?.request_id, error?.message ?? error);
+        console.error("Chat API Error:", asError(error).request_id, asError(error).message ?? error);
       }
 
-      const baseErrorText = error?.message || "Sorry, I encountered an error connecting to the knowledge base.";
+      const baseErrorText = asError(error).message || "Sorry, I encountered an error connecting to the knowledge base.";
       const errorText = isRetryable ? `${baseErrorText} Please try again.` : baseErrorText;
 
       set((state) => {

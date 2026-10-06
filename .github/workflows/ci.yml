@@ -22,12 +22,14 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      # Lint is non-blocking for now: the pre-existing tree has ~760 eslint errors
-      # (mostly no-explicit-any). This step surfaces them without failing CI; drop
-      # continue-on-error once the debt is cleared and add it to required checks.
-      - name: Lint (non-blocking)
-        run: npm run lint
-        continue-on-error: true
+      # Blocking: the tree is at 0 eslint errors. --max-warnings ratchets the
+      # remaining documented debt (raw <button> / hex-literal migration waves and
+      # the deferred react-hooks/* findings) so it can shrink but not grow.
+      # 681 is the measured count, not an estimate. The ceiling started at 671,
+      # which never passed — this gate only runs on PRs into main, so it was
+      # introduced and three times added to on dev without ever executing.
+      - name: Lint
+        run: npm run lint -- --max-warnings=681
       - name: Typecheck
         run: npm run typecheck
 

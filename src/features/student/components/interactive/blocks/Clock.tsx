@@ -12,7 +12,7 @@ export default function Clock({ directiveId, meta, disabled, readOnly }: Interac
   const it = meta?.interaction_type || "place_point";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ hour?: number; minute?: number }>(directiveId, it, allowRetry);
 
   const [hour, setHour] = useState<number>(studentAnswer?.hour ?? render.initial_hour ?? 12);
   const [minute, setMinute] = useState<number>(studentAnswer?.minute ?? render.initial_minute ?? 0);

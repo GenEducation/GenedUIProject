@@ -16,6 +16,19 @@ import type { ChatMessage } from "../store/useStudentStore";
  * `msg.text` as one continuous block and the visuals after it, so the text is never split
  * and never changes font when a visual appears.
  */
+/**
+ * Appends one assistant transcript chunk to the pending buffer.
+ *
+ * Verbatim, with NO separator. The provider streams token fragments, not
+ * words: a single word routinely arrives split across packets — "Bu" then
+ * "t sometimes" — and each chunk already carries whatever leading space it
+ * needs. Joining chunks with " " is what turned "just", "different" and "it"
+ * into "jus t", "differen t" and "i t" in the live transcript.
+ */
+export function appendTranscriptChunk(buffer: string, chunk: string): string {
+  return buffer + chunk;
+}
+
 export function appendStreamedText<T extends ChatMessage>(
   msg: T,
   content: string,

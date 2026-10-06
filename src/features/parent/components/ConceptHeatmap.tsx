@@ -5,9 +5,22 @@ import { useAgentStore } from "@/store/useAgent";
 import { useEffect, useState } from "react";
 import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Tooltip } from "recharts";
 
+/** One node of the mastery-map response. */
+interface MasteryNode {
+  label: string;
+  score: number;
+}
+
+/** A point on the radar chart. */
+interface RadarPoint {
+  subject: string;
+  A: number;
+  fullMark: number;
+}
+
 export function ConceptHeatmap() {
   const { student, activeAgent } = useAgentStore();
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<RadarPoint[]>([]);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
   if (!API_BASE_URL) {
@@ -20,7 +33,7 @@ export function ConceptHeatmap() {
     fetch(`${API_BASE_URL}/students/${student.id}/mastery-map?class_id=${classId}`)
       .then(res => res.json())
       .then(nodes => {
-        const formatted = nodes.map((n: any) => ({
+        const formatted = (nodes as MasteryNode[]).map((n) => ({
           subject: n.label,
           A: n.score,
           fullMark: 100,

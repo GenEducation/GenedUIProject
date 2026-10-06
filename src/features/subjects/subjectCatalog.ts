@@ -210,7 +210,7 @@ export async function fetchAllTaxonomyGrades(): Promise<number[]> {
     const response = await fetch(`${API_BASE_URL}/rag/taxonomy/subjects`);
     if (!response.ok) return [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
     const data = await response.json();
-    const catalog = data.subjects.map((row: any) => ({
+    const catalog = (data.subjects as Array<{ name: string; grades: number[] }>).map((row) => ({
       name: row.name as ExactSubject,
       grades: [...row.grades]
     }));

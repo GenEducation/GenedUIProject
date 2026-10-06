@@ -12,6 +12,7 @@ import {
 import { studentService } from "@/features/student/services/studentService";
 import { MarkdownRenderer } from "@/features/student/components/MarkdownRenderer";
 import { SubjectOnboardingCelebration } from "@/features/onboarding/components/SubjectOnboardingCelebration";
+import { Button } from "@/components/ui/Button";
 
 const SUBJECT_ICONS: Record<string, string> = {
   Mathematics: "📐",
@@ -312,12 +313,9 @@ export function OnboardingModal({ subject, grade, onClose }: OnboardingModalProp
                 </div>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[#042E5C]/30 hover:text-[#042E5C] hover:bg-[#042E5C]/5 transition-all"
-            >
+            <Button iconOnly size="sm" variant="tertiary" aria-label="Close" onClick={onClose}>
               <X size={18} />
-            </button>
+            </Button>
           </div>
 
           {/* Messages */}

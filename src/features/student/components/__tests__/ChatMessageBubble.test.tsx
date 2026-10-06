@@ -74,11 +74,34 @@ describe("ChatMessageBubble", () => {
       <ChatMessageBubble message={message({ text: "Let's get back to the lesson!" })} />,
     );
 
-    const redirectBubble = redirect.querySelector<HTMLElement>("[style*='border-radius']");
-    const ordinaryBubble = ordinary.querySelector<HTMLElement>("[style*='border-radius']");
+    // Asserted positively on each side rather than by comparing two lookups:
+    // ordinary replies are unboxed now, so a loose comparison would pass
+    // vacuously if the redirect styling were ever dropped.
+    const redirectCard = redirect.querySelector<HTMLElement>("[data-testid='message-surface']")!;
+    expect(redirectCard.dataset.boxed).toBe("true");
+    expect(redirectCard.style.background).toBe("rgb(255, 248, 236)");
+    expect(redirectCard.style.border).toContain("1px solid");
 
-    expect(redirectBubble?.style.background).toBeTruthy();
-    expect(redirectBubble?.style.background).not.toBe(ordinaryBubble?.style.background);
+    const ordinaryCard = ordinary.querySelector<HTMLElement>("[data-testid='message-surface']")!;
+    expect(ordinaryCard.dataset.boxed).toBe("false");
+    expect(ordinaryCard.style.background).toBe("");
+  });
+
+  it("renders an ordinary tutor reply with no card around it", () => {
+    // The tutor's turn is long-form content — prose, sketches, widgets — and
+    // reads as part of the page. Only the student's turn and a redirect sit on
+    // a surface.
+    render(<ChatMessageBubble message={message({ text: "Two times three is six." })} />);
+
+    expect(screen.getByText("Two times three is six.")).toBeInTheDocument();
+
+    const surface = screen.getByTestId("message-surface");
+    expect(surface.style.background).toBe("");
+    expect(surface.style.borderRadius).toBe("");
+    // jsdom reads the `border: none` shorthand back as its width ("medium"),
+    // so assert on the style longhand.
+    expect(surface.style.borderStyle).toBe("none");
+    expect(surface.style.boxShadow).toBe("none");
   });
 
   it("never styles a user message as a redirect", () => {
@@ -91,9 +114,11 @@ describe("ChatMessageBubble", () => {
       <ChatMessageBubble message={message({ sender: "user", text: "hi" })} />,
     );
 
-    const flaggedBubble = flagged.querySelector<HTMLElement>("[style*='border-radius']");
-    const plainBubble = plain.querySelector<HTMLElement>("[style*='border-radius']");
+    const flaggedBubble = flagged.querySelector<HTMLElement>("[data-testid='message-surface']")!;
+    const plainBubble = plain.querySelector<HTMLElement>("[data-testid='message-surface']")!;
 
-    expect(flaggedBubble?.style.background).toBe(plainBubble?.style.background);
+    // A user bubble always keeps its surface, so this compares two real values.
+    expect(plainBubble.style.background).toBeTruthy();
+    expect(flaggedBubble.style.background).toBe(plainBubble.style.background);
   });
 });

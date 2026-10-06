@@ -55,6 +55,5 @@ export function useSessionHeartbeat(
       window.removeEventListener("keydown", onActivity);
       window.removeEventListener("mousemove", onActivity);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId, sessionId]);
 }

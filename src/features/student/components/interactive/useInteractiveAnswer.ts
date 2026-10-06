@@ -9,8 +9,13 @@ import { useStudentStore } from "../../store/useStudentStore";
  * A failed POST (network error / null result) is NOT a wrong answer: we surface a
  * distinct `submitError` and unlock the widget so the student can retry, instead of
  * showing the red "Not quite" banner for something the server never graded.
+ *
+ * `TAnswer` is the shape of the student's previously submitted answer once
+ * JSON-parsed. It is decided by whichever block produced it (degrees for the
+ * angle tool, rows/cols for the array builder, and so on), so each block
+ * supplies its own.
  */
-export function useInteractiveAnswer(
+export function useInteractiveAnswer<TAnswer = never>(
   directiveId: string,
   interactionType: string,
   allowRetry: boolean
@@ -27,10 +32,10 @@ export function useInteractiveAnswer(
   const isCorrect = result?.is_correct;
   const attempts = result?.attempts ?? 0;
 
-  let studentAnswer: any = undefined;
+  let studentAnswer: TAnswer | undefined = undefined;
   if (result?.student_answer) {
     try {
-      studentAnswer = JSON.parse(result.student_answer);
+      studentAnswer = JSON.parse(result.student_answer) as TAnswer;
     } catch {
       studentAnswer = undefined;
     }

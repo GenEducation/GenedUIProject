@@ -16,7 +16,7 @@ export default function NumberLine({ directiveId, meta, disabled, readOnly }: In
   const it = meta?.interaction_type || "place_point";
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
-    useInteractiveAnswer(directiveId, it, allowRetry);
+    useInteractiveAnswer<{ value?: number }>(directiveId, it, allowRetry);
 
   const steps = Math.max(1, Math.round((max - min) / step));
   const decimals = (String(step).split(".")[1] || "").length;

@@ -1,10 +1,96 @@
 import { authFetch, ApiRequestError } from "@/utils/authFetch";
+import { asError } from "@/utils/errors";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
 if (!API_BASE_URL) {
   throw new Error("NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.");
 }
+
+/**
+ * `/available-agents` response. The payload nests
+ * partners -> subjects -> agents; every consumer walks the same three levels,
+ * so the shape lives here rather than being re-guessed at each call site.
+ * Fields beyond the ones named are passed through untouched, hence the index
+ * signature on the agent row.
+ */
+export interface AvailableAgent {
+  agent_id: string;
+  name: string;
+  subject?: string;
+  grade?: number | string;
+  document_titles?: string[];
+  [key: string]: unknown;
+}
+
+export interface AvailableAgentSubject {
+  subject?: string;
+  agents?: AvailableAgent[];
+  is_onboarding_complete?: boolean;
+  subject_coverage_percentage?: number;
+}
+
+export interface AvailableAgentPartner {
+  partner_id?: string;
+  board?: string;
+  subjects?: AvailableAgentSubject[];
+  [key: string]: unknown;
+}
+
+export interface AvailableAgentsResponse {
+  partners?: AvailableAgentPartner[];
+}
+
+/**
+ * A per-chapter mastery row from `/chapter-mastery`. The report card and the
+ * analytics/assessments views all read this same payload, so it is defined
+ * once here — `ChapterMasteryItem` in the report-card types is an alias.
+ */
+/** One row of the `/get-session` listing. */
+export interface SessionRow {
+  session_id: string;
+  title?: string;
+  agent_name?: string;
+  subject?: string;
+  subject_agent?: string;
+  chapter_name?: string;
+  chapter_completion_percentage?: number;
+  updated_at?: string;
+  created_at?: string;
+  source?: string;
+  is_complete?: boolean;
+}
+
+export interface ChapterMastery {
+  subject: string;
+  document_title: string;
+  completion_percentage: number;
+  mastery_score: number;
+  study_count: number;
+  grade: number;
+  chapter_report?: string | null;
+  status?: string | null;
+  is_curriculum?: boolean;
+  is_system?: boolean;
+  is_placeholder?: boolean;
+  time_minutes?: number;
+  time_sessions?: number;
+}
+
+/** Fire-and-forget conversation telemetry actions. */
+export type ConversationActionType =
+  | "playback_complete"
+  | "silence_detected"
+  | "repeat_requested"
+  | "slower_requested"
+  | "interaction_skipped";
+
+/** Comprehension widget answer formats. */
+export type ComprehensionInteractionType =
+  | "mcq"
+  | "fill_blank"
+  | "retell"
+  | "free_response";
 
 export const studentService = {
   fetchAvailableTeachers: async () => {
@@ -37,7 +123,10 @@ export const studentService = {
     }
   },
 
-  fetchAvailableAgents: async (userId: string, signal?: AbortSignal) => {
+  fetchAvailableAgents: async (
+    userId: string,
+    signal?: AbortSignal
+  ): Promise<AvailableAgentsResponse> => {
     const response = await authFetch(`${API_BASE_URL}/api/students/${userId}/available-agents`, { signal });
     return response.json();
   },
@@ -110,15 +199,19 @@ export const studentService = {
   },
 
   sendChatMessage: async (payload: {
-    text: string;
+    // Omitted for an activity-completion turn, which carries `activity_input`
+    // instead of typed text.
+    text?: string;
     user_id: string;
     // Resolved, title-cased student display name (prefers real name over the
     // login handle). TODO(backend): greet with display_name instead of username.
     display_name?: string;
     session_id?: string;
     agent_id?: string;
-    subject: string;
-    grade: number;
+    // Both are omitted on turns where the caller has no resolved subject or
+    // grade to send (the store spreads them in conditionally).
+    subject?: string;
+    grade?: number;
     document_title?: string;
     intent?: string;
     session_mode?: string;
@@ -166,7 +259,11 @@ export const studentService = {
     return response.json();
   },
 
-  fetchChapterMastery: async (studentId: string, subject: string, signal?: AbortSignal) => {
+  fetchChapterMastery: async (
+    studentId: string,
+    subject: string,
+    signal?: AbortSignal
+  ): Promise<ChapterMastery[]> => {
     const response = await authFetch(`${API_BASE_URL}/students/${studentId}/chapter-mastery?subject=${encodeURIComponent(subject)}`, {
       headers: { "accept": "application/json" },
       signal,
@@ -226,7 +323,7 @@ export const studentService = {
 
   reportConversationAction: async (
     sessionId: string,
-    type: "playback_complete" | "silence_detected" | "repeat_requested" | "slower_requested" | "interaction_skipped",
+    type: ConversationActionType,
     directiveId: string
   ) => {
     try {
@@ -238,9 +335,9 @@ export const studentService = {
           body: JSON.stringify({ type, directive_id: directiveId, timestamp: new Date().toISOString() }),
         }
       );
-    } catch (error: any) {
+    } catch (error) {
       // Fire-and-forget — don't throw on failure, just log
-      console.warn("[studentService] conversation-action failed:", error.status, error.message);
+      console.warn("[studentService] conversation-action failed:", asError(error).status, asError(error).message);
     }
   },
 
@@ -259,7 +356,7 @@ export const studentService = {
   submitComprehensionAnswer: async (
     sessionId: string,
     directiveId: string,
-    interactionType: "mcq" | "fill_blank" | "retell" | "free_response",
+    interactionType: ComprehensionInteractionType,
     answer: string
   ) => {
     const response = await authFetch(

@@ -268,7 +268,7 @@ export function StudentVoiceView() {
             {/* Always rendered, and a real toggle — it used to be open-only
                 ({!sidebarOpen && …}), leaving no way to collapse the sidebar
                 from the voice view. Matches StudentChatMain's header button. */}
-            <button
+            <button aria-label="Toggle sidebar"
               onClick={() => setSidebarOpen(!sidebarOpen)}
               title={sidebarOpen ? "Collapse sidebar" : "Open sidebar"}
               className="transition-all flex-shrink-0"
@@ -276,7 +276,7 @@ export function StudentVoiceView() {
             >
               <Menu size={15} strokeWidth={1.75} />
             </button>
-            <button
+            <button aria-label="Back to subjects"
               onClick={handleEnd}
               title="Back to subjects"
               className="transition-all flex-shrink-0"
