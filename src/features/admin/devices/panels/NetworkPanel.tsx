@@ -12,12 +12,26 @@ export function NetworkPanel({ panel }: NetworkPanelProps) {
     return <p className="text-sm text-rose-300">{panel.error}</p>;
   }
 
-  const wifiInterfaces = Array.isArray(panel.wifi?.value)
+  const wifiInterfaces: Record<string, unknown>[] = Array.isArray(panel.wifi?.value)
     ? (panel.wifi.value as Record<string, unknown>[])
+    : typeof panel.wifi?.value === "object" && panel.wifi?.value !== null
+    ? Object.entries(panel.wifi.value as Record<string, unknown>).map(
+        ([iface, data]) => ({
+          interface: iface,
+          ...(data && typeof data === "object" ? (data as Record<string, unknown>) : {}),
+        })
+      )
     : [];
 
-  const networkInterfaces = Array.isArray(panel.interfaces?.value)
+  const networkInterfaces: Record<string, unknown>[] = Array.isArray(panel.interfaces?.value)
     ? (panel.interfaces.value as Record<string, unknown>[])
+    : typeof panel.interfaces?.value === "object" && panel.interfaces?.value !== null
+    ? Object.entries(panel.interfaces.value as Record<string, unknown>).map(
+        ([iface, data]) => ({
+          name: iface,
+          ...(data && typeof data === "object" ? (data as Record<string, unknown>) : {}),
+        })
+      )
     : [];
 
   const routes = Array.isArray(panel.default_routes?.value)
@@ -86,7 +100,7 @@ export function NetworkPanel({ panel }: NetworkPanelProps) {
         <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/40">
           WiFi Association
         </h3>
-        {panel.wifi.state === "NOT_REPORTED" ? (
+        {panel.wifi?.state === "NOT_REPORTED" ? (
           <p className="text-xs text-white/40 italic">
             WiFi association not reported by this firmware
           </p>
