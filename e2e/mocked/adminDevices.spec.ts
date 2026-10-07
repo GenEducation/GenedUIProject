@@ -359,6 +359,191 @@ const CANONICAL_DETAIL: CanonicalDevice = {
   },
 };
 
+const CANONICAL_PERSONAL: CanonicalDevice = {
+  id: "11111111-0000-0000-0000-000000000002",
+  serial: "1000000000000002",
+  reported_device_id: "gened-home-7",
+  lab_hardware_id: null,
+  derived_device_key: "DEV-0000-0002",
+  label: "Home Unit Bravo",
+  device_model: "Raspberry Pi 4 Model B",
+  last_reported_mode: "PERSONAL",
+  provenance: "SELF_REGISTERED",
+  connectivity: { state: "ONLINE", source: "MQTT_STATUS", reason: null },
+  last_seen_at: minutesAgo(4),
+  last_seen_source: "MQTT_STATUS",
+  last_seen_age_seconds: 240,
+  first_seen_at: minutesAgo(60 * 24 * 30),
+  diagnostic_freshness: "FRESH",
+  diagnostic_verdict: "FAIL",
+  lab_tenancy: {
+    state: "NONE",
+    reason: null,
+    enrollment: null,
+  },
+  diagnostic: {
+    serial: "1000000000000002",
+    device_key: "DEV-0000-0002",
+    reported_device_id: "gened-home-7",
+    hostname: "gened-home-7",
+    device_model: "Raspberry Pi 4 Model B",
+    mode: "PERSONAL",
+    firmware_version: "1.4.2",
+    tool_version: "gened-health/1",
+    deployed_version: "b7bce87",
+    overall: "FAIL",
+    tally: { PASS: 35, FAIL: 1, WARN: 2 },
+    findings: [
+      {
+        id: "network.wifi.association",
+        status: "WARN",
+        subsystem: "network",
+        title: "WiFi signal weak",
+        detail: "RSSI -82 dBm",
+        next_step: "Move closer to AP",
+      },
+    ],
+    findings_total: 1,
+    received_at: minutesAgo(15),
+    report_age_seconds: 900,
+    fresh: true,
+    fresh_after_seconds: FLEET_FRESH_AFTER,
+    diagnostic_freshness: "FRESH",
+    report_interval_seconds: FLEET_INTERVAL,
+    collected_at: minutesAgo(15),
+    clock_synced: true,
+    last_ip: "192.168.1.42",
+    schema_version: 1,
+    redaction: "default",
+  },
+};
+
+const REPORT_MOCK = {
+  serial: "1000000000000002",
+  device_key: "DEV-0000-0002",
+  hostname: "gened-home-7",
+  device_model: "Raspberry Pi 4 Model B",
+  meta: {
+    mode: "PERSONAL",
+    mode_source: "file:/etc/gened-device/mode",
+    overall: "FAIL",
+    tally: { PASS: 35, FAIL: 1, WARN: 2 },
+    findings: [
+      {
+        id: "network.wifi.association",
+        status: "WARN",
+        subsystem: "network",
+        title: "WiFi signal weak",
+        detail: "RSSI -82 dBm",
+        next_step: "Move closer to AP",
+      },
+    ],
+    findings_total: 1,
+    tool_version: "gened-health/1",
+    deployed_version: "b7bce87",
+    firmware_version: "1.4.2",
+    received_at: minutesAgo(15),
+    collected_at: minutesAgo(15),
+    clock_synced: true,
+    diagnostic_freshness: "FRESH",
+    report_age_seconds: 900,
+    report_interval_seconds: FLEET_INTERVAL,
+  },
+  panels: {
+    network: {
+      primary_ip: { state: "OK", value: "192.168.1.42", unit: null, source_check: "network.interfaces.addresses", note: null },
+      wifi: {
+        state: "OK",
+        value: [{ ssid: "HomeWiFi-5G", signal_dbm: -58, signal_percent: 75, bssid: "aa:bb:cc:dd:ee:ff" }],
+        unit: null,
+        source_check: "network.wifi.association",
+        note: null,
+      },
+      server_observed_ip: { state: "OK", value: "203.0.113.19", unit: null, source_check: null, note: null },
+      interfaces: {
+        state: "OK",
+        value: [{ name: "wlan0", operstate: "UP", carrier: true, addresses: [{ ip: "192.168.1.42", family: "inet" }] }],
+        unit: null,
+        source_check: "network.interfaces.addresses",
+        note: null,
+      },
+      default_routes: { state: "OK", value: [{ interface: "wlan0", gateway: "192.168.1.1" }], unit: null, source_check: null, note: null },
+      nameservers: { state: "OK", value: ["1.1.1.1"], unit: null, source_check: null, note: null },
+      addresses_hidden_from_the_app: { state: "OK", value: [], unit: null, source_check: null, note: null },
+      regulatory_domain: { state: "OK", value: "IN", unit: null, source_check: null, note: null },
+      own_hotspot_active: { state: "OK", value: false, unit: null, source_check: null, note: null },
+      active_connections: { state: "OK", value: [], unit: null, source_check: null, note: null },
+      hostname_running: { state: "OK", value: "gened-home-7", unit: null, source_check: null, note: null },
+      hostname_configured: { state: "OK", value: "gened-home-7", unit: null, source_check: null, note: null },
+      mdns_collision_generation: { state: "OK", value: 0, unit: null, source_check: null, note: null },
+      sources: {},
+    },
+    system: {
+      uptime_human: { state: "OK", value: "5d 4h", unit: null, source_check: "identity.boot.uptime", note: null },
+      soc_temperature_c: { state: "OK", value: 48.5, unit: "C", source_check: "system.thermal.temperature", note: null },
+      load_1m: { state: "OK", value: 0.15, unit: null, source_check: null, note: null },
+      load_5m: { state: "OK", value: 0.22, unit: null, source_check: null, note: null },
+      load_15m: { state: "OK", value: 0.18, unit: null, source_check: null, note: null },
+      model: { state: "OK", value: "Raspberry Pi 4 Model B", unit: null, source_check: null, note: null },
+      sources: {},
+    },
+    storage: {
+      filesystems: { state: "OK", value: [{ mount: "/", free_human: "18 GB", free: 19327352832, total: 31100000000, percent_free: 62.1 }], unit: null, source_check: null, note: null },
+      sources: {},
+    },
+    power: {
+      battery_percent: { state: "OK", value: 88, unit: "%", source_check: null, note: null },
+      sources: {},
+    },
+    services: {
+      units: { state: "OK", value: [{ unit: "gened.service", state: "active" }], unit: null, source_check: null, note: null },
+      sources: {},
+    },
+    provenance: {
+      mode: { state: "OK", value: "PERSONAL", unit: null, source_check: null, note: null },
+      mode_source: { state: "OK", value: "file:/etc/gened-device/mode", unit: null, source_check: null, note: null },
+      firmware_stamp: { state: "OK", value: "1.4.2", unit: null, source_check: null, note: null },
+      tool_version: { state: "OK", value: "gened-health/1", unit: null, source_check: null, note: null },
+      stored: { mode: "PERSONAL", firmware_version: "1.4.2" },
+      sources: {},
+    },
+  },
+  inventory: {
+    subsystems: [
+      {
+        subsystem: "network",
+        worst_status: "WARN",
+        tally: { PASS: 5, WARN: 1 },
+        metrics_included: 6,
+        checks: [
+          {
+            check_id: "network.wifi.association",
+            status: "WARN",
+            title: "WiFi Association",
+            detail: "Connected to HomeWiFi-5G with RSSI -58 dBm",
+            error: null,
+            elapsed_ms: 12,
+            metrics: { ssid: "HomeWiFi-5G", signal_dbm: -58 },
+          },
+        ],
+      },
+    ],
+    other: [],
+  },
+};
+
+const REPORT_RAW_MOCK = {
+  meta: { serial: "1000000000000002" },
+  checks: [
+    {
+      id: "network.wifi.association",
+      status: "PASS",
+      subsystem: "network",
+      detail: "Associated with Campus-IoT",
+    },
+  ],
+};
+
 const FLEET_STATS: FleetStats = {
   total: 5,
   by_record: { CANONICAL: 3, LEGACY_LAB: 2 },
@@ -446,13 +631,37 @@ async function mockFleet(page: Page) {
   //
   // Registered BEFORE the stats route so the exact /stats match below wins:
   // Playwright gives precedence to the last matching route registered.
-  await page.route(`${API}/admin/devices/*`, (route) =>
+  await page.route(`${API}/admin/devices/*/report/raw`, (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(CANONICAL_DETAIL),
+      body: JSON.stringify(REPORT_RAW_MOCK),
     }),
   );
+
+  await page.route(`${API}/admin/devices/*/report`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(REPORT_MOCK),
+    }),
+  );
+
+  await page.route(`${API}/admin/devices/*`, (route) => {
+    const key = route.request().url().split("/").pop()!;
+    if (key.includes("1000000000000002")) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(CANONICAL_PERSONAL),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(CANONICAL_DETAIL),
+    });
+  });
 
   await page.route(`${API}/admin/devices/stats`, (route) =>
     route.fulfill({
@@ -657,6 +866,55 @@ test.describe("admin device fleet dashboard", () => {
     await expect(
       page.locator("aside").getByRole("button", { name: "Devices", exact: true }),
     ).toHaveAttribute("aria-current", "page");
+
+    expect(errors).toEqual([]);
+  });
+
+  test("drilling into a PERSONAL device with no Lab enrollment shows its network and system state", async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("console", (m) => {
+      if (m.type() === "error") errors.push(m.text());
+    });
+
+    await seedAuth(page, "admin");
+    await mockFleet(page);
+    await page.goto("/admin/devices");
+    await page.waitForLoadState("networkidle");
+
+    // Drill into the PERSONAL device from FleetTable
+    const row = page.locator('[data-fleet-row="serial:1000000000000002"]');
+    await row.getByRole("button", { name: /view/i }).click();
+
+    await expect(page).toHaveURL(/\/admin\/devices\/serial%3A1000000000000002/);
+
+    // Network and system state visible (IP and SSID)
+    await expect(page.getByText("192.168.1.42").first()).toBeVisible();
+    await expect(page.getByText(/HomeWiFi-5G/).first()).toBeVisible();
+
+    // No Lab enrollment card in the DOM
+    await expect(page.getByText("Previous Lab enrollment")).toHaveCount(0);
+
+    expect(errors).toEqual([]);
+  });
+
+  test("an old /admin/devices/<labUuid> bookmark still resolves", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("console", (m) => {
+      if (m.type() === "error") errors.push(m.text());
+    });
+
+    await seedAuth(page, "admin");
+    await mockFleet(page);
+
+    const oldLabUuid = "11111111-2222-3333-4444-555555555555";
+    await page.goto(`/admin/devices/${oldLabUuid}`);
+    await page.waitForLoadState("networkidle");
+
+    // Resolves and shows the Lab enrollment section
+    await expect(page.getByText("Lab enrollment")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Desk 1/);
 
     expect(errors).toEqual([]);
   });

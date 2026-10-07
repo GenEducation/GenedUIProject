@@ -14,12 +14,16 @@ const getFleetDevice = vi.hoisted(() => vi.fn());
 const getDeviceLogs = vi.hoisted(() => vi.fn());
 const listFleetLabs = vi.hoisted(() => vi.fn());
 const getCanonicalDevice = vi.hoisted(() => vi.fn());
+const getDeviceReport = vi.hoisted(() => vi.fn());
 vi.mock("../../adminService", () => ({
   getFleetDevice,
   getDeviceLogs,
   listFleetLabs,
   getCanonicalDevice,
+  getDeviceReport,
 }));
+
+const LAB_ID = "11111111-1111-1111-1111-111111111111";
 
 /**
  * Default: not in the canonical registry. The self-test suite below predates
@@ -30,6 +34,9 @@ vi.mock("../../adminService", () => ({
 beforeEach(() => {
   getCanonicalDevice.mockReset();
   getCanonicalDevice.mockResolvedValue(null);
+  getDeviceReport.mockReset();
+  getDeviceReport.mockResolvedValue(null);
+  getFleetDevice.mockReset();
 });
 
 /**
@@ -112,7 +119,7 @@ function detail(overrides: Partial<AdminDeviceDetail> = {}): AdminDeviceDetail {
 describe("DeviceDetailView — self-test parsing", () => {
   it("reads real components from report.components, not the wrapper's top-level keys", async () => {
     getFleetDevice.mockResolvedValue(detail());
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("Lab self-test")).toBeInTheDocument());
 
@@ -133,7 +140,7 @@ describe("DeviceDetailView — self-test parsing", () => {
 
   it("surfaces report-level metadata as real fields in the Lab enrollment card, not fake components", async () => {
     getFleetDevice.mockResolvedValue(detail());
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText(/Lab self-test report/)).toBeInTheDocument());
 
@@ -145,7 +152,7 @@ describe("DeviceDetailView — self-test parsing", () => {
 
   it("renders nested object metrics as real label/value rows, not a JSON dump", async () => {
     getFleetDevice.mockResolvedValue(detail());
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("audio_hat")).toBeInTheDocument());
 
@@ -166,7 +173,7 @@ describe("DeviceDetailView — self-test parsing", () => {
 
   it("shows the unknown-hardware-state message when no self-test has ever been reported", async () => {
     getFleetDevice.mockResolvedValue(detail({ last_health_report: null, self_test_status: null }));
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() =>
       expect(screen.getByText(/never reported a Lab self-test/i)).toBeInTheDocument(),
@@ -283,7 +290,7 @@ describe("DeviceDetailView — gened-health system diagnostic", () => {
     getCanonicalDevice.mockResolvedValue(
       canonical({ diagnostic: diagnostic() }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(getCanonicalDevice).toHaveBeenCalled());
     // "d1" is the Lab row's UUID and would find nothing — the canonical device
@@ -296,7 +303,7 @@ describe("DeviceDetailView — gened-health system diagnostic", () => {
     getCanonicalDevice.mockResolvedValue(
       canonical({ diagnostic: diagnostic() }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
     const card = diagCard();
@@ -326,7 +333,7 @@ describe("DeviceDetailView — gened-health system diagnostic", () => {
         findings_total: 0,
       }), }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
     const card = diagCard();
@@ -354,7 +361,7 @@ describe("DeviceDetailView — gened-health system diagnostic", () => {
         findings_total: 1,
       }), }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
     const card = diagCard();
@@ -379,7 +386,7 @@ describe("DeviceDetailView — gened-health system diagnostic", () => {
     getCanonicalDevice.mockResolvedValue(
       canonical({ diagnostic: diagnostic({ overall: "UNKNOWN", tally: { UNKNOWN: 4, PASS: 10 } }), }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
 
@@ -402,7 +409,7 @@ describe("DeviceDetailView — gened-health system diagnostic", () => {
      */
     getFleetDevice.mockResolvedValue(detail());
     getCanonicalDevice.mockResolvedValue(canonical({ diagnostic: null }));
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
     const card = diagCard();
@@ -425,7 +432,7 @@ describe("DeviceDetailView — gened-health system diagnostic", () => {
         received_at: new Date(Date.now() - 5 * 3600_000).toISOString(),
       }), }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
     const card = diagCard();
@@ -442,7 +449,7 @@ describe("DeviceDetailView — gened-health system diagnostic", () => {
     getCanonicalDevice.mockResolvedValue(
       canonical({ diagnostic: diagnostic({ clock_synced: false, collected_at: "1999-01-01T00:00:00Z" }), }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
     const card = diagCard();
@@ -457,7 +464,7 @@ describe("DeviceDetailView — gened-health system diagnostic", () => {
     getCanonicalDevice.mockResolvedValue(
       canonical({ diagnostic: diagnostic({ clock_synced: true }) }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
     expect(screen.queryByText(/clock is not synchronised/)).not.toBeInTheDocument();
@@ -468,7 +475,7 @@ describe("DeviceDetailView — gened-health system diagnostic", () => {
     getCanonicalDevice.mockResolvedValue(
       canonical({ diagnostic: diagnostic() }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
 
@@ -481,7 +488,7 @@ describe("DeviceDetailView — gened-health system diagnostic", () => {
   it("a failing diagnostic fetch does not take down the rest of the page", async () => {
     getFleetDevice.mockResolvedValue(detail());
     getCanonicalDevice.mockRejectedValue(new Error("diagnostic service unavailable"));
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
 
@@ -514,7 +521,7 @@ describe("DeviceDetailView — connectivity vs diagnostic freshness", () => {
         connectivity: { state: "UNKNOWN", source: "NONE", reason: "no_presence_channel" },
       }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
 
@@ -532,7 +539,7 @@ describe("DeviceDetailView — connectivity vs diagnostic freshness", () => {
         connectivity: { state: "UNKNOWN", source: "NONE", reason: "no_presence_channel" },
       }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
     expect(connState().className).not.toContain(HEALTHY_COLOUR);
@@ -560,7 +567,7 @@ describe("DeviceDetailView — connectivity vs diagnostic freshness", () => {
         }),
       }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
 
@@ -580,7 +587,7 @@ describe("DeviceDetailView — connectivity vs diagnostic freshness", () => {
         diagnostic: diagnostic({ overall: "PASS", diagnostic_freshness: "FRESH" }),
       }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
 
@@ -608,7 +615,7 @@ describe("DeviceDetailView — connectivity vs diagnostic freshness", () => {
         },
       }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
 
@@ -625,7 +632,7 @@ describe("DeviceDetailView — connectivity vs diagnostic freshness", () => {
     getCanonicalDevice.mockResolvedValue(
       canonical({ last_seen_source: "LAB_WS" }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
     expect(within(diagCard()).getByText(/LAB_WS/)).toBeInTheDocument();
@@ -642,7 +649,7 @@ describe("DeviceDetailView — connectivity vs diagnostic freshness", () => {
         last_seen_age_seconds: null,
       }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
     const card = diagCard();
@@ -669,7 +676,7 @@ describe("DeviceDetailView — connectivity vs diagnostic freshness", () => {
         }),
       }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
     expect(within(diagCard()).getByText(/every 30m/)).toBeInTheDocument();
@@ -678,7 +685,7 @@ describe("DeviceDetailView — connectivity vs diagnostic freshness", () => {
   it("shows the canonical serial, not just an alias", async () => {
     getFleetDevice.mockResolvedValue(detail());
     getCanonicalDevice.mockResolvedValue(canonical());
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
     expect(within(diagCard()).getByText("10000000aabbccdd")).toBeInTheDocument();
@@ -687,7 +694,7 @@ describe("DeviceDetailView — connectivity vs diagnostic freshness", () => {
   it("renders an informative empty state when the device is not in the registry", async () => {
     getFleetDevice.mockResolvedValue(detail());
     getCanonicalDevice.mockResolvedValue(null);
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
     const card = diagCard();
@@ -769,7 +776,7 @@ async function renderGenedpi(
 ) {
   getFleetDevice.mockResolvedValue(historicalLabDetail(detailOverrides));
   getCanonicalDevice.mockResolvedValue(genedpiCanonical(canonicalOverrides));
-  render(<DeviceDetailView deviceId="d1" />);
+  render(<DeviceDetailView deviceId={LAB_ID} />);
   await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
 }
 
@@ -895,7 +902,7 @@ describe("DeviceDetailView — historical Lab tenancy", () => {
     // registry is down) is the one time it is absent.
     getFleetDevice.mockResolvedValue(historicalLabDetail());
     getCanonicalDevice.mockRejectedValue(new Error("registry unavailable"));
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() =>
       expect(screen.getByText("Previous Lab enrollment")).toBeInTheDocument(),
@@ -929,7 +936,7 @@ describe("DeviceDetailView — active Lab tenancy is unchanged", () => {
         },
       }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("System diagnostic")).toBeInTheDocument());
 
@@ -948,11 +955,105 @@ describe("DeviceDetailView — active Lab tenancy is unchanged", () => {
     getFleetDevice.mockResolvedValue(
       detail({ revoked_at: "2026-09-01T00:00:00Z", lab_tenancy_state: "ACTIVE" }),
     );
-    render(<DeviceDetailView deviceId="d1" />);
+    render(<DeviceDetailView deviceId={LAB_ID} />);
 
     await waitFor(() => expect(screen.getByText("Lab actions")).toBeInTheDocument());
 
     expect(screen.getByRole("button", { name: /Force online/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /Move lab/i })).toBeDisabled();
+  });
+});
+
+describe("DeviceDetailView — canonical route and bookmarks", () => {
+  it("drills into a PERSONAL device with no Lab enrollment without calling getFleetDevice", async () => {
+    getCanonicalDevice.mockResolvedValue({
+      serial: "1000000000000001",
+      device_model: "Raspberry Pi 4",
+      connectivity: { state: "ONLINE", source: "MQTT_STATUS", reason: null },
+      lab_tenancy: null,
+      last_seen_at: new Date().toISOString(),
+      last_seen_source: "MQTT_STATUS",
+      diagnostic: null,
+      provenance: "DEV_CONF",
+    });
+
+    getDeviceReport.mockResolvedValue({
+      serial: "1000000000000001",
+      hostname: "gened-personal",
+      device_model: "Raspberry Pi 4",
+      meta: {
+        mode: "PERSONAL",
+        overall: "PASS",
+        tally: { PASS: 44 },
+        findings: [],
+        findings_total: 0,
+      },
+      panels: {
+        network: {
+          primary_ip: { state: "OK", value: "192.168.1.100", unit: null, source_check: null, note: null },
+          wifi: {
+            state: "OK",
+            value: [{ ssid: "HomeWiFi", signal_dbm: -52, signal_percent: 80 }],
+            unit: null,
+            source_check: "network.wifi.association",
+            note: null,
+          },
+          server_observed_ip: { state: "OK", value: "1.2.3.4", unit: null, source_check: null, note: null },
+          interfaces: { state: "OK", value: [], unit: null, source_check: null, note: null },
+          default_routes: { state: "OK", value: [], unit: null, source_check: null, note: null },
+          nameservers: { state: "OK", value: [], unit: null, source_check: null, note: null },
+          addresses_hidden_from_the_app: { state: "OK", value: [], unit: null, source_check: null, note: null },
+          regulatory_domain: { state: "OK", value: "IN", unit: null, source_check: null, note: null },
+          own_hotspot_active: { state: "OK", value: false, unit: null, source_check: null, note: null },
+          active_connections: { state: "OK", value: [], unit: null, source_check: null, note: null },
+          hostname_running: { state: "OK", value: "gened-personal", unit: null, source_check: null, note: null },
+          hostname_configured: { state: "OK", value: "gened-personal", unit: null, source_check: null, note: null },
+          mdns_collision_generation: { state: "OK", value: 0, unit: null, source_check: null, note: null },
+          sources: {},
+        },
+        system: {
+          uptime_human: { state: "OK", value: "3d 12h", unit: null, source_check: null, note: null },
+          soc_temperature_c: { state: "OK", value: 46.2, unit: "C", source_check: null, note: null },
+          load_1m: { state: "OK", value: 0.1, unit: null, source_check: null, note: null },
+          load_5m: { state: "OK", value: 0.1, unit: null, source_check: null, note: null },
+          load_15m: { state: "OK", value: 0.1, unit: null, source_check: null, note: null },
+          model: { state: "OK", value: "Raspberry Pi 4", unit: null, source_check: null, note: null },
+          sources: {},
+        },
+        storage: { filesystems: { state: "OK", value: [{ mount: "/", free_human: "22G" }] }, sources: {} },
+        power: { battery_percent: { state: "OK", value: 95, unit: "%" }, sources: {} },
+        services: { sources: {} },
+        provenance: { mode: { state: "OK", value: "PERSONAL" }, sources: {} },
+      },
+      inventory: { subsystems: [], other: [] },
+    });
+
+    render(<DeviceDetailView deviceId="serial:1000000000000001" />);
+
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument());
+
+    // Never attempts to load Lab device when there is no enrollment
+    expect(getFleetDevice).not.toHaveBeenCalled();
+
+    // Network and system state visible
+    expect(screen.getAllByText("192.168.1.100").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/HomeWiFi/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("3d 12h").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("46.2 °C").length).toBeGreaterThan(0);
+
+    // No Lab enrollment card/disclosure rendered in DOM
+    expect(screen.queryByText("Previous Lab enrollment")).toBeNull();
+    expect(screen.queryByText("Previous Lab enrollment history")).toBeNull();
+  });
+
+  it("resolves an old bare Lab UUID bookmark", async () => {
+    const oldUuid = "22222222-2222-2222-2222-222222222222";
+    getFleetDevice.mockResolvedValue(detail({ id: oldUuid, device_label: "Old Desk" }));
+
+    render(<DeviceDetailView deviceId={oldUuid} />);
+
+    await waitFor(() => expect(getFleetDevice).toHaveBeenCalledWith(oldUuid));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Old Desk");
+    expect(screen.getByText("Lab enrollment")).toBeInTheDocument();
   });
 });

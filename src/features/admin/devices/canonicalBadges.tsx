@@ -43,6 +43,20 @@ export const DIAG_STYLES: Record<DiagnosticStatus, string> = {
   INFO: "bg-white/10 text-white/50",
 };
 
+/**
+ * Presentation colours for the six Reading states.
+ * NOT_REPORTED is grey and italic, NEVER amber.
+ * UNKNOWN is amber, NEVER green.
+ */
+export const READING_STYLES = {
+  OK: { text: "text-white/80" },
+  NOT_REPORTED: { text: "text-white/40 italic" },
+  NOT_IN_METRICS: { text: "text-white/40" },
+  UNKNOWN: { text: "text-amber-300", badge: "bg-amber-500/15 text-amber-300" },
+  SKIPPED: { text: "text-white/40" },
+  PARTIAL: { text: "text-white/80", badge: "bg-white/10 text-white/50" },
+} as const;
+
 /** Worst-first, so the counts that matter are not buried under PASS. */
 export const TALLY_ORDER: DiagnosticStatus[] = [
   "FAIL",

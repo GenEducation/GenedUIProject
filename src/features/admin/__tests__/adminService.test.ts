@@ -12,6 +12,8 @@ import {
   getFleetDevice,
   getLabStats,
   getDeviceLogs,
+  getDeviceReport,
+  getDeviceReportRaw,
 } from "../adminService";
 import { seedAuthLocalStorage } from "@/test/helpers/auth";
 
@@ -215,5 +217,46 @@ describe("adminService.downloadImportTemplate — blob save flow", () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:mock");
 
     clickSpy.mockRestore();
+  });
+});
+
+describe("adminService — device report routes", () => {
+  it("getDeviceReport fetches /admin/devices/:device_key/report with encoded key", async () => {
+    const mockReport = { serial: "DEV-1", meta: { overall: "PASS" } };
+    const fetchMock = stubFetch(mockReport);
+    const result = await getDeviceReport("serial:DEV 1");
+    const { url } = firstCall(fetchMock);
+    expect(url).toMatch(/\/admin\/devices\/serial%3ADEV%201\/report$/);
+    expect(result).toEqual(mockReport);
+  });
+
+  it("getDeviceReport returns null on 404", async () => {
+    stubFetch({ message: "No gened-health report has been received for this device." }, 404);
+    const result = await getDeviceReport("serial:DEV-MISSING");
+    expect(result).toBeNull();
+  });
+
+  it("getDeviceReport re-throws non-404 errors", async () => {
+    stubFetch({ message: "Server error" }, 500);
+    await expect(getDeviceReport("serial:DEV-ERR")).rejects.toThrow();
+  });
+
+  it("getDeviceReportRaw fetches /admin/devices/:device_key/report/raw without evidence by default", async () => {
+    const mockDoc = { serial: "DEV-1", checks: {} };
+    const fetchMock = stubFetch(mockDoc);
+    const result = await getDeviceReportRaw("serial:DEV-1");
+    const { url } = firstCall(fetchMock);
+    expect(url).toMatch(/\/admin\/devices\/serial%3ADEV-1\/report\/raw$/);
+    expect(url).not.toContain("evidence=");
+    expect(result).toEqual(mockDoc);
+  });
+
+  it("getDeviceReportRaw appends ?evidence=true when requested", async () => {
+    const mockDoc = { serial: "DEV-1", checks: {}, evidence: {} };
+    const fetchMock = stubFetch(mockDoc);
+    const result = await getDeviceReportRaw("serial:DEV-1", true);
+    const { url } = firstCall(fetchMock);
+    expect(url).toMatch(/\/admin\/devices\/serial%3ADEV-1\/report\/raw\?evidence=true$/);
+    expect(result).toEqual(mockDoc);
   });
 });

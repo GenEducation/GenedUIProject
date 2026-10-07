@@ -13,6 +13,7 @@ import type {
   Paginated,
   PaginatedFleet,
 } from "./devices/types";
+import type { DeviceReport } from "./devices/reportTypes";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -449,6 +450,39 @@ export async function getCanonicalDevice(
     if (e instanceof ApiRequestError && e.status === 404) return null;
     throw e;
   }
+}
+
+/**
+ * Fetch the full, organised report (panels + check inventory) for one device.
+ *
+ * Resolves to `null` on 404 (the device exists but has never sent a gened-health
+ * report).
+ */
+export async function getDeviceReport(
+  deviceKey: string,
+): Promise<DeviceReport | null> {
+  try {
+    return await getJson<DeviceReport>(
+      `/admin/devices/${encodeURIComponent(deviceKey)}/report`,
+    );
+  } catch (e) {
+    if (e instanceof ApiRequestError && e.status === 404) return null;
+    throw e;
+  }
+}
+
+/**
+ * Fetch the stored raw gened-health JSON document.
+ * Evidence (raw stdout/files) is excluded unless `evidence=true`.
+ */
+export async function getDeviceReportRaw(
+  deviceKey: string,
+  evidence: boolean = false,
+): Promise<Record<string, unknown>> {
+  const query = evidence ? "?evidence=true" : "";
+  return await getJson<Record<string, unknown>>(
+    `/admin/devices/${encodeURIComponent(deviceKey)}/report/raw${query}`,
+  );
 }
 
 /**
