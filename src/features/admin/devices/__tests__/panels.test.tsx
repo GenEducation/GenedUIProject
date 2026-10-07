@@ -95,6 +95,58 @@ describe("Panels", () => {
       render(<NetworkPanel panel={panel} />);
       expect(screen.getByText("WiFi association not reported by this firmware")).toBeInTheDocument();
     });
+
+    it("renders WiFi association and network interfaces when provided as dictionary objects", () => {
+      const panel: NetworkPanelT = {
+        primary_ip: { state: "OK", value: "10.86.203.5", unit: null, source_check: "chk", note: null },
+        interfaces: {
+          state: "OK",
+          value: {
+            wlan0: { addresses: ["10.86.203.5/24"], operstate: "up", carrier: true },
+          },
+          unit: null,
+          source_check: "chk",
+          note: null,
+        },
+        default_routes: { state: "OK", value: ["default via 10.86.203.1 dev wlan0"], unit: null, source_check: "chk", note: null },
+        nameservers: { state: "OK", value: ["10.86.203.1"], unit: null, source_check: "chk", note: null },
+        addresses_hidden_from_the_app: { state: "OK", value: [], unit: null, source_check: "chk", note: null },
+        wifi: {
+          state: "OK",
+          value: {
+            wlan0: {
+              ssid: "Pixel 10a",
+              signal_dbm: -42,
+              signal_percent: 86,
+              band: "2.4GHz",
+              channel: 1,
+              tx_bitrate_mbps: 72.2,
+              interface_type: "managed",
+            },
+          },
+          unit: null,
+          source_check: "network.wifi.association",
+          note: null,
+        },
+        regulatory_domain: { state: "OK", value: "IN", unit: null, source_check: "chk", note: null },
+        own_hotspot_active: { state: "OK", value: false, unit: null, source_check: "chk", note: null },
+        active_connections: { state: "OK", value: [], unit: null, source_check: "chk", note: null },
+        hostname_running: { state: "OK", value: "gened-pi", unit: null, source_check: "chk", note: null },
+        hostname_configured: { state: "OK", value: "gened-pi", unit: null, source_check: "chk", note: null },
+        mdns_collision_generation: { state: "OK", value: 0, unit: null, source_check: "chk", note: null },
+        server_observed_ip: { state: "OK", value: "10.86.203.5", unit: null, source_check: null, note: null },
+        sources: {
+          "network.wifi.association": { status: "INFO", detail: "wlan0 joined to Pixel 10a at -42 dBm", next_step: null },
+        },
+      };
+
+      render(<NetworkPanel panel={panel} />);
+      expect(screen.getByText("Pixel 10a")).toBeInTheDocument();
+      expect(screen.getByText("-42 dBm (86%)")).toBeInTheDocument();
+      expect(screen.getByText("Band: 2.4GHz")).toBeInTheDocument();
+      expect(screen.getByText("72.2 Mbps tx")).toBeInTheDocument();
+      expect(screen.getAllByText("wlan0")).toHaveLength(2);
+    });
   });
 
   describe("SystemPanel", () => {

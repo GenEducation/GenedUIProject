@@ -24,11 +24,11 @@ export interface CheckSource {
 
 export interface NetworkPanel {
   primary_ip: Reading<string>;
-  interfaces: Reading<unknown[]>;
+  interfaces: Reading<unknown[] | Record<string, unknown>>;
   default_routes: Reading<unknown[]>;
   nameservers: Reading<unknown[]>;
   addresses_hidden_from_the_app: Reading<unknown[]>;
-  wifi: Reading<unknown[]>;
+  wifi: Reading<unknown[] | Record<string, unknown>>;
   regulatory_domain: Reading<string>;
   own_hotspot_active: Reading<boolean>;
   active_connections: Reading<unknown[]>;
