@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Copy, Check, Loader2 } from "lucide-react";
+import { Copy, Check } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { getDeviceReportRaw } from "../adminService";
 
 interface RawDocumentSectionProps {
@@ -64,23 +65,27 @@ export function RawDocumentSection({ deviceKey }: RawDocumentSectionProps) {
 
         <div className="flex items-center gap-2">
           {data ? (
-            <button
+            <Button
+              size="sm"
+              variant="outline"
+              tone="onDark"
               onClick={handleCopy}
-              className="inline-flex items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/5"
+              leadingIcon={copied ? <Check size={13} /> : <Copy size={13} />}
             >
-              {copied ? <Check size={13} /> : <Copy size={13} />}
               {copied ? "Copied" : "Copy JSON"}
-            </button>
+            </Button>
           ) : null}
 
-          <button
+          <Button
+            size="sm"
+            variant="secondary"
+            tone="onDark"
             onClick={handleFetch}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/15 disabled:opacity-50"
+            loading={loading}
           >
-            {loading ? <Loader2 size={13} className="animate-spin" /> : null}
             {data ? "Reload document" : "Load raw document"}
-          </button>
+          </Button>
         </div>
       </div>
 
