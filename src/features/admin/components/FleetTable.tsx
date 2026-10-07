@@ -28,6 +28,7 @@ import { useRouter } from "next/navigation";
 import { ChevronRight, RefreshCw, Search, TriangleAlert } from "lucide-react";
 
 import { Select } from "@/components/ui/Select";
+import { deviceHref } from "../devices/deviceRoute";
 import { getFleetDeviceStats, listFleetRegistryDevices } from "../adminService";
 import {
   ATTENTION_LABELS,
@@ -684,24 +685,16 @@ export function FleetTable() {
                     </td>
                     <td className="px-3 py-3 text-right">
                       {/*
-                        Only Lab-enrolled units have a detail page today: it loads
-                        from the Lab endpoint and keys on lab_devices.id. A
-                        PERSONAL or pre-registered device has no such record, so
-                        the link is omitted rather than pointed at a route that
-                        would 404.
+                        Every row carries a server-minted fleet_key (serial:*, lab:*,
+                        or health:*). All devices — canonical, legacy Lab, or
+                        legacy Personal — now have a detail page.
                       */}
-                      {row.lab?.lab_device_id ? (
-                        <button
-                          onClick={() =>
-                            router.push(
-                              `/admin/devices/${encodeURIComponent(row.lab!.lab_device_id)}`,
-                            )
-                          }
-                          className="inline-flex items-center gap-1 rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/5"
-                        >
-                          View <ChevronRight size={14} />
-                        </button>
-                      ) : null}
+                      <button
+                        onClick={() => router.push(deviceHref(row))}
+                        className="inline-flex items-center gap-1 rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/5"
+                      >
+                        View <ChevronRight size={14} />
+                      </button>
                     </td>
                   </tr>
                 ))}

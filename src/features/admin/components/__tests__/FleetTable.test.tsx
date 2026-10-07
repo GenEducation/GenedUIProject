@@ -789,24 +789,30 @@ describe("stats tiles", () => {
   });
 });
 
-// ── 6. Links and failure modes ───────────────────────────────
-
 describe("navigation and errors", () => {
-  it("links only the devices that actually have a detail page", async () => {
+  it("links every row using its server-minted fleet_key", async () => {
     await renderFleet();
 
-    // Lab-enrolled: the detail page loads from the Lab endpoint and keys on
-    // lab_devices.id.
+    // Lab-enrolled
     const lab = cells("lab:aaaaaaaa-0000-0000-0000-000000000001");
     fireEvent.click(lab.getByText("View"));
     expect(push).toHaveBeenCalledWith(
-      "/admin/devices/aaaaaaaa-0000-0000-0000-000000000001",
+      "/admin/devices/lab%3Aaaaaaaaa-0000-0000-0000-000000000001",
     );
 
-    // A personal or pre-registered unit has no such record, so no link is shown
-    // rather than one that would 404.
-    expect(cells("serial:1000000000000001").queryByText("View")).toBeNull();
-    expect(cells("health:DEV-8888-8888").queryByText("View")).toBeNull();
+    // Canonical serial
+    const canonical = cells("serial:1000000000000001");
+    fireEvent.click(canonical.getByText("View"));
+    expect(push).toHaveBeenCalledWith(
+      "/admin/devices/serial%3A1000000000000001",
+    );
+
+    // Legacy personal
+    const personal = cells("health:DEV-8888-8888");
+    fireEvent.click(personal.getByText("View"));
+    expect(push).toHaveBeenCalledWith(
+      "/admin/devices/health%3ADEV-8888-8888",
+    );
   });
 
   it("shows an error instead of an empty fleet when the request fails", async () => {
