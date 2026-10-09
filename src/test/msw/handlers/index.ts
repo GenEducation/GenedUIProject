@@ -8,6 +8,7 @@ import { placementHandlers } from "./placement";
 import { analyticsHandlers } from "./analytics";
 import { visualsHandlers } from "./visuals";
 import { sourcesHandlers } from "./sources";
+import { learnerHandlers } from "./learner";
 
 export const handlers = [
   ...authHandlers,
@@ -20,4 +21,5 @@ export const handlers = [
   ...analyticsHandlers,
   ...visualsHandlers,
   ...sourcesHandlers,
+  ...learnerHandlers,
 ];

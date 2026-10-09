@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Menu, Mic, MessageCircle } from "lucide-react";
 import Image from "next/image";
-import { useStudentStore, sessionRoutePath, isVoiceSession, type AgentItem } from "../store/useStudentStore";
+import { useStudentStore, sessionRoutePath, isVoiceSession } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
 import { getStudentDisplayName } from "../utils/displayName";
 import { selectContinueSession, selectImminentSession } from "../utils/sessionSelection";
@@ -22,9 +22,9 @@ import { StreakStats } from "./StreakStats";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
-import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { subjectMascot, SubjectIcon } from "@/features/subjects/subjectPresentation";
+import { subjectsForGrade, useSubjectCatalog, useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
 
 /* Subject-card mascot: display size, and how far it bleeds above the card.
    The bleed is mirrored as paddingTop on the horizontal scroller, which would
@@ -233,13 +233,16 @@ function FilterDropdown({ value, options, onChange, activeColor, defaultColor }:
 export function StudentHome() {
   const router = useRouter();
   const {
-    studentProfile, recentChats, availableAgents,
-    fetchSessions, fetchAvailableAgents, fetchStudentStats,
-    openNewChat, openExistingChat, openNewSession, startNewChatSession,
-    studentStats, isAgentsLoading, isSessionsLoading, isStatsLoading,
+    studentProfile, recentChats,
+    fetchSessions, fetchStudentStats,
+    openNewChat, openExistingChat,
+    studentStats, isSessionsLoading, isStatsLoading,
     avatarId,
   } = useStudentStore();
   const { sessions: scheduledSessions, loadScheduledSessions } = useScheduleStore();
+  const taxonomy = useTaxonomySubjects(studentProfile?.school_board);
+  const catalogLoaded = useSubjectCatalog((s) => s.isLoaded);
+  const catalogError = useSubjectCatalog((s) => s.error);
   const { hasEnded, hasDismissedCelebration, dismissCelebration } = useTutorialStore();
 
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
@@ -283,7 +286,6 @@ export function StudentHome() {
     let cancelled = false;
     if (studentProfile && !cancelled) {
       fetchSessions();
-      fetchAvailableAgents();
       fetchStudentStats();
       if (FEATURES.schedule) loadScheduledSessions(studentProfile.user_id);
     }
@@ -304,36 +306,18 @@ export function StudentHome() {
     return () => clearTimeout(t);
   }, [hasEnded, hasDismissedCelebration, dismissCelebration]);
 
-  const agents = availableAgents.map((agent: AgentItem) => {
-    return { ...agent, vis: subjectVisual(agent.subject) };
-  });
-
-  // The backend already groups agents by subject in the API response; the
-  // store flattens that into one entry per agent so other consumers (the
-  // "All Subjects" browse picker, chat/voice session start) can keep
-  // operating on individual agents. Re-group here so the dashboard shows one
-  // card per subject with its chapters aggregated, instead of one card per
-  // chapter-agent.
-  const subjectGroupsMap = new Map<string, typeof agents>();
-  for (const agent of agents) {
-    const key = `${agent.subject}__${agent.grade}`;
-    const existing = subjectGroupsMap.get(key);
-    if (existing) existing.push(agent);
-    else subjectGroupsMap.set(key, [agent]);
-  }
-  const subjectGroups = Array.from(subjectGroupsMap.entries()).map(([key, groupAgents]) => {
-    const first = groupAgents[0];
-    return {
-      key,
-      subject: first.subject,
-      grade: first.grade,
-      vis: first.vis,
-      agents: groupAgents,
-      mastery: typeof first.subject_coverage_percentage === "number"
-        ? Math.round(first.subject_coverage_percentage)
-        : 0,
-    };
-  });
+  // Subjects come from the taxonomy for the student's grade: the new backend
+  // has no per-student agent list. Each card opens the subject's chapter page
+  // (`/student/subjects/{subject}`), which lists what the student's school has
+  // published (GET /v1/learner/chapters).
+  const studentGrade = studentProfile?.grade;
+  const subjectGroups = subjectsForGrade(studentGrade, taxonomy).map((subject) => ({
+    key: subject,
+    subject,
+    grade: studentGrade as number,
+    vis: subjectVisual(subject),
+  }));
+  const isSubjectsLoading = !catalogLoaded && !catalogError;
 
   /* All sessions mapped with relative time */
   const allSessionsRaw = recentChats.map(chat => {
@@ -403,29 +387,8 @@ export function StudentHome() {
     ? getStudentDisplayName(studentProfile)
     : "Scholar";
 
-  const handleAgentChatClick = (agent: typeof agents[0]) => {
-    // Hold navigation until the backend assigns the real session_id, then
-    // jump straight to /student/chat/{id} so the greeting streams with the
-    // normal typing effect (no mid-stream URL swap / remount).
-    startNewChatSession(agent, (sessionId) => {
-      router.push(`/student/chat/${sessionId}`);
-    });
-  };
-
-  const handleAgentVoiceClick = (agent: typeof agents[0]) => {
-    openNewSession(agent, "voice");
-    router.push(`/student/voice?agent=${agent.agent_id}`);
-  };
-
-  // A subject card can back multiple chapter-agents; the tutor asks which
-  // chapter to work on as its opening question, so any agent in the group
-  // is a fine entry point — no chapter picker needed on the dashboard.
-  const handleSubjectChatClick = (group: typeof subjectGroups[0]) => {
-    handleAgentChatClick(group.agents[0]);
-  };
-
-  const handleSubjectVoiceClick = (group: typeof subjectGroups[0]) => {
-    handleAgentVoiceClick(group.agents[0]);
+  const openSubject = (subject: string) => {
+    router.push(`/student/subjects/${encodeURIComponent(subject)}`);
   };
 
   const handleSessionClick = (session: typeof allSessions[0]) => {
@@ -582,7 +545,7 @@ export function StudentHome() {
                 </h2>
               </div>
 
-              {isAgentsLoading ? (
+              {isSubjectsLoading ? (
                 <div className="flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)" }}>
                   {[1, 2].map((n) => (
                     <div key={n} className="rounded-[18px] animate-pulse flex-shrink-0"
@@ -639,12 +602,18 @@ export function StudentHome() {
                     {subjectGroups.map((group) => {
                     const vis = group.vis;
                     const hov = hoveredAgent === group.key;
-                    const mastery = group.mastery;
                     return (
-                      <div key={group.key}
+                      // A card-sized hit target, not a CTA: the shared <Button> would impose its sizing.
+                      // eslint-disable-next-line no-restricted-syntax
+                      <button key={group.key}
+                        type="button"
+                        onClick={() => openSubject(group.subject)}
                         onMouseEnter={() => setHoveredAgent(group.key)}
                         onMouseLeave={() => setHoveredAgent(null)}
-                        className="rounded-[18px] cursor-pointer flex-shrink-0 relative"
+                        onFocus={() => setHoveredAgent(group.key)}
+                        onBlur={() => setHoveredAgent(null)}
+                        aria-label={`${vis.label}: see chapters`}
+                        className="rounded-[18px] cursor-pointer flex-shrink-0 relative text-left outline-none focus-visible:ring-2"
                         style={{
                           background: C.card,
                           border: `1px solid ${hov ? vis.color + "60" : C.border}`,
@@ -687,56 +656,33 @@ export function StudentHome() {
                               {vis.label}
                             </div>
                             <div className="font-medium mt-0.5 truncate" style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>
-                              Grade {group.grade} · {group.agents.length} chapter{group.agents.length !== 1 ? "s" : ""}
+                              Grade {group.grade}
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center mb-4" style={{ gap: 10 }}>
-                          <div className="flex-1 rounded-full overflow-hidden" style={{ height: 7, background: vis.color + "14" }}>
-                            <div className="h-full rounded-full transition-all duration-1000"
-                              style={{ width: `${mastery}%`, background: `linear-gradient(90deg, ${vis.color}cc, ${vis.color})` }} />
-                          </div>
-                          <span className="font-bold flex-shrink-0" style={{ color: vis.color, fontSize: "clamp(12px, 1.2vw, 14px)" }}>{mastery}%</span>
+                        <div
+                          className="flex items-center justify-between rounded-[10px] font-bold"
+                          style={{
+                            padding: "9px 12px",
+                            background: hov ? `${vis.color}14` : `${vis.color}0A`,
+                            color: vis.color,
+                            fontSize: "clamp(11px, 1.1vw, 13px)",
+                            transition: "background 0.25s ease",
+                          }}
+                        >
+                          See chapters
+                          <ChevronRight size={16} strokeWidth={2.5} style={{ transform: hov ? "translateX(3px)" : "none", transition: "transform 0.25s ease" }} />
                         </div>
-                        <div className="flex gap-2 w-full mt-2">
-                          <Button
-                            variant="secondary"
-                            fullWidth
-                            onClick={() => handleSubjectChatClick(group)}
-                            style={{
-                              border: `1.5px solid ${vis.color}40`,
-                              background: hov ? `${vis.color}10` : "transparent",
-                              color: vis.color,
-                              borderRadius: 10,
-                              fontSize: "clamp(11px, 1.1vw, 13px)",
-                            }}
-                          >
-                            Chat
-                          </Button>
-                          <Button
-                            variant="primary"
-                            fullWidth
-                            onClick={() => handleSubjectVoiceClick(group)}
-                            style={{
-                              background: STUDENT_COLORS.primary,
-                              color: STUDENT_COLORS.card,
-                              border: "1.5px solid transparent",
-                              borderRadius: 10,
-                              fontSize: "clamp(11px, 1.1vw, 13px)",
-                              boxShadow: hov ? `0 4px 12px ${STUDENT_COLORS.primary}30` : "none",
-                            }}
-                          >
-                            Voice
-                          </Button>
-                        </div>
-                      </div>
+                      </button>
                     );
                     })}
                   </div>
                 </div>
               ) : (
                 <div className="rounded-2xl border-2 border-dashed p-10 text-center" style={{ borderColor: C.border }}>
-                  <p className="text-sm font-semibold" style={{ color: C.textMid }}>No subjects available yet</p>
+                  <p className="text-sm font-semibold" style={{ color: C.textMid }}>
+                    {catalogError ? "We couldn't load your subjects" : "No subjects available yet"}
+                  </p>
                   <p className="text-xs mt-1" style={{ color: C.textMuted }}>
                     Connect to a school from your{" "}
                     <button onClick={() => router.push("/student/profile")} className="underline bg-transparent border-none cursor-pointer" style={{ color: C.genPurple }}>
@@ -786,7 +732,7 @@ export function StudentHome() {
                     value={filterSubject === "All" ? "All Subjects" : filterSubject}
                     options={[
                       "All Subjects",
-                      ...Array.from(new Set(availableAgents.map((agent) => agent.subject))),
+                      ...subjectGroups.map((group) => group.subject),
                     ]}
                     onChange={v => {
                       if (v === "All Subjects") setFilterSubject("All");
