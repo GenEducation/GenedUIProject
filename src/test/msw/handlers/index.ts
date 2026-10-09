@@ -9,6 +9,7 @@ import { analyticsHandlers } from "./analytics";
 import { visualsHandlers } from "./visuals";
 import { sourcesHandlers } from "./sources";
 import { learnerHandlers } from "./learner";
+import { lessonHandlers } from "./lesson";
 
 export const handlers = [
   ...authHandlers,
@@ -21,5 +22,7 @@ export const handlers = [
   ...analyticsHandlers,
   ...visualsHandlers,
   ...sourcesHandlers,
+  // Before the learner handlers: its instance route falls through for theirs.
+  ...lessonHandlers,
   ...learnerHandlers,
 ];

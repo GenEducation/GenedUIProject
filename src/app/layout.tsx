@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display, Plus_Jakarta_Sans, Mukta, Source_Serif_4, JetBrains_Mono } from "next/font/google";
+import { Inter, Playfair_Display, Plus_Jakarta_Sans, Mukta, Source_Serif_4, JetBrains_Mono, Kalam } from "next/font/google";
 import "./globals.css";
 // Blobatar's motion layer. Required — an `animate` prop renders inline SVG but
 // nothing moves without this stylesheet. `gaze.css` arms the cursor-tracking
@@ -52,6 +52,14 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
+// The lesson whiteboard's handwriting: annotations the tutor "writes" on the
+// board. Kalam covers Devanagari too, so Hindi notes stay in the same hand.
+const kalam = Kalam({
+  variable: "--font-kalam",
+  subsets: ["latin", "devanagari"],
+  weight: ["400", "700"],
+});
+
 export const metadata: Metadata = {
   title: "GenEd",
   description: "A safe, AI-powered personalized learning platform for children.",
@@ -64,7 +72,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${playfair.variable} ${jakarta.variable} ${mukta.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} antialiased font-sans`}>
+      <body className={`${inter.variable} ${playfair.variable} ${jakarta.variable} ${mukta.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} ${kalam.variable} antialiased font-sans`}>
         <GlobalLoader />
         {children}
         <TutorialVideoModal />

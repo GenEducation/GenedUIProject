@@ -74,6 +74,8 @@ export default function StudentLayout({
   // Only prompt for a missing profile on the main student home page.
   // Sub-pages (report card, settings, sessions, etc.) shouldn't be interrupted.
   const isHomePage = pathname === "/student";
+  // The lesson screen has its own tutor on the page; a second creature would compete with it.
+  const isLesson = pathname?.startsWith("/student/lesson/") ?? false;
 
   return (
     <>
@@ -101,7 +103,7 @@ export default function StudentLayout({
           survives navigation, and suppressed while a blocking flow owns the
           screen — onboarding shows its own creature inside the modal, and a
           draggable toy during a mandatory placement test is a distraction. */}
-      <PetCompanion suppressed={Boolean(isProfileIncomplete) || placementOpen} />
+      <PetCompanion suppressed={Boolean(isProfileIncomplete) || placementOpen || isLesson} />
 
       {/* Global Real-time Toasts stack */}
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
