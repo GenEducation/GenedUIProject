@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef } from "react";
-import { Maximize2, MessageSquareText, Mic } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { MessageSquareText, Mic } from "lucide-react";
 import { useLessonStore } from "../useLessonStore";
-import { BoardFigure } from "./BoardFigure";
+import { WhiteboardCanvas } from "./WhiteboardCanvas";
+import type { Insets } from "../board/geometry";
 import { Filmstrip } from "./Filmstrip";
 import { StepCard } from "./StepCard";
 import { LessonSummary } from "./LessonSummary";
@@ -28,23 +29,36 @@ function EmptyBoard() {
 
 /**
  * The centre column and the screen's hero: the whiteboard. A mode switch and
- * full screen across the top; on the sheet, the step's title in the board's
- * hand, the figure in focus and what the learner can do now; the filmstrip and
- * the quick chips at the foot. The tutor's words live in the chat, not here.
+ * full screen across the top; below, an endless canvas (pan, zoom) holding
+ * every figure shown, with the step's title, the question card and the
+ * filmstrip floating over it; the quick chips at the foot. The tutor's words
+ * live in the chat, not here.
  */
 export function BoardPanel() {
-  const panelRef = useRef<HTMLElement>(null);
   const node = useLessonStore((s) => s.instance?.active_node ?? null);
   const title = useLessonStore((s) => s.payload?.node.title ?? s.instance?.active_node?.title ?? null);
-  const focused = useLessonStore((s) => s.focusedFigureId);
   const finished = useLessonStore((s) => s.instance?.state === "completed");
+  const hasFilmstrip = useLessonStore((s) => s.presentedFigureIds.length > 0);
   const voiceMode = useLessonStore((s) => s.voiceMode);
   const setVoiceMode = useLessonStore((s) => s.setVoiceMode);
 
-  const toggleFullscreen = () => {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void panelRef.current?.requestFullscreen?.();
-  };
+  const stepRef = useRef<HTMLDivElement>(null);
+  // The canvas frames figures in what the overlays leave clear: the title band, the docked question card, the filmstrip.
+  const insets = useCallback((): Insets => {
+    const step = stepRef.current;
+    const stepWidth = step && step.offsetWidth > 0 && step.childElementCount > 0 ? step.offsetWidth + 24 : 0;
+    return { top: 72, right: stepWidth, bottom: 128, left: 0 };
+  }, []);
+
+  // When the docked card appears, goes or changes width, re-frame the visual in the space it leaves.
+  const [stepWidth, setStepWidth] = useState(0);
+  useEffect(() => {
+    const el = stepRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setStepWidth(el.childElementCount > 0 ? el.offsetWidth : 0));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const modeButton = (on: boolean, label: string, Icon: typeof Mic, onClick: () => void, disabled = false) => (
     // eslint-disable-next-line no-restricted-syntax -- a segment of the mode switch.
@@ -71,7 +85,7 @@ export function BoardPanel() {
   );
 
   return (
-    <section ref={panelRef} aria-label="Whiteboard" className="lesson-panel flex h-full min-h-0 flex-col overflow-hidden">
+    <section aria-label="Whiteboard" className="lesson-panel flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex items-center gap-3 px-5 pb-3 pt-4">
         <div className="flex rounded-full bg-[var(--ls-sage)] p-1">
           {modeButton(!voiceMode, "Chat", MessageSquareText, () => setVoiceMode(false))}
@@ -83,37 +97,42 @@ export function BoardPanel() {
             {NODE_TYPE_LABEL[node.type]}
           </span>
         )}
-        {/* eslint-disable-next-line no-restricted-syntax -- a round icon tool in the board's toolbar. */}
-        <button
-          type="button"
-          onClick={toggleFullscreen}
-          aria-label="Full screen whiteboard"
-          className="grid h-10 w-10 place-items-center rounded-full text-[var(--ls-ink-mid)] transition-colors hover:bg-[var(--ls-primary-soft)] hover:text-[var(--ls-primary)]"
-        >
-          <Maximize2 size={19} />
-        </button>
       </div>
 
-      <div className="mx-4 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[22px] border border-[var(--ls-border)]">
-        <div className="lesson-board relative flex-1 min-h-0 overflow-y-auto">
-          <div className="mx-auto flex max-w-[880px] flex-col gap-6 p-5 sm:p-8">
-            {finished && <LessonSummary />}
+      <div className="relative mx-4 min-h-0 flex-1 overflow-hidden rounded-[22px] border border-[var(--ls-border)]">
+        {hasFilmstrip ? (
+          // Every figure shown this session stays on an endless board; the camera glides to each new one.
+          <WhiteboardCanvas insets={insets} refitKey={stepWidth} />
+        ) : (
+          <div className="lesson-board absolute inset-0 grid place-items-center">{!finished && <EmptyBoard />}</div>
+        )}
 
-            {title && !finished && (
-              <h1 className="lesson-hand lesson-underline self-start text-[30px] leading-tight text-[var(--ls-primary)]">{title}</h1>
-            )}
+        {title && !finished && (
+          <h1
+            data-no-pan
+            className="lesson-hand lesson-underline pointer-events-none absolute left-6 top-4 z-10 max-w-[60%] truncate text-[28px] leading-tight text-[var(--ls-primary)]"
+          >
+            {title}
+          </h1>
+        )}
 
-            {focused ? (
-              <div className="rounded-[22px] bg-white/80 p-4 shadow-[var(--ls-shadow)] sm:p-6">
-                <BoardFigure figureGroupId={focused} />
-              </div>
-            ) : finished ? null : (
-              <EmptyBoard />
-            )}
-
-            <StepCard />
-          </div>
+        {/* What the learner can do now (a check, a choice, moving on), docked on the right above the canvas. */}
+        <div
+          ref={stepRef}
+          data-no-pan
+          className="absolute bottom-32 right-4 top-16 z-10 flex w-[min(380px,46%)] flex-col overflow-y-auto overscroll-contain pb-2 pr-1 empty:hidden [&:not(:has(*))]:hidden"
+        >
+          <StepCard />
         </div>
+
+        {finished && (
+          <div data-no-pan className="absolute inset-0 z-20 overflow-y-auto bg-[var(--ls-card-warm)]/85 p-5 backdrop-blur-[2px] sm:p-8">
+            <div className="mx-auto max-w-[680px]">
+              <LessonSummary />
+            </div>
+          </div>
+        )}
+
         <Filmstrip />
       </div>
 

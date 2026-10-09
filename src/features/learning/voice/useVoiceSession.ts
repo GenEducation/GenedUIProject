@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getAuthToken } from "@/utils/authFetch";
 import { useLessonStore } from "../useLessonStore";
 import { loadPipeline, type MicErrorKind, type PipelineEvent, type VoicePipelineInstance } from "./loadPipeline";
@@ -22,6 +22,10 @@ export interface VoiceSession {
   level: number;
   /** Why voice stopped, in words for the learner. */
   error: string | null;
+  /** The learner muted the microphone: nothing is sent, and the server ignores what it would have heard. */
+  muted: boolean;
+  /** Mute or unmute (absent when there's no live session). Muting while the tutor speaks stops its reply. */
+  setMuted?: (muted: boolean) => void;
 }
 
 const MIC_ERRORS: Record<MicErrorKind, string> = {
@@ -32,7 +36,7 @@ const MIC_ERRORS: Record<MicErrorKind, string> = {
   failed: "The microphone couldn't start.",
 };
 
-const STARTING: VoiceSession = { phase: "connecting", heard: "", level: 0, error: null };
+const STARTING: VoiceSession = { phase: "connecting", heard: "", level: 0, error: null, muted: false };
 
 /** The capture worklet's RMS is in int16 units; ordinary speech sits around 1–3k. */
 const RMS_FULL_SCALE = 2600;
@@ -53,6 +57,16 @@ export function useVoiceSession(active: boolean): VoiceSession {
   // Only whether there is a node: the socket follows the lesson once open, so moving to a new node must not reconnect it.
   const hasNode = useLessonStore((s) => Boolean(s.instance?.active_node));
   const [session, setSession] = useState<VoiceSession>(STARTING);
+  const pipelineRef = useRef<VoicePipelineInstance | null>(null);
+
+  const setMuted = useCallback((muted: boolean) => {
+    const pipeline = pipelineRef.current;
+    if (!pipeline) return;
+    // Tell the server (voice_wire_v1 `mute`), and stop the track so no audio leaves the page while muted.
+    pipeline.worker?.postMessage({ t: "send", msg: { type: "mute", muted } });
+    if (pipeline.track) pipeline.track.enabled = !muted;
+    setSession((s) => ({ ...s, muted, level: muted ? 0 : s.level }));
+  }, []);
 
   useEffect(() => {
     const store = useLessonStore.getState();
@@ -121,6 +135,7 @@ export function useVoiceSession(active: boolean): VoiceSession {
           onEvent,
         });
         await pipeline.start();
+        pipelineRef.current = pipeline;
       } catch (error) {
         const kind = (error as { kind?: MicErrorKind })?.kind;
         goOffline(kind && kind in MIC_ERRORS ? MIC_ERRORS[kind] : "Voice couldn't start. You can keep going in the chat.");
@@ -129,10 +144,11 @@ export function useVoiceSession(active: boolean): VoiceSession {
 
     return () => {
       closed = true;
+      pipelineRef.current = null;
       void pipeline?.close().catch(() => undefined);
       setSession(STARTING); // the next session starts from scratch
     };
   }, [active, instanceId, hasNode]);
 
-  return session;
+  return { ...session, setMuted };
 }

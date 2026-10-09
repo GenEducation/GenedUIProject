@@ -53,14 +53,10 @@ export function BoardFigure({ figureGroupId }: { figureGroupId: string }) {
           width={picture.width_px}
           height={picture.height_px}
           onError={onError}
-          className="max-h-[52vh] w-auto max-w-full object-contain mix-blend-multiply"
+          className="max-h-[44vh] w-auto max-w-full object-contain mix-blend-multiply"
         />
       ))}
-      {caption && (
-        <figcaption className="lesson-hand max-w-[52ch] text-center text-[18px] leading-snug text-[var(--ls-primary)]">
-          {caption}
-        </figcaption>
-      )}
+      {/* No visible caption: the visuals carry their own drawn title; `caption` stays the image's description. */}
     </figure>
   );
 }

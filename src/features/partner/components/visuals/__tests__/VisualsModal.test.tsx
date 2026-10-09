@@ -163,6 +163,8 @@ describe("VisualsModal — detail and decisions", () => {
 
   it("accepts with the A key", async () => {
     await openDetail("SYNTHETIC shape 2");
+    // The shortcut belongs to the decision panel, which can mount after the passages; wait for it as a user would.
+    await screen.findByRole("region", { name: "Your decision" });
     fireEvent.keyDown(document, { key: "a" });
     await waitFor(() => expect(posts("/decision")).toHaveLength(1));
   });

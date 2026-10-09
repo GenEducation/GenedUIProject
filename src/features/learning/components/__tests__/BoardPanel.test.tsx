@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import {
   CHECK_ITEM, FIGURE_GROUP, LESSON_ID, OPTION_A,
   answerRequests, lessonFixture, makeLessonInstance, stepRequests, turnRequests,
@@ -27,11 +27,12 @@ beforeEach(() => {
 });
 
 describe("BoardPanel — figures", () => {
-  it("shows the focused figure with its learner caption, without repeating the chat", async () => {
+  it("shows the focused figure described by its learner caption, without repeating the chat", async () => {
     await open();
     const img = screen.getByRole("img", { name: "SYNTHETIC figure" });
     expect(img.getAttribute("src")).toMatch(/\/v1\/visual-images\/pic-1\?exp=1&sig=synthetic$/);
-    expect(screen.getByText("SYNTHETIC figure", { selector: "figcaption" })).toBeInTheDocument();
+    // The visual carries its own drawn title; the learner caption is its description, not repeated beneath it.
+    expect(document.querySelector("figcaption")).toBeNull();
     // The tutor's words live in the chat; the board doesn't repeat them.
     expect(screen.queryByText("SYNTHETIC look at this.")).toBeNull();
     expect(screen.getByText("Learn")).toBeInTheDocument();
@@ -46,18 +47,44 @@ describe("BoardPanel — figures", () => {
     expect(await screen.findByText("This picture couldn't load.")).toBeInTheDocument();
   });
 
-  it("the filmstrip moves through every figure shown, and says when one is from an earlier step", async () => {
+  it("keeps every figure on the board; the filmstrip focuses one without removing the others", async () => {
     lessonFixture.setHistory([
-      { turn_id: "t1", kind: "opening", status: "completed", created_at: "x", figure_group_ids: ["earlier-group"] },
-      { turn_id: "t2", kind: "learner_message", status: "completed", created_at: "x", figure_group_ids: [FIGURE_GROUP] },
+      { turn_id: "t1", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [FIGURE_GROUP] },
+      { turn_id: "t2", kind: "learner_message", status: "completed", created_at: "x", figure_group_ids: ["g-second"] },
     ]);
     await open();
+    // A second picture the board has a URL for (as if from an earlier node's manifest).
+    act(() => useLessonStore.setState((s) => ({
+      manifest: { ...s.manifest!, figures: { ...s.manifest!.figures, "pic-2": { figure_group_id: "g-second", url: "/v1/visual-images/pic-2", width_px: 10, height_px: 10, mime: "image/png", sha256: "0".repeat(64) } } },
+    })));
+    const board = screen.getByRole("list", { name: "Figures on the board" });
+    expect(within(board).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(board).getAllByRole("listitem")[1]).toHaveAttribute("aria-current", "true");
+
     const strip = screen.getByRole("navigation", { name: "Figures shown in this lesson" });
-    expect(within(strip).getByRole("button", { name: "Figure 2" })).toHaveAttribute("aria-current", "true");
-    expect(within(strip).getByRole("button", { name: "Next figure" })).toBeDisabled();
     fireEvent.click(within(strip).getByRole("button", { name: "Previous figure" }));
-    expect(store().focusedFigureId).toBe("earlier-group");
-    expect(screen.getByText("This picture is from an earlier step.")).toBeInTheDocument();
+    expect(store().focusedFigureId).toBe(FIGURE_GROUP);
+    expect(within(board).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(board).getAllByRole("listitem")[0]).toHaveAttribute("aria-current", "true");
+  });
+
+  it("a figure presented now is inked in; ones already on the board just appear", async () => {
+    await open();
+    expect(document.querySelector(`[data-figure-id="${FIGURE_GROUP}"]`)?.className).not.toMatch(/lesson-writing/);
+    act(() => useLessonStore.setState((s) => ({
+      presentedFigureIds: [...s.presentedFigureIds, "g-new"],
+      focusedFigureId: "g-new",
+      manifest: { ...s.manifest!, figures: { ...s.manifest!.figures, "pic-new": { figure_group_id: "g-new", url: "/v1/visual-images/pic-new", width_px: 10, height_px: 10, mime: "image/png", sha256: "0".repeat(64) } } },
+    })));
+    expect(document.querySelector('[data-figure-id="g-new"]')?.className).toMatch(/lesson-writing/);
+  });
+
+  it("leaves out a figure it has no picture for", async () => {
+    lessonFixture.setHistory([
+      { turn_id: "t1", kind: "opening", status: "completed", created_at: "x", figure_group_ids: ["earlier-group", FIGURE_GROUP] },
+    ]);
+    await open();
+    expect(within(screen.getByRole("list", { name: "Figures on the board" })).getAllByRole("listitem")).toHaveLength(1);
   });
 });
 

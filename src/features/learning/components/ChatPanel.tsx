@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowDown } from "lucide-react";
+import { animate, type AnimationPlaybackControls } from "framer-motion";
 import { useLessonStore } from "../useLessonStore";
 import { ChatTurn } from "./ChatTurn";
 import { ChatInput } from "./ChatInput";
@@ -14,6 +15,7 @@ const VOICE_UNAVAILABLE: VoiceSession = {
   heard: "",
   level: 0,
   error: "Voice lessons aren't available yet. You can keep going in the chat.",
+  muted: false,
 };
 
 /** Within this many px of the bottom counts as "reading the latest". */
@@ -43,16 +45,40 @@ export function ChatPanel({ onShowFigure }: { onShowFigure: (figureGroupId: stri
   const listRef = useRef<HTMLOListElement>(null);
   const [atBottom, setAtBottom] = useState(true);
 
+  const glide = useRef<AnimationPlaybackControls | null>(null);
   const scrollToEnd = useCallback((smooth: boolean) => {
     const list = listRef.current;
-    list?.scrollTo?.({ top: list.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+    if (!list) return;
+    glide.current?.stop();
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (!smooth || reduced) {
+      list.scrollTop = list.scrollHeight;
+      return;
+    }
+    // The same no-bounce spring as the board's camera; it chases the end if text is still streaming in.
+    glide.current = animate(list.scrollTop, list.scrollHeight - list.clientHeight, {
+      type: "spring",
+      duration: 0.8,
+      bounce: 0,
+      onUpdate: (top) => (list.scrollTop = top),
+      onComplete: () => {
+        glide.current = null;
+        list.scrollTop = list.scrollHeight;
+      },
+    });
   }, []);
+  // The learner's own scrolling takes over from a glide.
+  const stopGlide = () => {
+    glide.current?.stop();
+    glide.current = null;
+  };
+  useEffect(() => stopGlide, []);
 
   // Follow new turns and streamed text, unless the learner has scrolled up.
   const lastTurn = turns.at(-1);
   const contentKey = `${turns.length}:${lastTurn?.lastSeq ?? 0}:${lastTurn?.status ?? ""}`;
   useEffect(() => {
-    if (atBottom) scrollToEnd(false);
+    if (atBottom && !glide.current) scrollToEnd(false);
   }, [contentKey, atBottom, scrollToEnd]);
 
   const onScroll = () => {
@@ -70,6 +96,8 @@ export function ChatPanel({ onShowFigure }: { onShowFigure: (figureGroupId: stri
       <ol
         ref={listRef}
         onScroll={onScroll}
+        onWheel={stopGlide}
+        onTouchStart={stopGlide}
         aria-live="polite"
         aria-busy={replying}
         className="flex flex-1 min-h-0 flex-col gap-5 overflow-y-auto px-4 py-5"
@@ -89,10 +117,7 @@ export function ChatPanel({ onShowFigure }: { onShowFigure: (figureGroupId: stri
         // eslint-disable-next-line no-restricted-syntax -- a floating pill over the transcript.
         <button
           type="button"
-          onClick={() => {
-            setAtBottom(true);
-            scrollToEnd(true);
-          }}
+          onClick={() => scrollToEnd(true)}
           className="absolute bottom-[104px] left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[var(--ls-ink)] px-3.5 py-1.5 text-[12px] font-semibold text-white shadow-lg"
         >
           <ArrowDown size={13} aria-hidden /> Latest

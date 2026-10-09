@@ -10,11 +10,15 @@ const fake = vi.hoisted(() => ({
   options: null as PipelineOptions | null,
   closed: 0,
   startError: null as (Error & { kind?: string }) | null,
+  sent: [] as unknown[],
+  track: { enabled: true },
 }));
 vi.mock("../../voice/loadPipeline", () => ({
   loadPipeline: async () => ({
     VoicePipeline: class {
       constructor(options: PipelineOptions) { fake.options = options; }
+      worker = { postMessage: (m: unknown) => fake.sent.push(m) };
+      track = fake.track;
       async start() {
         if (fake.startError) throw fake.startError;
         return { aec: true, ns: true, agc: true, inRate: 48000 };
@@ -44,6 +48,8 @@ beforeEach(() => {
   fake.options = null;
   fake.closed = 0;
   fake.startError = null;
+  fake.sent = [];
+  fake.track = { enabled: true };
   lessonFixture.reset();
   store().reset();
   localStorage.setItem("gened_auth_token", "token-synthetic");
@@ -94,6 +100,22 @@ describe("voice mode", () => {
     const last = store().turns.at(-1)!;
     expect(last.status).toBe("interrupted");
     expect(replyText(last)).toBe("SYNTHETIC half");
+  });
+
+  it("the mic mutes: tells the server, stops the track, and unmutes the same way", async () => {
+    await openVoice();
+    await server({ type: "ready", session_id: "s", degraded: [] });
+    const mic = await screen.findByRole("button", { name: "Mute microphone" });
+    fireEvent.click(mic);
+    expect(fake.sent).toEqual([{ t: "send", msg: { type: "mute", muted: true } }]);
+    expect(fake.track.enabled).toBe(false);
+    expect(screen.getByRole("button", { name: "Unmute microphone" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Muted")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Unmute microphone" }));
+    expect(fake.sent.at(-1)).toEqual({ t: "send", msg: { type: "mute", muted: false } });
+    expect(fake.track.enabled).toBe(true);
+    expect(screen.getByText("Listening…")).toBeInTheDocument();
   });
 
   it("End closes the session and brings the text input back", async () => {

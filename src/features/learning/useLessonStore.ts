@@ -91,6 +91,16 @@ let lastReplyAt = 0;
 
 const uuid = () => crypto.randomUUID();
 
+/**
+ * The backend's manifest covers only the current node's pictures. The board keeps every figure shown this session,
+ * so earlier nodes' signed URLs are kept (until they expire) and newer ones win.
+ */
+function mergeManifest(previous: PresentationManifest | null, next: PresentationManifest | null): PresentationManifest | null {
+  if (!next) return previous;
+  if (!previous) return next;
+  return { expires_at: next.expires_at, figures: { ...previous.figures, ...next.figures } };
+}
+
 function withFigures(presented: string[], ids: string[]): string[] {
   const next = [...presented];
   for (const id of ids) if (!next.includes(id)) next.push(id);
@@ -114,7 +124,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
       lessonService.teacherPayload(instanceId),
       lessonService.manifest(instanceId).catch(() => null),
     ]);
-    if (get().instanceId === instanceId) set({ payload, manifest });
+    if (get().instanceId === instanceId) set((state) => ({ payload, manifest: mergeManifest(state.manifest, manifest) }));
   };
 
   const loadReport = async (instanceId: string) => {
@@ -376,7 +386,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
       const { instanceId } = get();
       if (!instanceId) return;
       const manifest = await lessonService.manifest(instanceId);
-      if (get().instanceId === instanceId) set({ manifest });
+      if (get().instanceId === instanceId) set((state) => ({ manifest: mergeManifest(state.manifest, manifest) }));
     },
 
     focusFigure: (figureGroupId) => set({ focusedFigureId: figureGroupId }),

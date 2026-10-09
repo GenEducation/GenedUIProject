@@ -30,6 +30,10 @@ export interface PipelineOptions {
 export interface VoicePipelineInstance {
   start(): Promise<{ aec: boolean; ns: boolean; agc: boolean; inRate: number }>;
   close(): Promise<void>;
+  /** The session worker that owns the socket; `{t: "send", msg}` sends a protocol frame. Set by `start()`. */
+  worker?: Worker | null;
+  /** The microphone track; set by `start()` (absent when a test stream stands in). */
+  track?: MediaStreamTrack | null;
 }
 
 /** `MicError.kind` from the pipeline: why the microphone couldn't be opened. */
