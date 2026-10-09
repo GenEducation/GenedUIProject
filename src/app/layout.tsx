@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display, Plus_Jakarta_Sans, Mukta, Source_Serif_4, JetBrains_Mono, Kalam } from "next/font/google";
+import { Inter, Playfair_Display, Plus_Jakarta_Sans, Mukta, Source_Serif_4, JetBrains_Mono, Kalam, Fredoka, Nunito } from "next/font/google";
 import "./globals.css";
 // Blobatar's motion layer. Required — an `animate` prop renders inline SVG but
 // nothing moves without this stylesheet. `gaze.css` arms the cursor-tracking
@@ -60,6 +60,20 @@ const kalam = Kalam({
   weight: ["400", "700"],
 });
 
+// The lesson screen's type, matched to the rounded GenEd logo: Fredoka for
+// headings and controls, Nunito for reading. Both chain Mukta for Devanagari.
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const nunito = Nunito({
+  variable: "--font-nunito",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
 export const metadata: Metadata = {
   title: "GenEd",
   description: "A safe, AI-powered personalized learning platform for children.",
@@ -72,7 +86,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${playfair.variable} ${jakarta.variable} ${mukta.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} ${kalam.variable} antialiased font-sans`}>
+      <body className={`${inter.variable} ${playfair.variable} ${jakarta.variable} ${mukta.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} ${kalam.variable} ${fredoka.variable} ${nunito.variable} antialiased font-sans`}>
         <GlobalLoader />
         {children}
         <TutorialVideoModal />

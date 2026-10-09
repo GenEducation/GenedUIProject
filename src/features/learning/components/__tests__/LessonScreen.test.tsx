@@ -6,9 +6,6 @@ import { useLessonStore } from "../../useLessonStore";
 import { formatDuration } from "../../useSessionTimer";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), usePathname: () => "/student/lesson/x" }));
-// The Blobatar draws SVG from a seed; not what these tests are about.
-vi.mock("@/features/student/components/StudentBlobatar", () => ({ StudentBlobatar: () => null }));
-
 import { LessonScreen } from "../LessonScreen";
 
 beforeEach(() => {
@@ -37,9 +34,9 @@ describe("LessonScreen", () => {
     expect(screen.getByRole("region", { name: "Chat with your tutor" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "SYNTHETIC node 2" })).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Steps completed" })).toHaveAttribute("aria-valuenow", "1");
-    // The tutor opens a fresh node: in the chat, and as the board's caption.
+    // The tutor opens a fresh node in the chat, and only there.
     expect(await within(screen.getByRole("region", { name: "Chat with your tutor" })).findByText("SYNTHETIC reply.")).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Whiteboard" })).getByText("SYNTHETIC reply.")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Whiteboard" })).queryByText("SYNTHETIC reply.")).toBeNull();
   });
 
   it("without launch info, falls back to a generic heading and exits home", () => {
@@ -58,10 +55,14 @@ describe("LessonScreen", () => {
     expect(document.getElementById("lesson-pane-board")?.className).toMatch(/(^| )hidden( |$)/);
   });
 
-  it("voice mode is off until the voice service is live", () => {
+  it("Voice opens voice mode, which says voice isn't available while it's switched off", async () => {
     render(<LessonScreen instanceId={LESSON_ID} />);
-    expect(screen.getByRole("radio", { name: "Chat & Whiteboard" })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByRole("radio", { name: "Voice Mode" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Chat" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Voice" }));
+    expect(screen.getByRole("button", { name: "Voice" })).toHaveAttribute("aria-pressed", "true");
+    expect(await screen.findByText("Voice lessons aren't available yet. You can keep going in the chat.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Back to typing" }));
+    expect(screen.getByRole("button", { name: "Chat" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("offers a retry when the lesson can't be read", async () => {

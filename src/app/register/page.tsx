@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ChangeEvent, FormEvent } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 import { SignUp } from "@/features/auth/components/SignUp";
@@ -9,6 +9,7 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 import { completeAndRedirect } from "@/features/auth/usePostAuthRedirect";
+import { passwordRuleError } from "@/features/auth/passwordRule";
 
 const initialSignUpData: SignUpFields = {
   email: "",
@@ -27,6 +28,14 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [googleSignUpToken, setGoogleSignUpToken] = useState<string | null>(null);
+
+  // A school's join link (`/register?partner=<school id>`) requests that school on
+  // sign-up. `GET /partners` needs a signed-in user, so there is no picker here;
+  // the student's membership starts PENDING until the school approves it.
+  useEffect(() => {
+    const partnerId = new URLSearchParams(window.location.search).get("partner")?.trim();
+    if (partnerId) setSignupData((prev) => ({ ...prev, partner_id: partnerId }));
+  }, []);
 
   const validateSignUp = () => {
     const errs: Record<string, string> = {};
@@ -47,7 +56,7 @@ export default function RegisterPage() {
         else if (!emailRegex.test(signupData.parent_email)) errs.parent_email = "Please enter a valid parent email address";
       }
       if (!signupData.password.trim()) errs.password = "Password is compulsory";
-      else if (signupData.password.length < 6) errs.password = "Password must be at least 6 characters";
+      else if (passwordRuleError(signupData.password)) errs.password = passwordRuleError(signupData.password)!;
       if (!signupData.confirmPassword?.trim()) errs.confirmPassword = "Confirm Password is compulsory";
       else if (signupData.password !== signupData.confirmPassword) errs.confirmPassword = "Passwords do not match";
       const gradeNum = Number(signupData.grade);
@@ -58,7 +67,7 @@ export default function RegisterPage() {
         if (!signupData.email.trim()) errs.email = "Email is compulsory";
         else if (!emailRegex.test(signupData.email)) errs.email = "Please enter a valid email address";
         if (!signupData.password.trim()) errs.password = "Password is compulsory";
-        else if (signupData.password.length < 6) errs.password = "Password must be at least 6 characters";
+        else if (passwordRuleError(signupData.password)) errs.password = passwordRuleError(signupData.password)!;
         if (!signupData.confirmPassword?.trim()) errs.confirmPassword = "Confirm Password is compulsory";
         else if (signupData.password !== signupData.confirmPassword) errs.confirmPassword = "Passwords do not match";
       }

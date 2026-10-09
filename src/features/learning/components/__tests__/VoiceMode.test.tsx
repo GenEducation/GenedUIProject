@@ -5,8 +5,6 @@ import { useLessonStore } from "../../useLessonStore";
 import { replyText } from "../../transcript";
 import type { PipelineEvent, PipelineOptions } from "../../voice/loadPipeline";
 
-vi.mock("@/features/student/components/StudentBlobatar", () => ({ StudentBlobatar: () => null }));
-
 /** A stand-in for the backend's audio client: records how it was opened and lets a test play the server's part. */
 const fake = vi.hoisted(() => ({
   options: null as PipelineOptions | null,

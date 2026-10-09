@@ -15,7 +15,7 @@ import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { StreakStats } from "./StreakStats";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { updateProfile, fetchProfile } from "@/features/auth/authService";
-import { studentService } from "@/features/student/services/studentService";
+import { studentService, type PartnerAssociationStatus } from "@/features/student/services/studentService";
 import { fetchVoices } from "@/features/student/services/voiceCatalogService";
 import { DEFAULT_GEMINI_VOICE, type GeminiVoice } from "@/constants/geminiVoices";
 import { PttHotkeyConfig } from "./PttHotkeyConfig";
@@ -81,6 +81,15 @@ const TRAIT_GROUPS: { key: keyof GeneralOnboarding; icon: string; title: string 
   { key: "strengths",            icon: "💪", title: "Strengths"      },
   { key: "weaknesses",           icon: "🎯", title: "Growing On"     },
 ];
+
+/** Dropdown hint for a school the student already has a request with. */
+const PARTNER_STATUS_HINT: Record<PartnerAssociationStatus, string | undefined> = {
+  NOT_REQUESTED: undefined,
+  PENDING: "Request pending",
+  APPROVED: "Connected",
+  REJECTED: "Request declined",
+  REVOKED: "Access ended",
+};
 
 const sentenceCase = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
@@ -362,7 +371,7 @@ export function StudentProfile() {
   const router = useRouter();
   const {
     studentProfile, logoutStudent,
-    availablePartners, fetchAvailablePartners,
+    availablePartners,
     sendPartnerRequest, partnerRequestStatus,
     enrolledPartners, fetchEnrolledPartners, isEnrolledPartnersLoading,
     linkParent, studentStats, fetchStudentStats,
@@ -415,12 +424,12 @@ export function StudentProfile() {
 
   useEffect(() => {
     setMounted(true);
-    fetchAvailablePartners();
+    // One request fills both lists: `/student/partners` returns every school with this student's status.
     fetchEnrolledPartners();
     fetchStudentStats();
     if (studentProfile?.user_id) loadStudentTests(studentProfile.user_id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchAvailablePartners, fetchEnrolledPartners, fetchStudentStats, studentProfile?.user_id]);
+  }, [fetchEnrolledPartners, fetchStudentStats, studentProfile?.user_id]);
 
   /**
    * Heal a stale localStorage profile by pulling the latest from auth-service
@@ -908,14 +917,9 @@ export function StudentProfile() {
                   options={availablePartners.map((p, i) => ({
                     value: String(p.partner_id ?? p.id ?? `avp-${i}`),
                     label: p.organization ?? "",
-                    hint:
-                      p.association_status === "PENDING"
-                        ? "Request pending"
-                        : p.association_status === "APPROVED"
-                          ? "Connected"
-                          : undefined,
-                    disabled:
-                      p.association_status === "PENDING" || p.association_status === "APPROVED",
+                    hint: p.association_status ? PARTNER_STATUS_HINT[p.association_status] : undefined,
+                    // Any existing association blocks a new request ("Association already exists").
+                    disabled: !!p.association_status && p.association_status !== "NOT_REQUESTED",
                   }))}
                   buttonStyle={{
                     padding: "10px 14px",

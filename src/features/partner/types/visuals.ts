@@ -167,5 +167,10 @@ export interface VisualListParams {
   component_id?: string;
   /** ISO datetime: the last item's `created_at`, for the next page. */
   before?: string;
+  /**
+   * The last item's `id`, sent with `before`. One run's visuals share a
+   * `created_at` (one transaction), so the cursor is the `(created_at, id)` pair.
+   */
+  before_id?: string;
   limit?: number;
 }

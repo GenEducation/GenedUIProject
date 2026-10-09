@@ -1,4 +1,5 @@
 import type { EducationBoard } from "@/types/education";
+import { apiErrorFromResponse } from "@/utils/apiError";
 
 export const AUTH_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL|| "";
 
@@ -20,6 +21,8 @@ export interface SignUpFields {
   phone?: string;
   otp_code?: string;
   parent_email?: string;
+  /** A school to request on sign-up; the membership starts PENDING until that school approves. Omit to join GenEd. */
+  partner_id?: string;
 }
 
 export interface AuthTokenResponse {
@@ -35,6 +38,8 @@ export interface AuthTokenResponse {
   board?: EducationBoard;
   organization?: string;
   website?: string | null;
+  // Parent-only.
+  phone?: string;
   age?: number;
   name?: string;
   ai_name?: string;
@@ -53,27 +58,9 @@ export interface SignInFields {
   password: string;
 }
 
+/** Throws an `ApiRequestError` (an `Error`) so callers keep `message` and also get `error_code` / `retry_after`. */
 async function handleAuthError(response: Response, defaultMsg: string): Promise<never> {
-  let errorMessage = defaultMsg;
-  try {
-    const errorData = await response.json();
-    // Prefer the top-level `message` from the structured error shape
-    if (typeof errorData.message === "string") {
-      errorMessage = errorData.message;
-    } else if (Array.isArray(errorData.detail)) {
-      // Legacy: FastAPI validation error shape — remove once all endpoints migrated
-      errorMessage = errorData.detail
-        .map((err: { msg?: string }) => err.msg)
-        .join(", ");
-    } else if (typeof errorData.detail === "string") {
-      // Legacy: old ad-hoc shape — remove once all endpoints migrated
-      errorMessage = errorData.detail;
-    }
-  } catch (e) {
-    const errorText = await response.text().catch(() => "");
-    errorMessage = errorText || errorMessage;
-  }
-  throw new Error(errorMessage);
+  throw await apiErrorFromResponse(response, defaultMsg);
 }
 
 export async function signIn(data: SignInFields): Promise<AuthTokenResponse> {
@@ -108,6 +95,8 @@ export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
     if (data.email) body.email_id = data.email;
     if (data.otp_code) body.otp_code = data.otp_code;
     if (data.grade) body.grade = Number(data.grade);
+    if (data.age) body.age = Number(data.age);
+    if (data.partner_id) body.partner_id = data.partner_id;
   } else {
     body.email_id = data.email;
     body.otp_code = data.otp_code;
@@ -153,10 +142,11 @@ export async function googleSignUp(token: string, data: Partial<SignUpFields>): 
     role: data.role?.toUpperCase(),
   };
 
-  if (data.username) body.username = data.username;
-
+  // The backend refuses unknown fields (422), so only send what each role accepts.
   if (data.role === "student") {
     if (data.grade) body.grade = Number(data.grade);
+    if (data.age) body.age = Number(data.age);
+    if (data.partner_id) body.partner_id = data.partner_id;
   } else if (data.role === "parent") {
     if (data.phone) body.phone = data.phone;
   }

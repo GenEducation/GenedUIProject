@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, Images, Play, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, Images, Play, AlertCircle, FileText, HelpCircle, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePartnerStore, SubjectFilters, type Subject } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
@@ -13,6 +13,9 @@ import { asError } from "@/utils/errors";
 import { resolveTaxonomyBoard, useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
 import { useVisualsIndex } from "../hooks/useVisualsIndex";
 import { VisualsModal } from "./visuals/VisualsModal";
+import { SourceReportModal } from "./SourceReportModal";
+import { SourceQuestionsModal } from "./SourceQuestionsModal";
+import { SourceReleaseModal } from "./SourceReleaseModal";
 import {
   ACTIVE_STATES,
   DELETABLE_STATES,
@@ -66,6 +69,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [visualsFor, setVisualsFor] = useState<Subject | null>(null);
+  const [reportFor, setReportFor] = useState<Subject | null>(null);
+  const [questionsFor, setQuestionsFor] = useState<Subject | null>(null);
+  const [releaseFor, setReleaseFor] = useState<Subject | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const visualsIndex = useVisualsIndex(subjects);
@@ -310,7 +316,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             const hasVisuals = !!visualCounts && visualCounts.pending + visualCounts.accepted + visualCounts.rejected > 0;
             const pendingVisuals = visualCounts?.pending ?? 0;
             const busy = busyId === subject.id;
-            const explain = subject.detail && ["failed", "invalid", "review_needed"].includes(subject.state);
+            // A chapter waiting on questions says so with its button; its raw detail names server paths.
+            const awaitingAnswers = subject.state === "review_needed" && subject.questions > 0;
+            const explain = subject.detail && ["failed", "invalid", "review_needed"].includes(subject.state) && !awaitingAnswers;
 
             return (
               <motion.div
@@ -344,6 +352,16 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                             {subject.detail}
                           </p>
                         )}
+                        {subject.has_report && (
+                          // eslint-disable-next-line no-restricted-syntax -- inline text link under the title, not a sized action button
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setReportFor(subject); }}
+                            className="self-start ml-[2px] mt-0.5 inline-flex items-center gap-1 text-[11px] font-black text-[#1A3D2C] underline decoration-[#1A3D2C]/30 underline-offset-2 hover:decoration-[#1A3D2C] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1A3D2C]/40 rounded"
+                          >
+                            <FileText size={12} aria-hidden /> {subject.state === "ready" ? "View report" : "See what needs fixing"}
+                          </button>
+                        )}
                       </div>
 
                       {/* Middle: Subject */}
@@ -355,11 +373,34 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
                       {/* Right: State & Actions */}
                       <div className="flex shrink-0 items-center gap-3 ml-4">
-                        <span
-                          className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-colors ${STATE_CHIP[subject.state]}`}
-                        >
-                          {SOURCE_STATE_LABELS[subject.state]}
-                        </span>
+                        {awaitingAnswers ? (
+                          <Button
+                            size="sm"
+                            pill
+                            leadingIcon={<HelpCircle size={13} />}
+                            onClick={(e) => { e.stopPropagation(); setQuestionsFor(subject); }}
+                          >
+                            {subject.questions === 1 ? "Answer 1 question" : `Answer ${subject.questions} questions`}
+                          </Button>
+                        ) : (
+                          <span
+                            className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-colors ${STATE_CHIP[subject.state]}`}
+                          >
+                            {SOURCE_STATE_LABELS[subject.state]}
+                          </span>
+                        )}
+
+                        {subject.state === "ready" && (
+                          <Button
+                            size="sm"
+                            pill
+                            variant="secondary"
+                            leadingIcon={<ShieldCheck size={13} />}
+                            onClick={(e) => { e.stopPropagation(); setReleaseFor(subject); }}
+                          >
+                            Review &amp; publish
+                          </Button>
+                        )}
 
                         {STARTABLE_STATES.has(subject.state) && (
                           <Button
@@ -469,6 +510,25 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         isLoading={isDeleting}
         error={deleteError}
       />
+
+      {/* Reconciliation questions popup */}
+      <SourceQuestionsModal
+        subject={questionsFor}
+        onClose={() => setQuestionsFor(null)}
+        onSaved={() => void fetchSubjects()}
+        onRerun={(subject) => startIngestion(subject.id)}
+      />
+
+      {/* Review & publish popup */}
+      <SourceReleaseModal
+        subject={releaseFor}
+        onClose={() => setReleaseFor(null)}
+        onPublished={() => void fetchSubjects()}
+        onRerun={(subject) => startIngestion(subject.id)}
+      />
+
+      {/* Ingestion report popup */}
+      <SourceReportModal subject={reportFor} onClose={() => setReportFor(null)} />
 
       {/* Visual review popup */}
       <VisualsModal

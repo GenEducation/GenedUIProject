@@ -6,6 +6,7 @@ import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { requestPasswordReset, resetPassword } from "../authService";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
+import { passwordRuleError } from "@/features/auth/passwordRule";
 
 export function ForgotPassword() {
   const [step, setStep] = useState(1);
@@ -45,8 +46,9 @@ export function ForgotPassword() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters");
+    const ruleError = passwordRuleError(newPassword);
+    if (ruleError) {
+      setError(ruleError);
       return;
     }
 

@@ -119,10 +119,10 @@ describe("SignUp — student flow", () => {
       target: { value: "parent@example.com" },
     });
     fireEvent.change(screen.getByPlaceholderText("Create a password"), {
-      target: { value: "secret1" },
+      target: { value: "Mangoes7" },
     });
     fireEvent.change(screen.getByPlaceholderText("Confirm your password"), {
-      target: { value: "secret1" },
+      target: { value: "Mangoes7" },
     });
     await selectGrade("Grade 6");
 
@@ -162,6 +162,22 @@ describe("SignUp — student flow", () => {
     expect(screen.getByText("OTP Code")).toBeInTheDocument();
   });
 
+  it("locks the send button for retry_after seconds when too many codes are pending (AUTH_1207)", async () => {
+    sendOtpMock.mockRejectedValue(
+      Object.assign(new Error("Too many OTP requests. Please wait."), { error_code: "AUTH_1207", retry_after: 120 }),
+    );
+    render(<Harness />);
+    await goToStudentStep2();
+    fireEvent.click(screen.getByLabelText(/sign up with my personal email/i));
+    fireEvent.change(screen.getByPlaceholderText("scholar@example.com"), {
+      target: { value: "kid@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Verify" }));
+
+    await waitFor(() => expect(screen.getByText("Too many OTP requests. Please wait.")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /resend in 1(20|19)s/i })).toBeDisabled();
+  });
+
   it("renders server-provided field errors", async () => {
     render(<Harness errors={{ username: "Username is compulsory", grade: "Please select your grade" }} />);
     await goToStudentStep2();
@@ -184,10 +200,10 @@ describe("SignUp — parent flow", () => {
       target: { value: "parent@example.com" },
     });
     fireEvent.change(screen.getByPlaceholderText("Create a password"), {
-      target: { value: "secret1" },
+      target: { value: "Mangoes7" },
     });
     fireEvent.change(screen.getByPlaceholderText("Confirm your password"), {
-      target: { value: "secret1" },
+      target: { value: "Mangoes7" },
     });
   }
 

@@ -15,6 +15,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 import { completeAndRedirect, getRedirectParam } from "../usePostAuthRedirect";
 import { asError } from "@/utils/errors";
+import { passwordRuleError } from "@/features/auth/passwordRule";
 
 const initialSignUpData: SignUpFields = {
   email: "",
@@ -87,8 +88,8 @@ export function LoginView() {
 
       if (!signupData.password.trim()) {
         errors.password = "Password is compulsory";
-      } else if (signupData.password.length < 6) {
-        errors.password = "Password must be at least 6 characters";
+      } else if (passwordRuleError(signupData.password)) {
+        errors.password = passwordRuleError(signupData.password)!;
       }
 
       if (!signupData.confirmPassword?.trim()) {
@@ -113,8 +114,8 @@ export function LoginView() {
 
         if (!signupData.password.trim()) {
           errors.password = "Password is compulsory";
-        } else if (signupData.password.length < 6) {
-          errors.password = "Password must be at least 6 characters";
+        } else if (passwordRuleError(signupData.password)) {
+          errors.password = passwordRuleError(signupData.password)!;
         }
 
         if (!signupData.confirmPassword?.trim()) {

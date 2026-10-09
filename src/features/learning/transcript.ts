@@ -13,7 +13,8 @@ export interface LessonTurn {
   status: TurnStatus;
   /** The highest seq applied: the resume cursor and the learner's `visible_seq` on stop. */
   lastSeq: number;
-  failure: { reason: FailureReason; retryable: boolean } | null;
+  /** `message`: the backend's own words when it refused the turn outright (e.g. the tutor is unavailable). */
+  failure: { reason: FailureReason; retryable: boolean; message?: string } | null;
   outcome: "correct" | "incorrect" | "quarantined" | null;
   createdAt: string;
 }

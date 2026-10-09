@@ -9,4 +9,8 @@ export const FEATURES = {
   /** Student schedule (/student/schedule), the parent schedule view
    *  (/parent/:id/schedule) and the upcoming-session panel on student home. */
   schedule: false,
+  /** Streak / session stats (`GET /students/{id}/streak`). Not served by the new
+   *  backend yet ("on hold until tutoring data settles"); while off, no request
+   *  is made and stats stay null, which the UI already renders as zero. */
+  streak: false,
 } as const;

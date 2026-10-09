@@ -138,9 +138,12 @@ export function LearningOutcomePicker({
                   {group.items.map((lo) => {
                     const on = selected.includes(lo.code);
                     return (
+                      // `relative` makes the label the hidden checkbox's containing block. Without it the
+                      // sr-only input is positioned against the modal panel, and focusing it on click
+                      // scrolls that overflow-hidden panel to wherever the input landed, blanking the form.
                       <label
                         key={lo.code}
-                        className={`flex items-start gap-2.5 rounded-xl px-2 py-1.5 cursor-pointer transition-colors ${
+                        className={`relative flex items-start gap-2.5 rounded-xl px-2 py-1.5 cursor-pointer transition-colors ${
                           on ? "bg-white" : "hover:bg-white/60"
                         }`}
                       >

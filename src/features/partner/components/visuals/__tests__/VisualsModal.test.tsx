@@ -24,6 +24,8 @@ const row: Subject = {
   publisher: "synthetic_press",
   state: "ready",
   detail: null,
+  has_report: false,
+  questions: 0,
   created_at: "2026-01-01T00:00:00Z",
 };
 
@@ -85,6 +87,23 @@ describe("VisualsModal — list", () => {
     open();
     await screen.findByRole("button", { name: "Open SYNTHETIC shape 1" });
     expect(screen.getByTestId("visual-image-placeholder")).toBeInTheDocument();
+  });
+
+  it("loads every visual of one run with Load more, though they share one created_at", async () => {
+    // A run inserts its visuals in one transaction, so they all carry the same timestamp.
+    const sameRun = "2026-01-01T00:00:00.000Z";
+    visualsFixture.reset(() => Array.from({ length: 47 }, () => makeVisual({ created_at: sameRun })));
+    open();
+    await screen.findAllByRole("button", { name: /^Open SYNTHETIC shape/ });
+    expect(screen.getAllByRole("button", { name: /^Open SYNTHETIC shape/ })).toHaveLength(24);
+
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    await waitFor(() => expect(screen.getAllByRole("button", { name: /^Open SYNTHETIC shape/ })).toHaveLength(47));
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+
+    const next = gets("/v1/visuals/candidates").at(-1)!.url.searchParams;
+    expect(next.get("before")).toBe(sameRun);
+    expect(next.get("before_id")).toBeTruthy();
   });
 
   it("refetches the list once when an image fails (expired signature), and never loops", async () => {

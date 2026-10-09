@@ -1,5 +1,13 @@
 import { http, HttpResponse } from "msw";
-import type { LearningOutcome, SourceState, SourceView } from "@/features/partner/types/sources";
+import type {
+  LearningOutcome,
+  QuestionsResponse,
+  RecordedAnswer,
+  ReleaseDecision,
+  SourceRelease,
+  SourceState,
+  SourceView,
+} from "@/features/partner/types/sources";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 const SOURCES = `${BASE}/v1/sources`;
@@ -34,6 +42,8 @@ export function makeSource(overrides: Partial<SourceView> = {}): SourceView {
     state: "registered",
     detail: null,
     visuals: null,
+    has_report: false,
+    questions: 0,
     queued_at: null,
     finished_at: null,
     created_at: new Date(Date.UTC(2026, 0, 1, 0, seq)).toISOString(),
@@ -43,6 +53,13 @@ export function makeSource(overrides: Partial<SourceView> = {}): SourceView {
 }
 
 const store = new Map<string, SourceView>();
+const reports = new Map<string, string>();
+const questions = new Map<string, QuestionsResponse>();
+const releases = new Map<string, SourceRelease>();
+/** The last release decisions POST, for asserting what the screen sent. */
+export let lastReleaseDecisions: ReleaseDecision[] | null = null;
+/** The last answers PUT, for asserting what the screen sent. */
+export let lastAnswers: Record<string, RecordedAnswer> | null = null;
 let strands: string[] = ["synthetic_existing"];
 /** The last upload's multipart fields, for asserting what the form sent. */
 export let lastUpload: Record<string, string | string[]> | null = null;
@@ -51,6 +68,11 @@ export const sourcesFixture = {
   /** Pass a factory so `makeSource` numbering restarts at 1 in every test. */
   reset(build?: () => SourceView[]) {
     store.clear();
+    reports.clear();
+    questions.clear();
+    releases.clear();
+    lastReleaseDecisions = null;
+    lastAnswers = null;
     seq = 0;
     strands = ["synthetic_existing"];
     lastUpload = null;
@@ -63,6 +85,21 @@ export const sourcesFixture = {
     if (s) store.set(id, { ...s, state, detail });
   },
   setStrands: (next: string[]) => void (strands = next),
+  /** Make a source wait on reconciliation questions (state `review_needed`), as the worker does. */
+  setQuestions: (id: string, q: QuestionsResponse) => {
+    questions.set(id, q);
+    const s = store.get(id);
+    if (s) store.set(id, { ...s, state: "review_needed", questions: q.questions.length });
+  },
+  /** Give a source a staged release, as the worker does when a run ends ready. */
+  setRelease: (id: string, release: SourceRelease) => void releases.set(id, structuredClone(release)),
+  getRelease: (id: string) => releases.get(id),
+  /** Give a source a review report (and `has_report: true`), as the worker does when a run finishes. */
+  setReport: (id: string, markdown: string) => {
+    reports.set(id, markdown);
+    const s = store.get(id);
+    if (s) store.set(id, { ...s, has_report: true });
+  },
 };
 
 const conflict = (message: string) =>
@@ -159,6 +196,80 @@ export const sourcesHandlers = [
     if (!DELETABLE.has(s.state)) return conflict(`A chapter that is ${s.state} cannot be deleted.`);
     store.delete(s.source_id);
     return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.get(`${SOURCES}/:id/reconciliation`, ({ params }) => {
+    const q = questions.get(String(params.id));
+    return q ? HttpResponse.json(q) : HttpResponse.json({ message: "This chapter has no questions waiting." }, { status: 404 });
+  }),
+
+  // Mirrors the backend's rules for a PARTNER: only `novel` or `same_as` a concept of this chapter it offered.
+  http.put(`${SOURCES}/:id/reconciliation`, async ({ params, request }) => {
+    const q = questions.get(String(params.id));
+    if (!q) return conflict("This chapter has no questions waiting.");
+    const { decisions } = (await request.json()) as { decisions: Record<string, RecordedAnswer> };
+    lastAnswers = decisions;
+    for (const [key, answer] of Object.entries(decisions)) {
+      const question = q.questions.find((x) => x.key === key);
+      if (!question) return HttpResponse.json({ message: `There is no question about ${key} in this chapter's last run.` }, { status: 422 });
+      if (!q.allowed_answers.includes(answer.decision)) {
+        return HttpResponse.json({ message: "Only a GenEd admin can match a concept to one already published in the catalogue." }, { status: 422 });
+      }
+      if (answer.decision === "same_as" && !question.candidates.some((c) => c.where === "this_chapter" && c.proposal_key === answer.proposal_key)) {
+        return HttpResponse.json({ message: `Pick one of the concepts of this chapter offered for ${question.proposal.title}.` }, { status: 422 });
+      }
+    }
+    const next = { ...q, questions: q.questions.map((x) => (decisions[x.key] ? { ...x, answer: decisions[x.key] } : x)) };
+    questions.set(String(params.id), next);
+    return HttpResponse.json(next);
+  }),
+
+  http.get(`${SOURCES}/:id/release`, ({ params }) => {
+    if (!store.has(String(params.id))) return notFound();
+    const r = releases.get(String(params.id));
+    return r
+      ? HttpResponse.json(r)
+      : HttpResponse.json({ message: "This chapter has no release to review yet. A run that ends ready is sent for review automatically." }, { status: 404 });
+  }),
+
+  // Mirrors the backend: each decision is recorded on its own, bound to the content hash shown.
+  http.post(`${SOURCES}/:id/release/decisions`, async ({ params, request }) => {
+    const r = releases.get(String(params.id));
+    if (!r) return notFound();
+    const { decisions } = (await request.json()) as { decisions: ReleaseDecision[] };
+    lastReleaseDecisions = decisions;
+    const results = decisions.map((d) => {
+      const p = r.proposals.find((x) => x.id === d.proposal_id);
+      if (!p) return { proposal_id: d.proposal_id, recorded: false, error: "not a proposal of this batch" };
+      if (p.content_hash !== d.content_hash) return { proposal_id: d.proposal_id, recorded: false, error: "content changed since it was reviewed" };
+      if (p.state !== "pending") return { proposal_id: d.proposal_id, recorded: false, error: "already decided" };
+      p.state = d.decision === "accept" ? "accepted" : "rejected";
+      return { proposal_id: d.proposal_id, recorded: true, error: null };
+    });
+    const counts: Record<string, number> = {};
+    for (const p of r.proposals) counts[p.state] = (counts[p.state] ?? 0) + 1;
+    r.release.proposals = counts;
+    return HttpResponse.json(results);
+  }),
+
+  http.post(`${SOURCES}/:id/release/publish`, async ({ params, request }) => {
+    const r = releases.get(String(params.id));
+    if (!r) return notFound();
+    const { artifact_hash } = (await request.json()) as { artifact_hash: string };
+    if (r.proposals.some((p) => p.state !== "accepted")) {
+      return HttpResponse.json({ message: "every proposal needs a human acceptance before publication" }, { status: 409 });
+    }
+    if (artifact_hash !== r.release.artifact_hash) return HttpResponse.json({ message: "artifact hash mismatch" }, { status: 409 });
+    r.release.state = "published";
+    return HttpResponse.json({ batch_id: r.release.batch_id, state: "published" });
+  }),
+
+  http.get(`${SOURCES}/:id/report`, ({ params }) => {
+    if (!store.has(String(params.id))) return notFound();
+    const text = reports.get(String(params.id));
+    return text === undefined
+      ? HttpResponse.json({ message: "This chapter has no report yet." }, { status: 404 })
+      : new HttpResponse(text, { headers: { "content-type": "text/plain; charset=utf-8" } });
   }),
 
   http.get(`${SOURCES}/:id/pdf`, ({ params }) =>

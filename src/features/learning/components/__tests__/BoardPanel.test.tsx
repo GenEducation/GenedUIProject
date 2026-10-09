@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import {
   CHECK_ITEM, FIGURE_GROUP, LESSON_ID, OPTION_A,
@@ -6,8 +6,6 @@ import {
 } from "@/test/msw/handlers/lesson";
 import { useLessonStore } from "../../useLessonStore";
 import type { CheckItem } from "../../types";
-
-vi.mock("@/features/student/components/StudentBlobatar", () => ({ StudentBlobatar: () => null }));
 
 import { BoardPanel } from "../BoardPanel";
 import { responseFor } from "../StepCard";
@@ -29,12 +27,13 @@ beforeEach(() => {
 });
 
 describe("BoardPanel — figures", () => {
-  it("shows the focused figure with its learner caption, and the tutor's latest words", async () => {
+  it("shows the focused figure with its learner caption, without repeating the chat", async () => {
     await open();
     const img = screen.getByRole("img", { name: "SYNTHETIC figure" });
     expect(img.getAttribute("src")).toMatch(/\/v1\/visual-images\/pic-1\?exp=1&sig=synthetic$/);
     expect(screen.getByText("SYNTHETIC figure", { selector: "figcaption" })).toBeInTheDocument();
-    expect(screen.getByText("SYNTHETIC look at this.")).toBeInTheDocument();
+    // The tutor's words live in the chat; the board doesn't repeat them.
+    expect(screen.queryByText("SYNTHETIC look at this.")).toBeNull();
     expect(screen.getByText("Learn")).toBeInTheDocument();
   });
 

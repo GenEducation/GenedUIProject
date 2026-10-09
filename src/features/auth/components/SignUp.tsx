@@ -9,6 +9,7 @@ import { fetchAllTaxonomyGrades } from "@/features/subjects/subjectCatalog";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
+import { passwordRuleError } from "@/features/auth/passwordRule";
 
 interface SignUpData {
   username?: string;
@@ -70,10 +71,41 @@ export function SignUp({
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [otpSentMessage, setOtpSentMessage] = useState("");
+  // Seconds until another code may be requested (from the backend's 429 `retry_after`).
+  const [otpCooldown, setOtpCooldown] = useState(0);
   const [hasPersonalEmail, setHasPersonalEmail] = useState(false);
   const [availableGrades, setAvailableGrades] = useState<number[]>([3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
   const isSignupEnabled = process.env.NEXT_PUBLIC_ENABLE_SIGNUP !== "false";
+
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const timer = setTimeout(() => setOtpCooldown((secs) => secs - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [otpCooldown]);
+
+  const handleSendOtp = async () => {
+    if (!signupData.email) {
+      setLocalErrors({ email: "Email is required to send OTP" });
+      return;
+    }
+    setIsSendingOtp(true);
+    setOtpSentMessage("");
+    setLocalErrors({});
+    try {
+      const { sendOtp } = await import("../authService");
+      await sendOtp(signupData.email);
+      setIsOtpSent(true);
+      setOtpSentMessage("OTP sent to your email!");
+    } catch (err) {
+      const { message, retry_after } = asError(err);
+      // AUTH_1207: too many codes pending; the backend says how long to wait.
+      if (retry_after) setOtpCooldown(Math.ceil(retry_after));
+      setLocalErrors({ email: message || "Failed to send OTP" });
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
 
   useEffect(() => {
     fetchAllTaxonomyGrades()
@@ -163,8 +195,8 @@ export function SignUp({
       }
       if (!signupData.password.trim()) {
         errors.password = "Password is required";
-      } else if (signupData.password.length < 6) {
-        errors.password = "Password must be at least 6 characters";
+      } else if (passwordRuleError(signupData.password)) {
+        errors.password = passwordRuleError(signupData.password)!;
       }
       if (signupData.password !== signupData.confirmPassword) {
         errors.confirmPassword = "Passwords do not match";
@@ -181,8 +213,8 @@ export function SignUp({
         }
         if (!signupData.password.trim()) {
           errors.password = "Password is required";
-        } else if (signupData.password.length < 6) {
-          errors.password = "Password must be at least 6 characters";
+        } else if (passwordRuleError(signupData.password)) {
+          errors.password = passwordRuleError(signupData.password)!;
         }
         if (signupData.password !== signupData.confirmPassword) {
           errors.confirmPassword = "Passwords do not match";
@@ -289,26 +321,8 @@ export function SignUp({
                   </div>
                   <button
                     type="button"
-                    onClick={async () => {
-                      if (!signupData.email) {
-                        setLocalErrors({ email: "Email is required to send OTP" });
-                        return;
-                      }
-                      setIsSendingOtp(true);
-                      setOtpSentMessage("");
-                      setLocalErrors({});
-                      try {
-                        const { sendOtp } = await import("../authService");
-                        await sendOtp(signupData.email);
-                        setIsOtpSent(true);
-                        setOtpSentMessage("OTP sent to your email!");
-                      } catch (err) {
-                        setLocalErrors({ email: asError(err).message || "Failed to send OTP" });
-                      } finally {
-                        setIsSendingOtp(false);
-                      }
-                    }}
-                    disabled={isSendingOtp || !signupData.email}
+                    onClick={handleSendOtp}
+                    disabled={isSendingOtp || !signupData.email || otpCooldown > 0}
                     className="px-6 py-3.5 rounded-xl bg-[#042e5c]/5 text-[#042e5c] text-xs font-bold transition-all hover:bg-[#042e5c]/10 active:scale-95 disabled:opacity-50"
                   >
                     {isSendingOtp ? (
@@ -316,7 +330,7 @@ export function SignUp({
                       <span aria-hidden className="h-3 w-3 rounded-full border-2 border-[#042e5c]/25 border-t-[#042e5c] motion-safe:animate-spin" />
                       Sending code…
                     </span>
-                  ) : isOtpSent ? "Resend" : "Verify"}
+                  ) : otpCooldown > 0 ? `Resend in ${otpCooldown}s` : isOtpSent ? "Resend" : "Verify"}
                   </button>
                 </div>
                 {otpSentMessage && (
@@ -530,26 +544,8 @@ export function SignUp({
                 </div>
                 <button
                   type="button"
-                  onClick={async () => {
-                    if (!signupData.email) {
-                      setLocalErrors({ email: "Email is required to send OTP" });
-                      return;
-                    }
-                    setIsSendingOtp(true);
-                    setOtpSentMessage("");
-                    setLocalErrors({});
-                    try {
-                      const { sendOtp } = await import("../authService");
-                      await sendOtp(signupData.email);
-                      setIsOtpSent(true);
-                      setOtpSentMessage("OTP sent to your email!");
-                    } catch (err) {
-                      setLocalErrors({ email: asError(err).message || "Failed to send OTP" });
-                    } finally {
-                      setIsSendingOtp(false);
-                    }
-                  }}
-                  disabled={isSendingOtp || !signupData.email}
+                  onClick={handleSendOtp}
+                  disabled={isSendingOtp || !signupData.email || otpCooldown > 0}
                   className="px-6 py-3.5 rounded-xl bg-[#042e5c]/5 text-[#042e5c] text-xs font-bold transition-all hover:bg-[#042e5c]/10 active:scale-95 disabled:opacity-50"
                 >
                   {isSendingOtp ? (
@@ -557,7 +553,7 @@ export function SignUp({
                       <span aria-hidden className="h-3 w-3 rounded-full border-2 border-[#042e5c]/25 border-t-[#042e5c] motion-safe:animate-spin" />
                       Sending code…
                     </span>
-                  ) : isOtpSent ? "Resend" : "Verify"}
+                  ) : otpCooldown > 0 ? `Resend in ${otpCooldown}s` : isOtpSent ? "Resend" : "Verify"}
                 </button>
               </div>
               {otpSentMessage && (

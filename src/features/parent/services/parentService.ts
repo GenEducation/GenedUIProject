@@ -49,7 +49,12 @@ async function getJson(path: string): Promise<unknown> {
   }
 }
 
-/** A child's session list, or null when it can't be read. */
+/**
+ * A child's session list, or null when it can't be read.
+ * @deprecated `/get-session` is not served by the new backend (404 → null, so
+ * activity badges simply don't show). Needs a replacement source from the
+ * lesson routes before the parent home redesign.
+ */
 async function fetchSessionRows(studentId: string): Promise<SessionRow[] | null> {
   try {
     const response = await authFetch(`${BASE_URL}/get-session`, {

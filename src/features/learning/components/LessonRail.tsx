@@ -1,58 +1,67 @@
 "use client";
 
-import { MessageSquareText, Mic } from "lucide-react";
+import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
+import { learnerService } from "@/features/student/learner/learnerService";
+import { paletteFor } from "@/features/student/learner/cardPalettes";
 import { useLessonStore } from "../useLessonStore";
-import { TutorCard } from "./TutorCard";
 import { LessonProgressRail } from "./LessonProgressRail";
 
-/** Voice is gated until the backend's voice service is live (Phase F). */
+/** Whether this build connects voice mode to the backend (`/v1/voice`); off until the voice service is live. */
 export const lessonVoiceEnabled = (): boolean => process.env.NEXT_PUBLIC_LESSON_VOICE === "true";
 
 /**
- * The left column: the tutor, the mode switch and the lesson's steps.
+ * Where the prototype's mascot sat: the chapter itself. Its accepted cover art
+ * when it has one, its subject's gradient when not, with the chapter number,
+ * and its title.
  */
-export function LessonRail() {
-  const voiceMode = useLessonStore((s) => s.voiceMode);
-  const setVoiceMode = useLessonStore((s) => s.setVoiceMode);
-
-  const modes = [
-    { key: "text", label: "Chat & Whiteboard", icon: MessageSquareText, active: !voiceMode, onClick: () => setVoiceMode(false), disabled: false },
-    { key: "voice", label: "Voice Mode", icon: Mic, active: voiceMode, onClick: () => setVoiceMode(true), disabled: !lessonVoiceEnabled() },
-  ];
+function ChapterCard() {
+  const instanceId = useLessonStore((s) => s.instanceId);
+  const chapter = useLessonLaunch((s) => (s.instanceId === instanceId ? s.chapter : null));
+  const pal = paletteFor(chapter?.palette);
 
   return (
-    <aside aria-label="Lesson" className="lesson-panel flex h-full flex-col gap-5 overflow-y-auto p-4">
-      <TutorCard />
+    <div
+      className="relative overflow-hidden rounded-[22px] border border-white/70 shadow-[var(--ls-shadow)]"
+      style={{ background: `linear-gradient(150deg, ${pal.sky[0]} 0%, ${pal.sky[1]} 100%)` }}
+    >
+      {chapter?.card ? (
+        // eslint-disable-next-line @next/next/no-img-element -- signed, expiring API URL.
+        <img
+          src={learnerService.cardSrc(chapter.card.image_url)}
+          alt=""
+          className="block aspect-[16/10] w-full object-cover"
+        />
+      ) : (
+        <div className="relative aspect-[16/10] w-full p-4">
+          <div aria-hidden className="absolute -right-6 -top-8 h-28 w-28 rounded-full opacity-50" style={{ background: `radial-gradient(circle, ${pal.a}66, transparent 70%)` }} />
+          <p className="relative text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: pal.a }}>
+            {chapter ? `Chapter ${chapter.number}` : "Your lesson"}
+          </p>
+          <p className="lesson-display relative mt-1 text-[20px] font-semibold leading-tight" style={{ color: pal.ink }}>
+            {chapter?.title ?? "Let's begin"}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
-      <div role="radiogroup" aria-label="Lesson mode" className="flex flex-col gap-1.5">
-        {modes.map(({ key, label, icon: Icon, active, onClick, disabled }) => (
-          // eslint-disable-next-line no-restricted-syntax -- a radio in the mode switch; selected state is its look.
-          <button
-            key={key}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            disabled={disabled}
-            title={disabled ? "Voice lessons are coming soon" : undefined}
-            onClick={onClick}
-            className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-[14px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
-              active
-                ? "bg-[var(--ls-primary)] text-white shadow-[0_6px_16px_-8px_rgb(7_94_99/0.7)]"
-                : "text-[var(--ls-ink)] hover:bg-[var(--ls-primary-soft)]"
-            }`}
-          >
-            <Icon size={18} aria-hidden />
-            {label}
-          </button>
-        ))}
+/**
+ * The left column: the chapter and the lesson's steps.
+ */
+export function LessonRail() {
+  return (
+    <aside aria-label="Lesson" className="lesson-rail relative flex h-full flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
+        <ChapterCard />
+
+        <section aria-labelledby="lesson-progress-heading" className="flex flex-col gap-4">
+          <h2 id="lesson-progress-heading" className="lesson-display text-[16px] font-medium text-[var(--ls-ink)]">
+            Lesson Progress
+          </h2>
+          <LessonProgressRail />
+        </section>
       </div>
-
-      <section aria-labelledby="lesson-progress-heading" className="flex flex-col gap-3">
-        <h2 id="lesson-progress-heading" className="text-[13px] font-semibold text-[var(--ls-ink-mid)]">
-          Lesson progress
-        </h2>
-        <LessonProgressRail />
-      </section>
     </aside>
   );
 }

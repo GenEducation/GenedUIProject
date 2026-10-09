@@ -2,13 +2,13 @@
 
 import { memo } from "react";
 import { RotateCcw } from "lucide-react";
-import { StudentBlobatar } from "@/features/student/components/StudentBlobatar";
 import { StudentAvatar } from "@/features/student/components/StudentAvatar";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { picturesFor, useLessonStore } from "../useLessonStore";
 import { replyText, type LessonTurn } from "../transcript";
 import type { FailureReason } from "../types";
 import { LessonMarkdown } from "./LessonMarkdown";
+import { TutorMark } from "./TutorMark";
 
 /** What the learner sees when a turn fails; never the internal reason. */
 function failureCopy(reason: FailureReason): string {
@@ -43,26 +43,24 @@ export const ChatTurn = memo(function ChatTurn({ turn, onShowFigure, onRetry }: 
   return (
     <li className="flex flex-col gap-3">
       {turn.learnerText && (
-        <div className="flex items-end justify-end gap-2">
+        <div className="flex items-start justify-end gap-2">
           <div className="flex max-w-[82%] flex-col items-end">
-            <p className="whitespace-pre-wrap break-words rounded-[18px] rounded-br-md bg-[var(--ls-soft)] px-3.5 py-2.5 text-[14px] leading-relaxed">
+            <p className="whitespace-pre-wrap break-words rounded-[20px] rounded-br-md bg-[var(--ls-soft)] px-4 py-3 text-[15px] leading-relaxed">
               {turn.learnerText}
             </p>
             {time && <span className="mt-1 text-[11px] text-[var(--ls-ink-faint)]">{time}</span>}
           </div>
-          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full ring-2 ring-white">
-            <StudentAvatar id={avatarId} size={32} alt="" />
+          <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-[var(--ls-soft)] ring-2 ring-white">
+            <StudentAvatar id={avatarId} size={36} alt="" />
           </div>
         </div>
       )}
 
       {(text || streaming || figures.length > 0 || turn.status === "failed" || turn.status === "interrupted") && (
       <div className="flex items-start gap-2">
-        <div className="shrink-0 rounded-full bg-[var(--ls-soft)] p-0.5">
-          <StudentBlobatar size={30} decorative />
-        </div>
+        <TutorMark size={36} active={streaming} />
         <div className="flex min-w-0 max-w-[88%] flex-col items-start">
-          <div className="min-w-0 rounded-[18px] rounded-tl-md border border-[var(--ls-border)] bg-[#F3F8F6] px-3.5 py-2.5 text-[14px] leading-relaxed">
+          <div className="min-w-0 rounded-[20px] rounded-tl-md bg-[var(--ls-tutor)] px-4 py-3 text-[15px] leading-relaxed">
             {text ? (
               <div className={streaming ? "lesson-caret" : undefined}>
                 <LessonMarkdown text={text} />
@@ -95,7 +93,7 @@ export const ChatTurn = memo(function ChatTurn({ turn, onShowFigure, onRetry }: 
 
             {turn.status === "failed" && turn.failure && (
               <div role="alert" className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-[var(--ls-ink-mid)]">
-                <span>{failureCopy(turn.failure.reason)}</span>
+                <span>{turn.failure.message ?? failureCopy(turn.failure.reason)}</span>
                 {turn.failure.retryable && (
                   // eslint-disable-next-line no-restricted-syntax -- an inline text action inside the bubble.
                   <button

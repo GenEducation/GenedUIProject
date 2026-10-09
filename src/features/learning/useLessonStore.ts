@@ -84,6 +84,8 @@ const initial = {
 
 /** The open stream's abort handle; not state, so it never re-renders anything. */
 let streamAbort: AbortController | null = null;
+/** Bumped by every load and reset: a load that is no longer the latest stops (React dev mounts twice). */
+let loadGeneration = 0;
 /** When the last tutor reply finished, for a learner message's `latency_ms`. */
 let lastReplyAt = 0;
 
@@ -199,8 +201,15 @@ export const useLessonStore = create<LessonState>((set, get) => {
       }
     } catch (error) {
       if (abort.signal.aborted) return;
-      updateTurn(request.turn_id, (t) => ({ ...t, status: "failed", failure: { reason: "stream_interrupted", retryable: false } }));
-      console.error("Lesson turn failed:", asError(error).request_id, asError(error).message ?? error);
+      // An HTTP refusal (the turn never started) carries the backend's reason; anything else is a dropped stream.
+      const { status, message, request_id } = asError(error);
+      const refused = typeof status === "number" && Boolean(message);
+      updateTurn(request.turn_id, (t) => ({
+        ...t,
+        status: "failed",
+        failure: { reason: refused ? "prepare_failed" : "stream_interrupted", retryable: false, ...(refused ? { message } : {}) },
+      }));
+      console.warn("Lesson turn failed:", request_id, message ?? error);
     } finally {
       if (streamAbort === abort) streamAbort = null;
       lastReplyAt = Date.now();
@@ -227,6 +236,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
     ...initial,
 
     load: async (instanceId) => {
+      const generation = ++loadGeneration;
       streamAbort?.abort();
       set({ ...initial, instanceId, status: "loading" });
       try {
@@ -235,7 +245,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
           // History is per active node; a finished lesson has none, so its history read fails. Not fatal.
           lessonService.turnHistory(instanceId).catch(() => []),
         ]);
-        if (get().instanceId !== instanceId) return;
+        if (generation !== loadGeneration) return;
         const turns = history.map(fromRecorded);
         const presented = withFigures([], turns.flatMap((t) => t.figureGroupIds));
         set({ instance, turns, presentedFigureIds: presented, focusedFigureId: presented.at(-1) ?? null });
@@ -246,6 +256,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
           return;
         }
         await loadNode(instanceId);
+        if (generation !== loadGeneration) return;
         set({ status: "ready" });
 
         // A fresh node opens with the tutor speaking first.
@@ -254,7 +265,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
           void runTurn({ turn_id: uuid(), kind: "opening", instance_node_id: node }, null);
         }
       } catch (error) {
-        if (get().instanceId !== instanceId) return;
+        if (generation !== loadGeneration) return;
         set({ status: "error", error: asError(error).message ?? "This lesson couldn't be opened." });
       }
     },
@@ -395,6 +406,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
     },
 
     reset: () => {
+      loadGeneration += 1;
       streamAbort?.abort();
       streamAbort = null;
       lastReplyAt = 0;

@@ -7,8 +7,6 @@ import {
 } from "@/test/msw/handlers/lesson";
 import { useLessonStore } from "../../useLessonStore";
 
-vi.mock("@/features/student/components/StudentBlobatar", () => ({ StudentBlobatar: () => null }));
-
 import { ChatPanel } from "../ChatPanel";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
@@ -83,6 +81,16 @@ describe("ChatPanel", () => {
     fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
     expect(await screen.findByText("SYNTHETIC second try.")).toBeInTheDocument();
     expect(turnRequests.at(-1)?.kind).toBe("regenerate");
+  });
+
+  it("a turn the backend refuses shows the backend's reason, not a dropped connection", async () => {
+    server.use(http.post(`${BASE}/v1/instances/:id/teacher-turns`, () =>
+      HttpResponse.json({ status: "error", error_code: "TUTR_1503", message: "The teacher is not available right now.", request_id: "r", retryable: false, details: {} }, { status: 503 }),
+    ));
+    await open();
+    type("SYNTHETIC question");
+    enter();
+    expect(await screen.findByRole("alert")).toHaveTextContent("The teacher is not available right now.");
   });
 
   it("a presented figure shows as a thumbnail that opens on the whiteboard", async () => {

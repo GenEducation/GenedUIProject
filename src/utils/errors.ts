@@ -17,6 +17,10 @@ export interface CaughtError {
   status?: number;
   error_code?: string;
   request_id?: string;
+  /** Seconds to wait before retrying; set on 429s (e.g. AUTH_1207, too many OTPs pending). */
+  retry_after?: number;
+  /** Structured extras; a 422 carries `details.fields` (field name → message). */
+  details?: Record<string, unknown>;
 }
 
 /**

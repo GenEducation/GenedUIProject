@@ -128,19 +128,27 @@ function summary(v: VisualDetail): VisualSummary {
   };
 }
 
+/** Row order `(created_at, id)`, as the backend's tuple comparison and `ORDER BY created_at DESC, id DESC`. */
+const byKey = (a: { created_at: string; id: string }, b: { created_at: string; id: string }) =>
+  a.created_at !== b.created_at ? (a.created_at < b.created_at ? -1 : 1) : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+
 function list(url: URL, forceState?: CandidateState) {
   const q = url.searchParams;
   const state = forceState ?? (q.get("state") as CandidateState | null) ?? "pending";
   const limit = Number(q.get("limit") ?? 50);
   const before = q.get("before");
+  const beforeId = q.get("before_id");
   const items = visualsFixture
     .all()
     .filter((v) => v.state === state)
     .filter((v) => !q.get("source_id") || v.source_id === q.get("source_id"))
     .filter((v) => !q.get("subject") || v.subject === q.get("subject"))
     .filter((v) => !q.get("grade") || v.grade === Number(q.get("grade")))
-    .filter((v) => !before || v.created_at < before)
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .filter((v) => {
+      if (!before) return true;
+      return beforeId ? byKey(v, { created_at: before, id: beforeId }) < 0 : v.created_at < before;
+    })
+    .sort((a, b) => byKey(b, a))
     .slice(0, limit);
   return HttpResponse.json(items.map(summary));
 }

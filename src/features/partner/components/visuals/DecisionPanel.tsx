@@ -118,7 +118,7 @@ export function DecisionPanel({ detail, onDecided, onConflict }: DecisionPanelPr
           >
             <ReasonFields reasons={reasons} onReasonsChange={setReasons} note={note} onNoteChange={setNote} />
 
-            <label htmlFor={toggleId} className="flex items-center gap-3 cursor-pointer select-none">
+            <label htmlFor={toggleId} className="relative flex items-center gap-3 cursor-pointer select-none">
               <input
                 id={toggleId}
                 type="checkbox"

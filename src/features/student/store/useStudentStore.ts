@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { FEATURES } from "@/constants/features";
 import * as Sentry from "@sentry/nextjs";
 import {
   studentService,
@@ -6,6 +7,7 @@ import {
   type ComprehensionInteractionType,
   type ConversationActionType,
   type SessionRow,
+  type PartnerAssociationStatus,
 } from "../services/studentService";
 import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import {
@@ -297,8 +299,8 @@ export interface PartnerItem {
   id: string;
   partner_id?: string;
   organization: string;
-  board?: string;
-  association_status?: "NOT_REQUESTED" | "PENDING" | "APPROVED" | "REJECTED" | "REVOKED";
+  board?: string | null;
+  association_status?: PartnerAssociationStatus;
   is_effective?: boolean;
 }
 
@@ -670,7 +672,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   fetchStudentStats: async () => {
     const { studentProfile, isStatsLoading } = get();
-    if (!studentProfile || isStatsLoading) return;
+    if (!FEATURES.streak || !studentProfile || isStatsLoading) return;
 
     set({ isStatsLoading: true });
     try {
@@ -839,18 +841,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     await get().fetchAvailableAgents();
   },
 
+  // `/student/partners` already lists every real school with this student's
+  // status, which is exactly what the "Connect to a school" list needs; the
+  // global `/partners` would also offer the GenEd placeholder.
   fetchAvailablePartners: async () => {
-    const { studentProfile } = get();
-    if (!studentProfile) return;
-    try {
-      const data: PartnerItem[] = await studentService.fetchStudentPartners(studentProfile.user_id);
-      set({
-        availablePartners: data,
-        enrolledPartners: data.filter((partner) => partner.is_effective),
-      });
-    } catch (error) {
-      console.error("Fetch Partners Error:", asError(error).request_id, asError(error).message ?? error);
-    }
+    await get().fetchEnrolledPartners();
   },
 
   fetchEnrolledPartners: async () => {
@@ -859,7 +854,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
     set({ isEnrolledPartnersLoading: true });
     try {
-      const data: PartnerItem[] = await studentService.fetchStudentPartners(studentProfile.user_id);
+      // GET /student/partners?student_id= — every real school, with this student's status.
+      const rows = await studentService.fetchStudentPartners(studentProfile.user_id);
+      const data: PartnerItem[] = rows.map((row) => ({ ...row, id: row.partner_id }));
       set({
         availablePartners: data,
         enrolledPartners: data.filter((partner) => partner.is_effective),
@@ -893,18 +890,15 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         studentProfile.user_id,
         partnerId,
       );
-      const message =
-        data.message ||
-        data.organization ||
-        "Successfully enrolled in partner module.";
+      const message = data.message || "Successfully enrolled in partner module.";
 
       set({
         partnerRequestStatus: "success",
         partnerRequestMessage: String(message),
       });
 
-      // Refresh the enrolled partners list so the UI reflects the new connection
-      await get().fetchAvailablePartners();
+      // Refresh the list so the dropdown marks the school "Request pending".
+      await get().fetchEnrolledPartners();
     } catch (error) {
       console.error("Partner Request Error:", asError(error).request_id, asError(error).message ?? error);
       set({

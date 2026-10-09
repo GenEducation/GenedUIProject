@@ -7,7 +7,14 @@ import { ChatTurn } from "./ChatTurn";
 import { ChatInput } from "./ChatInput";
 import { VoiceWaveform } from "./VoiceWaveform";
 import { lessonVoiceEnabled } from "./LessonRail";
-import { useVoiceSession } from "../voice/useVoiceSession";
+import { useVoiceSession, type VoiceSession } from "../voice/useVoiceSession";
+
+const VOICE_UNAVAILABLE: VoiceSession = {
+  phase: "offline",
+  heard: "",
+  level: 0,
+  error: "Voice lessons aren't available yet. You can keep going in the chat.",
+};
 
 /** Within this many px of the bottom counts as "reading the latest". */
 const STICK_PX = 80;
@@ -25,9 +32,12 @@ export function ChatPanel({ onShowFigure }: { onShowFigure: (figureGroupId: stri
   const stop = useLessonStore((s) => s.stop);
   const retry = useLessonStore((s) => s.retry);
   const setVoiceMode = useLessonStore((s) => s.setVoiceMode);
-  const voiceMode = useLessonStore((s) => s.voiceMode) && lessonVoiceEnabled();
+  const voiceMode = useLessonStore((s) => s.voiceMode);
+  const voiceAvailable = lessonVoiceEnabled();
   // Voice replies land in the same transcript; only the input area changes.
-  const voice = useVoiceSession(voiceMode && status === "ready" && canTalk);
+  const live = useVoiceSession(voiceMode && voiceAvailable && status === "ready" && canTalk);
+  // With voice switched off for this build, voice mode still opens and says so, rather than the button doing nothing.
+  const voice = voiceAvailable ? live : VOICE_UNAVAILABLE;
   const replying = turns.some((t) => t.status === "streaming");
 
   const listRef = useRef<HTMLOListElement>(null);
@@ -97,7 +107,6 @@ export function ChatPanel({ onShowFigure }: { onShowFigure: (figureGroupId: stri
         disabled={status !== "ready" || !canTalk}
         onSend={onSend}
         onStop={() => void stop()}
-        onVoice={() => setVoiceMode(true)}
       />
       )}
     </section>

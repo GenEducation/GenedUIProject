@@ -62,6 +62,8 @@ export default defineConfig({
         "src/features/partner/hooks/useVisualsIndex.ts": { lines: 85 },
         "src/features/partner/hooks/useVisualsList.ts": { lines: 85 },
         "src/features/partner/components/visuals/DecisionPanel.tsx": { lines: 85 },
+        // Student chapter list — the student's route into a lesson.
+        "src/features/student/learner/learnerService.ts": { lines: 90, functions: 90 },
       },
     },
   },

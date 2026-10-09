@@ -4,6 +4,7 @@ import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
 import { visualsFixture, SYNTHETIC_SOURCE } from "@/test/msw/handlers/visuals";
 import { makeSource, sourcesFixture } from "@/test/msw/handlers/sources";
+import { SYNTHETIC_REPORT } from "@/test/syntheticReport";
 import { usePartnerStore } from "@/features/partner/store/usePartnerStore";
 
 vi.mock("framer-motion", async () => (await import("../visuals/__tests__/framerPassthrough")).framerPassthrough());
@@ -113,6 +114,36 @@ describe("SubjectRegistry — chapter sources", () => {
     fireEvent.click(screen.getByRole("button", { name: /Delete Permanently/ }));
     await waitFor(() => expect(screen.queryByText("SYNTHETIC not started")).toBeNull());
     expect(sourcesFixture.get(id)).toBeUndefined();
+  });
+});
+
+describe("SubjectRegistry — ingestion report", () => {
+  it("links a chapter that didn't pass checks to a plain-language report", async () => {
+    const id = sourcesFixture.get(SYNTHETIC_SOURCE)!.source_id;
+    sourcesFixture.set({ ...sourcesFixture.get(id)!, state: "invalid", detail: "the bundle failed validation; see the report" });
+    sourcesFixture.setReport(id, SYNTHETIC_REPORT);
+    const openIngestedPdf = vi.fn();
+    usePartnerStore.setState({ openIngestedPdf });
+    await renderRegistry();
+
+    expect(within(rowFor("SYNTHETIC not started")).queryByRole("button", { name: /report|needs fixing/ })).toBeNull();
+    fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "See what needs fixing" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByText(/isn't taught by any concept in this chapter: G6-MATH-LO1\.2\.1/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/3 textbook figures need to be linked/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/You can fix this/)).toBeInTheDocument();
+    expect(within(dialog).getByText("Concepts").nextSibling).toHaveTextContent("8");
+    expect(within(dialog).getByText("Full technical report")).toBeInTheDocument();
+    expect(openIngestedPdf).not.toHaveBeenCalled();
+  });
+
+  it("says when there is no report yet", async () => {
+    const id = sourcesFixture.get(SYNTHETIC_SOURCE)!.source_id;
+    sourcesFixture.set({ ...sourcesFixture.get(id)!, state: "invalid", has_report: true }); // flagged, but nothing stored
+    await renderRegistry();
+    fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "See what needs fixing" }));
+    expect(await within(await screen.findByRole("dialog")).findByRole("alert")).toHaveTextContent("This chapter has no report yet.");
   });
 });
 

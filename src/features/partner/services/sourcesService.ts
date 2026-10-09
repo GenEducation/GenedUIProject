@@ -1,6 +1,11 @@
 import { authFetch } from "@/utils/authFetch";
 import type {
   LearningOutcome,
+  QuestionsResponse,
+  RecordedAnswer,
+  ReleaseDecision,
+  ReleaseDecisionResult,
+  SourceRelease,
   RegisterSourceInput,
   SourceListParams,
   SourceListResponse,
@@ -76,6 +81,51 @@ export const sourcesService = {
 
   remove: async (id: string): Promise<void> => {
     await authFetch(sourcePath(id), { method: "DELETE" });
+  },
+
+  /** The last run's reconciliation questions. 404 when the chapter has none waiting. */
+  questions: async (id: string): Promise<QuestionsResponse> => {
+    const response = await authFetch(`${sourcePath(id)}/reconciliation`);
+    return response.json();
+  },
+
+  /** Record answers (merged with any already recorded). 422 carries a plain-language reason. */
+  answerQuestions: async (id: string, decisions: Record<string, RecordedAnswer>): Promise<QuestionsResponse> => {
+    const response = await authFetch(`${sourcePath(id)}/reconciliation`, {
+      method: "PUT",
+      body: JSON.stringify({ decisions }),
+    });
+    return response.json();
+  },
+
+  /** The last run's review report, as Markdown. 404 ("This chapter has no report yet.") before one exists. */
+  report: async (id: string): Promise<string> => {
+    const response = await authFetch(`${sourcePath(id)}/report`);
+    return response.text();
+  },
+
+  /** The chapter's newest release and its proposals. 404 until a ready run has been staged for review. */
+  release: async (id: string): Promise<SourceRelease> => {
+    const response = await authFetch(`${sourcePath(id)}/release`);
+    return response.json();
+  },
+
+  /** Record decisions on the newest release; each is recorded or refused on its own (a stale hash is refused). */
+  decideRelease: async (id: string, decisions: ReleaseDecision[]): Promise<ReleaseDecisionResult[]> => {
+    const response = await authFetch(`${sourcePath(id)}/release/decisions`, {
+      method: "POST",
+      body: JSON.stringify({ decisions }),
+    });
+    return response.json();
+  },
+
+  /** Publish the newest release; a 409 says what still blocks it. */
+  publishRelease: async (id: string, artifactHash: string): Promise<Record<string, unknown>> => {
+    const response = await authFetch(`${sourcePath(id)}/release/publish`, {
+      method: "POST",
+      body: JSON.stringify({ artifact_hash: artifactHash }),
+    });
+    return response.json();
   },
 
   /** The uploaded PDF, as a Blob for an object URL (the route needs auth, so no plain link). */

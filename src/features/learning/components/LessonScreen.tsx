@@ -9,6 +9,7 @@ import { LessonHeader } from "./LessonHeader";
 import { LessonRail } from "./LessonRail";
 import { BoardPanel } from "./BoardPanel";
 import { ChatPanel } from "./ChatPanel";
+import { LESSON_COLUMNS } from "./layout";
 
 type Pane = "board" | "chat" | "progress";
 
@@ -88,7 +89,7 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
 
           <main
             aria-busy={status === "loading"}
-            className="grid flex-1 min-h-0 gap-4 px-4 pb-4 lg:grid-cols-[244px_minmax(0,1fr)_minmax(300px,368px)] xl:grid-cols-[264px_minmax(0,1fr)_minmax(340px,400px)]"
+            className={`grid flex-1 min-h-0 gap-4 px-4 pb-4 ${LESSON_COLUMNS}`}
           >
             <div id="lesson-pane-progress" role="tabpanel" aria-labelledby="lesson-tab-progress" className={`${paneClass("progress")} lesson-rise`}>
               <LessonRail />

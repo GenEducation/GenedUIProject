@@ -1,9 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, within, waitFor } from "@testing-library/react";
 import { LESSON_ID, NODE_2, lessonFixture, makeLessonInstance } from "@/test/msw/handlers/lesson";
 import { useLessonStore } from "../../useLessonStore";
-
-vi.mock("@/features/student/components/StudentBlobatar", () => ({ StudentBlobatar: () => null }));
 
 import { LessonProgressRail } from "../LessonProgressRail";
 import { BoardPanel } from "../BoardPanel";

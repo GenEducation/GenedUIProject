@@ -64,17 +64,32 @@ describe("forgot-password page", () => {
 
     fireEvent.change(screen.getByPlaceholderText("6-digit code"), { target: { value: "654321" } });
     const [password, confirm] = screen.getAllByPlaceholderText("••••••••");
-    fireEvent.change(password, { target: { value: "abcdefgh" } });
-    fireEvent.change(confirm, { target: { value: "abcdefgh" } });
+    fireEvent.change(password, { target: { value: "Mangoes8" } });
+    fireEvent.change(confirm, { target: { value: "Mangoes8" } });
     fireEvent.click(screen.getByRole("button", { name: /reset password/i }));
 
     await waitFor(() =>
       expect(resetPasswordMock).toHaveBeenCalledWith({
         email: "kid@example.com",
         otp_code: "654321",
-        new_password: "abcdefgh",
+        new_password: "Mangoes8",
       }),
     );
     await waitFor(() => expect(screen.getByText(/successfully reset/i)).toBeInTheDocument());
+  });
+
+  it("blocks a password the backend would refuse (no uppercase)", async () => {
+    render(<ForgotPasswordPage />);
+    requestOtp("kid@example.com");
+    await waitFor(() => screen.getByPlaceholderText("6-digit code"));
+
+    fireEvent.change(screen.getByPlaceholderText("6-digit code"), { target: { value: "654321" } });
+    const [password, confirm] = screen.getAllByPlaceholderText("••••••••");
+    fireEvent.change(password, { target: { value: "abcdefg1" } });
+    fireEvent.change(confirm, { target: { value: "abcdefg1" } });
+    fireEvent.click(screen.getByRole("button", { name: /reset password/i }));
+
+    expect(screen.getByText("Password needs an uppercase letter")).toBeInTheDocument();
+    expect(resetPasswordMock).not.toHaveBeenCalled();
   });
 });

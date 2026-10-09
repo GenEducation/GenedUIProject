@@ -22,19 +22,20 @@ const TYPE_LABEL = { teach: "Learn", practice: "Practice", assess: "Check" } as 
 function Marker({ state }: { state: StepState }) {
   if (state === "done") {
     return (
-      <span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--ls-primary)] text-white">
-        <Check size={14} strokeWidth={3} aria-hidden />
+      <span className="grid h-7 w-7 place-items-center rounded-full bg-[var(--ls-primary)] text-white shadow-[0_3px_8px_-3px_rgb(7_94_99/0.7)]">
+        <Check size={15} strokeWidth={3.2} aria-hidden />
       </span>
     );
   }
   if (state === "current") {
     return (
-      <span className="grid h-6 w-6 place-items-center rounded-full border-[3px] border-[var(--ls-primary)] bg-white shadow-[0_0_0_4px_var(--ls-accent)]">
-        <span className="h-2 w-2 rounded-full bg-[var(--ls-primary)]" />
+      // A solid citron disc with a deep-ocean dot: the step you're on.
+      <span className="grid h-7 w-7 place-items-center rounded-full bg-[var(--ls-accent)]">
+        <span className="h-2.5 w-2.5 rounded-full bg-[var(--ls-primary)]" />
       </span>
     );
   }
-  return <span className="h-6 w-6 rounded-full border-2 border-[var(--ls-border-strong)] bg-white" />;
+  return <span className="block h-7 w-7 rounded-full border-2 border-[var(--ls-border-strong)] bg-white" />;
 }
 
 /**
@@ -64,6 +65,7 @@ export function LessonProgressRail() {
   if (!finished && active) {
     steps.push({ key: active.instance_node_id, label: active.title, state: "current" });
     nextNodes.forEach((n, i) => steps.push({ key: `next-${n.node_id}-${i}`, label: n.title, state: "todo" }));
+    // The backend names only up to three upcoming steps; the rest are a count until it serves the full plan.
     const more = Math.max(0, instance.nodes_total - instance.nodes_done - 1 - nextNodes.length);
     if (more > 0) steps.push({ key: "more", label: `${more} more ${more === 1 ? "step" : "steps"}`, state: "todo", quiet: true });
   }
@@ -77,20 +79,20 @@ export function LessonProgressRail() {
           <li
             key={step.key}
             aria-current={step.state === "current" ? "step" : undefined}
-            className="relative flex items-start gap-3 pb-4 last:pb-0"
+            className="relative flex items-start gap-3.5 pb-5 last:pb-0"
           >
             {i < steps.length - 1 && (
               <span
                 aria-hidden
-                className={`absolute left-[11px] top-6 bottom-0 w-0.5 ${step.state === "done" ? "bg-[var(--ls-primary)]" : "bg-[var(--ls-border-strong)]"}`}
+                className={`absolute left-[13px] top-7 bottom-0 w-0.5 ${step.state === "done" ? "bg-[var(--ls-primary)]" : "bg-[var(--ls-border-strong)]"}`}
               />
             )}
             <span className="relative z-[1] shrink-0">
               <Marker state={step.state} />
             </span>
-            <span className="min-w-0 pt-0.5">
+            <span className="min-w-0 pt-1">
               <span
-                className={`block text-[14px] leading-snug ${
+                className={`block text-[15px] leading-snug ${
                   step.state === "current"
                     ? "font-bold text-[var(--ls-primary)]"
                     : step.quiet

@@ -1,7 +1,7 @@
 import { create } from "zustand";
-import { authFetch } from "@/utils/authFetch";
 import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
+import { partnerStudentsService } from "../services/partnerStudentsService";
 import type { RegisterSourceInput, SourceState, SourceView } from "../types/sources";
 
 export interface Student {
@@ -31,6 +31,10 @@ export interface Subject {
   state: SourceState;
   /** Why a run failed or needs review, in plain words. */
   detail: string | null;
+  /** The last run left a review report (`sourcesService.report`). */
+  has_report: boolean;
+  /** Reconciliation questions the last run is waiting on (`sourcesService.questions`). */
+  questions: number;
   created_at: string;
 }
 
@@ -47,24 +51,10 @@ export function toSubject(source: SourceView): Subject {
     publisher: source.publisher,
     state: source.state,
     detail: source.detail,
+    has_report: source.has_report,
+    questions: source.questions,
     created_at: source.created_at,
   };
-}
-
-/**
- * `/partner/students` returns student rows followed by a trailing metadata
- * object carrying the *_count fields, so the array is heterogeneous.
- */
-interface PartnerStudentRow {
-  id: string;
-  username: string;
-  grade: number | string;
-  status: "APPROVED" | "PENDING";
-}
-
-interface PartnerStudentsMeta {
-  approved_count?: number;
-  pending_count?: number;
 }
 
 export interface SubjectFilters {
@@ -110,6 +100,8 @@ interface PartnerState {
   fetchStudents: () => Promise<void>;
   approveRequest: (studentId: string) => Promise<void>;
   rejectRequest: (studentId: string) => Promise<void>;
+  /** End an approved student's membership but keep the record (status REVOKED); unlike `removeStudent`, which deletes it. */
+  revokeStudent: (studentId: string) => Promise<void>;
 
   // Subject Actions
   fetchSubjects: () => Promise<void>;
@@ -150,7 +142,16 @@ if (!API_URL) {
   throw new Error("NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.");
 }
 
-const getBaseUrl = () => API_URL;
+/** The signed-in partner's id (their user id), as login stored it. */
+function storedPartnerId(): string | undefined {
+  return localStorage.getItem("gened_partner_id")?.replace(/['"]+/g, "") || undefined;
+}
+
+function requirePartnerId(): string {
+  const partnerId = storedPartnerId();
+  if (!partnerId) throw new Error("No partner ID found");
+  return partnerId;
+}
 
 export const usePartnerStore = create<PartnerState>((set, get) => ({
   students: [],
@@ -199,57 +200,41 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     set({ viewerPdfUrl: null, viewerTitle: null, isViewerLoading: false, viewerError: null });
   },
 
-  // -- Fetch students from backend ----------------------------------------─
+  // -- Students and the approval queue ------------------------------------
+  // Approved students come from `/partner/students` (which lists every state,
+  // plus a counts row); the queue from `/partner/requests` (PENDING only), so a
+  // rejected or revoked student never shows up as a request.
   fetchStudents: async () => {
-    const rawPartnerId = localStorage.getItem("gened_partner_id");
-    const partnerId = rawPartnerId?.replace(/['"]+/g, "");
+    const partnerId = storedPartnerId();
     if (!partnerId) return;
 
     set({ isLoading: true });
-
     try {
-      const res = await authFetch(
-        `${getBaseUrl()}/partner/students?partner_id=${partnerId}`
-      );
-      if (!res.ok) throw new Error("Failed to fetch students");
-
-      const raw: Array<PartnerStudentRow | PartnerStudentsMeta> = await res.json();
-
-      // Extract the trailing metadata object (which contains *_count)
-      const metaObj = raw.find(
-        (item): item is PartnerStudentsMeta => "pending_count" in item
-      );
-      const totalEnrollments = metaObj?.approved_count ?? 0;
-      const pendingCount = metaObj?.pending_count ?? 0;
-
-      // Filter out the metadata trailer to parse strictly students
-      const studentItems = raw.filter(
-        (item): item is PartnerStudentRow => "id" in item && "username" in item
-      );
-
-      const approved: Student[] = [];
-      const pending: Student[] = [];
-
-      for (const item of studentItems) {
-        const student: Student = {
-          id: item.id,
-          name: item.username,
-          grade: String(item.grade),
-          initials: getInitials(item.username),
-          status: item.status,
-        };
-        if (item.status === "APPROVED") {
-          approved.push(student);
-        } else {
-          pending.push(student);
-        }
-      }
-
+      const [{ rows, counts }, requests] = await Promise.all([
+        partnerStudentsService.students(partnerId),
+        partnerStudentsService.requests(partnerId),
+      ]);
+      const students: Student[] = rows
+        .filter((row) => row.status === "APPROVED")
+        .map((row) => ({
+          id: row.id,
+          name: row.username,
+          grade: String(row.grade),
+          initials: getInitials(row.username),
+          status: "APPROVED",
+        }));
+      const pendingRequests: Student[] = requests.map((request) => ({
+        id: request.student_id,
+        name: request.name,
+        grade: String(request.grade),
+        initials: getInitials(request.name),
+        status: "PENDING",
+      }));
       set({
-        students: approved,
-        pendingRequests: pending,
-        numberOfPendingRequests: pendingCount,
-        totalEnrollments,
+        students,
+        pendingRequests,
+        numberOfPendingRequests: pendingRequests.length,
+        totalEnrollments: counts?.approved_count ?? students.length,
         isLoading: false,
       });
     } catch (error) {
@@ -260,16 +245,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
   // -- Approve request (backend-first) ------------------------------------
   approveRequest: async (studentId) => {
-    const rawPartnerId = localStorage.getItem("gened_partner_id");
-    const partnerId = rawPartnerId?.replace(/['"]+/g, "");
-    if (!partnerId) throw new Error("No partner ID found");
-
-    const res = await authFetch(
-      `${getBaseUrl()}/partner/students/${studentId}/status?partner_id=${partnerId}&status=APPROVED`,
-      { method: "PATCH" }
-    );
-
-    if (!res.ok) throw new Error("Failed to approve student");
+    await partnerStudentsService.setStatus(requirePartnerId(), studentId, "APPROVED");
 
     // Backend confirmed — update local state
     set((state) => {
@@ -296,16 +272,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
   // -- Reject request (backend-first) ------------------------------------─
   rejectRequest: async (studentId) => {
-    const rawPartnerId = localStorage.getItem("gened_partner_id");
-    const partnerId = rawPartnerId?.replace(/['"]+/g, "");
-    if (!partnerId) throw new Error("No partner ID found");
-
-    const res = await authFetch(
-      `${getBaseUrl()}/partner/students/${studentId}/status?partner_id=${partnerId}&status=REJECTED`,
-      { method: "PATCH" }
-    );
-
-    if (!res.ok) throw new Error("Failed to reject student");
+    await partnerStudentsService.setStatus(requirePartnerId(), studentId, "REJECTED");
 
     // Backend confirmed — remove from pending
     set((state) => {
@@ -316,6 +283,17 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         selectedStudent: null,
       };
     });
+  },
+
+  // -- Revoke an approved student (backend-first) -------------------------
+  revokeStudent: async (studentId) => {
+    await partnerStudentsService.setStatus(requirePartnerId(), studentId, "REVOKED");
+
+    set((state) => ({
+      students: state.students.filter((s) => s.id !== studentId),
+      totalEnrollments: Math.max(0, state.totalEnrollments - 1),
+      selectedStudent: state.selectedStudent?.id === studentId ? null : state.selectedStudent,
+    }));
   },
 
   // -- Subject actions ----------------------------------------------------
@@ -381,19 +359,11 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   },
 
   removeStudent: async (studentId) => {
-    const rawPartnerId = localStorage.getItem("gened_partner_id");
-    const partnerId = rawPartnerId?.replace(/['"]+/g, "");
-    if (!partnerId) throw new Error("No partner ID found");
-
-    const res = await authFetch(`${getBaseUrl()}/partner/students/${studentId}?partner_id=${partnerId}`, {
-      method: "DELETE",
-    });
-
-    if (!res.ok) throw new Error("Failed to delete student");
+    await partnerStudentsService.remove(requirePartnerId(), studentId);
 
     set((state) => ({
       students: state.students.filter((s) => s.id !== studentId),
-      totalEnrollments: state.totalEnrollments - 1,
+      totalEnrollments: Math.max(0, state.totalEnrollments - 1),
     }));
   },
 
