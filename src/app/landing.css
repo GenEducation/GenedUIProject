@@ -104,8 +104,8 @@
 .gened-landing .b3 { width: 300px; height: 300px; background: radial-gradient(circle, rgb(220 235 231 / 0.8), transparent 70%); top: 40%; left: 46%; }
 .gened-landing .hero .wrap { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 48px; align-items: center; }
 .gened-landing .badge { display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--line); color: var(--green-600); font-weight: 700; font-size: 13px; padding: 7px 14px; border-radius: 999px; box-shadow: var(--shadow-sm); }
-.gened-landing .badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px rgba(7,94,99, 0.22); animation: glpulse 2s infinite; }
-@keyframes glpulse { 0%, 100% { box-shadow: 0 0 0 4px rgba(7,94,99, 0.18); } 50% { box-shadow: 0 0 0 7px rgba(7,94,99, 0.05); } }
+.gened-landing .badge .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--citron); border: 1.5px solid var(--citron-deep); box-shadow: 0 0 0 4px rgb(217 242 121 / 0.45); animation: glpulse 2s infinite; }
+@keyframes glpulse { 0%, 100% { box-shadow: 0 0 0 4px rgb(217 242 121 / 0.45); } 50% { box-shadow: 0 0 0 7px rgb(217 242 121 / 0.12); } }
 .gened-landing .hero h1 { font-size: clamp(40px, 5.4vw, 68px); margin: 22px 0 18px; }
 .gened-landing .hero h1 em { font-style: italic; color: var(--green); font-family: var(--display);
   background: linear-gradient(transparent 64%, rgb(217 242 121 / 0.85) 64%, rgb(217 242 121 / 0.85) 90%, transparent 90%);
@@ -118,11 +118,22 @@
 .gened-landing .device-art { position: relative; display: grid; place-items: center; }
 .gened-landing .hero-photo { position: relative; width: 100%; max-width: 480px; margin: 0 auto; }
 .gened-landing .hero-photo .frame { border-radius: 28px; overflow: hidden; box-shadow: var(--shadow-lg); aspect-ratio: 5/4; background: #DCEBE7; }
+/* Photos and artwork are part of the page, not files to drag out: no
+   ghost-image drag, no long-press save callout, no accidental selection. */
+.gened-landing img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+/* <picture> wrappers (WebP + JPG fallback) must not break the img sizing. */
+.gened-landing picture { display: contents; }
 .gened-landing .hero-photo .frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .gened-landing .ph-label { position: absolute; background: #fff; color: var(--navy); font-weight: 700; font-size: 12.5px; padding: 8px 13px; border-radius: 999px; box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 7px; z-index: 3; }
-.gened-landing .ph-label .gdot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
+.gened-landing .ph-label .gdot { width: 9px; height: 9px; border-radius: 50%; background: var(--citron); border: 1.5px solid var(--citron-deep); }
 .gened-landing .ph-label.tl { top: -14px; left: -10px; }
 .gened-landing .ph-label.br { bottom: 22px; right: -12px; }
+.gened-landing .ph-label.bl { bottom: 22px; left: -12px; }
 
 /* ---------------- SECTION SHELL ---------------- */
 .gened-landing section { padding: 104px 0; }

@@ -4,13 +4,15 @@ import Image from "next/image";
  * The GenEd brand mark, in one place.
  *
  * - `full` — the cap-and-sparkle "GenEd" wordmark (transparent PNG, deep ocean).
- * - `mark` — the square cap + sparkle tile, for icon-sized slots (collapsed
- *   rails, avatars, the tab icon's twin).
+ * - `mark` — the star-and-hat icon (the favicon's artwork, transparent), for
+ *   icon-sized slots: collapsed rails, avatars, pop-ups.
  *
- * `onDark` knocks the wordmark out to white for dark grounds.
+ * `onDark` knocks the wordmark out to white, and swaps the mark for its
+ * light-coloured variant, for dark grounds.
  */
 const WORDMARK = { src: "/brand/gened-logo-deep-ocean-transparent.png", width: 354, height: 140 };
-const MARK = { src: "/brand/gened-mark.svg", width: 64, height: 64 };
+const MARK = { src: "/brand/gened-star.png", width: 256, height: 256 };
+const MARK_ON_DARK = { src: "/brand/gened-star-on-dark.png", width: 256, height: 256 };
 
 interface GenEdLogoProps {
   /** Rendered height in px; width follows the asset's aspect ratio. */
@@ -30,7 +32,7 @@ export function GenEdLogo({
   className,
   alt = "GenEd",
 }: GenEdLogoProps) {
-  const asset = variant === "mark" ? MARK : WORDMARK;
+  const asset = variant === "mark" ? (onDark ? MARK_ON_DARK : MARK) : WORDMARK;
   const width = Math.round((asset.width / asset.height) * height);
   return (
     <Image
@@ -39,6 +41,7 @@ export function GenEdLogo({
       width={width}
       height={height}
       priority={priority}
+      draggable={false}
       className={className}
       style={{
         height,

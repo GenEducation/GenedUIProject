@@ -216,6 +216,62 @@ h1, h2, h3, h4, h5, h6 {
   scrollbar-color: #DCEBE7 transparent;
 }
 
+/* ── Brand cursors ──────────────────────────────────────────────────────────
+   A tailless deep-ocean dart everywhere; over anything clickable the same
+   dart turns citron (its "you can act on this" meaning) — nothing else
+   changes. Text (fields and readable copy) gets a matching deep-ocean
+   I-beam. SVGs live in /public/cursors; hotspots: dart tip (5 5), I-beam
+   centre (16 16). The
+   trailing keyword is the native fallback if the image can't load.
+   !important on the pointer rule is needed to beat the many inline
+   `cursor: "pointer"` styles, and it also covers text nested inside a
+   clickable element so a card's paragraph doesn't flip to the I-beam.
+   Disabled controls show the plain deep-ocean dart (never the citron one,
+   never a browser default); drag areas keep grab/grabbing. */
+:root {
+  --cursor-default: url("/cursors/arrow.svg") 5 5, auto;
+  --cursor-pointer: url("/cursors/pointer.svg") 5 5, pointer;
+  --cursor-text: url("/cursors/text.svg") 16 16, text;
+}
+html { cursor: var(--cursor-default); }
+.cursor-default,
+[style*="cursor: default"] { cursor: var(--cursor-default) !important; }
+a[href],
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[role="tab"], [role="radio"], [role="checkbox"], [role="switch"],
+[role="menuitem"], [role="option"],
+summary, label[for], select:not(:disabled),
+input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled),
+input[type="submit"]:not(:disabled), input[type="button"]:not(:disabled),
+input[type="range"]:not(:disabled), input[type="color"]:not(:disabled),
+.cursor-pointer:not(:disabled),
+[style*="cursor: pointer"]:not(:disabled) { cursor: var(--cursor-pointer) !important; }
+
+/* Text: typing fields, editable areas and readable copy. */
+input:not([type="checkbox"], [type="radio"], [type="submit"], [type="button"], [type="reset"], [type="range"], [type="color"], [type="file"], [type="image"], [type="hidden"]),
+textarea, [contenteditable=""], [contenteditable="true"],
+p, li, h1, h2, h3, h4, h5, h6, blockquote, pre, code, td, th, dd, dt, figcaption {
+  cursor: var(--cursor-text);
+}
+/* Disabled: the plain brand dart. !important beats Tailwind's
+   `disabled:cursor-not-allowed` and inline cursor styles, and covers
+   buttons, which browsers otherwise give their own default arrow. */
+:is(button, input, textarea, select, fieldset):disabled,
+:is(button, input, textarea, select, fieldset):disabled *,
+[aria-disabled="true"], [aria-disabled="true"] * { cursor: var(--cursor-default) !important; }
+/* Browsers give <label> their own default arrow; treat field captions like
+   any other text, and labels that wrap a checkbox/radio (clicking toggles
+   it) like anything clickable. */
+label:not([for]) { cursor: var(--cursor-text); }
+label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled)) { cursor: var(--cursor-pointer); }
+
+/* Text inside something clickable stays the clickable pointer. */
+:is(a[href], button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, label[for], .cursor-pointer, [style*="cursor: pointer"])
+  :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, pre, code, td, th, dd, dt, figcaption, span, svg, img) {
+  cursor: var(--cursor-pointer) !important;
+}
+
 /* ── Citron accents ─────────────────────────────────────────────────────────
    Citron is the eye-catcher, so it is rationed: per screen, the ONE thing that
    matters most (a headline word, the key action) plus progress/achievement
@@ -504,6 +560,8 @@ h1, h2, h3, h4, h5, h6 {
   cursor: grab;
 }
 .lesson-paper { cursor: inherit; }
+/* Whiteboard text keeps the canvas's grab/grabbing hand, not the I-beam. */
+.lesson-canvas :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, pre, code, td, th, dd, dt, figcaption) { cursor: inherit; }
 .lesson-canvas[data-panning] {
   cursor: grabbing;
 }
@@ -572,6 +630,31 @@ h1, h2, h3, h4, h5, h6 {
   transform-box: fill-box;
   transform-origin: center;
   animation: lesson-twinkle 1.4s ease-in-out infinite;
+}
+
+/* The tutor's star-and-hat mark while it talks: a gentle breathe. */
+@keyframes lesson-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.lesson-breathe {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lesson-breathe 1.6s ease-in-out infinite;
+}
+/* Portrait prompt: the phone turns sideways, pauses, turns back. */
+@keyframes lesson-rotate-phone {
+  0%, 20% { transform: rotate(0deg); }
+  45%, 75% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+.lesson-rotate-phone {
+  transform-origin: center;
+  animation: lesson-rotate-phone 2.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lesson-breathe { animation: none; }
+  .lesson-rotate-phone { animation: none; transform: rotate(-90deg); }
 }
 
 /* ── Whiteboard: a figure added to the board is inked in left to right, a

@@ -45,7 +45,7 @@ export const RateLimitPrompt: React.FC<RateLimitPromptProps> = ({ isVisible, onC
             <div className="flex items-center gap-8">
               <div className="flex flex-1 items-center gap-5">
                 <div className="shrink-0">
-                  <GenEdLogo variant="mark" height={56} />
+                  <GenEdLogo variant="mark" onDark height={56} />
                 </div>
                 <div className="flex-1">
                   <h4 className="text-[17px] font-black text-white leading-tight tracking-tight uppercase">

@@ -19,6 +19,7 @@ import { STUDENT_COLORS } from "../theme/colors";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { StreakStats } from "./StreakStats";
+import { useTotalStudyMinutes } from "../hooks/useTotalStudyMinutes";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
@@ -247,6 +248,9 @@ export function StudentHome() {
   const { hasEnded, hasDismissedCelebration, dismissCelebration } = useTutorialStore();
 
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
+  // `undefined` while loading still shows the card, with 0 until it arrives;
+  // `null` (failed) shows "—".
+  const totalMinutes = useTotalStudyMinutes(studentProfile?.user_id) ?? (studentProfile?.user_id ? 0 : null);
   const [showConfetti,   setShowConfetti]   = useState(false);
   const [aprilState,     setAprilState]     = useState<AprilState>("idle");
   const [hoveredAgent,   setHoveredAgent]   = useState<string | null>(null);
@@ -535,7 +539,7 @@ export function StudentHome() {
               <h2 className="citron-eyebrow font-bold uppercase m-0 mb-4" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
                 Your progress
               </h2>
-              <StreakStats data={studentStats} isLoading={isStatsLoading} variant="card" />
+              <StreakStats data={studentStats} isLoading={isStatsLoading} variant="card" totalMinutes={totalMinutes} />
             </div>
 
             {/* ── MY SUBJECTS ── */}

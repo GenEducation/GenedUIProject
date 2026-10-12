@@ -2,18 +2,25 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, Flag, Timer, X } from "lucide-react";
+import { ChevronRight, Flag, ListChecks, Timer, X } from "lucide-react";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { StudentAvatar } from "@/features/student/components/StudentAvatar";
 import { useLessonStore } from "../useLessonStore";
 import { formatDuration, useSessionTimer } from "../useSessionTimer";
-import { LESSON_COLUMNS } from "./layout";
 
 interface LessonHeaderProps {
   subject: string | null;
   chapterTitle: string | null;
   /** Where leaving the lesson goes: the subject's chapters, or home. */
   exitHref: string;
+  /**
+   * Wide layout: the panels' grid template (rail · gap · board · gap · chat),
+   * so the logo sits over the rail and the student over the chat even after
+   * the student resizes the columns.
+   */
+  gridTemplate?: string;
+  /** Compact layout: opens the steps drawer (the rail isn't a column there). */
+  onOpenSteps?: () => void;
 }
 
 function Chip({
@@ -54,6 +61,8 @@ export function LessonHeader({
   subject,
   chapterTitle,
   exitHref,
+  gridTemplate,
+  onOpenSteps,
 }: LessonHeaderProps) {
   const seconds = useSessionTimer();
   const avatarId = useStudentStore((s) => s.avatarId);
@@ -62,12 +71,26 @@ export function LessonHeader({
 
   return (
     <header
-      className={`flex items-center gap-3 px-4 pb-3 pt-4 lg:grid lg:gap-4 ${LESSON_COLUMNS}`}
+      className={`${gridTemplate ? "grid gap-y-3" : "flex gap-3"} items-center px-4 pb-3 pt-4 [@media(max-height:500px)]:pb-2 [@media(max-height:500px)]:pt-2`}
+      style={gridTemplate ? { gridTemplateColumns: gridTemplate } : undefined}
     >
+      {onOpenSteps && (
+        // eslint-disable-next-line no-restricted-syntax -- icon-only header control.
+        <button
+          type="button"
+          onClick={onOpenSteps}
+          aria-label="Show lesson steps"
+          title="Lesson steps"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[var(--ls-border)] bg-[var(--ls-card)] text-[var(--ls-primary)] shadow-[var(--ls-shadow)] transition-colors hover:border-[var(--ls-border-strong)]"
+        >
+          <ListChecks size={19} strokeWidth={2.2} />
+        </button>
+      )}
       <Link
         href="/student"
         aria-label="GenEd home"
-        className="shrink-0 lg:flex lg:justify-center"
+        className={`shrink-0 ${gridTemplate ? "flex justify-center" : ""}`}
+        style={gridTemplate ? { gridColumn: "1" } : undefined}
       >
         <Image
           src="/brand/gened-logo.png"
@@ -75,11 +98,14 @@ export function LessonHeader({
           width={352}
           height={135}
           priority
-          className="h-10 w-auto sm:h-12 lg:h-14 xl:h-16"
+          className="h-10 w-auto sm:h-12 lg:h-14 xl:h-16 [@media(max-height:500px)]:h-8"
         />
       </Link>
 
-      <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+      <div
+        className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4"
+        style={gridTemplate ? { gridColumn: "3" } : undefined}
+      >
         <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
           <ol className="flex min-w-0 items-center gap-2 text-[15px] text-[var(--ls-ink-mid)]">
             {subject && (
@@ -120,7 +146,7 @@ export function LessonHeader({
           label="Session time"
         />
         {done !== null && total !== null && total > 0 && (
-          <div className="hidden md:block">
+          <div className="hidden md:block [@media(max-height:500px)]:hidden">
             <Chip
               icon={
                 <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--ls-accent)]">
@@ -139,8 +165,11 @@ export function LessonHeader({
         )}
       </div>
 
-      <div className="flex shrink-0 items-center justify-end gap-3">
-        <div className="relative hidden h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-white bg-[var(--ls-soft)] shadow-[var(--ls-shadow)] sm:block">
+      <div
+        className="flex shrink-0 items-center justify-end gap-3"
+        style={gridTemplate ? { gridColumn: "5" } : undefined}
+      >
+        <div className="relative hidden h-12 w-12 [@media(max-height:500px)]:!hidden shrink-0 overflow-hidden rounded-full border-2 border-white bg-[var(--ls-soft)] shadow-[var(--ls-shadow)] sm:block">
           <StudentAvatar id={avatarId} size={48} />
         </div>
         <Link

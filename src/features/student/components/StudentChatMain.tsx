@@ -639,11 +639,12 @@ export function StudentChatMain({
               >
                 <div style={{ width: "clamp(64px, 16vw, 96px)", height: "clamp(64px, 16vw, 96px)", borderRadius: 40, background: "#FFFFFF", border: "1px solid #E3E8E2", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 32, boxShadow: "0 0 0 6px #DCEBE7, 0 10px 24px -12px rgba(7,94,99,0.35)" }}>
                   <Image
-                    src="/brand/gened-mark.svg"
+                    src="/brand/gened-star.png"
                     alt="Agent Icon"
                     width={96}
                     height={96}
-                    className="object-cover w-full h-full"
+                    draggable={false}
+                    className="object-contain w-full h-full p-2.5"
                   />
                 </div>
                 <div className="text-center space-y-3 mb-12">

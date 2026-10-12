@@ -52,7 +52,7 @@ export function TeacherChatHistoryView() {
                 >
                   {!fromStudent && (
                     <div className="mt-0.5 h-10 w-10 flex-shrink-0 overflow-hidden rounded-full border border-border bg-white">
-                      <Image src="/brand/gened-mark.svg" alt="AI Tutor" width={40} height={40} className="h-full w-full object-cover" />
+                      <Image src="/brand/gened-star.png" alt="AI Tutor" width={40} height={40} className="h-full w-full object-contain p-[3px]" draggable={false} />
                     </div>
                   )}
                   {fromStudent && (

@@ -210,7 +210,7 @@ export const ChatMessageBubble = React.memo(
               <div className="absolute -inset-[3px] rounded-full border-[2px] border-transparent border-t-[var(--tutor)] border-r-[var(--tutor)] animate-spin" style={{ animationDuration: '1s' }} />
             )}
             <div className="rounded-full overflow-hidden relative z-10 bg-white" style={{ border: "1px solid #E3E8E2", width: "clamp(32px, 8vw, 40px)", height: "clamp(32px, 8vw, 40px)" }}>
-              <Image src="/brand/gened-mark.svg" alt="AI Agent" width={40} height={40} className="object-cover w-full h-full" />
+              <Image src="/brand/gened-star.png" alt="AI Agent" width={40} height={40} className="object-contain w-full h-full p-[3px]" draggable={false} />
             </div>
             {/* The tutor's presence spark — a teal dot ringed in canvas, the
                 same "Nia is here" mark the lesson screen uses. */}

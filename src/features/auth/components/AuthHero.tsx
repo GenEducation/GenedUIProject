@@ -24,7 +24,7 @@ export function AuthHero() {
         {/* Brand mark */}
         <div className="flex justify-center lg:justify-start w-full">
           <div className="rounded-full bg-white/10 p-4 ring-1 ring-white/20 shadow-xl shadow-black/30">
-            <GenEdLogo variant="mark" height={112} alt="GenEd" className="rounded-full" />
+            <GenEdLogo variant="mark" onDark height={112} alt="GenEd" />
           </div>
         </div>
 

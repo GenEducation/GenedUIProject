@@ -90,9 +90,13 @@ export function LessonProgressRail() {
             <span className="relative z-[1] shrink-0">
               <Marker state={step.state} />
             </span>
-            <span className="min-w-0 pt-1">
+            <span className="min-w-0 flex-1 pt-1">
+              {/* In a narrow rail (the student dragged it in, or the window is
+                  small) a step name collapses to one line with "…"; the full
+                  name stays on hover and for screen readers. */}
               <span
-                className={`block text-[15px] leading-snug ${
+                title={step.label}
+                className={`block text-[15px] leading-snug @max-[230px]:truncate @max-[230px]:text-[14px] ${
                   step.state === "current"
                     ? "font-bold text-[var(--ls-primary)]"
                     : step.quiet
