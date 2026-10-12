@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { PILOT_TAGLINE } from "@/constants/campaign";
 import { BetaSignupForm } from "./BetaSignupForm";
 
 /** The pilot sign-up as a sheet over the still-playing film (a bottom sheet on phones). */
@@ -33,7 +34,7 @@ export function JoinSheet({ open, onClose }: { open: boolean; onClose: () => voi
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
         </button>
-        <span className="gc-eyebrow">Limited pilot · Class 6 to 9</span>
+        <span className="gc-eyebrow">{PILOT_TAGLINE}</span>
         <h2 id="gc-sheet-title">
           Join the free pilot. <em>It takes a minute.</em>
         </h2>

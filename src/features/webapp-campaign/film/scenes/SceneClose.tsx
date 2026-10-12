@@ -2,6 +2,7 @@
 
 import { motion, useTransform } from "framer-motion";
 import { Reveal, useRange, type Progress } from "../primitives";
+import { PILOT_SEATS } from "@/constants/campaign";
 
 /** Closing title card. The whole film is the join button, so the CTA here is a visual cue. */
 export function SceneClose({ p }: { p: Progress }) {
@@ -27,7 +28,7 @@ export function SceneClose({ p }: { p: Progress }) {
           <p>
             Free for the whole pilot · Maths, Science &amp; English · Class 6–9
             <br />
-            <b>Only the first 100 families</b> · Access starts 16 October
+            <b>Only {PILOT_SEATS} families</b> · Access starts 16 October
           </p>
           <span className="gc-btn gc-btn-citron gc-btn-lg gc-close-btn">
             Tap to join the free pilot

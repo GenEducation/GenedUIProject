@@ -7,6 +7,7 @@ import Image from "next/image";
 import "./campaign.css";
 import { FONT_VARS } from "./fonts";
 import { FeatureVideo } from "./film/FeatureFilm";
+import { PILOT_TAGLINE } from "@/constants/campaign";
 import { BetaSignupForm } from "./BetaSignupForm";
 import { JoinSheet } from "./JoinSheet";
 import { MetaPixel, trackMetaCustom } from "./MetaPixel";
@@ -43,7 +44,8 @@ export function WebappCampaignPage() {
 
       <section className="gc-hero">
         <div className="gc-wrap gc-hero-inner">
-          <span className="gc-hero-badge">Free pilot · Class 6 to 9 · Maths, Science &amp; English</span>
+          <span className="gc-hero-badge">{PILOT_TAGLINE}</span>
+          <span className="gc-hero-sub">Class 6 to 9 · Maths, Science &amp; English</span>
           <h1>
             A personal AI tutor for your child. <em>You see every step.</em>
           </h1>
@@ -83,7 +85,7 @@ export function WebappCampaignPage() {
       <section id="join" className="gc-join">
         <div className="gc-wrap gc-join-grid">
           <div className="gc-join-copy">
-            <span className="gc-eyebrow">Limited pilot · Class 6 to 9</span>
+            <span className="gc-eyebrow">{PILOT_TAGLINE}</span>
             <h2>
               Save your child&apos;s seat. <em>It takes a minute.</em>
             </h2>

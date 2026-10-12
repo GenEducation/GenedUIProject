@@ -123,6 +123,7 @@
   animation: gcHeroRise 0.7s var(--spring) both;
 }
 .gened-campaign .gc-hero-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--citron-deep); box-shadow: 0 0 0 3px rgba(217, 242, 121, 0.5); }
+.gened-campaign .gc-hero-sub { margin-top: 10px; font-size: 13.5px; font-weight: 600; color: var(--muted); animation: gcHeroRise 0.7s 0.04s var(--spring) both; }
 .gened-campaign .gc-hero h1 {
   margin-top: 18px; font-size: clamp(32px, 4.4vw, 58px); max-width: 17ch; text-wrap: balance;
   animation: gcHeroRise 0.8s 0.08s var(--spring) both;
