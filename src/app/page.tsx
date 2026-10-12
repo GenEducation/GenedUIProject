@@ -256,9 +256,14 @@ export default function HomePage() {
           </div>
           <div className="device-art reveal in" data-d="2">
             <div className="hero-photo">
-              <div className="frame"><img src="/student-desk.jpg" alt="A student studying at their desk with the GenEd deskbot" /></div>
+              <div className="frame">
+                <picture>
+                  <source srcSet="/landing/deskbot-student.webp" type="image/webp" />
+                  <img draggable={false} src="/landing/deskbot-student.jpg" width={1400} height={1120} alt="A student writing in his notebook at his desk, with the yellow GenEd Deskbot smiling beside him" />
+                </picture>
+              </div>
               <span className="ph-label tl"><span className="gdot" /> Study mode: ON</span>
-              <span className="ph-label br"><svg className="icon" viewBox="0 0 24 24" style={{ width: 15, height: 15, color: "var(--green-600)" }}><path d="M20 6L9 17l-5-5" /></svg> No browser. Ever.</span>
+              <span className="ph-label bl"><svg className="icon" viewBox="0 0 24 24" style={{ width: 15, height: 15, color: "var(--green-600)" }}><path d="M20 6L9 17l-5-5" /></svg> No browser. Ever.</span>
             </div>
           </div>
         </div>
@@ -308,7 +313,10 @@ export default function HomePage() {
       <section id="device">
         <div className="wrap split">
           <div className="media reveal">
-            <img src="/hero-student.jpg" alt="A focused student learning with the GenEd deskbot" />
+            <picture>
+              <source srcSet="/landing/deskbot-trio.webp" type="image/webp" />
+              <img draggable={false} src="/landing/deskbot-trio.jpg" width={1400} height={1050} loading="lazy" alt="Three GenEd Deskbots in yellow, blue and grey, each showing its friendly face" />
+            </picture>
           </div>
           <div className="reveal" data-d="1">
             <span className="eyebrow">The GenEd Deskbot</span>

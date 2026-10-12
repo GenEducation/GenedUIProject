@@ -115,6 +115,17 @@
 .gened-landing .ph-label .gdot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
 .gened-landing .ph-label.tl { top: -14px; left: -10px; }
 .gened-landing .ph-label.br { bottom: 22px; right: -12px; }
+.gened-landing .ph-label.bl { bottom: 22px; left: -12px; }
+/* Photos and artwork are part of the page, not files to drag out: no
+   ghost-image drag, no long-press save callout, no accidental selection. */
+.gened-landing img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+/* <picture> wrappers (WebP + JPG fallback) must not break the img sizing. */
+.gened-landing picture { display: contents; }
 
 /* ---------------- SECTION SHELL ---------------- */
 .gened-landing section { padding: 104px 0; }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { PILOT_SEATS, PILOT_START } from "@/constants/campaign";
 import { BOARDS, GRADES, submitBetaSignup, type BetaSignup } from "./googleForm";
 import { trackMeta } from "./MetaPixel";
 
@@ -50,7 +51,7 @@ export function BetaSignupForm() {
 
   const share = async () => {
     const url = window.location.origin + window.location.pathname;
-    const text = "A free AI tutor for Class 6–9 — limited pilot, first 100 families.";
+    const text = `A free AI tutor for Class 6–9 — free pilot, only ${PILOT_SEATS} families, starts ${PILOT_START}.`;
     try {
       if (navigator.share) await navigator.share({ title: "GenEd free pilot", text, url });
       else {

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ACTIVE_CAMPAIGN } from "@/constants/campaign";
+import { ACTIVE_CAMPAIGN, PILOT_SEATS } from "@/constants/campaign";
 import { DeskbotPreorderPage } from "@/features/preorder/DeskbotPreorderPage";
 import { WebappCampaignPage } from "@/features/webapp-campaign/WebappCampaignPage";
 
@@ -9,7 +9,7 @@ const META: Record<typeof ACTIVE_CAMPAIGN, Metadata> = {
   webapp: {
     title: "Free AI Tutor for Your Child — Class 6 to 9 (Limited Pilot) | GenEd",
     description:
-      "A 1-on-1 AI tutor that follows your child's NCERT textbook chapter by chapter — and shows you every step. Maths, Science & English. Free for the whole pilot, first 100 families.",
+      `A 1-on-1 AI tutor that follows your child's NCERT textbook chapter by chapter — and shows you every step. Maths, Science & English. Free for the whole pilot, only ${PILOT_SEATS} families, starts 16 October.`,
     openGraph: {
       title: "Their journey. Your front-row seat.",
       description: "A free AI tutor for Class 6–9, and a parent home that shows you every step. Limited pilot.",
