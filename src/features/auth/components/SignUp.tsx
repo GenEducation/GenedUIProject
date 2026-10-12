@@ -39,11 +39,11 @@ const inputCls = (hasError: boolean) =>
   `w-full rounded-xl border ${
     hasError
       ? "border-rose-400 bg-rose-50/30"
-      : "border-[#042e5c]/15 bg-white/70"
-  } px-5 py-3.5 text-sm text-[#0E1F2B] transition-all duration-200 placeholder:text-[#0E1F2B]/25 hover:border-[#059F6D]/40 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/15`;
+      : "border-[#122D30]/15 bg-white/70"
+  } px-5 py-3.5 text-sm text-[#122D30] transition-all duration-200 placeholder:text-[#122D30]/25 hover:border-[#075E63]/40 focus:border-[#075E63] focus:outline-none focus:ring-2 focus:ring-[#075E63]/15`;
 
 const labelCls =
-  "block text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/45 mb-2.5 pl-0.5";
+  "block text-[9px] font-bold uppercase tracking-[0.28em] text-[#122D30]/45 mb-2.5 pl-0.5";
 
 const errorCls =
   "text-rose-500 text-[10px] font-semibold mt-1.5 ml-0.5 italic animate-in fade-in slide-in-from-top-1";
@@ -117,9 +117,9 @@ export function SignUp({
   if (!isSignupEnabled) {
     return (
       <div className="text-center py-10 flex flex-col items-center justify-center">
-        <div className="w-20 h-20 bg-[#059F6D]/8 rounded-full flex items-center justify-center mb-6">
+        <div className="w-20 h-20 bg-[#075E63]/8 rounded-full flex items-center justify-center mb-6">
           <svg
-            className="w-10 h-10 text-[#059F6D]"
+            className="w-10 h-10 text-[#075E63]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -132,14 +132,14 @@ export function SignUp({
             />
           </svg>
         </div>
-        <h3 className="text-xl font-extrabold text-[#042e5c] mb-4 font-serif">
+        <h3 className="text-xl font-extrabold text-[#122D30] mb-4 font-serif">
           <em>Registration</em> Restricted
         </h3>
-        <p className="text-[#2D3E51]/60 text-sm font-medium leading-relaxed max-w-xs mb-10">
+        <p className="text-[#3E5558]/60 text-sm font-medium leading-relaxed max-w-xs mb-10">
           This page is not for public access currently. Please contact us at{" "}
           <a
             href="mailto:support@geneducation.ai"
-            className="text-[#059F6D] font-bold hover:underline"
+            className="text-[#075E63] font-bold hover:underline"
           >
             support@geneducation.ai
           </a>
@@ -244,8 +244,8 @@ export function SignUp({
   const renderStep1 = () => (
     <div className="space-y-8">
       <div className="text-center mb-4">
-        <h3 className="text-xl font-bold text-[#042e5c] font-serif">Let&apos;s personalize your experience</h3>
-        <p className="text-xs text-[#042e5c]/50 mt-1">Select your role to get started</p>
+        <h3 className="text-xl font-bold text-[#122D30] font-serif">Let&apos;s personalize your experience</h3>
+        <p className="text-xs text-[#122D30]/50 mt-1">Select your role to get started</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -283,12 +283,12 @@ export function SignUp({
             type="button"
             onClick={prevStep}
             aria-label="Back to role selection"
-            className="-ml-2 p-2 rounded-full hover:bg-[#042e5c]/5 text-[#042e5c]/40 transition-colors"
+            className="-ml-2 p-2 rounded-full hover:bg-[#122D30]/5 text-[#122D30]/40 transition-colors"
           >
             <ArrowLeft size={20} />
           </button>
 
-          <div className="flex items-center gap-2.5 bg-[#042e5c]/5 p-4 rounded-xl border border-[#042e5c]/10">
+          <div className="flex items-center gap-2.5 bg-[#122D30]/5 p-4 rounded-xl border border-[#122D30]/10">
             <input
               type="checkbox"
               id="hasPersonalEmail"
@@ -297,9 +297,9 @@ export function SignUp({
                 setHasPersonalEmail(e.target.checked);
                 setLocalErrors({});
               }}
-              className="w-4 h-4 accent-[#059F6D] cursor-pointer"
+              className="w-4 h-4 accent-[#075E63] cursor-pointer"
             />
-            <label htmlFor="hasPersonalEmail" className="text-xs font-bold text-[#042e5c] cursor-pointer select-none">
+            <label htmlFor="hasPersonalEmail" className="text-xs font-bold text-[#122D30] cursor-pointer select-none">
               I want to sign up with my personal email address
             </label>
           </div>
@@ -323,18 +323,18 @@ export function SignUp({
                     type="button"
                     onClick={handleSendOtp}
                     disabled={isSendingOtp || !signupData.email || otpCooldown > 0}
-                    className="px-6 py-3.5 rounded-xl bg-[#042e5c]/5 text-[#042e5c] text-xs font-bold transition-all hover:bg-[#042e5c]/10 active:scale-95 disabled:opacity-50"
+                    className="px-6 py-3.5 rounded-xl bg-[#122D30]/5 text-[#122D30] text-xs font-bold transition-all hover:bg-[#122D30]/10 active:scale-95 disabled:opacity-50"
                   >
                     {isSendingOtp ? (
                     <span className="inline-flex items-center gap-1.5" aria-live="polite">
-                      <span aria-hidden className="h-3 w-3 rounded-full border-2 border-[#042e5c]/25 border-t-[#042e5c] motion-safe:animate-spin" />
+                      <span aria-hidden className="h-3 w-3 rounded-full border-2 border-[#122D30]/25 border-t-[#122D30] motion-safe:animate-spin" />
                       Sending code…
                     </span>
                   ) : otpCooldown > 0 ? `Resend in ${otpCooldown}s` : isOtpSent ? "Resend" : "Verify"}
                   </button>
                 </div>
                 {otpSentMessage && (
-                  <p className="text-[#059F6D] text-[10px] font-bold mt-1.5 ml-0.5 tracking-tight animate-in fade-in">
+                  <p className="text-[#075E63] text-[10px] font-bold mt-1.5 ml-0.5 tracking-tight animate-in fade-in">
                     {otpSentMessage}
                   </p>
                 )}
@@ -355,7 +355,7 @@ export function SignUp({
                     className={inputCls(false)}
                     maxLength={6}
                   />
-                  <p className="text-[#042e5c]/40 text-[9px] mt-1.5 ml-0.5 font-medium">
+                  <p className="text-[#122D30]/40 text-[9px] mt-1.5 ml-0.5 font-medium">
                     Check your inbox for the verification code
                   </p>
                 </div>
@@ -386,7 +386,7 @@ export function SignUp({
                   placeholder="parent@example.com"
                   className={inputCls(!!errors.parent_email || !!localErrors.parent_email)}
                 />
-                <p className="text-[#042e5c]/40 text-[9px] mt-1.5 ml-0.5 font-medium leading-relaxed">
+                <p className="text-[#122D30]/40 text-[9px] mt-1.5 ml-0.5 font-medium leading-relaxed">
                   Optional. Link parent now to grant them dashboard access.
                 </p>
                 {(errors.parent_email || localErrors.parent_email) && (
@@ -421,7 +421,7 @@ export function SignUp({
                   placeholder="parent@example.com"
                   className={inputCls(!!errors.parent_email || !!localErrors.parent_email)}
                 />
-                <p className="text-[#042e5c]/40 text-[9px] mt-1.5 ml-0.5 font-medium leading-relaxed">
+                <p className="text-[#122D30]/40 text-[9px] mt-1.5 ml-0.5 font-medium leading-relaxed">
                   Required for account confirmation. Your parent will receive an email to confirm and link accounts.
                 </p>
                 {(errors.parent_email || localErrors.parent_email) && (
@@ -446,7 +446,7 @@ export function SignUp({
                 <button aria-label={showPassword ? "Hide password" : "Show password"}
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#122D30]/30 hover:text-[#075E63] transition-colors"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -482,7 +482,7 @@ export function SignUp({
             */}
             <Select
               size="lg"
-              accentColor="#059F6D"
+              accentColor="#075E63"
               searchable={false}
               aria-label="What grade are you in?"
               placeholder="Select your grade"
@@ -522,7 +522,7 @@ export function SignUp({
           type="button"
           onClick={prevStep}
           aria-label="Back to role selection"
-          className="-ml-2 p-2 rounded-full hover:bg-[#042e5c]/5 text-[#042e5c]/40 transition-colors"
+          className="-ml-2 p-2 rounded-full hover:bg-[#122D30]/5 text-[#122D30]/40 transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
@@ -546,18 +546,18 @@ export function SignUp({
                   type="button"
                   onClick={handleSendOtp}
                   disabled={isSendingOtp || !signupData.email || otpCooldown > 0}
-                  className="px-6 py-3.5 rounded-xl bg-[#042e5c]/5 text-[#042e5c] text-xs font-bold transition-all hover:bg-[#042e5c]/10 active:scale-95 disabled:opacity-50"
+                  className="px-6 py-3.5 rounded-xl bg-[#122D30]/5 text-[#122D30] text-xs font-bold transition-all hover:bg-[#122D30]/10 active:scale-95 disabled:opacity-50"
                 >
                   {isSendingOtp ? (
                     <span className="inline-flex items-center gap-1.5" aria-live="polite">
-                      <span aria-hidden className="h-3 w-3 rounded-full border-2 border-[#042e5c]/25 border-t-[#042e5c] motion-safe:animate-spin" />
+                      <span aria-hidden className="h-3 w-3 rounded-full border-2 border-[#122D30]/25 border-t-[#122D30] motion-safe:animate-spin" />
                       Sending code…
                     </span>
                   ) : otpCooldown > 0 ? `Resend in ${otpCooldown}s` : isOtpSent ? "Resend" : "Verify"}
                 </button>
               </div>
               {otpSentMessage && (
-                <p className="text-[#059F6D] text-[10px] font-bold mt-1.5 ml-0.5 tracking-tight animate-in fade-in">
+                <p className="text-[#075E63] text-[10px] font-bold mt-1.5 ml-0.5 tracking-tight animate-in fade-in">
                   {otpSentMessage}
                 </p>
               )}
@@ -578,7 +578,7 @@ export function SignUp({
                   className={inputCls(false)}
                   maxLength={6}
                 />
-                <p className="text-[#042e5c]/40 text-[9px] mt-1.5 ml-0.5 font-medium">
+                <p className="text-[#122D30]/40 text-[9px] mt-1.5 ml-0.5 font-medium">
                   Check your inbox for the verification code
                 </p>
               </div>
@@ -599,7 +599,7 @@ export function SignUp({
                   <button aria-label={showPassword ? "Hide password" : "Show password"}
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#122D30]/30 hover:text-[#075E63] transition-colors"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -660,11 +660,11 @@ export function SignUp({
           <>
             {/* Divider — no opaque fill, the card surface is translucent */}
             <div className="flex items-center gap-3">
-              <span className="h-px flex-1 bg-[#042e5c]/10" />
-              <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/35">
+              <span className="h-px flex-1 bg-[#122D30]/10" />
+              <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-[#122D30]/35">
                 or
               </span>
-              <span className="h-px flex-1 bg-[#042e5c]/10" />
+              <span className="h-px flex-1 bg-[#122D30]/10" />
             </div>
 
             <GoogleAuthButton
@@ -701,7 +701,7 @@ export function SignUp({
           <div
             key={s}
             className={`h-full flex-1 transition-all duration-500 rounded-full ${
-              s <= step ? "bg-[#059F6D]" : "bg-[#042e5c]/5"
+              s <= step ? "bg-[#075E63]" : "bg-[#122D30]/5"
             }`}
           />
         ))}
@@ -722,12 +722,12 @@ export function SignUp({
         </AnimatePresence>
       </div>
 
-      <div className="text-center text-xs font-medium text-[#2D3E51]/40 pt-4">
+      <div className="text-center text-xs font-medium text-[#3E5558]/40 pt-4">
         Already have an account?{" "}
         <button
           type="button"
           onClick={onSwitchToSignin}
-          className="font-bold text-[#059F6D] hover:text-[#047a54] transition-colors"
+          className="font-bold text-[#075E63] hover:text-[#064C50] transition-colors"
         >
           Log in
         </button>

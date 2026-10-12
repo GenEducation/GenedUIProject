@@ -21,7 +21,7 @@ interface Props {
 
 const STATUS_STYLE: Record<string, string> = {
   valid: "bg-sky-500/15 text-sky-300",
-  created: "bg-[#059F6D]/15 text-[#059F6D]",
+  created: "bg-[#075E63]/15 text-[#075E63]",
   skipped: "bg-amber-500/15 text-amber-300",
   error: "bg-rose-500/15 text-rose-300",
 };
@@ -97,7 +97,7 @@ export function BulkImportModal({ role, context, contextLabel, onClose, onDone }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-[#13283a] p-6 shadow-2xl max-h-[90vh] flex flex-col">
+      <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-[#122D30] p-6 shadow-2xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-lg font-bold">
             Bulk import {noun}
@@ -144,7 +144,7 @@ export function BulkImportModal({ role, context, contextLabel, onClose, onDone }
               type="checkbox"
               checked={sendWelcome}
               onChange={(e) => setSendWelcome(e.target.checked)}
-              className="accent-[#059F6D]"
+              className="accent-[#075E63]"
             />
             Send welcome emails
           </label>
@@ -161,7 +161,7 @@ export function BulkImportModal({ role, context, contextLabel, onClose, onDone }
           <div className="mb-3 flex flex-wrap gap-2 text-xs">
             {committed ? (
               <>
-                <Pill className="bg-[#059F6D]/15 text-[#059F6D]">{committed.created} created</Pill>
+                <Pill className="bg-[#075E63]/15 text-[#075E63]">{committed.created} created</Pill>
                 <Pill className="bg-amber-500/15 text-amber-300">{committed.skipped} skipped</Pill>
                 <Pill className="bg-rose-500/15 text-rose-300">{committed.failed} failed</Pill>
               </>
@@ -179,7 +179,7 @@ export function BulkImportModal({ role, context, contextLabel, onClose, onDone }
         {summary ? (
           <div className="flex-1 overflow-auto rounded-lg border border-white/10">
             <table className="w-full text-left text-xs">
-              <thead className="sticky top-0 bg-[#0E1F2B] text-white/40">
+              <thead className="sticky top-0 bg-[#122D30] text-white/40">
                 <tr>
                   <th className="px-3 py-2">#</th>
                   <th className="px-3 py-2">Email</th>

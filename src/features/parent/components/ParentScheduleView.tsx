@@ -160,8 +160,8 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
     <div className="flex-1 overflow-y-auto p-6 lg:p-10">
       <div className="max-w-5xl mx-auto space-y-12">
         {/* Booking Form */}
-        <div className="bg-white p-8 rounded-[40px] border border-[#1a3a2a]/5 shadow-sm space-y-6">
-          <h2 className="text-sm font-black text-[#1a3a2a] uppercase tracking-widest flex items-center gap-2">
+        <div className="bg-white p-8 rounded-[40px] border border-[#122D30]/5 shadow-sm space-y-6">
+          <h2 className="text-sm font-black text-[#122D30] uppercase tracking-widest flex items-center gap-2">
             <Sparkles size={14} />
             Schedule a Session{studentName ? ` for ${studentName}` : ""}
           </h2>
@@ -174,8 +174,8 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
                 onClick={() => setSessionType(type)}
                 className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all border ${
                   sessionType === type
-                    ? "bg-[#1a3a2a] text-white border-[#1a3a2a] shadow-lg shadow-[#1a3a2a]/10"
-                    : "bg-[#F4F3EE]/50 text-[#1a3a2a]/40 border-[#1a3a2a]/5 hover:text-[#1a3a2a]"
+                    ? "bg-[#075E63] text-white border-[#122D30] shadow-lg shadow-[#122D30]/10"
+                    : "bg-[#F6F7F2]/50 text-[#122D30]/40 border-[#122D30]/5 hover:text-[#122D30]"
                 }`}
               >
                 {type === "TEST" ? <GraduationCap size={16} /> : <BookOpen size={16} />}
@@ -187,7 +187,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Subject */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest">Subject</label>
+              <label className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest">Subject</label>
               <Select
                 aria-label="Subject"
                 value={subject}
@@ -200,7 +200,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
                 options={agentSubjects.map((a) => ({ value: a.subject, label: a.subject }))}
                 buttonStyle={{
                   background: "color-mix(in srgb, var(--surface-sunken) 50%, transparent)",
-                  border: "1px solid rgba(4,46,92,0.05)",
+                  border: "1px solid rgba(18,45,48,0.05)",
                   borderRadius: 16,
                   padding: "14px 16px",
                 }}
@@ -209,7 +209,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
 
             {/* Topic */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest">
+              <label className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest">
                 Chapter {sessionType === "LEARNING" && "(optional)"}
               </label>
               <Select
@@ -221,7 +221,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
                 options={chapters.map((c) => ({ value: c, label: c }))}
                 buttonStyle={{
                   background: "color-mix(in srgb, var(--surface-sunken) 50%, transparent)",
-                  border: "1px solid rgba(4,46,92,0.05)",
+                  border: "1px solid rgba(18,45,48,0.05)",
                   borderRadius: 16,
                   padding: "14px 16px",
                 }}
@@ -230,7 +230,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
 
             {/* Date */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest">Date</label>
+              <label className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest">Date</label>
               <DatePicker
                 value={scheduledDate}
                 min={tomorrowDateString()}
@@ -241,11 +241,11 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
 
             {/* Time (optional) */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest">Start Time <span className="font-medium normal-case">(optional, IST)</span></label>
+              <label className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest">Start Time <span className="font-medium normal-case">(optional, IST)</span></label>
               <TimePicker
                 value={scheduledTime}
                 onChange={setScheduledTime}
-                accentColor="#1a3a2a"
+                accentColor="#122D30"
               />
             </div>
           </div>
@@ -267,7 +267,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
           <button
             onClick={handleBook}
             disabled={isBooking || !subject || !scheduledDate || (sessionType === "TEST" && !topic)}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-[#1a3a2a] text-white rounded-3xl text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-[#1a3a2a]/10 hover:bg-[#059669] hover:shadow-[#1a3a2a]/20 disabled:opacity-50 transition-all"
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-[#075E63] text-white rounded-3xl text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-[#122D30]/10 hover:bg-[#075E63] hover:shadow-[#122D30]/20 disabled:opacity-50 transition-all"
           >
             {isBooking ? (
               <>
@@ -292,22 +292,22 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
             </div>
           )}
 
-          <h2 className="text-sm font-black text-[#1a3a2a] uppercase tracking-widest flex items-center gap-2">
+          <h2 className="text-sm font-black text-[#122D30] uppercase tracking-widest flex items-center gap-2">
             <CalendarClock size={14} />
             Upcoming Sessions
           </h2>
 
           {isLoading ? (
-            <div className="flex items-center gap-3 py-6 text-[#1a3a2a]/40">
+            <div className="flex items-center gap-3 py-6 text-[#122D30]/40">
               <Loader2 size={20} className="animate-spin" />
               <span className="text-sm font-bold uppercase tracking-widest">Loading sessions...</span>
             </div>
           ) : sortedSessions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 space-y-4 bg-white/40 rounded-[40px] border border-dashed border-[#1a3a2a]/10">
-              <div className="w-16 h-16 rounded-full bg-[#1a3a2a]/5 flex items-center justify-center text-[#1a3a2a]/20">
+            <div className="flex flex-col items-center justify-center py-24 space-y-4 bg-white/40 rounded-[40px] border border-dashed border-[#122D30]/10">
+              <div className="w-16 h-16 rounded-full bg-[#075E63]/5 flex items-center justify-center text-[#122D30]/20">
                 <CalendarClock size={32} />
               </div>
-              <p className="text-sm font-medium text-[#1a3a2a]/40">No sessions scheduled yet.</p>
+              <p className="text-sm font-medium text-[#122D30]/40">No sessions scheduled yet.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -320,7 +320,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
                     ? { bg: "bg-red-50", text: "text-red-600", label: "Preparation Failed" }
                     : isReady
                     ? { bg: "bg-emerald-50", text: "text-emerald-600", label: "Ready" }
-                    : { bg: "bg-[#1a3a2a]/5", text: "text-[#1a3a2a]/40", label: "Being Prepared" };
+                    : { bg: "bg-[#075E63]/5", text: "text-[#122D30]/40", label: "Being Prepared" };
 
                   const progressLabel: Record<string, string> = {
                     PENDING: "Not started",
@@ -335,18 +335,18 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.97 }}
-                      className="bg-white p-6 rounded-3xl border border-[#1a3a2a]/5 shadow-sm space-y-4"
+                      className="bg-white p-6 rounded-3xl border border-[#122D30]/5 shadow-sm space-y-4"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 space-y-1">
-                          <h3 className="text-sm font-black text-[#1a3a2a] truncate">
+                          <h3 className="text-sm font-black text-[#122D30] truncate">
                             {s.topic || s.subject}
                           </h3>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest">
+                            <span className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest">
                               {s.subject}
                             </span>
-                            <span className="text-[10px] font-black text-[#1a3a2a]/30 uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#1a3a2a]/5">
+                            <span className="text-[10px] font-black text-[#122D30]/30 uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#075E63]/5">
                               {s.session_type}
                             </span>
                           </div>
@@ -359,11 +359,11 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
 
                       <div className="flex items-center justify-between gap-4">
                         <div className="space-y-0.5">
-                          <p className="text-xs font-bold text-[#1a3a2a]/60">
+                          <p className="text-xs font-bold text-[#122D30]/60">
                             {formatDateDisplay(s.scheduled_date)}
-                            {s.scheduled_time && <span className="ml-1.5 text-[#1a3a2a]/40">· {s.scheduled_time} IST</span>}
+                            {s.scheduled_time && <span className="ml-1.5 text-[#122D30]/40">· {s.scheduled_time} IST</span>}
                           </p>
-                          <p className="text-[10px] font-medium text-[#1a3a2a]/30 uppercase tracking-widest">
+                          <p className="text-[10px] font-medium text-[#122D30]/30 uppercase tracking-widest">
                             {progressLabel[s.status] ?? s.status}
                           </p>
                         </div>
@@ -371,7 +371,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
                         {isFailed && (
                           <button
                             onClick={() => handleReschedule(s.id, s.session_type, s.subject, s.topic)}
-                            className="px-4 py-2 rounded-xl bg-[#1a3a2a]/5 text-[#1a3a2a] text-[10px] font-black uppercase tracking-widest hover:bg-[#1a3a2a]/10 transition-all"
+                            className="px-4 py-2 rounded-xl bg-[#075E63]/5 text-[#122D30] text-[10px] font-black uppercase tracking-widest hover:bg-[#075E63]/10 transition-all"
                           >
                             Reschedule
                           </button>
@@ -393,7 +393,7 @@ export function ParentScheduleView({ studentId, parentId, studentName }: ParentS
         onConfirm={handleConfirmReschedule}
         isSubmitting={isRescheduling}
         errorMessage={rescheduleError}
-        themeColor="#1a3a2a"
+        themeColor="#122D30"
       />
     </div>
   );

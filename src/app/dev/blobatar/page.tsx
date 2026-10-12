@@ -81,9 +81,9 @@ export default function BlobatarHarness() {
   }
 
   return (
-    <main style={{ padding: 32, fontFamily: "var(--font-body)", background: "#F7F8FC", minHeight: "100vh" }}>
+    <main style={{ padding: 32, fontFamily: "var(--font-body)", background: "#F6F7F2", minHeight: "100vh" }}>
       <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>blobatar harness</h1>
-      <p style={{ fontSize: 13, color: "#4A5568", marginBottom: 28 }}>
+      <p style={{ fontSize: 13, color: "#3E5558", marginBottom: 28 }}>
         Dev-only. Everything below renders through the same code path the student app uses.
       </p>
 
@@ -277,17 +277,17 @@ export default function BlobatarHarness() {
 let devSeq = 0;
 
 const btn: React.CSSProperties = {
-  padding: "8px 14px", borderRadius: 10, border: "1px solid #E2E8F0",
+  padding: "8px 14px", borderRadius: 10, border: "1px solid #E3E8E2",
   background: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
 };
-const cap: React.CSSProperties = { fontSize: 10, color: "#94A3B8", marginTop: 4 };
+const cap: React.CSSProperties = { fontSize: 10, color: "#7F9295", marginTop: 4 };
 
 function Section({ title, note, children }: { title: string; note: string; children: React.ReactNode }) {
   return (
     <section style={{ marginBottom: 34 }}>
       <h2 style={{ fontSize: 14, fontWeight: 800, marginBottom: 2 }}>{title}</h2>
-      <p style={{ fontSize: 11, color: "#94A3B8", marginBottom: 12 }}>{note}</p>
-      <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 16, padding: 18 }}>
+      <p style={{ fontSize: 11, color: "#7F9295", marginBottom: 12 }}>{note}</p>
+      <div style={{ background: "#fff", border: "1px solid #E3E8E2", borderRadius: 16, padding: 18 }}>
         {children}
       </div>
     </section>

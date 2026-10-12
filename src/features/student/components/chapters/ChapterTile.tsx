@@ -90,7 +90,7 @@ export function ChapterTile({ chapter, index, opening, disabled, onOpen, onCardE
 
       {/* With a card the title is in the image; only "Opening…" needs saying over it. */}
       {showCard && opening && (
-        <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-[12px] font-bold shadow-sm" style={{ color: pal.ink }}>
+        <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--primary)] shadow-sm">
           <Loader2 size={13} className="animate-spin" /> Opening…
         </span>
       )}

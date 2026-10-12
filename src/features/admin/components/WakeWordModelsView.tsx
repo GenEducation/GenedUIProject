@@ -16,7 +16,7 @@ import { DataTable, Column } from "./DataTable";
 import { Button } from "@/components/ui/Button";
 
 const STATUS_STYLES: Record<string, string> = {
-  SUCCEEDED: "bg-[#059F6D]/15 text-[#059F6D]",
+  SUCCEEDED: "bg-[#075E63]/15 text-[#075E63]",
   RUNNING: "bg-sky-500/15 text-sky-300",
   PROVISIONING: "bg-sky-500/15 text-sky-300",
   PENDING: "bg-amber-500/15 text-amber-300",
@@ -113,7 +113,7 @@ export function WakeWordModelsView() {
             {m.model_num_bytes ? (
               <button
                 onClick={() => downloadWakewordModel(m.id, m.model_name)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-[#059F6D]/40 px-2.5 py-1.5 text-xs text-[#059F6D] hover:bg-[#059F6D]/10"
+                className="inline-flex items-center gap-1.5 rounded-md border border-[#075E63]/40 px-2.5 py-1.5 text-xs text-[#075E63] hover:bg-[#075E63]/10"
               >
                 <Download size={14} /> ONNX
               </button>
@@ -128,7 +128,7 @@ export function WakeWordModelsView() {
           onClick={() => setReportFor(null)}
         >
           <div
-            className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl border border-white/10 bg-[#0E1F2B] shadow-2xl"
+            className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl border border-white/10 bg-[#122D30] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
@@ -151,7 +151,7 @@ export function WakeWordModelsView() {
                   {reportError}
                 </div>
               ) : report?.report_md ? (
-                <div className="prose prose-invert prose-sm max-w-none prose-headings:text-white prose-a:text-[#059F6D]">
+                <div className="prose prose-invert prose-sm max-w-none prose-headings:text-white prose-a:text-[#075E63]">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.report_md}</ReactMarkdown>
                 </div>
               ) : report?.report_json ? (

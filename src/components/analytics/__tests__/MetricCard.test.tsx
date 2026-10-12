@@ -33,7 +33,7 @@ describe("MetricCard", () => {
         value="—"
         showProgress
         isSegmented
-        segments={[{ color: "#059669", width: 60 }, { color: "#D97706", width: 40 }]}
+        segments={[{ color: "#075E63", width: 60 }, { color: "#D97706", width: 40 }]}
       />,
     );
     const segments = container.querySelectorAll('[style*="background-color"]');
@@ -45,7 +45,7 @@ describe("MetricCard", () => {
       <MetricCard label="Trend" value={1} trend={{ value: "+5%", isPositive: true }} />,
     );
     expect(screen.getByText("+5%")).toBeInTheDocument();
-    expect(container.querySelector(".text-\\[\\#059669\\]")).toBeInTheDocument();
+    expect(container.querySelector(".text-\\[\\#075E63\\]")).toBeInTheDocument();
 
     rerender(<MetricCard label="Trend" value={1} trend={{ value: "-5%", isPositive: false }} />);
     expect(screen.getByText("-5%")).toBeInTheDocument();

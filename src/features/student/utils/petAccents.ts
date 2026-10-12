@@ -160,7 +160,7 @@ export function accentMarks(a: RestAnchors, kind: PetAccent): AccentMark[] {
         follow: "body",
         shape: {
           tag: "text", x: r2(a.headTop.x + a.face.rx * 0.55), y: r2(a.headTop.y + 2),
-          text: "?", size: 18, fill: "#5B4DC7", stroke: "#FFFFFF", className: "pet-accent-question",
+          text: "?", size: 18, fill: "#075E63", stroke: "#FFFFFF", className: "pet-accent-question",
         },
       }];
 
@@ -172,7 +172,7 @@ export function accentMarks(a: RestAnchors, kind: PetAccent): AccentMark[] {
         follow: "body" as const,
         shape: {
           tag: "ellipse" as const, cx: r2(x0 + i * 5), cy: r2(a.headTop.y - 1), rx: 1.9, ry: 1.9,
-          fill: "#5B4DC7", className: `pet-accent-dot pet-accent-dot-${i + 1}`,
+          fill: "#075E63", className: `pet-accent-dot pet-accent-dot-${i + 1}`,
         },
       }));
     }

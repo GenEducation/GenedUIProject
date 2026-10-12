@@ -49,8 +49,8 @@ function DraggableOption({
       {...attributes}
       className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border-2 bg-white cursor-grab active:cursor-grabbing transition-all select-none ${
         isDragging
-          ? "border-[var(--primary-ink)] shadow-lg scale-105 opacity-80"
-          : "border-[var(--primary-ink)]/15 hover:border-[var(--primary-ink)]/30 shadow-sm"
+          ? "border-[var(--primary)] shadow-lg scale-105 opacity-80"
+          : "border-[var(--surface-border)] hover:border-[var(--primary)]/40 shadow-sm"
       }`}
     >
       <GripVertical size={14} className="text-[var(--primary-ink)]/30 shrink-0" />
@@ -78,22 +78,23 @@ function DropZone({
       ref={setNodeRef}
       className={`min-h-[48px] rounded-xl border-2 border-dashed transition-all flex items-center px-2 sm:px-4 ${
         placedItem
-          ? "border-emerald-300 bg-emerald-50/50"
+          ? "border-solid border-[var(--primary)]/40 bg-[var(--soft-surface)]/40"
           : isOver
-          ? "border-[var(--primary-ink)] bg-[var(--primary-ink)]/5"
-          : "border-[var(--primary-ink)]/15 bg-slate-50/50"
+          ? "border-[var(--primary)] bg-[var(--soft-surface)]/50"
+          : "border-[var(--primary-ink)]/15 bg-[var(--canvas)]"
       }`}
     >
       {placedItem ? (
         <div className="flex items-center justify-between w-full py-2">
           <div className="flex items-center gap-2">
-            <span className="text-[13px] font-bold text-emerald-600">{placedItem.label}.</span>
+            {/* Placed = locked in: the letter becomes a teal chip. */}
+            <span className="px-1.5 py-0.5 rounded-md bg-[var(--primary)] text-[12px] font-black text-white">{placedItem.label}</span>
             <span className="text-[14px] font-medium text-[var(--primary-ink)]">{placedItem.text}</span>
           </div>
           {!disabled && (
             <button
               onClick={onRemove}
-              className="text-[11px] font-bold text-[var(--primary-ink)]/40 hover:text-red-500 transition-colors uppercase tracking-wider"
+              className="text-[11px] font-bold text-[var(--primary-ink)]/40 hover:text-[var(--danger)] transition-colors uppercase tracking-wider"
             >
               Remove
             </button>
@@ -186,10 +187,10 @@ export function MatchTheFollowingQuestion({
 
             return (
               <div key={left.id} className="flex items-center gap-1.5 sm:gap-3">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[var(--primary-ink)]/5 flex items-center justify-center shrink-0">
-                  <span className="text-[12px] sm:text-[13px] font-black text-[var(--primary-ink)]">{left.id}</span>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[var(--soft-surface)] flex items-center justify-center shrink-0">
+                  <span className="text-[12px] sm:text-[13px] font-black text-[var(--primary)]">{left.id}</span>
                 </div>
-                <div className="flex-1 py-2 px-2 sm:px-3 rounded-xl bg-white border border-[var(--primary-ink)]/10 min-w-0">
+                <div className="flex-1 py-2 px-2 sm:px-3 rounded-xl bg-white border border-[var(--surface-border)] min-w-0">
                   <span className="text-[13px] sm:text-[14px] font-medium text-[var(--primary-ink)]">{left.text}</span>
                 </div>
                 <span className="text-[var(--primary-ink)]/20 font-bold shrink-0">&rarr;</span>
@@ -229,7 +230,7 @@ export function MatchTheFollowingQuestion({
 
         <DragOverlay>
           {activeItem ? (
-            <div className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-[var(--primary-ink)] bg-white shadow-xl cursor-grabbing">
+            <div className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-[var(--primary)] bg-white shadow-xl cursor-grabbing">
               <GripVertical size={14} className="text-[var(--primary-ink)]/30" />
               <span className="text-[13px] font-bold text-[var(--primary-ink)]/50">{activeItem.label}.</span>
               <span className="text-[14px] font-medium text-[var(--primary-ink)]">{activeItem.text}</span>

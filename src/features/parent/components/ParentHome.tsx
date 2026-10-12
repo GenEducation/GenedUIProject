@@ -348,7 +348,7 @@ export function ParentHome() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 z-40 bg-[#13293D]/30 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-[#122D30]/30 backdrop-blur-sm lg:hidden"
           />
         )}
       </AnimatePresence>

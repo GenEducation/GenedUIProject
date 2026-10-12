@@ -45,7 +45,7 @@ export function StudentCard({
 
   return (
     <article
-      className={`rounded-2xl border p-5 shadow-[0_1px_2px_rgba(4,46,92,.06),0_1px_3px_rgba(4,46,92,.05)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(4,46,92,.07),0_12px_32px_rgba(4,46,92,.06)] ${
+      className={`rounded-2xl border p-5 shadow-[0_1px_2px_rgba(18,45,48,.06),0_1px_3px_rgba(18,45,48,.05)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(18,45,48,.07),0_12px_32px_rgba(18,45,48,.06)] ${
         isPending ? "border-warning-border bg-gradient-to-b from-[#fffaf1] to-white" : "border-border bg-white"
       }`}
     >
@@ -114,7 +114,7 @@ export function StudentCard({
             <button
               onClick={onApprove}
               disabled={isApproving || isRemoving || awaitingSchool}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald px-3.5 py-1.5 text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(5,159,109,.28)] transition-colors hover:bg-emerald-600 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald px-3.5 py-1.5 text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(7,94,99,.28)] transition-colors hover:bg-emerald-600 disabled:opacity-50"
             >
               {isApproving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
               {awaitingSchool ? "Awaiting school" : "Accept student"}
@@ -140,7 +140,7 @@ export function StudentCard({
               </button>
               <button
                 onClick={onViewReport}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-ink px-3 py-1.5 text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(4,46,92,.18)] transition-colors hover:bg-navy-700"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-ink px-3 py-1.5 text-[12.5px] font-semibold text-white shadow-[0_8px_20px_rgba(18,45,48,.18)] transition-colors hover:bg-navy-700"
               >
                 <ScrollText size={13} />
                 Report

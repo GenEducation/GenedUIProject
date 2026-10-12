@@ -32,7 +32,7 @@ const formatDate = (iso: string) => {
 
 const STATE_STYLE: Record<CandidateState, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-200",
-  accepted: "bg-[#D1E6D9]/60 text-[#1A3D2C] border-[#1A3D2C]/10",
+  accepted: "bg-[#DCEBE7]/60 text-[#122D30] border-[#122D30]/10",
   rejected: "bg-red-50 text-red-600 border-red-200",
 };
 
@@ -52,7 +52,7 @@ export function StateChip({ state }: { state: CandidateState }) {
 
 function SectionLabel({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <h5 className="flex items-center gap-2 text-[10px] font-black text-[#1A3D2C]/50 uppercase tracking-widest mb-2">
+    <h5 className="flex items-center gap-2 text-[10px] font-black text-[#122D30]/50 uppercase tracking-widest mb-2">
       {icon}
       {children}
     </h5>
@@ -73,10 +73,10 @@ function Passages({ detail }: { detail: VisualDetail }) {
         {used.map((p) => (
           <blockquote
             key={p.ref}
-            className="relative rounded-xl bg-[#FBFAF5] border border-[#1A3D2C]/5 pl-4 pr-3 py-3 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-r-full before:bg-[#1A3D2C]/60"
+            className="relative rounded-xl bg-[#FBFAF5] border border-[#122D30]/5 pl-4 pr-3 py-3 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-r-full before:bg-[#075E63]/60"
           >
-            <p className="text-[13px] leading-relaxed text-[#1A3D2C]/85 whitespace-pre-line">{p.text}</p>
-            <cite className="block mt-1.5 not-italic text-[9px] font-black uppercase tracking-widest text-[#1A3D2C]/35">
+            <p className="text-[13px] leading-relaxed text-[#122D30]/85 whitespace-pre-line">{p.text}</p>
+            <cite className="block mt-1.5 not-italic text-[9px] font-black uppercase tracking-widest text-[#122D30]/35">
               {p.ref}
             </cite>
           </blockquote>
@@ -84,14 +84,14 @@ function Passages({ detail }: { detail: VisualDetail }) {
       </div>
       {others.length > 0 && (
         <details className="mt-2 group">
-          <summary className="cursor-pointer text-[11px] font-bold text-[#1A3D2C]/50 hover:text-[#1A3D2C] select-none">
+          <summary className="cursor-pointer text-[11px] font-bold text-[#122D30]/50 hover:text-[#122D30] select-none">
             Other passages from this concept ({others.length})
           </summary>
           <div className="mt-2 flex flex-col gap-2">
             {others.map((p) => (
-              <blockquote key={p.ref} className="rounded-xl bg-[#F8F9F8] px-3 py-2.5">
-                <p className="text-xs leading-relaxed text-[#1A3D2C]/60 whitespace-pre-line">{p.text}</p>
-                <cite className="block mt-1 not-italic text-[9px] font-black uppercase tracking-widest text-[#1A3D2C]/30">
+              <blockquote key={p.ref} className="rounded-xl bg-[#F6F7F2] px-3 py-2.5">
+                <p className="text-xs leading-relaxed text-[#122D30]/60 whitespace-pre-line">{p.text}</p>
+                <cite className="block mt-1 not-italic text-[9px] font-black uppercase tracking-widest text-[#122D30]/30">
                   {p.ref}
                 </cite>
               </blockquote>
@@ -120,12 +120,12 @@ function FamilyTimeline({ detail, onOpen }: { detail: VisualDetail; onOpen: (id:
                 aria-current={current ? "true" : undefined}
                 onClick={() => onOpen(member.id)}
                 className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${
-                  current ? "bg-[#1A3D2C]/5 cursor-default" : "hover:bg-[#1A3D2C]/5"
+                  current ? "bg-[#075E63]/5 cursor-default" : "hover:bg-[#075E63]/5"
                 }`}
               >
-                <span className="text-xs font-black text-[#1A3D2C] w-16 shrink-0">Version {i + 1}</span>
+                <span className="text-xs font-black text-[#122D30] w-16 shrink-0">Version {i + 1}</span>
                 <StateChip state={member.state} />
-                <span className="ml-auto text-[11px] font-bold text-[#1A3D2C]/40">{formatDate(member.created_at)}</span>
+                <span className="ml-auto text-[11px] font-bold text-[#122D30]/40">{formatDate(member.created_at)}</span>
               </button>
             </li>
           );
@@ -153,7 +153,7 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
 
   return (
     <div className="flex flex-col min-h-full">
-      <div className="sticky top-0 z-10 flex items-center gap-2 px-5 md:px-7 py-3 bg-white/90 backdrop-blur border-b border-[#1A3D2C]/5">
+      <div className="sticky top-0 z-10 flex items-center gap-2 px-5 md:px-7 py-3 bg-white/90 backdrop-blur border-b border-[#122D30]/5">
         <Button variant="tertiary" size="sm" leadingIcon={<ArrowLeft size={14} />} onClick={onBack}>
           All visuals
         </Button>
@@ -181,7 +181,7 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
 
       {error && !detail && (
         <div className="flex flex-col items-center gap-3 py-16 text-center px-6">
-          <p className="text-sm font-bold text-[#1A3D2C]">{error}</p>
+          <p className="text-sm font-bold text-[#122D30]">{error}</p>
           <Button variant="outline" onClick={() => void reload()}>
             Try again
           </Button>
@@ -197,7 +197,7 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
         >
           {/* Left: the picture */}
           <div className="flex flex-col gap-4 lg:sticky lg:top-[68px] self-start w-full">
-            <div className="relative rounded-2xl border border-[#1A3D2C]/10 overflow-hidden bg-white">
+            <div className="relative rounded-2xl border border-[#122D30]/10 overflow-hidden bg-white">
               <div className={zoomed ? "overflow-auto max-h-[70vh]" : ""} data-testid="visual-zoom-frame">
                 <VisualImage
                   imageUrl={detail.image_url}
@@ -227,22 +227,22 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
           <div className="flex flex-col gap-6 min-w-0">
             <header>
               {detail.concept.section_title && (
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/40 mb-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40 mb-1">
                   {detail.concept.section_title}
                 </p>
               )}
-              <h3 className="text-xl md:text-2xl font-black text-[#1A3D2C] tracking-tight leading-tight">
+              <h3 className="text-xl md:text-2xl font-black text-[#122D30] tracking-tight leading-tight">
                 {detail.concept.title}
               </h3>
               {detail.concept.definition && (
-                <p className="mt-2 text-sm leading-relaxed text-[#1A3D2C]/70">{detail.concept.definition}</p>
+                <p className="mt-2 text-sm leading-relaxed text-[#122D30]/70">{detail.concept.definition}</p>
               )}
             </header>
 
             {detail.concept.feedback && (
-              <div className="rounded-xl bg-[#D1E6D9]/40 border border-[#1A3D2C]/10 px-4 py-3 flex items-start gap-2.5">
-                <Sparkles size={14} className="text-[#1A3D2C] mt-0.5 shrink-0" aria-hidden />
-                <p className="text-xs text-[#1A3D2C]/80">
+              <div className="rounded-xl bg-[#DCEBE7]/40 border border-[#122D30]/10 px-4 py-3 flex items-start gap-2.5">
+                <Sparkles size={14} className="text-[#122D30] mt-0.5 shrink-0" aria-hidden />
+                <p className="text-xs text-[#122D30]/80">
                   <span className="font-black">Made again after: </span>
                   {detail.concept.feedback.reason_codes.map((c) => REASON_LABELS[c] ?? c).join(", ")}
                   {detail.concept.feedback.note && <> — <q>{detail.concept.feedback.note}</q></>}
@@ -257,9 +257,9 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
                 <SectionLabel icon={<ListChecks size={12} />}>The picture should show</SectionLabel>
                 <ul className="flex flex-col gap-1.5">
                   {detail.spec.checklist.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-[13px] text-[#1A3D2C]/85">
-                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded-[5px] border-[1.5px] border-[#1A3D2C]/25 flex items-center justify-center">
-                        <Check size={10} className="text-[#1A3D2C]/30" aria-hidden />
+                    <li key={i} className="flex items-start gap-2.5 text-[13px] text-[#122D30]/85">
+                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded-[5px] border-[1.5px] border-[#122D30]/25 flex items-center justify-center">
+                        <Check size={10} className="text-[#122D30]/30" aria-hidden />
                       </span>
                       {item}
                     </li>
@@ -282,8 +282,8 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
             )}
 
             {detail.decision && (
-              <p className="text-xs text-[#1A3D2C]/60">
-                <span className="font-black text-[#1A3D2C]">
+              <p className="text-xs text-[#122D30]/60">
+                <span className="font-black text-[#122D30]">
                   {detail.decision.decision === "accept" ? "Accepted" : "Rejected"}
                 </span>{" "}
                 on {formatDate(detail.decision.decided_at)}

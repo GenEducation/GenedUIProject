@@ -27,7 +27,7 @@ export function PartnerAdmin() {
   const partnerId = rawPartnerId?.replace(/['"]+/g, "");
 
   return (
-    <div className="portal-legacy-type flex h-screen bg-[#F8F9F8] overflow-hidden">
+    <div className="portal-legacy-type flex h-screen bg-[#F6F7F2] overflow-hidden">
       {/* Navigation Sidebar */}
       <SideBar
         activeView={activeView}
@@ -37,11 +37,11 @@ export function PartnerAdmin() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-[#F8F9F8]">
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-[#F6F7F2]">
         {/* Top Navbar */}
-        <header className="h-[88px] shrink-0 border-b border-[#1A3D2C]/5 bg-white/40 flex items-center justify-between px-8 lg:px-12 z-50 transition-all">
+        <header className="h-[88px] shrink-0 border-b border-[#122D30]/5 bg-white/40 flex items-center justify-between px-8 lg:px-12 z-50 transition-all">
           <div className="flex-1">
-             <h2 className="text-xl font-black text-[#1A3D2C] hidden lg:block tracking-tight">
+             <h2 className="text-xl font-black text-[#122D30] hidden lg:block tracking-tight">
                {activeView === "subjects" ? "Academic Registry" : activeView === "labs" ? "Lab Mode" : "Enrollment Overview"}
              </h2>
           </div>

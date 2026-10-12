@@ -12,6 +12,7 @@ import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import "./landing.css";
 import { useHydrated } from "@/hooks/useHydrated";
 import { ParentLoaderBackdrop } from "@/features/parent/components/loader/ParentLoader";
+import { GenEdLogo } from "@/components/shared/GenEdLogo";
 
 function storedRole(): string | null {
   try {
@@ -188,10 +189,10 @@ export default function HomePage() {
       );
     }
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#F7F6F1]">
+      <div className="h-screen w-full flex items-center justify-center bg-[#F6F7F2]">
         <div className="flex flex-col items-center gap-4">
-          <Image src="/Logo.svg" alt="GenEd" width={150} height={30} className="animate-pulse" priority />
-          <div className="w-8 h-8 border-4 border-[#2D5540] border-t-transparent rounded-full animate-spin" />
+          <GenEdLogo height={56} className="animate-pulse" priority />
+          <div className="w-8 h-8 border-4 border-[#075E63] border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -208,7 +209,6 @@ export default function HomePage() {
         href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..700&family=Manrope:wght@400;500;600;700;800&display=swap"
         rel="stylesheet"
       />
-
       <span id="top" />
 
       {/* ── NAV ── */}
@@ -216,7 +216,7 @@ export default function HomePage() {
         <div className="wrap">
           <nav>
             <a href="#top" className="logo" aria-label="GenEd home">
-              <Image src="/Logo.svg" alt="GenEd" width={150} height={30} priority />
+              <GenEdLogo height={44} priority />
             </a>
             <div className="navlinks">
               <a href="#device">The Device</a>
@@ -444,7 +444,7 @@ export default function HomePage() {
           <h2>Give your child the learning companion they deserve.</h2>
           <p>GenEd is live and ready — a focused, distraction-free AI tutor that actually adapts to how your child learns.</p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-            <Link className="btn btn-primary" href="/pre-order">Pre-order the Deskbot <svg className="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></Link>
+            <Link className="btn btn-citron" href="/pre-order">Pre-order the Deskbot <svg className="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></Link>
             <Link className="btn btn-ghost" href="/register" style={{ color: "#fff", borderColor: "rgba(255,255,255,0.35)" }}>Get started free</Link>
           </div>
         </div>
@@ -455,7 +455,7 @@ export default function HomePage() {
         <div className="wrap">
           <div className="foot-grid">
             <div>
-              <a href="#top" className="logo" aria-label="GenEd home"><Image src="/Logo.svg" alt="GenEd" width={140} height={28} /></a>
+              <a href="#top" className="logo" aria-label="GenEd home"><GenEdLogo height={44} onDark /></a>
               <p>A dedicated AI learning device that helps every child learn confidently, safely and at their own pace.</p>
             </div>
             <div className="fcol"><h5>Product</h5><Link href="/pre-order">Pre-order</Link><a href="#device">The Device</a><a href="#why">Why GenEd</a><a href="#parents">Parent App</a><a href="#safe">Safety</a></div>

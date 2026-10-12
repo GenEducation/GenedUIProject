@@ -40,7 +40,7 @@ export function VisualsModal({ subject, counts, onClose, onChanged }: VisualsMod
       onClose={onClose}
       size="full"
       title={subject ? `Visuals for ${subject.title}` : "Visuals"}
-      panelStyle={{ maxWidth: "min(1180px, 100%)", background: "#F8F9F8" }}
+      panelStyle={{ maxWidth: "min(1180px, 100%)", background: "#F6F7F2" }}
     >
       {/* Keyed so each row opens on a fresh tab/selection. */}
       {subject && <VisualsModalBody key={subject.id} subject={subject} counts={counts} onClose={onClose} onChanged={onChanged} />}
@@ -88,14 +88,14 @@ function VisualsModalBody({ subject, counts, onClose, onChanged }: Required<Pick
   return (
     <div className="flex flex-col min-h-full">
       {/* Header */}
-      <header className="shrink-0 flex items-start gap-4 px-5 md:px-7 pt-6 pb-4 bg-white border-b border-[#1A3D2C]/5">
-        <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#1A3D2C] text-white flex items-center justify-center">
+      <header className="shrink-0 flex items-start gap-4 px-5 md:px-7 pt-6 pb-4 bg-white border-b border-[#122D30]/5">
+        <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#075E63] text-white flex items-center justify-center">
           <Images size={20} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/40">Teaching visuals</p>
-          <h2 className="text-lg md:text-xl font-black text-[#1A3D2C] tracking-tight truncate">{subject.title}</h2>
-          <p className="text-[11px] font-bold text-[#1A3D2C]/50 uppercase tracking-wider truncate">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">Teaching visuals</p>
+          <h2 className="text-lg md:text-xl font-black text-[#122D30] tracking-tight truncate">{subject.title}</h2>
+          <p className="text-[11px] font-bold text-[#122D30]/50 uppercase tracking-wider truncate">
             {subject.book_title} · Ch {subject.chapter_ordinal} · Grade {subject.grade} · {subject.subject}
           </p>
         </div>
@@ -137,7 +137,7 @@ function VisualsModalBody({ subject, counts, onClose, onChanged }: Required<Pick
             className="flex-1 flex flex-col gap-4 px-5 md:px-7 py-5"
           >
             {/* Tabs */}
-            <div role="tablist" aria-label="Visual state" className="flex gap-1 p-1 bg-white rounded-2xl border border-[#1A3D2C]/5 self-start">
+            <div role="tablist" aria-label="Visual state" className="flex gap-1 p-1 bg-white rounded-2xl border border-[#122D30]/5 self-start">
               {TABS.map((t) => {
                 const active = t.id === tab;
                 const n = counts?.[t.id];
@@ -150,11 +150,11 @@ function VisualsModalBody({ subject, counts, onClose, onChanged }: Required<Pick
                     aria-selected={active}
                     onClick={() => setTab(t.id)}
                     className={`px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors ${
-                      active ? "bg-[#1A3D2C] text-white" : "text-[#1A3D2C]/45 hover:text-[#1A3D2C] hover:bg-[#1A3D2C]/5"
+                      active ? "bg-[#075E63] text-white" : "text-[#122D30]/45 hover:text-[#122D30] hover:bg-[#075E63]/5"
                     }`}
                   >
                     {t.label}
-                    {n ? <span className={`ml-1.5 tabular-nums ${active ? "text-white/60" : "text-[#1A3D2C]/30"}`}>{n}</span> : null}
+                    {n ? <span className={`ml-1.5 tabular-nums ${active ? "text-white/60" : "text-[#122D30]/30"}`}>{n}</span> : null}
                   </button>
                 );
               })}
@@ -163,7 +163,7 @@ function VisualsModalBody({ subject, counts, onClose, onChanged }: Required<Pick
             <div role="tabpanel" aria-label={activeTab.label} className="flex-1">
               {list.error && !list.items.length ? (
                 <div className="flex flex-col items-center gap-3 py-16 text-center">
-                  <p className="text-sm font-bold text-[#1A3D2C]">{list.error}</p>
+                  <p className="text-sm font-bold text-[#122D30]">{list.error}</p>
                   <Button variant="outline" onClick={() => void list.refresh()}>
                     Try again
                   </Button>
@@ -215,10 +215,10 @@ function VisualsModalBody({ subject, counts, onClose, onChanged }: Required<Pick
 function EmptyState({ text }: { text: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-      <div className="h-14 w-14 rounded-2xl bg-white border border-[#1A3D2C]/5 flex items-center justify-center text-[#1A3D2C]/25">
+      <div className="h-14 w-14 rounded-2xl bg-white border border-[#122D30]/5 flex items-center justify-center text-[#122D30]/25">
         <Images size={24} strokeWidth={1.5} />
       </div>
-      <p className="text-sm font-bold text-[#1A3D2C]/60">{text}</p>
+      <p className="text-sm font-bold text-[#122D30]/60">{text}</p>
     </div>
   );
 }

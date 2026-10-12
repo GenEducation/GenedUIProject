@@ -89,8 +89,8 @@ export default function StudentVoiceUnifiedPage({
       <AuthGuard requiredRole="student">
         <div className="h-screen bg-white flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <div className="w-8 h-8 border-4 border-[#5B4DC7]/10 border-t-[#5B4DC7] rounded-full animate-spin" />
-            <p className="text-xs font-bold text-[#5B4DC7]/40 uppercase tracking-widest">
+            <div className="w-8 h-8 border-4 border-[#075E63]/10 border-t-[#075E63] rounded-full animate-spin" />
+            <p className="text-xs font-bold text-[#075E63]/40 uppercase tracking-widest">
               Preparing Voice…
             </p>
           </div>

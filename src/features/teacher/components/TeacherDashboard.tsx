@@ -233,7 +233,7 @@ export function TeacherDashboard() {
               </div>
               <button
                 onClick={() => setInviteOpen(true)}
-                className="flex items-center gap-2 rounded-xl bg-emerald px-4.5 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(5,159,109,.28)] transition-all hover:-translate-y-0.5 hover:bg-emerald-600"
+                className="flex items-center gap-2 rounded-xl bg-emerald px-4.5 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(7,94,99,.28)] transition-all hover:-translate-y-0.5 hover:bg-emerald-600"
               >
                 <Plus size={17} />
                 Invite student

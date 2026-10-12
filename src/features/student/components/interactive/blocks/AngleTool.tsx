@@ -26,9 +26,9 @@ export default function AngleTool({ directiveId, meta, disabled, readOnly }: Int
     <InteractiveShell label={meta?.label} prompt={meta?.question} targetLabel={render.target_label}>
       <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
         <svg viewBox="0 0 140 110" style={{ width: 150, height: 120 }} role="img" aria-label={`angle ${deg} degrees`}>
-          <line x1={ox} y1={oy} x2={ox + r} y2={oy} stroke="#888780" strokeWidth={3} />
+          <line x1={ox} y1={oy} x2={ox + r} y2={oy} stroke={COLORS.apparatus} strokeWidth={3} />
           <line x1={ox} y1={oy} x2={x2} y2={y2} stroke={COLORS.brand} strokeWidth={3} />
-          <path d={`M${ox + 28} ${oy} A28 28 0 0 0 ${ox + 28 * Math.cos(-rad)} ${oy + 28 * Math.sin(-rad)}`} fill="none" stroke="#D85A30" strokeWidth={2} />
+          <path d={`M${ox + 28} ${oy} A28 28 0 0 0 ${ox + 28 * Math.cos(-rad)} ${oy + 28 * Math.sin(-rad)}`} fill="none" stroke={COLORS.accentDeep} strokeWidth={3.5} strokeLinecap="round" />
         </svg>
         <div style={{ flex: 1, minWidth: 150 }}>
           <input type="range" min={0} max={180} step={snap} value={deg} disabled={lock} onChange={(e) => setDeg(+e.target.value)} style={{ width: "100%" }} aria-label="angle degrees" />

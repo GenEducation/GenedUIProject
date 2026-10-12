@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { InteractiveProps, COLORS } from "../types";
+import { InteractiveProps, COLORS, SERIES_FILL } from "../types";
 import { useInteractiveAnswer } from "../useInteractiveAnswer";
 import { InteractiveShell, InteractiveFooter } from "../shared";
 
 interface Sector { id: string; label: string; weight: number; color?: string }
-const PALETTE = ["#E24B4A", "#185FA5", "#1D9E75", "#EF9F27", "#7F77DD", "#D4537E"];
+const PALETTE = SERIES_FILL;
 
 export default function ProbabilitySpinner({ directiveId, meta, disabled, readOnly }: InteractiveProps) {
   const render = meta?.render || {};
@@ -50,7 +50,7 @@ export default function ProbabilitySpinner({ directiveId, meta, disabled, readOn
             const large = a2 - a1 > Math.PI ? 1 : 0;
             return <path key={s.id} d={`M${cx} ${cy} L${x1} ${y1} A${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`} fill={s.color || PALETTE[i % PALETTE.length]} stroke="#FFF" strokeWidth={1} />;
           })}
-          <circle cx={cx} cy={cy} r={5} fill="#2C2C2A" />
+          <circle cx={cx} cy={cy} r={5} fill={COLORS.ink} />
         </svg>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {sectors.map((s, i) => {

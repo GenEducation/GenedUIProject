@@ -10,7 +10,7 @@ interface Option { id: string; label: string }
 // Representative net glyphs (the choice of solid is what gets graded).
 const NETS: Record<string, React.ReactNode> = {
   cube_cross: (
-    <g fill="#7F77DD" stroke="#3C3489" strokeWidth={1.5}>
+    <g fill={COLORS.cell} stroke={COLORS.brand} strokeWidth={1.5}>
       <rect x={44} y={4} width={32} height={32} /><rect x={44} y={36} width={32} height={32} />
       <rect x={12} y={36} width={32} height={32} /><rect x={76} y={36} width={32} height={32} />
       <rect x={44} y={68} width={32} height={32} /><rect x={44} y={100} width={32} height={16} />

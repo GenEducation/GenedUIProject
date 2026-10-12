@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
+import { GenEdLogo } from "@/components/shared/GenEdLogo";
 
 /**
  * TutorialVideoModal
@@ -70,19 +71,14 @@ export const TutorialVideoModal: React.FC = () => {
               {/* ── Header ── */}
               <div
                 className="flex items-center justify-between shrink-0 px-5 py-3"
-                style={{ background: "#1C2333" }}
+                style={{ background: "#122D30" }}
               >
                 {/* Left: logo + badge */}
                 <div className="flex items-center gap-2.5">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/Logo.svg"
-                    alt="GenEd"
-                    style={{ height: 26, width: "auto", filter: "brightness(0) invert(1)" }}
-                  />
+                  <GenEdLogo height={34} onDark />
                   <span
                     className="rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest"
-                    style={{ background: "rgba(91,77,199,0.25)", color: "#8B7FE8" }}
+                    style={{ background: "#D9F279", color: "#122D30" }}
                   >
                     Quick Tour
                   </span>
@@ -127,7 +123,7 @@ export const TutorialVideoModal: React.FC = () => {
                   >
                     <div
                       className="w-12 h-12 rounded-2xl animate-pulse"
-                      style={{ background: "rgba(91,77,199,0.25)" }}
+                      style={{ background: "rgba(7,94,99,0.25)" }}
                     />
                     <p
                       className="text-sm font-medium"

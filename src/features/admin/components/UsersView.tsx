@@ -74,7 +74,7 @@ export function UsersView({ title }: Props) {
         render: (u) => (
           <span
             className={`rounded-md px-2 py-0.5 text-xs ${
-              u.plan === "PRO" ? "bg-[#059F6D]/15 text-[#059F6D]" : "bg-white/10 text-white/50"
+              u.plan === "PRO" ? "bg-[#075E63]/15 text-[#075E63]" : "bg-white/10 text-white/50"
             }`}
           >
             {u.plan}
@@ -114,7 +114,7 @@ export function UsersView({ title }: Props) {
             </button>
             <button
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 rounded-lg bg-[#059F6D] px-4 py-2.5 text-sm font-bold text-white"
+              className="flex items-center gap-2 rounded-lg bg-[#075E63] px-4 py-2.5 text-sm font-bold text-white"
             >
               <Plus size={16} /> Create account
             </button>
@@ -173,7 +173,7 @@ function EditUserModal({
   const [saving, setSaving] = useState(false);
 
   const inputCls =
-    "w-full rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white focus:border-[#059F6D] focus:outline-none";
+    "w-full rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white focus:border-[#075E63] focus:outline-none";
   const labelCls =
     "block text-[9px] font-bold uppercase tracking-[0.22em] text-white/40 mb-1.5";
 
@@ -191,7 +191,7 @@ function EditUserModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#13283a] p-6 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#122D30] p-6 shadow-2xl">
         <h2 className="text-lg font-bold mb-5">Edit user</h2>
         <div className="space-y-4">
           <div>

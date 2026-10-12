@@ -10,7 +10,7 @@ export default function ArrayBuilder({ directiveId, meta, disabled, readOnly }: 
   const interaction = meta?.interaction || {};
   const maxRows: number = render.max_rows || 6;
   const maxCols: number = render.max_cols || 6;
-  const dot: string = render.dot_color || "#D85A30";
+  const dot: string = render.dot_color || COLORS.brand;
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "build";
 

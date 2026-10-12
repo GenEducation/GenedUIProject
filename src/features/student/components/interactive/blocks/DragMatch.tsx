@@ -6,7 +6,7 @@ import {
   useDraggable, useDroppable, type DragEndEvent,
 } from "@dnd-kit/core";
 import { GripVertical } from "lucide-react";
-import { InteractiveProps, COLORS } from "../types";
+import { InteractiveProps, COLORS, SERIES_ON_WHITE_TEXT } from "../types";
 import { useInteractiveAnswer } from "../useInteractiveAnswer";
 import { InteractiveShell, InteractiveFooter, Katex } from "../shared";
 
@@ -25,7 +25,7 @@ function Chip({ id, label }: Item) {
         display: "flex", alignItems: "center", gap: 6, padding: "9px 12px", borderRadius: 12,
         background: "#FFFFFF", border: `1px solid ${isDragging ? COLORS.brand : COLORS.border}`,
         cursor: "grab", fontSize: 14, fontWeight: 600, color: COLORS.ink, fontFamily: "var(--font-body)",
-        boxShadow: isDragging ? "0 6px 16px rgba(91,77,199,0.2)" : "none", touchAction: "none",
+        boxShadow: isDragging ? "0 6px 16px rgba(7,94,99,0.2)" : "none", touchAction: "none",
       }}
     >
       <GripVertical size={13} color={COLORS.muted} />
@@ -62,7 +62,7 @@ export default function DragMatch({ directiveId, meta, disabled, readOnly }: Int
   const right: Item[] = render.right || [];
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "match";
-  const colors = ["#534AB7", "#1D9E75", "#D85A30", "#993556", "#185FA5"];
+  const colors = SERIES_ON_WHITE_TEXT;
 
   const { submitted, isCorrect, attempts, submitting, submit, retry, submitError, dismissError, studentAnswer } =
     useInteractiveAnswer<{ pairs?: string[][] }>(directiveId, it, allowRetry);

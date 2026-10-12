@@ -58,9 +58,9 @@ function motionSafe<T extends object>(props: T): Omit<T, MotionConflictingProp> 
 
 const getMarkdownComponents = (showToolbar: boolean): Components => ({
   // Header styles
-  h1: ({ ...props }) => <h1 className="text-lg font-black mt-4 mb-2 text-[#1a3a2a]" {...props} />,
-  h2: ({ ...props }) => <h2 className="text-md font-bold mt-3 mb-1 text-[#1a3a2a]" {...props} />,
-  h3: ({ ...props }) => <h3 className="text-sm font-bold mt-2 mb-1 text-[#1a3a2a]" {...props} />,
+  h1: ({ ...props }) => <h1 className="text-lg font-black mt-4 mb-2 text-[#122D30]" {...props} />,
+  h2: ({ ...props }) => <h2 className="text-md font-bold mt-3 mb-1 text-[#122D30]" {...props} />,
+  h3: ({ ...props }) => <h3 className="text-sm font-bold mt-2 mb-1 text-[#122D30]" {...props} />,
   
   // List styles
   ul: ({ node, ...props }) => <motion.ul initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="list-disc list-inside mb-3 space-y-1" {...motionSafe(props)} />,
@@ -69,19 +69,23 @@ const getMarkdownComponents = (showToolbar: boolean): Components => ({
   
   // Table styles
   table: ({ node, ...props }) => (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="overflow-x-auto my-4 rounded-xl border border-[#1a3a2a]/10">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="overflow-x-auto my-4 rounded-xl border border-[#122D30]/10">
       <table className="w-full text-left border-collapse" {...props} />
     </motion.div>
   ),
-  thead: ({ ...props }) => <thead className="bg-[#1a3a2a]/5" {...props} />,
-  th: ({ ...props }) => <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#1a3a2a]/50 border-b border-[#1a3a2a]/10" {...props} />,
-  td: ({ ...props }) => <td className="px-4 py-2 text-sm border-b border-[#1a3a2a]/5" {...props} />,
+  thead: ({ ...props }) => <thead className="bg-[#075E63]/5" {...props} />,
+  th: ({ ...props }) => <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#122D30]/50 border-b border-[#122D30]/10" {...props} />,
+  td: ({ ...props }) => <td className="px-4 py-2 text-sm border-b border-[#122D30]/5" {...props} />,
   
   // Link styles
-  a: ({ ...props }) => <a className="text-emerald-600 hover:underline font-bold" target="_blank" rel="noopener noreferrer" {...props} />,
+  a: ({ ...props }) => <a className="text-[var(--primary)] underline decoration-[var(--primary)]/40 decoration-2 underline-offset-[3px] hover:decoration-[var(--primary)] font-bold transition-colors" target="_blank" rel="noopener noreferrer" {...props} />,
   
+  // Emphasis — plain extra-bold ink. A reply can bold many terms, so no
+  // highlighter: citron is kept for the screen's few earned moments.
+  strong: ({ node, ...props }) => <strong className="font-extrabold text-[#122D30]" {...props} />,
+
   // Blockquote styles
-  blockquote: ({ node, ...props }) => <motion.blockquote initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} className="border-l-4 border-emerald-400 pl-4 py-1 my-3 bg-emerald-50/50 rounded-r-lg italic text-[#1a3a2a]/70" {...motionSafe(props)} />,
+  blockquote: ({ node, ...props }) => <motion.blockquote initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} className="border-l-4 border-[var(--primary)] pl-4 py-1 my-3 bg-[var(--soft-surface)]/50 rounded-r-lg italic text-[#122D30]/70" {...motionSafe(props)} />,
   
   // Code styles
   code: ({ node, className, children, ...props }) => {
@@ -94,18 +98,18 @@ const getMarkdownComponents = (showToolbar: boolean): Components => ({
     return !inline ? (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="relative my-4 group">
         {match && (
-          <div className="absolute right-3 top-2 text-[9px] font-black uppercase tracking-tighter text-white/30 group-hover:text-white/60 transition-colors">
+          <div className="absolute right-3 top-2 text-[9px] font-black uppercase tracking-tighter text-[#122D30]/30 group-hover:text-[#122D30]/60 transition-colors">
             {match[1]}
           </div>
         )}
-        <pre className="!bg-slate-100 !p-4 rounded-2xl border border-slate-200 overflow-x-auto shadow-sm">
-          <code className={`${className} !text-[13px] !text-slate-800 !leading-relaxed`} {...props}>
+        <pre className="!bg-[var(--canvas)] !p-4 rounded-2xl border border-[var(--surface-border)] overflow-x-auto shadow-sm">
+          <code className={`${className} !text-[13px] !text-[#122D30] !leading-relaxed`} {...props}>
             {children}
           </code>
         </pre>
       </motion.div>
     ) : (
-      <code className="text-[13px] font-black text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded-md font-mono" {...props}>
+      <code className="text-[13px] font-black text-[#075E63] bg-[var(--soft-surface)] px-1.5 py-0.5 rounded-md font-mono" {...props}>
         {children}
       </code>
     );
@@ -139,7 +143,7 @@ const getMarkdownComponents = (showToolbar: boolean): Components => ({
           transition={{ duration: 0.4 }}
           src={url} 
           alt={alt || "Illustration"} 
-          className="rounded-2xl border border-[#1a3a2a]/10 shadow-md w-full h-auto object-contain max-h-[400px] block mx-auto"
+          className="rounded-2xl border border-[#122D30]/10 shadow-md w-full h-auto object-contain max-h-[400px] block mx-auto"
           {...motionSafe(props)} 
         />
       </div>

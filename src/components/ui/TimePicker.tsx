@@ -444,7 +444,7 @@ export function TimePicker({
             // override borderColor, and React warns when the two are mixed.
             borderWidth: 1,
             borderStyle: "solid",
-            borderColor: error ? "var(--danger-2)" : "rgba(4,46,92,0.05)",
+            borderColor: error ? "var(--danger-2)" : "rgba(18,45,48,0.05)",
             borderRadius: 16,
             color: "var(--text-primary)",
             ...buttonStyle,

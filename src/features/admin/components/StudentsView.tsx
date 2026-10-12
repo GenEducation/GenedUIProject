@@ -41,7 +41,7 @@ export function StudentsView() {
         render: (s) => (
           <span
             className={`rounded-md px-2 py-0.5 text-xs ${
-              s.plan === "PRO" ? "bg-[#059F6D]/15 text-[#059F6D]" : "bg-white/10 text-white/50"
+              s.plan === "PRO" ? "bg-[#075E63]/15 text-[#075E63]" : "bg-white/10 text-white/50"
             }`}
           >
             {s.plan}

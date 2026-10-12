@@ -37,7 +37,7 @@ export function ParentReportPreparing({ childName, avatar }: { childName?: strin
             <img src={avatar} alt="" className="h-full w-full scale-[1.035] object-cover" />
           </span>
         )}
-        <p className="mt-4 text-[17px] font-bold text-[#13293D]">
+        <p className="mt-4 text-[17px] font-bold text-[#122D30]">
           Preparing {first ? `${first}'s` : "the"} report card
         </p>
         <ol className="mx-auto mt-5 w-fit space-y-2.5 text-left">
@@ -47,16 +47,16 @@ export function ParentReportPreparing({ childName, avatar }: { childName?: strin
               <li key={label} className="flex items-center gap-2.5 text-[14px]">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center">
                   {state === "done" ? (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#16A36B] text-white">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#075E63] text-white">
                       <Check size={12} strokeWidth={3} />
                     </span>
                   ) : state === "current" ? (
-                    <span className="h-4 w-4 rounded-full border-2 border-[#CDEEDF] border-t-[#16A36B] motion-safe:animate-spin" />
+                    <span className="h-4 w-4 rounded-full border-2 border-[#CDEEDF] border-t-[#075E63] motion-safe:animate-spin" />
                   ) : (
                     <span className="h-2 w-2 rounded-full bg-[#C7D3D9]" />
                   )}
                 </span>
-                <span className={state === "pending" ? "text-[#5E7186]/70" : state === "current" ? "font-semibold text-[#13293D]" : "text-[#13293D]"}>
+                <span className={state === "pending" ? "text-[#5E7477]/70" : state === "current" ? "font-semibold text-[#122D30]" : "text-[#122D30]"}>
                   {label}
                   {state === "current" ? "…" : ""}
                 </span>

@@ -84,8 +84,8 @@ export default function StudentChatUnifiedPage({
       <AuthGuard requiredRole="student">
         <div className="h-screen bg-white flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <div className="w-8 h-8 border-4 border-[#1a3a2a]/10 border-t-[#1a3a2a] rounded-full animate-spin" />
-            <p className="text-xs font-bold text-[#1a3a2a]/30 uppercase tracking-widest">Preparing Chat...</p>
+            <div className="w-8 h-8 border-4 border-[#122D30]/10 border-t-[#122D30] rounded-full animate-spin" />
+            <p className="text-xs font-bold text-[#122D30]/30 uppercase tracking-widest">Preparing Chat...</p>
           </div>
         </div>
       </AuthGuard>

@@ -28,7 +28,7 @@ export function UnlinkConfirmationModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-[#0E1F2B]/60 backdrop-blur-md z-[100]"
+            className="fixed inset-0 bg-[#122D30]/60 backdrop-blur-md z-[100]"
           />
 
           {/* Modal Container */}
@@ -38,7 +38,7 @@ export function UnlinkConfirmationModal({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="w-full max-w-md bg-white rounded-[32px] shadow-[0_40px_100px_rgba(14,31,43,0.3)] overflow-hidden pointer-events-auto border border-[#1a3a2a]/5"
+              className="w-full max-w-md bg-white rounded-[32px] shadow-[0_40px_100px_rgba(14,31,43,0.3)] overflow-hidden pointer-events-auto border border-[#122D30]/5"
             >
               {/* Top Banner / Icon Area */}
               <div className="bg-red-50 p-8 flex flex-col items-center text-center relative border-b border-red-100/50">
@@ -50,7 +50,7 @@ export function UnlinkConfirmationModal({
                   <Trash2 size={32} strokeWidth={2.5} />
                 </div>
                 
-                <h3 className="text-2xl font-black text-[#1a3a2a] leading-tight mb-2">Remove Scholar?</h3>
+                <h3 className="text-2xl font-black text-[#122D30] leading-tight mb-2">Remove Scholar?</h3>
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-600 border border-red-200">
                   <AlertTriangle size={12} strokeWidth={3} />
                   <span className="text-[10px] font-black uppercase tracking-widest">Permanent Action</span>
@@ -59,8 +59,8 @@ export function UnlinkConfirmationModal({
 
               {/* Content Area */}
               <div className="p-8 space-y-8">
-                <p className="text-[#1a3a2a]/60 text-center text-sm leading-relaxed">
-                  Are you sure you want to remove <span className="font-black text-[#1a3a2a] text-base px-2 py-0.5 bg-[#F4F3EE] rounded-lg">{studentName}</span> from your account? This will immediately disconnect your access to their learning analytics and chat history.
+                <p className="text-[#122D30]/60 text-center text-sm leading-relaxed">
+                  Are you sure you want to remove <span className="font-black text-[#122D30] text-base px-2 py-0.5 bg-[#F6F7F2] rounded-lg">{studentName}</span> from your account? This will immediately disconnect your access to their learning analytics and chat history.
                 </p>
 
                 <div className="grid grid-cols-2 gap-4">

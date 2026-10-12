@@ -59,8 +59,8 @@ export const ChapterMasteryView: React.FC<ChapterMasteryViewProps> = ({ mode = "
       
       {/* Show an empty state if no data */}
       {analyticsChapterMastery.length === 0 && (
-        <div key="empty-chapter-state" className="col-span-full py-20 text-center bg-white rounded-[40px] border border-[#1a3a2a]/5 shadow-sm">
-          <p className="text-[#1a3a2a]/70 text-base font-medium italic">No chapter data found for this subject.</p>
+        <div key="empty-chapter-state" className="col-span-full py-20 text-center bg-white rounded-[40px] border border-[#122D30]/5 shadow-sm">
+          <p className="text-[#122D30]/70 text-base font-medium italic">No chapter data found for this subject.</p>
         </div>
       )}
     </div>

@@ -48,11 +48,11 @@ export function RegenerationStatus({ detail, onOpen, onChanged }: RegenerationSt
 
   if (regen && (regen.state === "queued" || regen.state === "claimed")) {
     return (
-      <div role="status" className="rounded-2xl border border-[#1A3D2C]/10 bg-[#D1E6D9]/40 p-4 flex items-start gap-3">
-        <Loader2 size={18} className="animate-spin text-[#1A3D2C] mt-0.5 shrink-0" aria-hidden />
+      <div role="status" className="rounded-2xl border border-[#122D30]/10 bg-[#DCEBE7]/40 p-4 flex items-start gap-3">
+        <Loader2 size={18} className="animate-spin text-[#122D30] mt-0.5 shrink-0" aria-hidden />
         <div>
-          <p className="text-sm font-bold text-[#1A3D2C]">Making a new version…</p>
-          <p className="text-xs text-[#1A3D2C]/60 mt-0.5">
+          <p className="text-sm font-bold text-[#122D30]">Making a new version…</p>
+          <p className="text-xs text-[#122D30]/60 mt-0.5">
             This usually takes a minute or two. You can close this window; it keeps going.
           </p>
         </div>
@@ -63,8 +63,8 @@ export function RegenerationStatus({ detail, onOpen, onChanged }: RegenerationSt
   if (regen?.state === "done" && regen.result_candidate_id) {
     const resultId = regen.result_candidate_id;
     return (
-      <div className="rounded-2xl border border-[#1A3D2C]/10 bg-[#D1E6D9]/40 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-        <p className="flex-1 text-sm font-bold text-[#1A3D2C]">A new version is ready.</p>
+      <div className="rounded-2xl border border-[#122D30]/10 bg-[#DCEBE7]/40 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+        <p className="flex-1 text-sm font-bold text-[#122D30]">A new version is ready.</p>
         <Button trailingIcon={<ArrowRight size={14} />} onClick={() => onOpen(resultId)}>
           Review the new version
         </Button>
@@ -81,19 +81,19 @@ export function RegenerationStatus({ detail, onOpen, onChanged }: RegenerationSt
   return (
     <div
       className={`rounded-2xl border p-4 flex flex-col gap-3 ${
-        failed ? "border-red-200 bg-red-50/60" : "border-[#1A3D2C]/10 bg-white"
+        failed ? "border-red-200 bg-red-50/60" : "border-[#122D30]/10 bg-white"
       }`}
     >
       {failed ? (
         <div className="flex items-start gap-3">
           <TriangleAlert size={18} className="text-red-500 mt-0.5 shrink-0" aria-hidden />
           <div>
-            <p className="text-sm font-bold text-[#1A3D2C]">The new version couldn&apos;t be made.</p>
-            {regen?.error && <p className="text-xs text-[#1A3D2C]/60 mt-0.5">{regen.error}</p>}
+            <p className="text-sm font-bold text-[#122D30]">The new version couldn&apos;t be made.</p>
+            {regen?.error && <p className="text-xs text-[#122D30]/60 mt-0.5">{regen.error}</p>}
           </div>
         </div>
       ) : (
-        <p className="text-sm font-bold text-[#1A3D2C]">No new version was asked for.</p>
+        <p className="text-sm font-bold text-[#122D30]">No new version was asked for.</p>
       )}
 
       {asking ? (

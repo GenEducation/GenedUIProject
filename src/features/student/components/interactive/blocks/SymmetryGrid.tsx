@@ -12,7 +12,7 @@ export default function SymmetryGrid({ directiveId, meta, disabled, readOnly }: 
   const cols: number = render.cols || 6;
   const axis: string = render.axis || "vertical";
   const given: number[] = render.given_cells || [];
-  const fill: string = render.fill_color || "#993556";
+  const fill: string = render.fill_color || COLORS.brand;
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "select_cells";
 

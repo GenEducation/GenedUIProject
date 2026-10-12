@@ -94,11 +94,11 @@ function KeyInsights({ data }: { data: ReportCardData }) {
           )}
           {(insights.headline || insights.assessment) && (
             <InsightBlock
-              icon={<TintIcon name="insights/ai-insight" color="#fff" size={15} />}
+              icon={<TintIcon name="insights/ai-insight" color="#A9CCC7" size={15} />}
               title="AI Learning Insight"
-              bg="#F1F6FE"
-              edge="#DCE6FB"
-              accent="#2563EB"
+              bg="var(--rs-surface-2)"
+              edge="var(--rs-line-strong)"
+              accent="var(--rs-ink)"
               badge="Powered by GenEd AI"
             >
               {insights.headline && <p className="text-[13px] font-semibold leading-snug text-[var(--rs-ink)]">{insights.headline}</p>}
@@ -137,7 +137,7 @@ function InsightBlock({
         <span className="flex h-7 w-7 items-center justify-center rounded-full text-white" style={{ background: accent }}>{icon}</span>
         <h3 className="text-[14px] font-bold text-[var(--rs-ink)]">{title}</h3>
         {badge && (
-          <span className="ml-auto rounded-full border px-2 py-0.5 text-[10.5px] font-semibold" style={{ borderColor: edge, color: accent, background: "#fff" }}>
+          <span className="ml-auto rounded-full border border-[var(--rs-line-strong)] bg-[var(--rs-mint)] px-2 py-0.5 text-[10.5px] font-semibold text-[var(--rs-brand)]">
             {badge}
           </span>
         )}
@@ -208,10 +208,17 @@ function SubjectTrends({ data, subjects }: { data: ReportCardData; subjects: Sub
 function Delta({ value }: { value: number }) {
   const tone = value > 0 ? BAND_TONES.Advanced : value < 0 ? BAND_TONES.Developing : BAND_TONES["Not started"];
   const glyph = value > 0 ? "trends/increase" : value < 0 ? "trends/decrease" : "trends/no-change";
+  // A gain is an earned moment: ink on a citron pill. Drops/flat stay plain text.
+  const up = value > 0;
   return (
-    <span className="inline-flex w-[52px] items-center justify-end gap-0.5 text-[12.5px] font-bold tabular-nums" style={{ color: tone.ink }}>
-      <TintIcon name={glyph} color={tone.ink} size={11} className="mr-0.5" />
-      {value > 0 ? "+" : ""}{value}%
+    <span className="flex w-[60px] justify-end">
+      <span
+        className={`inline-flex items-center gap-0.5 text-[12.5px] font-bold tabular-nums ${up ? "rounded-full bg-[var(--rs-citron)] px-1.5 py-0.5" : ""}`}
+        style={{ color: up ? "var(--rs-ink)" : tone.ink }}
+      >
+        <TintIcon name={glyph} color={up ? "var(--rs-ink)" : tone.ink} size={11} className="mr-0.5" />
+        {up ? "+" : ""}{value}%
+      </span>
     </span>
   );
 }

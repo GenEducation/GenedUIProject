@@ -22,7 +22,7 @@ export function ReasonFields({ reasons, onReasonsChange, note, onNoteChange }: R
   return (
     <div className="flex flex-col gap-4">
       <fieldset>
-        <legend className="text-[10px] font-black text-[#1A3D2C]/50 uppercase tracking-widest mb-2">
+        <legend className="text-[10px] font-black text-[#122D30]/50 uppercase tracking-widest mb-2">
           What&apos;s wrong? <span className="normal-case tracking-normal font-bold">(pick at least one)</span>
         </legend>
         <div className="flex flex-wrap gap-2">
@@ -46,11 +46,11 @@ export function ReasonFields({ reasons, onReasonsChange, note, onNoteChange }: R
 
       <div>
         <div className="flex items-baseline justify-between mb-1">
-          <label htmlFor={noteId} className="text-[10px] font-black text-[#1A3D2C]/50 uppercase tracking-widest">
+          <label htmlFor={noteId} className="text-[10px] font-black text-[#122D30]/50 uppercase tracking-widest">
             Note <span className="normal-case tracking-normal font-bold">(optional)</span>
           </label>
           <span
-            className={`text-[10px] font-bold tabular-nums ${note.length >= NOTE_MAX ? "text-red-500" : "text-[#1A3D2C]/40"}`}
+            className={`text-[10px] font-bold tabular-nums ${note.length >= NOTE_MAX ? "text-red-500" : "text-[#122D30]/40"}`}
             aria-live="polite"
           >
             {note.length}/{NOTE_MAX}
@@ -64,9 +64,9 @@ export function ReasonFields({ reasons, onReasonsChange, note, onNoteChange }: R
           aria-describedby={hintId}
           onChange={(e) => onNoteChange(e.target.value.slice(0, NOTE_MAX))}
           placeholder="What should the new picture do differently?"
-          className="w-full px-3 py-2 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-xl text-sm text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/30 resize-none"
+          className="w-full px-3 py-2 bg-[#F6F7F2] border border-[#122D30]/10 focus:border-[#122D30]/40 rounded-xl text-sm text-[#122D30] outline-none placeholder:text-[#122D30]/30 resize-none"
         />
-        <p id={hintId} className="mt-1 text-[11px] text-[#1A3D2C]/50">
+        <p id={hintId} className="mt-1 text-[11px] text-[#122D30]/50">
           Don&apos;t include names or personal details. This note is used to improve the picture.
         </p>
       </div>

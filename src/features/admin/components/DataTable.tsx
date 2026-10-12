@@ -102,7 +102,7 @@ export function DataTable<T>({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search any field…"
-            className="w-full rounded-lg border border-white/15 bg-white/5 pl-9 pr-4 py-2.5 text-sm text-white placeholder:text-white/25 focus:border-[#059F6D] focus:outline-none"
+            className="w-full rounded-lg border border-white/15 bg-white/5 pl-9 pr-4 py-2.5 text-sm text-white placeholder:text-white/25 focus:border-[#075E63] focus:outline-none"
           />
         </div>
         {filterCols.map((c) => (
@@ -122,9 +122,9 @@ export function DataTable<T>({
             buttonStyle={
               filters[c.key]
                 ? {
-                    borderColor: "rgba(5,159,109,0.6)",
-                    background: "rgba(5,159,109,0.10)",
-                    color: "#059F6D",
+                    borderColor: "rgba(7,94,99,0.6)",
+                    background: "rgba(7,94,99,0.10)",
+                    color: "#075E63",
                   }
                 : undefined
             }

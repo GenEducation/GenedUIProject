@@ -1,8 +1,9 @@
 "use client";
+import { GenEdLogo } from "@/components/shared/GenEdLogo";
 
 export function AuthHero() {
   return (
-    <section className="relative bg-[#042e5c] p-10 lg:p-14 flex flex-col justify-between gap-10 min-h-[650px] overflow-hidden">
+    <section className="relative bg-[#122D30] p-10 lg:p-14 flex flex-col justify-between gap-10 min-h-[650px] overflow-hidden">
       {/* Subtle grid pattern */}
       <div
         className="absolute inset-0 opacity-[0.04]"
@@ -14,20 +15,16 @@ export function AuthHero() {
       />
 
       {/* Ambient glow — Emerald */}
-      <div className="absolute -bottom-40 -right-40 w-[480px] h-[480px] bg-[#059F6D] opacity-[0.08] rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-[480px] h-[480px] bg-[#075E63] opacity-[0.08] rounded-full blur-3xl pointer-events-none" />
       {/* Ambient glow — Teal */}
-      <div className="absolute top-0 left-0 w-72 h-72 bg-[#4EB6BF] opacity-[0.05] rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-0 w-72 h-72 bg-[#5FA8A3] opacity-[0.05] rounded-full blur-3xl pointer-events-none" />
 
       {/* Content */}
       <div className="space-y-8 relative z-10 flex flex-col items-center lg:items-start">
-        {/* Favicon — kept as-is, animation removed per audit */}
+        {/* Brand mark */}
         <div className="flex justify-center lg:justify-start w-full">
           <div className="rounded-full bg-white/10 p-4 ring-1 ring-white/20 shadow-xl shadow-black/30">
-            <img
-              src="/Favicon1.jpg"
-              alt="GenEd favicon"
-              className="h-28 w-28 rounded-full object-cover"
-            />
+            <GenEdLogo variant="mark" height={112} alt="GenEd" className="rounded-full" />
           </div>
         </div>
 
@@ -36,7 +33,7 @@ export function AuthHero() {
           <h1 className="text-4xl lg:text-5xl tracking-tight text-white leading-[1.1] font-serif">
             <span className="block font-extrabold text-white">Where Young Minds</span>
             <span className="block font-extrabold text-white">Meet{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#059F6D] via-[#2dcfab] to-[#4EB6BF]">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#075E63] via-[#B8D63F] to-[#5FA8A3]">
                 Smarter Learning
               </span>
             </span>

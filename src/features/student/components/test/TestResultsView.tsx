@@ -13,9 +13,11 @@ interface TestResultsViewProps {
 }
 
 const VERDICT_CONFIG: Record<ZPDVerdict, { bg: string; text: string; icon: typeof Award; label: string }> = {
-  ABOVE: { bg: "bg-emerald-50", text: "text-emerald-600", icon: Award, label: "Above Expectations" },
-  AT: { bg: "bg-blue-50", text: "text-blue-600", icon: CheckCircle2, label: "At Expectations" },
-  BELOW: { bg: "bg-orange-50", text: "text-orange-600", icon: XCircle, label: "Below Expectations" },
+  // ABOVE is earned, so it gets the citron badge (ink on citron); AT sits on
+  // the calm soft surface; BELOW stays on the warning hue, never red.
+  ABOVE: { bg: "bg-[var(--accent)]", text: "text-[var(--accent-ink)]", icon: Award, label: "Above Expectations" },
+  AT: { bg: "bg-[var(--soft-surface)]", text: "text-[var(--primary)]", icon: CheckCircle2, label: "At Expectations" },
+  BELOW: { bg: "bg-[var(--warning-bg)]", text: "text-[var(--warning-ink)]", icon: XCircle, label: "Below Expectations" },
 };
 
 export function TestResultsView({ test, result, onClose }: TestResultsViewProps) {
@@ -57,17 +59,17 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
           {verdict.label}
         </div>
 
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[var(--primary-ink)]">
-          Overall Score: {Math.round(result.overall_score * 100)}%
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[var(--ink)]">
+          Overall Score: <span className="citron-mark">{Math.round(result.overall_score * 100)}%</span>
         </h2>
 
         {hasMarksData && (
-          <p className="text-lg font-bold text-[var(--primary-ink)]/70">
+          <p className="text-lg font-bold text-[var(--primary)]">
             {obtainedMarks} / {totalMarks} marks
           </p>
         )}
 
-        <p className="text-[var(--primary-ink)]/60 max-w-md mx-auto">
+        <p className="text-[var(--text-muted)] max-w-md mx-auto">
           Great effort on the {test.document_title} test! Here&apos;s a breakdown of your
           performance by section.
         </p>
@@ -80,11 +82,11 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: idx * 0.1 }}
-            className="p-3 sm:p-5 bg-white rounded-2xl border border-[var(--primary-ink)]/10 shadow-sm"
+            className="p-3 sm:p-5 bg-white rounded-2xl border border-[var(--surface-border)] shadow-sm"
           >
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[var(--primary-ink)]/5 flex items-center justify-center text-[var(--primary-ink)] flex-shrink-0">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[var(--soft-surface)] flex items-center justify-center text-[var(--primary)] flex-shrink-0">
                   <BookOpen size={20} className="sm:hidden" />
                   <BookOpen size={24} className="hidden sm:block" />
                 </div>
@@ -111,17 +113,17 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
             </div>
 
             {data.total_marks != null && (
-              <div className="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="mt-3 h-2 bg-[var(--canvas)] rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${(data.marks_obtained / data.total_marks) * 100}%` }}
                   transition={{ duration: 0.8, delay: idx * 0.1 }}
                   className={`h-full rounded-full ${
                     data.verdict === "ABOVE"
-                      ? "bg-emerald-400"
+                      ? "bg-[var(--accent-deep)]"
                       : data.verdict === "AT"
-                      ? "bg-blue-400"
-                      : "bg-orange-400"
+                      ? "bg-[var(--primary)]"
+                      : "bg-[var(--warning)]"
                   }`}
                 />
               </div>
@@ -131,7 +133,7 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
       </div>
 
       <div className="space-y-4">
-        <h3 className="font-bold text-[var(--primary-ink)] text-lg flex items-center gap-2">
+        <h3 className="citron-eyebrow font-bold text-[var(--ink)] text-lg">
           Detailed Feedback
         </h3>
 
@@ -147,7 +149,7 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
             return (
               <div
                 key={idx}
-                className="p-3 sm:p-4 rounded-xl bg-[#F8F9FA] border border-[var(--primary-ink)]/5 space-y-2"
+                className="p-3 sm:p-4 rounded-xl bg-[var(--canvas)] border border-[var(--primary-ink)]/5 space-y-2"
               >
                 <div className="flex justify-between items-start gap-2 sm:gap-4">
                   <p className="text-[14px] font-medium text-[var(--primary-ink)]/80 flex-1">
@@ -162,10 +164,10 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
                     <div
                       className={`px-2 py-1 rounded-md text-[11px] font-bold ${
                         graded.score_0_1 === 1
-                          ? "bg-emerald-100 text-emerald-700"
+                          ? "bg-[var(--soft-surface)] text-[var(--primary)]"
                           : graded.score_0_1 > 0
-                          ? "bg-orange-100 text-orange-700"
-                          : "bg-red-100 text-red-700"
+                          ? "bg-[var(--warning-bg)] text-[var(--warning-ink)]"
+                          : "bg-[var(--danger-bg)] text-[var(--danger-ink)]"
                       }`}
                     >
                       {Math.round(graded.score_0_1 * 100)}%
@@ -183,7 +185,7 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
 
       <button
         onClick={onClose}
-        className="w-full py-4 bg-[var(--primary-ink)] text-white rounded-2xl font-bold text-[16px] shadow-lg shadow-[var(--primary-ink)]/20 flex items-center justify-center gap-2 hover:bg-[#064282] transition-all"
+        className="w-full py-4 bg-[var(--primary)] text-white rounded-2xl font-bold text-[16px] shadow-lg shadow-[var(--primary)]/20 flex items-center justify-center gap-2 hover:bg-[var(--primary-hover)] transition-all"
       >
         Continue Learning
         <ArrowRight size={20} />

@@ -18,7 +18,7 @@ interface UnitCardProps {
 }
 
 const statusColors = {
-  "PROFICIENT": { text: "text-[#059669]", bg: "bg-[#059669]/5", label: "PROFICIENT", bar: "bg-[#059669]" },
+  "PROFICIENT": { text: "text-[#075E63]", bg: "bg-[#075E63]/5", label: "PROFICIENT", bar: "bg-[#075E63]" },
   "DEVELOPING": { text: "text-[#D97706]", bg: "bg-[#D97706]/5", label: "DEVELOPING", bar: "bg-[#D97706]" },
   "NEEDS WORK": { text: "text-red-500", bg: "bg-red-500/5", label: "NEEDS WORK", bar: "bg-red-500" },
 };
@@ -40,22 +40,22 @@ export const UnitCard: React.FC<UnitCardProps> = ({
 
   if (isLocked) {
     return (
-      <div className="bg-white/40 p-8 rounded-[40px] border border-[#1a3a2a]/5 relative overflow-hidden group">
+      <div className="bg-white/40 p-8 rounded-[40px] border border-[#122D30]/5 relative overflow-hidden group">
         <div className="filter blur-[2px] opacity-20 select-none">
           <div className="flex justify-between items-start mb-4">
-            <span className="text-xs font-bold text-[#1a3a2a]/60">{unitId}</span>
+            <span className="text-xs font-bold text-[#122D30]/60">{unitId}</span>
             <span className="text-3xl font-bold">0%</span>
           </div>
-          <h4 className="text-xl font-bold mb-8 text-[#1a3a2a]">{title}</h4>
+          <h4 className="text-xl font-bold mb-8 text-[#122D30]">{title}</h4>
         </div>
         
         <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-          <div className="w-14 h-14 rounded-full bg-white shadow-xl flex items-center justify-center text-[#1a3a2a]/20 mb-4">
+          <div className="w-14 h-14 rounded-full bg-white shadow-xl flex items-center justify-center text-[#122D30]/20 mb-4">
             <Lock size={24} />
           </div>
-          <p className="text-[12px] font-bold text-[#1a3a2a]/30 uppercase tracking-widest mb-1">Locked</p>
+          <p className="text-[12px] font-bold text-[#122D30]/30 uppercase tracking-widest mb-1">Locked</p>
           {prerequisite && (
-            <p className="text-[10px] font-medium text-[#1a3a2a]/20">Prerequisite: {prerequisite}</p>
+            <p className="text-[10px] font-medium text-[#122D30]/20">Prerequisite: {prerequisite}</p>
           )}
         </div>
       </div>
@@ -63,25 +63,25 @@ export const UnitCard: React.FC<UnitCardProps> = ({
   }
 
   return (
-    <div className="bg-white p-8 rounded-[40px] border border-[#1a3a2a]/5 shadow-sm hover:shadow-xl transition-all group flex flex-col justify-between h-full">
+    <div className="bg-white p-8 rounded-[40px] border border-[#122D30]/5 shadow-sm hover:shadow-xl transition-all group flex flex-col justify-between h-full">
       <div>
         <div className="flex justify-between items-start mb-2">
-          <span className="text-xs font-bold text-[#1a3a2a]/60 bg-[#F4F3EE] px-3 py-1.5 rounded-full uppercase tracking-wider">{unitId}</span>
+          <span className="text-xs font-bold text-[#122D30]/60 bg-[#F6F7F2] px-3 py-1.5 rounded-full uppercase tracking-wider">{unitId}</span>
           <div className="text-right">
-            <span className="text-3xl font-bold text-[#1a3a2a]">{mastery}%</span>
+            <span className="text-3xl font-bold text-[#122D30]">{mastery}%</span>
             <p className={`text-xs font-black tracking-tight ${color.text}`}>{color.label}</p>
           </div>
         </div>
         
-        <h4 className="text-xl font-bold mb-8 text-[#1a3a2a] leading-tight group-hover:text-[#059669] transition-colors">{title}</h4>
+        <h4 className="text-xl font-bold mb-8 text-[#122D30] leading-tight group-hover:text-[#075E63] transition-colors">{title}</h4>
         
         <div className="space-y-4 mb-10">
           <div>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-bold text-[#1a3a2a]/70 uppercase tracking-widest">Content Coverage</span>
-              <span className="text-xs font-bold text-[#1a3a2a]">{coverage}%</span>
+              <span className="text-xs font-bold text-[#122D30]/70 uppercase tracking-widest">Content Coverage</span>
+              <span className="text-xs font-bold text-[#122D30]">{coverage}%</span>
             </div>
-            <div className="h-1.5 w-full bg-[#1a3a2a]/5 rounded-full overflow-hidden">
+            <div className="h-1.5 w-full bg-[#075E63]/5 rounded-full overflow-hidden">
               <div 
                 className={`h-full ${color.bar} rounded-full transition-all duration-1000 ease-out`}
                 style={{ width: `${coverage}%` }}
@@ -97,8 +97,8 @@ export const UnitCard: React.FC<UnitCardProps> = ({
             onClick={onAction}
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-[11px] font-bold transition-all ${
               status === 'NEEDS WORK' 
-              ? 'bg-[#1a3a2a] text-white shadow-lg hover:shadow-[#1a3a2a]/20' 
-              : 'text-[#1a3a2a] bg-[#F4F3EE] hover:bg-[#E8E7E0]'
+              ? 'bg-[#075E63] text-white shadow-lg hover:shadow-[#122D30]/20' 
+              : 'text-[#122D30] bg-[#F6F7F2] hover:bg-[#E8E7E0]'
             }`}
           >
             {mastery === 0 ? "Start" : "Continue"}
@@ -107,7 +107,7 @@ export const UnitCard: React.FC<UnitCardProps> = ({
 
           <button 
             onClick={onTestAction}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-[11px] font-bold text-[#042E5C] border-2 border-[#042E5C]/10 hover:border-[#042E5C]/30 transition-all"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-[11px] font-bold text-[#122D30] border-2 border-[#122D30]/10 hover:border-[#122D30]/30 transition-all"
           >
             Take Test
           </button>

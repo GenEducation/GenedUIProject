@@ -31,13 +31,13 @@ export function ParentSessionList() {
   };
 
   return (
-    <div className="w-full md:w-[350px] bg-white border-r border-[#1a3a2a]/5 flex flex-col h-full">
+    <div className="w-full md:w-[350px] bg-white border-r border-[#122D30]/5 flex flex-col h-full">
 
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {isFetchingSessions ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-8 h-8 border-3 border-[#1a3a2a]/10 border-t-[#1a3a2a] rounded-full animate-spin" />
-            <p className="text-[10px] font-black text-[#1a3a2a]/30 uppercase tracking-widest">Loading sessions...</p>
+            <div className="w-8 h-8 border-3 border-[#122D30]/10 border-t-[#122D30] rounded-full animate-spin" />
+            <p className="text-[10px] font-black text-[#122D30]/30 uppercase tracking-widest">Loading sessions...</p>
           </div>
         ) : selectedStudentSessions.length > 0 ? (
           selectedStudentSessions.map((session) => (
@@ -46,13 +46,13 @@ export function ParentSessionList() {
               onClick={() => setActiveSessionId(session.session_id)}
               className={`w-full p-4 rounded-2xl flex flex-col transition-all text-left group ${
                 activeSessionId === session.session_id
-                  ? "bg-[#1a3a2a] text-white shadow-xl translate-x-1"
-                  : "bg-white hover:bg-[#F4F3EE] text-[#1a3a2a]"
+                  ? "bg-[#075E63] text-white shadow-xl translate-x-1"
+                  : "bg-white hover:bg-[#F6F7F2] text-[#122D30]"
               }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <div className={`p-2 rounded-lg ${activeSessionId === session.session_id ? "bg-white/10" : "bg-[#E5F2E9]"}`}>
-                  <MessageSquare size={14} className={activeSessionId === session.session_id ? "text-white" : "text-[#1a3a2a]"} />
+                <div className={`p-2 rounded-lg ${activeSessionId === session.session_id ? "bg-white/10" : "bg-[#E8F2EF]"}`}>
+                  <MessageSquare size={14} className={activeSessionId === session.session_id ? "text-white" : "text-[#122D30]"} />
                 </div>
                 {activeSessionId === session.session_id && (
                   <motion.div
@@ -67,7 +67,7 @@ export function ParentSessionList() {
               </h4>
               
               <div className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider ${
-                activeSessionId === session.session_id ? "text-white/60" : "text-[#1a3a2a]/40"
+                activeSessionId === session.session_id ? "text-white/60" : "text-[#122D30]/40"
               }`}>
                 <Clock size={10} />
                 <span>{formatDate(session.created_at)}</span>
@@ -76,11 +76,11 @@ export function ParentSessionList() {
           ))
         ) : (
           <div className="text-center py-20 px-6">
-            <div className="w-16 h-16 rounded-3xl bg-[#F4F3EE] flex items-center justify-center text-[#1a3a2a]/10 mx-auto mb-4">
+            <div className="w-16 h-16 rounded-3xl bg-[#F6F7F2] flex items-center justify-center text-[#122D30]/10 mx-auto mb-4">
               <MessageSquare size={32} />
             </div>
-            <p className="text-sm font-bold text-[#1a3a2a]/40 mb-1">No sessions found</p>
-            <p className="text-[10px] text-[#1a3a2a]/20 font-medium">This student hasn&apos;t started any explorations yet.</p>
+            <p className="text-sm font-bold text-[#122D30]/40 mb-1">No sessions found</p>
+            <p className="text-[10px] text-[#122D30]/20 font-medium">This student hasn&apos;t started any explorations yet.</p>
           </div>
         )}
       </div>

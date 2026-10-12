@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { UpgradeButton } from "../UpgradeButton";
 import { Button } from "@/components/ui/Button";
+import { GenEdLogo } from "@/components/shared/GenEdLogo";
 
 interface RateLimitPromptProps {
   isVisible: boolean;
@@ -32,7 +33,7 @@ export const RateLimitPrompt: React.FC<RateLimitPromptProps> = ({ isVisible, onC
           exit={{ opacity: 0, y: 10, scale: 0.98 }}
           className="absolute bottom-full left-1/2 -translate-x-1/2 mb-6 z-50 w-full max-w-4xl px-4"
         >
-          <div className="relative overflow-hidden bg-[#042E5C] rounded-[2rem] shadow-[0_30px_60px_rgba(4,46,92,0.4)] border border-white/10 p-6 pr-14">
+          <div className="relative overflow-hidden bg-[#122D30] rounded-[2rem] shadow-[0_30px_60px_rgba(18,45,48,0.4)] border border-white/10 p-6 pr-14">
             {/* Decorative background glow */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[80px] pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#03b1ed]/10 blur-[60px] pointer-events-none" />
@@ -43,8 +44,8 @@ export const RateLimitPrompt: React.FC<RateLimitPromptProps> = ({ isVisible, onC
 
             <div className="flex items-center gap-8">
               <div className="flex flex-1 items-center gap-5">
-                <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 border border-white/10 shadow-inner">
-                  <img src="/Favicon1.jpg" alt="Logo" className="w-full h-full object-cover" />
+                <div className="shrink-0">
+                  <GenEdLogo variant="mark" height={56} />
                 </div>
                 <div className="flex-1">
                   <h4 className="text-[17px] font-black text-white leading-tight tracking-tight uppercase">
@@ -65,7 +66,7 @@ export const RateLimitPrompt: React.FC<RateLimitPromptProps> = ({ isVisible, onC
                       userId={studentProfile.user_id}
                       userName={studentProfile.username}
                       userEmail={studentProfile.email}
-                      className="w-full justify-center py-4 bg-[#059F6D] hover:bg-[#048b5f] text-white text-[13px] font-black uppercase tracking-[0.15em] rounded-2xl shadow-xl shadow-[#059F6D]/30 transition-all active:scale-[0.96] border border-white/10"
+                      className="w-full justify-center py-4 bg-[#075E63] hover:bg-[#064C50] text-white text-[13px] font-black uppercase tracking-[0.15em] rounded-2xl shadow-xl shadow-[#075E63]/30 transition-all active:scale-[0.96] border border-white/10"
                     >
                       Unlock Pro
                     </UpgradeButton>

@@ -69,8 +69,8 @@ export const FigureView = React.memo(({ uuid }: FigureViewProps) => {
 
   if (!src) {
     return (
-      <div className="my-6 h-40 animate-pulse bg-[#1a3a2a]/5 rounded-2xl flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#1a3a2a]/10 border-t-[#1a3a2a]/30 rounded-full animate-spin" />
+      <div className="my-6 h-40 animate-pulse bg-[#075E63]/5 rounded-2xl flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#122D30]/10 border-t-[#122D30]/30 rounded-full animate-spin" />
       </div>
     );
   }
@@ -82,7 +82,7 @@ export const FigureView = React.memo(({ uuid }: FigureViewProps) => {
       transition={{ duration: 0.5 }}
       src={src} 
       alt="Historical Figure" 
-      className="rounded-2xl border border-[#1a3a2a]/10 shadow-md w-full h-auto object-contain max-h-[340px] max-w-[480px] my-4 block"
+      className="rounded-2xl border border-[#122D30]/10 shadow-md w-full h-auto object-contain max-h-[340px] max-w-[480px] my-4 block"
     />
   );
 });

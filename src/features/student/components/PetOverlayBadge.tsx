@@ -22,11 +22,11 @@ import type { PetOverlay } from "../theme/petExpressions";
  */
 
 const ICONS: Record<Exclude<PetOverlay, "zzz">, { Icon: LucideIcon; color: string }> = {
-  ear: { Icon: Ear, color: "#059F6D" },
-  speaker: { Icon: Volume2, color: "#059F6D" },
+  ear: { Icon: Ear, color: "#075E63" },
+  speaker: { Icon: Volume2, color: "#075E63" },
   micOff: { Icon: MicOff, color: "#E8635A" },
-  wifiOff: { Icon: WifiOff, color: "#94A3B8" },
-  dots: { Icon: Ellipsis, color: "#4A5568" },
+  wifiOff: { Icon: WifiOff, color: "#7F9295" },
+  dots: { Icon: Ellipsis, color: "#3E5558" },
   bell: { Icon: Bell, color: "#D97706" },
   heart: { Icon: Heart, color: "#E0527E" },
   confetti: { Icon: PartyPopper, color: "#E0527E" },
@@ -53,7 +53,7 @@ export function PetOverlayBadge({ overlay, size }: { overlay: PetOverlay; size: 
     return (
       <span
         className="pet-badge-zzz"
-        style={{ ...base, background: "none", boxShadow: "none", fontWeight: 800, fontSize: d * 0.6, color: "#64748B" }}
+        style={{ ...base, background: "none", boxShadow: "none", fontWeight: 800, fontSize: d * 0.6, color: "#5E7477" }}
       >
         z
       </span>

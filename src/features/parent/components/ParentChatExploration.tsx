@@ -30,7 +30,7 @@ export function ParentChatExploration() {
         {activeSessionId && (
           <button 
             onClick={() => setActiveSessionId(null)}
-            className="md:hidden flex items-center gap-2 p-4 text-[#1a3a2a]/60 hover:text-[#1a3a2a] transition-colors border-b border-[#1a3a2a]/5"
+            className="md:hidden flex items-center gap-2 p-4 text-[#122D30]/60 hover:text-[#122D30] transition-colors border-b border-[#122D30]/5"
           >
             <ChevronLeft size={18} />
             <span className="text-xs font-bold uppercase tracking-widest">Back to Sessions</span>

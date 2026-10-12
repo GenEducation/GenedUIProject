@@ -130,10 +130,12 @@ export function StreakStats({
                   <span
                     className="rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{
-                      background: s.color + "1F",
-                      width: "clamp(24px, 2.2vw, 30px)",
-                      height: "clamp(24px, 2.2vw, 30px)",
-                      color: s.color,
+                      // Soft-surface well, teal glyph — calm chrome; citron is
+                      // kept for the screen's one key moment.
+                      background: STUDENT_COLORS.softSurface,
+                      width: "clamp(26px, 2.4vw, 32px)",
+                      height: "clamp(26px, 2.4vw, 32px)",
+                      color: STUDENT_COLORS.primary,
                     }}
                   >
                     <s.Icon size={16} strokeWidth={2.2} />

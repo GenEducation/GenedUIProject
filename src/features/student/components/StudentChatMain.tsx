@@ -40,24 +40,24 @@ function AudioStatusPill({ state, onStop }: { state: string; onStop: () => void 
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200"
+      className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--soft-surface)] border border-[var(--tutor)]/15"
     >
       {state === "playing" ? (
         <>
-          <Volume2 size={13} className="text-emerald-600 animate-pulse" />
-          <span className="text-xs font-bold text-emerald-700">Listening...</span>
+          <Volume2 size={13} className="text-[var(--tutor)] animate-pulse" />
+          <span className="text-xs font-bold text-[var(--tutor)]">Listening...</span>
           <button aria-label="Stop playback"
             onClick={onStop}
-            className="ml-1 w-4 h-4 rounded-full bg-emerald-200 flex items-center justify-center hover:bg-emerald-300 transition-colors"
+            className="ml-1 w-4 h-4 rounded-full bg-[var(--tutor)] flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors"
             title="Stop playback"
           >
-            <Square size={8} className="text-emerald-700" />
+            <Square size={8} className="text-white" fill="currentColor" />
           </button>
         </>
       ) : (
         <>
-          <Loader2 size={13} className="text-emerald-500 animate-spin" />
-          <span className="text-xs font-bold text-emerald-600">Preparing audio...</span>
+          <Loader2 size={13} className="text-[var(--tutor)] animate-spin" />
+          <span className="text-xs font-bold text-[var(--tutor)]">Preparing audio...</span>
         </>
       )}
     </motion.div>
@@ -98,7 +98,7 @@ function ReadingSkillModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-[#1C2333]/40 backdrop-blur-sm" 
+        className="absolute inset-0 bg-[#122D30]/40 backdrop-blur-sm" 
       />
 
       {/* Modal Card */}
@@ -106,21 +106,21 @@ function ReadingSkillModal({
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative bg-white rounded-[24px] sm:rounded-[32px] shadow-2xl border border-[#E2E8F0] w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]"
+        className="relative bg-white rounded-[24px] sm:rounded-[32px] shadow-2xl border border-[#E3E8E2] w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]"
       >
         {/* Header */}
-        <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-[#E2E8F0] flex items-center justify-between bg-[#F7F8FC]">
+        <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-[#E3E8E2] flex items-center justify-between bg-[#F6F7F2]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-              <Mic className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[var(--soft-surface)] flex items-center justify-center flex-shrink-0">
+              <Mic className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--tutor)]" />
             </div>
             <div>
-              <h3 className="font-bold text-sm sm:text-base" style={{ color: "#1A202C" }}>Reading Task</h3>
-              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-widest" style={{ color: "#94A3B8" }}>Speak clearly into the mic</p>
+              <h3 className="font-bold text-sm sm:text-base" style={{ color: "#122D30" }}>Reading Task</h3>
+              <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-widest" style={{ color: "#7F9295" }}>Speak clearly into the mic</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white rounded-full border border-[#E2E8F0] shadow-sm flex-shrink-0">
+          <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white rounded-full border border-[#E3E8E2] shadow-sm flex-shrink-0">
             {state === "recording" ? (
               <>
                 <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
@@ -128,13 +128,13 @@ function ReadingSkillModal({
               </>
             ) : state === "uploading" || state === "processing" ? (
               <>
-                <Loader2 className="w-3 h-3 text-emerald-500 animate-spin" />
-                <span className="text-xs font-bold text-emerald-600 uppercase tracking-tight">Saving</span>
+                <Loader2 className="w-3 h-3 text-[var(--tutor)] animate-spin" />
+                <span className="text-xs font-bold text-[var(--tutor)] uppercase tracking-tight">Saving</span>
               </>
             ) : (
               <>
-                <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                <span className="text-xs font-bold text-amber-600 uppercase tracking-tight">Ready</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-[var(--tutor)]" />
+                <span className="text-xs font-bold text-[var(--ink)] uppercase tracking-tight">Ready</span>
               </>
             )}
           </div>
@@ -142,7 +142,7 @@ function ReadingSkillModal({
 
         {/* Content Area */}
         <div className="p-4 sm:p-8 flex-1 overflow-y-auto" style={{ maxHeight: "38vh" }}>
-          <div className="bg-[#F7F8FC] rounded-2xl sm:rounded-3xl p-3 sm:p-4 mb-4 sm:mb-8 border border-[#E2E8F0]">
+          <div className="bg-[#F6F7F2] rounded-2xl sm:rounded-3xl p-3 sm:p-4 mb-4 sm:mb-8 border border-[#E3E8E2]">
             <KaraokeRenderer 
               text={skillData?.source_text || skillData?.text || ""} 
               directiveId={skillData?.directive_id || ""} 
@@ -156,7 +156,7 @@ function ReadingSkillModal({
               {(state === "recording" || state === "permission_request" || state === "ready" || state === "uploading" || state === "processing") && (
                 <div className="w-full flex flex-col gap-3">
                   {state === "processing" && (
-                    <div className="bg-blue-50 text-blue-800 text-xs px-4 py-3 rounded-xl text-center font-bold border border-blue-200 animate-pulse">
+                    <div className="bg-[var(--soft-surface)] text-[var(--tutor)] text-xs px-4 py-3 rounded-xl text-center font-bold border border-[var(--tutor)]/15 animate-pulse">
                       Analyzing your reading...
                     </div>
                   )}
@@ -170,7 +170,7 @@ function ReadingSkillModal({
                 </motion.div>
               )}
               {prompt === "cap" && (
-                <div className="bg-blue-50 text-blue-800 text-xs px-4 py-3 rounded-xl text-center font-bold border border-blue-200">
+                <div className="bg-[var(--soft-surface)] text-[var(--tutor)] text-xs px-4 py-3 rounded-xl text-center font-bold border border-[var(--tutor)]/15">
                   Time&apos;s up! Tap done to send your recording.
                 </div>
               )}
@@ -206,7 +206,7 @@ function ReadingSkillModal({
               {prompt === "silence" && (
                 <button
                   onClick={onDismissPrompt}
-                  className="text-xs font-bold text-[#94A3B8] hover:text-[var(--tutor)] uppercase tracking-widest pt-1"
+                  className="text-xs font-bold text-[#7F9295] hover:text-[var(--tutor)] uppercase tracking-widest pt-1"
                 >
                   Keep Recording
                 </button>
@@ -217,33 +217,33 @@ function ReadingSkillModal({
           {state === "completed" && analysisResult && (
             <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-                <div className="bg-blue-50/50 p-2.5 sm:p-3 rounded-xl border border-blue-100 flex flex-col items-center text-center">
-                  <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-blue-600 font-bold mb-0.5">Accuracy</span>
-                  <span className="text-lg sm:text-xl font-black text-blue-900 leading-tight">
+                <div className="bg-[var(--soft-surface)] p-2.5 sm:p-3 rounded-xl border border-[var(--tutor)]/15 flex flex-col items-center text-center">
+                  <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-[var(--tutor)] font-bold mb-0.5">Accuracy</span>
+                  <span className="text-lg sm:text-xl font-black text-[var(--ink)] leading-tight">
                     {Math.max(0, Math.round((1 - (analysisResult.wer || 0)) * 100))}%
                   </span>
                 </div>
-                <div className="bg-green-50/50 p-2.5 sm:p-3 rounded-xl border border-green-100 flex flex-col items-center text-center">
-                  <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-green-600 font-bold mb-0.5">Speed</span>
-                  <span className="text-lg sm:text-xl font-black text-green-900 leading-tight">
+                <div className="bg-[var(--soft-surface)]/70 p-2.5 sm:p-3 rounded-xl border border-[var(--tutor)]/15 flex flex-col items-center text-center">
+                  <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-[var(--tutor)] font-bold mb-0.5">Speed</span>
+                  <span className="text-lg sm:text-xl font-black text-[var(--ink)] leading-tight">
                     {Math.round(analysisResult.pace_wpm || 0)}
                   </span>
-                  <span className="text-[9px] text-green-700 font-medium">wpm</span>
+                  <span className="text-[9px] text-[var(--tutor)] font-medium">wpm</span>
                 </div>
-                <div className="bg-purple-50/50 p-2.5 sm:p-3 rounded-xl border border-purple-100 flex flex-col items-center text-center">
-                  <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-purple-600 font-bold mb-0.5">Fluency</span>
-                  <span className="text-sm sm:text-base font-black text-purple-900 capitalize leading-tight break-words w-full text-center">
+                <div className="bg-[var(--canvas)] p-2.5 sm:p-3 rounded-xl border border-[var(--surface-border)] flex flex-col items-center text-center">
+                  <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-[var(--tutor)] font-bold mb-0.5">Fluency</span>
+                  <span className="text-sm sm:text-base font-black text-[var(--ink)] capitalize leading-tight break-words w-full text-center">
                     {(analysisResult.fluency || "Good").replace(/_/g, " ")}
                   </span>
                 </div>
               </div>
 
-              <div className="p-3 sm:p-4 bg-orange-50/30 rounded-xl sm:rounded-2xl border border-orange-100/50">
+              <div className="p-3 sm:p-4 bg-[#EAF2EF] rounded-xl sm:rounded-2xl border border-[var(--tutor)]/10">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-6 h-6 rounded-full bg-orange-200 flex items-center justify-center text-[10px] font-bold text-orange-700 flex-shrink-0">A</div>
-                  <span className="text-xs font-bold text-orange-800">Aanya&apos;s Feedback</span>
+                  <div className="w-6 h-6 rounded-full bg-[var(--tutor)] ring-2 ring-white flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">A</div>
+                  <span className="text-xs font-bold text-[var(--tutor)]">Aanya&apos;s Feedback</span>
                 </div>
-                <p className="text-sm text-orange-900/80 italic leading-relaxed">
+                <p className="text-sm text-[var(--ink)]/80 italic leading-relaxed">
                   &quot;{analysisResult.feedback || "Great job reading! Keep it up."}&quot;
                 </p>
               </div>
@@ -297,7 +297,7 @@ function ReadingSkillModal({
               <div className="flex gap-3 w-full">
                 <button
                   onClick={onStart}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all"
+                  className="flex-1 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-bold py-4 rounded-2xl transition-all"
                 >
                   Try Again
                 </button>
@@ -389,30 +389,39 @@ export function StudentChatMain({
     : STUDENT_COLORS.tutor;
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "#F7F8FC" }}>
+    <div
+      className="flex-1 flex flex-col overflow-hidden"
+      style={{
+        backgroundColor: "#F6F7F2",
+        // The lesson screen's "paper on a lit desk": a faint citron glow top-left
+        // and a deep-ocean wash bottom-right, so chat reads as the same product.
+        backgroundImage:
+          "radial-gradient(48rem 30rem at -10% -20%, rgb(217 242 121 / 0.22), transparent 62%), radial-gradient(40rem 30rem at 110% 115%, rgb(7 94 99 / 0.06), transparent 60%)",
+      }}
+    >
       {/* Top bar */}
       <header
         className="flex-shrink-0 relative"
-        style={{ background: "#FFFFFF", borderBottom: "1px solid #E2E8F0" }}
+        style={{ background: "#FFFFFF", borderBottom: "1px solid #E3E8E2" }}
       >
         <div className="flex items-center justify-between" style={{ padding: "10px 12px" }}>
           <div className="flex items-center gap-2">
             <button aria-label="Toggle sidebar"
               onClick={toggleSidebar}
               className="transition-all flex-shrink-0"
-              style={{ width: 32, height: 32, borderRadius: 10, background: "#F7F8FC", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", color: "#4A5568", cursor: "pointer" }}
+              style={{ width: 32, height: 32, borderRadius: 10, background: "#F6F7F2", border: "1px solid #E3E8E2", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--tutor)", cursor: "pointer" }}
             >
               <Menu size={15} />
             </button>
             <button aria-label="Back to home"
               onClick={() => { closeChat(); router.push('/student'); }}
               className="transition-all flex-shrink-0"
-              style={{ width: 32, height: 32, borderRadius: 10, background: "#F7F8FC", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", color: "#4A5568", cursor: "pointer" }}
+              style={{ width: 32, height: 32, borderRadius: 10, background: "#F6F7F2", border: "1px solid #E3E8E2", display: "flex", alignItems: "center", justifyContent: "center", color: "#3E5558", cursor: "pointer" }}
             >
               <ArrowLeft size={15} />
             </button>
             <div className="min-w-0">
-              <h2 className="truncate" style={{ fontWeight: 800, color: "#1A202C", fontSize: "clamp(11px, 3vw, 17px)", lineHeight: 1.3, fontFamily: "var(--font-display), var(--font-body)", margin: 0 }}>
+              <h2 className="truncate" style={{ fontWeight: 800, color: "#122D30", fontSize: "clamp(11px, 3vw, 17px)", lineHeight: 1.3, fontFamily: "var(--font-display), var(--font-body)", margin: 0 }}>
                 {activeChat.title}
               </h2>
               {(chapterPct !== null || activeChat.subject) && (
@@ -434,8 +443,8 @@ export function StudentChatMain({
                   style={{
                     padding: "4px 10px",
                     borderRadius: 20,
-                    border: isPdfViewerOpen ? "1.5px solid var(--tutor)" : "1.5px solid #D6D3F0",
-                    background: isPdfViewerOpen ? "var(--tutor)" : "#EDE9FE",
+                    border: isPdfViewerOpen ? "1.5px solid var(--tutor)" : "1.5px solid rgba(7,94,99,0.18)",
+                    background: isPdfViewerOpen ? "var(--tutor)" : "#DCEBE7",
                     color: isPdfViewerOpen ? "#FFFFFF" : "var(--tutor)",
                     fontSize: 11,
                     fontWeight: 700,
@@ -450,7 +459,7 @@ export function StudentChatMain({
                       display: "inline-block",
                       width: 10,
                       height: 10,
-                      border: `2px solid ${isPdfViewerOpen ? "rgba(255,255,255,0.4)" : "#C4B8F5"}`,
+                      border: `2px solid ${isPdfViewerOpen ? "rgba(255,255,255,0.4)" : "rgba(7,94,99,0.25)"}`,
                       borderTopColor: isPdfViewerOpen ? "#fff" : "var(--tutor)",
                       borderRadius: "50%",
                       animation: "spin 0.7s linear infinite",
@@ -463,7 +472,7 @@ export function StudentChatMain({
                 {chapterPdfError && (
                   <button
                     onClick={clearPdfError}
-                    style={{ fontSize: 10, color: "#EF4444", background: "none", border: "none", cursor: "pointer", padding: 0, whiteSpace: "nowrap" }}
+                    style={{ fontSize: 10, color: "#E8635A", background: "none", border: "none", cursor: "pointer", padding: 0, whiteSpace: "nowrap" }}
                   >
                     {chapterPdfError} ✕
                   </button>
@@ -489,7 +498,7 @@ export function StudentChatMain({
               title={chatQueryModePinned ? "Locked for your next message" : undefined}
               className="flex items-center flex-shrink-0"
               style={{
-                background: "#E8E8EC",
+                background: "var(--soft-surface)",
                 borderRadius: 999,
                 padding: "3px 3px 3px 8px",
                 gap: 4,
@@ -497,7 +506,7 @@ export function StudentChatMain({
               }}
             >
               {chatQueryModePinned && (
-                <Pin size={10} style={{ color: "#9CA3AF", flexShrink: 0 }} aria-hidden="true" />
+                <Pin size={10} style={{ color: "var(--tutor)", flexShrink: 0 }} aria-hidden="true" />
               )}
               {/* Doubt segment */}
               <motion.button
@@ -515,19 +524,19 @@ export function StudentChatMain({
                 {chatQueryMode === "doubt" && (
                   <motion.div
                     layoutId="mode-active-pill"
-                    style={{ position: "absolute", inset: 0, borderRadius: 999, background: "var(--tutor)", boxShadow: "0 2px 8px rgba(91,77,199,0.4)" }}
+                    style={{ position: "absolute", inset: 0, borderRadius: 999, background: "var(--tutor)", boxShadow: "0 2px 8px rgba(7,94,99,0.4)" }}
                     transition={{ type: "spring", stiffness: 400, damping: 32 }}
                   />
                 )}
                 <motion.span
-                  animate={{ color: chatQueryMode === "doubt" ? "#FFFFFF" : "#9CA3AF" }}
+                  animate={{ color: chatQueryMode === "doubt" ? "#FFFFFF" : "#5E7477" }}
                   transition={{ duration: 0.18 }}
                   style={{ position: "relative", zIndex: 1, display: "flex" }}
                 >
                   <HelpCircle size={11} />
                 </motion.span>
                 <motion.span
-                  animate={{ color: chatQueryMode === "doubt" ? "#FFFFFF" : "#9CA3AF" }}
+                  animate={{ color: chatQueryMode === "doubt" ? "#FFFFFF" : "#5E7477" }}
                   transition={{ duration: 0.18 }}
                   style={{ position: "relative", zIndex: 1, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}
                 >
@@ -551,19 +560,19 @@ export function StudentChatMain({
                 {chatQueryMode === "study" && (
                   <motion.div
                     layoutId="mode-active-pill"
-                    style={{ position: "absolute", inset: 0, borderRadius: 999, background: "#00B894", boxShadow: "0 2px 8px rgba(0,184,148,0.4)" }}
+                    style={{ position: "absolute", inset: 0, borderRadius: 999, background: "#FFFFFF", boxShadow: "inset 0 0 0 1px rgba(7,94,99,0.35), 0 2px 8px rgba(7,94,99,0.18)" }}
                     transition={{ type: "spring", stiffness: 400, damping: 32 }}
                   />
                 )}
                 <motion.span
-                  animate={{ color: chatQueryMode === "study" ? "#FFFFFF" : "#9CA3AF" }}
+                  animate={{ color: chatQueryMode === "study" ? "#075E63" : "#5E7477" }}
                   transition={{ duration: 0.18 }}
                   style={{ position: "relative", zIndex: 1, display: "flex" }}
                 >
                   <GraduationCap size={11} />
                 </motion.span>
                 <motion.span
-                  animate={{ color: chatQueryMode === "study" ? "#FFFFFF" : "#9CA3AF" }}
+                  animate={{ color: chatQueryMode === "study" ? "#075E63" : "#5E7477" }}
                   transition={{ duration: 0.18 }}
                   style={{ position: "relative", zIndex: 1, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}
                 >
@@ -578,17 +587,17 @@ export function StudentChatMain({
               <span
                 style={{
                   width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-                  background: connectionQuality === "poor" ? "#E8635A" : connectionQuality === "reconnecting" ? "#F0AD4E" : "#00B894",
+                  background: connectionQuality === "poor" ? "#E8635A" : connectionQuality === "reconnecting" ? "#F0AD4E" : "var(--tutor)",
                 }}
                 className={isAITyping || connectionQuality === "reconnecting" ? "animate-pulse" : undefined}
               />
-              <span style={{ fontSize: 11, fontWeight: 700, color: connectionQuality === "poor" ? "#E8635A" : "#00B894", letterSpacing: "0.04em" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: connectionQuality === "poor" ? "#E8635A" : "var(--tutor)", letterSpacing: "0.04em" }}>
                 {isAITyping ? "Thinking…" : connectionQuality === "poor" ? "Poor connection" : connectionQuality === "reconnecting" ? "Reconnecting…" : "Active"}
               </span>
               {activeChat.grade && (
                 <>
-                  <span style={{ color: "#CBD5E1", fontSize: 10 }}>·</span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: "#94A3B8", whiteSpace: "nowrap" }}>{activeChat.grade}</span>
+                  <span style={{ color: "#C5D1CF", fontSize: 10 }}>·</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#7F9295", whiteSpace: "nowrap" }}>{activeChat.grade}</span>
                 </>
               )}
             </div>
@@ -597,8 +606,10 @@ export function StudentChatMain({
 
         {/* Full-width progress bar at header bottom */}
         {chapterPct !== null && (
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 5, background: `${subjectAccent}20` }}>
-            <div style={{ width: `${chapterPct}%`, height: "100%", background: subjectAccent, transition: "width 1.2s cubic-bezier(0.22,1,0.36,1)", borderRadius: "0 3px 3px 0", boxShadow: `0 0 6px ${subjectAccent}80` }} />
+          // Progress is earned, so it's citron (as on the lesson rail), on a soft
+          // deep-ocean track; the subject colour stays on the subtitle above.
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 5, background: "var(--soft-surface)" }}>
+            <div style={{ width: `${chapterPct}%`, height: "100%", background: "linear-gradient(90deg, var(--accent) 0%, var(--accent-deep) 100%)", transition: "width 1.2s cubic-bezier(0.22,1,0.36,1)", borderRadius: "0 3px 3px 0", boxShadow: "0 0 8px rgba(184,214,63,0.55)" }} />
           </div>
         )}
       </header>
@@ -615,8 +626,8 @@ export function StudentChatMain({
                 exit={{ opacity: 0 }}
                 className="flex-1 flex flex-col items-center justify-center py-20 text-center space-y-4"
               >
-                <Loader2 className="animate-spin" style={{ width: 36, height: 36, color: "#5B4DC720" }} />
-                <p style={{ fontSize: 13, color: "#94A3B8", fontWeight: 700, letterSpacing: "0.05em" }}>Retrieving history...</p>
+                <Loader2 className="animate-spin" style={{ width: 36, height: 36, color: "#075E6320" }} />
+                <p style={{ fontSize: 13, color: "#7F9295", fontWeight: 700, letterSpacing: "0.05em" }}>Retrieving history...</p>
                 <FunFactCard subject={activeChat.subject} />
               </motion.div>
             ) : isNewChat ? (
@@ -626,9 +637,9 @@ export function StudentChatMain({
                 animate={{ opacity: 1, y: 0 }}
                 className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 max-w-5xl mx-auto w-full"
               >
-                <div style={{ width: "clamp(64px, 16vw, 96px)", height: "clamp(64px, 16vw, 96px)", borderRadius: 40, background: "#FFFFFF", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 32, boxShadow: "0 2px 12px rgba(91,77,199,0.08)" }}>
+                <div style={{ width: "clamp(64px, 16vw, 96px)", height: "clamp(64px, 16vw, 96px)", borderRadius: 40, background: "#FFFFFF", border: "1px solid #E3E8E2", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 32, boxShadow: "0 0 0 6px #DCEBE7, 0 10px 24px -12px rgba(7,94,99,0.35)" }}>
                   <Image
-                    src="/Favicon1.jpg"
+                    src="/brand/gened-mark.svg"
                     alt="Agent Icon"
                     width={96}
                     height={96}
@@ -636,10 +647,10 @@ export function StudentChatMain({
                   />
                 </div>
                 <div className="text-center space-y-3 mb-12">
-                  <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(22px, 5vw, 32px)", fontWeight: 800, color: "#1A202C", lineHeight: 1.2 }}>
-                    New session: {activeChat.title}
+                  <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(22px, 5vw, 32px)", fontWeight: 800, color: "#122D30", lineHeight: 1.2 }}>
+                    New session: <span className="citron-mark">{activeChat.title}</span>
                   </h1>
-                  <p style={{ fontSize: 16, color: "#4A5568", maxWidth: 400, margin: "0 auto", lineHeight: 1.6 }}>
+                  <p style={{ fontSize: 16, color: "#3E5558", maxWidth: 400, margin: "0 auto", lineHeight: 1.6 }}>
                     Ask anything about {activeChat.title}. {studentProfile?.ai_name || "Your Socratic guide"} is ready.
                   </p>
                 </div>
@@ -694,7 +705,7 @@ export function StudentChatMain({
 
         {/* Dedicated Bottom Input Area (Outside Scroll) */}
         {!isNewChat && !isHistoryLoading && (
-          <div style={{ flexShrink: 0, padding: "12px 24px 28px", background: "#FFFFFF", borderTop: "1px solid #E2E8F0" }}>
+          <div style={{ flexShrink: 0, padding: "12px 24px 28px", background: "#FFFFFF", borderTop: "1px solid #E3E8E2" }}>
             <div className="max-w-5xl mx-auto relative">
               <RateLimitPrompt
                 isVisible={isRateLimitHit}

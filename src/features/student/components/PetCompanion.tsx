@@ -543,7 +543,7 @@ export function PetCompanion({ suppressed = false }: PetCompanionProps) {
             justifyContent: "center",
             border: "2px solid #fff",
             background: "#fff",
-            color: "#4A5568",
+            color: "#3E5558",
             boxShadow: "0 2px 8px rgba(0,0,0,0.22)",
             cursor: "pointer",
             padding: 0,

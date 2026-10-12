@@ -9,6 +9,7 @@ import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 import { loadSubjectCatalog } from "@/features/subjects/subjectCatalog";
 import { ParentLoaderBackdrop } from "@/features/parent/components/loader/ParentLoader";
+import { GenEdLogo } from "@/components/shared/GenEdLogo";
 
 type Role = "student" | "parent" | "partner" | "admin" | "teacher";
 
@@ -153,10 +154,10 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
       );
     }
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#F7F6F1]">
+      <div className="h-screen w-full flex items-center justify-center bg-[#F6F7F2]">
         <div className="flex flex-col items-center gap-4">
-          <img src="/Logo.svg" alt="Logo" className="h-12 w-auto animate-pulse" />
-          <div className="w-8 h-8 border-4 border-[#2D5540] border-t-transparent rounded-full animate-spin" />
+          <GenEdLogo height={64} className="animate-pulse" priority />
+          <div className="w-8 h-8 border-4 border-[#075E63] border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );

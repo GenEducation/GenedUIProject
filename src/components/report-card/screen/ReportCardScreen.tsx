@@ -227,7 +227,7 @@ export function ReportCardScreen({ data, ui }: { data: ReportCardData; ui: Repor
 function CompactSubjectBar({ summary: s, onBack }: { summary: SubjectSummary; onBack: () => void }) {
   return (
     <div
-      className="sticky top-2 z-10 flex items-center gap-3 rounded-2xl border px-3 py-2.5 shadow-[0_10px_24px_-18px_rgba(19,41,61,0.5)] backdrop-blur-md"
+      className="sticky top-2 z-10 flex items-center gap-3 rounded-2xl border px-3 py-2.5 shadow-[0_10px_24px_-18px_rgba(18,45,48,0.5)] backdrop-blur-md"
       style={{ background: `linear-gradient(110deg, ${s.tone.wash[0]}F2, ${s.tone.wash[1]}F2)`, borderColor: s.tone.edge }}
     >
       <Button variant="tertiary" size="sm" pill iconOnly onClick={onBack} aria-label="Back to subject preview">
@@ -260,11 +260,11 @@ function BrandNew({ firstName, onStart }: { firstName: string; onStart?: () => v
         {firstName}&apos;s report fills in after the first learning session — every score and insight here comes from
         real session activity.
       </p>
-      <h3 className="mt-6 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]">How this report builds</h3>
+      <h3 className="citron-eyebrow mt-6 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]">How this report builds</h3>
       <ol className="mt-3 flex flex-col gap-2.5">
         {steps.map((s, i) => (
           <li key={i} className="flex items-center gap-3 rounded-2xl border border-[var(--rs-line)] bg-[var(--rs-surface-2)] px-4 py-3 text-[13.5px] text-[var(--rs-ink)]">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--rs-brand)] text-[12px] font-bold text-white">{i + 1}</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--rs-mint)] text-[12px] font-bold text-[var(--rs-brand)]">{i + 1}</span>
             <span>{s}</span>
           </li>
         ))}

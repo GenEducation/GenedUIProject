@@ -15,17 +15,17 @@ import type {
 // ─────────────────────────────────────────────────────────
 
 export const SUBJECT_ACCENTS = [
-  "#3B82F6",
-  "#10B981",
-  "#8B5CF6",
-  "#F59E0B",
-  "#EF4444",
+  "#075E63",
+  "#2F7A7E",
+  "#122D30",
+  "#5FA8A3",
+  "#8FA3A5",
 ];
 
 /** Mastery color for a 0–1 level. */
 export function masteryColor(level: number): string {
-  if (level >= 0.8) return "#059F6D";
-  if (level >= 0.6) return "#10B981";
+  if (level >= 0.8) return "#075E63";
+  if (level >= 0.6) return "#2F7A7E";
   if (level >= 0.4) return "#F59E0B";
   if (level >= 0.2) return "#F97316";
   return "#EF4444";
@@ -72,11 +72,11 @@ export function formatDate(isoStr: string): string {
 // Sparkline level mapping (session-by-session learning arc).
 export const SPARK_LEVELS = { beginning: 1, developing: 2, approaching: 3, proficient: 4, advanced: 5 } as const;
 export const SPARK_COLORS = {
-  beginning: "#94a3b8",
+  beginning: "#7F9295",
   developing: "#be123c",
   approaching: "#b45309",
-  proficient: "#1d4ed8",
-  advanced: "#047857",
+  proficient: "#2F7A7E",
+  advanced: "#B8D63F",
 } as const;
 export type SparkLevel = keyof typeof SPARK_LEVELS;
 

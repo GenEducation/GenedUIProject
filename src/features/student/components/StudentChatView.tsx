@@ -140,7 +140,7 @@ export function StudentChatView() {
       <div className="h-screen flex items-center justify-center font-sans" style={{ background: "var(--surface-page)" }}>
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 animate-spin" style={{ color: "var(--tutor)" }} />
-          <p style={{ fontSize: 12, fontWeight: 700, color: "#94A3B8", letterSpacing: "0.15em", textTransform: "uppercase" }}>Loading Chat...</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#7F9295", letterSpacing: "0.15em", textTransform: "uppercase" }}>Loading Chat...</p>
         </div>
       </div>
     );
@@ -151,7 +151,7 @@ export function StudentChatView() {
       <div className="h-screen flex items-center justify-center font-sans" style={{ background: "var(--surface-page)" }}>
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 animate-spin" style={{ color: "var(--tutor)" }} />
-          <p style={{ fontSize: 12, fontWeight: 700, color: "#94A3B8", letterSpacing: "0.15em", textTransform: "uppercase" }}>Initializing Portal...</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#7F9295", letterSpacing: "0.15em", textTransform: "uppercase" }}>Initializing Portal...</p>
         </div>
       </div>
     );

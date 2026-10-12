@@ -14,6 +14,7 @@ import { MetricCard } from "./MetricCard";
 import { ChapterMasteryView } from "./ChapterMasteryView";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { Select } from "@/components/ui/Select";
+import { GenEdLogo } from "@/components/shared/GenEdLogo";
 
 // Lazy-loaded: these are the recharts-backed views. Deferring them keeps
 // recharts out of the dashboard's initial bundle.
@@ -117,7 +118,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
     // Don't show Struggling to students who haven't started yet
     if (!hasData || (sessionCount === 0 && index === 0)) {
       status = "Not Started";
-      color = "#9CA3AF"; // Gray
+      color = "#8FA1A3"; // Gray
     } else if (!status) {
       if (index < 0.8) status = "Struggling";
       else if (index > 1.2) status = "Outperforming";
@@ -125,9 +126,9 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
     }
 
     // Assign color based on status (regardless of where status came from)
-    if (status === "Not Started") color = "#9CA3AF";
+    if (status === "Not Started") color = "#8FA1A3";
     else if (status === "Struggling") color = "#EF4444";
-    else if (status === "Outperforming") color = "#10B981";
+    else if (status === "Outperforming") color = "#075E63";
     else color = "#3B82F6";
 
     // Progress percentage (0-100)
@@ -144,7 +145,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
     const segments = [
       { color: "#EF4444", width: (redMax / (denominator || 1)) * 100 },
       { color: "#3B82F6", width: (blueMax / (denominator || 1)) * 100 },
-      { color: "#10B981", width: (greenMax / (denominator || 1)) * 100 }
+      { color: "#075E63", width: (greenMax / (denominator || 1)) * 100 }
     ];
 
     return { denominator, status, color, progress, segments };
@@ -160,7 +161,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
       description: "Based on content coverage and session performance across all active subjects.",
       showProgress: true,
       progress: (skillSummary?.overall_score || 0) * 100,
-      valueColor: "#10B981" // Always green for mastery progress
+      valueColor: "#075E63" // Always green for mastery progress
     },
     {
       label: "Skill Index",
@@ -189,28 +190,28 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
   ];
 
   return (
-    <div className="h-screen overflow-y-auto bg-[#FBFBFA] flex flex-col font-sans">
+    <div className="h-screen overflow-y-auto bg-[#FBFBF8] flex flex-col font-sans">
       {/* -- TOP NAVIGATION (Student Only) ----------------------------------─ */}
       {mode === "student" && (
-        <header className="px-8 py-6 flex items-center justify-between bg-white border-b border-[#1a3a2a]/5 sticky top-0 z-20">
-          <img src="/Logo.svg" alt="GenEd Logo" className="h-8 w-auto" />
+        <header className="px-8 py-6 flex items-center justify-between bg-white border-b border-[#122D30]/5 sticky top-0 z-20">
+          <GenEdLogo height={40} />
           
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-sm font-bold text-[#1a3a2a] leading-tight">
+              <p className="text-sm font-bold text-[#122D30] leading-tight">
                 {studentProfile?.username || "A. Sterling"}
               </p>
             </div>
             <button 
               onClick={() => window.location.href = '/student/profile'}
-              className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1a3a2a] to-[#059669] border-2 border-white shadow-md hover:scale-105 transition-transform" 
+              className="w-10 h-10 rounded-full bg-gradient-to-br from-[#075E63] to-[#075E63] border-2 border-white shadow-md hover:scale-105 transition-transform" 
             />
           </div>
         </header>
       )}
 
       {/* -- SUB-NAVIGATION CONTROLS ------------------------------------------ */}
-      <div className={`px-8 py-4 flex items-center gap-8 bg-transparent border-b border-[#1a3a2a]/5 sticky ${mode === 'student' ? 'top-[89px]' : 'top-0'} z-10 backdrop-blur-sm bg-white/30`}>
+      <div className={`px-8 py-4 flex items-center gap-8 bg-transparent border-b border-[#122D30]/5 sticky ${mode === 'student' ? 'top-[89px]' : 'top-0'} z-10 backdrop-blur-sm bg-white/30`}>
         {mode === "student" && (
           <>
             <button 
@@ -222,20 +223,20 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                 }
                 window.location.href = '/student';
               }}
-              className="flex items-center gap-2 text-[#1a3a2a]/60 hover:text-[#1a3a2a] transition-all group lg:min-w-[80px]"
+              className="flex items-center gap-2 text-[#122D30]/60 hover:text-[#122D30] transition-all group lg:min-w-[80px]"
               data-tutorial="analytics-back-button"
             >
               <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-              <span className="text-sm font-bold border-b-2 border-transparent group-hover:border-[#1a3a2a]/20">Back</span>
+              <span className="text-sm font-bold border-b-2 border-transparent group-hover:border-[#122D30]/20">Back</span>
             </button>
-            <div className="h-6 w-[1px] bg-[#1a3a2a]/10" />
+            <div className="h-6 w-[1px] bg-[#075E63]/10" />
             
             <div className="flex items-center gap-4 group cursor-pointer relative">
-              <div className="w-11 h-11 rounded-2xl bg-[#E5F2E9] flex items-center justify-center text-[#1a3a2a] shadow-sm group-hover:scale-105 transition-transform">
+              <div className="w-11 h-11 rounded-2xl bg-[#E8F2EF] flex items-center justify-center text-[#122D30] shadow-sm group-hover:scale-105 transition-transform">
                 <LayoutGrid size={22} />
               </div>
               <div className="relative">
-                <p className="text-[10px] font-black text-[#1a3a2a]/30 uppercase tracking-[0.25em] leading-none mb-1.5">Learning Subject</p>
+                <p className="text-[10px] font-black text-[#122D30]/30 uppercase tracking-[0.25em] leading-none mb-1.5">Learning Subject</p>
                 <div className="flex items-center gap-1 group">
                   <Select
                     variant="inline"
@@ -253,7 +254,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                       color: "var(--primary-ink)",
                     }}
                   />
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-[#1a3a2a]/30 group-hover:text-[#059669] transition-colors">
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-[#122D30]/30 group-hover:text-[#075E63] transition-colors">
                     <ChevronDown size={18} strokeWidth={3} />
                   </div>
                 </div>
@@ -268,12 +269,12 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
         {/* Empty state for students with no graded work yet */}
         {analyticsSubjects.length === 0 && !isAnalyticsLoading && (
           <div className="flex flex-col items-center justify-center py-24 space-y-6 text-center">
-            <div className="w-20 h-20 rounded-full bg-[#E5F2E9] flex items-center justify-center text-[#059669]">
+            <div className="w-20 h-20 rounded-full bg-[#E8F2EF] flex items-center justify-center text-[#075E63]">
               <BarChart2 size={36} />
             </div>
             <div className="space-y-2 max-w-sm">
-              <h3 className="text-xl font-bold text-[#1a3a2a]">No data yet</h3>
-              <p className="text-sm text-[#1a3a2a]/50 leading-relaxed">
+              <h3 className="text-xl font-bold text-[#122D30]">No data yet</h3>
+              <p className="text-sm text-[#122D30]/50 leading-relaxed">
                 {mode === "parent"
                   ? "This student hasn't finished their onboarding test yet. Once they do, progress data will appear here."
                   : "Finish your onboarding test to start tracking your progress here."}
@@ -282,7 +283,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
             {mode !== "parent" && (
               <a
                 href="/student"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[#059F6D] text-white rounded-2xl text-sm font-bold shadow-lg shadow-[#059F6D]/20 hover:bg-[#048055] transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#075E63] text-white rounded-2xl text-sm font-bold shadow-lg shadow-[#075E63]/20 hover:bg-[#048055] transition-colors"
               >
                 Go to my dashboard
               </a>
@@ -302,54 +303,54 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
             animate={{ height: showExplanation ? "auto" : 0, opacity: showExplanation ? 1 : 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-white/50 border border-[#1a3a2a]/5 rounded-3xl p-8 mt-6 space-y-6">
-              <div className="flex items-center gap-3 text-[#1a3a2a]">
-                <Info size={20} className="text-[#059669]" />
+            <div className="bg-white/50 border border-[#122D30]/5 rounded-3xl p-8 mt-6 space-y-6">
+              <div className="flex items-center gap-3 text-[#122D30]">
+                <Info size={20} className="text-[#075E63]" />
                 <h4 className="text-lg font-bold">Understanding Your Skill Index</h4>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
-                  <p className="text-sm font-bold text-[#1a3a2a]/60 uppercase tracking-wider">Index Ranges by Grade</p>
+                  <p className="text-sm font-bold text-[#122D30]/60 uppercase tracking-wider">Index Ranges by Grade</p>
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 bg-white rounded-xl border border-[#1a3a2a]/5">
-                      <span className="text-sm font-semibold text-[#1a3a2a]">Grades 0 - 4</span>
-                      <span className="text-sm font-black text-[#1a3a2a]">0.00 - 2.00</span>
+                    <div className="flex justify-between items-center p-3 bg-white rounded-xl border border-[#122D30]/5">
+                      <span className="text-sm font-semibold text-[#122D30]">Grades 0 - 4</span>
+                      <span className="text-sm font-black text-[#122D30]">0.00 - 2.00</span>
                     </div>
-                    <div className="flex justify-between items-center p-3 bg-white rounded-xl border border-[#1a3a2a]/5">
-                      <span className="text-sm font-semibold text-[#1a3a2a]">Grades 5 - 8</span>
-                      <span className="text-sm font-black text-[#1a3a2a]">0.00 - 1.43</span>
+                    <div className="flex justify-between items-center p-3 bg-white rounded-xl border border-[#122D30]/5">
+                      <span className="text-sm font-semibold text-[#122D30]">Grades 5 - 8</span>
+                      <span className="text-sm font-black text-[#122D30]">0.00 - 1.43</span>
                     </div>
-                    <div className="flex justify-between items-center p-3 bg-white rounded-xl border border-[#1a3a2a]/5">
-                      <span className="text-sm font-semibold text-[#1a3a2a]">Grades 9 - 10</span>
-                      <span className="text-sm font-black text-[#1a3a2a]">0.00 - 1.14</span>
+                    <div className="flex justify-between items-center p-3 bg-white rounded-xl border border-[#122D30]/5">
+                      <span className="text-sm font-semibold text-[#122D30]">Grades 9 - 10</span>
+                      <span className="text-sm font-black text-[#122D30]">0.00 - 1.14</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <p className="text-sm font-bold text-[#1a3a2a]/60 uppercase tracking-wider">Performance Indicators</p>
+                  <p className="text-sm font-bold text-[#122D30]/60 uppercase tracking-wider">Performance Indicators</p>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-[#EF4444]/10">
                       <div className="w-2 h-2 rounded-full bg-[#EF4444]" />
-                      <span className="text-sm font-semibold text-[#1a3a2a]">Below 0.80</span>
+                      <span className="text-sm font-semibold text-[#122D30]">Below 0.80</span>
                       <span className="ml-auto text-xs font-bold text-[#EF4444] uppercase">Struggling</span>
                     </div>
                     <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-[#3B82F6]/10">
                       <div className="w-2 h-2 rounded-full bg-[#3B82F6]" />
-                      <span className="text-sm font-semibold text-[#1a3a2a]">0.80 - 1.20</span>
+                      <span className="text-sm font-semibold text-[#122D30]">0.80 - 1.20</span>
                       <span className="ml-auto text-xs font-bold text-[#3B82F6] uppercase">On Track</span>
                     </div>
-                    <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-[#10B981]/10">
-                      <div className="w-2 h-2 rounded-full bg-[#10B981]" />
-                      <span className="text-sm font-semibold text-[#1a3a2a]">Above 1.20</span>
-                      <span className="ml-auto text-xs font-bold text-[#10B981] uppercase">Outperforming</span>
+                    <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-[#075E63]/10">
+                      <div className="w-2 h-2 rounded-full bg-[#075E63]" />
+                      <span className="text-sm font-semibold text-[#122D30]">Above 1.20</span>
+                      <span className="ml-auto text-xs font-bold text-[#075E63] uppercase">Outperforming</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <p className="text-xs text-[#1a3a2a]/50 italic">
+              <p className="text-xs text-[#122D30]/50 italic">
                 * The Skill Index is a dynamic metric that adapts to your grade level, providing a fair assessment of your academic standing relative to standardized benchmarks.
               </p>
             </div>
@@ -358,7 +359,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
           <div className="flex justify-center">
             <button 
               onClick={() => setShowExplanation(!showExplanation)}
-              className="flex items-center gap-2 text-xs font-bold text-[#1a3a2a]/40 hover:text-[#1a3a2a] transition-colors"
+              className="flex items-center gap-2 text-xs font-bold text-[#122D30]/40 hover:text-[#122D30] transition-colors"
             >
               <Info size={14} />
               {showExplanation ? "Hide Skill Index Explanation" : "How is Skill Index calculated?"}
@@ -370,18 +371,18 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
         <section className="space-y-8" style={{ display: analyticsSubjects.length === 0 && !isAnalyticsLoading ? "none" : undefined }}>
           <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-bold text-[#1a3a2a]">
+              <h3 className="text-2xl font-bold text-[#122D30]">
                 {TAB_HEADINGS[activeTab]}
               </h3>
               
-              <div className="flex gap-2 p-1.5 bg-[#F4F3EE] rounded-2xl">
+              <div className="flex gap-2 p-1.5 bg-[#F6F7F2] rounded-2xl">
                 <button 
                   data-tutorial="chapter-mastery-tab"
                   onClick={() => setActiveTab("chapter")}
                   className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
                     activeTab === "chapter" 
-                      ? "bg-white text-[#1a3a2a] shadow-sm" 
-                      : "text-[#1a3a2a]/70 hover:text-[#1a3a2a]"
+                      ? "bg-white text-[#122D30] shadow-sm" 
+                      : "text-[#122D30]/70 hover:text-[#122D30]"
                   }`}
                 >
                   Chapter Mastery
@@ -391,8 +392,8 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                   onClick={() => setActiveTab("skill")}
                   className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
                     activeTab === "skill" 
-                      ? "bg-white text-[#1a3a2a] shadow-sm" 
-                      : "text-[#1a3a2a]/70 hover:text-[#1a3a2a]"
+                      ? "bg-white text-[#122D30] shadow-sm" 
+                      : "text-[#122D30]/70 hover:text-[#122D30]"
                   }`}
                 >
                   Skill Mastery
@@ -402,8 +403,8 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                   onClick={() => setActiveTab("progression")}
                   className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
                     activeTab === "progression"
-                      ? "bg-white text-[#1a3a2a] shadow-sm"
-                      : "text-[#1a3a2a]/70 hover:text-[#1a3a2a]"
+                      ? "bg-white text-[#122D30] shadow-sm"
+                      : "text-[#122D30]/70 hover:text-[#122D30]"
                   }`}
                 >
                   Skill Progression

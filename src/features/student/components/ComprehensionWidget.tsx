@@ -18,6 +18,23 @@ interface ComprehensionWidgetProps {
   slowAvailable?: boolean;
 }
 
+// A small citron coin with an ink tick — the "you got it" mark. Citron as a
+// fill under ink, never as text on the light card.
+function CorrectTick() {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        width: 16, height: 16, borderRadius: 999, flexShrink: 0,
+        background: "var(--accent)", border: "1px solid var(--accent-deep)",
+        color: "var(--accent-ink)", display: "inline-flex", alignItems: "center", justifyContent: "center",
+      }}
+    >
+      <Check size={10} style={{ strokeWidth: 3.5 }} />
+    </span>
+  );
+}
+
 // ── Difficult Word Chip ───────────────────────────────────────────────────────
 
 function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailable, disabled }: ComprehensionWidgetProps) {
@@ -44,12 +61,13 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailab
       style={{
         padding: "12px 18px",
         borderRadius: 18,
-        background: "#EDE9FE",
-        border: "1px solid #C4B5FD40",
+        background: "#DCEBE7",
+        border: "1px solid rgba(7,94,99,0.14)",
       }}
     >
       <div className="flex items-center gap-6 justify-between">
-        <span style={{ fontWeight: 800, fontSize: 18, color: "var(--tutor)", lineHeight: 1.3, fontFamily: "var(--font-body)" }}>
+        {/* The word itself, in bold ink on the soft-surface card. */}
+        <span style={{ fontWeight: 800, fontSize: 18, color: "var(--ink)", lineHeight: 1.3, fontFamily: "var(--font-body)" }}>
           {word}
         </span>
 
@@ -61,8 +79,8 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailab
               title="Slower pronunciation"
               style={{
                 fontSize: 10, fontWeight: 800, padding: "3px 10px",
-                borderRadius: 20, border: "1px solid #5B4DC730",
-                background: isPlaying && isSlow ? "#5B4DC720" : "#FFFFFF",
+                borderRadius: 20, border: "1px solid #075E6330",
+                background: isPlaying && isSlow ? "#075E6320" : "#FFFFFF",
                 color: "var(--tutor)", cursor: "pointer", transition: "all 0.15s",
               }}
             >
@@ -93,7 +111,7 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailab
             </span>
           )}
           {phonetic && (
-            <span style={{ fontSize: 12, color: "#94A3B8", fontStyle: "italic" }}>{phonetic}</span>
+            <span style={{ fontSize: 12, color: "#7F9295", fontStyle: "italic" }}>{phonetic}</span>
           )}
         </div>
       )}
@@ -135,13 +153,15 @@ function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: Com
     const isSelected = effectiveSelected === choice.id;
     if (isSelected && effectiveSubmitted && result !== undefined) {
       return isCorrect
-        ? { background: "#00B894", border: "1px solid #00B894", color: "#FFFFFF", boxShadow: "0 2px 8px rgba(0,184,148,0.25)" }
-        : { background: "#E53E3E", border: "1px solid #E53E3E", color: "#FFFFFF", boxShadow: "0 2px 8px rgba(229,62,62,0.2)" };
+        // Correct = citron (earned), ink text on it. Wrong = a gentle danger
+        // wash rather than a solid red slab — kinder for a child, and clearer.
+        ? { background: "var(--accent)", border: "1px solid var(--accent-deep)", color: "var(--accent-ink)", boxShadow: "0 4px 14px -4px rgba(184,214,63,0.7)" }
+        : { background: "var(--danger-bg)", border: "1px solid var(--danger)", color: "var(--danger-ink)" };
     }
     if (isSelected) {
-      return { background: "var(--tutor)", border: "1px solid var(--tutor)", color: "#FFFFFF", boxShadow: "0 2px 8px rgba(91,77,199,0.2)" };
+      return { background: "var(--tutor)", border: "1px solid var(--tutor)", color: "#FFFFFF", boxShadow: "0 2px 8px rgba(7,94,99,0.2)" };
     }
-    return { background: "#F8F9FA", border: "1px solid #E2E8F0", color: "#1A202C" };
+    return { background: "#FFFFFF", border: "1px solid #E3E8E2", color: "#122D30" };
   };
 
   return (
@@ -150,11 +170,11 @@ function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: Com
       animate={{ opacity: 1, y: 0 }}
       style={{
         marginTop: 12, padding: 16, borderRadius: 20,
-        background: "#F0F9FF", border: "1px solid #5DADE225",
+        background: "#EAF2EF", border: "1px solid rgba(7,94,99,0.12)",
       }}
     >
       {question && (
-        <p style={{ fontSize: 14, fontWeight: 700, color: "#1A202C", lineHeight: 1.5, marginBottom: 12, fontFamily: "var(--font-body)" }}>
+        <p style={{ fontSize: 14, fontWeight: 700, color: "#122D30", lineHeight: 1.5, marginBottom: 12, fontFamily: "var(--font-body)" }}>
           {question}
         </p>
       )}
@@ -186,11 +206,11 @@ function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: Com
             onClick={handleRetry}
             style={{
               display: "flex", alignItems: "center", gap: 5, marginTop: 10,
-              fontSize: 12, fontWeight: 700, color: "#94A3B8", background: "none",
+              fontSize: 12, fontWeight: 700, color: "#7F9295", background: "none",
               border: "none", cursor: "pointer", transition: "color 0.15s",
             }}
             onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = "var(--tutor)"}
-            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = "#94A3B8"}
+            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = "#7F9295"}
           >
             <RefreshCw size={11} />
             Want to try once more?
@@ -203,11 +223,11 @@ function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: Com
             style={{
               display: "flex", alignItems: "center", gap: 5, marginTop: 10,
               fontSize: 12, fontWeight: 700,
-              color: isCorrect ? "#00B894" : "#E53E3E",
+              color: isCorrect ? "var(--tutor)" : "var(--danger-ink)",
             }}
           >
             {isCorrect ? (
-              <><Check size={12} style={{ strokeWidth: 3 }} /> Brilliant! That is correct. Let&apos;s continue!</>
+              <><CorrectTick /> Brilliant! That is correct. Let&apos;s continue!</>
             ) : (
               <>Not quite, but good effort — let&apos;s keep going!</>
             )}
@@ -240,15 +260,15 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
 
   const inputStyle = effectiveSubmitted && result !== undefined
     ? isCorrect
-      ? { background: "#F0FFF8", color: "#1A202C", border: "1px solid #00B89440" }
-      : { background: "#FFF5F5", color: "#1A202C", border: "1px solid #E53E3E40" }
-    : { background: "#F8F9FA", color: "#1A202C", border: "1px solid #E2E8F0" };
+      ? { background: "rgba(217,242,121,0.3)", color: "#122D30", border: "1px solid var(--accent-deep)" }
+      : { background: "var(--danger-bg)", color: "#122D30", border: "1px solid rgba(225,96,75,0.35)" }
+    : { background: "#FFFFFF", color: "#122D30", border: "1px solid #E3E8E2" };
 
   const btnStyle = effectiveSubmitted && result !== undefined
     ? isCorrect
-      ? { background: "#00B894", color: "#FFFFFF" }
-      : { background: "#E53E3E", color: "#FFFFFF" }
-    : { background: "var(--tutor)", color: "#FFFFFF" };
+      ? { background: "var(--accent)", color: "var(--accent-ink)" }
+      : { background: "var(--danger)", color: "#FFFFFF" }
+    : { background: "var(--primary)", color: "#FFFFFF" };
 
   return (
     <motion.div
@@ -256,11 +276,11 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
       animate={{ opacity: 1, y: 0 }}
       style={{
         marginTop: 12, padding: 16, borderRadius: 20,
-        background: "#ECFDF5", border: "1px solid #00B89420",
+        background: "#EAF2EF", border: "1px solid rgba(7,94,99,0.12)",
       }}
     >
       {question && (
-        <p style={{ fontSize: 14, fontWeight: 700, color: "#1A202C", lineHeight: 1.5, marginBottom: 12, fontFamily: "var(--font-body)" }}>
+        <p style={{ fontSize: 14, fontWeight: 700, color: "#122D30", lineHeight: 1.5, marginBottom: 12, fontFamily: "var(--font-body)" }}>
           {question}
         </p>
       )}
@@ -280,8 +300,8 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
           }}
           onFocus={e => {
             if (!effectiveSubmitted) {
-              (e.target as HTMLInputElement).style.borderColor = "#5B4DC750";
-              (e.target as HTMLInputElement).style.boxShadow = "0 0 0 3px rgba(91,77,199,0.08)";
+              (e.target as HTMLInputElement).style.borderColor = "#075E6350";
+              (e.target as HTMLInputElement).style.boxShadow = "0 0 0 3px rgba(7,94,99,0.08)";
             }
           }}
           onBlur={e => {
@@ -313,11 +333,11 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
           style={{
             display: "flex", alignItems: "center", gap: 5, marginTop: 10,
             fontSize: 12, fontWeight: 700,
-            color: isCorrect ? "#00B894" : "#E53E3E",
+            color: isCorrect ? "var(--tutor)" : "var(--danger-ink)",
           }}
         >
           {isCorrect ? (
-            <><Check size={12} style={{ strokeWidth: 3 }} /> Excellent! Correct answer.</>
+            <><CorrectTick /> Excellent! Correct answer.</>
           ) : (
             <>Good try! Let&apos;s keep practicing together.</>
           )}

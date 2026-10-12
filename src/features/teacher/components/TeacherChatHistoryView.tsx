@@ -52,7 +52,7 @@ export function TeacherChatHistoryView() {
                 >
                   {!fromStudent && (
                     <div className="mt-0.5 h-10 w-10 flex-shrink-0 overflow-hidden rounded-full border border-border bg-white">
-                      <Image src="/Favicon1.jpg" alt="AI Tutor" width={40} height={40} className="h-full w-full object-cover" />
+                      <Image src="/brand/gened-mark.svg" alt="AI Tutor" width={40} height={40} className="h-full w-full object-cover" />
                     </div>
                   )}
                   {fromStudent && (
@@ -66,10 +66,10 @@ export function TeacherChatHistoryView() {
                       borderRadius: "1.75rem",
                       borderTopRightRadius: fromStudent ? 6 : undefined,
                       borderTopLeftRadius: !fromStudent ? 6 : undefined,
-                      background: fromStudent ? "#059F6D" : "#FFFFFF",
-                      color: fromStudent ? "#FFFFFF" : "#042E5C",
-                      border: fromStudent ? "none" : "1px solid #e6ecf2",
-                      boxShadow: fromStudent ? "0 2px 10px rgba(5,159,109,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
+                      background: fromStudent ? "#075E63" : "#FFFFFF",
+                      color: fromStudent ? "#FFFFFF" : "#122D30",
+                      border: fromStudent ? "none" : "1px solid #E3E8E2",
+                      boxShadow: fromStudent ? "0 2px 10px rgba(7,94,99,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
                     }}
                   >
                     {fromStudent ? (

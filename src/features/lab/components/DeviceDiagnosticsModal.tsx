@@ -17,15 +17,15 @@ import { Button } from "@/components/ui/Button";
 import { LEGACY_FOREST_BUTTON } from "@/components/ui/legacyBrandOverride";
 
 const PILL_TONE: Record<HealthComponentStatus, string> = {
-  ok: "bg-[#E5F2E9] text-[#1A3D2C]",
+  ok: "bg-[#E8F2EF] text-[#122D30]",
   warn: "bg-warning-bg text-warning-ink",
   fail: "bg-danger-bg text-danger-ink",
-  unknown: "bg-[#1A3D2C]/5 text-[#1A3D2C]/45",
+  unknown: "bg-[#075E63]/5 text-[#122D30]/45",
 };
 
 const LINK_TONE: Record<LabDeviceHealth, { label: string; className: string }> = {
-  ONLINE: { label: "Online", className: "bg-[#E5F2E9] text-[#1A3D2C]" },
-  OFFLINE: { label: "Offline", className: "bg-[#F4F3EE] text-[#1A3D2C]/50" },
+  ONLINE: { label: "Online", className: "bg-[#E8F2EF] text-[#122D30]" },
+  OFFLINE: { label: "Offline", className: "bg-[#F6F7F2] text-[#122D30]/50" },
   NEEDS_ATTENTION: { label: "Needs attention", className: "bg-danger-bg text-danger-ink" },
 };
 
@@ -35,15 +35,15 @@ const MAX_ARRAY_ITEMS = 5;
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/40">{children}</p>
+    <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">{children}</p>
   );
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-1">
-      <span className="shrink-0 text-[11px] text-[#1A3D2C]/45">{label}</span>
-      <span className="min-w-0 break-words text-right text-[12px] font-semibold text-[#1A3D2C]">
+      <span className="shrink-0 text-[11px] text-[#122D30]/45">{label}</span>
+      <span className="min-w-0 break-words text-right text-[12px] font-semibold text-[#122D30]">
         {children}
       </span>
     </div>
@@ -54,7 +54,7 @@ function BoolChip({ on }: { on: boolean }) {
   return (
     <span
       className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${
-        on ? "bg-[#E5F2E9] text-[#1A3D2C]" : "bg-[#1A3D2C]/5 text-[#1A3D2C]/40"
+        on ? "bg-[#E8F2EF] text-[#122D30]" : "bg-[#075E63]/5 text-[#122D30]/40"
       }`}
     >
       {on ? "yes" : "no"}
@@ -64,7 +64,7 @@ function BoolChip({ on }: { on: boolean }) {
 
 /** Renders one scalar metric value. Returns `null` for anything non-scalar. */
 function ScalarValue({ value }: { value: unknown }) {
-  if (value === null || value === undefined) return <span className="text-[#1A3D2C]/25">—</span>;
+  if (value === null || value === undefined) return <span className="text-[#122D30]/25">—</span>;
   if (typeof value === "boolean") return <BoolChip on={value} />;
   if (typeof value === "number") {
     return <span className="tabular-nums">{Number.isInteger(value) ? value : value.toFixed(1)}</span>;
@@ -97,7 +97,7 @@ function MetricGrid({ metrics, depth = 0 }: { metrics: Record<string, unknown>; 
             <Row key={key} label={humanizeKey(key)}>
               {Array.isArray(value) ? (
                 value.length === 0 ? (
-                  <span className="text-[#1A3D2C]/25">none</span>
+                  <span className="text-[#122D30]/25">none</span>
                 ) : (
                   <span>
                     {value.slice(0, MAX_ARRAY_ITEMS).map(String).join(", ")}
@@ -114,19 +114,19 @@ function MetricGrid({ metrics, depth = 0 }: { metrics: Record<string, unknown>; 
 
       {nested.map(([key, value]) =>
         depth + 1 < MAX_METRIC_DEPTH ? (
-          <div key={key} className="mt-2 border-l-2 border-[#1A3D2C]/[0.07] pl-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#1A3D2C]/35">
+          <div key={key} className="mt-2 border-l-2 border-[#122D30]/[0.07] pl-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#122D30]/35">
               {humanizeKey(key)}
             </p>
             <MetricGrid metrics={value as Record<string, unknown>} depth={depth + 1} />
           </div>
         ) : (
           // Depth cap: show the payload verbatim rather than dropping it.
-          <div key={key} className="mt-2 border-l-2 border-[#1A3D2C]/[0.07] pl-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#1A3D2C]/35">
+          <div key={key} className="mt-2 border-l-2 border-[#122D30]/[0.07] pl-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#122D30]/35">
               {humanizeKey(key)}
             </p>
-            <pre className="mt-1 overflow-x-auto rounded-lg bg-[#F4F3EE] p-2 font-mono text-[10px] text-[#1A3D2C]/70">
+            <pre className="mt-1 overflow-x-auto rounded-lg bg-[#F6F7F2] p-2 font-mono text-[10px] text-[#122D30]/70">
               {JSON.stringify(value)}
             </pre>
           </div>
@@ -209,15 +209,15 @@ export function DeviceDiagnosticsModal({ device, onClose }: DeviceDiagnosticsMod
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="fixed left-1/2 top-1/2 z-[101] flex max-h-[85vh] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_60px_rgba(4,46,92,.22)] focus:outline-none"
+            className="fixed left-1/2 top-1/2 z-[101] flex max-h-[85vh] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_60px_rgba(18,45,48,.22)] focus:outline-none"
           >
             {/* Header */}
-            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#1A3D2C]/[0.07] px-7 py-5">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#122D30]/[0.07] px-7 py-5">
               <div className="min-w-0">
-                <h3 className="font-serif text-lg font-semibold text-[#1A3D2C]">
+                <h3 className="font-serif text-lg font-semibold text-[#122D30]">
                   {device.device_label}
                 </h3>
-                <p className="mt-0.5 truncate font-mono text-[11px] text-[#1A3D2C]/40">
+                <p className="mt-0.5 truncate font-mono text-[11px] text-[#122D30]/40">
                   {displayHardwareId(device.hardware_id)}
                 </p>
               </div>
@@ -257,21 +257,21 @@ export function DeviceDiagnosticsModal({ device, onClose }: DeviceDiagnosticsMod
                   )}
                   {addresses?.changed && addresses.atSelfTest && (
                     <Row label="Address (at self-test)">
-                      <span className="font-mono text-[#1A3D2C]/50">{addresses.atSelfTest}</span>
+                      <span className="font-mono text-[#122D30]/50">{addresses.atSelfTest}</span>
                     </Row>
                   )}
                 </div>
                 {addresses?.changed && (
-                  <p className="mt-1.5 text-[11px] text-[#1A3D2C]/45">
+                  <p className="mt-1.5 text-[11px] text-[#122D30]/45">
                     The device moved to a different address since its last self-test.
                   </p>
                 )}
               </section>
 
               {!summary.hasReport ? (
-                <div className="rounded-xl bg-[#F4F3EE] px-4 py-6 text-center">
-                  <p className="text-sm font-semibold text-[#1A3D2C]/60">No self-test reported yet</p>
-                  <p className="mt-1 text-[12px] text-[#1A3D2C]/40">
+                <div className="rounded-xl bg-[#F6F7F2] px-4 py-6 text-center">
+                  <p className="text-sm font-semibold text-[#122D30]/60">No self-test reported yet</p>
+                  <p className="mt-1 text-[12px] text-[#122D30]/40">
                     {device.revoked_at
                       ? "This device was revoked; its diagnostics are no longer collected."
                       : "Diagnostics appear once the device runs its first health check."}
@@ -283,19 +283,19 @@ export function DeviceDiagnosticsModal({ device, onClose }: DeviceDiagnosticsMod
                   <section
                     className={`rounded-xl border p-4 ${
                       summary.isStale
-                        ? "border-[#1A3D2C]/[0.07] bg-[#F4F3EE]"
-                        : "border-[#1A3D2C]/[0.07] bg-white"
+                        ? "border-[#122D30]/[0.07] bg-[#F6F7F2]"
+                        : "border-[#122D30]/[0.07] bg-white"
                     }`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <SectionLabel>{summary.isStale ? "Last known self-test" : "Self-test"}</SectionLabel>
-                      <span className="text-[11px] font-semibold text-[#1A3D2C]/45">
+                      <span className="text-[11px] font-semibold text-[#122D30]/45">
                         <RelativeTime value={checkedAt} prefix="Checked " />
                       </span>
                     </div>
 
                     {summary.isStale && summary.isLinkDown && (
-                      <p className="mt-2 text-[11px] leading-relaxed text-[#1A3D2C]/50">
+                      <p className="mt-2 text-[11px] leading-relaxed text-[#122D30]/50">
                         The device is not reachable right now. Everything below describes its state at
                         the time of the last check, not the present.
                       </p>
@@ -366,13 +366,13 @@ export function DeviceDiagnosticsModal({ device, onClose }: DeviceDiagnosticsMod
                         return (
                           <div
                             key={component.key}
-                            className="rounded-xl border border-[#1A3D2C]/[0.07] p-3.5"
+                            className="rounded-xl border border-[#122D30]/[0.07] p-3.5"
                           >
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F4F3EE]">
-                                <Icon size={14} className="text-[#1A3D2C]/70" />
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F6F7F2]">
+                                <Icon size={14} className="text-[#122D30]/70" />
                               </span>
-                              <p className="text-[13px] font-bold text-[#1A3D2C]">{component.label}</p>
+                              <p className="text-[13px] font-bold text-[#122D30]">{component.label}</p>
                               <span
                                 className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${PILL_TONE[component.status]}`}
                               >
@@ -380,7 +380,7 @@ export function DeviceDiagnosticsModal({ device, onClose }: DeviceDiagnosticsMod
                               </span>
                             </div>
                             {component.detail && (
-                              <p className="mt-2 text-[11.5px] leading-relaxed text-[#1A3D2C]/50">
+                              <p className="mt-2 text-[11.5px] leading-relaxed text-[#122D30]/50">
                                 {component.detail}
                               </p>
                             )}
@@ -394,10 +394,10 @@ export function DeviceDiagnosticsModal({ device, onClose }: DeviceDiagnosticsMod
                   </section>
 
                   <details className="group">
-                    <summary className="cursor-pointer list-none text-[11px] font-bold uppercase tracking-widest text-[#1A3D2C]/35 hover:text-[#1A3D2C]/60">
+                    <summary className="cursor-pointer list-none text-[11px] font-bold uppercase tracking-widest text-[#122D30]/35 hover:text-[#122D30]/60">
                       Raw report
                     </summary>
-                    <pre className="mt-2 max-h-64 overflow-auto rounded-xl bg-[#F4F3EE] p-3 font-mono text-[10.5px] leading-relaxed text-[#1A3D2C]/70">
+                    <pre className="mt-2 max-h-64 overflow-auto rounded-xl bg-[#F6F7F2] p-3 font-mono text-[10.5px] leading-relaxed text-[#122D30]/70">
                       {JSON.stringify(report, null, 2)}
                     </pre>
                   </details>
@@ -406,8 +406,8 @@ export function DeviceDiagnosticsModal({ device, onClose }: DeviceDiagnosticsMod
             </div>
 
             {/* Footer */}
-            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[#1A3D2C]/[0.07] px-7 py-4">
-              <p className="text-[11px] text-[#1A3D2C]/35">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[#122D30]/[0.07] px-7 py-4">
+              <p className="text-[11px] text-[#122D30]/35">
                 {summary.hasReport ? "Reported by the device itself." : "Awaiting first report."}
               </p>
               <div className="flex items-center gap-2">

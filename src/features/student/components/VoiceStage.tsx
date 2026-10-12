@@ -25,6 +25,11 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd,
   const pulseScale =
     phase === "speaking" ? [1, 1.08, 1] : phase === "listening" ? [1, 1.05, 1] : [1, 1.02, 1];
 
+  // Citron is the voice's "live" colour: it lights the ring and glow while the
+  // mic is hot or Nia is speaking, and stays out of the way when idle.
+  const isMutedActive = isMuted && voiceSessionStatus === "active";
+  const isLive = !isMutedActive && (pttHeld || phase !== "idle");
+
   const isPtt = !!onPressStart;
   const isTappable = !!onTap || isPtt;
 
@@ -32,9 +37,15 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd,
     <div className="flex flex-col items-center justify-center w-full">
       {agentName && (
         <span
-          className="text-[12px] font-extrabold tracking-wide mb-3"
+          className="inline-flex items-center gap-1.5 text-[12px] font-extrabold tracking-wide mb-3"
           style={{ color: "var(--tutor)", fontFamily: "var(--font-display)" }}
         >
+          {/* Presence spark — the same teal dot that marks the tutor in chat. */}
+          <span
+            aria-hidden="true"
+            className={isLive && !reduceMotion ? "animate-pulse" : undefined}
+            style={{ width: 7, height: 7, borderRadius: 999, background: "var(--tutor)" }}
+          />
           {agentName}
         </span>
       )}
@@ -73,10 +84,12 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd,
           className="absolute inset-0 rounded-full"
           style={{
             background: pttHeld
-              ? "radial-gradient(circle at 30% 30%, rgba(52,199,89,0.35), rgba(52,199,89,0.12) 60%, transparent 75%)"
-              : isMuted && voiceSessionStatus === "active"
+              ? "radial-gradient(circle at 30% 30%, rgba(217,242,121,0.7), rgba(184,214,63,0.28) 60%, transparent 75%)"
+              : isMutedActive
                 ? "radial-gradient(circle at 30% 30%, rgba(232,99,90,0.25), rgba(232,99,90,0.08) 60%, transparent 75%)"
-                : "radial-gradient(circle at 30% 30%, rgba(91,77,199,0.35), rgba(74,144,217,0.15) 60%, transparent 75%)",
+                : isLive
+                  ? "radial-gradient(circle at 30% 30%, rgba(217,242,121,0.55), rgba(7,94,99,0.18) 60%, transparent 75%)"
+                  : "radial-gradient(circle at 30% 30%, rgba(7,94,99,0.35), rgba(7,94,99,0.10) 60%, transparent 75%)",
             filter: "blur(20px)",
           }}
           animate={
@@ -86,6 +99,18 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd,
           }
           transition={{ duration: pttHeld ? 0.8 : pulseDuration * 1.3, repeat: Infinity, ease: "easeInOut" }}
         />
+        {/* Live ring — a thin citron halo that breathes while the mic is hot or
+            Nia is speaking. Purely decorative; pointer events pass through. */}
+        {isLive && (
+          <motion.div
+            aria-hidden="true"
+            className="absolute inset-2 rounded-full pointer-events-none"
+            style={{ border: "2px solid var(--accent)", boxShadow: "0 0 18px rgba(217,242,121,0.55)" }}
+            initial={{ opacity: 0 }}
+            animate={reduceMotion ? { opacity: 0.9 } : { opacity: [0.45, 1, 0.45] }}
+            transition={{ duration: pulseDuration, repeat: Infinity, ease: "easeInOut" }}
+          />
+        )}
         {/* Orb */}
         <motion.div
           className="absolute inset-4 rounded-full overflow-hidden"
@@ -93,13 +118,13 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd,
           transition={{ duration: 0.15, ease: "easeOut" }}
           style={{
             background: pttHeld
-              ? "conic-gradient(from 220deg at 50% 50%, #34C759, #30d158, #4cd964, #34C759)"
-              : isMuted && voiceSessionStatus === "active"
+              ? "conic-gradient(from 220deg at 50% 50%, var(--tutor), var(--accent-deep), var(--tutor-soft), var(--tutor))"
+              : isMutedActive
                 ? "conic-gradient(from 220deg at 50% 50%, #E8635A, #c0392b, #e57373, #E8635A)"
                 : "conic-gradient(from 220deg at 50% 50%, var(--tutor), var(--tutor-soft), var(--tutor-light), var(--tutor))",
             boxShadow: pttHeld
-              ? "inset -20px -30px 60px rgba(0,0,0,0.25), inset 12px 16px 40px rgba(255,255,255,0.25), 0 12px 48px rgba(52,199,89,0.5)"
-              : "inset -20px -30px 60px rgba(0,0,0,0.25), inset 12px 16px 40px rgba(255,255,255,0.25), 0 12px 40px rgba(91,77,199,0.35)",
+              ? "inset -20px -30px 60px rgba(18,45,48,0.3), inset 12px 16px 40px rgba(255,255,255,0.25), 0 12px 48px rgba(184,214,63,0.6)"
+              : "inset -20px -30px 60px rgba(18,45,48,0.3), inset 12px 16px 40px rgba(255,255,255,0.25), 0 12px 40px rgba(7,94,99,0.35)",
           }}
         >
           {/* Animated overlay sheen */}
@@ -128,12 +153,13 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd,
             style={{
               padding: "10px 28px",
               borderRadius: 999,
-              background: "#059F6D",
+              background: "var(--primary)",
               color: "#fff",
               border: "none",
               cursor: "pointer",
               letterSpacing: "0.12em",
-              boxShadow: "0 4px 20px rgba(5,159,109,0.35)",
+              // A soft teal halo hints the orb above will light up once started.
+              boxShadow: "0 0 0 3px rgba(95,168,163,0.45), 0 4px 20px rgba(7,94,99,0.35)",
             }}
           >
             Tap to start

@@ -78,7 +78,7 @@ export const StudentLoader: React.FC<StudentLoaderProps> = ({ isVisible, onCompl
           <div className="w-full max-w-sm px-4 flex flex-col items-center">
             <div className="w-full h-[4px] bg-gray-100 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-[#059F6D]"
+                className="h-full bg-[#075E63]"
                 initial={{ width: "0%" }}
                 animate={{ width: `${progress}%` }}
                 transition={{ ease: "linear", duration: 0.05 }}
@@ -94,7 +94,7 @@ export const StudentLoader: React.FC<StudentLoaderProps> = ({ isVisible, onCompl
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
-                  className="text-[#042e5c]/40 font-medium text-sm tracking-wide"
+                  className="text-[#122D30]/40 font-medium text-sm tracking-wide"
                 >
                   {isDone ? "READY!" : MESSAGES[messageIndex].toUpperCase()}
                 </motion.p>

@@ -24,7 +24,7 @@ const num = (v: unknown): number => (typeof v === "number" ? v : Number(v ?? 0))
  * Light-theme recharts wrappers.
  *
  * The admin console's existing wrappers (`../DeviceCharts.tsx`) are hardcoded
- * against the dark shell — white-alpha axes, a `#13283a` tooltip. Only the
+ * against the dark shell — white-alpha axes, a `#122D30` tooltip. Only the
  * recharts API carries over, so these are siblings rather than a shared
  * abstraction; making DeviceCharts theme-aware would ripple through DevicesView
  * and its tests for no benefit here.

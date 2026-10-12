@@ -25,7 +25,7 @@ const AXIS_TICK = { fill: "rgba(255,255,255,0.4)", fontSize: 11 };
 
 const TOOLTIP_STYLE = {
   contentStyle: {
-    background: "#13283a",
+    background: "#122D30",
     border: "1px solid rgba(255,255,255,0.1)",
     borderRadius: 10,
     fontSize: 12,
@@ -37,7 +37,7 @@ const TOOLTIP_STYLE = {
 } as const;
 
 export const CHART_COLORS = {
-  good: "#059F6D",
+  good: "#075E63",
   warn: "#FBBF24",
   bad: "#FB7185",
   muted: "rgba(255,255,255,0.22)",
