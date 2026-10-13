@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
 import { partnerStudentsService } from "../services/partnerStudentsService";
-import type { RegisterSourceInput, SourceState, SourceView } from "../types/sources";
+import type { ExcludedPages, ExcludedPagesDecision, RegisterSourceInput, SourceState, SourceView } from "../types/sources";
 
 export interface Student {
   id: string;
@@ -35,6 +35,8 @@ export interface Subject {
   has_report: boolean;
   /** Reconciliation questions the last run is waiting on (`sourcesService.questions`). */
   questions: number;
+  /** Pages the server left out at upload as the solutions appendix; the partner confirms or includes them. */
+  excluded_pages: ExcludedPages | null;
   created_at: string;
 }
 
@@ -53,6 +55,7 @@ export function toSubject(source: SourceView): Subject {
     detail: source.detail,
     has_report: source.has_report,
     questions: source.questions,
+    excluded_pages: source.excluded_pages ?? null,
     created_at: source.created_at,
   };
 }
@@ -111,6 +114,8 @@ interface PartnerState {
   uploadSource: (input: RegisterSourceInput) => Promise<void>;
   startIngestion: (sourceId: string) => Promise<void>;
   cancelIngestion: (sourceId: string) => Promise<void>;
+  /** Answer about the pages left out at upload: confirm the cut, or include them (the chapter runs again). */
+  decideExcludedPages: (sourceId: string, decision: ExcludedPagesDecision) => Promise<void>;
   removeSubject: (sourceId: string) => Promise<void>;
   removeStudent: (studentId: string) => Promise<void>;
   setShowUploadModal: (show: boolean) => void;
@@ -344,6 +349,11 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
   cancelIngestion: async (sourceId) => {
     const source = await sourcesService.cancel(sourceId);
+    replaceSubject(set, source);
+  },
+
+  decideExcludedPages: async (sourceId, decision) => {
+    const source = await sourcesService.decideExcludedPages(sourceId, decision);
     replaceSubject(set, source);
   },
 

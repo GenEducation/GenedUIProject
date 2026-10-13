@@ -57,6 +57,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const fetchSubjects = usePartnerStore((state) => state.fetchSubjects);
   const removeSubject = usePartnerStore((state) => state.removeSubject);
   const cancelIngestion = usePartnerStore((state) => state.cancelIngestion);
+  const decideExcludedPages = usePartnerStore((state) => state.decideExcludedPages);
   const startIngestion = usePartnerStore((state) => state.startIngestion);
   const openIngestedPdf = usePartnerStore((state) => state.openIngestedPdf);
   const setSubjectFilters = usePartnerStore((state) => state.setSubjectFilters);
@@ -361,6 +362,39 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           >
                             <FileText size={12} aria-hidden /> {subject.state === "ready" ? "View report" : "See what needs fixing"}
                           </button>
+                        )}
+                        {subject.excluded_pages?.status === "pending" && (
+                          // The server cut a solutions appendix at upload; publishing waits until the partner answers.
+                          <div
+                            role="note"
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-1 ml-[2px] flex flex-wrap items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-2 py-1 text-[11px] text-amber-900"
+                          >
+                            <AlertCircle size={12} aria-hidden className="shrink-0" />
+                            <span>
+                              Pages {subject.excluded_pages.first_page}–{subject.excluded_pages.last_page} were left out:
+                              they look like the chapter&apos;s solutions.
+                            </span>
+                            <Button
+                              size="sm"
+                              pill
+                              variant="secondary"
+                              loading={busy}
+                              onClick={() => void runAction(subject, (id) => decideExcludedPages(id, "confirm"))}
+                            >
+                              Yes, leave them out
+                            </Button>
+                            <Button
+                              size="sm"
+                              pill
+                              variant="outline"
+                              disabled={busy || !STARTABLE_STATES.has(subject.state)}
+                              title={STARTABLE_STATES.has(subject.state) ? undefined : "You can add them once this run finishes"}
+                              onClick={() => void runAction(subject, (id) => decideExcludedPages(id, "include"))}
+                            >
+                              No, include them
+                            </Button>
+                          </div>
                         )}
                       </div>
 

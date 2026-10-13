@@ -26,6 +26,7 @@ const row: Subject = {
   detail: null,
   has_report: false,
   questions: 0,
+  excluded_pages: null,
   created_at: "2026-01-01T00:00:00Z",
 };
 

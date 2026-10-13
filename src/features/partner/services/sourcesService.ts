@@ -1,5 +1,6 @@
 import { authFetch } from "@/utils/authFetch";
 import type {
+  ExcludedPagesDecision,
   LearningOutcome,
   QuestionsResponse,
   RecordedAnswer,
@@ -76,6 +77,16 @@ export const sourcesService = {
   /** Take a queued run off the queue (a running one can't be stopped). */
   cancel: async (id: string): Promise<SourceView> => {
     const response = await authFetch(`${sourcePath(id)}/ingestions`, { method: "DELETE" });
+    return response.json();
+  },
+
+  /** Confirm the pages left out at upload as the solutions, or include them (the chapter runs again). 409 when
+   * nothing is waiting for an answer or the chapter is still running. */
+  decideExcludedPages: async (id: string, decision: ExcludedPagesDecision): Promise<SourceView> => {
+    const response = await authFetch(`${sourcePath(id)}/excluded-pages`, {
+      method: "PUT",
+      body: JSON.stringify({ decision }),
+    });
     return response.json();
   },
 
