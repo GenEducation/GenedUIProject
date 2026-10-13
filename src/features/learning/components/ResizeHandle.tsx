@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { layoutX } from "../board/screenSpace";
 
 interface ResizeHandleProps {
   /** What this divider resizes, for screen readers ("steps panel", "chat"). */
@@ -45,11 +46,11 @@ export function ResizeHandle({ label, value, min, max, direction, onResize, onCo
       className="group relative flex h-full cursor-col-resize touch-none select-none items-center justify-center outline-none"
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
-        start.current = { x: e.clientX, w: value };
+        start.current = { x: layoutX(e.clientX, e.clientY), w: value };
       }}
       onPointerMove={(e) => {
         if (!start.current) return;
-        onResize(clamp(start.current.w + direction * (e.clientX - start.current.x)));
+        onResize(clamp(start.current.w + direction * (layoutX(e.clientX, e.clientY) - start.current.x)));
       }}
       onPointerUp={(e) => {
         if (!start.current) return;

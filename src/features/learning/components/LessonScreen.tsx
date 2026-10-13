@@ -11,19 +11,7 @@ import { BoardPanel } from "./BoardPanel";
 import { ChatPanel } from "./ChatPanel";
 import { RailDrawer } from "./RailDrawer";
 import { ResizeHandle } from "./ResizeHandle";
-import { RotatePrompt } from "./RotatePrompt";
-import { CHAT, RAIL, fitWidths, gridTemplate, useLessonMode, useLessonWidths } from "./layout";
-
-type Pane = "board" | "chat" | "progress";
-
-const PANES: Array<{ key: Pane; label: string }> = [
-  { key: "board", label: "Whiteboard" },
-  { key: "chat", label: "Chat" },
-  { key: "progress", label: "Progress" },
-];
-
-/** "Continue in portrait" lasts for this browser tab. */
-const PORTRAIT_OK_KEY = "gened.lesson.portraitOk";
+import { CHAT, RAIL, fitWidths, gridTemplate, useLessonFrame, useLessonWidths } from "./layout";
 
 /** Matches the CSS grid gutter (px-4) so measured width = usable width. */
 const SIDE_PADDING = 32;
@@ -36,8 +24,8 @@ const SIDE_PADDING = 32;
  *   narrows the rail gives way first.
  * - Compact (< 1024px, incl. a phone held sideways): whiteboard · chat; the
  *   rail opens as a drawer from the header.
- * - Phone held upright: a "turn your phone sideways" prompt, with the old
- *   one-panel tabs as the fallback.
+ * - Phone held upright: the same landscape layout, drawn turned 90° to fill
+ *   the screen. The lesson is landscape only; nobody is asked to rotate.
  *
  * Full-focus: no app sidebar, the header leads back out.
  */
@@ -48,11 +36,12 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
   const error = useLessonStore((s) => s.error);
   // The tile that opened this lesson in this tab, if any (survives a reload via sessionStorage).
   const launched = useLessonLaunch((s) => (s.instanceId === instanceId ? s : null));
-  const [pane, setPane] = useState<Pane>("board");
   const focusFigure = useLessonStore((s) => s.focusFigure);
 
-  const mode = useLessonMode();
-  const [portraitOk, setPortraitOk] = useState(false);
+  // How the lesson fits this screen: scaled down on a small one, and turned on a phone held upright.
+  const frame = useLessonFrame();
+  const { mode, turned: upright, scale } = frame;
+  const fittedFrame = upright || scale !== 1;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { widths: pref, setWidths, save, reset: resetWidth } = useLessonWidths();
 
@@ -69,23 +58,26 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
     return () => ro.disconnect();
   }, [mode, status]);
 
+  // Tells the drag code (whiteboard pan, pinch, dividers) how the lesson is drawn, so it reads touches the right way.
   useEffect(() => {
-    try {
-      setPortraitOk(window.sessionStorage.getItem(PORTRAIT_OK_KEY) === "1");
-    } catch {
-      /* storage blocked: the prompt just shows each time */
-    }
-  }, []);
+    if (!fittedFrame) return;
+    const root = document.documentElement;
+    if (upright) root.dataset.lessonRotated = "true";
+    root.dataset.lessonScale = String(scale);
+    return () => {
+      delete root.dataset.lessonRotated;
+      delete root.dataset.lessonScale;
+    };
+  }, [fittedFrame, upright, scale]);
 
   // Leaving compact mode closes the drawer, so it isn't stuck open on rotate.
   useEffect(() => {
     if (mode !== "compact") setDrawerOpen(false);
   }, [mode]);
 
-  // A figure tapped in the chat opens on the whiteboard; in tab mode, switch to that tab.
+  // A figure tapped in the chat opens on the whiteboard.
   const showFigure = useCallback((figureGroupId: string) => {
     focusFigure(figureGroupId);
-    setPane("board");
   }, [focusFigure]);
 
   useEffect(() => {
@@ -96,28 +88,32 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
   const subject = launched?.subject ?? null;
   const exitHref = subject ? `/student/subjects/${encodeURIComponent(subject)}` : "/student";
 
-  const tabs = mode === "portrait" && portraitOk;
-  const columns = mode !== "portrait";
-  const fitted = columns && containerW > 0 ? fitWidths(mode, containerW, pref) : null;
-  const template = fitted && mode !== "portrait" ? gridTemplate(mode, fitted) : undefined;
-
-  // In tab mode only the chosen tab's panel shows; in column mode, all that belong.
-  const paneClass = (key: Pane) => (tabs ? (pane === key ? "flex" : "hidden") : "flex") + " min-h-0 flex-col";
+  const fitted = containerW > 0 ? fitWidths(mode, containerW, pref) : null;
+  const template = fitted ? gridTemplate(mode, fitted) : undefined;
+  const paneClass = "flex min-h-0 flex-col";
 
   // Persist from inside the state update so a key press saves the width it just set.
   const commitWidths = () => setWidths((w) => { save(w); return w; });
 
-  const continueInPortrait = () => {
-    setPortraitOk(true);
-    try {
-      window.sessionStorage.setItem(PORTRAIT_OK_KEY, "1");
-    } catch {
-      /* fine: it just won't survive a reload */
-    }
-  };
-
   return (
-    <div className="lesson-theme flex h-dvh flex-col overflow-hidden">
+    <div
+      className={`lesson-theme flex flex-col overflow-hidden ${fittedFrame ? "" : "h-dvh"}`}
+      // A small screen: lay the lesson out at its design size, then scale it to fit exactly (everything shrinks
+      // together). An upright phone also gets it turned 90°, landscape across the screen's height.
+      style={fittedFrame ? {
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: `${frame.width}px`,
+        height: `${frame.height}px`,
+        transform: upright
+          ? `translateX(${Math.round(frame.height * scale)}px) rotate(90deg) scale(${scale})`
+          : `scale(${scale})`,
+        transformOrigin: "top left",
+      } : undefined}
+      data-orientation={upright ? "turned" : undefined}
+      data-scale={fittedFrame ? scale : undefined}
+    >
       <LessonHeader
         subject={subject}
         chapterTitle={launched?.chapter?.title ?? null}
@@ -137,45 +133,19 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
             </Link>
           </div>
         </div>
-      ) : mode === "portrait" && !portraitOk ? (
-        <RotatePrompt onContinue={continueInPortrait} />
       ) : (
         <>
-          <div
-            role="tablist"
-            aria-label="Lesson panels"
-            className={`mx-4 mb-3 gap-1 rounded-full bg-[var(--ls-soft)] p-1 ${tabs ? "flex" : "hidden"}`}
-          >
-            {PANES.map(({ key, label }) => (
-              // eslint-disable-next-line no-restricted-syntax -- a tab in a segmented tablist, not an action button.
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                id={`lesson-tab-${key}`}
-                aria-selected={pane === key}
-                aria-controls={`lesson-pane-${key}`}
-                onClick={() => setPane(key)}
-                className={`flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors ${
-                  pane === key ? "bg-white text-[var(--ls-primary)] shadow-sm" : "text-[var(--ls-ink-mid)]"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
           <main
             ref={mainRef}
             aria-busy={status === "loading"}
-            className={`grid flex-1 min-h-0 px-4 pb-4 ${tabs ? "gap-4" : ""} ${
+            className={`grid flex-1 min-h-0 px-4 pb-4 ${
               // Until measured, a sensible static template so the first paint isn't one column.
-              !tabs && !template ? (mode === "wide" ? "grid-cols-[264px_16px_minmax(0,1fr)_16px_380px]" : "grid-cols-[minmax(0,1fr)_16px_380px]") : ""
+              !template ? (mode === "wide" ? "grid-cols-[264px_16px_minmax(0,1fr)_16px_380px]" : "grid-cols-[minmax(0,1fr)_16px_380px]") : ""
             }`}
             style={template ? { gridTemplateColumns: template } : undefined}
           >
-            {(tabs || mode === "wide") && (
-              <div id="lesson-pane-progress" role="tabpanel" aria-labelledby="lesson-tab-progress" className={`${paneClass("progress")} lesson-rise`}>
+            {mode === "wide" && (
+              <div id="lesson-pane-progress" className={`${paneClass} lesson-rise`}>
                 <LessonRail />
               </div>
             )}
@@ -192,10 +162,10 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
               />
             )}
             {mode === "wide" && !fitted && <div aria-hidden />}
-            <div id="lesson-pane-board" role="tabpanel" aria-labelledby="lesson-tab-board" className={`${paneClass("board")} lesson-rise`} style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
+            <div id="lesson-pane-board" className={`${paneClass} lesson-rise`} style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
               <BoardPanel />
             </div>
-            {!tabs && fitted && (
+            {fitted && (
               <ResizeHandle
                 label="chat"
                 value={fitted.chat}
@@ -207,8 +177,8 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
                 onReset={() => resetWidth("chat")}
               />
             )}
-            {!tabs && !fitted && <div aria-hidden />}
-            <div id="lesson-pane-chat" role="tabpanel" aria-labelledby="lesson-tab-chat" className={`${paneClass("chat")} lesson-rise`} style={{ "--rise-delay": "180ms" } as React.CSSProperties}>
+            {!fitted && <div aria-hidden />}
+            <div id="lesson-pane-chat" className={`${paneClass} lesson-rise`} style={{ "--rise-delay": "180ms" } as React.CSSProperties}>
               <ChatPanel onShowFigure={showFigure} subject={subject} />
             </div>
           </main>

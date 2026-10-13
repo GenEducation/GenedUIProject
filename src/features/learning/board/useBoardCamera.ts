@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { animate, useMotionValue, type AnimationPlaybackControls, type MotionValue } from "framer-motion";
 import { clampScale, interpolateCamera, NO_INSETS, zoomAt, type Camera, type Insets, type Size } from "./geometry";
+import { localPoint } from "./screenSpace";
 
 /**
  * Apple-like: a critically damped spring (no bounce) over ~0.8 s. Flights move
@@ -82,10 +83,8 @@ export function useBoardCamera(viewport: () => Size, insets: () => Insets = () =
     let velocity = { x: 0, y: 0 };
     let pinch: { distance: number } | null = null;
 
-    const local = (e: { clientX: number; clientY: number }) => {
-      const r = el.getBoundingClientRect();
-      return { x: e.clientX - r.left, y: e.clientY - r.top };
-    };
+    // In the board's own pixels, also when the lesson is drawn turned on an upright phone.
+    const local = (e: { clientX: number; clientY: number }) => localPoint(el, e.clientX, e.clientY);
 
     const onDown = (e: PointerEvent) => {
       // Only the board itself pans; buttons and overlays inside it keep their clicks.

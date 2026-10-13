@@ -642,19 +642,8 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
   transform-origin: center;
   animation: lesson-breathe 1.6s ease-in-out infinite;
 }
-/* Portrait prompt: the phone turns sideways, pauses, turns back. */
-@keyframes lesson-rotate-phone {
-  0%, 20% { transform: rotate(0deg); }
-  45%, 75% { transform: rotate(-90deg); }
-  100% { transform: rotate(0deg); }
-}
-.lesson-rotate-phone {
-  transform-origin: center;
-  animation: lesson-rotate-phone 2.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-}
 @media (prefers-reduced-motion: reduce) {
   .lesson-breathe { animation: none; }
-  .lesson-rotate-phone { animation: none; transform: rotate(-90deg); }
 }
 
 /* ── Whiteboard: a figure added to the board is inked in left to right, a
