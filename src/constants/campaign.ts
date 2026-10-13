@@ -23,3 +23,7 @@ export const META_PIXEL_ID = "1132054889546244";
 export const PILOT_SEATS = 30;
 export const PILOT_START = "16 Oct";
 export const PILOT_TAGLINE = `Free pilot · Only ${PILOT_SEATS} families · Starts ${PILOT_START}`;
+
+/** "Seats left" shown on the campaign page. Hardcoded (no live count yet); it
+ *  drops by one for a visitor once they've signed up, remembered in their browser. */
+export const PILOT_SEATS_LEFT = 11;

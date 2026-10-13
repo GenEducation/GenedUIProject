@@ -734,3 +734,28 @@
 @keyframes gcSheetIn { from { opacity: 0; transform: translateY(20px) scale(0.97); } to { opacity: 1; transform: none; } }
 @keyframes gcSheetUp { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes gcDash { to { background-position: 24px 0; } }
+
+/* ---------- seats left: hardcoded scarcity counter (see pilotSeats.ts) ---------- */
+.gened-campaign .gc-seats {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 600; color: var(--muted);
+}
+.gened-campaign .gc-seats::before {
+  content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: #E2552B;
+  animation: gcSeatPulse 1.8s ease-out infinite;
+}
+.gened-campaign .gc-seats b {
+  display: inline-block; font-weight: 800; font-size: 1.15em; color: var(--green-600); font-variant-numeric: tabular-nums;
+  animation: gcSeatPop 0.5s var(--spring) both;
+}
+.gened-campaign .gc-seats-hero { margin-top: 14px; animation: gcHeroRise 0.8s 0.3s var(--spring) both; }
+.gened-campaign .gc-seats-sheet { margin: -8px 0 18px; }
+.gened-campaign .gc-join-copy .gc-seats { margin-top: -12px; }
+@keyframes gcSeatPulse {
+  0% { box-shadow: 0 0 0 0 rgba(226, 85, 43, 0.45); }
+  70%, 100% { box-shadow: 0 0 0 8px rgba(226, 85, 43, 0); }
+}
+@keyframes gcSeatPop { from { transform: scale(1.5); color: #E2552B; } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .gened-campaign .gc-seats::before, .gened-campaign .gc-seats b { animation: none; }
+}

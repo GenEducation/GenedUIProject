@@ -8,6 +8,7 @@ import "./campaign.css";
 import { FONT_VARS } from "./fonts";
 import { FeatureVideo } from "./film/FeatureFilm";
 import { PILOT_TAGLINE } from "@/constants/campaign";
+import { SeatsLeft } from "./SeatsLeft";
 import { BetaSignupForm } from "./BetaSignupForm";
 import { JoinSheet } from "./JoinSheet";
 import { MetaPixel, trackMetaCustom } from "./MetaPixel";
@@ -67,6 +68,7 @@ export function WebappCampaignPage() {
           <button type="button" className="gc-btn gc-btn-citron gc-btn-lg gc-hero-cta" onClick={openJoin}>
             Join the free pilot
           </button>
+          <SeatsLeft className="gc-seats-hero" />
           {/* eslint-disable-next-line no-restricted-syntax -- campaign-styled scroll cue, not a form control */}
           <button type="button" className="gc-hero-down" onClick={showFilm}>
             <span className="gc-hero-down-label">See it in action</span>
@@ -89,6 +91,7 @@ export function WebappCampaignPage() {
             <h2>
               Save your child&apos;s seat. <em>It takes a minute.</em>
             </h2>
+            <SeatsLeft />
           </div>
           <BetaSignupForm />
         </div>
