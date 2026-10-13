@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Keyboard, Languages, Loader2, Mic, Pause, Play, Radio, Settings } from "lucide-react";
+import { Languages, Loader2, Mic, Pause, Play, Radio, Settings } from "lucide-react";
 import { Select } from "@/components/ui/Select";
 import { updateProfile } from "@/features/auth/authService";
 import { studentService } from "@/features/student/services/studentService";
@@ -291,21 +291,25 @@ export function LearningPreferencesCard({ index }: { index: number }) {
           />
         )}
 
+        {/* The push-to-talk key lives inside this row, on a line that's always there: switching modes changes
+            the line, never the card's height, so the card beside it never stretches to a gap. */}
         <Row
           icon={<Radio size={20} strokeWidth={2} />}
           title="Voice activation"
           description="Talk freely, or hold a key while you speak."
-          control={<ListenModeToggle />}
+          control={
+            <>
+              <ListenModeToggle />
+              <span className="flex h-7 items-center justify-center" aria-live="polite">
+                {listenMode === "ptt" ? (
+                  <PttHotkeyConfig inline />
+                ) : (
+                  <span className="text-[12px] text-[var(--text-muted)]">Your tutor listens whenever you speak.</span>
+                )}
+              </span>
+            </>
+          }
         />
-
-        {listenMode === "ptt" && (
-          <Row
-            icon={<Keyboard size={20} strokeWidth={2} />}
-            title="Push-to-talk key"
-            description="The key you hold down to talk to your tutor."
-            control={<div className="flex sm:justify-end"><PttHotkeyConfig compact /></div>}
-          />
-        )}
       </div>
     </ProfileCard>
   );
