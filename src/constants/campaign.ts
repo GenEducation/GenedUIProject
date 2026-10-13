@@ -22,6 +22,8 @@ export const META_PIXEL_ID = "1132054889546244";
  *  the sign-up count can be read back from the Google Form's sheet. */
 export const PILOT_SEATS = 30;
 export const PILOT_START = "16 Oct";
+/** When the pilot starts (IST); the seats-left pill counts down to it. */
+export const PILOT_START_AT = "2026-10-16T00:00:00+05:30";
 export const PILOT_TAGLINE = `Free pilot · Only ${PILOT_SEATS} families · Starts ${PILOT_START}`;
 
 /** "Seats left" shown on the campaign page. Hardcoded (no live count yet); it

@@ -1,41 +1,42 @@
 "use client";
 
-import { PILOT_SEATS, PILOT_START } from "@/constants/campaign";
+import { useSyncExternalStore } from "react";
+import { PILOT_START_AT } from "@/constants/campaign";
 import { useSeatsLeft } from "./pilotSeats";
 
-/** The seats-left counter. "meter" is the hero's headline card (big number +
- *  a row of seats, taken ones filled); "pill" is the compact one in the sheet. */
-export function SeatsLeft({ variant = "pill", className = "" }: { variant?: "meter" | "pill"; className?: string }) {
+const pad = (n: number) => String(n).padStart(2, "0");
+
+function subscribeClock(tick: () => void) {
+  const id = window.setInterval(tick, 1000);
+  return () => window.clearInterval(id);
+}
+const nowSec = () => Math.floor(Date.now() / 1000);
+
+/** Time until the pilot starts, ticking every second; null on the server (no
+ *  hydration mismatch) and once the start has passed. */
+function useCountdown(): string | null {
+  const now = useSyncExternalStore(subscribeClock, nowSec, () => null);
+  if (now === null) return null;
+  const s = Math.floor(Date.parse(PILOT_START_AT) / 1000) - now;
+  if (s <= 0) return null;
+  const d = Math.floor(s / 86400);
+  return `${d > 0 ? `${d}d ` : ""}${pad(Math.floor((s % 86400) / 3600))}h ${pad(Math.floor((s % 3600) / 60))}m ${pad(s % 60)}s`;
+}
+
+/** "● 11 seats left · Closes in 2d 14h 05m 09s" */
+export function SeatsLeft({ className = "" }: { className?: string }) {
   const n = useSeatsLeft();
-  const label = n === 1 ? "seat left" : "seats left";
-
-  if (variant === "pill") {
-    return (
-      <span className={`gc-seats ${className}`.trim()} aria-live="polite">
-        Only <b key={n}>{n}</b> {label}
-      </span>
-    );
-  }
-
-  const taken = PILOT_SEATS - n;
+  const left = useCountdown();
   return (
-    <div className={`gc-seatmeter ${className}`.trim()} aria-live="polite">
-      <div className="gc-seatmeter-top">
-        <span className="gc-seatmeter-live">Filling fast</span>
-        <span>Free pilot · Starts {PILOT_START}</span>
-      </div>
-      <p className="gc-seatmeter-count">
-        <b key={n}>{n}</b>
-        <span>
-          {label}
-          <small>of {PILOT_SEATS} families</small>
+    <p className={`gc-seats ${className}`.trim()}>
+      <span aria-live="polite">
+        <b key={n}>{n}</b> {n === 1 ? "seat" : "seats"} left
+      </span>
+      {left && (
+        <span className="gc-seats-time">
+          Closes in <time>{left}</time>
         </span>
-      </p>
-      <div className="gc-seatmeter-seats" aria-hidden>
-        {Array.from({ length: PILOT_SEATS }, (_, i) => (
-          <i key={i} className={i < taken ? "taken" : undefined} style={{ "--i": i } as React.CSSProperties} />
-        ))}
-      </div>
-    </div>
+      )}
+    </p>
   );
 }

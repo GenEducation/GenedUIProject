@@ -45,7 +45,7 @@ export function WebappCampaignPage() {
 
       <section className="gc-hero">
         <div className="gc-wrap gc-hero-inner">
-          <SeatsLeft variant="meter" />
+          <SeatsLeft className="gc-seats-hero" />
           <span className="gc-hero-sub">Class 6 to 9 · Maths, Science &amp; English</span>
           <h1>
             A personal AI tutor for your child. <em>You see every step.</em>
@@ -90,7 +90,7 @@ export function WebappCampaignPage() {
             <h2>
               Save your child&apos;s seat. <em>It takes a minute.</em>
             </h2>
-            <SeatsLeft variant="meter" className="gc-seatmeter-join" />
+            <SeatsLeft className="gc-seats-join" />
           </div>
           <BetaSignupForm />
         </div>
