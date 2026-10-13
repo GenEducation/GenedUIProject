@@ -52,6 +52,16 @@ export function BetaSignupForm() {
     }
   };
 
+  /** Same parent, another child: keep name + number, pick grade/board again. */
+  const addAnother = () => {
+    setGrade("");
+    setBoard("");
+    setOtherBoard("");
+    setErrors({});
+    setCopied(false);
+    setStatus("idle");
+  };
+
   const share = async () => {
     const url = window.location.origin + window.location.pathname;
     const text = `A free AI tutor for Class 6–9 — free pilot, only ${PILOT_SEATS} families, starts ${PILOT_START}.`;
@@ -81,6 +91,10 @@ export function BetaSignupForm() {
         {/* eslint-disable-next-line no-restricted-syntax -- campaign-styled control (gc-btn), outside the app design system */}
         <button type="button" className="gc-btn gc-btn-primary" onClick={share}>
           {copied ? "Link copied" : "Share with a parent"}
+        </button>
+        {/* eslint-disable-next-line no-restricted-syntax -- campaign-styled control (gc-btn), outside the app design system */}
+        <button type="button" className="gc-form-another" onClick={addAnother}>
+          + Add another child
         </button>
       </div>
     );

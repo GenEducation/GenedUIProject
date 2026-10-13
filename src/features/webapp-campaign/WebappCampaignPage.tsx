@@ -45,7 +45,7 @@ export function WebappCampaignPage() {
 
       <section className="gc-hero">
         <div className="gc-wrap gc-hero-inner">
-          <span className="gc-hero-badge">{PILOT_TAGLINE}</span>
+          <SeatsLeft variant="meter" />
           <span className="gc-hero-sub">Class 6 to 9 · Maths, Science &amp; English</span>
           <h1>
             A personal AI tutor for your child. <em>You see every step.</em>
@@ -68,7 +68,6 @@ export function WebappCampaignPage() {
           <button type="button" className="gc-btn gc-btn-citron gc-btn-lg gc-hero-cta" onClick={openJoin}>
             Join the free pilot
           </button>
-          <SeatsLeft className="gc-seats-hero" />
           {/* eslint-disable-next-line no-restricted-syntax -- campaign-styled scroll cue, not a form control */}
           <button type="button" className="gc-hero-down" onClick={showFilm}>
             <span className="gc-hero-down-label">See it in action</span>
@@ -91,7 +90,7 @@ export function WebappCampaignPage() {
             <h2>
               Save your child&apos;s seat. <em>It takes a minute.</em>
             </h2>
-            <SeatsLeft />
+            <SeatsLeft variant="meter" className="gc-seatmeter-join" />
           </div>
           <BetaSignupForm />
         </div>

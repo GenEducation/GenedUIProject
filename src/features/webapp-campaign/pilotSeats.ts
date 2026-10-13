@@ -1,17 +1,18 @@
 import { useSyncExternalStore } from "react";
 import { PILOT_SEATS_LEFT } from "@/constants/campaign";
 
-// No live sign-up count yet: every visitor sees PILOT_SEATS_LEFT, and one fewer
-// once they've joined from this browser. Shared so the hero, join section and
-// sheet all tick down together.
-const KEY = "gened-pilot-joined";
+// No live sign-up count yet: every visitor starts at PILOT_SEATS_LEFT, and each
+// sign-up from this browser (e.g. one per child) takes one more seat. Shared so
+// the hero, join section and sheet all tick down together.
+const KEY = "gened-pilot-signups";
 const listeners = new Set<() => void>();
 
-function hasJoined(): boolean {
+function signups(): number {
   try {
-    return window.localStorage.getItem(KEY) === "1";
+    const n = Number.parseInt(window.localStorage.getItem(KEY) ?? "0", 10);
+    return Number.isFinite(n) && n > 0 ? n : 0;
   } catch {
-    return false;
+    return 0;
   }
 }
 
@@ -20,7 +21,7 @@ function subscribe(fn: () => void) {
   return () => listeners.delete(fn);
 }
 
-const getSnapshot = () => Math.max(1, PILOT_SEATS_LEFT - (hasJoined() ? 1 : 0));
+const getSnapshot = () => Math.max(1, PILOT_SEATS_LEFT - signups());
 const getServerSnapshot = () => PILOT_SEATS_LEFT;
 
 export function useSeatsLeft(): number {
@@ -29,7 +30,7 @@ export function useSeatsLeft(): number {
 
 export function markPilotJoined() {
   try {
-    window.localStorage.setItem(KEY, "1");
+    window.localStorage.setItem(KEY, String(signups() + 1));
   } catch {
     /* storage blocked — the count just won't stick across reloads */
   }
