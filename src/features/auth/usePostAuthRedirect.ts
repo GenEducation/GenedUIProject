@@ -6,7 +6,7 @@ import { useLoaderStore } from "@/stores/useLoaderStore";
 const HANDOFF_WATCHDOG_MS = 12000;
 
 /**
- * Reads the `redirect` query param that /login and the root LoginView both
+ * Reads the `redirect` query param that /login and /register
  * check after an auth call succeeds, so a mid-flow deep link is honored.
  */
 export function getRedirectParam(): string | null {
