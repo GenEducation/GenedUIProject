@@ -199,6 +199,27 @@ export const sourcesHandlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
+  // Mirrors the backend: answer a pending cut only; including the pages widens the range and queues a re-run.
+  http.put(`${SOURCES}/:id/excluded-pages`, async ({ params, request }) => {
+    const s = store.get(String(params.id));
+    if (!s) return notFound();
+    const cut = s.excluded_pages;
+    if (!cut || cut.status !== "pending") return conflict("This chapter has no left-out pages waiting for an answer.");
+    const { decision } = (await request.json()) as { decision: "confirm" | "include" };
+    if (decision === "confirm") {
+      store.set(s.source_id, { ...s, excluded_pages: { ...cut, status: "confirmed" } });
+    } else {
+      if (!STARTABLE.has(s.state)) return conflict(`The pages can be added back once this chapter is no longer ${s.state}.`);
+      store.set(s.source_id, {
+        ...s,
+        state: "queued",
+        chapter: { ...s.chapter, last_pdf_page: cut.last_page },
+        excluded_pages: { ...cut, status: "included" },
+      });
+    }
+    return HttpResponse.json(store.get(s.source_id));
+  }),
+
   http.get(`${SOURCES}/:id/reconciliation`, ({ params }) => {
     const q = questions.get(String(params.id));
     return q ? HttpResponse.json(q) : HttpResponse.json({ message: "This chapter has no questions waiting." }, { status: 404 });

@@ -90,6 +90,20 @@ export interface SourceChapter {
   last_pdf_page: number;
 }
 
+/**
+ * Pages of the upload the server left out because they are the chapter's solutions appendix (the answers to its
+ * questions), not lessons. `pending` until the partner confirms the cut or includes the pages
+ * (`PUT /v1/sources/{id}/excluded-pages`); publishing waits for an answer.
+ */
+export interface ExcludedPages {
+  first_page: number;
+  last_page: number;
+  reason: "solutions_appendix";
+  status: "pending" | "confirmed" | "included";
+}
+
+export type ExcludedPagesDecision = "confirm" | "include";
+
 export interface SourceView {
   source_id: string;
   board: string;
@@ -115,6 +129,8 @@ export interface SourceView {
   questions: number;
   /** How far the current (or last) run got; poll `GET /v1/sources` every few seconds while `running`. */
   progress?: SourceProgress | null;
+  /** Pages left out at upload as the solutions appendix; null when nothing was left out. */
+  excluded_pages?: ExcludedPages | null;
   queued_at: string | null;
   finished_at: string | null;
   created_at: string;
