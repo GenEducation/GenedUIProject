@@ -34,6 +34,8 @@ export interface TurnRequest {
   interrupts?: { turn_id: string; visible_seq: number };
   modality?: "text" | "voice";
   language?: VoiceLanguage;
+  /** The learner session whose confirmed check deliveries a message may answer (backend ADR 0035 decision 5). */
+  session_id?: string;
 }
 
 export type FailureReason =
@@ -249,7 +251,11 @@ export interface AnswerBody {
   response?: AnswerResponse;
   transcript?: string;
   confirmed_reading?: boolean;
+  /** The learner session the check's delivery was confirmed in; without it the answer is refused (`check_not_delivered`). */
+  session_id?: string;
 }
+
+export type { DeliveryBody } from "./delivery/checkDelivery";
 
 /** `needs_confirmation`: nothing was committed; `reading` holds a "did you mean …?" to resubmit. */
 export interface AnswerResult {

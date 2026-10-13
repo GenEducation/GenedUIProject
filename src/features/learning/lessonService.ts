@@ -2,6 +2,7 @@ import { authFetch } from "@/utils/authFetch";
 import type {
   AnswerBody,
   AnswerResult,
+  DeliveryBody,
   ChapterReport,
   InstanceState,
   PresentationManifest,
@@ -57,6 +58,11 @@ export const lessonService = {
 
   answer: async (instanceId: string, body: AnswerBody): Promise<AnswerResult> =>
     (await authFetch(`${instancePath(instanceId)}/responses`, json(body))).json(),
+
+  /** Confirms a check was delivered in this session (shown, or its audio played to the end). An answer counts only after this. */
+  checkDelivered: async (instanceId: string, itemId: string, body: DeliveryBody): Promise<void> => {
+    await authFetch(`${instancePath(instanceId)}/checks/${encodeURIComponent(itemId)}/delivered`, json(body));
+  },
 
   /** Records that the learner asked for help on a check; the hint itself comes as a `hint` turn. */
   hint: async (instanceId: string, body: { request_id: string; item_id: string }): Promise<InstanceState> =>

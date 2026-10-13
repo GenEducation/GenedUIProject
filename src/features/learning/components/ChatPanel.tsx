@@ -8,8 +8,8 @@ import { ChatTurn } from "./ChatTurn";
 import { ChatInput } from "./ChatInput";
 import { VoiceWaveform } from "./VoiceWaveform";
 import { lessonVoiceEnabled } from "./LessonRail";
+import { useVoiceLanguages } from "../voice/useVoiceLanguages";
 import { useVoiceSession, type VoiceSession } from "../voice/useVoiceSession";
-import { useSpeechLanguage } from "../dictation/useSpeechLanguage";
 
 const VOICE_UNAVAILABLE: VoiceSession = {
   phase: "offline",
@@ -17,6 +17,9 @@ const VOICE_UNAVAILABLE: VoiceSession = {
   level: 0,
   error: "Voice lessons aren't available yet. You can keep going in the chat.",
   muted: false,
+  pushToTalk: false,
+  held: false,
+  language: null,
 };
 
 /** Within this many px of the bottom counts as "reading the latest". */
@@ -45,11 +48,12 @@ export function ChatPanel({
   const voiceMode = useLessonStore((s) => s.voiceMode);
   const voiceAvailable = lessonVoiceEnabled();
   // Voice replies land in the same transcript; only the input area changes.
-  // Voice and dictation share one language; voice reconnects when it changes.
-  const { language, pick: pickLanguage } = useSpeechLanguage(subject);
-  const live = useVoiceSession(voiceMode && voiceAvailable && status === "ready" && canTalk, language);
+  const wantsVoice = voiceMode && voiceAvailable && status === "ready" && canTalk;
+  // The languages come from the backend; the session opens once one is chosen, and a new choice restarts it.
+  const { languages, language, setLanguage, error: languageError } = useVoiceLanguages(wantsVoice);
+  const live = useVoiceSession(wantsVoice && !languageError, language);
   // With voice switched off for this build, voice mode still opens and says so, rather than the button doing nothing.
-  const voice = voiceAvailable ? live : VOICE_UNAVAILABLE;
+  const voice = !voiceAvailable ? VOICE_UNAVAILABLE : languageError ? { ...VOICE_UNAVAILABLE, error: languageError } : live;
   const replying = turns.some((t) => t.status === "streaming");
 
   const listRef = useRef<HTMLOListElement>(null);
@@ -102,7 +106,7 @@ export function ChatPanel({
   };
 
   return (
-    <section aria-label="Chat with your tutor" className="lesson-panel relative flex h-full min-h-0 flex-col overflow-hidden">
+    <section aria-label="Chat with your tutor" className="lesson-panel font-indic relative flex h-full min-h-0 flex-col overflow-hidden">
       <ol
         ref={listRef}
         onScroll={onScroll}
@@ -135,12 +139,7 @@ export function ChatPanel({
       )}
 
       {voiceMode ? (
-        <VoiceWaveform
-          session={voice}
-          onEnd={() => setVoiceMode(false)}
-          language={language}
-          onLanguageChange={pickLanguage}
-        />
+        <VoiceWaveform session={voice} onEnd={() => setVoiceMode(false)} languages={languages} onLanguage={setLanguage} />
       ) : (
       <ChatInput
         replying={replying}
