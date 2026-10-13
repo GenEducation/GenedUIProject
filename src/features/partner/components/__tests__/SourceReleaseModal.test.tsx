@@ -10,6 +10,7 @@ vi.mock("../IngestedPdfViewer", () => ({ IngestedPdfViewer: () => null }));
 import { SubjectRegistry } from "../SubjectRegistry";
 
 const SID = "synthetic-press-synthetic-book-6-ch6-r";
+const CONCEPT_ID = "0192f298-710d-57dc-a4d7-224f5f118008";
 const hash = (n: number) => String(n).padStart(64, "a");
 
 const proposal = (n: number, kind: string, content: Record<string, unknown>): ReleaseProposal => ({
@@ -31,11 +32,31 @@ const RELEASE: SourceRelease = {
     chapters: ["SYNTHETIC chapter six"],
     artifact_hash: hash(99),
     created_at: "2026-01-01T00:00:00Z",
-    proposals: { pending: 4 },
+    proposals: { pending: 5 },
   },
   proposals: [
-    proposal(1, "component", { title: "SYNTHETIC concept", definition: "SYNTHETIC definition.", embedding: [0.1, 0.2] }),
-    proposal(2, "item", { prompt: "SYNTHETIC question?", options: ["SYNTHETIC a", "SYNTHETIC b"] }),
+    // As the backend sends them: each record bound to the release as { artifact_hash, value }.
+    proposal(1, "component", {
+      artifact_hash: hash(99),
+      value: {
+        id: CONCEPT_ID, title: "SYNTHETIC concept", definition: "SYNTHETIC definition.", strand: "math_numbers",
+        bloom: 4, difficulty: 0.8, lo_codes: ["G6-MATH-LO6.2.1"], source_chunk_ids: ["c1", "c2"],
+        embedding: [0.1, 0.2], embedding_model: "SYNTHETIC-embedder",
+      },
+    }),
+    proposal(2, "item", {
+      artifact_hash: hash(99),
+      value: {
+        id: "q1", prompt: "SYNTHETIC question?", bloom: 2, difficulty: 0.2, mastery_eligible: true,
+        options: [
+          { id: "o1", text: "SYNTHETIC a" },
+          { id: "o2", text: "SYNTHETIC b", misconception_id: "m1" },
+        ],
+        rule: { kind: "mcq", correct_option_id: "o1" },
+        components: [{ component_id: CONCEPT_ID, weight: 1 }],
+      },
+    }),
+    proposal(5, "misconception", { artifact_hash: hash(99), value: { id: "m1", code: "adds_digits", definition: "SYNTHETIC adds the digits instead.", component_ids: [CONCEPT_ID] } }),
     proposal(3, "lesson_node", { title: "SYNTHETIC step", type: "teach", est_minutes: 5 }),
     proposal(4, "chapter_plan:6", { chapter_ordinal: 6, node_ids: ["x", "y"], lo_codes: ["G6-MATH-LO1.2.1"] }),
   ],
@@ -71,10 +92,24 @@ describe("Reviewing and publishing a chapter", () => {
     expect(within(dialog).getByText("Chapter 6: 2 lesson steps")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Publish chapter" })).toBeDisabled();
 
-    // Details never show embeddings.
-    fireEvent.click(within(within(dialog).getByRole("region", { name: "Concepts" })).getByRole("button", { name: "Details" }));
-    expect(within(dialog).getByText(/"definition": "SYNTHETIC definition."/)).toBeInTheDocument();
-    expect(within(dialog).queryByText(/embedding/)).toBeNull();
+    // Details are laid out in words: never raw JSON, ids, embeddings or model names.
+    const concepts = within(dialog).getByRole("region", { name: "Concepts" });
+    fireEvent.click(within(concepts).getByRole("button", { name: "Show details" }));
+    expect(within(concepts).getByText("Definition")).toBeInTheDocument();
+    expect(within(concepts).getByText("G6-MATH-LO6.2.1")).toBeInTheDocument();
+    expect(within(concepts).getByText("Analyse")).toBeInTheDocument(); // thinking level 4
+    expect(within(concepts).getByText("Hard")).toBeInTheDocument();
+    expect(within(concepts).getByText("Math numbers")).toBeInTheDocument();
+    expect(within(concepts).getByText("2 passages")).toBeInTheDocument();
+    expect(dialog.textContent).not.toMatch(/[{}"]|embedding|SYNTHETIC-embedder|0192f298/);
+
+    // A question shows its correct option, the mistake a wrong one catches, and the concept it tests by name.
+    const questions = within(dialog).getByRole("region", { name: "Questions" });
+    fireEvent.click(within(questions).getByRole("button", { name: "Show details" }));
+    expect(within(questions).getByLabelText("Correct").closest("li")).toHaveTextContent("SYNTHETIC a");
+    expect(within(questions).getByText("Catches: SYNTHETIC adds the digits instead.")).toBeInTheDocument();
+    expect(within(questions).getByText("SYNTHETIC concept")).toBeInTheDocument();
+    expect(within(questions).getByText("Yes")).toBeInTheDocument(); // counts towards mastery
   });
 
   it("accepts a part with the hash it showed, and needs a reason to reject", async () => {
@@ -99,8 +134,8 @@ describe("Reviewing and publishing a chapter", () => {
 
   it("accepts everything left, then publishes the chapter", async () => {
     const dialog = await openReview();
-    fireEvent.click(within(dialog).getByRole("button", { name: "Accept all 4" }));
-    await waitFor(() => expect(lastReleaseDecisions).toHaveLength(4));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Accept all 5" }));
+    await waitFor(() => expect(lastReleaseDecisions).toHaveLength(5));
     const publish = await within(dialog).findByRole("button", { name: "Publish chapter" });
     await waitFor(() => expect(publish).toBeEnabled());
 
