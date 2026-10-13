@@ -5,6 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { getStudentDisplayName, titleCase } from "@/features/student/utils/displayName";
 
 /**
  * TutorialVideoModal
@@ -20,6 +22,14 @@ import { GenEdLogo } from "@/components/shared/GenEdLogo";
 export const TutorialVideoModal: React.FC = () => {
   const { isActive, skipTutorial, completeTutorial } = useTutorialStore();
   const [iframeReady, setIframeReady] = useState(false);
+  // The tour shows the student as the app does (their name and avatar) and calls the tutor by the name they gave it.
+  const studentProfile = useStudentStore((s) => s.studentProfile);
+  const avatarId = useStudentStore((s) => s.avatarId);
+  const tourParams = new URLSearchParams({
+    tutor: titleCase(studentProfile?.ai_name?.trim() || "Nia"),
+    avatar: avatarId,
+    ...(studentProfile?.name?.trim() ? { name: getStudentDisplayName(studentProfile) } : {}),
+  });
 
   /* Reset ready-state when modal opens */
   useEffect(() => {
@@ -135,7 +145,7 @@ export const TutorialVideoModal: React.FC = () => {
                 )}
 
                 <iframe
-                  src="/tutorial-walkthrough.html"
+                  src={`/tutorial-walkthrough.html?${tourParams}`}
                   title="GenEd Walkthrough Tour"
                   className="block w-full h-full border-0"
                   onLoad={() => setIframeReady(true)}

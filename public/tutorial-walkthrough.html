@@ -6,7 +6,9 @@
 <title>GenEd Quick Tour</title>
 <!--
   The student's first-run tour, shown in TutorialVideoModal's iframe. A scripted "video" of the real student app:
-  Home → pick a chapter → a lesson with Nia → asking for help (chips, dictation, voice) → Profile.
+  Home → pick a chapter → a lesson with the tutor → asking for help (chips, dictation, voice) → Profile.
+  It is personalised from the query: ?tutor= (the tutor's name, "Nia" by default), ?name= (the student's name)
+  and ?avatar= (their avatar id).
   Each chapter of the tour sets up its own screen, so the chapter buttons can jump anywhere.
   Posts "tutorial:close" to the parent when the student taps "Start learning" on the last screen.
 -->
@@ -40,7 +42,7 @@
   .screen { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .45s ease, visibility 0s .45s; }
   .screen.on { opacity: 1; visibility: visible; transition: opacity .45s ease; }
 
-  /* Spotlight: the part of the screen Nia is talking about */
+  /* Spotlight: the part of the screen the tutor is talking about */
   .spot { position: relative; z-index: 5; animation: spot 1.8s ease-in-out infinite; }
   @keyframes spot { 0%,100% { box-shadow: 0 0 0 3px var(--citron), 0 0 0 9px rgb(217 242 121 / .35); } 50% { box-shadow: 0 0 0 3px var(--citron), 0 0 0 15px rgb(217 242 121 / .12); } }
   .mark { background: linear-gradient(transparent 62%, rgb(217 242 121 / .9) 62% 92%, transparent 92%); }
@@ -338,8 +340,8 @@
   .screen.on .card-screen h1, .screen.on .card-screen p, .screen.on .route { opacity: 0; animation: rise .6s ease forwards; }
   .screen.on .card-screen h1 { animation-delay: .25s; } .screen.on .card-screen p { animation-delay: .5s; } .screen.on .route { animation-delay: .8s; }
   .route { position: relative; display: flex; gap: 10px; margin-top: 28px; }
-  .route span { display: flex; align-items: center; gap: 7px; background: rgb(255 255 255 / .1); border: 1px solid rgb(255 255 255 / .16); border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 700; color: #fff; }
-  .route span b { width: 20px; height: 20px; border-radius: 50%; background: var(--citron); color: var(--ink); display: grid; place-items: center; font-size: 11px; }
+  .route > span { display: flex; align-items: center; gap: 7px; background: rgb(255 255 255 / .1); border: 1px solid rgb(255 255 255 / .16); border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 700; color: #fff; }
+  .route > span b { width: 20px; height: 20px; border-radius: 50%; background: var(--citron); color: var(--ink); display: grid; place-items: center; font-size: 11px; }
   .outro-row { position: relative; display: flex; align-items: center; gap: 30px; }
   .outro-row .trophy { width: 132px; height: 132px; border-radius: 40px; background: #fff; display: grid; place-items: center; overflow: hidden; transform: rotate(4deg); box-shadow: 0 0 0 10px rgb(217 242 121 / .25), 0 30px 60px -20px rgb(0 0 0 / .5); }
   .outro-row .trophy img { width: 118px; }
@@ -407,9 +409,9 @@
       <section class="screen" id="scrIntro">
         <div class="card-screen">
           <div class="intro-logo"><img src="/brand/gened-logo-deep-ocean-transparent.png" alt="GenEd" /></div>
-          <h1>Hi! I'm <span class="mk2">Nia</span></h1>
+          <h1>Hi! I'm <span class="mk2 tn">Nia</span></h1>
           <p>Your learning buddy on GenEd. Let me show you around. It only takes a minute!</p>
-          <div class="route"><span><b>1</b>Pick a chapter</span><span><b>2</b>Learn with Nia</span><span><b>3</b>Ask for help</span></div>
+          <div class="route"><span><b>1</b>Pick a chapter</span><span><b>2</b>Learn with <span class="tn">Nia</span></span><span><b>3</b>Ask for help</span></div>
         </div>
       </section>
 
@@ -420,12 +422,12 @@
           <div class="nav active" id="navHome"><i data-i="home" data-s="17"></i>Home</div>
           <div class="nav" id="navReport"><i data-i="chart" data-s="17"></i>Report Card</div>
           <div class="nav" id="navProfile"><i data-i="user" data-s="17"></i>Profile</div>
-          <div class="gopro"><b>Go Pro</b><p>Keep learning with Nia, no daily limits.</p><span><i data-i="sparkles" data-s="13"></i>Upgrade to Pro</span></div>
+          <div class="gopro"><b>Go Pro</b><p>Keep learning with <span class="tn">Nia</span>, no daily limits.</p><span><i data-i="sparkles" data-s="13"></i>Upgrade to Pro</span></div>
         </aside>
         <main class="home">
           <div class="greet" id="greet">
-            <img class="avatar" src="/avatars/students/boy_05_cap_teal_hoodie.png" width="52" height="52" alt="" />
-            <div><h1>Good morning, <span class="mark">Aarav</span>!</h1><p>What would you like to learn today?</p></div>
+            <img class="avatar me" src="/avatars/students/boy_01_green_hoodie.png" width="52" height="52" alt="" />
+            <div><h1>Good morning, <span class="mark first-name">Aarav</span>!</h1><p>What would you like to learn today?</p></div>
             <span class="bell"><i data-i="bell" data-s="18"></i></span>
           </div>
           <div class="cont" id="contCard">
@@ -498,7 +500,7 @@
             <div style="flex:1"></div>
             <div class="l-chip"><i data-i="timer" data-s="22" style="color:#3C8A8E"></i><div><b id="lTimer">00:12</b><small>Session time</small></div></div>
             <div class="l-chip" id="stepsChip"><span class="disc"><i data-i="flag" data-s="13"></i></span><div><b id="lSteps">0/6</b><small>Steps done</small></div></div>
-            <img class="avatar" src="/avatars/students/boy_05_cap_teal_hoodie.png" width="36" height="36" alt="" />
+            <img class="avatar me" src="/avatars/students/boy_01_green_hoodie.png" width="36" height="36" alt="" />
             <span class="l-x" id="leaveBtn"><i data-i="x" data-s="16"></i></span>
           </div>
           <div class="l-grid">
@@ -578,8 +580,8 @@
         <div class="prof">
           <div class="prof-head"><span class="back"><i data-i="arrowL" data-s="18"></i></span><div><h1>My Profile</h1><p>Your learning space</p></div></div>
           <div class="pcard hero">
-            <img class="avatar" src="/avatars/students/boy_05_cap_teal_hoodie.png" alt="" />
-            <div><h2>Aarav Mehta</h2><div class="gr">Grade 6 · CBSE</div><span class="ai-pill"><i data-i="sparkles" data-s="12"></i>AI Tutor: Nia</span></div>
+            <img class="avatar me" src="/avatars/students/boy_01_green_hoodie.png" alt="" />
+            <div><h2 class="full-name">Aarav Mehta</h2><div class="gr">Grade 6 · CBSE</div><span class="ai-pill"><i data-i="sparkles" data-s="12"></i>AI Tutor: <span class="tn">Nia</span></span></div>
             <div class="hero-stats">
               <div class="hs"><span><i data-i="flame" data-s="17"></i></span><div><b>3</b><small>Day streak</small></div></div>
               <div class="hs"><span><i data-i="book" data-s="17"></i></span><div><b>12</b><small>Sessions completed</small></div></div>
@@ -587,9 +589,9 @@
           </div>
           <div class="pgrid">
             <div class="pcard" id="prefCard">
-              <div class="ph"><span class="ci"><i data-i="settings" data-s="18"></i></span><div><b>Learning preferences</b><small>Make Nia sound and listen the way you like.</small></div></div>
+              <div class="ph"><span class="ci"><i data-i="settings" data-s="18"></i></span><div><b>Learning preferences</b><small>Make <span class="tn">Nia</span> sound and listen the way you like.</small></div></div>
               <div class="pref"><span class="pi"><i data-i="mic" data-s="15"></i></span><div><b>Tutor voice</b><small>Choose the voice for your AI tutor.</small></div>
-                <div class="ctl"><span class="select" id="voiceSel">Nia (Default)<i data-i="chevD" data-s="12"></i></span><span class="play" id="playBtn"><i data-i="play" data-s="13"></i></span></div></div>
+                <div class="ctl"><span class="select" id="voiceSel">Default voice<i data-i="chevD" data-s="12"></i></span><span class="play" id="playBtn"><i data-i="play" data-s="13"></i></span></div></div>
               <div class="pref"><span class="pi"><i data-i="radio" data-s="15"></i></span><div><b>Voice activation</b><small>Talk freely, or hold a key while you speak.</small></div>
                 <div class="ctl"><div class="pseg"><span class="on" id="segCont">Continuous</span><span id="segPtt">Push to talk</span></div></div></div>
               <div class="ptt-line" id="pttLine">Your tutor listens whenever you speak.</div>
@@ -614,7 +616,7 @@
             <div class="trophy"><img src="/loaders/journey/char-trophy.svg" alt="" /></div>
           </div>
           <h1>You're <span class="mk2">all set!</span></h1>
-          <p>Pick a subject, open a chapter, and Nia will be right there with you.</p>
+          <p>Pick a subject, open a chapter, and <span class="tn">Nia</span> will be right there with you.</p>
           <div class="end-btns">
             <button class="go" id="startBtn" type="button">Start learning <svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
             <button class="again" id="againBtn" type="button"><svg class="i" width="16" height="16" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Watch again</button>
@@ -688,6 +690,23 @@ function paintIcons(root = document) {
 
 /* ═══ Static content built once ═══════════════════════════════════════════ */
 const $ = id => document.getElementById(id);
+/* The student's own tutor name (?tutor=), as plain text and escaped for the captions' HTML. */
+const TUTOR_TEXT = (() => {
+  const raw = (new URLSearchParams(location.search).get('tutor') || '').trim().slice(0, 24);
+  return raw || 'Nia';
+})();
+const TUTOR = TUTOR_TEXT.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+document.querySelectorAll('.tn').forEach(el => { el.textContent = TUTOR_TEXT; });
+/* The student as the app shows them: their name and their avatar (only one of the app's own avatar files). */
+const PARAMS = new URLSearchParams(location.search);
+const FULL_NAME = (PARAMS.get('name') || '').trim().slice(0, 40);
+if (FULL_NAME) {
+  document.querySelectorAll('.full-name').forEach(el => { el.textContent = FULL_NAME; });
+  document.querySelectorAll('.first-name').forEach(el => { el.textContent = FULL_NAME.split(/\s+/)[0]; });
+}
+const AVATAR = PARAMS.get('avatar') || '';
+const AVATAR_SRC = `/avatars/students/${/^(boy|girl)_0[1-5]_[a-z_]+$/.test(AVATAR) ? AVATAR : 'boy_01_green_hoodie'}.png`;
+document.querySelectorAll('img.me').forEach(el => { el.src = AVATAR_SRC; });
 const CHAPTERS = [
   'Patterns in Mathematics', 'Lines and Angles', 'Number Play', 'Data Handling and Presentation', 'Prime Time', 'Perimeter and Area',
 ];
@@ -810,7 +829,7 @@ async function drawSketch() {
   await wait(1000);
 }
 const NIA_AV = '<span class="tmark"><img src="/brand/gened-star.png" alt="" /></span>';
-const ME_AV = '<img class="avatar av" src="/avatars/students/boy_05_cap_teal_hoodie.png" alt="" />';
+const ME_AV = `<img class="avatar av" src="${AVATAR_SRC}" alt="" />`;
 function addMsg(who, html) {
   const m = document.createElement('div');
   m.className = `msg ${who}`;
@@ -871,7 +890,7 @@ const SCENES = [
     name: 'Hello', dur: 6500,
     setup() { show('scrIntro'); cursor.classList.remove('on'); },
     async play() {
-      await say("Hi there! I'm <b>Nia</b>, your learning buddy.", 3200);
+      await say(`Hi there! I'm <b>${TUTOR}</b>, your learning buddy.`, 3200);
       await say("Let's take a quick tour of GenEd together!", 3000);
     },
   },
@@ -928,11 +947,11 @@ const SCENES = [
     },
   },
   {
-    name: 'Learn with Nia', dur: 31000,
+    name: `Learn with ${TUTOR_TEXT}`, dur: 31000,
     setup() { show('scrLesson'); resetLesson(); placeCursor(560, 330); cursor.classList.remove('on'); },
     async play() {
       await wait(400);
-      await say('Welcome to your lesson! <b>Nia</b> teaches you one step at a time.', 600);
+      await say(`Welcome to your lesson! <b>${TUTOR}</b> teaches you one step at a time.`, 600);
       setBoard(false);
       await wait(400);
       $('bTitleText').classList.add('in'); $('boardEmpty').style.opacity = 0;
@@ -983,7 +1002,7 @@ const SCENES = [
       placeCursor(560, 470); cursor.classList.add('on');
     },
     async play() {
-      await say('Stuck? Just <b>ask Nia</b>! Tap a quick button like <b>Examples</b>.');
+      await say(`Stuck? Just <b>ask ${TUTOR}</b>! Tap a quick button like <b>Examples</b>.`);
       await clickOn($('chipEx'));
       addMsg('me', 'Can you show me an example?');
       const ex = niaSays('Sure! Take 2025: 2 + 0 + 2 + 5 = 9. Now you try 3104!');
@@ -999,7 +1018,7 @@ const SCENES = [
       $('langName').textContent = 'हिन्दी';
       $('langMenu').classList.remove('on');
       await wait(300);
-      await say('Tap the <b>mic</b> and speak. Nia writes down what you say.');
+      await say(`Tap the <b>mic</b> and speak. ${TUTOR} writes down what you say.`);
       await clickOn($('micBtn'));
       const comp = $('composer');
       comp.classList.add('dictating', 'focus');
@@ -1016,12 +1035,12 @@ const SCENES = [
       comp.classList.remove('focus');
       await niaSays('ज़रूर! 512 लो: 5 + 1 + 2 = 8.', 90);
       await wait(400);
-      await say('Or switch to <b>Voice</b> and chat with Nia out loud, like a real tutor!');
+      await say(`Or switch to <b>Voice</b> and chat with ${TUTOR} out loud, like a real tutor!`);
       await clickOn($('segVoice'));
       $('segVoice').classList.add('on'); $('segChat').classList.remove('on');
       $('chat').classList.add('voicing');
       $('voice').classList.add('on', 'speaking');
-      $('vStatus').textContent = 'Nia is speaking'; $('vHeard').textContent = '';
+      $('vStatus').textContent = `${TUTOR_TEXT} is speaking`; $('vHeard').textContent = '';
       cursor.classList.remove('on');
       await wait(2600);
       $('voice').classList.remove('speaking');
@@ -1044,7 +1063,7 @@ const SCENES = [
     async play() {
       await say('Your <b>Profile</b> is where you make GenEd yours.', 2600);
       spot($('prefCard'));
-      await say("Pick <b>Nia's voice</b> and listen to how she sounds.");
+      await say(`Pick <b>${TUTOR}'s voice</b> and hear how it sounds.`);
       await clickOn($('playBtn'));
       await wait(1200);
       await say('Like to talk only while holding a key? Choose <b>Push to talk</b>.');

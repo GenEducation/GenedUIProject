@@ -127,8 +127,9 @@ export default function RegisterPage() {
           plan: authResponse.plan,
           plan_expires_at: authResponse.plan_expires_at,
         });
-        const { useTutorialStore } = await import("@/features/tutorial/store/useTutorialStore");
-        useTutorialStore.getState().startTutorial();
+        // The quick tour plays once the student has named themselves and their tutor (CompleteProfileBanner),
+        // so it can call the tutor by the name they chose.
+        localStorage.setItem("gened_new_user", "true");
       }
 
       completeAndRedirect(router, `/${role}`);
