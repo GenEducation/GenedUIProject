@@ -87,7 +87,7 @@ export const TutorialVideoModal: React.FC = () => {
                 {/* Right: hint + close */}
                 <div className="flex items-center gap-3">
                   <span className="hidden sm:block text-[11px] font-medium" style={{ color: "rgba(200,209,220,0.5)" }}>
-                    See how GenEd works in 60 seconds
+                    See how GenEd works in about 2 minutes
                   </span>
                   <button
                     onClick={skipTutorial}
@@ -110,7 +110,7 @@ export const TutorialVideoModal: React.FC = () => {
 
               {/* ── Video / iframe ── */}
               <div
-                className="relative w-full aspect-[380/680] sm:aspect-[900/560]"
+                className="relative w-full aspect-[380/400] sm:aspect-[860/610]"
                 style={{
                   background: "#0d1117",
                 }}
