@@ -31,15 +31,16 @@ vi.mock("../../voice/loadPipeline", () => ({
 
 import { ChatPanel } from "../ChatPanel";
 import { voiceSocketUrl } from "../../voice/useVoiceSession";
+import { resetSpeechLanguage } from "../../dictation/useSpeechLanguage";
 
 const emit = (e: PipelineEvent) => act(() => fake.options!.onEvent(e));
 const server = (msg: object) => emit({ t: "server", msg } as PipelineEvent);
 const store = () => useLessonStore.getState();
 
-async function openVoice() {
+async function openVoice(subject?: string) {
   await store().load(LESSON_ID);
   store().setVoiceMode(true);
-  render(<ChatPanel onShowFigure={vi.fn()} />);
+  render(<ChatPanel onShowFigure={vi.fn()} subject={subject} />);
   await waitFor(() => expect(fake.options).not.toBeNull());
 }
 
@@ -52,6 +53,8 @@ beforeEach(() => {
   fake.track = { enabled: true };
   lessonFixture.reset();
   store().reset();
+  localStorage.removeItem("gened_dictation_language");
+  resetSpeechLanguage();
   localStorage.setItem("gened_auth_token", "token-synthetic");
   lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
 });
@@ -145,5 +148,33 @@ describe("voiceSocketUrl", () => {
   it("swaps http(s) for ws(s) on the API base", () => {
     expect(voiceSocketUrl("https://api.example.test/")).toBe("wss://api.example.test/v1/voice");
     expect(voiceSocketUrl("http://localhost:8102")).toBe("ws://localhost:8102/v1/voice");
+  });
+});
+
+describe("voice mode in other languages", () => {
+  it("a Hindi lesson talks in Hindi", async () => {
+    await openVoice("Hindi");
+    expect(fake.options!.init).toMatchObject({ language: "hi" });
+  });
+
+  it("starts in the language the learner last picked", async () => {
+    localStorage.setItem("gened_dictation_language", "te");
+    resetSpeechLanguage();
+    await openVoice("Mathematics");
+    expect(fake.options!.init).toMatchObject({ language: "te" });
+  });
+
+  it("picking another language reconnects in it", async () => {
+    await openVoice();
+    expect(fake.options!.init).toMatchObject({ language: "en" });
+    const first = fake.options;
+
+    fireEvent.click(screen.getByRole("button", { name: "Voice language: English" }));
+    fireEvent.click(screen.getByRole("option", { name: /Tamil/ }));
+
+    await waitFor(() => expect(fake.options).not.toBe(first));
+    expect(fake.closed).toBeGreaterThanOrEqual(1);
+    expect(fake.options!.init).toMatchObject({ language: "ta" });
+    expect(screen.getByRole("button", { name: "Voice language: Tamil" })).toBeInTheDocument();
   });
 });

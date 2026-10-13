@@ -44,6 +44,7 @@ export function makeSource(overrides: Partial<SourceView> = {}): SourceView {
     visuals: null,
     has_report: false,
     questions: 0,
+    progress: null,
     queued_at: null,
     finished_at: null,
     created_at: new Date(Date.UTC(2026, 0, 1, 0, seq)).toISOString(),

@@ -3,8 +3,10 @@ import { create } from 'zustand';
 /** Which full-screen loader to show. Students (and unknown roles) get the journey. */
 export type LoaderVariant = 'default' | 'parent';
 
-/** What the parent loader is waiting on; drives its status line. */
-export type ParentLoaderStage = 'signup' | 'signin-handoff' | 'entry';
+/** What the logo-toss loader is waiting on; drives its status line. */
+// The GenEd logo-toss loader serves parents and partners; partners have their
+// own wording.
+export type ParentLoaderStage = 'signup' | 'signin-handoff' | 'entry' | 'partner-signin' | 'partner-signup';
 
 interface StartOptions {
   variant?: LoaderVariant;

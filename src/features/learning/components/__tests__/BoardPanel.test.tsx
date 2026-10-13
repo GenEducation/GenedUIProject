@@ -2,14 +2,17 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import {
   CHECK_ITEM, FIGURE_GROUP, LESSON_ID, OPTION_A,
-  answerRequests, lessonFixture, makeLessonInstance, stepRequests, turnRequests,
+  answerRequests, lessonFixture, makeLessonInstance, stepRequests, syntheticPayload, turnRequests,
 } from "@/test/msw/handlers/lesson";
+import { http, HttpResponse } from "msw";
+import { server } from "@/test/msw/server";
 import { useLessonStore } from "../../useLessonStore";
 import type { CheckItem } from "../../types";
 
 import { BoardPanel } from "../BoardPanel";
 import { responseFor } from "../StepCard";
 
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 const node = makeLessonInstance().active_node!;
 const store = () => useLessonStore.getState();
 
@@ -147,5 +150,59 @@ describe("responseFor", () => {
     expect(responseFor(check("numeric"), " 3/4 ")).toEqual({ kind: "numeric", value: "3/4" });
     expect(responseFor(check("numeric_set"), "2, 3")).toEqual({ kind: "text", text: "2, 3" });
     expect(responseFor(check("symbolic"), "2x+1")).toEqual({ kind: "text", text: "2x+1" });
+  });
+});
+
+describe("the answer box's calculator", () => {
+  const withCheck = (response_type: CheckItem["response_type"]) => {
+    const base = syntheticPayload();
+    server.use(
+      http.get(`${BASE}/v1/instances/:instanceId/teacher-payload`, () =>
+        HttpResponse.json({
+          ...base,
+          node: { ...base.node, check_items: [{ ...base.node.check_items[0], response_type, options: [] }] },
+        }),
+      ),
+    );
+  };
+  const answerBox = () => screen.getByRole("textbox", { name: "Your answer" }) as HTMLInputElement;
+
+  it("works out a root as they type, and sends the number for a number answer", async () => {
+    withCheck("numeric");
+    await open();
+    fireEvent.change(answerBox(), { target: { value: "√144" } });
+    expect(screen.getByText("= 12")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
+    await waitFor(() => expect(answerRequests[0]).toMatchObject({ response: { kind: "numeric", value: "12" } }));
+  });
+
+  it("keeps an exact answer as written for an expression answer, showing the value only as a help", async () => {
+    withCheck("symbolic");
+    await open();
+    fireEvent.change(answerBox(), { target: { value: "√2" } });
+    expect(screen.getByText("= 1.414214")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
+    await waitFor(() => expect(answerRequests[0]).toMatchObject({ response: { kind: "text", text: "√2" } }));
+  });
+
+  it("the calculator keys type what a keyboard can't", async () => {
+    withCheck("numeric");
+    await open();
+    expect(screen.queryByRole("group", { name: "Calculator keys" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Calculator" }));
+    const keys = screen.getByRole("group", { name: "Calculator keys" });
+
+    fireEvent.click(within(keys).getByRole("button", { name: "square root" }));
+    expect(answerBox()).toHaveValue("√");
+    act(() => { answerBox().setSelectionRange(1, 1); });
+    fireEvent.change(answerBox(), { target: { value: "√81" } });
+    expect(screen.getByText("= 9")).toBeInTheDocument();
+
+    fireEvent.change(answerBox(), { target: { value: "" } });
+    fireEvent.click(within(keys).getByRole("button", { name: "sine" }));
+    expect(answerBox()).toHaveValue("sin(");
+    act(() => { answerBox().setSelectionRange(4, 4); });
+    fireEvent.change(answerBox(), { target: { value: "sin(30)" } });
+    expect(screen.getByText("= 0.5")).toBeInTheDocument();
   });
 });

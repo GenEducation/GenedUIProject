@@ -209,7 +209,7 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
             )}
             {!tabs && !fitted && <div aria-hidden />}
             <div id="lesson-pane-chat" role="tabpanel" aria-labelledby="lesson-tab-chat" className={`${paneClass("chat")} lesson-rise`} style={{ "--rise-delay": "180ms" } as React.CSSProperties}>
-              <ChatPanel onShowFigure={showFigure} />
+              <ChatPanel onShowFigure={showFigure} subject={subject} />
             </div>
           </main>
         </>

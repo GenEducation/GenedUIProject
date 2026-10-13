@@ -23,13 +23,16 @@ import {
   STARTABLE_STATES,
   type SourceState,
 } from "../types/sources";
+import { activeStatus, shownPercent } from "../utils/ingestionProgress";
 
 interface SubjectRegistryProps {
   onUploadClick: () => void;
 }
 
-/** While a run is queued or running, re-read the list this often. */
+/** While a run is only queued, re-read the list this often. */
 export const LIST_POLL_MS = 10_000;
+/** While a run is processing, this often: the backend reports progress every couple of seconds. */
+export const RUN_POLL_MS = 4_000;
 
 const STATE_OPTIONS = [
   { value: "", label: "All Statuses" },
@@ -39,7 +42,7 @@ const STATE_OPTIONS = [
 const STATE_CHIP: Record<SourceState, string> = {
   registered: "bg-[#075E63]/5 text-[#122D30]/60 border-[#122D30]/10",
   queued: "bg-amber-50 text-amber-600 border-amber-200",
-  running: "bg-amber-50 text-amber-600 border-amber-200",
+  running: "bg-[#075E63]/10 text-[#075E63] border-[#075E63]/20",
   review_needed: "bg-sky-50 text-sky-700 border-sky-200",
   invalid: "bg-red-50 text-red-600 border-red-200",
   ready: "bg-[#DCEBE7]/30 text-[#122D30] border-[#122D30]/5",
@@ -84,13 +87,15 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
     fetchSubjects();
   }, [fetchSubjects]);
 
-  // The worker reports run state to the server; poll while any run is still going.
+  // The worker reports run state (and a running chapter's progress) to the server; poll while any run is still
+  // going, faster while one is processing so its progress bar moves.
   const hasActiveRun = subjects.some((s) => ACTIVE_STATES.has(s.state));
+  const hasRunningRun = subjects.some((s) => s.state === "running");
   useEffect(() => {
     if (!hasActiveRun) return;
-    const timer = setInterval(() => void fetchSubjects(), LIST_POLL_MS);
+    const timer = setInterval(() => void fetchSubjects(), hasRunningRun ? RUN_POLL_MS : LIST_POLL_MS);
     return () => clearInterval(timer);
-  }, [hasActiveRun, fetchSubjects]);
+  }, [hasActiveRun, hasRunningRun, fetchSubjects]);
 
   /** Start or stop a run, showing the server's reason when it doesn't fit (409). */
   const runAction = async (subject: Subject, action: (id: string) => Promise<void>) => {
@@ -319,6 +324,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             // A chapter waiting on questions says so with its button; its raw detail names server paths.
             const awaitingAnswers = subject.state === "review_needed" && subject.questions > 0;
             const explain = subject.detail && ["failed", "invalid", "review_needed"].includes(subject.state) && !awaitingAnswers;
+            const status = activeStatus(subject.state, subject.progress);
+            const percent = shownPercent(subject.state, subject.progress);
 
             return (
               <motion.div
@@ -344,6 +351,19 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                         <p className="text-[11px] font-bold text-[#122D30]/50 ml-[2px] uppercase tracking-wider truncate">
                           {subject.book_title} · Ch {subject.chapter_ordinal} · Grade {subject.grade}
                         </p>
+                        {status && (
+                          <p
+                            role="status"
+                            className={`flex items-center gap-1.5 text-[11px] font-semibold ml-[2px] min-w-0 ${subject.state === "running" ? "text-[#075E63]" : "text-amber-700/80"}`}
+                          >
+                            <span
+                              aria-hidden
+                              className={`h-1.5 w-1.5 shrink-0 rounded-full motion-safe:animate-pulse ${subject.state === "running" ? "bg-[#075E63]" : "bg-amber-500"}`}
+                            />
+                            <span className="truncate">{status.line}</span>
+                            {status.step && <span className="shrink-0 text-[#122D30]/40">· {status.step}</span>}
+                          </p>
+                        )}
                         {explain && (
                           <p
                             className={`text-[11px] ml-[2px] truncate ${subject.state === "review_needed" ? "text-sky-700/80" : "text-red-600/80"}`}
@@ -387,6 +407,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                             className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-colors ${STATE_CHIP[subject.state]}`}
                           >
                             {SOURCE_STATE_LABELS[subject.state]}
+                            {percent !== null && <span className="ml-1 tabular-nums">{percent}%</span>}
                           </span>
                         )}
 
@@ -462,14 +483,29 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                   </div>
                 </div>
 
-                {/* Progress bar while queued or running */}
+                {/* Progress bar while queued or running: the run's real percent once it reports one, a sweep until then */}
                 {isRunning && (
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#DCEBE7]/20 overflow-hidden">
-                    <motion.div
-                      animate={{ x: ["-100%", "100%"] }}
-                      transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                      className="h-full w-1/2 bg-[#075E63]"
-                    />
+                  <div
+                    role="progressbar"
+                    aria-label={`${subject.title} ingestion progress`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={percent ?? undefined}
+                    aria-valuetext={percent !== null ? `${percent}%` : status?.line}
+                    className={`absolute bottom-0 left-0 right-0 overflow-hidden ${percent !== null ? "h-1.5 bg-[#DCEBE7]/60" : "h-1 bg-[#DCEBE7]/20"}`}
+                  >
+                    {percent !== null ? (
+                      <div
+                        className="h-full rounded-r-full bg-[#075E63] transition-[width] duration-[1200ms] ease-out"
+                        style={{ width: `${Math.max(percent, 2)}%` }}
+                      />
+                    ) : (
+                      <motion.div
+                        animate={{ x: ["-100%", "100%"] }}
+                        transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                        className={`h-full w-1/2 ${subject.state === "queued" ? "bg-amber-400" : "bg-[#075E63]"}`}
+                      />
+                    )}
                   </div>
                 )}
 

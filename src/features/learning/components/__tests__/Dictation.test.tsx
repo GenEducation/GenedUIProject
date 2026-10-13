@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { ChatInput } from "../ChatInput";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { resetSpeechLanguage } from "../../dictation/useSpeechLanguage";
 
 /** A stand-in for the browser's speech recogniser: the test plays what it hears. */
 class FakeRecognition {
@@ -32,6 +34,8 @@ function renderInput(onSend = vi.fn()) {
 }
 
 beforeEach(() => {
+  localStorage.clear();
+  resetSpeechLanguage();
   FakeRecognition.last = null;
   (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition = FakeRecognition;
 });
@@ -98,5 +102,65 @@ describe("dictation", () => {
     act(() => FakeRecognition.last!.onerror?.({ error: "not-allowed" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Microphone access is blocked.");
     expect(screen.queryByRole("group", { name: "Dictation" })).toBeNull();
+  });
+});
+
+describe("dictation in other languages", () => {
+  beforeEach(() => {
+    useStudentStore.setState({ studentProfile: null });
+  });
+
+  const dictateIn = (subject?: string) => {
+    render(<ChatInput replying={false} disabled={false} onSend={vi.fn()} onStop={vi.fn()} subject={subject} />);
+    fireEvent.click(screen.getByRole("button", { name: "Dictate" }));
+    return FakeRecognition.last!;
+  };
+  const pick = (english: string) => {
+    fireEvent.click(screen.getByRole("button", { name: /^Dictation language:/ }));
+    fireEvent.click(screen.getByRole("option", { name: new RegExp(english) }));
+  };
+
+  it("listens in English by default", () => {
+    expect(dictateIn().lang).toBe("en-IN");
+  });
+
+  it("a Hindi lesson listens in Hindi", () => {
+    expect(dictateIn("Hindi").lang).toBe("hi-IN");
+  });
+
+  it("follows the language the learner's profile prefers", () => {
+    useStudentStore.setState({ studentProfile: { user_id: "s1", preferred_language: "ta" } as never });
+    expect(dictateIn("Mathematics").lang).toBe("ta-IN");
+  });
+
+  it("the learner can pick another language, and it's remembered next time", () => {
+    const { unmount } = render(<ChatInput replying={false} disabled={false} onSend={vi.fn()} onStop={vi.fn()} />);
+    pick("Marathi");
+    fireEvent.click(screen.getByRole("button", { name: "Dictate" }));
+    expect(FakeRecognition.last!.lang).toBe("mr-IN");
+    unmount();
+
+    // a new lesson, even a Hindi one, starts in the learner's own pick
+    expect(dictateIn("Hindi").lang).toBe("mr-IN");
+  });
+
+  it("switching language mid-dictation keeps the words and carries on in the new one", () => {
+    const first = dictateIn();
+    first.hear(["SYNTHETIC hello", true]);
+
+    pick("Hindi");
+    const second = FakeRecognition.last!;
+    expect(second).not.toBe(first);
+    expect(first.aborted).toBe(true);
+    expect(second).toMatchObject({ lang: "hi-IN", started: 1 });
+
+    second.hear(["SYNTHETIC नमस्ते", true]);
+    expect(box()).toHaveValue("SYNTHETIC hello SYNTHETIC नमस्ते");
+  });
+
+  it("says so when the browser can't dictate in the chosen language", () => {
+    const rec = dictateIn();
+    act(() => rec.onerror?.({ error: "language-not-supported" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("can't take dictation in that language");
   });
 });

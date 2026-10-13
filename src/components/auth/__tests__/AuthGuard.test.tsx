@@ -129,16 +129,20 @@ describe("AuthGuard — authorized", () => {
 describe("AuthGuard — parent portal loader", () => {
   beforeEach(() => window.history.pushState({}, "", "/parent"));
 
-  it("starts the parent loader on a fresh load and leaves dismissal to the portal", async () => {
+  it("shows no hat loader on a refresh or new tab: that's for signing in and up", async () => {
     seedAuthLocalStorage("parent", { profile: { user_id: "p1" } });
     renderGuard("parent");
 
     await waitFor(() => expect(screen.getByText(SECRET)).toBeInTheDocument());
-    const loader = useLoaderStore.getState();
-    expect(loader.isVisible).toBe(true);
-    expect(loader.variant).toBe("parent");
-    expect(loader.parentStage).toBe("entry");
+    expect(useLoaderStore.getState().isVisible).toBe(false);
+  });
 
+  it("leaves a sign-in hand-off loader for the portal to dismiss", async () => {
+    useLoaderStore.getState().startLoading({ variant: "parent", stage: "signin-handoff" });
+    seedAuthLocalStorage("parent", { profile: { user_id: "p1" } });
+    renderGuard("parent");
+
+    await waitFor(() => expect(screen.getByText(SECRET)).toBeInTheDocument());
     await new Promise((r) => setTimeout(r, 600));
     expect(useLoaderStore.getState().isVisible).toBe(true); // not stopped after 500ms like other portals
   });

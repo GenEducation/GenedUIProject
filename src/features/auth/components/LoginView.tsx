@@ -13,7 +13,7 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useLoaderStore } from "@/stores/useLoaderStore";
-import { completeAndRedirect, getRedirectParam } from "../usePostAuthRedirect";
+import { completeAndRedirect, getRedirectParam, startLoaderForRole } from "../usePostAuthRedirect";
 import { asError } from "@/utils/errors";
 import { passwordRuleError } from "@/features/auth/passwordRule";
 
@@ -148,7 +148,6 @@ export function LoginView() {
     }
 
     setIsSigningIn(true);
-    useLoaderStore.getState().startLoading();
 
     try {
       const token = await signIn(loginData);
@@ -197,6 +196,7 @@ export function LoginView() {
         });
       }
 
+      startLoaderForRole(role, "signin");
       const redirectPath = getRedirectParam();
       completeAndRedirect(router, redirectPath || `/${role}`);
     } catch (error) {
@@ -220,7 +220,6 @@ export function LoginView() {
     }
 
     setIsSubmitting(true);
-    useLoaderStore.getState().startLoading();
 
     try {
       let authResponse;
@@ -274,6 +273,7 @@ export function LoginView() {
         useTutorialStore.getState().startTutorial();
       }
 
+      startLoaderForRole(role, "signup");
       completeAndRedirect(router, `/${role}`);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
@@ -386,7 +386,6 @@ export function LoginView() {
                     onGoogleSuccess={async (token) => {
                       setSigninErrors({});
                       setIsSigningIn(true);
-                      useLoaderStore.getState().startLoading();
                       try {
                         const { googleSignIn } = await import("../authService");
                         const res = await googleSignIn(token);
@@ -432,6 +431,7 @@ export function LoginView() {
                           });
                         }
 
+                        startLoaderForRole(role, "signin");
                         const redirectPath = getRedirectParam();
                         completeAndRedirect(router, redirectPath || `/${role}`);
                       } catch (err) {

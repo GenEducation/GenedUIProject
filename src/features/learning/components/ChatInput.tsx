@@ -3,6 +3,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Check, Mic, SendHorizontal, Square, X } from "lucide-react";
 import { useDictation } from "../dictation/useDictation";
+import { DictationLanguagePicker } from "../dictation/DictationLanguagePicker";
+import { dictationLanguage } from "../dictation/languages";
+import { useSpeechLanguage } from "../dictation/useSpeechLanguage";
 import { formatDuration } from "../useSessionTimer";
 
 /** The backend refuses a learner message over 1000 characters. */
@@ -17,6 +20,8 @@ interface ChatInputProps {
   disabled: boolean;
   onSend: (text: string) => void;
   onStop: () => void;
+  /** The lesson's subject: a Hindi lesson dictates in Hindi unless the learner has picked otherwise. */
+  subject?: string | null;
 }
 
 /**
@@ -59,10 +64,12 @@ function DictationWave({ level }: { level: number }) {
  * waveform with a timer, and confirm. Confirm keeps the words to edit and
  * send; cancel restores what was there before.
  */
-export function ChatInput({ replying, disabled, onSend, onStop }: ChatInputProps) {
+export function ChatInput({ replying, disabled, onSend, onStop, subject = null }: ChatInputProps) {
   const [text, setText] = useState("");
   const areaRef = useRef<HTMLTextAreaElement>(null);
-  const dictation = useDictation();
+  // Shared with voice mode: a pick in either place applies to both.
+  const { language, pick: pickLanguage } = useSpeechLanguage(subject);
+  const dictation = useDictation(dictationLanguage(language)?.recognition);
   const dictating = dictation.state === "listening";
   // What was in the box when dictation began; dictated words are added after it.
   const [before, setBefore] = useState("");
@@ -144,6 +151,7 @@ export function ChatInput({ replying, disabled, onSend, onStop }: ChatInputProps
             >
               <X size={18} />
             </button>
+            <DictationLanguagePicker value={language} onChange={pickLanguage} />
             <DictationWave level={dictation.level} />
             <span className="shrink-0 text-[13px] tabular-nums text-[var(--ls-ink-mid)]">{formatDuration(dictation.seconds)}</span>
             {/* eslint-disable-next-line no-restricted-syntax -- the dictation bar's round confirm. */}
@@ -170,6 +178,9 @@ export function ChatInput({ replying, disabled, onSend, onStop }: ChatInputProps
               >
                 <Mic size={18} />
               </button>
+            )}
+            {dictation.supported && (
+              <DictationLanguagePicker value={language} onChange={pickLanguage} disabled={disabled} />
             )}
             {dictation.error && (
               <span role="alert" className="min-w-0 truncate text-[12px] text-[#9A2E1E]">

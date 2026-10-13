@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
 import { partnerStudentsService } from "../services/partnerStudentsService";
-import type { RegisterSourceInput, SourceState, SourceView } from "../types/sources";
+import type { RegisterSourceInput, SourceProgress, SourceState, SourceView } from "../types/sources";
 
 export interface Student {
   id: string;
@@ -35,6 +35,8 @@ export interface Subject {
   has_report: boolean;
   /** Reconciliation questions the last run is waiting on (`sourcesService.questions`). */
   questions: number;
+  /** How far the current run is, while `running` (null before it first reports). */
+  progress: SourceProgress | null;
   created_at: string;
 }
 
@@ -53,6 +55,7 @@ export function toSubject(source: SourceView): Subject {
     detail: source.detail,
     has_report: source.has_report,
     questions: source.questions,
+    progress: source.progress ?? null,
     created_at: source.created_at,
   };
 }

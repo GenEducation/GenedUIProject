@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import { Mic, MicOff, PhoneOff } from "lucide-react";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import type { VoiceSession } from "../voice/useVoiceSession";
+import type { VoiceLanguage } from "../types";
+import { DictationLanguagePicker } from "../dictation/DictationLanguagePicker";
 
 const BARS = 13;
 
@@ -13,6 +15,9 @@ const ENVELOPE = Array.from({ length: BARS }, (_, i) => 0.35 + 0.65 * Math.sin((
 interface VoiceWaveformProps {
   session: VoiceSession;
   onEnd: () => void;
+  /** The language voice listens and replies in; changing it reconnects. */
+  language?: VoiceLanguage;
+  onLanguageChange?: (code: VoiceLanguage) => void;
 }
 
 /**
@@ -21,7 +26,7 @@ interface VoiceWaveformProps {
  * with the microphone while the learner talks and with a steady pulse while
  * the tutor speaks; they are driven by refs on animation frames, not renders.
  */
-export function VoiceWaveform({ session, onEnd }: VoiceWaveformProps) {
+export function VoiceWaveform({ session, onEnd, language, onLanguageChange }: VoiceWaveformProps) {
   const tutorName = useStudentStore((s) => s.studentProfile?.ai_name) || "Your tutor";
   const barsRef = useRef<HTMLDivElement>(null);
   // The animation loop reads the latest level and phase without restarting.
@@ -133,6 +138,10 @@ export function VoiceWaveform({ session, onEnd }: VoiceWaveformProps) {
               </button>
               {side("r", false)}
             </div>
+
+            {language && onLanguageChange && (
+              <DictationLanguagePicker value={language} onChange={onLanguageChange} label="Voice language" align="right" />
+            )}
 
             {/* eslint-disable-next-line no-restricted-syntax -- the voice bar's end-call pill. */}
             <button

@@ -64,12 +64,14 @@ const ERRORS: Record<string, string> = {
   "service-not-allowed": "Microphone access is blocked. Allow it in your browser to dictate.",
   "audio-capture": "No microphone was found.",
   network: "Dictation needs an internet connection.",
+  "language-not-supported": "This browser can't take dictation in that language. Try Chrome, or pick another language.",
 };
 
 const noSubscribe = () => () => {};
 
 const join = (a: string, b: string) => [a.trim(), b.trim()].filter(Boolean).join(" ");
 
+/** `lang` is the recogniser's BCP-47 tag (see `languages.ts`); changing it mid-dictation carries on in the new one. */
 export function useDictation(lang = "en-IN"): Dictation {
   // False on the server and the first client render, so they agree; the real answer on the client.
   const supported = useSyncExternalStore(noSubscribe, () => recognitionCtor() !== null, () => false);
@@ -219,6 +221,36 @@ export function useDictation(lang = "en-IN"): Dictation {
     setSettled("");
     setInterim("");
   }, [finish]);
+
+  // A new language while dictating: keep what was heard and carry on listening in the new one.
+  const langRef = useRef(lang);
+  useEffect(() => {
+    if (langRef.current === lang) return;
+    langRef.current = lang;
+    if (!wanted.current) return;
+    const old = recognition.current;
+    recognition.current = null;
+    if (old) {
+      old.onend = null;
+      old.onresult = null;
+      old.onerror = null;
+      try {
+        old.abort();
+      } catch {
+        // already stopped
+      }
+    }
+    settledRef.current = join(settledRef.current, interimRef.current);
+    setSettled(settledRef.current);
+    interimRef.current = "";
+    setInterim("");
+    try {
+      begin();
+    } catch {
+      setError("Dictation couldn't start.");
+      finish();
+    }
+  }, [lang, begin, finish]);
 
   // The recording timer.
   useEffect(() => {

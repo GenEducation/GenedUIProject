@@ -9,6 +9,7 @@ import { ChatInput } from "./ChatInput";
 import { VoiceWaveform } from "./VoiceWaveform";
 import { lessonVoiceEnabled } from "./LessonRail";
 import { useVoiceSession, type VoiceSession } from "../voice/useVoiceSession";
+import { useSpeechLanguage } from "../dictation/useSpeechLanguage";
 
 const VOICE_UNAVAILABLE: VoiceSession = {
   phase: "offline",
@@ -26,7 +27,14 @@ const STICK_PX = 80;
  * while the learner is at the bottom; once they scroll up to reread, it stays
  * put and offers a jump back down.
  */
-export function ChatPanel({ onShowFigure }: { onShowFigure: (figureGroupId: string) => void }) {
+export function ChatPanel({
+  onShowFigure,
+  subject = null,
+}: {
+  onShowFigure: (figureGroupId: string) => void;
+  /** The lesson's subject, so dictation can start in its language. */
+  subject?: string | null;
+}) {
   const turns = useLessonStore((s) => s.turns);
   const status = useLessonStore((s) => s.status);
   const canTalk = useLessonStore((s) => s.instance?.state === "active" && Boolean(s.instance.active_node));
@@ -37,7 +45,9 @@ export function ChatPanel({ onShowFigure }: { onShowFigure: (figureGroupId: stri
   const voiceMode = useLessonStore((s) => s.voiceMode);
   const voiceAvailable = lessonVoiceEnabled();
   // Voice replies land in the same transcript; only the input area changes.
-  const live = useVoiceSession(voiceMode && voiceAvailable && status === "ready" && canTalk);
+  // Voice and dictation share one language; voice reconnects when it changes.
+  const { language, pick: pickLanguage } = useSpeechLanguage(subject);
+  const live = useVoiceSession(voiceMode && voiceAvailable && status === "ready" && canTalk, language);
   // With voice switched off for this build, voice mode still opens and says so, rather than the button doing nothing.
   const voice = voiceAvailable ? live : VOICE_UNAVAILABLE;
   const replying = turns.some((t) => t.status === "streaming");
@@ -125,13 +135,19 @@ export function ChatPanel({ onShowFigure }: { onShowFigure: (figureGroupId: stri
       )}
 
       {voiceMode ? (
-        <VoiceWaveform session={voice} onEnd={() => setVoiceMode(false)} />
+        <VoiceWaveform
+          session={voice}
+          onEnd={() => setVoiceMode(false)}
+          language={language}
+          onLanguageChange={pickLanguage}
+        />
       ) : (
       <ChatInput
         replying={replying}
         disabled={status !== "ready" || !canTalk}
         onSend={onSend}
         onStop={() => void stop()}
+        subject={subject}
       />
       )}
     </section>

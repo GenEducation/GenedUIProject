@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getAuthToken } from "@/utils/authFetch";
 import { useLessonStore } from "../useLessonStore";
+import type { VoiceLanguage } from "../types";
 import { loadPipeline, type MicErrorKind, type PipelineEvent, type VoicePipelineInstance } from "./loadPipeline";
 
 export type VoicePhase =
@@ -52,7 +53,7 @@ export function voiceSocketUrl(apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""):
  * backend's reference client (`public/voice/`); this maps what it reports onto
  * the lesson: spoken replies become turns in the same store as typed ones.
  */
-export function useVoiceSession(active: boolean): VoiceSession {
+export function useVoiceSession(active: boolean, language: VoiceLanguage = "en"): VoiceSession {
   const instanceId = useLessonStore((s) => s.instanceId);
   // Only whether there is a node: the socket follows the lesson once open, so moving to a new node must not reconnect it.
   const hasNode = useLessonStore((s) => Boolean(s.instance?.active_node));
@@ -129,7 +130,7 @@ export function useVoiceSession(active: boolean): VoiceSession {
           url: voiceSocketUrl(),
           // The gateway reads the account token from the subprotocols, never from a URL a log would keep.
           protocols: ["gened-companion-v1", `companion-token.${getAuthToken()}`],
-          init: { language: "en", instance_id: instanceId, instance_node_id: startNode, device: navigator.userAgent.slice(0, 150) },
+          init: { language, instance_id: instanceId, instance_node_id: startNode, device: navigator.userAgent.slice(0, 150) },
           // Half duplex: the tutor isn't cut off by its own echo through the speakers.
           interrupt: "never",
           onEvent,
@@ -148,7 +149,8 @@ export function useVoiceSession(active: boolean): VoiceSession {
       void pipeline?.close().catch(() => undefined);
       setSession(STARTING); // the next session starts from scratch
     };
-  }, [active, instanceId, hasNode]);
+    // The server takes the language once, at `init`: a new one reconnects in it.
+  }, [active, instanceId, hasNode, language]);
 
   return { ...session, setMuted };
 }

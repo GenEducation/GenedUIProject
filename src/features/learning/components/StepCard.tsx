@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState, type ButtonHTMLAttributes, type FormEvent } from "react";
-import { ArrowRight, Check, Lightbulb, Loader2, X } from "lucide-react";
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type FormEvent } from "react";
+import { ArrowRight, Calculator, Check, Lightbulb, Loader2, X } from "lucide-react";
 import { asError } from "@/utils/errors";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLessonStore } from "../useLessonStore";
 import { calculation } from "../check/arithmetic";
 import type { AnswerResponse, AnswerResult, CheckItem } from "../types";
 import { BoardFigure } from "./BoardFigure";
+import { CalculatorKeys } from "./CalculatorKeys";
 
 /** The structured answer each check type is scored from (backend `gened_assessment/scorer.py`). */
 export function responseFor(check: CheckItem, value: string): AnswerResponse {
@@ -95,8 +96,22 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
   const [error, setError] = useState<string | null>(null);
   const isChoice = check.response_type === "mcq";
   const isTyped = TYPED_TYPES.has(check.response_type);
-  // A sum typed as the answer ("540 * 40") is worked out as they type, and its result is what's sent.
+  // A calculation typed as the answer ("540 * 40", "√144") is worked out as they type. For a number answer its
+  // result is what's sent; for an expression or words, what they typed is (√2 stays √2), and the result only helps.
   const sum = isTyped ? calculation(typed) : null;
+  const [calculator, setCalculator] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  /** Type a calculator key's symbol where the cursor is. */
+  const insertKey = (text: string) => {
+    const el = inputRef.current;
+    const start = el?.selectionStart ?? typed.length;
+    const end = el?.selectionEnd ?? typed.length;
+    setTyped(typed.slice(0, start) + text + typed.slice(end));
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(start + text.length, start + text.length);
+    });
+  };
 
   useEffect(() => {
     setSelected(null);
@@ -108,7 +123,7 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
     event.preventDefault();
     const response: AnswerResponse | null = isChoice
       ? selected ? { kind: "choice", option_ids: [selected] } : null
-      : typed.trim() ? responseFor(check, sum ?? typed) : null;
+      : typed.trim() ? responseFor(check, check.response_type === "numeric" ? sum ?? typed : typed) : null;
     if (!response) return;
     setBusy(true);
     setError(null);
@@ -162,6 +177,7 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
         <div className="relative mt-4">
           <label htmlFor={`answer-${check.id}`} className="sr-only">Your answer</label>
           <input
+            ref={inputRef}
             id={`answer-${check.id}`}
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
@@ -192,6 +208,8 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
         </div>
       )}
 
+      {isTyped && calculator && <CalculatorKeys id={`calc-${check.id}`} onKey={insertKey} />}
+
       {!isChoice && !isTyped && (
         <p className="lesson-hand mt-3 text-[17px] text-[var(--ls-ink-mid)]">Type your answer to this one in the chat.</p>
       )}
@@ -207,6 +225,17 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
         <SketchButton type="button" variant="tertiary" onClick={() => void askHint(check.id)}>
           <Lightbulb size={16} aria-hidden /> Hint
         </SketchButton>
+        {isTyped && (
+          <SketchButton
+            type="button"
+            variant="tertiary"
+            aria-pressed={calculator}
+            aria-controls={calculator ? `calc-${check.id}` : undefined}
+            onClick={() => setCalculator((c) => !c)}
+          >
+            <Calculator size={16} aria-hidden /> Calculator
+          </SketchButton>
+        )}
       </div>
     </form>
   );
