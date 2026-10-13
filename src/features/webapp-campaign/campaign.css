@@ -735,7 +735,7 @@
 @keyframes gcSheetUp { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes gcDash { to { background-position: 24px 0; } }
 
-/* ---------- seats left + countdown to the pilot start (see pilotSeats.ts) ---------- */
+/* ---------- seats left: hardcoded scarcity counter (see pilotSeats.ts) ---------- */
 .gened-campaign .gc-form-another {
   margin-top: 4px; background: none; border: 0; cursor: pointer; font: 700 14.5px var(--body); color: var(--green-600);
   text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--citron-deep);
@@ -743,19 +743,15 @@
 .gened-campaign .gc-form-another:hover { color: var(--ink); }
 
 .gened-campaign .gc-seats {
-  display: inline-flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 4px 12px;
+  display: inline-flex; align-items: center; gap: 6px;
   padding: 9px 18px 9px 16px; border-radius: 999px; background: #fff; border: 1px solid rgba(255, 122, 89, 0.35);
   box-shadow: 0 10px 28px -14px rgba(226, 85, 43, 0.45); font-size: 15px; font-weight: 600; color: var(--ink);
 }
-.gened-campaign .gc-seats > span:first-child { display: inline-flex; align-items: center; gap: 6px; }
-.gened-campaign .gc-seats > span:first-child::before {
+.gened-campaign .gc-seats::before {
   content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--coral); margin-right: 2px;
   animation: gcSeatPulse 1.6s ease-out infinite;
 }
 .gened-campaign .gc-seats b { display: inline-block; font-size: 1.2em; font-weight: 800; color: #D9481F; font-variant-numeric: tabular-nums; animation: gcSeatPop 0.5s var(--spring) both; }
-.gened-campaign .gc-seats-time { color: var(--muted); }
-.gened-campaign .gc-seats-time::before { content: "·"; margin-right: 12px; color: rgba(18, 45, 48, 0.3); }
-.gened-campaign .gc-seats time { font-weight: 700; color: var(--green-600); font-variant-numeric: tabular-nums; }
 .gened-campaign .gc-seats-hero { animation: gcHeroRise 0.7s var(--spring) both; }
 .gened-campaign .gc-seats-join { margin: -8px 0 4px; }
 .gened-campaign .gc-seats-sheet { margin: -6px 0 18px; }
@@ -769,5 +765,5 @@
   .gened-campaign .gc-seats { font-size: 14px; padding: 8px 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .gened-campaign .gc-seats, .gened-campaign .gc-seats *, .gened-campaign .gc-seats *::before { animation: none !important; }
+  .gened-campaign .gc-seats, .gened-campaign .gc-seats *, .gened-campaign .gc-seats::before { animation: none !important; }
 }
