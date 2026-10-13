@@ -9,7 +9,7 @@ import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 import { loadSubjectCatalog } from "@/features/subjects/subjectCatalog";
 import { ParentLoaderBackdrop } from "@/features/parent/components/loader/ParentLoader";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { BrandLoadingScreen } from "@/components/shared/loaders/BrandLoadingScreen";
 
 type Role = "student" | "parent" | "partner" | "admin" | "teacher";
 
@@ -151,14 +151,7 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
         </div>
       );
     }
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#F6F7F2]">
-        <div className="flex flex-col items-center gap-4">
-          <GenEdLogo height={64} className="animate-pulse" priority />
-          <div className="w-8 h-8 border-4 border-[#075E63] border-t-transparent rounded-full animate-spin" />
-        </div>
-      </div>
-    );
+    return <BrandLoadingScreen />;
   }
 
   return <>{children}</>;

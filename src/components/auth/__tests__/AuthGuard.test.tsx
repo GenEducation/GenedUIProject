@@ -52,7 +52,9 @@ describe("AuthGuard — unauthenticated", () => {
       expect(routerMock.replace).toHaveBeenCalledWith("/?redirect=%2Fstudent%2Fanalytics"),
     );
     expect(screen.queryByText(SECRET)).not.toBeInTheDocument();
-    expect(screen.getByAltText("GenEd")).toBeInTheDocument(); // spinner
+    // the GenEd loading screen, not the old pulsing logo and spinner
+    expect(screen.getByRole("status", { name: "Loading" })).toBeInTheDocument();
+    expect(document.querySelector(".animate-spin")).toBeNull();
   });
 
   it("redirects when the role is missing even if a token exists", async () => {
