@@ -36,3 +36,22 @@ export function completeAndRedirect(router: ReturnType<typeof useRouter>, path: 
     router.replace(path);
   });
 }
+
+/**
+ * Puts up the right full-screen loader for a role, once the auth reply has
+ * said which role it is. Sign-in can't know the role until then, so the form
+ * shows its own button spinner while the request is in flight and the loader
+ * starts here, already the right one — never the student loader first and the
+ * parent one a moment later. Parents and partners get the GenEd logo toss;
+ * everyone else gets the learning journey.
+ */
+export function startLoaderForRole(role: string, mode: "signin" | "signup"): void {
+  const loader = useLoaderStore.getState();
+  if (role === "parent") {
+    loader.startLoading({ variant: "parent", stage: mode === "signup" ? "signup" : "signin-handoff" });
+  } else if (role === "partner") {
+    loader.startLoading({ variant: "parent", stage: mode === "signup" ? "partner-signup" : "partner-signin" });
+  } else {
+    loader.startLoading();
+  }
+}

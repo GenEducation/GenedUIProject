@@ -51,3 +51,28 @@ export function clearPortalEntry(): void {
     // Nothing to clear.
   }
 }
+
+/**
+ * The first-run "connect your child" popup. A parent with no child connected
+ * sees it on entering the portal; "I'll do this later" hides it for the rest
+ * of this login only, so it comes back next time until a child is connected.
+ */
+const CONNECT_KEY = "gened_parent_connect_prompt_dismissed";
+
+export function hasDismissedConnectPrompt(): boolean {
+  try {
+    const login = currentLoginFingerprint();
+    return !!login && sessionStorage.getItem(CONNECT_KEY) === login;
+  } catch {
+    return false;
+  }
+}
+
+export function dismissConnectPrompt(): void {
+  try {
+    const login = currentLoginFingerprint();
+    if (login) sessionStorage.setItem(CONNECT_KEY, login);
+  } catch {
+    // Blocked storage: the popup simply shows again after a refresh.
+  }
+}

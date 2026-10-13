@@ -34,22 +34,22 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   segments = []
 }) => {
   return (
-    <div className="bg-white p-6 rounded-3xl border border-[#1a3a2a]/5 shadow-sm hover:shadow-xl transition-all group">
+    <div className="bg-white p-6 rounded-3xl border border-[#122D30]/5 shadow-sm hover:shadow-xl transition-all group">
       <div className="flex justify-between items-start mb-4">
-        <p className="text-xs font-bold uppercase tracking-widest text-[#1a3a2a]/70 group-hover:text-[#059669] transition-colors">
+        <p className="text-xs font-bold uppercase tracking-widest text-[#122D30]/70 group-hover:text-[#075E63] transition-colors">
           {label}
         </p>
         {icon && (
-          <div className="text-[#1a3a2a]/60 group-hover:text-[#059669] group-hover:scale-110 transition-all duration-300">
+          <div className="text-[#122D30]/60 group-hover:text-[#075E63] group-hover:scale-110 transition-all duration-300">
             {icon}
           </div>
         )}
       </div>
       
       <div className="flex items-center gap-3 mb-4">
-        <h3 className="text-4xl font-bold transition-colors duration-300" style={{ color: valueColor || "#1a3a2a" }}>{value}</h3>
+        <h3 className="text-4xl font-bold transition-colors duration-300" style={{ color: valueColor || "#122D30" }}>{value}</h3>
         {subValue && (
-          <span className="text-sm font-semibold text-[#1a3a2a]/60">{subValue}</span>
+          <span className="text-sm font-semibold text-[#122D30]/60">{subValue}</span>
         )}
         {status && (
           <span 
@@ -69,11 +69,11 @@ export const MetricCard: React.FC<MetricCardProps> = ({
                 className="absolute bottom-0 flex flex-col items-start transition-all duration-1000 ease-out"
                 style={{ left: `${Math.min(99, Math.max(0, progress))}%` }}
               >
-                <Flag size={14} fill={valueColor || "#1a3a2a"} style={{ color: valueColor || "#1a3a2a" }} />
+                <Flag size={14} fill={valueColor || "#122D30"} style={{ color: valueColor || "#122D30" }} />
               </div>
           </div>
 
-          <div className="relative h-2 w-full rounded-full bg-[#1a3a2a]/5 overflow-hidden flex">
+          <div className="relative h-2 w-full rounded-full bg-[#075E63]/5 overflow-hidden flex">
             {isSegmented ? (
               <>
                 {segments.map((seg, idx) => (
@@ -102,7 +102,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       
       <div className="flex items-center justify-between">
         {trend && (
-          <div className={`flex items-center gap-1 text-xs font-bold ${trend.isPositive ? 'text-[#059669]' : 'text-red-500'}`}>
+          <div className={`flex items-center gap-1 text-xs font-bold ${trend.isPositive ? 'text-[#075E63]' : 'text-red-500'}`}>
             {trend.isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
             {trend.value}
           </div>
@@ -110,7 +110,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       </div>
       
       {description && (
-        <p className="mt-4 text-sm leading-relaxed text-[#1a3a2a]/80 font-medium">
+        <p className="mt-4 text-sm leading-relaxed text-[#122D30]/80 font-medium">
           {description}
         </p>
       )}

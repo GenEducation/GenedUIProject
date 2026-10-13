@@ -12,6 +12,8 @@ import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import "./landing.css";
 import { useHydrated } from "@/hooks/useHydrated";
 import { ParentLoaderBackdrop } from "@/features/parent/components/loader/ParentLoader";
+import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { BrandLoadingScreen } from "@/components/shared/loaders/BrandLoadingScreen";
 
 function storedRole(): string | null {
   try {
@@ -187,14 +189,7 @@ export default function HomePage() {
         </div>
       );
     }
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#F7F6F1]">
-        <div className="flex flex-col items-center gap-4">
-          <Image src="/Logo.svg" alt="GenEd" width={150} height={30} className="animate-pulse" priority />
-          <div className="w-8 h-8 border-4 border-[#2D5540] border-t-transparent rounded-full animate-spin" />
-        </div>
-      </div>
-    );
+    return <BrandLoadingScreen />;
   }
 
   const closeMenu = () => setMenuOpen(false);
@@ -208,7 +203,6 @@ export default function HomePage() {
         href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..700&family=Manrope:wght@400;500;600;700;800&display=swap"
         rel="stylesheet"
       />
-
       <span id="top" />
 
       {/* ── NAV ── */}
@@ -216,7 +210,7 @@ export default function HomePage() {
         <div className="wrap">
           <nav>
             <a href="#top" className="logo" aria-label="GenEd home">
-              <Image src="/Logo.svg" alt="GenEd" width={150} height={30} priority />
+              <GenEdLogo height={44} priority />
             </a>
             <div className="navlinks">
               <a href="#device">The Device</a>
@@ -277,9 +271,14 @@ export default function HomePage() {
           </div>
           <div className="device-art reveal in" data-d="2">
             <div className="hero-photo">
-              <div className="frame"><img src="/student-desk.jpg" alt="A student studying at their desk with the GenEd deskbot" /></div>
+              <div className="frame">
+                <picture>
+                  <source srcSet="/landing/deskbot-student.webp" type="image/webp" />
+                  <img draggable={false} src="/landing/deskbot-student.jpg" width={1400} height={1120} alt="A student writing in his notebook at his desk, with the yellow GenEd Deskbot smiling beside him" />
+                </picture>
+              </div>
               <span className="ph-label tl"><span className="gdot" /> Study mode: ON</span>
-              <span className="ph-label br"><svg className="icon" viewBox="0 0 24 24" style={{ width: 15, height: 15, color: "var(--green-600)" }}><path d="M20 6L9 17l-5-5" /></svg> No browser. Ever.</span>
+              <span className="ph-label bl"><svg className="icon" viewBox="0 0 24 24" style={{ width: 15, height: 15, color: "var(--green-600)" }}><path d="M20 6L9 17l-5-5" /></svg> No browser. Ever.</span>
             </div>
           </div>
         </div>
@@ -329,7 +328,10 @@ export default function HomePage() {
       <section id="device">
         <div className="wrap split">
           <div className="media reveal">
-            <img src="/hero-student.jpg" alt="A focused student learning with the GenEd deskbot" />
+            <picture>
+              <source srcSet="/landing/deskbot-trio.webp" type="image/webp" />
+              <img draggable={false} src="/landing/deskbot-trio.jpg" width={1400} height={1050} loading="lazy" alt="Three GenEd Deskbots in yellow, blue and grey, each showing its friendly face" />
+            </picture>
           </div>
           <div className="reveal" data-d="1">
             <span className="eyebrow">The GenEd Deskbot</span>
@@ -380,7 +382,7 @@ export default function HomePage() {
             </ul>
           </div>
           <div className="media reveal" data-d="1">
-            <img src="/parent-analytics-5.jpg" alt="A parent checking their child's learning progress on the GenEd app" />
+            <img draggable={false} src="/parent-analytics-5.jpg" alt="A parent checking their child's learning progress on the GenEd app" />
           </div>
         </div>
       </section>
@@ -444,7 +446,7 @@ export default function HomePage() {
           <h2>Give your child the learning companion they deserve.</h2>
           <p>GenEd is live and ready — a focused, distraction-free AI tutor that actually adapts to how your child learns.</p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-            <Link className="btn btn-primary" href="/pre-order">Pre-order the Deskbot <svg className="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></Link>
+            <Link className="btn btn-citron" href="/pre-order">Pre-order the Deskbot <svg className="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></Link>
             <Link className="btn btn-ghost" href="/register" style={{ color: "#fff", borderColor: "rgba(255,255,255,0.35)" }}>Get started free</Link>
           </div>
         </div>
@@ -455,7 +457,7 @@ export default function HomePage() {
         <div className="wrap">
           <div className="foot-grid">
             <div>
-              <a href="#top" className="logo" aria-label="GenEd home"><Image src="/Logo.svg" alt="GenEd" width={140} height={28} /></a>
+              <a href="#top" className="logo" aria-label="GenEd home"><GenEdLogo height={44} onDark /></a>
               <p>A dedicated AI learning device that helps every child learn confidently, safely and at their own pace.</p>
             </div>
             <div className="fcol"><h5>Product</h5><Link href="/pre-order">Pre-order</Link><a href="#device">The Device</a><a href="#why">Why GenEd</a><a href="#parents">Parent App</a><a href="#safe">Safety</a></div>

@@ -27,30 +27,30 @@ const dom = <T extends object>(props: Passed<T>): T => {
 
 /** The full report, styled to sit inside the partner portal rather than as raw Markdown. */
 const MARKDOWN: Components = {
-  h1: (p) => <h3 className="text-base font-black text-[#1A3D2C] mt-2 mb-2" {...dom(p)} />,
-  h2: (p) => <h4 className="text-xs font-black uppercase tracking-widest text-[#1A3D2C]/60 mt-5 mb-2" {...dom(p)} />,
-  h3: (p) => <h5 className="text-xs font-black text-[#1A3D2C]/70 mt-4 mb-1" {...dom(p)} />,
-  p: (p) => <p className="text-xs leading-relaxed text-[#1A3D2C]/75 my-1.5" {...dom(p)} />,
-  ul: (p) => <ul className="list-disc pl-5 space-y-0.5 text-xs text-[#1A3D2C]/75" {...dom(p)} />,
-  ol: (p) => <ol className="list-decimal pl-5 space-y-0.5 text-xs text-[#1A3D2C]/75" {...dom(p)} />,
+  h1: (p) => <h3 className="text-base font-black text-[#122D30] mt-2 mb-2" {...dom(p)} />,
+  h2: (p) => <h4 className="text-xs font-black uppercase tracking-widest text-[#122D30]/60 mt-5 mb-2" {...dom(p)} />,
+  h3: (p) => <h5 className="text-xs font-black text-[#122D30]/70 mt-4 mb-1" {...dom(p)} />,
+  p: (p) => <p className="text-xs leading-relaxed text-[#122D30]/75 my-1.5" {...dom(p)} />,
+  ul: (p) => <ul className="list-disc pl-5 space-y-0.5 text-xs text-[#122D30]/75" {...dom(p)} />,
+  ol: (p) => <ol className="list-decimal pl-5 space-y-0.5 text-xs text-[#122D30]/75" {...dom(p)} />,
   li: (p) => <li className="break-words" {...dom(p)} />,
-  code: (p) => <code className="font-mono text-[11px] bg-[#1A3D2C]/5 rounded px-1 py-px break-all" {...dom(p)} />,
-  pre: (p) => <pre className="text-[11px] bg-[#1A3D2C]/5 rounded-xl p-3 overflow-x-auto" {...dom(p)} />,
+  code: (p) => <code className="font-mono text-[11px] bg-[#075E63]/5 rounded px-1 py-px break-all" {...dom(p)} />,
+  pre: (p) => <pre className="text-[11px] bg-[#075E63]/5 rounded-xl p-3 overflow-x-auto" {...dom(p)} />,
   table: (p) => <table className="text-xs border-collapse my-2" {...dom(p)} />,
-  th: (p) => <th className="border border-[#1A3D2C]/10 px-2 py-1 text-left" {...dom(p)} />,
-  td: (p) => <td className="border border-[#1A3D2C]/10 px-2 py-1" {...dom(p)} />,
+  th: (p) => <th className="border border-[#122D30]/10 px-2 py-1 text-left" {...dom(p)} />,
+  td: (p) => <td className="border border-[#122D30]/10 px-2 py-1" {...dom(p)} />,
 };
 
 function Problem({ problem }: { problem: ReportProblem }) {
   const yours = problem.fixedBy === "you";
   return (
-    <li className={`flex items-start gap-3 rounded-2xl border px-4 py-3 ${yours ? "border-amber-200 bg-amber-50/70" : "border-[#1A3D2C]/10 bg-white"}`}>
-      <span className={`mt-0.5 shrink-0 ${yours ? "text-amber-600" : "text-[#1A3D2C]/40"}`} aria-hidden>
+    <li className={`flex items-start gap-3 rounded-2xl border px-4 py-3 ${yours ? "border-amber-200 bg-amber-50/70" : "border-[#122D30]/10 bg-white"}`}>
+      <span className={`mt-0.5 shrink-0 ${yours ? "text-amber-600" : "text-[#122D30]/40"}`} aria-hidden>
         {yours ? <UserRound size={16} /> : <ShieldCheck size={16} />}
       </span>
       <div className="min-w-0">
-        <p className="text-sm text-[#1A3D2C] leading-snug">{problem.text}</p>
-        <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/40">
+        <p className="text-sm text-[#122D30] leading-snug">{problem.text}</p>
+        <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">
           {yours ? "You can fix this" : "For a GenEd admin"} · {problem.code}
           {problem.count > 1 ? ` · ${problem.count}×` : ""}
         </p>
@@ -71,7 +71,7 @@ export function SourceReportModal({ subject, onClose }: SourceReportModalProps) 
       onClose={onClose}
       size="full"
       title={subject ? `Report for ${subject.title}` : "Report"}
-      panelStyle={{ maxWidth: "min(880px, 100%)", background: "#F8F9F8" }}
+      panelStyle={{ maxWidth: "min(880px, 100%)", background: "#F6F7F2" }}
     >
       {/* Keyed so each chapter's report starts from an empty, loading state. */}
       {subject && <ReportBody key={subject.source_id} subject={subject} onClose={onClose} />}
@@ -108,14 +108,14 @@ function ReportBody({ subject, onClose }: { subject: Subject; onClose: () => voi
 
   return (
     <div className="flex flex-col min-h-full">
-      <header className="shrink-0 flex items-start gap-4 px-5 md:px-7 pt-6 pb-4 bg-white border-b border-[#1A3D2C]/5">
-        <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#1A3D2C] text-white flex items-center justify-center">
+      <header className="shrink-0 flex items-start gap-4 px-5 md:px-7 pt-6 pb-4 bg-white border-b border-[#122D30]/5">
+        <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#075E63] text-white flex items-center justify-center">
           <ClipboardList size={20} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/40">Ingestion report</p>
-          <h2 className="text-lg md:text-xl font-black text-[#1A3D2C] tracking-tight truncate">{subject.title}</h2>
-          <p className="text-[11px] font-bold text-[#1A3D2C]/50 uppercase tracking-wider truncate">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">Ingestion report</p>
+          <h2 className="text-lg md:text-xl font-black text-[#122D30] tracking-tight truncate">{subject.title}</h2>
+          <p className="text-[11px] font-bold text-[#122D30]/50 uppercase tracking-wider truncate">
             {subject.book_title} · Ch {subject.chapter_ordinal} · Grade {subject.grade} · {subject.subject}
           </p>
         </div>
@@ -126,9 +126,9 @@ function ReportBody({ subject, onClose }: { subject: Subject; onClose: () => voi
 
       <div className="flex-1 px-5 md:px-7 py-5 flex flex-col gap-5">
         {error ? (
-          <p role="alert" className="text-sm font-bold text-[#1A3D2C]/70 py-10 text-center">{error}</p>
+          <p role="alert" className="text-sm font-bold text-[#122D30]/70 py-10 text-center">{error}</p>
         ) : !report ? (
-          <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#1A3D2C]/40 py-10">
+          <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#122D30]/40 py-10">
             <Loader2 size={16} className="animate-spin" aria-hidden /> Loading the report…
           </p>
         ) : (
@@ -136,16 +136,16 @@ function ReportBody({ subject, onClose }: { subject: Subject; onClose: () => voi
             {stats.length > 0 && (
               <dl className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {stats.map(([label, n]) => (
-                  <div key={label} className="rounded-2xl bg-white border border-[#1A3D2C]/5 px-4 py-3">
-                    <dt className="text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/40">{label}</dt>
-                    <dd className="text-xl font-black text-[#1A3D2C] tabular-nums">{n}</dd>
+                  <div key={label} className="rounded-2xl bg-white border border-[#122D30]/5 px-4 py-3">
+                    <dt className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">{label}</dt>
+                    <dd className="text-xl font-black text-[#122D30] tabular-nums">{n}</dd>
                   </div>
                 ))}
               </dl>
             )}
 
             <section aria-label="What needs attention">
-              <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/50 mb-2">
+              <h3 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#122D30]/50 mb-2">
                 <AlertTriangle size={12} aria-hidden /> What needs attention
               </h3>
               {summary && summary.problems.length > 0 ? (
@@ -155,17 +155,17 @@ function ReportBody({ subject, onClose }: { subject: Subject; onClose: () => voi
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-[#1A3D2C]/70 rounded-2xl bg-white border border-[#1A3D2C]/5 px-4 py-3">
+                <p className="text-sm text-[#122D30]/70 rounded-2xl bg-white border border-[#122D30]/5 px-4 py-3">
                   Nothing failed the checks. The chapter&apos;s content is waiting for an admin to review it.
                 </p>
               )}
             </section>
 
-            <details className="rounded-2xl bg-white border border-[#1A3D2C]/5 px-4 py-3 group">
-              <summary className="cursor-pointer text-xs font-black text-[#1A3D2C]/60 hover:text-[#1A3D2C] select-none">
+            <details className="rounded-2xl bg-white border border-[#122D30]/5 px-4 py-3 group">
+              <summary className="cursor-pointer text-xs font-black text-[#122D30]/60 hover:text-[#122D30] select-none">
                 Full technical report
               </summary>
-              <div className="mt-3 border-t border-[#1A3D2C]/5 pt-3 overflow-x-auto">
+              <div className="mt-3 border-t border-[#122D30]/5 pt-3 overflow-x-auto">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN}>
                   {report}
                 </ReactMarkdown>

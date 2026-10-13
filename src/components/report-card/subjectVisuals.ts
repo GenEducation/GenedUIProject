@@ -42,11 +42,13 @@ export interface BandTone {
 
 /** Report-card bands (via `bandFor`), coloured for this page. */
 export const BAND_TONES: Record<MasteryBand, BandTone> = {
-  Advanced: { accent: "#16A36B", ink: "#0E7C55", tint: "#D7F3E5", wash: ["#EFFAF4", "#FAFDFB"], edge: "#D3EFE1" },
-  Proficient: { accent: "#2563EB", ink: "#1D4ED8", tint: "#DBE7FE", wash: ["#F2F6FF", "#FAFCFF"], edge: "#DCE6FB" },
+  // Advanced is the "mastered" state: deep-teal marks on a citron tint, so the
+  // chip/glyph well is the page's eye-catcher (ink/teal on citron ≥ 7:1).
+  Advanced: { accent: "#075E63", ink: "#122D30", tint: "#D9F279", wash: ["#F4F9E6", "#FBFCF7"], edge: "#DDEAB4" },
+  Proficient: { accent: "#2F7A7E", ink: "#075E63", tint: "#DCEBE7", wash: ["#EEF5F3", "#FAFCFB"], edge: "#D0E3DD" },
   Approaching: { accent: "#F5A50B", ink: "#B7790A", tint: "#FDEFC7", wash: ["#FFF8E8", "#FFFDF7"], edge: "#F8E7BE" },
   Developing: { accent: "#EC3F72", ink: "#C02659", tint: "#FCDDE7", wash: ["#FFF2F6", "#FFFAFB"], edge: "#F8DAE4" },
-  "Not started": { accent: "#8A9AA8", ink: "#5E7186", tint: "#E9EEF1", wash: ["#F6F8F9", "#FCFDFD"], edge: "#E3E9EC" },
+  "Not started": { accent: "#8FA3A5", ink: "#5E7477", tint: "#E8EEEC", wash: ["#F5F7F5", "#FCFCFB"], edge: "#E1E8E5" },
 };
 
 /** Band for a 0–100 mastery, or "Not started" when the child hasn't begun. */

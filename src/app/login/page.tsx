@@ -10,7 +10,7 @@ import { useParentStore } from "@/features/parent/store/useParentStore";
 import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useLoaderStore } from "@/stores/useLoaderStore";
-import { completeAndRedirect, getRedirectParam } from "@/features/auth/usePostAuthRedirect";
+import { completeAndRedirect, getRedirectParam, startLoaderForRole } from "@/features/auth/usePostAuthRedirect";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -81,13 +81,9 @@ export default function LoginPage() {
       });
     }
 
-    // The role is only known now, so login starts on the shared loader; a
-    // parent is handed over to the parent loader for the rest of the way.
-    if (role === "parent") {
-      useLoaderStore.getState().setVariant("parent");
-      useLoaderStore.getState().setParentStage("signin-handoff");
-    }
-
+    // The role is only known now: start the right loader straight away (the
+    // button's spinner covered the request), so nothing swaps mid-way.
+    startLoaderForRole(role, "signin");
     const redirectPath = getRedirectParam();
     completeAndRedirect(router, redirectPath || `/${role}`);
   };
@@ -101,7 +97,6 @@ export default function LoginPage() {
       return;
     }
     setIsSigningIn(true);
-    useLoaderStore.getState().startLoading();
     try {
       const token = await signIn(loginData);
       persistAndRedirect(token);
@@ -129,7 +124,6 @@ export default function LoginPage() {
   const handleGoogleSuccess = async (token: string) => {
     setErrors({});
     setIsSigningIn(true);
-    useLoaderStore.getState().startLoading();
     try {
       const { googleSignIn } = await import("@/features/auth/authService");
       const res = await googleSignIn(token);

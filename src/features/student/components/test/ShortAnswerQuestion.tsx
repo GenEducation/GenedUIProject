@@ -36,7 +36,7 @@ export function ShortAnswerQuestion({
         disabled={disabled}
         placeholder={question.type === "open_ended" ? "Write your explanation here..." : "Your answer..."}
         rows={1}
-        className="w-full p-3 sm:p-4 rounded-xl border-2 border-[var(--primary-ink)]/10 focus:border-[var(--primary-ink)]/30 focus:ring-4 focus:ring-[var(--primary-ink)]/5 outline-none transition-all text-[15px] resize-none overflow-hidden min-h-[56px]"
+        className="w-full p-3 sm:p-4 rounded-xl border-2 border-[var(--primary-ink)]/10 focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10 outline-none transition-all text-[15px] resize-none overflow-hidden min-h-[56px]"
       />
     </div>
   );

@@ -41,7 +41,8 @@ export interface ChapterRowModel {
 
 export type ChapterSort = "order" | "mastery" | "recent";
 
-function chapterStatus(ch: ChapterMasteryItem): ChapterStatus {
+/** Shared with the profile's "Chapters completed" stat so both count alike. */
+export function chapterStatus(ch: ChapterMasteryItem): ChapterStatus {
   if (ch.status === "completed" || ch.completion_percentage >= 100) return "Completed";
   if (ch.completion_percentage > 0 || ch.study_count > 0) return "In progress";
   return "Not started";

@@ -68,23 +68,23 @@ export function PageWisePreview({ file, onPageCount }: PageWisePreviewProps) {
   if (!fileUrl) return null;
 
   return (
-    <div className="flex flex-col h-full bg-[#F8FBF9] rounded-[2rem] border border-[#1A3D2C]/5 overflow-hidden shadow-inner">
+    <div className="flex flex-col h-full bg-[#F8FBF9] rounded-[2rem] border border-[#122D30]/5 overflow-hidden shadow-inner">
       {/* Viewer Header */}
-      <div className="shrink-0 p-4 border-b border-[#1A3D2C]/5 bg-white/50 backdrop-blur-sm flex items-center justify-between">
+      <div className="shrink-0 p-4 border-b border-[#122D30]/5 bg-white/50 backdrop-blur-sm flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-[#1A3D2C] text-white rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-[#075E63] text-white rounded-lg flex items-center justify-center">
             <FileText size={16} />
           </div>
           <div>
-            <p className="text-[10px] font-black text-[#1A3D2C]/40 uppercase tracking-widest">Previewing</p>
-            <p className="text-xs font-bold text-[#1A3D2C] truncate max-w-[200px]">{file.name}</p>
+            <p className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest">Previewing</p>
+            <p className="text-xs font-bold text-[#122D30] truncate max-w-[200px]">{file.name}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
            <button aria-label="Open Original" 
              onClick={() => window.open(fileUrl, '_blank')}
-             className="p-2 text-[#1A3D2C]/40 hover:text-[#1A3D2C] hover:bg-white rounded-lg transition-all"
+             className="p-2 text-[#122D30]/40 hover:text-[#122D30] hover:bg-white rounded-lg transition-all"
              title="Open Original"
            >
              <Maximize2 size={16} />
@@ -112,35 +112,35 @@ export function PageWisePreview({ file, onPageCount }: PageWisePreviewProps) {
                 exit={{ opacity: 0 }}
                 className="absolute inset-0 bg-white/80 backdrop-blur-[2px] flex flex-col items-center justify-center z-10"
               >
-                <div className="w-8 h-8 border-4 border-[#1A3D2C]/10 border-t-[#1A3D2C] rounded-full animate-spin mb-2" />
-                <p className="text-[10px] font-black text-[#1A3D2C]/40 uppercase tracking-[0.2em]">Syncing Page {currentPage}...</p>
+                <div className="w-8 h-8 border-4 border-[#122D30]/10 border-t-[#122D30] rounded-full animate-spin mb-2" />
+                <p className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-[0.2em]">Syncing Page {currentPage}...</p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
       {/* Pagination Footer */}
-      <div className="shrink-0 p-6 bg-white border-t border-[#1A3D2C]/5 flex items-center justify-between">
+      <div className="shrink-0 p-6 bg-white border-t border-[#122D30]/5 flex items-center justify-between">
         <button aria-label="Previous page" 
           onClick={handlePrevPage}
           disabled={currentPage <= 1}
-          className="w-14 h-14 flex items-center justify-center rounded-2xl bg-[#F8F9F8] text-[#1A3D2C]/40 hover:text-[#1A3D2C] hover:bg-[#D1E6D9]/30 disabled:opacity-30 transition-all shadow-sm"
+          className="w-14 h-14 flex items-center justify-center rounded-2xl bg-[#F6F7F2] text-[#122D30]/40 hover:text-[#122D30] hover:bg-[#DCEBE7]/30 disabled:opacity-30 transition-all shadow-sm"
         >
           <ChevronLeft size={28} />
         </button>
         
         <div className="flex flex-col items-center min-w-[60px]">
-          <span className="text-[10px] font-black text-[#1A3D2C]/40 uppercase tracking-widest">Page</span>
+          <span className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest">Page</span>
           <div className="flex items-baseline gap-1">
-            <span className="text-lg font-black text-[#1A3D2C]">{currentPage}</span>
-            <span className="text-xs font-bold text-[#1A3D2C]/30">/ {totalPages}</span>
+            <span className="text-lg font-black text-[#122D30]">{currentPage}</span>
+            <span className="text-xs font-bold text-[#122D30]/30">/ {totalPages}</span>
           </div>
         </div>
 
         <button aria-label="Next page" 
           onClick={handleNextPage}
           disabled={currentPage >= totalPages}
-          className="w-14 h-14 flex items-center justify-center rounded-2xl bg-[#F8F9F8] text-[#1A3D2C]/40 hover:text-[#1A3D2C] hover:bg-[#D1E6D9]/30 disabled:opacity-30 transition-all shadow-sm"
+          className="w-14 h-14 flex items-center justify-center rounded-2xl bg-[#F6F7F2] text-[#122D30]/40 hover:text-[#122D30] hover:bg-[#DCEBE7]/30 disabled:opacity-30 transition-all shadow-sm"
         >
           <ChevronRight size={28} />
         </button>

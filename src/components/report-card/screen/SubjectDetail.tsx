@@ -37,7 +37,6 @@ export function SubjectDetail({
   onTab: (tab: DetailTab) => void;
 }) {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const { tone } = summary;
 
   const onKeyDown = (e: React.KeyboardEvent, i: number) => {
     const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
@@ -72,7 +71,7 @@ export function SubjectDetail({
                 <motion.span
                   layoutId="rc-tab-underline"
                   className="absolute inset-x-1 bottom-0 h-[3px] rounded-full"
-                  style={{ background: tone.accent }}
+                  style={{ background: "var(--rs-brand)" }}
                 />
               )}
             </button>
@@ -202,7 +201,7 @@ function InsightsTab({ summary }: { summary: SubjectSummary }) {
       )}
       {recs.length > 0 && (
         <div>
-          <h4 className="text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]">Recommendations</h4>
+          <h4 className="citron-eyebrow text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]">Recommendations</h4>
           <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-[13px] leading-relaxed text-[var(--rs-ink)]">
             {recs.map((r, i) => <li key={i}>{typeof r === "string" ? r : (r.action ?? r.recommendation ?? r.text ?? "")}</li>)}
           </ul>

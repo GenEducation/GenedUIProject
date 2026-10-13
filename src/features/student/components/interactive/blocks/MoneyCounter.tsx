@@ -36,7 +36,7 @@ export default function MoneyCounter({ directiveId, meta, disabled, readOnly }: 
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", minHeight: 30 }}>
         {picks.map((v, i) => (
-          <span key={i} style={{ background: v >= 10 ? "#1D9E75" : COLORS.brand, color: "#FFFFFF", padding: "6px 11px", borderRadius: v >= 5 ? 6 : 20, fontSize: 13, fontWeight: 600 }}>{sym}{v}</span>
+          <span key={i} style={{ background: v >= 10 ? "#075E63" : COLORS.brand, color: "#FFFFFF", padding: "6px 11px", borderRadius: v >= 5 ? 6 : 20, fontSize: 13, fontWeight: 600 }}>{sym}{v}</span>
         ))}
       </div>
       <p style={{ marginTop: 10, fontSize: 15, fontWeight: 700, color: COLORS.ink }}>Total: {sym}{total}</p>

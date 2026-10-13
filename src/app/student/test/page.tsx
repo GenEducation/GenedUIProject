@@ -57,7 +57,7 @@ function TestPageContent() {
     <button aria-label="Open sidebar"
       onClick={() => setSidebarOpen(true)}
       className="fixed top-4 left-4 z-30 flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all"
-      style={{ width: 38, height: 38, background: "#FFFFFF", border: "1px solid #E2E8F0", color: "#042E5C" }}
+      style={{ width: 38, height: 38, background: "var(--surface-card)", border: "1px solid var(--surface-border)", color: "var(--ink)" }}
       title="Open sidebar"
     >
       <Menu size={16} strokeWidth={1.75} />
@@ -165,21 +165,24 @@ function TestPageContent() {
       <div className="h-screen flex overflow-hidden">
         <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
         {sidebarToggle}
-        <div className="flex-1 min-w-0 bg-[#F8FAFC] flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
+        <div className="flex-1 min-w-0 bg-[var(--canvas)] flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="space-y-6"
           >
             <div className="relative inline-block">
-              <Loader2 size={64} className="text-[#042E5C] animate-spin" />
+              <Loader2 size={64} className="text-[var(--primary)] animate-spin" />
               <div className="absolute inset-0 flex items-center justify-center">
-                <Sparkles size={24} className="text-[#042E5C] animate-pulse" />
+                {/* Citron well + ink spark: the one bright beat while the paper is set. */}
+                <span className="w-9 h-9 rounded-full bg-[var(--soft-surface)] flex items-center justify-center">
+                  <Sparkles size={18} className="text-[var(--primary)] animate-pulse" />
+                </span>
               </div>
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-black text-[#042E5C]">Preparing Your Assessment</h2>
-              <p className="text-[#042E5C]/60 max-w-xs mx-auto">
+              <h2 className="text-2xl font-black text-[var(--ink)]">Preparing Your Assessment</h2>
+              <p className="text-[var(--text-muted)] max-w-xs mx-auto">
                 Our AI is calibrating questions to your current mastery level...
               </p>
             </div>
@@ -193,23 +196,23 @@ function TestPageContent() {
     <div className="h-screen flex overflow-hidden">
       <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
       {sidebarToggle}
-    <div className="min-h-screen flex-1 min-w-0 bg-[#F8FAFC] flex flex-col overflow-y-auto">
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-[#042E5C]/5 px-6 py-4">
+    <div className="min-h-screen flex-1 min-w-0 bg-[var(--canvas)] flex flex-col overflow-y-auto">
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-[var(--surface-border)] px-6 py-4">
         <div className="max-w-[1400px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button aria-label="Close test"
               onClick={handleClose}
-              className="w-10 h-10 rounded-full bg-[#042E5C]/5 text-[#042E5C] flex items-center justify-center hover:bg-[#042E5C]/10 transition-all"
+              className="w-10 h-10 rounded-full bg-[var(--soft-surface)]/60 text-[var(--ink)] flex items-center justify-center hover:bg-[var(--soft-surface)] transition-all"
             >
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 className="text-lg font-black text-[#042E5C] leading-tight">
+              <h1 className="text-lg font-black text-[var(--ink)] leading-tight">
                 {currentTest?.document_title || "Chapter Assessment"}
               </h1>
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-black text-[#042E5C]/40 uppercase tracking-widest">
+                <span className="w-2 h-2 rounded-full bg-[var(--primary)] animate-pulse" />
+                <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
                   Live Assessment Mode
                 </span>
               </div>
@@ -217,14 +220,23 @@ function TestPageContent() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="text-[11px] font-black text-emerald-600 uppercase tracking-tighter">
+            <div className="px-4 py-1.5 rounded-full bg-[var(--soft-surface)]/60 border border-[var(--soft-surface)] flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[var(--primary)]" />
+              <span className="text-[11px] font-black text-[var(--primary)] uppercase tracking-tighter">
                 Connection Stable
               </span>
             </div>
           </div>
         </div>
+        {/* Answered-so-far rail along the header's bottom edge: citron = progress. */}
+        {currentTest && !testResult && totalQuestions > 0 && (
+          <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[3px] bg-[var(--soft-surface)]/70">
+            <div
+              className="h-full bg-[var(--accent-deep)] rounded-r-full transition-[width] duration-500 ease-out"
+              style={{ width: `${(answeredCount / totalQuestions) * 100}%` }}
+            />
+          </div>
+        )}
       </header>
 
       <div className="flex-1 max-w-[1400px] mx-auto w-full flex gap-12 p-6 py-12">
@@ -245,7 +257,7 @@ function TestPageContent() {
                 key="results"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-[40px] p-8 md:p-12 border border-[#042E5C]/5 shadow-xl shadow-[#042E5C]/5"
+                className="bg-white rounded-[40px] p-8 md:p-12 border border-[var(--surface-border)] shadow-xl shadow-[var(--ink)]/5"
               >
                 <TestResultsView
                   test={currentTest!}
@@ -309,11 +321,11 @@ function TestPageContent() {
                   })}
                 </div>
 
-                <div className="pt-12 mt-12 border-t border-[#042E5C]/5 flex items-center justify-between">
+                <div className="pt-12 mt-12 border-t border-[var(--surface-border)] flex items-center justify-between">
                   <button
                     onClick={handleBack}
                     disabled={isFirstSection}
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl text-[#042E5C]/40 hover:text-[#042E5C] font-black text-xs uppercase tracking-widest disabled:opacity-0 transition-all"
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl text-[var(--text-muted)] hover:text-[var(--primary)] font-black text-xs uppercase tracking-widest disabled:opacity-0 transition-all"
                   >
                     <ChevronLeft size={16} />
                     Previous Section
@@ -324,7 +336,7 @@ function TestPageContent() {
                       <button
                         onClick={handleSubmitClick}
                         disabled={isSubmitting}
-                        className="px-8 py-3 bg-[#042E5C] text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg shadow-[#042E5C]/20 hover:bg-[#064282] disabled:opacity-50 transition-all"
+                        className="px-8 py-3 bg-[var(--primary)] text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-all"
                       >
                         {isSubmitting ? (
                           <>
@@ -341,7 +353,7 @@ function TestPageContent() {
                     ) : (
                       <button
                         onClick={handleNext}
-                        className="px-8 py-3 bg-[#042E5C] text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg shadow-[#042E5C]/20 hover:bg-[#064282] transition-all"
+                        className="px-8 py-3 bg-[var(--primary)] text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg shadow-[var(--primary)]/20 hover:bg-[var(--primary-hover)] transition-all"
                       >
                         Next Section
                         <ChevronRight size={16} />
@@ -369,19 +381,19 @@ function TestPageContent() {
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 text-center shadow-2xl space-y-5"
             >
-              <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
-                <AlertTriangle size={28} className="text-amber-500" />
+              <div className="w-16 h-16 rounded-full bg-[var(--warning-bg)] flex items-center justify-center mx-auto">
+                <AlertTriangle size={28} className="text-[var(--warning)]" />
               </div>
-              <h2 className="text-xl font-extrabold text-[#042E5C]">
+              <h2 className="text-xl font-extrabold text-[var(--ink)]">
                 {unansweredCount} unanswered {unansweredCount === 1 ? "question" : "questions"}
               </h2>
-              <p className="text-[#042E5C]/60 text-[15px]">
+              <p className="text-[var(--text-muted)] text-[15px]">
                 Unanswered questions will be scored as 0. Are you sure you want to submit?
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowSubmitWarning(false)}
-                  className="flex-1 py-3 bg-slate-100 text-[#042E5C] rounded-xl font-bold text-[15px] hover:bg-slate-200 transition-all"
+                  className="flex-1 py-3 bg-[var(--soft-surface)]/60 text-[var(--ink)] rounded-xl font-bold text-[15px] hover:bg-[var(--soft-surface)] transition-all"
                 >
                   Go Back
                 </button>
@@ -390,7 +402,7 @@ function TestPageContent() {
                     setShowSubmitWarning(false);
                     submitTest();
                   }}
-                  className="flex-1 py-3 bg-[#042E5C] text-white rounded-xl font-bold text-[15px] hover:bg-[#064282] transition-all"
+                  className="flex-1 py-3 bg-[var(--primary)] text-white rounded-xl font-bold text-[15px] hover:bg-[var(--primary-hover)] transition-all"
                 >
                   Submit Anyway
                 </button>

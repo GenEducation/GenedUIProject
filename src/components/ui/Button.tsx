@@ -25,14 +25,14 @@ const t = (token: string, fallback: string) => `var(${token}, ${fallback})`;
  */
 /* eslint-disable no-restricted-syntax -- documented token fallbacks, see above */
 const FALLBACK = {
-  primary: STUDENT_COLORS.primary, // #059F6D
-  primaryHover: "#04835a",
-  primaryActive: "#036c4a",
-  primarySoft: "rgba(5,159,109,0.08)",
-  primaryRing: "rgba(5,159,109,0.35)",
-  primaryInk: "#042E5C",
-  neutralHover: "rgba(4,46,92,0.05)",
-  neutralBorder: "rgba(4,46,92,0.12)",
+  primary: STUDENT_COLORS.primary, // #075E63
+  primaryHover: "#064C50",
+  primaryActive: "#053C40",
+  primarySoft: "rgba(7,94,99,0.08)",
+  primaryRing: "rgba(7,94,99,0.32)",
+  primaryInk: "#122D30",
+  neutralHover: "rgba(18,45,48,0.05)",
+  neutralBorder: "rgba(18,45,48,0.14)",
   danger: STUDENT_COLORS.danger, // #E8635A
   dangerHover: "#d9524a",
   dangerActive: "#c2453e",
@@ -81,7 +81,7 @@ const VARIANT_SURFACE: Record<ButtonVariant, Surface> = {
   secondary: {
     "--btn-bg": "transparent",
     "--btn-bg-hover": t("--primary-soft", FALLBACK.primarySoft),
-    "--btn-bg-active": "rgba(5,159,109,0.14)",
+    "--btn-bg-active": "rgba(7,94,99,0.14)",
     "--btn-fg": t("--primary", FALLBACK.primary),
     "--btn-border": t("--primary", FALLBACK.primary),
     "--btn-ring": t("--primary-ring", FALLBACK.primaryRing),
@@ -89,7 +89,7 @@ const VARIANT_SURFACE: Record<ButtonVariant, Surface> = {
   outline: {
     "--btn-bg": "transparent",
     "--btn-bg-hover": t("--btn-neutral-hover", FALLBACK.neutralHover),
-    "--btn-bg-active": "rgba(4,46,92,0.09)",
+    "--btn-bg-active": "rgba(18,45,48,0.09)",
     "--btn-fg": t("--primary-ink", FALLBACK.primaryInk),
     "--btn-border": t("--btn-neutral-border", FALLBACK.neutralBorder),
     "--btn-ring": t("--primary-ring", FALLBACK.primaryRing),
@@ -97,7 +97,7 @@ const VARIANT_SURFACE: Record<ButtonVariant, Surface> = {
   tertiary: {
     "--btn-bg": "transparent",
     "--btn-bg-hover": t("--btn-neutral-hover", FALLBACK.neutralHover),
-    "--btn-bg-active": "rgba(4,46,92,0.09)",
+    "--btn-bg-active": "rgba(18,45,48,0.09)",
     "--btn-fg": t("--primary-ink", FALLBACK.primaryInk),
     "--btn-border": "transparent",
     "--btn-ring": t("--primary-ring", FALLBACK.primaryRing),

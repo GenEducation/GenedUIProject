@@ -22,8 +22,8 @@ export function VoiceControls({ onEnd }: VoiceControlsProps) {
         style={{
           background: isMuted ? "#E8635A" : "white",
           color: isMuted ? "white" : "var(--tutor)",
-          border: `1px solid ${isMuted ? "#E8635A" : "#E2E8F0"}`,
-          boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+          border: `1px solid ${isMuted ? "#E8635A" : "#E3E8E2"}`,
+          boxShadow: "0 4px 12px rgba(18,45,48,0.08)",
         }}
         title={isMuted ? "Unmute" : "Mute"}
       >
@@ -40,13 +40,15 @@ export function VoiceControls({ onEnd }: VoiceControlsProps) {
           onTouchEnd={(e) => { e.preventDefault(); endPttUtterance(); }}
           className="flex items-center gap-2 px-4 sm:px-7 h-11 sm:h-12 rounded-full font-bold text-[12px] sm:text-[13px] select-none transition-all whitespace-nowrap flex-shrink-0"
           style={{
+            // Held = the mic is live: the button lights citron (ink text on it,
+            // never white), matching the orb's citron ring above.
             background: pttHeld
-              ? "linear-gradient(135deg, #34C759, #30d158)"
-              : "linear-gradient(135deg, #059F6D, #048A5D)",
-            color: "white",
+              ? "linear-gradient(135deg, var(--accent), var(--accent-deep))"
+              : "linear-gradient(135deg, var(--primary), var(--primary-hover))",
+            color: pttHeld ? "var(--accent-ink)" : "white",
             boxShadow: pttHeld
-              ? "0 6px 20px rgba(52,199,89,0.45)"
-              : "0 6px 20px rgba(5,159,109,0.35)",
+              ? "0 0 0 3px rgba(7,94,99,0.18), 0 6px 20px rgba(184,214,63,0.55)"
+              : "0 6px 20px rgba(7,94,99,0.35)",
             transform: pttHeld ? "scale(0.97)" : "scale(1)",
           }}
         >

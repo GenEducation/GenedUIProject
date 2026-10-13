@@ -8,21 +8,21 @@
 
 .gened-preorder {
   /* palette (shared with landing.css) */
-  --ink: #0a2a4a;
-  --navy: #042e5c;
-  --navy-700: #0b3a6e;
-  --green: #059f6d;
-  --green-600: #04875c;
-  --green-800: #046b50; /* deep green — feature titles (readable on the grey stage) */
-  --green-200: #9be3c8;
+  --ink: #122D30;
+  --navy: #122D30;
+  --navy-700: #0B474B;
+  --green: #075E63;
+  --green-600: #064C50;
+  --green-800: #053C40; /* deep green — feature titles (readable on the grey stage) */
+  --green-200: #D9F279;
   --accent-blue: #1d5aa8; /* feature number — echoes the device's blue face */
-  --cream: #f7f6f1;
-  --cream-2: #efede3;
+  --cream: #F6F7F2;
+  --cream-2: #DCEBE7;
   --amber: #f4b740;
   --coral: #ff7a59;
   --paper: #ffffff;
-  --muted: #5c6b7a;
-  --line: rgba(4, 46, 92, 0.1);
+  --muted: #5E7477;
+  --line: rgba(18,45,48, 0.1);
 
   /* studio grey — matches the device clip's baked-in background */
   --studio-1: #aeadab;
@@ -97,11 +97,11 @@
 .po-btn-primary {
   background: var(--green);
   color: #fff;
-  box-shadow: 0 10px 24px -8px rgba(5, 159, 109, 0.55);
+  box-shadow: 0 10px 24px -8px rgba(7,94,99, 0.55);
 }
 .po-btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 32px -10px rgba(5, 159, 109, 0.65);
+  box-shadow: 0 16px 32px -10px rgba(7,94,99, 0.65);
   background: var(--green-600);
 }
 .po-btn-ghost {
@@ -190,8 +190,8 @@
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--green-600);
-  background: rgba(5, 159, 109, 0.09);
-  border: 1px solid rgba(5, 159, 109, 0.18);
+  background: rgba(7,94,99, 0.09);
+  border: 1px solid rgba(7,94,99, 0.18);
   padding: 8px 16px;
   border-radius: 999px;
 }
@@ -200,7 +200,7 @@
   height: 7px;
   border-radius: 50%;
   background: var(--green);
-  box-shadow: 0 0 0 4px rgba(5, 159, 109, 0.18);
+  box-shadow: 0 0 0 4px rgba(7,94,99, 0.18);
 }
 .po-intro h1 {
   font-family: var(--display);
@@ -294,7 +294,7 @@
     radial-gradient(
       120% 80% at 50% 42%,
       transparent 55%,
-      rgba(4, 46, 92, 0.06) 100%
+      rgba(18,45,48, 0.06) 100%
     );
 }
 
@@ -367,13 +367,13 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(4, 46, 92, 0.22);
+  background: rgba(18,45,48, 0.22);
   transition: all 0.3s ease;
 }
 .po-rail span.is-active {
   background: var(--green);
   transform: scale(1.5);
-  box-shadow: 0 0 0 4px rgba(5, 159, 109, 0.16);
+  box-shadow: 0 0 0 4px rgba(7,94,99, 0.16);
 }
 
 /* ---------- fallback (mobile / reduced-motion) ---------- */
@@ -402,7 +402,7 @@
   border: 1px solid var(--line);
   border-radius: var(--r);
   padding: 24px 26px;
-  box-shadow: 0 12px 30px -20px rgba(4, 46, 92, 0.35);
+  box-shadow: 0 12px 30px -20px rgba(18,45,48, 0.35);
 }
 .po-fallback-card .po-fnum {
   font-family: var(--display);
@@ -450,7 +450,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(5, 159, 109, 0.1);
+  background: rgba(7,94,99, 0.1);
   color: var(--green-600);
   margin-bottom: 12px;
 }
@@ -633,7 +633,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.16em;
-  color: rgba(4, 46, 92, 0.5);
+  color: rgba(18,45,48, 0.5);
   margin-bottom: 7px;
 }
 .po-field input,
@@ -663,7 +663,7 @@
   outline: none;
   border-color: var(--green);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(5, 159, 109, 0.14);
+  box-shadow: 0 0 0 3px rgba(7,94,99, 0.14);
 }
 .po-field.has-error input,
 .po-field.has-error select,
@@ -727,7 +727,7 @@
   width: 74px;
   height: 74px;
   border-radius: 22px;
-  background: rgba(5, 159, 109, 0.12);
+  background: rgba(7,94,99, 0.12);
   color: var(--green-600);
   display: inline-flex;
   align-items: center;

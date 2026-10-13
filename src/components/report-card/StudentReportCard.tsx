@@ -325,10 +325,10 @@ export function StudentReportCard({
   if (isLoading) {
     if (loadingFallback) return <>{loadingFallback}</>;
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--canvas)] flex items-center justify-center">
         <div className="text-center">
-          <RefreshCw size={28} className="text-[#059F6D] animate-spin mx-auto mb-3" />
-          <p className="text-sm text-slate-500 font-medium">Generating your report card…</p>
+          <RefreshCw size={28} className="text-[var(--primary)] animate-spin mx-auto mb-3" />
+          <p className="text-sm text-[var(--text-muted)] font-medium">Generating your report card…</p>
           <FunFactCard className="mt-6" />
         </div>
       </div>
@@ -337,9 +337,9 @@ export function StudentReportCard({
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--canvas)] flex items-center justify-center">
         <div className="text-center max-w-sm">
-          <p className="text-sm text-red-500 font-medium mb-3">{error}</p>
+          <p className="text-sm text-[var(--danger-ink)] font-medium mb-3">{error}</p>
           <Button
             variant="outline"
             onClick={() => (childId && (parentId || teacherId) ? fetchParentReportData() : fetchAll())}

@@ -155,7 +155,7 @@ function ComponentRow({ name, report }: { name: string; report: HealthComponentR
         <span className="text-sm font-medium text-white">{name}</span>
         <span
           className={`rounded-md px-2 py-0.5 text-[11px] ${
-            failed ? "bg-rose-500/15 text-rose-300" : "bg-[#059F6D]/15 text-[#059F6D]"
+            failed ? "bg-rose-500/15 text-rose-300" : "bg-[#075E63]/15 text-[#075E63]"
           }`}
         >
           {status}
@@ -430,7 +430,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
               <input
                 value={labelDraft}
                 onChange={(e) => setLabelDraft(e.target.value)}
-                className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white focus:border-[#059F6D] focus:outline-none"
+                className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white focus:border-[#075E63] focus:outline-none"
                 placeholder="Desk label"
               />
               <button
@@ -441,7 +441,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
                   setRenaming(false);
                 }}
                 disabled={!labelDraft.trim() || busy === "rename"}
-                className="rounded-lg bg-[#059F6D] px-3 py-2 text-sm font-medium text-white hover:bg-[#048158] disabled:opacity-50"
+                className="rounded-lg bg-[#075E63] px-3 py-2 text-sm font-medium text-white hover:bg-[#048158] disabled:opacity-50"
               >
                 {busy === "rename" ? "Saving…" : "Save"}
               </button>

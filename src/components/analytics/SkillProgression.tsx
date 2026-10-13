@@ -16,12 +16,12 @@ import { Select } from "@/components/ui/Select";
 // -- Constants ----------------------------------------------------------------
 
 const LINE_COLORS = [
-  "#059669", // primary green
+  "#075E63", // primary green
   "#7C3AED", // purple
   "#0EA5E9", // sky blue
   "#F59E0B", // amber
   "#EC4899", // pink
-  "#10B981", // emerald
+  "#075E63", // emerald
   "#6366F1", // indigo
   "#EF4444", // red
 ];
@@ -116,7 +116,7 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
   const label = payload[0]?.payload?.fullLabel;
 
   return (
-    <div className="bg-[#1a3a2a] rounded-2xl px-4 py-3 shadow-xl border border-white/10">
+    <div className="bg-[#075E63] rounded-2xl px-4 py-3 shadow-xl border border-white/10">
       <p className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-2">{label}</p>
       {payload
         .filter((p: TooltipPayloadItem) => p.value !== undefined)
@@ -161,10 +161,10 @@ export const SkillProgression: React.FC = () => {
   if (isProgressionLoading) {
     return (
       <div className="space-y-6 animate-in fade-in duration-500">
-        <div className="bg-white rounded-[40px] border border-[#1a3a2a]/5 shadow-sm h-[450px] flex items-center justify-center">
+        <div className="bg-white rounded-[40px] border border-[#122D30]/5 shadow-sm h-[450px] flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <div className="w-10 h-10 rounded-full border-4 border-[#059669]/20 border-t-[#059669] animate-spin" />
-            <p className="text-sm font-bold text-[#1a3a2a]/50">Loading progression data…</p>
+            <div className="w-10 h-10 rounded-full border-4 border-[#075E63]/20 border-t-[#075E63] animate-spin" />
+            <p className="text-sm font-bold text-[#122D30]/50">Loading progression data…</p>
           </div>
         </div>
       </div>
@@ -173,14 +173,14 @@ export const SkillProgression: React.FC = () => {
 
   if (skillProgression.length === 0) {
     return (
-      <div className="bg-white rounded-[40px] border border-[#1a3a2a]/5 shadow-sm h-[450px] flex items-center justify-center">
+      <div className="bg-white rounded-[40px] border border-[#122D30]/5 shadow-sm h-[450px] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center max-w-xs">
-          <div className="w-16 h-16 rounded-3xl bg-[#E5F2E9] flex items-center justify-center">
-            <Activity size={28} className="text-[#059669]" />
+          <div className="w-16 h-16 rounded-3xl bg-[#E8F2EF] flex items-center justify-center">
+            <Activity size={28} className="text-[#075E63]" />
           </div>
           <div>
-            <p className="text-lg font-black text-[#1a3a2a]">No progression data yet</p>
-            <p className="text-sm text-[#1a3a2a]/50 mt-1">
+            <p className="text-lg font-black text-[#122D30]">No progression data yet</p>
+            <p className="text-sm text-[#122D30]/50 mt-1">
               Complete more assessments in this subject to see your skill progression over time.
             </p>
           </div>
@@ -194,10 +194,10 @@ export const SkillProgression: React.FC = () => {
       {/* Selection & Skill Info */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Dropdown Card */}
-        <div className="bg-white p-8 rounded-[40px] border border-[#1a3a2a]/5 shadow-sm flex flex-col justify-center">
+        <div className="bg-white p-8 rounded-[40px] border border-[#122D30]/5 shadow-sm flex flex-col justify-center">
           <div className="space-y-1 mb-4">
-            <p className="text-[10px] font-black text-[#1a3a2a]/30 uppercase tracking-[0.2em]">Select Focus Skill</p>
-            <h4 className="text-xl font-bold text-[#1a3a2a]">Deep-Dive Analysis</h4>
+            <p className="text-[10px] font-black text-[#122D30]/30 uppercase tracking-[0.2em]">Select Focus Skill</p>
+            <h4 className="text-xl font-bold text-[#122D30]">Deep-Dive Analysis</h4>
           </div>
           
           <div className="relative group">
@@ -218,7 +218,7 @@ export const SkillProgression: React.FC = () => {
                 color: "var(--primary-ink)",
               }}
             />
-            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-[#1a3a2a]/30 group-hover:text-[#059669] transition-colors">
+            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-[#122D30]/30 group-hover:text-[#075E63] transition-colors">
               <ChevronDown size={18} />
             </div>
           </div>
@@ -226,7 +226,7 @@ export const SkillProgression: React.FC = () => {
 
         {/* Skill Detail Card */}
         {selectedSkill && (
-          <div className="lg:col-span-2 bg-white p-8 rounded-[40px] border border-[#1a3a2a]/5 shadow-sm relative overflow-hidden">
+          <div className="lg:col-span-2 bg-white p-8 rounded-[40px] border border-[#122D30]/5 shadow-sm relative overflow-hidden">
             <div className="flex justify-between items-start relative z-10">
               <div className="space-y-4 max-w-xl">
                 <div className="flex items-center gap-3">
@@ -237,22 +237,22 @@ export const SkillProgression: React.FC = () => {
                     <BookOpen size={20} />
                   </div>
                   <div>
-                    <h5 className="text-lg font-bold text-[#1a3a2a] leading-tight">{selectedSkill.skill_name}</h5>
+                    <h5 className="text-lg font-bold text-[#122D30] leading-tight">{selectedSkill.skill_name}</h5>
                   </div>
                 </div>
-                <p className="text-sm text-[#1a3a2a]/60 leading-relaxed">
+                <p className="text-sm text-[#122D30]/60 leading-relaxed">
                   Your performance in this specific learning objective is being tracked based on interactive exercises and real-time feedback. 
                   The graph shows your mastery trend from initial assessment to your most recent session.
                 </p>
               </div>
               
               <div className="text-right">
-                <p className="text-4xl font-black text-[#1a3a2a]">
+                <p className="text-4xl font-black text-[#122D30]">
                   {Math.round((selectedSkill.history[selectedSkill.history.length - 1]?.mastery_level || 0) * 100)}%
                 </p>
-                <p className="text-[10px] font-black uppercase text-[#059669] tracking-tighter">Current Mastery</p>
+                <p className="text-[10px] font-black uppercase text-[#075E63] tracking-tighter">Current Mastery</p>
                 <div className="mt-4 flex flex-col items-end gap-1">
-                  <span className="px-3 py-1 bg-[#F4F3EE] rounded-full text-[10px] font-bold text-[#1a3a2a]/60">
+                  <span className="px-3 py-1 bg-[#F6F7F2] rounded-full text-[10px] font-bold text-[#122D30]/60">
                     {selectedSkill.history[selectedSkill.history.length - 1]?.assessment_count || 0} Assessments
                   </span>
                 </div>
@@ -261,24 +261,24 @@ export const SkillProgression: React.FC = () => {
             
             <Activity 
               size={120} 
-              className="absolute -right-8 -bottom-8 text-[#1a3a2a]/3 rotate-12" 
+              className="absolute -right-8 -bottom-8 text-[#122D30]/3 rotate-12" 
             />
           </div>
         )}
       </div>
 
       {/* Chart */}
-      <div className="bg-white p-8 rounded-[40px] border border-[#1a3a2a]/5 shadow-sm">
+      <div className="bg-white p-8 rounded-[40px] border border-[#122D30]/5 shadow-sm">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h4 className="text-base font-black text-[#1a3a2a]">Progression Timeline</h4>
-            <p className="text-xs text-[#1a3a2a]/50 mt-1">Hover over the line to see session date and time</p>
+            <h4 className="text-base font-black text-[#122D30]">Progression Timeline</h4>
+            <p className="text-xs text-[#122D30]/50 mt-1">Hover over the line to see session date and time</p>
           </div>
         </div>
 
         <ResponsiveContainer width="100%" height={400}>
           <LineChart data={chartData} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a3a2a" strokeOpacity={0.06} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#122D30" strokeOpacity={0.06} />
 
             <XAxis
               dataKey="_rawTs"
@@ -290,13 +290,13 @@ export const SkillProgression: React.FC = () => {
             <YAxis
               domain={[0, 100]}
               tickFormatter={(v) => `${v}%`}
-              tick={{ fill: "#1a3a2a", fontSize: 11, fontWeight: 700, opacity: 0.5 }}
+              tick={{ fill: "#122D30", fontSize: 11, fontWeight: 700, opacity: 0.5 }}
               axisLine={false}
               tickLine={false}
               width={50}
             />
 
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#1a3a2a", strokeWidth: 1, strokeOpacity: 0.1 }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#122D30", strokeWidth: 1, strokeOpacity: 0.1 }} />
 
             {selectedSkill && (
               <Line

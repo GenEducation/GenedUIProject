@@ -60,13 +60,13 @@ import {
  */
 
 const C = {
-  ink: "#1A202C",
-  mid: "#4A5568",
-  muted: "#94A3B8",
-  faint: "#CBD5E1",
-  border: "#E2E8F0",
-  accent: "#059F6D",
-  surface: "#F7F8FC",
+  ink: "#122D30",
+  mid: "#3E5558",
+  muted: "#7F9295",
+  faint: "#C5D1CF",
+  border: "#E3E8E2",
+  accent: "#075E63",
+  surface: "#F6F7F2",
 };
 
 interface PetTunerModalProps {

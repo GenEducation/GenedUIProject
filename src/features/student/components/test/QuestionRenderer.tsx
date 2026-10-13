@@ -32,14 +32,23 @@ export function QuestionRenderer({
   disabled,
 }: QuestionRendererProps) {
   const marksLabel = question.marks === 1 ? "1 mark" : `${question.marks} marks`;
+  // Same rule the paper's progress uses: an answer, or any match board at all.
+  const isAnswered = !!answer || !!matchSelections;
 
   return (
     <div className="p-3 sm:p-4 md:p-6 rounded-2xl bg-white border border-[var(--primary-ink)]/8 shadow-sm space-y-4">
       <div className="flex items-center justify-between">
-        <span className="text-[12px] font-black text-[var(--primary-ink)]/40 uppercase tracking-widest">
+        {/* Answered questions earn a soft teal tab, so the paper reads as filling up. */}
+        <span
+          className={`text-[12px] font-black uppercase tracking-widest transition-colors ${
+            isAnswered
+              ? "px-2.5 py-0.5 rounded-full bg-[var(--soft-surface)] text-[var(--primary)]"
+              : "text-[var(--text-muted)]"
+          }`}
+        >
           Q{questionNumber}
         </span>
-        <span className="px-3 py-1 rounded-full bg-[var(--primary-ink)]/5 text-[11px] font-bold text-[var(--primary-ink)]/60 uppercase tracking-wider">
+        <span className="px-3 py-1 rounded-full bg-[var(--soft-surface)]/70 text-[11px] font-bold text-[var(--primary)] uppercase tracking-wider">
           {marksLabel}
         </span>
       </div>

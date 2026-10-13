@@ -19,12 +19,14 @@ import { STUDENT_COLORS } from "../theme/colors";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { StreakStats } from "./StreakStats";
+import { useTotalStudyMinutes } from "../hooks/useTotalStudyMinutes";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
 import { Select } from "@/components/ui/Select";
 import { subjectMascot, SubjectIcon } from "@/features/subjects/subjectPresentation";
 import { subjectsForGrade, useSubjectCatalog, useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
+import { GenEdLogo } from "@/components/shared/GenEdLogo";
 
 /* Subject-card mascot: display size, and how far it bleeds above the card.
    The bleed is mirrored as paddingTop on the horizontal scroller, which would
@@ -246,6 +248,9 @@ export function StudentHome() {
   const { hasEnded, hasDismissedCelebration, dismissCelebration } = useTutorialStore();
 
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
+  // `undefined` while loading still shows the card, with 0 until it arrives;
+  // `null` (failed) shows "—".
+  const totalMinutes = useTotalStudyMinutes(studentProfile?.user_id) ?? (studentProfile?.user_id ? 0 : null);
   const [showConfetti,   setShowConfetti]   = useState(false);
   const [aprilState,     setAprilState]     = useState<AprilState>("idle");
   const [hoveredAgent,   setHoveredAgent]   = useState<string | null>(null);
@@ -451,7 +456,7 @@ export function StudentHome() {
 
             {/* Logo centered */}
             <div className="flex-1 flex justify-center">
-              <Image src="/Logo.svg" alt="GenEd" width={90} height={32} style={{ height: 32, width: "auto" }} priority />
+              <GenEdLogo height={38} priority />
             </div>
 
             {/* Notification bell on right, balancing the hamburger. The
@@ -479,13 +484,13 @@ export function StudentHome() {
                 {/* Hidden on small screens: the greeting already clamps down to
                     22px there and a creature beside it crowds the line. */}
                 <div className="hidden md:flex flex-shrink-0 rounded-full overflow-hidden"
-                  style={{ width: 56, height: 56, border: "2px solid white", boxShadow: `0 4px 12px ${C.sun}30` }}>
+                  style={{ width: 56, height: 56, border: "2px solid white", boxShadow: `0 0 0 3px ${STUDENT_COLORS.softSurface}, 0 6px 16px rgb(7 94 99 / 0.18)` }}>
                   <StudentAvatar id={avatarId} size={56} />
                 </div>
                 <div>
                   <h1 className="font-extrabold leading-tight m-0"
                     style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(22px, 3vw, 34px)" }}>
-                    {getGreeting()}, {username}!
+                    {getGreeting()}, <span className="citron-mark">{username}</span>!
                   </h1>
                   <p className="mt-2 font-medium leading-relaxed" style={{ color: C.textMid, fontSize: "clamp(13px, 1.4vw, 15px)" }}>
                     What would you like to learn today?
@@ -531,16 +536,16 @@ export function StudentHome() {
 
             {/* ── STAT STRIP ── */}
             <div className="mb-8" style={{ ...fade(0.22) }}>
-              <h2 className="font-bold uppercase m-0 mb-4" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
+              <h2 className="citron-eyebrow font-bold uppercase m-0 mb-4" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
                 Your progress
               </h2>
-              <StreakStats data={studentStats} isLoading={isStatsLoading} variant="card" />
+              <StreakStats data={studentStats} isLoading={isStatsLoading} variant="card" totalMinutes={totalMinutes} />
             </div>
 
             {/* ── MY SUBJECTS ── */}
             <div className="mb-8" style={fade(0.30)}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold uppercase m-0" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
+                <h2 className="citron-eyebrow font-bold uppercase m-0" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
                   My subjects
                 </h2>
               </div>
@@ -598,7 +603,7 @@ export function StudentHome() {
                       </button>
                     </>
                   )}
-                  <div ref={subjectsScrollRef} className="flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)", scrollSnapType: "x mandatory", paddingTop: MASCOT_BLEED }}>
+                  <div ref={subjectsScrollRef} className="citron-scroll flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)", scrollSnapType: "x mandatory", paddingTop: MASCOT_BLEED }}>
                     {subjectGroups.map((group) => {
                     const vis = group.vis;
                     const hov = hoveredAgent === group.key;
@@ -697,7 +702,7 @@ export function StudentHome() {
             {/* ── RECENT SESSIONS ── */}
             <div style={fade(0.38)}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold uppercase m-0 flex items-center gap-2" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
+                <h2 className="citron-eyebrow font-bold uppercase m-0" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
                   Recent sessions
                 </h2>
               </div>

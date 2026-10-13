@@ -19,12 +19,12 @@ interface ParsedOption {
 }
 
 // Brand tokens (kept consistent with ChatMessageBubble / StudentChatMain).
-const PURPLE = "var(--tutor)";
-const SOFT = "#EDE9FE";
-const TEXT = "#1A202C";
-const MUTED = "#94A3B8";
-const BORDER = "#E2E8F0";
-const HOVER = "#FBFAFF";
+const TUTOR = "var(--tutor)";
+const SOFT = "#DCEBE7";
+const TEXT = "#122D30";
+const MUTED = "#7F9295";
+const BORDER = "#E3E8E2";
+const HOVER = "#F1F7F4"; // a breath of the soft surface
 
 const CHAPTER_RE = /^Chapter\s+(\d+)\s+(.*)$/i;
 
@@ -42,8 +42,8 @@ function NumberBadge({ num, active, small }: { num: string; active?: boolean; sm
         width: size,
         height: size,
         borderRadius: small ? 7 : 9,
-        background: active ? PURPLE : SOFT,
-        color: active ? "#FFFFFF" : PURPLE,
+        background: active ? TUTOR : SOFT,
+        color: active ? "#FFFFFF" : TUTOR,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -131,14 +131,14 @@ export function ChapterOptionPicker({ options, onSelect }: ChapterOptionPickerPr
           onClick={() => onSelect(o.raw)}
           className="w-full flex items-center gap-3"
           style={{ background: "#FFFFFF", border: `1.5px solid ${BORDER}`, borderRadius: 14, padding: "11px 14px", cursor: "pointer", textAlign: "left", transition: "border-color 0.15s, background 0.15s" }}
-          onMouseEnter={(e) => { const t = e.currentTarget as HTMLButtonElement; t.style.borderColor = PURPLE; t.style.background = HOVER; }}
+          onMouseEnter={(e) => { const t = e.currentTarget as HTMLButtonElement; t.style.borderColor = TUTOR; t.style.background = HOVER; }}
           onMouseLeave={(e) => { const t = e.currentTarget as HTMLButtonElement; t.style.borderColor = BORDER; t.style.background = "#FFFFFF"; }}
         >
           {o.num !== null && <NumberBadge num={o.num} />}
           <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: TEXT, fontFamily: "var(--font-body)" }}>
             {o.title}
           </span>
-          <ChevronRight size={16} style={{ color: "#CBD5E1", flexShrink: 0 }} />
+          <ChevronRight size={16} style={{ color: "var(--tutor-soft)", flexShrink: 0 }} />
         </motion.button>
       ))}
     </div>

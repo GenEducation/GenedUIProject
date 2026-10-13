@@ -34,10 +34,10 @@ export default function BalanceScale({ directiveId, meta, disabled, readOnly }: 
     <InteractiveShell label={meta?.label} prompt={meta?.question} targetLabel={render.target_label}>
       <svg viewBox="0 0 320 150" style={{ width: "100%", maxWidth: 340, height: "auto" }} role="img" aria-label="balance scale">
         <line x1={160} y1={20} x2={160} y2={120} stroke={COLORS.border} strokeWidth={3} />
-        <line x1={60} y1={70 + tilt} x2={260} y2={70 - tilt} stroke="#888780" strokeWidth={3} />
+        <line x1={60} y1={70 + tilt} x2={260} y2={70 - tilt} stroke={COLORS.apparatus} strokeWidth={3} />
         <rect x={30} y={70 + tilt} width={80} height={6} rx={3} fill={COLORS.border} />
         <rect x={210} y={70 - tilt} width={80} height={6} rx={3} fill={COLORS.border} />
-        <rect x={120} y={118} width={80} height={8} rx={3} fill="#888780" />
+        <rect x={120} y={118} width={80} height={8} rx={3} fill={COLORS.apparatus} />
         <text x={70} y={62 + tilt} fontSize={12} fill={COLORS.ink} textAnchor="middle" fontWeight={600}>x + {leftUnits}</text>
         <text x={250} y={62 - tilt} fontSize={12} fill={COLORS.ink} textAnchor="middle" fontWeight={600}>{rightUnits}</text>
       </svg>

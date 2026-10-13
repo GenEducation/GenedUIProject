@@ -130,7 +130,7 @@ export default function ButtonGalleryPage() {
       </Section>
 
       <Section title='tone="onDark"'>
-        <div className="rounded-2xl bg-[#0E1F2B] p-6">
+        <div className="rounded-2xl bg-[#122D30] p-6">
           <div className="flex flex-wrap items-center gap-3">
             {VARIANTS.map((v) => (
               <Button key={v} variant={v} tone="onDark">

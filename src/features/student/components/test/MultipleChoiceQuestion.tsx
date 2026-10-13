@@ -34,12 +34,12 @@ export function MultipleChoiceQuestion({
               onClick={() => !disabled && onSelect(option)}
               className={`w-full p-3 sm:p-4 rounded-xl text-left transition-all border-2 flex items-center gap-3 ${
                 isSelected 
-                  ? "bg-[var(--primary-ink)]/5 border-[var(--primary-ink)] text-[var(--primary-ink)]" 
-                  : "bg-white border-[var(--primary-ink)]/10 text-[var(--primary-ink)]/70 hover:border-[var(--primary-ink)]/30"
+                  ? "bg-[var(--soft-surface)]/50 border-[var(--primary)] text-[var(--ink)]" 
+                  : "bg-white border-[var(--surface-border)] text-[var(--text-mid)] hover:border-[var(--primary)]/40"
               } ${disabled ? "cursor-default" : "cursor-pointer"}`}
             >
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                isSelected ? "border-[var(--primary-ink)] bg-[var(--primary-ink)]" : "border-[var(--primary-ink)]/20"
+                isSelected ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[var(--primary-ink)]/20"
               }`}>
                 {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
               </div>

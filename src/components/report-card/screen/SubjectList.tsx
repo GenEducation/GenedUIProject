@@ -64,11 +64,11 @@ function SubjectRow({
       onClick={() => onSelect(s.subject)}
       aria-pressed={active}
       aria-label={`${s.subject}: ${s.band}, ${s.mastery}% mastery, ${s.coverage}% coverage`}
-      className={`group relative block w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-300 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-26px_rgba(19,41,61,0.5)] ${FOCUS_RING}`}
+      className={`group relative block w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-300 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-26px_rgba(18,45,48,0.5)] ${FOCUS_RING}`}
       style={{
         background: `linear-gradient(100deg, ${tone.wash[0]}, ${tone.wash[1]} 65%)`,
         borderColor: active ? tone.accent : tone.edge,
-        boxShadow: active ? `0 0 0 1.5px ${tone.accent}, 0 18px 36px -26px rgba(19,41,61,0.5)` : undefined,
+        boxShadow: active ? `0 0 0 1.5px ${tone.accent}, 0 18px 36px -26px rgba(18,45,48,0.5)` : undefined,
       }}
     >
       {/* Band edge */}

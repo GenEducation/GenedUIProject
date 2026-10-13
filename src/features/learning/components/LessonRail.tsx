@@ -51,8 +51,8 @@ function ChapterCard() {
  */
 export function LessonRail() {
   return (
-    <aside aria-label="Lesson" className="lesson-rail relative flex h-full flex-col overflow-hidden">
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
+    <aside aria-label="Lesson" className="lesson-rail @container relative flex h-full flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4 @max-[230px]:gap-4 @max-[230px]:p-3">
         <ChapterCard />
 
         <section aria-labelledby="lesson-progress-heading" className="flex flex-col gap-4">

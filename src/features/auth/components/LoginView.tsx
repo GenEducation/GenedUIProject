@@ -13,7 +13,7 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useLoaderStore } from "@/stores/useLoaderStore";
-import { completeAndRedirect, getRedirectParam } from "../usePostAuthRedirect";
+import { completeAndRedirect, getRedirectParam, startLoaderForRole } from "../usePostAuthRedirect";
 import { asError } from "@/utils/errors";
 import { passwordRuleError } from "@/features/auth/passwordRule";
 
@@ -148,7 +148,6 @@ export function LoginView() {
     }
 
     setIsSigningIn(true);
-    useLoaderStore.getState().startLoading();
 
     try {
       const token = await signIn(loginData);
@@ -197,6 +196,7 @@ export function LoginView() {
         });
       }
 
+      startLoaderForRole(role, "signin");
       const redirectPath = getRedirectParam();
       completeAndRedirect(router, redirectPath || `/${role}`);
     } catch (error) {
@@ -220,7 +220,6 @@ export function LoginView() {
     }
 
     setIsSubmitting(true);
-    useLoaderStore.getState().startLoading();
 
     try {
       let authResponse;
@@ -274,6 +273,7 @@ export function LoginView() {
         useTutorialStore.getState().startTutorial();
       }
 
+      startLoaderForRole(role, "signup");
       completeAndRedirect(router, `/${role}`);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
@@ -325,31 +325,31 @@ export function LoginView() {
 
   return (
     <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
-      <div className="min-h-screen w-full flex flex-col bg-white text-[#0E1F2B] font-sans selection:bg-[#059F6D]/15 selection:text-[#0E1F2B]">
+      <div className="min-h-screen w-full flex flex-col bg-white text-[#122D30] font-sans selection:bg-[#075E63]/15 selection:text-[#122D30]">
         <AuthHeader />
 
         {/* MAIN CONTENT */}
         <div className="flex-1 flex items-center justify-center px-6 pb-12 lg:px-16">
-          <div className="w-full max-w-7xl rounded-[3rem] bg-white shadow-[0_40px_100px_rgba(45,85,64,0.08)] overflow-hidden grid grid-cols-1 lg:grid-cols-2 border border-[#2D5540]/5">
+          <div className="w-full max-w-7xl rounded-[3rem] bg-white shadow-[0_40px_100px_rgba(45,85,64,0.08)] overflow-hidden grid grid-cols-1 lg:grid-cols-2 border border-[#122D30]/5">
             <AuthHero />
 
             <section className="p-8 sm:p-10 lg:p-14 flex items-center justify-center bg-white relative">
               {/* Emerald ambient glow */}
-              <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[#059F6D]/5 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[#075E63]/5 rounded-full blur-3xl pointer-events-none" />
 
               <div className="w-full max-w-md relative z-10">
                 <div className="mb-10 text-center lg:text-left">
-                  <h2 className="text-3xl lg:text-4xl font-extrabold text-[#042e5c] tracking-tight font-serif">
+                  <h2 className="text-3xl lg:text-4xl font-extrabold text-[#122D30] tracking-tight font-serif">
                     {isSignUp ? "Create account" : <><em>Welcome</em> back</>}
                   </h2>
-                  <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.25em] text-[#042e5c]/60">
+                  <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.25em] text-[#122D30]/60">
                     {isSignUp
                       ? "Safe, guided learning begins here"
                       : "Pick up where you left off"}
                   </p>
                   {signupSuccessMessage && !isSignUp && (
-                    <div className="mt-6 p-4 bg-[#059F6D]/8 border border-[#059F6D]/20 rounded-xl animate-fade-in">
-                      <p className="text-sm font-semibold text-[#047a54] text-center tracking-tight">
+                    <div className="mt-6 p-4 bg-[#075E63]/8 border border-[#075E63]/20 rounded-xl animate-fade-in">
+                      <p className="text-sm font-semibold text-[#064C50] text-center tracking-tight">
                         {signupSuccessMessage}
                       </p>
                     </div>
@@ -386,7 +386,6 @@ export function LoginView() {
                     onGoogleSuccess={async (token) => {
                       setSigninErrors({});
                       setIsSigningIn(true);
-                      useLoaderStore.getState().startLoading();
                       try {
                         const { googleSignIn } = await import("../authService");
                         const res = await googleSignIn(token);
@@ -432,6 +431,7 @@ export function LoginView() {
                           });
                         }
 
+                        startLoaderForRole(role, "signin");
                         const redirectPath = getRedirectParam();
                         completeAndRedirect(router, redirectPath || `/${role}`);
                       } catch (err) {

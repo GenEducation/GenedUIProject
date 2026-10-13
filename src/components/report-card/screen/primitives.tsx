@@ -7,12 +7,12 @@ import type { BandTone, MasteryBand } from "../subjectVisuals";
 import { MaskIcon } from "../MaskIcon";
 import { reportSubjectIcon } from "./icons";
 
-/** Neutral colour for coverage, so it never competes with the mastery band. */
-export const COVERAGE_COLOR = "#7C93B8";
+/** Neutral teal-grey for coverage, so it never competes with the mastery band. */
+export const COVERAGE_COLOR = "#6A9295";
 
 /** The white card every screen panel sits on. */
 export const CARD =
-  "rounded-[20px] border border-[var(--rs-line)] bg-white shadow-[0_1px_2px_rgba(19,41,61,0.04),0_12px_32px_-22px_rgba(19,41,61,0.22)]";
+  "rounded-[20px] border border-[var(--rs-line)] bg-white shadow-[0_1px_2px_rgba(18,45,48,0.04),0_12px_32px_-22px_rgba(18,45,48,0.22)]";
 
 export const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--rs-brand)]";

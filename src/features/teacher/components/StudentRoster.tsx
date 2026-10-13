@@ -56,7 +56,7 @@ export function StudentRoster({
   return (
     <div>
       {/* Controls */}
-      <section className="mb-5 flex flex-wrap items-end gap-3.5 rounded-2xl border border-border bg-white p-4 shadow-[0_1px_2px_rgba(4,46,92,.06),0_1px_3px_rgba(4,46,92,.05)]">
+      <section className="mb-5 flex flex-wrap items-end gap-3.5 rounded-2xl border border-border bg-white p-4 shadow-[0_1px_2px_rgba(18,45,48,.06),0_1px_3px_rgba(18,45,48,.05)]">
         <div className="flex flex-col gap-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Status</span>
           <div className="flex rounded-[11px] border border-border bg-paper p-[3px]">

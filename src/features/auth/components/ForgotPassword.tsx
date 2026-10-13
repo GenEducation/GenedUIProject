@@ -71,7 +71,7 @@ export function ForgotPassword() {
 
   if (isSuccess) {
     return (
-      <div className="space-y-8 rounded-2xl border border-[#042e5c]/10 bg-white/80 backdrop-blur-xl p-8 sm:p-10 shadow-[0_8px_40px_rgba(4,46,92,0.07)]">
+      <div className="space-y-8 rounded-2xl border border-[#122D30]/10 bg-white/80 backdrop-blur-xl p-8 sm:p-10 shadow-[0_8px_40px_rgba(18,45,48,0.07)]">
         <div className="space-y-6 py-4 animate-in fade-in slide-in-from-bottom-2">
           <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-5 py-6 text-center">
             <div className="mx-auto w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mb-4 text-emerald-600">
@@ -83,7 +83,7 @@ export function ForgotPassword() {
           </div>
           <Link
             href="/"
-            className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 flex items-center justify-center shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
+            className="group relative w-full overflow-hidden rounded-xl bg-[#075E63] py-4 text-sm font-bold text-white transition-all duration-300 flex items-center justify-center shadow-lg shadow-[#075E63]/20 hover:shadow-xl hover:shadow-[#075E63]/40"
           >
             Sign In with New Password
           </Link>
@@ -93,12 +93,12 @@ export function ForgotPassword() {
   }
 
   return (
-    <div className="space-y-8 rounded-2xl border border-[#042e5c]/10 bg-white/80 backdrop-blur-xl p-8 sm:p-10 shadow-[0_8px_40px_rgba(4,46,92,0.07)]">
+    <div className="space-y-8 rounded-2xl border border-[#122D30]/10 bg-white/80 backdrop-blur-xl p-8 sm:p-10 shadow-[0_8px_40px_rgba(18,45,48,0.07)]">
       <div className="space-y-2">
-        <h2 className="text-2xl font-bold text-[#042e5c] tracking-tight">
+        <h2 className="text-2xl font-bold text-[#122D30] tracking-tight">
           {step === 1 ? "Forgot Password" : "Reset Password"}
         </h2>
-        <p className="text-sm text-[#042e5c]/60 font-medium">
+        <p className="text-sm text-[#122D30]/60 font-medium">
           {step === 1 
             ? "Enter your email address and we'll send you an OTP to reset your password."
             : "Enter the OTP code sent to your email and your new password below."}
@@ -108,7 +108,7 @@ export function ForgotPassword() {
       <form onSubmit={step === 1 ? handleRequestOtp : handleResetPassword} className="space-y-6">
         {step === 1 ? (
           <div>
-            <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/45 mb-2.5 pl-0.5">
+            <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#122D30]/45 mb-2.5 pl-0.5">
               Email Address
             </label>
             <input
@@ -121,13 +121,13 @@ export function ForgotPassword() {
               type="email"
               required
               placeholder="e.g. scholar@geneducation.ai"
-              className="w-full rounded-xl border border-[#042e5c]/15 bg-white/70 px-5 py-3.5 text-sm text-[#0E1F2B] transition-all duration-200 placeholder:text-[#0E1F2B]/25 hover:border-[#059F6D]/40 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/15"
+              className="w-full rounded-xl border border-[#122D30]/15 bg-white/70 px-5 py-3.5 text-sm text-[#122D30] transition-all duration-200 placeholder:text-[#122D30]/25 hover:border-[#075E63]/40 focus:border-[#075E63] focus:outline-none focus:ring-2 focus:ring-[#075E63]/15"
             />
           </div>
         ) : (
           <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
              <div>
-              <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/45 mb-2.5 pl-0.5">
+              <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#122D30]/45 mb-2.5 pl-0.5">
                 OTP Code
               </label>
               <input
@@ -141,12 +141,12 @@ export function ForgotPassword() {
                 required
                 placeholder="6-digit code"
                 maxLength={6}
-                className="w-full rounded-xl border border-[#042e5c]/15 bg-white/70 px-5 py-3.5 text-sm text-[#0E1F2B] transition-all duration-200 placeholder:text-[#0E1F2B]/25 hover:border-[#059F6D]/40 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/15 tracking-[0.5em] font-mono text-center"
+                className="w-full rounded-xl border border-[#122D30]/15 bg-white/70 px-5 py-3.5 text-sm text-[#122D30] transition-all duration-200 placeholder:text-[#122D30]/25 hover:border-[#075E63]/40 focus:border-[#075E63] focus:outline-none focus:ring-2 focus:ring-[#075E63]/15 tracking-[0.5em] font-mono text-center"
               />
             </div>
 
             <div>
-              <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/45 mb-2.5 pl-0.5">
+              <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#122D30]/45 mb-2.5 pl-0.5">
                 New Password
               </label>
               <div className="relative">
@@ -160,12 +160,12 @@ export function ForgotPassword() {
                   type={showPassword ? "text" : "password"}
                   required
                   placeholder="Enter your new password"
-                  className="w-full rounded-xl border border-[#042e5c]/15 bg-white/70 px-5 py-3.5 text-sm text-[#0E1F2B] transition-all duration-200 placeholder:text-[#0E1F2B]/25 hover:border-[#059F6D]/40 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/15 font-mono tracking-widest"
+                  className="w-full rounded-xl border border-[#122D30]/15 bg-white/70 px-5 py-3.5 text-sm text-[#122D30] transition-all duration-200 placeholder:text-[#122D30]/25 hover:border-[#075E63]/40 focus:border-[#075E63] focus:outline-none focus:ring-2 focus:ring-[#075E63]/15 font-mono tracking-widest"
                 />
                 <button aria-label={showPassword ? "Hide password" : "Show password"}
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#122D30]/30 hover:text-[#075E63] transition-colors"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -173,7 +173,7 @@ export function ForgotPassword() {
             </div>
 
             <div>
-              <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/45 mb-2.5 pl-0.5">
+              <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#122D30]/45 mb-2.5 pl-0.5">
                 Confirm New Password
               </label>
               <input
@@ -186,7 +186,7 @@ export function ForgotPassword() {
                 type={showPassword ? "text" : "password"}
                 required
                 placeholder="Confirm your new password"
-                className="w-full rounded-xl border border-[#042e5c]/15 bg-white/70 px-5 py-3.5 text-sm text-[#0E1F2B] transition-all duration-200 placeholder:text-[#0E1F2B]/25 hover:border-[#059F6D]/40 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/15 font-mono tracking-widest"
+                className="w-full rounded-xl border border-[#122D30]/15 bg-white/70 px-5 py-3.5 text-sm text-[#122D30] transition-all duration-200 placeholder:text-[#122D30]/25 hover:border-[#075E63]/40 focus:border-[#075E63] focus:outline-none focus:ring-2 focus:ring-[#075E63]/15 font-mono tracking-widest"
               />
             </div>
           </div>
@@ -221,7 +221,7 @@ export function ForgotPassword() {
             )}
             <Link
               href="/"
-              className="text-sm font-bold text-[#059F6D] hover:text-[#047a54] hover:underline transition-colors"
+              className="text-sm font-bold text-[#075E63] hover:text-[#064C50] hover:underline transition-colors"
             >
               Return to Sign In
             </Link>

@@ -51,23 +51,23 @@ export function ConceptHeatmap() {
 
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
-          <PolarGrid stroke="#042E5C10" />
+          <PolarGrid stroke="#122D3010" />
           <PolarAngleAxis 
             dataKey="subject" 
-            tick={{ fill: "#042E5C40", fontSize: 10, fontWeight: "bold" }} 
+            tick={{ fill: "#122D3040", fontSize: 10, fontWeight: "bold" }} 
           />
           <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
           <Radar
             name="Mastery"
             dataKey="A"
-            stroke="#059F6D"
-            fill="#059F6D"
+            stroke="#075E63"
+            fill="#075E63"
             fillOpacity={0.1}
             strokeWidth={3}
           />
           <Tooltip 
-            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(4,46,92,0.1)', padding: '12px' }}
-            itemStyle={{ color: '#042E5C', fontWeight: 'bold', fontSize: '12px' }}
+            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(18,45,48,0.1)', padding: '12px' }}
+            itemStyle={{ color: '#122D30', fontWeight: 'bold', fontSize: '12px' }}
           />
         </RadarChart>
       </ResponsiveContainer>

@@ -32,7 +32,7 @@ export function PdfSidebar({ pdfDoc, numPages, pageDimensions, currentPage, onPa
       style={{
         width: 110,
         background: "#F8FAFC",
-        borderRight: "1px solid #E2E8F0",
+        borderRight: "1px solid #E3E8E2",
         padding: "8px 6px",
         gap: 4,
       }}

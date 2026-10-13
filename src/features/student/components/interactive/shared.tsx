@@ -44,12 +44,14 @@ export function InteractiveShell({
         padding: 16,
         borderRadius: 20,
         background: COLORS.panel,
-        border: "1px solid #5B4DC722",
+        border: "1px solid #075E6322",
+        boxShadow: "0 1px 2px rgba(18,45,48,0.04), 0 10px 30px -22px rgba(18,45,48,0.25)",
         maxWidth: 680,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <span style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS.brand, flexShrink: 0 }} />
+        {/* Nia's presence spark: a deep-ocean dot. */}
+        <span style={{ width: 9, height: 9, borderRadius: "50%", background: COLORS.brand, flexShrink: 0 }} />
         <span
           style={{
             fontSize: 11, fontWeight: 800, letterSpacing: "0.1em",
@@ -124,7 +126,21 @@ export function ResultBanner({
           }}
         >
           {isCorrect ? (
-            <><Check size={14} style={{ strokeWidth: 3 }} /> Brilliant! That&apos;s correct.</>
+            <>
+              {/* Citron coin, ink tick: the "earned" mark. */}
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 20, height: 20, borderRadius: 999, flexShrink: 0,
+                  background: COLORS.accent, border: `1px solid ${COLORS.accentDeep}`, color: COLORS.accentInk,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 4px 12px -4px rgba(184,214,63,0.8)",
+                }}
+              >
+                <Check size={12} style={{ strokeWidth: 3.5 }} />
+              </span>
+              Brilliant! That&apos;s correct.
+            </>
           ) : (
             <>Not quite — give it another look!</>
           )}

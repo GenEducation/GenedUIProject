@@ -23,13 +23,16 @@ import {
   STARTABLE_STATES,
   type SourceState,
 } from "../types/sources";
+import { activeStatus, shownPercent } from "../utils/ingestionProgress";
 
 interface SubjectRegistryProps {
   onUploadClick: () => void;
 }
 
-/** While a run is queued or running, re-read the list this often. */
+/** While a run is only queued, re-read the list this often. */
 export const LIST_POLL_MS = 10_000;
+/** While a run is processing, this often: the backend reports progress every couple of seconds. */
+export const RUN_POLL_MS = 4_000;
 
 const STATE_OPTIONS = [
   { value: "", label: "All Statuses" },
@@ -37,19 +40,19 @@ const STATE_OPTIONS = [
 ];
 
 const STATE_CHIP: Record<SourceState, string> = {
-  registered: "bg-[#1A3D2C]/5 text-[#1A3D2C]/60 border-[#1A3D2C]/10",
+  registered: "bg-[#075E63]/5 text-[#122D30]/60 border-[#122D30]/10",
   queued: "bg-amber-50 text-amber-600 border-amber-200",
-  running: "bg-amber-50 text-amber-600 border-amber-200",
+  running: "bg-[#075E63]/10 text-[#075E63] border-[#075E63]/20",
   review_needed: "bg-sky-50 text-sky-700 border-sky-200",
   invalid: "bg-red-50 text-red-600 border-red-200",
-  ready: "bg-[#D1E6D9]/30 text-[#1A3D2C] border-[#1A3D2C]/5",
+  ready: "bg-[#DCEBE7]/30 text-[#122D30] border-[#122D30]/5",
   failed: "bg-red-50 text-red-600 border-red-200",
 };
 
 const inputClass =
-  "w-full px-3 py-2 bg-[#F8F9F8] border border-[#1A3D2C]/10 focus:border-[#1A3D2C]/40 rounded-xl text-xs font-bold text-[#1A3D2C] outline-none placeholder:text-[#1A3D2C]/30";
+  "w-full px-3 py-2 bg-[#F6F7F2] border border-[#122D30]/10 focus:border-[#122D30]/40 rounded-xl text-xs font-bold text-[#122D30] outline-none placeholder:text-[#122D30]/30";
 
-const labelClass = "text-[10px] font-black text-[#1A3D2C]/50 uppercase tracking-widest mb-1 block";
+const labelClass = "text-[10px] font-black text-[#122D30]/50 uppercase tracking-widest mb-1 block";
 
 export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const subjects = usePartnerStore((state) => state.subjects);
@@ -85,13 +88,15 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
     fetchSubjects();
   }, [fetchSubjects]);
 
-  // The worker reports run state to the server; poll while any run is still going.
+  // The worker reports run state (and a running chapter's progress) to the server; poll while any run is still
+  // going, faster while one is processing so its progress bar moves.
   const hasActiveRun = subjects.some((s) => ACTIVE_STATES.has(s.state));
+  const hasRunningRun = subjects.some((s) => s.state === "running");
   useEffect(() => {
     if (!hasActiveRun) return;
-    const timer = setInterval(() => void fetchSubjects(), LIST_POLL_MS);
+    const timer = setInterval(() => void fetchSubjects(), hasRunningRun ? RUN_POLL_MS : LIST_POLL_MS);
     return () => clearInterval(timer);
-  }, [hasActiveRun, fetchSubjects]);
+  }, [hasActiveRun, hasRunningRun, fetchSubjects]);
 
   /** Start or stop a run, showing the server's reason when it doesn't fit (409). */
   const runAction = async (subject: Subject, action: (id: string) => Promise<void>) => {
@@ -164,8 +169,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
           onClick={() => setShowFilters((v) => !v)}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all ${
             showFilters || hasFilters
-              ? "bg-[#1A3D2C] text-white border-[#1A3D2C]"
-              : "bg-white text-[#1A3D2C]/60 border-[#1A3D2C]/10 hover:border-[#1A3D2C]/30"
+              ? "bg-[#075E63] text-white border-[#122D30]"
+              : "bg-white text-[#122D30]/60 border-[#122D30]/10 hover:border-[#122D30]/30"
           }`}
         >
           <SlidersHorizontal size={14} />
@@ -179,7 +184,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
         <button
           onClick={onUploadClick}
-          className="flex items-center justify-center gap-3 px-6 py-3 bg-[#1A3D2C] text-white rounded-2xl hover:bg-[#1A3D2C]/90 transition-all shadow-[0_8px_30px_rgba(26,61,44,0.2)] group"
+          className="flex items-center justify-center gap-3 px-6 py-3 bg-[#075E63] text-white rounded-2xl hover:bg-[#075E63]/90 transition-all shadow-[0_8px_30px_rgba(18,45,48,0.2)] group"
         >
           <div className="bg-white/10 p-1 rounded-lg">
             <Plus size={18} />
@@ -198,13 +203,13 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="bg-[#FBFCFB] border border-[#1A3D2C]/5 rounded-[1.5rem] p-5">
+            <div className="bg-[#FBFCFB] border border-[#122D30]/5 rounded-[1.5rem] p-5">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
                 {/* Search */}
                 <div className="lg:col-span-2">
                   <label className={labelClass}>Search</label>
                   <div className="relative">
-                    <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1A3D2C]/30" />
+                    <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122D30]/30" />
                     <input
                       type="text"
                       placeholder="Book or chapter title..."
@@ -260,14 +265,14 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
               <div className="flex items-center gap-2 justify-end">
                 <button
                   onClick={handleClear}
-                  className="flex items-center gap-1.5 px-4 py-2 text-[#1A3D2C]/50 hover:text-[#1A3D2C] text-xs font-bold transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 text-[#122D30]/50 hover:text-[#122D30] text-xs font-bold transition-colors"
                 >
                   <X size={12} />
                   Clear
                 </button>
                 <button
                   onClick={handleApply}
-                  className="px-5 py-2 bg-[#1A3D2C] text-white text-xs font-bold rounded-xl hover:bg-[#1A3D2C]/90 transition-all"
+                  className="px-5 py-2 bg-[#075E63] text-white text-xs font-bold rounded-xl hover:bg-[#075E63]/90 transition-all"
                 >
                   Apply Filters
                 </button>
@@ -320,6 +325,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             // A chapter waiting on questions says so with its button; its raw detail names server paths.
             const awaitingAnswers = subject.state === "review_needed" && subject.questions > 0;
             const explain = subject.detail && ["failed", "invalid", "review_needed"].includes(subject.state) && !awaitingAnswers;
+            const status = activeStatus(subject.state, subject.progress);
+            const percent = shownPercent(subject.state, subject.progress);
 
             return (
               <motion.div
@@ -328,23 +335,36 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
                 onClick={() => openIngestedPdf(subject)}
-                className="group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-transparent hover:border-[#1A3D2C]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all overflow-hidden cursor-pointer"
+                className="group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-transparent hover:border-[#122D30]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all overflow-hidden cursor-pointer"
               >
                 <div className="flex-1 flex items-center gap-3 md:gap-4 min-w-0">
                   {/* Left Side Highlight bar */}
-                  <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-[#1A3D2C] opacity-0 group-hover:opacity-100 transition-opacity rounded-r-full" />
+                  <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-[#075E63] opacity-0 group-hover:opacity-100 transition-opacity rounded-r-full" />
 
                   {/* Chapter Details */}
                   <div className="flex-1 flex flex-col min-w-0">
                     <div className="flex items-center justify-between pr-4 w-full gap-3">
                       {/* Left: Chapter, book & grade */}
                       <div className="flex flex-col gap-0.5 group-hover:translate-x-1 transition-transform w-[240px] md:w-[320px] shrink-0 min-w-0">
-                        <h3 className="text-base md:text-lg font-bold text-[#1A3D2C] tracking-tight truncate">
+                        <h3 className="text-base md:text-lg font-bold text-[#122D30] tracking-tight truncate">
                           {subject.title}
                         </h3>
-                        <p className="text-[11px] font-bold text-[#1A3D2C]/50 ml-[2px] uppercase tracking-wider truncate">
+                        <p className="text-[11px] font-bold text-[#122D30]/50 ml-[2px] uppercase tracking-wider truncate">
                           {subject.book_title} · Ch {subject.chapter_ordinal} · Grade {subject.grade}
                         </p>
+                        {status && (
+                          <p
+                            role="status"
+                            className={`flex items-center gap-1.5 text-[11px] font-semibold ml-[2px] min-w-0 ${subject.state === "running" ? "text-[#075E63]" : "text-amber-700/80"}`}
+                          >
+                            <span
+                              aria-hidden
+                              className={`h-1.5 w-1.5 shrink-0 rounded-full motion-safe:animate-pulse ${subject.state === "running" ? "bg-[#075E63]" : "bg-amber-500"}`}
+                            />
+                            <span className="truncate">{status.line}</span>
+                            {status.step && <span className="shrink-0 text-[#122D30]/40">· {status.step}</span>}
+                          </p>
+                        )}
                         {explain && (
                           <p
                             className={`text-[11px] ml-[2px] truncate ${subject.state === "review_needed" ? "text-sky-700/80" : "text-red-600/80"}`}
@@ -358,7 +378,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); setReportFor(subject); }}
-                            className="self-start ml-[2px] mt-0.5 inline-flex items-center gap-1 text-[11px] font-black text-[#1A3D2C] underline decoration-[#1A3D2C]/30 underline-offset-2 hover:decoration-[#1A3D2C] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1A3D2C]/40 rounded"
+                            className="self-start ml-[2px] mt-0.5 inline-flex items-center gap-1 text-[11px] font-black text-[#122D30] underline decoration-[#122D30]/30 underline-offset-2 hover:decoration-[#122D30] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#122D30]/40 rounded"
                           >
                             <FileText size={12} aria-hidden /> {subject.state === "ready" ? "View report" : "See what needs fixing"}
                           </button>
@@ -400,7 +420,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
                       {/* Middle: Subject */}
                       <div className="hidden sm:flex flex-1 items-center min-w-0">
-                        <span className="text-sm font-bold text-[#1A3D2C]/70 bg-[#1A3D2C]/5 px-4 py-1.5 rounded-xl border border-[#1A3D2C]/10 truncate">
+                        <span className="text-sm font-bold text-[#122D30]/70 bg-[#075E63]/5 px-4 py-1.5 rounded-xl border border-[#122D30]/10 truncate">
                           {subject.subject}
                         </span>
                       </div>
@@ -421,6 +441,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                             className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-colors ${STATE_CHIP[subject.state]}`}
                           >
                             {SOURCE_STATE_LABELS[subject.state]}
+                            {percent !== null && <span className="ml-1 tabular-nums">{percent}%</span>}
                           </span>
                         )}
 
@@ -496,14 +517,29 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                   </div>
                 </div>
 
-                {/* Progress bar while queued or running */}
+                {/* Progress bar while queued or running: the run's real percent once it reports one, a sweep until then */}
                 {isRunning && (
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#D1E6D9]/20 overflow-hidden">
-                    <motion.div
-                      animate={{ x: ["-100%", "100%"] }}
-                      transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                      className="h-full w-1/2 bg-[#1A3D2C]"
-                    />
+                  <div
+                    role="progressbar"
+                    aria-label={`${subject.title} ingestion progress`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={percent ?? undefined}
+                    aria-valuetext={percent !== null ? `${percent}%` : status?.line}
+                    className={`absolute bottom-0 left-0 right-0 overflow-hidden ${percent !== null ? "h-1.5 bg-[#DCEBE7]/60" : "h-1 bg-[#DCEBE7]/20"}`}
+                  >
+                    {percent !== null ? (
+                      <div
+                        className="h-full rounded-r-full bg-[#075E63] transition-[width] duration-[1200ms] ease-out"
+                        style={{ width: `${Math.max(percent, 2)}%` }}
+                      />
+                    ) : (
+                      <motion.div
+                        animate={{ x: ["-100%", "100%"] }}
+                        transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                        className={`h-full w-1/2 ${subject.state === "queued" ? "bg-amber-400" : "bg-[#075E63]"}`}
+                      />
+                    )}
                   </div>
                 )}
 
@@ -515,15 +551,15 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
         {/* Pagination */}
         {total_count > 0 && (
-          <div className="flex items-center justify-between pt-3 mt-2 border-t border-[#1A3D2C]/5">
-            <span className="text-[11px] font-bold text-[#1A3D2C]/40">
+          <div className="flex items-center justify-between pt-3 mt-2 border-t border-[#122D30]/5">
+            <span className="text-[11px] font-bold text-[#122D30]/40">
               {offset + 1}–{Math.min(offset + limit, total_count)} of {total_count}
             </span>
             <div className="flex items-center gap-1">
               <Button iconOnly size="sm" variant="tertiary" aria-label="Previous page" onClick={handlePrev} disabled={offset === 0}>
                 <ChevronLeft size={16} />
               </Button>
-              <span className="text-[11px] font-bold text-[#1A3D2C]/60 px-2">
+              <span className="text-[11px] font-bold text-[#122D30]/60 px-2">
                 {currentPage} / {totalPages}
               </span>
               <Button iconOnly size="sm" variant="tertiary" aria-label="Next page" onClick={handleNext} disabled={offset + limit >= total_count}>

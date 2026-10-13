@@ -2,7 +2,7 @@
 // colors which clashed with the portal's navy/emerald identity.
 export const SUBJECT_COLORS: Record<string, string> = {
   English: "#4A6FA5", // slate blue
-  Mathematics: "#059F6D", // emerald
+  Mathematics: "#075E63", // emerald
   Science: "#B98A2E", // muted gold
   "Social Science": "#B0543F",
   History: "#A6762D",
@@ -11,6 +11,6 @@ export const SUBJECT_COLORS: Record<string, string> = {
 };
 
 export function subjectColor(subject?: string | null): string {
-  if (!subject) return "#94a3b8";
-  return SUBJECT_COLORS[subject] || "#94a3b8";
+  if (!subject) return "#7F9295";
+  return SUBJECT_COLORS[subject] || "#7F9295";
 }

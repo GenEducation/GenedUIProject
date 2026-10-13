@@ -86,7 +86,7 @@ export function SubjectPreview({
       {/* Recent chapters */}
       {top.length > 0 && (
         <div className="px-4 pt-4">
-          <h3 className="text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]">Recent chapters</h3>
+          <h3 className="citron-eyebrow text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]">Recent chapters</h3>
           <ul className="mt-2 flex flex-col gap-1.5">
             {top.map((r) => (
               <li key={r.key} className="flex items-center gap-3 rounded-xl bg-[var(--rs-surface-2)] px-3 py-2">
@@ -107,7 +107,7 @@ export function SubjectPreview({
         ) : (
           subjects.length > 1 && (
             <div>
-              <h3 className="text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]">Switch subject</h3>
+              <h3 className="citron-eyebrow text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]">Switch subject</h3>
               <div className="mt-2 flex flex-wrap gap-2">
                 {subjects.filter((o) => o.subject !== s.subject).map((o) => (
                   // eslint-disable-next-line no-restricted-syntax -- subject chip with glyph, not a CTA

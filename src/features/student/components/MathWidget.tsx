@@ -170,7 +170,7 @@ export const MathWidget: React.FC<MathWidgetProps> = ({ expression, meta, minima
   }
 
   return (
-    <div className="my-4 rounded-2xl border border-[#1a3a2a]/10 shadow-sm overflow-hidden bg-white group">
+    <div className="my-4 rounded-2xl border border-[#122D30]/10 shadow-sm overflow-hidden bg-white group">
       <div className="relative">
         <iframe
           ref={iframeRef}
@@ -180,13 +180,13 @@ export const MathWidget: React.FC<MathWidgetProps> = ({ expression, meta, minima
           sandbox="allow-scripts allow-same-origin"
         />
         {/* Overlay to catch clicks if needed or just styling */}
-        <div className="absolute inset-0 pointer-events-none border border-[#1a3a2a]/5 rounded-2xl" />
+        <div className="absolute inset-0 pointer-events-none border border-[#122D30]/5 rounded-2xl" />
       </div>
-      <div className="px-4 py-2 bg-[#1a3a2a]/5 flex justify-between items-center gap-3">
-        <span className="text-[10px] font-black text-[#1a3a2a]/40 uppercase tracking-widest shrink-0">
+      <div className="px-4 py-2 bg-[#075E63]/5 flex justify-between items-center gap-3">
+        <span className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest shrink-0">
           Interactive Graph
         </span>
-        <span className="text-[10px] font-mono text-[#1a3a2a]/60 font-bold truncate">
+        <span className="text-[10px] font-mono text-[#122D30]/60 font-bold truncate">
           {expression}
         </span>
       </div>

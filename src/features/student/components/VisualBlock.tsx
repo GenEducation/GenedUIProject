@@ -14,11 +14,11 @@ export const VisualBlock: React.FC<VisualBlockProps> = ({ svg, image, meta }) =>
     <div
       className="my-3 overflow-hidden"
       style={{
-        background: "#F8FAFC",
-        border: "1px solid #E2E8F0",
+        background: "#FBFBF8",
+        border: "1px solid #E3E8E2",
         borderRadius: 18,
         padding: 16,
-        boxShadow: "0 1px 6px rgba(91,77,199,0.05)",
+        boxShadow: "0 1px 6px rgba(7,94,99,0.05)",
       }}
     >
       {isShowFigure ? (
@@ -29,7 +29,7 @@ export const VisualBlock: React.FC<VisualBlockProps> = ({ svg, image, meta }) =>
             src={image}
             alt={meta?.figure_id || "Visual Figure"}
             className="max-w-full h-auto rounded-xl object-contain"
-            style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}
+            style={{ boxShadow: "0 2px 12px rgba(18,45,48,0.08)" }}
           />
         </div>
       ) : svg ? (
@@ -44,7 +44,7 @@ export const VisualBlock: React.FC<VisualBlockProps> = ({ svg, image, meta }) =>
           style={{
             marginTop: 8, textAlign: "center",
             fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
-            textTransform: "uppercase", color: "#94A3B8",
+            textTransform: "uppercase", color: "#7F9295",
             fontFamily: "var(--font-body)",
           }}
         >

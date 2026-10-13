@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 
 // -- Confetti Particle ---------------------------------------------------------
-const CONFETTI_COLORS = ["#059F6D", "#042E5C", "#FFD700", "#FF6B6B", "#A78BFA", "#38BDF8"];
+const CONFETTI_COLORS = ["#075E63", "#122D30", "#FFD700", "#FF6B6B", "#A78BFA", "#38BDF8"];
 
 function ConfettiParticle({ index }: { index: number }) {
   const color = CONFETTI_COLORS[index % CONFETTI_COLORS.length];
@@ -48,7 +48,7 @@ export function TutorialCelebration({ onDismiss }: TutorialCelebrationProps) {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-[#042e5c]/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-[#122D30]/50 backdrop-blur-sm">
       {/* Confetti */}
       {showConfetti && (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -65,7 +65,7 @@ export function TutorialCelebration({ onDismiss }: TutorialCelebrationProps) {
         className="relative pointer-events-auto w-full max-w-sm bg-white rounded-3xl shadow-[0_30px_80px_rgba(0,0,0,0.3)] overflow-hidden"
       >
         {/* Top gradient banner */}
-        <div className="relative bg-gradient-to-br from-[#042E5C] to-[#0a4a8a] px-8 pt-10 pb-14 text-center overflow-hidden">
+        <div className="relative bg-gradient-to-br from-[#122D30] to-[#0a4a8a] px-8 pt-10 pb-14 text-center overflow-hidden">
           {/* Shimmer rings */}
           <motion.div
             animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.6, 0.3] }}
@@ -117,12 +117,12 @@ export function TutorialCelebration({ onDismiss }: TutorialCelebrationProps) {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.75 }}
-            className="flex gap-3 bg-[#F4F3EE] rounded-2xl p-4"
+            className="flex gap-3 bg-[#F6F7F2] rounded-2xl p-4"
           >
             <span className="text-2xl flex-shrink-0">⏳</span>
             <div className="space-y-0.5">
-              <p className="text-xs font-black text-[#042e5c] uppercase tracking-wider">Waiting for Approval</p>
-              <p className="text-sm text-[#042e5c]/60 leading-snug">
+              <p className="text-xs font-black text-[#122D30] uppercase tracking-wider">Waiting for Approval</p>
+              <p className="text-sm text-[#122D30]/60 leading-snug">
                 Once your partner accepts your request, subject agents will appear and you can start chatting!
               </p>
             </div>
@@ -154,7 +154,7 @@ export function TutorialCelebration({ onDismiss }: TutorialCelebrationProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.1 }}
             onClick={onDismiss}
-            className="w-full bg-[#059F6D] hover:bg-[#048055] text-white rounded-2xl py-4 font-black text-[15px] shadow-lg shadow-[#059F6D]/25 transition-all flex items-center justify-center gap-2"
+            className="w-full bg-[#075E63] hover:bg-[#048055] text-white rounded-2xl py-4 font-black text-[15px] shadow-lg shadow-[#075E63]/25 transition-all flex items-center justify-center gap-2"
           >
             <Sparkles size={18} />
             Got it, let&apos;s go!

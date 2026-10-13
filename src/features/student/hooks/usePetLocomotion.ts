@@ -272,7 +272,7 @@ function clearCssMove(el: HTMLElement) {
   }
 }
 
-const CONFETTI = ["#edab30", "#D4537E", "#378ADD", "#1D9E75", "#D85A30", "#7F77DD"];
+const CONFETTI = ["#edab30", "#D4537E", "#378ADD", "#075E63", "#D85A30", "#3C8A8E"];
 
 /**
  * What each particle is: its glyph (by index, so a burst can mix), how long
@@ -289,4 +289,4 @@ const PARTICLES: Record<PetParticle, { glyph: (i: number) => string; life: numbe
 };
 
 /** Only the multicolour `burst` reads `--c`; the others are coloured in CSS. */
-const PARTICLE_COLOURS = ["#edab30", "#D4537E", "#378ADD", "#1D9E75", "#7F77DD"];
+const PARTICLE_COLOURS = ["#edab30", "#D4537E", "#378ADD", "#075E63", "#3C8A8E"];

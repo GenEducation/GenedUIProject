@@ -31,7 +31,7 @@ import type { TraitOverrides } from "blobatar";
  * these, seed picks which" — which is what a house style actually is. So the
  * brand degrees below are divided by 360 on the way in.
  *
- * The brand green (`--primary #059F6D`) sits at ~158°, so the band runs
+ * The brand green (`--primary #075E63`) sits at ~158°, so the band runs
  * green → teal → a warm amber escape, which keeps a crowd of blobatars
  * recognizably one family without collapsing them into one color.
  * Deliberately NOT pinning `shape` — silhouette variety is the only thing

@@ -27,7 +27,7 @@ export default function BaseTenBlocks({ directiveId, meta, disabled, readOnly }:
     return (
       <div style={{ textAlign: "center" }}>
         <div style={{ display: "flex", gap: 3, flexWrap: "wrap", maxWidth: 100, justifyContent: "center", minHeight: 62, alignItems: "flex-end" }}>
-          {Array.from({ length: count }).map((_, i) => <div key={i} style={{ width: w, height: hgt, background: color, borderRadius: 2 }} />)}
+          {Array.from({ length: count }).map((_, i) => <div key={i} style={{ width: w, height: hgt, background: color, borderRadius: 2, boxShadow: "inset 0 0 0 1px rgba(18,45,48,0.22)" }} />)}
         </div>
         <p style={{ margin: "4px 0 0", fontSize: 11, color: COLORS.muted }}>{label}</p>
       </div>
@@ -43,9 +43,9 @@ export default function BaseTenBlocks({ directiveId, meta, disabled, readOnly }:
         <button aria-label="Reset" onClick={() => { if (lock) return; setH(0); setT(0); setO(0); }} disabled={lock} style={btn(lock)}><RefreshCw size={13} /></button>
       </div>
       <div style={{ display: "flex", gap: 14, alignItems: "flex-end" }}>
-        <Col label="100s" count={h} color="#534AB7" w={20} hgt={60} onAdd={() => setH(h + 1)} show={available.includes("hundred")} />
-        <Col label="10s" count={t} color="#1D9E75" w={8} hgt={60} onAdd={() => setT(t + 1)} show={available.includes("ten")} />
-        <Col label="1s" count={o} color="#D85A30" w={11} hgt={11} onAdd={() => setO(o + 1)} show={available.includes("one")} />
+        <Col label="100s" count={h} color={COLORS.ink} w={20} hgt={60} onAdd={() => setH(h + 1)} show={available.includes("hundred")} />
+        <Col label="10s" count={t} color={COLORS.brand} w={8} hgt={60} onAdd={() => setT(t + 1)} show={available.includes("ten")} />
+        <Col label="1s" count={o} color={COLORS.accentDeep} w={11} hgt={11} onAdd={() => setO(o + 1)} show={available.includes("one")} />
       </div>
       <p style={{ marginTop: 10, fontSize: 15, fontWeight: 700, color: COLORS.ink }}>Total: {total}</p>
       <InteractiveFooter

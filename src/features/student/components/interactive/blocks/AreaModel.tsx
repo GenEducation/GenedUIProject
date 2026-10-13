@@ -10,7 +10,7 @@ export default function AreaModel({ directiveId, meta, disabled, readOnly }: Int
   const interaction = meta?.interaction || {};
   const rows: number = render.rows || 6;
   const cols: number = render.cols || 6;
-  const fill: string = render.fill_color || "#0F6E56";
+  const fill: string = render.fill_color || COLORS.brand;
   const unit: string = render.unit || "square unit";
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "select_cells";

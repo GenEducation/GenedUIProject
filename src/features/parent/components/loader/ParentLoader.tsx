@@ -46,8 +46,8 @@ interface ParentLoaderProps {
 }
 
 const BG = "#F5FAF9";
-const INK = "#13293D";
-const INK_SOFT = "#5E7186";
+const INK = "#122D30";
+const INK_SOFT = "#5E7477";
 
 export function ParentLoader({
   isVisible,
@@ -226,7 +226,7 @@ export function ParentLoader({
             {/* Progress line */}
             <div className="mt-4 h-[3px] w-[220px] overflow-hidden rounded-full bg-[#DDEDE7]">
               <div
-                className="h-full rounded-full bg-[linear-gradient(90deg,#16A36B,#C9E15A)] transition-[width] duration-300 ease-out"
+                className="h-full rounded-full bg-[linear-gradient(90deg,#075E63,#C9E15A)] transition-[width] duration-300 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>

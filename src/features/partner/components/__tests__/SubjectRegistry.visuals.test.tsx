@@ -11,7 +11,7 @@ vi.mock("framer-motion", async () => (await import("../visuals/__tests__/framerP
 // The PDF viewer renders pdf.js; the store's openIngestedPdf is what these tests care about.
 vi.mock("../IngestedPdfViewer", () => ({ IngestedPdfViewer: () => null }));
 
-import { SubjectRegistry, LIST_POLL_MS } from "../SubjectRegistry";
+import { SubjectRegistry, LIST_POLL_MS, RUN_POLL_MS } from "../SubjectRegistry";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 
@@ -104,6 +104,54 @@ describe("SubjectRegistry — chapter sources", () => {
     const settled = listCalls;
     await act(() => vi.advanceTimersByTimeAsync(LIST_POLL_MS * 2));
     expect(listCalls).toBe(settled);
+  });
+
+  it("shows a processing chapter's stage, step and percent from the backend's progress", async () => {
+    const running = makeSource({
+      state: "running",
+      chapter: { ordinal: 5, title: "SYNTHETIC running", first_pdf_page: 1, last_pdf_page: 36 },
+      progress: { stage: "read_pages", step: 2, steps: 9, done: 12, total: 36, percent: 42.7, updated_at: "2026-10-13T10:00:00Z" },
+    });
+    sourcesFixture.set(running);
+    await renderRegistry();
+
+    const row = rowFor("SYNTHETIC running");
+    expect(within(row).getByText("Processing")).toHaveTextContent("Processing42%");
+    expect(within(row).getByRole("status")).toHaveTextContent("Reading pages · 12 of 36 pages· Step 2 of 9");
+    const bar = within(row).getByRole("progressbar");
+    expect(bar).toHaveAttribute("aria-valuenow", "42");
+  });
+
+  it("says a run is starting, or waiting its turn, before there's a percent", async () => {
+    sourcesFixture.set(makeSource({ state: "running", chapter: { ordinal: 6, title: "SYNTHETIC starting", first_pdf_page: 1, last_pdf_page: 3 } }));
+    await renderRegistry();
+
+    const starting = rowFor("SYNTHETIC starting");
+    expect(within(starting).getByRole("status")).toHaveTextContent("Starting up");
+    expect(within(starting).getByRole("progressbar")).not.toHaveAttribute("aria-valuenow");
+
+    const queued = rowFor("SYNTHETIC queued");
+    expect(within(queued).getByRole("status")).toHaveTextContent("Waiting in line to start");
+    expect(within(queued).getByText("Queued")).not.toHaveTextContent("%");
+  });
+
+  it("polls faster while a chapter is processing, so its bar moves", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const run = makeSource({
+      state: "running",
+      chapter: { ordinal: 7, title: "SYNTHETIC moving", first_pdf_page: 1, last_pdf_page: 36 },
+      progress: { stage: "read_pages", step: 2, steps: 9, done: 6, total: 36, percent: 10, updated_at: "2026-10-13T10:00:00Z" },
+    });
+    sourcesFixture.set(run);
+    await renderRegistry();
+    const before = listCalls;
+
+    sourcesFixture.set({ ...run, progress: { ...run.progress!, done: 30, percent: 31.2 } });
+    await act(() => vi.advanceTimersByTimeAsync(RUN_POLL_MS));
+    await waitFor(() => expect(listCalls).toBe(before + 1));
+    await waitFor(() =>
+      expect(within(rowFor("SYNTHETIC moving")).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "31"),
+    );
   });
 
   it("deletes a chapter that never produced anything", async () => {

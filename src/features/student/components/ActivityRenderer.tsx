@@ -40,7 +40,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
 
   const renderReading = () => (
     <div className="flex flex-col gap-3 mt-2 mb-4">
-      <div className="text-[15px] font-medium text-[var(--primary-ink)]/90 leading-relaxed border-l-2 border-[var(--primary-ink)]/20 pl-3">
+      <div className="text-[15px] font-medium text-[var(--primary-ink)]/90 leading-relaxed border-l-[3px] border-[var(--primary)] pl-3">
         {action.content}
       </div>
       
@@ -49,7 +49,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
           <button aria-label="Toggle microphone"
             onClick={handleToggleMic}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm ${
-              isListening ? "bg-red-500 text-white animate-pulse" : "bg-white text-[var(--primary-ink)] border border-[var(--primary-ink)]/10 hover:bg-[var(--primary-ink)] hover:text-white"
+              isListening ? "bg-red-500 text-white animate-pulse" : "bg-white text-[var(--primary-ink)] border border-[var(--primary-ink)]/10 hover:bg-[var(--primary)] hover:text-white"
             }`}
           >
             {isListening ? <MicOff size={16} /> : <Mic size={16} />}
@@ -62,7 +62,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
           {localTranscript && (
             <button aria-label="Send answer"
               onClick={handleSubmit}
-              className="w-10 h-10 rounded-full bg-[var(--primary-ink)] text-white flex items-center justify-center hover:bg-[#064282] transition-all"
+              className="w-10 h-10 rounded-full bg-[var(--primary)] text-white flex items-center justify-center hover:bg-[var(--primary-hover)] transition-all"
             >
               <Send size={16} />
             </button>
@@ -71,7 +71,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
       )}
       
       {isCompleted && (
-        <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[12px] uppercase tracking-wider pl-3">
+        <div className="self-start inline-flex items-center gap-1.5 bg-[var(--accent)] text-[var(--accent-ink)] font-bold text-[12px] uppercase tracking-wider px-3 py-1 rounded-full ml-3">
           <CheckCircle2 size={14} /> Completed
         </div>
       )}
@@ -83,7 +83,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
       <div className="flex items-center gap-4">
         <button aria-label={isPlaying ? "Pause" : "Play"}
           onClick={() => setIsPlaying(!isPlaying)}
-          className="w-12 h-12 rounded-full bg-[var(--primary-ink)] text-white flex items-center justify-center hover:bg-[#064282] transition-all shadow-md"
+          className="w-12 h-12 rounded-full bg-[var(--primary)] text-white flex items-center justify-center hover:bg-[var(--primary-hover)] transition-all shadow-md"
         >
           {isPlaying ? <Pause size={20} /> : <Play size={20} className="ml-1" />}
         </button>
@@ -100,12 +100,12 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
             value={localTranscript}
             onChange={(e) => setLocalTranscript(e.target.value)}
             placeholder="Type your answer here..."
-            className="flex-1 px-4 py-3 bg-[#F8F9FA] rounded-xl border border-[var(--primary-ink)]/10 text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary-ink)]/20"
+            className="flex-1 px-4 py-3 bg-[#F6F7F2] rounded-xl border border-[var(--primary-ink)]/10 text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary-ring)]"
           />
           <button
             onClick={handleSubmit}
             disabled={!localTranscript.trim()}
-            className="px-6 py-3 bg-[var(--primary-ink)] text-white rounded-xl font-bold text-[14px] disabled:opacity-30 transition-all"
+            className="px-6 py-3 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-xl font-bold text-[14px] disabled:opacity-30 transition-all"
           >
             Submit
           </button>
@@ -113,7 +113,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
       )}
 
       {isCompleted && (
-        <div className="flex items-center gap-2 text-emerald-500 font-bold text-[13px] uppercase tracking-wider">
+        <div className="self-start inline-flex items-center gap-2 bg-[var(--accent)] text-[var(--accent-ink)] font-bold text-[13px] uppercase tracking-wider px-3 py-1 rounded-full">
           <CheckCircle2 size={16} /> Answer Submitted
         </div>
       )}
@@ -125,7 +125,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
       <p className="text-[14px] font-bold text-[var(--primary-ink)]">Spelling Challenge</p>
       <div className="flex flex-wrap gap-2">
         {action.words?.map((word, i) => (
-          <span key={i} className="px-3 py-1 bg-[var(--primary-ink)]/5 rounded-lg text-[13px] font-medium text-[var(--primary-ink)]">
+          <span key={i} className="px-3 py-1 bg-[var(--soft-surface)] rounded-lg text-[13px] font-medium text-[var(--primary-ink)]">
             {word}
           </span>
         ))}
@@ -138,12 +138,12 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
             value={localTranscript}
             onChange={(e) => setLocalTranscript(e.target.value)}
             placeholder="Spell the words..."
-            className="w-full px-4 py-3 bg-[#F8F9FA] rounded-xl border border-[var(--primary-ink)]/10 text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary-ink)]/20"
+            className="w-full px-4 py-3 bg-[#F6F7F2] rounded-xl border border-[var(--primary-ink)]/10 text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary-ring)]"
           />
           <button
             onClick={handleSubmit}
             disabled={!localTranscript.trim()}
-            className="w-full py-3 bg-[var(--primary-ink)] text-white rounded-xl font-bold text-[14px] disabled:opacity-30 transition-all"
+            className="w-full py-3 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white rounded-xl font-bold text-[14px] disabled:opacity-30 transition-all"
           >
             Check Spelling
           </button>
@@ -151,7 +151,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
       )}
 
       {isCompleted && (
-        <div className="flex items-center gap-2 text-emerald-500 font-bold text-[13px] uppercase tracking-wider">
+        <div className="self-start inline-flex items-center gap-2 bg-[var(--accent)] text-[var(--accent-ink)] font-bold text-[13px] uppercase tracking-wider px-3 py-1 rounded-full">
           <CheckCircle2 size={16} /> Spelling Completed
         </div>
       )}
@@ -165,7 +165,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
         <p className="text-[12px] font-bold text-[var(--primary-ink)]/50 uppercase tracking-wider">Repeat after me</p>
       </div>
       
-      <div className="text-[15px] font-medium text-[var(--primary-ink)]/90 leading-relaxed border-l-2 border-[var(--primary-ink)]/20 pl-3 italic">
+      <div className="text-[15px] font-medium text-[var(--primary-ink)]/90 leading-relaxed border-l-[3px] border-[var(--primary)] pl-3 italic">
         &quot;{action.content}&quot;
       </div>
 
@@ -174,7 +174,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
           <button aria-label="Toggle microphone"
             onClick={handleToggleMic}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm ${
-              isListening ? "bg-red-500 text-white animate-pulse" : "bg-white text-[var(--primary-ink)] border border-[var(--primary-ink)]/10 hover:bg-[var(--primary-ink)] hover:text-white"
+              isListening ? "bg-red-500 text-white animate-pulse" : "bg-white text-[var(--primary-ink)] border border-[var(--primary-ink)]/10 hover:bg-[var(--primary)] hover:text-white"
             }`}
           >
             {isListening ? <MicOff size={16} /> : <Mic size={16} />}
@@ -187,7 +187,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
           {localTranscript && (
             <button aria-label="Send answer"
               onClick={handleSubmit}
-              className="w-10 h-10 rounded-full bg-[var(--primary-ink)] text-white flex items-center justify-center hover:bg-[#064282] transition-all"
+              className="w-10 h-10 rounded-full bg-[var(--primary)] text-white flex items-center justify-center hover:bg-[var(--primary-hover)] transition-all"
             >
               <Send size={16} />
             </button>
@@ -196,7 +196,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
       )}
 
       {isCompleted && (
-        <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[12px] uppercase tracking-wider pl-3">
+        <div className="self-start inline-flex items-center gap-1.5 bg-[var(--accent)] text-[var(--accent-ink)] font-bold text-[12px] uppercase tracking-wider px-3 py-1 rounded-full ml-3">
           <CheckCircle2 size={14} /> Good Job!
         </div>
       )}

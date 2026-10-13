@@ -206,18 +206,18 @@ export function PdfViewer({ pdfUrl }: PdfViewerProps) {
   // ── Loading state ────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center flex-1 gap-3" style={{ background: "#F7F8FC" }}>
+      <div className="flex flex-col items-center justify-center flex-1 gap-3" style={{ background: "#F6F7F2" }}>
         <div
           style={{
             width: 28,
             height: 28,
-            border: "3px solid #EDE9FE",
+            border: "3px solid #DCEBE7",
             borderTopColor: "var(--tutor)",
             borderRadius: "50%",
             animation: "spin 0.8s linear infinite",
           }}
         />
-        <p style={{ fontSize: 13, color: "#64748B", fontFamily: "var(--font-body)", margin: 0 }}>
+        <p style={{ fontSize: 13, color: "#5E7477", fontFamily: "var(--font-body)", margin: 0 }}>
           Loading textbook…
         </p>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -228,7 +228,7 @@ export function PdfViewer({ pdfUrl }: PdfViewerProps) {
   // ── Error state ──────────────────────────────────────────────────────────────
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center flex-1 gap-3" style={{ background: "#F7F8FC" }}>
+      <div className="flex flex-col items-center justify-center flex-1 gap-3" style={{ background: "#F6F7F2" }}>
         <p style={{ fontSize: 13, color: "#EF4444", fontFamily: "var(--font-body)", margin: 0 }}>
           {error}
         </p>
@@ -238,7 +238,7 @@ export function PdfViewer({ pdfUrl }: PdfViewerProps) {
             fontSize: 12,
             fontWeight: 600,
             color: "var(--tutor)",
-            background: "#EDE9FE",
+            background: "#DCEBE7",
             border: "none",
             borderRadius: 8,
             padding: "6px 14px",
@@ -284,7 +284,7 @@ export function PdfViewer({ pdfUrl }: PdfViewerProps) {
         <div
           ref={scrollRef}
           className="flex-1 overflow-y-auto overflow-x-hidden"
-          style={{ background: "#F7F8FC", padding: `${pageGap}px ${horizontalPadding}px` }}
+          style={{ background: "#F6F7F2", padding: `${pageGap}px ${horizontalPadding}px` }}
         >
           <div className="flex flex-col" style={{ gap: pageGap, alignItems: "center", position: "relative" }}>
             {pdfDoc &&

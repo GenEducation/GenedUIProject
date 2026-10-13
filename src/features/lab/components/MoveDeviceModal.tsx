@@ -64,13 +64,13 @@ export function MoveDeviceModal({
       aria-modal="true"
       aria-labelledby="move-device-title"
     >
-      <div className="w-full max-w-sm rounded-[1.5rem] bg-white p-6 shadow-[0_24px_60px_rgba(4,46,92,.22)]">
+      <div className="w-full max-w-sm rounded-[1.5rem] bg-white p-6 shadow-[0_24px_60px_rgba(18,45,48,.22)]">
         <div className="flex items-start justify-between">
           <div>
-            <h2 id="move-device-title" className="text-lg font-black text-[#1A3D2C]">
+            <h2 id="move-device-title" className="text-lg font-black text-[#122D30]">
               Move {device.device_label}
             </h2>
-            <p className="mt-1 text-sm text-[#1A3D2C]/55">
+            <p className="mt-1 text-sm text-[#122D30]/55">
               Its Lab credential stays installed. No re-pairing is required.
             </p>
           </div>
@@ -82,7 +82,7 @@ export function MoveDeviceModal({
         {targets.length > 0 ? (
           <>
             <label className="mt-5 block">
-              <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#1A3D2C]/50">
+              <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#122D30]/50">
                 Target Lab
               </span>
               <Select
@@ -90,10 +90,10 @@ export function MoveDeviceModal({
                 value={targetLabId}
                 onChange={setTargetLabId}
                 options={targets.map((lab) => ({ value: lab.id, label: lab.name }))}
-                accentColor="#1A3D2C"
+                accentColor="#122D30"
                 buttonStyle={{
                   background: "#FFFFFF",
-                  border: "1px solid rgba(26,61,44,0.10)",
+                  border: "1px solid rgba(18,45,48,0.10)",
                   borderRadius: 12,
                   padding: "10px 12px",
                 }}
@@ -113,7 +113,7 @@ export function MoveDeviceModal({
             </Button>
           </>
         ) : (
-          <p className="mt-5 rounded-xl bg-[#F4F3EE] p-3 text-sm text-[#1A3D2C]/60">
+          <p className="mt-5 rounded-xl bg-[#F6F7F2] p-3 text-sm text-[#122D30]/60">
             Create another Lab before moving this device.
           </p>
         )}

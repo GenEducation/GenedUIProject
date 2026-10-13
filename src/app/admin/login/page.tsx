@@ -51,11 +51,11 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#0E1F2B] px-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#122D30] px-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center justify-center h-14 w-14 rounded-2xl bg-[#059F6D]/15 border border-[#059F6D]/30 mb-4">
-            <ShieldCheck className="h-7 w-7 text-[#059F6D]" />
+          <div className="flex items-center justify-center h-14 w-14 rounded-2xl bg-[#075E63]/15 border border-[#075E63]/30 mb-4">
+            <ShieldCheck className="h-7 w-7 text-[#075E63]" />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">
             GenEd Admin Console
@@ -77,7 +77,7 @@ export default function AdminLoginPage() {
               type="text"
               autoComplete="username"
               placeholder="Enter your username"
-              className="w-full rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm text-white transition-all duration-200 placeholder:text-white/25 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/20"
+              className="w-full rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm text-white transition-all duration-200 placeholder:text-white/25 focus:border-[#075E63] focus:outline-none focus:ring-2 focus:ring-[#075E63]/20"
             />
           </div>
 
@@ -92,12 +92,12 @@ export default function AdminLoginPage() {
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm text-white transition-all duration-200 placeholder:text-white/25 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/20"
+                className="w-full rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm text-white transition-all duration-200 placeholder:text-white/25 focus:border-[#075E63] focus:outline-none focus:ring-2 focus:ring-[#075E63]/20"
               />
               <button aria-label={showPassword ? "Hide password" : "Show password"}
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-[#059F6D] transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-[#075E63] transition-colors"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>

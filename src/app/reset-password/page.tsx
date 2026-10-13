@@ -24,7 +24,7 @@ export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="w-8 h-8 border-4 border-[#059F6D]/10 border-t-[#059F6D] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#075E63]/10 border-t-[#075E63] rounded-full animate-spin" />
       </div>
     }>
       <ResetPasswordContent />

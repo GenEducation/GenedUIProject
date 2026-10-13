@@ -13,13 +13,21 @@
 export const STUDENT_COLORS = {
   // Brand — mirrors --primary / --tutor in globals.css. Raw hex here too
   // (not var()) so downstream alpha-suffix concatenation keeps working.
-  primary: "#059F6D",
-  tutor: "#5B4DC7",
-  tutorLight: "#8B7FE8",
-  tutorSoft: "#4A90D9",
+  primary: "#075E63",
+  tutor: "#075E63",
+  tutorLight: "#3C8A8E",
+  tutorSoft: "#5FA8A3",
+
+  // Deep Ocean + Citron brand surfaces — mirror --accent / --canvas /
+  // --soft-surface. Citron is a fill only; put ink text on it, never white.
+  accent: "#D9F279",
+  accentDeep: "#B8D63F",
+  ink: "#122D30",
+  canvas: "#F6F7F2",
+  softSurface: "#DCEBE7",
 
   // Accents
-  growth: "#00B894",
+  growth: "#4E8F2F",
   warn: "#F0AD4E",
   danger: "#E8635A",
   sky: "#5DADE2",
@@ -33,19 +41,19 @@ export const STUDENT_COLORS = {
   subjectHindi: "#7B5EA7",
 
   // Text
-  text: "#1a2332",
-  textMid: "#4a5568",
-  textMuted: "#94a3b8",
-  textFaint: "#cbd5e1",
+  text: "#122D30",
+  textMid: "#3E5558",
+  textMuted: "#5E7477",
+  textFaint: "#C5D1CF",
 
   // Surfaces
-  pageBg: "#F7F8FC",
+  pageBg: "#F6F7F2",
   card: "#FFFFFF",
-  border: "#e2e8f0",
+  border: "#E3E8E2",
 
   // Dark sidebar ground
-  sidebarBg: "#1C2333",
-  sidebarText: "rgba(200,209,220,1)",
+  sidebarBg: "#122D30",
+  sidebarText: "rgba(205,222,218,1)",
   sidebarMuted: "rgba(255,255,255,0.25)",
   sidebarActive: "#FFFFFF",
   sidebarBorder: "rgba(255,255,255,0.06)",
@@ -54,11 +62,11 @@ export const STUDENT_COLORS = {
 
   // Light sidebar ground — the redesigned StudentHomeSidebar. Kept separate
   // from the dark `sidebar*` keys above, which StudentChatSidebar still uses.
-  sidebarLightBg: "#FFFFFF",
-  sidebarLightText: "#5A6478",
-  sidebarLightActive: "#5B4DC7",
-  sidebarLightActiveBg: "#F1EFFC",
-  sidebarLightBorder: "#EEF0F6",
-  sidebarLightHover: "#F5F4FD",
-  sidebarLightName: "#1a2332",
+  sidebarLightBg: "#FBFBF8",
+  sidebarLightText: "#4C6366",
+  sidebarLightActive: "#075E63",
+  sidebarLightActiveBg: "#DCEBE7",
+  sidebarLightBorder: "#E7ECE6",
+  sidebarLightHover: "#EEF4F1",
+  sidebarLightName: "#122D30",
 } as const;

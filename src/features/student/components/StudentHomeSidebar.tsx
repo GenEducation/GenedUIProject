@@ -2,15 +2,12 @@
 
 import { FEATURES } from "@/constants/features";
 import React, { useEffect, useState } from "react";
-import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
-import { getStudentDisplayName } from "../utils/displayName";
+import { getStudentDisplayName, titleCase } from "../utils/displayName";
 import { STUDENT_COLORS } from "../theme/colors";
-import { StudentAvatar } from "./StudentAvatar";
 import { STRINGS } from "../constants/strings";
 import {
-  LogOut,
   Menu,
   Home as HomeIcon,
   Target,
@@ -19,14 +16,10 @@ import {
   User,
 } from "lucide-react";
 import { UpgradeButton } from "@/features/billing/UpgradeButton";
+import { GenEdLogo } from "@/components/shared/GenEdLogo";
 
 /* ═══ TOKENS ═══ — sourced from STUDENT_COLORS (see theme/colors.ts) */
 const C = {
-  genPurple: STUDENT_COLORS.tutor,
-  genBlue: STUDENT_COLORS.tutorSoft,
-  edGreen: STUDENT_COLORS.subjectMath,
-  sparkle: STUDENT_COLORS.tutorLight,
-  sun: STUDENT_COLORS.warn,
   sidebarBg: STUDENT_COLORS.sidebarLightBg,
   sidebarText: STUDENT_COLORS.sidebarLightText,
   sidebarActive: STUDENT_COLORS.sidebarLightActive,
@@ -35,20 +28,6 @@ const C = {
   sidebarHover: STUDENT_COLORS.sidebarLightHover,
   sidebarName: STUDENT_COLORS.sidebarLightName,
 };
-
-/* ═══ GENED LOGO ═══ */
-function GenEdLogo() {
-  return (
-    <Image
-      src="/Logo.svg"
-      alt="GenEd"
-      width={96}
-      height={32}
-      style={{ height: 30, width: "auto" }}
-      priority
-    />
-  );
-}
 
 /* ═══ NAV ITEM ═══ */
 function NavItem({
@@ -65,13 +44,14 @@ function NavItem({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 rounded-xl border-none cursor-pointer transition-all text-left"
+      aria-current={active ? "page" : undefined}
+      className="w-full flex items-center gap-3 rounded-2xl border-none cursor-pointer transition-all text-left"
       style={{
-        padding: "11px 14px",
+        padding: "12px 16px",
         background: active ? C.sidebarActiveBg : "transparent",
         color: active ? C.sidebarActive : C.sidebarText,
-        fontSize: 14,
-        fontWeight: active ? 700 : 500,
+        fontSize: 15,
+        fontWeight: active ? 700 : 600,
         fontFamily: "var(--font-body)",
       }}
       onMouseEnter={(e) => {
@@ -88,7 +68,7 @@ function NavItem({
       {active && (
         <div
           className="ml-auto w-1.5 h-1.5 rounded-full"
-          style={{ background: C.genPurple }}
+          style={{ background: C.sidebarActive }}
         />
       )}
     </button>
@@ -110,7 +90,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
 }: StudentHomeSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { studentProfile, logoutStudent, avatarId } = useStudentStore();
+  const { studentProfile } = useStudentStore();
 
   const plan   = studentProfile?.plan ?? "FREE";
   const isPro  = plan === "PRO";
@@ -161,7 +141,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
       {isMobile && isOpen && (
         <div
           className="fixed inset-0 z-30"
-          style={{ background: "rgba(16,20,32,0.35)" }}
+          style={{ background: "rgba(18,45,48,0.35)" }}
           onClick={onClose}
         />
       )}
@@ -177,7 +157,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                 maxWidth: "85vw",
                 background: C.sidebarBg,
                 borderRight: `1px solid ${C.sidebarBorder}`,
-                boxShadow: isOpen ? "0 0 32px rgba(16,20,32,0.14)" : "none",
+                boxShadow: isOpen ? "0 0 32px rgba(18,45,48,0.14)" : "none",
               }
             : {
                 width: sidebarW,
@@ -192,7 +172,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
           {/* Header: logo + close */}
           <div className="flex items-center justify-between mb-7 px-0.5 py-1">
             <button aria-label="GenEd home" onClick={() => navigate("/student")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
-              <GenEdLogo />
+              <GenEdLogo height={46} priority />
             </button>
             <button aria-label="Close sidebar"
               onClick={onClose}
@@ -221,90 +201,38 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
             ))}
           </nav>
 
-          {/* Student info — display only. The nav "Profile" item above is the
-              single entry point to /student/profile. */}
-          <div className="mt-auto pt-3.5" style={{ borderTop: `1px solid ${C.sidebarBorder}` }}>
-            <div className="flex items-center gap-2.5 px-1">
+          {/* Upgrade — the sidebar's single call to action. Anchored at the
+              bottom, where it is the only thing in the empty space, on a deep
+              ocean card so the citron button gets the strongest contrast we
+              have. Student name/avatar are already in every page header, so
+              they no longer repeat here. Hidden entirely for PRO. */}
+          {!isPro && studentProfile?.user_id && (
+            <div
+              className="mt-auto relative overflow-hidden rounded-2xl"
+              style={{
+                padding: "16px 14px 14px",
+                background: `linear-gradient(160deg, ${STUDENT_COLORS.primary} 0%, #0B474B 100%)`,
+                boxShadow: "0 12px 26px -16px rgb(7 94 99 / 0.7)",
+              }}
+            >
               <div
-                className="w-[34px] h-[34px] rounded-full overflow-hidden flex-shrink-0"
-                style={{ border: `1.5px solid ${C.sidebarBorder}` }}
-              >
-                <StudentAvatar id={avatarId} size={34} />
-              </div>
-              <div className="flex-1 min-w-0">
-                {/* Name + plan badge */}
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <div className="text-[13px] font-semibold truncate" style={{ color: C.sidebarName }}>
-                    {getStudentDisplayName(studentProfile)}
-                  </div>
-                  <span style={{
-                    flexShrink: 0,
-                    padding: "1px 6px",
-                    borderRadius: 5,
-                    fontSize: 9,
-                    fontWeight: 800,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    background: isPro ? "#00B89418" : `${C.genPurple}12`,
-                    color:      isPro ? "#00997A"   : C.genPurple,
-                    border:     `1px solid ${isPro ? "#00B89440" : C.genPurple + "30"}`,
-                  }}>
-                    {plan}
-                  </span>
-                </div>
-                <div className="text-[10px]" style={{ color: C.sidebarText, opacity: 0.75 }}>
-                  Grade {studentProfile?.grade ?? "—"} · {studentProfile?.school_board ?? "—"}
-                </div>
-              </div>
-            </div>
-
-            {/* PRO: renewal date */}
-            {isPro && studentProfile?.plan_expires_at && (() => {
-              try {
-                const d = new Date(studentProfile.plan_expires_at!);
-                if (isNaN(d.getTime())) return null;
-                return (
-                  <div className="text-[10px] mt-2 px-1" style={{ color: C.sidebarText, opacity: 0.7 }}>
-                    Renews {d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}
-                  </div>
-                );
-              } catch { return null; }
-            })()}
-
-            {/* FREE: upgrade button */}
-            {!isPro && studentProfile?.user_id && (
+                aria-hidden
+                className="absolute rounded-full pointer-events-none"
+                style={{ width: 120, height: 120, right: -44, top: -54, background: "radial-gradient(circle, rgb(217 242 121 / 0.28), transparent 70%)" }}
+              />
+              <div className="relative text-[15px] font-extrabold text-white leading-tight">Go Pro</div>
+              <p className="relative mt-1 mb-3 text-[12.5px] leading-snug" style={{ color: "#A9CCC7" }}>
+                Keep learning with {titleCase(studentProfile.ai_name || "Nia")}, no daily limits.
+              </p>
               <UpgradeButton
                 userId={studentProfile.user_id}
                 userName={getStudentDisplayName(studentProfile)}
                 userEmail={studentProfile.email}
                 billingCycle="monthly"
-                className="w-full justify-center mt-3 text-[12px] py-2"
+                className="relative w-full justify-center text-[13px] py-2.5 rounded-xl"
               />
-            )}
-
-            {/* Logout */}
-            <button
-              onClick={logoutStudent}
-              className="w-full flex items-center gap-2.5 mt-3 px-3.5 py-2.5 rounded-xl border-none cursor-pointer transition-all text-left"
-              style={{
-                background: "transparent",
-                color: C.sidebarText,
-                fontSize: 13,
-                fontWeight: 500,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(232,99,90,0.10)";
-                e.currentTarget.style.color = "#E8635A";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = C.sidebarText;
-              }}
-            >
-              <LogOut size={15} />
-              <span>Logout</span>
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -353,26 +281,20 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
             })}
           </nav>
 
-          {/* Logout — the rail's Profile nav icon above is the only profile
-              affordance, so no duplicate avatar button here. */}
-          <div className="mt-auto flex flex-col items-center gap-2 pt-3.5 w-full" style={{ borderTop: `1px solid ${C.sidebarBorder}` }}>
-            <button aria-label="Logout"
-              onClick={logoutStudent}
-              title="Logout"
-              className="flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-all"
-              style={{ background: "transparent", color: C.sidebarText }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(232,99,90,0.10)";
-                e.currentTarget.style.color = "#E8635A";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = C.sidebarText;
-              }}
-            >
-              <LogOut size={15} />
-            </button>
-          </div>
+          {/* Collapsed rail: the same upgrade action as a compact citron spark. */}
+          {!isPro && studentProfile?.user_id && (
+            <div className="mt-auto" title="Upgrade to Pro">
+              <UpgradeButton
+                userId={studentProfile.user_id}
+                userName={getStudentDisplayName(studentProfile)}
+                userEmail={studentProfile.email}
+                billingCycle="monthly"
+                className="!w-11 !h-11 !px-0 !py-0 justify-center rounded-xl"
+              >
+                <span className="sr-only">Upgrade to Pro</span>
+              </UpgradeButton>
+            </div>
+          )}
         </div>
       )}
       </aside>

@@ -22,16 +22,16 @@ export function AssertionReasoningQuestion({
     <div className="space-y-5">
       {hasStructuredFields ? (
         <div className="space-y-3">
-          <div className="p-3 sm:p-4 rounded-xl bg-blue-50/60 border border-blue-200/50">
-            <span className="text-[11px] font-black text-blue-500 uppercase tracking-widest">
+          <div className="p-3 sm:p-4 rounded-xl bg-[var(--soft-surface)]/50 border border-[var(--soft-surface)]">
+            <span className="text-[11px] font-black text-[var(--primary)] uppercase tracking-widest">
               Assertion (A)
             </span>
             <p className="text-[15px] font-medium text-[var(--primary-ink)] mt-1 leading-relaxed">
               {question.assertion}
             </p>
           </div>
-          <div className="p-3 sm:p-4 rounded-xl bg-amber-50/60 border border-amber-200/50">
-            <span className="text-[11px] font-black text-amber-600 uppercase tracking-widest">
+          <div className="p-3 sm:p-4 rounded-xl bg-[var(--canvas)] border border-[var(--surface-border)]">
+            <span className="text-[11px] font-black text-[var(--text-mid)] uppercase tracking-widest">
               Reason (R)
             </span>
             <p className="text-[15px] font-medium text-[var(--primary-ink)] mt-1 leading-relaxed">
@@ -45,7 +45,7 @@ export function AssertionReasoningQuestion({
         </p>
       )}
 
-      <p className="text-[13px] font-semibold text-[var(--primary-ink)]/60 uppercase tracking-wider">
+      <p className="text-[13px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
         Choose the correct option
       </p>
 
@@ -60,13 +60,13 @@ export function AssertionReasoningQuestion({
               onClick={() => !disabled && onSelect(option)}
               className={`w-full p-3 sm:p-4 rounded-xl text-left transition-all border-2 flex items-center gap-3 ${
                 isSelected
-                  ? "bg-[var(--primary-ink)]/5 border-[var(--primary-ink)] text-[var(--primary-ink)]"
-                  : "bg-white border-[var(--primary-ink)]/10 text-[var(--primary-ink)]/70 hover:border-[var(--primary-ink)]/30"
+                  ? "bg-[var(--soft-surface)]/50 border-[var(--primary)] text-[var(--ink)]"
+                  : "bg-white border-[var(--surface-border)] text-[var(--text-mid)] hover:border-[var(--primary)]/40"
               } ${disabled ? "cursor-default" : "cursor-pointer"}`}
             >
               <div
                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                  isSelected ? "border-[var(--primary-ink)] bg-[var(--primary-ink)]" : "border-[var(--primary-ink)]/20"
+                  isSelected ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[var(--primary-ink)]/20"
                 }`}
               >
                 {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}

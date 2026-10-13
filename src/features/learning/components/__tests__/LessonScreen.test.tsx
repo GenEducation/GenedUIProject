@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { LESSON_ID, lessonFixture } from "@/test/msw/handlers/lesson";
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
@@ -7,6 +7,26 @@ import { formatDuration } from "../../useSessionTimer";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), usePathname: () => "/student/lesson/x" }));
 import { LessonScreen } from "../LessonScreen";
+
+/** Pretend to be a given screen: "portrait" (phone upright) or "compact" (< 1024px). */
+function mockViewport(kind: "portrait" | "compact") {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: (query: string) => ({
+      matches: kind === "portrait" ? true : query.includes("1023px"),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }),
+  });
+}
+
+afterEach(() => {
+  // @ts-expect-error -- jsdom has no matchMedia; tests that need one add it.
+  delete window.matchMedia;
+  sessionStorage.clear();
+});
 
 beforeEach(() => {
   lessonFixture.reset();
@@ -45,7 +65,30 @@ describe("LessonScreen", () => {
     expect(screen.getByRole("link", { name: "Leave lesson" })).toHaveAttribute("href", "/student");
   });
 
-  it("switches panels with the mobile tabs", () => {
+  it("asks a phone held upright to turn sideways, and can carry on in portrait", () => {
+    mockViewport("portrait");
+    render(<LessonScreen instanceId={LESSON_ID} />);
+    expect(screen.getByText("Turn your phone sideways")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Whiteboard" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Continue in portrait" }));
+    expect(screen.queryByText("Turn your phone sideways")).toBeNull();
+    expect(screen.getByRole("tab", { name: "Whiteboard" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("on a narrow screen shows board and chat side by side, with the steps in a drawer", () => {
+    mockViewport("compact");
+    render(<LessonScreen instanceId={LESSON_ID} />);
+    expect(screen.getByRole("region", { name: "Whiteboard" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Chat with your tutor" })).toBeInTheDocument();
+    expect(document.getElementById("lesson-pane-progress")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Show lesson steps" }));
+    expect(screen.getByRole("dialog", { name: "Lesson steps" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close lesson steps" }));
+  });
+
+  it("switches panels with the portrait tabs", () => {
+    mockViewport("portrait");
+    sessionStorage.setItem("gened.lesson.portraitOk", "1");
     render(<LessonScreen instanceId={LESSON_ID} />);
     const chatTab = screen.getByRole("tab", { name: "Chat" });
     expect(screen.getByRole("tab", { name: "Whiteboard" })).toHaveAttribute("aria-selected", "true");

@@ -19,7 +19,7 @@ const columns: Column<Ingestion>[] = [
       <span
         className={`rounded-md px-2 py-0.5 text-xs ${
           i.status === "completed"
-            ? "bg-[#059F6D]/15 text-[#059F6D]"
+            ? "bg-[#075E63]/15 text-[#075E63]"
             : "bg-rose-500/15 text-rose-300"
         }`}
       >

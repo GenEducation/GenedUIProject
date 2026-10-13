@@ -66,10 +66,10 @@ export interface SelectProps<T extends string | number = string> {
  * what this component exists to end.
  */
 export const PANEL_CLASSNAME =
-  "overflow-hidden rounded-2xl border border-[rgba(4,46,92,0.10)] bg-white shadow-[0_12px_32px_-8px_rgba(4,46,92,0.18),0_2px_8px_rgba(4,46,92,0.06)]";
+  "overflow-hidden rounded-2xl border border-[rgba(18,45,48,0.10)] bg-white shadow-[0_12px_32px_-8px_rgba(18,45,48,0.18),0_2px_8px_rgba(18,45,48,0.06)]";
 
 export const PANEL_CLASSNAME_DARK =
-  "overflow-hidden rounded-2xl border border-white/10 bg-[#13283a] shadow-[0_12px_32px_-8px_rgba(0,0,0,0.55)]";
+  "overflow-hidden rounded-2xl border border-white/10 bg-[#122D30] shadow-[0_12px_32px_-8px_rgba(0,0,0,0.55)]";
 
 const SIZE_STYLES: Record<SelectSize, { padding: string; fontSize: number; optionPad: string }> = {
   sm: { padding: "6px 12px", fontSize: 12, optionPad: "py-1.5 px-3" },
@@ -137,7 +137,7 @@ function triggerStyles(
         background: "var(--surface-sunken)",
         borderWidth: 1,
         borderStyle: "solid",
-        borderColor: hasError ? "var(--danger-2)" : "rgba(4,46,92,0.05)",
+        borderColor: hasError ? "var(--danger-2)" : "rgba(18,45,48,0.05)",
         borderRadius: 16,
         color: "var(--text-primary)",
       };
@@ -362,7 +362,7 @@ export function Select<T extends string | number = string>({
       {enableSearch && (
         <div
           className={`flex shrink-0 items-center gap-2 border-b px-3 py-2 ${
-            isDark ? "border-white/10" : "border-[rgba(4,46,92,0.08)]"
+            isDark ? "border-white/10" : "border-[rgba(18,45,48,0.08)]"
           }`}
         >
           <Search size={14} className={isDark ? "text-white/40" : "text-[var(--text-muted)]"} />

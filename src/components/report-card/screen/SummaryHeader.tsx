@@ -50,7 +50,8 @@ export function SummaryHeader({
 
       {/* Overall progress ring */}
       <div className="flex items-center @[540px]/hdr:border-l @[540px]/hdr:border-[var(--rs-line)] @[540px]/hdr:px-6">
-        <Ring value={overall.progress} color="var(--rs-brand)" size={118} stroke={12}>
+        {/* The headline number: a citron progress fill, the page's main eye-catcher. */}
+        <Ring value={overall.progress} color="var(--rs-citron-deep)" size={118} stroke={12}>
           <div className="text-center leading-none">
             <div className="text-[30px] font-extrabold tabular-nums tracking-[-0.03em] text-[var(--rs-ink)]">{overall.progress}%</div>
             <div className="mt-1.5 text-[11.5px] font-medium text-[var(--rs-ink-soft)]">Overall<br />Progress</div>
@@ -116,11 +117,20 @@ function Callout({
     <button
       type="button"
       onClick={() => onOpen(subject.subject)}
-      className={`group flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-[transform,box-shadow] duration-300 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-20px_rgba(19,41,61,0.4)] ${FOCUS_RING}`}
+      className={`group flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-[transform,box-shadow] duration-300 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-20px_rgba(18,45,48,0.4)] ${FOCUS_RING}`}
       style={{ background: `linear-gradient(135deg, ${tone.wash[0]}, ${tone.wash[1]})`, borderColor: tone.edge }}
     >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white" style={{ background: tone.accent }}>
-        <TintIcon name={kind === "strong" ? "insights/positive-insight" : "insights/needs-attention"} color="#fff" size={15} />
+      {/* Strongest subject gets a soft-surface well + teal glyph;
+          needs-attention keeps its band colour. */}
+      <span
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+        style={{ background: kind === "strong" ? "var(--rs-mint)" : tone.accent }}
+      >
+        <TintIcon
+          name={kind === "strong" ? "insights/positive-insight" : "insights/needs-attention"}
+          color={kind === "strong" ? "var(--rs-brand)" : "#fff"}
+          size={15}
+        />
       </span>
       <span className="min-w-0 flex-1 leading-tight">
         <span className="block text-[12px] font-medium text-[var(--rs-ink-soft)]">{kind === "strong" ? "Strongest Subject" : "Needs Attention"}</span>

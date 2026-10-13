@@ -9,6 +9,8 @@ const STAGE_LINES: Record<ParentLoaderStage, string[]> = {
   signup: ["Creating your family account", "Setting up your parent space"],
   "signin-handoff": ["Signed in securely", "Opening your parent portal"],
   entry: ["Opening your parent portal", "Finding your children"],
+  "partner-signin": ["Signed in securely", "Opening your school dashboard"],
+  "partner-signup": ["Creating your school account", "Setting up your dashboard"],
 };
 
 export const SLOW_LINE = "Still working, thanks for your patience";

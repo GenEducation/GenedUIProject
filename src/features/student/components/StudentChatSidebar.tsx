@@ -13,14 +13,18 @@ import { STRINGS } from "../constants/strings";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { getSubjectConfig } from "@/constants/subjectConfig";
+import { GenEdLogo } from "@/components/shared/GenEdLogo";
 
 /* Sourced from STUDENT_COLORS (see theme/colors.ts) */
 const C = {
   sidebarBg: STUDENT_COLORS.sidebarBg,
-  genPurple: STUDENT_COLORS.tutor,
-  genBlue: STUDENT_COLORS.tutorSoft,
-  sun: STUDENT_COLORS.warn,
-  sparkle: STUDENT_COLORS.tutorLight,
+  tutor: STUDENT_COLORS.tutor,
+  tutorSoft: STUDENT_COLORS.tutorSoft,
+  // Citron reads at full strength on this ink ground — it marks only the
+  // active session and PRO here, never body text or chrome.
+  citron: STUDENT_COLORS.accent,
+  // Elevated surface for the popup: a step lighter than the ink sidebar.
+  popupBg: "#18393C",
   sidebarText: STUDENT_COLORS.sidebarText,
   sidebarMuted: STUDENT_COLORS.sidebarMuted,
   sidebarActive: STUDENT_COLORS.sidebarActive,
@@ -118,7 +122,7 @@ function ProfilePopup({
         bottom: "calc(100% + 10px)",
         left: 12,
         right: 12,
-        background: "#151C2B",
+        background: C.popupBg,
         border: "1px solid rgba(255,255,255,0.10)",
         borderRadius: 18,
         boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
@@ -142,14 +146,14 @@ function ProfilePopup({
           {displayName}
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 }}>
-          <span style={{ fontSize: 11, color: "rgba(200,209,220,0.6)" }}>Grade {profile?.grade ?? "—"}</span>
+          <span style={{ fontSize: 11, color: "rgba(205,222,218,0.6)" }}>Grade {profile?.grade ?? "—"}</span>
           {profile?.plan && (
             <span style={{
               padding: "1px 8px", borderRadius: 6, fontSize: 9, fontWeight: 800,
               letterSpacing: "0.08em", textTransform: "uppercase" as const,
-              background: profile.plan === "PRO" ? "#00B89425" : `${C.genPurple}30`,
-              color: profile.plan === "PRO" ? "#00B894" : C.sparkle,
-              border: `1px solid ${profile.plan === "PRO" ? "#00B89440" : C.sparkle + "40"}`,
+              background: profile.plan === "PRO" ? `${C.citron}20` : `${C.tutorSoft}25`,
+              color: profile.plan === "PRO" ? C.citron : C.tutorSoft,
+              border: `1px solid ${profile.plan === "PRO" ? C.citron + "55" : C.tutorSoft + "40"}`,
             }}>{profile.plan}</span>
           )}
         </div>
@@ -162,7 +166,7 @@ function ProfilePopup({
             key={item.label}
             onClick={() => { router.push(item.path); onClose(); }}
             className="w-full flex items-center justify-center gap-2 rounded-xl border-none cursor-pointer transition-all"
-            style={{ padding: "9px 14px", background: "transparent", color: "rgba(200,209,220,0.8)", fontSize: 13, fontWeight: 700 }}
+            style={{ padding: "9px 14px", background: "transparent", color: "rgba(205,222,218,0.8)", fontSize: 13, fontWeight: 700 }}
             onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)"}
             onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = "transparent"}
           >
@@ -277,7 +281,7 @@ export const StudentChatSidebar = React.memo(({
       {isMobile && isOpen && (
         <div
           className="fixed inset-0 z-30"
-          style={{ background: "rgba(0,0,0,0.45)" }}
+          style={{ background: "rgba(8,26,28,0.5)" }}
           onClick={onClose}
         />
       )}
@@ -314,23 +318,16 @@ export const StudentChatSidebar = React.memo(({
               {/* Inverted to white — the colored logo read at poor contrast
                   on this dark sidebar ground (matches StudentHomeSidebar's
                   own inverted treatment). */}
-              <Image
-                src="/Logo.svg"
-                alt="GenEd"
-                width={96}
-                height={30}
-                style={{ height: 30, width: "auto", filter: "brightness(0) invert(1)" }}
-                priority
-              />
+              <GenEdLogo height={40} onDark priority />
             </button>
           </div>
 
           {/* Recent sessions */}
-          <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.1) transparent" }}>
-            <p style={{
+          <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: `${C.tutorSoft}40 transparent` }}>
+            <p className="citron-eyebrow" style={{
               fontSize: 11, fontWeight: 700, color: C.sidebarMuted,
               letterSpacing: "1.5px", textTransform: "uppercase",
-              padding: "4px 6px 12px", textAlign: "center", fontFamily: "var(--font-body)",
+              padding: "4px 6px 12px", justifyContent: "center", fontFamily: "var(--font-body)",
             }}>
               Recent Sessions
             </p>
@@ -373,6 +370,8 @@ export const StudentChatSidebar = React.memo(({
                       style={{
                         padding: "10px 12px",
                         background: isActive ? C.sidebarActiveBg : "transparent",
+                        // The open session carries a citron marker on its leading edge.
+                        boxShadow: isActive ? `inset 3px 0 0 ${C.citron}` : "none",
                         color: isActive ? C.sidebarActive : C.sidebarText,
                         fontSize: 13,
                         fontWeight: isActive ? 800 : 700,
@@ -474,14 +473,14 @@ export const StudentChatSidebar = React.memo(({
                       <span style={{
                         flexShrink: 0, padding: "2px 8px", borderRadius: 6, fontSize: 10,
                         fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase" as const,
-                        background: studentProfile.plan === "PRO" ? "#00B89420" : `${C.genPurple}25`,
-                        color: studentProfile.plan === "PRO" ? "#00B894" : C.sparkle,
-                        border: `1px solid ${studentProfile.plan === "PRO" ? "#00B89440" : C.sparkle + "30"}`,
+                        background: studentProfile.plan === "PRO" ? `${C.citron}20` : `${C.tutorSoft}25`,
+                        color: studentProfile.plan === "PRO" ? C.citron : C.tutorSoft,
+                        border: `1px solid ${studentProfile.plan === "PRO" ? C.citron + "55" : C.tutorSoft + "30"}`,
                       }}>{studentProfile.plan}</span>
                     )}
                   </div>
                   {/* Row 2: grade */}
-                  <div style={{ fontSize: 11, color: "rgba(200,209,220,0.5)", fontWeight: 600, marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: "rgba(205,222,218,0.5)", fontWeight: 600, marginTop: 2 }}>
                     Grade {studentProfile?.grade ?? "—"}
                   </div>
                 </div>
@@ -500,7 +499,7 @@ export const StudentChatSidebar = React.memo(({
             cursor: "ew-resize", zIndex: 10,
             background: "transparent",
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = `${C.genPurple}40`; }}
+          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = `${C.tutorSoft}55`; }}
           onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
         />
       )}

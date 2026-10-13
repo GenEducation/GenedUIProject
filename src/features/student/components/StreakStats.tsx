@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Flame, Star, type LucideIcon } from "lucide-react";
+import { BookOpen, Clock3, Flame, Star, type LucideIcon } from "lucide-react";
 
 import { STUDENT_COLORS } from "../theme/colors";
 import { STRINGS } from "../constants/strings";
@@ -29,14 +29,34 @@ const STATS: {
   { key: "longestStreak", Icon: Star, label: STRINGS.streak.longestStreak, color: STUDENT_COLORS.subjectMath, unit: "Days" },
 ];
 
+/**
+ * Minutes → value/unit pairs for the card ("45 min", "2h 15m", "3h").
+ * Kept as parts so the numbers render large and the units small, matching
+ * the other cards' "0 Days".
+ */
+export function studyTimeParts(minutes: number): { n: number; u: string }[] {
+  const total = Math.max(0, Math.round(minutes));
+  if (total < 60) return [{ n: total, u: "min" }];
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return m ? [{ n: h, u: "h" }, { n: m, u: "m" }] : [{ n: h, u: "h" }];
+}
+
 export function StreakStats({
   data,
   isLoading,
   variant = "card",
+  totalMinutes,
 }: {
   data: StreakStatsData | null;
   isLoading?: boolean;
   variant?: "card" | "strip";
+  /**
+   * Card variant only. When passed, a fourth "Time Spent" card is shown:
+   * a number of minutes, `null` if it couldn't be loaded (shows "—"), or
+   * `undefined` to leave the card out.
+   */
+  totalMinutes?: number | null;
 }) {
   if (variant === "strip") {
     return (
@@ -79,10 +99,31 @@ export function StreakStats({
     );
   }
 
+  const showTime = totalMinutes !== undefined;
+  const cards: { key: string; Icon: LucideIcon; label: string; parts: { n: number; u: string }[] | null }[] = [
+    ...STATS.map((s) => ({
+      key: s.key,
+      Icon: s.Icon,
+      label: s.label,
+      parts: [{ n: data?.[s.key] ?? 0, u: s.unit }],
+    })),
+    ...(showTime
+      ? [{
+          key: "timeSpent",
+          Icon: Clock3,
+          label: STRINGS.streak.timeSpent,
+          parts: totalMinutes == null ? null : studyTimeParts(totalMinutes),
+        }]
+      : []),
+  ];
+
   return (
-    <div className="grid grid-cols-3" style={{ gap: "clamp(8px, 1.2vw, 14px)" }}>
+    <div
+      className={showTime ? "grid grid-cols-2 lg:grid-cols-4" : "grid grid-cols-3"}
+      style={{ gap: "clamp(8px, 1.2vw, 14px)" }}
+    >
       {isLoading
-        ? [1, 2, 3].map((n) => (
+        ? cards.map((c) => c.key).map((n) => (
             <div
               key={n}
               className="rounded-2xl animate-pulse"
@@ -102,8 +143,7 @@ export function StreakStats({
               <div className="rounded mt-3" style={{ background: STUDENT_COLORS.border + "60", height: 22, width: 68 }} />
             </div>
           ))
-        : STATS.map((s) => {
-            const value = data?.[s.key] ?? 0;
+        : cards.map((s) => {
             return (
               <div
                 key={s.key}
@@ -130,10 +170,12 @@ export function StreakStats({
                   <span
                     className="rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{
-                      background: s.color + "1F",
-                      width: "clamp(24px, 2.2vw, 30px)",
-                      height: "clamp(24px, 2.2vw, 30px)",
-                      color: s.color,
+                      // Soft-surface well, teal glyph — calm chrome; citron is
+                      // kept for the screen's one key moment.
+                      background: STUDENT_COLORS.softSurface,
+                      width: "clamp(26px, 2.4vw, 32px)",
+                      height: "clamp(26px, 2.4vw, 32px)",
+                      color: STUDENT_COLORS.primary,
                     }}
                   >
                     <s.Icon size={16} strokeWidth={2.2} />
@@ -149,10 +191,16 @@ export function StreakStats({
                     fontSize: "clamp(19px, 2.1vw, 26px)",
                   }}
                 >
-                  {value}
-                  {s.unit && (
-                    <span style={{ fontSize: "0.72em", marginLeft: 5 }}>{s.unit}</span>
-                  )}
+                  {s.parts === null
+                    ? "—"
+                    : s.parts.map((p, i) => (
+                        <span key={i} style={{ marginLeft: i ? 6 : 0 }}>
+                          {p.n}
+                          {p.u && (
+                            <span style={{ fontSize: "0.72em", marginLeft: p.u.length > 1 ? 5 : 1 }}>{p.u}</span>
+                          )}
+                        </span>
+                      ))}
                 </div>
               </div>
             );

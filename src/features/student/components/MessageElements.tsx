@@ -38,15 +38,15 @@ function FigureDescribeBlock({ figureAssetUrl, prompt, directiveId }: {
   return (
     <div className="flex flex-col items-center gap-3 w-full">
       {loading ? (
-        <div className="w-full h-32 rounded-xl animate-pulse" style={{ background: "#F0EEFF" }} />
+        <div className="w-full h-32 rounded-xl animate-pulse" style={{ background: "#EAF2EF" }} />
       ) : imageUrl ? (
-        <img src={imageUrl} alt="Scene" className="max-w-full rounded-xl" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.08)", maxHeight: "60vh", objectFit: "contain" }} />
+        <img src={imageUrl} alt="Scene" className="max-w-full rounded-xl" style={{ boxShadow: "0 2px 12px rgba(18,45,48,0.08)", maxHeight: "60vh", objectFit: "contain" }} />
       ) : (
-        <div className="w-full p-3 sm:p-4 rounded-xl text-[10px] sm:text-xs font-medium text-center" style={{ background: "#FFF8E1", color: "#D4820A" }}>
+        <div className="w-full p-3 sm:p-4 rounded-xl text-[10px] sm:text-xs font-medium text-center" style={{ background: "var(--warning-bg)", color: "var(--warning-ink)" }}>
           🖼️ Image unavailable
         </div>
       )}
-      <p style={{ fontSize: 13, fontWeight: 700, color: "#4A5568", textAlign: "center" }}>{prompt}</p>
+      <p style={{ fontSize: 13, fontWeight: 700, color: "#3E5558", textAlign: "center" }}>{prompt}</p>
     </div>
   );
 }
@@ -100,7 +100,7 @@ function renderElementNode(el: ChatElement): React.ReactNode {
   if (el.type === "visual") {
     if (el.content === "error") {
       return (
-        <div className="bg-[#FFF8E1] text-[#F57F17] px-3 py-2 rounded-lg text-xs font-medium self-center my-2">
+        <div className="bg-[var(--warning-bg)] text-[var(--warning-ink)] px-3 py-2 rounded-lg text-xs font-medium self-center my-2">
            📐 Visual unavailable — {el.meta?.label || "Visual"}
         </div>
       );
@@ -136,7 +136,7 @@ function renderElementNode(el: ChatElement): React.ReactNode {
           ) : imgSource ? (
             <img src={imgSource} alt={el.meta.label || "Figure"} className="max-w-full sm:max-w-[480px] h-auto rounded-xl" />
           ) : (
-            <div className="bg-[#FFF8E1] text-[#F57F17] px-3 py-2 rounded-lg text-xs font-medium">📐 Figure ID: unknown</div>
+            <div className="bg-[var(--warning-bg)] text-[var(--warning-ink)] px-3 py-2 rounded-lg text-xs font-medium">📐 Figure ID: unknown</div>
           )}
         </div>
       );
@@ -267,8 +267,8 @@ export function MessageElements({ elements, isStreaming, toolStatus, onAllReveal
         );
       })}
       {toolStatus && isStreaming && (
-        <div className="flex items-center gap-3 animate-pulse mt-3" style={{ padding: "10px 16px", background: "#5B4DC708", border: "1px solid #5B4DC715", borderRadius: 16, fontSize: 12, fontWeight: 700, color: "var(--tutor)" }}>
-          <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#00B894", animation: "bounce 1s infinite" }} />
+        <div className="flex items-center gap-3 animate-pulse mt-3" style={{ padding: "10px 16px", background: "#075E6308", border: "1px solid #075E6315", borderRadius: 16, fontSize: 12, fontWeight: 700, color: "var(--tutor)" }}>
+          <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--tutor)", animation: "bounce 1s infinite" }} />
           {toolStatus}
         </div>
       )}

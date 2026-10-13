@@ -76,7 +76,7 @@ export function PortalProgressBar() {
       aria-busy={phase === "active"}
       className="pointer-events-none relative h-[2px] w-full overflow-hidden"
     >
-      <div className="relative h-full overflow-hidden rounded-full bg-[linear-gradient(90deg,#16A36B,#9FE3C4,#C9E15A)]" style={style}>
+      <div className="relative h-full overflow-hidden rounded-full bg-[linear-gradient(90deg,#075E63,#9FE3C4,#C9E15A)]" style={style}>
         <span className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.85),transparent)] motion-safe:animate-[shimmer_1.2s_ease-in-out_infinite]" />
       </div>
     </div>

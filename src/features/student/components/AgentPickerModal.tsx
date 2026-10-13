@@ -48,7 +48,7 @@ export function AgentPickerModal() {
         {/* Header */}
         <div className="flex items-center justify-between px-7 pt-7 pb-5 border-b border-[var(--primary-ink)]/8">
           <div>
-            <h2 className="text-xl font-extrabold text-[var(--primary-ink)]">All Subjects</h2>
+            <h2 className="citron-eyebrow text-xl font-extrabold text-[var(--primary-ink)]">All Subjects</h2>
             <p className="text-sm text-[var(--primary-ink)]/50 mt-0.5">Select what you&apos;d like to learn today</p>
           </div>
           <Button iconOnly size="sm" variant="tertiary" aria-label="Close" onClick={() => setAgentPickerOpen(false)}>
@@ -58,7 +58,7 @@ export function AgentPickerModal() {
 
         {/* Search */}
         <div className="px-7 py-4 border-b border-[var(--primary-ink)]/8">
-          <div className="flex items-center gap-3 bg-[#F4F3EE] rounded-2xl px-4 py-3">
+          <div className="flex items-center gap-3 bg-[#F6F7F2] rounded-2xl px-4 py-3">
             <Search size={16} className="text-[var(--primary-ink)]/40 flex-shrink-0" />
             <input
               autoFocus
@@ -86,7 +86,7 @@ export function AgentPickerModal() {
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.035 }}
-                  className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-left hover:bg-[#F4F3EE]/50 transition-all border-l-4"
+                  className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-left hover:bg-[var(--soft-surface)]/50 transition-all border-l-4"
                   style={{ borderLeftColor: config.color }}
                 >
                   <div
@@ -113,7 +113,7 @@ export function AgentPickerModal() {
                           router.push(`/student/chat/${sessionId}`);
                         });
                       }}
-                      className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[var(--primary-ink)]/8 text-[var(--primary-ink)] hover:bg-[var(--primary-ink)]/15 transition-all cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[var(--soft-surface)] text-[var(--tutor)] hover:bg-[var(--tutor)]/15 transition-all cursor-pointer"
                     >
                       Chat
                     </button>
@@ -124,7 +124,7 @@ export function AgentPickerModal() {
                         startVoiceSession();
                         router.push(`/student/voice?agent=${agent.agent_id}`);
                       }}
-                      className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[var(--tutor)] text-white hover:bg-[var(--tutor)]/90 shadow-sm transition-all cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg font-bold text-xs bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] shadow-sm transition-all cursor-pointer"
                     >
                       Voice
                     </button>
@@ -136,7 +136,7 @@ export function AgentPickerModal() {
         </div>
 
         {/* Footer */}
-        <div className="px-7 py-4 border-t border-[var(--primary-ink)]/8 bg-[#F4F3EE]/50">
+        <div className="px-7 py-4 border-t border-[var(--primary-ink)]/8 bg-[#F6F7F2]/50">
           <p className="text-xs text-[var(--primary-ink)]/40 text-center">
             {filtered.length} subject{filtered.length !== 1 ? "s" : ""} available
           </p>

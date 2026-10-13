@@ -35,7 +35,7 @@ export function SourceReleaseModal(props: SourceReleaseModalProps) {
       onClose={onClose}
       size="full"
       title={subject ? `Review ${subject.title}` : "Review"}
-      panelStyle={{ maxWidth: "min(920px, 100%)", background: "#F8F9F8" }}
+      panelStyle={{ maxWidth: "min(920px, 100%)", background: "#F6F7F2" }}
     >
       {subject && <ReleaseBody key={subject.source_id} {...props} subject={subject} />}
     </Modal>
@@ -120,14 +120,14 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun }: SourceReleaseMo
 
   return (
     <div className="flex flex-col min-h-full">
-      <header className="shrink-0 flex items-start gap-4 px-5 md:px-7 pt-6 pb-4 bg-white border-b border-[#1A3D2C]/5">
-        <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#1A3D2C] text-white flex items-center justify-center">
+      <header className="shrink-0 flex items-start gap-4 px-5 md:px-7 pt-6 pb-4 bg-white border-b border-[#122D30]/5">
+        <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#075E63] text-white flex items-center justify-center">
           <ShieldCheck size={20} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/40">Review &amp; publish</p>
-          <h2 className="text-lg md:text-xl font-black text-[#1A3D2C] tracking-tight truncate">{subject.title}</h2>
-          <p className="text-xs text-[#1A3D2C]/60 mt-1 max-w-xl">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">Review &amp; publish</p>
+          <h2 className="text-lg md:text-xl font-black text-[#122D30] tracking-tight truncate">{subject.title}</h2>
+          <p className="text-xs text-[#122D30]/60 mt-1 max-w-xl">
             Check what the run made from your chapter. Everything needs your accept before students can open it; a
             part you reject stops the chapter from being published until it is run again.
           </p>
@@ -140,13 +140,13 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun }: SourceReleaseMo
       <div className="flex-1 px-5 md:px-7 py-5 flex flex-col gap-4">
         {loadError ? (
           <div className="py-10 flex flex-col items-center gap-4 text-center">
-            <p role="alert" className="text-sm font-bold text-[#1A3D2C]/70 max-w-md">{loadError}</p>
+            <p role="alert" className="text-sm font-bold text-[#122D30]/70 max-w-md">{loadError}</p>
             <Button variant="secondary" leadingIcon={<Play size={14} />} loading={busy === "rerun"} onClick={() => void rerun()}>
               Run the chapter again
             </Button>
           </div>
         ) : !data ? (
-          <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#1A3D2C]/40 py-10">
+          <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#122D30]/40 py-10">
             <Loader2 size={16} className="animate-spin" aria-hidden /> Loading the review…
           </p>
         ) : (
@@ -184,14 +184,14 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun }: SourceReleaseMo
       </div>
 
       {data && !published && (
-        <footer className="sticky bottom-0 shrink-0 bg-white border-t border-[#1A3D2C]/5 px-5 md:px-7 py-4 flex flex-col gap-3">
+        <footer className="sticky bottom-0 shrink-0 bg-white border-t border-[#122D30]/5 px-5 md:px-7 py-4 flex flex-col gap-3">
           {error && (
             <p role="alert" className="flex items-start gap-2 text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
               <AlertCircle size={14} className="mt-px shrink-0" aria-hidden /> {error}
             </p>
           )}
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <p className="flex-1 text-xs font-bold text-[#1A3D2C]/55">
+            <p className="flex-1 text-xs font-bold text-[#122D30]/55">
               {rejected.length
                 ? "A rejected part stops publishing. Run the chapter again to make a new release."
                 : pending.length
@@ -222,10 +222,10 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun }: SourceReleaseMo
 }
 
 function Count({ label, value, tone }: { label: string; value: number; tone: "good" | "warn" | "bad" | "neutral" }) {
-  const color = { good: "text-emerald-700", warn: "text-amber-700", bad: "text-red-700", neutral: "text-[#1A3D2C]" }[tone];
+  const color = { good: "text-emerald-700", warn: "text-amber-700", bad: "text-red-700", neutral: "text-[#122D30]" }[tone];
   return (
-    <div className="rounded-2xl bg-white border border-[#1A3D2C]/5 px-4 py-3">
-      <p className="text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/40">{label}</p>
+    <div className="rounded-2xl bg-white border border-[#122D30]/5 px-4 py-3">
+      <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">{label}</p>
       <p className={`text-2xl font-black tabular-nums ${color}`}>{value}</p>
     </div>
   );
@@ -251,7 +251,7 @@ function KindGroup({
   const pending = proposals.filter((p) => p.state === "pending");
   const [open, setOpen] = useState(pending.length > 0 && pending.length <= 12);
   return (
-    <section aria-label={label} className="rounded-2xl bg-white border border-[#1A3D2C]/5">
+    <section aria-label={label} className="rounded-2xl bg-white border border-[#122D30]/5">
       <div className="flex items-center gap-3 px-4 md:px-5 py-3.5">
         {/* eslint-disable-next-line no-restricted-syntax -- a full-width disclosure header, not an action button */}
         <button
@@ -260,12 +260,12 @@ function KindGroup({
           aria-expanded={open}
           className="flex-1 min-w-0 flex items-center gap-2 text-left"
         >
-          <ChevronDown size={16} className={`shrink-0 text-[#1A3D2C]/40 transition-transform ${open ? "" : "-rotate-90"}`} aria-hidden />
+          <ChevronDown size={16} className={`shrink-0 text-[#122D30]/40 transition-transform ${open ? "" : "-rotate-90"}`} aria-hidden />
           <span className="min-w-0">
-            <span className="block text-sm font-black text-[#1A3D2C]">
-              {label} <span className="text-[#1A3D2C]/40 tabular-nums">· {proposals.length}</span>
+            <span className="block text-sm font-black text-[#122D30]">
+              {label} <span className="text-[#122D30]/40 tabular-nums">· {proposals.length}</span>
             </span>
-            {hint && <span className="block text-[11px] text-[#1A3D2C]/50 truncate">{hint}</span>}
+            {hint && <span className="block text-[11px] text-[#122D30]/50 truncate">{hint}</span>}
           </span>
         </button>
         {pending.length > 0 ? (
@@ -280,7 +280,7 @@ function KindGroup({
         )}
       </div>
       {open && (
-        <ul className="border-t border-[#1A3D2C]/5 divide-y divide-[#1A3D2C]/5">
+        <ul className="border-t border-[#122D30]/5 divide-y divide-[#122D30]/5">
           {proposals.map((p) => (
             <ProposalRow key={p.id} proposal={p} readOnly={readOnly} busy={busy} onDecide={onDecide} />
           ))}
@@ -311,14 +311,14 @@ function ProposalRow({
     <li className="px-4 md:px-5 py-3.5">
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-[#1A3D2C] leading-snug">{title}</p>
-          {detail && <p className="mt-0.5 text-xs text-[#1A3D2C]/60 leading-relaxed line-clamp-3">{detail}</p>}
+          <p className="text-sm font-bold text-[#122D30] leading-snug">{title}</p>
+          {detail && <p className="mt-0.5 text-xs text-[#122D30]/60 leading-relaxed line-clamp-3">{detail}</p>}
           {/* eslint-disable-next-line no-restricted-syntax -- an inline text disclosure, not an action button */}
-          <button type="button" onClick={() => setShowDetails((s) => !s)} className="mt-1 text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/35 hover:text-[#1A3D2C]/60">
+          <button type="button" onClick={() => setShowDetails((s) => !s)} className="mt-1 text-[10px] font-black uppercase tracking-widest text-[#122D30]/35 hover:text-[#122D30]/60">
             {showDetails ? "Hide details" : "Details"}
           </button>
           {showDetails && (
-            <pre className="mt-2 max-h-64 overflow-auto rounded-xl bg-[#F8F9F8] p-3 text-[11px] leading-relaxed text-[#1A3D2C]/80 whitespace-pre-wrap break-words">
+            <pre className="mt-2 max-h-64 overflow-auto rounded-xl bg-[#F6F7F2] p-3 text-[11px] leading-relaxed text-[#122D30]/80 whitespace-pre-wrap break-words">
               {detailsOf(proposal)}
             </pre>
           )}
@@ -348,13 +348,13 @@ function ProposalRow({
       </div>
       {rejecting && proposal.state === "pending" && (
         <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl bg-red-50/60 border border-red-100 p-3">
-          <label className="flex-1 flex items-center gap-2 text-xs font-bold text-[#1A3D2C]/70">
+          <label className="flex-1 flex items-center gap-2 text-xs font-bold text-[#122D30]/70">
             Why?
             <select
               value={reason}
               onChange={(e) => setReason(e.target.value as ReleaseReason)}
               aria-label="Reason for rejecting"
-              className="flex-1 rounded-lg border border-[#1A3D2C]/10 bg-white px-2 py-1.5 text-xs font-bold text-[#1A3D2C]"
+              className="flex-1 rounded-lg border border-[#122D30]/10 bg-white px-2 py-1.5 text-xs font-bold text-[#122D30]"
             >
               <option value="">Pick a reason…</option>
               {REJECT_REASONS.map((r) => (

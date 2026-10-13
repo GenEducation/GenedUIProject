@@ -22,7 +22,7 @@ vi.mock("../DeviceCharts", () => ({
   DonutChart: () => <div data-testid="donut" />,
   BySchoolChart: () => <div data-testid="by-school" />,
   FirmwareChart: () => <div data-testid="firmware" />,
-  CHART_COLORS: { good: "#059F6D", warn: "#FBBF24", bad: "#FB7185", muted: "#888", neutral: "#0af" },
+  CHART_COLORS: { good: "#075E63", warn: "#FBBF24", bad: "#FB7185", muted: "#888", neutral: "#0af" },
 }));
 
 const NOW = new Date("2026-08-06T12:00:00Z");

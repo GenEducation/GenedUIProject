@@ -36,7 +36,7 @@ export function ChapterRow({ row, ui, index }: { row: ChapterRowModel; ui: Repor
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: Math.min(index, 8) * 0.04 }}
-      className="overflow-hidden rounded-2xl border bg-white transition-shadow hover:shadow-[0_14px_30px_-24px_rgba(19,41,61,0.5)]"
+      className="overflow-hidden rounded-2xl border bg-white transition-shadow hover:shadow-[0_14px_30px_-24px_rgba(18,45,48,0.5)]"
       style={{ borderColor: open ? tone.edge : "var(--rs-line)" }}
     >
       {/* eslint-disable-next-line no-restricted-syntax -- disclosure header for a composite chapter card */}

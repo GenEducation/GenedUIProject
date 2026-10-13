@@ -39,6 +39,50 @@ export const SOURCE_STATE_LABELS: Record<SourceState, string> = {
   failed: "Failed",
 };
 
+/** The stages of an ingestion run, in order (backend `gened_ingestion.progress.STAGES`). A run without teaching
+ * visuals skips `visuals`. */
+export type IngestionStage =
+  | "render"
+  | "read_pages"
+  | "components"
+  | "reconcile"
+  | "questions"
+  | "figures"
+  | "lesson"
+  | "visuals"
+  | "submit";
+
+/** Each stage as a partner reads it, and what its counted units are called (if it has any). */
+export const INGESTION_STAGES: Record<IngestionStage, { label: string; unit?: string }> = {
+  render: { label: "Preparing the pages" },
+  read_pages: { label: "Reading pages", unit: "pages" },
+  components: { label: "Finding the key concepts" },
+  reconcile: { label: "Checking against existing concepts" },
+  questions: { label: "Writing practice questions" },
+  figures: { label: "Collecting figures" },
+  lesson: { label: "Planning the lesson" },
+  visuals: { label: "Drawing teaching visuals", unit: "visuals" },
+  submit: { label: "Saving everything" },
+};
+
+/**
+ * How far a run is (`SourceView.progress`): which stage of how many, the units done in it when it has countable
+ * ones, and the percent of the whole run, which never goes backwards. While `running` it is the current run;
+ * afterwards where the last run stopped (100 when it finished). Null before a run first reports.
+ */
+export interface SourceProgress {
+  stage: IngestionStage;
+  /** 1-based position of `stage` among `steps`. */
+  step: number;
+  steps: number;
+  done: number;
+  /** 0 for a stage without countable units: show the stage name without a count. */
+  total: number;
+  /** 0–100. */
+  percent: number;
+  updated_at: string;
+}
+
 export interface SourceChapter {
   ordinal: number;
   title: string;
@@ -83,6 +127,8 @@ export interface SourceView {
   has_report: boolean;
   /** How many reconciliation questions the last run is waiting on (state `review_needed`). */
   questions: number;
+  /** How far the current (or last) run got; poll `GET /v1/sources` every few seconds while `running`. */
+  progress?: SourceProgress | null;
   /** Pages left out at upload as the solutions appendix; null when nothing was left out. */
   excluded_pages?: ExcludedPages | null;
   queued_at: string | null;

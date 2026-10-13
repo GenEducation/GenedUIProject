@@ -115,11 +115,11 @@ export function AdminDashboard() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0E1F2B] text-white">
+    <div className="flex h-screen overflow-hidden bg-[#122D30] text-white">
       {/* Sidebar */}
       <aside className="w-20 lg:w-64 shrink-0 border-r border-white/10 bg-white/[0.02] flex flex-col transition-all duration-300">
         <div className="flex items-center justify-center lg:justify-start gap-2.5 px-3 lg:px-6 h-16 border-b border-white/10">
-          <ShieldCheck className="h-6 w-6 text-[#059F6D] shrink-0" />
+          <ShieldCheck className="h-6 w-6 text-[#075E63] shrink-0" />
           <span className="hidden lg:inline font-bold tracking-tight">GenEd Admin</span>
         </div>
 
@@ -137,7 +137,7 @@ export function AdminDashboard() {
                 aria-current={active ? "page" : undefined}
                 className={`flex w-full items-center justify-center lg:justify-start gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   active
-                    ? "bg-[#059F6D]/15 text-[#059F6D]"
+                    ? "bg-[#075E63]/15 text-[#075E63]"
                     : "text-white/55 hover:bg-white/5 hover:text-white"
                 }`}
               >

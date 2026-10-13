@@ -73,7 +73,7 @@ function StatCard({
 }) {
   const valueColor = {
     neutral: "text-white",
-    good: "text-[#059F6D]",
+    good: "text-[#075E63]",
     warn: "text-amber-300",
     bad: "text-rose-300",
   }[accent];
@@ -89,7 +89,7 @@ function StatCard({
       data-kpi-tile={label}
       className={`rounded-xl border p-4 text-left transition-colors ${
         active
-          ? "border-[#059F6D]/60 bg-[#059F6D]/10"
+          ? "border-[#075E63]/60 bg-[#075E63]/10"
           : "border-white/10 bg-white/[0.03] enabled:hover:bg-white/[0.06]"
       } ${onClick ? "cursor-pointer" : "cursor-default"}`}
     >
@@ -483,7 +483,7 @@ export function DevicesView() {
             {tile ? (
               <button
                 onClick={() => setTile("")}
-                className="rounded-lg border border-[#059F6D]/50 bg-[#059F6D]/10 px-3 py-2 text-xs text-[#059F6D] hover:bg-[#059F6D]/20"
+                className="rounded-lg border border-[#075E63]/50 bg-[#075E63]/10 px-3 py-2 text-xs text-[#075E63] hover:bg-[#075E63]/20"
               >
                 Clear tile filter
               </button>
