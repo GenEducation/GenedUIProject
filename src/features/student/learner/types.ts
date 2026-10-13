@@ -23,6 +23,34 @@ export interface LearnerChapter {
   card: ChapterCard | null;
 }
 
+/**
+ * One of the chapters a student last worked on (`GET /v1/learner/recent-chapters`): the chapter and its newest
+ * lesson instance in one entry, most recently active first.
+ */
+export interface RecentChapter {
+  chapter_id: string;
+  chapter_title: string;
+  chapter_number: number;
+  book_title: string;
+  /** The subject's code, e.g. `mathematics`, `social_science` (not the display name). */
+  subject: string;
+  /** The newest lesson instance for this chapter: resume it at `/student/lesson/{instance_id}`. */
+  instance_id: string;
+  state: "active" | "completed" | "abandoned";
+  nodes_done: number;
+  nodes_total: number;
+  started_at: string;
+  completed_at: string | null;
+  last_active_at: string;
+  /** `'<subject>:<n>'`: the card palette, for the gradient while there's no card. */
+  palette: string;
+  card: ChapterCard | null;
+}
+
+export interface RecentChaptersOut {
+  chapters: RecentChapter[];
+}
+
 export interface LearnerChaptersOut {
   subject: string;
   grade: number;

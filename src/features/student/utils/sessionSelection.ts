@@ -1,11 +1,5 @@
 import { scheduledSessionStartMs } from "@/utils/datetime";
 
-export function selectContinueSession<T extends { is_complete?: boolean }>(
-  sessions: readonly T[],
-): T | null {
-  return sessions.find(session => !session.is_complete) ?? null;
-}
-
 /**
  * How far ahead a booked session may be before the dashboard bothers showing a
  * countdown. Beyond this the hero slot stays on Continue Learning — a clock
