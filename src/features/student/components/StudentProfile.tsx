@@ -58,6 +58,8 @@ export function StudentProfile() {
           school_board: fresh.school_board ?? studentProfile.school_board,
           ai_name: fresh.ai_name ?? studentProfile.ai_name,
           preferred_voice: fresh.preferred_voice ?? studentProfile.preferred_voice,
+          // The server is the source of truth for the pick, including "none" (null): never keep a stale cached one.
+          tutor_voice: "tutor_voice" in fresh ? fresh.tutor_voice : studentProfile.tutor_voice,
           plan: fresh.plan ?? studentProfile.plan,
           plan_expires_at: fresh.plan_expires_at ?? studentProfile.plan_expires_at,
         };

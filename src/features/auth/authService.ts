@@ -44,6 +44,9 @@ export interface AuthTokenResponse {
   name?: string;
   ai_name?: string;
   preferred_voice?: string;
+  /** The tutor voice the student picked (an id from `GET /voices`), or null for the default. Returned by the profile
+   *  routes (`GET`/`PATCH /auth/profile`), not by sign-in. */
+  tutor_voice?: string | null;
   plan?: "FREE" | "PRO";
   plan_expires_at?: string | null;
   // Teacher-only fields, present when `role` is TEACHER.
@@ -240,6 +243,7 @@ export async function updateProfile(data: {
   age?: number;
   ai_name?: string;
   preferred_voice?: string;
+  tutor_voice?: string;
 }): Promise<AuthTokenResponse> {
   const token = localStorage.getItem("gened_auth_token");
   const response = await fetch(`${AUTH_API_BASE_URL}/auth/profile`, {
