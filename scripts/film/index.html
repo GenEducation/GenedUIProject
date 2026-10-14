@@ -1,0 +1,34 @@
+<!doctype html>
+<!--
+  Wrapper for the frame-render skill (gened-motion/skills/frame-render): it opens
+  this file, waits for window.ready and calls window.render(t) per frame, then
+  screenshots #c. The film itself is /dev/film-render on the running dev server
+  (FILM_ORIGIN, default http://localhost:3010), driven here over postMessage.
+
+  node <gened-motion>/skills/frame-render/scripts/render.mjs scripts/film/index.html --out film.mp4
+  … --query format=portrait   for the 4:5 phone cut
+-->
+<html>
+<head><meta charset="utf-8"><style>html,body{margin:0;background:#072528;overflow:hidden}#c{display:block;border:0}</style></head>
+<body>
+<iframe id="c"></iframe>
+<script>
+  const q = new URLSearchParams(location.search);
+  const origin = q.get('origin') || 'http://localhost:3010';
+  const frame = document.getElementById('c');
+  frame.src = origin + '/dev/film-render?format=' + (q.get('format') || 'landscape');
+  let done = null;
+  window.ready = new Promise((resolve) => {
+    addEventListener('message', (e) => {
+      if (e.data?.type === 'ready') {
+        frame.style.width = e.data.info.width + 'px';
+        frame.style.height = e.data.info.height + 'px';
+        resolve(e.data.info);
+      }
+      if (e.data?.type === 'rendered' && done) { const d = done; done = null; d(); }
+    });
+  });
+  window.render = (t) => new Promise((resolve) => { done = resolve; frame.contentWindow.postMessage({ type: 'render', t }, '*'); });
+</script>
+</body>
+</html>

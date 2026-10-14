@@ -18,7 +18,10 @@ export class VoicePipeline {
    * @param {string} o.url         the WebSocket URL
    * @param {string[]} [o.protocols]  WebSocket subprotocols (the product gateway reads the account token from them)
    * @param {object} o.init        the `init` fields other than protocol and vad (language, instance ids, device)
-   * @param {"never"|"allow"} [o.interrupt]  "never": half duplex, the tutor is not interrupted by its own echo; "allow": headphones
+   * @param {"never"|"echo_aware"|"allow"} [o.interrupt]  "never": half duplex (the microphone is not listened to while the tutor
+   *   speaks); "echo_aware": the learner may interrupt, and a sound the tutor's own echo explains never starts a turn (speakers);
+   *   "allow": no echo check (headphones)
+   * @param {object} [o.vad]  overrides of the VAD's thresholds and tuning (`vad-worklet.js`); the applied values are reported in `init`
    * @param {(ctx: AudioContext, source: AudioNode) => Promise<AudioNode>} [o.denoise]  optional hook between the microphone and capture
    * @param {MediaStream} [o.stream]  a stream to use instead of the microphone (a test)
    * @param {{aec?: boolean, ns?: boolean, agc?: boolean}} [o.processing]  the browser's own processing to request
@@ -30,6 +33,7 @@ export class VoicePipeline {
     const { o } = this;
     const ctx = (this.ctx = new AudioContext({ latencyHint: "interactive" }));
     await ctx.resume();
+    await ctx.audioWorklet.addModule(new URL("vad-worklet.js", HERE));   // the capture worklet uses what it defines
     await Promise.all(["capture-worklet.js", "playback-worklet.js"].map((f) => ctx.audioWorklet.addModule(new URL(f, HERE))));
 
     let stream = o.stream, track = null;
@@ -41,7 +45,7 @@ export class VoicePipeline {
     const source = ctx.createMediaStreamSource(stream);
     const tail = o.denoise ? await o.denoise(ctx, source) : source;
 
-    const capture = new AudioWorkletNode(ctx, "capture", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] });
+    const capture = new AudioWorkletNode(ctx, "capture", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], processorOptions: { vad: o.vad ?? {} } });
     const playback = new AudioWorkletNode(ctx, "playback", { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1] });
     const hello = new Promise((resolve) => {
       capture.port.onmessage = (e) => {
@@ -59,9 +63,11 @@ export class VoicePipeline {
     this.health = new MicHealth({ emit: (e) => this.diag(e.event, e.detail, true), settings: this.settings, inRate });
     this.watch(ctx, track);
 
-    const cw = new MessageChannel(), pw = new MessageChannel();
+    const cw = new MessageChannel(), pw = new MessageChannel(), echo = new MessageChannel();
     capture.port.postMessage({ t: "sink" }, [cw.port2]);
     playback.port.postMessage({ t: "link" }, [pw.port2]);
+    capture.port.postMessage({ t: "echo" }, [echo.port1]);   // audio thread to audio thread: what the tutor rendered, for the VAD
+    playback.port.postMessage({ t: "echo" }, [echo.port2]);
     this.worker = new Worker(new URL("session-worker.js", HERE), { type: "module" });
     this.worker.onmessage = (e) => o.onEvent(e.data);
     this.worker.onerror = (e) => o.onEvent({ t: "status", state: "worker_error", message: e.message });

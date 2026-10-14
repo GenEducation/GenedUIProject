@@ -3,18 +3,23 @@
 import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { AlertTriangle, ClipboardList, Loader2, ShieldCheck, UserRound, X } from "lucide-react";
+import { AlertTriangle, ClipboardList, Images, Loader2, PenLine, ShieldCheck, Upload, UserRound, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
 import { summarizeReport, type ReportProblem } from "../utils/reportSummary";
+import { NEXT_STEP_COPY, UPLOAD_STEPS } from "../utils/ingestionPath";
 import type { Subject } from "../store/usePartnerStore";
 
 interface SourceReportModalProps {
   /** The chapter whose report to show; null keeps the popup closed. */
   subject: Subject | null;
   onClose: () => void;
+  /** The next step's actions, so the report ends in what to do (the server's `outcome`), not only what failed. */
+  onAddQuestions?: (subject: Subject) => void;
+  onUploadAgain?: (subject: Subject) => void;
+  onReviewVisuals?: (subject: Subject) => void;
 }
 
 /** react-markdown hands each component its AST `node`; it must not reach the DOM. */
@@ -64,7 +69,8 @@ function Problem({ problem }: { problem: ReportProblem }) {
  * plain summary first (what to fix, and who fixes it), then the full report
  * for anyone who wants the detail.
  */
-export function SourceReportModal({ subject, onClose }: SourceReportModalProps) {
+export function SourceReportModal(props: SourceReportModalProps) {
+  const { subject, onClose } = props;
   return (
     <Modal
       open={!!subject}
@@ -74,12 +80,42 @@ export function SourceReportModal({ subject, onClose }: SourceReportModalProps) 
       panelStyle={{ maxWidth: "min(880px, 100%)", background: "#F6F7F2" }}
     >
       {/* Keyed so each chapter's report starts from an empty, loading state. */}
-      {subject && <ReportBody key={subject.source_id} subject={subject} onClose={onClose} />}
+      {subject && <ReportBody key={subject.source_id} {...props} subject={subject} />}
     </Modal>
   );
 }
 
-function ReportBody({ subject, onClose }: { subject: Subject; onClose: () => void }) {
+/** The server's decision for the chapter, with its one action; the same box the ingestion path shows. */
+function NextStep({ subject, onClose, onAddQuestions, onUploadAgain, onReviewVisuals }: SourceReportModalProps & { subject: Subject }) {
+  const step = subject.outcome?.next_step;
+  if (!step || step === "wait" || step === "start" || step === "none") return null;
+  const copy = NEXT_STEP_COPY[step];
+  const act = (fn?: (s: Subject) => void) => (fn ? () => { onClose(); fn(subject); } : undefined);
+  const action =
+    step === "add_questions" ? { label: "Add questions", icon: <PenLine size={14} />, run: act(onAddQuestions) }
+    : UPLOAD_STEPS.has(step) ? { label: "Upload again", icon: <Upload size={14} />, run: act(onUploadAgain) }
+    : step === "review_visuals" ? { label: "Review pictures", icon: <Images size={14} />, run: act(onReviewVisuals) }
+    : null;
+  return (
+    <section aria-label="What to do next" className="rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/50">
+          {subject.state === "invalid" ? "Why it didn't pass, and what to do" : "What to do next"}
+        </p>
+        <p className="text-sm font-black text-[#122D30]">{copy.title}</p>
+        <p className="text-xs text-[#122D30]/70">{copy.body}</p>
+      </div>
+      {action?.run && (
+        <Button size="sm" leadingIcon={action.icon} onClick={action.run}>
+          {action.label}
+        </Button>
+      )}
+    </section>
+  );
+}
+
+function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
+  const { subject, onClose } = props;
   const [report, setReport] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const sourceId = subject.source_id;
@@ -95,7 +131,11 @@ function ReportBody({ subject, onClose }: { subject: Subject; onClose: () => voi
     };
   }, [sourceId]);
 
-  const summary = useMemo(() => (report ? summarizeReport(report) : null), [report]);
+  const findings = subject.outcome?.findings;
+  const summary = useMemo(
+    () => (report ? summarizeReport(report, Object.fromEntries((findings ?? []).map((f) => [f.check, f.owner]))) : null),
+    [report, findings],
+  );
   const counts = summary?.counts;
   const stats = counts
     ? ([
@@ -133,6 +173,7 @@ function ReportBody({ subject, onClose }: { subject: Subject; onClose: () => voi
           </p>
         ) : (
           <>
+            <NextStep {...props} />
             {stats.length > 0 && (
               <dl className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {stats.map(([label, n]) => (

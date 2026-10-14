@@ -53,7 +53,7 @@ export function BoardFigure({ figureGroupId }: { figureGroupId: string }) {
           width={picture.width_px}
           height={picture.height_px}
           onError={onError}
-          className="max-h-[44vh] w-auto max-w-full object-contain mix-blend-multiply"
+          className="max-h-[22vh] w-auto max-w-full object-contain mix-blend-multiply"
         />
       ))}
       {/* No visible caption: the visuals carry their own drawn title; `caption` stays the image's description. */}

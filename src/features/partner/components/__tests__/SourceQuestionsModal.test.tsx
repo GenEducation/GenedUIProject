@@ -26,7 +26,7 @@ const candidate = (n: number, similarity: number, where: "this_chapter" | "catal
 });
 
 const QUESTIONS: QuestionsResponse = {
-  allowed_answers: ["novel", "same_as"],
+  allowed_answers: ["novel", "same_as", "match"],
   questions: [
     {
       key: "2.7:proposal",
@@ -56,6 +56,29 @@ async function openQuestions() {
 }
 
 describe("Answering a chapter's reconciliation questions", () => {
+  it("shows the button only on a chapter waiting for answers", async () => {
+    render(<SubjectRegistry onUploadClick={vi.fn()} />);
+    expect(await screen.findByRole("button", { name: "Answer 1 question" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Answer \d+ question/ })).toHaveLength(1);
+  });
+
+  it("shows the proposal and its closest look-alikes, with similarity and where each comes from", async () => {
+    const dialog = await openQuestions();
+    expect(within(dialog).getByText("SYNTHETIC definition.")).toBeInTheDocument();
+    expect(within(dialog).getByText("G6-MATH-LO3.1.1")).toBeInTheDocument();
+
+    const options = within(dialog).getAllByRole("radio");
+    // "new" + the three most similar: 89 %, 86 %, 82 % (a published one is chosen like any other).
+    expect(options).toHaveLength(4);
+    expect(within(dialog).getByText("89% alike")).toBeInTheDocument();
+    expect(within(dialog).getByText("82% alike")).toBeInTheDocument();
+    expect(within(dialog).queryByText("70% alike")).toBeNull();
+    expect(within(dialog).getByText("Catalogue")).toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Show 2 less similar" }));
+    expect(within(dialog).getByText("70% alike")).toBeInTheDocument();
+  });
+
   it("saves 'same as' a concept of this chapter, then offers to run the chapter again", async () => {
     const dialog = await openQuestions();
     const save = within(dialog).getByRole("button", { name: "Save answers" });
@@ -70,6 +93,22 @@ describe("Answering a chapter's reconciliation questions", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(sourcesFixture.get(SID)!.state).toBe("queued");
+  });
+
+  it("saves a match to a published concept", async () => {
+    const dialog = await openQuestions();
+    fireEvent.click(within(dialog).getByText("SYNTHETIC look-alike 9"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save answers" }));
+    await waitFor(() =>
+      expect(lastAnswers).toEqual({ "2.7:proposal": { decision: "match", component_id: "00000000-0000-0000-0000-000000000009" } }),
+    );
+  });
+
+  it("saves 'it's a new concept'", async () => {
+    const dialog = await openQuestions();
+    fireEvent.click(within(dialog).getByText("It's a new concept"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save answers" }));
+    await waitFor(() => expect(lastAnswers).toEqual({ "2.7:proposal": { decision: "novel" } }));
   });
 
   it("shows the server's reason when an answer is refused, and keeps the choice", async () => {

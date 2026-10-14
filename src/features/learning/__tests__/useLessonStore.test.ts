@@ -100,3 +100,82 @@ describe("useLessonStore — answers", () => {
     expect(store().instance?.revision).toBe(9);
   });
 });
+
+
+describe("useLessonStore — moving on to the next part", () => {
+  const nextNode = () =>
+    makeLessonInstance({
+      revision: 4,
+      active_node: { ...makeLessonInstance().active_node!, instance_node_id: NODE_2, title: "SYNTHETIC node 3" },
+    });
+
+  beforeEach(async () => {
+    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
+    await store().load(LESSON_ID);
+    turnRequests.length = 0;
+  });
+
+  it("asks the tutor to open the new part after Next step, once the lesson has moved", async () => {
+    lessonFixture.setInstance(nextNode());
+    await store().done();
+    await waitFor(() => expect(turnRequests.map((r) => r.kind)).toEqual(["opening"]));
+    expect(turnRequests[0].instance_node_id).toBe(NODE_2);
+    await settled();
+  });
+
+  it("leaves the opening to the voice session when one is live (it reconnects for the new part)", async () => {
+    store().setVoiceSession("synthetic-voice-session");
+    lessonFixture.setInstance(nextNode());
+    await store().done();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(turnRequests).toEqual([]);
+  });
+
+  it("waits for the turn in flight instead of cutting it off, then opens the new part", async () => {
+    const next = nextNode();
+    lessonFixture.setScript(() => [
+      { type: "state_changed", instance: next },
+      { type: "text_delta", text: "Well done." },
+      { type: "turn_completed", status: "completed", finish_reason: "stop" },
+    ]);
+    await store().send("SYNTHETIC answer");
+    await waitFor(() => expect(turnRequests.map((r) => r.kind)).toEqual(["learner_message", "opening"]));
+    expect(turnRequests[1].instance_node_id).toBe(NODE_2);
+    // the first turn finished; it was not interrupted by the opening
+    expect(store().turns[0]).toMatchObject({ status: "completed" });
+    await settled();
+  });
+});
+
+describe("useLessonStore — typed turns carry the session language", () => {
+  beforeEach(async () => {
+    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
+    await store().load(LESSON_ID);
+    turnRequests.length = 0;
+    localStorage.removeItem("gened_voice_language");
+  });
+
+  it("sends the language the learner picked on a hint", async () => {
+    store().setSessionLanguage("hi");
+    await store().askHint(CHECK_ITEM);
+    expect(turnRequests.at(-1)).toMatchObject({ kind: "hint", language: "hi" });
+    expect(turnRequests.at(-1)?.modality).toBeUndefined();
+    await settled();
+  });
+
+  it("falls back to the stored voice choice, and sends none when nothing is chosen", async () => {
+    localStorage.setItem("gened_voice_language", "ta");
+    await store().send("SYNTHETIC question");
+    expect(turnRequests.at(-1)).toMatchObject({ kind: "learner_message", language: "ta" });
+    localStorage.removeItem("gened_voice_language");
+    useLessonStore.setState({ sessionLanguage: null });
+    await store().send("SYNTHETIC again");
+    expect(turnRequests.at(-1)).not.toHaveProperty("language");
+  });
+
+  it("never sends a tag outside the eight", async () => {
+    localStorage.setItem("gened_voice_language", "fr");
+    await store().send("SYNTHETIC question");
+    expect(turnRequests.at(-1)).not.toHaveProperty("language");
+  });
+});

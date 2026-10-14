@@ -17,3 +17,17 @@ describe("summarizeReport", () => {
   });
 
 });
+
+describe("who fixes a check", () => {
+  const report = "## Validation\n- VIOLATION single_component_share items: share None below 0.7\n- VIOLATION SYNTHETIC_check x: y\n";
+  it("tells the partner to add questions when there are too few", () => {
+    const [p] = summarizeReport(report).problems;
+    expect(p).toMatchObject({ code: "single_component_share", fixedBy: "you" });
+    expect(p.text).toMatch(/Add questions/);
+  });
+  it("takes the server's owner over the default", () => {
+    const owners = { single_component_share: "gened", SYNTHETIC_check: "partner" } as const;
+    const byCode = Object.fromEntries(summarizeReport(report, owners).problems.map((p) => [p.code, p.fixedBy]));
+    expect(byCode).toEqual({ single_component_share: "admin", SYNTHETIC_check: "you" });
+  });
+});

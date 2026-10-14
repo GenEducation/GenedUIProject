@@ -69,9 +69,13 @@ const EXPLAIN: Record<string, Explainer> = {
     text: `${plural(n, "question refers", "questions refer")} to a picture that isn't linked to ${n === 1 ? "it" : "them"} yet. An admin links them.`,
     fixedBy: "admin",
   }),
+  single_component_share: () => ({
+    text: "GenEd found too few questions it can check, so students could not practise this chapter. Add questions: give the answers of printed ones, write your own, or let AI suggest some.",
+    fixedBy: "you",
+  }),
   unassessed_component: (n) => ({
-    text: `${plural(n, "concept has", "concepts have")} no practice question to check it. An admin adds questions or adjusts the plan.`,
-    fixedBy: "admin",
+    text: `${plural(n, "concept has", "concepts have")} no question to check ${n === 1 ? "it" : "them"}. Add a question for ${n === 1 ? "it" : "each"}.`,
+    fixedBy: "you",
   }),
 };
 
@@ -85,7 +89,8 @@ function countAfter(report: string, label: string): number | undefined {
   return match ? Number(match[1]) : undefined;
 }
 
-export function summarizeReport(report: string): ReportSummary {
+/** `owners` is the server's word on who fixes each check (`SourceView.outcome.findings`); it outranks the defaults. */
+export function summarizeReport(report: string, owners: Record<string, "partner" | "gened"> = {}): ReportSummary {
   const groups = new Map<string, { path: string; detail: string }[]>();
   for (const line of report.split("\n")) {
     const match = line.trim().match(VIOLATION);
@@ -96,11 +101,11 @@ export function summarizeReport(report: string): ReportSummary {
     groups.set(code, list);
   }
 
-  const problems = [...groups.entries()].map(([code, lines]) => ({
-    code,
-    count: lines.length,
-    ...(EXPLAIN[code] ?? otherProblem)(lines.length, lines),
-  }));
+  const problems = [...groups.entries()].map(([code, lines]) => {
+    const problem = { code, count: lines.length, ...(EXPLAIN[code] ?? otherProblem)(lines.length, lines) };
+    const owner = owners[code];
+    return owner ? { ...problem, fixedBy: owner === "partner" ? ("you" as const) : ("admin" as const) } : problem;
+  });
   // What the partner can fix first, then the biggest groups.
   problems.sort((a, b) => (a.fixedBy === b.fixedBy ? b.count - a.count : a.fixedBy === "you" ? -1 : 1));
 

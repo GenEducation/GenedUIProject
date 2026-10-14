@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, X, FileText, RotateCcw, AlertCircle } from "lucide-react";
 import { useState, useRef } from "react";
-import { usePartnerStore } from "../store/usePartnerStore";
+import { usePartnerStore, type Subject } from "../store/usePartnerStore";
 import { PageWisePreview } from "./PageWisePreview";
 import { LearningOutcomePicker } from "./LearningOutcomePicker";
 import { MAX_UPLOAD_BYTES } from "../types/sources";
@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/Button";
 
 interface CurriculumIngestionProps {
   onClose: () => void;
+  /** A chapter to upload again: every detail but the PDF and its pages is filled in from it. */
+  prefill?: Subject | null;
 }
 
 const fieldLabel = "text-[10px] font-black text-[#122D30] uppercase tracking-widest px-1";
@@ -30,22 +32,22 @@ const textInput =
  * learning outcomes and strand it maps to. Submitting registers it and queues
  * its first ingestion run; errors from the server stay on the form.
  */
-export function CurriculumIngestion({ onClose }: CurriculumIngestionProps) {
+export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [subjectName, setSubjectName] = useState("");
-  const [grade, setGrade] = useState("");
+  const [subjectName, setSubjectName] = useState(prefill?.subject ?? "");
+  const [grade, setGrade] = useState(prefill ? String(prefill.grade) : "");
   const board = resolveTaxonomyBoard();
-  const [publisher, setPublisher] = useState("NCERT");
-  const [bookTitle, setBookTitle] = useState("");
-  const [edition, setEdition] = useState("");
-  const [chapterNo, setChapterNo] = useState("");
-  const [chapterTitle, setChapterTitle] = useState("");
+  const [publisher, setPublisher] = useState(prefill?.publisher ?? "NCERT");
+  const [bookTitle, setBookTitle] = useState(prefill?.book_title ?? "");
+  const [edition, setEdition] = useState(prefill?.edition_label ?? "");
+  const [chapterNo, setChapterNo] = useState(prefill ? String(prefill.chapter_ordinal) : "");
+  const [chapterTitle, setChapterTitle] = useState(prefill?.title ?? "");
   const [firstPage, setFirstPage] = useState("1");
   const [lastPage, setLastPage] = useState("");
   const [pageCount, setPageCount] = useState<number | null>(null);
-  const [loCodes, setLoCodes] = useState<string[]>([]);
-  const [strand, setStrand] = useState("");
+  const [loCodes, setLoCodes] = useState<string[]>(prefill?.lo_codes ?? []);
+  const [strand, setStrand] = useState(prefill?.strand ?? "");
 
   const gradeNum = parseInt(grade, 10);
   // Loads the catalogue on mount rather than assuming an earlier screen already
@@ -154,6 +156,11 @@ export function CurriculumIngestion({ onClose }: CurriculumIngestionProps) {
               <div>
                 <h3 className="text-xl md:text-2xl font-black text-[#122D30] tracking-tight">Curriculum Upload</h3>
                 <p className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest mt-1">Registry Ingestion</p>
+                {prefill && (
+                  <p className="mt-2 text-[11px] font-semibold text-[#075E63]">
+                    Uploading &ldquo;{prefill.title}&rdquo; again: its details are filled in. Choose the new PDF or pages.
+                  </p>
+                )}
               </div>
 
               {!hasFile ? (

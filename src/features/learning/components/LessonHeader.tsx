@@ -6,6 +6,7 @@ import { ChevronRight, Flag, ListChecks, Timer, X } from "lucide-react";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { StudentAvatar } from "@/features/student/components/StudentAvatar";
 import { useLessonStore } from "../useLessonStore";
+import { useUiText } from "../i18n";
 import { formatDuration, useSessionTimer } from "../useSessionTimer";
 
 interface LessonHeaderProps {
@@ -64,7 +65,9 @@ export function LessonHeader({
   gridTemplate,
   onOpenSteps,
 }: LessonHeaderProps) {
-  const seconds = useSessionTimer();
+  const instanceId = useLessonStore((s) => s.instanceId);
+  const seconds = useSessionTimer(instanceId);
+  const t = useUiText();
   const avatarId = useStudentStore((s) => s.avatarId);
   const done = useLessonStore((s) => s.instance?.nodes_done ?? null);
   const total = useLessonStore((s) => s.instance?.nodes_total ?? null);
@@ -133,7 +136,7 @@ export function LessonHeader({
         </nav>
         <Chip
           role="timer"
-          aria-label={`Session time ${formatDuration(seconds)}`}
+          aria-label={`${t("sessionTime")} ${formatDuration(seconds)}`}
           icon={
             <Timer
               size={26}
@@ -143,7 +146,7 @@ export function LessonHeader({
             />
           }
           value={formatDuration(seconds)}
-          label="Session time"
+          label={t("sessionTime")}
         />
         {done !== null && total !== null && total > 0 && (
           <div className="hidden md:block [@media(max-height:500px)]:hidden">
@@ -159,7 +162,7 @@ export function LessonHeader({
                 </span>
               }
               value={`${done}/${total}`}
-              label="Steps done"
+              label={t("stepsDone")}
             />
           </div>
         )}

@@ -58,7 +58,8 @@ export function Filmstrip() {
                   type="button"
                   onClick={() => focusFigure(id)}
                   aria-current={current}
-                  aria-label={`Figure ${i + 1}`}
+                  aria-label={`Figure ${i + 1} of ${ids.length}`}
+                  title={`Figure ${i + 1} of ${ids.length}`}
                   className={`pointer-events-auto grid place-items-center overflow-hidden rounded-full bg-[var(--ls-card-warm)] transition-[width,height,opacity,box-shadow] duration-300 ${
                     current
                       ? "h-[76px] w-[76px] opacity-100 ring-[3px] ring-[var(--ls-primary)] ring-offset-2 ring-offset-[var(--ls-card-warm)] shadow-[0_10px_22px_-12px_rgb(7_94_99/0.7)]"
@@ -89,6 +90,11 @@ export function Filmstrip() {
         </button>
       </div>
 
+      {ids.length > 1 && index >= 0 && (
+        <p className="lesson-display rounded-full bg-white/80 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--ls-ink-mid)]">
+          Figure {index + 1} of {ids.length}
+        </p>
+      )}
       {ids.length > 1 && (
         <div aria-hidden className="flex justify-center gap-1.5">
           {ids.map((id) => (

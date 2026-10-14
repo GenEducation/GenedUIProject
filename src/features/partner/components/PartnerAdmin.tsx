@@ -9,7 +9,7 @@ import { CurriculumIngestion } from "./CurriculumIngestion";
 import { AnimatePresence, motion } from "framer-motion";
 import { NotificationBell } from "@/components/NotificationBell";
 import { User } from "lucide-react";
-import { usePartnerStore } from "../store/usePartnerStore";
+import { usePartnerStore, type Subject } from "../store/usePartnerStore";
 import { LabSetup } from "@/features/lab/components/LabSetup";
 
 export function PartnerAdmin() {
@@ -21,6 +21,8 @@ export function PartnerAdmin() {
     pathname === "/partner/subjects" ? "subjects" : pathname === "/partner/labs" ? "labs" : "analytics";
 
   const showUploadModal = usePartnerStore((state) => state.showUploadModal);
+  // The chapter an "Upload again" came from, to prefill the form; null for a fresh upload.
+  const [uploadPrefill, setUploadPrefill] = useState<Subject | null>(null);
   const setShowUploadModal = usePartnerStore((state) => state.setShowUploadModal);
 
   const rawPartnerId = typeof window !== 'undefined' ? localStorage.getItem("gened_partner_id") : null;
@@ -61,7 +63,7 @@ export function PartnerAdmin() {
                 exit={{ opacity: 0, y: -10 }}
                 className="flex-1 flex flex-col h-full"
               >
-                <SubjectRegistry onUploadClick={() => setShowUploadModal(true)} />
+                <SubjectRegistry onUploadClick={(prefill) => { setUploadPrefill(prefill ?? null); setShowUploadModal(true); }} />
               </motion.div>
             ) : activeView === "labs" ? (
               <motion.div
@@ -90,7 +92,7 @@ export function PartnerAdmin() {
         {/* Modals */}
         <AnimatePresence>
           {showUploadModal && (
-            <CurriculumIngestion onClose={() => setShowUploadModal(false)} />
+            <CurriculumIngestion prefill={uploadPrefill} onClose={() => setShowUploadModal(false)} />
           )}
         </AnimatePresence>
       </main>

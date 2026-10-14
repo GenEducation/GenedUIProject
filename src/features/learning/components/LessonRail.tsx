@@ -17,6 +17,8 @@ export const lessonVoiceEnabled = (): boolean => process.env.NEXT_PUBLIC_LESSON_
 function ChapterCard() {
   const instanceId = useLessonStore((s) => s.instanceId);
   const chapter = useLessonLaunch((s) => (s.instanceId === instanceId ? s.chapter : null));
+  const done = useLessonStore((s) => s.instance?.nodes_done ?? 0);
+  const total = useLessonStore((s) => s.instance?.nodes_total ?? 0);
   const pal = paletteFor(chapter?.palette);
 
   return (
@@ -40,6 +42,14 @@ function ChapterCard() {
           <p className="lesson-display relative mt-1 text-[20px] font-semibold leading-tight" style={{ color: pal.ink }}>
             {chapter?.title ?? "Let's begin"}
           </p>
+          {/* Without cover art the card still says where the learner is in the chapter. */}
+          {total > 0 && (
+            <div className="absolute inset-x-4 bottom-4">
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/60">
+                <div className="h-full rounded-full" style={{ width: `${Math.round((done / total) * 100)}%`, background: pal.a }} />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
