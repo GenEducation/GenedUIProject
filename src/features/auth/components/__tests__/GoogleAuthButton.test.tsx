@@ -37,8 +37,8 @@ afterEach(() => {
 
 describe("GoogleAuthButton", () => {
   it("renders Google's real widget, visible and un-obscured", async () => {
-    // Two earlier versions hid the widget behind a custom surface and both
-    // shipped a button that looked fine and did nothing. Nothing may cover it.
+    // An earlier version hid the widget behind a custom surface and shipped a
+    // button that looked fine and did nothing. Nothing may cover it.
     render(<GoogleAuthButton onSuccess={vi.fn()} />);
 
     await waitFor(() => expect(screen.getByTestId("gsi-widget")).toBeInTheDocument());

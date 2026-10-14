@@ -176,6 +176,48 @@ describe("useTestStore — lifecycle", () => {
   });
 });
 
+describe("useTestStore — test-ready prompt", () => {
+  it("startTest raises the prompt once generation finishes", async () => {
+    await submitAndCaptureAnswers([question("short_answer")]);
+    expect(useTestStore.getState().testReadyPrompt).toBe(true);
+  });
+
+  it("loadTest opens the test immediately without raising the prompt", async () => {
+    svc.getTest.mockResolvedValue(testWith([question("short_answer")]));
+
+    await useTestStore.getState().loadTest("test-1");
+
+    const s = useTestStore.getState();
+    expect(s.currentTest).not.toBeNull();
+    expect(s.testReadyPrompt).toBe(false);
+  });
+
+  it("dismissTestReadyPrompt closes the prompt but keeps the prepared test", async () => {
+    await submitAndCaptureAnswers([question("short_answer")]);
+
+    useTestStore.getState().dismissTestReadyPrompt();
+
+    const s = useTestStore.getState();
+    expect(s.testReadyPrompt).toBe(false);
+    // "Later" must leave the test retrievable from Practice.
+    expect(s.currentTest).not.toBeNull();
+    expect(s.timerSeconds).toBe(15 * 60);
+  });
+
+  it("discardPreparedTest closes the prompt and drops the local test", async () => {
+    await submitAndCaptureAnswers([question("short_answer", { question_id: "q1" })]);
+    useTestStore.getState().updateAnswer("q1", "x");
+
+    useTestStore.getState().discardPreparedTest();
+
+    const s = useTestStore.getState();
+    expect(s.testReadyPrompt).toBe(false);
+    expect(s.currentTest).toBeNull();
+    expect(s.answers).toEqual({});
+    expect(s.timerSeconds).toBe(0);
+  });
+});
+
 describe("useTestStore — loadSubmission error handling", () => {
   it("swallows a 404 without logging", async () => {
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});

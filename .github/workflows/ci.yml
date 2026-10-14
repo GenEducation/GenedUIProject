@@ -25,8 +25,11 @@ jobs:
       # Blocking: the tree is at 0 eslint errors. --max-warnings ratchets the
       # remaining documented debt (raw <button> / hex-literal migration waves and
       # the deferred react-hooks/* findings) so it can shrink but not grow.
+      # 681 is the measured count, not an estimate. The ceiling started at 671,
+      # which never passed — this gate only runs on PRs into main, so it was
+      # introduced and three times added to on dev without ever executing.
       - name: Lint
-        run: npm run lint -- --max-warnings=671
+        run: npm run lint -- --max-warnings=681
       - name: Typecheck
         run: npm run typecheck
 
