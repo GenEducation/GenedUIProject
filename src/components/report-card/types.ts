@@ -12,8 +12,40 @@ export interface SubjectData {
   session_count: number;
 }
 
-/** The `/chapter-mastery` row. Defined in the service that fetches it. */
-export type ChapterMasteryItem = ChapterMastery;
+/** A skill's level in words (backend `progress_levels_v2`); never a mastery claim from thin evidence. */
+export type SkillLevel = "not_started" | "good_start" | "getting_there" | "got_it" | "strong";
+
+/** One skill of a chapter (`GET /v1/skills`). */
+export interface ChapterSkill {
+  component_id: string;
+  title: string;
+  level: SkillLevel;
+  /** Its revisit state in the chapter: `queued`, `revisiting`, `keep_practising`, `resolved`. */
+  status: string | null;
+  /** A spaced revisit is due. */
+  due: boolean;
+  needs_adult_support: boolean;
+}
+
+/** The new backend's facts about one chapter (`/v1/learner/...`, `/v1/instances/{id}/report`). */
+export interface ChapterFacts {
+  chapter_id?: string;
+  chapter_number?: number;
+  book_title?: string;
+  /** The student's lesson for this chapter; absent until they open it. */
+  instance_id?: string;
+  nodes_done?: number;
+  nodes_total?: number;
+  /** Questions answered and answered right; null when the chapter's report couldn't be read. */
+  answered?: number | null;
+  correct?: number | null;
+  outcomes?: Array<{ code: string; title: string; mastered: boolean }> | null;
+  skills?: ChapterSkill[];
+  last_active_at?: string;
+}
+
+/** A chapter row: the old `/chapter-mastery` shape plus the new backend's facts. */
+export type ChapterMasteryItem = ChapterMastery & ChapterFacts;
 
 export interface SkillLOItem {
   skill_id: string;

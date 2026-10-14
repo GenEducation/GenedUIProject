@@ -14,10 +14,11 @@ import type {
 } from "./types";
 import { RC_STYLES, RC_SCREEN_STYLES } from "./styles";
 import { applySimulation } from "./utils";
-import { ReportCardScreen } from "./screen/ReportCardScreen";
+import { ReportCardScreen, isEmptyReport } from "./screen/ReportCardScreen";
 import { Icon } from "./screen/icons";
 import { Button } from "@/components/ui/Button";
 import { usePrintPdf } from "./usePrintPdf";
+import { loadV1Report } from "./v1Report";
 import {
   loadSubjectCatalog,
   requireExactSubject,
@@ -102,15 +103,26 @@ export function StudentReportCard({
   // ── Data Fetching ─────────────────────────────────────
   const studentId = studentProfile?.user_id;
 
-  const fetchParentReportData = useCallback(async () => {
-    if (!childId || !(parentId || teacherId)) return;
+  /** Fill every dataset slice at once (each loader returns them all). */
+  const applyDataset = (d: Awaited<ReturnType<typeof loadV1Report>>) => {
+    setTotalSessions(d.totalSessions);
+    setSubjects(d.subjects);
+    setChapters(d.chapters);
+    setSkillTree(d.skillTree);
+    setTestSubmissions(d.testSubmissions);
+    setProgressReport(d.progressReport);
+    setSubjectEvolutions(d.subjectEvolutions);
+    setChapterEvolutions(d.chapterEvolutions);
+  };
+
+  // The teacher's report still comes from the MVP route: the new backend has no teacher equivalent yet.
+  const fetchTeacherReportData = useCallback(async () => {
+    if (!childId || !teacherId) return;
     setIsLoading(true);
     setError(null);
     try {
       const catalog = await loadSubjectCatalog();
-      const data = parentId
-        ? await studentService.fetchParentReport(parentId, childId)
-        : await studentService.fetchTeacherReport(teacherId!, childId);
+      const data = await studentService.fetchTeacherReport(teacherId, childId);
       const grade = data.profile?.grade;
       if (!Number.isInteger(grade)) {
         throw new Error("A valid student grade is required to build a report.");
@@ -125,135 +137,36 @@ export function StudentReportCard({
       setSubjectEvolutions((data.subject_evolutions ?? []).filter((row: SubjectEvolutionData) => hasExactReportSubject(row, grade, catalog)));
       setChapterEvolutions((data.chapter_evolutions ?? []).filter((row: EvolutionAnalysisData) => hasExactReportSubject(row, grade, catalog)));
     } catch (err) {
-      console.error("[ReportCard] Failed to load parent report data:", err);
+      console.error("[ReportCard] Failed to load teacher report data:", err);
       setError("Failed to load report data. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  }, [parentId, teacherId, childId]);
+  }, [teacherId, childId]);
 
-  const fetchAll = useCallback(async () => {
-    if (!studentId) return;
+  // Student and parent: the new backend's learner routes (see v1Report.ts).
+  const fetchV1 = useCallback(async () => {
+    const who = parentId && childId ? ({ role: "parent", childId } as const) : studentId ? ({ role: "student" } as const) : null;
+    if (!who) return;
     setIsLoading(true);
     setError(null);
-
     try {
-      const [catalog, profileData, subjectListData] = await Promise.all([
-        loadSubjectCatalog(),
-        studentService.fetchDashboardProfile(studentId).catch(() => null),
-        studentService.fetchAnalyticsSubjects(studentId).catch(() => ({ subjects: [] })),
-      ]);
-
-      if (profileData) setDashboardProfile(profileData);
-      const grade = profileData?.grade ?? studentProfile?.grade;
-      if (!Number.isInteger(grade)) {
-        throw new Error("A valid student grade is required to build a report.");
-      }
-      const rawSubjectNames: unknown[] = Array.isArray(subjectListData?.subjects)
-        ? subjectListData.subjects
-        : [];
-      const subjectNames = rawSubjectNames.flatMap((subject) => {
-        try {
-          return [requireExactSubject(subject, grade, catalog)];
-        } catch {
-          return [];
-        }
-      });
-      setTotalSessions(subjectListData?.session_count ?? 0);
-
-      const perSubjectResults = await Promise.all(
-        subjectNames.map(async (subject) => {
-          const [summaryData, masteryData, treeData, subjectEvoData] = await Promise.all([
-            studentService.fetchSkillSummary(studentId, subject).catch(() => null),
-            studentService.fetchChapterMastery(studentId, subject).catch(() => []),
-            studentService.fetchSkillTree(studentId, subject).catch(() => []),
-            studentService.fetchSubjectEvolution(studentId, subject).catch(() => null),
-          ]);
-
-          const subjectEntry: SubjectData | null = summaryData
-            ? {
-                subject,
-                overall_score: summaryData.overall_score ?? 0,
-                skill_index: summaryData.skill_index ?? 0,
-                adaptive_mode: summaryData.adaptive_mode ?? "PRACTICE",
-                session_count: summaryData.session_count ?? 0,
-              }
-            : null;
-
-          const chapterEntries: ChapterMasteryItem[] = Array.isArray(masteryData)
-            ? masteryData.map((ch: ChapterMasteryItem) => ({ ...ch, subject }))
-            : [];
-          const cgEntries: SkillCGItem[] = Array.isArray(treeData)
-            ? treeData.map((cg: SkillCGItem) => ({ ...cg, subject }))
-            : [];
-
-          return { subjectEntry, chapterEntries, cgEntries, subjectEvoData };
-        })
-      );
-
-      const allSubjects: SubjectData[] = [];
-      const allChapters: ChapterMasteryItem[] = [];
-      const allCGs: SkillCGItem[] = [];
-      const allSubjectEvos: SubjectEvolutionData[] = [];
-
-      for (const { subjectEntry, chapterEntries, cgEntries, subjectEvoData } of perSubjectResults) {
-        if (subjectEntry) allSubjects.push(subjectEntry);
-        allChapters.push(...chapterEntries);
-        allCGs.push(...cgEntries);
-        if (subjectEvoData && !subjectEvoData.detail) allSubjectEvos.push(subjectEvoData);
-      }
-
-      const [testData, progressData, timeByChapterData] = await Promise.all([
-        studentService.fetchTestSubmissions(studentId).catch(() => []),
-        studentService.fetchProgressReport(studentId).catch(() => null),
-        studentService.fetchTimeByChapter(studentId).catch(() => []),
-      ]);
-
-      if (Array.isArray(timeByChapterData)) {
-        const timeByKey = new Map<string, { total_minutes: number; session_count: number }>();
-        for (const t of timeByChapterData) {
-          const key = `${t.subject ?? ""}::${(t.chapter_name ?? "").toLowerCase()}`;
-          timeByKey.set(key, t);
-        }
-        for (const ch of allChapters) {
-          const key = `${ch.subject}::${ch.document_title.toLowerCase()}`;
-          const t = timeByKey.get(key);
-          if (t) {
-            ch.time_minutes = t.total_minutes;
-            ch.time_sessions = t.session_count;
-          }
-        }
-      }
-
-      setSubjects(allSubjects);
-      setChapters(allChapters);
-      setSkillTree(allCGs);
-      setSubjectEvolutions(allSubjectEvos);
-
-      if (Array.isArray(testData)) setTestSubmissions(testData);
-      if (progressData && !progressData.detail) setProgressReport(progressData);
-
-      const chapterEvoResults = await Promise.all(
-        allChapters.map((ch) =>
-          studentService.fetchChapterEvolution(studentId, ch.subject, ch.document_title).catch(() => null)
-        )
-      );
-      setChapterEvolutions(chapterEvoResults.filter((r) => r && !r.detail) as EvolutionAnalysisData[]);
+      applyDataset(await loadV1Report(who));
     } catch (err) {
       console.error("[ReportCard] Failed to load data:", err);
       setError("Failed to load report data. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  }, [studentId, studentProfile?.grade]);
+  }, [parentId, childId, studentId]);
 
+  const load = useCallback(
+    () => (teacherId && childId ? fetchTeacherReportData() : fetchV1()),
+    [teacherId, childId, fetchTeacherReportData, fetchV1],
+  );
   useEffect(() => {
-    if (childId && (parentId || teacherId)) {
-      fetchParentReportData();
-    } else {
-      fetchAll();
-    }
-  }, [fetchAll, fetchParentReportData, parentId, teacherId, childId]);
+    void load();
+  }, [load]);
 
   // Watchdog: fetchAll() no-ops (leaving isLoading true forever) if studentId
   // never hydrates from the store, and a hung network request has no other
@@ -304,7 +217,9 @@ export function StudentReportCard({
   const safeName = (displayName || "Student").replace(/[^a-z0-9]/gi, "_");
   const { isGenerating, triggerPrint, printPortal } = usePrintPdf({ data, role, filename: `${safeName}_Report_Card` });
 
-  const isBrandNew = data.totalSessions === 0 && data.subjects.length === 0 && !data.progressReport;
+  const isBrandNew = isEmptyReport(data);
+  // The PDF layout is built on the MVP's data (scores, tests, analyses); for the new backend it's coming soon.
+  const isV1 = role !== "teacher";
 
   const ui: ReportCardUI = {
     variant: "screen",
@@ -318,7 +233,7 @@ export function StudentReportCard({
     onStartSession: role === "student" ? () => router.push("/student") : undefined,
     onPrint: triggerPrint,
     isPdfGenerating: isGenerating,
-    canDownload: !isBrandNew,
+    canDownload: !isBrandNew && !isV1,
   };
 
   // ── Loading / Error ─────────────────────────────────────
@@ -342,7 +257,7 @@ export function StudentReportCard({
           <p className="text-sm text-[var(--danger-ink)] font-medium mb-3">{error}</p>
           <Button
             variant="outline"
-            onClick={() => (childId && (parentId || teacherId) ? fetchParentReportData() : fetchAll())}
+            onClick={() => void load()}
             leadingIcon={<Icon name="misc/refresh" size={16} />}
           >
             Retry

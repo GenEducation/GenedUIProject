@@ -29,23 +29,23 @@ describe("Learning preferences — voice activation", () => {
     const before = rows();
     expect(screen.getByText("Your tutor listens whenever you speak.")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("radio", { name: "Push to talk" }));
-    expect(rows()).toEqual(before); // no extra "Push-to-talk key" row
+    fireEvent.click(screen.getByRole("radio", { name: "Hold to talk" }));
+    expect(rows()).toEqual(before); // no extra "Hold-to-talk key" row
     expect(screen.queryByText("Your tutor listens whenever you speak.")).toBeNull();
-    const key = screen.getByRole("button", { name: /Push-to-talk key: Space/ });
+    const key = screen.getByRole("button", { name: /Hold-to-talk key: Space/ });
     expect(key.parentElement).toHaveTextContent(/^Hold\s*Space\s*to talk$/);
   });
 
   it("changes the key from the keycap itself", () => {
     useStudentStore.setState({ voicePrefs: { ...useStudentStore.getState().voicePrefs, listenMode: "ptt" } });
     render(<LearningPreferencesCard index={0} />);
-    fireEvent.click(screen.getByRole("button", { name: /Push-to-talk key: Space/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Hold-to-talk key: Space/ }));
     expect(within(screen.getByRole("button", { name: /Cancel changing/ })).getByText(/Press any key/)).toBeInTheDocument();
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "t", code: "KeyT" }));
     });
     expect(useStudentStore.getState().voicePrefs.pttHotkey).toBe("KeyT");
-    expect(screen.getByRole("button", { name: /Push-to-talk key: T/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Hold-to-talk key: T/ })).toBeInTheDocument();
   });
 });
 
@@ -85,7 +85,8 @@ describe("Learning preferences — tutor voice catalogue (the backend's app voic
 
   it("shows the catalogue's default, labelled, for a student who never picked, and can preview it", async () => {
     render(<LearningPreferencesCard index={0} />);
-    expect(await screen.findByText("Voice A (Default)")).toBeInTheDocument();
+    expect(await screen.findByText("Voice A")).toBeInTheDocument();
+    expect(screen.getByText("Default")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Play a sample of Voice A" }));
     expect(played).toEqual([expect.stringContaining("/voices/sample/voice_a")]);
     expect(patches).toEqual([]);
@@ -106,6 +107,15 @@ describe("Learning preferences — tutor voice catalogue (the backend's app voic
     expect(within(list).getByRole("button", { name: "Stop the sample of Voice B" })).toBeInTheDocument();
     expect(within(list).getByRole("button", { name: "Play a sample of Voice C" })).toBeInTheDocument();
     expect(patches).toEqual([]);
+  });
+
+  it("narrows the voices by the gender their descriptions give", async () => {
+    render(<LearningPreferencesCard index={0} />);
+    const list = await openCatalogue();
+    fireEvent.click(screen.getByRole("button", { name: "Female 2" }));
+    expect(within(list).getAllByRole("radio").map((r) => r.getAttribute("aria-label"))).toEqual(["Voice B", "Voice C"]);
+    fireEvent.click(screen.getByRole("button", { name: "All 3" }));
+    expect(within(list).getAllByRole("radio")).toHaveLength(3);
   });
 
   it("choosing a voice saves it as tutor_voice, never preferred_voice, and marks it chosen", async () => {
@@ -131,7 +141,8 @@ describe("Learning preferences — tutor voice catalogue (the backend's app voic
   it("shows the default when the saved voice is no longer offered", async () => {
     useStudentStore.setState({ studentProfile: { ...useStudentStore.getState().studentProfile!, tutor_voice: "voice_gone" } });
     render(<LearningPreferencesCard index={0} />);
-    expect(await screen.findByText("Voice A (Default)")).toBeInTheDocument();
+    expect(await screen.findByText("Voice A")).toBeInTheDocument();
+    expect(screen.getByText("Default")).toBeInTheDocument();
   });
 
   it("says so when a save fails, and keeps the previous voice", async () => {

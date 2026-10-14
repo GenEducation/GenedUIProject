@@ -107,36 +107,40 @@ export function ChatPanel({
 
   return (
     <section aria-label="Chat with your tutor" className="lesson-panel font-indic relative flex h-full min-h-0 flex-col overflow-hidden">
-      <ol
-        ref={listRef}
-        onScroll={onScroll}
-        onWheel={stopGlide}
-        onTouchStart={stopGlide}
-        aria-live="polite"
-        aria-busy={replying}
-        className="flex flex-1 min-h-0 flex-col gap-5 overflow-y-auto px-4 py-5"
-      >
-        {status === "loading" && turns.length === 0 && (
-          <li aria-hidden className="flex flex-col gap-3">
-            <div className="h-14 w-3/4 animate-pulse rounded-2xl bg-[var(--ls-soft)]" />
-            <div className="h-10 w-1/2 self-end animate-pulse rounded-2xl bg-[var(--ls-soft)]" />
-          </li>
-        )}
-        {turns.map((turn) => (
-          <ChatTurn key={turn.turnId} turn={turn} onShowFigure={onShowFigure} onRetry={(id) => void retry(id)} />
-        ))}
-      </ol>
-
-      {!atBottom && (
-        // eslint-disable-next-line no-restricted-syntax -- a floating pill over the transcript.
-        <button
-          type="button"
-          onClick={() => scrollToEnd(true)}
-          className="absolute bottom-[104px] left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[var(--ls-ink)] px-3.5 py-1.5 text-[12px] font-semibold text-white shadow-lg"
+      {/* The transcript and its "Latest" pill share a box, so the pill sits just above whichever input is
+          below it (the text box or the taller voice panel) instead of at a fixed height that only fits one. */}
+      <div className="relative flex flex-1 min-h-0 flex-col">
+        <ol
+          ref={listRef}
+          onScroll={onScroll}
+          onWheel={stopGlide}
+          onTouchStart={stopGlide}
+          aria-live="polite"
+          aria-busy={replying}
+          className="flex flex-1 min-h-0 flex-col gap-5 overflow-y-auto px-4 py-5"
         >
-          <ArrowDown size={13} aria-hidden /> Latest
-        </button>
-      )}
+          {status === "loading" && turns.length === 0 && (
+            <li aria-hidden className="flex flex-col gap-3">
+              <div className="h-14 w-3/4 animate-pulse rounded-2xl bg-[var(--ls-soft)]" />
+              <div className="h-10 w-1/2 self-end animate-pulse rounded-2xl bg-[var(--ls-soft)]" />
+            </li>
+          )}
+          {turns.map((turn) => (
+            <ChatTurn key={turn.turnId} turn={turn} onShowFigure={onShowFigure} onRetry={(id) => void retry(id)} />
+          ))}
+        </ol>
+
+        {!atBottom && (
+          // eslint-disable-next-line no-restricted-syntax -- a floating pill over the transcript.
+          <button
+            type="button"
+            onClick={() => scrollToEnd(true)}
+            className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[var(--ls-ink)] px-3.5 py-1.5 text-[12px] font-semibold text-white shadow-lg"
+          >
+            <ArrowDown size={13} aria-hidden /> Latest
+          </button>
+        )}
+      </div>
 
       {voiceMode ? (
         <VoiceWaveform session={voice} onEnd={() => setVoiceMode(false)} languages={languages} onLanguage={setLanguage} />

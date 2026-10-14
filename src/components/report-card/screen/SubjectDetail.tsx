@@ -8,7 +8,7 @@ import { BAND_TONES } from "../subjectVisuals";
 import { deriveTopicInsights, testAggregate } from "../utils";
 import { TopicMastery } from "../parts/TopicMastery";
 import { TestItem } from "../parts/TestItem";
-import { CARD, FOCUS_RING } from "./primitives";
+import { CARD, ComingSoon, FOCUS_RING, SkillLevelChip } from "./primitives";
 import { Icon } from "./icons";
 import { ChapterRow } from "./ChapterRow";
 import { Lightbulb } from "lucide-react";
@@ -17,7 +17,7 @@ export type DetailTab = "chapters" | "progress" | "tests" | "insights";
 
 const TABS: { id: DetailTab; label: string }[] = [
   { id: "chapters", label: "Chapters" },
-  { id: "progress", label: "Learning Progress" },
+  { id: "progress", label: "Skills" },
   { id: "tests", label: "Tests" },
   { id: "insights", label: "Insights" },
 ];
@@ -139,6 +139,30 @@ function ChaptersTab({ data, ui, subject }: { data: ReportCardData; ui: ReportCa
 }
 
 function ProgressTab({ data, ui, subject }: { data: ReportCardData; ui: ReportCardUI; subject: string }) {
+  // The new backend's skills, by chapter (an older record carries a topic tree instead).
+  const withSkills = chapterRows(data, subject).filter((r) => r.skills.length > 0);
+  if (withSkills.length > 0 || data.skillTree.length === 0) {
+    if (withSkills.length === 0) {
+      return <Empty icon={<Icon name="session-content/practice" size={22} />} text="Skills appear here once questions in this subject's chapters have been answered." />;
+    }
+    return (
+      <div className="flex flex-col gap-4">
+        {withSkills.map((r) => (
+          <div key={r.key}>
+            <h4 className="text-[13px] font-bold text-[var(--rs-ink)]">{r.title}</h4>
+            <ul className="mt-2 flex flex-col divide-y divide-[var(--rs-line)] rounded-xl border border-[var(--rs-line)] bg-white">
+              {r.skills.map((k) => (
+                <li key={k.component_id} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                  <span className="min-w-0 text-[13px] text-[var(--rs-ink)]">{k.title}</span>
+                  <SkillLevelChip level={k.level} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    );
+  }
   const insights = deriveTopicInsights(data.skillTree, subject);
   if (insights.cgs.length === 0) {
     return <Empty icon={<Icon name="session-content/practice" size={22} />} text="Topic-level mastery appears once learning outcomes in this subject have been assessed in sessions." />;
@@ -157,7 +181,7 @@ function TestsTab({ data, ui, subject }: { data: ReportCardData; ui: ReportCardU
   const tests = data.testSubmissions.filter((t) => t.subject === subject);
   const agg = testAggregate(tests);
   if (tests.length === 0) {
-    return <Empty icon={<Icon name="metrics/tests" size={22} />} text="No chapter tests taken yet. Take a test from any completed chapter to see scores and a section-by-section breakdown here." />;
+    return <ComingSoon icon={<Icon name="metrics/tests" size={22} />} title="Chapter tests" text="Test scores and a section-by-section breakdown will show here once chapter tests are back." />;
   }
   return (
     <div className="rc-legacy">
@@ -174,7 +198,7 @@ function TestsTab({ data, ui, subject }: { data: ReportCardData; ui: ReportCardU
 function InsightsTab({ summary }: { summary: SubjectSummary }) {
   const evo = summary.evolution;
   if (!evo) {
-    return <Empty icon={<Icon name="insights/ai-insight" size={22} />} text="Subject trend analysis appears after studying 2+ chapters in this subject — it compares performance chapter to chapter." />;
+    return <ComingSoon icon={<Icon name="insights/ai-insight" size={22} />} title="Subject insights" text="An analysis of strengths, what to work on and how this subject is going chapter to chapter." />;
   }
   const json: EvolutionAnalysisJson = evo.analysis_json ?? {};
   const strengths = json.universal_strengths ?? json.subject_strengths ?? [];

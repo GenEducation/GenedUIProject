@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getAuthToken } from "@/utils/authFetch";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useLessonStore, type SpokenCheckMark } from "../useLessonStore";
 import { languageLabel } from "./languages";
 import { loadPipeline, type MicErrorKind, type PipelineEvent, type VoicePipelineInstance } from "./loadPipeline";
@@ -40,15 +41,6 @@ export interface VoiceSession {
   release?: () => void;
 }
 
-const PTT_KEY = "gened_voice_push_to_talk";
-const readPushToTalk = (): boolean => {
-  try {
-    return localStorage.getItem(PTT_KEY) === "1";
-  } catch {
-    return false;
-  }
-};
-
 const MIC_ERRORS: Record<MicErrorKind, string> = {
   denied: "Microphone access was blocked. Allow it in your browser to talk.",
   no_device: "No microphone was found.",
@@ -82,7 +74,8 @@ export function useVoiceSession(active: boolean, language: string | null): Voice
   const activeNodeId = useLessonStore((s) => s.instance?.active_node?.instance_node_id ?? null);
   const [session, setSession] = useState<VoiceSession>(STARTING);
   const pipelineRef = useRef<VoicePipelineInstance | null>(null);
-  const [pushToTalk, setPtt] = useState(readPushToTalk);
+  // Hold to talk is the student's own setting, the same one Profile's "Voice activation" shows and changes.
+  const pushToTalk = useStudentStore((s) => s.voicePrefs.listenMode === "ptt");
   const [held, setHeld] = useState(false);
   // The press handlers read the latest of these without being recreated.
   const live = useRef({ muted: false, phase: session.phase, held: false, pushToTalk });
@@ -119,12 +112,8 @@ export function useVoiceSession(active: boolean, language: string | null): Voice
   const setPushToTalk = useCallback(
     (on: boolean) => {
       release();
-      try {
-        localStorage.setItem(PTT_KEY, on ? "1" : "0");
-      } catch {
-        // not remembered; still applies now
-      }
-      setPtt(on);
+      // Saved to the student's voice preferences, so Profile shows the same choice (and remembers it for next time).
+      useStudentStore.getState().setListenMode(on ? "ptt" : "continuous");
       try {
         pipelineRef.current?.setMode(on ? "hold" : "auto");
       } catch {

@@ -97,12 +97,58 @@ describe("ReportCardScreen — brand-new student", () => {
     const start = vi.fn();
     const { unmount } = render(<Harness data={empty} onStartSession={start} />);
     expect(screen.getByText("How this report builds")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Start your first session" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pick a chapter" }));
     expect(start).toHaveBeenCalled();
     unmount();
 
     // No CTA for parents and teachers.
     render(<Harness data={empty} />);
-    expect(screen.queryByRole("button", { name: "Start your first session" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Pick a chapter" })).not.toBeInTheDocument();
+  });
+});
+
+describe("ReportCardScreen — the new backend's chapters", () => {
+  const skill = (component_id: string, level: string, extra: object = {}) =>
+    ({ component_id, title: `SYNTHETIC ${component_id}`, level, status: null, due: false, needs_adult_support: false, ...extra }) as never;
+  const v1 = makeData({
+    totalSessions: 1,
+    subjects: [{ subject: "Mathematics", overall_score: 0.5, skill_index: 0, adaptive_mode: "", session_count: 1 }],
+    chapters: [
+      {
+        subject: "Mathematics", document_title: "SYNTHETIC Fractions", completion_percentage: 50, mastery_score: 0.5, study_count: 1,
+        grade: 0, status: "in_progress", chapter_id: "c-1", instance_id: "i-1", book_title: "SYNTHETIC Book", nodes_done: 3, nodes_total: 6,
+        answered: 9, correct: 7, outcomes: [{ code: "M1", title: "SYNTHETIC outcome", mastered: true }],
+        skills: [skill("add", "got_it"), skill("compare", "getting_there", { status: "keep_practising", due: true })],
+        last_active_at: new Date().toISOString(),
+      },
+      { subject: "Mathematics", document_title: "SYNTHETIC Decimals", completion_percentage: 0, mastery_score: 0, study_count: 0, grade: 0, status: null, chapter_id: "c-2", skills: [] },
+    ],
+    skillTree: [], testSubmissions: [], progressReport: null, subjectEvolutions: [], chapterEvolutions: [],
+  });
+
+  it("shows each chapter's steps, answers and skills, what to keep practising, and the rest as coming soon", async () => {
+    render(<Harness data={v1} />);
+
+    // Overview: the backend's revisit list, and placeholders where AI insights and trends were.
+    const practise = screen.getByRole("region", { name: "Keep practising" });
+    expect(within(practise).getByText("SYNTHETIC compare")).toBeInTheDocument();
+    expect(within(practise).getByText("Getting there")).toBeInTheDocument();
+    expect(screen.getByText("AI learning insights")).toBeInTheDocument();
+    expect(screen.getByText("Subject trends")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Report summary" })).getByText("Coming soon")).toBeInTheDocument();
+
+    fireEvent.click(subjectRow(/^Mathematics:/));
+    fireEvent.click(await screen.findByRole("button", { name: /View chapter breakdown/ }));
+    const detail = await screen.findByRole("region", { name: "Mathematics details" });
+    expect(within(detail).getByText("Step 3 of 6")).toBeInTheDocument();
+    expect(within(detail).getByText("7/9")).toBeInTheDocument();
+
+    fireEvent.click(within(detail).getByRole("button", { name: /SYNTHETIC Fractions/ }));
+    expect(await within(detail).findByText("SYNTHETIC add")).toBeInTheDocument();
+    expect(within(detail).getByText("Got it")).toBeInTheDocument();
+    expect(within(detail).getByText("SYNTHETIC outcome")).toBeInTheDocument();
+
+    fireEvent.click(within(detail).getByRole("tab", { name: "Tests" }));
+    expect(await screen.findByText("Chapter tests")).toBeInTheDocument();
   });
 });

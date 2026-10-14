@@ -61,14 +61,16 @@ export function SubjectPreview({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <h2 className="text-[21px] font-bold leading-tight text-[var(--rs-ink)]">{s.subject}</h2>
-              <BandChip band={s.band} tone={tone} />
+              <BandChip band={s.bandLabel} tone={tone} />
             </div>
             <p className="mt-1 flex flex-wrap items-center gap-x-3 text-[12.5px] text-[var(--rs-ink-soft)]">
               <span className="inline-flex items-center gap-1"><Icon name="subject-card-stats/stat-chapters" size={14} />{plural(s.chaptersTotal, "Chapter")}</span>
-              <span className="inline-flex items-center gap-1"><Icon name="subject-card-stats/stat-sessions" size={13} />{plural(s.sessions, "Session")}</span>
+              <span className="inline-flex items-center gap-1"><Icon name="subject-card-stats/stat-sessions" size={13} />{s.v1 ? `${s.sessions} opened` : plural(s.sessions, "Session")}</span>
             </p>
           </div>
-          <Ring value={s.mastery} color={tone.accent} size={78} stroke={8} label="Mastery" valueClassName="text-[18px]" />
+          <Ring value={s.mastery} color={tone.accent} size={78} stroke={8} label="Mastery" valueClassName="text-[18px]">
+            {s.measured ? undefined : <span className="font-bold text-[var(--rs-ink-soft)]">—</span>}
+          </Ring>
         </div>
         <p className="mt-3 text-[13px] leading-relaxed text-[var(--rs-ink)]/80">{description}</p>
       </div>
@@ -77,7 +79,7 @@ export function SubjectPreview({
       <div className="grid grid-cols-3 gap-2 px-4 pt-4">
         <MiniStat label="Coverage" value={`${s.coverage}%`} color={COVERAGE_COLOR} />
         <MiniStat label="Completed" value={`${s.chaptersCompleted}/${s.chaptersTotal}`} />
-        <MiniStat label="Study time" value={minutes > 0 ? formatMinutes(minutes) : "—"} />
+        <MiniStat label="Study time" value={minutes > 0 ? formatMinutes(minutes) : s.v1 ? <span className="text-[12px] uppercase tracking-[0.06em] text-[var(--rs-ink-soft)]" title="Coming soon">Soon</span> : "—"} />
       </div>
       <div className="px-4 pt-3">
         <Bar value={s.coverage} color={COVERAGE_COLOR} className="h-1.5" />
@@ -120,7 +122,7 @@ export function SubjectPreview({
                   >
                     <SubjectGlyph subject={o.subject} tone={o.tone} size={24} />
                     {o.subject}
-                    <span className="tabular-nums" style={{ color: o.tone.ink }}>{o.mastery}%</span>
+                    <span className="tabular-nums" style={{ color: o.tone.ink }}>{o.measured ? `${o.mastery}%` : "—"}</span>
                   </button>
                 ))}
               </div>
@@ -132,7 +134,7 @@ export function SubjectPreview({
   );
 }
 
-function MiniStat({ label, value, color }: { label: string; value: string; color?: string }) {
+function MiniStat({ label, value, color }: { label: string; value: React.ReactNode; color?: string }) {
   return (
     <div className="rounded-xl border border-[var(--rs-line)] bg-[var(--rs-surface-2)] px-2 py-2.5 text-center">
       <p className="text-[15px] font-bold tabular-nums text-[var(--rs-ink)]" style={color ? { color } : undefined}>{value}</p>

@@ -42,7 +42,7 @@ const EN = {
   speaking: "{name} is speaking",
   thinking: "{name} is thinking…",
   voiceOff: "Voice is off",
-  modePush: "Push to talk",
+  modePush: "Hold to talk",
   tapOrHold: "Tap or hold to speak",
   unmuteToSpeak: "Unmute to speak",
   listeningRelease: "Listening… release to send",

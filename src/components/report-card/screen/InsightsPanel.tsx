@@ -8,15 +8,18 @@ import { keyInsights, subjectTrend, type SubjectSummary } from "../selectors";
 import { BAND_TONES } from "../subjectVisuals";
 import { deriveUnlocks } from "../utils";
 import { Button } from "@/components/ui/Button";
-import { CARD, Sparkline, SubjectGlyph } from "./primitives";
+import { CARD, ComingSoon, SkillLevelChip, Sparkline, SubjectGlyph } from "./primitives";
 import { Icon, TintIcon } from "./icons";
 
 const BULLETS = 2;
 
 export function InsightsPanel({ data, subjects }: { data: ReportCardData; subjects: SubjectSummary[] }) {
-  const unlocks = deriveUnlocks(data);
+  // The new backend (its chapters carry skills) has no learning-arc analyses, so nothing "unlocks" them any more.
+  const v1 = data.chapters.some((c) => c.skills !== undefined);
+  const unlocks = v1 ? [] : deriveUnlocks(data);
   return (
     <div className="flex flex-col gap-4">
+      {v1 && <KeepPractising data={data} />}
       <KeyInsights data={data} />
       <SubjectTrends data={data} subjects={subjects} />
       {unlocks.length > 0 && (
@@ -38,6 +41,62 @@ export function InsightsPanel({ data, subjects }: { data: ReportCardData; subjec
         </section>
       )}
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// KEEP PRACTISING — the backend's own revisit list
+// ─────────────────────────────────────────────────────────
+
+const PRACTISE_SHOWN = 5;
+
+/** Skills the backend asks to revisit (due first), and any it flags for an adult's help. */
+function KeepPractising({ data }: { data: ReportCardData }) {
+  const [showAll, setShowAll] = useState(false);
+  const items = data.chapters.flatMap((c) =>
+    (c.skills ?? [])
+      .filter((k) => k.status === "keep_practising" || k.due || k.needs_adult_support)
+      .map((k) => ({ ...k, chapter: c.document_title, subject: c.subject })),
+  ).sort((a, b) => Number(b.due) - Number(a.due) || Number(b.needs_adult_support) - Number(a.needs_adult_support));
+  const shown = showAll ? items : items.slice(0, PRACTISE_SHOWN);
+
+  return (
+    <section aria-labelledby="rc-practise-title" className={`${CARD} p-5`}>
+      <header className="flex items-center justify-between gap-3">
+        <h2 id="rc-practise-title" className="flex items-center gap-2.5 text-[18px] font-bold text-[var(--rs-ink)]">
+          <Icon name="session-content/practice" size={24} />
+          Keep practising
+        </h2>
+        {items.length > PRACTISE_SHOWN && (
+          <Button variant="tertiary" size="sm" pill onClick={() => setShowAll((v) => !v)} aria-expanded={showAll}>
+            {showAll ? "Show less" : `View all ${items.length}`}
+          </Button>
+        )}
+      </header>
+      {items.length === 0 ? (
+        <p className="mt-3 text-[13px] leading-relaxed text-[var(--rs-ink-soft)]">
+          Nothing to revisit right now. Skills that need another go show up here as chapters are worked through.
+        </p>
+      ) : (
+        <ul className="mt-3 flex flex-col gap-2">
+          {shown.map((k) => (
+            <li key={`${k.chapter}::${k.component_id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--rs-line)] bg-[var(--rs-surface-2)] px-3.5 py-2.5">
+              <div className="min-w-0 flex-1 leading-tight">
+                <p className="text-[13.5px] font-semibold text-[var(--rs-ink)]">{k.title}</p>
+                <p className="mt-0.5 truncate text-[11.5px] text-[var(--rs-ink-soft)]">{k.subject} · {k.chapter}</p>
+                {(k.due || k.needs_adult_support) && (
+                  <p className="mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5 text-[11.5px] font-semibold text-[var(--rs-ink)]">
+                    {k.due && <span>Revisit due</span>}
+                    {k.needs_adult_support && <span>Could use an adult&apos;s help</span>}
+                  </p>
+                )}
+              </div>
+              <SkillLevelChip level={k.level} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -73,12 +132,13 @@ function KeyInsights({ data }: { data: ReportCardData }) {
       </header>
 
       {!insights ? (
-        <div className="mt-4 flex items-start gap-3 rounded-2xl border border-dashed border-[var(--rs-line-strong)] p-4">
-          <Icon name="insights/ai-insight" size={20} className="mt-0.5" />
-          <p className="text-[13px] leading-relaxed text-[var(--rs-ink-soft)]">
-            AI insights are generated once there&apos;s enough signal — 2+ sessions on a chapter unlock its analysis, and
-            cross-subject insights follow once a subject is fully analysed.
-          </p>
+        <div className="mt-4">
+          <ComingSoon
+            compact
+            icon={<Icon name="insights/ai-insight" size={20} />}
+            title="AI learning insights"
+            text="What's working well, what needs attention and where to focus next, across every subject."
+          />
         </div>
       ) : (
         <div className="mt-4 flex flex-col gap-3">
@@ -161,6 +221,19 @@ function Bullets({ items }: { items: string[] }) {
 
 function SubjectTrends({ data, subjects }: { data: ReportCardData; subjects: SubjectSummary[] }) {
   if (subjects.length === 0) return null;
+  // Trends are drawn from session scores the new backend doesn't report: one placeholder, not a row of "no trend".
+  if (!subjects.some((s) => subjectTrend(data, s.subject))) {
+    return (
+      <section aria-label="Subject trends" className={`${CARD} p-5`}>
+        <ComingSoon
+          compact
+          icon={<Icon name="trends/subject-trends" size={22} />}
+          title="Subject trends"
+          text="How each subject is moving over time, session by session."
+        />
+      </section>
+    );
+  }
   return (
     <section aria-labelledby="rc-trends-title" className={`${CARD} p-5`}>
       <header className="flex items-center gap-3">

@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { Settings2 } from "lucide-react";
 import { useStudentStore } from "../store/useStudentStore";
 
-function formatKey(code: string): string {
+/** A `KeyboardEvent.code` as a learner reads it on the key: "KeyK" → "K", "Space" → "Space". */
+export function formatKey(code: string): string {
   if (!code) return "—";
   if (code === "Space") return "Space";
   if (code.startsWith("Key")) return code.slice(3);
@@ -50,7 +51,7 @@ export function PttHotkeyConfig({ compact = false, inline = false }: PttHotkeyCo
         <button
           type="button"
           onClick={() => setCapturing((v) => !v)}
-          aria-label={capturing ? "Cancel changing the push-to-talk key" : `Push-to-talk key: ${label}. Change it`}
+          aria-label={capturing ? "Cancel changing the hold-to-talk key" : `Hold-to-talk key: ${label}. Change it`}
           title={capturing ? "Cancel" : "Change key"}
           className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-bold text-[var(--primary-ink)] shadow-[0_1px_0_#E3E8E2] transition-colors hover:border-[var(--primary)] ${
             capturing ? "border-[var(--primary)] bg-[var(--primary-soft,#E6F0EF)]" : "border-[#E3E8E2] bg-white"

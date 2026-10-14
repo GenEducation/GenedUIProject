@@ -74,7 +74,7 @@ beforeEach(() => {
   fake.track = { enabled: true };
   lessonFixture.reset();
   voiceFixture.reset();
-  useStudentStore.setState({ studentProfile: null });
+  useStudentStore.setState({ studentProfile: null, voicePrefs: { listenMode: "continuous", pttHotkey: "Space" } });
   store().reset();
   localStorage.removeItem("gened_dictation_language");
   resetSpeechLanguage();
@@ -84,7 +84,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllEnvs();
   localStorage.removeItem("gened_voice_language");
-  localStorage.removeItem("gened_voice_push_to_talk");
+  localStorage.removeItem("voice_prefs");
   localStorage.removeItem("gened_voice_interrupt");
   localStorage.removeItem("gened_voice_vad");
 });
@@ -170,7 +170,7 @@ describe("voice mode", () => {
   });
 
   describe("push to talk", () => {
-    const toggle = () => screen.findByRole("button", { name: "Push to talk" });
+    const toggle = () => screen.findByRole("button", { name: "Hold to talk" });
     const ready = async () => {
       await openVoice();
       await server({ type: "ready", session_id: "s", degraded: [] });
@@ -183,20 +183,20 @@ describe("voice mode", () => {
       expect(fake.calls).toEqual([]);
     });
 
-    it("switches the pipeline live, remembers the choice and applies it to the next session", async () => {
+    it("switches the pipeline live and saves it as the student's own setting, the one Profile shows", async () => {
       await ready();
       fireEvent.click(await toggle());
       expect(fake.calls).toEqual(["mode:hold"]);
-      expect(localStorage.getItem("gened_voice_push_to_talk")).toBe("1");
-      expect(screen.getByRole("button", { name: "Push to talk" })).toHaveAttribute("aria-pressed", "true");
+      expect(useStudentStore.getState().voicePrefs.listenMode).toBe("ptt");
+      expect(screen.getByRole("button", { name: "Hold to talk" })).toHaveAttribute("aria-pressed", "true");
       expect(screen.getByRole("button", { name: "Tap or hold to speak" })).toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: "Push to talk" }));
+      fireEvent.click(screen.getByRole("button", { name: "Hold to talk" }));
       expect(fake.calls.at(-1)).toBe("mode:auto");
-      expect(localStorage.getItem("gened_voice_push_to_talk")).toBe("0");
+      expect(useStudentStore.getState().voicePrefs.listenMode).toBe("continuous");
     });
 
-    it("starts in hold mode when it was left on", async () => {
-      localStorage.setItem("gened_voice_push_to_talk", "1");
+    it("starts in hold mode when Profile has push to talk on", async () => {
+      useStudentStore.setState({ voicePrefs: { listenMode: "ptt", pttHotkey: "Space" } });
       await ready();
       expect(fake.calls).toEqual(["mode:hold"]);
       expect(await toggle()).toHaveAttribute("aria-pressed", "true");
@@ -268,6 +268,18 @@ describe("voice mode", () => {
       clock.mockRestore();
     });
 
+    it("uses the push-to-talk key picked in Profile instead of Space, and shows it on the button", async () => {
+      useStudentStore.setState({ voicePrefs: { listenMode: "ptt", pttHotkey: "KeyK" } });
+      await ready();
+      const hold = screen.getByRole("button", { name: "Tap or hold to speak" });
+      expect(hold).toHaveAttribute("aria-keyshortcuts", "KeyK");
+      expect(hold.querySelector("kbd")).toHaveTextContent("K");
+      fireEvent.keyDown(document.body, { code: "Space" });
+      expect(fake.calls).not.toContain("press");
+      fireEvent.keyDown(document.body, { code: "KeyK" });
+      expect(fake.calls.at(-1)).toBe("press");
+    });
+
     it("releases when the window loses focus", async () => {
       await ready();
       fireEvent.click(await toggle());
@@ -283,7 +295,7 @@ describe("voice mode", () => {
       expect(screen.queryByRole("button", { name: "Mute microphone" })).toBeNull();
       expect(screen.queryByRole("button", { name: "Unmute microphone" })).toBeNull();
       expect(screen.getByRole("button", { name: "Tap or hold to speak" })).toBeEnabled();
-      fireEvent.click(screen.getByRole("button", { name: "Push to talk" }));
+      fireEvent.click(screen.getByRole("button", { name: "Hold to talk" }));
       expect(screen.getByRole("button", { name: "Mute microphone" })).toBeInTheDocument();
     });
 

@@ -118,7 +118,7 @@ function ListenModeToggle() {
   const { voicePrefs, setListenMode } = useStudentStore();
   const modes = [
     { key: "continuous", label: "Continuous" },
-    { key: "ptt", label: "Push to talk" },
+    { key: "ptt", label: "Hold to talk" },
   ] as const;
   return (
     <div role="radiogroup" aria-label="Voice activation" className="grid grid-cols-2 rounded-xl bg-[var(--canvas)] p-1 ring-1 ring-[var(--surface-border)]">
@@ -189,13 +189,22 @@ export function LearningPreferencesCard({ index }: { index: number }) {
         <Row
           icon={<Radio size={20} strokeWidth={2} />}
           title="Voice activation"
-          description="Talk freely, or hold a key while you speak."
+          description="Talk freely, or press and hold to speak."
           control={
             <>
               <ListenModeToggle />
               <span className="flex h-7 items-center justify-center" aria-live="polite">
                 {listenMode === "ptt" ? (
-                  <PttHotkeyConfig inline />
+                  <>
+                    {/* A key to hold only means something with a keyboard: on a phone (or any small or touch-only
+                        screen) push to talk is the lesson's talk button, so that's what this line says instead. */}
+                    <span className="hidden sm:pointer-fine:inline-flex">
+                      <PttHotkeyConfig inline />
+                    </span>
+                    <span className="text-[12px] text-[var(--text-muted)] sm:pointer-fine:hidden">
+                      Hold the talk button in a lesson to speak.
+                    </span>
+                  </>
                 ) : (
                   <span className="text-[12px] text-[var(--text-muted)]">Your tutor listens whenever you speak.</span>
                 )}

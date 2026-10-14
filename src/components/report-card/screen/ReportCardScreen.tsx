@@ -39,7 +39,7 @@ export function ReportCardScreen({ data, ui }: { data: ReportCardData; ui: Repor
 
   const subjects = useMemo(() => subjectSummaries(data), [data]);
   const overall = useMemo(() => overallSummary(data, subjects), [data, subjects]);
-  const isBrandNew = data.totalSessions === 0 && data.subjects.length === 0 && !data.progressReport;
+  const isBrandNew = isEmptyReport(data);
 
   // A subject can vanish when the dataset changes (child switch, simulation).
   const current = view.level === "overview" ? null : subjects.find((s) => s.subject === view.subject) ?? null;
@@ -239,27 +239,33 @@ function CompactSubjectBar({ summary: s, onBack }: { summary: SubjectSummary; on
         <p className="truncate text-[15px] font-bold text-[var(--rs-ink)]">{s.subject}</p>
         <p className="text-[11.5px] text-[var(--rs-ink-soft)]">{s.chaptersCompleted}/{s.chaptersTotal} chapters completed</p>
       </div>
-      <BandChip band={`${s.mastery}%`} tone={s.tone} />
+      <BandChip band={s.measured ? `${s.mastery}%` : "—"} tone={s.tone} />
     </div>
   );
 }
 
+/** Nothing to report yet. On the new backend (its chapters carry skills) that means no chapter opened, even though
+ *  every subject the student can study is already listed. */
+export function isEmptyReport(data: ReportCardData): boolean {
+  if (data.chapters.some((c) => c.skills !== undefined)) return data.totalSessions === 0;
+  return data.totalSessions === 0 && data.subjects.length === 0 && !data.progressReport;
+}
+
 function BrandNew({ firstName, onStart }: { firstName: string; onStart?: () => void }) {
   const steps = [
-    <><b>1 session</b> → subject &amp; chapter scores appear</>,
-    <><b>2+ sessions on a chapter</b> → its learning-arc analysis unlocks</>,
-    <><b>2+ chapters in a subject</b> → subject learning trends</>,
-    <><b>An analysed subject</b> → cross-subject AI insights</>,
+    <><b>Open a chapter</b> → its progress and steps appear</>,
+    <><b>Answer its questions</b> → each skill gets a level, from Good start to Strong</>,
+    <><b>Keep going</b> → learning outcomes are marked mastered, and skills to revisit show up</>,
+    <><b>Coming soon</b> → chapter tests, subject trends and AI insights</>,
   ];
   return (
     <section className={`${CARD} rc-rise mx-auto w-full max-w-[720px] p-6 sm:p-8`}>
       <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--rs-mint)] text-[var(--rs-brand-deep)]">
         <Icon name="session-content/achievement" size={26} />
       </span>
-      <h2 className="mt-4 text-[22px] font-bold text-[var(--rs-ink)]">No sessions yet</h2>
+      <h2 className="mt-4 text-[22px] font-bold text-[var(--rs-ink)]">No chapters yet</h2>
       <p className="mt-1.5 text-[14px] leading-relaxed text-[var(--rs-ink-soft)]">
-        {firstName}&apos;s report fills in after the first learning session — every score and insight here comes from
-        real session activity.
+        {firstName}&apos;s report fills in once a chapter is opened. Every figure here comes from real lesson activity.
       </p>
       <h3 className="citron-eyebrow mt-6 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]"><ListChecks size={14} strokeWidth={2.2} aria-hidden />How this report builds</h3>
       <ol className="mt-3 flex flex-col gap-2.5">
@@ -272,7 +278,7 @@ function BrandNew({ firstName, onStart }: { firstName: string; onStart?: () => v
       </ol>
       {onStart && (
         <Button variant="primary" size="lg" onClick={onStart} className="mt-6">
-          Start your first session
+          Pick a chapter
         </Button>
       )}
     </section>

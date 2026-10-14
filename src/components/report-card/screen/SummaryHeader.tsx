@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import type { ReportCardData, ReportCardUI } from "../types";
 import type { OverallSummary, SubjectSummary } from "../selectors";
 import { toneFor } from "../subjectVisuals";
-import { CARD, FOCUS_RING, Ring } from "./primitives";
+import { CARD, FOCUS_RING, Ring, SoonTag } from "./primitives";
 import { Icon, TintIcon } from "./icons";
 
 export function SummaryHeader({
@@ -63,7 +63,7 @@ export function SummaryHeader({
       <div className="grid content-center gap-3 @[540px]/hdr:gap-3.5 @[540px]/hdr:border-l @[540px]/hdr:border-[var(--rs-line)] @[540px]/hdr:pl-6 @[980px]/hdr:pr-6">
         <HeaderStat
           icon={<Icon name="metrics/average-mastery" size={26} />}
-          value={<span style={{ color: masteryTone.ink }}>{overall.avgMastery}%</span>}
+          value={overall.measured ? <span style={{ color: masteryTone.ink }}>{overall.avgMastery}%</span> : <span className="text-[var(--rs-ink-soft)]">—</span>}
           label="Average Mastery"
         />
         <HeaderStat
@@ -71,7 +71,12 @@ export function SummaryHeader({
           value={<>{overall.chaptersCompleted} <span className="text-[var(--rs-ink-soft)]">/ {overall.chaptersTotal}</span></>}
           label="Chapters Completed"
         />
-        <HeaderStat icon={<Icon name="metrics/tests" size={26} />} value={overall.tests} label={overall.tests === 1 ? "Test" : "Tests"} />
+        {/* The new backend (chapters carrying skills) doesn't report tests yet. */}
+        {overall.tests === 0 && data.chapters.some((c) => c.skills !== undefined) ? (
+          <HeaderStat icon={<Icon name="metrics/tests" size={26} />} value={<SoonTag />} label="Tests" />
+        ) : (
+          <HeaderStat icon={<Icon name="metrics/tests" size={26} />} value={overall.tests} label={overall.tests === 1 ? "Test" : "Tests"} />
+        )}
       </div>
 
       {/* Strongest / needs attention */}
@@ -83,7 +88,7 @@ export function SummaryHeader({
           </>
         ) : (
           <p className="col-span-full rounded-2xl border border-dashed border-[var(--rs-line-strong)] px-4 py-5 text-[13px] leading-relaxed text-[var(--rs-ink-soft)]">
-            Strongest and weakest subjects appear once {data.firstName} has studied two or more subjects.
+            Strongest and weakest subjects appear once {data.firstName} has answered questions in two or more subjects.
           </p>
         )}
       </div>

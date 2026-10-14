@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Hand, Mic, MicOff, PhoneOff } from "lucide-react";
+import { Mic, MicOff, PhoneOff } from "lucide-react";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { formatKey } from "@/features/student/components/PttHotkeyConfig";
 import { Select } from "@/components/ui/Select";
 import { languageLabel, voiceLanguageEnabled, type VoiceLanguage } from "../voice/languages";
 import type { VoiceSession } from "../voice/useVoiceSession";
@@ -121,26 +122,28 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
     setLatched(false);
     release?.();
   }, [release]);
+  // The push-to-talk key the student picked in Profile (Space unless they changed it).
+  const hotkey = useStudentStore((s) => s.voicePrefs.pttHotkey) || "Space";
   const holdLabel = session.held
     ? latched ? t("listeningTap") : t("listeningRelease")   // `latched` only shows while the session holds
     : muted ? t("unmuteToSpeak") : t("tapOrHold");
 
-  // Space works the same way when focus is not somewhere Space means something else (a text field, another control).
+  // The student's push-to-talk key works the same way, when focus is not somewhere that key means something else.
   useEffect(() => {
     if (!pushToTalk) return;
-    // Space is the learner's to type with in a field, and opens a menu on a picker; on anything else (a button focused by the last
-    // click included) it is push to talk, and the focused button is not also clicked.
+    // The key is the learner's to type with in a field, and (Space) opens a menu on a picker; on anything else (a button focused by
+    // the last click included) it is push to talk, and the focused button is not also clicked.
     const typing = (t: EventTarget | null) => {
       const el = t as HTMLElement | null;
       return !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.getAttribute("aria-haspopup") !== null);
     };
     const keyDown = (e: KeyboardEvent) => {
-      if (e.code !== "Space" || typing(e.target)) return;
+      if (e.code !== hotkey || typing(e.target)) return;
       e.preventDefault();
       if (!e.repeat) down();
     };
     const keyUp = (e: KeyboardEvent) => {
-      if (e.code !== "Space" || typing(e.target)) return;
+      if (e.code !== hotkey || typing(e.target)) return;
       e.preventDefault();
       up();
     };
@@ -154,7 +157,7 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
       window.removeEventListener("blur", off);
       cancel();
     };
-  }, [pushToTalk, down, up, cancel]);
+  }, [pushToTalk, hotkey, down, up, cancel]);
 
   const picker = (languages.length > 0 && onLanguage) || session.setPushToTalk ? (
     <div className="mb-2 flex items-center justify-between gap-2">
@@ -176,7 +179,7 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
               : "border-[var(--ls-border-strong)] bg-white text-[var(--ls-ink-mid)]"
           }`}
         >
-          <Hand size={13} aria-hidden /> {t("modePush")}
+          <Mic size={13} aria-hidden /> {t("modePush")}
           {/* An on/off switch, so the mode reads at a glance (the pill only names it). */}
           <span aria-hidden className={`relative h-3.5 w-6 rounded-full transition-colors ${session.pushToTalk ? "bg-white/40" : "bg-[var(--ls-border-strong)]"}`}>
             <span className={`absolute top-0.5 h-2.5 w-2.5 rounded-full bg-white shadow transition-[left] ${session.pushToTalk ? "left-[13px]" : "left-0.5"}`} />
@@ -296,6 +299,7 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
             type="button"
             disabled={holdDisabled}
             aria-pressed={session.held}
+            aria-keyshortcuts={hotkey}
             onPointerDown={(e) => {
               e.currentTarget.setPointerCapture?.(e.pointerId);
               down();
@@ -309,6 +313,14 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
             }`}
           >
             <Mic size={18} aria-hidden /> {holdLabel}
+            {/* The key that does the same, as set in Profile: only where there's a keyboard (a wider screen with a
+                mouse or trackpad). On a phone or a touch-only tablet, holding this button is push to talk. */}
+            <kbd
+              aria-hidden
+              className="ml-1 hidden rounded-md border border-white/40 bg-white/15 px-1.5 py-0.5 font-sans text-[11px] font-bold leading-none sm:pointer-fine:inline-block"
+            >
+              {formatKey(hotkey)}
+            </kbd>
           </button>
         )}
       </div>

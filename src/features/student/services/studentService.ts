@@ -153,14 +153,6 @@ export const studentService = {
     return response.json();
   },
 
-  fetchParentReport: async (parentId: string, studentId: string) => {
-    const response = await authFetch(
-      `${API_BASE_URL}/parent/students/${studentId}/report?parent_id=${parentId}`,
-      { headers: { accept: "application/json" } }
-    );
-    return response.json();
-  },
-
   fetchTeacherReport: async (teacherId: string, studentId: string) => {
     const response = await authFetch(
       `${API_BASE_URL}/teacher/students/${studentId}/report?teacher_id=${teacherId}`,
@@ -282,23 +274,6 @@ export const studentService = {
     const response = await authFetch(`${API_BASE_URL}/students/${studentId}/chapter-mastery?subject=${encodeURIComponent(subject)}`, {
       headers: { "accept": "application/json" },
       signal,
-    });
-    return response.json();
-  },
-
-  fetchTestSubmissions: async (studentId: string, subject?: string) => {
-    const url = subject
-      ? `${API_BASE_URL}/students/${studentId}/test-submissions?subject=${encodeURIComponent(subject)}`
-      : `${API_BASE_URL}/students/${studentId}/test-submissions`;
-    const response = await authFetch(url, {
-      headers: { "accept": "application/json" }
-    });
-    return response.json();
-  },
-
-  fetchDashboardProfile: async (studentId: string) => {
-    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/profile`, {
-      headers: { "accept": "application/json" }
     });
     return response.json();
   },
@@ -431,30 +406,6 @@ export const studentService = {
   },
 
   // ── AI Analysis Reports ─────────────────────────────────────────────────────
-
-  fetchProgressReport: async (studentId: string) => {
-    const response = await authFetch(
-      `${API_BASE_URL}/students/${studentId}/progress-report`,
-      { headers: { accept: "application/json" } }
-    );
-    return response.json();
-  },
-
-  fetchSubjectEvolution: async (studentId: string, subject: string) => {
-    const response = await authFetch(
-      `${API_BASE_URL}/students/${studentId}/subject-evolution-analysis?subject=${encodeURIComponent(subject)}`,
-      { headers: { accept: "application/json" } }
-    );
-    return response.json();
-  },
-
-  fetchChapterEvolution: async (studentId: string, subject: string, documentTitle: string) => {
-    const response = await authFetch(
-      `${API_BASE_URL}/students/${studentId}/evolution-analysis?subject=${encodeURIComponent(subject)}&document_title=${encodeURIComponent(documentTitle)}`,
-      { headers: { accept: "application/json" } }
-    );
-    return response.json();
-  },
 
   // ── Time Tracking ─────────────────────────────────────────────────────────
 
