@@ -1092,3 +1092,11 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
   border-radius: 12px 4px 13px 5px / 5px 13px 4px 12px;
 }
 }
+
+/* Voice lessons run in eight languages. Latin and Devanagari come from the body fonts; the other scripts fall to the
+   platform's own faces, named per script so a missing glyph never shows as a box (Gurmukhi, Tamil, Telugu, Kannada). */
+.font-indic {
+  font-family: var(--font-body), "Noto Sans Devanagari", "Noto Sans Gurmukhi", "Noto Sans Tamil", "Noto Sans Telugu",
+    "Noto Sans Kannada", "Kohinoor Devanagari", "Gurmukhi MN", "Tamil Sangam MN", "Kohinoor Telugu", "Kannada Sangam MN",
+    "Nirmala UI", "Mangal", "Raavi", "Latha", "Gautami", "Tunga", ui-sans-serif, system-ui, sans-serif;
+}

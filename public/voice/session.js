@@ -165,8 +165,14 @@ export class Session {
       case "transcript":
         // A final with words is an accepted learner turn (the server drops one without): the uplink decides whether its level teaches the VAD.
         if (msg.kind === "final") {
-          const levels = this.uplink.accepted(msg.utterance_no, (msg.text ?? "").trim().split(/\s+/).filter(Boolean).length);
-          if (levels) this.tell("capture", { t: "levels", levels });
+          const words = (msg.text ?? "").trim().split(/\s+/).filter(Boolean).length;
+          if (words === 0) {   // no words: what the VAD admitted was not the learner's speech
+            const level = this.uplink.refuted(msg.utterance_no);
+            if (level !== null) this.tell("capture", { t: "background_voice", level });
+          } else {
+            const levels = this.uplink.accepted(msg.utterance_no, words);
+            if (levels) this.tell("capture", { t: "levels", levels });
+          }
         }
         break;
       case "response_started":

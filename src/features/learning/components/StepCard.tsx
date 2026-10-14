@@ -6,6 +6,7 @@ import { asError } from "@/utils/errors";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLessonStore } from "../useLessonStore";
 import { calculation } from "../check/arithmetic";
+import { useCheckShown } from "../delivery/useCheckShown";
 import type { AnswerResponse, AnswerResult, CheckItem } from "../types";
 import { BoardFigure } from "./BoardFigure";
 import { CalculatorKeys } from "./CalculatorKeys";
@@ -90,6 +91,10 @@ const cardClass = "lesson-rise lesson-sketch p-5 text-[var(--ls-ink)]";
 function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: AnswerResult) => void }) {
   const answer = useLessonStore((s) => s.answer);
   const askHint = useLessonStore((s) => s.askHint);
+  const notDelivered = useLessonStore((s) => s.notDeliveredItemId === check.id);
+  const cardRef = useRef<HTMLFormElement>(null);
+  // The delivery is confirmed once the card is actually on screen.
+  useCheckShown(cardRef, check.id);
   const [selected, setSelected] = useState<string | null>(null);
   const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState(false);
@@ -138,7 +143,7 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
   };
 
   return (
-    <form onSubmit={submit} className={cardClass} aria-labelledby={`check-${check.id}`}>
+    <form ref={cardRef} onSubmit={submit} className={cardClass} aria-labelledby={`check-${check.id}`}>
       <p className="lesson-hand lesson-underline inline-block text-[18px] font-bold text-[var(--ls-primary)]">
         {check.role === "checkpoint" ? "Checkpoint" : "Quick check"}
       </p>
@@ -215,6 +220,12 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
       )}
 
       {error && <p role="alert" className="mt-3 text-[13px] text-[#9A2E1E]">{error}</p>}
+      {/* The answer wasn't counted because the question hadn't reached your tutor's session yet: neutral, never "incorrect". */}
+      {notDelivered && !error && (
+        <p role="status" className="lesson-hand mt-3 text-[17px] text-[var(--ls-ink-mid)]">
+          Your tutor is still getting this question ready. Try your answer again in a moment.
+        </p>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         {(isChoice || isTyped) && (

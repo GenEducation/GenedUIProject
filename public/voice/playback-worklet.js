@@ -5,6 +5,9 @@
 // reply has fully played. A cancel fades out in 8 ms and discards everything queued; a duck lowers the level and keeps the audio.
 //
 // Chunks of any response other than the current one are dropped (a barge-in must leave no stale audio in the buffer).
+//
+// What is rendered is also the capture VAD's echo reference: over a port of its own (`echo`), every ~20 ms of output with sound in
+// it is reported as its end time on the audio clock and its level in the capture's dB scale (int16 power, 10 log10).
 "use strict";
 
 const IN_RATE = 24000;       // the session's downlink rate (`ready.downlink_rate`), set by `begin`
@@ -50,6 +53,7 @@ class Playback extends AudioWorkletProcessor {
     this.reset(-1);
     this.gain = 1; this.target = 1; this.speaking = false; this.tailLeft = 0; this.fade = 0;
     this.stats = { underruns: 0, rendered: 0, since: 0 };
+    this.echoOut = null; this.refSq = 0; this.refN = 0;
     this.port.onmessage = (e) => this.onMessage(e.data, e.ports);
     this.port.postMessage({ t: "hello", rate: sampleRate });
   }
@@ -68,6 +72,7 @@ class Playback extends AudioWorkletProcessor {
   onMessage(m, ports) {
     switch (m.t) {
       case "link": this.link = ports[0]; this.link.onmessage = (e) => this.onMessage(e.data, e.ports); break;
+      case "echo": this.echoOut = ports[0]; break;
       case "config": Object.assign(this.cfg, m.cfg); break;
       case "begin":
         this.reset(m.responseNo); this.fade = 0; this.target = 1; this.gain = Math.min(this.gain, 1);
@@ -162,9 +167,18 @@ class Playback extends AudioWorkletProcessor {
       if (this.fade > 0) { v *= this.fade / (FADE_S * rate); if (--this.fade === 0) { this.discard(currentTime + (i + 1) / rate); v = 0; } }
       out[i] = v * this.gain;
     }
+    this.reference(out, n);
     this.account(first >= 0, n / rate);
     if (first >= 0 && (this.sinceProgress += n) >= rate * 0.1) { this.sinceProgress = 0; this.report(); }   // about every 100 ms of rendering
     return true;
+  }
+  reference(out, n) {
+    if (!this.echoOut) return;
+    for (let i = 0; i < n; i++) { const v = out[i] * 32768; this.refSq += v * v; }
+    this.refN += n;
+    if (this.refN < sampleRate * 0.02) return;
+    if (this.refSq > 0) this.echoOut.postMessage({ at: currentTime + n / sampleRate, db: 10 * Math.log10(this.refSq / this.refN + 1e-3) });
+    this.refSq = 0; this.refN = 0;
   }
   underrunEnd(i) {
     if (this.underrunAt === null) return;

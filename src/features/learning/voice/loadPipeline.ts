@@ -4,13 +4,13 @@ import type { SequencedTurnEvent } from "../types";
 export type PipelineEvent =
   | { t: "status"; state: "open" | "closed" | "error" | "reconnecting" | "reconnected" | "gave_up" | "stalled" | "worker_error"; code?: number; message?: string }
   | { t: "server"; msg: VoiceServerMessage }
-  | { t: "ui"; ev: "utterance_start" | "utterance_end" | "speaking" | "first_sample" | "drained" | "stopped" | string; on?: boolean }
+  | { t: "ui"; ev: "utterance_start" | "utterance_end" | "speaking" | "first_sample" | "drained" | "stopped" | string; on?: boolean; responseNo?: number }
   | { t: "capture"; rms: number; speaking?: boolean }
   | { t: "mic"; event: string; detail?: Record<string, unknown> }
   | { t: "playback_stats"; speaking?: boolean };
 
 export type VoiceServerMessage =
-  | { type: "ready"; session_id: string; degraded: string[] }
+  | { type: "ready"; session_id: string; degraded: string[]; features?: string[] }
   | { type: "transcript"; utterance_no: number; kind: "partial" | "stable" | "final"; text: string }
   | { type: "response_started"; response_no: number; turn_id: string }
   | { type: "teacher_event"; response_no: number; event: SequencedTurnEvent }
@@ -23,13 +23,19 @@ export interface PipelineOptions {
   url: string;
   protocols?: string[];
   init: { language: string; instance_id: string; instance_node_id: string; device?: string };
-  interrupt?: "never" | "allow";
+  interrupt?: "never" | "echo_aware" | "allow";
+  vad?: Record<string, number | boolean>;
+  processing?: { aec?: boolean; ns?: boolean; agc?: boolean };
   onEvent: (event: PipelineEvent) => void;
 }
 
 export interface VoicePipelineInstance {
   start(): Promise<{ aec: boolean; ns: boolean; agc: boolean; inRate: number }>;
   close(): Promise<void>;
+  /** "auto": the VAD decides when the learner speaks; "hold": press() and release() do (push to talk). */
+  setMode(mode: "auto" | "hold"): void;
+  press(): void;
+  release(): void;
   /** The session worker that owns the socket; `{t: "send", msg}` sends a protocol frame. Set by `start()`. */
   worker?: Worker | null;
   /** The microphone track; set by `start()` (absent when a test stream stands in). */
