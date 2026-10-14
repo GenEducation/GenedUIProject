@@ -27,12 +27,13 @@ const PUBLIC_PAGES = ["/", "/login", "/register", "/forgot-password"];
 
 for (const path of PUBLIC_PAGES) {
   test(`a11y: buttons on ${path} all have accessible names`, async ({ page }) => {
-    // Stubbed even for public pages: /register fetches the taxonomy catalogue,
-    // which never settles, so `networkidle` would hang. Waiting on a rendered
-    // button is also a truer gate here — it is what the assertion inspects.
+    // Stubbed even for public pages: /register (when sign-up is enabled) fetches
+    // the taxonomy catalogue, which never settles, so `networkidle` would hang.
+    // Waiting on a rendered control is also a truer gate — it is what the
+    // assertion inspects. The paused /register page has links but no buttons.
     await stubApiCatchAll(page);
     await page.goto(path);
-    await page.locator("button").first().waitFor({ state: "attached" });
+    await page.locator("button, a").first().waitFor({ state: "attached" });
 
     const violations = await axeViolations(page, RULES);
     expect(violations, formatViolations(violations)).toEqual([]);
@@ -50,7 +51,7 @@ for (const { role, path } of PORTALS) {
     await stubApiCatchAll(page);
     await seedAuth(page, role);
     await page.goto(path);
-    await page.locator("button").first().waitFor({ state: "attached" });
+    await page.locator("button, a").first().waitFor({ state: "attached" });
 
     const violations = await axeViolations(page, RULES);
     expect(violations, formatViolations(violations)).toEqual([]);

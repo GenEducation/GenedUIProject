@@ -26,7 +26,7 @@ const initial: SignUpFields = {
   username: "",
 };
 
-// A thin stateful harness mirroring how register/page.tsx wires SignUp: the component
+// A thin stateful harness mirroring how register/RegisterForm.tsx wires SignUp: the component
 // itself is presentational, so realistic interaction needs a real controlled parent.
 function Harness(props: {
   errors?: Record<string, string>;

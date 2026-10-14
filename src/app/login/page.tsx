@@ -2,6 +2,7 @@
 
 import { useState, ChangeEvent, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { SIGNUP_ENABLED } from "@/constants/features";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 import { SignIn } from "@/features/auth/components/SignIn";
 import { signIn } from "@/features/auth/authService";
@@ -141,7 +142,7 @@ export default function LoginPage() {
               loginData={loginData}
               onChange={handleChange}
               onSubmit={handleSubmit}
-              onSwitchToSignup={() => router.push("/register")}
+              onSwitchToSignup={SIGNUP_ENABLED ? () => router.push("/register") : undefined}
               isSigningIn={isSigningIn}
               errors={errors}
           onGoogleSuccess={handleGoogleSuccess}
