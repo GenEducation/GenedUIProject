@@ -123,8 +123,15 @@ const confirmedDeliveries = new Set<string>();
 let requireDelivery = false;
 export const interruptRequests: Array<{ turnId: string; visible_seq: number }> = [];
 export const resumeRequests: Array<{ turnId: string; afterSeq: number }> = [];
-/** `/done`, `/choice` and `/hints` bodies, in order, tagged with their route. */
-export const stepRequests: Array<{ route: "done" | "choice" | "hints"; body: Record<string, unknown> }> = [];
+/** `/done` and `/choice` bodies, in order, tagged with their route. */
+export const stepRequests: Array<{ route: "done" | "choice"; body: Record<string, unknown> }> = [];
+
+/** Every request that reached a route the lesson screen must not call (R-E5: a hint is only a hint turn). */
+export const forbiddenRequests: string[] = [];
+
+/** Text presence beats, in order (`source_id`s), and what the server answers (`active`). */
+export const presenceBeats: string[] = [];
+export const presence = { active: true };
 
 export const lessonFixture = {
   reset() {
@@ -141,6 +148,9 @@ export const lessonFixture = {
     confirmedDeliveries.clear();
     requireDelivery = false;
     interruptRequests.length = 0;
+    forbiddenRequests.length = 0;
+    presenceBeats.length = 0;
+    presence.active = true;
     resumeRequests.length = 0;
     stepRequests.length = 0;
   },
@@ -244,7 +254,7 @@ export const lessonHandlers = [
     return HttpResponse.json({ item_id: params.itemId, round_ordinal: 1, replayed: false });
   }),
 
-  ...(["done", "choice", "hints"] as const).map((route) =>
+  ...(["done", "choice"] as const).map((route) =>
     http.post(`${BASE}/v1/instances/:instanceId/${route}`, async ({ request }) => {
       const body = (await request.json()) as Record<string, unknown>;
       stepRequests.push({ route, body });
@@ -254,19 +264,28 @@ export const lessonHandlers = [
           { status: 409 },
         );
       }
-      // A done or a choice moves the lesson on one step; a hint only records the request.
-      if (route !== "hints") {
-        state.instance = {
-          ...state.instance,
-          revision: (state.instance.revision ?? 0) + 1,
-          nodes_done: state.instance.nodes_done + (route === "done" ? 1 : 0),
-          next_action: "learn",
-          active_node: state.instance.active_node && { ...state.instance.active_node, choice: null },
-        };
-      }
+      // A done or a choice moves the lesson on one step.
+      state.instance = {
+        ...state.instance,
+        revision: (state.instance.revision ?? 0) + 1,
+        nodes_done: state.instance.nodes_done + (route === "done" ? 1 : 0),
+        next_action: "learn",
+        active_node: state.instance.active_node && { ...state.instance.active_node, choice: null },
+      };
       return HttpResponse.json(state.instance);
     }),
   ),
+
+  http.post(`${BASE}/v1/instances/:instanceId/hints`, ({ request }) => {
+    forbiddenRequests.push(new URL(request.url).pathname);
+    return HttpResponse.json({}, { status: 410 });
+  }),
+
+  http.post(`${BASE}/v1/instances/:instanceId/presence`, async ({ request }) => {
+    const body = (await request.json()) as { source_id: string };
+    presenceBeats.push(body.source_id);
+    return HttpResponse.json({ active: presence.active });
+  }),
 
   http.get(`${BASE}/v1/instances/:instanceId/report`, () =>
     HttpResponse.json({

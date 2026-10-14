@@ -12,7 +12,11 @@ describe("hidden student sections", () => {
   it("are switched off", () => {
     expect(FEATURES.practice).toBe(false);
     expect(FEATURES.schedule).toBe(false);
-    expect(FEATURES.chapterTime).toBe(false);
+  });
+
+  it("serves streak and chapter time from the learning activity model", () => {
+    expect(FEATURES.streak).toBe(true);
+    expect(FEATURES.chapterTime).toBe(true);
   });
 
   it.each([

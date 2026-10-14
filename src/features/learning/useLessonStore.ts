@@ -528,7 +528,8 @@ export const useLessonStore = create<LessonState>((set, get) => {
       const { instanceId } = get();
       const node = activeNodeId();
       if (!instanceId || !node) return;
-      applyInstance(await lessonService.hint(instanceId, { request_id: uuid(), item_id: itemId }));
+      // Only a hint turn: the server counts and records it at admission. `/hints` is a second request for the same
+      // ask, which would be counted twice as an action (LEARNING_ACTIVITY_v1 §4.15, R-E5).
       await runTurn({ turn_id: uuid(), kind: "hint", instance_node_id: node, item_id: itemId }, null);
     },
 

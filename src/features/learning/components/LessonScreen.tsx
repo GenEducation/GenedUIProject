@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
 import { useLessonStore } from "../useLessonStore";
+import { useLessonPresence } from "../presence/useLessonPresence";
 import { LessonHeader } from "./LessonHeader";
 import { LessonRail } from "./LessonRail";
 import { BoardPanel } from "./BoardPanel";
@@ -37,6 +38,7 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
   // The tile that opened this lesson in this tab, if any (survives a reload via sessionStorage).
   const launched = useLessonLaunch((s) => (s.instanceId === instanceId ? s : null));
   const focusFigure = useLessonStore((s) => s.focusFigure);
+  useLessonPresence(instanceId);
 
   // How the lesson fits this screen: scaled down on a small one, and turned on a phone held upright.
   const frame = useLessonFrame();

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { waitFor } from "@testing-library/react";
 import {
   CHECK_ITEM, FIGURE_GROUP, LESSON_ID, NODE_1, NODE_2, OPTION_A,
-  answerRequests, lessonFixture, makeLessonInstance, replyScript, resumeRequests, turnRequests,
+  answerRequests, forbiddenRequests, lessonFixture, makeLessonInstance, replyScript, resumeRequests, turnRequests,
 } from "@/test/msw/handlers/lesson";
 import { useLessonStore } from "../useLessonStore";
 import { replyText } from "../transcript";
@@ -177,5 +177,17 @@ describe("useLessonStore — typed turns carry the session language", () => {
     localStorage.setItem("gened_voice_language", "fr");
     await store().send("SYNTHETIC question");
     expect(turnRequests.at(-1)).not.toHaveProperty("language");
+  });
+});
+
+describe("useLessonStore — a hint is only a hint turn (R-E5)", () => {
+  it("starts a hint turn and never calls /hints, so the ask is counted once", async () => {
+    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
+    await store().load(LESSON_ID);
+    turnRequests.length = 0;
+    await store().askHint(CHECK_ITEM);
+    expect(turnRequests.map((r) => r.kind)).toEqual(["hint"]);
+    expect(forbiddenRequests).toEqual([]);
+    await settled();
   });
 });

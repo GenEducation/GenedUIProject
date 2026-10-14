@@ -9,13 +9,11 @@ export const FEATURES = {
   /** Student schedule (/student/schedule), the parent schedule view
    *  (/parent/:id/schedule) and the upcoming-session panel on student home. */
   schedule: false,
-  /** Streak / session stats (`GET /students/{id}/streak`). Not served by the new
-   *  backend yet ("on hold until tutoring data settles"); while off, no request
-   *  is made and stats stay null, which the UI already renders as zero. */
-  streak: false,
-  /** Study time per chapter (`GET /students/{id}/time/by-chapter`), behind student
-   *  home's Time Spent, the report card's chapter times and the parent home's
-   *  per-subject study time. Off for now (the endpoint 404s); while off, no
-   *  request is made and those read as zero. */
-  chapterTime: false,
+  /** Streak / session stats (`GET /students/{id}/streak`), served from the learning activity model
+   *  (backend `docs/specs/LEARNING_ACTIVITY_v1.md`): days with a counted action or credited presence, and ended sessions. */
+  streak: true,
+  /** Study time per chapter (`GET /students/{id}/time/by-chapter`), behind student home's Time Spent, the report
+   *  card's chapter times and the parent home's per-subject study time. The time is an estimate of credited presence
+   *  and is shown as one. */
+  chapterTime: true,
 } as const;
