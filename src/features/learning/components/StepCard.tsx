@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ButtonHTMLAttributes, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type FormEvent } from "react";
 import { ArrowRight, Check, Lightbulb, Loader2, X } from "lucide-react";
 import { asError } from "@/utils/errors";
 import { AnimatePresence, motion } from "framer-motion";
