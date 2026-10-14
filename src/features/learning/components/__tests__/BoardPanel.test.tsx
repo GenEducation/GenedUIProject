@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import {
   CHECK_ITEM, FIGURE_GROUP, LESSON_ID, OPTION_A,
-  answerRequests, lessonFixture, makeLessonInstance, stepRequests, syntheticPayload, turnRequests,
+  answerRequests, forbiddenRequests, lessonFixture, makeLessonInstance, stepRequests, syntheticPayload, turnRequests,
 } from "@/test/msw/handlers/lesson";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
@@ -62,11 +62,12 @@ describe("BoardPanel — the step card", () => {
     await waitFor(() => expect(turnRequests.at(-1)?.kind).toBe("result_reaction"));
   });
 
-  it("Hint records the request and asks the tutor for a hint turn", async () => {
+  it("Hint is only a hint turn: the server records it, and /hints is never called", async () => {
     await open();
     fireEvent.click(screen.getByRole("button", { name: "Hint" }));
     await waitFor(() => expect(turnRequests.at(-1)).toMatchObject({ kind: "hint", item_id: CHECK_ITEM }));
-    expect(stepRequests[0]).toMatchObject({ route: "hints", body: { item_id: CHECK_ITEM } });
+    expect(forbiddenRequests).toEqual([]);
+    expect(stepRequests).toEqual([]);
   });
 
   it("a teach step with every check answered and enough talk offers Next step", async () => {

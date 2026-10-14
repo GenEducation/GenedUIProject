@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { LESSON_ID, lessonFixture } from "@/test/msw/handlers/lesson";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
 import { useLessonStore } from "../../useLessonStore";
 
@@ -56,6 +57,14 @@ describe("LessonScreen", () => {
     // The tutor opens a fresh node in the chat, and only there.
     expect(await within(screen.getByRole("region", { name: "Chat with your tutor" })).findByText("SYNTHETIC reply.")).toBeInTheDocument();
     expect(within(screen.getByRole("region", { name: "Whiteboard" })).queryByText("SYNTHETIC reply.")).toBeNull();
+  });
+
+  it("shows the server's session time and this chapter's estimated time, so a refresh or another tab continues them", async () => {
+    useStudentStore.setState({ studentProfile: { user_id: "00000000-0000-4000-8000-0000000000bb" } as never });
+    render(<LessonScreen instanceId={LESSON_ID} />);
+    await waitFor(() => expect(screen.getByRole("timer")).toHaveAccessibleName(/^Session time 10:0\d$/));
+    expect(await screen.findByLabelText("Chapter time 12 min")).toBeInTheDocument();
+    useStudentStore.setState({ studentProfile: null });
   });
 
   it("on a phone held upright, goes straight to the landscape lesson, turned to fill the screen", () => {

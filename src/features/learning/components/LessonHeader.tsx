@@ -7,6 +7,8 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { StudentAvatar } from "@/features/student/components/StudentAvatar";
 import { useLessonStore } from "../useLessonStore";
 import { useUiText } from "../i18n";
+import { useChapterTime, formatEstimate } from "../activity/useChapterTime";
+import { useSessionClock } from "../activity/useSessionClock";
 import { formatDuration, useSessionTimer } from "../useSessionTimer";
 
 interface LessonHeaderProps {
@@ -66,7 +68,14 @@ export function LessonHeader({
   onOpenSteps,
 }: LessonHeaderProps) {
   const instanceId = useLessonStore((s) => s.instanceId);
-  const seconds = useSessionTimer(instanceId);
+  const studentId = useStudentStore((s) => s.studentProfile?.user_id);
+  const chapterId = useLessonStore((s) => s.instance?.chapter_id);
+  // The session clock is the server's (it survives a refresh, another tab and another device); this tab's own clock
+  // stands in until the server has answered, or when it cannot be reached.
+  const localSeconds = useSessionTimer(instanceId);
+  const serverSeconds = useSessionClock(studentId);
+  const seconds = serverSeconds ?? localSeconds;
+  const chapterMinutes = useChapterTime(studentId, chapterId);
   const t = useUiText();
   const avatarId = useStudentStore((s) => s.avatarId);
   const done = useLessonStore((s) => s.instance?.nodes_done ?? null);
@@ -148,6 +157,16 @@ export function LessonHeader({
           value={formatDuration(seconds)}
           label={t("sessionTime")}
         />
+        {chapterMinutes !== null && (
+          <div className="hidden md:block [@media(max-height:500px)]:hidden">
+            <Chip
+              aria-label={`${t("chapterTime")} ${formatEstimate(chapterMinutes)}`}
+              icon={<Timer size={26} strokeWidth={2.2} className="text-[var(--ls-primary)]" aria-hidden />}
+              value={`≈ ${formatEstimate(chapterMinutes)}`}
+              label={t("chapterTime")}
+            />
+          </div>
+        )}
         {done !== null && total !== null && total > 0 && (
           <div className="hidden md:block [@media(max-height:500px)]:hidden">
             <Chip

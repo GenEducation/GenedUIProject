@@ -123,8 +123,22 @@ const confirmedDeliveries = new Set<string>();
 let requireDelivery = false;
 export const interruptRequests: Array<{ turnId: string; visible_seq: number }> = [];
 export const resumeRequests: Array<{ turnId: string; afterSeq: number }> = [];
-/** `/done`, `/choice` and `/hints` bodies, in order, tagged with their route. */
-export const stepRequests: Array<{ route: "done" | "choice" | "hints"; body: Record<string, unknown> }> = [];
+/** `/done` and `/choice` bodies, in order, tagged with their route. */
+export const stepRequests: Array<{ route: "done" | "choice"; body: Record<string, unknown> }> = [];
+
+/** Every request that reached a route the lesson screen must not call (R-E5: a hint is only a hint turn). */
+export const forbiddenRequests: string[] = [];
+
+/** Text presence beats, in order (`source_id`s), and what the server answers (`active`). */
+export const presenceBeats: string[] = [];
+export const presence = { active: true };
+
+/** The server's study session and chapter totals, as `/students/{id}/session/current` and `/time/by-chapter` answer. */
+export const activity: { session: { open: boolean; started_at: string | null; elapsed_seconds: number; credited_seconds: number; server_time: string }; chapters: unknown[]; fail: boolean } = {
+  session: { open: true, started_at: "2026-10-14T10:00:00+00:00", elapsed_seconds: 600, credited_seconds: 300, server_time: "x" },
+  chapters: [{ chapter_id: "00000000-0000-4000-8000-000000000001", chapter_name: "SYNTHETIC", subject: "math", total_minutes: 12.4, session_count: 2 }],
+  fail: false,
+};
 
 export const lessonFixture = {
   reset() {
@@ -141,6 +155,11 @@ export const lessonFixture = {
     confirmedDeliveries.clear();
     requireDelivery = false;
     interruptRequests.length = 0;
+    forbiddenRequests.length = 0;
+    presenceBeats.length = 0;
+    presence.active = true;
+    activity.fail = false;
+    activity.session = { open: true, started_at: "2026-10-14T10:00:00+00:00", elapsed_seconds: 600, credited_seconds: 300, server_time: "x" };
     resumeRequests.length = 0;
     stepRequests.length = 0;
   },
@@ -244,7 +263,7 @@ export const lessonHandlers = [
     return HttpResponse.json({ item_id: params.itemId, round_ordinal: 1, replayed: false });
   }),
 
-  ...(["done", "choice", "hints"] as const).map((route) =>
+  ...(["done", "choice"] as const).map((route) =>
     http.post(`${BASE}/v1/instances/:instanceId/${route}`, async ({ request }) => {
       const body = (await request.json()) as Record<string, unknown>;
       stepRequests.push({ route, body });
@@ -254,19 +273,34 @@ export const lessonHandlers = [
           { status: 409 },
         );
       }
-      // A done or a choice moves the lesson on one step; a hint only records the request.
-      if (route !== "hints") {
-        state.instance = {
-          ...state.instance,
-          revision: (state.instance.revision ?? 0) + 1,
-          nodes_done: state.instance.nodes_done + (route === "done" ? 1 : 0),
-          next_action: "learn",
-          active_node: state.instance.active_node && { ...state.instance.active_node, choice: null },
-        };
-      }
+      // A done or a choice moves the lesson on one step.
+      state.instance = {
+        ...state.instance,
+        revision: (state.instance.revision ?? 0) + 1,
+        nodes_done: state.instance.nodes_done + (route === "done" ? 1 : 0),
+        next_action: "learn",
+        active_node: state.instance.active_node && { ...state.instance.active_node, choice: null },
+      };
       return HttpResponse.json(state.instance);
     }),
   ),
+
+  http.post(`${BASE}/v1/instances/:instanceId/hints`, ({ request }) => {
+    forbiddenRequests.push(new URL(request.url).pathname);
+    return HttpResponse.json({}, { status: 410 });
+  }),
+
+  http.get(`${BASE}/students/:studentId/session/current`, () =>
+    activity.fail ? HttpResponse.json({}, { status: 500 }) : HttpResponse.json(activity.session),
+  ),
+
+  http.get(`${BASE}/students/:studentId/time/by-chapter`, () => HttpResponse.json(activity.chapters)),
+
+  http.post(`${BASE}/v1/instances/:instanceId/presence`, async ({ request }) => {
+    const body = (await request.json()) as { source_id: string };
+    presenceBeats.push(body.source_id);
+    return HttpResponse.json({ active: presence.active });
+  }),
 
   http.get(`${BASE}/v1/instances/:instanceId/report`, () =>
     HttpResponse.json({
