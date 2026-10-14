@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { PILOT_TAGLINE } from "@/constants/campaign";
 import { BetaSignupForm } from "./BetaSignupForm";
-import { SeatsLeft } from "./SeatsLeft";
 
 /** The pilot sign-up as a sheet over the still-playing film (a bottom sheet on phones). */
 export function JoinSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -39,7 +38,6 @@ export function JoinSheet({ open, onClose }: { open: boolean; onClose: () => voi
         <h2 id="gc-sheet-title">
           Join the free pilot. <em>It takes a minute.</em>
         </h2>
-        <SeatsLeft className="gc-seats-sheet" />
         <BetaSignupForm />
       </div>
     </div>

@@ -735,32 +735,9 @@
 @keyframes gcSheetUp { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes gcDash { to { background-position: 24px 0; } }
 
-/* ---------- seats left: hardcoded scarcity counter (see pilotSeats.ts) ---------- */
+/* ---------- success state: sign up another child ---------- */
 .gened-campaign .gc-form-another {
   margin-top: 4px; background: none; border: 0; cursor: pointer; font: 700 14.5px var(--body); color: var(--green-600);
   text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--citron-deep);
 }
 .gened-campaign .gc-form-another:hover { color: var(--ink); }
-
-.gened-campaign .gc-seats {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 6px 13px 6px 11px; border-radius: 999px; background: #fff; border: 1px solid rgba(255, 122, 89, 0.3);
-  box-shadow: var(--shadow-sm); font-size: 12.5px; font-weight: 600; color: var(--ink);
-}
-.gened-campaign .gc-seats::before {
-  content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--coral); margin-right: 2px;
-  animation: gcSeatPulse 1.6s ease-out infinite;
-}
-.gened-campaign .gc-seats b { display: inline-block; font-weight: 800; color: #D9481F; font-variant-numeric: tabular-nums; animation: gcSeatPop 0.5s var(--spring) both; }
-.gened-campaign .gc-seats-hero { animation: gcHeroRise 0.7s var(--spring) both; }
-.gened-campaign .gc-seats-join { margin: -8px 0 4px; }
-.gened-campaign .gc-seats-sheet { margin: -6px 0 18px; }
-
-@keyframes gcSeatPulse {
-  0% { box-shadow: 0 0 0 0 rgba(255, 122, 89, 0.55); }
-  70%, 100% { box-shadow: 0 0 0 5px rgba(255, 122, 89, 0); }
-}
-@keyframes gcSeatPop { from { transform: scale(1.35); } to { transform: none; } }
-@media (prefers-reduced-motion: reduce) {
-  .gened-campaign .gc-seats, .gened-campaign .gc-seats *, .gened-campaign .gc-seats::before { animation: none !important; }
-}

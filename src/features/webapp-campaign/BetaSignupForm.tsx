@@ -4,7 +4,6 @@ import { useState, type FormEvent } from "react";
 import { PILOT_SEATS, PILOT_START } from "@/constants/campaign";
 import { BOARDS, GRADES, submitBetaSignup, type BetaSignup } from "./googleForm";
 import { trackMeta } from "./MetaPixel";
-import { markPilotJoined, useSeatsLeft } from "./pilotSeats";
 
 type Status = "idle" | "sending" | "done" | "error";
 type Errors = Partial<Record<"name" | "whatsapp" | "grade" | "board" | "otherBoard", string>>;
@@ -24,7 +23,6 @@ export function BetaSignupForm() {
   const [errors, setErrors] = useState<Errors>({});
   const [status, setStatus] = useState<Status>("idle");
   const [copied, setCopied] = useState(false);
-  const seatsLeft = useSeatsLeft();
 
   const validate = (): Errors => {
     const e: Errors = {};
@@ -45,7 +43,6 @@ export function BetaSignupForm() {
     try {
       await submitBetaSignup({ name, whatsapp: normalisePhone(phone), grade, board, otherBoard });
       setStatus("done");
-      markPilotJoined();
       trackMeta("Lead", { content_name: "Webapp free pilot", content_category: grade });
     } catch {
       setStatus("error");
@@ -84,9 +81,6 @@ export function BetaSignupForm() {
         </span>
         <h3>You&apos;re in!</h3>
         <p>We&apos;ll WhatsApp you your access details before 16 October.</p>
-        <p className="gc-form-muted">
-          Your seat is saved. Only <b>{seatsLeft}</b> left for other families.
-        </p>
         <p className="gc-form-muted">Know another parent whose child would benefit?</p>
         {/* eslint-disable-next-line no-restricted-syntax -- campaign-styled control (gc-btn), outside the app design system */}
         <button type="button" className="gc-btn gc-btn-primary" onClick={share}>
