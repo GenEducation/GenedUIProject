@@ -15,9 +15,11 @@ function formatKey(code: string): string {
 
 interface PttHotkeyConfigProps {
   compact?: boolean;
+  /** A sentence instead of a control row: "Hold [Space] to talk", the key itself the button that changes it. */
+  inline?: boolean;
 }
 
-export function PttHotkeyConfig({ compact = false }: PttHotkeyConfigProps) {
+export function PttHotkeyConfig({ compact = false, inline = false }: PttHotkeyConfigProps) {
   const { voicePrefs, setPttHotkey } = useStudentStore();
   const [capturing, setCapturing] = useState(false);
 
@@ -39,6 +41,28 @@ export function PttHotkeyConfig({ compact = false }: PttHotkeyConfigProps) {
   }, [capturing, setPttHotkey]);
 
   const label = capturing ? "Press any key… (Esc to cancel)" : formatKey(voicePrefs.pttHotkey);
+
+  if (inline) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--text-muted)]">
+        {capturing ? null : "Hold"}
+        {/* eslint-disable-next-line no-restricted-syntax -- the keycap itself, set inside a sentence. */}
+        <button
+          type="button"
+          onClick={() => setCapturing((v) => !v)}
+          aria-label={capturing ? "Cancel changing the push-to-talk key" : `Push-to-talk key: ${label}. Change it`}
+          title={capturing ? "Cancel" : "Change key"}
+          className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-bold text-[var(--primary-ink)] shadow-[0_1px_0_#E3E8E2] transition-colors hover:border-[var(--primary)] ${
+            capturing ? "border-[var(--primary)] bg-[var(--primary-soft,#E6F0EF)]" : "border-[#E3E8E2] bg-white"
+          }`}
+        >
+          <kbd className="font-[inherit]">{label}</kbd>
+          {!capturing && <Settings2 size={11} className="text-[#7F9295]" aria-hidden />}
+        </button>
+        {capturing ? null : "to talk"}
+      </span>
+    );
+  }
 
   return (
     <div className={`flex items-center gap-2 ${compact ? "text-[11px]" : "text-[13px]"}`}>

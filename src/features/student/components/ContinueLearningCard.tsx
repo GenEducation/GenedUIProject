@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState, useSyncExternalStore } from "react";
-import { Target } from "lucide-react";
+import { History } from "lucide-react";
 
 import { STUDENT_COLORS } from "../theme/colors";
 
@@ -54,6 +54,8 @@ interface ContinueLearningCardProps {
   session: ContinueLearningSession;
   /** Grade + board line, e.g. "Grade 8 CBSE". Omitted when unknown. */
   gradeLabel?: string;
+  /** When it was last studied, e.g. "2h ago", after the eyebrow. */
+  lastStudied?: string;
   onStart: () => void;
   style?: React.CSSProperties;
 }
@@ -96,6 +98,7 @@ function Sparkle({
 export function ContinueLearningCard({
   session,
   gradeLabel,
+  lastStudied,
   onStart,
   style,
 }: ContinueLearningCardProps) {
@@ -172,8 +175,13 @@ export function ContinueLearningCard({
             fontSize: "clamp(9px, 0.9vw, 11px)",
           }}
         >
-          <Target size={14} strokeWidth={2} />
-          <span>Today&apos;s learning goal</span>
+          <History size={14} strokeWidth={2} aria-hidden />
+          <span>Pick up where you left off</span>
+          {lastStudied && (
+            <span className="font-semibold normal-case tracking-normal" style={{ opacity: 0.75 }}>
+              · {lastStudied}
+            </span>
+          )}
         </div>
 
         {/* Title block behind the purple rule */}

@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Keyboard, Languages, Loader2, Mic, Pause, Play, Radio, Settings } from "lucide-react";
+import { Languages, Loader2, Mic, Pause, Play, Radio, Settings } from "lucide-react";
 import { Select } from "@/components/ui/Select";
 import { updateProfile } from "@/features/auth/authService";
 import { studentService } from "@/features/student/services/studentService";
 import { fetchVoices } from "@/features/student/services/voiceCatalogService";
-import { DEFAULT_GEMINI_VOICE, type GeminiVoice } from "@/constants/geminiVoices";
+import type { TutorVoice } from "@/constants/tutorVoices";
 import { useStudentStore, type StudentProfile } from "../../store/useStudentStore";
 import { PttHotkeyConfig } from "../PttHotkeyConfig";
 import { CardIcon, ProfileCard } from "./ProfileCard";
@@ -69,7 +69,7 @@ function Row({
 /* ─── Tutor voice ─────────────────────────────────────────────────────────── */
 function VoiceControl() {
   const profile = useStudentStore((s) => s.studentProfile);
-  const [voices, setVoices] = useState<GeminiVoice[]>([]);
+  const [voices, setVoices] = useState<TutorVoice[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -86,9 +86,11 @@ function VoiceControl() {
     return () => { cancelled = true; audioRef.current?.pause(); };
   }, []);
 
-  // A saved voice the catalog no longer offers falls back to the default.
-  const saved = profile?.preferred_voice;
-  const current = saved && (!loaded || voices.some((v) => v.id === saved)) ? saved : DEFAULT_GEMINI_VOICE;
+  // The pick is `tutor_voice` (an app voice id), never `preferred_voice` (the MVP's Gemini name). No pick, or one the
+  // catalog no longer offers, shows the catalog's default: what the backend speaks for such a student too.
+  const saved = profile?.tutor_voice;
+  const defaultId = voices.find((v) => v.is_default)?.id ?? "";
+  const current = saved && voices.some((v) => v.id === saved) ? saved : defaultId;
   const currentVoice = voices.find((v) => v.id === current);
 
   const stop = () => {
@@ -110,13 +112,13 @@ function VoiceControl() {
   };
 
   const handleChange = async (id: string) => {
-    if (!profile || id === current) return;
+    if (!profile || !id || id === current) return;
     stop();
     setSaving(true);
     setSaveError(null);
     try {
-      const res = await updateProfile({ user_id: profile.user_id, preferred_voice: id });
-      persistProfile({ ...profile, preferred_voice: res.preferred_voice ?? id }, res.access_token);
+      const res = await updateProfile({ user_id: profile.user_id, tutor_voice: id });
+      persistProfile({ ...profile, tutor_voice: res.tutor_voice ?? id }, res.access_token);
     } catch (err: unknown) {
       setSaveError(err instanceof Error ? err.message : "Couldn't save voice. Please try again.");
     } finally {
@@ -124,13 +126,11 @@ function VoiceControl() {
     }
   };
 
-  const options = voices.length
-    ? voices.map((v) => ({
-        value: v.id,
-        label: v.id === DEFAULT_GEMINI_VOICE ? `${v.label} (Default)` : v.label,
-        hint: v.description,
-      }))
-    : [{ value: current, label: current === DEFAULT_GEMINI_VOICE ? `${current} (Default)` : current }];
+  const options = voices.map((v) => ({
+    value: v.id,
+    label: v.is_default ? `${v.label} (Default)` : v.label,
+    hint: v.description,
+  }));
 
   return (
     <>
@@ -140,8 +140,9 @@ function VoiceControl() {
             aria-label="Tutor voice"
             value={current}
             onChange={handleChange}
-            disabled={!loaded || saving || !!loadError}
+            disabled={!loaded || saving || !!loadError || !options.length}
             options={options}
+            placeholder={loaded && !loadError ? "No voices available" : "Loading voices…"}
             panelWidth={300}
           />
         </div>
@@ -150,7 +151,7 @@ function VoiceControl() {
           type="button"
           onClick={togglePreview}
           disabled={!currentVoice}
-          aria-label={audioState === "idle" ? `Play a sample of ${current}` : "Stop sample"}
+          aria-label={audioState === "idle" ? `Play a sample of ${currentVoice?.label ?? "the tutor voice"}` : "Stop sample"}
           className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[var(--accent)] text-[var(--accent-ink)] shadow-[0_6px_14px_-8px_rgb(184_214_63/0.9)] transition hover:bg-[var(--accent-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-ring)] disabled:opacity-40"
         >
           {audioState === "loading" ? (
@@ -269,7 +270,7 @@ export function LearningPreferencesCard({ index }: { index: number }) {
         <Row
           icon={<Mic size={20} strokeWidth={2} />}
           title="Tutor voice"
-          description="Choose the voice for your AI tutor."
+          description="Choose the voice for your AI tutor. It applies from your next voice lesson."
           control={<VoiceControl />}
         />
 
@@ -291,21 +292,25 @@ export function LearningPreferencesCard({ index }: { index: number }) {
           />
         )}
 
+        {/* The push-to-talk key lives inside this row, on a line that's always there: switching modes changes
+            the line, never the card's height, so the card beside it never stretches to a gap. */}
         <Row
           icon={<Radio size={20} strokeWidth={2} />}
           title="Voice activation"
           description="Talk freely, or hold a key while you speak."
-          control={<ListenModeToggle />}
+          control={
+            <>
+              <ListenModeToggle />
+              <span className="flex h-7 items-center justify-center" aria-live="polite">
+                {listenMode === "ptt" ? (
+                  <PttHotkeyConfig inline />
+                ) : (
+                  <span className="text-[12px] text-[var(--text-muted)]">Your tutor listens whenever you speak.</span>
+                )}
+              </span>
+            </>
+          }
         />
-
-        {listenMode === "ptt" && (
-          <Row
-            icon={<Keyboard size={20} strokeWidth={2} />}
-            title="Push-to-talk key"
-            description="The key you hold down to talk to your tutor."
-            control={<div className="flex sm:justify-end"><PttHotkeyConfig compact /></div>}
-          />
-        )}
       </div>
     </ProfileCard>
   );

@@ -1,4 +1,4 @@
-import type { GeminiVoice } from "@/constants/geminiVoices";
+import type { TutorVoice } from "@/constants/tutorVoices";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
@@ -12,7 +12,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
  * Relative `sample_url` values returned by the BE are rewritten to absolute
  * URLs here so the audio element can play them as-is.
  */
-export async function fetchVoices(): Promise<GeminiVoice[]> {
+export async function fetchVoices(): Promise<TutorVoice[]> {
   const res = await fetch(`${API_BASE_URL}/voices`, { method: "GET" });
   if (!res.ok) {
     throw new Error(`Failed to load voice catalog: ${res.status}`);
@@ -22,9 +22,11 @@ export async function fetchVoices(): Promise<GeminiVoice[]> {
     label: string;
     description: string;
     sample_url: string;
+    is_default?: boolean;
   }>;
   return list.map((v) => ({
     ...v,
+    is_default: v.is_default === true,
     sample_url:
       v.sample_url.startsWith("http://") || v.sample_url.startsWith("https://")
         ? v.sample_url

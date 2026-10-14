@@ -5,6 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { getStudentDisplayName, titleCase } from "@/features/student/utils/displayName";
 
 /**
  * TutorialVideoModal
@@ -20,6 +22,14 @@ import { GenEdLogo } from "@/components/shared/GenEdLogo";
 export const TutorialVideoModal: React.FC = () => {
   const { isActive, skipTutorial, completeTutorial } = useTutorialStore();
   const [iframeReady, setIframeReady] = useState(false);
+  // The tour shows the student as the app does (their name and avatar) and calls the tutor by the name they gave it.
+  const studentProfile = useStudentStore((s) => s.studentProfile);
+  const avatarId = useStudentStore((s) => s.avatarId);
+  const tourParams = new URLSearchParams({
+    tutor: titleCase(studentProfile?.ai_name?.trim() || "Nia"),
+    avatar: avatarId,
+    ...(studentProfile?.name?.trim() ? { name: getStudentDisplayName(studentProfile) } : {}),
+  });
 
   /* Reset ready-state when modal opens */
   useEffect(() => {
@@ -87,7 +97,7 @@ export const TutorialVideoModal: React.FC = () => {
                 {/* Right: hint + close */}
                 <div className="flex items-center gap-3">
                   <span className="hidden sm:block text-[11px] font-medium" style={{ color: "rgba(200,209,220,0.5)" }}>
-                    See how GenEd works in 60 seconds
+                    See how GenEd works in about 2 minutes
                   </span>
                   <button
                     onClick={skipTutorial}
@@ -110,7 +120,7 @@ export const TutorialVideoModal: React.FC = () => {
 
               {/* ── Video / iframe ── */}
               <div
-                className="relative w-full aspect-[380/680] sm:aspect-[900/560]"
+                className="relative w-full aspect-[380/400] sm:aspect-[860/610]"
                 style={{
                   background: "#0d1117",
                 }}
@@ -135,7 +145,7 @@ export const TutorialVideoModal: React.FC = () => {
                 )}
 
                 <iframe
-                  src="/tutorial-walkthrough.html"
+                  src={`/tutorial-walkthrough.html?${tourParams}`}
                   title="GenEd Walkthrough Tour"
                   className="block w-full h-full border-0"
                   onLoad={() => setIframeReady(true)}

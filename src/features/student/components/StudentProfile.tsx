@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, LogOut, Menu, UserRound } from "lucide-react";
+import { ArrowLeft, LogOut, Menu, PlayCircle, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useStudentStore, type StudentProfile as StudentProfileType } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
+import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { getStudentDisplayName, titleCase } from "../utils/displayName";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { fetchProfile } from "@/features/auth/authService";
@@ -27,6 +28,7 @@ export function StudentProfile() {
   } = useStudentStore();
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const startTutorial = useTutorialStore((s) => s.startTutorial);
 
   useDebouncedResize(() => applyResponsive(window.innerWidth >= 1024));
 
@@ -56,6 +58,8 @@ export function StudentProfile() {
           school_board: fresh.school_board ?? studentProfile.school_board,
           ai_name: fresh.ai_name ?? studentProfile.ai_name,
           preferred_voice: fresh.preferred_voice ?? studentProfile.preferred_voice,
+          // The server is the source of truth for the pick, including "none" (null): never keep a stale cached one.
+          tutor_voice: "tutor_voice" in fresh ? fresh.tutor_voice : studentProfile.tutor_voice,
           plan: fresh.plan ?? studentProfile.plan,
           plan_expires_at: fresh.plan_expires_at ?? studentProfile.plan_expires_at,
         };
@@ -146,9 +150,18 @@ export function StudentProfile() {
                   <CardHeading
                     icon={<UserRound size={24} strokeWidth={1.9} />}
                     title="Account"
-                    description="Manage your account settings and sign out from GenEd."
+                    description="Watch the quick tour again, or sign out from GenEd."
                   />
                 </div>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={startTutorial}
+                  leadingIcon={<PlayCircle size={16} />}
+                  className="self-start rounded-full px-6 sm:self-center"
+                >
+                  Watch the quick tour
+                </Button>
                 <Button
                   variant="destructive"
                   size="md"

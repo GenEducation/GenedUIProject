@@ -65,14 +65,23 @@ describe("LessonScreen", () => {
     expect(screen.getByRole("link", { name: "Leave lesson" })).toHaveAttribute("href", "/student");
   });
 
-  it("asks a phone held upright to turn sideways, and can carry on in portrait", () => {
+  it("on a phone held upright, goes straight to the landscape lesson, turned to fill the screen", () => {
     mockViewport("portrait");
-    render(<LessonScreen instanceId={LESSON_ID} />);
-    expect(screen.getByText("Turn your phone sideways")).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Whiteboard" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Continue in portrait" }));
+    const { unmount } = render(<LessonScreen instanceId={LESSON_ID} />);
+    // no prompt, no portrait tabs: the same board and chat side by side as a phone held sideways
     expect(screen.queryByText("Turn your phone sideways")).toBeNull();
-    expect(screen.getByRole("tab", { name: "Whiteboard" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("tab")).toBeNull();
+    expect(screen.getByRole("region", { name: "Whiteboard" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Chat with your tutor" })).toBeInTheDocument();
+    // jsdom's 1024 × 768 window, held "upright": laid out 768 wide × 1024 tall, turned to fill the screen
+    const root = document.querySelector('[data-orientation="turned"]') as HTMLElement;
+    expect(root.style.transform).toBe("translateX(1024px) rotate(90deg) scale(1)");
+    expect(root.style.width).toBe("768px");
+    expect(root.style.height).toBe("1024px");
+    // dragging code is told the screen is turned, and untold when the lesson closes
+    expect(document.documentElement.dataset.lessonRotated).toBe("true");
+    unmount();
+    expect(document.documentElement.dataset.lessonRotated).toBeUndefined();
   });
 
   it("on a narrow screen shows board and chat side by side, with the steps in a drawer", () => {
@@ -84,18 +93,6 @@ describe("LessonScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show lesson steps" }));
     expect(screen.getByRole("dialog", { name: "Lesson steps" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Close lesson steps" }));
-  });
-
-  it("switches panels with the portrait tabs", () => {
-    mockViewport("portrait");
-    sessionStorage.setItem("gened.lesson.portraitOk", "1");
-    render(<LessonScreen instanceId={LESSON_ID} />);
-    const chatTab = screen.getByRole("tab", { name: "Chat" });
-    expect(screen.getByRole("tab", { name: "Whiteboard" })).toHaveAttribute("aria-selected", "true");
-    fireEvent.click(chatTab);
-    expect(chatTab).toHaveAttribute("aria-selected", "true");
-    expect(document.getElementById("lesson-pane-chat")?.className).toMatch(/(^| )flex( |$)/);
-    expect(document.getElementById("lesson-pane-board")?.className).toMatch(/(^| )hidden( |$)/);
   });
 
   it("Voice opens voice mode, which says voice isn't available while it's switched off", async () => {

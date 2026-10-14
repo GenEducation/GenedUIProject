@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type FormEvent } from "react";
-import { ArrowRight, Calculator, Check, Lightbulb, Loader2, X } from "lucide-react";
+import { ArrowRight, Check, Lightbulb, Loader2, X } from "lucide-react";
 import { asError } from "@/utils/errors";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLessonStore } from "../useLessonStore";
@@ -19,6 +19,8 @@ export function responseFor(check: CheckItem, value: string): AnswerResponse {
 
 /** Ordering and matching need drag-and-drop answers the board doesn't draw yet; the chat accepts them as text. */
 const TYPED_TYPES = new Set<CheckItem["response_type"]>(["numeric", "numeric_set", "symbolic", "string_set"]);
+/** Typed answers that are maths, where the answer box is also a calculator. */
+const MATH_TYPES = new Set<CheckItem["response_type"]>(["numeric", "numeric_set", "symbolic"]);
 
 const RESULT_COPY: Record<AnswerResult["outcome"], { tone: "good" | "try" | "info"; text: string } | null> = {
   correct: { tone: "good", text: "That's right!" },
@@ -104,7 +106,9 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
   // A calculation typed as the answer ("540 * 40", "√144") is worked out as they type. For a number answer its
   // result is what's sent; for an expression or words, what they typed is (√2 stays √2), and the result only helps.
   const sum = isTyped ? calculation(typed) : null;
-  const [calculator, setCalculator] = useState(false);
+  // The answer box is the calculator: while it's in use, the keys a keyboard doesn't have (√, π, log…) sit under it.
+  const [answering, setAnswering] = useState(false);
+  const showKeys = MATH_TYPES.has(check.response_type) && (answering || typed !== "");
   const inputRef = useRef<HTMLInputElement>(null);
   /** Type a calculator key's symbol where the cursor is. */
   const insertKey = (text: string) => {
@@ -179,41 +183,48 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
       )}
 
       {isTyped && (
-        <div className="relative mt-4">
-          <label htmlFor={`answer-${check.id}`} className="sr-only">Your answer</label>
-          <input
-            ref={inputRef}
-            id={`answer-${check.id}`}
-            value={typed}
-            onChange={(e) => setTyped(e.target.value)}
-            inputMode="text"
-            maxLength={check.response_type === "numeric" ? 64 : 500}
-            autoComplete="off"
-            placeholder="Your answer"
-            aria-describedby={sum ? `sum-${check.id}` : undefined}
-            className="lesson-hand w-full border-0 border-b-2 border-dashed border-[var(--ls-ink-faint)] bg-transparent px-1 py-2 text-[20px] text-[var(--ls-ink)] outline-none placeholder:text-[var(--ls-ink-faint)] focus:border-solid focus:border-[var(--ls-primary)]"
-          />
-          {/* The worked-out result, written on just after what they typed, like a calculator's ghost. */}
-          <AnimatePresence>
-            {sum && (
-              <motion.p
-                id={`sum-${check.id}`}
-                aria-live="polite"
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                className="lesson-hand pointer-events-none absolute inset-y-0 left-0 flex items-center overflow-hidden whitespace-pre px-1 text-[20px]"
-              >
-                <span className="invisible">{typed}</span>
-                <span className="text-[var(--ls-primary)]"> = {sum}</span>
-              </motion.p>
-            )}
-          </AnimatePresence>
+        <div
+          className="mt-4"
+          onFocus={() => setAnswering(true)}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setAnswering(false);
+          }}
+        >
+          <div className="relative">
+            <label htmlFor={`answer-${check.id}`} className="sr-only">Your answer</label>
+            <input
+              ref={inputRef}
+              id={`answer-${check.id}`}
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              inputMode="text"
+              maxLength={check.response_type === "numeric" ? 64 : 500}
+              autoComplete="off"
+              placeholder="Your answer"
+              aria-describedby={sum ? `sum-${check.id}` : undefined}
+              className="lesson-hand w-full border-0 border-b-2 border-dashed border-[var(--ls-ink-faint)] bg-transparent px-1 py-2 text-[20px] text-[var(--ls-ink)] outline-none placeholder:text-[var(--ls-ink-faint)] focus:border-solid focus:border-[var(--ls-primary)]"
+            />
+            {/* The worked-out result, written on just after what they typed, like a calculator's ghost. */}
+            <AnimatePresence>
+              {sum && (
+                <motion.p
+                  id={`sum-${check.id}`}
+                  aria-live="polite"
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="lesson-hand pointer-events-none absolute inset-y-0 left-0 flex items-center overflow-hidden whitespace-pre px-1 text-[20px]"
+                >
+                  <span className="invisible">{typed}</span>
+                  <span className="text-[var(--ls-primary)]"> = {sum}</span>
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
+          {showKeys && <CalculatorKeys id={`calc-${check.id}`} onKey={insertKey} />}
         </div>
       )}
-
-      {isTyped && calculator && <CalculatorKeys id={`calc-${check.id}`} onKey={insertKey} />}
 
       {!isChoice && !isTyped && (
         <p className="lesson-hand mt-3 text-[17px] text-[var(--ls-ink-mid)]">Type your answer to this one in the chat.</p>
@@ -236,17 +247,6 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
         <SketchButton type="button" variant="tertiary" onClick={() => void askHint(check.id)}>
           <Lightbulb size={16} aria-hidden /> Hint
         </SketchButton>
-        {isTyped && (
-          <SketchButton
-            type="button"
-            variant="tertiary"
-            aria-pressed={calculator}
-            aria-controls={calculator ? `calc-${check.id}` : undefined}
-            onClick={() => setCalculator((c) => !c)}
-          >
-            <Calculator size={16} aria-hidden /> Calculator
-          </SketchButton>
-        )}
       </div>
     </form>
   );
@@ -303,6 +303,8 @@ export function StepCard() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Whether the tutor has drawn anything on the board yet.
+  const hasFigures = useLessonStore((st) => st.presentedFigureIds.length > 0);
   const node = instance?.active_node;
   // A result belongs to the step it was given on.
   useEffect(() => setLastResult(null), [node?.instance_node_id]);
@@ -356,7 +358,9 @@ export function StepCard() {
         </SketchButton>
       </div>
     );
-  } else if (node.type === "teach") {
+  } else if (node.type === "teach" && !hasFigures) {
+    // Only on a board still waiting for its first visual: once the tutor has drawn, the note would just sit on
+    // the picture, and the chat already carries the conversation.
     body = (
       <p className="lesson-hand text-center text-[18px] text-[var(--ls-ink-mid)]">
         Talk it through with your tutor to unlock the next step.

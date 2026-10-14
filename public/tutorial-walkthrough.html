@@ -3,1413 +3,1171 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>GenEd – How It Works</title>
-<script>
-  // Prevent direct access — only allow when loaded inside an iframe
-  if (window === window.top) { window.location.replace('/'); }
-</script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+<title>GenEd Quick Tour</title>
+<!--
+  The student's first-run tour, shown in TutorialVideoModal's iframe. A scripted "video" of the real student app:
+  Home → pick a chapter → a lesson with the tutor → asking for help (chips, dictation, voice) → Profile.
+  It is personalised from the query: ?tutor= (the tutor's name, "Nia" by default), ?name= (the student's name)
+  and ?avatar= (their avatar id).
+  Each chapter of the tour sets up its own screen, so the chapter buttons can jump anywhere.
+  Posts "tutorial:close" to the parent when the student taps "Start learning" on the last screen.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Kalam:wght@400;700&family=Mukta:wght@500;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800;6..12,900&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet" />
 <style>
-  /* ── Reset & Base ─────────────────────────────── */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #075E63; --primary-hover: #064C50; --ink: #122D30; --mid: #3E5558; --muted: #5E7477; --faint: #C5D1CF;
+    --citron: #D9F279; --citron-deep: #B8D63F; --canvas: #F6F7F2; --soft: #DCEBE7; --em50: #E8F2EF;
+    --card: #FFFFFF; --border: #E3E8E2; --paper: #FBFBF8; --sage: #EEF3EB; --strong: #CFD9D3; --tutor-bubble: #EAF2EF;
+    --ls-shadow: 0 1px 2px rgb(18 45 48 / .04), 0 10px 30px -18px rgb(18 45 48 / .18);
+    --app: 'Nunito Sans', 'Mukta', sans-serif; --lesson: 'Nunito', 'Mukta', sans-serif;
+    --display: 'Fredoka', 'Mukta', sans-serif; --hand: 'Kalam', 'Mukta', cursive;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
   body {
-    font-family: 'DM Sans', sans-serif;
-    background: #0d1117;
-    display: flex; align-items: center; justify-content: center;
-    min-height: 100vh;
-    overflow: hidden;
+    background: #0B2427; color: var(--ink); font-family: var(--app); overflow: hidden;
+    display: flex; flex-direction: column; -webkit-font-smoothing: antialiased;
   }
+  svg.i { display: inline-block; vertical-align: middle; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-  /* ── Outer wrapper ───────────────────────────── */
-  .stage-scaler {
-    width: min(900px, calc(100vw - 24px));
-    aspect-ratio: 900 / 560;
-    position: relative;
-  }
-  .stage {
-    position: absolute; inset: 0;
-    width: 900px; height: 560px;
-    background: #F7F8FC;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 40px 120px rgba(0,0,0,0.7);
-    transform-origin: top left;
-  }
+  /* ── Viewport: the stage is a fixed 960×600 canvas, scaled to fit ───────── */
+  .viewport { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;
+    background: radial-gradient(120% 90% at 0% 0%, rgb(217 242 121 / .10), transparent 55%), radial-gradient(90% 90% at 100% 100%, rgb(60 138 142 / .25), transparent 60%), #0B2427; }
+  .stage-box { position: relative; flex-shrink: 0; }
+  .stage { position: absolute; top: 0; left: 0; width: 960px; height: 600px; transform-origin: 0 0; overflow: hidden; background: var(--canvas); border-radius: 18px; }
+  .stage.paused *, .stage.paused *::before, .stage.paused *::after { animation-play-state: paused !important; }
 
-  /* ── Browser chrome bar ──────────────────────── */
-  .chrome {
-    position: absolute; top: 0; left: 0; right: 0;
-    height: 36px;
-    background: #1e1e1e;
-    display: flex; align-items: center;
-    padding: 0 14px; gap: 8px;
-    z-index: 1000;
-    border-radius: 16px 16px 0 0;
-  }
-  .dot { width: 11px; height: 11px; border-radius: 50%; }
-  .dot.r { background: #ff5f57; }
-  .dot.y { background: #febc2e; }
-  .dot.g { background: #28c840; }
-  .url-bar {
-    flex: 1; height: 22px; background: #2d2d2d; border-radius: 5px;
-    display: flex; align-items: center; padding: 0 10px;
-    color: #aaa; font-size: 11px; font-family: 'DM Sans', sans-serif;
-    margin: 0 60px;
-    transition: color 0.3s;
-  }
-  .url-bar span { color: #7c9cf5; }
+  .screen { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .45s ease, visibility 0s .45s; }
+  .screen.on { opacity: 1; visibility: visible; transition: opacity .45s ease; }
 
-  /* ── App shell ───────────────────────────────── */
-  .app {
-    position: absolute; top: 36px; left: 0; right: 0; bottom: 0;
-    display: flex; overflow: hidden;
-  }
+  /* Spotlight: the part of the screen the tutor is talking about */
+  .spot { position: relative; z-index: 5; animation: spot 1.8s ease-in-out infinite; }
+  @keyframes spot { 0%,100% { box-shadow: 0 0 0 3px var(--citron), 0 0 0 9px rgb(217 242 121 / .35); } 50% { box-shadow: 0 0 0 3px var(--citron), 0 0 0 15px rgb(217 242 121 / .12); } }
+  .mark { background: linear-gradient(transparent 62%, rgb(217 242 121 / .9) 62% 92%, transparent 92%); }
+  .eyebrow { display: flex; align-items: center; gap: 8px; font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+  .eyebrow::before { content: ''; width: 16px; height: 3px; border-radius: 3px; background: var(--primary); opacity: .35; }
 
-  /* ── Sidebar ─────────────────────────────────── */
-  .sidebar {
-    width: 220px; min-width: 220px;
-    background: #1C2333;
-    display: flex; flex-direction: column;
-    padding: 16px 12px;
-    transition: transform 0.4s cubic-bezier(.4,0,.2,1);
-    flex-shrink: 0;
-  }
-  .sidebar.hidden { transform: translateX(-100%); margin-left: -220px; }
-  .sidebar-logo {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 24px; padding: 0 2px;
-  }
-  .sidebar-ham { color: #c8d1dc; font-size: 16px; cursor: pointer; opacity: 0.7; }
-  .nav-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px; border-radius: 12px;
-    color: #c8d1dc; font-size: 13.5px; font-weight: 500;
-    margin-bottom: 2px; cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-  }
-  .nav-item.active { background: rgba(255,255,255,0.1); color: #fff; font-weight: 700; }
-  .nav-item .dot-active {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: #8B7FE8; margin-left: auto;
-  }
-  .nav-icon { font-size: 17px; width: 22px; text-align: center; }
-  .sidebar-bottom {
-    margin-top: auto; padding-top: 14px;
-    border-top: 1px solid rgba(255,255,255,0.06);
-  }
-  .student-chip {
-    display: flex; align-items: center; gap: 10px; padding: 4px 4px;
-  }
-  .avatar-chip {
-    width: 34px; height: 34px; border-radius: 10px;
-    background: linear-gradient(135deg, rgba(91,77,199,0.3), rgba(74,144,217,0.3));
-    display: flex; align-items: center; justify-content: center;
-    color: #8B7FE8; font-weight: 800; font-size: 14px;
-  }
-  .chip-info { flex: 1; }
-  .chip-name { color: #fff; font-size: 13px; font-weight: 600; }
-  .chip-sub { color: #c8d1dc; font-size: 10px; opacity: 0.6; }
+  /* ── Sidebar (Home, Profile) ───────────────────────────────────────────── */
+  .side { position: absolute; left: 0; top: 0; bottom: 0; width: 200px; background: var(--paper); border-right: 1px solid #E7ECE6; padding: 16px 12px; display: flex; flex-direction: column; }
+  .side-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-left: 4px; }
+  .side-head img { height: 38px; }
+  .side-burger { width: 28px; height: 28px; border-radius: 8px; background: #EEF4F1; color: #4C6366; display: grid; place-items: center; }
+  .nav { display: flex; align-items: center; gap: 11px; padding: 10px 13px; border-radius: 16px; font-size: 13.5px; font-weight: 600; color: #4C6366; margin-bottom: 3px; transition: background .25s, color .25s; }
+  .nav.active { background: var(--soft); color: var(--primary); font-weight: 700; }
+  .nav.active::after { content: ''; margin-left: auto; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+  .gopro { margin-top: auto; border-radius: 16px; padding: 14px; color: #fff; position: relative; overflow: hidden;
+    background: radial-gradient(70% 60% at 100% 0%, rgb(217 242 121 / .35), transparent 70%), linear-gradient(160deg, #075E63, #0B474B); box-shadow: 0 12px 26px -16px rgb(7 94 99 / .7); }
+  .gopro b { font-size: 13.5px; font-weight: 800; display: block; }
+  .gopro p { font-size: 11px; color: #A9CCC7; margin: 3px 0 10px; line-height: 1.35; }
+  .gopro span { display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--citron); color: var(--ink); border-radius: 11px; padding: 7px; font-size: 11.5px; font-weight: 800; }
 
-  /* ── Main content area ───────────────────────── */
-  .main { flex: 1; overflow: hidden; position: relative; background: #F7F8FC; }
-  .page { position: absolute; inset: 0; overflow-y: auto; padding: 32px 36px 40px; opacity: 1; transition: opacity 0.35s; }
-  .page.hidden { opacity: 0; pointer-events: none; }
+  /* ── Home ──────────────────────────────────────────────────────────────── */
+  .home { position: absolute; left: 200px; right: 0; top: 0; bottom: 0; padding: 24px 30px; }
+  .greet { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+  .avatar { border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 3px var(--soft), 0 6px 16px rgb(7 94 99 / .18); background: var(--soft); object-fit: cover; }
+  .greet h1 { font-size: 25px; font-weight: 800; letter-spacing: -.01em; }
+  .greet p { font-size: 13px; color: var(--mid); margin-top: 1px; }
+  .bell { margin-left: auto; width: 38px; height: 38px; border-radius: 12px; background: var(--canvas); border: 1px solid var(--border); color: var(--ink); display: grid; place-items: center; }
 
-  /* ── Page: Home ──────────────────────────────── */
-  .greeting { margin-bottom: 26px; }
-  .greeting h1 {
-    font-family: 'Nunito', sans-serif;
-    font-size: 26px; font-weight: 900; color: #1a2332;
-  }
-  .greeting p { color: #4a5568; font-size: 14px; margin-top: 6px; }
+  .cont { position: relative; overflow: hidden; border-radius: 22px; background: var(--em50); padding: 18px 24px 20px; margin-bottom: 16px; }
+  .cont::after { content: ''; position: absolute; right: -60px; bottom: -90px; width: 300px; height: 220px; border-radius: 50%; background: var(--soft); }
+  .cont img { position: absolute; right: 30px; bottom: 0; height: 158px; z-index: 1; transform: scaleX(-1); }
+  .cont-body { position: relative; z-index: 2; width: 64%; }
+  .cont-eyebrow { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .cont-title { border-left: 3px solid var(--primary); padding-left: 11px; margin: 9px 0 10px; }
+  .cont-title b { display: block; font-size: 21px; font-weight: 800; }
+  .cont-title span { font-size: 12px; color: var(--mid); }
+  .cont-prog { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--mid); }
+  .cont-prog i { color: var(--citron-deep); font-style: normal; }
+  .bar { height: 8px; background: #fff; border-radius: 9px; margin: 5px 0 12px; overflow: hidden; }
+  .bar > div { height: 100%; width: 60%; background: var(--citron-deep); border-radius: 9px; }
+  .btn-teal { display: inline-flex; align-items: center; gap: 7px; background: var(--primary); color: #fff; font-weight: 800; font-size: 12.5px; border-radius: 999px; padding: 8px 18px; box-shadow: 0 6px 18px rgb(7 94 99 / .28); transition: transform .2s, background .2s; }
+  .btn-teal.press { transform: translateY(1px) scale(.97); background: var(--primary-hover); }
 
-  .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 24px; }
-  .stat-card {
-    background: #fff; border: 1px solid #e2e8f0; border-radius: 16px;
-    padding: 16px; display: flex; align-items: center; gap: 12px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-  }
-  .stat-icon {
-    width: 40px; height: 40px; border-radius: 12px;
-    display: flex; align-items: center; justify-content: center; font-size: 18px;
-  }
-  .stat-val { font-family: 'Nunito',sans-serif; font-size: 22px; font-weight: 900; color: #1a2332; }
-  .stat-lbl { font-size: 10px; font-weight: 600; color: #94a3b8; margin-top: 2px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 9px 0 16px; }
+  .stat { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 10px 12px; box-shadow: 0 1px 4px rgb(0 0 0 / .04); }
+  .stat-top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .stat-top span { width: 24px; height: 24px; border-radius: 7px; background: var(--soft); color: var(--primary); display: grid; place-items: center; }
+  .stat b { font-size: 19px; font-weight: 800; display: block; margin-top: 3px; }
+  .stat b small { font-size: 11px; font-weight: 700; color: var(--muted); margin-left: 2px; }
 
-  .section-hdr {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 14px;
-  }
-  .section-hdr h2 {
-    font-size: 10.5px; font-weight: 800; color: #94a3b8;
-    text-transform: uppercase; letter-spacing: 1.6px;
-  }
-  .section-hdr .see-all { font-size: 12px; color: #5B4DC7; font-weight: 600; cursor: pointer; }
+  .shelf { display: flex; gap: 12px; margin-top: 34px; }
+  .subj { position: relative; flex: 1 1 0; min-width: 0; background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 12px; box-shadow: 0 1px 5px rgb(0 0 0 / .04); transition: transform .25s, box-shadow .25s, border-color .25s; }
+  .subj.hover { transform: translateY(-3px); border-color: rgb(45 106 79 / .6); box-shadow: 0 10px 30px rgb(45 106 79 / .12); }
+  .subj .mascot { position: absolute; right: 2px; top: -42px; height: 50px; }
+  .subj-row { display: flex; align-items: center; gap: 10px; }
+  .subj-row .tile { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; }
+  .subj-row .tile img { width: 26px; height: 26px; object-fit: contain; }
+  .subj-row b { display: block; font-size: 13.5px; font-weight: 700; white-space: nowrap; }
+  .subj-row small { font-size: 11px; color: var(--muted); }
+  .subj-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; border-radius: 10px; padding: 7px 10px; font-size: 11.5px; font-weight: 700; }
 
-  .subjects-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
-  .subject-card {
-    background: #fff; border: 1px solid #e2e8f0; border-radius: 18px;
-    padding: 18px; cursor: pointer; transition: all 0.25s;
-    box-shadow: 0 1px 5px rgba(0,0,0,0.04);
-  }
-  .subject-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(91,77,199,0.1); }
-  .subject-card.highlight { border-color: rgba(91,77,199,0.5); box-shadow: 0 8px 28px rgba(91,77,199,0.18); transform: translateY(-2px); }
-  .subj-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-  .subj-icon {
-    width: 44px; height: 44px; border-radius: 14px;
-    display: flex; align-items: center; justify-content: center; font-size: 22px;
-  }
-  .subj-name { font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: 800; color: #1a2332; }
-  .subj-meta { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-  .progress-bar {
-    height: 7px; border-radius: 10px; background: #e2e8f0; overflow: hidden; margin-bottom: 12px;
-  }
-  .progress-fill { height: 100%; border-radius: 10px; transition: width 1s ease; }
-  .subj-btn {
-    width: 100%; padding: 9px 0; border-radius: 11px;
-    border: 1px solid rgba(91,77,199,0.25); background: transparent;
-    color: #5B4DC7; font-size: 12.5px; font-weight: 700;
-    cursor: pointer; font-family: 'DM Sans', sans-serif;
-    transition: all 0.2s;
-  }
-  .subj-btn:hover { background: #5B4DC7; color: #fff; border-color: transparent; }
-  .subj-btn.active { background: #5B4DC7; color: #fff; border-color: transparent; }
+  /* ── Chapter list ─────────────────────────────────────────────────────── */
+  .chap-page { position: absolute; left: 200px; right: 0; top: 0; bottom: 0; }
+  .page-head { display: flex; align-items: center; gap: 12px; background: #fff; border-bottom: 1px solid rgb(18 45 48 / .05); padding: 16px 28px; }
+  .back { width: 34px; height: 34px; border-radius: 50%; background: rgb(18 45 48 / .05); display: grid; place-items: center; color: var(--ink); }
+  .page-head .tile { width: 24px; height: 24px; border-radius: 7px; background: #E8F5EF; display: grid; place-items: center; }
+  .page-head .tile img { width: 16px; height: 16px; }
+  .page-head h1 { font-size: 18px; font-weight: 900; }
+  .chap-body { padding: 20px 28px; }
+  .chap-title { display: flex; align-items: flex-end; justify-content: space-between; margin: 6px 0 16px; }
+  .chap-title h2 { font-size: 26px; font-weight: 800; }
+  .chip-ready { background: var(--soft); color: var(--primary); font-size: 11.5px; font-weight: 800; border-radius: 999px; padding: 5px 12px; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .ctile { position: relative; overflow: hidden; aspect-ratio: 16 / 10; border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; justify-content: flex-end;
+    background: radial-gradient(60% 70% at 85% 10%, color-mix(in srgb, var(--b) 20%, transparent), transparent 70%), radial-gradient(55% 60% at 10% 100%, color-mix(in srgb, var(--a) 16%, transparent), transparent 70%), linear-gradient(160deg, var(--s0), var(--s1));
+    box-shadow: 0 1px 2px rgb(18 45 48 / .08), 0 8px 24px -12px var(--a); color: var(--k); transition: transform .3s; opacity: 0; transform: translateY(10px); }
+  .screen.on .ctile { animation: rise .5s ease forwards; }
+  .ctile.hover { transform: translateY(-4px) !important; }
+  .ctile .num { position: absolute; right: 10px; bottom: -22px; font-size: 112px; font-weight: 900; opacity: .16; line-height: 1; }
+  .ctile .pill { align-self: flex-start; font-size: 9.5px; font-weight: 800; letter-spacing: .1em; border-radius: 999px; padding: 3px 9px; background: color-mix(in srgb, var(--a) 12%, transparent); }
+  .ctile b { position: relative; font-size: 16px; font-weight: 800; margin: 6px 0 4px; line-height: 1.2; }
+  .ctile .go { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; color: var(--a); }
+  .opening { position: absolute; inset: 0; display: grid; place-items: center; background: rgb(255 255 255 / .72); backdrop-filter: blur(2px); font-weight: 800; font-size: 13px; color: var(--primary); opacity: 0; transition: opacity .3s; }
+  .opening.on { opacity: 1; }
+  .spin { animation: spin .9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes rise { to { opacity: 1; transform: none; } }
 
-  /* ── Page: Profile ───────────────────────────── */
-  .profile-header-row {
-    display: flex; align-items: center; gap: 14px; margin-bottom: 28px;
-  }
-  .back-btn {
-    width: 36px; height: 36px; border-radius: 10px;
-    background: #fff; border: 1px solid #e2e8f0;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; font-size: 16px; color: #4a5568;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04); transition: all 0.2s;
-  }
-  .back-btn:hover { background: #f0f0f0; }
-  .profile-title { font-family: 'Nunito', sans-serif; font-size: 22px; font-weight: 900; color: #1a2332; }
+  /* ── Lesson ────────────────────────────────────────────────────────────── */
+  .lesson { position: absolute; inset: 0; font-family: var(--lesson); padding: 10px 14px 14px;
+    background: radial-gradient(50% 40% at 0% 0%, rgb(217 242 121 / .28), transparent 70%), radial-gradient(45% 45% at 100% 100%, rgb(60 138 142 / .10), transparent 70%), radial-gradient(rgb(18 45 48 / .05) 1px, transparent 1.2px) 0 0 / 22px 22px, var(--canvas); }
+  .l-head { display: flex; align-items: center; gap: 12px; height: 48px; margin-bottom: 10px; }
+  .l-head > .logo { height: 34px; width: 188px; object-fit: contain; object-position: left; }
+  .crumb { font-size: 13px; color: rgb(18 45 48 / .66); }
+  .crumb b { color: var(--ink); }
+  .l-chip { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #E4E9E3; border-radius: 16px; padding: 5px 12px 5px 8px; }
+  .l-chip b { display: block; font-family: var(--display); font-size: 14px; line-height: 1.1; }
+  .l-chip small { font-size: 9.5px; color: rgb(18 45 48 / .66); }
+  .l-chip .disc { width: 24px; height: 24px; border-radius: 50%; background: var(--citron); display: grid; place-items: center; color: var(--ink); }
+  .l-x { width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 1px solid #E4E9E3; display: grid; place-items: center; }
+  .l-grid { display: grid; grid-template-columns: 188px 1fr 268px; gap: 12px; height: calc(100% - 58px); }
+  .panel { background: #fff; border: 1px solid #E4E9E3; border-radius: 22px; box-shadow: var(--ls-shadow); position: relative; overflow: hidden; }
+  .l-rail { background: linear-gradient(180deg, #F3F7EF, #EEF3EB); border: 1px solid #E4E9E3; border-radius: 22px; padding: 10px; display: flex; flex-direction: column; }
+  .rail-card { aspect-ratio: 16 / 10; border-radius: 16px; padding: 10px; display: flex; flex-direction: column; justify-content: flex-end; background: radial-gradient(60% 70% at 85% 10%, #21B3A433, transparent 70%), linear-gradient(160deg, #EEF0FF, #D6DBFF); color: #272A5C; }
+  .rail-card small { font-size: 8.5px; font-weight: 800; letter-spacing: .1em; color: #5B5BD6; }
+  .rail-card b { font-family: var(--display); font-size: 16px; font-weight: 600; }
+  .rail-h { font-family: var(--display); font-size: 13.5px; font-weight: 600; margin: 12px 4px 8px; }
+  .steps { position: relative; flex: 1; }
+  .step { position: relative; display: flex; gap: 9px; padding: 0 4px 12px; font-size: 11.5px; line-height: 1.25; color: rgb(18 45 48 / .66); }
+  .step:not(:last-child)::before { content: ''; position: absolute; left: 15px; top: 22px; bottom: 0; width: 2px; background: var(--strong); }
+  .step.done:not(:last-child)::before { background: var(--primary); }
+  .mk { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 2px var(--strong); display: grid; place-items: center; color: #fff; position: relative; z-index: 1; transition: background .3s, box-shadow .3s; }
+  .step.done { color: var(--ink); }
+  .step.done .mk { background: var(--primary); box-shadow: none; }
+  .step.cur { color: var(--primary); font-weight: 800; }
+  .step.cur .mk { background: var(--citron); box-shadow: none; }
+  .step.cur .mk::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }
+  .step .ty { display: none; font-size: 8.5px; letter-spacing: .1em; color: var(--muted); font-weight: 800; margin-top: 2px; }
+  .step.cur .ty { display: block; }
+  .rail-bar { height: 7px; border-radius: 8px; background: var(--soft); overflow: hidden; margin: 6px 4px 4px; }
+  .rail-bar div { height: 100%; width: 0; background: linear-gradient(90deg, #075E63, #B8D63F); border-radius: 8px; transition: width .6s ease; }
+  .rail-cap { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); padding: 0 4px; font-weight: 700; }
 
-  .profile-card {
-    background: #fff; border: 1px solid #e2e8f0; border-radius: 22px;
-    padding: 22px 24px; margin-bottom: 14px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
-  }
-  .card-section-hdr {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
-  }
-  .card-section-hdr span { font-size: 13px; }
-  .card-section-hdr h3 {
-    font-size: 10px; font-weight: 800; color: #94a3b8;
-    text-transform: uppercase; letter-spacing: 1.4px;
-  }
+  .b-top { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 8px; }
+  .seg { display: flex; background: var(--sage); border-radius: 999px; padding: 3px; }
+  .seg span { display: flex; align-items: center; gap: 6px; padding: 3px 12px 3px 3px; border-radius: 999px; font-family: var(--display); font-size: 12.5px; font-weight: 600; color: var(--ink); transition: background .3s, color .3s; }
+  .seg span i { width: 24px; height: 24px; border-radius: 50%; background: #fff; display: grid; place-items: center; color: var(--primary); font-style: normal; }
+  .seg span.on { background: var(--primary); color: #fff; }
+  .seg span.on i { background: var(--citron); color: var(--ink); }
+  .type-pill { background: var(--citron); font-family: var(--display); font-size: 10.5px; font-weight: 600; letter-spacing: .08em; border-radius: 999px; padding: 4px 11px; }
+  .paper { position: absolute; left: 12px; right: 12px; top: 50px; bottom: 50px; border: 1px solid #E4E9E3; border-radius: 18px; overflow: hidden;
+    background: linear-gradient(rgb(7 94 99 / .04) 1px, transparent 1px) 0 0 / 30px 30px, linear-gradient(90deg, rgb(7 94 99 / .04) 1px, transparent 1px) 0 0 / 30px 30px, #FBFBF8; }
+  .b-title { position: absolute; left: 18px; top: 10px; font-family: var(--hand); font-size: 23px; font-weight: 700; color: var(--primary); }
+  .b-title svg { position: absolute; left: 0; bottom: -4px; width: 100%; height: 10px; }
+  .reveal { clip-path: inset(0 100% 0 0); transition: clip-path 1.1s steps(18, end); }
+  .reveal.in { clip-path: inset(0 0 0 0); }
+  .draw { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .9s ease; }
+  .draw.in { stroke-dashoffset: 0; }
+  .sketch { position: absolute; left: 20px; top: 62px; font-family: var(--hand); color: var(--ink); }
+  .sketch .big { font-size: 46px; font-weight: 700; letter-spacing: .06em; }
+  .sketch .sum { font-size: 22px; margin-top: 4px; }
+  .sketch .sum em { font-style: normal; color: var(--primary); font-weight: 700; }
+  .board-empty { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--hand); font-size: 18px; color: rgb(18 45 48 / .45); transition: opacity .4s; }
+  .chips { position: absolute; left: 12px; right: 12px; bottom: 11px; display: flex; gap: 7px; }
+  .qchip { display: flex; align-items: center; gap: 5px; background: #fff; border: 1px solid #E4E9E3; border-radius: 999px; padding: 5px 10px; font-family: var(--display); font-size: 11.5px; font-weight: 500; transition: background .2s, transform .2s; }
+  .qchip svg { color: var(--primary); }
+  .qchip.press { background: var(--soft); transform: scale(.96); }
 
-  .partner-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 0; border-bottom: 1px solid #f1f5f9;
-  }
-  .partner-row:last-child { border-bottom: none; }
-  .partner-logo {
-    width: 36px; height: 36px; border-radius: 10px;
-    background: linear-gradient(135deg, #042E5C, #0a4a8a);
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 10px; font-weight: 800;
-  }
-  .partner-name { font-size: 13px; font-weight: 600; color: #1a2332; }
-  .partner-sub { font-size: 10px; color: #94a3b8; }
-  .partner-status {
-    margin-left: auto; font-size: 11px; font-weight: 700;
-    padding: 4px 10px; border-radius: 20px;
-  }
-  .status-pending { background: #fff7ed; color: #f97316; }
-  .status-approved { background: #ecfdf5; color: #059669; }
+  .sk { border: 2px solid var(--ink); background: #fffdf6; border-radius: 18px 6px 20px 8px / 8px 20px 6px 18px; box-shadow: 4px 5px 0 rgb(18 45 48 / .12); }
+  .sk-sm { border: 1.6px solid var(--ink); background: #fffdf6; border-radius: 10px 4px 11px 5px / 5px 11px 4px 10px; }
+  .stepcard { position: absolute; right: 14px; bottom: 14px; width: 236px; padding: 12px 14px; font-family: var(--hand); opacity: 0; transform: translateY(14px) rotate(.6deg); transition: opacity .45s, transform .45s; }
+  .stepcard.on { opacity: 1; transform: rotate(.6deg); }
+  .sc-eye { display: inline-block; font-size: 12px; font-weight: 700; color: var(--primary); background: linear-gradient(transparent 60%, rgb(217 242 121 / .9) 60% 95%, transparent 95%); }
+  .sc-q { font-size: 16px; font-weight: 700; line-height: 1.25; margin: 4px 0 8px; }
+  .sc-in { display: flex; align-items: baseline; border-bottom: 2px dashed var(--strong); padding: 2px 2px 3px; font-size: 18px; min-height: 30px; }
+  .sc-in .ph { color: rgb(18 45 48 / .35); }
+  .sc-in .ghost { color: var(--primary); margin-left: 4px; opacity: 0; transition: opacity .3s; }
+  .sc-in .ghost.on { opacity: 1; }
+  .caret { display: inline-block; width: 2px; height: 18px; background: var(--primary); margin-left: 1px; animation: blink 1s steps(1) infinite; vertical-align: -2px; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .sc-btns { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+  .sc-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; padding: 3px 9px; transition: background .2s, transform .2s, color .2s; }
+  .sc-btn.teal { background: var(--primary); color: #fff; border-color: var(--ink); }
+  .sc-btn.press { background: var(--citron); color: var(--ink); transform: rotate(-1deg) scale(.97); }
+  .keys { display: none; grid-template-columns: repeat(8, 1fr); gap: 3px; margin-top: 8px; }
+  .keys.on { display: grid; animation: rise .35s ease forwards; opacity: 0; transform: translateY(4px); }
+  .keys span { height: 22px; display: grid; place-items: center; font-family: var(--lesson); font-size: 10px; font-weight: 800; }
+  .keys span.press { background: var(--citron); }
+  .keys-note { display: none; font-family: var(--lesson); font-size: 9px; color: var(--muted); margin-top: 4px; }
+  .keys.on + .keys-note { display: block; }
+  .result { position: absolute; z-index: 8; right: 150px; top: 150px; font-family: var(--hand); font-size: 18px; font-weight: 700; padding: 6px 14px; background: var(--citron); opacity: 0; transform: scale(.6) rotate(-1deg); transition: opacity .3s, transform .45s cubic-bezier(.3, 1.6, .5, 1); }
+  .result.on { opacity: 1; transform: scale(1) rotate(-1deg); }
 
-  .add-partner-row {
-    display: flex; align-items: center; gap: 10px;
-    margin-top: 12px;
-  }
-  .partner-select {
-    flex: 1; padding: 10px 14px; border-radius: 12px;
-    border: 1px solid #e2e8f0; background: #f8fafc;
-    font-size: 13px; color: #1a2332; font-family: 'DM Sans', sans-serif;
-    outline: none; transition: border-color 0.2s;
-  }
-  .partner-select:focus { border-color: #5B4DC7; }
-  .send-btn {
-    padding: 10px 20px; border-radius: 12px;
-    background: #5B4DC7; color: #fff;
-    font-size: 13px; font-weight: 700; border: none;
-    cursor: pointer; font-family: 'DM Sans', sans-serif;
-    transition: all 0.2s; white-space: nowrap;
-  }
-  .send-btn:hover { background: #4a3db0; }
-  .send-btn.sending { background: #94a3b8; }
-  .send-btn.sent { background: #059F6D; }
+  .chat { display: flex; flex-direction: column; }
+  .msgs { flex: 1; overflow: hidden; padding: 12px 12px 4px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; }
+  .msg { display: flex; gap: 7px; align-items: flex-start; animation: rise .35s ease forwards; opacity: 0; transform: translateY(8px); }
+  .msg.me { flex-direction: row-reverse; }
+  .tmark { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--soft); box-shadow: 0 0 0 2px #fff; display: grid; place-items: center; }
+  .tmark img { width: 18px; height: 18px; }
+  .tmark.breathe { animation: breathe 1.4s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.08); box-shadow: 0 0 0 2px #fff, 0 0 0 6px rgb(217 242 121 / .5); } }
+  .msg .av { width: 28px; height: 28px; }
+  .bub { max-width: 86%; font-size: 12.5px; line-height: 1.45; padding: 8px 11px; border-radius: 16px; }
+  .msg.nia .bub { background: var(--tutor-bubble); border-top-left-radius: 5px; }
+  .msg.me .bub { background: var(--soft); border-bottom-right-radius: 5px; }
+  .bub .cc { display: inline-block; width: 7px; height: 12px; background: var(--citron-deep); border-radius: 2px; margin-left: 2px; vertical-align: -1px; }
+  .dots { display: flex; gap: 4px; padding: 4px 2px; }
+  .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); animation: dot 1s ease-in-out infinite; }
+  .dots i:nth-child(2) { animation-delay: .15s; } .dots i:nth-child(3) { animation-delay: .3s; }
+  @keyframes dot { 50% { transform: translateY(-4px); opacity: .5; } }
+  .hindi { font-family: 'Mukta', var(--lesson); font-weight: 500; }
 
-  .parent-input-row {
-    display: flex; align-items: center; gap: 10px; margin-top: 8px;
-  }
-  .parent-input {
-    flex: 1; padding: 10px 14px; border-radius: 12px;
-    border: 1px solid #e2e8f0; background: #f8fafc;
-    font-size: 13px; color: #1a2332; font-family: 'DM Sans', sans-serif;
-    outline: none;
-  }
-  .add-btn {
-    padding: 10px 16px; border-radius: 12px;
-    background: #2D6A4F; color: #fff;
-    font-size: 13px; font-weight: 700; border: none;
-    cursor: pointer; font-family: 'DM Sans', sans-serif;
-  }
+  .composer { margin: 8px 10px 10px; background: #fff; border: 1px solid var(--strong); border-radius: 18px; padding: 8px 9px 7px; transition: border-color .2s, box-shadow .2s; position: relative; }
+  .composer.focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgb(7 94 99 / .07); }
+  .c-text { font-size: 12.5px; min-height: 20px; padding: 0 3px 6px; color: var(--ink); }
+  .c-text .ph { color: rgb(18 45 48 / .4); }
+  .c-row { display: flex; align-items: center; gap: 6px; }
+  .c-mic { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--primary); background: var(--sage); transition: background .2s; }
+  .c-mic.press { background: var(--citron); }
+  .lang { display: flex; align-items: center; gap: 4px; height: 26px; border: 1px solid #E4E9E3; border-radius: 999px; padding: 0 8px; font-size: 11px; font-weight: 700; color: var(--ink); transition: border-color .2s; }
+  .lang.press { border-color: var(--primary); background: var(--sage); }
+  .c-send { margin-left: auto; width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: #fff; display: grid; place-items: center; transition: transform .2s; }
+  .c-send.press { transform: scale(.9); }
+  .wave { flex: 1; display: none; align-items: center; gap: 2px; height: 24px; }
+  .wave i { flex: 1; background: var(--primary); border-radius: 2px; height: 20%; animation: wv .7s ease-in-out infinite alternate; }
+  @keyframes wv { to { height: 95%; } }
+  .c-timer { display: none; font-size: 10.5px; font-weight: 700; color: var(--muted); width: 26px; }
+  .composer.dictating .wave, .composer.dictating .c-timer { display: flex; }
+  .composer.dictating .c-mic, .composer.dictating .c-send { display: none; }
+  .c-cancel, .c-done { display: none; width: 28px; height: 28px; border-radius: 50%; place-items: center; }
+  .c-cancel { border: 1px solid #E4E9E3; }
+  .c-done { background: var(--primary); color: #fff; }
+  .composer.dictating .c-cancel, .composer.dictating .c-done { display: grid; }
+  .langmenu { position: absolute; left: 34px; bottom: 40px; width: 128px; background: #fff; border: 1px solid #E4E9E3; border-radius: 14px; box-shadow: 0 14px 30px -12px rgb(18 45 48 / .3); padding: 4px; font-size: 12px; font-weight: 600; opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity .25s, transform .25s; z-index: 6; }
+  .langmenu.on { opacity: 1; transform: none; }
+  .langmenu div { padding: 5px 9px; border-radius: 9px; font-family: 'Mukta', var(--lesson); }
+  .langmenu div.sel { background: var(--soft); color: var(--primary); }
+  .voice { display: none; margin: 8px 10px 10px; background: #fff; border: 1px solid var(--strong); border-radius: 18px; padding: 10px; }
+  .voice.on { display: block; animation: rise .35s ease forwards; opacity: 0; }
+  .chat.voicing .composer { display: none; }
+  .v-heard { font-size: 11.5px; font-style: italic; color: var(--mid); text-align: center; min-height: 16px; margin-bottom: 6px; }
+  .v-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .fan { display: flex; align-items: center; gap: 2px; height: 30px; }
+  .fan i { width: 3px; border-radius: 2px; background: var(--primary); height: 20%; animation: wv .55s ease-in-out infinite alternate; }
+  .voice.speaking .fan i { background: var(--citron-deep); }
+  .v-mic { width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: #fff; display: grid; place-items: center; box-shadow: 0 0 0 4px rgb(217 242 121 / .7); }
+  .v-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; font-size: 10.5px; font-weight: 700; }
+  .v-status { display: flex; align-items: center; gap: 5px; color: var(--primary); }
+  .v-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: blink 1.2s steps(1) infinite; }
+  .v-end { display: flex; align-items: center; gap: 4px; color: #B4232C; border: 1px solid #F1D4D2; border-radius: 999px; padding: 3px 9px; }
 
-  /* ── Page: Chat ──────────────────────────────── */
-  .chat-header {
-    display: flex; align-items: center; gap: 14px;
-    padding: 16px 24px; background: #fff;
-    border-bottom: 1px solid #e2e8f0;
-    position: sticky; top: 0; z-index: 10;
-  }
-  .chat-subj-icon {
-    width: 38px; height: 38px; border-radius: 12px;
-    display: flex; align-items: center; justify-content: center; font-size: 20px;
-  }
-  .chat-title { font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 800; color: #1a2332; }
-  .chat-sub { font-size: 11px; color: #94a3b8; }
+  /* ── Profile ──────────────────────────────────────────────────────────── */
+  .prof { position: absolute; left: 200px; right: 0; top: 0; bottom: 0; padding: 20px 26px;
+    background: radial-gradient(40% 35% at 100% 0%, rgb(220 235 231 / .9), transparent 70%), radial-gradient(35% 35% at 100% 100%, rgb(217 242 121 / .25), transparent 70%), var(--canvas); }
+  .prof-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .prof-head .back { width: 38px; height: 38px; background: rgb(220 235 231 / .7); color: var(--primary); }
+  .prof-head h1 { font-size: 24px; font-weight: 800; line-height: 1.1; }
+  .prof-head p { font-size: 12px; color: var(--mid); }
+  .pcard { background: #fff; border: 1px solid var(--border); border-radius: 22px; padding: 14px 18px; box-shadow: 0 1px 2px rgb(18 45 48 / .04), 0 14px 34px -24px rgb(18 45 48 / .28); }
+  .hero { display: flex; align-items: center; gap: 18px; margin-bottom: 14px; }
+  .hero .avatar { width: 84px; height: 84px; border-width: 4px; }
+  .hero h2 { font-size: 24px; font-weight: 800; }
+  .hero .gr { font-size: 12px; color: rgb(7 94 99 / .8); font-weight: 700; }
+  .ai-pill { display: inline-flex; align-items: center; gap: 5px; background: var(--soft); color: var(--primary); border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 800; margin-top: 6px; }
+  .hero-stats { margin-left: auto; display: flex; gap: 22px; }
+  .hs { display: flex; align-items: center; gap: 9px; }
+  .hs span { width: 38px; height: 38px; border-radius: 50%; background: var(--soft); color: var(--primary); display: grid; place-items: center; }
+  .hs b { display: block; font-size: 17px; font-weight: 800; }
+  .hs small { font-size: 10.5px; color: var(--muted); }
+  .pgrid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; }
+  .ph { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
+  .ph .ci { width: 38px; height: 38px; border-radius: 50%; background: rgb(220 235 231 / .7); color: var(--primary); display: grid; place-items: center; }
+  .ph b { display: block; font-size: 15px; font-weight: 800; }
+  .ph small { font-size: 11.5px; color: var(--mid); }
+  .pref { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid #EEF1EC; }
+  .pref .pi { width: 30px; height: 30px; border-radius: 10px; background: var(--canvas); color: var(--primary); display: grid; place-items: center; }
+  .pref b { display: block; font-size: 12.5px; font-weight: 700; }
+  .pref small { font-size: 10.5px; color: var(--muted); }
+  .pref > div:not(.ctl) { flex: 1; min-width: 0; }
+  .pref .ctl { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-shrink: 0; white-space: nowrap; }
+  .select { border: 1px solid var(--border); border-radius: 10px; padding: 5px 9px; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .play { width: 30px; height: 30px; border-radius: 50%; background: var(--citron); display: grid; place-items: center; color: var(--ink); }
+  .pseg { display: flex; background: var(--canvas); border: 1px solid var(--border); border-radius: 999px; padding: 2px; font-size: 11px; font-weight: 700; }
+  .pseg span { padding: 4px 10px; border-radius: 999px; transition: background .25s, color .25s; color: var(--mid); }
+  .pseg span.on { background: var(--primary); color: #fff; }
+  .ptt-line { font-size: 10.5px; color: var(--muted); padding-left: 40px; height: 18px; }
+  .kcap { display: inline-block; border: 1px solid var(--strong); border-bottom-width: 2px; border-radius: 6px; padding: 0 6px; font-weight: 800; color: var(--ink); background: #fff; }
+  .status { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 800; background: #fdeeea; color: #B0453B; transition: background .3s, color .3s; }
+  .status.sent { background: var(--citron); color: var(--ink); }
+  .btn-sec { display: inline-flex; align-items: center; gap: 6px; background: var(--primary); color: #fff; border-radius: 12px; padding: 8px 14px; font-size: 12px; font-weight: 800; margin-top: 10px; transition: transform .2s; }
+  .btn-sec.press { transform: scale(.96); }
+  .g-input { display: none; align-items: center; gap: 6px; margin-top: 10px; }
+  .g-input.on { display: flex; animation: rise .3s ease forwards; opacity: 0; }
+  .g-input .field { flex: 1; border: 1px solid var(--primary); box-shadow: 0 0 0 3px rgb(7 94 99 / .07); border-radius: 10px; padding: 7px 9px; font-size: 12px; min-height: 32px; }
+  .privacy { display: flex; gap: 7px; align-items: flex-start; margin-top: 12px; background: rgb(220 235 231 / .6); border-radius: 12px; padding: 8px 10px; font-size: 10.5px; color: var(--mid); line-height: 1.4; }
+  .privacy svg { color: var(--primary); }
 
-  .chat-page { padding: 0; display: flex; flex-direction: column; height: 100%; }
-  .chat-messages { flex: 1; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+  /* ── Title cards (intro, outro) ───────────────────────────────────────── */
+  .card-screen { position: absolute; inset: 0; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    background: radial-gradient(60% 60% at 15% 10%, rgb(217 242 121 / .22), transparent 70%), radial-gradient(60% 60% at 90% 100%, rgb(60 138 142 / .5), transparent 70%), linear-gradient(160deg, #0B474B, #075E63 55%, #0B3A3E); }
+  .card-screen::before { content: ''; position: absolute; inset: 0; background: url(/patterns/auth-doodles-v2.webp) center / 520px; opacity: .07; }
+  .nia-big { position: relative; width: 132px; height: 132px; border-radius: 40px; background: #fff; display: grid; place-items: center; box-shadow: 0 0 0 10px rgb(217 242 121 / .25), 0 30px 60px -20px rgb(0 0 0 / .5); }
+  .nia-big img { width: 92px; }
+  /* The wordmark knocked out to white on the dark ocean, as GenEdLogo onDark does in the app. */
+  .intro-logo { position: relative; }
+  .intro-logo img { display: block; height: 120px; filter: brightness(0) invert(1) drop-shadow(0 12px 28px rgb(0 0 0 / .35)); }
+  .outro-logo img { height: 104px; }
+  .screen.on .intro-logo:not(.outro-logo) { animation: pop .7s cubic-bezier(.3, 1.5, .5, 1) both; }
+  @keyframes pop { from { opacity: 0; transform: scale(.7) rotate(-4deg); } to { opacity: 1; transform: none; } }
+  .screen.on .nia-big { animation: hop 2.4s ease-in-out infinite; }
+  @keyframes hop { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-10px) rotate(3deg); } }
+  .card-screen h1 { position: relative; font-family: var(--display); font-weight: 700; font-size: 44px; margin-top: 30px; letter-spacing: -.01em; }
+  .card-screen h1 .mk2 { color: var(--ink); background: var(--citron); border-radius: 12px; padding: 0 12px; display: inline-block; transform: rotate(-2deg); }
+  .card-screen p { position: relative; font-size: 17px; color: #CFE3DF; margin-top: 10px; max-width: 480px; line-height: 1.45; }
+  .screen.on .card-screen h1, .screen.on .card-screen p, .screen.on .route { opacity: 0; animation: rise .6s ease forwards; }
+  .screen.on .card-screen h1 { animation-delay: .25s; } .screen.on .card-screen p { animation-delay: .5s; } .screen.on .route { animation-delay: .8s; }
+  .route { position: relative; display: flex; gap: 10px; margin-top: 28px; }
+  .route > span { display: flex; align-items: center; gap: 7px; background: rgb(255 255 255 / .1); border: 1px solid rgb(255 255 255 / .16); border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 700; color: #fff; }
+  .route > span b { width: 20px; height: 20px; border-radius: 50%; background: var(--citron); color: var(--ink); display: grid; place-items: center; font-size: 11px; }
+  .outro-row { position: relative; display: flex; align-items: center; gap: 30px; }
+  .outro-row .trophy { width: 132px; height: 132px; border-radius: 40px; background: #fff; display: grid; place-items: center; overflow: hidden; transform: rotate(4deg); box-shadow: 0 0 0 10px rgb(217 242 121 / .25), 0 30px 60px -20px rgb(0 0 0 / .5); }
+  .outro-row .trophy img { width: 118px; }
+  .end-btns { position: relative; display: flex; gap: 12px; margin-top: 28px; }
+  .end-btns button { font-family: var(--app); font-size: 15px; font-weight: 800; border-radius: 16px; padding: 13px 26px; border: 0; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: transform .15s, background .15s; }
+  .end-btns button:hover { transform: translateY(-2px); }
+  .end-btns .go { background: var(--citron); color: var(--ink); box-shadow: 0 10px 26px -10px rgb(217 242 121 / .8); }
+  .end-btns .again { background: rgb(255 255 255 / .1); color: #fff; border: 1.5px solid rgb(255 255 255 / .22); }
+  .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .confetti i { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(640px) rotate(540deg); } }
 
-  .msg { display: flex; gap: 10px; max-width: 80%; }
-  .msg.ai { align-self: flex-start; }
-  .msg.student { align-self: flex-end; flex-direction: row-reverse; }
-  .msg-avatar {
-    width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-  }
-  .msg-avatar.ai-av { background: linear-gradient(135deg, #EBF3FB, #D4E6F7); }
-  .msg-avatar.stu-av { background: linear-gradient(135deg, rgba(91,77,199,0.2), rgba(74,144,217,0.2)); color: #8B7FE8; font-weight: 800; font-size: 13px; }
-  .bubble {
-    padding: 12px 16px; border-radius: 16px;
-    font-size: 13.5px; line-height: 1.6; color: #1a2332;
-  }
-  .bubble.ai-bubble {
-    background: #fff; border: 1px solid #e2e8f0;
-    border-radius: 4px 16px 16px 16px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-  }
-  .bubble.stu-bubble {
-    background: linear-gradient(135deg, #5B4DC7, #4A90D9);
-    color: #fff; border-radius: 16px 4px 16px 16px;
-  }
-  .bubble .hi { font-weight: 700; }
-  .bubble .chapter-pill {
-    display: inline-block; margin-top: 8px;
-    background: #EBF3FB; color: #4A90D9;
-    padding: 4px 12px; border-radius: 20px;
-    font-size: 12px; font-weight: 700; cursor: pointer;
-    transition: all 0.2s;
-  }
-  .bubble .chapter-pill:hover { background: #4A90D9; color: #fff; }
-  .bubble .chapter-pill.selected { background: #5B4DC7; color: #fff; }
+  /* ── Cursor and tap ripple ─────────────────────────────────────────────── */
+  .cursor { position: absolute; left: 0; top: 0; width: 30px; height: 30px; margin: -5px 0 0 -5px; z-index: 50; pointer-events: none; transform: translate(620px, 360px); opacity: 0; transition: opacity .3s; }
+  .cursor.on { opacity: 1; }
+  .cursor img { width: 30px; height: 30px; display: block; transition: transform .15s; filter: drop-shadow(0 3px 6px rgb(18 45 48 / .25)); }
+  .cursor.tap img { transform: scale(.8); }
+  .ripple { position: absolute; z-index: 49; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; border: 3px solid var(--citron); pointer-events: none; animation: ripple .55s ease-out forwards; }
+  @keyframes ripple { from { transform: scale(.2); opacity: 1; } to { transform: scale(1.2); opacity: 0; } }
 
-  .chat-input-area {
-    padding: 14px 24px; background: #fff;
-    border-top: 1px solid #e2e8f0;
-    display: flex; gap: 10px; align-items: flex-end;
-  }
-  .chat-input {
-    flex: 1; padding: 11px 16px; border-radius: 14px;
-    border: 1.5px solid #e2e8f0; background: #f8fafc;
-    font-size: 13.5px; color: #1a2332; font-family: 'DM Sans', sans-serif;
-    outline: none; resize: none; transition: border-color 0.2s;
-    min-height: 44px; max-height: 100px;
-  }
-  .chat-input:focus { border-color: #5B4DC7; }
-  .send-icon-btn {
-    width: 44px; height: 44px; border-radius: 14px;
-    background: linear-gradient(135deg, #5B4DC7, #4A90D9);
-    border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; font-size: 18px; transition: all 0.2s;
-  }
-  .send-icon-btn:hover { transform: scale(1.06); }
+  /* ── Caption + controls (outside the stage, real pixel sizes) ─────────── */
+  .dock { flex-shrink: 0; display: flex; align-items: center; gap: 14px; padding: 10px 16px; background: #0F2E31; border-top: 1px solid rgb(255 255 255 / .06); min-height: 70px; }
+  .say { flex: 1; min-width: 0; display: flex; align-items: center; gap: 11px; }
+  .say-av { flex-shrink: 0; display: grid; place-items: center; }
+  .say-av img { height: 34px; display: block; filter: brightness(0) invert(1); }
+  .say-av.talk { animation: talk .5s ease-in-out 3; }
+  @keyframes talk { 50% { transform: scale(1.1) rotate(-4deg); } }
+  .say-text { color: #F1F6F2; font-family: var(--display); font-weight: 500; font-size: 17px; line-height: 1.3; transition: opacity .25s, transform .25s; }
+  .say-text.out { opacity: 0; transform: translateY(4px); }
+  .say-text b { font-weight: 600; color: var(--ink); background: var(--citron); border-radius: 6px; padding: 0 5px; }
+  .ctrl { flex-shrink: 0; display: flex; align-items: center; gap: 10px; }
+  .pp { width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--citron); color: var(--ink); display: grid; place-items: center; cursor: pointer; transition: transform .15s; }
+  .pp:hover { transform: scale(1.06); }
+  .pp:focus-visible, .chap:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .chaps { display: flex; gap: 4px; }
+  .chap { position: relative; width: 34px; height: 22px; border: 0; background: transparent; cursor: pointer; padding: 0; }
+  .chap::before { content: ''; position: absolute; left: 0; right: 0; top: 9px; height: 5px; border-radius: 5px; background: rgb(255 255 255 / .16); }
+  .chap span { position: absolute; left: 0; top: 9px; height: 5px; border-radius: 5px; background: var(--citron); width: 0; }
+  .chap:hover::before { background: rgb(255 255 255 / .3); }
+  .chap-label { color: rgb(255 255 255 / .55); font-size: 11.5px; font-weight: 700; min-width: 108px; text-align: right; white-space: nowrap; }
 
-  /* ── Cursor ──────────────────────────────────── */
-  .cursor {
-    position: absolute; width: 20px; height: 20px; pointer-events: none;
-    z-index: 9999; transition: top 0.5s cubic-bezier(.4,0,.2,1), left 0.5s cubic-bezier(.4,0,.2,1);
+  @media (max-width: 640px) {
+    .dock { flex-wrap: wrap; gap: 8px 10px; padding: 9px 12px; }
+    .say { flex-basis: 100%; }
+    .say-av img { height: 26px; }
+    .say-text { font-size: 14.5px; }
+    .ctrl { width: 100%; justify-content: space-between; }
+    .pp { width: 32px; height: 32px; }
+    .chaps { flex: 1; }
+    .chap { flex: 1; width: auto; }
+    .chap-label { display: none; }
   }
-  .cursor svg { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
-  .cursor-ring {
-    position: absolute; inset: -6px;
-    border: 2px solid rgba(91,77,199,0.5); border-radius: 50%;
-    animation: ring-pulse 1s ease-in-out infinite;
-    opacity: 0;
+  @media (prefers-reduced-motion: reduce) {
+    .nia-big, .spot, .wave i, .fan i, .tmark.breathe { animation: none !important; }
   }
-  @keyframes ring-pulse {
-    0%   { transform: scale(0.7); opacity: 0.8; }
-    100% { transform: scale(2);   opacity: 0; }
-  }
-  .cursor-click .cursor-ring { animation: none; opacity: 0; }
-  .cursor.clicking { animation: cursor-click-anim 0.2s ease; }
-  @keyframes cursor-click-anim {
-    0%  { transform: scale(1); }
-    40% { transform: scale(0.78); }
-    100%{ transform: scale(1); }
-  }
-
-  /* ── Tooltip label ───────────────────────────── */
-  .tooltip-label {
-    position: absolute; z-index: 9998;
-    background: #1C2333; color: #fff;
-    font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif;
-    padding: 6px 12px; border-radius: 8px; white-space: nowrap;
-    opacity: 0; transform: translateY(4px);
-    transition: opacity 0.3s, transform 0.3s;
-    pointer-events: none;
-  }
-  .tooltip-label.show { opacity: 1; transform: translateY(0); }
-  .tooltip-label::before {
-    content: ''; position: absolute; top: -5px; left: 14px;
-    border: 5px solid transparent; border-bottom-color: #1C2333;
-    border-top: none;
-  }
-
-  /* ── Progress dots (3 steps) ─────────────────── */
-  .progress-dots {
-    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
-    display: flex; gap: 6px; z-index: 500;
-  }
-  .pdot {
-    width: 6px; height: 6px; border-radius: 3px;
-    background: rgba(91,77,199,0.2); transition: all 0.3s;
-  }
-  .pdot.active { background: #5B4DC7; width: 20px; }
-
-  /* ── Modal overlay ───────────────────────────── */
-  .modal-overlay {
-    position: absolute; inset: 0;
-    background: rgba(0,0,0,0.3); backdrop-filter: blur(4px);
-    z-index: 800; display: flex; align-items: center; justify-content: center;
-    opacity: 0; transition: opacity 0.3s; pointer-events: none;
-  }
-  .modal-overlay.show { opacity: 1; pointer-events: all; }
-  .modal-box {
-    background: #fff; border-radius: 24px; padding: 36px 32px;
-    width: 340px; text-align: center;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-    transform: scale(0.9) translateY(20px);
-    transition: transform 0.35s cubic-bezier(.4,0,.2,1);
-  }
-  .modal-overlay.show .modal-box { transform: scale(1) translateY(0); }
-  .modal-icon {
-    width: 60px; height: 60px; border-radius: 18px; margin: 0 auto 16px;
-    display: flex; align-items: center; justify-content: center; font-size: 28px;
-  }
-  .modal-title { font-family: 'Nunito', sans-serif; font-size: 18px; font-weight: 900; color: #1a2332; margin-bottom: 8px; }
-  .modal-body { font-size: 13px; color: #4a5568; line-height: 1.6; margin-bottom: 24px; }
-  .modal-cta {
-    width: 100%; padding: 13px; border-radius: 14px;
-    background: #059F6D; color: #fff; font-weight: 800; font-size: 14px;
-    border: none; cursor: pointer; font-family: 'DM Sans', sans-serif;
-  }
-
-  /* ── Typing indicator ────────────────────────── */
-  .typing-dots { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
-  .typing-dots span {
-    width: 7px; height: 7px; border-radius: 50%; background: #94a3b8;
-    animation: typing 1.2s ease-in-out infinite;
-  }
-  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes typing {
-    0%,60%,100% { transform: translateY(0); opacity: 0.4; }
-    30% { transform: translateY(-5px); opacity: 1; }
-  }
-
-  /* ── Highlight ring ──────────────────────────── */
-  .highlight-ring {
-    position: absolute; border-radius: 12px; pointer-events: none;
-    border: 2px solid #5B4DC7; z-index: 900;
-    opacity: 0; transition: opacity 0.3s;
-    box-shadow: 0 0 0 4px rgba(91,77,199,0.15);
-  }
-  .highlight-ring.show { opacity: 1; }
-
-  /* ── Scroll indicator ────────────────────────── */
-  .scroll-hint {
-    position: absolute; right: 14px;
-    background: #5B4DC7; color: #fff;
-    font-size: 11px; font-weight: 700;
-    padding: 6px 12px; border-radius: 20px;
-    display: flex; align-items: center; gap: 6px;
-    z-index: 900; opacity: 0; transition: opacity 0.3s;
-    pointer-events: none;
-  }
-  .scroll-hint.show { opacity: 1; }
-
-  /* ── Chapter select pills ────────────────────── */
-  .chapter-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .ch-pill {
-    padding: 6px 14px; border-radius: 20px;
-    border: 1.5px solid #e2e8f0; background: #f8fafc;
-    font-size: 12px; font-weight: 600; color: #4a5568;
-    cursor: pointer; transition: all 0.2s;
-  }
-  .ch-pill:hover { border-color: #5B4DC7; color: #5B4DC7; }
-  .ch-pill.chosen { background: #5B4DC7; border-color: #5B4DC7; color: #fff; }
-
-  /* ── End screen ──────────────────────────────── */
-  .end-screen {
-    position: absolute; inset: 0;
-    background: linear-gradient(135deg, #042E5C, #0a4a8a);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    z-index: 2000; opacity: 0; pointer-events: none;
-    transition: opacity 0.6s;
-  }
-  .end-screen.show { opacity: 1; pointer-events: all; }
-  .end-logo { font-family: 'Nunito', sans-serif; font-size: 36px; font-weight: 900; color: #fff; margin-bottom: 10px; }
-  .end-sub { color: rgba(255,255,255,0.65); font-size: 15px; margin-bottom: 36px; }
-  .end-restart {
-    padding: 14px 36px; border-radius: 16px;
-    background: #059F6D; color: #fff;
-    font-weight: 800; font-size: 15px; border: none;
-    cursor: pointer; font-family: 'DM Sans', sans-serif;
-    transition: all 0.2s; box-shadow: 0 8px 24px rgba(5,159,109,0.35);
-  }
-  .end-restart:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(5,159,109,0.4); }
-
-  /* ── Captions ────────────────────────────────── */
-  .caption-bar {
-    position: absolute; top: 44px; left: 50%; transform: translateX(-50%);
-    background: rgba(28,35,51,0.95); color: #fff;
-    font-size: 15px; font-weight: 600; line-height: 1.6;
-    padding: 12px 28px; border-radius: 16px;
-    z-index: 3000; opacity: 0; transition: opacity 0.4s;
-    pointer-events: none;
-    backdrop-filter: blur(8px);
-    max-width: 720px; text-align: center; white-space: normal;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-  }
-  .caption-bar.show { opacity: 1; }
-
-  /* ── Step card (scene transition overlay) ────── */
-  .step-card {
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%) scale(0.8);
-    background: linear-gradient(135deg, #5B4DC7, #4A3DB0); color: #fff;
-    font-family: 'Nunito', sans-serif;
-    border-radius: 24px;
-    z-index: 4000; opacity: 0;
-    transition: opacity 0.4s, transform 0.4s;
-    pointer-events: none;
-    box-shadow: 0 16px 48px rgba(91,77,199,0.5);
-    display: flex; flex-direction: column; align-items: center; gap: 16px;
-    padding: 28px 44px;
-    text-align: center;
-  }
-  .step-card.show { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: all; }
-  .step-card-title {
-    font-size: 22px; font-weight: 900;
-    white-space: nowrap;
-  }
-  .step-card-sub {
-    font-size: 13px; font-weight: 500;
-    color: rgba(255,255,255,0.65);
-    margin-top: -8px;
-  }
-  .step-next-btn {
-    background: #059F6D; color: #fff;
-    border: none; cursor: pointer;
-    font-family: 'Nunito', sans-serif;
-    font-size: 15px; font-weight: 800;
-    padding: 12px 36px; border-radius: 14px;
-    transition: all 0.2s;
-    box-shadow: 0 6px 20px rgba(5,159,109,0.35);
-  }
-  .step-next-btn:hover { background: #048055; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(5,159,109,0.45); }
-
-  @media (max-width: 600px) {
-    .step-card { padding: 22px 28px; gap: 12px; border-radius: 20px; }
-    .step-card-title { font-size: 17px; }
-    .step-card-sub { font-size: 11px; }
-    .step-next-btn { font-size: 13px; padding: 10px 28px; }
-  }
-
-  /* ── Scrollable profile area ─────────────────── */
-  .profile-scroll { overflow-y: auto; height: 100%; }
-
-  /* ══════════════════════════════════════════════
-     MOBILE RESPONSIVE — phone frame for ≤ 600px
-     ══════════════════════════════════════════════ */
-  @media (max-width: 600px) {
-    .stage-scaler {
-      width: min(380px, calc(100vw - 16px));
-      aspect-ratio: 380 / 680;
-    }
-    .stage {
-      width: 380px; height: 680px;
-      border-radius: 32px;
-      border: 4px solid #2d2d2d;
-    }
-
-    /* Hide desktop chrome bar — show a mobile status bar instead */
-    .chrome {
-      height: 32px; border-radius: 28px 28px 0 0;
-      justify-content: center; padding: 0;
-    }
-    .chrome .dot { display: none; }
-    .url-bar {
-      margin: 0 16px; font-size: 10px; height: 18px;
-      border-radius: 9px; justify-content: center;
-    }
-
-    /* Hide sidebar on mobile — show bottom nav instead */
-    .sidebar { display: none; }
-
-    /* Bottom nav bar for mobile */
-    .mobile-nav {
-      display: flex !important;
-    }
-
-    .app { flex-direction: column; }
-    .main { flex: 1; }
-
-    /* Pages need tighter padding */
-    .page { padding: 16px 14px 80px; }
-
-    /* Shrink all card elements */
-    .greeting h1 { font-size: 20px; }
-    .greeting p { font-size: 12px; }
-    .stats-row { grid-template-columns: repeat(3,1fr); gap: 6px; margin-bottom: 16px; }
-    .stat-card { padding: 10px 8px; gap: 6px; border-radius: 12px; }
-    .stat-icon { width: 30px; height: 30px; font-size: 14px; border-radius: 8px; }
-    .stat-val { font-size: 16px; }
-    .stat-lbl { font-size: 8px; }
-    .section-hdr h2 { font-size: 9px; }
-    .section-hdr .see-all { font-size: 10px; }
-
-    .subjects-grid { grid-template-columns: 1fr; gap: 10px; }
-    .subject-card { padding: 14px; border-radius: 14px; }
-    .subj-icon { width: 36px; height: 36px; font-size: 18px; border-radius: 10px; }
-    .subj-name { font-size: 14px; }
-    .subj-meta { font-size: 10px; }
-    .subj-btn { font-size: 11px; padding: 8px 0; border-radius: 10px; }
-
-    /* Profile page mobile */
-    .profile-title { font-size: 18px; }
-    .profile-card { padding: 14px 16px; border-radius: 16px; }
-    .partner-select { font-size: 11px; padding: 8px 10px; }
-    .send-btn { font-size: 11px; padding: 8px 14px; }
-    .add-partner-row { flex-direction: column; }
-    .parent-input { font-size: 11px; }
-
-    /* Chat page mobile */
-    .chat-header { padding: 12px 14px; gap: 10px; }
-    .chat-title { font-size: 14px; }
-    .chat-messages { padding: 12px 14px; gap: 10px; }
-    .msg { max-width: 90%; }
-    .bubble { font-size: 12px; padding: 10px 12px; }
-    .chat-input-area { padding: 10px 14px; }
-    .chat-input { font-size: 12px; padding: 8px 12px; min-height: 38px; }
-    .send-icon-btn { width: 38px; height: 38px; font-size: 14px; border-radius: 12px; }
-    .ch-pill { font-size: 10px; padding: 4px 10px; }
-
-    /* Caption bar — bigger on mobile, still at top */
-    .caption-bar {
-      top: 36px; left: 8px; right: 8px;
-      transform: none;
-      max-width: none;
-      font-size: 13px; padding: 10px 16px;
-      border-radius: 12px;
-    }
-
-    /* Step card smaller */
-    .step-card { font-size: 16px; padding: 12px 24px; }
-
-    /* Progress dots */
-    .progress-dots { bottom: 8px; }
-
-    /* Tooltip */
-    .tooltip-label { font-size: 10px; padding: 4px 8px; }
-
-    /* End screen */
-    .end-logo { font-size: 24px; }
-    .end-sub { font-size: 13px; }
-    .end-restart { font-size: 13px; padding: 12px 24px; }
-
-    /* Modal */
-    .modal-box { width: 280px; padding: 24px 20px; border-radius: 20px; }
-    .modal-title { font-size: 16px; }
-    .modal-body { font-size: 11px; }
-  }
-
-  /* Mobile bottom nav — hidden on desktop */
-  .mobile-nav {
-    display: none;
-    position: absolute; bottom: 0; left: 0; right: 0;
-    height: 56px; background: #1C2333;
-    align-items: center; justify-content: space-around;
-    z-index: 100; border-top: 1px solid rgba(255,255,255,0.06);
-  }
-  .mobile-nav-item {
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
-    color: #c8d1dc; font-size: 9px; font-weight: 600;
-    opacity: 0.5; transition: all 0.2s; cursor: pointer;
-  }
-  .mobile-nav-item.active { opacity: 1; color: #8B7FE8; }
-  .mobile-nav-item .mnav-icon { font-size: 18px; }
 </style>
 </head>
 <body>
 
-<div class="stage-scaler" id="stageScaler"><div class="stage" id="stage">
-  <!-- Browser chrome -->
-  <div class="chrome">
-    <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
-    <div class="url-bar" id="urlBar"><span>gened.app</span>/student</div>
-  </div>
+<div class="viewport" id="viewport">
+  <div class="stage-box" id="stageBox">
+    <div class="stage" id="stage">
 
-  <!-- App shell -->
-  <div class="app">
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-      <div class="sidebar-logo">
-        <img src="/brand/gened-logo-deep-ocean-transparent.png" alt="GenEd" style="height:28px;width:auto;filter:brightness(0) invert(1);" />
-        <div class="sidebar-ham">☰</div>
-      </div>
-      <nav>
-        <div class="nav-item active" id="navHome"><span class="nav-icon">🏠</span> Home <div class="dot-active"></div></div>
-        <div class="nav-item" id="navPractice"><span class="nav-icon">🎯</span> Practice</div>
-        <div class="nav-item" id="navMe"><span class="nav-icon">😊</span> Me</div>
-      </nav>
-      <div class="sidebar-bottom">
-        <div class="student-chip">
-          <div class="avatar-chip">A</div>
-          <div class="chip-info">
-            <div class="chip-name">Aryan</div>
-            <div class="chip-sub">Grade 4 · CBSE</div>
-          </div>
+      <!-- ════ INTRO ════ -->
+      <section class="screen" id="scrIntro">
+        <div class="card-screen">
+          <div class="intro-logo"><img src="/brand/gened-logo-deep-ocean-transparent.png" alt="GenEd" /></div>
+          <h1>Hi! I'm <span class="mk2 tn">Nia</span></h1>
+          <p>Your learning buddy on GenEd. Let me show you around. It only takes a minute!</p>
+          <div class="route"><span><b>1</b>Pick a chapter</span><span><b>2</b>Learn with <span class="tn">Nia</span></span><span><b>3</b>Ask for help</span></div>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <!-- Main content -->
-    <div class="main" id="main">
-
-      <!-- ════ PAGE: HOME ════ -->
-      <div class="page" id="pageHome">
-        <div class="greeting">
-          <h1>Good morning, Aryan! 👋</h1>
-          <p>What would you like to learn today?</p>
-        </div>
-        <div class="stats-row">
-          <div class="stat-card">
-            <div class="stat-icon" style="background:#FFF3DC;">🔥</div>
-            <div><div class="stat-val">3</div><div class="stat-lbl">Day Streak</div></div>
+      <!-- ════ HOME ════ -->
+      <section class="screen" id="scrHome">
+        <aside class="side">
+          <div class="side-head"><img src="/brand/gened-logo-deep-ocean-transparent.png" alt="GenEd" /><span class="side-burger"><i data-i="menu" data-s="15"></i></span></div>
+          <div class="nav active" id="navHome"><i data-i="home" data-s="17"></i>Home</div>
+          <div class="nav" id="navReport"><i data-i="chart" data-s="17"></i>Report Card</div>
+          <div class="nav" id="navProfile"><i data-i="user" data-s="17"></i>Profile</div>
+          <div class="gopro"><b>Go Pro</b><p>Keep learning with <span class="tn">Nia</span>, no daily limits.</p><span><i data-i="sparkles" data-s="13"></i>Upgrade to Pro</span></div>
+        </aside>
+        <main class="home">
+          <div class="greet" id="greet">
+            <img class="avatar me" src="/avatars/students/boy_01_green_hoodie.png" width="52" height="52" alt="" />
+            <div><h1>Good morning, <span class="mark first-name">Aarav</span>!</h1><p>What would you like to learn today?</p></div>
+            <span class="bell"><i data-i="bell" data-s="18"></i></span>
           </div>
-          <div class="stat-card">
-            <div class="stat-icon" style="background:#EBF3FB;">📚</div>
-            <div><div class="stat-val">12</div><div class="stat-lbl">Sessions</div></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon" style="background:#E8F5EF;">⭐</div>
-            <div><div class="stat-val">7</div><div class="stat-lbl">Best Streak</div></div>
-          </div>
-        </div>
-        <div class="section-hdr">
-          <h2>My Subjects</h2>
-          <span class="see-all">See all (4) →</span>
-        </div>
-        <div class="subjects-grid">
-          <div class="subject-card" id="subjectMath">
-            <div class="subj-header">
-              <div class="subj-icon" style="background:#E8F5EF;">🧮</div>
-              <div>
-                <div class="subj-name">Mathematics</div>
-                <div class="subj-meta">Grade 4 · 6 chapters</div>
-              </div>
-            </div>
-            <div class="progress-bar"><div class="progress-fill" style="width:42%;background:linear-gradient(90deg,rgba(45,106,79,0.7),#2D6A4F)"></div></div>
-            <button class="subj-btn" id="mathBtn">Start learning →</button>
-          </div>
-          <div class="subject-card" id="subjectEnglish">
-            <div class="subj-header">
-              <div class="subj-icon" style="background:#EBF3FB;">📖</div>
-              <div>
-                <div class="subj-name">English</div>
-                <div class="subj-meta">Grade 4 · 5 chapters</div>
-              </div>
-            </div>
-            <div class="progress-bar"><div class="progress-fill" style="width:65%;background:linear-gradient(90deg,rgba(74,144,217,0.7),#4A90D9)"></div></div>
-            <button class="subj-btn" style="color:#4A90D9;border-color:rgba(74,144,217,0.25);">Start learning →</button>
-          </div>
-        </div>
-        <div class="section-hdr">
-          <h2>Recent Sessions</h2>
-        </div>
-        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 4px rgba(0,0,0,0.03);">
-          <div class="subj-icon" style="background:#E8F5EF;width:38px;height:38px;font-size:18px;border-radius:11px;flex-shrink:0;">🧮</div>
-          <div style="flex:1;">
-            <div style="font-weight:600;font-size:14px;color:#1a2332;">Triangles &amp; Shapes</div>
-            <div style="font-size:11px;color:#94a3b8;">Mathematics · 2h ago</div>
-          </div>
-          <div style="color:#cbd5e1;font-size:20px;">›</div>
-        </div>
-      </div>
-
-      <!-- ════ PAGE: PROFILE ════ -->
-      <div class="page hidden" id="pageProfile">
-        <div class="profile-scroll" id="profileScroll">
-          <div class="profile-header-row">
-            <div class="back-btn" id="backBtn">←</div>
-            <div class="profile-title">My Profile</div>
-          </div>
-
-          <!-- Profile card -->
-          <div class="profile-card">
-            <div class="card-section-hdr"><span>👤</span><h3>Account</h3></div>
-            <div style="display:flex;align-items:center;gap:14px;">
-              <div style="width:54px;height:54px;border-radius:16px;background:linear-gradient(135deg,rgba(91,77,199,0.2),rgba(74,144,217,0.2));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#8B7FE8;font-family:'Nunito',sans-serif;">A</div>
-              <div>
-                <div style="font-weight:700;font-size:15px;color:#1a2332;">Aryan Sharma</div>
-                <div style="font-size:12px;color:#94a3b8;margin-top:3px;">aryan@student.com · Grade 4 · CBSE</div>
-              </div>
+          <div class="cont" id="contCard">
+            <img src="/mascots/banner/cheer.webp" alt="" />
+            <div class="cont-body">
+              <div class="cont-eyebrow"><i data-i="history" data-s="13"></i>Pick up where you left off · 2h ago</div>
+              <div class="cont-title"><b>Patterns in Mathematics</b><span>Mathematics • Grade 6 CBSE</span></div>
+              <div class="cont-prog"><i>Progress</i><span>60% complete</span></div>
+              <div class="bar"><div></div></div>
+              <span class="btn-teal" id="contBtn">Continue Learning <i data-i="arrowR" data-s="14"></i></span>
             </div>
           </div>
-
-          <!-- Partners card -->
-          <div class="profile-card" id="partnersCard">
-            <div class="card-section-hdr"><span>🏫</span><h3>School Partners</h3></div>
-            <div class="partner-row">
-              <div class="partner-logo">GA</div>
-              <div>
-                <div class="partner-name">GenEd Admin</div>
-                <div class="partner-sub">Default curriculum partner</div>
-              </div>
-              <div class="partner-status status-approved">✓ Approved</div>
+          <div class="eyebrow">Your progress</div>
+          <div class="stats" id="stats">
+            <div class="stat"><div class="stat-top">Current Streak<span><i data-i="flame" data-s="13"></i></span></div><b>3<small>Days</small></b></div>
+            <div class="stat"><div class="stat-top">Sessions Done<span><i data-i="book" data-s="13"></i></span></div><b>12</b></div>
+            <div class="stat"><div class="stat-top">Longest Streak<span><i data-i="star" data-s="13"></i></span></div><b>7<small>Days</small></b></div>
+            <div class="stat"><div class="stat-top">Time Spent<span><i data-i="clock" data-s="13"></i></span></div><b>2h 15m</b></div>
+          </div>
+          <div class="eyebrow">My subjects</div>
+          <div class="shelf" id="shelf">
+            <div class="subj" id="subjMath">
+              <img class="mascot" src="/mascots/subjects/maths.webp" alt="" />
+              <div class="subj-row"><span class="tile" style="background:#E8F5EF"><img src="/report-card/icons/subjects/mathematics.png" alt="" /></span><div><b>Mathematics</b><small>Grade 6</small></div></div>
+              <div class="subj-foot" style="background:#2D6A4F0A;color:#2D6A4F">See chapters<i data-i="chevR" data-s="14"></i></div>
             </div>
-            <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9;">
-              <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;">Add a School Partner</div>
-              <div class="add-partner-row" id="addPartnerRow">
-                <select class="partner-select" id="partnerSelectEl">
-                  <option value="">Select your school…</option>
-                  <option value="delhi">Delhi Public School</option>
-                  <option value="kendriya">Kendriya Vidyalaya</option>
-                  <option value="ryan">Ryan International</option>
-                </select>
-                <button class="send-btn" id="sendRequestBtn">Send Request</button>
-              </div>
+            <div class="subj">
+              <img class="mascot" src="/mascots/subjects/science.webp" alt="" />
+              <div class="subj-row"><span class="tile" style="background:#FEF5E7"><img src="/report-card/icons/subjects/science.png" alt="" /></span><div><b>Science</b><small>Grade 6</small></div></div>
+              <div class="subj-foot" style="background:#D4820A0A;color:#D4820A">See chapters<i data-i="chevR" data-s="14"></i></div>
+            </div>
+            <div class="subj">
+              <img class="mascot" src="/mascots/subjects/english.webp" alt="" />
+              <div class="subj-row"><span class="tile" style="background:#EBF3FB"><img src="/report-card/icons/subjects/english.png" alt="" /></span><div><b>English</b><small>Grade 6</small></div></div>
+              <div class="subj-foot" style="background:#4A90D90A;color:#4A90D9">See chapters<i data-i="chevR" data-s="14"></i></div>
+            </div>
+            <div class="subj">
+              <img class="mascot" src="/mascots/subjects/social-science.webp" alt="" />
+              <div class="subj-row"><span class="tile" style="background:#FBEFEB"><img src="/report-card/icons/subjects/social-science.png" alt="" /></span><div><b>Social Science</b><small>Grade 6</small></div></div>
+              <div class="subj-foot" style="background:#B0543F0A;color:#B0543F">See chapters<i data-i="chevR" data-s="14"></i></div>
             </div>
           </div>
+        </main>
+      </section>
 
-          <!-- Guardian card -->
-          <div class="profile-card">
-            <div class="card-section-hdr"><span>👨‍👩‍👧</span><h3>Guardian Access</h3></div>
-            <p style="font-size:12.5px;color:#4a5568;margin-bottom:12px;">Add your parent's email so they can track your progress.</p>
-            <div class="parent-input-row">
-              <input class="parent-input" type="email" placeholder="parent@email.com" />
-              <button class="add-btn">+ Add</button>
-            </div>
+      <!-- ════ CHAPTERS ════ -->
+      <section class="screen" id="scrChapters">
+        <aside class="side">
+          <div class="side-head"><img src="/brand/gened-logo-deep-ocean-transparent.png" alt="GenEd" /><span class="side-burger"><i data-i="menu" data-s="15"></i></span></div>
+          <div class="nav active"><i data-i="home" data-s="17"></i>Home</div>
+          <div class="nav"><i data-i="chart" data-s="17"></i>Report Card</div>
+          <div class="nav"><i data-i="user" data-s="17"></i>Profile</div>
+        </aside>
+        <div class="chap-page">
+          <div class="page-head"><span class="back"><i data-i="arrowL" data-s="17"></i></span><span class="tile"><img src="/report-card/icons/subjects/mathematics.png" alt="" /></span><h1>Mathematics</h1></div>
+          <div class="chap-body">
+            <div class="eyebrow">Grade 6</div>
+            <div class="chap-title"><h2>Pick a <span class="mark">chapter</span></h2><span class="chip-ready">6 chapters ready</span></div>
+            <div class="tiles" id="tiles"></div>
           </div>
+        </div>
+      </section>
 
-          <!-- Badges card -->
-          <div class="profile-card">
-            <div class="card-section-hdr"><span>🏅</span><h3>Achievements</h3></div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-              <div style="text-align:center;padding:12px 6px;border-radius:14px;background:rgba(91,77,199,0.06);border:1.5px solid rgba(91,77,199,0.15);">
-                <div style="font-size:22px;margin-bottom:6px;">🎯</div>
-                <div style="font-size:10px;font-weight:700;color:#5B4DC7;">First Session</div>
+      <!-- ════ LESSON ════ -->
+      <section class="screen" id="scrLesson">
+        <div class="lesson">
+          <div class="l-head">
+            <img class="logo" src="/brand/gened-logo.png" alt="GenEd" />
+            <div class="crumb">Mathematics › <b>Number Play</b></div>
+            <div style="flex:1"></div>
+            <div class="l-chip"><i data-i="timer" data-s="22" style="color:#3C8A8E"></i><div><b id="lTimer">00:12</b><small>Session time</small></div></div>
+            <div class="l-chip" id="stepsChip"><span class="disc"><i data-i="flag" data-s="13"></i></span><div><b id="lSteps">0/6</b><small>Steps done</small></div></div>
+            <img class="avatar me" src="/avatars/students/boy_01_green_hoodie.png" width="36" height="36" alt="" />
+            <span class="l-x" id="leaveBtn"><i data-i="x" data-s="16"></i></span>
+          </div>
+          <div class="l-grid">
+            <div class="l-rail" id="rail">
+              <div class="rail-card"><small>CHAPTER 3</small><b>Number Play</b></div>
+              <div class="rail-h">Lesson Progress</div>
+              <div class="steps" id="steps"></div>
+              <div class="rail-bar"><div id="railBar"></div></div>
+              <div class="rail-cap"><span id="railCap">0 of 6 steps done</span><span id="railPct">0%</span></div>
+            </div>
+
+            <div class="panel" id="board">
+              <div class="b-top">
+                <div class="seg"><span class="on" id="segChat"><i><i data-i="msg" data-s="13"></i></i>Chat</span><span id="segVoice"><i><i data-i="mic" data-s="13"></i></i>Voice</span></div>
+                <span class="type-pill" id="typePill">LEARN</span>
               </div>
-              <div style="text-align:center;padding:12px 6px;border-radius:14px;background:rgba(240,173,78,0.08);border:1.5px solid rgba(240,173,78,0.2);">
-                <div style="font-size:22px;margin-bottom:6px;">🔥</div>
-                <div style="font-size:10px;font-weight:700;color:#F0AD4E;">3-Day Streak</div>
+              <div class="paper" id="paper">
+                <div class="board-empty" id="boardEmpty">Your tutor will draw here.</div>
+                <div class="b-title" id="bTitle"><span class="reveal" id="bTitleText">Adding up digits</span>
+                  <svg viewBox="0 0 200 10" preserveAspectRatio="none"><path class="draw" id="bUnder" pathLength="1" d="M2 6 C 50 2, 120 9, 198 4" stroke="#D9F279" stroke-width="5" fill="none" stroke-linecap="round"/></svg></div>
+                <div class="sketch" id="sketch">
+                  <div class="big reveal" id="skNum">1400</div>
+                  <svg width="190" height="34" viewBox="0 0 190 34" style="display:block;margin:2px 0 0 4px">
+                    <path class="draw" id="skA1" pathLength="1" d="M10 2 C 8 14, 12 22, 16 30" stroke="#3C8A8E" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <path class="draw" id="skA2" pathLength="1" d="M40 2 C 40 14, 42 22, 44 30" stroke="#3C8A8E" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <path class="draw" id="skA3" pathLength="1" d="M70 2 C 72 14, 72 22, 72 30" stroke="#3C8A8E" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <path class="draw" id="skA4" pathLength="1" d="M98 2 C 100 14, 100 22, 100 30" stroke="#3C8A8E" stroke-width="2" fill="none" stroke-linecap="round"/>
+                  </svg>
+                  <div class="sum reveal" id="skSum">1 + 4 + 0 + 0 = <em>?</em></div>
+                </div>
+                <div class="sk stepcard" id="stepCard"></div>
+                <div class="sk result" id="result">✓ That's right!</div>
               </div>
-              <div style="text-align:center;padding:12px 6px;border-radius:14px;background:#f8fafc;border:1.5px solid #e2e8f0;opacity:0.55;filter:grayscale(0.7);">
-                <div style="font-size:22px;margin-bottom:6px;">🏆</div>
-                <div style="font-size:10px;font-weight:700;color:#94a3b8;">Quiz Champ 🔒</div>
+              <div class="chips">
+                <span class="qchip"><i data-i="bulb" data-s="13"></i>Concepts</span>
+                <span class="qchip" id="chipEx"><i data-i="book" data-s="13"></i>Examples</span>
+                <span class="qchip"><i data-i="target" data-s="13"></i>Practice</span>
+                <span class="qchip"><i data-i="notes" data-s="13"></i>Notes</span>
+              </div>
+            </div>
+
+            <div class="panel chat" id="chat">
+              <div class="msgs" id="msgs"></div>
+              <div class="composer" id="composer">
+                <div class="c-text" id="cText"><span class="ph">Type a message…</span></div>
+                <div class="c-row">
+                  <span class="c-cancel"><i data-i="x" data-s="13"></i></span>
+                  <span class="c-mic" id="micBtn"><i data-i="mic" data-s="15"></i></span>
+                  <span class="lang" id="langBtn"><i data-i="langs" data-s="12"></i><span id="langName">English</span><i data-i="chevD" data-s="12"></i></span>
+                  <div class="wave" id="wave"></div>
+                  <span class="c-timer" id="cTimer">0:00</span>
+                  <span class="c-done" id="doneBtn"><i data-i="check" data-s="14"></i></span>
+                  <span class="c-send" id="sendBtn"><i data-i="send" data-s="15"></i></span>
+                </div>
+                <div class="langmenu" id="langMenu">
+                  <div class="sel">English</div><div id="optHindi">हिन्दी</div><div>Hinglish</div><div>मराठी</div><div>தமிழ்</div><div>తెలుగు</div>
+                </div>
+              </div>
+              <div class="voice" id="voice">
+                <div class="v-heard" id="vHeard"></div>
+                <div class="v-row"><div class="fan" id="fanL"></div><span class="v-mic"><i data-i="mic" data-s="18"></i></span><div class="fan" id="fanR"></div></div>
+                <div class="v-foot"><span class="v-status" id="vStatus">Listening…</span><span class="v-end"><i data-i="phoneOff" data-s="11"></i>End</span></div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- ════ PAGE: CHAT ════ -->
-      <div class="page hidden" id="pageChat" style="padding:0;display:flex;flex-direction:column;">
-        <div class="chat-header">
-          <div class="back-btn" id="chatBackBtn">←</div>
-          <div class="chat-subj-icon" style="background:#E8F5EF;">🧮</div>
-          <div>
-            <div class="chat-title">Mathematics Agent</div>
-            <div class="chat-sub">Grade 4 · Chapter selection</div>
+      <!-- ════ PROFILE ════ -->
+      <section class="screen" id="scrProfile">
+        <aside class="side">
+          <div class="side-head"><img src="/brand/gened-logo-deep-ocean-transparent.png" alt="GenEd" /><span class="side-burger"><i data-i="menu" data-s="15"></i></span></div>
+          <div class="nav"><i data-i="home" data-s="17"></i>Home</div>
+          <div class="nav"><i data-i="chart" data-s="17"></i>Report Card</div>
+          <div class="nav active"><i data-i="user" data-s="17"></i>Profile</div>
+        </aside>
+        <div class="prof">
+          <div class="prof-head"><span class="back"><i data-i="arrowL" data-s="18"></i></span><div><h1>My Profile</h1><p>Your learning space</p></div></div>
+          <div class="pcard hero">
+            <img class="avatar me" src="/avatars/students/boy_01_green_hoodie.png" alt="" />
+            <div><h2 class="full-name">Aarav Mehta</h2><div class="gr">Grade 6 · CBSE</div><span class="ai-pill"><i data-i="sparkles" data-s="12"></i>AI Tutor: <span class="tn">Nia</span></span></div>
+            <div class="hero-stats">
+              <div class="hs"><span><i data-i="flame" data-s="17"></i></span><div><b>3</b><small>Day streak</small></div></div>
+              <div class="hs"><span><i data-i="book" data-s="17"></i></span><div><b>12</b><small>Sessions completed</small></div></div>
+            </div>
+          </div>
+          <div class="pgrid">
+            <div class="pcard" id="prefCard">
+              <div class="ph"><span class="ci"><i data-i="settings" data-s="18"></i></span><div><b>Learning preferences</b><small>Make <span class="tn">Nia</span> sound and listen the way you like.</small></div></div>
+              <div class="pref"><span class="pi"><i data-i="mic" data-s="15"></i></span><div><b>Tutor voice</b><small>Choose the voice for your AI tutor.</small></div>
+                <div class="ctl"><span class="select" id="voiceSel">Default voice<i data-i="chevD" data-s="12"></i></span><span class="play" id="playBtn"><i data-i="play" data-s="13"></i></span></div></div>
+              <div class="pref"><span class="pi"><i data-i="radio" data-s="15"></i></span><div><b>Voice activation</b><small>Talk freely, or hold a key while you speak.</small></div>
+                <div class="ctl"><div class="pseg"><span class="on" id="segCont">Continuous</span><span id="segPtt">Push to talk</span></div></div></div>
+              <div class="ptt-line" id="pttLine">Your tutor listens whenever you speak.</div>
+            </div>
+            <div class="pcard" id="guardCard">
+              <div class="ph"><span class="ci"><i data-i="users" data-s="18"></i></span><div><b>Guardian connection</b><small>Invite a parent to follow your progress.</small></div></div>
+              <span class="status" id="gStatus">Not connected</span><br />
+              <span class="btn-sec" id="inviteBtn"><i data-i="plus" data-s="14"></i>Invite / Link guardian</span>
+              <div class="g-input" id="gInput"><div class="field" id="gField"></div><span class="btn-sec" id="gSend" style="margin-top:0">Send invite</span></div>
+              <div class="privacy"><i data-i="shield" data-s="14"></i>Your learning data is private and only shared with your guardian when you choose to invite them.</div>
+            </div>
           </div>
         </div>
-        <div class="chat-messages" id="chatMessages">
-          <!-- AI welcome message – injected by JS -->
+      </section>
+
+      <!-- ════ OUTRO ════ -->
+      <section class="screen" id="scrOutro">
+        <div class="card-screen">
+          <div class="confetti" id="confetti"></div>
+          <div class="outro-row">
+            <div class="intro-logo outro-logo"><img src="/brand/gened-logo-deep-ocean-transparent.png" alt="GenEd" /></div>
+            <div class="trophy"><img src="/loaders/journey/char-trophy.svg" alt="" /></div>
+          </div>
+          <h1>You're <span class="mk2">all set!</span></h1>
+          <p>Pick a subject, open a chapter, and <span class="tn">Nia</span> will be right there with you.</p>
+          <div class="end-btns">
+            <button class="go" id="startBtn" type="button">Start learning <svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+            <button class="again" id="againBtn" type="button"><svg class="i" width="16" height="16" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Watch again</button>
+          </div>
         </div>
-        <div class="chat-input-area">
-          <textarea class="chat-input" id="chatInputField" placeholder="Type a chapter or topic…" rows="1"></textarea>
-          <button class="send-icon-btn">➤</button>
-        </div>
-      </div>
+      </section>
 
-    </div><!-- /main -->
-
-    <!-- Mobile bottom nav (visible only on small screens via CSS) -->
-    <div class="mobile-nav" id="mobileNav">
-      <div class="mobile-nav-item active" id="mnavHome"><span class="mnav-icon">🏠</span>Home</div>
-      <div class="mobile-nav-item" id="mnavPractice"><span class="mnav-icon">🎯</span>Practice</div>
-      <div class="mobile-nav-item" id="mnavMe"><span class="mnav-icon">😊</span>Me</div>
-    </div>
-  </div><!-- /app -->
-
-  <!-- Cursor -->
-  <div class="cursor" id="cursor" style="top:220px;left:450px;">
-    <div class="cursor-ring"></div>
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <path d="M4 2L16 10L10 11.5L7 17L4 2Z" fill="white" stroke="#1C2333" stroke-width="1.5" stroke-linejoin="round"/>
-    </svg>
-  </div>
-
-  <!-- Tooltip label -->
-  <div class="tooltip-label" id="tooltip">Click here</div>
-
-  <!-- Progress dots — 3 steps -->
-  <div class="progress-dots" id="progressDots">
-    <div class="pdot active" id="pd0"></div>
-    <div class="pdot" id="pd1"></div>
-    <div class="pdot" id="pd2"></div>
-  </div>
-
-  <!-- Step card -->
-  <div class="step-card" id="stepCard">
-    <div class="step-card-title" id="stepCardTitle"></div>
-    <div class="step-card-sub" id="stepCardSub"></div>
-    <button class="step-next-btn" id="stepNextBtn">Next →</button>
-  </div>
-
-  <!-- Modal overlay -->
-  <div class="modal-overlay" id="modalOverlay">
-    <div class="modal-box">
-      <div class="modal-icon" style="background:#ecfdf5;"><span>✅</span></div>
-      <div class="modal-title">Request Sent! 🎉</div>
-      <div class="modal-body">Your school request was sent! Once approved, your subjects will show up on the Home screen.</div>
-      <button class="modal-cta" id="modalCta">Got it 🎉</button>
+      <div class="cursor" id="cursor"><img src="/cursors/pointer.svg" alt="" /></div>
     </div>
   </div>
+</div>
 
-  <!-- Caption bar -->
-  <div class="caption-bar" id="caption"></div>
-
-  <!-- End screen -->
-  <div class="end-screen" id="endScreen">
-    <img src="/brand/gened-star.png" alt="GenEd" style="width:72px;height:72px;border-radius:18px;margin-bottom:16px;object-fit:contain;background:#fff;padding:6px;" />
-    <div class="end-logo">You're all set! 🎉</div>
-    <div class="end-sub">Start your learning journey with GenEd</div>
-    <div style="display:flex;gap:12px;align-items:center;">
-      <button class="end-restart" id="restartBtn">Watch Again ↺</button>
-      <button id="endCloseBtn" style="padding:14px 28px;border-radius:16px;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.75);font-weight:700;font-size:15px;border:1.5px solid rgba(255,255,255,0.2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s;backdrop-filter:blur(4px);"
-        onmouseover="this.style.background='rgba(255,255,255,0.18)';this.style.color='#fff'"
-        onmouseout="this.style.background='rgba(255,255,255,0.1)';this.style.color='rgba(255,255,255,0.75)'">
-        Close ✕
-      </button>
-    </div>
+<div class="dock">
+  <div class="say" aria-live="polite">
+    <div class="say-av" id="sayAv"><img src="/brand/gened-logo-deep-ocean-transparent.png" alt="GenEd" /></div>
+    <div class="say-text" id="sayText"></div>
   </div>
-</div><!-- /stage --></div><!-- /stage-scaler -->
+  <div class="ctrl">
+    <button class="pp" id="ppBtn" type="button" aria-label="Pause"></button>
+    <div class="chaps" id="chaps"></div>
+    <div class="chap-label" id="chapLabel"></div>
+  </div>
+</div>
 
 <script>
-/* ═════════════════════════════════════════════
-   ANIMATION ENGINE
-   ═════════════════════════════════════════════ */
+/* ═══ Icons (lucide paths) ═══════════════════════════════════════════════ */
+const ICONS = {
+  menu: '<path d="M4 12h16M4 6h16M4 18h16"/>',
+  home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  user: '<circle cx="12" cy="7" r="4"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  history: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+  flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+  book: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  star: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6h4.5"/>',
+  chevR: '<path d="m9 18 6-6-6-6"/>', chevD: '<path d="m6 9 6 6 6-6"/>',
+  arrowL: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>', arrowR: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  timer: '<path d="M10 2h4"/><path d="m12 14 3-3"/><circle cx="12" cy="14" r="8"/>',
+  flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>', check: '<path d="M20 6 9 17l-5-5"/>',
+  msg: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/>',
+  mic: '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/>',
+  bulb: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  notes: '<path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4M2 10h4M2 14h4M2 18h4"/><path d="M21.38 5.63a2.12 2.12 0 1 0-3-3l-5.01 5.01a2 2 0 0 0-.51.86l-.84 2.87a.5.5 0 0 0 .62.62l2.87-.84a2 2 0 0 0 .86-.51z"/>',
+  calc: '<rect width="16" height="20" x="4" y="2" rx="2"/><path d="M8 6h8"/><path d="M16 14v4"/><path d="M16 10h.01M12 10h.01M8 10h.01M12 14h.01M8 14h.01M12 18h.01M8 18h.01"/>',
+  langs: '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
+  send: '<path d="m3 3 3 9-3 9 19-9Z"/><path d="M6 12h16"/>',
+  phoneOff: '<path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><path d="M22 2 2 22"/>',
+  sparkles: '<path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0l1.58 6.14a2 2 0 0 0 1.44 1.44l6.14 1.58a.5.5 0 0 1 0 .96l-6.14 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  radio: '<path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/>',
+  play: '<path d="M6 3l14 9-14 9z"/>', pause: '<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',
+  replay: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>', loader: '<path d="M21 12a9 9 0 1 1-6.22-8.56"/>',
+  shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+};
+const svg = (name, size = 16, cls = '') => `<svg class="i ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24">${ICONS[name]}</svg>`;
+function paintIcons(root = document) {
+  root.querySelectorAll('i[data-i]').forEach(el => {
+    const tmp = document.createElement('span');
+    tmp.innerHTML = svg(el.dataset.i, +el.dataset.s || 16);
+    const s = tmp.firstChild;
+    if (el.getAttribute('style')) s.setAttribute('style', el.getAttribute('style'));
+    el.replaceWith(s);
+  });
+}
 
-/* ── Responsive scaler ──────────────────────────── */
-const isMobile = () => window.innerWidth <= 600;
+/* ═══ Static content built once ═══════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+/* The student's own tutor name (?tutor=), as plain text and escaped for the captions' HTML. */
+const TUTOR_TEXT = (() => {
+  const raw = (new URLSearchParams(location.search).get('tutor') || '').trim().slice(0, 24);
+  return raw || 'Nia';
+})();
+const TUTOR = TUTOR_TEXT.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+document.querySelectorAll('.tn').forEach(el => { el.textContent = TUTOR_TEXT; });
+/* The student as the app shows them: their name and their avatar (only one of the app's own avatar files). */
+const PARAMS = new URLSearchParams(location.search);
+const FULL_NAME = (PARAMS.get('name') || '').trim().slice(0, 40);
+if (FULL_NAME) {
+  document.querySelectorAll('.full-name').forEach(el => { el.textContent = FULL_NAME; });
+  document.querySelectorAll('.first-name').forEach(el => { el.textContent = FULL_NAME.split(/\s+/)[0]; });
+}
+const AVATAR = PARAMS.get('avatar') || '';
+const AVATAR_SRC = `/avatars/students/${/^(boy|girl)_0[1-5]_[a-z_]+$/.test(AVATAR) ? AVATAR : 'boy_01_green_hoodie'}.png`;
+document.querySelectorAll('img.me').forEach(el => { el.src = AVATAR_SRC; });
+const CHAPTERS = [
+  'Patterns in Mathematics', 'Lines and Angles', 'Number Play', 'Data Handling and Presentation', 'Prime Time', 'Perimeter and Area',
+];
+$('tiles').innerHTML = CHAPTERS.map((t, i) => `
+  <div class="ctile" id="tile${i + 1}" style="--s0:#EEF0FF;--s1:#D6DBFF;--a:#5B5BD6;--b:#21B3A4;--k:#272A5C;animation-delay:${i * 0.06}s">
+    <span class="num">${i + 1}</span><span class="pill">CHAPTER ${i + 1}</span><b>${t}</b>
+    <span class="go">Start ${svg('arrowR', 13)}</span>
+  </div>`).join('');
+const STEPS = [
+  ['Adding up digits', 'LEARN'], ['Digit sums of big numbers', 'PRACTICE'], ['Spot the pattern', 'LEARN'],
+  ['Palindromes', 'LEARN'], ['The magic number 1089', 'PRACTICE'], ['Chapter check', 'CHECK'],
+];
+$('wave').innerHTML = Array.from({ length: 22 }, (_, i) => `<i style="animation-delay:${(i * 73 % 600) / 1000}s"></i>`).join('');
+const fan = Array.from({ length: 9 }, (_, i) => `<i style="animation-delay:${(i * 97 % 500) / 1000}s"></i>`).join('');
+$('fanL').innerHTML = fan; $('fanR').innerHTML = fan;
+paintIcons();
 
-function scaleStage() {
-  const scaler = document.getElementById('stageScaler');
-  const stage  = document.getElementById('stage');
-  const baseW = isMobile() ? 380 : 900;
-  const scale  = scaler.offsetWidth / baseW;
+/* ═══ Stage scaling ═══════════════════════════════════════════════════════ */
+const stage = $('stage'), box = $('stageBox'), view = $('viewport');
+let scale = 1;
+function fit() {
+  const pad = window.innerWidth <= 640 ? 8 : 14;
+  scale = Math.min((view.clientWidth - pad * 2) / 960, (view.clientHeight - pad * 2) / 600);
+  box.style.width = 960 * scale + 'px';
+  box.style.height = 600 * scale + 'px';
   stage.style.transform = `scale(${scale})`;
 }
-scaleStage();
-window.addEventListener('resize', scaleStage);
+fit();
+window.addEventListener('resize', fit);
 
-const $ = id => document.getElementById(id);
-const cursor  = $('cursor');
-const tooltip = $('tooltip');
-const caption = $('caption');
-
-/* ── Helpers ──────────────────────────────────── */
-function moveCursor(top, left, cb, duration=650) {
-  cursor.style.transition = `top ${duration}ms cubic-bezier(.4,0,.2,1), left ${duration}ms cubic-bezier(.4,0,.2,1)`;
-  cursor.style.top  = top  + 'px';
-  cursor.style.left = left + 'px';
-  if (cb) setTimeout(cb, duration + 60);
-}
-
-function clickCursor() {
-  cursor.classList.add('clicking');
-  showRing();
-  setTimeout(() => cursor.classList.remove('clicking'), 220);
-}
-
-function showRing() {
-  const ring = cursor.querySelector('.cursor-ring');
-  ring.style.animation = 'none';
-  void ring.offsetWidth;
-  ring.style.animation = 'ring-pulse 0.5s ease-out forwards';
-}
-
-function showTooltip(text, top, left) {
-  tooltip.textContent = text;
-  tooltip.style.top  = top  + 'px';
-  tooltip.style.left = left + 'px';
-  tooltip.classList.add('show');
-}
-function hideTooltip() { tooltip.classList.remove('show'); }
-
-function showCaption(text, dur) {
-  caption.textContent = text;
-  caption.classList.add('show');
-  if (dur) setTimeout(hideCaption, dur);
-}
-function hideCaption() { caption.classList.remove('show'); }
-
-function setDot(n) {
-  document.querySelectorAll('.pdot').forEach((d,i) => {
-    d.classList.toggle('active', i===n);
-  });
-}
-
-function showPage(id) {
-  ['pageHome','pageProfile','pageChat'].forEach(p => {
-    $(p).classList.toggle('hidden', p !== id);
-  });
-}
-
-/* ── Mobile nav helpers ──────────────────────── */
-function setMobileNav(active) {
-  ['mnavHome','mnavPractice','mnavMe'].forEach(id => {
-    const el = $(id);
-    if(el) el.classList.toggle('active', id === active);
-  });
-}
-
-function setUrl(path) {
-  $('urlBar').innerHTML = `<span>gened.app</span>${path}`;
-}
-
-function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-/* ── Step card helper — waits for user to click Next ── */
-function showStep(title, subtitle) {
-  return new Promise(resolve => {
-    const card = $('stepCard');
-    $('stepCardTitle').textContent = title;
-    $('stepCardSub').textContent = subtitle || '';
-    $('stepCardSub').style.display = subtitle ? 'block' : 'none';
-    card.classList.add('show');
-
-    const btn = $('stepNextBtn');
-    const handler = () => {
-      btn.removeEventListener('click', handler);
-      card.classList.remove('show');
-      setTimeout(resolve, 400); // wait for fade-out
-    };
-    btn.addEventListener('click', handler);
-  });
-}
-
-/* ── Typing simulation ──────────────────────── */
-async function typeInto(el, text, speed=55) {
-  el.value = '';
-  el.focus();
-  for(let ch of text) {
-    el.value += ch;
-    await wait(speed);
+/* ═══ Playback clock: every wait runs on it, so pausing stops the tour ═══ */
+let token = 0, paused = false, chapterElapsed = 0;
+class Cancelled extends Error {}
+async function wait(ms) {
+  const mine = token;
+  let left = ms;
+  while (left > 0) {
+    const t0 = performance.now();
+    await new Promise(r => setTimeout(r, Math.min(left, 40)));
+    if (mine !== token) throw new Cancelled();
+    if (!paused) { const dt = performance.now() - t0; left -= dt; chapterElapsed += dt; }
   }
 }
 
-/* ── Chat message inject ────────────────────── */
-function addMessage(type, html, delay=0) {
-  return new Promise(resolve => {
-    setTimeout(() => {
-      const msgs = $('chatMessages');
-      const div = document.createElement('div');
-      div.className = `msg ${type}`;
-      if(type === 'ai') {
-        div.innerHTML = `
-          <div class="msg-avatar ai-av"><img src="/brand/gened-star.png" alt="AI" style="width:22px;height:22px;border-radius:6px;object-fit:contain;background:#fff;" /></div>
-          <div class="bubble ai-bubble">${html}</div>`;
-      } else {
-        div.innerHTML = `
-          <div class="bubble stu-bubble">${html}</div>
-          <div class="msg-avatar stu-av">A</div>`;
-      }
-      div.style.opacity = '0';
-      div.style.transform = 'translateY(10px)';
-      div.style.transition = 'all 0.4s ease';
-      msgs.appendChild(div);
-      msgs.scrollTop = msgs.scrollHeight;
-      setTimeout(() => { div.style.opacity='1'; div.style.transform='translateY(0)'; }, 30);
-      resolve(div);
-    }, delay);
-  });
+/* ═══ Helpers ═════════════════════════════════════════════════════════════ */
+const cursor = $('cursor');
+let cur = { x: 620, y: 360 };
+function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
+function pointOf(el, dx = 0, dy = 0) {
+  const r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
+  return { x: (r.left + r.width / 2 - s.left) / scale + dx, y: (r.top + r.height / 2 - s.top) / scale + dy };
+}
+function placeCursor(x, y) { cur = { x, y }; cursor.style.transition = 'opacity .3s'; cursor.style.transform = `translate(${x}px, ${y}px)`; }
+async function moveTo(el, ms = 750, dx = 0, dy = 0) {
+  const p = pointOf(el, dx, dy);
+  cursor.classList.add('on');
+  cursor.style.transition = `transform ${ms}ms cubic-bezier(.45,0,.2,1), opacity .3s`;
+  cursor.style.transform = `translate(${p.x}px, ${p.y}px)`;
+  cur = p;
+  await wait(ms + 60);
+}
+async function tap(el) {
+  cursor.classList.add('tap');
+  const r = document.createElement('span');
+  r.className = 'ripple'; r.style.left = cur.x + 'px'; r.style.top = cur.y + 'px';
+  stage.appendChild(r);
+  setTimeout(() => r.remove(), 700);
+  if (el) el.classList.add('press');
+  await wait(180);
+  cursor.classList.remove('tap');
+  await wait(120);
+  if (el) el.classList.remove('press');
+}
+async function clickOn(el, ms) { await moveTo(el, ms); await wait(150); await tap(el); }
+function spot(el) { document.querySelectorAll('.spot').forEach(s => s.classList.remove('spot')); if (el) el.classList.add('spot'); }
+
+const sayText = $('sayText'), sayAv = $('sayAv');
+async function say(html, hold = 0) {
+  sayText.classList.add('out');
+  await wait(220);
+  sayText.innerHTML = html;
+  sayText.classList.remove('out');
+  sayAv.classList.remove('talk'); void sayAv.offsetWidth; sayAv.classList.add('talk');
+  if (hold) await wait(hold);
+}
+async function typeInto(el, text, speed = 70) {
+  el.innerHTML = '<span class="txt"></span><span class="caret"></span>';
+  const t = el.querySelector('.txt');
+  for (const ch of text) { t.textContent += ch; await wait(speed); }
 }
 
-function showTypingIndicator() {
-  const msgs = $('chatMessages');
-  const div = document.createElement('div');
-  div.className = 'msg ai';
-  div.id = 'typingIndicator';
-  div.innerHTML = `<div class="msg-avatar ai-av"><img src="/brand/gened-star.png" alt="AI" style="width:22px;height:22px;border-radius:6px;object-fit:contain;background:#fff;" /></div><div class="bubble ai-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
+/* Lesson state */
+function setRail(done) {
+  $('steps').innerHTML = STEPS.map(([t, ty], i) => `
+    <div class="step ${i < done ? 'done' : i === done ? 'cur' : ''}">
+      <span class="mk">${i < done ? svg('check', 12) : ''}</span><div>${t}<span class="ty">${ty}</span></div>
+    </div>`).join('');
+  $('railBar').style.width = Math.round(done / STEPS.length * 100) + '%';
+  $('railCap').textContent = `${done} of ${STEPS.length} steps done`;
+  $('railPct').textContent = Math.round(done / STEPS.length * 100) + '%';
+  $('lSteps').textContent = `${done}/${STEPS.length}`;
+  $('typePill').textContent = (STEPS[done] || STEPS[0])[1];
 }
-function removeTypingIndicator() {
-  const el = $('typingIndicator');
-  if(el) el.remove();
+const SKETCH_IDS = ['skNum', 'skA1', 'skA2', 'skA3', 'skA4', 'skSum'];
+/* The board: a title (drawn or not) and an optional worked sum under it. */
+function setBoard(drawn, title = 'Adding up digits', sketch = { num: '1400', sum: '1 + 4 + 0 + 0 = <em>?</em>' }) {
+  $('bTitleText').textContent = title;
+  $('bTitleText').classList.toggle('in', drawn);
+  $('bUnder').classList.toggle('in', drawn);
+  $('boardEmpty').style.opacity = drawn ? 0 : 1;
+  $('sketch').style.display = sketch ? '' : 'none';
+  if (sketch) { $('skNum').textContent = sketch.num; $('skSum').innerHTML = sketch.sum; }
+  SKETCH_IDS.forEach(id => $(id).classList.toggle('in', drawn && !!sketch));
 }
-
-/* ══════════════════════════════════════════════
-   SCENE SEQUENCE
-   ══════════════════════════════════════════════ */
-async function runAnimation() {
-  // ─── SCENE 0: Intro – home page loaded ───
-  setDot(0);
-  showPage('pageHome');
-  setUrl('/student');
-  setMobileNav('mnavHome');
-  cursor.style.top  = isMobile() ? '300px' : '320px';
-  cursor.style.left = isMobile() ? '190px' : '500px';
-  await wait(800);
-  showCaption('Welcome to GenEd! Let\'s see how it works. 😊', 4500);
-  await wait(5000);
-
-  // ─── STEP 1 card ───
-  await showStep('Step 1: Your Profile 👤', 'See your info and settings');
-
-  // ─── SCENE 1: Move cursor to "Me" nav ───
-  setDot(0);
-  showCaption('Let\'s click on "Me" to see your profile!');
-  await wait(3500);
-
-  if (isMobile()) {
-    // Mobile: tap bottom nav "Me"
-    moveCursor(645, 320);
-    await wait(800);
-    showTooltip('Tap "Me"', 618, 280);
-  } else {
-    moveCursor(217, 110);
-    await wait(800);
-    showTooltip('Click "Me"', 183, 90);
-  }
-  await wait(900);
-
-  // Highlight nav item
-  if (!isMobile()) {
-    $('navMe').style.background = 'rgba(91,77,199,0.18)';
-    $('navMe').style.color = '#8B7FE8';
-  }
-  await wait(500);
-  clickCursor();
-  await wait(250);
-
-  // Switch active nav
-  $('navHome').classList.remove('active');
-  $('navMe').classList.add('active');
-  $('navMe').querySelector('.dot-active') || ($('navMe').innerHTML += '<div class="dot-active"></div>');
-  setMobileNav('mnavMe');
-  hideTooltip();
-  await wait(400);
-
-  // ─── Navigate to Profile ───
-  showPage('pageProfile');
-  setUrl('/student/profile');
-  setMobileNav('mnavMe');
-  hideCaption();
-  showCaption('This is your profile page! You can see your info here. 😊');
-  cursor.style.transition = 'none';
-  cursor.style.top  = isMobile() ? '300px' : '300px';
-  cursor.style.left = isMobile() ? '190px' : '600px';
-  await wait(4500);
-  hideCaption();
-
-  // ─── STEP 2 card ───
-  await showStep('Step 2: Add Your School 🏫', 'Connect with your school to get subjects');
-
-  // ─── SCENE 2: Scroll down to partners section ───
-  setDot(1);
-  showCaption('Let\'s scroll down to add your school!');
-  await wait(1500);
-  moveCursor(isMobile() ? 350 : 350, isMobile() ? 190 : 552);
-  await wait(800);
-
-  // Animate scroll
-  const ps = $('profileScroll');
-  const scrollTarget = $('partnersCard').offsetTop - 40;
-  let scrollStart = ps.scrollTop;
-  const scrollDur = 900;
-  const startTime = performance.now();
-
-  function animateScroll(now) {
-    const elapsed = now - startTime;
-    const progress = Math.min(elapsed / scrollDur, 1);
-    const ease = 1 - Math.pow(1 - progress, 3);
-    ps.scrollTop = scrollStart + (scrollTarget - scrollStart) * ease;
-    if(progress < 1) requestAnimationFrame(animateScroll);
-  }
-  requestAnimationFrame(animateScroll);
-  await wait(1200);
-  hideCaption();
-
-  // ─── SCENE 3: Select school and send request ───
-  showCaption('Pick your school from this list!');
-  await wait(2000);
-  moveCursor(isMobile() ? 310 : 262, isMobile() ? 190 : 483);
-  await wait(700);
-
-  // Click on select
-  const sel = $('partnerSelectEl');
-  await wait(500);
-  clickCursor();
-  await wait(350);
-
-  // Simulate selecting an option
-  sel.style.borderColor = '#5B4DC7';
-  sel.value = 'delhi';
-  await wait(600);
-  sel.style.borderColor = '#e2e8f0';
-
-  hideCaption();
-  showCaption('Now tap "Send Request"! ✅');
-  await wait(2000);
-
-  // Move to send button
-  if (isMobile()) {
-    moveCursor(360, 190);
-    showTooltip('Send Request', 330, 140);
-  } else {
-    moveCursor(262, 760);
-    showTooltip('Send Request', 228, 700);
-  }
-  await wait(900);
-  clickCursor();
-  hideTooltip();
-
-  // Button state: sending
-  const sendBtn = $('sendRequestBtn');
-  sendBtn.textContent = 'Sending…';
-  sendBtn.classList.add('sending');
-  hideCaption();
-  await wait(1200);
-
-  // Show success modal
-  sendBtn.textContent = 'Sent ✓';
-  sendBtn.classList.remove('sending');
-  sendBtn.classList.add('sent');
-  $('modalOverlay').classList.add('show');
-  await wait(3000);
-  showCaption('Done! Your school will add your subjects soon. 🎉');
-  await wait(3000);
-  hideCaption();
-
-  // Close modal
-  $('modalOverlay').classList.remove('show');
-  await wait(500);
-
-  // ─── SCENE 4: Navigate back to Home ───
-  showCaption('Let\'s go back to the Home screen!');
-  await wait(2500);
-
-  // Scroll profile back to top first
-  const scrollBackDur = 500;
-  const scrollBackStart = ps.scrollTop;
-  const scrollBackStartTime = performance.now();
-  await new Promise(resolve => {
-    function scrollBack(now) {
-      const elapsed = now - scrollBackStartTime;
-      const t = Math.min(elapsed / scrollBackDur, 1);
-      const ease = 1 - Math.pow(1 - t, 3);
-      ps.scrollTop = scrollBackStart * (1 - ease);
-      if(t < 1) requestAnimationFrame(scrollBack);
-      else resolve();
-    }
-    requestAnimationFrame(scrollBack);
-  });
-  moveCursor(isMobile() ? 52 : 86, isMobile() ? 50 : 274);
-  await wait(600);
-  showTooltip('Go back', isMobile() ? 22 : 52, isMobile() ? 20 : 244);
-  await wait(700);
-  clickCursor();
-  hideTooltip();
-  await wait(400);
-
-  // Switch nav back
-  $('navMe').classList.remove('active');
-  $('navHome').classList.add('active');
-  setMobileNav('mnavHome');
-  showPage('pageHome');
-  setUrl('/student');
-  ps.scrollTop = 0;
-  sendBtn.textContent = 'Send Request';
-  sendBtn.classList.remove('sent');
-  sel.value = '';
-
-  cursor.style.transition = 'none';
-  cursor.style.top  = isMobile() ? '300px' : '300px';
-  cursor.style.left = isMobile() ? '190px' : '600px';
-  await wait(400);
-
-  hideCaption();
-
-  // ─── STEP 3 card ───
-  await showStep('Step 3: Start Learning! 🚀', 'Pick a subject and chat with your helper');
-
-  // ─── SCENE 5: Click first subject (Mathematics) ───
-  setDot(2);
-  showCaption('Here are your subjects! Let\'s try one. 🎉');
-  await wait(3500);
-
-  hideCaption();
-  showCaption('Tap on Mathematics to start learning!');
-  await wait(1500);
-
-  // Scroll home to subjects if needed
-  $('pageHome').scrollTop = 0;
-  await wait(300);
-
-  // Move cursor to "Start learning →" button inside Math card
-  if (isMobile()) {
-    moveCursor(360, 190);
-    await wait(800);
-    $('subjectMath').classList.add('highlight');
-    $('mathBtn').classList.add('active');
-    showTooltip('Open Mathematics', 330, 100);
-  } else {
-    moveCursor(402, 401);
-    await wait(800);
-    $('subjectMath').classList.add('highlight');
-    $('mathBtn').classList.add('active');
-    showTooltip('Open Mathematics', 368, 320);
-  }
-  await wait(900);
-  clickCursor();
-  hideTooltip();
-  await wait(400);
-
-  $('subjectMath').classList.remove('highlight');
-
-  // ─── Navigate to chat ───
-  showPage('pageChat');
-  setUrl('/student/chat/new?agent=math');
-
-  // Clear chat
-  $('chatMessages').innerHTML = '';
-  cursor.style.transition = 'none';
-  cursor.style.top  = isMobile() ? '400px' : '380px';
-  cursor.style.left = isMobile() ? '190px' : '600px';
-  await wait(500);
-
-  // ─── SCENE 6: AI welcome message ───
-  hideCaption();
-  showCaption('Meet your Maths helper! It asks what you\'d like to learn. 🤖');
-  showTypingIndicator();
-  await wait(2200);
-  removeTypingIndicator();
-
-  await addMessage('ai',
-    `<span class="hi">👋 Hello Aryan, welcome!</span><br><br>
-    I'm your <strong>Mathematics helper</strong> for Grade 4. I'm here to make learning fun and easy!<br><br>
-    Which chapter would you like to explore today? Pick one below or type your own:
-    <div class="chapter-pills" id="chapterPills">
-      <span class="ch-pill" id="pill1">📐 Triangles</span>
-      <span class="ch-pill" id="pill2">📊 Statistics</span>
-      <span class="ch-pill" id="pill3">🔢 Polynomials</span>
-      <span class="ch-pill" id="pill4">📏 Geometry</span>
-    </div>`
-  );
-
-  await wait(3000);
-  hideCaption();
-
-  // ─── SCENE 7: Student selects a chapter ───
-  showCaption('You can pick any chapter you like! 📚');
-  await wait(2000);
-
-  // Move cursor to "Triangles" pill
-  const pill1 = $('pill1');
-  if(pill1) {
-    const scale = $('stageScaler').offsetWidth / 900;
-    const rect = pill1.getBoundingClientRect();
-    const stageRect = $('stage').getBoundingClientRect();
-    const pillCx = (rect.left + rect.width  / 2 - stageRect.left) / scale;
-    const pillCy = (rect.top  + rect.height / 2 - stageRect.top)  / scale;
-    moveCursor(pillCy, pillCx, null, 800);
-  }
+async function drawSketch() {
+  $('skNum').classList.add('in');
   await wait(1000);
-  showTooltip('Select chapter', 0, 0);
-  tooltip.style.top  = (parseFloat(cursor.style.top)  - 34) + 'px';
-  tooltip.style.left = (parseFloat(cursor.style.left) - 20) + 'px';
-  await wait(800);
-  clickCursor();
-  hideTooltip();
-
-  if(pill1) {
-    pill1.classList.add('chosen');
-  }
-  await wait(500);
-
-  // Student message bubble
-  await addMessage('student', 'Triangles 📐');
-  await wait(600);
-
-  hideCaption();
-  showCaption('Your helper is ready to teach you! 🎉');
-
-  showTypingIndicator();
-  await wait(2000);
-  removeTypingIndicator();
-
-  await addMessage('ai',
-    `<strong>Triangles</strong> — great choice! 🎉<br><br>
-    We'll learn about <em>shapes, sides, and angles</em>. Shall we start with a fun overview, or jump into some practice?`
-  );
-
-  $('chatMessages').scrollTop = $('chatMessages').scrollHeight;
-  await wait(3500);
-  hideCaption();
-
-  // ─── END ───
-  await wait(600);
-  $('endScreen').classList.add('show');
+  for (const id of ['skA1', 'skA2', 'skA3', 'skA4']) { $(id).classList.add('in'); await wait(200); }
+  $('skSum').classList.add('in');
+  await wait(1000);
+}
+const NIA_AV = '<span class="tmark"><img src="/brand/gened-star.png" alt="" /></span>';
+const ME_AV = `<img class="avatar av" src="${AVATAR_SRC}" alt="" />`;
+function addMsg(who, html) {
+  const m = document.createElement('div');
+  m.className = `msg ${who}`;
+  m.innerHTML = (who === 'nia' ? NIA_AV : ME_AV) + `<div class="bub">${html}</div>`;
+  $('msgs').appendChild(m);
+  const all = $('msgs').children;
+  while (all.length > 4) all[0].remove();
+  return m.querySelector('.bub');
+}
+async function niaSays(text, speed = 55) {
+  const bub = addMsg('nia', '<div class="dots"><i></i><i></i><i></i></div>');
+  const mark = bub.parentElement.querySelector('.tmark');
+  mark.classList.add('breathe');
+  await wait(1100);
+  bub.innerHTML = '<span class="t"></span><span class="cc"></span>';
+  const t = bub.querySelector('.t');
+  for (const w of text.split(' ')) { t.textContent += (t.textContent ? ' ' : '') + w; await wait(speed); }
+  bub.querySelector('.cc').remove();
+  mark.classList.remove('breathe');
+}
+function checkCard() {
+  $('stepCard').innerHTML = `
+    <span class="sc-eye">Quick check</span>
+    <div class="sc-q">What is the digit sum of 1400?</div>
+    <div class="sc-in" id="scIn"><span class="ph">Your answer</span></div>
+    <div class="keys" id="keys">${['(', ')', 'x²', 'xʸ', '√', '∛', 'π', 'n!', '%', '×', '÷', 'log', 'ln', 'sin', 'cos', 'tan'].map(k => `<span class="sk-sm">${k}</span>`).join('')}</div>
+    <div class="keys-note">Angles are in degrees · log is base 10</div>
+    <div class="sc-btns">
+      <span class="sk-sm sc-btn teal" id="checkBtn">Check answer</span>
+      <span class="sk-sm sc-btn">${svg('bulb', 13)}Hint</span>
+    </div>`;
+}
+function nextCard() {
+  $('stepCard').innerHTML = `
+    <div class="sc-q" style="margin-top:0">Got it? Move on when you're ready.</div>
+    <div class="sc-btns"><span class="sk-sm sc-btn teal" id="nextBtn">Next step ${svg('arrowR', 13)}</span></div>`;
+}
+function resetComposer() {
+  $('composer').classList.remove('dictating', 'focus');
+  $('cText').innerHTML = '<span class="ph">Type a message…</span>';
+  $('langName').textContent = 'English';
+  $('langMenu').classList.remove('on');
+  $('chat').classList.remove('voicing');
+  $('voice').classList.remove('on', 'speaking');
+  $('segChat').classList.add('on'); $('segVoice').classList.remove('on');
+}
+function resetLesson() {
+  setRail(0); setBoard(false); resetComposer();
+  $('msgs').innerHTML = '';
+  $('stepCard').classList.remove('on'); $('stepCard').innerHTML = '';
+  $('result').classList.remove('on');
+  $('lTimer').textContent = '00:12';
 }
 
-// Close button — notify parent iframe if embedded
-$('endCloseBtn').addEventListener('click', () => {
-  try { window.parent.postMessage('tutorial:close', '*'); } catch(e) {}
-  $('endScreen').classList.remove('show');
+/* ═══ The tour, chapter by chapter ════════════════════════════════════════ */
+const SCENES = [
+  {
+    name: 'Hello', dur: 6500,
+    setup() { show('scrIntro'); cursor.classList.remove('on'); },
+    async play() {
+      await say(`Hi there! I'm <b>${TUTOR}</b>, your learning buddy.`, 3200);
+      await say("Let's take a quick tour of GenEd together!", 3000);
+    },
+  },
+  {
+    name: 'Home', dur: 15000,
+    setup() {
+      show('scrHome'); spot(null);
+      $('subjMath').classList.remove('hover');
+      placeCursor(640, 330);
+    },
+    async play() {
+      await wait(500);
+      spot($('greet'));
+      await say('This is your <b>Home</b>. Every learning day starts here.', 3200);
+      spot($('contCard'));
+      await say('Started a chapter before? Tap <b>Continue Learning</b> to jump right back in.');
+      await moveTo($('contBtn'));
+      await wait(2200);
+      spot($('stats'));
+      await say('Here you can see your streak and how long you have learned.', 3000);
+      spot($('shelf'));
+      await say('Want something new? Choose a subject from <b>My subjects</b>.');
+      await moveTo($('subjMath'), 800);
+      $('subjMath').classList.add('hover');
+      await wait(900);
+      spot(null);
+      await tap($('subjMath'));
+      await wait(250);
+    },
+  },
+  {
+    name: 'Pick a chapter', dur: 9500,
+    setup() {
+      show('scrChapters');
+      document.querySelectorAll('.ctile').forEach(t => { t.classList.remove('hover'); t.querySelector('.opening')?.remove(); });
+      placeCursor(420, 160);
+      cursor.classList.add('on');
+    },
+    async play() {
+      await say('Every chapter is a little adventure. <b>Pick a chapter</b> to start!', 1800);
+      await moveTo($('tile1'), 600); await wait(300);
+      await moveTo($('tile2'), 500); await wait(300);
+      const t3 = $('tile3');
+      await moveTo(t3, 600);
+      t3.classList.add('hover');
+      await say("Let's try <b>Number Play</b>.", 900);
+      await tap(t3);
+      const o = document.createElement('div');
+      o.className = 'opening';
+      o.innerHTML = `<span style="display:flex;align-items:center;gap:8px">${svg('loader', 16, 'spin')}Opening…</span>`;
+      t3.appendChild(o);
+      await wait(30); o.classList.add('on');
+      await wait(1700);
+    },
+  },
+  {
+    name: `Learn with ${TUTOR_TEXT}`, dur: 31000,
+    setup() { show('scrLesson'); resetLesson(); placeCursor(560, 330); cursor.classList.remove('on'); },
+    async play() {
+      await wait(400);
+      await say(`Welcome to your lesson! <b>${TUTOR}</b> teaches you one step at a time.`, 600);
+      setBoard(false);
+      await wait(400);
+      $('bTitleText').classList.add('in'); $('boardEmpty').style.opacity = 0;
+      await wait(900); $('bUnder').classList.add('in');
+      const nia = niaSays("Let's start with something fun! Here's a number: 1400. Can you add up its digits?");
+      await wait(500);
+      await drawSketch();
+      await nia;
+      await say('She draws on the <b>board</b> while she explains.', 2600);
+      spot($('rail'));
+      await say('This side shows your <b>steps</b>, so you always know how far you have come.', 3400);
+      spot(null);
+      checkCard();
+      $('stepCard').classList.add('on');
+      await say("Now it's your turn! Answer on the <b>question card</b>.", 2200);
+      cursor.classList.add('on');
+      const scIn = $('scIn');
+      await clickOn(scIn);
+      scIn.innerHTML = '<span class="caret"></span>';
+      $('keys').classList.add('on');
+      await say('The answer box is a <b>calculator</b> too! Use √, log, π and more.', 2800);
+      await typeInto(scIn, '1+4+0+0', 110);
+      scIn.insertAdjacentHTML('beforeend', '<span class="ghost" id="ghost">= 5</span>');
+      await wait(40); $('ghost').classList.add('on');
+      await say("See the <b>= 5</b>? That's a sneak peek of your answer.", 1400);
+      await clickOn($('checkBtn'));
+      $('result').classList.add('on');
+      setRail(1);
+      await say('Woohoo! Every right answer moves you <b>one step forward</b>.', 2600);
+      $('result').classList.remove('on');
+      nextCard();
+      await wait(300);
+      await clickOn($('nextBtn'));
+      $('stepCard').classList.remove('on');
+      setBoard(false, 'Digit sums of big numbers', null);
+      await wait(200);
+      $('bTitleText').classList.add('in'); $('bUnder').classList.add('in'); $('boardEmpty').style.opacity = 0;
+      await wait(1200);
+    },
+  },
+  {
+    name: 'Ask for help', dur: 30000,
+    setup() {
+      show('scrLesson'); resetLesson(); setRail(1);
+      setBoard(true, 'Digit sums of big numbers', { num: '2025', sum: '2 + 0 + 2 + 5 = <em>9</em>' });
+      SKETCH_IDS.forEach(id => $(id).classList.remove('in'));
+      addMsg('nia', "Great job! Now let's try bigger numbers.");
+      placeCursor(560, 470); cursor.classList.add('on');
+    },
+    async play() {
+      await say(`Stuck? Just <b>ask ${TUTOR}</b>! Tap a quick button like <b>Examples</b>.`);
+      await clickOn($('chipEx'));
+      addMsg('me', 'Can you show me an example?');
+      const ex = niaSays('Sure! Take 2025: 2 + 0 + 2 + 5 = 9. Now you try 3104!');
+      await wait(900);
+      await drawSketch();
+      await ex;
+      await wait(600);
+      await say("Don't feel like typing? <b>Talk</b> in your own language!");
+      await clickOn($('langBtn'));
+      $('langMenu').classList.add('on');
+      await wait(500);
+      await clickOn($('optHindi'), 500);
+      $('langName').textContent = 'हिन्दी';
+      $('langMenu').classList.remove('on');
+      await wait(300);
+      await say(`Tap the <b>mic</b> and speak. ${TUTOR} writes down what you say.`);
+      await clickOn($('micBtn'));
+      const comp = $('composer');
+      comp.classList.add('dictating', 'focus');
+      $('cText').innerHTML = '<span class="ph">Listening…</span>';
+      for (let s = 1; s <= 3; s++) { await wait(800); $('cTimer').textContent = `0:0${s}`; }
+      $('cText').innerHTML = '<span class="hindi">मुझे एक और उदाहरण दिखाओ</span>';
+      await wait(900);
+      await clickOn($('doneBtn'));
+      comp.classList.remove('dictating');
+      await wait(250);
+      await clickOn($('sendBtn'), 450);
+      addMsg('me', '<span class="hindi">मुझे एक और उदाहरण दिखाओ</span>');
+      $('cText').innerHTML = '<span class="ph">Type a message…</span>';
+      comp.classList.remove('focus');
+      await niaSays('ज़रूर! 512 लो: 5 + 1 + 2 = 8.', 90);
+      await wait(400);
+      await say(`Or switch to <b>Voice</b> and chat with ${TUTOR} out loud, like a real tutor!`);
+      await clickOn($('segVoice'));
+      $('segVoice').classList.add('on'); $('segChat').classList.remove('on');
+      $('chat').classList.add('voicing');
+      $('voice').classList.add('on', 'speaking');
+      $('vStatus').textContent = `${TUTOR_TEXT} is speaking`; $('vHeard').textContent = '';
+      cursor.classList.remove('on');
+      await wait(2600);
+      $('voice').classList.remove('speaking');
+      $('vStatus').textContent = 'Listening…';
+      await wait(900);
+      $('vHeard').textContent = '"Is the digit sum of 3104 eight?"';
+      await wait(2200);
+    },
+  },
+  {
+    name: 'Your profile', dur: 21000,
+    setup() {
+      show('scrProfile'); spot(null);
+      $('segCont').classList.add('on'); $('segPtt').classList.remove('on');
+      $('pttLine').textContent = 'Your tutor listens whenever you speak.';
+      $('gStatus').classList.remove('sent'); $('gStatus').textContent = 'Not connected';
+      $('inviteBtn').style.display = ''; $('gInput').classList.remove('on'); $('gField').innerHTML = '';
+      placeCursor(560, 300); cursor.classList.add('on');
+    },
+    async play() {
+      await say('Your <b>Profile</b> is where you make GenEd yours.', 2600);
+      spot($('prefCard'));
+      await say(`Pick <b>${TUTOR}'s voice</b> and hear how it sounds.`);
+      await clickOn($('playBtn'));
+      await wait(1200);
+      await say('Like to talk only while holding a key? Choose <b>Push to talk</b>.');
+      await clickOn($('segPtt'));
+      $('segPtt').classList.add('on'); $('segCont').classList.remove('on');
+      $('pttLine').innerHTML = 'Hold <span class="kcap">Space</span> to talk';
+      await wait(2200);
+      spot($('guardCard'));
+      await say('Invite a <b>parent</b> so they can cheer on your progress!');
+      await clickOn($('inviteBtn'));
+      $('inviteBtn').style.display = 'none';
+      $('gInput').classList.add('on');
+      await typeInto($('gField'), 'parent@email.com', 55);
+      await clickOn($('gSend'));
+      $('gInput').classList.remove('on');
+      $('gStatus').classList.add('sent');
+      $('gStatus').innerHTML = `${svg('check', 12)}Invite sent`;
+      spot(null);
+      await wait(2200);
+    },
+  },
+  {
+    name: 'All set', dur: 5000, final: true,
+    setup() {
+      show('scrOutro'); cursor.classList.remove('on'); spot(null);
+      const c = $('confetti'); c.innerHTML = '';
+      const colors = ['#D9F279', '#B8D63F', '#FFFFFF', '#5FA8A3', '#F0AD4E'];
+      for (let i = 0; i < 46; i++) {
+        const p = document.createElement('i');
+        p.style.left = (i * 37 % 100) + '%';
+        p.style.background = colors[i % colors.length];
+        p.style.animationDuration = (2.2 + (i % 7) * 0.35) + 's';
+        p.style.animationDelay = ((i % 9) * 0.12) + 's';
+        c.appendChild(p);
+      }
+    },
+    async play() {
+      await say("You're ready! Tap <b>Start learning</b> and let's begin. See you in class!");
+    },
+  },
+];
+
+/* ═══ Player ══════════════════════════════════════════════════════════════ */
+let current = 0;
+const chapsEl = $('chaps');
+chapsEl.innerHTML = SCENES.map((s, i) => `<button class="chap" type="button" data-n="${i}" aria-label="${s.name}" title="${s.name}"><span></span></button>`).join('');
+const bars = [...chapsEl.querySelectorAll('.chap span')];
+chapsEl.addEventListener('click', e => { const b = e.target.closest('.chap'); if (b) playFrom(+b.dataset.n); });
+
+function paintProgress() {
+  bars.forEach((b, i) => {
+    const f = i < current ? 1 : i > current ? 0 : Math.min(chapterElapsed / SCENES[i].dur, 1);
+    b.style.width = f * 100 + '%';
+  });
+  requestAnimationFrame(paintProgress);
+}
+requestAnimationFrame(paintProgress);
+
+const pp = $('ppBtn');
+function setPaused(p) {
+  paused = p;
+  stage.classList.toggle('paused', p);
+  pp.innerHTML = svg(p ? 'play' : 'pause', 16);
+  pp.setAttribute('aria-label', p ? 'Play' : 'Pause');
+}
+pp.addEventListener('click', () => {
+  if (SCENES[current].final && finished) return playFrom(0);
+  setPaused(!paused);
 });
 
-// Restart
-$('restartBtn').addEventListener('click', () => {
-  $('endScreen').classList.remove('show');
-  $('navMe').classList.remove('active');
-  const dotEl = $('navMe').querySelector('.dot-active');
-  if(dotEl) dotEl.remove();
-  $('navHome').classList.add('active');
-  setMobileNav('mnavHome');
-  $('mathBtn').classList.remove('active');
-  hideCaption(); hideTooltip();
-  setTimeout(() => runAnimation(), 300);
+let finished = false;
+async function playFrom(n) {
+  const mine = ++token;
+  finished = false;
+  setPaused(false);
+  try {
+    for (let i = n; i < SCENES.length; i++) {
+      current = i; chapterElapsed = 0;
+      $('chapLabel').textContent = `${i + 1}/${SCENES.length} · ${SCENES[i].name}`;
+      SCENES[i].setup();
+      await SCENES[i].play();
+    }
+    if (mine === token) {
+      chapterElapsed = SCENES[current].dur;
+      finished = true;
+      pp.innerHTML = svg('replay', 16);
+      pp.setAttribute('aria-label', 'Watch again');
+    }
+  } catch (e) {
+    if (!(e instanceof Cancelled)) throw e;
+  }
+}
+
+$('againBtn').addEventListener('click', () => playFrom(0));
+$('startBtn').addEventListener('click', () => {
+  try { window.parent.postMessage('tutorial:close', '*'); } catch (e) {}
+});
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); pp.click(); }
+  if (e.code === 'ArrowRight' && current < SCENES.length - 1) playFrom(current + 1);
+  if (e.code === 'ArrowLeft') playFrom(Math.max(0, current - 1));
 });
 
-// Start on load
-window.addEventListener('load', () => {
-  setTimeout(runAnimation, 800);
-});
+playFrom(0);
 </script>
 </body>
 </html>

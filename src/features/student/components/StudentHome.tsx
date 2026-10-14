@@ -4,12 +4,19 @@ import { FEATURES } from "@/constants/features";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Menu, Mic, MessageCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Menu } from "lucide-react";
 import Image from "next/image";
-import { useStudentStore, sessionRoutePath, isVoiceSession } from "../store/useStudentStore";
+import { useStudentStore } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
 import { getStudentDisplayName } from "../utils/displayName";
-import { selectContinueSession, selectImminentSession } from "../utils/sessionSelection";
+import { selectImminentSession } from "../utils/sessionSelection";
+import { asError } from "@/utils/errors";
+import { learnerService } from "../learner/learnerService";
+import { useLessonLaunch } from "../learner/useLessonLaunch";
+import { useRecentChapters } from "../learner/useRecentChapters";
+import { asLearnerChapter, chapterPercent, continueChapter, subjectName } from "../learner/recentChapters";
+import type { RecentChapter } from "../learner/types";
+import { RecentChapterRow } from "./chapters/RecentChapterRow";
 import { useScheduleStore } from "../store/useScheduleStore";
 import { UpcomingSessionPanel } from "./UpcomingSessionPanel";
 import { ContinueLearningCard } from "./ContinueLearningCard";
@@ -144,25 +151,6 @@ function AprilAvatar({ state = "idle", size = 52 }: { state?: AprilState; size?:
   );
 }
 
-/* ═══ PROGRESS RING ═══ */
-function ProgressRing({ percent, size = 40, stroke = 3.5, color }: { percent: number; size?: number; stroke?: number; color: string }) {
-  const r    = (size - stroke) / 2;
-  const circ = 2 * Math.PI * r;
-  const off  = circ * (1 - percent / 100);
-  // A round cap on a near-empty arc renders as a dot floating off the track
-  // rather than "barely started" — square the cap below ~6% so a low value
-  // still reads as a short flat sliver sitting on the track.
-  const cap = percent > 0 && percent < 6 ? "butt" : "round";
-  return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color + "18"} strokeWidth={stroke} />
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
-        strokeDasharray={circ} strokeDashoffset={off} strokeLinecap={cap}
-        style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1)" }} />
-    </svg>
-  );
-}
-
 /* ═══ CONFETTI ═══ */
 function Confetti({ active, onDone }: { active: boolean; onDone?: () => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -235,10 +223,10 @@ function FilterDropdown({ value, options, onChange, activeColor, defaultColor }:
 export function StudentHome() {
   const router = useRouter();
   const {
-    studentProfile, recentChats,
-    fetchSessions, fetchStudentStats,
-    openNewChat, openExistingChat,
-    studentStats, isSessionsLoading, isStatsLoading,
+    studentProfile,
+    fetchStudentStats,
+    openNewChat,
+    studentStats, isStatsLoading,
     avatarId,
   } = useStudentStore();
   const { sessions: scheduledSessions, loadScheduledSessions } = useScheduleStore();
@@ -259,7 +247,7 @@ export function StudentHome() {
   // the blank screen indefinitely. The stagger transition above still plays
   // on genuine visibility changes; it just no longer gates first paint.
   const [mounted,        setMounted]        = useState(true);
-  const [showAllSessions,setShowAllSessions]= useState(false);
+  const [showAllRecent,  setShowAllRecent]  = useState(false);
   const subjectsScrollRef = useRef<HTMLDivElement>(null);
   const scrollSubjects = (dir: "left" | "right") => {
     const el = subjectsScrollRef.current;
@@ -280,7 +268,6 @@ export function StudentHome() {
 
   // Filters
   const [filterDate, setFilterDate] = useState<string>("All Time");
-  const [filterType, setFilterType] = useState<string>("All");
   const [filterSubject, setFilterSubject] = useState<string>("All");
 
   /* responsive sidebar */
@@ -290,7 +277,6 @@ export function StudentHome() {
   useEffect(() => {
     let cancelled = false;
     if (studentProfile && !cancelled) {
-      fetchSessions();
       fetchStudentStats();
       if (FEATURES.schedule) loadScheduledSessions(studentProfile.user_id);
     }
@@ -324,46 +310,33 @@ export function StudentHome() {
   }));
   const isSubjectsLoading = !catalogLoaded && !catalogError;
 
-  /* All sessions mapped with relative time */
-  const allSessionsRaw = recentChats.map(chat => {
-    return {
-      ...chat,
-      vis: subjectVisual(chat.subject ?? ""),
-      mastery: typeof chat.chapter_completion_percentage === "number"
-        ? Math.round(chat.chapter_completion_percentage)
-        : 0,
-    };
+  /* Recent chapters (GET /v1/learner/recent-chapters): the chapters the student last worked on, newest first.
+     The API names subjects by code ("social_science"); match them to the student's own subject names. */
+  const recent = useRecentChapters(!!studentProfile);
+  const subjectNames = subjectGroups.map((group) => group.subject);
+  const recentRows = recent.chapters.map((chapter) => {
+    const subject = subjectName(chapter.subject, subjectNames);
+    return { chapter, subject, vis: subjectVisual(subject), percent: chapterPercent(chapter) };
   });
 
-  const allSessions = allSessionsRaw.filter(sess => {
-    if (filterSubject !== "All" && sess.vis.label !== filterSubject) return false;
-    
-    if (filterType !== "All") {
-      const isVoice = isVoiceSession(sess);
-      if (filterType === "Voice" && !isVoice) return false;
-      if (filterType === "Chat" && isVoice) return false;
-    }
+  /* Continue learning: the most recently active chapter still in progress, whatever the list's filters. */
+  const continueTarget = continueChapter(recent.chapters);
+  const continueRow = continueTarget ? recentRows.find((row) => row.chapter === continueTarget) ?? null : null;
 
+  const filteredRecent = recentRows.filter((row) => {
+    if (filterSubject !== "All" && row.subject !== filterSubject) return false;
     if (filterDate !== "All Time") {
       const now = new Date();
-      // Handle the timestamp fields available
-      const dateVal = sess.lastActive || sess.created_at || sess.session_date;
-      if (dateVal) {
-        const d = new Date(dateVal);
-        if (!isNaN(d.getTime())) {
-          const diffDays = (now.getTime() - d.getTime()) / 86400000;
-          if (filterDate === "Today" && d.toDateString() !== now.toDateString()) return false;
-          if (filterDate === "This Week" && diffDays > 7) return false;
-          if (filterDate === "This Month" && diffDays > 30) return false;
-        }
+      const d = new Date(row.chapter.last_active_at);
+      if (!isNaN(d.getTime())) {
+        const diffDays = (now.getTime() - d.getTime()) / 86400000;
+        if (filterDate === "Today" && d.toDateString() !== now.toDateString()) return false;
+        if (filterDate === "This Week" && diffDays > 7) return false;
+        if (filterDate === "This Month" && diffDays > 30) return false;
       }
     }
-    
     return true;
   });
-
-  /* Continue learning is independent of Recent Sessions filters and must be resumable. */
-  const continueSession = selectContinueSession(allSessionsRaw);
 
   // `useNow` (5s) is enough to decide *whether* a countdown belongs in the hero
   // slot; the clock inside the panel runs its own 1s tick. Before mount it
@@ -374,11 +347,10 @@ export function StudentHome() {
     ? null
     : selectImminentSession(scheduledSessions, now);
 
-  /* Recent Sessions retains completed sessions and only removes the card shown above. */
-  const recentSessions = allSessions.filter(session => session.id !== continueSession?.id);
-  const previewSessions = recentSessions.slice(0, 3);
-  const displayedSessions = showAllSessions ? recentSessions : previewSessions;
-  const hasMoreSessions = recentSessions.length > 3;
+  /* The recent list keeps finished chapters and leaves out only the one in the Continue card above. */
+  const recentList = filteredRecent.filter((row) => row.chapter.instance_id !== continueRow?.chapter.instance_id);
+  const displayedRecent = showAllRecent ? recentList : recentList.slice(0, 3);
+  const hasMoreRecent = recentList.length > 3;
 
   const getGreeting = () => {
     const h = new Date().getHours();
@@ -396,12 +368,24 @@ export function StudentHome() {
     router.push(`/student/subjects/${encodeURIComponent(subject)}`);
   };
 
-  const handleSessionClick = (session: typeof allSessions[0]) => {
-    openExistingChat(session);
-    // Voice sessions reopen in the voice UI; chat sessions in the chat UI.
-    // router.push (not window.location.href) — the full reload used to
-    // discard the SPA cache and re-fetch every script on each session open.
-    router.push(sessionRoutePath(session));
+  /* Open a recent chapter: its own lesson when in progress or finished (to review); a fresh one if abandoned. */
+  const launchLesson = useLessonLaunch((st) => st.launch);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [openError, setOpenError] = useState<string | null>(null);
+  const openRecent = async (chapter: RecentChapter, subject: string) => {
+    if (openingId) return;
+    setOpenError(null);
+    setOpeningId(chapter.instance_id);
+    try {
+      const instanceId = chapter.state === "abandoned"
+        ? (await learnerService.openChapter(chapter.chapter_id)).id
+        : chapter.instance_id;
+      launchLesson(instanceId, asLearnerChapter(chapter), subject);
+      router.push(`/student/lesson/${encodeURIComponent(instanceId)}`);
+    } catch (e) {
+      setOpenError(asError(e).message || "That chapter couldn't open. Try again.");
+      setOpeningId(null);
+    }
   };
 
   const fade = (d = 0) => ({
@@ -509,7 +493,7 @@ export function StudentHome() {
               <UpcomingSessionPanel session={imminentSession} style={fade(0.14)} />
             )}
 
-            {!imminentSession && isSessionsLoading && !continueSession && (
+            {!imminentSession && recent.loading && !continueRow && (
               <div className="rounded-[22px] mb-8 animate-pulse"
                 style={{ background: C.card, border: `1px solid ${C.border}`, padding: "clamp(18px, 2.4vw, 28px)" }}>
                 <div className="flex flex-col gap-3" style={{ maxWidth: "min(66%, 800px)" }}>
@@ -521,15 +505,16 @@ export function StudentHome() {
                 </div>
               </div>
             )}
-            {!imminentSession && continueSession && (
+            {!imminentSession && continueRow && (
               <ContinueLearningCard
-                session={continueSession}
+                session={{ title: continueRow.chapter.chapter_title, mastery: continueRow.percent, vis: continueRow.vis }}
                 gradeLabel={
                   studentProfile?.grade
                     ? `Grade ${studentProfile.grade}${studentProfile.school_board ? ` ${studentProfile.school_board}` : ""}`
                     : undefined
                 }
-                onStart={() => handleSessionClick(continueSession)}
+                lastStudied={timeAgo(continueRow.chapter.last_active_at)}
+                onStart={() => void openRecent(continueRow.chapter, continueRow.subject)}
                 style={fade(0.14)}
               />
             )}
@@ -699,18 +684,17 @@ export function StudentHome() {
               )}
             </div>
 
-            {/* ── RECENT SESSIONS ── */}
+            {/* ── RECENT CHAPTERS ── */}
             <div style={fade(0.38)}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="citron-eyebrow font-bold uppercase m-0" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
-                  Recent sessions
+                  Recent chapters
                 </h2>
               </div>
 
               {/* Filters UI */}
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div className="flex flex-wrap items-center gap-3">
-                  {/* Date Filter */}
                   <FilterDropdown
                     value={filterDate}
                     options={["All Time", "Today", "This Week", "This Month"]}
@@ -718,40 +702,17 @@ export function StudentHome() {
                     activeColor={C.genPurple}
                     defaultColor={C.textMid}
                   />
-
-                  {/* Type Filter */}
-                  <FilterDropdown
-                    value={filterType === "All" ? "All Types" : filterType === "Voice" ? "Voice Sessions" : "Chat Sessions"}
-                    options={["All Types", "Voice Sessions", "Chat Sessions"]}
-                    onChange={v => {
-                      if (v === "All Types") setFilterType("All");
-                      else if (v === "Voice Sessions") setFilterType("Voice");
-                      else if (v === "Chat Sessions") setFilterType("Chat");
-                    }}
-                    activeColor={C.genPurple}
-                    defaultColor={C.textMid}
-                  />
-
-                  {/* Subject Filter */}
                   <FilterDropdown
                     value={filterSubject === "All" ? "All Subjects" : filterSubject}
-                    options={[
-                      "All Subjects",
-                      ...subjectGroups.map((group) => group.subject),
-                    ]}
-                    onChange={v => {
-                      if (v === "All Subjects") setFilterSubject("All");
-                      else setFilterSubject(v);
-                    }}
+                    options={["All Subjects", ...subjectNames]}
+                    onChange={(v) => setFilterSubject(v === "All Subjects" ? "All" : v)}
                     activeColor={C.genPurple}
                     defaultColor={C.textMid}
                   />
-
-                  {(filterDate !== "All Time" || filterType !== "All" || filterSubject !== "All") && (
+                  {(filterDate !== "All Time" || filterSubject !== "All") && (
                     <button
                       onClick={() => {
                         setFilterDate("All Time");
-                        setFilterType("All");
                         setFilterSubject("All");
                       }}
                       className="text-xs font-semibold text-gray-400 hover:text-red-500 bg-transparent border-none cursor-pointer transition-colors"
@@ -761,93 +722,76 @@ export function StudentHome() {
                   )}
                 </div>
 
-                {hasMoreSessions && (
+                {hasMoreRecent && (
                   <button
-                    onClick={() => setShowAllSessions(v => !v)}
+                    onClick={() => setShowAllRecent((v) => !v)}
                     className="font-semibold cursor-pointer bg-transparent border-none flex-shrink-0"
                     style={{ color: C.genPurple, fontSize: "clamp(11px, 1vw, 13px)" }}>
-                    {showAllSessions ? "Show less ↑" : "See all →"}
+                    {showAllRecent ? "Show less ↑" : "See all →"}
                   </button>
                 )}
               </div>
 
-              {isSessionsLoading ? (
-                <div className="flex flex-col" style={{ gap: "clamp(6px, 0.8vw, 10px)" }}>
+              {openError && (
+                <p role="alert" className="mb-3 text-[13px]" style={{ color: C.coral }}>{openError}</p>
+              )}
+
+              {recent.loading && recent.chapters.length === 0 ? (
+                <div className="flex flex-col" style={{ gap: "clamp(6px, 0.8vw, 10px)" }} aria-busy="true">
                   {[1, 2, 3].map((n) => (
                     <div key={n} className="rounded-[14px] flex items-center animate-pulse"
                       style={{
                         background: C.card, border: `1px solid ${C.border}`,
-                        padding: "clamp(12px, 1.4vw, 16px) clamp(14px, 1.8vw, 20px)",
+                        padding: "clamp(10px, 1.2vw, 14px) clamp(12px, 1.6vw, 18px)",
                         gap: "clamp(10px, 1.4vw, 16px)",
                       }}>
-                      <div className="rounded-full flex-shrink-0" style={{ width: 38, height: 38, background: C.border + "50" }} />
+                      <div className="rounded-[10px] flex-shrink-0" style={{ width: 72, aspectRatio: "16 / 10", background: C.border + "50" }} />
                       <div className="flex-1 flex flex-col gap-2">
                         <div className="rounded" style={{ height: 13, width: "60%", background: C.border + "60" }} />
                         <div className="rounded" style={{ height: 10, width: "35%", background: C.border + "35" }} />
                       </div>
-                      <div className="rounded" style={{ height: 10, width: 50, background: C.border + "30" }} />
+                      <div className="rounded-full" style={{ height: 38, width: 38, background: C.border + "30" }} />
                     </div>
                   ))}
                 </div>
-              ) : displayedSessions.length > 0 ? (
+              ) : recent.error && recent.chapters.length === 0 ? (
+                <div className="rounded-2xl p-6 text-center" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+                  <p style={{ color: C.textMuted, fontSize: 14 }}>Your recent chapters couldn&apos;t load.</p>
+                  <button
+                    onClick={() => void recent.refresh()}
+                    className="mt-2 font-semibold bg-transparent border-none cursor-pointer"
+                    style={{ color: C.genPurple, fontSize: 13 }}
+                  >
+                    Try again
+                  </button>
+                </div>
+              ) : displayedRecent.length > 0 ? (
                 <div className="flex flex-col" style={{ gap: "clamp(6px, 0.8vw, 10px)" }}>
-                  {displayedSessions.map(sess => {
-                    const vis = sess.vis;
-                    return (
-                      <div key={sess.id}
-                        className="rounded-[14px] flex items-center cursor-pointer"
-                        style={{
-                          background: C.card, border: `1px solid ${C.border}`,
-                          padding: "clamp(12px, 1.4vw, 16px) clamp(14px, 1.8vw, 20px)",
-                          gap: "clamp(10px, 1.4vw, 16px)",
-                          boxShadow: "0 1px 4px rgba(0,0,0,0.03)",
-                          transition: "box-shadow 0.2s",
-                        }}
-                        onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)"}
-                        onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.03)"}
-                        onClick={() => handleSessionClick(sess)}
-                      >
-                        <div className="rounded-[11px] flex items-center justify-center flex-shrink-0"
-                          style={{ background: vis.bg, width: "clamp(34px, 3.2vw, 42px)", height: "clamp(34px, 3.2vw, 42px)", color: vis.color }}>
-                          <SubjectIcon subject={sess.subject ?? ""} size={18} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold truncate" style={{ color: C.text, fontSize: "clamp(13px, 1.3vw, 15px)" }}>
-                            <span
-                              title={isVoiceSession(sess) ? "Voice session" : "Chat session"}
-                              aria-label={isVoiceSession(sess) ? "Voice session" : "Chat session"}
-                              className="inline-flex align-middle"
-                              style={{ marginRight: 6, color: C.textMuted }}
-                            >
-                              {isVoiceSession(sess)
-                                ? <Mic size={14} strokeWidth={2} />
-                                : <MessageCircle size={14} strokeWidth={2} />}
-                            </span>
-                            {sess.title}
-                          </div>
-                          <div className="mt-0.5" style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>
-                            {vis.label} · {timeAgo(sess.lastActive)}
-                          </div>
-                        </div>
-                        <div className="flex items-center flex-shrink-0" style={{ gap: 8 }}>
-                          <div className="relative">
-                            <ProgressRing percent={sess.mastery} size={38} stroke={3.5} color={vis.color} />
-                            <div className="absolute inset-0 flex items-center justify-center font-bold"
-                              style={{ color: vis.color, fontSize: "clamp(9px, 0.9vw, 11px)" }}>
-                              {sess.mastery}%
-                            </div>
-                          </div>
-                          <div style={{ color: C.textFaint, fontSize: 18 }}>›</div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {displayedRecent.map((row) => (
+                    <RecentChapterRow
+                      key={row.chapter.instance_id}
+                      chapter={row.chapter}
+                      subjectLabel={row.vis.label}
+                      color={row.vis.color}
+                      when={timeAgo(row.chapter.last_active_at)}
+                      opening={openingId === row.chapter.instance_id}
+                      disabled={!!openingId}
+                      onOpen={(chapter) => void openRecent(chapter, row.subject)}
+                      onCardExpired={() => void recent.refresh()}
+                    />
+                  ))}
                 </div>
-              ) : allSessions.length <= 1 ? (
+              ) : (
                 <div className="rounded-2xl p-8 text-center" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-                  <p style={{ color: C.textMuted, fontSize: 14 }}>No other sessions yet. Keep learning!</p>
+                  <p style={{ color: C.textMuted, fontSize: 14 }}>
+                    {recentRows.length === 0
+                      ? "No chapters yet. Pick a subject above to start your first one!"
+                      : recentList.length === 0 && filteredRecent.length > 0
+                        ? "No other chapters yet. Keep learning!"
+                        : "No chapters match these filters."}
+                  </p>
                 </div>
-              ) : null}
+              )}
             </div>
 
           </div>

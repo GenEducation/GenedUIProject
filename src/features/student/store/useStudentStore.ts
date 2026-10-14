@@ -54,6 +54,8 @@ export interface StudentProfile {
   school_board?: string;
   ai_name?: string;
   preferred_voice?: string;
+  /** The picked tutor voice (an id from `GET /voices`); null or absent means the catalog's default. */
+  tutor_voice?: string | null;
   plan?: "FREE" | "PRO";
   plan_expires_at?: string | null;
   preferred_language?: string | null;

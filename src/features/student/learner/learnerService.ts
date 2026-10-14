@@ -1,5 +1,5 @@
 import { authFetch } from "@/utils/authFetch";
-import type { InstanceState, LearnerChaptersOut } from "./types";
+import type { InstanceState, LearnerChaptersOut, RecentChaptersOut } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
@@ -15,6 +15,13 @@ export const learnerService = {
   /** The chapters this student can open for `subject` (exact taxonomy name). Grade and school come from the token. */
   chapters: async (subject: string): Promise<LearnerChaptersOut> => {
     const response = await authFetch(`${API_BASE_URL}/v1/learner/chapters?subject=${encodeURIComponent(subject)}`);
+    return response.json();
+  },
+
+  /** The chapters this student last worked on, most recently active first (`limit` 1–50). */
+  recentChapters: async (limit = 20): Promise<RecentChaptersOut> => {
+    const n = Math.max(1, Math.min(50, Math.floor(limit)));
+    const response = await authFetch(`${API_BASE_URL}/v1/learner/recent-chapters?limit=${n}`);
     return response.json();
   },
 

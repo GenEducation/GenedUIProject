@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertCircle, Check, CheckCircle2, ChevronDown, Loader2, Play, Rocket, ShieldCheck, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
 import { REJECT_REASONS, type ReleaseProposal, type ReleaseReason, type SourceRelease } from "../types/sources";
-import { detailsOf, groupByKind, summarize } from "../utils/releaseSummary";
+import { groupByKind, summarize } from "../utils/releaseSummary";
+import { buildLookup, type ReleaseLookup } from "../utils/releaseDetails";
+import { ReleaseProposalDetails } from "./ReleaseProposalDetails";
 import type { Subject } from "../store/usePartnerStore";
 
 interface SourceReleaseModalProps {
@@ -110,7 +112,9 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun }: SourceReleaseMo
     }
   };
 
-  const proposals = data?.proposals ?? [];
+  const proposals = useMemo(() => data?.proposals ?? [], [data]);
+  // Names for the ids parts point at (a question's concepts, a step's sections…), from the whole release.
+  const lookup = useMemo(() => buildLookup(proposals), [proposals]);
   const pending = proposals.filter((p) => p.state === "pending");
   const rejected = proposals.filter((p) => p.state === "rejected");
   const accepted = proposals.length - pending.length - rejected.length;
@@ -173,6 +177,7 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun }: SourceReleaseMo
                 label={g.info.label}
                 hint={g.info.hint}
                 proposals={g.proposals}
+                lookup={lookup}
                 readOnly={published}
                 busy={busy}
                 onAcceptAll={(ps) => void decide(g.info.label, ps, "accept")}
@@ -235,6 +240,7 @@ function KindGroup({
   label,
   hint,
   proposals,
+  lookup,
   readOnly,
   busy,
   onAcceptAll,
@@ -243,6 +249,7 @@ function KindGroup({
   label: string;
   hint: string;
   proposals: ReleaseProposal[];
+  lookup: ReleaseLookup;
   readOnly: boolean;
   busy: string | null;
   onAcceptAll: (ps: ReleaseProposal[]) => void;
@@ -282,7 +289,7 @@ function KindGroup({
       {open && (
         <ul className="border-t border-[#122D30]/5 divide-y divide-[#122D30]/5">
           {proposals.map((p) => (
-            <ProposalRow key={p.id} proposal={p} readOnly={readOnly} busy={busy} onDecide={onDecide} />
+            <ProposalRow key={p.id} proposal={p} lookup={lookup} readOnly={readOnly} busy={busy} onDecide={onDecide} />
           ))}
         </ul>
       )}
@@ -292,11 +299,13 @@ function KindGroup({
 
 function ProposalRow({
   proposal,
+  lookup,
   readOnly,
   busy,
   onDecide,
 }: {
   proposal: ReleaseProposal;
+  lookup: ReleaseLookup;
   readOnly: boolean;
   busy: string | null;
   onDecide: (p: ReleaseProposal, decision: "accept" | "reject", reason?: ReleaseReason) => void;
@@ -314,14 +323,16 @@ function ProposalRow({
           <p className="text-sm font-bold text-[#122D30] leading-snug">{title}</p>
           {detail && <p className="mt-0.5 text-xs text-[#122D30]/60 leading-relaxed line-clamp-3">{detail}</p>}
           {/* eslint-disable-next-line no-restricted-syntax -- an inline text disclosure, not an action button */}
-          <button type="button" onClick={() => setShowDetails((s) => !s)} className="mt-1 text-[10px] font-black uppercase tracking-widest text-[#122D30]/35 hover:text-[#122D30]/60">
-            {showDetails ? "Hide details" : "Details"}
+          <button
+            type="button"
+            onClick={() => setShowDetails((s) => !s)}
+            aria-expanded={showDetails}
+            className="mt-1 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#075E63]/70 hover:text-[#075E63]"
+          >
+            <ChevronDown size={12} className={`transition-transform ${showDetails ? "" : "-rotate-90"}`} aria-hidden />
+            {showDetails ? "Hide details" : "Show details"}
           </button>
-          {showDetails && (
-            <pre className="mt-2 max-h-64 overflow-auto rounded-xl bg-[#F6F7F2] p-3 text-[11px] leading-relaxed text-[#122D30]/80 whitespace-pre-wrap break-words">
-              {detailsOf(proposal)}
-            </pre>
-          )}
+          {showDetails && <ReleaseProposalDetails proposal={proposal} lookup={lookup} />}
         </div>
         {proposal.state !== "pending" ? (
           <span

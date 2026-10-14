@@ -118,9 +118,17 @@ describe("BoardPanel — the step card", () => {
     await waitFor(() => expect(store().instance?.nodes_done).toBe(2));
   });
 
-  it("a teach step still short of talk asks the learner to talk it through", async () => {
+  it("a teach step still short of talk asks the learner to talk it through, on a board with nothing drawn yet", async () => {
+    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", teacher_text: "SYNTHETIC hello.", created_at: "x", figure_group_ids: [] }]);
     await open(makeLessonInstance({ active_node: { ...node, answered_item_ids: [CHECK_ITEM], engagement_count: 0 } }));
     expect(screen.getByText("Talk it through with your tutor to unlock the next step.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Next step/ })).toBeNull();
+  });
+
+  it("once the tutor has drawn, leaves the board to the picture", async () => {
+    await open(makeLessonInstance({ active_node: { ...node, answered_item_ids: [CHECK_ITEM], engagement_count: 0 } }));
+    expect(await screen.findByRole("img", { name: "SYNTHETIC figure" })).toBeInTheDocument();
+    expect(screen.queryByText("Talk it through with your tutor to unlock the next step.")).toBeNull();
     expect(screen.queryByRole("button", { name: /Next step/ })).toBeNull();
   });
 
@@ -185,11 +193,12 @@ describe("the answer box's calculator", () => {
     await waitFor(() => expect(answerRequests[0]).toMatchObject({ response: { kind: "text", text: "√2" } }));
   });
 
-  it("the calculator keys type what a keyboard can't", async () => {
+  it("the calculator keys type what a keyboard can't, under the answer box while it's in use", async () => {
     withCheck("numeric");
     await open();
+    expect(screen.queryByRole("button", { name: "Calculator" })).toBeNull();
     expect(screen.queryByRole("group", { name: "Calculator keys" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Calculator" }));
+    fireEvent.focus(answerBox());
     const keys = screen.getByRole("group", { name: "Calculator keys" });
 
     fireEvent.click(within(keys).getByRole("button", { name: "square root" }));
@@ -204,5 +213,12 @@ describe("the answer box's calculator", () => {
     act(() => { answerBox().setSelectionRange(4, 4); });
     fireEvent.change(answerBox(), { target: { value: "sin(30)" } });
     expect(screen.getByText("= 0.5")).toBeInTheDocument();
+  });
+
+  it("has no calculator keys for a word answer", async () => {
+    withCheck("string_set");
+    await open();
+    fireEvent.focus(answerBox());
+    expect(screen.queryByRole("group", { name: "Calculator keys" })).toBeNull();
   });
 });

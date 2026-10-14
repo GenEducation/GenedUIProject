@@ -1,11 +1,13 @@
 import type { ReleaseProposal } from "../types/sources";
+import { valueOf } from "./releaseDetails";
 
 /**
  * A release's proposals in a partner's words: what each kind is, in the order a
  * reviewer reads a chapter (its concepts first, the bookkeeping last), and a
  * one-line summary of each proposal's content. The content is the backend's
- * release bundle (gened_curriculum.bundle); only a few well-known fields are
- * read, and anything else stays in the proposal's "Details".
+ * release bundle record (gened_curriculum.bundle), bound to the release as
+ * `{ artifact_hash, value }`; the full record is laid out by
+ * ReleaseProposalDetails.
  */
 export interface KindInfo {
   label: string;
@@ -40,7 +42,7 @@ const list = (v: unknown) => (Array.isArray(v) ? v : []);
 
 /** A proposal's title and, when there is one, a line of detail. */
 export function summarize(p: ReleaseProposal): { title: string; detail: string | null } {
-  const c = p.content;
+  const c = valueOf(p);
   switch (kindOf(p.kind)) {
     case "component":
       return { title: str(c.title) ?? "Concept", detail: str(c.definition) };
@@ -86,11 +88,6 @@ export function summarize(p: ReleaseProposal): { title: string; detail: string |
         detail: str(c.description) ?? str(c.kind),
       };
   }
-}
-
-/** The content to show under "Details": everything but embeddings, which mean nothing to a reader. */
-export function detailsOf(p: ReleaseProposal): string {
-  return JSON.stringify(p.content, (key, value) => (key === "embedding" ? undefined : value), 2);
 }
 
 /** Proposals grouped by kind, in reading order. */
