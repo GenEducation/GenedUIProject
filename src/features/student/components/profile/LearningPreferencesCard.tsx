@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Languages, Loader2, Mic, Pause, Play, Radio, Settings } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Languages, Mic, Radio, Settings } from "lucide-react";
 import { Select } from "@/components/ui/Select";
-import { updateProfile } from "@/features/auth/authService";
 import { studentService } from "@/features/student/services/studentService";
-import { fetchVoices } from "@/features/student/services/voiceCatalogService";
-import type { TutorVoice } from "@/constants/tutorVoices";
 import { useStudentStore, type StudentProfile } from "../../store/useStudentStore";
 import { PttHotkeyConfig } from "../PttHotkeyConfig";
 import { CardIcon, ProfileCard } from "./ProfileCard";
+import { TutorVoiceControl } from "./TutorVoiceControl";
 
 const LANGUAGE_OPTIONS = [
   { value: "en", label: "English" },
@@ -63,112 +61,6 @@ function Row({
         {footnote && <p className="text-[12px] text-[var(--text-muted)]">{footnote}</p>}
       </div>
     </div>
-  );
-}
-
-/* ─── Tutor voice ─────────────────────────────────────────────────────────── */
-function VoiceControl() {
-  const profile = useStudentStore((s) => s.studentProfile);
-  const [voices, setVoices] = useState<TutorVoice[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [audioState, setAudioState] = useState<"idle" | "loading" | "playing">("idle");
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchVoices()
-      .then((list) => { if (!cancelled) setVoices(list); })
-      .catch((err: unknown) => { if (!cancelled) setLoadError(err instanceof Error ? err.message : "Network error"); })
-      .finally(() => { if (!cancelled) setLoaded(true); });
-    return () => { cancelled = true; audioRef.current?.pause(); };
-  }, []);
-
-  // The pick is `tutor_voice` (an app voice id), never `preferred_voice` (the MVP's Gemini name). No pick, or one the
-  // catalog no longer offers, shows the catalog's default: what the backend speaks for such a student too.
-  const saved = profile?.tutor_voice;
-  const defaultId = voices.find((v) => v.is_default)?.id ?? "";
-  const current = saved && voices.some((v) => v.id === saved) ? saved : defaultId;
-  const currentVoice = voices.find((v) => v.id === current);
-
-  const stop = () => {
-    audioRef.current?.pause();
-    setAudioState("idle");
-  };
-
-  const togglePreview = () => {
-    if (audioState !== "idle") return stop();
-    if (!currentVoice) return;
-    audioRef.current?.pause();
-    const audio = new Audio(currentVoice.sample_url);
-    audioRef.current = audio;
-    setAudioState("loading");
-    audio.oncanplay = () => setAudioState("playing");
-    audio.onended = () => setAudioState("idle");
-    audio.onerror = () => setAudioState("idle");
-    audio.play().catch(() => setAudioState("idle"));
-  };
-
-  const handleChange = async (id: string) => {
-    if (!profile || !id || id === current) return;
-    stop();
-    setSaving(true);
-    setSaveError(null);
-    try {
-      const res = await updateProfile({ user_id: profile.user_id, tutor_voice: id });
-      persistProfile({ ...profile, tutor_voice: res.tutor_voice ?? id }, res.access_token);
-    } catch (err: unknown) {
-      setSaveError(err instanceof Error ? err.message : "Couldn't save voice. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const options = voices.map((v) => ({
-    value: v.id,
-    label: v.is_default ? `${v.label} (Default)` : v.label,
-    hint: v.description,
-  }));
-
-  return (
-    <>
-      <div className="flex items-center gap-2.5">
-        <div className="min-w-0 flex-1">
-          <Select
-            aria-label="Tutor voice"
-            value={current}
-            onChange={handleChange}
-            disabled={!loaded || saving || !!loadError || !options.length}
-            options={options}
-            placeholder={loaded && !loadError ? "No voices available" : "Loading voices…"}
-            panelWidth={300}
-          />
-        </div>
-        {/* eslint-disable-next-line no-restricted-syntax -- round icon-only play control beside the voice select. */}
-        <button
-          type="button"
-          onClick={togglePreview}
-          disabled={!currentVoice}
-          aria-label={audioState === "idle" ? `Play a sample of ${currentVoice?.label ?? "the tutor voice"}` : "Stop sample"}
-          className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[var(--accent)] text-[var(--accent-ink)] shadow-[0_6px_14px_-8px_rgb(184_214_63/0.9)] transition hover:bg-[var(--accent-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-ring)] disabled:opacity-40"
-        >
-          {audioState === "loading" ? (
-            <Loader2 size={17} className="animate-spin" />
-          ) : audioState === "playing" ? (
-            <Pause size={17} fill="currentColor" />
-          ) : (
-            <Play size={17} fill="currentColor" className="ml-0.5" />
-          )}
-        </button>
-      </div>
-      {(saving || saveError || loadError) && (
-        <p className={`text-[12px] ${saveError || loadError ? "text-[var(--danger-ink)]" : "text-[var(--text-muted)]"}`}>
-          {saving ? "Saving…" : saveError ?? `Couldn't load voices: ${loadError}`}
-        </p>
-      )}
-    </>
   );
 }
 
@@ -271,7 +163,7 @@ export function LearningPreferencesCard({ index }: { index: number }) {
           icon={<Mic size={20} strokeWidth={2} />}
           title="Tutor voice"
           description="Choose the voice for your AI tutor. It applies from your next voice lesson."
-          control={<VoiceControl />}
+          control={<TutorVoiceControl persist={persistProfile} />}
         />
 
         {lang.enabled && (
