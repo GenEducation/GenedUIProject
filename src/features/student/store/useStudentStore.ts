@@ -18,7 +18,6 @@ import {
 } from "../utils/parseContent";
 import type { GeoGebraAppletParameters } from "@/utils/geogebraLoader";
 import { voiceService, type VoiceEvent } from "../services/voiceService";
-import { usePetStore } from "./usePetStore";
 import { appendStreamedText } from "../utils/voiceStreamMerge";
 import {
   isCompatibleVoiceSessionId,
@@ -136,13 +135,6 @@ export interface ActivityAction {
   words?: string[];
 }
 
-/**
- * Debugging only: pet reactions that arrived before the voice reply they
- * belong to (the backend now sends the reaction first). Drained onto the next
- * tutor message. See ChatMessage.debugPetEmotions.
- */
-const pendingPetDebug: { emotion: string; cause: string }[] = [];
-
 export interface ChatMessage {
   id: string;
   text: string;
@@ -166,11 +158,6 @@ export interface ChatMessage {
   toolStatus?: string;
   phase?: string;
   actions?: ActivityAction[];
-  // Debugging the pet-emotion leak reports: every backend `pet_emotion` frame
-  // that arrived while this turn was the active one, in order. Not shown in
-  // the normal chat UI — VoiceTranscript surfaces it, bracketed, next to the
-  // reply it came with. Remove once debugged.
-  debugPetEmotions?: { emotion: string; cause: string }[];
 }
 
 /** The tutor's active read-aloud / karaoke directive. */
@@ -514,10 +501,7 @@ export interface StudentState {
  * Which of the two profile illustrations the student picked.
  *
  * This is their *profile picture* — who they are, on the sidebar chip, the
- * chat header and the profile hero. Deliberately separate from the desk
- * buddy's appearance, which lives in `usePetStore`: a companion and an
- * identity are different things, and collapsing them made the profile feel
- * like a toy.
+ * chat header and the profile hero.
  */
 export type AvatarId = StudentAvatarId;
 
@@ -1412,7 +1396,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
 
     console.log("🎙️ [StudentStore] Starting Voice Session for Chat:", effectiveChat);
-    pendingPetDebug.length = 0;
     set({ voiceSessionStatus: "connecting", isRateLimitHit: false, rateLimitMessage: null });
 
     // Ensure chat mode is voice
@@ -1437,44 +1420,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       await voiceService.startSession(
         studentProfile.user_id,
         (event: VoiceEvent) => {
-          if (event.type === "pet_emotion" || event.type === "answer_graded") {
-            usePetStore
-              .getState()
-              .ingestPetFrame(event, `voice:${voiceService.getSessionId() ?? "pending"}`);
-            // Debugging the pet-emotion reports: tag the reply each frame belongs
-            // to, so VoiceTranscript can show it bracketed next to that reply.
-            // See ChatMessage.debugPetEmotions.
-            //
-            // Since v3 the backend holds each reply until its reaction is sent,
-            // so a reaction arrives *before* its reply exists: with no reply
-            // streaming it waits in `pendingPetDebug` and is attached to the
-            // next tutor message (below, in the transcript reveal). A lesson-end
-            // `celebration` comes after its turn, so it goes on the last reply.
-            if (event.type === "pet_emotion" && typeof event.emotion === "string") {
-              const emotion = event.emotion;
-              const cause = typeof event.cause === "string" ? event.cause : "unknown";
-              set((state) => {
-                const messages = [...state.messages];
-                let idx = state.streamingMessageId
-                  ? messages.findIndex((m) => m.id === state.streamingMessageId && m.sender === "ai")
-                  : -1;
-                if (idx === -1 && emotion !== "celebration") {
-                  pendingPetDebug.push({ emotion, cause });
-                  return {};
-                }
-                if (idx === -1) {
-                  for (let i = messages.length - 1; i >= 0; i--) {
-                    if (messages[i].sender === "ai") { idx = i; break; }
-                  }
-                }
-                if (idx === -1) return {};
-                const prev = messages[idx].debugPetEmotions ?? [];
-                messages[idx] = { ...messages[idx], debugPetEmotions: [...prev, { emotion, cause }] };
-                return { messages };
-              });
-            }
-            return;
-          }
+          // Reactions meant for the removed desk pet; nothing on screen uses them.
+          if (event.type === "pet_emotion" || event.type === "answer_graded") return;
           if (event.type === "connected") {
             // Clears any rotation notice from the socket we just replaced.
             set({ voiceSessionStatus: "active", sessionNotice: null });
@@ -1895,15 +1842,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
               updatedMessages[updatedMessages.length - 1] = appendStreamedText(lastMsg, content, role);
             } else {
               newId = `voice-${Date.now()}`;
-              // A reaction that arrived ahead of this reply (see the pet_emotion
-              // branch above) belongs to it.
-              const heldReactions = sender === "ai" ? pendingPetDebug.splice(0) : [];
               updatedMessages.push({
                 id: newId,
                 text: content,
                 sender,
                 timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                ...(heldReactions.length ? { debugPetEmotions: heldReactions } : {}),
               });
             }
 
@@ -2244,7 +2187,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         answer
       );
       if (result) {
-        usePetStore.getState().recordWidgetAnswer({ directiveId, isCorrect: result.is_correct });
         set((state) => ({
           comprehensionResults: {
             ...state.comprehensionResults,
@@ -2283,11 +2225,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         answer
       );
       if (result) {
-        usePetStore.getState().recordWidgetAnswer({
-          directiveId,
-          isCorrect: result.is_correct,
-          attempts: result.attempts,
-        });
         set((state) => ({
           interactiveResults: {
             ...state.interactiveResults,
@@ -2591,13 +2528,8 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       };
 
       const handleEvent = (event: StreamEvent) => {
-        if (event.type === "pet_emotion" || event.type === "answer_graded") {
-          const chat = get().activeChat;
-          usePetStore
-            .getState()
-            .ingestPetFrame(event, `chat:${chat?.session_id || chat?.id || "new"}`);
-          return;
-        }
+        // Reactions meant for the removed desk pet; nothing on screen uses them.
+        if (event.type === "pet_emotion" || event.type === "answer_graded") return;
         if (event.type === "planning") {
           const status = event.text || event.message || "";
           const phase = event.phase || "thinking";

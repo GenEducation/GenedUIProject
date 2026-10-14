@@ -12,6 +12,7 @@ describe("hidden student sections", () => {
   it("are switched off", () => {
     expect(FEATURES.practice).toBe(false);
     expect(FEATURES.schedule).toBe(false);
+    expect(FEATURES.chapterTime).toBe(false);
   });
 
   it.each([

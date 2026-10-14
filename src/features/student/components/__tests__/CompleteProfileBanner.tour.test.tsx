@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 
-vi.mock("../StudentBlobatar", () => ({ StudentBlobatar: () => null }));
 vi.mock("@/features/auth/authService", () => ({
   updateProfile: vi.fn(async (u: { name: string; ai_name?: string }) => ({ name: u.name, ai_name: u.ai_name ?? null })),
 }));

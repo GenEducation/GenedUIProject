@@ -11,7 +11,6 @@ import { PlacementHeader } from "./PlacementHeader";
 import { PlacementIntro } from "./PlacementIntro";
 import { PlacementCompleteView } from "./PlacementCompleteView";
 import { PlacementProgressRail } from "./PlacementProgressRail";
-import { PERCH_SIZE, PlacementPerchPet } from "./PlacementPerchPet";
 import type { PlacementItem } from "../types/placement";
 
 const FOCUSABLE =
@@ -105,7 +104,6 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
   // item screen's multi-subject grid — sized to the reference's narrower
   // dialog rather than stretching to the item screen's 1180px board width.
   const isNarrowPhase = phase === "intro" || phase === "complete";
-  const showPerch = phase === "intro" || phase === "item" || phase === "complete";
   const isLastBlock = currentBlock ? currentBlock.block_index >= totalBlocks - 1 : false;
   const isLastScreen = isLastBlock;
   const missingItems = remainingItems.filter((it) => draftResponses[it.item_id] === undefined);
@@ -174,27 +172,14 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
           />
 
           <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
-            {/* The panel plus, perched on its top edge, the student's pet —
-                outside the panel because the panel clips (`overflow-hidden`),
-                and outside the dialog because it is decoration. The wrapper
-                carries the enter/exit motion so the two scale as one; the top
-                margin (and the matching cut to the panel's max height) keeps
-                the pet on screen on a short window. */}
+            {/* The wrapper carries the panel's enter/exit motion. */}
             <motion.div
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.97 }}
               transition={{ type: "spring", stiffness: 400, damping: 34 }}
               className="placement-theme relative"
-              style={{ marginTop: PERCH_SIZE }}
             >
-              {showPerch && (
-                <PlacementPerchPet
-                  progress={totalItems > 0 ? currentIndex / totalItems : 0}
-                  finished={phase === "complete"}
-                  submitting={isSubmitting}
-                />
-              )}
               <div
                 ref={panelRef}
                 role="dialog"
@@ -205,7 +190,7 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
                   isNarrowPhase ? "w-[640px] max-w-[92vw]" : "w-[1180px] max-w-[95vw]"
                 }`}
                 style={{
-                  maxHeight: `min(760px, calc(92vh - ${PERCH_SIZE}px))`,
+                  maxHeight: "min(760px, 92vh)",
                   background: "var(--pl-canvas)",
                   boxShadow: "0 30px 80px rgb(16 20 32 / 0.28)",
                 }}

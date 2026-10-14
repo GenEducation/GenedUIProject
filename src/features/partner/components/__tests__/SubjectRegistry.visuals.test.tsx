@@ -66,6 +66,7 @@ describe("SubjectRegistry — chapter sources", () => {
 
     const failed = rowFor("SYNTHETIC failed");
     expect(within(failed).getByText("SYNTHETIC: the PDF could not be read")).toBeInTheDocument();
+    expect(within(failed).getByRole("button", { name: "Retry ingestion" })).toBeInTheDocument();
 
     const queued = rowFor("SYNTHETIC queued");
     expect(within(queued).getByRole("button", { name: "Stop Ingestion" })).toBeInTheDocument();
@@ -82,6 +83,29 @@ describe("SubjectRegistry — chapter sources", () => {
     await renderRegistry();
     fireEvent.click(within(rowFor("SYNTHETIC not started")).getByRole("button", { name: "Start ingestion" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("SYNTHETIC: this chapter is already running.");
+  });
+
+  it("asks before re-running a chapter with results, starts nothing on Cancel, and retries a failed one at once", async () => {
+    let runs = 0;
+    server.events.on("request:start", ({ request }) => {
+      if (request.method === "POST" && new URL(request.url).pathname.endsWith("/ingestions")) runs += 1;
+    });
+    await renderRegistry();
+    const rerun = () => fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "Run ingestion again" }));
+
+    rerun();
+    expect(screen.getByText("Run this chapter again?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByText("Run this chapter again?")).toBeNull();
+
+    rerun();
+    fireEvent.click(screen.getByRole("button", { name: "Run again" }));
+    await waitFor(() => expect(runs).toBe(1));
+
+    // A failed run has nothing to lose: Retry starts straight away.
+    fireEvent.click(within(rowFor("SYNTHETIC failed")).getByRole("button", { name: "Retry ingestion" }));
+    expect(screen.queryByText("Run this chapter again?")).toBeNull();
+    await waitFor(() => expect(runs).toBe(2));
   });
 
   it("keeps polling while a run is queued or running, and stops when none is", async () => {

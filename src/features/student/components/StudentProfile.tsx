@@ -156,7 +156,7 @@ export function StudentProfile() {
                 <Button
                   variant="secondary"
                   size="md"
-                  onClick={startTutorial}
+                  onClick={() => startTutorial()}
                   leadingIcon={<PlayCircle size={16} />}
                   className="self-start rounded-full px-6 sm:self-center"
                 >

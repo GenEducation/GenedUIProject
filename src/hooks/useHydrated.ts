@@ -7,9 +7,8 @@ const getServerSnapshot = () => false;
 /**
  * `false` during SSR and on the first client render, `true` from the commit on.
  *
- * Several stores in this app read `localStorage` when their module initializes
- * — `usePetStore`, and `avatarTraits` in `useStudentStore`. That happens
- * before hydration, so a component that renders straight from one of those
+ * Some stores in this app read `localStorage` when their module initializes
+ * (e.g. the avatar choice in `useStudentStore`). That happens before hydration, so a component that renders straight from one of those
  * values produces different output on the client than the server sent, and
  * React 19 throws a hydration mismatch rather than patching it up.
  *

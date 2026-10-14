@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, Images, Play, AlertCircle, FileText, HelpCircle, ShieldCheck } from "lucide-react";
+import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, Images, Play, RotateCw, AlertCircle, FileText, HelpCircle, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePartnerStore, SubjectFilters, type Subject } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
@@ -78,6 +78,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const [releaseFor, setReleaseFor] = useState<Subject | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Re-running a chapter whose run produced results (ready / review_needed) needs a confirm: the new run
+  // replaces them. A failed or invalid run has nothing to lose, so its Retry starts straight away.
+  const [rerunFor, setRerunFor] = useState<Subject | null>(null);
   const visualsIndex = useVisualsIndex(subjects);
   const subjectNames = [...new Set(useTaxonomySubjects(resolveTaxonomyBoard()).map((s) => s.name))];
 
@@ -458,17 +461,43 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                         )}
 
                         {STARTABLE_STATES.has(subject.state) && (
-                          <Button
-                            iconOnly
-                            size="sm"
-                            variant="outline"
-                            aria-label={subject.state === "registered" ? "Start ingestion" : "Run ingestion again"}
-                            title={subject.state === "registered" ? "Start ingestion" : "Run again"}
-                            loading={busy}
-                            onClick={(e) => { e.stopPropagation(); void runAction(subject, startIngestion); }}
-                          >
-                            <Play size={14} />
-                          </Button>
+                          subject.state === "registered" ? (
+                            <Button
+                              iconOnly
+                              size="sm"
+                              variant="outline"
+                              aria-label="Start ingestion"
+                              title="Start ingestion"
+                              loading={busy}
+                              onClick={(e) => { e.stopPropagation(); void runAction(subject, startIngestion); }}
+                            >
+                              <Play size={14} />
+                            </Button>
+                          ) : subject.state === "failed" || subject.state === "invalid" ? (
+                            <Button
+                              iconOnly
+                              size="sm"
+                              variant="outline"
+                              aria-label="Retry ingestion"
+                              title="Retry"
+                              loading={busy}
+                              onClick={(e) => { e.stopPropagation(); void runAction(subject, startIngestion); }}
+                            >
+                              <RotateCw size={14} />
+                            </Button>
+                          ) : (
+                            <Button
+                              iconOnly
+                              size="sm"
+                              variant="outline"
+                              aria-label="Run ingestion again"
+                              title="Run again"
+                              loading={busy}
+                              onClick={(e) => { e.stopPropagation(); setRerunFor(subject); }}
+                            >
+                              <RotateCw size={14} />
+                            </Button>
+                          )
                         )}
 
                         {subject.state === "queued" && (
@@ -579,6 +608,23 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         message="It will be removed from your registry. Only chapters that haven't produced reviewable content can be deleted."
         isLoading={isDeleting}
         error={deleteError}
+      />
+
+      {/* Re-run confirmation */}
+      <DeleteConfirmationModal
+        isOpen={!!rerunFor}
+        onClose={() => setRerunFor(null)}
+        onConfirm={() => {
+          const subject = rerunFor;
+          setRerunFor(null);
+          if (subject) void runAction(subject, startIngestion);
+        }}
+        title="Run this chapter again?"
+        message={`This starts a fresh ingestion run for "${rerunFor?.title ?? ""}". It can take a while, and it replaces the current results and report.`}
+        confirmLabel="Run again"
+        cancelLabel="Cancel"
+        tone="caution"
+        icon={RotateCw}
       />
 
       {/* Reconciliation questions popup */}

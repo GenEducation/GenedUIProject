@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, AlertTriangle } from "lucide-react";
+import { X, AlertTriangle, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 interface DeleteConfirmationModalProps {
@@ -13,6 +13,12 @@ interface DeleteConfirmationModalProps {
   message: string;
   isLoading?: boolean;
   error?: string | null;
+  /** Defaults suit a delete; override them to confirm some other risky action. */
+  confirmLabel?: string;
+  cancelLabel?: string;
+  /** `caution`: a teal, non-red treatment for actions that redo work rather than destroy it. */
+  tone?: "danger" | "caution";
+  icon?: LucideIcon;
 }
 
 export function DeleteConfirmationModal({
@@ -23,6 +29,10 @@ export function DeleteConfirmationModal({
   message,
   isLoading = false,
   error = null,
+  confirmLabel = "Delete Permanently",
+  cancelLabel = "Keep It",
+  tone = "danger",
+  icon: Icon = AlertTriangle,
 }: DeleteConfirmationModalProps) {
   return (
     <AnimatePresence>
@@ -46,8 +56,8 @@ export function DeleteConfirmationModal({
           >
             <div className="p-8 flex flex-col items-center text-center">
               {/* Icon */}
-              <div className="mb-6 w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-500">
-                <AlertTriangle size={32} />
+              <div className={`mb-6 w-16 h-16 rounded-2xl flex items-center justify-center ${tone === "danger" ? "bg-red-50 text-red-500" : "bg-[#075E63]/10 text-[#075E63]"}`}>
+                <Icon size={32} />
               </div>
 
               {/* Text Content */}
@@ -66,13 +76,13 @@ export function DeleteConfirmationModal({
               {/* Actions */}
               <div className="flex flex-col w-full gap-3">
                 <Button
-                  variant="destructiveSolid"
+                  variant={tone === "danger" ? "destructiveSolid" : "primary"}
                   size="lg"
                   fullWidth
                   loading={isLoading}
                   onClick={onConfirm}
                 >
-                  Delete Permanently
+                  {confirmLabel}
                 </Button>
                 <Button
                   variant="outline"
@@ -81,7 +91,7 @@ export function DeleteConfirmationModal({
                   disabled={isLoading}
                   onClick={onClose}
                 >
-                  Keep It
+                  {cancelLabel}
                 </Button>
               </div>
             </div>

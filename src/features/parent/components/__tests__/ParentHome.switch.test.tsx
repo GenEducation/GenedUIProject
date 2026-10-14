@@ -42,7 +42,6 @@ function linkChildren(children: ReturnType<typeof kid>[]) {
     http.get(`${BASE}/students/:id/profile`, () => HttpResponse.json({ grade: 7 })),
     http.get(`${BASE}/api/students/:id/available-agents`, () => HttpResponse.json({ partners: [] })),
     http.get(`${BASE}/students/:id/time/by-period`, () => HttpResponse.json([])),
-    http.get(`${BASE}/students/:id/time/by-chapter`, () => HttpResponse.json([])),
   );
 }
 

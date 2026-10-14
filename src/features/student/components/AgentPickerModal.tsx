@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Search } from "lucide-react";
+import { X, Search, Library } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
@@ -48,7 +48,7 @@ export function AgentPickerModal() {
         {/* Header */}
         <div className="flex items-center justify-between px-7 pt-7 pb-5 border-b border-[var(--primary-ink)]/8">
           <div>
-            <h2 className="citron-eyebrow text-xl font-extrabold text-[var(--primary-ink)]">All Subjects</h2>
+            <h2 className="citron-eyebrow text-xl font-extrabold text-[var(--primary-ink)]"><Library size={18} strokeWidth={2.2} aria-hidden />All Subjects</h2>
             <p className="text-sm text-[var(--primary-ink)]/50 mt-0.5">Select what you&apos;d like to learn today</p>
           </div>
           <Button iconOnly size="sm" variant="tertiary" aria-label="Close" onClick={() => setAgentPickerOpen(false)}>

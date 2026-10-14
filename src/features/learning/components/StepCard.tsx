@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ButtonHTMLAttributes, type FormEvent } from "react";
+import { useEffect, useState, type ButtonHTMLAttributes, type FormEvent } from "react";
 import { ArrowRight, Check, Lightbulb, Loader2, X } from "lucide-react";
 import { asError } from "@/utils/errors";
 import { AnimatePresence, motion } from "framer-motion";
@@ -8,7 +8,6 @@ import { useLessonStore } from "../useLessonStore";
 import { calculation } from "../check/arithmetic";
 import type { AnswerResponse, AnswerResult, CheckItem } from "../types";
 import { BoardFigure } from "./BoardFigure";
-import { CalculatorKeys } from "./CalculatorKeys";
 
 /** The structured answer each check type is scored from (backend `gened_assessment/scorer.py`). */
 export function responseFor(check: CheckItem, value: string): AnswerResponse {
@@ -18,8 +17,6 @@ export function responseFor(check: CheckItem, value: string): AnswerResponse {
 
 /** Ordering and matching need drag-and-drop answers the board doesn't draw yet; the chat accepts them as text. */
 const TYPED_TYPES = new Set<CheckItem["response_type"]>(["numeric", "numeric_set", "symbolic", "string_set"]);
-/** Typed answers that are maths, where the answer box is also a calculator. */
-const MATH_TYPES = new Set<CheckItem["response_type"]>(["numeric", "numeric_set", "symbolic"]);
 
 const RESULT_COPY: Record<AnswerResult["outcome"], { tone: "good" | "try" | "info"; text: string } | null> = {
   correct: { tone: "good", text: "That's right!" },
@@ -98,24 +95,10 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
   const [error, setError] = useState<string | null>(null);
   const isChoice = check.response_type === "mcq";
   const isTyped = TYPED_TYPES.has(check.response_type);
-  // A calculation typed as the answer ("540 * 40", "√144") is worked out as they type. For a number answer its
+  // A calculation typed as the answer ("540 * 40", "sqrt(144)") is worked out as they type. There are no
+  // calculator keys: whatever they type (2^3, pi, log 100, sin 30…) is worked out. For a number answer its
   // result is what's sent; for an expression or words, what they typed is (√2 stays √2), and the result only helps.
   const sum = isTyped ? calculation(typed) : null;
-  // The answer box is the calculator: while it's in use, the keys a keyboard doesn't have (√, π, log…) sit under it.
-  const [answering, setAnswering] = useState(false);
-  const showKeys = MATH_TYPES.has(check.response_type) && (answering || typed !== "");
-  const inputRef = useRef<HTMLInputElement>(null);
-  /** Type a calculator key's symbol where the cursor is. */
-  const insertKey = (text: string) => {
-    const el = inputRef.current;
-    const start = el?.selectionStart ?? typed.length;
-    const end = el?.selectionEnd ?? typed.length;
-    setTyped(typed.slice(0, start) + text + typed.slice(end));
-    requestAnimationFrame(() => {
-      el?.focus();
-      el?.setSelectionRange(start + text.length, start + text.length);
-    });
-  };
 
   useEffect(() => {
     setSelected(null);
@@ -178,17 +161,10 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
       )}
 
       {isTyped && (
-        <div
-          className="mt-4"
-          onFocus={() => setAnswering(true)}
-          onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setAnswering(false);
-          }}
-        >
+        <div className="mt-4">
           <div className="relative">
             <label htmlFor={`answer-${check.id}`} className="sr-only">Your answer</label>
             <input
-              ref={inputRef}
               id={`answer-${check.id}`}
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
@@ -217,7 +193,6 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
               )}
             </AnimatePresence>
           </div>
-          {showKeys && <CalculatorKeys id={`calc-${check.id}`} onKey={insertKey} />}
         </div>
       )}
 

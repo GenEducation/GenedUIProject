@@ -1,5 +1,6 @@
 import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import { asError } from "@/utils/errors";
+import { FEATURES } from "@/constants/features";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
@@ -477,6 +478,7 @@ export const studentService = {
   },
 
   fetchTimeByChapter: async (studentId: string, subject?: string) => {
+    if (!FEATURES.chapterTime) return [];
     const url = subject
       ? `${API_BASE_URL}/students/${studentId}/time/by-chapter?subject=${encodeURIComponent(subject)}`
       : `${API_BASE_URL}/students/${studentId}/time/by-chapter`;
