@@ -21,7 +21,7 @@ export const STRINGS = {
     dayStreak: "Current Streak",
     sessions: "Sessions Done",
     longestStreak: "Longest Streak",
-    timeSpent: "Time Spent",
+    timeSpent: "Time Spent (est.)",
   },
 
   practice: {

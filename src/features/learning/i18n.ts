@@ -50,6 +50,7 @@ const EN = {
   end: "End",
   backToTyping: "Back to typing",
   sessionTime: "Session time",
+  chapterTime: "Chapter time",
   stepsDone: "Steps done",
 } as const;
 
@@ -95,6 +96,7 @@ const HI: Table = {
   end: "खत्म करें",
   backToTyping: "लिखने पर लौटें",
   sessionTime: "सत्र का समय",
+  chapterTime: "अध्याय का समय",
   stepsDone: "पूरे हुए चरण",
 };
 
@@ -137,6 +139,7 @@ const HI_LATN: Table = {
   end: "Khatam",
   backToTyping: "Likhne par wapas",
   sessionTime: "Session ka samay",
+  chapterTime: "Chapter ka samay",
   stepsDone: "Poore hue steps",
 };
 
@@ -179,6 +182,7 @@ const MR: Table = {
   end: "संपवा",
   backToTyping: "लिहिण्याकडे परत",
   sessionTime: "सत्राची वेळ",
+  chapterTime: "प्रकरणाची वेळ",
   stepsDone: "पूर्ण झालेले टप्पे",
 };
 
@@ -221,6 +225,7 @@ const PA: Table = {
   end: "ਖ਼ਤਮ",
   backToTyping: "ਲਿਖਣ ਤੇ ਵਾਪਸ",
   sessionTime: "ਸੈਸ਼ਨ ਦਾ ਸਮਾਂ",
+  chapterTime: "ਅਧਿਆਇ ਦਾ ਸਮਾਂ",
   stepsDone: "ਪੂਰੇ ਹੋਏ ਕਦਮ",
 };
 
@@ -263,6 +268,7 @@ const TA: Table = {
   end: "முடி",
   backToTyping: "எழுதுவதற்குத் திரும்பு",
   sessionTime: "அமர்வு நேரம்",
+  chapterTime: "அத்தியாய நேரம்",
   stepsDone: "முடிந்த படிகள்",
 };
 
@@ -305,6 +311,7 @@ const TE: Table = {
   end: "ముగించు",
   backToTyping: "రాయడానికి తిరిగి",
   sessionTime: "సెషన్ సమయం",
+  chapterTime: "అధ్యాయం సమయం",
   stepsDone: "పూర్తైన దశలు",
 };
 
@@ -347,6 +354,7 @@ const KN: Table = {
   end: "ಮುಗಿಸಿ",
   backToTyping: "ಬರೆಯುವುದಕ್ಕೆ ಹಿಂತಿರುಗಿ",
   sessionTime: "ಅಧಿವೇಶನದ ಸಮಯ",
+  chapterTime: "ಅಧ್ಯಾಯದ ಸಮಯ",
   stepsDone: "ಮುಗಿದ ಹಂತಗಳು",
 };
 

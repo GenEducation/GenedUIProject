@@ -64,9 +64,9 @@ export const lessonService = {
     await authFetch(`${instancePath(instanceId)}/checks/${encodeURIComponent(itemId)}/delivered`, json(body));
   },
 
-  /** Records that the learner asked for help on a check; the hint itself comes as a `hint` turn. */
-  hint: async (instanceId: string, body: { request_id: string; item_id: string }): Promise<InstanceState> =>
-    (await authFetch(`${instancePath(instanceId)}/hints`, json(body))).json(),
+  /** A text presence beat for this tab (`source_id`). `active: false`: the server did not credit it (no recent action). */
+  presence: async (instanceId: string, sourceId: string): Promise<{ active: boolean }> =>
+    (await authFetch(`${instancePath(instanceId)}/presence`, json({ source_id: sourceId }))).json(),
 
   /** The learner's explicit done on the active teach node. */
   done: async (instanceId: string, body: { request_id: string; expected_revision: number }): Promise<InstanceState> =>
