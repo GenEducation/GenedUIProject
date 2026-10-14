@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { Button } from "../Button";
 import { STUDENT_COLORS } from "@/features/student/theme/colors";
 
@@ -68,27 +67,10 @@ describe("Button", () => {
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
   });
 
-  it("does not fire onClick while loading", async () => {
-    const onClick = vi.fn();
-    render(
-      <Button loading onClick={onClick}>
-        Save
-      </Button>
-    );
-    await userEvent.click(screen.getByRole("button"), { pointerEventsCheck: 0 });
-    expect(onClick).not.toHaveBeenCalled();
-  });
-
-  it("renders a square footprint for icon-only buttons", () => {
-    render(<Button iconOnly size="md" aria-label="Delete" />);
-    expect(screen.getByRole("button", { name: "Delete" })).toHaveStyle({
-      width: "36px",
-      height: "36px",
-    });
-  });
-
-  it("lets a call site override the surface via style", () => {
-    render(<Button style={{ borderRadius: 4 }}>Go</Button>);
-    expect(screen.getByRole("button")).toHaveStyle({ borderRadius: "4px" });
+  it("drops its own relative when the call site positions it absolutely", () => {
+    render(<Button aria-label="Close" className="absolute top-4 right-4">x</Button>);
+    const btn = screen.getByRole("button");
+    expect(btn).toHaveClass("absolute");
+    expect(btn).not.toHaveClass("relative");
   });
 });

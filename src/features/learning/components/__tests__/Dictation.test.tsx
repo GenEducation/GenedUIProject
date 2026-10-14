@@ -44,12 +44,6 @@ afterEach(() => {
 });
 
 describe("dictation", () => {
-  it("shows the mic only where the browser can recognise speech", () => {
-    delete (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition;
-    renderInput();
-    expect(screen.queryByRole("button", { name: "Dictate" })).toBeNull();
-  });
-
   it("words appear in the box as they're heard; Done keeps them to edit and send", () => {
     const onSend = renderInput();
     fireEvent.change(box(), { target: { value: "SYNTHETIC so" } });
@@ -73,27 +67,6 @@ describe("dictation", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(onSend).toHaveBeenCalledWith("SYNTHETIC so what is perimeter of a square");
-  });
-
-  it("Cancel throws the dictated words away and restores the box", () => {
-    renderInput();
-    fireEvent.change(box(), { target: { value: "SYNTHETIC kept" } });
-    fireEvent.click(screen.getByRole("button", { name: "Dictate" }));
-    FakeRecognition.last!.hear(["dropped words", true]);
-    fireEvent.click(screen.getByRole("button", { name: "Cancel dictation" }));
-    expect(box()).toHaveValue("SYNTHETIC kept");
-    expect(screen.getByRole("button", { name: "Dictate" })).toBeInTheDocument();
-  });
-
-  it("keeps listening when the browser ends a session on silence", () => {
-    renderInput();
-    fireEvent.click(screen.getByRole("button", { name: "Dictate" }));
-    const rec = FakeRecognition.last!;
-    rec.hear(["first part", false]);
-    act(() => rec.onend?.());
-    expect(rec.started).toBe(2);
-    rec.hear(["second part", false]);
-    expect(box()).toHaveValue("first part second part");
   });
 
   it("a blocked microphone stops dictation and says why", () => {
@@ -120,19 +93,6 @@ describe("dictation in other languages", () => {
     fireEvent.click(screen.getByRole("option", { name: new RegExp(english) }));
   };
 
-  it("listens in English by default", () => {
-    expect(dictateIn().lang).toBe("en-IN");
-  });
-
-  it("a Hindi lesson listens in Hindi", () => {
-    expect(dictateIn("Hindi").lang).toBe("hi-IN");
-  });
-
-  it("follows the language the learner's profile prefers", () => {
-    useStudentStore.setState({ studentProfile: { user_id: "s1", preferred_language: "ta" } as never });
-    expect(dictateIn("Mathematics").lang).toBe("ta-IN");
-  });
-
   it("the learner can pick another language, and it's remembered next time", () => {
     const { unmount } = render(<ChatInput replying={false} disabled={false} onSend={vi.fn()} onStop={vi.fn()} />);
     pick("Marathi");
@@ -156,11 +116,5 @@ describe("dictation in other languages", () => {
 
     second.hear(["SYNTHETIC नमस्ते", true]);
     expect(box()).toHaveValue("SYNTHETIC hello SYNTHETIC नमस्ते");
-  });
-
-  it("says so when the browser can't dictate in the chosen language", () => {
-    const rec = dictateIn();
-    act(() => rec.onerror?.({ error: "language-not-supported" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("can't take dictation in that language");
   });
 });

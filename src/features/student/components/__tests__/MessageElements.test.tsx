@@ -29,10 +29,24 @@ import { MessageElements } from "../MessageElements";
 import type { ChatElement } from "../../store/useStudentStore";
 
 describe("MessageElements — dispatch by element type", () => {
-  it("renders text elements through the markdown pipeline", () => {
-    const els: ChatElement[] = [{ id: "1", type: "text", content: "Hello world" }];
+  it("routes each element type to its renderer with the right props", () => {
+    const els: ChatElement[] = [
+      { id: "1", type: "text", content: "Hello world" },
+      { id: "2", type: "visual", content: "geogebra", meta: { engine: "geogebra", commands: ["A=(1,1)"] } },
+      { id: "3", type: "svg", content: "<svg></svg>" },
+      { id: "4", type: "widget", content: "x^2 + 1" },
+      { id: "5", type: "comprehension_widget", content: "q", meta: { question: "What color is the sky?" } },
+      { id: "6", type: "english_skill_view", content: "Read this aloud" },
+      { id: "7", type: "interactive", content: "grid", meta: { directive_id: "dir-9" } },
+    ];
     render(<MessageElements elements={els} />);
     expect(screen.getByText("Hello world")).toBeInTheDocument();
+    expect(screen.getByTestId("geogebra-visual")).toBeInTheDocument();
+    expect(screen.getByTestId("visual-block")).toHaveTextContent("svg");
+    expect(screen.getByTestId("math-widget")).toHaveTextContent("x^2 + 1");
+    expect(screen.getByTestId("comprehension-widget")).toHaveTextContent("What color is the sky?");
+    expect(screen.getByTestId("karaoke-renderer")).toHaveTextContent("Read this aloud");
+    expect(screen.getByTestId("interactive-block")).toHaveTextContent("dir-9");
   });
 
   it("routes p5sketch visuals straight to P5Visual, with no card chrome", () => {
@@ -45,52 +59,10 @@ describe("MessageElements — dispatch by element type", () => {
     expect(screen.queryByText("Graph")).not.toBeInTheDocument();
   });
 
-  it("routes geogebra visuals to GeoGebraVisual", () => {
-    const els: ChatElement[] = [
-      { id: "1", type: "visual", content: "geogebra", meta: { engine: "geogebra", commands: ["A=(1,1)"] } },
-    ];
-    render(<MessageElements elements={els} />);
-    expect(screen.getByTestId("geogebra-visual")).toBeInTheDocument();
-  });
-
   it("shows a friendly fallback for a visual-error element", () => {
     const els: ChatElement[] = [{ id: "1", type: "visual", content: "error", meta: { label: "Bad sketch" } }];
     render(<MessageElements elements={els} />);
     expect(screen.getByText(/Visual unavailable — Bad sketch/)).toBeInTheDocument();
-  });
-
-  it("routes svg elements to VisualBlock", () => {
-    const els: ChatElement[] = [{ id: "1", type: "svg", content: "<svg></svg>" }];
-    render(<MessageElements elements={els} />);
-    expect(screen.getByTestId("visual-block")).toHaveTextContent("svg");
-  });
-
-  it("routes widget elements to MathWidget with the expression", () => {
-    const els: ChatElement[] = [{ id: "1", type: "widget", content: "x^2 + 1" }];
-    render(<MessageElements elements={els} />);
-    expect(screen.getByTestId("math-widget")).toHaveTextContent("x^2 + 1");
-  });
-
-  it("routes comprehension_widget elements with the question text", () => {
-    const els: ChatElement[] = [
-      { id: "1", type: "comprehension_widget", content: "q", meta: { question: "What color is the sky?" } },
-    ];
-    render(<MessageElements elements={els} />);
-    expect(screen.getByTestId("comprehension-widget")).toHaveTextContent("What color is the sky?");
-  });
-
-  it("routes english_skill_view elements to KaraokeRenderer", () => {
-    const els: ChatElement[] = [{ id: "1", type: "english_skill_view", content: "Read this aloud" }];
-    render(<MessageElements elements={els} />);
-    expect(screen.getByTestId("karaoke-renderer")).toHaveTextContent("Read this aloud");
-  });
-
-  it("routes interactive elements to InteractiveBlock with the directive id", () => {
-    const els: ChatElement[] = [
-      { id: "el-1", type: "interactive", content: "grid", meta: { directive_id: "dir-9" } },
-    ];
-    render(<MessageElements elements={els} />);
-    expect(screen.getByTestId("interactive-block")).toHaveTextContent("dir-9");
   });
 
   it("shows the tool status pill only while streaming", () => {

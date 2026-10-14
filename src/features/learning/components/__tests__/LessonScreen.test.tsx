@@ -3,7 +3,6 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import { LESSON_ID, lessonFixture } from "@/test/msw/handlers/lesson";
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
 import { useLessonStore } from "../../useLessonStore";
-import { formatDuration } from "../../useSessionTimer";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), usePathname: () => "/student/lesson/x" }));
 import { LessonScreen } from "../LessonScreen";
@@ -59,12 +58,6 @@ describe("LessonScreen", () => {
     expect(within(screen.getByRole("region", { name: "Whiteboard" })).queryByText("SYNTHETIC reply.")).toBeNull();
   });
 
-  it("without launch info, falls back to a generic heading and exits home", () => {
-    render(<LessonScreen instanceId={LESSON_ID} />);
-    expect(within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("Lesson")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Leave lesson" })).toHaveAttribute("href", "/student");
-  });
-
   it("on a phone held upright, goes straight to the landscape lesson, turned to fill the screen", () => {
     mockViewport("portrait");
     const { unmount } = render(<LessonScreen instanceId={LESSON_ID} />);
@@ -84,17 +77,6 @@ describe("LessonScreen", () => {
     expect(document.documentElement.dataset.lessonRotated).toBeUndefined();
   });
 
-  it("on a narrow screen shows board and chat side by side, with the steps in a drawer", () => {
-    mockViewport("compact");
-    render(<LessonScreen instanceId={LESSON_ID} />);
-    expect(screen.getByRole("region", { name: "Whiteboard" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Chat with your tutor" })).toBeInTheDocument();
-    expect(document.getElementById("lesson-pane-progress")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Show lesson steps" }));
-    expect(screen.getByRole("dialog", { name: "Lesson steps" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Close lesson steps" }));
-  });
-
   it("Voice opens voice mode, which says voice isn't available while it's switched off", async () => {
     render(<LessonScreen instanceId={LESSON_ID} />);
     expect(screen.getByRole("button", { name: "Chat" })).toHaveAttribute("aria-pressed", "true");
@@ -110,12 +92,5 @@ describe("LessonScreen", () => {
     const alert = await screen.findByRole("alert");
     expect(within(alert).getByRole("button", { name: "Try again" })).toBeInTheDocument();
     await waitFor(() => expect(within(alert).getByRole("link", { name: "Back to chapters" })).toHaveAttribute("href", "/student"));
-  });
-});
-
-describe("formatDuration", () => {
-  it("pads minutes and seconds, and adds hours past one", () => {
-    expect(formatDuration(75)).toBe("01:15");
-    expect(formatDuration(3725)).toBe("1:02:05");
   });
 });

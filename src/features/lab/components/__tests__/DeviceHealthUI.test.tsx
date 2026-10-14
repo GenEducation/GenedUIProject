@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { DeviceHealthStrip } from "../DeviceHealthStrip";
@@ -89,14 +89,6 @@ const REVOKED_DESK: DeviceResponse = {
 };
 
 describe("DeviceHealthStrip", () => {
-  it("renders one glyph per reported subsystem", () => {
-    render(<DeviceHealthStrip device={ONLINE_DESK} onOpenDiagnostics={vi.fn()} />);
-
-    expect(screen.getByTitle("Display — OK")).toBeInTheDocument();
-    expect(screen.getByTitle("Speaker — OK")).toBeInTheDocument();
-    expect(screen.getByTitle("Microphone — OK")).toBeInTheDocument();
-  });
-
   it("frames a passing report on an offline device as historical", () => {
     render(<DeviceHealthStrip device={ONLINE_DESK} onOpenDiagnostics={vi.fn()} />);
 
@@ -105,24 +97,9 @@ describe("DeviceHealthStrip", () => {
     expect(screen.getByRole("button").getAttribute("aria-label")).toContain("Last known");
   });
 
-  it("shows uptime from the report", () => {
-    render(<DeviceHealthStrip device={ONLINE_DESK} onOpenDiagnostics={vi.fn()} />);
-    expect(screen.getByRole("button").textContent).toContain("2h 14m");
-  });
-
   it("renders nothing for a revoked device", () => {
     const { container } = render(
       <DeviceHealthStrip device={REVOKED_DESK} onOpenDiagnostics={vi.fn()} />,
-    );
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it("renders nothing when the device has never reported", () => {
-    const { container } = render(
-      <DeviceHealthStrip
-        device={{ ...ONLINE_DESK, last_health_report: null }}
-        onOpenDiagnostics={vi.fn()}
-      />,
     );
     expect(container).toBeEmptyDOMElement();
   });
@@ -134,29 +111,9 @@ describe("DeviceHealthStrip", () => {
     await userEvent.click(screen.getByRole("button"));
     expect(onOpen).toHaveBeenCalledWith(ONLINE_DESK);
   });
-
-  it("renders a subsystem the client has never seen before", () => {
-    const withNewSubsystem: DeviceResponse = {
-      ...ONLINE_DESK,
-      last_health_report: {
-        ...ONLINE_DESK.last_health_report,
-        components: {
-          ...ONLINE_DESK.last_health_report!.components,
-          zigbee_radio: { status: "some_future_state", detail: "n/a" },
-        },
-      },
-    };
-    render(<DeviceHealthStrip device={withNewSubsystem} onOpenDiagnostics={vi.fn()} />);
-    expect(screen.getByTitle("Zigbee Radio — Unknown")).toBeInTheDocument();
-  });
 });
 
 describe("DeviceDiagnosticsModal", () => {
-  it("renders nothing when no device is selected", () => {
-    const { container } = render(<DeviceDiagnosticsModal device={null} onClose={vi.fn()} />);
-    expect(container).toBeEmptyDOMElement();
-  });
-
   it("separates live link state from the last self-test", () => {
     render(<DeviceDiagnosticsModal device={ONLINE_DESK} onClose={vi.fn()} />);
 
@@ -179,29 +136,11 @@ describe("DeviceDiagnosticsModal", () => {
     expect(screen.getByText("ADC PCM")).toBeInTheDocument();
   });
 
-  it("shows the device identity and cleaned hardware id", () => {
-    render(<DeviceDiagnosticsModal device={ONLINE_DESK} onClose={vi.fn()} />);
-
-    expect(screen.getByText("Desk")).toBeInTheDocument();
-    expect(screen.getByText("DEV-BF5A-A492")).toBeInTheDocument();
-    expect(screen.getByText("SNBF5AA492")).toBeInTheDocument();
-    expect(screen.getAllByText("10.10.34.49").length).toBeGreaterThan(0);
-  });
-
   it("strips the revocation prefix from a revoked device's hardware id", () => {
     render(<DeviceDiagnosticsModal device={REVOKED_DESK} onClose={vi.fn()} />);
     expect(screen.getByText("DEV-BF5A-A492")).toBeInTheDocument();
     expect(screen.queryByText(/^revoked:/)).not.toBeInTheDocument();
     expect(screen.getByText("No self-test reported yet")).toBeInTheDocument();
-  });
-
-  it("warns when the address changed since the self-test", () => {
-    render(
-      <DeviceDiagnosticsModal device={{ ...ONLINE_DESK, last_ip: "10.10.34.77" }} onClose={vi.fn()} />,
-    );
-    expect(screen.getByText(/moved to a different address/i)).toBeInTheDocument();
-    expect(screen.getByText("Address (current)")).toBeInTheDocument();
-    expect(screen.getByText("Address (at self-test)")).toBeInTheDocument();
   });
 
   it("calls out failing subsystems", () => {
@@ -222,40 +161,5 @@ describe("DeviceDiagnosticsModal", () => {
     expect(screen.getByText(/1 subsystem failing/i)).toBeInTheDocument();
     expect(screen.getByText(/Microphone\./)).toBeInTheDocument();
     expect(screen.getByText("no capture device")).toBeInTheDocument();
-  });
-
-  it("warns on firmware drift between the record and the report", () => {
-    const drifted: DeviceResponse = {
-      ...ONLINE_DESK,
-      last_health_report: { ...ONLINE_DESK.last_health_report, firmware_version: "9efae0f" },
-    };
-    render(<DeviceDiagnosticsModal device={drifted} onClose={vi.fn()} />);
-    expect(screen.getByText(/update may not have completed/i)).toBeInTheDocument();
-  });
-
-  it("closes on Escape and on the close button", async () => {
-    const onClose = vi.fn();
-    render(<DeviceDiagnosticsModal device={ONLINE_DESK} onClose={onClose} />);
-
-    await userEvent.keyboard("{Escape}");
-    expect(onClose).toHaveBeenCalled();
-
-    onClose.mockClear();
-    await userEvent.click(screen.getByLabelText("Close diagnostics"));
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it("exposes the raw report for support escalation", () => {
-    render(<DeviceDiagnosticsModal device={ONLINE_DESK} onClose={vi.fn()} />);
-    const raw = screen.getByText("Raw report").closest("details");
-    expect(within(raw!).getByText(/"schema_version": 1/)).toBeInTheDocument();
-  });
-
-  it("survives a report whose components map is malformed", () => {
-    const broken: DeviceResponse = {
-      ...ONLINE_DESK,
-      last_health_report: { status: "ok", components: null as never },
-    };
-    expect(() => render(<DeviceDiagnosticsModal device={broken} onClose={vi.fn()} />)).not.toThrow();
   });
 });

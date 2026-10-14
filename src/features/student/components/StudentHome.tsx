@@ -3,8 +3,7 @@
 import { FEATURES } from "@/constants/features";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Menu } from "lucide-react";
+import { ChevronLeft, ChevronRight, Menu, TrendingUp, Library, type LucideIcon } from "lucide-react";
 import Image from "next/image";
 import { useStudentStore } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
@@ -59,6 +58,19 @@ const C = {
   card:      STUDENT_COLORS.card,
   border:    STUDENT_COLORS.border,
 };
+
+/** A home section's eyebrow: a small icon naming the section, then its label. */
+function SectionHeading({ icon: Icon, className = "", children }: { icon: LucideIcon; className?: string; children: React.ReactNode }) {
+  return (
+    <h2
+      className={`flex items-center gap-2 font-bold uppercase m-0 ${className}`}
+      style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}
+    >
+      <Icon size={15} strokeWidth={2.2} aria-hidden style={{ color: STUDENT_COLORS.primary }} className="shrink-0" />
+      {children}
+    </h2>
+  );
+}
 
 // Raw hex, not var() — these get alpha-suffix concatenated below
 // (`${vis.color}cc`, `vis.color + "14"`), which CSS custom properties can't
@@ -286,7 +298,7 @@ export function StudentHome() {
   /* Mount */
   useEffect(() => { setMounted(true); }, []);
 
-  /* One-shot confetti — only fires once, right after the student closes the tutorial video */
+  /* One-shot confetti — only after a new student's first tour (a replay from Profile doesn't arm it) */
   useEffect(() => {
     if (!hasEnded || hasDismissedCelebration) return;
     setAprilState("celebrating");
@@ -409,18 +421,6 @@ export function StudentHome() {
       {/* ── MAIN ── */}
       <main className="flex-1 overflow-hidden flex flex-col relative min-w-0">
         <Confetti active={showConfetti} onDone={() => setShowConfetti(false)} />
-        {showConfetti && (
-          <motion.img
-            src="/loaders/journey/char-trophy.svg"
-            alt=""
-            aria-hidden="true"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 16 }}
-            className="absolute inset-0 m-auto z-50 w-28 h-28 object-contain pointer-events-none drop-shadow-xl"
-          />
-        )}
 
         {/* Mobile / collapsed topbar */}
         {!sidebarOpen && (
@@ -466,7 +466,7 @@ export function StudentHome() {
             <div className="flex items-start justify-between mb-8 relative z-20" style={fade(0.06)}>
               <div className="flex items-center gap-4">
                 {/* Hidden on small screens: the greeting already clamps down to
-                    22px there and a creature beside it crowds the line. */}
+                    22px there and an avatar beside it crowds the line. */}
                 <div className="hidden md:flex flex-shrink-0 rounded-full overflow-hidden"
                   style={{ width: 56, height: 56, border: "2px solid white", boxShadow: `0 0 0 3px ${STUDENT_COLORS.softSurface}, 0 6px 16px rgb(7 94 99 / 0.18)` }}>
                   <StudentAvatar id={avatarId} size={56} />
@@ -521,18 +521,14 @@ export function StudentHome() {
 
             {/* ── STAT STRIP ── */}
             <div className="mb-8" style={{ ...fade(0.22) }}>
-              <h2 className="citron-eyebrow font-bold uppercase m-0 mb-4" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
-                Your progress
-              </h2>
+              <SectionHeading icon={TrendingUp} className="mb-4">Your progress</SectionHeading>
               <StreakStats data={studentStats} isLoading={isStatsLoading} variant="card" totalMinutes={totalMinutes} />
             </div>
 
             {/* ── MY SUBJECTS ── */}
             <div className="mb-8" style={fade(0.30)}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="citron-eyebrow font-bold uppercase m-0" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
-                  My subjects
-                </h2>
+                <SectionHeading icon={Library}>My subjects</SectionHeading>
               </div>
 
               {isSubjectsLoading ? (

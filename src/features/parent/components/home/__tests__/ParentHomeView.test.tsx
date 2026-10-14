@@ -45,13 +45,6 @@ function serveChild({ timeOk = true } = {}) {
         Array.from({ length: 14 }, (_, i) => ({ subject, document_title: `Ch ${i}`, completion_percentage: i < started ? 50 : 0 })),
       );
     }),
-    http.get(`${BASE}/students/:id/time/by-chapter`, () =>
-      HttpResponse.json([
-        { subject: "English", chapter_name: "a", total_minutes: 500, session_count: 3 },
-        { subject: "English", chapter_name: "b", total_minutes: 360, session_count: 2 },
-        { subject: "Mathematics", chapter_name: "c", total_minutes: 610, session_count: 4 },
-      ]),
-    ),
     http.get(`${BASE}/students/:id/time/by-period`, () =>
       timeOk
         ? HttpResponse.json([
@@ -78,14 +71,6 @@ const renderHome = () => render(<ParentHomeView studentId="s1" />);
 const card = (name: string) => screen.getByRole("region", { name });
 
 describe("ParentHomeView", () => {
-  it("leaves Learning Score, Skill Index and alerts blank until the backend provides them", () => {
-    serveChild();
-    renderHome();
-    expect(within(card("Overall Learning Score")).getByText("Available soon")).toBeInTheDocument();
-    expect(within(card("Skill Index")).getByText("Coming soon")).toBeInTheDocument();
-    expect(within(card("Recent Alerts & Updates")).getByText("No alerts right now")).toBeInTheDocument();
-  });
-
   it("totals sessions across subjects with a month-on-month trend", async () => {
     serveChild();
     renderHome();
@@ -119,11 +104,12 @@ describe("ParentHomeView", () => {
     const english = await screen.findByRole("link", { name: /^English: Advanced, 84% mastery/ });
     expect(english).toHaveAttribute("href", "/parent/s1/subject/English");
     expect(within(english).getByText("28")).toBeInTheDocument();
-    expect(within(english).getByText("14h 20m")).toBeInTheDocument();
+    // Study time per chapter is switched off (FEATURES.chapterTime), so it reads as zero.
+    await waitFor(() => expect(within(english).getByText("0m")).toBeInTheDocument());
     expect(within(english).getByText("11/14")).toBeInTheDocument();
 
     await screen.findByRole("link", { name: /^Mathematics: Approaching, 45% mastery/ });
     const science = await screen.findByRole("link", { name: /^Science: Proficient, 68% mastery/ });
-    await waitFor(() => expect(within(science).getByText("0m")).toBeInTheDocument()); // no time logged
+    await waitFor(() => expect(within(science).getByText("0m")).toBeInTheDocument());
   });
 });

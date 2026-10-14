@@ -26,75 +26,37 @@ const START = scheduledSessionStartMs("2026-08-20", "10:00");
 const nowAt = (offsetFromStart: number) => START - offsetFromStart;
 
 describe("scheduledSessionStartMs", () => {
-  it("resolves a time against the IST offset, not the viewer's timezone", () => {
-    // 10:00 IST == 04:30 UTC
+  it("resolves against IST, defaults a missing or bad time to 09:00, and NaNs a bad date", () => {
+    // 10:00 IST == 04:30 UTC, not the viewer's timezone.
     expect(new Date(START).toISOString()).toBe("2026-08-20T04:30:00.000Z");
-  });
-
-  it("defaults a missing time to 09:00 IST", () => {
-    const start = scheduledSessionStartMs("2026-08-20", null);
-    expect(new Date(start).toISOString()).toBe("2026-08-20T03:30:00.000Z");
-  });
-
-  it("ignores an unparseable time rather than producing NaN", () => {
-    const start = scheduledSessionStartMs("2026-08-20", "not-a-time");
-    expect(new Date(start).toISOString()).toBe("2026-08-20T03:30:00.000Z");
-  });
-
-  it("returns NaN for an unparseable date", () => {
+    expect(new Date(scheduledSessionStartMs("2026-08-20", null)).toISOString()).toBe("2026-08-20T03:30:00.000Z");
+    expect(new Date(scheduledSessionStartMs("2026-08-20", "not-a-time")).toISOString()).toBe("2026-08-20T03:30:00.000Z");
     expect(scheduledSessionStartMs("nonsense", "10:00")).toBeNaN();
   });
 });
 
 describe("selectImminentSession", () => {
-  it("includes a session just inside the 24h window", () => {
+  it("shows a session from 24h before its start until the grace window passes", () => {
     const s = session();
     expect(selectImminentSession([s], nowAt(IMMINENT_WINDOW_MS - 1000))).toBe(s);
-  });
-
-  it("excludes a session beyond the 24h window", () => {
-    const s = session();
     expect(selectImminentSession([s], nowAt(IMMINENT_WINDOW_MS + 1000))).toBeNull();
-  });
-
-  it("keeps showing a session inside the grace window after it started", () => {
-    const s = session();
     expect(selectImminentSession([s], nowAt(-(START_GRACE_MS - 1000)))).toBe(s);
-  });
-
-  it("drops a session once the grace window has passed", () => {
-    const s = session();
     expect(selectImminentSession([s], nowAt(-(START_GRACE_MS + 1000)))).toBeNull();
   });
 
-  it("excludes a session whose content preparation failed", () => {
-    const s = session({ preparation_status: "FAILED" });
-    expect(selectImminentSession([s], nowAt(60_000))).toBeNull();
+  it("excludes failed-prep and completed sessions but keeps pending prep", () => {
+    expect(selectImminentSession([session({ preparation_status: "FAILED" })], nowAt(60_000))).toBeNull();
+    expect(selectImminentSession([session({ status: "COMPLETED" })], nowAt(60_000))).toBeNull();
+    // Pending prep still surfaces, so it can show a waiting state.
+    const pending = session({ preparation_status: "PENDING" });
+    expect(selectImminentSession([pending], nowAt(60_000))).toBe(pending);
   });
 
-  it("excludes a session the student already completed", () => {
-    const s = session({ status: "COMPLETED" });
-    expect(selectImminentSession([s], nowAt(60_000))).toBeNull();
-  });
-
-  it("still surfaces a session whose prep is pending, so it can show a waiting state", () => {
-    const s = session({ preparation_status: "PENDING" });
-    expect(selectImminentSession([s], nowAt(60_000))).toBe(s);
-  });
-
-  it("returns the soonest when several are in the window", () => {
+  it("returns the soonest valid session, skipping unparseable dates", () => {
     const later = session({ id: "later", scheduled_time: "18:00" });
     const sooner = session({ id: "sooner", scheduled_time: "10:00" });
-    expect(selectImminentSession([later, sooner], nowAt(60_000))).toBe(sooner);
-  });
-
-  it("skips sessions with an unparseable date instead of throwing", () => {
     const broken = session({ id: "broken", scheduled_date: "nonsense" });
-    const good = session({ id: "good" });
-    expect(selectImminentSession([broken, good], nowAt(60_000))).toBe(good);
-  });
-
-  it("returns null for an empty list", () => {
+    expect(selectImminentSession([later, broken, sooner], nowAt(60_000))).toBe(sooner);
     expect(selectImminentSession([], Date.now())).toBeNull();
   });
 });

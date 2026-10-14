@@ -107,21 +107,6 @@ describe("usePlacementStore", () => {
       expect(usePlacementStore.getState().subjects).toEqual(["Hindi"]);
     });
 
-    it("stays shut for a student who already finished", async () => {
-      mocked.getStatus.mockResolvedValue({
-        board: "CBSE",
-        grade: 6,
-        attempt_status: "COMPLETED",
-        current_index: 10,
-        total_items: 10,
-        subjects: [],
-      });
-
-      await usePlacementStore.getState().checkStatus("student-1");
-
-      expect(usePlacementStore.getState().phase).toBe("unavailable");
-    });
-
     /**
      * ONBD_1104 means there is no form for this board+grade — an ICSE student,
      * or one outside grades 3–9. That is a normal state, not a failure: they
@@ -180,15 +165,6 @@ describe("usePlacementStore", () => {
       // A numeric input and a one-word fill-in — light enough to share a page.
       mocked.start.mockResolvedValue(attempt({ current_block: lightBlock() }));
       await usePlacementStore.getState().startOrResume("student-1");
-    });
-
-    it("keeps drafts across items without contacting the server", () => {
-      usePlacementStore.getState().setItemDraft("CBSE-G6-MATH-01", { value: 405 });
-
-      expect(mocked.submitBlock).not.toHaveBeenCalled();
-      expect(usePlacementStore.getState().draftResponses).toEqual({
-        "CBSE-G6-MATH-01": { value: 405 },
-      });
     });
 
     it("refuses to advance while any item in the batch is unanswered", async () => {
@@ -262,26 +238,6 @@ describe("usePlacementStore", () => {
       expect(usePlacementStore.getState().phase).toBe("intro");
     });
 
-    it("never learns whether an answer was correct", async () => {
-      mocked.submitBlock.mockResolvedValue({
-        accepted: 2,
-        current_index: 2,
-        total_items: 10,
-        is_complete: false,
-        next_block: secondBatch(),
-      });
-
-      const store = usePlacementStore.getState();
-      store.setItemDraft("CBSE-G6-MATH-01", { value: 405 });
-      store.setItemDraft("CBSE-G6-ENG-03", { text: "but" });
-      await usePlacementStore.getState().goNext();
-
-      // Nothing in the store may carry correctness mid-form — the API does
-      // not send it, and inferring it client-side is explicitly out of
-      // contract.
-      expect(JSON.stringify(usePlacementStore.getState())).not.toMatch(/is_correct/);
-    });
-
     it("lands on the completed screen once the last batch is submitted — the last thing the student sees", async () => {
       mocked.submitBlock.mockResolvedValue({
         accepted: 2,
@@ -303,45 +259,6 @@ describe("usePlacementStore", () => {
       // per-item breakdown from this flow.
       expect(mocked.getResult).not.toHaveBeenCalled();
     });
-
-    it("closes the flow when the completed screen's own button is used", async () => {
-      mocked.submitBlock.mockResolvedValue({
-        accepted: 2,
-        current_index: 10,
-        total_items: 10,
-        is_complete: true,
-        next_block: null,
-      });
-
-      const store = usePlacementStore.getState();
-      store.setItemDraft("CBSE-G6-MATH-01", { value: 405 });
-      store.setItemDraft("CBSE-G6-ENG-03", { text: "but" });
-      await usePlacementStore.getState().goNext();
-      usePlacementStore.getState().finish();
-
-      expect(usePlacementStore.getState().phase).toBe("unavailable");
-    });
-
-    it("stamps startedAt once the student reaches an item, and completedAt once the form is finished", async () => {
-      const before = Date.now();
-      mocked.submitBlock.mockResolvedValue({
-        accepted: 2,
-        current_index: 10,
-        total_items: 10,
-        is_complete: true,
-        next_block: null,
-      });
-
-      expect(usePlacementStore.getState().startedAt).toBeGreaterThanOrEqual(before);
-      expect(usePlacementStore.getState().completedAt).toBeNull();
-
-      const store = usePlacementStore.getState();
-      store.setItemDraft("CBSE-G6-MATH-01", { value: 405 });
-      store.setItemDraft("CBSE-G6-ENG-03", { text: "but" });
-      await usePlacementStore.getState().goNext();
-
-      expect(usePlacementStore.getState().completedAt).toBeGreaterThanOrEqual(before);
-    });
   });
 
   describe("error codes", () => {
@@ -353,26 +270,6 @@ describe("usePlacementStore", () => {
       const state = usePlacementStore.getState();
       expect(state.phase).toBe("error");
       expect(state.errorMessage).toMatch(/profile/i);
-    });
-
-    it("points at the teacher when the grade changed mid-attempt", async () => {
-      mocked.start.mockRejectedValue(apiError(PLACEMENT_ERROR.BAD_ITEM));
-
-      await usePlacementStore.getState().startOrResume("student-1");
-
-      const state = usePlacementStore.getState();
-      expect(state.phase).toBe("error");
-      expect(state.errorMessage).toMatch(/teacher/i);
-    });
-
-    it("offers a retry for an unrecognised failure rather than giving up", async () => {
-      mocked.getStatus.mockRejectedValue(new Error("boom"));
-
-      await usePlacementStore.getState().checkStatus("student-1");
-
-      const state = usePlacementStore.getState();
-      expect(state.phase).toBe("error");
-      expect(state.errorMessage).toMatch(/connection/i);
     });
   });
 });

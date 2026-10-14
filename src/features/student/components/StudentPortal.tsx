@@ -17,7 +17,7 @@ export function StudentPortal() {
   const pathname = usePathname();
   
   const isProfileRoute = pathname === "/student/profile";
-  const isAssessmentsRoute = pathname === "/student/assessments";
+  const isPracticeRoute = pathname === "/student/practice";
 
   const isChatRoute = pathname?.startsWith("/student/chat");
 
@@ -33,9 +33,9 @@ export function StudentPortal() {
           >
             <StudentProfile />
           </motion.div>
-        ) : isAssessmentsRoute ? (
+        ) : isPracticeRoute ? (
           <motion.div
-            key="assessments"
+            key="practice"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}

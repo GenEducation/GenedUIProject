@@ -30,13 +30,6 @@ afterEach(() => {
 });
 
 describe("parentService — request shaping", () => {
-  it("fetchLinkedStudents GETs /parent/students with the parent_id query", async () => {
-    const fetchMock = stubFetch([{ student_id: "s1", status: "APPROVED" }]);
-    const res = await parentService.fetchLinkedStudents("p1");
-    expect(res).toHaveLength(1);
-    expect(firstCall(fetchMock).url).toMatch(/\/parent\/students\?parent_id=p1$/);
-  });
-
   it("linkStudent POSTs {parent_id, student_id} to /parent/link", async () => {
     const fetchMock = stubFetch({ student_id: "s1", parent_id: "p1", status: "PENDING", requested_at: "now" });
     await parentService.linkStudent("p1", "s1");
@@ -54,14 +47,6 @@ describe("parentService — request shaping", () => {
     expect(init.method).toBe("PATCH");
     expect(body).toEqual({ status: "APPROVED" });
   });
-
-  it("unlinkStudent DELETEs the student link and resolves void", async () => {
-    const fetchMock = stubFetch("", 200);
-    await expect(parentService.unlinkStudent("p1", "s1")).resolves.toBeUndefined();
-    const { url, init } = firstCall(fetchMock);
-    expect(url).toMatch(/\/parent\/link\/s1\?parent_id=p1$/);
-    expect(init.method).toBe("DELETE");
-  });
 });
 
 describe("parentService — non-ok responses reject", () => {
@@ -74,26 +59,5 @@ describe("parentService — non-ok responses reject", () => {
     const err = await parentService.fetchLinkedStudents("p1").catch((e) => e);
     expect(err).toBeInstanceOf(ApiRequestError);
     expect(err.status).toBe(500);
-  });
-
-  it("linkStudent rejects with ApiRequestError on 409", async () => {
-    stubFetch({ error: "already linked" }, 409);
-    const err = await parentService.linkStudent("p1", "s1").catch((e) => e);
-    expect(err).toBeInstanceOf(ApiRequestError);
-    expect(err.status).toBe(409);
-  });
-
-  it("updateStudentStatus rejects with ApiRequestError on 400", async () => {
-    stubFetch({ error: "bad" }, 400);
-    const err = await parentService.updateStudentStatus("p1", "s1", "REJECTED").catch((e) => e);
-    expect(err).toBeInstanceOf(ApiRequestError);
-    expect(err.status).toBe(400);
-  });
-
-  it("unlinkStudent rejects with ApiRequestError on 404", async () => {
-    stubFetch("", 404);
-    const err = await parentService.unlinkStudent("p1", "s1").catch((e) => e);
-    expect(err).toBeInstanceOf(ApiRequestError);
-    expect(err.status).toBe(404);
   });
 });

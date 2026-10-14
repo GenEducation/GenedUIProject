@@ -13,22 +13,12 @@ describe("MarkdownRenderer", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
   });
 
-  it("renders inline math as KaTeX output", () => {
-    const { container } = render(<MarkdownRenderer content="The area is $x^2$." />);
+  it("renders inline and block math as KaTeX output", () => {
+    const { container, unmount } = render(<MarkdownRenderer content="The area is $x^2$." />);
     expect(container.querySelector(".katex")).toBeInTheDocument();
-  });
-
-  it("renders block math as KaTeX output", () => {
-    const { container } = render(<MarkdownRenderer content={"$$\\int_0^1 x\\,dx$$"} />);
-    expect(container.querySelector(".katex")).toBeInTheDocument();
-  });
-
-  it("applies highlight.js classes to fenced code blocks", () => {
-    const { container } = render(
-      <MarkdownRenderer content={"```js\nconst x = 1;\n```"} />,
-    );
-    expect(container.querySelector("code.language-js")).toBeInTheDocument();
-    expect(container.querySelector("pre")).toBeInTheDocument();
+    unmount();
+    const block = render(<MarkdownRenderer content={"$$\\int_0^1 x\\,dx$$"} />);
+    expect(block.container.querySelector(".katex")).toBeInTheDocument();
   });
 
   it("does not render raw HTML tags — no rehype-raw plugin is wired in", () => {

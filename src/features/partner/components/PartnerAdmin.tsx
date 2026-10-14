@@ -44,7 +44,7 @@ export function PartnerAdmin() {
         <header className="h-[88px] shrink-0 border-b border-[#122D30]/5 bg-white/40 flex items-center justify-between px-8 lg:px-12 z-50 transition-all">
           <div className="flex-1">
              <h2 className="text-xl font-black text-[#122D30] hidden lg:block tracking-tight">
-               {activeView === "subjects" ? "Academic Registry" : activeView === "labs" ? "Lab Mode" : "Enrollment Overview"}
+               {activeView === "subjects" ? "Subjects" : activeView === "labs" ? "Lab Mode" : "Analytics"}
              </h2>
           </div>
           <div className="flex items-center gap-4">

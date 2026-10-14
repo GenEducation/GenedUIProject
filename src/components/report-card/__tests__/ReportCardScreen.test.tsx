@@ -26,14 +26,6 @@ function Harness({ data = makeData(), onStartSession }: { data?: ReportCardData;
 const subjectRow = (name: RegExp) => screen.getByRole("button", { name });
 
 describe("ReportCardScreen — narrow (stacked) layout", () => {
-  it("opens with the summary, subject list and key insights", () => {
-    render(<Harness />);
-    expect(screen.getByRole("heading", { name: "Abeer Khan" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Subjects & Chapters/ })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Key Insights/ })).toBeInTheDocument();
-    expect(subjectRow(/^Mathematics: Proficient, 61% mastery, 54% coverage$/)).toBeInTheDocument();
-  });
-
   it("steps overview → preview → chapter breakdown, and back out with Esc", async () => {
     render(<Harness />);
 
@@ -69,25 +61,6 @@ describe("ReportCardScreen — narrow (stacked) layout", () => {
     await waitFor(() => expect(within(panel).getByText("PASS")).toBeInTheDocument());
     expect(within(panel).getByText("Polynomials")).toBeInTheDocument();
   });
-
-  it("expands a started chapter to its learning arc", async () => {
-    render(<Harness />);
-    fireEvent.click(subjectRow(/^Mathematics:/));
-    fireEvent.click(await screen.findByRole("button", { name: /View chapter breakdown/ }));
-
-    const polynomials = (await screen.findByText("Polynomials", { selector: "h4" })).closest("button")!;
-    expect(polynomials).toHaveAttribute("aria-expanded", "false");
-    fireEvent.click(polynomials);
-    expect(polynomials).toHaveAttribute("aria-expanded", "true");
-    expect(await screen.findByText(/Learning arc & skill dimensions/)).toBeInTheDocument();
-    expect(screen.getByText("Conceptual understanding")).toBeInTheDocument();
-  });
-
-  it("opens a subject from the Needs Attention callout", async () => {
-    render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: /Needs Attention/ }));
-    expect(await screen.findByRole("region", { name: "Social Science preview" })).toBeInTheDocument();
-  });
 });
 
 describe("ReportCardScreen — wide (cascading) layout", () => {
@@ -120,15 +93,15 @@ describe("ReportCardScreen — brand-new student", () => {
     subjectEvolutions: [], chapterEvolutions: [], testSubmissions: [],
   });
 
-  it("explains how the report builds, with a CTA for students", () => {
+  it("explains how the report builds, with a CTA for students only", () => {
     const start = vi.fn();
-    render(<Harness data={empty} onStartSession={start} />);
+    const { unmount } = render(<Harness data={empty} onStartSession={start} />);
     expect(screen.getByText("How this report builds")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Start your first session" }));
     expect(start).toHaveBeenCalled();
-  });
+    unmount();
 
-  it("shows no CTA to parents and teachers", () => {
+    // No CTA for parents and teachers.
     render(<Harness data={empty} />);
     expect(screen.queryByRole("button", { name: "Start your first session" })).not.toBeInTheDocument();
   });

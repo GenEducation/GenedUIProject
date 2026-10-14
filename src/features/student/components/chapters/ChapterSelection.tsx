@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, RotateCw } from "lucide-react";
+import { BookOpen, RotateCw, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/student/PageHeader";
 import { SidebarToggle } from "@/components/student/SidebarToggle";
@@ -74,6 +74,7 @@ export function ChapterSelection({ subject }: { subject: string }) {
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p className={`m-0 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)] ${data ? "citron-eyebrow" : ""}`}>
+                  {data && <GraduationCap size={14} strokeWidth={2.2} aria-hidden />}
                   {data ? `Grade ${data.grade}` : " "}
                 </p>
                 <h2
@@ -125,7 +126,7 @@ export function ChapterSelection({ subject }: { subject: string }) {
                   <section key={book} aria-label={books.length > 1 ? book : undefined}>
                     {books.length > 1 && (
                       <h3 className="citron-eyebrow m-0 mb-3.5 flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                        <BookOpen size={14} /> {book}
+                        <BookOpen size={14} strokeWidth={2.2} aria-hidden /> {book}
                       </h3>
                     )}
                     <div className={GRID}>

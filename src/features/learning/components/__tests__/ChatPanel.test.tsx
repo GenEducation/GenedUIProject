@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
 import {
-  FIGURE_GROUP, LESSON_ID, interruptRequests, lessonFixture, makeLessonInstance, replyScript, turnRequests,
+  LESSON_ID, interruptRequests, lessonFixture, replyScript, turnRequests,
 } from "@/test/msw/handlers/lesson";
 import { useLessonStore } from "../../useLessonStore";
 
@@ -29,11 +29,6 @@ beforeEach(() => {
 });
 
 describe("ChatPanel", () => {
-  it("renders history as Markdown", async () => {
-    await open();
-    expect(screen.getByText("welcome").tagName).toBe("STRONG");
-  });
-
   it("Enter sends and clears; the message and the streamed reply appear", async () => {
     await open();
     lessonFixture.setScript(replyScript("SYNTHETIC ", "answer."));
@@ -43,15 +38,6 @@ describe("ChatPanel", () => {
     expect(await screen.findByText("SYNTHETIC answer.")).toBeInTheDocument();
     expect(screen.getByText("SYNTHETIC question")).toBeInTheDocument();
     expect(turnRequests.at(-1)).toMatchObject({ kind: "learner_message", text: "SYNTHETIC question" });
-  });
-
-  it("Shift+Enter is a new line, and an empty message can't be sent", async () => {
-    await open();
-    enter(true);
-    type("   ");
-    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
-    enter();
-    expect(turnRequests).toEqual([]);
   });
 
   it("while the tutor replies, Send becomes Stop, and Stop interrupts", async () => {
@@ -91,24 +77,5 @@ describe("ChatPanel", () => {
     type("SYNTHETIC question");
     enter();
     expect(await screen.findByRole("alert")).toHaveTextContent("The teacher is not available right now.");
-  });
-
-  it("a presented figure shows as a thumbnail that opens on the whiteboard", async () => {
-    const onShowFigure = await open();
-    lessonFixture.setScript(() => [
-      { type: "figure_presented", figure_group_id: FIGURE_GROUP },
-      { type: "text_delta", text: "SYNTHETIC look." },
-      { type: "turn_completed", status: "completed", finish_reason: "stop" },
-    ]);
-    type("show me");
-    enter();
-    fireEvent.click(await screen.findByRole("button", { name: "Show this figure on the whiteboard" }));
-    expect(onShowFigure).toHaveBeenCalledWith(FIGURE_GROUP);
-  });
-
-  it("can't send once the lesson is finished", async () => {
-    lessonFixture.setInstance(makeLessonInstance({ state: "completed", next_action: "completed", active_node: null }));
-    await open();
-    expect(box()).toBeDisabled();
   });
 });

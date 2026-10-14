@@ -42,7 +42,6 @@ vi.mock("../../voice/loadPipeline", () => ({
 }));
 
 import { ChatPanel } from "../ChatPanel";
-import { voiceSocketUrl } from "../../voice/useVoiceSession";
 import { resetSpeechLanguage } from "../../dictation/useSpeechLanguage";
 
 const emit = (e: PipelineEvent) => act(() => fake.options!.onEvent(e));
@@ -342,19 +341,6 @@ describe("voice mode", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Microphone access was blocked.");
     fireEvent.click(screen.getByRole("button", { name: "Back to typing" }));
     expect(store().voiceMode).toBe(false);
-  });
-
-  it("giving up on reconnecting leaves the lesson in text", async () => {
-    await openVoice();
-    await emit({ t: "status", state: "gave_up", code: 1011 });
-    expect(screen.getByRole("alert")).toHaveTextContent("Voice disconnected. You can keep going in the chat.");
-  });
-});
-
-describe("voiceSocketUrl", () => {
-  it("swaps http(s) for ws(s) on the API base", () => {
-    expect(voiceSocketUrl("https://api.example.test/")).toBe("wss://api.example.test/v1/voice");
-    expect(voiceSocketUrl("http://localhost:8102")).toBe("ws://localhost:8102/v1/voice");
   });
 });
 

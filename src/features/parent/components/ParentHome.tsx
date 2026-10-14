@@ -148,13 +148,18 @@ export function ParentHome() {
   //   /parent/:id/report                   → Report Card
   //   /parent/:id/subject/:subject         → one subject in depth
   //   /parent/:id/{chat,schedule,moments}  → older views, still reachable by link
-  //   /parent/profile                      → Settings
+  //   /parent/settings                     → Settings (/parent/profile redirects here)
   const urlParts = pathname.split("/").filter(Boolean);
   const subjectFromUrl =
     urlParts[2] === "subject" && urlParts[3] ? safeDecode(urlParts[3]) : null;
   useEffect(() => {
     const [, id, section] = pathname.split("/").filter(Boolean);
     if (id === "profile") {
+      // The old address for Settings; keep bookmarks working.
+      router.replace("/parent/settings");
+      return;
+    }
+    if (id === "settings") {
       setDashboardView("profile");
       setSelectedStudentId(null);
       return;
@@ -212,7 +217,7 @@ export function ParentHome() {
   // The account-link flow (?token=) and the parent's own profile page aren't
   // about any one child, so they skip the picker.
   const isLinkingFlow = !!searchParams.get("token");
-  const isProfilePage = pathname === "/parent/profile";
+  const isProfilePage = pathname === "/parent/settings" || pathname === "/parent/profile";
 
   // With nothing to choose between, the tab counts as entered straight away.
   useEffect(() => {
@@ -357,7 +362,7 @@ export function ParentHome() {
       <h2 className="mb-3 text-2xl font-bold">Link your child to get started</h2>
       <p className="max-w-md text-sm text-[var(--pp-ink-soft)]">
         Once your child&apos;s account is linked, you&apos;ll see how they&apos;re learning here. You can manage links in{" "}
-        <Link href="/parent/profile" className="font-semibold text-[var(--pp-green-deep)] underline-offset-2 hover:underline">Settings</Link>.
+        <Link href="/parent/settings" className="font-semibold text-[var(--pp-green-deep)] underline-offset-2 hover:underline">Settings</Link>.
       </p>
       {!isLinkingFlow && (
         <Button variant="primary" className="mt-6" onClick={() => setConnectDismissed(false)}>
@@ -439,7 +444,7 @@ export function ParentHome() {
           )}
 
           <Link
-            href="/parent/profile"
+            href="/parent/settings"
             aria-current={activeDashboardView === "profile" ? "page" : undefined}
             onClick={closeSidebarOnMobile}
             className={`${NAV_ROW} ${activeDashboardView === "profile" ? NAV_ROW_ACTIVE : ""}`}
@@ -557,7 +562,7 @@ type DashboardView = ReturnType<typeof useParentStore.getState>["activeDashboard
  */
 export function routeFromPath(pathname: string): { view: DashboardView | null; studentId: string | null } {
   const [, id, section] = pathname.split("/").filter(Boolean);
-  if (id === "profile") return { view: "profile", studentId: null };
+  if (id === "settings" || id === "profile") return { view: "profile", studentId: null };
   if (!id) return { view: null, studentId: null };
   if (section === "schedule" && !FEATURES.schedule) return { view: "analytics", studentId: id };
   if (section === "report" || section === "subject" || section === "chat" || section === "schedule" || section === "moments") {

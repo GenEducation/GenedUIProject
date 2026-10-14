@@ -1,7 +1,7 @@
 "use client";
 
 import { FEATURES } from "@/constants/features";
-import { Loader2, LogOut, User, ClipboardCheck } from "lucide-react";
+import { Loader2, LogOut, User, ClipboardCheck, History } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useStudentStore, isVoiceSession, sessionRoutePath, type AvatarId } from "../store/useStudentStore";
@@ -35,8 +35,8 @@ const C = {
 
 const NAV_ITEMS = [
   { id: "home",      icon: "🏠", label: "Home",     path: "/student" },
-  ...(FEATURES.practice ? [{ id: "practice",  icon: "🎯", label: "Practice",  path: "/student/assessments" }] : []),
-  { id: "me",        icon: "😊", label: "Me",        path: "/student/profile" },
+  ...(FEATURES.practice ? [{ id: "practice",  icon: "🎯", label: "Practice",  path: "/student/practice" }] : []),
+  { id: "me",        icon: "😊", label: "Profile",   path: "/student/profile" },
 ];
 
 const MIN_WIDTH = 200;
@@ -110,8 +110,8 @@ function ProfilePopup({
   const displayName = getStudentDisplayName(profile);
 
   const menuItems = [
-    { icon: <User size={14} />,         label: STRINGS.nav.me,       path: "/student/profile" },
-    ...(FEATURES.practice ? [{ icon: <ClipboardCheck size={14}/>,label: STRINGS.nav.practice, path: "/student/assessments" }] : []),
+    { icon: <User size={14} />,         label: STRINGS.nav.profile,  path: "/student/profile" },
+    ...(FEATURES.practice ? [{ icon: <ClipboardCheck size={14}/>,label: STRINGS.nav.practice, path: "/student/practice" }] : []),
   ];
 
   return (
@@ -325,10 +325,13 @@ export const StudentChatSidebar = React.memo(({
           {/* Recent sessions */}
           <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: `${C.tutorSoft}40 transparent` }}>
             <p className="citron-eyebrow" style={{
+              // On the dark sidebar the icon takes the label's own muted colour, not the brand teal.
+              ["--eyebrow-icon" as string]: "currentColor",
               fontSize: 11, fontWeight: 700, color: C.sidebarMuted,
               letterSpacing: "1.5px", textTransform: "uppercase",
               padding: "4px 6px 12px", justifyContent: "center", fontFamily: "var(--font-body)",
             }}>
+              <History size={14} strokeWidth={2.2} aria-hidden />
               Recent Sessions
             </p>
 

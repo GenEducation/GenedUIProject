@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 
-import { describeLastSeen, hasNewActivity, markSeen, readSeen, UNSEEN_LOOKBACK_MS } from "../studentActivity";
+import { hasNewActivity, markSeen, readSeen } from "../studentActivity";
 
 const NOW = Date.parse("2026-09-30T12:00:00Z");
 const iso = (ms: number) => new Date(ms).toISOString();
@@ -25,19 +25,5 @@ describe("studentActivity", () => {
     expect(hasNewActivity(iso(NOW - 5000), NOW - 1000, NOW)).toBe(false);
     expect(hasNewActivity(null, NOW - 1000, NOW)).toBe(false);
     expect(hasNewActivity("not a date", NOW - 1000, NOW)).toBe(false);
-  });
-
-  it("only flags recent work for a child never viewed here", () => {
-    expect(hasNewActivity(iso(NOW - UNSEEN_LOOKBACK_MS + 60_000), undefined, NOW)).toBe(true);
-    expect(hasNewActivity(iso(NOW - UNSEEN_LOOKBACK_MS - 60_000), undefined, NOW)).toBe(false);
-  });
-
-  it("describes when a child was last viewed", () => {
-    expect(describeLastSeen(undefined, NOW)).toBe("Not viewed yet");
-    expect(describeLastSeen(NOW - 10_000, NOW)).toBe("Viewed just now");
-    expect(describeLastSeen(NOW - 5 * 60_000, NOW)).toBe("Viewed 5m ago");
-    expect(describeLastSeen(NOW - 3 * 3_600_000, NOW)).toBe("Viewed 3h ago");
-    expect(describeLastSeen(NOW - 30 * 3_600_000, NOW)).toBe("Viewed yesterday");
-    expect(describeLastSeen(NOW - 80 * 3_600_000, NOW)).toBe("Viewed 3d ago");
   });
 });

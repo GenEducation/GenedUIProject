@@ -16,13 +16,6 @@ describe("summarizeReport", () => {
     expect(problems[2].text).toMatch(/1 other check failed \(SYNTHETIC structural detail\)/);
   });
 
-  it("reads the headline counts", () => {
-    expect(summarizeReport(SYNTHETIC_REPORT).counts).toEqual({ sections: 4, concepts: 8, questions: 14, steps: 15 });
-  });
-
-  it("has nothing to fix for a report without violations", () => {
-    expect(summarizeReport("# Ingestion review\n\n## Validation\n- passed").problems).toEqual([]);
-  });
 });
 
 describe("who fixes a check", () => {

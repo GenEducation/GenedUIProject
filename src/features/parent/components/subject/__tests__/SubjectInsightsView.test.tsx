@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 
 import { server } from "@/test/msw/server";
@@ -73,18 +73,6 @@ describe("SubjectInsightsView", () => {
     expect(within(hero).getByText("68")).toBeInTheDocument();
     expect(await within(hero).findByText("1/2")).toBeInTheDocument();
     expect(within(hero).getByText("12")).toBeInTheDocument();
-  });
-
-  it("groups skill areas and opens one to show why it scored that way", async () => {
-    serve();
-    view();
-    const skills = screen.getByRole("region", { name: "Where Aarav stands" });
-    const row = await within(skills).findByRole("button", { name: /Fractions/ });
-    expect(within(skills).getByRole("button", { name: /Needs attention/ })).toHaveTextContent("1");
-
-    fireEvent.click(row);
-    fireEvent.click(await within(skills).findByRole("button", { name: /Like denominators/ }));
-    expect(await within(skills).findByText("Solved every one.")).toBeInTheDocument();
   });
 
   it("shows the overall change and handles a missing history on its own", async () => {

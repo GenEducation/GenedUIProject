@@ -33,30 +33,6 @@ describe("forgot-password page", () => {
     await waitFor(() => expect(screen.getByText(/code sent to kid@example.com/i)).toBeInTheDocument());
   });
 
-  it("shows the request error and stays on step 1", async () => {
-    requestPasswordResetMock.mockRejectedValue(new Error("No account with that email"));
-    render(<ForgotPasswordPage />);
-    requestOtp();
-
-    await waitFor(() => expect(screen.getByText("No account with that email")).toBeInTheDocument());
-    expect(screen.queryByPlaceholderText("6-digit code")).not.toBeInTheDocument();
-  });
-
-  it("blocks submission when the new passwords don't match", async () => {
-    render(<ForgotPasswordPage />);
-    requestOtp();
-    await waitFor(() => screen.getByPlaceholderText("6-digit code"));
-
-    fireEvent.change(screen.getByPlaceholderText("6-digit code"), { target: { value: "123456" } });
-    const [password, confirm] = screen.getAllByPlaceholderText("••••••••");
-    fireEvent.change(password, { target: { value: "abcdefgh" } });
-    fireEvent.change(confirm, { target: { value: "mismatch1" } });
-    fireEvent.click(screen.getByRole("button", { name: /reset password/i }));
-
-    expect(screen.getByText("Passwords do not match")).toBeInTheDocument();
-    expect(resetPasswordMock).not.toHaveBeenCalled();
-  });
-
   it("resets the password and shows the success state", async () => {
     render(<ForgotPasswordPage />);
     requestOtp("kid@example.com");

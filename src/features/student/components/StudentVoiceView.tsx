@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, BookOpen, Loader2, Mic, Sparkles, Menu } from "lucide-react";
+import { ArrowLeft, BookOpen, Loader2, Mic, Sparkles, Menu, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useStudentStore } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
@@ -346,6 +346,7 @@ export function StudentVoiceView() {
         ) : showCompleted ? (
           <div className="flex flex-col items-center gap-3">
             <p className="citron-eyebrow text-[13px] font-bold uppercase tracking-widest text-[var(--primary-ink)]/50">
+              <CheckCircle2 size={14} strokeWidth={2.2} aria-hidden />
               Session Completed
             </p>
             <button

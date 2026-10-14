@@ -11,6 +11,7 @@ import { TestItem } from "../parts/TestItem";
 import { CARD, FOCUS_RING } from "./primitives";
 import { Icon } from "./icons";
 import { ChapterRow } from "./ChapterRow";
+import { Lightbulb } from "lucide-react";
 
 export type DetailTab = "chapters" | "progress" | "tests" | "insights";
 
@@ -201,7 +202,7 @@ function InsightsTab({ summary }: { summary: SubjectSummary }) {
       )}
       {recs.length > 0 && (
         <div>
-          <h4 className="citron-eyebrow text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]">Recommendations</h4>
+          <h4 className="citron-eyebrow text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]"><Lightbulb size={14} strokeWidth={2.2} aria-hidden />Recommendations</h4>
           <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-[13px] leading-relaxed text-[var(--rs-ink)]">
             {recs.map((r, i) => <li key={i}>{typeof r === "string" ? r : (r.action ?? r.recommendation ?? r.text ?? "")}</li>)}
           </ul>

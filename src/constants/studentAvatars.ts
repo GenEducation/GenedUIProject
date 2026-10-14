@@ -1,6 +1,6 @@
 /**
  * The illustrated profile icons shared by the student portal (the avatar a
- * student picks on their "Me" page) and the parent portal (the face shown for
+ * student picks on their Profile page) and the parent portal (the face shown for
  * each linked child). Files live in public/avatars/students/.
  *
  * Order matters: the parent portal hashes student IDs into this list, so

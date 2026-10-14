@@ -126,7 +126,7 @@ export function AssessmentsPage() {
       if (submissionId) {
         await loadSubmission(submissionId);
       }
-      router.push("/student/test?from=assessments");
+      router.push("/student/test?from=practice");
     } catch (error) {
       console.error("Error loading past test:", error);
     } finally {

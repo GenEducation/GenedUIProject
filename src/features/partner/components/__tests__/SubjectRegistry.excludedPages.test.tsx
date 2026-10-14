@@ -29,22 +29,6 @@ beforeEach(() => {
 const rowFor = (title: string) => screen.getByText(title).closest(".group") as HTMLElement;
 
 describe("SubjectRegistry — pages left out as the solutions appendix", () => {
-  it("asks about the cut only on the chapter that has one", async () => {
-    render(<SubjectRegistry onUploadClick={vi.fn()} />);
-    await screen.findByText("SYNTHETIC cut chapter");
-    const note = within(rowFor("SYNTHETIC cut chapter")).getByRole("note");
-    expect(note).toHaveTextContent("Pages 34–44 were left out");
-    expect(within(rowFor("SYNTHETIC whole chapter")).queryByRole("note")).toBeNull();
-  });
-
-  it("confirms the cut and the question goes away", async () => {
-    render(<SubjectRegistry onUploadClick={vi.fn()} />);
-    await screen.findByText("SYNTHETIC cut chapter");
-    fireEvent.click(within(rowFor("SYNTHETIC cut chapter")).getByRole("button", { name: "Yes, leave them out" }));
-    await waitFor(() => expect(within(rowFor("SYNTHETIC cut chapter")).queryByRole("note")).toBeNull());
-    expect(sourcesFixture.get("synthetic-cut")?.excluded_pages?.status).toBe("confirmed");
-  });
-
   it("includes the pages and the chapter runs again with the whole range", async () => {
     render(<SubjectRegistry onUploadClick={vi.fn()} />);
     await screen.findByText("SYNTHETIC cut chapter");

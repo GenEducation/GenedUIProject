@@ -1,4 +1,5 @@
 import { authFetch } from "@/utils/authFetch";
+import { FEATURES } from "@/constants/features";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
@@ -146,6 +147,7 @@ export const parentService = {
 
   /** Study minutes per chapter for a child, across subjects. Null when unknown. */
   fetchTimeByChapter: async (studentId: string): Promise<ChapterStudyTime[] | null> => {
+    if (!FEATURES.chapterTime) return [];
     const rows = await getJson(`/students/${encodeURIComponent(studentId)}/time/by-chapter`);
     if (!Array.isArray(rows)) return null;
     return rows.map((r) => ({

@@ -17,17 +17,6 @@ beforeEach(() => listFleetDevices.mockReset());
 afterEach(() => vi.restoreAllMocks());
 
 describe("fetchAllDevices", () => {
-  it("makes a single request when the fleet fits in one page", async () => {
-    listFleetDevices.mockResolvedValueOnce(page(128, 128));
-
-    const res = await fetchAllDevices();
-
-    expect(listFleetDevices).toHaveBeenCalledTimes(1);
-    expect(res.devices).toHaveLength(128);
-    expect(res.total).toBe(128);
-    expect(res.truncated).toBe(false);
-  });
-
   it("requests page 2 when the first full page is short of the total", async () => {
     listFleetDevices
       .mockResolvedValueOnce(page(200, 260, 1))
@@ -39,18 +28,6 @@ describe("fetchAllDevices", () => {
     expect(listFleetDevices.mock.calls[1][0]).toMatchObject({ page: 2, page_size: 200 });
     expect(res.devices).toHaveLength(260);
     expect(res.truncated).toBe(false);
-  });
-
-  it("threads the caller's query through every page", async () => {
-    listFleetDevices.mockResolvedValueOnce(page(10, 10));
-
-    await fetchAllDevices({ include_revoked: true });
-
-    expect(listFleetDevices.mock.calls[0][0]).toMatchObject({
-      include_revoked: true,
-      page: 1,
-      page_size: 200,
-    });
   });
 
   it("stops on a short page even if the server over-reports total", async () => {

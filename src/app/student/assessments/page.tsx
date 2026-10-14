@@ -1,12 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { AuthGuard } from "@/components/auth/AuthGuard";
-import { StudentPortal } from "@/features/student/components/StudentPortal";
-
-export default function AssessmentsPageRoute() {
-  return (
-    <AuthGuard requiredRole="student">
-      <StudentPortal />
-    </AuthGuard>
-  );
+// The old address for Practice; keep bookmarks working.
+export default function OldAssessmentsRoute() {
+  redirect("/student/practice");
 }

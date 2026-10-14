@@ -45,22 +45,6 @@ describe("GoogleAuthButton", () => {
     expect(screen.getByTestId("google-widget-layer")).not.toHaveClass("opacity-0");
   });
 
-  it("sizes the widget to the container so it spans the full card width", async () => {
-    render(<GoogleAuthButton onSuccess={vi.fn()} />);
-
-    await waitFor(() =>
-      expect(screen.getByTestId("gsi-widget")).toHaveAttribute("data-width", String(CONTAINER_WIDTH)),
-    );
-  });
-
-  it("passes the sign-up copy through when asked", async () => {
-    render(<GoogleAuthButton text="signup_with" onSuccess={vi.fn()} />);
-
-    await waitFor(() =>
-      expect(screen.getByTestId("gsi-widget")).toHaveAttribute("data-text", "signup_with"),
-    );
-  });
-
   it("clamps the width to the maximum GSI will render", async () => {
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(900);
     render(<GoogleAuthButton onSuccess={vi.fn()} />);

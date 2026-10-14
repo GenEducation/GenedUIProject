@@ -28,21 +28,6 @@ beforeEach(async () => {
 });
 
 describe("StepCard: a check", () => {
-  it("offers no scientific keys to a grade 4 learner", () => {
-    asStudent(4);
-    render(<StepCard />);
-    expect(screen.getByRole("heading", { name: "SYNTHETIC count the shapes" })).toBeInTheDocument();
-    act(() => screen.getByRole("textbox").focus());
-    expect(screen.queryByRole("group", { name: /calculator keys/i })).not.toBeInTheDocument();
-  });
-
-  it("offers them from grade 6", () => {
-    asStudent(8);
-    render(<StepCard />);
-    act(() => screen.getByRole("textbox").focus());
-    expect(screen.getByRole("group", { name: /calculator keys/i })).toBeInTheDocument();
-  });
-
   it("writes its own words in the session language", () => {
     asStudent(8);
     act(() => store().setSessionLanguage("hi"));

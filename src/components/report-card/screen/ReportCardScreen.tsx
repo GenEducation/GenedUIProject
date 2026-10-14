@@ -12,6 +12,7 @@ import { SubjectList } from "./SubjectList";
 import { InsightsPanel } from "./InsightsPanel";
 import { SubjectPreview } from "./SubjectPreview";
 import { SubjectDetail, type DetailTab } from "./SubjectDetail";
+import { ListChecks } from "lucide-react";
 
 /**
  * The on-screen report card. Three levels, stepped through like cascading
@@ -260,7 +261,7 @@ function BrandNew({ firstName, onStart }: { firstName: string; onStart?: () => v
         {firstName}&apos;s report fills in after the first learning session — every score and insight here comes from
         real session activity.
       </p>
-      <h3 className="citron-eyebrow mt-6 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]">How this report builds</h3>
+      <h3 className="citron-eyebrow mt-6 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]"><ListChecks size={14} strokeWidth={2.2} aria-hidden />How this report builds</h3>
       <ol className="mt-3 flex flex-col gap-2.5">
         {steps.map((s, i) => (
           <li key={i} className="flex items-center gap-3 rounded-2xl border border-[var(--rs-line)] bg-[var(--rs-surface-2)] px-4 py-3 text-[13.5px] text-[var(--rs-ink)]">

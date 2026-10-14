@@ -14,7 +14,6 @@ export const STRINGS = {
     practice: "Practice",
     schedule: "Schedule",
     reportCard: "Report Card",
-    me: "Me",
     profile: "Profile",
   },
 

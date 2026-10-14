@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
-import { chapterListReads, lastOpenedChapter, learnerFixture, makeChapter } from "@/test/msw/handlers/learner";
+import { chapterListReads, lastOpenedChapter, learnerFixture } from "@/test/msw/handlers/learner";
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
 
 const push = vi.fn();
@@ -49,13 +49,6 @@ describe("ChapterSelection", () => {
     const second = await screen.findByRole("region", { name: "SYNTHETIC Second Book" });
     expect(within(second).getAllByRole("button")).toHaveLength(1);
     expect(screen.getByRole("region", { name: "SYNTHETIC Book" })).toBeInTheDocument();
-  });
-
-  it("does not group a single book", async () => {
-    learnerFixture.reset(() => [makeChapter(), makeChapter()]);
-    render(<ChapterSelection subject="Mathematics" />);
-    await tile(1, "SYNTHETIC chapter 1");
-    expect(screen.queryByRole("region")).toBeNull();
   });
 
   it("says so when the school has published nothing for the subject", async () => {

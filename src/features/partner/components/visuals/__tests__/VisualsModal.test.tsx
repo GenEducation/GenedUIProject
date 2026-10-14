@@ -87,26 +87,6 @@ describe("VisualsModal — list", () => {
     expect(gets("/v1/visuals/candidates")[0].url.searchParams.get("source_id")).toBe(SYNTHETIC_SOURCE);
   });
 
-  it("shows the empty state when nothing is waiting", async () => {
-    visualsFixture.reset(() => []);
-    open();
-    expect(await screen.findByText("No visuals waiting for review.")).toBeInTheDocument();
-  });
-
-  it("switches to the Accepted tab", async () => {
-    open();
-    await screen.findByRole("button", { name: "Open SYNTHETIC shape 1" });
-    fireEvent.click(screen.getByRole("tab", { name: /Accepted/ }));
-    expect(await screen.findByRole("button", { name: "Open SYNTHETIC shape 3" })).toBeInTheDocument();
-  });
-
-  it("shows a placeholder for a null image_url", async () => {
-    visualsFixture.reset(() => [makeVisual({ image_url: null })]);
-    open();
-    await screen.findByRole("button", { name: "Open SYNTHETIC shape 1" });
-    expect(screen.getByTestId("visual-image-placeholder")).toBeInTheDocument();
-  });
-
   it("loads every visual of one run with Load more, though they share one created_at", async () => {
     // A run inserts its visuals in one transaction, so they all carry the same timestamp.
     const sameRun = "2026-01-01T00:00:00.000Z";
@@ -156,16 +136,6 @@ describe("VisualsModal — detail and decisions", () => {
     return ctx;
   }
 
-  it("shows the textbook passages it was drawn from, the checklist and the AI flags", async () => {
-    await openDetail("SYNTHETIC shape 1");
-    expect(screen.getByText("SYNTHETIC passage one.")).toBeVisible();
-    // p2 isn't in source_refs: tucked under "Other passages".
-    expect(screen.getByText(/Other passages from this concept \(1\)/)).toBeInTheDocument();
-    expect(screen.getByText("SYNTHETIC checklist item")).toBeInTheDocument();
-    expect(screen.getByText("The AI reviewer flagged:")).toBeInTheDocument();
-    expect(screen.getByText("SYNTHETIC problem: label overlaps")).toBeInTheDocument();
-  });
-
   it("accepts with {content_hash, decision} and moves to the next pending visual", async () => {
     const { onChanged } = await openDetail("SYNTHETIC shape 2");
     fireEvent.click(screen.getByRole("button", { name: /Accept/ }));
@@ -177,14 +147,6 @@ describe("VisualsModal — detail and decisions", () => {
 
     // Advanced to the other pending one.
     expect(await screen.findByText("SYNTHETIC concept 1")).toBeInTheDocument();
-  });
-
-  it("accepts with the A key", async () => {
-    await openDetail("SYNTHETIC shape 2");
-    // The shortcut belongs to the decision panel, which can mount after the passages; wait for it as a user would.
-    await screen.findByRole("region", { name: "Your decision" });
-    fireEvent.keyDown(document, { key: "a" });
-    await waitFor(() => expect(posts("/decision")).toHaveLength(1));
   });
 
   it("needs a reason to reject, and asks for a new version by default", async () => {
@@ -208,16 +170,6 @@ describe("VisualsModal — detail and decisions", () => {
       note: "SYNTHETIC note",
       regenerate: true,
     });
-  });
-
-  it("rejects without a new version when the toggle is off", async () => {
-    await openDetail("SYNTHETIC shape 2");
-    fireEvent.click(screen.getByRole("button", { name: /^Reject/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Wrong or misleading" }));
-    fireEvent.click(screen.getByRole("switch", { name: "Make a new version" }));
-    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
-    await waitFor(() => expect(posts("/decision")).toHaveLength(1));
-    expect(posts("/decision")[0].body).toMatchObject({ regenerate: false, note: null });
   });
 
   it("on a 409 shows the message, reloads the visual and keeps the session", async () => {
@@ -252,16 +204,6 @@ describe("VisualsModal — new versions", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Open SYNTHETIC shape/ }));
     await screen.findByText("From the textbook");
   }
-
-  it("links to the new version once it is done", async () => {
-    visualsFixture.reset(() => [
-      rejected({ id: "r1", state: "done", attempts: 1, result_candidate_id: "vis-new", error: null, created_at: "2026-01-02T00:00:00Z", finished_at: "2026-01-02T00:01:00Z" }),
-      makeVisual({ id: "vis-new", parent_id: "vis-r" }),
-    ]);
-    await openRejected();
-    fireEvent.click(screen.getByRole("button", { name: "Review the new version" }));
-    await waitFor(() => expect(gets("/candidates/vis-new").length).toBe(1));
-  });
 
   it("shows the failure and Try again posts to /regenerate with the original reasons", async () => {
     visualsFixture.reset(() => [

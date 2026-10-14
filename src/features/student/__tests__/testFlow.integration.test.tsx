@@ -13,7 +13,7 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 // the test-taking flow (question components -> store -> submit -> results).
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
-  useSearchParams: () => new URLSearchParams("from=assessments"),
+  useSearchParams: () => new URLSearchParams("from=practice"),
 }));
 vi.mock("@/components/auth/AuthGuard", () => ({ AuthGuard: ({ children }: { children: React.ReactNode }) => children }));
 vi.mock("@/features/student/components/StudentHomeSidebar", () => ({ StudentHomeSidebar: () => null }));
