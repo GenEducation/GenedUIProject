@@ -1,8 +1,10 @@
 import { create } from "zustand";
 import { asError } from "@/utils/errors";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { DeliveryLedger, type DeliveryBinding } from "./delivery/checkDelivery";
 import { lessonService } from "./lessonService";
 import { readSseFrames } from "./sse";
+import { resolveSessionLanguage, type SessionLanguage } from "./voice/languages";
 import { applyEvent, fromRecorded, isTerminal, newTurn, type LessonTurn } from "./transcript";
 import type {
   ChapterReport,
@@ -44,6 +46,8 @@ interface LessonState {
   /** The figure group on the whiteboard. */
   focusedFigureId: string | null;
   voiceMode: boolean;
+  /** The language the learner picked in this session, or null (then the last stored choice, then the profile's). Every typed turn carries it. */
+  sessionLanguage: SessionLanguage | null;
   /** This lesson screen's own session id: the learner session while no voice session is live. */
   pageSessionId: string;
   /** The live voice session's id (the voice socket's `ready.session_id`); a reconnect is a new one. Null while there is none. */
@@ -76,6 +80,7 @@ interface LessonState {
   sessionId: () => string;
   /** The voice socket opened (or reconnected) with this session id, or closed (null). Still-visible checks are confirmed again. */
   setVoiceSession: (sessionId: string | null) => void;
+  setSessionLanguage: (language: SessionLanguage) => void;
   /** A check card is on screen and visible (or no longer is). The first time, in a session and round, the delivery is confirmed. */
   setCheckVisible: (itemId: string, visible: boolean) => void;
   /** At the start of a tutor reply: the one visible, unanswered check it may be reading aloud. */
@@ -104,6 +109,7 @@ const initial = {
   focusedFigureId: null,
   voiceMode: false,
   pageSessionId: "",
+  sessionLanguage: null,
   voiceSessionId: null,
   notDeliveredItemId: null,
   completedSteps: [],
@@ -211,6 +217,21 @@ export const useLessonStore = create<LessonState>((set, get) => {
     if (get().instanceId === instanceId) set({ report });
   };
 
+  /** The node whose opening has not been asked for yet: set when the lesson moves on, cleared when it is asked for or no longer wanted. */
+  let openingDue: string | null = null;
+  const openIfDue = () => {
+    const node = openingDue;
+    if (!node) return;
+    const { instance, voiceSessionId, turns } = get();
+    if (voiceSessionId || instance?.state !== "active" || instance.active_node?.instance_node_id !== node) {
+      openingDue = null; // a voice session opens it on reconnecting, or the lesson has moved on again
+      return;
+    }
+    if (turns.some((t) => t.status === "streaming")) return; // asked again when that turn ends
+    openingDue = null;
+    void runTurn({ turn_id: uuid(), kind: "opening", instance_node_id: node }, null);
+  };
+
   const applyInstance = (instance: InstanceState) => {
     const previous = get().instance;
     const beforeNode = previous?.active_node;
@@ -231,6 +252,13 @@ export const useLessonStore = create<LessonState>((set, get) => {
       }));
     }
     if (after && after !== beforeNode?.instance_node_id) void loadNode(instance.id).catch(() => undefined);
+    // The lesson moved on to a new node: it opens with the tutor speaking first (backend ADR 0006 D7, D17: the client asks).
+    // In a voice session the socket reconnects for the new node and the server opens it, so only a text session asks here.
+    // Asked after the turn in flight (a reaction to the answer that finished the old node) has ended, never over it.
+    if (instance.state === "active" && beforeNode && after && after !== beforeNode.instance_node_id) {
+      openingDue = after;
+      queueMicrotask(openIfDue);
+    }
     if (instance.state === "completed" && previous?.state !== "completed") void loadReport(instance.id).catch(() => undefined);
   };
 
@@ -270,7 +298,13 @@ export const useLessonStore = create<LessonState>((set, get) => {
   const runTurn = async (unsessioned: TurnRequest, learnerText: string | null) => {
     const instanceId = get().instanceId;
     if (!instanceId) return;
-    const request: TurnRequest = { ...unsessioned, session_id: sessionId() };
+    // A typed turn is written in the session language the learner chose (backend ADR 0037); none known, none sent.
+    const language =
+      unsessioned.language ??
+      (unsessioned.modality === "voice"
+        ? undefined
+        : (resolveSessionLanguage(get().sessionLanguage, useStudentStore.getState().studentProfile?.preferred_language) ?? undefined));
+    const request: TurnRequest = { ...unsessioned, session_id: sessionId(), ...(language ? { language } : {}) };
     streamAbort?.abort();
     const abort = new AbortController();
     streamAbort = abort;
@@ -309,6 +343,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
     } finally {
       if (streamAbort === abort) streamAbort = null;
       lastReplyAt = Date.now();
+      openIfDue();
     }
   };
 
@@ -450,9 +485,10 @@ export const useLessonStore = create<LessonState>((set, get) => {
         }
         if (!result) return null;
         set({ notDeliveredItemId: null });
-        applyInstance(result.instance);
-        // The tutor reacts to a committed result in its own turn.
+        // The reaction belongs to the node the answer was given on (backend admission: attempt-bound), which the answer itself
+        // may have finished; the next node's opening follows once the reaction ends.
         const node = activeNodeId();
+        applyInstance(result.instance);
         if (result.attempt_id && result.outcome !== "needs_confirmation" && node) {
           void runTurn(
             { turn_id: uuid(), kind: "result_reaction", instance_node_id: node, attempt_id: result.attempt_id },
@@ -508,6 +544,8 @@ export const useLessonStore = create<LessonState>((set, get) => {
     setVoiceMode: (on) => set({ voiceMode: on }),
 
     sessionId,
+
+    setSessionLanguage: (language) => set({ sessionLanguage: language }),
 
     setVoiceSession: (id) => {
       if (get().voiceSessionId === id) return;
@@ -566,6 +604,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
       streamAbort?.abort();
       streamAbort = null;
       lastReplyAt = 0;
+      openingDue = null;
       set({ ...initial });
     },
   };

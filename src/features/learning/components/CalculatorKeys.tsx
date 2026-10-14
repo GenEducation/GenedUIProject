@@ -27,7 +27,8 @@ const KEYS: { label: string; insert: string; name: string }[] = [
 export function CalculatorKeys({ id, onKey }: { id: string; onKey: (insert: string) => void }) {
   return (
     <div id={id} role="group" aria-label="Calculator keys" className="mt-3">
-      <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-[repeat(16,minmax(0,1fr))]">
+      {/* Two rows of eight: sixteen keys in one row squeeze to nothing in a card this narrow. */}
+      <div className="grid grid-cols-8 gap-1.5">
         {KEYS.map((key) => (
           // eslint-disable-next-line no-restricted-syntax -- a calculator key: a compact sketch tile, not an action button.
           <button

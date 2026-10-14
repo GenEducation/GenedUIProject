@@ -49,6 +49,13 @@ export async function fetchVoiceCapabilities(signal?: AbortSignal): Promise<Voic
   return (await res.json()) as VoiceCapabilities;
 }
 
+/** The eight session languages (backend `gened_language`): the only tags a turn or a session may carry. */
+export const SESSION_LANGUAGES = ["en", "hi", "hi-Latn", "mr", "pa", "ta", "te", "kn"] as const;
+export type SessionLanguage = (typeof SESSION_LANGUAGES)[number];
+
+export const isSessionLanguage = (tag: unknown): tag is SessionLanguage =>
+  typeof tag === "string" && (SESSION_LANGUAGES as readonly string[]).includes(tag);
+
 const CHOICE_KEY = "gened_voice_language";
 
 export function readLanguageChoice(): string | null {
@@ -74,4 +81,13 @@ export function defaultLanguage(offered: VoiceLanguage[], preferred?: string | n
     if (tag && open.includes(tag)) return tag;
   }
   return open[0] ?? null;
+}
+
+/**
+ * The session language for typed turns and the lesson screen's words: this session's pick, else the last choice made on this
+ * browser, else the profile preference; none if none is one of the eight (the turn then carries no language, as before).
+ */
+export function resolveSessionLanguage(picked: string | null | undefined, preferred?: string | null): SessionLanguage | null {
+  for (const tag of [picked, readLanguageChoice(), preferred]) if (isSessionLanguage(tag)) return tag;
+  return null;
 }

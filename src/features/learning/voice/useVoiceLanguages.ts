@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
-import { defaultLanguage, fetchVoiceCapabilities, saveLanguageChoice, type VoiceLanguage } from "./languages";
+import { useLessonStore } from "../useLessonStore";
+import { defaultLanguage, isSessionLanguage, fetchVoiceCapabilities, saveLanguageChoice, type VoiceLanguage } from "./languages";
 
 export interface VoiceLanguages {
   /** What the server offers; empty until it has answered. */
@@ -38,8 +39,13 @@ export function useVoiceLanguages(enabled: boolean): VoiceLanguages {
   const setLanguage = useCallback((tag: string) => {
     saveLanguageChoice(tag);
     setChoice(tag);
+    if (isSessionLanguage(tag)) useLessonStore.getState().setSessionLanguage(tag);
   }, []);
 
   const offered = choice && languages.some((l) => l.language === choice && l.may_open !== false) ? choice : defaultLanguage(languages, preferred);
+  // The language the voice session actually opens in is the session's language for typed turns and the screen's words too.
+  useEffect(() => {
+    if (isSessionLanguage(offered)) useLessonStore.getState().setSessionLanguage(offered);
+  }, [offered]);
   return { languages, language: offered, setLanguage, error };
 }

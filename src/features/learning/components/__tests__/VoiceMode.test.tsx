@@ -306,16 +306,13 @@ describe("voice mode", () => {
       clock.mockRestore();
     });
 
-    it("does not talk over the tutor: the button says to wait and presses nothing", async () => {
+    it("lets the learner press while the tutor speaks: that is how they interrupt it", async () => {
       await ready();
       fireEvent.click(await toggle());
       await emit({ t: "ui", ev: "speaking", on: true });
-      const hold = screen.getByRole("button", { name: "Wait for the tutor to finish" });
-      expect(hold).toBeDisabled();
-      fireEvent.keyDown(document.body, { code: "Space" });
-      expect(fake.calls).not.toContain("press");
-      await emit({ t: "ui", ev: "drained" });
       expect(screen.getByRole("button", { name: "Tap or hold to speak" })).toBeEnabled();
+      fireEvent.keyDown(document.body, { code: "Space" });
+      expect(fake.calls).toContain("press");
     });
 
     it("a release after the session ended, or with a dead worker, does not throw", async () => {
@@ -419,7 +416,7 @@ describe("voice language", () => {
     expect(fake.options!.init.language).toBe("hi");
     expect(await picker()).toHaveTextContent("हिन्दी");
     expect(localStorage.getItem("gened_voice_language")).toBe("hi");
-    expect(screen.getByText("Connecting…")).toBeInTheDocument(); // a fresh session, not the old one carried over
+    expect(screen.getByText("जुड़ रहे हैं…")).toBeInTheDocument(); // a fresh session, not the old one carried over; its words are Hindi now
   });
 
   it("a refused language says which one, does not fall back, and can be changed", async () => {

@@ -6,6 +6,7 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { Select } from "@/components/ui/Select";
 import { languageLabel, voiceLanguageEnabled, type VoiceLanguage } from "../voice/languages";
 import type { VoiceSession } from "../voice/useVoiceSession";
+import { useUiText } from "../i18n";
 
 const BARS = 13;
 /** A press shorter than this is a tap (it starts talking until the next tap); longer is a hold (it sends on release). */
@@ -29,7 +30,10 @@ interface VoiceWaveformProps {
  * the tutor speaks; they are driven by refs on animation frames, not renders.
  */
 export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: VoiceWaveformProps) {
-  const tutorName = useStudentStore((s) => s.studentProfile?.ai_name) || "Your tutor";
+  const t = useUiText();
+  // The name the learner gave their tutor, as they wrote it (a lower-case "nia" reads as "Nia"); "Your tutor" until they have.
+  const given = useStudentStore((s) => s.studentProfile?.ai_name)?.trim();
+  const tutorName = given ? given.charAt(0).toLocaleUpperCase() + given.slice(1) : t("tutor");
   const barsRef = useRef<HTMLDivElement>(null);
   // The animation loop reads the latest level and phase without restarting.
   const live = useRef({ level: 0, phase: session.phase, muted: session.muted });
@@ -61,13 +65,13 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
   }, []);
 
   const label: Record<VoiceSession["phase"], string> = {
-    connecting: "Connecting…",
-    listening: "Listening…",
-    hearing: "Hearing you",
-    thinking: `${tutorName} is thinking…`,
-    speaking: `${tutorName} is speaking`,
-    reconnecting: "Reconnecting…",
-    offline: "Voice is off",
+    connecting: t("connecting"),
+    listening: t("listening"),
+    hearing: t("hearing"),
+    thinking: t("thinking", { name: tutorName }),
+    speaking: t("speaking", { name: tutorName }),
+    reconnecting: t("reconnecting"),
+    offline: t("voiceOff"),
   };
   const tutorTalking = session.phase === "speaking" || session.phase === "thinking";
   const muted = session.muted;
@@ -75,8 +79,8 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
 
   // The language is the session's own: shown while it is connected, and the one thing the learner can change (which restarts it).
   const pushToTalk = session.pushToTalk && !offline;
-  const tutorSpeaking = session.phase === "speaking";
-  const holdDisabled = muted || tutorSpeaking || !session.press || ["connecting", "reconnecting"].includes(session.phase);
+  // Pressing while the tutor speaks is how the learner interrupts it (backend barge-in, ADR 0017); only muting or no session stops it.
+  const holdDisabled = muted || !session.press || ["connecting", "reconnecting"].includes(session.phase);
   // Tap or hold: a quick tap starts talking and the next tap sends; a press held longer than a tap sends on release.
   const { press, release } = session;
   const hold = useRef<{ downAt: number; latched: boolean }>({ downAt: 0, latched: false });
@@ -118,8 +122,8 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
     release?.();
   }, [release]);
   const holdLabel = session.held
-    ? latched ? "Listening… tap to send" : "Listening… release to send"   // `latched` only shows while the session holds
-    : muted ? "Unmute to speak" : tutorSpeaking ? "Wait for the tutor to finish" : "Tap or hold to speak";
+    ? latched ? t("listeningTap") : t("listeningRelease")   // `latched` only shows while the session holds
+    : muted ? t("unmuteToSpeak") : t("tapOrHold");
 
   // Space works the same way when focus is not somewhere Space means something else (a text field, another control).
   useEffect(() => {
@@ -159,7 +163,7 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
         <button
           type="button"
           aria-pressed={session.pushToTalk}
-          aria-label="Push to talk"
+          aria-label={t("modePush")}
           onClick={(e) => {
             const on = !session.pushToTalk;
             if (on && muted) session.setMuted?.(false);   // push to talk has no mute: nothing is heard unless pressed
@@ -172,7 +176,11 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
               : "border-[var(--ls-border-strong)] bg-white text-[var(--ls-ink-mid)]"
           }`}
         >
-          <Hand size={13} aria-hidden /> Push to talk
+          <Hand size={13} aria-hidden /> {t("modePush")}
+          {/* An on/off switch, so the mode reads at a glance (the pill only names it). */}
+          <span aria-hidden className={`relative h-3.5 w-6 rounded-full transition-colors ${session.pushToTalk ? "bg-white/40" : "bg-[var(--ls-border-strong)]"}`}>
+            <span className={`absolute top-0.5 h-2.5 w-2.5 rounded-full bg-white shadow transition-[left] ${session.pushToTalk ? "left-[13px]" : "left-0.5"}`} />
+          </span>
         </button>
       ) : (
         <span />
@@ -226,7 +234,7 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
             <p className="text-[14px] text-[var(--ls-ink)]">{session.error}</p>
             {/* eslint-disable-next-line no-restricted-syntax -- a quiet text action in the voice bar. */}
             <button type="button" onClick={onEnd} className="text-[14px] font-semibold text-[var(--ls-primary)] hover:underline">
-              Back to typing
+              {t("backToTyping")}
             </button>
           </div>
         ) : (
@@ -237,7 +245,13 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
                   session.phase === "hearing" ? "bg-[var(--ls-accent-deep)] animate-pulse" : session.phase === "reconnecting" || session.phase === "connecting" ? "bg-[#E2A23B]" : "bg-[var(--ls-primary)]"
                 }`}
               />
-              <span className="text-[12px] font-semibold leading-tight">{muted ? "Muted" : label[session.phase]}</span>
+              {/* One line for the microphone, and while it is muted what the tutor is doing besides, so neither hides the other. */}
+              <span className="text-[12px] font-semibold leading-tight">
+                {muted ? t("muted") : label[session.phase]}
+                {muted && (session.phase === "speaking" || session.phase === "thinking") && (
+                  <span className="block text-[11px] font-normal text-[var(--ls-ink-mid)]">{label[session.phase]}</span>
+                )}
+              </span>
             </div>
 
             <div ref={barsRef} className="flex min-w-0 flex-1 items-center gap-2">
@@ -250,7 +264,7 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
                 onClick={() => session.setMuted?.(!muted)}
                 disabled={!session.setMuted}
                 aria-pressed={muted}
-                aria-label={muted ? "Unmute microphone" : "Mute microphone"}
+                aria-label={muted ? t("unmuteMic") : t("muteMic")}
                 className={`grid h-12 w-12 shrink-0 place-items-center rounded-full transition-[background,box-shadow] disabled:cursor-not-allowed ${
                   muted
                     ? "border-2 border-[var(--ls-border-strong)] bg-white text-[#B4232C]"
@@ -271,7 +285,7 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
               onClick={onEnd}
               className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--ls-border-strong)] bg-white px-3 py-2 text-[13px] font-semibold text-[#B4232C] transition-colors hover:bg-[#FBE6E7]"
             >
-              <PhoneOff size={15} aria-hidden /> End
+              <PhoneOff size={15} aria-hidden /> {t("end")}
             </button>
           </div>
         )}

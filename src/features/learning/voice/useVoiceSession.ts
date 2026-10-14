@@ -76,8 +76,10 @@ export function voiceSocketUrl(apiBase = process.env.NEXT_PUBLIC_API_URL ?? ""):
  */
 export function useVoiceSession(active: boolean, language: string | null): VoiceSession {
   const instanceId = useLessonStore((s) => s.instanceId);
-  // Only whether there is a node: the socket follows the lesson once open, so moving to a new node must not reconnect it.
-  const hasNode = useLessonStore((s) => Boolean(s.instance?.active_node));
+  // The server binds a voice session to the node named at `init` and checks every turn against it, so the session follows the
+  // lesson by reconnecting: moving to a new node ends the old socket (which cancels the old reply) and opens one for the new node,
+  // whose opening the server then speaks (backend ADR 0025: a fresh `init`, no resume).
+  const activeNodeId = useLessonStore((s) => s.instance?.active_node?.instance_node_id ?? null);
   const [session, setSession] = useState<VoiceSession>(STARTING);
   const pipelineRef = useRef<VoicePipelineInstance | null>(null);
   const [pushToTalk, setPtt] = useState(readPushToTalk);
@@ -102,8 +104,9 @@ export function useVoiceSession(active: boolean, language: string | null): Voice
   const press = useCallback(() => {
     const { muted, phase, held: already, pushToTalk: on } = live.current;
     const pipeline = pipelineRef.current;
-    // Hold to talk waits for the tutor to finish (no talking over it by button), and nothing is sent while muted.
-    if (!pipeline || !on || muted || already || phase === "speaking" || phase === "offline" || phase === "connecting" || phase === "reconnecting") return;
+    // Pressing while the tutor speaks is allowed: it is how the learner interrupts (the server confirms a barge-in from what it hears,
+    // backend ADR 0017). Nothing is sent while muted or before the session is up.
+    if (!pipeline || !on || muted || already || phase === "offline" || phase === "connecting" || phase === "reconnecting") return;
     try {
       pipeline.press();
     } catch {
@@ -264,8 +267,8 @@ export function useVoiceSession(active: boolean, language: string | null): Voice
       void pipeline?.close().catch(() => undefined);
       setSession(STARTING); // the next session starts from scratch
     };
-    // The server takes the language once, at `init`: a new one reconnects in it.
-  }, [active, instanceId, hasNode, language]);
+    // The server takes the language and the node once, at `init`: a new one reconnects with it.
+  }, [active, instanceId, activeNodeId, language]);
 
   return { ...session, language, setMuted, pushToTalk, held, setPushToTalk, press, release };
 }

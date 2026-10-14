@@ -85,6 +85,8 @@ export interface InstanceState {
   next_action: InstanceNextAction;
   nodes_done: number;
   nodes_total: number;
+  /** The finished parts, in plan order, with their titles (absent from an older backend). */
+  completed_nodes?: Array<{ instance_node_id: string; title: string }>;
   // The lesson screen's fields. Optional so the chapter list's fixtures stay small.
   plan_version_id?: string;
   /** Every answer, done or engagement names it as `expected_revision`; a stale one is a 409 (CORE_3103). */

@@ -56,11 +56,14 @@ export function LessonProgressRail() {
   const active = instance.active_node;
   const steps: Step[] = [];
 
-  const earlier = Math.max(0, instance.nodes_done - completedSteps.length);
+  // The backend names every finished part, so a reloaded lesson lists them by title; an older one names none, and the steps
+  // finished while this screen was open are all there is to show.
+  const named = instance.completed_nodes?.map((c) => ({ instanceNodeId: c.instance_node_id, title: c.title })) ?? completedSteps;
+  const earlier = Math.max(0, instance.nodes_done - named.length);
   if (earlier > 0) {
     steps.push({ key: "earlier", label: `${earlier} ${earlier === 1 ? "step" : "steps"} done`, state: "done", quiet: true });
   }
-  for (const step of completedSteps) steps.push({ key: step.instanceNodeId, label: step.title, state: "done" });
+  for (const step of named) steps.push({ key: step.instanceNodeId, label: step.title, state: "done" });
 
   if (!finished && active) {
     steps.push({ key: active.instance_node_id, label: active.title, state: "current" });
