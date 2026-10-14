@@ -5,6 +5,7 @@ import { partnerStudentsService } from "../services/partnerStudentsService";
 import type {
   ExcludedPages,
   ExcludedPagesDecision,
+  SourceReleaseRef, SourceOutcome, SuggestionsState,
   RegisterSourceInput,
   SourceProgress,
   SourceState,
@@ -46,6 +47,25 @@ export interface Subject {
   progress: SourceProgress | null;
   /** Pages the server left out at upload as the solutions appendix; the partner confirms or includes them. */
   excluded_pages: ExcludedPages | null;
+  /** What is being ingested, how far each step got and where the result went (`IngestionPathPanel`). */
+  edition_label: string;
+  pdf_file_name: string;
+  page_count: number;
+  first_pdf_page: number;
+  last_pdf_page: number;
+  strand: string;
+  lo_codes: string[];
+  visuals: Record<string, number> | null;
+  release: SourceReleaseRef | null;
+  /** The server's next step for this chapter; null from a server that predates it. */
+  outcome: SourceOutcome | null;
+  /** The last run left questions to complete (`SourceAuthoringModal`); how many the partner did; AI drafts' state. */
+  has_authoring: boolean;
+  authored: number;
+  suggestions: SuggestionsState | null;
+  queued_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
   created_at: string;
 }
 
@@ -66,6 +86,22 @@ export function toSubject(source: SourceView): Subject {
     questions: source.questions,
     progress: source.progress ?? null,
     excluded_pages: source.excluded_pages ?? null,
+    edition_label: source.edition_label,
+    pdf_file_name: source.pdf_file_name,
+    page_count: source.page_count,
+    first_pdf_page: source.chapter.first_pdf_page,
+    last_pdf_page: source.chapter.last_pdf_page,
+    strand: source.strand,
+    lo_codes: source.lo_codes,
+    visuals: source.visuals,
+    release: source.release ?? null,
+    outcome: source.outcome ?? null,
+    has_authoring: source.has_authoring ?? false,
+    authored: source.authored ?? 0,
+    suggestions: source.suggestions ?? null,
+    queued_at: source.queued_at,
+    started_at: source.started_at ?? null,
+    finished_at: source.finished_at,
     created_at: source.created_at,
   };
 }

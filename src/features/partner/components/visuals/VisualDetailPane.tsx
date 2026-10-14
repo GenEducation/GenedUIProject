@@ -273,6 +273,12 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
                 <h5 className="flex items-center gap-2 text-xs font-black text-amber-800 mb-1.5">
                   <TriangleAlert size={13} aria-hidden /> The AI reviewer flagged:
                 </h5>
+                {detail.critique.kinds?.includes("content") && (
+                  <p className="text-xs font-bold text-amber-900 mb-1.5">
+                    This redraw differs from the textbook picture. Compare it with the original, and accept it only if
+                    these differences don&apos;t matter for what it teaches or the questions about it.
+                  </p>
+                )}
                 <ul className="list-disc pl-5 flex flex-col gap-1 text-xs text-amber-900/80">
                   {detail.critique.problems.map((p, i) => (
                     <li key={i}>{p}</li>
