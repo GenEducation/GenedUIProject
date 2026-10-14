@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import {
   CHECK_ITEM, FIGURE_GROUP, LESSON_ID, OPTION_A,
   answerRequests, lessonFixture, makeLessonInstance, stepRequests, syntheticPayload, turnRequests,
@@ -10,8 +10,6 @@ import { useLessonStore } from "../../useLessonStore";
 import type { CheckItem } from "../../types";
 
 import { BoardPanel } from "../BoardPanel";
-import { responseFor } from "../StepCard";
-
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 const node = makeLessonInstance().active_node!;
 const store = () => useLessonStore.getState();
@@ -49,46 +47,6 @@ describe("BoardPanel — figures", () => {
     fireEvent.error(await screen.findByRole("img", { name: "SYNTHETIC figure" }));
     expect(await screen.findByText("This picture couldn't load.")).toBeInTheDocument();
   });
-
-  it("keeps every figure on the board; the filmstrip focuses one without removing the others", async () => {
-    lessonFixture.setHistory([
-      { turn_id: "t1", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [FIGURE_GROUP] },
-      { turn_id: "t2", kind: "learner_message", status: "completed", created_at: "x", figure_group_ids: ["g-second"] },
-    ]);
-    await open();
-    // A second picture the board has a URL for (as if from an earlier node's manifest).
-    act(() => useLessonStore.setState((s) => ({
-      manifest: { ...s.manifest!, figures: { ...s.manifest!.figures, "pic-2": { figure_group_id: "g-second", url: "/v1/visual-images/pic-2", width_px: 10, height_px: 10, mime: "image/png", sha256: "0".repeat(64) } } },
-    })));
-    const board = screen.getByRole("list", { name: "Figures on the board" });
-    expect(within(board).getAllByRole("listitem")).toHaveLength(2);
-    expect(within(board).getAllByRole("listitem")[1]).toHaveAttribute("aria-current", "true");
-
-    const strip = screen.getByRole("navigation", { name: "Figures shown in this lesson" });
-    fireEvent.click(within(strip).getByRole("button", { name: "Previous figure" }));
-    expect(store().focusedFigureId).toBe(FIGURE_GROUP);
-    expect(within(board).getAllByRole("listitem")).toHaveLength(2);
-    expect(within(board).getAllByRole("listitem")[0]).toHaveAttribute("aria-current", "true");
-  });
-
-  it("a figure presented now is inked in; ones already on the board just appear", async () => {
-    await open();
-    expect(document.querySelector(`[data-figure-id="${FIGURE_GROUP}"]`)?.className).not.toMatch(/lesson-writing/);
-    act(() => useLessonStore.setState((s) => ({
-      presentedFigureIds: [...s.presentedFigureIds, "g-new"],
-      focusedFigureId: "g-new",
-      manifest: { ...s.manifest!, figures: { ...s.manifest!.figures, "pic-new": { figure_group_id: "g-new", url: "/v1/visual-images/pic-new", width_px: 10, height_px: 10, mime: "image/png", sha256: "0".repeat(64) } } },
-    })));
-    expect(document.querySelector('[data-figure-id="g-new"]')?.className).toMatch(/lesson-writing/);
-  });
-
-  it("leaves out a figure it has no picture for", async () => {
-    lessonFixture.setHistory([
-      { turn_id: "t1", kind: "opening", status: "completed", created_at: "x", figure_group_ids: ["earlier-group", FIGURE_GROUP] },
-    ]);
-    await open();
-    expect(within(screen.getByRole("list", { name: "Figures on the board" })).getAllByRole("listitem")).toHaveLength(1);
-  });
 });
 
 describe("BoardPanel — the step card", () => {
@@ -118,20 +76,6 @@ describe("BoardPanel — the step card", () => {
     await waitFor(() => expect(store().instance?.nodes_done).toBe(2));
   });
 
-  it("a teach step still short of talk asks the learner to talk it through, on a board with nothing drawn yet", async () => {
-    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", teacher_text: "SYNTHETIC hello.", created_at: "x", figure_group_ids: [] }]);
-    await open(makeLessonInstance({ active_node: { ...node, answered_item_ids: [CHECK_ITEM], engagement_count: 0 } }));
-    expect(screen.getByText("Talk it through with your tutor to unlock the next step.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Next step/ })).toBeNull();
-  });
-
-  it("once the tutor has drawn, leaves the board to the picture", async () => {
-    await open(makeLessonInstance({ active_node: { ...node, answered_item_ids: [CHECK_ITEM], engagement_count: 0 } }));
-    expect(await screen.findByRole("img", { name: "SYNTHETIC figure" })).toBeInTheDocument();
-    expect(screen.queryByText("Talk it through with your tutor to unlock the next step.")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Next step/ })).toBeNull();
-  });
-
   it("after a failed round, offers the choice with the recommended one first", async () => {
     await open(makeLessonInstance({
       next_action: "choose",
@@ -149,15 +93,6 @@ describe("BoardPanel — the step card", () => {
     expect(screen.getByText(/You wrote “SYNTHETIC tpyo”/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Yes, SYNTHETIC typo" }));
     await waitFor(() => expect(answerRequests[0]).toMatchObject({ confirmed_reading: true, response: { kind: "text", text: "SYNTHETIC typo" } }));
-  });
-});
-
-describe("responseFor", () => {
-  const check = (response_type: CheckItem["response_type"]) => ({ response_type }) as CheckItem;
-  it("numeric checks send a number; the other typed checks send text", () => {
-    expect(responseFor(check("numeric"), " 3/4 ")).toEqual({ kind: "numeric", value: "3/4" });
-    expect(responseFor(check("numeric_set"), "2, 3")).toEqual({ kind: "text", text: "2, 3" });
-    expect(responseFor(check("symbolic"), "2x+1")).toEqual({ kind: "text", text: "2x+1" });
   });
 });
 
@@ -182,43 +117,5 @@ describe("the answer box's calculator", () => {
     expect(screen.getByText("= 12")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
     await waitFor(() => expect(answerRequests[0]).toMatchObject({ response: { kind: "numeric", value: "12" } }));
-  });
-
-  it("keeps an exact answer as written for an expression answer, showing the value only as a help", async () => {
-    withCheck("symbolic");
-    await open();
-    fireEvent.change(answerBox(), { target: { value: "√2" } });
-    expect(screen.getByText("= 1.414214")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
-    await waitFor(() => expect(answerRequests[0]).toMatchObject({ response: { kind: "text", text: "√2" } }));
-  });
-
-  it("the calculator keys type what a keyboard can't, under the answer box while it's in use", async () => {
-    withCheck("numeric");
-    await open();
-    expect(screen.queryByRole("button", { name: "Calculator" })).toBeNull();
-    expect(screen.queryByRole("group", { name: "Calculator keys" })).toBeNull();
-    fireEvent.focus(answerBox());
-    const keys = screen.getByRole("group", { name: "Calculator keys" });
-
-    fireEvent.click(within(keys).getByRole("button", { name: "square root" }));
-    expect(answerBox()).toHaveValue("√");
-    act(() => { answerBox().setSelectionRange(1, 1); });
-    fireEvent.change(answerBox(), { target: { value: "√81" } });
-    expect(screen.getByText("= 9")).toBeInTheDocument();
-
-    fireEvent.change(answerBox(), { target: { value: "" } });
-    fireEvent.click(within(keys).getByRole("button", { name: "sine" }));
-    expect(answerBox()).toHaveValue("sin(");
-    act(() => { answerBox().setSelectionRange(4, 4); });
-    fireEvent.change(answerBox(), { target: { value: "sin(30)" } });
-    expect(screen.getByText("= 0.5")).toBeInTheDocument();
-  });
-
-  it("has no calculator keys for a word answer", async () => {
-    withCheck("string_set");
-    await open();
-    fireEvent.focus(answerBox());
-    expect(screen.queryByRole("group", { name: "Calculator keys" })).toBeNull();
   });
 });

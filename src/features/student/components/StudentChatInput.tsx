@@ -100,8 +100,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
   const isTextDisabled = !!activeActivity || isFirstResponseWaiting;
 
   return (
-    // `data-pet-avoid`: the desk pet never wanders onto the input a student is typing in.
-    <div data-pet-avoid className={`w-full transition-all duration-500 ${isCentered ? "px-0" : "px-0"}`}>
+    <div className={`w-full transition-all duration-500 ${isCentered ? "px-0" : "px-0"}`}>
       {/* Inline subject picker */}
       {isHub && showSubjectPicker && (
         <InlineSubjectPicker

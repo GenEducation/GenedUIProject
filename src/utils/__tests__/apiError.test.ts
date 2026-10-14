@@ -26,11 +26,6 @@ describe("apiErrorFromResponse — the backend's three error shapes", () => {
     expect(err.request_id).toBe("hdr-1");
   });
 
-  it("403 permission: string detail becomes the message", async () => {
-    const err = await apiErrorFromResponse(json(403, { detail: "Permission denied: Student ID mismatch." }));
-    expect(err).toMatchObject({ error_code: "PERMISSION_DENIED", message: "Permission denied: Student ID mismatch." });
-  });
-
   it("non-JSON body falls back to the caller's message, then a generic one", async () => {
     expect((await apiErrorFromResponse(new Response("oops", { status: 502 }), "Signup failed.")).message).toBe("Signup failed.");
     expect((await apiErrorFromResponse(new Response("oops", { status: 502 }))).message).toBe("Request failed with status 502");

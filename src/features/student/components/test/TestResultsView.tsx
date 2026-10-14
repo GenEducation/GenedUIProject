@@ -1,10 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, Award, ArrowRight, BookOpen } from "lucide-react";
+import { CheckCircle2, XCircle, Award, ArrowRight, BookOpen, MessageSquareText } from "lucide-react";
 import { SubmitTestResponse, CreateChapterTestResponse, ZPDVerdict } from "../../types/test";
-import { happy, unsure } from "blobatar/expression";
-import { StudentBlobatar } from "../StudentBlobatar";
 
 interface TestResultsViewProps {
   test: CreateChapterTestResponse;
@@ -41,17 +39,6 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
         animate={{ opacity: 1, y: 0 }}
         className="text-center space-y-4"
       >
-        {/* Reacts to the app's own verdict rather than a cutoff on the raw
-            score. `unsure` on a weak result, never `sad` — a creature that
-            looks ill at a child who scored badly is a worse product. */}
-        <div className="flex justify-center">
-          <StudentBlobatar
-            size={72}
-            animate="always"
-            expression={result.overall_verdict === "BELOW" ? unsure : happy}
-          />
-        </div>
-
         <div
           className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${verdict.bg} ${verdict.text} font-bold text-sm tracking-wider uppercase`}
         >
@@ -134,6 +121,7 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
 
       <div className="space-y-4">
         <h3 className="citron-eyebrow font-bold text-[var(--ink)] text-lg">
+          <MessageSquareText size={18} strokeWidth={2.2} aria-hidden />
           Detailed Feedback
         </h3>
 

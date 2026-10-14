@@ -97,7 +97,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
 
   const getActiveNav = () => {
     if (pathname === "/student" || pathname === "/student/") return "home";
-    if (pathname?.startsWith("/student/assessments")) return "practice";
+    if (pathname?.startsWith("/student/practice")) return "practice";
     if (pathname?.startsWith("/student/schedule")) return "schedule";
     if (pathname?.startsWith("/student/report-card")) return "report";
     if (pathname?.startsWith("/student/profile")) return "me";
@@ -130,7 +130,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
 
   const navItems = [
     { icon: <HomeIcon size={18} strokeWidth={1.9} />,     label: STRINGS.nav.home,       key: "home",     path: "/student" },
-    ...(FEATURES.practice ? [{ icon: <Target size={18} strokeWidth={1.9} />,       label: STRINGS.nav.practice,   key: "practice", path: "/student/assessments" }] : []),
+    ...(FEATURES.practice ? [{ icon: <Target size={18} strokeWidth={1.9} />,       label: STRINGS.nav.practice,   key: "practice", path: "/student/practice" }] : []),
     ...(FEATURES.schedule ? [{ icon: <CalendarDays size={18} strokeWidth={1.9} />, label: STRINGS.nav.schedule,   key: "schedule", path: "/student/schedule" }] : []),
     { icon: <BarChart3 size={18} strokeWidth={1.9} />,    label: STRINGS.nav.reportCard, key: "report",   path: "/student/report-card" },
     { icon: <User size={18} strokeWidth={1.9} />,         label: STRINGS.nav.profile,    key: "me",       path: "/student/profile" },

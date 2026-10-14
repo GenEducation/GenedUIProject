@@ -34,7 +34,7 @@ export function TestReadyModal() {
 
   const handleContinue = () => {
     dismissTestReadyPrompt();
-    router.push("/student/test?from=assessments");
+    router.push("/student/test?from=practice");
   };
 
   // "Later" leaves the test alone — it is already reachable from Practice,

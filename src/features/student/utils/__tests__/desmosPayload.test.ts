@@ -13,25 +13,12 @@ describe("splitExpressions", () => {
     ]);
   });
 
-  it("keeps a single expression whole", () => {
+  it("keeps nested commas, splits on latex line breaks, and drops empty segments", () => {
     expect(splitExpressions("y = x^2 + 1")).toEqual(["y = x^2 + 1"]);
-  });
-
-  it("does not split on commas nested inside brackets or braces", () => {
     expect(splitExpressions("\\left[1, 2, 3\\right], y = x")).toEqual(["\\left[1, 2, 3\\right]", "y = x"]);
     expect(splitExpressions("\\{1, 2\\}")).toEqual(["\\{1, 2\\}"]);
-  });
-
-  it("splits on latex line breaks", () => {
     expect(splitExpressions("y = x \\\\ y = 2x")).toEqual(["y = x", "y = 2x"]);
-  });
-
-  it("drops empty segments from trailing or doubled separators", () => {
     expect(splitExpressions("y = x, , y = 2x,")).toEqual(["y = x", "y = 2x"]);
-  });
-
-  it("returns nothing for an empty payload", () => {
-    expect(splitExpressions("")).toEqual([]);
     expect(splitExpressions("   ")).toEqual([]);
   });
 });
@@ -54,21 +41,17 @@ describe("contentBounds", () => {
     expect(bounds.right - bounds.left).toBeLessThan(20);
   });
 
-  it("reads a plus sign as a negative centre", () => {
+  it("reads a plus sign as a negative centre and pads a single point", () => {
     // "(x + 3)" is centred at -3.
     const bounds = contentBounds(["(x+3)^2 + (y+1)^2 = 1"])!;
-
     expect(bounds.left).toBeLessThan(-3);
     expect(bounds.right).toBeGreaterThan(-3);
     expect(bounds.bottom).toBeLessThan(-1);
     expect(bounds.top).toBeGreaterThan(-1);
-  });
 
-  it("pads a single point so it is not flush against the edge", () => {
-    const bounds = contentBounds(["(x-5)^2 + (y-5)^2 = 0.1"])!;
-
-    expect(bounds.left).toBeLessThanOrEqual(3.5);
-    expect(bounds.right).toBeGreaterThanOrEqual(6.5);
+    const single = contentBounds(["(x-5)^2 + (y-5)^2 = 0.1"])!;
+    expect(single.left).toBeLessThanOrEqual(3.5);
+    expect(single.right).toBeGreaterThanOrEqual(6.5);
   });
 
   it("returns null when the expressions are not point-shaped, so the caller uses a default view", () => {

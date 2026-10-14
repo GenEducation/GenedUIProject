@@ -82,10 +82,11 @@ export const ChatTurn = memo(function ChatTurn({ turn, onShowFigure, onRetry }: 
                     type="button"
                     onClick={() => onShowFigure(id)}
                     aria-label="Show this figure on the whiteboard"
+                    title="Show on the whiteboard"
                     className="overflow-hidden rounded-xl border border-[var(--ls-border)] bg-white p-1.5 transition-shadow hover:shadow-[var(--ls-shadow)]"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element -- signed, expiring API URL; next/image can't cache it. */}
-                    <img src={picture!.src} alt="" className="block h-24 w-auto max-w-[200px] object-contain" />
+                    <img src={picture!.src} alt="" className="block h-36 w-auto max-w-[280px] object-contain" />
                   </button>
                 ))}
               </div>

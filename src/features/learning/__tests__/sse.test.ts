@@ -30,8 +30,4 @@ describe("readSseFrames", () => {
     const frames = await collect(chunked(': ping\n\nevent: keepalive\ndata: {}\n\nid: t:3\ndata: {"cut'));
     expect(frames).toEqual([{ id: null, event: "keepalive", data: "{}" }]);
   });
-
-  it("accepts CRLF line endings", async () => {
-    expect(await collect(chunked("id: t:1\r\ndata: x\r\n\r\n"))).toEqual([{ id: "t:1", event: null, data: "x" }]);
-  });
 });

@@ -21,13 +21,6 @@ beforeEach(() => {
 });
 
 describe("P5Visual", () => {
-  it("aligns to the start of the message rather than centring itself", async () => {
-    // The sketch sits in a left-aligned message; centring it made it read as a
-    // detached widget floating away from the text.
-    const { box } = await renderSketch();
-    expect(box.className).not.toContain("mx-auto");
-  });
-
   it("adopts the aspect ratio the sketch reports", async () => {
     const { box, iframe } = await renderSketch();
 
@@ -44,8 +37,8 @@ describe("P5Visual", () => {
     await waitFor(() => expect(box.style.aspectRatio).toBe("2 / 1"));
   });
 
-  it("ignores canvas-size messages from any other frame", async () => {
-    const { box } = await renderSketch();
+  it("ignores canvas-size messages from any other frame, or with nonsense dimensions", async () => {
+    const { box, iframe } = await renderSketch();
 
     // A sandboxed frame has an opaque origin, so source identity is the only
     // real check — a message from elsewhere must not resize this sketch.
@@ -56,13 +49,7 @@ describe("P5Visual", () => {
       }),
     );
 
-    await new Promise((r) => setTimeout(r, 20));
-    expect(box.style.aspectRatio).toBe("1.6 / 1");
-  });
-
-  it("ignores nonsense dimensions", async () => {
-    const { box, iframe } = await renderSketch();
-
+    // Nonsense dimensions are ignored too.
     for (const bad of [{ w: 0, h: 100 }, { w: 100, h: 0 }, { w: NaN, h: 10 }, { w: -5, h: 10 }]) {
       window.dispatchEvent(
         new MessageEvent("message", {

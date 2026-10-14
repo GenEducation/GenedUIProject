@@ -120,7 +120,7 @@ export function BoardPanel() {
         <div
           ref={stepRef}
           data-no-pan
-          className="absolute bottom-32 right-4 top-16 z-10 flex w-[min(380px,46%)] flex-col overflow-y-auto overscroll-contain pb-2 pr-1 empty:hidden [&:not(:has(*))]:hidden"
+          className="absolute bottom-32 right-4 top-16 z-10 flex w-[min(380px,46%)] flex-col overflow-y-auto overscroll-contain px-1.5 pb-3 pt-1.5 empty:hidden [&:not(:has(*))]:hidden"
         >
           <StepCard />
         </div>

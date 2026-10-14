@@ -27,12 +27,22 @@ import type { AdminDeviceListItem, SelfTestStatus } from "../devices/types";
 export type ConnState = "ONLINE" | "STALE" | "NEEDS_ATTENTION" | "OFFLINE" | "REVOKED";
 
 /**
- * The server decides staleness with LAB_STALE_HEARTBEAT_MINUTES, which it does
- * not expose. `stats.stale_heartbeat` is therefore the authoritative count; this
- * constant only drives per-row highlighting. If the KPI tile and the highlighted
- * rows disagree on screen, this number is wrong — not the tile.
+ * MIRRORS the server's threshold (lab-service `STALE_HEARTBEAT_MINUTES`, env
+ * `LAB_STALE_HEARTBEAT_MINUTES`, default 15). It is not an independent choice.
+ *
+ * This was 10 while the server used 15, which the previous comment here
+ * acknowledged — "if the KPI tile and the highlighted rows disagree on screen,
+ * this number is wrong" — without fixing: the tile counted one set of devices
+ * and the rows highlighted a different, larger set. Aligning the value removes
+ * the disagreement.
+ *
+ * It is not deleted outright because the Lab list endpoint does not publish its
+ * threshold, and inventing a replacement would recreate the same problem. The
+ * newer canonical-device surface avoids the whole category — it renders
+ * server-supplied `grace_seconds` and `fresh_after_seconds` rather than any
+ * local constant. New code should follow that pattern instead of importing this.
  */
-export const STALE_HEARTBEAT_MINUTES = 10;
+export const STALE_HEARTBEAT_MINUTES = 15;
 
 export function deriveConn(
   d: Pick<AdminDeviceListItem, "health_status" | "last_heartbeat_at" | "revoked_at">,

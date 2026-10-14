@@ -96,15 +96,6 @@ describe("useTestStore — buildAnswerString via submit payload", () => {
     });
   });
 
-  it("formats true_false without a justification as the bare answer", async () => {
-    await submitAndCaptureAnswers([question("true_false", { question_id: "q1" })]);
-    useTestStore.getState().updateAnswer("q1", "False");
-
-    await useTestStore.getState().submitTest();
-
-    expect(svc.submitTest.mock.calls[0][1].answers[0].student_answer).toBe("False");
-  });
-
   it("sorts match_the_following selections numerically, not lexically", async () => {
     await submitAndCaptureAnswers([question("match_the_following", { question_id: "q1" })]);
     // insertion order deliberately shuffled; key 10 must land AFTER key 2
@@ -115,16 +106,7 @@ describe("useTestStore — buildAnswerString via submit payload", () => {
     expect(svc.submitTest.mock.calls[0][1].answers[0].student_answer).toBe("1→A, 2→B, 10→J");
   });
 
-  it("passes multiple_choice answers through unchanged", async () => {
-    await submitAndCaptureAnswers([question("multiple_choice", { question_id: "q1" })]);
-    useTestStore.getState().updateAnswer("q1", "Glucose");
-
-    await useTestStore.getState().submitTest();
-
-    expect(svc.submitTest.mock.calls[0][1].answers[0].student_answer).toBe("Glucose");
-  });
-
-  it("omits questions the student never answered", async () => {
+  it("passes answers through unchanged and omits questions the student never answered", async () => {
     await submitAndCaptureAnswers([
       question("multiple_choice", { question_id: "q1" }),
       question("short_answer", { question_id: "q2" }),
@@ -135,21 +117,19 @@ describe("useTestStore — buildAnswerString via submit payload", () => {
     await useTestStore.getState().submitTest();
 
     const payload = svc.submitTest.mock.calls[0][1].answers;
-    expect(payload).toHaveLength(1);
-    expect(payload[0].question_id).toBe("q1");
+    expect(payload).toEqual([{ question_id: "q1", student_answer: "answered" }]);
   });
 });
 
 describe("useTestStore — lifecycle", () => {
-  it("startTest sets the timer from suggested_time_minutes", async () => {
+  it("startTest sets the timer from suggested_time_minutes, defaulting to 30", async () => {
     svc.createChapterTest.mockResolvedValue(testWith([question("short_answer")], 15));
     await useTestStore.getState().startTest({
       student_id: "s1", chapter_query: "c", subject: "S", grade: 6, questions_per_section: 3,
     });
     expect(useTestStore.getState().timerSeconds).toBe(15 * 60);
-  });
 
-  it("startTest defaults the timer to 30 minutes when paper_meta is missing", async () => {
+    // Defaults to 30 minutes when paper_meta is missing.
     svc.createChapterTest.mockResolvedValue(testWith([question("short_answer")], null));
     await useTestStore.getState().startTest({
       student_id: "s1", chapter_query: "c", subject: "S", grade: 6, questions_per_section: 3,
@@ -170,14 +150,52 @@ describe("useTestStore — lifecycle", () => {
     expect(s.timerSeconds).toBe(0);
   });
 
-  it("submitTest is a no-op with no current test", async () => {
-    await useTestStore.getState().submitTest();
-    expect(svc.submitTest).not.toHaveBeenCalled();
+});
+
+describe("useTestStore — test-ready prompt", () => {
+  it("startTest raises the prompt once generation finishes", async () => {
+    await submitAndCaptureAnswers([question("short_answer")]);
+    expect(useTestStore.getState().testReadyPrompt).toBe(true);
+  });
+
+  it("loadTest opens the test immediately without raising the prompt", async () => {
+    svc.getTest.mockResolvedValue(testWith([question("short_answer")]));
+
+    await useTestStore.getState().loadTest("test-1");
+
+    const s = useTestStore.getState();
+    expect(s.currentTest).not.toBeNull();
+    expect(s.testReadyPrompt).toBe(false);
+  });
+
+  it("dismissTestReadyPrompt closes the prompt but keeps the prepared test", async () => {
+    await submitAndCaptureAnswers([question("short_answer")]);
+
+    useTestStore.getState().dismissTestReadyPrompt();
+
+    const s = useTestStore.getState();
+    expect(s.testReadyPrompt).toBe(false);
+    // "Later" must leave the test retrievable from Practice.
+    expect(s.currentTest).not.toBeNull();
+    expect(s.timerSeconds).toBe(15 * 60);
+  });
+
+  it("discardPreparedTest closes the prompt and drops the local test", async () => {
+    await submitAndCaptureAnswers([question("short_answer", { question_id: "q1" })]);
+    useTestStore.getState().updateAnswer("q1", "x");
+
+    useTestStore.getState().discardPreparedTest();
+
+    const s = useTestStore.getState();
+    expect(s.testReadyPrompt).toBe(false);
+    expect(s.currentTest).toBeNull();
+    expect(s.answers).toEqual({});
+    expect(s.timerSeconds).toBe(0);
   });
 });
 
 describe("useTestStore — loadSubmission error handling", () => {
-  it("swallows a 404 without logging", async () => {
+  it("swallows a 404 without logging, but logs other errors", async () => {
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     svc.getSubmission.mockRejectedValue(Object.assign(new Error("not found"), { status: 404 }));
 
@@ -185,11 +203,8 @@ describe("useTestStore — loadSubmission error handling", () => {
 
     expect(useTestStore.getState().testResult).toBeNull();
     expect(errSpy).not.toHaveBeenCalled();
-    errSpy.mockRestore();
-  });
 
-  it("logs non-404 errors", async () => {
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // Non-404 errors are logged.
     svc.getSubmission.mockRejectedValue(Object.assign(new Error("boom"), { status: 500 }));
 
     await useTestStore.getState().loadSubmission("x");

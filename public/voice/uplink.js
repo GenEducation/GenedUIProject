@@ -3,19 +3,22 @@
 // in Node. What it owns:
 //   sequencing   one `seq` per audio frame sent, from 0, never reused; a stretch of audio that was lost (the audio thread skipped
 //                time, or the socket was backed up and a frame was dropped) is flagged on the next frame sent, never papered over;
-//   utterances   speech_started, then the preroll (the last 200 ms before the VAD fired), then every frame, then
-//                speech_candidate_ended with the last voiced sample's time (auto) or end_signal (hold to talk);
+//   utterances   speech_started, then the preroll (the candidate's audio from just before its first speech-like frame, which the
+//                VAD confirmed before admitting it: `lead` frames), then every frame, then speech_candidate_ended with the last
+//                voiced sample's time (auto) or end_signal (hold to talk);
 //   buffering    bounded: frames wait only in the preroll ring, and a frame is dropped (and flagged) when the socket's own buffer is
 //                already above the limit, so a slow network costs audio inside the budget and never grows memory or latency;
-//   duplex       half duplex gates the capture VAD while the tutor's audio is coming out (a reply must not be cut by its own echo);
-//                full duplex ducks the tutor at once on this VAD's start and leaves the decision to the server (ADR 0024 decision 5).
+//   duplex       "never" (half duplex) gates the capture VAD while the tutor's audio is coming out; "echo_aware" listens, and the
+//                VAD itself refuses what the tutor's echo explains; "echo_aware" and "allow" duck the tutor at once on this VAD's
+//                start and leave the decision to the server (ADR 0024 decision 5).
 
 import { encodeUplink } from "./wire.js";
 
-export const DEFAULTS = { prerollFrames: 14, profileTurns: 12, rejectReportS: 2, oneWordMinVoicedMs: 400, oneWordWeight: 0.5, maxBufferedBytes: 64 * 1024, interrupt: "never" };
+export const DEFAULTS = { prerollFrames: 14, ringFrames: 60, profileTurns: 12, learnBelowDb: 10, learnMaxMsPerWord: 1500, blipVoicedMs: 200, rejectReportS: 2, oneWordMinVoicedMs: 400, oneWordWeight: 0.5, maxBufferedBytes: 64 * 1024, interrupt: "never" };
 const FRAME_S = 0.02;
 const TIERS = { confident: 0, quiet: 1, unprofiled: 2 };   // how a turn was admitted (client_diagnostic details are numbers)
-const ENDS = { hangover: 0, level: 1, bounded: 2 };        // why it ended
+const ENDS = { hangover: 0, level: 1, bounded: 2, drop: 3 };   // why it ended
+const REJECTS = { echo: 0, level: 1, steady: 2, background: 3 };   // why a candidate was refused
 
 export class Uplink {
   constructor({ text, binary, buffered, tell, cfg = {} }) {
@@ -48,16 +51,20 @@ export class Uplink {
     this.tell("capture", { t: "gate", on: gate });
   }
 
-  diag(event, detail) { this.text({ type: "client_diagnostic", event, detail }); }
+  diag(event, detail) {
+    const known = Object.fromEntries(Object.entries(detail).filter(([, v]) => v !== undefined && v !== null));   // numbers only, none empty
+    this.text({ type: "client_diagnostic", event, detail: known });
+  }
 
   // The VAD's admission decisions, as numbers (ADR 0021: every threshold is analysable against what it decided).
   decisions(f) {
     const r = (x) => (x === null || x === undefined ? undefined : Math.round(x * 10) / 10);
+    const shape = (x) => ({ modulation_db: r(x.modulationDb), echo_free: r(x.echoFree), bg_delta_db: r(x.bgDeltaDb) });
     if (f.reject && f.endTs - this.lastRejectAt >= this.cfg.rejectReportS) {
       this.lastRejectAt = f.endTs;
-      this.diag("vad_reject", { delta_db: r(f.reject.deltaDb), profile_n: f.reject.n });
+      this.diag("vad_reject", { why: REJECTS[f.reject.why] ?? -1, delta_db: r(f.reject.deltaDb), profile_n: f.reject.n, tutor: +this.playbackActive, ...shape(f.reject) });
     }
-    if (f.admit) this.diag("vad_admit", { tier: TIERS[f.admit.tier], delta_db: r(f.admit.deltaDb), profile_n: f.admit.n });
+    if (f.admit) this.diag("vad_admit", { tier: TIERS[f.admit.tier], delta_db: r(f.admit.deltaDb), profile_n: f.admit.n, confirm_ms: f.admit.confirmMs, tutor: +this.playbackActive, ...shape(f.admit) });
     if (f.end) this.diag("vad_end", { why: ENDS[f.end.why], tier: TIERS[f.end.tier], ms: f.end.ms, level_db: r(f.end.level) });
   }
 
@@ -69,6 +76,13 @@ export class Uplink {
     this.turns.delete(no);
     if (!t || !Number.isFinite(t.level) || words < 1) return null;
     if (t.tier === "quiet" || t.why !== "hangover") return null;
+    // Not the learner's level to learn: seconds of sound for a word or two (a room held the turn open), or far below the learner's
+    // own turns so far (the room, or the learner far away: either way it must not lower the bar for the next sound).
+    if (t.voicedMs / words > this.cfg.learnMaxMsPerWord) return null;
+    if (this.learner.length) {
+      const levels = this.learner.map(([d]) => d).sort((a, b) => a - b), median = levels[Math.floor(levels.length / 2)];
+      if (t.level < median - this.cfg.learnBelowDb) return null;
+    }
     let weight = 1;
     if (words === 1) {
       if (t.tutorAudible || t.voicedMs < this.cfg.oneWordMinVoicedMs) return null;
@@ -77,6 +91,13 @@ export class Uplink {
     this.learner.push([t.level, weight]);
     if (this.learner.length > this.cfg.profileTurns) this.learner.shift();
     return this.learner.map((x) => [...x]);
+  }
+  // The server heard no words in utterance `no`: what the VAD took for speech was not the learner's. Its level, for the VAD to treat
+  // as a background voice's (only a turn the VAD admitted without the learner's level behind it: a confident one is the learner's).
+  refuted(no) {
+    const t = this.turns.get(no);
+    this.turns.delete(no);
+    return t && Number.isFinite(t.level) && t.tier !== "confident" ? t.level : null;
   }
   resetProfile() { this.learner = []; this.turns.clear(); }
 
@@ -95,6 +116,11 @@ export class Uplink {
       if (f.end) {
         this.turns.set(this.no, { level: f.end.level, voicedMs: f.end.voicedMs ?? 0, tier: f.end.tier, why: f.end.why, tutorAudible: this.tutorAtStart });
         for (const k of this.turns.keys()) if (k < this.no - 8) this.turns.delete(k);
+        // Too little voice to be a word (the server abandons it unheard): a sound of the room. Not the learner's, unless the VAD
+        // knew it by the learner's level; its level makes the next sound like it need more evidence.
+        if ((f.end.voicedMs ?? 0) < this.cfg.blipVoicedMs && f.end.tier !== "confident" && Number.isFinite(f.end.level)) {
+          this.tell("capture", { t: "background_voice", level: f.end.level });
+        }
       }
       this.candidateEnd();
     }
@@ -102,7 +128,7 @@ export class Uplink {
 
   keep(f) {
     this.ring.push(f);
-    if (this.ring.length > this.cfg.prerollFrames) this.ring.shift();
+    if (this.ring.length > this.cfg.ringFrames) this.ring.shift();
   }
 
   begin(f) {
@@ -111,7 +137,8 @@ export class Uplink {
     this.text({ type: "speech_started", utterance_no: this.no });
     this.n.utterances++;
     this.lastVoicedEnd = null;
-    for (const r of this.ring) this.audio(r, true);
+    const lead = Math.min(this.ring.length, f.lead ?? this.cfg.prerollFrames);
+    for (const r of this.ring.slice(this.ring.length - lead)) this.audio(r, true);
     this.ring = [];
     this.speaking = true;
     this.audio(f, false);

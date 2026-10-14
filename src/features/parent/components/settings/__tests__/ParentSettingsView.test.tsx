@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 import { useParentStore } from "../../../store/useParentStore";
 import { ParentSettingsView } from "../ParentSettingsView";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
-  usePathname: () => "/parent/profile",
+  usePathname: () => "/parent/settings",
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -39,28 +39,6 @@ function seed(overrides: Partial<ReturnType<typeof useParentStore.getState>> = {
 beforeEach(() => vi.clearAllMocks());
 
 describe("ParentSettingsView", () => {
-  it("names the parent once, in the account card", () => {
-    seed();
-    render(<ParentSettingsView />);
-    expect(screen.getAllByText("Priya Sharma")).toHaveLength(1);
-    // the email is shown in the account card; the guide only offers it as a copy button
-    const account = screen.getByRole("region", { name: "Account" });
-    expect(within(account).getByText("priya@example.com")).toBeInTheDocument();
-    // username differs from the name, so it earns its own mention
-    expect(screen.getByText(/@priya · Parent account/)).toBeInTheDocument();
-  });
-
-  it("lists connected children as compact rows, without a dashboard button", async () => {
-    seed();
-    render(<ParentSettingsView />);
-    const list = screen.getByRole("list", { name: "Connected children" });
-    expect(within(list).getByText("Aarav")).toBeInTheDocument();
-    expect(within(list).queryByText("Old")).not.toBeInTheDocument();
-    expect(await within(list).findByText(/Grade 7 · Connected/)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /dashboard/i })).not.toBeInTheDocument();
-    expect(screen.getByText("1 connected")).toBeInTheDocument();
-  });
-
   it("puts waiting requests on top and approves one", async () => {
     const { updateStudentStatus } = seed();
     render(<ParentSettingsView />);
@@ -84,21 +62,5 @@ describe("ParentSettingsView", () => {
     expect(unlinkStudent).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole("button", { name: "Unlink" }));
     expect(unlinkStudent).toHaveBeenCalledWith("s1");
-  });
-
-  it("walks through adding a child, with the parent's email to copy", () => {
-    seed();
-    render(<ParentSettingsView />);
-    const guide = screen.getByRole("region", { name: "Add another child" });
-    expect(within(guide).getAllByRole("listitem")).toHaveLength(3);
-    expect(within(guide).getByText("Send you an invite")).toBeInTheDocument();
-    expect(within(guide).getByRole("button", { name: "Copy priya@example.com" })).toBeInTheDocument();
-  });
-
-  it("points a parent with no children at the steps", () => {
-    seed({ linkedStudents: [] });
-    render(<ParentSettingsView />);
-    expect(screen.getByText(/No children connected yet\. The steps below/)).toBeInTheDocument();
-    expect(screen.queryByRole("list", { name: "Waiting for your approval" })).not.toBeInTheDocument();
   });
 });

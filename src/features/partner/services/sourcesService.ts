@@ -1,5 +1,7 @@
 import { authFetch } from "@/utils/authFetch";
 import type {
+  AuthoredQuestions,
+  AuthoringResponse,
   ExcludedPagesDecision,
   LearningOutcome,
   QuestionsResponse,
@@ -136,6 +138,24 @@ export const sourcesService = {
       method: "POST",
       body: JSON.stringify({ artifact_hash: artifactHash }),
     });
+    return response.json();
+  },
+
+  /** What the last run offers to complete when it found too few questions, and what the partner completed. */
+  authoring: async (id: string): Promise<AuthoringResponse> => {
+    const response = await authFetch(`${sourcePath(id)}/authoring`);
+    return response.json();
+  },
+
+  /** Replace the partner's keys and questions; a 422 says which one doesn't fit. Then run the chapter again. */
+  saveAuthoring: async (id: string, authored: AuthoredQuestions): Promise<AuthoringResponse> => {
+    const response = await authFetch(`${sourcePath(id)}/authoring`, { method: "PUT", body: JSON.stringify(authored) });
+    return response.json();
+  },
+
+  /** Ask for AI-drafted questions; poll `authoring` until `suggestions.state` is `ready` or `failed`. */
+  suggestQuestions: async (id: string): Promise<AuthoringResponse> => {
+    const response = await authFetch(`${sourcePath(id)}/authoring/suggestions`, { method: "POST" });
     return response.json();
   },
 

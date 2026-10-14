@@ -9,7 +9,7 @@ import { CurriculumIngestion } from "./CurriculumIngestion";
 import { AnimatePresence, motion } from "framer-motion";
 import { NotificationBell } from "@/components/NotificationBell";
 import { User } from "lucide-react";
-import { usePartnerStore } from "../store/usePartnerStore";
+import { usePartnerStore, type Subject } from "../store/usePartnerStore";
 import { LabSetup } from "@/features/lab/components/LabSetup";
 
 export function PartnerAdmin() {
@@ -21,6 +21,8 @@ export function PartnerAdmin() {
     pathname === "/partner/subjects" ? "subjects" : pathname === "/partner/labs" ? "labs" : "analytics";
 
   const showUploadModal = usePartnerStore((state) => state.showUploadModal);
+  // The chapter an "Upload again" came from, to prefill the form; null for a fresh upload.
+  const [uploadPrefill, setUploadPrefill] = useState<Subject | null>(null);
   const setShowUploadModal = usePartnerStore((state) => state.setShowUploadModal);
 
   const rawPartnerId = typeof window !== 'undefined' ? localStorage.getItem("gened_partner_id") : null;
@@ -42,7 +44,7 @@ export function PartnerAdmin() {
         <header className="h-[88px] shrink-0 border-b border-[#122D30]/5 bg-white/40 flex items-center justify-between px-8 lg:px-12 z-50 transition-all">
           <div className="flex-1">
              <h2 className="text-xl font-black text-[#122D30] hidden lg:block tracking-tight">
-               {activeView === "subjects" ? "Academic Registry" : activeView === "labs" ? "Lab Mode" : "Enrollment Overview"}
+               {activeView === "subjects" ? "Subjects" : activeView === "labs" ? "Lab Mode" : "Analytics"}
              </h2>
           </div>
           <div className="flex items-center gap-4">
@@ -61,7 +63,7 @@ export function PartnerAdmin() {
                 exit={{ opacity: 0, y: -10 }}
                 className="flex-1 flex flex-col h-full"
               >
-                <SubjectRegistry onUploadClick={() => setShowUploadModal(true)} />
+                <SubjectRegistry onUploadClick={(prefill) => { setUploadPrefill(prefill ?? null); setShowUploadModal(true); }} />
               </motion.div>
             ) : activeView === "labs" ? (
               <motion.div
@@ -90,7 +92,7 @@ export function PartnerAdmin() {
         {/* Modals */}
         <AnimatePresence>
           {showUploadModal && (
-            <CurriculumIngestion onClose={() => setShowUploadModal(false)} />
+            <CurriculumIngestion prefill={uploadPrefill} onClose={() => setShowUploadModal(false)} />
           )}
         </AnimatePresence>
       </main>

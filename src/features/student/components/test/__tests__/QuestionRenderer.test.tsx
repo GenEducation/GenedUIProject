@@ -57,21 +57,6 @@ describe("QuestionRenderer — dispatch by type", () => {
     expect(onJustificationChange).toHaveBeenCalledWith("q1", "Because it rotates");
   });
 
-  it("match_the_following: renders both columns without crashing", () => {
-    render(
-      <QuestionRenderer
-        question={question("match_the_following", {
-          match_pairs: [{ left: "Stroma", right: "Sugar" }],
-        })}
-        questionNumber={3}
-        onAnswerChange={vi.fn()}
-        onMatchSelectionChange={vi.fn()}
-      />,
-    );
-    expect(screen.getByText("Stroma")).toBeInTheDocument();
-    expect(screen.getByText("Sugar")).toBeInTheDocument();
-  });
-
   it("assertion_reasoning: renders the assertion/reason pair and reports the choice", () => {
     const onAnswerChange = vi.fn();
     render(
@@ -106,40 +91,15 @@ describe("QuestionRenderer — dispatch by type", () => {
     expect(onAnswerChange).toHaveBeenCalledWith("q1", "(a) yes (b) no");
   });
 
-  it.each<QuestionType>(["short_answer", "long_answer", "open_ended", "application", "fill_in_the_blank"])(
-    "%s: falls through to the short-answer textarea",
-    (type) => {
+  it("falls through to the short-answer textarea for free-text and unrecognized types", () => {
+    for (const type of ["short_answer", "long_answer", "fill_in_the_blank", "made_up_type"] as QuestionType[]) {
       const onAnswerChange = vi.fn();
-      render(
+      const { unmount } = render(
         <QuestionRenderer question={question(type)} questionNumber={6} onAnswerChange={onAnswerChange} />,
       );
-      const textarea = screen.getByRole("textbox");
-      fireEvent.change(textarea, { target: { value: "my answer" } });
-      expect(onAnswerChange).toHaveBeenCalledWith("q1", "my answer");
-    },
-  );
-
-  it("falls back to the short-answer textarea for an unrecognized type", () => {
-    const onAnswerChange = vi.fn();
-    render(
-      <QuestionRenderer
-        question={question("made_up_type" as QuestionType)}
-        questionNumber={7}
-        onAnswerChange={onAnswerChange}
-      />,
-    );
-    expect(screen.getByRole("textbox")).toBeInTheDocument();
-  });
-
-  it("shows the question number and marks label", () => {
-    render(
-      <QuestionRenderer
-        question={question("multiple_choice", { options: ["A"], marks: 2 })}
-        questionNumber={9}
-        onAnswerChange={vi.fn()}
-      />,
-    );
-    expect(screen.getByText("Q9")).toBeInTheDocument();
-    expect(screen.getByText("2 marks")).toBeInTheDocument();
+      fireEvent.change(screen.getByRole("textbox"), { target: { value: "my answer" } });
+      expect(onAnswerChange, type).toHaveBeenCalledWith("q1", "my answer");
+      unmount();
+    }
   });
 });

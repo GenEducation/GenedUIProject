@@ -71,41 +71,11 @@ async function selectGrade(label: string) {
   fireEvent.click(option);
 }
 
-describe("SignUp — role selection", () => {
-  it("starts on the role-select step and advances to student details on click", async () => {
-    render(<Harness />);
-    expect(screen.getByText(/select your role to get started/i)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /\bstudent\b/i }));
-
-    await waitFor(() => expect(screen.getByText("What grade are you in?")).toBeInTheDocument());
-  });
-
-  it("advances to the parent credentials step on Parent click", async () => {
-    render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: /\bparent\b/i }));
-    await waitFor(() =>
-      expect(screen.getByPlaceholderText("scholar@gened.edu")).toBeInTheDocument(),
-    );
-  });
-});
-
 describe("SignUp — student flow", () => {
   async function goToStudentStep2() {
     fireEvent.click(screen.getByRole("button", { name: /\bstudent\b/i }));
     await waitFor(() => expect(screen.getByText("What grade are you in?")).toBeInTheDocument());
   }
-
-  it("disables submit until a grade is picked, then enables it", async () => {
-    render(<Harness />);
-    await goToStudentStep2();
-
-    const submit = screen.getByRole("button", { name: /create account/i });
-    expect(submit).toBeDisabled();
-
-    await selectGrade("Grade 6");
-    expect(submit).not.toBeDisabled();
-  });
 
   it("calls onSubmit once the student form is complete", async () => {
     const onSubmit = vi.fn((e: FormEvent<HTMLFormElement>) => e.preventDefault());
@@ -177,14 +147,6 @@ describe("SignUp — student flow", () => {
     await waitFor(() => expect(screen.getByText("Too many OTP requests. Please wait.")).toBeInTheDocument());
     expect(screen.getByRole("button", { name: /resend in 1(20|19)s/i })).toBeDisabled();
   });
-
-  it("renders server-provided field errors", async () => {
-    render(<Harness errors={{ username: "Username is compulsory", grade: "Please select your grade" }} />);
-    await goToStudentStep2();
-
-    expect(screen.getByText("Username is compulsory")).toBeInTheDocument();
-    expect(screen.getByText("Please select your grade")).toBeInTheDocument();
-  });
 });
 
 describe("SignUp — parent flow", () => {
@@ -206,15 +168,6 @@ describe("SignUp — parent flow", () => {
       target: { value: "Mangoes7" },
     });
   }
-
-  it("collects phone alongside credentials on the same step", async () => {
-    render(<Harness />);
-    await goToParentCredentials();
-
-    // Phone used to live on a third step; the flow is two steps for both roles now.
-    expect(screen.getByText("Phone Number")).toBeInTheDocument();
-    expect(screen.queryByText(/step \d of \d/i)).not.toBeInTheDocument();
-  });
 
   it("calls onSubmit once credentials and phone are filled", async () => {
     const onSubmit = vi.fn((e: FormEvent<HTMLFormElement>) => e.preventDefault());

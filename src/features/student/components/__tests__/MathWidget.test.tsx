@@ -21,18 +21,16 @@ function scriptBodyOf(html: string): string {
 }
 
 describe("MathWidget — Desmos harness", () => {
-  it("emits a syntactically valid script", () => {
+  it("emits a syntactically valid script carrying the payload, splitter and fitter", () => {
     // The harness is built by stringifying functions into a template literal,
     // which is exactly the kind of thing that breaks silently on an escaping
     // slip. Compiling it here catches that; the graph failing to parse in a
     // sandboxed iframe would otherwise be invisible.
     const body = scriptBodyOf(srcDocOf(COUNTING_PAYLOAD));
     expect(() => new Function(body)).not.toThrow();
-  });
 
-  it("injects the payload splitter and the viewport fitter", () => {
-    const body = scriptBodyOf(srcDocOf(COUNTING_PAYLOAD));
-
+    // Carries the raw payload, plus the payload splitter and the viewport fitter.
+    expect(body).toContain(JSON.stringify(COUNTING_PAYLOAD));
     expect(body).toContain("var splitExpressions =");
     expect(body).toContain("var contentBounds =");
     // Each expression is set individually — a single setExpression call with
@@ -56,11 +54,6 @@ describe("MathWidget — Desmos harness", () => {
     expect(code).not.toContain("isValid");
     // No delayed verdict at all — success is reported once expressions are set.
     expect(code).not.toContain("setTimeout");
-  });
-
-  it("carries the raw payload through to the frame", () => {
-    const body = scriptBodyOf(srcDocOf(COUNTING_PAYLOAD));
-    expect(body).toContain(JSON.stringify(COUNTING_PAYLOAD));
   });
 
   it("escapes a payload that would otherwise break out of the script", () => {

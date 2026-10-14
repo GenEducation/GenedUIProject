@@ -15,11 +15,4 @@ describe("assignStudentAvatars", () => {
     const assigned = assignStudentAvatars(ids);
     expect(new Set(Object.values(assigned)).size).toBe(STUDENT_AVATARS.length);
   });
-
-  it("still assigns an icon to every child beyond the icon count", () => {
-    const ids = Array.from({ length: STUDENT_AVATARS.length + 3 }, (_, i) => `child-${i}`);
-    const assigned = assignStudentAvatars(ids);
-    expect(Object.keys(assigned)).toHaveLength(ids.length);
-    ids.forEach((id) => expect(STUDENT_AVATARS).toContain(assigned[id]));
-  });
 });

@@ -13,7 +13,7 @@ import { getStudentDisplayName, titleCase } from "@/features/student/utils/displ
  *
  * Renders the walkthrough animation as a compact centred popup.
  * - Header "✕" → skipTutorial()  (no confetti, silent dismiss)
- * - End-screen "Close" in the iframe → completeTutorial() (confetti fires on Home)
+ * - End-screen "Close" in the iframe → completeTutorial() (confetti on Home, first onboarding tour only)
  * - "Skip" footer button → skipTutorial()
  *
  * The iframe posts "tutorial:close" when the user deliberately closes from the

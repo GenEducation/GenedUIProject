@@ -7,7 +7,7 @@ import {
   useStudentStore,
 } from "../store/useStudentStore";
 import { StudentChatInput } from "./StudentChatInput";
-import { ChevronRight, Clock, Bot, Menu } from "lucide-react";
+import { ChevronRight, Clock, Bot, Menu, CalendarDays, Zap } from "lucide-react";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { ActivityHeatmap } from "./ActivityHeatmap";
@@ -155,6 +155,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             className="space-y-3"
           >
             <h2 className="citron-eyebrow text-sm font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest px-2">
+              <CalendarDays size={14} strokeWidth={2.2} aria-hidden />
               Activity
             </h2>
             <div className="bg-white rounded-2xl p-5 border border-[var(--primary-ink)]/5 shadow-sm">
@@ -170,7 +171,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             className="space-y-4"
           >
             <div className="flex items-center justify-between px-2">
-              <h2 className="citron-eyebrow text-sm font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest">Quick Start</h2>
+              <h2 className="citron-eyebrow text-sm font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest"><Zap size={14} strokeWidth={2.2} aria-hidden />Quick Start</h2>
               <button
                 onClick={() => setAgentPickerOpen(true)}
                 className="text-[10px] font-bold text-[var(--primary-ink)]/40 hover:text-[var(--tutor)] uppercase tracking-widest flex items-center gap-1 transition-colors"

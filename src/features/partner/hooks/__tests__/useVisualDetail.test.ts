@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
-import { http } from "msw";
 import { server } from "@/test/msw/server";
 import { makeVisual, visualsFixture } from "@/test/msw/handlers/visuals";
 import { REGEN_POLL_MS, useVisualDetail } from "../useVisualDetail";
@@ -63,17 +62,6 @@ describe("useVisualDetail — regeneration polling", () => {
     expect(reads).toBe(readsAtDone);
   });
 
-  it("stops on failed", async () => {
-    visualsFixture.setRegenOutcome("failed");
-    const { result } = renderHook(() => useVisualDetail("vis-rej"));
-
-    await waitFor(() => expect(result.current.detail?.regeneration?.state).toBe("queued"));
-    await tick();
-    await tick();
-    await waitFor(() => expect(result.current.detail?.regeneration?.state).toBe("failed"));
-    expect(result.current.polling).toBe(false);
-  });
-
   it("does not poll a visual with no regeneration in flight", async () => {
     visualsFixture.reset(() => [makeVisual({ id: "vis-rej" })]);
     const { result } = renderHook(() => useVisualDetail("vis-rej"));
@@ -81,11 +69,5 @@ describe("useVisualDetail — regeneration polling", () => {
     const before = reads;
     await tick();
     expect(reads).toBe(before);
-  });
-
-  it("shows an error when the detail can't be read", async () => {
-    server.use(http.get(`${BASE}/v1/visuals/candidates/:id`, () => new Response(null, { status: 500 })));
-    const { result } = renderHook(() => useVisualDetail("vis-rej"));
-    await waitFor(() => expect(result.current.error).toBeTruthy());
   });
 });

@@ -37,6 +37,9 @@ export const NOTE_MAX = 500;
 export interface VisualCritique {
   passes: boolean;
   problems: string[];
+  /** One per problem: `content` changes what the picture says (a colour, count, label, position), else `style`.
+   * A textbook-figure redraw reaches you even with content problems: compare it with the original. */
+  kinds?: ("content" | "style")[];
 }
 
 export interface VisualSummary {

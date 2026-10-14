@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, Images, Play, AlertCircle, FileText, HelpCircle, ShieldCheck } from "lucide-react";
+import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, ChevronDown, Images, Play, RotateCw, AlertCircle, FileText, HelpCircle, ShieldCheck, Route, Upload, PenLine } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePartnerStore, SubjectFilters, type Subject } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
@@ -16,6 +16,8 @@ import { VisualsModal } from "./visuals/VisualsModal";
 import { SourceReportModal } from "./SourceReportModal";
 import { SourceQuestionsModal } from "./SourceQuestionsModal";
 import { SourceReleaseModal } from "./SourceReleaseModal";
+import { SourceAuthoringModal } from "./SourceAuthoringModal";
+import { IngestionPathPanel } from "./IngestionPathPanel";
 import {
   ACTIVE_STATES,
   DELETABLE_STATES,
@@ -24,9 +26,11 @@ import {
   type SourceState,
 } from "../types/sources";
 import { activeStatus, shownPercent } from "../utils/ingestionProgress";
+import { NEXT_STEP_COPY, UPLOAD_STEPS } from "../utils/ingestionPath";
 
 interface SubjectRegistryProps {
-  onUploadClick: () => void;
+  /** Open the upload form; with a chapter, prefilled from it (the next step after a run that needs a new upload). */
+  onUploadClick: (prefill?: Subject) => void;
 }
 
 /** While a run is only queued, re-read the list this often. */
@@ -75,9 +79,21 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const [visualsFor, setVisualsFor] = useState<Subject | null>(null);
   const [reportFor, setReportFor] = useState<Subject | null>(null);
   const [questionsFor, setQuestionsFor] = useState<Subject | null>(null);
+  const [authoringFor, setAuthoringFor] = useState<Subject | null>(null);
   const [releaseFor, setReleaseFor] = useState<Subject | null>(null);
+  const [pathOpen, setPathOpen] = useState<ReadonlySet<string>>(new Set());
+  const togglePath = (id: string) =>
+    setPathOpen((open) => {
+      const next = new Set(open);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Re-running a chapter whose run produced results (ready / review_needed) needs a confirm: the new run
+  // replaces them. A failed or invalid run has nothing to lose, so its Retry starts straight away.
+  const [rerunFor, setRerunFor] = useState<Subject | null>(null);
   const visualsIndex = useVisualsIndex(subjects);
   const subjectNames = [...new Set(useTaxonomySubjects(resolveTaxonomyBoard()).map((s) => s.name))];
 
@@ -183,7 +199,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         </button>
 
         <button
-          onClick={onUploadClick}
+          onClick={() => onUploadClick()}
           className="flex items-center justify-center gap-3 px-6 py-3 bg-[#075E63] text-white rounded-2xl hover:bg-[#075E63]/90 transition-all shadow-[0_8px_30px_rgba(18,45,48,0.2)] group"
         >
           <div className="bg-white/10 p-1 rounded-lg">
@@ -325,12 +341,21 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             // A chapter waiting on questions says so with its button; its raw detail names server paths.
             const awaitingAnswers = subject.state === "review_needed" && subject.questions > 0;
             const explain = subject.detail && ["failed", "invalid", "review_needed"].includes(subject.state) && !awaitingAnswers;
+            // The server's next step; a re-run of an upload whose failed checks are the partner's would end the same way.
+            const next = subject.outcome?.next_step ?? null;
+            const canRunAgain = STARTABLE_STATES.has(subject.state) && (subject.outcome?.can_run_again ?? true);
+            // A chapter the partner can complete with questions of their own offers that first; uploading stays in its path.
+            const addQuestions = next === "add_questions";
+            const needsUpload = next !== null && UPLOAD_STEPS.has(next) && !addQuestions;
             const status = activeStatus(subject.state, subject.progress);
             const percent = shownPercent(subject.state, subject.progress);
+            const showPath = pathOpen.has(subject.id);
+            // Published: live for students, nothing left to review (the server's next step is `none`).
+            const live = subject.state === "ready" && subject.release?.state === "published";
 
             return (
+              <React.Fragment key={subject.id}>
               <motion.div
-                key={subject.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
@@ -370,9 +395,20 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                             className={`text-[11px] ml-[2px] truncate ${subject.state === "review_needed" ? "text-sky-700/80" : "text-red-600/80"}`}
                             title={subject.detail ?? undefined}
                           >
-                            {subject.detail}
+                            {subject.state === "invalid" && next ? NEXT_STEP_COPY[next].title : subject.detail}
                           </p>
                         )}
+                        {/* eslint-disable-next-line no-restricted-syntax -- inline text link under the title, not a sized action button */}
+                        <button
+                          type="button"
+                          aria-expanded={showPath}
+                          aria-controls={`path-${subject.id}`}
+                          onClick={(e) => { e.stopPropagation(); togglePath(subject.id); }}
+                          className="self-start ml-[2px] mt-0.5 inline-flex items-center gap-1 text-[11px] font-black text-[#075E63] hover:underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#122D30]/40 rounded"
+                        >
+                          <Route size={12} aria-hidden /> {showPath ? "Hide ingestion path" : "Show ingestion path"}
+                          <ChevronDown size={12} aria-hidden className={`transition-transform ${showPath ? "rotate-180" : ""}`} />
+                        </button>
                         {subject.has_report && (
                           // eslint-disable-next-line no-restricted-syntax -- inline text link under the title, not a sized action button
                           <button
@@ -438,14 +474,14 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           </Button>
                         ) : (
                           <span
-                            className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-colors ${STATE_CHIP[subject.state]}`}
+                            className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-colors ${live ? "bg-emerald-50 text-emerald-700 border-emerald-200" : STATE_CHIP[subject.state]}`}
                           >
-                            {SOURCE_STATE_LABELS[subject.state]}
+                            {live ? "Live" : SOURCE_STATE_LABELS[subject.state]}
                             {percent !== null && <span className="ml-1 tabular-nums">{percent}%</span>}
                           </span>
                         )}
 
-                        {subject.state === "ready" && (
+                        {subject.state === "ready" && !live && (
                           <Button
                             size="sm"
                             pill
@@ -457,18 +493,66 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           </Button>
                         )}
 
-                        {STARTABLE_STATES.has(subject.state) && (
+                        {addQuestions && (
                           <Button
-                            iconOnly
                             size="sm"
-                            variant="outline"
-                            aria-label={subject.state === "registered" ? "Start ingestion" : "Run ingestion again"}
-                            title={subject.state === "registered" ? "Start ingestion" : "Run again"}
-                            loading={busy}
-                            onClick={(e) => { e.stopPropagation(); void runAction(subject, startIngestion); }}
+                            pill
+                            leadingIcon={<PenLine size={13} />}
+                            onClick={(e) => { e.stopPropagation(); setAuthoringFor(subject); }}
                           >
-                            <Play size={14} />
+                            Add questions
                           </Button>
+                        )}
+
+                        {needsUpload && (
+                          <Button
+                            size="sm"
+                            pill
+                            leadingIcon={<Upload size={13} />}
+                            onClick={(e) => { e.stopPropagation(); onUploadClick(subject); }}
+                          >
+                            Upload again
+                          </Button>
+                        )}
+
+                        {canRunAgain && (
+                          subject.state === "registered" ? (
+                            <Button
+                              iconOnly
+                              size="sm"
+                              variant="outline"
+                              aria-label="Start ingestion"
+                              title="Start ingestion"
+                              loading={busy}
+                              onClick={(e) => { e.stopPropagation(); void runAction(subject, startIngestion); }}
+                            >
+                              <Play size={14} />
+                            </Button>
+                          ) : subject.state === "failed" || subject.state === "invalid" ? (
+                            <Button
+                              iconOnly
+                              size="sm"
+                              variant="outline"
+                              aria-label="Retry ingestion"
+                              title="Retry"
+                              loading={busy}
+                              onClick={(e) => { e.stopPropagation(); void runAction(subject, startIngestion); }}
+                            >
+                              <RotateCw size={14} />
+                            </Button>
+                          ) : (
+                            <Button
+                              iconOnly
+                              size="sm"
+                              variant="outline"
+                              aria-label="Run ingestion again"
+                              title="Run again"
+                              loading={busy}
+                              onClick={(e) => { e.stopPropagation(); setRerunFor(subject); }}
+                            >
+                              <RotateCw size={14} />
+                            </Button>
+                          )
                         )}
 
                         {subject.state === "queued" && (
@@ -544,6 +628,18 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                 )}
 
               </motion.div>
+              {showPath && (
+                <div id={`path-${subject.id}`}>
+                  <IngestionPathPanel
+                    subject={subject}
+                    onOpenReport={() => setReportFor(subject)}
+                    onUploadAgain={() => onUploadClick(subject)}
+                    onReviewVisuals={() => setVisualsFor(subject)}
+                    onAddQuestions={() => setAuthoringFor(subject)}
+                  />
+                </div>
+              )}
+              </React.Fragment>
             );
           })}
           </div>
@@ -581,10 +677,35 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         error={deleteError}
       />
 
+      {/* Re-run confirmation */}
+      <DeleteConfirmationModal
+        isOpen={!!rerunFor}
+        onClose={() => setRerunFor(null)}
+        onConfirm={() => {
+          const subject = rerunFor;
+          setRerunFor(null);
+          if (subject) void runAction(subject, startIngestion);
+        }}
+        title="Run this chapter again?"
+        message={`This starts a fresh ingestion run for "${rerunFor?.title ?? ""}". It can take a while, and it replaces the current results and report.`}
+        confirmLabel="Run again"
+        cancelLabel="Cancel"
+        tone="caution"
+        icon={RotateCw}
+      />
+
       {/* Reconciliation questions popup */}
       <SourceQuestionsModal
         subject={questionsFor}
         onClose={() => setQuestionsFor(null)}
+        onSaved={() => void fetchSubjects()}
+        onRerun={(subject) => startIngestion(subject.id)}
+      />
+
+      {/* Completing a chapter's questions (ADR 0036) */}
+      <SourceAuthoringModal
+        subject={authoringFor}
+        onClose={() => setAuthoringFor(null)}
         onSaved={() => void fetchSubjects()}
         onRerun={(subject) => startIngestion(subject.id)}
       />
@@ -598,7 +719,13 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
       />
 
       {/* Ingestion report popup */}
-      <SourceReportModal subject={reportFor} onClose={() => setReportFor(null)} />
+      <SourceReportModal
+        subject={reportFor}
+        onClose={() => setReportFor(null)}
+        onAddQuestions={setAuthoringFor}
+        onUploadAgain={(subject) => onUploadClick(subject)}
+        onReviewVisuals={setVisualsFor}
+      />
 
       {/* Visual review popup */}
       <VisualsModal

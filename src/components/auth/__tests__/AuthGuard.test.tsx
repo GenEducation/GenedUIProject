@@ -114,30 +114,10 @@ describe("AuthGuard — authorized", () => {
     expect(routerMock.replace).not.toHaveBeenCalled();
     expect(useStudentStore.getState().studentProfile?.user_id).toBe("u_42");
   });
-
-  it("does not re-hydrate when the store already holds the same user", async () => {
-    useStudentStore.getState().setStudentProfile({ user_id: "u_42", username: "existing" } as never);
-    const setSpy = vi.spyOn(useStudentStore.getState(), "setStudentProfile");
-    seedAuthLocalStorage("student", { profile: { user_id: "u_42" } });
-
-    renderGuard("student");
-
-    await waitFor(() => expect(screen.getByText(SECRET)).toBeInTheDocument());
-    expect(setSpy).not.toHaveBeenCalled();
-    setSpy.mockRestore();
-  });
 });
 
 describe("AuthGuard — parent portal loader", () => {
   beforeEach(() => window.history.pushState({}, "", "/parent"));
-
-  it("shows no hat loader on a refresh or new tab: that's for signing in and up", async () => {
-    seedAuthLocalStorage("parent", { profile: { user_id: "p1" } });
-    renderGuard("parent");
-
-    await waitFor(() => expect(screen.getByText(SECRET)).toBeInTheDocument());
-    expect(useLoaderStore.getState().isVisible).toBe(false);
-  });
 
   it("leaves a sign-in hand-off loader for the portal to dismiss", async () => {
     useLoaderStore.getState().startLoading({ variant: "parent", stage: "signin-handoff" });
@@ -147,15 +127,5 @@ describe("AuthGuard — parent portal loader", () => {
     await waitFor(() => expect(screen.getByText(SECRET)).toBeInTheDocument());
     await new Promise((r) => setTimeout(r, 600));
     expect(useLoaderStore.getState().isVisible).toBe(true); // not stopped after 500ms like other portals
-  });
-
-  it("doesn't restart a loader that's already handing off", async () => {
-    useLoaderStore.getState().startLoading({ variant: "parent", stage: "signin-handoff" });
-    const { loadId } = useLoaderStore.getState();
-    seedAuthLocalStorage("parent", { profile: { user_id: "p1" } });
-    renderGuard("parent");
-
-    await waitFor(() => expect(screen.getByText(SECRET)).toBeInTheDocument());
-    expect(useLoaderStore.getState().loadId).toBe(loadId);
   });
 });

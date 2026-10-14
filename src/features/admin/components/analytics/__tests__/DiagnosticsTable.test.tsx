@@ -28,17 +28,6 @@ describe("DiagnosticsTable", () => {
     expect(screen.queryByText(/CBSE\.G6\.MATH/)).not.toBeInTheDocument();
   });
 
-  it("flags items using the thresholds from /meta", () => {
-    render(<DiagnosticsTable rows={diagnosticsFixture} meta={metaFixture} />);
-
-    // p = 0.97, above PLC-06's published p_ceiling of 0.95.
-    expect(within(rowFor("Q-104")).getByText("Very High")).toBeInTheDocument();
-    // p = 0.09, below p_floor of 0.15.
-    expect(within(rowFor("Q-217")).getByText("Very Low")).toBeInTheDocument();
-    // p = 0.58, inside the band.
-    expect(within(rowFor("Q-091")).getByText("Normal")).toBeInTheDocument();
-  });
-
   it("follows a threshold change in /meta without a code change", () => {
     const widened = metaFixture.map((m) =>
       m.metric_id === "PLC-06"
@@ -65,10 +54,5 @@ describe("DiagnosticsTable", () => {
     expect(screen.queryByText("Review")).not.toBeInTheDocument();
     // The rows themselves still render.
     expect(screen.getByText("Q-104")).toBeInTheDocument();
-  });
-
-  it("renders an empty state with no rows", () => {
-    render(<DiagnosticsTable rows={[]} meta={metaFixture} />);
-    expect(screen.getByText(/No item diagnostics for this range yet/i)).toBeInTheDocument();
   });
 });

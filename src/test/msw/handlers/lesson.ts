@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw";
 import type {
   AnswerBody,
+  DeliveryBody,
   InstanceState,
   PresentationManifest,
   RecordedTurn,
@@ -114,6 +115,12 @@ const state: State = {
 /** Every turn request the client sent, oldest first. */
 export const turnRequests: TurnRequest[] = [];
 export const answerRequests: AnswerBody[] = [];
+/** Every check-delivery confirmation, with the item it named; `deliveryFailures` makes the next N of them fail with a 503. */
+export const deliveryRequests: Array<{ itemId: string; body: DeliveryBody }> = [];
+let deliveryFailures = 0;
+/** Items the server has a confirmation for in the (session, item) sense: an answer without one is refused as not delivered. */
+const confirmedDeliveries = new Set<string>();
+let requireDelivery = false;
 export const interruptRequests: Array<{ turnId: string; visible_seq: number }> = [];
 export const resumeRequests: Array<{ turnId: string; afterSeq: number }> = [];
 /** `/done`, `/choice` and `/hints` bodies, in order, tagged with their route. */
@@ -129,10 +136,17 @@ export const lessonFixture = {
     state.manifestReads = 0;
     turnRequests.length = 0;
     answerRequests.length = 0;
+    deliveryRequests.length = 0;
+    deliveryFailures = 0;
+    confirmedDeliveries.clear();
+    requireDelivery = false;
     interruptRequests.length = 0;
     resumeRequests.length = 0;
     stepRequests.length = 0;
   },
+  failNextDeliveries: (n: number) => void (deliveryFailures = n),
+  /** Make `/responses` refuse an answer whose (session, item) was never confirmed, as the backend does in `required` mode. */
+  requireDelivery: (on: boolean) => void (requireDelivery = on),
   setInstance: (instance: InstanceState) => void (state.instance = instance),
   setHistory: (history: RecordedTurn[]) => void (state.history = history),
   setScript: (script: TurnScript) => void (state.script = script),
@@ -190,6 +204,12 @@ export const lessonHandlers = [
   http.post(`${BASE}/v1/instances/:instanceId/responses`, async ({ request }) => {
     const body = (await request.json()) as AnswerBody;
     answerRequests.push(body);
+    if (requireDelivery && !confirmedDeliveries.has(`${body.session_id}|${body.item_id}`)) {
+      return HttpResponse.json(
+        { status: "error", error_code: "CORE_3106", message: "The request is invalid.", request_id: "r", retryable: false, details: { reason: "check_not_delivered" } },
+        { status: 409 },
+      );
+    }
     if (body.expected_revision !== state.instance.revision) {
       return HttpResponse.json(
         { status: "error", error_code: "CORE_3103", message: "This lesson has moved on.", request_id: "r", retryable: false, details: {} },
@@ -208,6 +228,20 @@ export const lessonHandlers = [
       replayed: false,
       instance: state.instance,
     });
+  }),
+
+  http.post(`${BASE}/v1/instances/:instanceId/checks/:itemId/delivered`, async ({ params, request }) => {
+    const body = (await request.json()) as DeliveryBody;
+    deliveryRequests.push({ itemId: String(params.itemId), body });
+    if (deliveryFailures > 0) {
+      deliveryFailures -= 1;
+      return HttpResponse.json(
+        { status: "error", error_code: "CORE_9999", message: "Unavailable.", request_id: "r", retryable: true, details: {} },
+        { status: 503 },
+      );
+    }
+    confirmedDeliveries.add(`${body.session_id}|${params.itemId}`);
+    return HttpResponse.json({ item_id: params.itemId, round_ordinal: 1, replayed: false });
   }),
 
   ...(["done", "choice", "hints"] as const).map((route) =>

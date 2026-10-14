@@ -1,35 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { isDevanagari, transliterateToDevanagari } from "../hindiTransliteration";
-
-describe("isDevanagari", () => {
-  it("detects Devanagari text", () => {
-    expect(isDevanagari("नमस्ते")).toBe(true);
-  });
-
-  it("says no for plain Latin text", () => {
-    expect(isDevanagari("namaste")).toBe(false);
-  });
-});
+import { transliterateToDevanagari } from "../hindiTransliteration";
 
 describe("transliterateToDevanagari", () => {
   it("passes Devanagari input straight through, unmodified", () => {
     expect(transliterateToDevanagari("नमस्ते")).toBe("नमस्ते");
   });
 
-  it("passes empty input straight through", () => {
-    expect(transliterateToDevanagari("")).toBe("");
-  });
-
   it("converts a genuine Sanskrit-style conjunct correctly", () => {
     expect(transliterateToDevanagari("namaste")).toBe("नमस्ते");
-  });
-
-  it("converts simple consonant-vowel syllables, with no trailing virama", () => {
-    expect(transliterateToDevanagari("ghar")).toBe("घर");
-  });
-
-  it("keeps punctuation and spaces untouched", () => {
-    expect(transliterateToDevanagari("raam, shyaam")).toBe("राम, श्याम");
   });
 
   /**

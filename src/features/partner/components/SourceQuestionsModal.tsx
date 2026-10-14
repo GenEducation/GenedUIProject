@@ -260,7 +260,7 @@ function QuestionCard({
                 <div className="min-w-0">
                   {label}
                   <p className="text-[11px] text-[#122D30]/50 mt-0.5">
-                    Already published. Only a GenEd admin can match a concept to it.
+                    Already published. It can&apos;t be chosen here.
                   </p>
                 </div>
               </div>
