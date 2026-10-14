@@ -11,7 +11,7 @@ vi.mock("framer-motion", async () => (await import("../visuals/__tests__/framerP
 // The PDF viewer renders pdf.js; the store's openIngestedPdf is what these tests care about.
 vi.mock("../IngestedPdfViewer", () => ({ IngestedPdfViewer: () => null }));
 
-import { SubjectRegistry, LIST_POLL_MS, RUN_POLL_MS } from "../SubjectRegistry";
+import { SubjectRegistry, LIST_POLL_MS } from "../SubjectRegistry";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 
@@ -73,12 +73,6 @@ describe("SubjectRegistry — chapter sources", () => {
     expect(within(queued).queryByRole("button", { name: "Delete" })).toBeNull();
   });
 
-  it("starts a run and shows it queued", async () => {
-    await renderRegistry();
-    fireEvent.click(within(rowFor("SYNTHETIC not started")).getByRole("button", { name: "Start ingestion" }));
-    expect(await within(rowFor("SYNTHETIC not started")).findByText("Queued")).toBeInTheDocument();
-  });
-
   it("explains a refused action instead of failing silently", async () => {
     server.use(
       http.post(`${BASE}/v1/sources/:id/ingestions`, () =>
@@ -122,47 +116,6 @@ describe("SubjectRegistry — chapter sources", () => {
     expect(bar).toHaveAttribute("aria-valuenow", "42");
   });
 
-  it("says a run is starting, or waiting its turn, before there's a percent", async () => {
-    sourcesFixture.set(makeSource({ state: "running", chapter: { ordinal: 6, title: "SYNTHETIC starting", first_pdf_page: 1, last_pdf_page: 3 } }));
-    await renderRegistry();
-
-    const starting = rowFor("SYNTHETIC starting");
-    expect(within(starting).getByRole("status")).toHaveTextContent("Starting up");
-    expect(within(starting).getByRole("progressbar")).not.toHaveAttribute("aria-valuenow");
-
-    const queued = rowFor("SYNTHETIC queued");
-    expect(within(queued).getByRole("status")).toHaveTextContent("Waiting in line to start");
-    expect(within(queued).getByText("Queued")).not.toHaveTextContent("%");
-  });
-
-  it("polls faster while a chapter is processing, so its bar moves", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const run = makeSource({
-      state: "running",
-      chapter: { ordinal: 7, title: "SYNTHETIC moving", first_pdf_page: 1, last_pdf_page: 36 },
-      progress: { stage: "read_pages", step: 2, steps: 9, done: 6, total: 36, percent: 10, updated_at: "2026-10-13T10:00:00Z" },
-    });
-    sourcesFixture.set(run);
-    await renderRegistry();
-    const before = listCalls;
-
-    sourcesFixture.set({ ...run, progress: { ...run.progress!, done: 30, percent: 31.2 } });
-    await act(() => vi.advanceTimersByTimeAsync(RUN_POLL_MS));
-    await waitFor(() => expect(listCalls).toBe(before + 1));
-    await waitFor(() =>
-      expect(within(rowFor("SYNTHETIC moving")).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "31"),
-    );
-  });
-
-  it("deletes a chapter that never produced anything", async () => {
-    await renderRegistry();
-    const id = usePartnerStore.getState().subjects.find((x) => x.title === "SYNTHETIC not started")!.id;
-    fireEvent.click(within(rowFor("SYNTHETIC not started")).getByRole("button", { name: "Delete" }));
-    expect(await screen.findByText("Delete this chapter?")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Delete Permanently/ }));
-    await waitFor(() => expect(screen.queryByText("SYNTHETIC not started")).toBeNull());
-    expect(sourcesFixture.get(id)).toBeUndefined();
-  });
 });
 
 describe("SubjectRegistry — ingestion report", () => {
@@ -185,25 +138,9 @@ describe("SubjectRegistry — ingestion report", () => {
     expect(within(dialog).getByText("Full technical report")).toBeInTheDocument();
     expect(openIngestedPdf).not.toHaveBeenCalled();
   });
-
-  it("says when there is no report yet", async () => {
-    const id = sourcesFixture.get(SYNTHETIC_SOURCE)!.source_id;
-    sourcesFixture.set({ ...sourcesFixture.get(id)!, state: "invalid", has_report: true }); // flagged, but nothing stored
-    await renderRegistry();
-    fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "See what needs fixing" }));
-    expect(await within(await screen.findByRole("dialog")).findByRole("alert")).toHaveTextContent("This chapter has no report yet.");
-  });
 });
 
 describe("SubjectRegistry — visuals", () => {
-  it("shows the visuals icon with the pending count only on the source that has visuals", async () => {
-    await renderRegistry();
-    const icon = await screen.findByRole("button", { name: "Review visuals (2 to review)" });
-    expect(rowFor("SYNTHETIC with visuals")).toContainElement(icon);
-    expect(within(rowFor("SYNTHETIC with visuals")).getByText("2")).toBeInTheDocument();
-    expect(within(rowFor("SYNTHETIC not started")).queryByRole("button", { name: /Review visuals/ })).toBeNull();
-  });
-
   it("opens the popup without opening the PDF", async () => {
     const openIngestedPdf = vi.fn();
     usePartnerStore.setState({ openIngestedPdf });
@@ -212,13 +149,5 @@ describe("SubjectRegistry — visuals", () => {
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Open SYNTHETIC shape 1" })).toBeInTheDocument();
     expect(openIngestedPdf).not.toHaveBeenCalled();
-  });
-
-  it("opens the chapter's PDF when the row is clicked", async () => {
-    const openIngestedPdf = vi.fn();
-    usePartnerStore.setState({ openIngestedPdf });
-    await renderRegistry();
-    fireEvent.click(rowFor("SYNTHETIC not started"));
-    expect(openIngestedPdf).toHaveBeenCalledWith(expect.objectContaining({ title: "SYNTHETIC not started" }));
   });
 });

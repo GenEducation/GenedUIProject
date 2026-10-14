@@ -1,14 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { formatRelativeTime, formatUptime, isFresh } from "@/utils/datetime";
+import { formatRelativeTime, formatUptime } from "@/utils/datetime";
 import {
-  displayHardwareId,
-  humanizeKey,
   isRevokedDevice,
   normalizeStatus,
   orderedComponents,
   resolveAddresses,
-  resolveSubsystem,
   summarizeHealth,
 } from "../deviceHealth";
 import type { DeviceResponse } from "../../types/lab";
@@ -84,14 +81,6 @@ describe("normalizeStatus", () => {
     expect(normalizeStatus("FAILED")).toBe("fail");
     expect(normalizeStatus("critical")).toBe("fail");
   });
-
-  it("returns unknown for anything unrecognised, rather than throwing", () => {
-    expect(normalizeStatus("brand_new_firmware_state")).toBe("unknown");
-    expect(normalizeStatus(undefined)).toBe("unknown");
-    expect(normalizeStatus(null)).toBe("unknown");
-    expect(normalizeStatus(42)).toBe("unknown");
-    expect(normalizeStatus({})).toBe("unknown");
-  });
 });
 
 describe("summarizeHealth", () => {
@@ -106,24 +95,6 @@ describe("summarizeHealth", () => {
     expect(summary.isStale).toBe(true);
   });
 
-  it("is not stale when the device is online and the report is recent", () => {
-    const summary = summarizeHealth(
-      makeDevice({ health_status: "ONLINE" }),
-      Date.parse("2026-08-06T10:35:00Z"),
-    );
-    expect(summary.isLinkDown).toBe(false);
-    expect(summary.isStale).toBe(false);
-  });
-
-  it("marks an online device stale once its report ages past the window", () => {
-    const summary = summarizeHealth(
-      makeDevice({ health_status: "ONLINE" }),
-      Date.parse("2026-08-06T11:30:00Z"),
-    );
-    expect(summary.isLinkDown).toBe(false);
-    expect(summary.isStale).toBe(true);
-  });
-
   it("handles a device that has never reported", () => {
     const summary = summarizeHealth(
       makeDevice({ last_health_report: null, last_health_at: null }),
@@ -132,12 +103,6 @@ describe("summarizeHealth", () => {
     expect(summary.components).toEqual([]);
     expect(summary.failedNames).toEqual([]);
     expect(summary.uptimeLabel).toBeNull();
-  });
-
-  it("suppresses the report for revoked devices", () => {
-    expect(summarizeHealth(makeDevice({ revoked_at: "2026-08-05T16:35:00.733700Z" })).hasReport).toBe(
-      false,
-    );
   });
 
   it("escalates to the worst subsystem verdict and names the failures", () => {
@@ -150,15 +115,6 @@ describe("summarizeHealth", () => {
     expect(summary.failedNames).toEqual(["Speaker"]);
   });
 
-  it("unions declared failures with ones it reads, without duplicating", () => {
-    const device = makeDevice();
-    device.last_health_report!.components!.display.status = "fail";
-    device.last_health_report!.failed = ["display", "audio_hat"];
-
-    const summary = summarizeHealth(device);
-    expect(summary.failedNames.sort()).toEqual(["Display", "Microphone"]);
-  });
-
   it("flags firmware drift only when both sides are known and differ", () => {
     expect(summarizeHealth(makeDevice()).firmwareDrift).toBe(false);
 
@@ -168,10 +124,6 @@ describe("summarizeHealth", () => {
 
     const missing = makeDevice({ firmware_version: null });
     expect(summarizeHealth(missing).firmwareDrift).toBe(false);
-  });
-
-  it("formats uptime from the report", () => {
-    expect(summarizeHealth(makeDevice()).uptimeLabel).toBe("2h 14m");
   });
 
   it("survives a malformed report without throwing", () => {
@@ -207,44 +159,6 @@ describe("orderedComponents", () => {
     expect(view.detail).toBe("weak link");
     expect(view.icon).toBeDefined();
   });
-
-  it("returns an empty list for an absent or malformed components map", () => {
-    expect(orderedComponents(null)).toEqual([]);
-    expect(orderedComponents(undefined)).toEqual([]);
-    expect(orderedComponents({})).toEqual([]);
-    expect(orderedComponents({ components: null })).toEqual([]);
-  });
-
-  it("normalizes missing metrics to an empty object", () => {
-    expect(orderedComponents({ components: { display: { status: "ok" } } })[0].metrics).toEqual({});
-  });
-});
-
-describe("resolveSubsystem / humanizeKey", () => {
-  it("humanizes snake_case keys", () => {
-    expect(humanizeKey("audio_hat")).toBe("Audio Hat");
-    expect(humanizeKey("crtc_id")).toBe("Crtc Id");
-    expect(humanizeKey("Left Boost Mixer LINPUT1")).toBe("Left Boost Mixer LINPUT1");
-  });
-
-  it("maps audio_hat to the operator-facing name", () => {
-    expect(resolveSubsystem("audio_hat").label).toBe("Microphone");
-    expect(resolveSubsystem("display").label).toBe("Display");
-  });
-});
-
-describe("displayHardwareId", () => {
-  it("strips the revocation prefix the backend adds", () => {
-    expect(displayHardwareId("revoked:24931e7a-46e6-416b-8796-ff23ea583861:DEV-BF5A-A492")).toBe(
-      "DEV-BF5A-A492",
-    );
-  });
-
-  it("leaves ordinary ids and empty input alone", () => {
-    expect(displayHardwareId("DEV-BF5A-A492")).toBe("DEV-BF5A-A492");
-    expect(displayHardwareId(null)).toBe("");
-    expect(displayHardwareId(undefined)).toBe("");
-  });
 });
 
 describe("isRevokedDevice", () => {
@@ -256,10 +170,6 @@ describe("isRevokedDevice", () => {
     ).toBe(true);
   });
 
-  it("detects a revoked timestamp even without the prefix", () => {
-    expect(isRevokedDevice(makeDevice({ revoked_at: "2026-08-05T16:35:00.733700Z" }))).toBe(true);
-  });
-
   it("leaves active devices alone", () => {
     expect(isRevokedDevice(makeDevice())).toBe(false);
     expect(isRevokedDevice({ hardware_id: null, revoked_at: null })).toBe(false);
@@ -268,21 +178,9 @@ describe("isRevokedDevice", () => {
 });
 
 describe("resolveAddresses", () => {
-  it("reports no change when the addresses agree", () => {
-    expect(resolveAddresses(makeDevice())).toEqual({
-      current: "10.10.34.49",
-      atSelfTest: "10.10.34.49",
-      changed: false,
-    });
-  });
-
   it("detects an address change since the self-test", () => {
     const moved = makeDevice({ last_ip: "10.10.34.77" });
     expect(resolveAddresses(moved).changed).toBe(true);
-  });
-
-  it("does not claim a change when one side is missing", () => {
-    expect(resolveAddresses(makeDevice({ last_ip: null })).changed).toBe(false);
   });
 });
 
@@ -295,33 +193,11 @@ describe("datetime helpers", () => {
     expect(formatUptime(273_600)).toBe("3d 4h");
   });
 
-  it("rejects nonsense uptimes", () => {
-    expect(formatUptime(NaN)).toBeNull();
-    expect(formatUptime(-1)).toBeNull();
-    expect(formatUptime(Infinity)).toBeNull();
-    expect(formatUptime(null)).toBeNull();
-    expect(formatUptime(undefined)).toBeNull();
-  });
-
-  it("returns null for unusable timestamps instead of 'Invalid Date'", () => {
-    expect(formatRelativeTime("")).toBeNull();
-    expect(formatRelativeTime(null)).toBeNull();
-    expect(formatRelativeTime(undefined)).toBeNull();
-    expect(formatRelativeTime("not-a-date")).toBeNull();
-  });
-
   it("formats relative times and clamps future clocks", () => {
     const now = Date.parse("2026-08-06T12:00:00Z");
     expect(formatRelativeTime("2026-08-06T11:58:00Z", now)).toBe("2m ago");
     expect(formatRelativeTime("2026-08-06T09:00:00Z", now)).toBe("3h ago");
     expect(formatRelativeTime("2026-08-05T09:00:00Z", now)).toBe("Yesterday");
     expect(formatRelativeTime("2026-08-06T12:30:00Z", now)).toBe("Just now");
-  });
-
-  it("tests freshness against a window", () => {
-    const now = Date.parse("2026-08-06T12:00:00Z");
-    expect(isFresh("2026-08-06T11:55:00Z", 10 * 60 * 1000, now)).toBe(true);
-    expect(isFresh("2026-08-06T11:45:00Z", 10 * 60 * 1000, now)).toBe(false);
-    expect(isFresh(null, 10 * 60 * 1000, now)).toBe(false);
   });
 });

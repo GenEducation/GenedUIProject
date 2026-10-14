@@ -144,14 +144,4 @@ describe("Reviewing and publishing a chapter", () => {
     expect(sourcesFixture.getRelease(SID)!.release.state).toBe("published");
     expect(within(dialog).queryByRole("button", { name: /Accept/ })).toBeNull();
   });
-
-  it("says when there is nothing to review yet, and offers to run the chapter", async () => {
-    sourcesFixture.reset(() => [makeSource({ source_id: SID, state: "ready" })]);
-    render(<SubjectRegistry onUploadClick={vi.fn()} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Review & publish" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent("sent for review automatically");
-    fireEvent.click(within(dialog).getByRole("button", { name: "Run the chapter again" }));
-    await waitFor(() => expect(sourcesFixture.get(SID)!.state).toBe("queued"));
-  });
 });

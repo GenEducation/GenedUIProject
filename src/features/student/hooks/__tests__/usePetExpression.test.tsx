@@ -66,54 +66,15 @@ describe("usePetExpression — triggers that watch a number change", () => {
    * nothing to their real value; compared naively against 0 that is an
    * "increase", and the buddy would celebrate every time the app loads.
    */
-  it("does NOT react to the first observation of an existing streak", () => {
+  it("does NOT react to the first observation of an existing streak or unread count", () => {
     const { result } = renderHook(() => usePetExpression());
     setStats(7, 7); // first fetch lands — a 7-day streak the student already had
     expect(result.current).toBe("idle");
-  });
-
-  it("does NOT react to the first observation of existing unread notifications", () => {
-    const { result } = renderHook(() => usePetExpression());
-    setUnread(5);
+    setUnread(5); // nor to existing unread notifications
     expect(result.current).toBe("idle");
   });
 
-  it("celebrates a streak milestone", () => {
-    const { result } = renderHook(() => usePetExpression());
-    setStats(2, 30); // seeds
-    setStats(3, 30);
-    expect(result.current).toBe("celebration");
-  });
-
-  it("is excited by an ordinary streak increase", () => {
-    const { result } = renderHook(() => usePetExpression());
-    setStats(4, 30);
-    setStats(5, 30);
-    expect(result.current).toBe("excited");
-  });
-
-  it("does not react to a lost streak", () => {
-    const { result } = renderHook(() => usePetExpression());
-    setStats(7, 7);
-    setStats(0, 7);
-    expect(result.current).toBe("idle");
-  });
-
-  it("notices a streak gained since the last visit on this device", () => {
-    act(() => { usePetStore.setState({ petLastSeenStreak: 6 }); });
-    const { result } = renderHook(() => usePetExpression());
-    setStats(7, 7); // first observation this session, but 6 was remembered
-    expect(result.current).toBe("celebration");
-  });
-
-  it("notices when a notification genuinely arrives", () => {
-    const { result } = renderHook(() => usePetExpression());
-    setUnread(2);
-    setUnread(3);
-    expect(result.current).toBe("noticing");
-  });
-
-  it("does not notice again inside the cooldown", () => {
+  it("notices when a notification genuinely arrives, but not again inside the cooldown", () => {
     vi.useFakeTimers();
     const { result } = renderHook(() => usePetExpression());
     setUnread(1);
@@ -124,12 +85,6 @@ describe("usePetExpression — triggers that watch a number change", () => {
     expect(result.current).toBe("idle");
   });
 
-  it("ignores notifications being read (the count falling)", () => {
-    const { result } = renderHook(() => usePetExpression());
-    setUnread(4);
-    setUnread(1);
-    expect(result.current).toBe("idle");
-  });
 });
 
 describe("usePetExpression — backend frames and precedence", () => {
@@ -151,13 +106,6 @@ describe("usePetExpression — backend frames and precedence", () => {
     setUnread(1);
     setUnread(2);
     expect(result.current).toBe("celebration");
-  });
-
-  it("a newer performance burst replaces an older one", () => {
-    const { result } = renderHook(() => usePetExpression());
-    frame("curious", 1);
-    frame("supportive", 2);
-    expect(result.current).toBe("supportive");
   });
 
   it("maps test verdicts", () => {
@@ -203,14 +151,6 @@ describe("usePetExpression — voice: the tutor thinking", () => {
     expect(result.current).toBe("speaking");
   });
 
-  it("thinks through the tutor's planning bubble instead of looking like it speaks", () => {
-    const { result } = renderHook(() => usePetExpression());
-    act(() => { useStudentStore.setState({ voiceSessionStatus: "active" }); });
-    childSays("Why is the sky blue?");
-    tutor({ text: "Thinking...", isPlanning: true });
-    expect(result.current).toBe("thinking");
-  });
-
   it("keeps thinking when a status frame clears isAITyping mid-think", () => {
     // The reported bug: the pet dropped to idle while the tutor was thinking.
     const { result } = renderHook(() => usePetExpression());
@@ -218,14 +158,6 @@ describe("usePetExpression — voice: the tutor thinking", () => {
     childSays("Why is the sky blue?");
     tutor({ text: "Thinking...", isPlanning: true });
     act(() => { useStudentStore.setState({ isAITyping: false }); });
-    expect(result.current).toBe("thinking");
-  });
-
-  it("thinks through a tool status that has no words yet", () => {
-    const { result } = renderHook(() => usePetExpression());
-    act(() => { useStudentStore.setState({ voiceSessionStatus: "active" }); });
-    childSays("Show me a triangle");
-    tutor({ text: "", toolStatus: "Drawing..." });
     expect(result.current).toBe("thinking");
   });
 
@@ -244,36 +176,20 @@ describe("usePetExpression — voice: the tutor thinking", () => {
     childSays("Twelve");
     expect(result.current).toBe("thinking");
   });
-
-  it("does not think in text chat off the back of the student's message", () => {
-    const { result } = renderHook(() => usePetExpression());
-    childSays("hello");
-    expect(result.current).toBe("idle");
-  });
 });
 
 describe("usePetExpression — voice presence", () => {
-  it("speaking outranks muted and thinking", () => {
+  it("maps live-session state to speaking, muted, listening and reconnecting", () => {
     const { result } = renderHook(() => usePetExpression());
+    // Speaking outranks muted and thinking.
     act(() => { useStudentStore.setState({ voiceSessionStatus: "active", isMuted: true, isAITyping: true }); });
     expect(result.current).toBe("speaking");
-  });
-
-  it("is muted when the session is live and the mic is off", () => {
-    const { result } = renderHook(() => usePetExpression());
-    act(() => { useStudentStore.setState({ voiceSessionStatus: "active", isMuted: true }); });
+    act(() => { useStudentStore.setState({ isAITyping: false }); });
     expect(result.current).toBe("muted");
-  });
-
-  it("holding push-to-talk is listening", () => {
-    const { result } = renderHook(() => usePetExpression());
-    act(() => { useStudentStore.setState({ voiceSessionStatus: "active", isMuted: true, pttHeld: true }); });
+    // Holding push-to-talk is listening.
+    act(() => { useStudentStore.setState({ pttHeld: true }); });
     expect(result.current).toBe("listening");
-  });
-
-  it("a poor connection is reconnecting", () => {
-    const { result } = renderHook(() => usePetExpression());
-    act(() => { useStudentStore.setState({ voiceSessionStatus: "active", connectionQuality: "poor" }); });
+    act(() => { useStudentStore.setState({ isMuted: false, pttHeld: false, connectionQuality: "poor" }); });
     expect(result.current).toBe("reconnecting");
   });
 

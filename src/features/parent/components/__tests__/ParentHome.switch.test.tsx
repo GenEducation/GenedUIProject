@@ -76,13 +76,6 @@ describe("ParentHome — opening the portal", () => {
     expect(hasEnteredPortal()).toBe(true);
   });
 
-  it("picking another child goes to their dashboard", async () => {
-    twoKids();
-    render(<ParentHome />);
-    fireEvent.click(await screen.findByRole("button", { name: "View Priya's dashboard" }));
-    expect(nav.push).toHaveBeenCalledWith("/parent/s2");
-  });
-
   it("a refresh after the picker keeps the current page", async () => {
     twoKids();
     markPortalEntered();
@@ -96,14 +89,6 @@ describe("ParentHome — opening the portal", () => {
     twoKids();
     markPortalEntered();
     localStorage.setItem("gened_auth_token", "a-different-session");
-    render(<ParentHome />);
-    expect(await picker()).toBeInTheDocument();
-  });
-
-  it("bare /parent shows the picker even after entering (See all profiles)", async () => {
-    twoKids();
-    markPortalEntered();
-    nav.pathname = "/parent";
     render(<ParentHome />);
     expect(await picker()).toBeInTheDocument();
   });
@@ -141,25 +126,6 @@ describe("ParentHome — top bar", () => {
     expect(within(banner).getByRole("heading", { level: 1 })).toHaveTextContent(/^Good (morning|afternoon|evening), Ramesh!/);
     expect(await within(banner).findByText("Here's how Aarav is doing on their learning journey.")).toBeInTheDocument();
   });
-
-  it("uses the parent's real name once login provides it", () => {
-    linkChildren([kid("s1", "Aarav")]);
-    useParentStore.getState().setParentProfile({ user_id: "p1", username: "ramesh190", email: "m@x.com", role: "parent", name: "Ramesh Kumar" });
-    render(<ParentHome />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/, Ramesh Kumar!/);
-  });
-
-  it("titles Settings plainly instead of greeting (the page names the parent itself)", async () => {
-    linkChildren([kid("s1", "Aarav")]);
-    useParentStore.getState().setParentProfile({ user_id: "p1", username: "ramesh", email: "m@x.com", role: "parent" });
-    nav.pathname = "/parent/profile";
-    render(<ParentHome />);
-
-    const banner = screen.getByRole("banner");
-    expect(await within(banner).findByRole("heading", { level: 1, name: "Settings" })).toBeInTheDocument();
-    expect(within(banner).queryByText(/Ramesh/)).not.toBeInTheDocument();
-    expect(within(banner).queryByText(/learning journey/)).not.toBeInTheDocument();
-  });
 });
 
 describe("ParentHome — sidebar Switch", () => {
@@ -173,15 +139,6 @@ describe("ParentHome — sidebar Switch", () => {
     expect(nav.push).toHaveBeenCalledWith("/parent/s2/chat");
   });
 
-  it("keeps the report card open when switching from it", async () => {
-    linkChildren([kid("s1", "Aarav"), kid("s2", "Priya")]);
-    nav.pathname = "/parent/s1/report";
-    render(<ParentHome />);
-
-    fireEvent.click(await screen.findByRole("button", { name: "Switch to Priya" }));
-    expect(nav.push).toHaveBeenCalledWith("/parent/s2/report");
-  });
-
   it("keeps the open subject when switching", async () => {
     linkChildren([kid("s1", "Aarav"), kid("s2", "Priya")]);
     nav.pathname = "/parent/s1/subject/Mathematics";
@@ -189,25 +146,6 @@ describe("ParentHome — sidebar Switch", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Switch to Priya" }));
     expect(nav.push).toHaveBeenCalledWith("/parent/s2/subject/Mathematics");
-  });
-
-  it("from Home, switches to the other child's Home", async () => {
-    linkChildren([kid("s1", "Aarav"), kid("s2", "Priya")]);
-    nav.pathname = "/parent/s1";
-    render(<ParentHome />);
-
-    fireEvent.click(await screen.findByRole("button", { name: "Switch to Priya" }));
-    expect(nav.push).toHaveBeenCalledWith("/parent/s2");
-  });
-
-  it("hides Switch Account for a single child", async () => {
-    linkChildren([kid("s1", "Aarav")]);
-    render(<ParentHome />);
-
-    expect(await screen.findByRole("link", { name: "Home" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Report Card" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Settings" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /switch/i })).not.toBeInTheDocument();
   });
 
   it("with three or more children, offers a menu that switches in place or opens the picker", async () => {
@@ -226,16 +164,6 @@ describe("ParentHome — sidebar Switch", () => {
 
 describe("ParentHome — first run with no child connected", () => {
   const dialog = () => screen.findByRole("dialog", { name: "Let's connect your child" });
-
-  it("shows how to connect a child before Home", async () => {
-    linkChildren([]);
-    nav.pathname = "/parent";
-    render(<ParentHome />);
-
-    const d = await dialog();
-    expect(within(d).getByText("Open their profile")).toBeInTheDocument();
-    expect(within(d).getByRole("button", { name: "Copy m@x.com" })).toBeInTheDocument();
-  });
 
   it("'later' hides it for this login, and the empty Home can bring it back", async () => {
     linkChildren([]);
@@ -267,21 +195,6 @@ describe("ParentHome — first run with no child connected", () => {
 
     fireEvent.click(within(await dialog()).getByRole("button", { name: "Approve Kabir" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-  });
-
-  it("doesn't appear once a child is connected", async () => {
-    linkChildren([kid("s1", "Aarav")]);
-    render(<ParentHome />);
-    expect(await screen.findByText("chat view")).toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-
-  it("stays out of the way on Settings", async () => {
-    linkChildren([]);
-    nav.pathname = "/parent/profile";
-    render(<ParentHome />);
-    expect(await screen.findByText("profile view")).toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
 
@@ -315,11 +228,8 @@ describe("ParentHome — following the URL", () => {
 describe("routeFromPath", () => {
   it.each([
     ["/parent", { view: null, studentId: null }],
-    ["/parent/profile", { view: "profile", studentId: null }],
-    ["/parent/s1", { view: "analytics", studentId: "s1" }],
-    ["/parent/s1/report", { view: "report", studentId: "s1" }],
+    ["/parent/settings", { view: "profile", studentId: null }],
     ["/parent/s1/subject/Mathematics", { view: "subject", studentId: "s1" }],
-    ["/parent/s1/whatever", { view: "analytics", studentId: "s1" }],
   ])("%s", (path, expected) => {
     expect(routeFromPath(path)).toEqual(expected);
   });

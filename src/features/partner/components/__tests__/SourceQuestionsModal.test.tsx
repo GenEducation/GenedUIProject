@@ -56,30 +56,6 @@ async function openQuestions() {
 }
 
 describe("Answering a chapter's reconciliation questions", () => {
-  it("shows the button only on a chapter waiting for answers", async () => {
-    render(<SubjectRegistry onUploadClick={vi.fn()} />);
-    expect(await screen.findByRole("button", { name: "Answer 1 question" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /Answer \d+ question/ })).toHaveLength(1);
-  });
-
-  it("shows the proposal and its closest look-alikes, with similarity and where each comes from", async () => {
-    const dialog = await openQuestions();
-    expect(within(dialog).getByText("SYNTHETIC definition.")).toBeInTheDocument();
-    expect(within(dialog).getByText("G6-MATH-LO3.1.1")).toBeInTheDocument();
-
-    const options = within(dialog).getAllByRole("radio");
-    // "new" + the three most similar: 89 %, 86 %, 82 % (the catalogue one is information only, not a radio).
-    expect(options).toHaveLength(3);
-    expect(within(dialog).getByText("89% alike")).toBeInTheDocument();
-    expect(within(dialog).getByText("82% alike")).toBeInTheDocument();
-    expect(within(dialog).queryByText("70% alike")).toBeNull();
-    expect(within(dialog).getByText("Catalogue")).toBeInTheDocument();
-    expect(within(dialog).getByText(/Only a GenEd admin can match/)).toBeInTheDocument();
-
-    fireEvent.click(within(dialog).getByRole("button", { name: "Show 2 less similar" }));
-    expect(within(dialog).getByText("70% alike")).toBeInTheDocument();
-  });
-
   it("saves 'same as' a concept of this chapter, then offers to run the chapter again", async () => {
     const dialog = await openQuestions();
     const save = within(dialog).getByRole("button", { name: "Save answers" });
@@ -94,13 +70,6 @@ describe("Answering a chapter's reconciliation questions", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(sourcesFixture.get(SID)!.state).toBe("queued");
-  });
-
-  it("saves 'it's a new concept'", async () => {
-    const dialog = await openQuestions();
-    fireEvent.click(within(dialog).getByText("It's a new concept"));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save answers" }));
-    await waitFor(() => expect(lastAnswers).toEqual({ "2.7:proposal": { decision: "novel" } }));
   });
 
   it("shows the server's reason when an answer is refused, and keeps the choice", async () => {

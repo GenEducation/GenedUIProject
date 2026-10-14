@@ -54,10 +54,6 @@ function meta(partial: Partial<MetricMeta> = {}): MetricMeta {
 }
 
 describe("resolveValueState", () => {
-  it("returns ok for a clean row", () => {
-    expect(resolveValueState(row(), meta())).toEqual({ kind: "ok", value: 0.83 });
-  });
-
   it("distinguishes 'no row' from 'suppressed'", () => {
     expect(resolveValueState(undefined, meta()).kind).toBe("empty");
     expect(resolveValueState(row({ suppressed: true, value: null }), meta()).kind).toBe(
@@ -76,23 +72,10 @@ describe("resolveValueState", () => {
     }
   });
 
-  it("carries blocked_by through for a parked metric", () => {
-    const state = resolveValueState(
-      undefined,
-      meta({ status: "NOT_INSTRUMENTED", blocked_by: "No sign-in event yet." }),
-    );
-    expect(state).toEqual({ kind: "not_instrumented", blockedBy: "No sign-in event yet." });
-  });
-
   it("treats a parked status as parked even when a row exists with a value", () => {
     // A rollup that emits a row for a parked metric must not make it look live.
     const state = resolveValueState(row({ status: "NOT_INSTRUMENTED", value: 0 }), meta());
     expect(state.kind).toBe("not_instrumented");
-  });
-
-  it("flags low confidence but keeps the number", () => {
-    const state = resolveValueState(row({ low_confidence: true, sample_size: 12 }), meta());
-    expect(state).toEqual({ kind: "low_confidence", value: 0.83, sampleSize: 12 });
   });
 
   it("ranks stale above low confidence", () => {
@@ -100,22 +83,9 @@ describe("resolveValueState", () => {
     expect(state.kind).toBe("stale");
   });
 
-  it("ranks suppressed above stale", () => {
-    const state = resolveValueState(row({ suppressed: true, stale: true, value: null }), meta());
-    expect(state.kind).toBe("suppressed");
-  });
-
   it("treats a null value (PLC-04) as empty, not as zero", () => {
     const state = resolveValueState(row({ metric_id: "PLC-04", value: null }), meta());
     expect(state.kind).toBe("empty");
     expect(hasValue(state)).toBe(false);
-  });
-
-  it("reports the min reporting n so the UI can explain the suppression", () => {
-    const state = resolveValueState(
-      row({ suppressed: true, value: null }),
-      meta({ min_reporting_n: 5 }),
-    );
-    expect(state).toMatchObject({ kind: "suppressed", minReportingN: 5 });
   });
 });

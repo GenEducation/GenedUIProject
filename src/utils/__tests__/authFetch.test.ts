@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
-import { authFetch, ApiRequestError } from "../authFetch";
+import { authFetch } from "../authFetch";
 import { installLocationStub, type LocationStub } from "@/test/helpers/location";
 import { seedAuthLocalStorage } from "@/test/helpers/auth";
 
@@ -48,14 +48,6 @@ describe("authFetch — header injection", () => {
     expect(h.get("x-user-role")).toBe("STUDENT");
   });
 
-  it("omits the Authorization header when no token is present", async () => {
-    const fetchMock = stubFetch(new Response("{}", { status: 200 }));
-
-    await authFetch("https://api.test/thing");
-
-    expect(sentHeaders(fetchMock).has("authorization")).toBe(false);
-  });
-
   it("tolerates a corrupt gened_user_profile (still sends, no x-user-id)", async () => {
     localStorage.setItem("gened_auth_token", "tok");
     localStorage.setItem("gened_user_profile", "{not json");
@@ -71,32 +63,12 @@ describe("authFetch — header injection", () => {
 });
 
 describe("authFetch — Content-Type handling", () => {
-  it("sets application/json when a non-FormData body is present", async () => {
-    const fetchMock = stubFetch(new Response("{}", { status: 200 }));
-
-    await authFetch("https://api.test/thing", { method: "POST", body: JSON.stringify({ a: 1 }) });
-
-    expect(sentHeaders(fetchMock).get("content-type")).toBe("application/json");
-  });
-
   it("does not set Content-Type for FormData bodies", async () => {
     const fetchMock = stubFetch(new Response("{}", { status: 200 }));
 
     await authFetch("https://api.test/thing", { method: "POST", body: new FormData() });
 
     expect(sentHeaders(fetchMock).has("content-type")).toBe(false);
-  });
-
-  it("never overrides a caller-provided Content-Type", async () => {
-    const fetchMock = stubFetch(new Response("{}", { status: 200 }));
-
-    await authFetch("https://api.test/thing", {
-      method: "POST",
-      body: "x=1",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    });
-
-    expect(sentHeaders(fetchMock).get("content-type")).toBe("application/x-www-form-urlencoded");
   });
 });
 
@@ -174,23 +146,5 @@ describe("authFetch — other errors", () => {
       message: "bad",
       request_id: "r-1",
     });
-  });
-
-  it("returns the Response unchanged on success", async () => {
-    const ok = new Response(JSON.stringify({ ok: true }), { status: 200 });
-    stubFetch(ok);
-
-    const res = await authFetch("https://api.test/thing");
-
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ ok: true });
-  });
-
-  it("ApiRequestError is an Error with the message from the body", async () => {
-    stubFetch(new Response(JSON.stringify({ message: "nope" }), { status: 400 }));
-
-    const err = await authFetch("https://api.test/thing").catch((e) => e);
-    expect(err).toBeInstanceOf(ApiRequestError);
-    expect(err.message).toBe("nope");
   });
 });

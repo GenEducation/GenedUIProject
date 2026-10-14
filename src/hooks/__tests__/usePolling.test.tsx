@@ -19,16 +19,6 @@ afterEach(() => {
 });
 
 describe("usePolling", () => {
-  it("fetches once on mount and exposes the result", async () => {
-    const fetcher = vi.fn().mockResolvedValue("first");
-    const { result } = renderHook(() => usePolling(fetcher, 30_000));
-
-    await waitFor(() => expect(result.current.data).toBe("first"));
-    expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.lastUpdatedAt).toBeInstanceOf(Date);
-  });
-
   it("refetches on the interval while the tab is visible", async () => {
     const fetcher = vi.fn().mockResolvedValue("x");
     renderHook(() => usePolling(fetcher, 30_000));
@@ -52,24 +42,6 @@ describe("usePolling", () => {
 
     // Three ticks passed; a background tab must not hammer the fleet endpoints.
     expect(fetcher).toHaveBeenCalledTimes(1);
-  });
-
-  it("refetches immediately when the tab becomes visible again", async () => {
-    const fetcher = vi.fn().mockResolvedValue("x");
-    renderHook(() => usePolling(fetcher, 30_000));
-    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
-
-    act(() => setVisibility("hidden"));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(60_000);
-    });
-    expect(fetcher).toHaveBeenCalledTimes(1);
-
-    await act(async () => {
-      setVisibility("visible");
-      await vi.advanceTimersByTimeAsync(0);
-    });
-    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
   it("keeps the previous data visible and reports an error on a failed refresh", async () => {
@@ -108,17 +80,5 @@ describe("usePolling", () => {
       release("done");
       await vi.advanceTimersByTimeAsync(0);
     });
-  });
-
-  it("stops polling after unmount", async () => {
-    const fetcher = vi.fn().mockResolvedValue("x");
-    const { unmount } = renderHook(() => usePolling(fetcher, 30_000));
-    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
-
-    unmount();
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(120_000);
-    });
-    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });

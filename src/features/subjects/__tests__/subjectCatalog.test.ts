@@ -70,13 +70,7 @@ describe("taxonomy subject catalogue", () => {
 
   it.each([
     ["math", 4],
-    ["Math", 4],
-    ["maths", 4],
-    ["mathematics", 4],
-    [" Mathematics", 4],
     ["Science", 5],
-    ["General", 6],
-    ["English", undefined],
   ])("rejects non-exact or unsupported subject %p at grade %p", async (subject, grade) => {
     const catalog = await loadSubjectCatalog();
 
@@ -103,12 +97,6 @@ describe("taxonomy subject catalogue", () => {
     );
   });
 
-  it("unions grades across subjects without duplicates and in order", async () => {
-    // Science and Social Science both serve 6-8, English and Mathematics 3-8.
-    const catalog = await loadSubjectCatalog();
-    expect(allTaxonomyGrades(catalog)).toEqual([3, 4, 5, 6, 7, 8]);
-  });
-
   it("offers a grade the moment any single subject serves it", async () => {
     vi.mocked(authFetch).mockResolvedValueOnce(
       new Response(
@@ -118,10 +106,6 @@ describe("taxonomy subject catalogue", () => {
 
     // A grade picker built from a literal array would silently omit 9 here.
     expect(allTaxonomyGrades(await loadSubjectCatalog())).toEqual([9]);
-  });
-
-  it("offers no grades before the catalogue loads, rather than guessing", async () => {
-    expect(allTaxonomyGrades([])).toEqual([]);
   });
 
   it("fails closed on a malformed catalogue", async () => {

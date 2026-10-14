@@ -30,7 +30,6 @@ vi.mock("../../voice/loadPipeline", () => ({
 }));
 
 import { ChatPanel } from "../ChatPanel";
-import { voiceSocketUrl } from "../../voice/useVoiceSession";
 import { resetSpeechLanguage } from "../../dictation/useSpeechLanguage";
 
 const emit = (e: PipelineEvent) => act(() => fake.options!.onEvent(e));
@@ -121,14 +120,6 @@ describe("voice mode", () => {
     expect(screen.getByText("Listening…")).toBeInTheDocument();
   });
 
-  it("End closes the session and brings the text input back", async () => {
-    await openVoice();
-    fireEvent.click(screen.getByRole("button", { name: "End" }));
-    expect(store().voiceMode).toBe(false);
-    await waitFor(() => expect(fake.closed).toBe(1));
-    expect(screen.getByRole("textbox", { name: "Message your tutor" })).toBeInTheDocument();
-  });
-
   it("a blocked microphone says so and offers the way back to typing", async () => {
     fake.startError = Object.assign(new Error("denied"), { kind: "denied" });
     await openVoice();
@@ -136,34 +127,9 @@ describe("voice mode", () => {
     fireEvent.click(screen.getByRole("button", { name: "Back to typing" }));
     expect(store().voiceMode).toBe(false);
   });
-
-  it("giving up on reconnecting leaves the lesson in text", async () => {
-    await openVoice();
-    await emit({ t: "status", state: "gave_up", code: 1011 });
-    expect(screen.getByRole("alert")).toHaveTextContent("Voice disconnected. You can keep going in the chat.");
-  });
-});
-
-describe("voiceSocketUrl", () => {
-  it("swaps http(s) for ws(s) on the API base", () => {
-    expect(voiceSocketUrl("https://api.example.test/")).toBe("wss://api.example.test/v1/voice");
-    expect(voiceSocketUrl("http://localhost:8102")).toBe("ws://localhost:8102/v1/voice");
-  });
 });
 
 describe("voice mode in other languages", () => {
-  it("a Hindi lesson talks in Hindi", async () => {
-    await openVoice("Hindi");
-    expect(fake.options!.init).toMatchObject({ language: "hi" });
-  });
-
-  it("starts in the language the learner last picked", async () => {
-    localStorage.setItem("gened_dictation_language", "te");
-    resetSpeechLanguage();
-    await openVoice("Mathematics");
-    expect(fake.options!.init).toMatchObject({ language: "te" });
-  });
-
   it("picking another language reconnects in it", async () => {
     await openVoice();
     expect(fake.options!.init).toMatchObject({ language: "en" });

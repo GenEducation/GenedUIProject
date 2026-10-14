@@ -28,17 +28,12 @@ function posedEye(seed: string, mark: EyeMark, pose: typeof idle) {
 }
 
 describe("restAnchors", () => {
-  it("returns the eyes left-then-right with blobatar's side signs", () => {
+  it("returns the eyes left-then-right with blobatar's side signs, head top above the face", () => {
     for (const seed of SEEDS) {
       const a = restAnchors(_layout(seed, {}));
       expect(a.eyes[0].cx).toBeLessThan(a.eyes[1].cx);
       expect(a.eyes.map((e) => e.wrap)).toEqual([-1, 1]);
-    }
-  });
-
-  it("puts the head top above the face, puffs included", () => {
-    for (const seed of SEEDS) {
-      const a = restAnchors(_layout(seed, {}));
+      // The head top sits above the face, puffs included.
       expect(a.headTop.y).toBeLessThan(a.face.cy - a.face.ry);
       expect(a.headTop.y).toBeGreaterThan(-10);
     }
@@ -46,10 +41,9 @@ describe("restAnchors", () => {
 });
 
 describe("marks follow their eye", () => {
-  for (const seed of SEEDS) {
-    const a = restAnchors(_layout(seed, {}));
-
-    it(`${seed}: a blush sits just under its own eye in every pose`, () => {
+  it("a blush sits just under its own eye in every pose", () => {
+    for (const seed of SEEDS) {
+      const a = restAnchors(_layout(seed, {}));
       for (const [name, pose] of Object.entries(POSES)) {
         for (const m of eyeMarks(accentMarks(a, "blush"))) {
           const eye = posedEye(seed, m, pose);
@@ -64,9 +58,12 @@ describe("marks follow their eye", () => {
           expect(Math.abs(x - eye.cx)).toBeLessThan(eye.rx + 4);
         }
       }
-    });
+    }
+  });
 
-    it(`${seed}: glints sit on the top outer corner of their eye`, () => {
+  it("glints sit on the top outer corner of their eye", () => {
+    for (const seed of SEEDS) {
+      const a = restAnchors(_layout(seed, {}));
       for (const pose of [idle, impressedPose]) {
         for (const m of eyeMarks(accentMarks(a, "glints"))) {
           const eye = posedEye(seed, m, pose);
@@ -75,8 +72,8 @@ describe("marks follow their eye", () => {
           expect(Math.sign(o.x - eye.cx)).toBe(a.eyes[m.eye].wrap);
         }
       }
-    });
-  }
+    }
+  });
 
   it("moves with the pose: a lifted pose lifts eye and body marks alike", () => {
     const layout = _layout("aanya", {});

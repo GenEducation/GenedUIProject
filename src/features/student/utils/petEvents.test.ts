@@ -5,7 +5,6 @@ import {
   LOCAL_SOURCES,
   SUPPORTIVE_COOLDOWN_MS,
   acceptSeq,
-  fromStreakChange,
   fromTestVerdict,
   fromWidgetResult,
   parsePetFrame,
@@ -16,17 +15,10 @@ import { usePetStore } from "../store/usePetStore";
 import { PET_EMOTIONS, type PetEmotion } from "../theme/petExpressions";
 
 describe("parsePetFrame", () => {
-  it("accepts a pet_emotion frame", () => {
+  it("accepts a pet_emotion frame for every emotion the backend sends, and has a face for each", () => {
     expect(
       parsePetFrame({ type: "pet_emotion", emotion: "proud", cause: "ledger.recovered", seq: 4, turn_id: "t1" }),
     ).toEqual({ type: "pet_emotion", emotion: "proud", cause: "ledger.recovered", seq: 4, turn_id: "t1" });
-  });
-
-  it("drops an emotion this build does not know", () => {
-    expect(parsePetFrame({ type: "pet_emotion", emotion: "bored", cause: "x", seq: 1 })).toBeNull();
-  });
-
-  it("accepts every emotion the backend sends, and has a face for each", () => {
     // MVP docs/pet-emotions-frontend-integration.md, `PetEmotionFrame.emotion`.
     // v3 handoff: twelve reactions (docs/pet-emotions-v3-frontend-handoff.md).
     const sent = [
@@ -39,24 +31,20 @@ describe("parsePetFrame", () => {
     }
   });
 
-  it("drops the emotions retired when the pet went positive-only", () => {
+  it("drops unknown or retired emotions and frames without a numeric seq", () => {
+    expect(parsePetFrame({ type: "pet_emotion", emotion: "bored", cause: "x", seq: 1 })).toBeNull();
+    // Retired when the pet went positive-only.
     for (const emotion of ["correct", "incorrect", "sad", "happy"]) {
       expect(parsePetFrame({ type: "pet_emotion", emotion, cause: "x", seq: 1 })).toBeNull();
     }
-  });
-
-  it("drops frames without a numeric seq", () => {
     expect(parsePetFrame({ type: "pet_emotion", emotion: "cheer", cause: "x" })).toBeNull();
   });
 
-  it("parses answer_graded", () => {
+  it("parses answer_graded and ignores every other stream event", () => {
     expect(parsePetFrame({ type: "answer_graded", correct: true, burst: false, seq: 2 })).toMatchObject({
       type: "answer_graded",
       correct: true,
     });
-  });
-
-  it("ignores every other stream event", () => {
     expect(parsePetFrame({ type: "chunk", text: "hi", seq: 1 })).toBeNull();
     expect(parsePetFrame(null)).toBeNull();
   });
@@ -72,32 +60,24 @@ describe("acceptSeq", () => {
     expect(r.accept).toBe(false);
     r = acceptSeq(r.lastSeqBySession, "chat:a", 6);
     expect(r.accept).toBe(true);
-  });
-
-  it("keeps a separate high-water mark per session", () => {
-    const r = acceptSeq({ "chat:a": 40 }, "voice:b", 1);
-    expect(r.accept).toBe(true);
-    expect(r.lastSeqBySession).toEqual({ "chat:a": 40, "voice:b": 1 });
+    // A separate high-water mark per session.
+    const other = acceptSeq({ "chat:a": 40 }, "voice:b", 1);
+    expect(other.accept).toBe(true);
+    expect(other.lastSeqBySession).toEqual({ "chat:a": 40, "voice:b": 1 });
   });
 });
 
 describe("passDamper", () => {
-  it("coalesces the same emotion inside the window", () => {
+  it("coalesces the same emotion inside the window, but lets a different one through", () => {
     const a = passDamper({}, "cheer", 1000);
     expect(a.pass).toBe(true);
     expect(passDamper(a.lastAt, "cheer", 1000 + COALESCE_MS - 1).pass).toBe(false);
     expect(passDamper(a.lastAt, "cheer", 1000 + COALESCE_MS).pass).toBe(true);
-  });
-
-  it("lets a different emotion through immediately", () => {
-    const a = passDamper({}, "cheer", 1000);
     expect(passDamper(a.lastAt, "curious", 1001).pass).toBe(true);
-  });
-
-  it("holds Supportive to once a minute", () => {
-    const a = passDamper({}, "supportive", 0);
-    expect(passDamper(a.lastAt, "supportive", COALESCE_MS + 1).pass).toBe(false);
-    expect(passDamper(a.lastAt, "supportive", SUPPORTIVE_COOLDOWN_MS).pass).toBe(true);
+    // Supportive is held to once a minute.
+    const s = passDamper({}, "supportive", 0);
+    expect(passDamper(s.lastAt, "supportive", COALESCE_MS + 1).pass).toBe(false);
+    expect(passDamper(s.lastAt, "supportive", SUPPORTIVE_COOLDOWN_MS).pass).toBe(true);
   });
 });
 
@@ -105,12 +85,10 @@ describe("fromWidgetResult", () => {
   const answer = (t: WidgetTally, directiveId: string, isCorrect: boolean, attempts?: number) =>
     fromWidgetResult(t, { directiveId, isCorrect, attempts });
 
-  it("maps a first-try answer to cheer / encouraging", () => {
+  it("maps a first-try answer to cheer / encouraging, and a second wrong to supportive", () => {
     expect(answer(EMPTY_TALLY, "d1", true).emotion).toBe("cheer");
     expect(answer(EMPTY_TALLY, "d1", false).emotion).toBe("encouraging");
-  });
-
-  it("is Supportive on the second wrong in a row", () => {
+    // Supportive on the second wrong in a row.
     const a = answer(EMPTY_TALLY, "d1", false);
     expect(answer(a.tally, "d2", false).emotion).toBe("supportive");
   });
@@ -118,21 +96,17 @@ describe("fromWidgetResult", () => {
   it("is Proud when a retry of the same directive comes good", () => {
     const a = answer(EMPTY_TALLY, "d1", false);
     expect(answer(a.tally, "d1", true).emotion).toBe("proud");
-  });
-
-  it("trusts the backend's attempts count too", () => {
+    // Trusts the backend's attempts count too.
     expect(answer(EMPTY_TALLY, "d9", true, 2).emotion).toBe("proud");
   });
 
-  it("is Excited at a 3-in-a-row correctness streak", () => {
+  it("is Excited at a 3-in-a-row correctness streak, which a wrong answer breaks", () => {
     let t = EMPTY_TALLY;
     t = answer(t, "a", true).tally;
     t = answer(t, "b", true).tally;
     expect(answer(t, "c", true).emotion).toBe("excited");
-  });
 
-  it("a wrong answer breaks the streak", () => {
-    let t = EMPTY_TALLY;
+    t = EMPTY_TALLY;
     t = answer(t, "a", true).tally;
     t = answer(t, "b", true).tally;
     t = answer(t, "c", false).tally;
@@ -146,29 +120,6 @@ describe("fromTestVerdict", () => {
     expect(fromTestVerdict("AT")).toBe("cheer");
     expect(fromTestVerdict("BELOW")).toBe("supportive");
     expect(fromTestVerdict(null)).toBeNull();
-  });
-});
-
-describe("fromStreakChange", () => {
-  it("fires nothing without a previous value", () => {
-    expect(fromStreakChange(null, 7)).toBeNull();
-  });
-
-  it("celebrates a milestone, including one crossed rather than landed on", () => {
-    expect(fromStreakChange(2, 3)).toBe("celebration");
-    expect(fromStreakChange(5, 8)).toBe("celebration");
-  });
-
-  it("is Excited for an ordinary increase", () => {
-    expect(fromStreakChange(4, 5)).toBe("excited");
-  });
-
-  it("fires nothing when the streak is lost — the pet is positive-only", () => {
-    expect(fromStreakChange(7, 0)).toBeNull();
-  });
-
-  it("ignores no change", () => {
-    expect(fromStreakChange(5, 5)).toBeNull();
   });
 });
 

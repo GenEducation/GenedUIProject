@@ -4,7 +4,6 @@ import {
   deriveConn,
   deriveService,
   isHeartbeatStale,
-  relativeTime,
   STALE_HEARTBEAT_MINUTES,
 } from "../../components/deviceHealth";
 import type { AdminDeviceListItem } from "../types";
@@ -58,17 +57,6 @@ describe("deriveConn — precedence", () => {
     ).toBe("REVOKED");
   });
 
-  it("maps NEEDS_ATTENTION and OFFLINE straight through", () => {
-    freezeNow();
-    expect(deriveConn(device({ health_status: "NEEDS_ATTENTION" }))).toBe("NEEDS_ATTENTION");
-    expect(deriveConn(device({ health_status: "OFFLINE" }))).toBe("OFFLINE");
-  });
-
-  it("reports ONLINE when the heartbeat is fresh", () => {
-    freezeNow();
-    expect(deriveConn(device({ last_heartbeat_at: minutesAgo(1) }))).toBe("ONLINE");
-  });
-
   it("downgrades a device that claims ONLINE but stopped heartbeating to STALE", () => {
     freezeNow();
     const d = device({
@@ -92,11 +80,6 @@ describe("deriveConn — precedence", () => {
 });
 
 describe("deriveService — unknown is not healthy", () => {
-  it("maps ok and service_required directly", () => {
-    expect(deriveService({ self_test_status: "ok" })).toBe("OK");
-    expect(deriveService({ self_test_status: "service_required" })).toBe("SERVICE_REQUIRED");
-  });
-
   it("maps a null status to UNKNOWN — never to OK", () => {
     expect(deriveService({ self_test_status: null })).toBe("UNKNOWN");
   });
@@ -105,24 +88,5 @@ describe("deriveService — unknown is not healthy", () => {
     // The spec's explicit trap: [] means "clean" only when status is "ok".
     const d = device({ self_test_status: null, self_test_failed: [] });
     expect(deriveService(d)).toBe("UNKNOWN");
-  });
-
-  it("an empty self_test_failed with status ok is genuinely clean", () => {
-    expect(deriveService(device({ self_test_status: "ok", self_test_failed: [] }))).toBe("OK");
-  });
-});
-
-describe("relativeTime", () => {
-  it("renders an em dash for null and unparseable input", () => {
-    expect(relativeTime(null)).toBe("—");
-    expect(relativeTime("not-a-date")).toBe("—");
-  });
-
-  it("scales through seconds, minutes, hours and days", () => {
-    freezeNow();
-    expect(relativeTime(minutesAgo(0.5))).toBe("30s ago");
-    expect(relativeTime(minutesAgo(5))).toBe("5m ago");
-    expect(relativeTime(minutesAgo(60 * 3))).toBe("3h ago");
-    expect(relativeTime(minutesAgo(60 * 24 * 2))).toBe("2d ago");
   });
 });

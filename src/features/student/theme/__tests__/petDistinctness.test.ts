@@ -31,18 +31,18 @@ const MIN_DIFFERENT_LAYERS = 3;
 describe("reaction distinctness", () => {
   const reactions = [...BACKEND_EMOTIONS];
 
-  for (let i = 0; i < reactions.length; i++) {
-    for (let j = i + 1; j < reactions.length; j++) {
-      const [a, b] = [reactions[i], reactions[j]];
-      it(`${a} and ${b} differ on at least ${MIN_DIFFERENT_LAYERS} layers`, () => {
+  it(`every pair of reactions differs on at least ${MIN_DIFFERENT_LAYERS} layers`, () => {
+    for (let i = 0; i < reactions.length; i++) {
+      for (let j = i + 1; j < reactions.length; j++) {
+        const [a, b] = [reactions[i], reactions[j]];
         const differing = Object.entries(LAYERS)
           .filter(([, layer]) => layer(PET_EMOTIONS[a]) !== layer(PET_EMOTIONS[b]))
           .map(([name]) => name);
         expect(differing.length, `${a} vs ${b} differ only on: ${differing.join(", ") || "nothing"}`)
           .toBeGreaterThanOrEqual(MIN_DIFFERENT_LAYERS);
-      });
+      }
     }
-  }
+  });
 
   it("no two reactions share the same eyes", () => {
     const eyes = reactions.map((e) => LAYERS.eyes(PET_EMOTIONS[e]));
@@ -62,14 +62,14 @@ describe("reaction tints keep the pet's own colour", () => {
   };
   const hueGap = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
 
-  for (const emotion of ["cheer", "supportive", "impressed"] as const) {
-    it(`${emotion} stays within a few degrees of the body's own hue`, () => {
+  it("cheer, supportive and impressed stay within a few degrees of the body's own hue", () => {
+    for (const emotion of ["cheer", "supportive", "impressed"] as const) {
       for (const hue of [18, 158, 186, 255, 300]) {
         const base = palette(hue);
         const face = PET_EMOTIONS[emotion].face;
         const tinted = face.tint!(base, face.p);
-        expect(hueGap(hueOf(tinted.head!), hueOf(base.head!)), `hue ${hue}`).toBeLessThan(15);
+        expect(hueGap(hueOf(tinted.head!), hueOf(base.head!)), `${emotion} at hue ${hue}`).toBeLessThan(15);
       }
-    });
-  }
+    }
+  });
 });

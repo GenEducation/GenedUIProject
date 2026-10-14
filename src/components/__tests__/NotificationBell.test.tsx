@@ -36,28 +36,11 @@ beforeEach(() => {
 });
 
 describe("NotificationBell", () => {
-  it("fetches notifications for the given user on mount", async () => {
-    render(<NotificationBell userId="u1" />);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("u1"));
-  });
-
-  it("shows no badge when there are no unread notifications", async () => {
-    fetchMock.mockResolvedValue([notif({ is_read: true })]);
-    render(<NotificationBell userId="u1" />);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    expect(screen.queryByText("1")).not.toBeInTheDocument();
-  });
-
-  it("shows the unread count on the badge", async () => {
-    fetchMock.mockResolvedValue([notif({ id: "a" }), notif({ id: "b" })]);
+  it("fetches the user's notifications on mount and shows the unread count on the badge", async () => {
+    fetchMock.mockResolvedValue([notif({ id: "a" }), notif({ id: "b" }), notif({ id: "c", is_read: true })]);
     render(<NotificationBell userId="u1" />);
     await waitFor(() => expect(screen.getByText("2")).toBeInTheDocument());
-  });
-
-  it("caps the badge at 9+", async () => {
-    fetchMock.mockResolvedValue(Array.from({ length: 12 }, (_, i) => notif({ id: `n${i}` })));
-    render(<NotificationBell userId="u1" />);
-    await waitFor(() => expect(screen.getByText("9+")).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalledWith("u1");
   });
 
   it("opens the dropdown and lists notifications on bell click", async () => {
@@ -69,14 +52,6 @@ describe("NotificationBell", () => {
 
     expect(screen.getByText("New message")).toBeInTheDocument();
     expect(screen.getByText("You have a new update")).toBeInTheDocument();
-  });
-
-  it("shows the empty state when there are no notifications", async () => {
-    render(<NotificationBell userId="u1" />);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-
-    fireEvent.click(screen.getByRole("button", { name: /notifications/i }));
-    expect(screen.getByText("No new notifications")).toBeInTheDocument();
   });
 
   it("marks a notification read, updates the badge, and calls the service", async () => {

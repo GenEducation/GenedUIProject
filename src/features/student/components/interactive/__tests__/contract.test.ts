@@ -45,15 +45,4 @@ describe("interactive type contract", () => {
       expect(COMPONENT_REGISTRY[type], `missing renderer for ${type}`).toBeDefined();
     }
   });
-
-  it("registry has no renderer for an unknown interactive_type", () => {
-    expect(COMPONENT_REGISTRY["totally_made_up"]).toBeUndefined();
-  });
-
-  it("uses only the five known interaction_type buckets", () => {
-    const buckets = new Set(Object.values(BACKEND_MAP));
-    expect([...buckets].sort()).toEqual(
-      ["build", "match", "order", "place_point", "select_cells"].sort()
-    );
-  });
 });

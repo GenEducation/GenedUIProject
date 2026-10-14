@@ -43,9 +43,6 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
           <h1 className="text-[#122D30] text-sm font-black uppercase tracking-widest leading-none">
             Partner Portal
           </h1>
-          <p className="text-[#122D30]/40 text-[10px] font-bold uppercase tracking-tighter mt-1">
-            Deep Work Mode
-          </p>
         </div>
       </div>
 

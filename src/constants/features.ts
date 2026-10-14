@@ -4,7 +4,7 @@
  * portals. Flip back to `true` to bring a section back.
  */
 export const FEATURES = {
-  /** Student "Practice" (/student/assessments). */
+  /** Student "Practice" (/student/practice). */
   practice: false,
   /** Student schedule (/student/schedule), the parent schedule view
    *  (/parent/:id/schedule) and the upcoming-session panel on student home. */

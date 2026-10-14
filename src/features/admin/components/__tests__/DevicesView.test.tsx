@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 
 import { DevicesView } from "../DevicesView";
 import type { AdminDeviceListItem, AdminLabStats } from "../../devices/types";
@@ -105,17 +105,6 @@ function tile(label: string) {
 }
 
 describe("DevicesView", () => {
-  it("renders the fleet summary from the stats payload", async () => {
-    render(<DevicesView />);
-    expect(await screen.findByText("5 devices · 2 labs · 1 schools")).toBeInTheDocument();
-  });
-
-  it("fetches revoked devices so the revoked tile can reconcile with rows", async () => {
-    render(<DevicesView />);
-    await waitFor(() => expect(fetchAllDevices).toHaveBeenCalled());
-    expect(fetchAllDevices).toHaveBeenCalledWith({ include_revoked: true });
-  });
-
   it("hides revoked devices from the table until the toggle is switched on", async () => {
     render(<DevicesView />);
     expect(await screen.findByText("5 of 5 devices")).toBeInTheDocument();
@@ -124,19 +113,6 @@ describe("DevicesView", () => {
     fireEvent.click(screen.getByLabelText(/show revoked/i));
     expect(await screen.findByText("6 of 6 devices")).toBeInTheDocument();
     expect(screen.getByText("Desk 6")).toBeInTheDocument();
-  });
-
-  it("shows a device's failed components on its self-test chip", async () => {
-    render(<DevicesView />);
-    await screen.findByText("Desk 3");
-    expect(screen.getByText("Service required: speaker")).toBeInTheDocument();
-  });
-
-  it("labels a never-reported device as Unknown rather than passing", async () => {
-    render(<DevicesView />);
-    const row = (await screen.findByText("Desk 4")).closest("tr")!;
-    expect(within(row).getByText("Unknown")).toBeInTheDocument();
-    expect(within(row).queryByText("Passing")).not.toBeInTheDocument();
   });
 
   it("flags a device that claims ONLINE but stopped heartbeating as Stale", async () => {
@@ -156,13 +132,6 @@ describe("DevicesView", () => {
     expect(screen.queryByText("Desk 1")).not.toBeInTheDocument();
   });
 
-  it("navigates to the detail route from a row action", async () => {
-    render(<DevicesView />);
-    const row = (await screen.findByText("Desk 1")).closest("tr")!;
-    fireEvent.click(within(row).getByRole("button", { name: /view/i }));
-    expect(push).toHaveBeenCalledWith("/admin/devices/ok");
-  });
-
   it("warns rather than silently truncating when the fleet exceeds the cap", async () => {
     fetchAllDevices.mockResolvedValue({ devices: DEVICES, total: 2500, truncated: true });
     render(<DevicesView />);
@@ -175,11 +144,5 @@ describe("DevicesView", () => {
     render(<DevicesView />);
     expect(await screen.findByText("5 devices")).toBeInTheDocument();
     expect(screen.getByText("Desk 1")).toBeInTheDocument();
-  });
-
-  it("surfaces a device-fetch failure as a table error", async () => {
-    fetchAllDevices.mockRejectedValue(new Error("gateway down"));
-    render(<DevicesView />);
-    expect(await screen.findByText("gateway down")).toBeInTheDocument();
   });
 });

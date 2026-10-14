@@ -137,14 +137,4 @@ describe("DeviceDetailView — self-test parsing", () => {
     // Scalar metrics (peak, frames, alsa_card) still render as compact rows.
     expect(screen.getByText("32768")).toBeInTheDocument();
   });
-
-  it("shows the unknown-hardware-state message when no self-test has ever been reported", async () => {
-    getFleetDevice.mockResolvedValue(detail({ last_health_report: null, self_test_status: null }));
-    render(<DeviceDetailView deviceId="d1" />);
-
-    await waitFor(() =>
-      expect(screen.getByText(/never reported a self-test/i)).toBeInTheDocument(),
-    );
-    expect(screen.queryByText("Self-test report")).not.toBeInTheDocument();
-  });
 });

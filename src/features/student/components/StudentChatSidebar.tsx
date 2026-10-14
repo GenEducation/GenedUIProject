@@ -35,8 +35,8 @@ const C = {
 
 const NAV_ITEMS = [
   { id: "home",      icon: "🏠", label: "Home",     path: "/student" },
-  ...(FEATURES.practice ? [{ id: "practice",  icon: "🎯", label: "Practice",  path: "/student/assessments" }] : []),
-  { id: "me",        icon: "😊", label: "Me",        path: "/student/profile" },
+  ...(FEATURES.practice ? [{ id: "practice",  icon: "🎯", label: "Practice",  path: "/student/practice" }] : []),
+  { id: "me",        icon: "😊", label: "Profile",   path: "/student/profile" },
 ];
 
 const MIN_WIDTH = 200;
@@ -110,8 +110,8 @@ function ProfilePopup({
   const displayName = getStudentDisplayName(profile);
 
   const menuItems = [
-    { icon: <User size={14} />,         label: STRINGS.nav.me,       path: "/student/profile" },
-    ...(FEATURES.practice ? [{ icon: <ClipboardCheck size={14}/>,label: STRINGS.nav.practice, path: "/student/assessments" }] : []),
+    { icon: <User size={14} />,         label: STRINGS.nav.profile,  path: "/student/profile" },
+    ...(FEATURES.practice ? [{ icon: <ClipboardCheck size={14}/>,label: STRINGS.nav.practice, path: "/student/practice" }] : []),
   ];
 
   return (

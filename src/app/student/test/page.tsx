@@ -39,7 +39,7 @@ function TestPageContent() {
     timerSeconds,
   } = useTestStore();
   const searchParams = useSearchParams();
-  const from = searchParams.get("from") || "assessments";
+  const from = searchParams.get("from") || "practice";
 
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0);
   const [showSubmitWarning, setShowSubmitWarning] = useState(false);
@@ -93,7 +93,7 @@ function TestPageContent() {
 
   const backRoute =
     from === "schedule" && FEATURES.schedule ? "/student/schedule" :
-    FEATURES.practice ? "/student/assessments" :
+    FEATURES.practice ? "/student/practice" :
     "/student";
 
   useEffect(() => {

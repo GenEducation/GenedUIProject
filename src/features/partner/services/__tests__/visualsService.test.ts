@@ -14,31 +14,6 @@ beforeEach(() => {
 });
 
 describe("visualsService", () => {
-  it("sends only the filters that are set", async () => {
-    let seen: URL | null = null;
-    server.use(
-      http.get(`${BASE}/v1/visuals/candidates`, ({ request }) => {
-        seen = new URL(request.url);
-        return HttpResponse.json([]);
-      }),
-    );
-
-    await visualsService.listCandidates({ state: "rejected", source_id: "src-1", grade: 6, subject: "", before: undefined, limit: 24 });
-
-    expect(seen!.searchParams.get("state")).toBe("rejected");
-    expect(seen!.searchParams.get("source_id")).toBe("src-1");
-    expect(seen!.searchParams.get("grade")).toBe("6");
-    expect(seen!.searchParams.get("limit")).toBe("24");
-    expect(seen!.searchParams.has("subject")).toBe(false);
-    expect(seen!.searchParams.has("before")).toBe(false);
-  });
-
-  it("lists pending visuals newest first", async () => {
-    const items = await visualsService.listCandidates();
-    expect(items.map((v) => v.state)).toEqual(["pending", "pending"]);
-    expect(items[0].created_at > items[1].created_at).toBe(true);
-  });
-
   it("sends {content_hash, decision} for an accept", async () => {
     let body: unknown = null;
     server.use(

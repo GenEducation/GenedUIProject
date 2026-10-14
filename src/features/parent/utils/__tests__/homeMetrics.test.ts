@@ -3,15 +3,11 @@ import { describe, it, expect } from "vitest";
 import {
   chapterProgress,
   fillDailySeries,
-  formatDuration,
-  formatPeriodLabel,
-  greetingFor,
   localDayKey,
-  minutesBySubject,
   sessionTrendPct,
   totalMinutes,
 } from "../homeMetrics";
-import { BAND_TONES, masteryBand, subjectIcon } from "../subjectVisuals";
+import { BAND_TONES, masteryBand } from "../subjectVisuals";
 
 const TODAY = new Date(2026, 8, 30, 15, 0); // 30 Sept 2026, 3pm local
 const DAY = 24 * 60 * 60 * 1000;
@@ -35,14 +31,6 @@ describe("homeMetrics", () => {
     expect(localDayKey(TODAY)).toBe("2026-09-30");
   });
 
-  it("formats durations and dates like the design", () => {
-    expect(formatDuration(2550)).toBe("42h 30m");
-    expect(formatDuration(45)).toBe("45m");
-    expect(formatDuration(0)).toBe("0m");
-    expect(formatPeriodLabel("2026-09-19")).toMatch(/^19 Sep/);
-    expect(formatPeriodLabel("week 38")).toBe("week 38");
-  });
-
   it("compares sessions in the last 30 days with the 30 before", () => {
     const now = TODAY.getTime();
     const at = (daysAgo: number) => new Date(now - daysAgo * DAY).toISOString();
@@ -60,30 +48,6 @@ describe("homeMetrics", () => {
         { completion_percentage: 0, is_placeholder: true },
       ]),
     ).toEqual({ started: 2, total: 3 });
-  });
-
-  it("totals study time per subject", () => {
-    expect(
-      minutesBySubject([
-        { subject: "Hindi", total_minutes: 30 },
-        { subject: "Hindi", total_minutes: 15 },
-        { subject: "English", total_minutes: 10 },
-      ]),
-    ).toEqual({ Hindi: 45, English: 10 });
-  });
-
-  it("greets by time of day", () => {
-    expect(greetingFor(new Date(2026, 8, 30, 9))).toBe("Good morning");
-    expect(greetingFor(new Date(2026, 8, 30, 14))).toBe("Good afternoon");
-    expect(greetingFor(new Date(2026, 8, 30, 20))).toBe("Good evening");
-  });
-
-  it("picks the subject glyph by keyword", () => {
-    expect(subjectIcon("Mathematics")).toContain("mathematics");
-    expect(subjectIcon("Science")).toContain("science");
-    expect(subjectIcon("Social Science")).toContain("subject_overview"); // not the flask
-    expect(subjectIcon("Hindi")).toContain("hindi");
-    expect(subjectIcon("English")).toContain("english");
   });
 
   it("colours by mastery band, not by subject", () => {

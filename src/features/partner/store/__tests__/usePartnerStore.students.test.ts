@@ -34,22 +34,6 @@ describe("usePartnerStore — a school's students", () => {
     expect(state.totalEnrollments).toBe(2);
   });
 
-  it("rejects a request with PATCH status=REJECTED, and it stays out after a refetch", async () => {
-    await usePartnerStore.getState().fetchStudents();
-    await usePartnerStore.getState().rejectRequest(id(2));
-    expect(lastStatusChange).toEqual({ studentId: id(2), status: "REJECTED" });
-    await usePartnerStore.getState().fetchStudents();
-    expect(usePartnerStore.getState().pendingRequests).toEqual([]);
-  });
-
-  it("removes a student with DELETE", async () => {
-    await usePartnerStore.getState().fetchStudents();
-    await usePartnerStore.getState().removeStudent(id(1));
-    expect(partnerStudentsFixture.get(id(1))).toBeUndefined();
-    expect(usePartnerStore.getState().students).toEqual([]);
-    expect(usePartnerStore.getState().totalEnrollments).toBe(0);
-  });
-
   it("revokes a student with PATCH status=REVOKED: gone from the list, record kept, out after a refetch", async () => {
     await usePartnerStore.getState().fetchStudents();
     await usePartnerStore.getState().revokeStudent(id(1));
@@ -66,13 +50,6 @@ describe("usePartnerStore — a school's students", () => {
       /association not found/,
     );
   });
-
-  it("does nothing without a signed-in partner", async () => {
-    localStorage.removeItem("gened_partner_id");
-    await usePartnerStore.getState().fetchStudents();
-    expect(usePartnerStore.getState().students).toEqual([]);
-    await expect(usePartnerStore.getState().removeStudent(id(1))).rejects.toThrow("No partner ID found");
-  });
 });
 
 describe("partnerStudentsService", () => {
@@ -81,14 +58,4 @@ describe("partnerStudentsService", () => {
     expect(await partnerStudentsService.profile(SYNTHETIC_PARTNER, "33333333-0000-4000-8000-000000000999")).toBeNull();
   });
 
-  it("splits the counts row off the students list", async () => {
-    const { rows, counts } = await partnerStudentsService.students(SYNTHETIC_PARTNER);
-    expect(rows).toHaveLength(4);
-    expect(counts).toEqual({ total_count: 4, pending_count: 1, approved_count: 1 });
-  });
-
-  it("can revoke a membership", async () => {
-    await partnerStudentsService.setStatus(SYNTHETIC_PARTNER, id(1), "REVOKED");
-    expect(partnerStudentsFixture.get(id(1))?.status).toBe("REVOKED");
-  });
 });

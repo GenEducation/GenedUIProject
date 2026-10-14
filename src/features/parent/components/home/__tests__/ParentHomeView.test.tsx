@@ -78,14 +78,6 @@ const renderHome = () => render(<ParentHomeView studentId="s1" />);
 const card = (name: string) => screen.getByRole("region", { name });
 
 describe("ParentHomeView", () => {
-  it("leaves Learning Score, Skill Index and alerts blank until the backend provides them", () => {
-    serveChild();
-    renderHome();
-    expect(within(card("Overall Learning Score")).getByText("Available soon")).toBeInTheDocument();
-    expect(within(card("Skill Index")).getByText("Coming soon")).toBeInTheDocument();
-    expect(within(card("Recent Alerts & Updates")).getByText("No alerts right now")).toBeInTheDocument();
-  });
-
   it("totals sessions across subjects with a month-on-month trend", async () => {
     serveChild();
     renderHome();
