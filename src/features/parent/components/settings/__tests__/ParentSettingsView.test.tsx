@@ -44,6 +44,10 @@ describe("ParentSettingsView", () => {
     render(<ParentSettingsView />);
     expect(screen.getByRole("list", { name: "Waiting for your approval" })).toHaveTextContent("Meera");
     fireEvent.click(screen.getByRole("button", { name: "Approve Meera" }));
+    // Approving is the parent's explicit confirmation, so it is asked for in words first.
+    expect(updateStudentStatus).not.toHaveBeenCalled();
+    expect(screen.getByText(/parent or legal guardian/i)).toHaveTextContent("Confirm that you are Meera's parent or legal guardian");
+    fireEvent.click(screen.getByRole("button", { name: /yes, i'm their parent or guardian/i }));
     await waitFor(() => expect(updateStudentStatus).toHaveBeenCalledWith("s2", "APPROVED"));
   });
 

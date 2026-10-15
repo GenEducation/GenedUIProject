@@ -10,7 +10,7 @@ import { useParentStore } from "@/features/parent/store/useParentStore";
 import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useLoaderStore } from "@/stores/useLoaderStore";
-import { completeAndRedirect, getRedirectParam, startLoaderForRole } from "@/features/auth/usePostAuthRedirect";
+import { completeAndRedirect, getRedirectParam, startLoaderForRole, withRedirect } from "@/features/auth/usePostAuthRedirect";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -84,7 +84,8 @@ export default function LoginPage() {
     // The role is only known now: start the right loader straight away (the
     // button's spinner covered the request), so nothing swaps mid-way.
     startLoaderForRole(role, "signin");
-    const redirectPath = getRedirectParam();
+    // Only a safe in-app path in this role's own area (a parent's invitation link, say).
+    const redirectPath = getRedirectParam(role);
     completeAndRedirect(router, redirectPath || `/${role}`);
   };
 
@@ -143,7 +144,7 @@ export default function LoginPage() {
               loginData={loginData}
               onChange={handleChange}
               onSubmit={handleSubmit}
-              onSwitchToSignup={() => router.push("/register")}
+              onSwitchToSignup={() => router.push(withRedirect("/register"))}
               isSigningIn={isSigningIn}
               errors={errors}
           onGoogleSuccess={handleGoogleSuccess}

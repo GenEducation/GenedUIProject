@@ -1,7 +1,8 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useLessonStore } from "../useLessonStore";
+import { isRevisiting, useLessonStore } from "../useLessonStore";
+import { useUiText } from "../i18n";
 import type { NodeOutline } from "../types";
 
 type StepState = "done" | "current" | "todo";
@@ -49,6 +50,7 @@ export function LessonProgressRail() {
   const instance = useLessonStore((s) => s.instance);
   const nextNodes = useLessonStore((s) => s.payload?.student_context.next_nodes ?? NO_NODES);
   const completedSteps = useLessonStore((s) => s.completedSteps);
+  const t = useUiText();
 
   if (!instance) return <div className="h-40 animate-pulse rounded-xl bg-[var(--ls-soft)]" />;
 
@@ -145,6 +147,11 @@ export function LessonProgressRail() {
           <span>{finished ? "All steps done" : `${instance.nodes_done} of ${instance.nodes_total} steps done`}</span>
           <span className="tabular-nums">{pct}%</span>
         </p>
+        {/* Every planned step can be done while revisit steps remain: the counts stay as they are, and this says why the
+            lesson goes on. */}
+        {isRevisiting(instance) && (
+          <p className="mt-1 text-[12px] font-semibold text-[var(--ls-primary)]">{t("revisiting")}</p>
+        )}
       </div>
     </div>
   );

@@ -6,12 +6,41 @@ import { useLoaderStore } from "@/stores/useLoaderStore";
 const HANDOFF_WATCHDOG_MS = 12000;
 
 /**
- * Reads the `redirect` query param that /login and /register
- * check after an auth call succeeds, so a mid-flow deep link is honored.
+ * A post-auth destination we are willing to navigate to: an in-app path only
+ * (one leading slash; never `//host` or `/\host`, which browsers treat as
+ * another site), and, given the signed-in role, only that role's own area —
+ * a parent's invitation link (`/parent?token=…`) must not send a student to
+ * the parent portal, where AuthGuard would sign them out.
  */
-export function getRedirectParam(): string | null {
+export function safeRedirect(path: string | null | undefined, role?: string | null): string | null {
+  if (!path || !path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) return null;
+  if (role) {
+    const area = `/${role.toLowerCase()}`;
+    const top = `/${path.split(/[/?#]/)[1] ?? ""}`;
+    const roleAreas = ["/student", "/parent", "/partner", "/teacher", "/admin"];
+    if (roleAreas.includes(top) && top !== area) return null;
+  }
+  return path;
+}
+
+/**
+ * Reads the `redirect` query param that /login and /register check after an
+ * auth call succeeds, so a mid-flow deep link (a parent's invitation, say) is
+ * honored. Unsafe values, and another role's area when `role` is given, read
+ * as none.
+ */
+export function getRedirectParam(role?: string | null): string | null {
   if (typeof window === "undefined") return null;
-  return new URLSearchParams(window.location.search).get("redirect");
+  return safeRedirect(new URLSearchParams(window.location.search).get("redirect"), role);
+}
+
+/**
+ * `href` with the current page's safe `redirect` carried along, so moving
+ * between landing, /login and /register keeps a parent's invitation context.
+ */
+export function withRedirect(href: string, redirect: string | null = getRedirectParam()): string {
+  if (!redirect) return href;
+  return `${href}${href.includes("?") ? "&" : "?"}redirect=${encodeURIComponent(redirect)}`;
 }
 
 /**

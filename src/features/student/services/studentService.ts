@@ -4,6 +4,35 @@ import { FEATURES } from "@/constants/features";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
+/**
+ * The student's guardian connection, each step separately (`GET /parent/guardian/status`). `state` sums it up:
+ * the parent email is missing or unverified; the parent has no account yet (the invitation is out); the parent has
+ * an account and has to confirm; they are linked; or the parent declined.
+ */
+export interface GuardianStatus {
+  student_id: string;
+  state:
+    | "no_parent_email"
+    | "email_unverified"
+    | "awaiting_parent_registration"
+    | "awaiting_parent_confirmation"
+    | "linked"
+    | "declined";
+  parent_email: string | null;
+  parent_email_supplied: boolean;
+  parent_email_verified: boolean;
+  parent_account_registered: boolean;
+  parent_onboarding_completed: boolean;
+  guardian_consent_recorded: boolean;
+  relationship_status: "PENDING" | "APPROVED" | "REJECTED" | "REVOKED" | null;
+  relationship_with_invited_parent: boolean | null;
+  invitation_sent_at: string | null;
+  last_invitation_at: string | null;
+  reminders_sent: number;
+  can_resend_invitation: boolean;
+  invitation_sent?: boolean | null;
+}
+
 if (!API_BASE_URL) {
   throw new Error("NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.");
 }
@@ -278,7 +307,45 @@ export const studentService = {
     return response.json();
   },
 
-  linkParent: async (studentId: string, parentEmailOrPhone: string) => {
+  /** Where the student's guardian connection stands, read fresh from the server (`GET /parent/guardian/status`). */
+  fetchGuardianStatus: async (studentId: string): Promise<GuardianStatus> => {
+    const response = await authFetch(
+      `${API_BASE_URL}/parent/guardian/status?student_id=${encodeURIComponent(studentId)}`,
+      { headers: { accept: "application/json" } },
+    );
+    return response.json();
+  },
+
+  /** Emails a code to the parent address on the student's profile, to verify it after sign-up. */
+  sendParentEmailCode: async (studentId: string): Promise<void> => {
+    await authFetch(`${API_BASE_URL}/parent/guardian/email-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ student_id: studentId }),
+    });
+  },
+
+  /** The code the parent received; verifies their address and invites them. */
+  verifyParentEmail: async (studentId: string, code: string): Promise<GuardianStatus> => {
+    const response = await authFetch(`${API_BASE_URL}/parent/guardian/verify-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ student_id: studentId, code: code.trim() }),
+    });
+    return response.json();
+  },
+
+  /** Sends the invitation to the verified parent address again (`invitation_sent` says whether it went). */
+  resendGuardianInvitation: async (studentId: string): Promise<GuardianStatus> => {
+    const response = await authFetch(`${API_BASE_URL}/parent/guardian/invitation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ student_id: studentId }),
+    });
+    return response.json();
+  },
+
+  linkParent: async (studentId: string, parentEmailOrPhone: string): Promise<{ status?: string }> => {
     const response = await authFetch(`${API_BASE_URL}/parent/link`, {
       method: "POST",
       headers: {

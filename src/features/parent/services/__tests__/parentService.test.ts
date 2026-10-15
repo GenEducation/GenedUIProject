@@ -39,13 +39,20 @@ describe("parentService — request shaping", () => {
     expect(body).toEqual({ parent_id: "p1", student_id: "s1" });
   });
 
-  it("updateStudentStatus PATCHes {status} to the student status endpoint", async () => {
+  it("updateStudentStatus PATCHes {status, guardian_confirmed} to the student status endpoint when approving", async () => {
     const fetchMock = stubFetch({ student_id: "s1", parent_id: "p1", status: "APPROVED", requested_at: "now" });
     await parentService.updateStudentStatus("p1", "s1", "APPROVED");
     const { url, init, body } = firstCall(fetchMock);
     expect(url).toMatch(/\/parent\/link\/s1\/status\?parent_id=p1$/);
     expect(init.method).toBe("PATCH");
-    expect(body).toEqual({ status: "APPROVED" });
+    // Approving is the parent's explicit confirmation; the backend refuses an approval without it.
+    expect(body).toEqual({ status: "APPROVED", guardian_confirmed: true });
+  });
+
+  it("declining sends the status alone", async () => {
+    const fetchMock = stubFetch({ student_id: "s1", parent_id: "p1", status: "REJECTED", requested_at: "now" });
+    await parentService.updateStudentStatus("p1", "s1", "REJECTED");
+    expect(firstCall(fetchMock).body).toEqual({ status: "REJECTED" });
   });
 });
 

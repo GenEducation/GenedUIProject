@@ -193,6 +193,7 @@ describe("ParentHome — first run with no child connected", () => {
     render(<ParentHome />);
 
     fireEvent.click(within(await dialog()).getByRole("button", { name: "Approve Kabir" }));
+    fireEvent.click(within(await dialog()).getByRole("button", { name: /yes, i'm their parent or guardian/i }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 });

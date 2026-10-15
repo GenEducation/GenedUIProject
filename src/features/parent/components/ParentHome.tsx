@@ -8,7 +8,8 @@ import { Menu, Users, X } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { useParentStore } from "../store/useParentStore";
-import type { LinkedStudent } from "../services/parentService";
+import { parentService, type LinkedStudent } from "../services/parentService";
+import { GuardianConfirmation } from "./GuardianConfirmation";
 import { titleCase } from "@/features/student/utils/displayName";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 import dynamic from "next/dynamic";
@@ -29,7 +30,6 @@ import { greetingFor } from "../utils/homeMetrics";
 import { ParentReportPreparing } from "./loader/ParentReportPreparing";
 import { PortalBusyProvider, PortalProgressBar } from "./loader/PortalProgress";
 import { GlassSkeleton } from "./loader/GlassSkeleton";
-import { asError } from "@/utils/errors";
 
 // The GenEd logo shared for the portal (Deep Ocean + Citron).
 const LOGO_SRC = "/brand/gened-logo-deep-ocean-transparent.png";
@@ -68,80 +68,42 @@ export function ParentHome() {
   const selectedStudentId = fromUrl.view === "profile" ? null : fromUrl.studentId ?? storedStudentId;
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isLinking, setIsLinking] = useState(false);
-  const [linkingError, setLinkingError] = useState<string | null>(null);
   const [linkingSuccess, setLinkingSuccess] = useState<string | null>(null);
 
-  // Auto parent linking if search query parameters are present
-  useEffect(() => {
-    const token = searchParams.get("token");
-    const studentId = searchParams.get("student_id");
-
-    if (!token || !studentId || !parentProfile?.user_id) return;
-
-    let cancelled = false;
-    const controller = new AbortController();
-
-    async function autoLink() {
-      setIsLinking(true);
-      setLinkingError(null);
-      setLinkingSuccess(null);
-      try {
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
-
-        // 1. Verify token first
-        const verifyResp = await fetch(
-          `${API_BASE_URL}/parent/verify-token?student_id=${studentId}&token=${token}`,
-          { signal: controller.signal }
-        );
-        if (!verifyResp.ok) {
-          const errData = await verifyResp.json().catch(() => ({}));
-          throw new Error(errData.message || "Failed to verify parent token.");
-        }
-        const verifyData = await verifyResp.json();
-
-        // 2. Confirm link
-        const confirmResp = await fetch(`${API_BASE_URL}/parent/confirm-link`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("gened_auth_token")}`,
-          },
-          body: JSON.stringify({
-            student_id: studentId,
-            parent_id: parentProfile!.user_id,
-            token: token,
-          }),
-          signal: controller.signal,
-        });
-
-        if (!confirmResp.ok) {
-          const errData = await confirmResp.json().catch(() => ({}));
-          throw new Error(errData.message || "Failed to link account.");
-        }
-
-        if (!cancelled) {
-          setLinkingSuccess(`Successfully linked with student "${verifyData.student_username}"!`);
-
-          // Refresh students list in parent store
-          await fetchLinkedStudents();
-
-          // Clean URL params without page reload
-          const newUrl = window.location.pathname;
-          window.history.replaceState({}, "", newUrl);
-        }
-      } catch (err) {
-        if (!cancelled && asError(err).name !== "AbortError") {
-          setLinkingError(asError(err).message || "Failed to establish parent-student link.");
-        }
-      } finally {
-        if (!cancelled) setIsLinking(false);
+  // The invitation link from the parent's email (`/parent?token=…&student_id=…`) opens a confirmation screen
+  // (GuardianConfirmation): nothing is linked until the parent says, in so many words, that they are the child's
+  // parent or guardian. The backend links a parent to a child who verified their email whether or not they ever
+  // open this link; the link is a convenience.
+  const inviteToken = searchParams.get("token");
+  const inviteStudentId = searchParams.get("student_id");
+  const [invitationClosed, setInvitationClosed] = useState(false);
+  const showInvitation = !!inviteToken && !!inviteStudentId && !!parentProfile?.user_id && !invitationClosed;
+  const finishInvitation = useCallback(
+    (linked: boolean) => {
+      if (linked) {
+        setLinkingSuccess("You're connected. Your child's learning now shows up here.");
+        void fetchLinkedStudents();
       }
-    }
+      setInvitationClosed(true);
+      // Drop the token from the address bar without a reload.
+      window.history.replaceState({}, "", window.location.pathname);
+    },
+    [fetchLinkedStudents],
+  );
 
-    autoLink();
-    return () => { cancelled = true; controller.abort(); };
-  }, [searchParams, parentProfile, fetchLinkedStudents]);
+  // Children who named this parent's email but are already connected to another guardian account: the parent
+  // is told why they can't connect, instead of finding nothing.
+  const [otherGuardianNames, setOtherGuardianNames] = useState<string[]>([]);
+  useEffect(() => {
+    if (!parentProfile?.user_id) return;
+    let cancelled = false;
+    parentService.fetchGuardianInvitations(parentProfile.user_id).then((found) => {
+      if (!cancelled) setOtherGuardianNames(found.filter((i) => i.state === "other_guardian").map((i) => i.student_name));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [parentProfile?.user_id]);
 
   // Sync URL → state on mount / pathname change.
   //   /parent/:id, /parent/:id/analytics  → Home
@@ -216,7 +178,7 @@ export function ParentHome() {
   }, []);
   // The account-link flow (?token=) and the parent's own profile page aren't
   // about any one child, so they skip the picker.
-  const isLinkingFlow = !!searchParams.get("token");
+  const isLinkingFlow = !!inviteToken && !invitationClosed;
   const isProfilePage = pathname === "/parent/settings" || pathname === "/parent/profile";
 
   // With nothing to choose between, the tab counts as entered straight away.
@@ -509,23 +471,26 @@ export function ParentHome() {
           </div>
         </header>
 
-        {/* Auto-linking status banners */}
-        {isLinking && (
-          <div className="mx-4 mt-3 flex items-center gap-2.5 rounded-xl border border-blue-100 bg-[#eff6ff] px-5 py-3 text-xs font-bold text-blue-700 lg:mx-8">
-            <div className="h-2.5 w-2.5 animate-ping rounded-full bg-blue-500" />
-            Verifying and establishing link with your child...
-          </div>
+        {showInvitation && (
+          <GuardianConfirmation
+            token={inviteToken!}
+            studentId={inviteStudentId!}
+            parentId={parentProfile!.user_id}
+            parentEmail={parentProfile?.email}
+            onFinished={finishInvitation}
+          />
         )}
         {linkingSuccess && (
-          <div className="mx-4 mt-3 flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-xs font-bold text-emerald-700 lg:mx-8">
-            <span>🎉 {linkingSuccess}</span>
+          <div role="status" className="mx-4 mt-3 flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-xs font-bold text-emerald-700 lg:mx-8">
+            <span>{linkingSuccess}</span>
             <button onClick={() => setLinkingSuccess(null)} className="px-2 py-1 font-black hover:text-emerald-950">Dismiss</button>
           </div>
         )}
-        {linkingError && (
-          <div className="mx-4 mt-3 flex items-center justify-between rounded-xl border border-rose-100 bg-rose-50 px-5 py-3 text-xs font-bold text-rose-700 lg:mx-8">
-            <span>⚠️ {linkingError}</span>
-            <button onClick={() => setLinkingError(null)} className="px-2 py-1 font-black hover:text-rose-950">Dismiss</button>
+        {otherGuardianNames.length > 0 && (
+          <div role="note" className="mx-4 mt-3 rounded-xl border border-amber-100 bg-amber-50 px-5 py-3 text-xs font-semibold text-amber-800 lg:mx-8">
+            {otherGuardianNames.join(", ")} named your email as their parent&apos;s, but{" "}
+            {otherGuardianNames.length > 1 ? "they are" : "is"} already connected to another guardian account. A child
+            can have one guardian account on GenEd; that guardian can remove the connection in their Settings.
           </div>
         )}
 

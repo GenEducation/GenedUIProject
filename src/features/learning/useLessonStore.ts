@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { asError } from "@/utils/errors";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { DeliveryLedger, type DeliveryBinding } from "./delivery/checkDelivery";
+import { forgetPictures, preloadPicture } from "./figures";
 import { lessonService } from "./lessonService";
 import { readSseFrames } from "./sse";
 import { resolveSessionLanguage, type SessionLanguage } from "./voice/languages";
@@ -24,6 +25,23 @@ const MAX_RESUMES = 3;
 const STALE_REVISION = "CORE_3103";
 /** The backend's step conflict; its `details.reason` says which (`check_not_delivered`: the check's delivery was never confirmed). */
 const STEP_CONFLICT = "CORE_3106";
+/** A failed manifest read is tried this many more times within the step, the wait growing by this much each time. */
+const MANIFEST_RETRIES = 2;
+const MANIFEST_RETRY_MS = 300;
+/**
+ * The longest a presented figure holds its turn's words. Readiness is the picture's own load (or its failure, refreshed
+ * once); this only bounds a request that never answers, after which the words show with a retry for the picture.
+ */
+const FIGURE_WAIT_MS = 8000;
+/** The longest a new step's opening waits for the step's payload and pictures, for a read that never answers. */
+const STEP_LOAD_WAIT_MS = 10_000;
+
+/**
+ * A figure the tutor presented live on this screen: `pending` until its picture is in the manifest and decoded (the
+ * turn's words wait), `ready` once the board can draw it, `failed` when it could not load (the words show with a
+ * retry), `retrying` while that retry runs. Figures from history have no entry and never hold anything.
+ */
+export type FigureReadiness = "pending" | "ready" | "failed" | "retrying";
 
 /** What the voice session captured when a tutor reply began: which check was pending, and in which session. */
 export interface SpokenCheckMark {
@@ -58,6 +76,17 @@ interface LessonState {
   completedSteps: Array<{ instanceNodeId: string; title: string }>;
   /** The chapter report, read once the lesson completes. */
   report: ChapterReport | null;
+  /** The titles of the steps seen on this screen, by instance node id: the transcript's step boundaries name them. */
+  stepTitles: Record<string, string>;
+  /** Figures presented live on this screen, and whether the board can show them (see `FigureReadiness`). */
+  figureStatus: Record<string, FigureReadiness>;
+  /**
+   * The lesson is moving to its next step: a step command (Next step, a choice) is in flight, or the lesson has moved and
+   * the new step's opening has not started yet. A message sent now waits for it, so it is never sent on the step being left.
+   */
+  stepPending: boolean;
+  /** The step (instance node) whose payload could not be read when the lesson moved to it: said in the chat, with a retry. */
+  stepLoadError: string | null;
 
   load: (instanceId: string) => Promise<void>;
   send: (text: string) => Promise<void>;
@@ -74,6 +103,10 @@ interface LessonState {
   choose: (choice: "try_now" | "keep_going") => Promise<void>;
   askHint: (itemId: string) => Promise<void>;
   refreshManifest: () => Promise<void>;
+  /** Read the current step's payload and pictures again after `stepLoadError`; the step then opens if it never did. */
+  reloadStep: () => Promise<void>;
+  /** A presented figure that failed to load: fresh URLs, and one more try. */
+  retryFigure: (figureGroupId: string) => Promise<void>;
   focusFigure: (figureGroupId: string) => void;
   setVoiceMode: (on: boolean) => void;
   /** The session id answers and delivery confirmations carry: the voice session's while one is live, else this screen's. */
@@ -114,10 +147,15 @@ const initial = {
   notDeliveredItemId: null,
   completedSteps: [],
   report: null,
+  stepTitles: {},
+  figureStatus: {},
+  stepPending: false,
+  stepLoadError: null,
 };
 
-/** The open stream's abort handle; not state, so it never re-renders anything. */
+/** The open stream's abort handle, and the turn it streams; not state, so they never re-render anything. */
 let streamAbort: AbortController | null = null;
+let streamTurnId: string | null = null;
 /** Bumped by every load and reset: a load that is no longer the latest stops (React dev mounts twice). */
 let loadGeneration = 0;
 /** When the last tutor reply finished, for a learner message's `latency_ms`. */
@@ -127,6 +165,8 @@ const uuid = () => crypto.randomUUID();
 
 /** Check cards on screen right now, and the highest round ordinal seen per node (for the round a check is bound to). */
 const visibleChecks = new Set<string>();
+/** Replies of the live voice session (they arrive over its socket, not a turn stream). */
+const voiceTurns = new Set<string>();
 const roundsSeen = new Map<string, number>();
 
 /**
@@ -143,6 +183,23 @@ function withFigures(presented: string[], ids: string[]): string[] {
   const next = [...presented];
   for (const id of ids) if (!next.includes(id)) next.push(id);
   return next;
+}
+
+/**
+ * The learner is on a revisit step (`active_node.reason` "revisit_…") of a lesson still in progress. The step counts stay the
+ * backend's own (they can read "17 of 17" then); this only lets the screen say that revisit work is under way.
+ */
+export const isRevisiting = (instance: InstanceState | null): boolean =>
+  instance?.state === "active" && Boolean(instance.active_node?.reason?.startsWith("revisit_"));
+
+/** A turn's words wait while a figure it presented is still on its way to the board (FIGURES_IN_TEACHING_v1 §9.2). */
+export const heldForFigure = (turn: LessonTurn, status: Record<string, FigureReadiness>): boolean =>
+  turn.figureGroupIds.some((id) => status[id] === "pending");
+
+/** The last seq of a turn the learner has actually seen: none of its words while a figure holds them. */
+function visibleSeq(turn: LessonTurn, status: Record<string, FigureReadiness>): number {
+  if (!heldForFigure(turn, status)) return turn.lastSeq;
+  return (turn.deltas[0]?.seq ?? turn.lastSeq + 1) - 1;
 }
 
 /**
@@ -200,16 +257,95 @@ export const useLessonStore = create<LessonState>((set, get) => {
     }
   };
 
+  /** Fetch and decode a fresh manifest's pictures now, so each is ready before the tutor presents it (§9.2). */
+  const preloadManifest = (manifest: PresentationManifest | null) => {
+    for (const figure of Object.values(manifest?.figures ?? {})) {
+      void preloadPicture(lessonService.pictureSrc(figure.url)).catch(() => undefined);
+    }
+  };
+
+  /** The manifest, tried again a few times within the step: without it none of the step's pictures can be shown. */
+  const fetchManifest = async (instanceId: string): Promise<PresentationManifest | null> => {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await lessonService.manifest(instanceId);
+      } catch {
+        if (attempt >= MANIFEST_RETRIES || get().instanceId !== instanceId) return null;
+        await new Promise((resolve) => setTimeout(resolve, MANIFEST_RETRY_MS * (attempt + 1)));
+      }
+    }
+  };
+
   /** Reread the node's session payload and pictures (on load and whenever the active node changes). */
   const loadNode = async (instanceId: string) => {
-    const [payload, manifest] = await Promise.all([
-      lessonService.teacherPayload(instanceId),
-      lessonService.manifest(instanceId).catch(() => null),
-    ]);
-    if (get().instanceId === instanceId) {
-      set((state) => ({ payload, manifest: mergeManifest(state.manifest, manifest) }));
-      syncDeliveries();
-    }
+    const node = get().instance?.active_node?.instance_node_id;
+    const [payload, manifest] = await Promise.all([lessonService.teacherPayload(instanceId), fetchManifest(instanceId)]);
+    // Once the lesson has moved again, the newer step's read owns the screen.
+    if (get().instanceId !== instanceId || get().instance?.active_node?.instance_node_id !== node) return;
+    set((state) => ({ payload, manifest: mergeManifest(state.manifest, manifest) }));
+    preloadManifest(manifest);
+    syncDeliveries();
+  };
+
+  /** One manifest refresh at a time: every figure that needs fresh URLs waits on the same read. */
+  let refreshing: Promise<void> | null = null;
+  const refreshOnce = (): Promise<void> => {
+    refreshing ??= get()
+      .refreshManifest()
+      .catch(() => undefined)
+      .finally(() => {
+        refreshing = null;
+      });
+    return refreshing;
+  };
+
+  const setFigure = (id: string, status: FigureReadiness) =>
+    set((state) => (state.figureStatus[id] === status ? state : { figureStatus: { ...state.figureStatus, [id]: status } }));
+
+  /** Each presented figure's readiness check in flight. */
+  const figureChecks = new Map<string, Promise<void>>();
+
+  /**
+   * Make a presented figure showable: its picture in the manifest (refreshed when the id is missing) and decoded (an
+   * expired URL is refreshed once and tried again). It ends `ready` or `failed`, never left pending past FIGURE_WAIT_MS;
+   * a picture that arrives after that still turns `ready`.
+   */
+  const ensureFigure = (id: string, retrying = false): Promise<void> => {
+    if (get().figureStatus[id] === "ready") return Promise.resolve();
+    const running = figureChecks.get(id);
+    if (running) return running;
+    const instanceId = get().instanceId;
+    const current = () => get().instanceId === instanceId;
+    setFigure(id, retrying ? "retrying" : "pending");
+    const decode = async (): Promise<boolean> => {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        if (attempt > 0 || !picturesFor(get().manifest, id)[0]) await refreshOnce();
+        const picture = picturesFor(get().manifest, id)[0];
+        if (!current()) return false;
+        if (!picture) continue;
+        try {
+          await preloadPicture(picture.src);
+          return true;
+        } catch {
+          // an expired or refused URL: fresh ones, then once more
+        }
+      }
+      return false;
+    };
+    const check = (async () => {
+      const ceiling = setTimeout(() => {
+        if (current() && get().figureStatus[id] === "pending") setFigure(id, "failed");
+      }, FIGURE_WAIT_MS);
+      try {
+        const ok = await decode();
+        if (current()) setFigure(id, ok ? "ready" : "failed");
+      } finally {
+        clearTimeout(ceiling);
+        figureChecks.delete(id);
+      }
+    })();
+    figureChecks.set(id, check);
+    return check;
   };
 
   const loadReport = async (instanceId: string) => {
@@ -217,22 +353,74 @@ export const useLessonStore = create<LessonState>((set, get) => {
     if (get().instanceId === instanceId) set({ report });
   };
 
-  /** The node whose opening has not been asked for yet: set when the lesson moves on, cleared when it is asked for or no longer wanted. */
-  let openingDue: string | null = null;
-  const openIfDue = () => {
-    const node = openingDue;
-    if (!node) return;
-    const { instance, voiceSessionId, turns } = get();
-    if (voiceSessionId || instance?.state !== "active" || instance.active_node?.instance_node_id !== node) {
-      openingDue = null; // a voice session opens it on reconnecting, or the lesson has moved on again
-      return;
-    }
-    if (turns.some((t) => t.status === "streaming")) return; // asked again when that turn ends
-    openingDue = null;
-    void runTurn({ turn_id: uuid(), kind: "opening", instance_node_id: node }, null);
+  /** The step gap (`stepPending`): a message sent inside it waits for it to close. */
+  let gap: { closed: Promise<void>; close: () => void } | null = null;
+  const openGap = () => {
+    if (gap) return;
+    let close = () => {};
+    const closed = new Promise<void>((resolve) => (close = resolve));
+    gap = { closed, close };
+    set({ stepPending: true });
+  };
+  const closeGap = () => {
+    if (!gap) return;
+    gap.close();
+    gap = null;
+    set({ stepPending: false });
   };
 
-  const applyInstance = (instance: InstanceState) => {
+  /**
+   * The lesson left a step. Every turn still streaming that is not on the new step is closed here, except `cause`, the
+   * turn whose own stream moved the lesson on (its words are the reaction to what finished the step): its stream is
+   * cancelled, it shows as stopped and takes no more events, and the server is told what the learner saw of it (the same
+   * report as Stop). So nothing of the step left streams into the next, and the next step's opening (backend ADR 0006
+   * D32) is told only what the learner saw. A voice reply needs no report: its socket is replaced for the new step, and
+   * that cancels it. Resolves once the reports are in (never rejects).
+   */
+  const leaveStep = (newNode: string | null, cause: string | null): Promise<void> => {
+    const instanceId = get().instanceId;
+    const { turns, figureStatus } = get();
+    const left = turns.filter((t) => t.status === "streaming" && t.turnId !== cause && (!newNode || t.nodeId !== newNode));
+    const reports = left.map((turn) => {
+      updateTurn(turn.turnId, (t) => ({ ...t, status: "interrupted" }));
+      if (turn.turnId !== streamTurnId || !instanceId) return Promise.resolve();
+      streamAbort?.abort();
+      streamAbort = null;
+      streamTurnId = null;
+      return lessonService
+        .interruptTurn(instanceId, turn.turnId, visibleSeq(turn, figureStatus))
+        .then((out) => {
+          const through = out.transcript_through_seq;
+          if (typeof through === "number") updateTurn(turn.turnId, (t) => ({ ...t, deltas: t.deltas.filter((d) => d.seq <= through) }));
+        })
+        .catch(() => undefined);
+    });
+    return Promise.all(reports).then(() => undefined);
+  };
+
+  /**
+   * The step whose opening has not been asked for yet: set when the lesson moves on, `ready` once the step's payload and
+   * pictures are read and the step left has been closed; cleared when the opening is asked for or no longer wanted.
+   */
+  let openingDue: { node: string; ready: boolean } | null = null;
+  const openIfDue = () => {
+    const due = openingDue;
+    if (!due?.ready) return;
+    const { instance, voiceSessionId, turns } = get();
+    if (voiceSessionId || instance?.state !== "active" || instance.active_node?.instance_node_id !== due.node) {
+      openingDue = null; // a voice session opens it on reconnecting, or the lesson has moved on again
+      closeGap();
+      return;
+    }
+    // The reaction to what finished the step plays out first; asked again when it ends.
+    if (turns.some((t) => t.status === "streaming")) return;
+    openingDue = null;
+    // The opening's turn is on screen (streaming) before the gap closes, so a waiting message follows it.
+    void runTurn({ turn_id: uuid(), kind: "opening", instance_node_id: due.node }, null);
+    closeGap();
+  };
+
+  const applyInstance = (instance: InstanceState, cause: string | null = null) => {
     const previous = get().instance;
     const beforeNode = previous?.active_node;
     const ordinal = instance.active_node?.round_ordinal;
@@ -240,7 +428,13 @@ export const useLessonStore = create<LessonState>((set, get) => {
       const id = instance.active_node.instance_node_id;
       roundsSeen.set(id, Math.max(roundsSeen.get(id) ?? 0, ordinal));
     }
-    set({ instance });
+    const active = instance.active_node;
+    set((state) => ({
+      instance,
+      stepTitles: active ? { ...state.stepTitles, [active.instance_node_id]: active.title } : state.stepTitles,
+      // A step that could not load is no longer the question once the lesson is on another one.
+      stepLoadError: state.stepLoadError === (active?.instance_node_id ?? null) ? state.stepLoadError : null,
+    }));
     syncDeliveries();
     const after = instance.active_node?.instance_node_id;
     // The step we were on is finished once the lesson moves past it.
@@ -251,25 +445,62 @@ export const useLessonStore = create<LessonState>((set, get) => {
           : [...state.completedSteps, { instanceNodeId: beforeNode.instance_node_id, title: beforeNode.title }],
       }));
     }
-    if (after && after !== beforeNode?.instance_node_id) void loadNode(instance.id).catch(() => undefined);
+    const left = beforeNode && after !== beforeNode.instance_node_id ? leaveStep(after ?? null, cause) : Promise.resolve();
+    // The new step's payload is what its board and check card are drawn from: a failed read is never swallowed. It is
+    // said in the chat with a retry (`stepLoadError`), and the step is not opened over a board that cannot show it.
+    const loading: Promise<boolean> =
+      after && after !== beforeNode?.instance_node_id
+        ? loadNode(instance.id).then(
+            () => true,
+            (error) => {
+              console.warn("The lesson step couldn't load:", asError(error).request_id, asError(error).message ?? error);
+              if (get().instance?.active_node?.instance_node_id === after) set({ stepLoadError: after });
+              return false;
+            },
+          )
+        : Promise.resolve(true);
     // The lesson moved on to a new node: it opens with the tutor speaking first (backend ADR 0006 D7, D17: the client asks).
     // In a voice session the socket reconnects for the new node and the server opens it, so only a text session asks here.
-    // Asked after the turn in flight (a reaction to the answer that finished the old node) has ended, never over it.
+    // Asked once the new step's payload and pictures are read (so a figure it presents can be shown) and the step left is
+    // closed; after the reaction to the answer that finished the old node has ended, never over it.
     if (instance.state === "active" && beforeNode && after && after !== beforeNode.instance_node_id) {
-      openingDue = after;
-      queueMicrotask(openIfDue);
+      openGap();
+      const due = { node: after, ready: false };
+      openingDue = due;
+      // A read that never answers is said like a failed one (the learner can retry, and type meanwhile); should it answer
+      // after all, the step still opens then.
+      const ceiling = setTimeout(() => {
+        if (openingDue !== due) return;
+        set({ stepLoadError: after });
+        closeGap();
+      }, STEP_LOAD_WAIT_MS);
+      void Promise.all([loading, left]).then(([loaded]) => {
+        clearTimeout(ceiling);
+        if (openingDue !== due) return; // the lesson has moved again; that move owns the gap
+        if (!loaded) {
+          openingDue = null;
+          closeGap();
+          return;
+        }
+        if (get().stepLoadError === after) set({ stepLoadError: null });
+        due.ready = true;
+        openIfDue();
+      });
     }
     if (instance.state === "completed" && previous?.state !== "completed") void loadReport(instance.id).catch(() => undefined);
   };
 
   const onEvent = (turnId: string, event: SequencedTurnEvent) => {
     const before = currentTurn(turnId);
-    if (!before) return;
+    // A turn already closed on this screen takes nothing more: the learner stopped it, or the lesson left its step.
+    if (!before || before.status !== "streaming") return;
     const after = applyEvent(before, event);
     if (after === before) return; // a replayed event
     updateTurn(turnId, () => after);
-    if (event.type === "state_changed") applyInstance(event.instance);
+    if (event.type === "state_changed") applyInstance(event.instance, turnId);
     if (event.type === "figure_presented") {
+      // Pending first, so the board never draws it (or the chat shows its words) before its picture is ready.
+      void ensureFigure(event.figure_group_id);
       set((state) => ({
         presentedFigureIds: withFigures(state.presentedFigureIds, [event.figure_group_id]),
         focusedFigureId: event.figure_group_id,
@@ -308,11 +539,12 @@ export const useLessonStore = create<LessonState>((set, get) => {
     streamAbort?.abort();
     const abort = new AbortController();
     streamAbort = abort;
+    streamTurnId = request.turn_id;
     // One turn streams at a time: a still-open one is superseded (the server records it via `interrupts`).
     set((state) => ({
       turns: [
         ...state.turns.map((t) => (t.status === "streaming" ? { ...t, status: "interrupted" as const } : t)),
-        newTurn(request.turn_id, request.kind, learnerText),
+        newTurn(request.turn_id, request.kind, learnerText, request.instance_node_id),
       ],
     }));
 
@@ -341,7 +573,10 @@ export const useLessonStore = create<LessonState>((set, get) => {
       }));
       console.warn("Lesson turn failed:", request_id, message ?? error);
     } finally {
-      if (streamAbort === abort) streamAbort = null;
+      if (streamAbort === abort) {
+        streamAbort = null;
+        streamTurnId = null;
+      }
       lastReplyAt = Date.now();
       openIfDue();
     }
@@ -352,7 +587,20 @@ export const useLessonStore = create<LessonState>((set, get) => {
   /** The open turn, if one is still streaming, so a new turn can name it as interrupted. */
   const openTurnInterrupt = () => {
     const open = get().turns.findLast((t) => t.status === "streaming");
-    return open ? { turn_id: open.turnId, visible_seq: open.lastSeq } : undefined;
+    return open ? { turn_id: open.turnId, visible_seq: visibleSeq(open, get().figureStatus) } : undefined;
+  };
+
+  /** Run a step command (Next step, a choice): the step gap is open while it is in flight, and stays open if it moved the lesson. */
+  const stepCommand = async (command: () => Promise<InstanceState>) => {
+    openGap();
+    try {
+      applyInstance(await command());
+    } catch (error) {
+      await rereadIfStale(error);
+      throw error;
+    } finally {
+      if (!openingDue) closeGap();
+    }
   };
 
   /** Reread the instance after a stale-revision 409, then rethrow so the caller can show it. */
@@ -372,6 +620,9 @@ export const useLessonStore = create<LessonState>((set, get) => {
       visibleChecks.clear();
       roundsSeen.clear();
       ledger.clear();
+      figureChecks.clear();
+      openingDue = null;
+      closeGap();
       set({ ...initial, instanceId, pageSessionId: uuid(), status: "loading" });
       try {
         const [instance, history] = await Promise.all([
@@ -380,9 +631,16 @@ export const useLessonStore = create<LessonState>((set, get) => {
           lessonService.turnHistory(instanceId).catch(() => []),
         ]);
         if (generation !== loadGeneration) return;
-        const turns = history.map(fromRecorded);
+        const node = instance.active_node;
+        const turns = history.map((turn) => fromRecorded(turn, node?.instance_node_id ?? null));
         const presented = withFigures([], turns.flatMap((t) => t.figureGroupIds));
-        set({ instance, turns, presentedFigureIds: presented, focusedFigureId: presented.at(-1) ?? null });
+        set({
+          instance,
+          turns,
+          presentedFigureIds: presented,
+          focusedFigureId: presented.at(-1) ?? null,
+          stepTitles: node ? { [node.instance_node_id]: node.title } : {},
+        });
         if (instance.state === "completed") {
           // A finished lesson has no active node to load; show its report.
           await loadReport(instanceId).catch(() => undefined);
@@ -394,9 +652,8 @@ export const useLessonStore = create<LessonState>((set, get) => {
         set({ status: "ready" });
 
         // A fresh node opens with the tutor speaking first.
-        const node = instance.active_node?.instance_node_id;
         if (instance.state === "active" && node && turns.length === 0) {
-          void runTurn({ turn_id: uuid(), kind: "opening", instance_node_id: node }, null);
+          void runTurn({ turn_id: uuid(), kind: "opening", instance_node_id: node.instance_node_id }, null);
         }
       } catch (error) {
         if (generation !== loadGeneration) return;
@@ -405,6 +662,9 @@ export const useLessonStore = create<LessonState>((set, get) => {
     },
 
     send: async (text) => {
+      // Sent while the lesson moves to its next step, a message waits for that step (and its opening to start), so it is
+      // never sent on the step being left (the server would refuse it as a stale node, or answer it there).
+      if (gap) await gap.closed;
       const node = activeNodeId();
       const trimmed = text.trim();
       if (!node || !trimmed) return;
@@ -428,7 +688,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
       streamAbort?.abort();
       updateTurn(open.turnId, (t) => ({ ...t, status: "interrupted" }));
       try {
-        const out = await lessonService.interruptTurn(instanceId, open.turnId, open.lastSeq);
+        const out = await lessonService.interruptTurn(instanceId, open.turnId, visibleSeq(open, get().figureStatus));
         const through = out.transcript_through_seq;
         if (typeof through === "number") {
           updateTurn(open.turnId, (t) => ({ ...t, deltas: t.deltas.filter((d) => d.seq <= through) }));
@@ -441,7 +701,16 @@ export const useLessonStore = create<LessonState>((set, get) => {
     retry: async (turnId) => {
       const failed = currentTurn(turnId);
       const node = activeNodeId();
-      if (!failed?.failure?.retryable || !node) return;
+      // Only a turn of the step on screen: a failed turn of a step already left is not brought back into this one.
+      if (!failed || failed.status !== "failed" || !node || (failed.nodeId && failed.nodeId !== node)) return;
+      if (failed.kind === "opening") {
+        // The step never got its opening: ask for it again (a failed opening is not attached to, so this one is
+        // generated afresh), in place of the failure.
+        set((state) => ({ turns: state.turns.filter((t) => t.turnId !== turnId) }));
+        await runTurn({ turn_id: uuid(), kind: "opening", instance_node_id: node }, null);
+        return;
+      }
+      if (!failed.failure?.retryable) return;
       await runTurn({ turn_id: uuid(), kind: "regenerate", instance_node_id: node, regenerates: turnId }, failed.learnerText);
     },
 
@@ -505,23 +774,15 @@ export const useLessonStore = create<LessonState>((set, get) => {
     done: async () => {
       const { instanceId, instance } = get();
       if (!instanceId || instance?.revision === undefined) return;
-      try {
-        applyInstance(await lessonService.done(instanceId, { request_id: uuid(), expected_revision: instance.revision }));
-      } catch (error) {
-        await rereadIfStale(error);
-        throw error;
-      }
+      const revision = instance.revision;
+      await stepCommand(() => lessonService.done(instanceId, { request_id: uuid(), expected_revision: revision }));
     },
 
     choose: async (choice) => {
       const { instanceId, instance } = get();
       if (!instanceId || instance?.revision === undefined) return;
-      try {
-        applyInstance(await lessonService.choose(instanceId, { request_id: uuid(), expected_revision: instance.revision, choice }));
-      } catch (error) {
-        await rereadIfStale(error);
-        throw error;
-      }
+      const revision = instance.revision;
+      await stepCommand(() => lessonService.choose(instanceId, { request_id: uuid(), expected_revision: revision, choice }));
     },
 
     askHint: async (itemId) => {
@@ -537,7 +798,34 @@ export const useLessonStore = create<LessonState>((set, get) => {
       const { instanceId } = get();
       if (!instanceId) return;
       const manifest = await lessonService.manifest(instanceId);
-      if (get().instanceId === instanceId) set((state) => ({ manifest: mergeManifest(state.manifest, manifest) }));
+      if (get().instanceId !== instanceId) return;
+      set((state) => ({ manifest: mergeManifest(state.manifest, manifest) }));
+      preloadManifest(manifest);
+    },
+
+    reloadStep: async () => {
+      const { instanceId } = get();
+      const node = activeNodeId();
+      if (!instanceId || !node || get().stepLoadError !== node) return;
+      set({ stepLoadError: null });
+      try {
+        await loadNode(instanceId);
+      } catch (error) {
+        console.warn("The lesson step couldn't load:", asError(error).request_id, asError(error).message ?? error);
+        if (activeNodeId() === node) set({ stepLoadError: node });
+        return;
+      }
+      // The step never got its opening on this screen (nothing was said on it yet): ask for it now.
+      if (activeNodeId() === node && !get().turns.some((t) => t.nodeId === node)) {
+        openingDue = { node, ready: true };
+        openIfDue();
+      }
+    },
+
+    retryFigure: async (figureGroupId) => {
+      if (get().figureStatus[figureGroupId] !== "failed") return;
+      await refreshOnce();
+      await ensureFigure(figureGroupId, true);
     },
 
     focusFigure: (figureGroupId) => set({ focusedFigureId: figureGroupId }),
@@ -550,7 +838,13 @@ export const useLessonStore = create<LessonState>((set, get) => {
 
     setVoiceSession: (id) => {
       if (get().voiceSessionId === id) return;
-      set({ voiceSessionId: id });
+      // A reconnect is a fresh session (backend ADR 0025, no resume): a reply of the session it replaces is over, whether
+      // or not its end reached us. Left streaming, it would look like a tutor still talking on the step.
+      set((state) => ({
+        voiceSessionId: id,
+        turns: state.turns.map((t) => (t.status === "streaming" && voiceTurns.has(t.turnId) ? { ...t, status: "interrupted" as const } : t)),
+      }));
+      voiceTurns.clear();
       syncDeliveries(); // a reconnect is a new session: what is still on screen is confirmed again
     },
 
@@ -579,10 +873,11 @@ export const useLessonStore = create<LessonState>((set, get) => {
       if (currentTurn(turnId)) return;
       // A spoken reply supersedes any typed one still streaming.
       streamAbort?.abort();
+      voiceTurns.add(turnId);
       set((state) => ({
         turns: [
           ...state.turns.map((t) => (t.status === "streaming" ? { ...t, status: "interrupted" as const } : t)),
-          newTurn(turnId, "learner_message", learnerText),
+          newTurn(turnId, "learner_message", learnerText, activeNodeId()),
         ],
       }));
     },
@@ -606,6 +901,10 @@ export const useLessonStore = create<LessonState>((set, get) => {
       streamAbort = null;
       lastReplyAt = 0;
       openingDue = null;
+      closeGap();
+      figureChecks.clear();
+      voiceTurns.clear();
+      forgetPictures();
       set({ ...initial });
     },
   };

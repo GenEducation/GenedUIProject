@@ -15,6 +15,23 @@ export interface LinkedStudent {
   name?: string;
 }
 
+/** A guardian invitation the parent opened from their email (`GET /parent/verify-token`). */
+export interface GuardianInvitationToken {
+  parent_email: string;
+  student_username: string;
+  student_id: string;
+}
+
+/**
+ * A student who named and verified this parent's email (`GET /parent/guardian/invitations`).
+ * `other_guardian`: the student is already connected to another account, which this one cannot replace.
+ */
+export interface GuardianInvitation {
+  student_id: string;
+  student_name: string;
+  state: "awaiting_confirmation" | "confirmed" | "declined" | "other_guardian";
+}
+
 export interface StudyTimePoint {
   period: string;
   total_minutes: number;
@@ -185,7 +202,9 @@ export const parentService = {
         "Content-Type": "application/json",
         "accept": "application/json" 
       },
-      body: JSON.stringify({ status }),
+      // Approving is the parent's explicit confirmation that they are this child's parent or guardian; the
+      // backend refuses an approval without it.
+      body: JSON.stringify(status === "APPROVED" ? { status, guardian_confirmed: true } : { status }),
     });
 
     if (!response.ok) {
@@ -193,6 +212,45 @@ export const parentService = {
     }
 
     return response.json();
+  },
+
+  /** Checks the emailed invitation link. Public: the token is the whole authorization for reading it. */
+  verifyInvitation: async (studentId: string, token: string): Promise<GuardianInvitationToken> => {
+    const query = `student_id=${encodeURIComponent(studentId)}&token=${encodeURIComponent(token)}`;
+    const response = await fetch(`${BASE_URL}/parent/verify-token?${query}`, { headers: { accept: "application/json" } });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.message || "This invitation link is no longer valid.");
+    }
+    return response.json();
+  },
+
+  /**
+   * The parent's explicit "I am this child's parent or guardian", from the invitation link. The backend also needs
+   * the signed-in account's email to be the address the invitation was sent to.
+   */
+  confirmInvitation: async (parentId: string, studentId: string, token: string): Promise<LinkedStudent> => {
+    const response = await authFetch(`${BASE_URL}/parent/confirm-link`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ student_id: studentId, parent_id: parentId, token, guardian_confirmed: true }),
+      allow403: true, // a wrong account is the backend's 403, shown on the screen, not a sign-out
+    });
+    return response.json();
+  },
+
+  /** Students who named and verified this parent's email; also links them (PENDING) on the server. */
+  fetchGuardianInvitations: async (parentId: string): Promise<GuardianInvitation[]> => {
+    try {
+      const response = await authFetch(
+        `${BASE_URL}/parent/guardian/invitations?parent_id=${encodeURIComponent(parentId)}`,
+        { headers: { accept: "application/json" }, allow403: true },
+      );
+      const found = await response.json();
+      return Array.isArray(found) ? found : [];
+    } catch {
+      return []; // a hint for the parent, never worth breaking the portal over
+    }
   },
 
   unlinkStudent: async (parentId: string, studentId: string): Promise<void> => {

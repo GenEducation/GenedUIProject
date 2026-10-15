@@ -8,7 +8,7 @@ import { signUp, SignUpFields } from "@/features/auth/authService";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { useLoaderStore } from "@/stores/useLoaderStore";
-import { completeAndRedirect } from "@/features/auth/usePostAuthRedirect";
+import { completeAndRedirect, getRedirectParam, withRedirect } from "@/features/auth/usePostAuthRedirect";
 import { passwordRuleError } from "@/features/auth/passwordRule";
 
 const initialSignUpData: SignUpFields = {
@@ -20,6 +20,7 @@ const initialSignUpData: SignUpFields = {
   phone: "",
   otp_code: "",
   parent_email: "",
+  parent_otp_code: "",
 };
 
 export default function RegisterPage() {
@@ -47,14 +48,17 @@ export default function RegisterPage() {
         if (!emailRegex.test(signupData.email)) errs.email = "Please enter a valid email address";
         if (signupData.username?.trim() && signupData.username.trim().length < 3)
           errs.username = "Username must be at least 3 characters";
-        if (signupData.parent_email?.trim() && !emailRegex.test(signupData.parent_email))
+        if (signupData.parent_email?.trim() && !emailRegex.test(signupData.parent_email.trim()))
           errs.parent_email = "Please enter a valid parent email address";
       } else {
         if (!signupData.username?.trim()) errs.username = "Username is compulsory";
         else if (signupData.username.trim().length < 3) errs.username = "Username must be at least 3 characters";
         if (!signupData.parent_email?.trim()) errs.parent_email = "Parent or Guardian email is compulsory";
-        else if (!emailRegex.test(signupData.parent_email)) errs.parent_email = "Please enter a valid parent email address";
+        else if (!emailRegex.test(signupData.parent_email.trim())) errs.parent_email = "Please enter a valid parent email address";
       }
+      // The parent's address is verified with the code we emailed them (guardian linking).
+      if (signupData.parent_email?.trim() && !errs.parent_email && !signupData.parent_otp_code?.trim())
+        errs.parent_otp_code = "Send a code to your parent and type it here";
       if (!signupData.password.trim()) errs.password = "Password is compulsory";
       else if (passwordRuleError(signupData.password)) errs.password = passwordRuleError(signupData.password)!;
       if (!signupData.confirmPassword?.trim()) errs.confirmPassword = "Confirm Password is compulsory";
@@ -132,7 +136,9 @@ export default function RegisterPage() {
         localStorage.setItem("gened_new_user", "true");
       }
 
-      completeAndRedirect(router, `/${role}`);
+      // A parent who arrived from their invitation link goes back to it (the confirmation screen); the
+      // server links them by their verified email whether or not this survives.
+      completeAndRedirect(router, getRedirectParam(role) || `/${role}`);
     } catch (error) {
       useLoaderStore.getState().stopLoading();
       const rawMsg = error instanceof Error ? error.message : "Unable to complete signup.";
@@ -161,7 +167,7 @@ export default function RegisterPage() {
               signupData={signupData}
               onChange={handleChange}
               onSubmit={handleSubmit}
-              onSwitchToSignin={() => router.push("/login")}
+              onSwitchToSignin={() => router.push(withRedirect("/login"))}
               isSubmitting={isSubmitting}
               errors={errors}
           onGoogleSuccess={(token) => setGoogleSignUpToken(token)}

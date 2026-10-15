@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowDown } from "lucide-react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { ArrowDown, RotateCcw } from "lucide-react";
 import { animate, type AnimationPlaybackControls } from "framer-motion";
 import { useLessonStore } from "../useLessonStore";
 import { ChatTurn } from "./ChatTurn";
@@ -46,6 +46,11 @@ export function ChatPanel({
   const retry = useLessonStore((s) => s.retry);
   const setVoiceMode = useLessonStore((s) => s.setVoiceMode);
   const voiceMode = useLessonStore((s) => s.voiceMode);
+  const stepTitles = useLessonStore((s) => s.stepTitles);
+  // Moving to the next step: what is typed now would wait for it, so the box says the lesson is getting ready instead.
+  const stepPending = useLessonStore((s) => s.stepPending);
+  const stepLoadError = useLessonStore((s) => s.stepLoadError);
+  const reloadStep = useLessonStore((s) => s.reloadStep);
   const voiceAvailable = lessonVoiceEnabled();
   // Voice replies land in the same transcript; only the input area changes.
   const wantsVoice = voiceMode && voiceAvailable && status === "ready" && canTalk;
@@ -90,7 +95,7 @@ export function ChatPanel({
 
   // Follow new turns and streamed text, unless the learner has scrolled up.
   const lastTurn = turns.at(-1);
-  const contentKey = `${turns.length}:${lastTurn?.lastSeq ?? 0}:${lastTurn?.status ?? ""}`;
+  const contentKey = `${turns.length}:${lastTurn?.lastSeq ?? 0}:${lastTurn?.status ?? ""}:${stepLoadError ?? ""}`;
   useEffect(() => {
     if (atBottom && !glide.current) scrollToEnd(false);
   }, [contentKey, atBottom, scrollToEnd]);
@@ -125,9 +130,38 @@ export function ChatPanel({
               <div className="h-10 w-1/2 self-end animate-pulse rounded-2xl bg-[var(--ls-soft)]" />
             </li>
           )}
-          {turns.map((turn) => (
-            <ChatTurn key={turn.turnId} turn={turn} onShowFigure={onShowFigure} onRetry={(id) => void retry(id)} />
-          ))}
+          {turns.map((turn, i) => {
+            const before = turns[i - 1];
+            // Where the lesson moved to its next step: a quiet rule naming the new step, so what came before reads as finished.
+            const boundary = before?.nodeId && turn.nodeId && before.nodeId !== turn.nodeId;
+            return (
+              <Fragment key={turn.turnId}>
+                {boundary && (
+                  <li role="separator" aria-label={`Next step: ${stepTitles[turn.nodeId!] ?? "a new step"}`} className="flex items-center gap-3 py-1">
+                    <span aria-hidden className="h-px flex-1 bg-[var(--ls-border)]" />
+                    <span className="max-w-[70%] truncate text-[12px] font-semibold text-[var(--ls-ink-faint)]">
+                      {stepTitles[turn.nodeId!] ?? "Next step"}
+                    </span>
+                    <span aria-hidden className="h-px flex-1 bg-[var(--ls-border)]" />
+                  </li>
+                )}
+                <ChatTurn turn={turn} onShowFigure={onShowFigure} onRetry={(id) => void retry(id)} />
+              </Fragment>
+            );
+          })}
+          {stepLoadError && (
+            <li role="alert" className="flex flex-wrap items-center gap-2 text-[13px] text-[var(--ls-ink-mid)]">
+              <span>This step couldn&apos;t load.</span>
+              {/* eslint-disable-next-line no-restricted-syntax -- an inline text action in the transcript. */}
+              <button
+                type="button"
+                onClick={() => void reloadStep()}
+                className="inline-flex items-center gap-1 font-semibold text-[var(--ls-primary)] hover:underline"
+              >
+                <RotateCcw size={13} aria-hidden /> Try again
+              </button>
+            </li>
+          )}
         </ol>
 
         {!atBottom && (
@@ -147,7 +181,7 @@ export function ChatPanel({
       ) : (
       <ChatInput
         replying={replying}
-        disabled={status !== "ready" || !canTalk}
+        disabled={status !== "ready" || !canTalk || stepPending}
         onSend={onSend}
         onStop={() => void stop()}
         subject={subject}

@@ -29,6 +29,7 @@ import { useTotalStudyMinutes } from "../hooks/useTotalStudyMinutes";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
+import { GuardianInvitePopup } from "./guardian/GuardianInvitePopup";
 import { Select } from "@/components/ui/Select";
 import { subjectMascot, SubjectIcon } from "@/features/subjects/subjectPresentation";
 import { subjectsForGrade, useSubjectCatalog, useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
@@ -414,6 +415,8 @@ export function StudentHome() {
     <div className="flex h-screen overflow-hidden relative" style={{ fontFamily: "var(--font-body)", background: C.pageBg }}>
 
       <SessionStartingOverlay />
+      {/* After onboarding: tells a student whose verified parent email has no account yet how they connect. */}
+      <GuardianInvitePopup />
 
       {/* ── SIDEBAR ── */}
       <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />

@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
 import { passwordRuleError } from "@/features/auth/passwordRule";
+import { ParentEmailVerification } from "./ParentEmailVerification";
 
 interface SignUpData {
   username?: string;
@@ -22,6 +23,7 @@ interface SignUpData {
   phone?: string;
   otp_code?: string;
   parent_email?: string;
+  parent_otp_code?: string;
 }
 
 interface SignUpProps {
@@ -192,6 +194,10 @@ export function SignUp({
         } else if (!emailRegex.test(signupData.parent_email)) {
           errors.parent_email = "Invalid parent email format";
         }
+      }
+      // A parent email is verified with the code the parent received (guardian linking).
+      if (signupData.parent_email?.trim() && !errors.parent_email && !signupData.parent_otp_code?.trim()) {
+        errors.parent_otp_code = "Send a code to your parent and type it here";
       }
       if (!signupData.password.trim()) {
         errors.password = "Password is required";
@@ -376,23 +382,14 @@ export function SignUp({
                 )}
               </div>
 
-              <div>
-                <label className={labelCls}>Parent or Guardian&apos;s Email Address (Optional)</label>
-                <input
-                  name="parent_email"
-                  value={signupData.parent_email || ""}
-                  onChange={onChange}
-                  type="email"
-                  placeholder="parent@example.com"
-                  className={inputCls(!!errors.parent_email || !!localErrors.parent_email)}
-                />
-                <p className="text-[#122D30]/40 text-[9px] mt-1.5 ml-0.5 font-medium leading-relaxed">
-                  Optional. Link parent now to grant them dashboard access.
-                </p>
-                {(errors.parent_email || localErrors.parent_email) && (
-                  <p className={errorCls}>{errors.parent_email || localErrors.parent_email}</p>
-                )}
-              </div>
+              <ParentEmailVerification
+                email={signupData.parent_email || ""}
+                code={signupData.parent_otp_code || ""}
+                onChange={onChange}
+                required={false}
+                error={errors.parent_email || localErrors.parent_email}
+                codeError={errors.parent_otp_code || localErrors.parent_otp_code}
+              />
             </>
           ) : (
             <>
@@ -411,23 +408,14 @@ export function SignUp({
                 )}
               </div>
 
-              <div>
-                <label className={labelCls}>Parent or Guardian&apos;s Email Address</label>
-                <input
-                  name="parent_email"
-                  value={signupData.parent_email || ""}
-                  onChange={onChange}
-                  type="email"
-                  placeholder="parent@example.com"
-                  className={inputCls(!!errors.parent_email || !!localErrors.parent_email)}
-                />
-                <p className="text-[#122D30]/40 text-[9px] mt-1.5 ml-0.5 font-medium leading-relaxed">
-                  Required for account confirmation. Your parent will receive an email to confirm and link accounts.
-                </p>
-                {(errors.parent_email || localErrors.parent_email) && (
-                  <p className={errorCls}>{errors.parent_email || localErrors.parent_email}</p>
-                )}
-              </div>
+              <ParentEmailVerification
+                email={signupData.parent_email || ""}
+                code={signupData.parent_otp_code || ""}
+                onChange={onChange}
+                required
+                error={errors.parent_email || localErrors.parent_email}
+                codeError={errors.parent_otp_code || localErrors.parent_otp_code}
+              />
             </>
           )}
 
