@@ -18,6 +18,7 @@ import { SourceQuestionsModal } from "./SourceQuestionsModal";
 import { SourceReleaseModal } from "./SourceReleaseModal";
 import { SourceAuthoringModal } from "./SourceAuthoringModal";
 import { IngestionPathPanel } from "./IngestionPathPanel";
+import { RunOutcome, RunProgress } from "./RunStatus";
 import {
   ACTIVE_STATES,
   DELETABLE_STATES,
@@ -25,8 +26,7 @@ import {
   STARTABLE_STATES,
   type SourceState,
 } from "../types/sources";
-import { activeStatus, shownPercent } from "../utils/ingestionProgress";
-import { NEXT_STEP_COPY, UPLOAD_STEPS } from "../utils/ingestionPath";
+import { UPLOAD_STEPS } from "../utils/ingestionPath";
 
 interface SubjectRegistryProps {
   /** Open the upload form; with a chapter, prefilled from it (the next step after a run that needs a new upload). */
@@ -42,16 +42,6 @@ const STATE_OPTIONS = [
   { value: "", label: "All Statuses" },
   ...(Object.entries(SOURCE_STATE_LABELS) as [SourceState, string][]).map(([value, label]) => ({ value, label })),
 ];
-
-const STATE_CHIP: Record<SourceState, string> = {
-  registered: "bg-[#075E63]/5 text-[#122D30]/60 border-[#122D30]/10",
-  queued: "bg-amber-50 text-amber-600 border-amber-200",
-  running: "bg-[#075E63]/10 text-[#075E63] border-[#075E63]/20",
-  review_needed: "bg-sky-50 text-sky-700 border-sky-200",
-  invalid: "bg-red-50 text-red-600 border-red-200",
-  ready: "bg-[#DCEBE7]/30 text-[#122D30] border-[#122D30]/5",
-  failed: "bg-red-50 text-red-600 border-red-200",
-};
 
 const inputClass =
   "w-full px-3 py-2 bg-[#F6F7F2] border border-[#122D30]/10 focus:border-[#122D30]/40 rounded-xl text-xs font-bold text-[#122D30] outline-none placeholder:text-[#122D30]/30";
@@ -89,6 +79,20 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
       else next.add(id);
       return next;
     });
+  // The chapter just uploaded: opened, scrolled to and marked for a few seconds, so its start is seen.
+  const justUploadedId = usePartnerStore((state) => state.justUploadedId);
+  const clearJustUploaded = usePartnerStore((state) => state.clearJustUploaded);
+  const [freshId, setFreshId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!justUploadedId || !subjects.some((s) => s.id === justUploadedId)) return;
+    const id = justUploadedId;
+    clearJustUploaded();
+    setPathOpen((open) => new Set(open).add(id));
+    setFreshId(id);
+    requestAnimationFrame(() => document.querySelector(`[data-source-row="${CSS.escape(id)}"]`)?.scrollIntoView?.({ behavior: "smooth", block: "center" }));
+    const timer = setTimeout(() => setFreshId(null), 4000);
+    return () => clearTimeout(timer);
+  }, [justUploadedId, subjects, clearJustUploaded]);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   // Re-running a chapter whose run produced results (ready / review_needed) needs a confirm: the new run
@@ -200,12 +204,12 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
         <button
           onClick={() => onUploadClick()}
-          className="flex items-center justify-center gap-3 px-6 py-3 bg-[#075E63] text-white rounded-2xl hover:bg-[#075E63]/90 transition-all shadow-[0_8px_30px_rgba(18,45,48,0.2)] group"
+          className="flex shrink-0 items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 whitespace-nowrap bg-[#075E63] text-white rounded-2xl hover:bg-[#075E63]/90 transition-all shadow-[0_8px_30px_rgba(18,45,48,0.2)] group"
         >
           <div className="bg-white/10 p-1 rounded-lg">
             <Plus size={18} />
           </div>
-          <span className="text-sm font-bold tracking-tight">Upload Curriculum</span>
+          <span className="text-sm font-bold tracking-tight">Upload<span className="hidden sm:inline"> Curriculum</span></span>
         </button>
       </div>
 
@@ -340,15 +344,12 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             const busy = busyId === subject.id;
             // A chapter waiting on questions says so with its button; its raw detail names server paths.
             const awaitingAnswers = subject.state === "review_needed" && subject.questions > 0;
-            const explain = subject.detail && ["failed", "invalid", "review_needed"].includes(subject.state) && !awaitingAnswers;
             // The server's next step; a re-run of an upload whose failed checks are the partner's would end the same way.
             const next = subject.outcome?.next_step ?? null;
             const canRunAgain = STARTABLE_STATES.has(subject.state) && (subject.outcome?.can_run_again ?? true);
             // A chapter the partner can complete with questions of their own offers that first; uploading stays in its path.
             const addQuestions = next === "add_questions";
             const needsUpload = next !== null && UPLOAD_STEPS.has(next) && !addQuestions;
-            const status = activeStatus(subject.state, subject.progress);
-            const percent = shownPercent(subject.state, subject.progress);
             const showPath = pathOpen.has(subject.id);
             // Published: live for students, nothing left to review (the server's next step is `none`).
             const live = subject.state === "ready" && subject.release?.state === "published";
@@ -360,7 +361,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
                 onClick={() => openIngestedPdf(subject)}
-                className="group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-transparent hover:border-[#122D30]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all overflow-hidden cursor-pointer"
+                data-source-row={subject.id}
+                className={`@container/row group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border ${freshId === subject.id ? "border-[#075E63]/40 ring-4 ring-[#075E63]/10" : "border-transparent"} hover:border-[#122D30]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all overflow-hidden cursor-pointer`}
               >
                 <div className="flex-1 flex items-center gap-3 md:gap-4 min-w-0">
                   {/* Left Side Highlight bar */}
@@ -368,57 +370,44 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
                   {/* Chapter Details */}
                   <div className="flex-1 flex flex-col min-w-0">
-                    <div className="flex items-center justify-between pr-4 w-full gap-3">
-                      {/* Left: Chapter, book & grade */}
-                      <div className="flex flex-col gap-0.5 group-hover:translate-x-1 transition-transform w-[240px] md:w-[320px] shrink-0 min-w-0">
+                    {/* Laid out by the row's own width, not the window's (the sidebar takes a share of it): one line when
+                        wide; the title beside its actions over the run when medium; stacked when narrow. */}
+                    <div className="grid w-full items-center gap-x-5 gap-y-3 pr-1 md:pr-3 grid-cols-1 [grid-template-areas:'title'_'status'_'actions'] @[600px]/row:grid-cols-[minmax(0,1fr)_auto] @[600px]/row:[grid-template-areas:'title_actions'_'status_status'] @[1040px]/row:grid-cols-[minmax(240px,320px)_minmax(0,1fr)_auto] @[1040px]/row:[grid-template-areas:'title_status_actions']">
+                      {/* Chapter, book & grade */}
+                      <div className="flex flex-col gap-0.5 group-hover:translate-x-1 transition-transform min-w-0 [grid-area:title]">
                         <h3 className="text-base md:text-lg font-bold text-[#122D30] tracking-tight truncate">
                           {subject.title}
                         </h3>
-                        <p className="text-[11px] font-bold text-[#122D30]/50 ml-[2px] uppercase tracking-wider truncate">
+                        <p className="text-[11px] lg:text-[12px] font-bold text-[#122D30]/50 ml-[2px] uppercase tracking-wider truncate">
                           {subject.book_title} · Ch {subject.chapter_ordinal} · Grade {subject.grade}
+                          {/* Narrow rows have no room for the subject chip; it reads here instead. */}
+                          <span className="@[600px]/row:hidden"> · {subject.subject}</span>
                         </p>
-                        {status && (
-                          <p
-                            role="status"
-                            className={`flex items-center gap-1.5 text-[11px] font-semibold ml-[2px] min-w-0 ${subject.state === "running" ? "text-[#075E63]" : "text-amber-700/80"}`}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            pill
+                            aria-expanded={showPath}
+                            aria-controls={`path-${subject.id}`}
+                            leadingIcon={<Route size={14} aria-hidden />}
+                            onClick={(e) => { e.stopPropagation(); togglePath(subject.id); }}
                           >
-                            <span
-                              aria-hidden
-                              className={`h-1.5 w-1.5 shrink-0 rounded-full motion-safe:animate-pulse ${subject.state === "running" ? "bg-[#075E63]" : "bg-amber-500"}`}
-                            />
-                            <span className="truncate">{status.line}</span>
-                            {status.step && <span className="shrink-0 text-[#122D30]/40">· {status.step}</span>}
-                          </p>
-                        )}
-                        {explain && (
-                          <p
-                            className={`text-[11px] ml-[2px] truncate ${subject.state === "review_needed" ? "text-sky-700/80" : "text-red-600/80"}`}
-                            title={subject.detail ?? undefined}
-                          >
-                            {subject.state === "invalid" && next ? NEXT_STEP_COPY[next].title : subject.detail}
-                          </p>
-                        )}
-                        {/* eslint-disable-next-line no-restricted-syntax -- inline text link under the title, not a sized action button */}
-                        <button
-                          type="button"
-                          aria-expanded={showPath}
-                          aria-controls={`path-${subject.id}`}
-                          onClick={(e) => { e.stopPropagation(); togglePath(subject.id); }}
-                          className="self-start ml-[2px] mt-0.5 inline-flex items-center gap-1 text-[11px] font-black text-[#075E63] hover:underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#122D30]/40 rounded"
-                        >
-                          <Route size={12} aria-hidden /> {showPath ? "Hide ingestion path" : "Show ingestion path"}
-                          <ChevronDown size={12} aria-hidden className={`transition-transform ${showPath ? "rotate-180" : ""}`} />
-                        </button>
-                        {subject.has_report && (
-                          // eslint-disable-next-line no-restricted-syntax -- inline text link under the title, not a sized action button
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); setReportFor(subject); }}
-                            className="self-start ml-[2px] mt-0.5 inline-flex items-center gap-1 text-[11px] font-black text-[#122D30] underline decoration-[#122D30]/30 underline-offset-2 hover:decoration-[#122D30] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#122D30]/40 rounded"
-                          >
-                            <FileText size={12} aria-hidden /> {subject.state === "ready" ? "View report" : "See what needs fixing"}
-                          </button>
-                        )}
+                            {showPath ? "Hide run details" : "Run details"}
+                            <ChevronDown size={14} aria-hidden className={`transition-transform ${showPath ? "rotate-180" : ""}`} />
+                          </Button>
+                          {subject.has_report && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              pill
+                              leadingIcon={<FileText size={14} aria-hidden />}
+                              onClick={(e) => { e.stopPropagation(); setReportFor(subject); }}
+                            >
+                              {subject.state === "ready" ? "Report" : "What needs fixing"}
+                            </Button>
+                          )}
+                        </div>
                         {subject.excluded_pages?.status === "pending" && (
                           // The server cut a solutions appendix at upload; publishing waits until the partner answers.
                           <div
@@ -454,39 +443,35 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                         )}
                       </div>
 
-                      {/* Middle: Subject */}
-                      <div className="hidden sm:flex flex-1 items-center min-w-0">
-                        <span className="text-sm font-bold text-[#122D30]/70 bg-[#075E63]/5 px-4 py-1.5 rounded-xl border border-[#122D30]/10 truncate">
+                      {/* Subject, and the run: its phases while it runs, what it means once it has finished */}
+                      <div className="flex min-w-0 items-center gap-4 @[1040px]/row:gap-6 [grid-area:status]">
+                        <span title={subject.subject} className="hidden @[600px]/row:inline-block w-[128px] lg:w-[148px] shrink-0 text-center text-sm lg:text-[15px] font-bold text-[#122D30]/70 bg-[#075E63]/5 px-3 py-1.5 rounded-xl border border-[#122D30]/10 truncate">
                           {subject.subject}
                         </span>
+                        <div className="min-w-0 flex-1">
+                          {isRunning ? <RunProgress subject={subject} /> : <RunOutcome subject={subject} />}
+                        </div>
                       </div>
 
-                      {/* Right: State & Actions */}
-                      <div className="flex shrink-0 items-center gap-3 ml-4">
-                        {awaitingAnswers ? (
+                      {/* Actions (on one line, one minimum width, so every row's status starts at the same place; they wrap
+                          rather than overflow when the row is narrow) */}
+                      <div className="flex flex-wrap items-center justify-start gap-2.5 [grid-area:actions] @[600px]/row:justify-end @[1040px]/row:min-w-[240px]">
+                        {/* The state itself is the middle's sentence; here only what can be done about it. */}
+                        {awaitingAnswers && (
                           <Button
-                            size="sm"
                             pill
-                            leadingIcon={<HelpCircle size={13} />}
+                            leadingIcon={<HelpCircle size={16} />}
                             onClick={(e) => { e.stopPropagation(); setQuestionsFor(subject); }}
                           >
                             {subject.questions === 1 ? "Answer 1 question" : `Answer ${subject.questions} questions`}
                           </Button>
-                        ) : (
-                          <span
-                            className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-colors ${live ? "bg-emerald-50 text-emerald-700 border-emerald-200" : STATE_CHIP[subject.state]}`}
-                          >
-                            {live ? "Live" : SOURCE_STATE_LABELS[subject.state]}
-                            {percent !== null && <span className="ml-1 tabular-nums">{percent}%</span>}
-                          </span>
                         )}
 
                         {subject.state === "ready" && !live && (
                           <Button
-                            size="sm"
                             pill
                             variant="secondary"
-                            leadingIcon={<ShieldCheck size={13} />}
+                            leadingIcon={<ShieldCheck size={16} />}
                             onClick={(e) => { e.stopPropagation(); setReleaseFor(subject); }}
                           >
                             Review &amp; publish
@@ -495,9 +480,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
                         {addQuestions && (
                           <Button
-                            size="sm"
                             pill
-                            leadingIcon={<PenLine size={13} />}
+                            leadingIcon={<PenLine size={16} />}
                             onClick={(e) => { e.stopPropagation(); setAuthoringFor(subject); }}
                           >
                             Add questions
@@ -506,9 +490,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
                         {needsUpload && (
                           <Button
-                            size="sm"
                             pill
-                            leadingIcon={<Upload size={13} />}
+                            leadingIcon={<Upload size={16} />}
                             onClick={(e) => { e.stopPropagation(); onUploadClick(subject); }}
                           >
                             Upload again
@@ -519,38 +502,35 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           subject.state === "registered" ? (
                             <Button
                               iconOnly
-                              size="sm"
                               variant="outline"
                               aria-label="Start ingestion"
                               title="Start ingestion"
                               loading={busy}
                               onClick={(e) => { e.stopPropagation(); void runAction(subject, startIngestion); }}
                             >
-                              <Play size={14} />
+                              <Play size={18} />
                             </Button>
                           ) : subject.state === "failed" || subject.state === "invalid" ? (
                             <Button
                               iconOnly
-                              size="sm"
                               variant="outline"
                               aria-label="Retry ingestion"
                               title="Retry"
                               loading={busy}
                               onClick={(e) => { e.stopPropagation(); void runAction(subject, startIngestion); }}
                             >
-                              <RotateCw size={14} />
+                              <RotateCw size={18} />
                             </Button>
                           ) : (
                             <Button
                               iconOnly
-                              size="sm"
                               variant="outline"
                               aria-label="Run ingestion again"
                               title="Run again"
                               loading={busy}
                               onClick={(e) => { e.stopPropagation(); setRerunFor(subject); }}
                             >
-                              <RotateCw size={14} />
+                              <RotateCw size={18} />
                             </Button>
                           )
                         )}
@@ -558,13 +538,12 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                         {subject.state === "queued" && (
                           <Button
                             iconOnly
-                            size="sm"
                             variant="destructive"
                             aria-label="Stop Ingestion"
                             loading={busy}
                             onClick={(e) => { e.stopPropagation(); void runAction(subject, cancelIngestion); }}
                           >
-                            <Square size={14} className="fill-current" />
+                            <Square size={16} className="fill-current" />
                           </Button>
                         )}
 
@@ -572,13 +551,12 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           <span className="relative inline-flex">
                             <Button
                               iconOnly
-                              size="sm"
                               variant="outline"
                               aria-label={pendingVisuals > 0 ? `Review visuals (${pendingVisuals} to review)` : "Review visuals"}
                               title="Teaching visuals"
                               onClick={(e) => { e.stopPropagation(); setVisualsFor(subject); }}
                             >
-                              <Images size={16} />
+                              <Images size={19} />
                             </Button>
                             {pendingVisuals > 0 && (
                               <span
@@ -592,40 +570,14 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                         )}
 
                         {DELETABLE_STATES.has(subject.state) && (
-                          <Button iconOnly size="sm" variant="destructive" aria-label="Delete" onClick={(e) => { e.stopPropagation(); setDeleteId(subject.id); }}>
-                            <Trash2 size={18} />
+                          <Button iconOnly variant="destructive" aria-label="Delete" onClick={(e) => { e.stopPropagation(); setDeleteId(subject.id); }}>
+                            <Trash2 size={19} />
                           </Button>
                         )}
                       </div>
                     </div>
                   </div>
                 </div>
-
-                {/* Progress bar while queued or running: the run's real percent once it reports one, a sweep until then */}
-                {isRunning && (
-                  <div
-                    role="progressbar"
-                    aria-label={`${subject.title} ingestion progress`}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={percent ?? undefined}
-                    aria-valuetext={percent !== null ? `${percent}%` : status?.line}
-                    className={`absolute bottom-0 left-0 right-0 overflow-hidden ${percent !== null ? "h-1.5 bg-[#DCEBE7]/60" : "h-1 bg-[#DCEBE7]/20"}`}
-                  >
-                    {percent !== null ? (
-                      <div
-                        className="h-full rounded-r-full bg-[#075E63] transition-[width] duration-[1200ms] ease-out"
-                        style={{ width: `${Math.max(percent, 2)}%` }}
-                      />
-                    ) : (
-                      <motion.div
-                        animate={{ x: ["-100%", "100%"] }}
-                        transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                        className={`h-full w-1/2 ${subject.state === "queued" ? "bg-amber-400" : "bg-[#075E63]"}`}
-                      />
-                    )}
-                  </div>
-                )}
 
               </motion.div>
               {showPath && (
@@ -725,6 +677,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         onAddQuestions={setAuthoringFor}
         onUploadAgain={(subject) => onUploadClick(subject)}
         onReviewVisuals={setVisualsFor}
+        onReviewRelease={setReleaseFor}
       />
 
       {/* Visual review popup */}

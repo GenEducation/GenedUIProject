@@ -216,6 +216,75 @@ function AddChildGuide({ email }: { email?: string }) {
 }
 
 /** Who's signed in, and the two things they can do about it. */
+/**
+ * The parent's own name (`PUT /parent/profile`), which their connected child sees on their profile. Parents who
+ * signed up before names were asked for add it here; the username stands in until they do.
+ */
+function ParentNameRow({ profile }: { profile?: ParentProfile | null }) {
+  const saved = profile?.name?.trim() || "";
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(saved);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const save = async () => {
+    const value = draft.trim();
+    if (!value) return setError("Please enter your name.");
+    if (value.length > 80) return setError("Your name must be at most 80 characters.");
+    setSaving(true);
+    setError("");
+    try {
+      const stored = await parentService.updateParentName(value);
+      const current = useParentStore.getState().parentProfile;
+      if (current) useParentStore.getState().setParentProfile({ ...current, name: stored });
+      setEditing(false);
+    } catch {
+      setError("Couldn't save your name. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 rounded-2xl border border-white/90 bg-white/65 px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <p id="parent-name-label" className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--pp-ink-soft)]">
+          Your name
+        </p>
+        {!editing && (
+          <Button variant="tertiary" size="sm" onClick={() => { setDraft(saved); setEditing(true); }}>
+            {saved ? "Edit" : "Add"}
+          </Button>
+        )}
+      </div>
+      {editing ? (
+        <div className="mt-1.5 space-y-2">
+          <input
+            aria-labelledby="parent-name-label"
+            value={draft}
+            maxLength={80}
+            autoComplete="name"
+            onChange={(e) => setDraft(e.target.value)}
+            className="w-full rounded-xl border border-[var(--pp-ink)]/15 bg-white px-3 py-2 text-[14px] text-[var(--pp-ink)]"
+          />
+          {error && <p role="alert" className="text-[12px] font-semibold text-rose-600">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setEditing(false)} disabled={saving}>
+              Cancel
+            </Button>
+            <Button variant="primary" size="sm" onClick={save} loading={saving} disabled={saving}>
+              Save
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-0.5 truncate text-[14px] font-semibold text-[var(--pp-ink)]">{saved || "Not added"}</p>
+      )}
+      <p className="mt-1 text-[11.5px] text-[var(--pp-ink-soft)]">Your child sees this name once you&apos;re connected.</p>
+    </div>
+  );
+}
+
 function AccountCard({ profile }: { profile?: ParentProfile | null }) {
   const logoutParent = useParentStore((s) => s.logoutParent);
   const name = titleCase(profile?.name?.trim() || profile?.username || "Parent");
@@ -235,7 +304,9 @@ function AccountCard({ profile }: { profile?: ParentProfile | null }) {
         </div>
       </div>
 
-      <dl className="mt-4 rounded-2xl border border-white/90 bg-white/65 px-4 py-3">
+      <ParentNameRow profile={profile} />
+
+      <dl className="mt-2.5 rounded-2xl border border-white/90 bg-white/65 px-4 py-3">
         <dt className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--pp-ink-soft)]">Email</dt>
         <dd className="mt-0.5 truncate text-[14px] font-semibold text-[var(--pp-ink)]" title={profile?.email}>{profile?.email || "Not added"}</dd>
       </dl>

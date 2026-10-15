@@ -228,8 +228,8 @@ export function LabDevicePairingWizard({
                   )}
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-[1fr_220px]">
-                  <div>
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+                  <div className="min-w-0">
                     <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#122D30]/50">
                       Code shown on device
                     </label>

@@ -46,3 +46,31 @@ export function formatEstimate(minutes: number): string {
   const m = total % 60;
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
+
+/**
+ * The lesson header's clock: this chapter's credited time (`useChapterTime`) in seconds, counting on between the
+ * server's reads while the tab is visible, so it runs like a clock rather than jumping a minute at a time. Each read
+ * puts it back on the server's figure, which stays the truth (credited presence across every sitting, never the wall
+ * clock). `null` until the server has answered once.
+ */
+export function useChapterClock(studentId: string | undefined, chapterId: string | undefined): number | null {
+  const minutes = useChapterTime(studentId, chapterId);
+  const [extra, setExtra] = useState<{ base: number | null; seconds: number }>({ base: null, seconds: 0 });
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      setExtra((e) => ({ ...e, seconds: e.seconds + 1 }));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  if (minutes === null) return null;
+  const base = Math.round(minutes * 60);
+  // A new read restarts the count from the server's figure.
+  if (extra.base !== base) {
+    setExtra({ base, seconds: 0 });
+    return base;
+  }
+  return base + extra.seconds;
+}

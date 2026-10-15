@@ -4,6 +4,9 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import { ReportCardScreen } from "../screen/ReportCardScreen";
 import type { ReportCardData, ReportCardUI } from "../types";
 import { makeData } from "./fixtures";
+import { http, HttpResponse } from "msw";
+import { server } from "@/test/msw/server";
+import { ReportExtrasProvider } from "../sections/ReportExtras";
 
 function Harness({ data = makeData(), onStartSession }: { data?: ReportCardData; onStartSession?: () => void }) {
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -135,7 +138,10 @@ describe("ReportCardScreen — the new backend's chapters", () => {
     expect(within(practise).getByText("Getting there")).toBeInTheDocument();
     expect(screen.getByText("AI learning insights")).toBeInTheDocument();
     expect(screen.getByText("Subject trends")).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Report summary" })).getByText("Coming soon")).toBeInTheDocument();
+    // No tests on the new backend: the header shows estimated study time in their place (— until the activity read lands).
+    const header = within(screen.getByRole("region", { name: "Report summary" }));
+    expect(header.getByText("Study time (est.), 30 days")).toBeInTheDocument();
+    expect(header.queryByText("Tests")).not.toBeInTheDocument();
 
     fireEvent.click(subjectRow(/^Mathematics:/));
     fireEvent.click(await screen.findByRole("button", { name: /View chapter breakdown/ }));
@@ -148,7 +154,70 @@ describe("ReportCardScreen — the new backend's chapters", () => {
     expect(within(detail).getByText("Got it")).toBeInTheDocument();
     expect(within(detail).getByText("SYNTHETIC outcome")).toBeInTheDocument();
 
-    fireEvent.click(within(detail).getByRole("tab", { name: "Tests" }));
-    expect(await screen.findByText("Chapter tests")).toBeInTheDocument();
+    expect(within(detail).queryByRole("tab", { name: "Tests" }), "no chapter tests on the new backend").not.toBeInTheDocument();
+    expect(within(detail).getByRole("tab", { name: "Insights" })).toBeInTheDocument();
+  });
+});
+
+describe("ReportCardScreen — the sections the new backend added", () => {
+  const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
+  const day = (n: number, answers: number) => ({
+    period: new Date(Date.UTC(2026, 9, 14) - n * 86_400_000).toISOString().slice(0, 10), answers, correct: answers, minutes: answers * 10,
+    active_days: answers ? 1 : 0, skills_levelled_up: null,
+  });
+  const point = (week: string, share: number | null) => ({ week, known_share: share, measured: share == null ? 0 : 4, known: 0, levelled_up: 0 });
+  const chapter = (over: object) => ({
+    subject: "Mathematics", subject_code: "mathematics", document_title: "SYNTHETIC Fractions", completion_percentage: 50, mastery_score: 0.5, study_count: 1,
+    grade: 6, status: "in_progress", chapter_id: "c-1", instance_id: "i-1", book_title: "SYNTHETIC Book", nodes_done: 3, nodes_total: 6,
+    answered: 10, correct: 8, outcomes: [], skills: [{ component_id: "add", title: "SYNTHETIC add", level: "got_it", status: null, due: false, needs_adult_support: false }],
+    help: { correct_alone: 6, correct_with_help: 2, hints_used: 3 }, time_minutes: 75, last_active_at: new Date().toISOString(), ...over,
+  });
+  const data = makeData({
+    totalSessions: 1,
+    subjects: [{ subject: "Mathematics", overall_score: 0.5, skill_index: 0, adaptive_mode: "", session_count: 1 }],
+    chapters: [chapter({}) as never],
+    skillTree: [], testSubmissions: [], progressReport: null, subjectEvolutions: [], chapterEvolutions: [],
+  });
+
+  function renderWithBackend() {
+    localStorage.setItem("gened_auth_token", "token-synthetic");
+    server.use(
+      http.get(`${BASE}/v1/learner/activity`, () => HttpResponse.json({ start: day(83, 0).period, end: day(0, 0).period, measurement: "estimated", measured_since: null,
+        periods: Array.from({ length: 84 }, (_, i) => day(83 - i, i === 83 ? 4 : i === 82 ? 2 : 0)) })),
+      http.get(`${BASE}/students/s-1/streak`, () => HttpResponse.json({ current_streak: 2, longest_streak: 5 })),
+      http.get(`${BASE}/v1/learner/trends`, () => HttpResponse.json({ weeks: ["a", "b", "c"], overall: [],
+        subjects: [{ subject_code: "mathematics", points: [point("a", null), point("b", 0.25), point("c", 0.75)] }] })),
+      http.get(`${BASE}/v1/learner/misconceptions`, () => HttpResponse.json({ misconceptions: [{ misconception_id: "m", title: "SYNTHETIC idea", chapter_id: "c-1",
+        chapter_title: "SYNTHETIC Fractions", subject_code: "mathematics", first_seen_at: "2026-10-01T10:00:00Z", last_seen_at: "2026-10-10T10:00:00Z", times_seen: 1, resolved: false }] })),
+    );
+    const ui: ReportCardUI = {
+      variant: "screen", role: "student", isSubjectOpen: () => false, toggleSubject: () => {}, isExpOpen: () => false, toggleExp: () => {},
+      isClampOpen: () => false, toggleClamp: () => {}, onPrint: () => {}, canDownload: false,
+    };
+    const summary = { help: { correct_alone: 6, correct_with_help: 2, hints_used: 3 }, answered: 10, correct: 8 };
+    return render(
+      <ReportExtrasProvider who={{ role: "student", studentId: "s-1" }} summary={summary}>
+        <ReportCardScreen data={data} ui={ui} />
+      </ReportExtrasProvider>,
+    );
+  }
+
+  it("fills the header with study time and right answers alone vs with help, and the overview with activity and mix-ups", async () => {
+    renderWithBackend();
+
+    const header = within(screen.getByRole("region", { name: "Report summary" }));
+    expect(await header.findByText("1h")).toBeInTheDocument(); // (4 + 2) answers x 10 minutes
+    expect(header.getByText("75% of right answers on their own")).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Activity" })).toBeInTheDocument();
+    expect(await screen.findByText("SYNTHETIC idea")).toBeInTheDocument();
+    // Study time reaches the chapter and subject too, as an estimate.
+    fireEvent.click(subjectRow(/^Mathematics:/));
+    expect(await screen.findByText("1h 15m")).toBeInTheDocument();
+  });
+
+  it("draws each subject's trend from the weekly share of skills known, skipping weeks nothing was measured", async () => {
+    renderWithBackend();
+    // 25% to 75%: up 50 points (the section swaps from loading to the lines, so it is found again each time).
+    await waitFor(() => expect(within(screen.getByRole("region", { name: /subject trends/i })).getByText("+50%")).toBeInTheDocument());
   });
 });

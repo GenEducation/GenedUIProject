@@ -35,12 +35,13 @@ export function EnrollmentAdmin() {
   return (
     <div className="flex-1 px-4 md:px-12 pt-8 md:pt-12 pb-8 bg-white flex flex-col min-h-0 overflow-y-auto lg:overflow-hidden">
       {/* Main Content Grid */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 min-h-0 overflow-visible lg:overflow-hidden scrollbar-hide">
+      {/* Stacked (below lg), each card is as tall as its content; side by side, they share the screen's height. */}
+      <div className="lg:flex-1 grid grid-cols-1 content-start lg:content-normal lg:grid-cols-12 gap-6 md:gap-8 min-h-0 overflow-visible lg:overflow-hidden scrollbar-hide">
         {/* Left: Student Registry Table */}
         <StudentRegistryTable />
 
         {/* Right: Sidebar Cards */}
-        <div className="lg:col-span-4 flex flex-col gap-6 md:gap-8 min-h-0 h-full">
+        <div className="lg:col-span-4 flex flex-col gap-6 md:gap-8 min-h-0 lg:h-full">
           <TotalEnrollmentsStat />
           <PendingRequestsSidebar />
         </div>

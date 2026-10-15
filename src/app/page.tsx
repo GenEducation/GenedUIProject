@@ -453,7 +453,7 @@ export default function HomePage() {
         <div className="wrap reveal">
           <h2>Give your child the learning companion they deserve.</h2>
           <p>GenEd is live and ready — a focused, distraction-free AI tutor that actually adapts to how your child learns.</p>
-          <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
+          <div className="cta-row">
             <Link className="btn btn-citron" href="/pre-order">{campaignLabel("Pre-order the Deskbot")} <svg className="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></Link>
             <Link className="btn btn-ghost" href={registerHref} style={{ color: "#fff", borderColor: "rgba(255,255,255,0.35)" }}>Get started free</Link>
           </div>

@@ -10,6 +10,9 @@ import { calculation } from "../check/arithmetic";
 import { useCheckShown } from "../delivery/useCheckShown";
 import type { AnswerResponse, AnswerResult, CheckItem } from "../types";
 import { BoardFigure } from "./BoardFigure";
+import { MathField, type MathFieldHandle } from "../math/MathField";
+import { answerFromField, calcTextFromField } from "../math/latex";
+import { isMathsSubject } from "./ChatInput";
 
 /** The structured answer each check type is scored from (backend `gened_assessment/scorer.py`). */
 export function responseFor(check: CheckItem, value: string): AnswerResponse {
@@ -89,7 +92,7 @@ function SketchButton({
 
 const cardClass = "lesson-rise lesson-sketch shrink-0 p-5 text-[var(--ls-ink)]";
 
-function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: AnswerResult) => void }) {
+function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (r: AnswerResult) => void; subject: string | null }) {
   const t = useUiText();
   const answer = useLessonStore((s) => s.answer);
   const askHint = useLessonStore((s) => s.askHint);
@@ -99,6 +102,18 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
   useCheckShown(cardRef, check.id);
   const [selected, setSelected] = useState<string | null>(null);
   const [typed, setTyped] = useState("");
+  // A maths lesson's answer box is typed like any other, with maths from its `/` menu: it holds LaTeX, and `typed` is
+  // what is sent (the words as typed, the maths in the checker's form). Other subjects keep the plain box.
+  const [answerLatex, setAnswerLatex] = useState("");
+  const isMath = isMathsSubject(subject);
+  // The field's value as of the last key, so an Enter typed right after it sends what is in the box.
+  const latexNow = useRef("");
+  const mathRef = useRef<MathFieldHandle>(null);
+  const onMath = (latex: string) => {
+    latexNow.current = latex;
+    setAnswerLatex(latex);
+    setTyped(answerFromField(latex));
+  };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isChoice = check.response_type === "mcq";
@@ -106,11 +121,13 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
   // A calculation typed as the answer ("540 * 40", "sqrt(144)") is worked out as they type. There are no
   // calculator keys: whatever they type (2^3, pi, log 100, sin 30…) is worked out. For a number answer its
   // result is what's sent; for an expression or words, what they typed is (√2 stays √2), and the result only helps.
-  const sum = isTyped ? calculation(typed) : null;
+  const sum = isTyped ? calculation(isMath && answerLatex ? calcTextFromField(answerLatex) : typed) : null;
 
   useEffect(() => {
     setSelected(null);
     setTyped("");
+    setAnswerLatex("");
+    latexNow.current = "";
     setError(null);
     // A new question starts at its top, whatever the dock was scrolled to for the last one.
     cardRef.current?.closest<HTMLElement>("[data-no-pan]")?.scrollTo?.({ top: 0 });
@@ -118,9 +135,12 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    // A maths answer is read from the field as it is now, not from the last render.
+    const answerNow = isMath ? answerFromField(latexNow.current) : typed;
+    const sumNow = isMath ? calculation(latexNow.current ? calcTextFromField(latexNow.current) : "") : sum;
     const response: AnswerResponse | null = isChoice
       ? selected ? { kind: "choice", option_ids: [selected] } : null
-      : typed.trim() ? responseFor(check, check.response_type === "numeric" ? sum ?? typed : typed) : null;
+      : answerNow.trim() ? responseFor(check, check.response_type === "numeric" ? sumNow ?? answerNow : answerNow) : null;
     if (!response) return;
     setBusy(true);
     setError(null);
@@ -172,6 +192,34 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
 
       {isTyped && (
         <div className="mt-4">
+          {isMath ? (
+            <>
+              {/* The whole answer line takes a click, its padding and dashed rule too, not only the field inside it. */}
+              <div
+                onMouseDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
+                  e.preventDefault();
+                  mathRef.current?.focus();
+                }}
+                className="lesson-answer-field cursor-text border-b-2 border-dashed border-[var(--ls-ink-faint)] px-1 py-2 text-[20px] text-[var(--ls-ink)] focus-within:border-solid focus-within:border-[var(--ls-primary)]"
+              >
+                <MathField
+                  ref={mathRef}
+                  value={answerLatex}
+                  onChange={onMath}
+                  onEnter={(now) => { latexNow.current = now; cardRef.current?.requestSubmit(); }}
+                  disabled={busy}
+                  ariaLabel={t("yourAnswer")}
+                  placeholder={`${t("yourAnswer")} ( / for maths )`}
+                />
+              </div>
+              {sum && (
+                <p id={`sum-${check.id}`} aria-live="polite" className="lesson-hand mt-1.5 px-1 text-[18px] text-[var(--ls-primary)]">
+                  = {sum}
+                </p>
+              )}
+            </>
+          ) : (
           <div className="relative">
             <label htmlFor={`answer-${check.id}`} className="sr-only">{t("yourAnswer")}</label>
             <input
@@ -203,6 +251,7 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
               )}
             </AnimatePresence>
           </div>
+          )}
         </div>
       )}
 
@@ -264,7 +313,7 @@ function ConfirmReading({ check, original, suggestion }: { check: CheckItem; ori
  * (on a teach step that is ready) moving on. Nothing here decides correctness
  * or progression; every outcome comes back from the backend.
  */
-export function StepCard() {
+export function StepCard({ subject = null }: { subject?: string | null }) {
   const t = useUiText();
   const instance = useLessonStore((s) => s.instance);
   const payload = useLessonStore((s) => s.payload);
@@ -330,7 +379,7 @@ export function StepCard() {
   } else if (reading && checks.get(reading.item_id)) {
     body = <ConfirmReading check={checks.get(reading.item_id)!} original={reading.original} suggestion={reading.suggestion} />;
   } else if (unanswered.length > 0 && checks.get(unanswered[0])) {
-    body = <CheckCard check={checks.get(unanswered[0])!} onResult={showResult} />;
+    body = <CheckCard check={checks.get(unanswered[0])!} onResult={showResult} subject={subject} />;
   } else if (node.type === "teach" && node.engagement_count >= node.engagement_required) {
     body = (
       <div className={`${cardClass} flex flex-wrap items-center gap-4`}>

@@ -16,6 +16,8 @@ export interface SignUpFields {
   confirmPassword?: string;
   // Partner accounts are admin-provisioned only; not a public signup role.
   role: "student" | "parent";
+  /** Parent only: their name, which their connected child sees (`identity.parent_profiles`). */
+  full_name?: string;
   age?: string;
   grade?: string;
   phone?: string;
@@ -112,6 +114,7 @@ export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
     body.otp_code = data.otp_code;
     if (data.role === "parent") {
       if (data.phone) body.phone = data.phone;
+      if (data.full_name?.trim()) body.full_name = data.full_name.trim();
     }
   }
 

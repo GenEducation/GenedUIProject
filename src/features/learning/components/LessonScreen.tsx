@@ -165,7 +165,7 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
             )}
             {mode === "wide" && !fitted && <div aria-hidden />}
             <div id="lesson-pane-board" className={`${paneClass} lesson-rise`} style={{ "--rise-delay": "90ms" } as React.CSSProperties}>
-              <BoardPanel />
+              <BoardPanel subject={subject} />
             </div>
             {fitted && (
               <ResizeHandle

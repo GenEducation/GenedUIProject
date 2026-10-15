@@ -92,9 +92,12 @@ export function GuardianCard({ index }: { index: number }) {
         )}
       </div>
 
-      {status?.state === "linked" && status.linked_parent_email && (
+      {status?.state === "linked" && (status.linked_parent_name || status.linked_parent_email) && (
         <p className="mt-3 text-[13px] leading-relaxed text-[var(--text-mid)] sm:ml-[68px]" data-testid="guardian-connected-to">
-          Connected to <strong className="break-all">{status.linked_parent_email}</strong>
+          Connected to <strong className="break-words">{status.linked_parent_name || status.linked_parent_email}</strong>
+          {status.linked_parent_name && status.linked_parent_email && (
+            <span className="break-all text-[12px] text-[var(--text-mid)]"> ({status.linked_parent_email})</span>
+          )}
         </p>
       )}
 

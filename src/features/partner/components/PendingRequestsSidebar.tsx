@@ -12,7 +12,7 @@ export function PendingRequestsSidebar() {
   const setSelectedStudent = usePartnerStore((state) => state.setSelectedStudent);
 
   return (
-    <div className="flex-1 bg-[#F6F7F2] rounded-[1.5rem] p-5 md:p-6 border border-gray-100/50 shadow-xl flex flex-col min-h-[300px] lg:min-h-0 overflow-hidden">
+    <div className="flex-1 bg-[#F6F7F2] rounded-[1.5rem] p-5 md:p-6 border border-gray-100/50 shadow-xl flex flex-col lg:min-h-0 overflow-hidden">
       <div className="flex justify-between items-center mb-4 md:mb-5">
         <h4 className="text-[9px] md:text-[10px] font-black text-[#122D30] uppercase tracking-widest">
           Pending Requests
@@ -41,7 +41,7 @@ export function PendingRequestsSidebar() {
             onClick={() => setSelectedStudent(request)}
             className="w-full flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-transparent hover:border-[#122D30]/5 transition-all text-left shadow-sm hover:shadow-md group"
           >
-            <span className="text-[11px] md:text-xs font-bold text-[#122D30]/80 group-hover:text-[#122D30] transition-colors">
+            <span className="min-w-0 truncate text-[11px] md:text-xs font-bold text-[#122D30]/80 group-hover:text-[#122D30] transition-colors">
               {request.name}
             </span>
             <ChevronRight

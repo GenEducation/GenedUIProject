@@ -55,7 +55,7 @@ describe("SubjectRegistry — chapter sources", () => {
     await renderRegistry();
 
     const ready = rowFor("SYNTHETIC with visuals");
-    expect(within(ready).getByText("Ready")).toBeInTheDocument();
+    expect(within(ready).getByText("Ready for your review")).toBeInTheDocument();
     expect(within(ready).getByRole("button", { name: "Run ingestion again" })).toBeInTheDocument();
     expect(within(ready).queryByRole("button", { name: "Delete" })).toBeNull();
 
@@ -70,7 +70,7 @@ describe("SubjectRegistry — chapter sources", () => {
 
     const queued = rowFor("SYNTHETIC queued");
     expect(within(queued).getByRole("button", { name: "Stop Ingestion" })).toBeInTheDocument();
-    expect(within(queued).queryByRole("button", { name: /Start|Run/ })).toBeNull();
+    expect(within(queued).queryByRole("button", { name: /Start ingestion|Run ingestion again|Retry/ })).toBeNull();
     expect(within(queued).queryByRole("button", { name: "Delete" })).toBeNull();
   });
 
@@ -118,13 +118,13 @@ describe("SubjectRegistry — chapter sources", () => {
     const queuedId = usePartnerStore.getState().subjects.find((x) => x.title === "SYNTHETIC queued")!.id;
     sourcesFixture.setState(queuedId, "ready");
     await act(() => vi.advanceTimersByTimeAsync(LIST_POLL_MS));
-    await waitFor(() => expect(within(rowFor("SYNTHETIC queued")).getByText("Ready")).toBeInTheDocument());
+    await waitFor(() => expect(within(rowFor("SYNTHETIC queued")).getByText("Ready for your review")).toBeInTheDocument());
     const settled = listCalls;
     await act(() => vi.advanceTimersByTimeAsync(LIST_POLL_MS * 2));
     expect(listCalls).toBe(settled);
   });
 
-  it("shows a processing chapter's stage, step and percent from the backend's progress", async () => {
+  it("shows a processing chapter's phase, stage and percent from the backend's progress", async () => {
     const running = makeSource({
       state: "running",
       chapter: { ordinal: 5, title: "SYNTHETIC running", first_pdf_page: 1, last_pdf_page: 36 },
@@ -134,8 +134,8 @@ describe("SubjectRegistry — chapter sources", () => {
     await renderRegistry();
 
     const row = rowFor("SYNTHETIC running");
-    expect(within(row).getByText("Processing")).toHaveTextContent("Processing42%");
-    expect(within(row).getByRole("status")).toHaveTextContent("Reading pages · 12 of 36 pages· Step 2 of 9");
+    expect(within(row).getByRole("status")).toHaveTextContent("Reading pages · 12 of 36 pages");
+    expect(within(row).getByText("42%")).toBeInTheDocument();
     const bar = within(row).getByRole("progressbar");
     expect(bar).toHaveAttribute("aria-valuenow", "42");
   });
@@ -152,14 +152,14 @@ describe("SubjectRegistry — ingestion report", () => {
     await renderRegistry();
 
     expect(within(rowFor("SYNTHETIC not started")).queryByRole("button", { name: /report|needs fixing/ })).toBeNull();
-    fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "See what needs fixing" }));
+    fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "What needs fixing" }));
 
     const dialog = await screen.findByRole("dialog");
     expect(await within(dialog).findByText(/isn't taught by any concept in this chapter: G6-MATH-LO1\.2\.1/)).toBeInTheDocument();
     expect(within(dialog).getByText(/3 textbook figures need to be linked/)).toBeInTheDocument();
     expect(within(dialog).getByText(/You can fix this/)).toBeInTheDocument();
-    expect(within(dialog).getByText("Concepts").nextSibling).toHaveTextContent("8");
-    expect(within(dialog).getByText("Full technical report")).toBeInTheDocument();
+    expect(within(dialog).getAllByText("Concepts")[0].nextSibling).toHaveTextContent("8");
+    expect(within(dialog).getByRole("button", { name: /Technical details for GenEd/ })).toBeInTheDocument();
     expect(openIngestedPdf).not.toHaveBeenCalled();
   });
 });

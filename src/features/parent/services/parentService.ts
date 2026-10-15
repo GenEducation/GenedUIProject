@@ -253,6 +253,28 @@ export const parentService = {
     }
   },
 
+  /** The signed-in parent's own name (`GET /parent/profile`), which their connected child sees; null until given. */
+  fetchParentName: async (): Promise<string | null> => {
+    try {
+      const response = await authFetch(`${BASE_URL}/parent/profile`, { headers: { accept: "application/json" } });
+      const body = (await response.json()) as { display_name?: string | null };
+      return body.display_name ?? null;
+    } catch {
+      return null; // the username stands in, as before
+    }
+  },
+
+  /** Saves the parent's name (`PUT /parent/profile`; trimmed, 1–80 characters); returns it as stored. */
+  updateParentName: async (displayName: string): Promise<string> => {
+    const response = await authFetch(`${BASE_URL}/parent/profile`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ display_name: displayName }),
+    });
+    const body = (await response.json()) as { display_name: string };
+    return body.display_name;
+  },
+
   unlinkStudent: async (parentId: string, studentId: string): Promise<void> => {
     const response = await authFetch(`${BASE_URL}/parent/link/${studentId}?parent_id=${encodeURIComponent(parentId)}`, {
       method: "DELETE",

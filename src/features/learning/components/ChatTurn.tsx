@@ -8,6 +8,7 @@ import { heldForFigure, picturesFor, useLessonStore } from "../useLessonStore";
 import { replyText, type LessonTurn } from "../transcript";
 import type { FailureReason } from "../types";
 import { LessonMarkdown } from "./LessonMarkdown";
+import { LearnerText } from "../math/LearnerText";
 import { TutorMark } from "./TutorMark";
 
 /** What the learner sees when a turn fails; never the internal reason. */
@@ -58,7 +59,7 @@ export const ChatTurn = memo(function ChatTurn({ turn, onShowFigure, onRetry }: 
         <div className="flex items-start justify-end gap-2">
           <div className="flex max-w-[82%] flex-col items-end">
             <p className="whitespace-pre-wrap break-words rounded-[20px] rounded-br-md bg-[var(--ls-soft)] px-4 py-3 text-[15px] leading-relaxed">
-              {turn.learnerText}
+              <LearnerText text={turn.learnerText} />
             </p>
             {time && <span className="mt-1 text-[11px] text-[var(--ls-ink-faint)]">{time}</span>}
           </div>

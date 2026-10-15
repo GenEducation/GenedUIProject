@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, MonitorSmartphone, Wifi, WifiOff, TriangleAlert, Link2, ArrowRightLeft, Settings2, Ban, X, ChevronRight, RefreshCw, type LucideIcon } from "lucide-react";
+import { Plus, MonitorSmartphone, Wifi, WifiOff, TriangleAlert, Link2, ArrowRightLeft, Settings2, Ban, X, ChevronLeft, ChevronRight, RefreshCw, type LucideIcon } from "lucide-react";
 import { useLabStore } from "../store/useLabStore";
 import { DeviceTokenModal } from "./DeviceTokenModal";
 import { LabDevicePairingWizard } from "./LabDevicePairingWizard";
@@ -49,7 +49,7 @@ function LastUpdatedLabel({ fetchedAt }: { fetchedAt?: number }) {
 
   return (
     <span
-      className={`mr-1 text-[11px] font-semibold tabular-nums ${
+      className={`mr-1 whitespace-nowrap text-[11px] font-semibold tabular-nums ${
         isLagging ? "text-warning-ink" : "text-[#122D30]/35"
       }`}
       title={isLagging ? "The device list has not refreshed recently" : undefined}
@@ -154,9 +154,11 @@ export function LabSetup({ partnerId }: LabSetupProps) {
     : null;
 
   return (
-    <div className="flex h-full">
+    // Laid out by its own width (the portal's sidebar takes a share of the window): the lab list beside the chosen
+    // lab's devices when there is room; otherwise one at a time, the list first, a lab's devices with a way back.
+    <div className="@container/lab flex h-full min-w-0">
       {/* Lab list */}
-      <div className="w-80 shrink-0 border-r border-[#122D30]/5 bg-white/40 p-6 overflow-y-auto">
+      <div className={`${selectedLab ? "hidden @[900px]/lab:block" : "block"} w-full shrink-0 border-[#122D30]/5 bg-white/40 p-4 overflow-y-auto @[600px]/lab:p-6 @[900px]/lab:w-72 @[900px]/lab:border-r @[1200px]/lab:w-80`}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-xs font-black uppercase tracking-widest text-[#122D30]/60">Labs</h3>
           <button aria-label="Create lab"
@@ -192,8 +194,8 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                     selectedLabId === lab.id ? "bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)]" : "hover:bg-white/60"
                   }`}
                 >
-                  <div>
-                    <p className="text-sm font-bold text-[#122D30]">{lab.name}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-[#122D30]">{lab.name}</p>
                     <p className="mt-0.5 text-[11px] text-[#122D30]/50">
                       {deviceCount} device{deviceCount === 1 ? "" : "s"}
                       {lab.location ? ` · ${lab.location}` : ""}
@@ -208,7 +210,7 @@ export function LabSetup({ partnerId }: LabSetupProps) {
       </div>
 
       {/* Devices */}
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className={`${selectedLab ? "block" : "hidden @[900px]/lab:block"} min-w-0 flex-1 overflow-y-auto p-4 @[600px]/lab:p-6 @[1200px]/lab:p-8`}>
         {!selectedLab ? (
           <div className="flex h-full flex-col items-center justify-center text-center text-[#122D30]/40">
             <MonitorSmartphone size={40} className="mb-3" />
@@ -216,15 +218,24 @@ export function LabSetup({ partnerId }: LabSetupProps) {
           </div>
         ) : (
           <>
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-black text-[#122D30]">{selectedLab.name}</h2>
+            {/* One lab at a time (narrow): the way back to the list. */}
+            {/* eslint-disable-next-line no-restricted-syntax -- a back link above the heading, not a sized action button */}
+            <button
+              type="button"
+              onClick={() => setSelectedLabId(null)}
+              className="mb-3 inline-flex items-center gap-1 rounded text-xs font-bold text-[#075E63] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#075E63]/40 @[900px]/lab:hidden"
+            >
+              <ChevronLeft size={14} aria-hidden /> All labs
+            </button>
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-lg font-black text-[#122D30] @[600px]/lab:text-xl">{selectedLab.name}</h2>
                 <p className="mt-1 text-sm text-[#122D30]/50">
                   {selectedLab.location || "No location set"} · default session{" "}
                   {Math.round(selectedLab.default_session_seconds / 60)} min
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <LastUpdatedLabel fetchedAt={devicesFetchedAt[selectedLab.id]} />
                 <button
                   onClick={handleManualRefresh}
@@ -248,7 +259,7 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                     setReconnectDevice(null);
                     setPairingOpen(true);
                   }}
-                  className="flex items-center gap-2 rounded-xl bg-[#075E63] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#053C40]"
+                  className="flex items-center gap-2 whitespace-nowrap rounded-xl bg-[#075E63] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#053C40]"
                 >
                   <Plus size={16} />
                   Pair devices
@@ -263,7 +274,7 @@ export function LabSetup({ partnerId }: LabSetupProps) {
             {visibleDevices.length === 0 ? (
               <p className="text-sm text-[#122D30]/40">No devices registered yet.</p>
             ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr))]">
                 {visibleDevices.map((device) => {
                   const health = healthStyles[device.health_status];
                   const HealthIcon = health.icon;
