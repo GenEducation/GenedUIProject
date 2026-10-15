@@ -92,6 +92,12 @@ export function GuardianCard({ index }: { index: number }) {
         )}
       </div>
 
+      {status?.state === "linked" && status.linked_parent_email && (
+        <p className="mt-3 text-[13px] leading-relaxed text-[var(--text-mid)] sm:ml-[68px]" data-testid="guardian-connected-to">
+          Connected to <strong className="break-all">{status.linked_parent_email}</strong>
+        </p>
+      )}
+
       {status && status.state !== "linked" && status.state !== "no_parent_email" && (
         <div className="mt-4 space-y-2 sm:ml-[68px]" data-testid="guardian-detail">
           {status.state === "awaiting_parent_registration" && (

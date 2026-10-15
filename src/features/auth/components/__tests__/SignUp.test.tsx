@@ -204,6 +204,17 @@ describe("SignUp — parent flow", () => {
     });
   }
 
+  it("a parent's invitation link (/register?role=parent) opens the parent form directly", async () => {
+    window.history.pushState({}, "", "/register?role=parent&redirect=%2Fparent");
+    try {
+      render(<Harness onSubmit={vi.fn()} />);
+      expect(await screen.findByPlaceholderText("scholar@gened.edu")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Back to role selection" })).toBeInTheDocument();
+    } finally {
+      window.history.pushState({}, "", "/");
+    }
+  });
+
   it("calls onSubmit once credentials and phone are filled", async () => {
     const onSubmit = vi.fn((e: FormEvent<HTMLFormElement>) => e.preventDefault());
     render(<Harness onSubmit={onSubmit} />);

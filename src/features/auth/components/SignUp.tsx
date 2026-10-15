@@ -116,6 +116,16 @@ export function SignUp({
   }, []);
 
   // -- Signup disabled state --------------------------------------------------
+  // `/register?role=parent` (a parent's invitation email, the student's invite popup) opens the parent form
+  // directly instead of the role picker; Back still offers both roles. Above the sign-up-disabled return, so the
+  // hook order never changes; it selects the role itself rather than through `handleRoleSelect`, declared later.
+  useEffect(() => {
+    if (!isSignupEnabled || new URLSearchParams(window.location.search).get("role") !== "parent") return;
+    onChange({ target: { name: "role", value: "parent" } } as ChangeEvent<HTMLInputElement>);
+    setStep(2);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- read once, on arrival
+  }, []);
+
   if (!isSignupEnabled) {
     return (
       <div className="text-center py-10 flex flex-col items-center justify-center">

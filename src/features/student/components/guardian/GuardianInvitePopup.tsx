@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +11,8 @@ import { usePlacementStore } from "@/features/placement/store/usePlacementStore"
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 
 /** "Maybe later" holds for a week; after that, if the parent still has no account, it asks once more. */
+/** The parent sign-up form, which returns the new parent to the confirmation screen (`/parent`). */
+export const PARENT_SIGN_UP = `/register?role=parent&redirect=${encodeURIComponent("/parent")}`;
 export const GUARDIAN_POPUP_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 const snoozeKey = (studentId: string) => `gened_guardian_invite_snoozed_until:${studentId}`;
 const PLACEMENT_ENABLED = process.env.NEXT_PUBLIC_PLACEMENT_ENABLED !== "false";
@@ -27,13 +30,14 @@ function snoozed(studentId: string): boolean {
  * whose verified parent email has no GenEd account yet is told so, kindly, once:
  * they can carry on learning, their parent must create their own account with
  * that same email, and the accounts connect automatically once the parent
- * confirms. It offers to send the invitation again and shows the sign-up link.
+ * confirms. It offers to send the invitation again and a button to the parent sign-up form.
  *
  * The state is read fresh from the server each time it could show, so it never
  * shows once the parent has registered or connected, and "Maybe later" puts it
  * away for a week rather than blocking anything.
  */
 export function GuardianInvitePopup() {
+  const router = useRouter();
   const studentProfile = useStudentStore((s) => s.studentProfile);
   const placementPhase = usePlacementStore((s) => s.phase);
   const tourActive = useTutorialStore((s) => s.isActive);
@@ -43,12 +47,7 @@ export function GuardianInvitePopup() {
   const [dismissed, setDismissed] = useState(false);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
-  const [signUpLink, setSignUpLink] = useState("");
   const titleId = useId();
-
-  useEffect(() => {
-    setSignUpLink(`${window.location.origin}/register?redirect=${encodeURIComponent("/parent")}`);
-  }, []);
 
   const open =
     onboarded &&
@@ -125,8 +124,8 @@ export function GuardianInvitePopup() {
           <li>Once they sign up and confirm they&apos;re your parent or guardian, your accounts connect automatically.</li>
         </ul>
         <p className="mt-3 text-xs text-gray-500">
-          We&apos;ve emailed them an invitation{status.reminders_sent > 0 ? " and a reminder" : ""}. Their sign-up link:{" "}
-          <span className="break-all font-mono text-[11px] text-gray-700">{signUpLink}</span>
+          We&apos;ve emailed them an invitation{status.reminders_sent > 0 ? " and a reminder" : ""}. If your parent is
+          with you, they can create their account here on this device.
         </p>
         {note && (
           <p role="status" className="mt-3 text-xs font-semibold text-[var(--primary-ink)]">
@@ -136,6 +135,9 @@ export function GuardianInvitePopup() {
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={dismiss}>
             Maybe later
+          </Button>
+          <Button variant={status.can_resend_invitation ? "outline" : "primary"} onClick={() => router.push(PARENT_SIGN_UP)}>
+            Create parent account
           </Button>
           {status.can_resend_invitation && (
             <Button variant="primary" loading={sending} disabled={sending} onClick={resend}>

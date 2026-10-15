@@ -69,6 +69,7 @@ export function guardianStatus(overrides: Record<string, unknown> = {}) {
     guardian_consent_recorded: true,
     relationship_status: "APPROVED",
     relationship_with_invited_parent: true,
+    linked_parent_email: "Mum@Example.com",
     invitation_sent_at: "2026-10-01T09:00:00Z",
     last_invitation_at: "2026-10-01T09:00:00Z",
     reminders_sent: 0,

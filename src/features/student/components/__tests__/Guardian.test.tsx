@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 
@@ -10,7 +10,15 @@ import { useStudentStore } from "../../store/useStudentStore";
 import { usePlacementStore } from "@/features/placement/store/usePlacementStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { GuardianCard } from "../profile/GuardianCard";
-import { GuardianInvitePopup } from "../guardian/GuardianInvitePopup";
+import { GuardianInvitePopup, PARENT_SIGN_UP } from "../guardian/GuardianInvitePopup";
+import { createNextNavigationMock } from "@/test/helpers/nextNavigation";
+
+const nav = vi.hoisted(() => ({ current: null as ReturnType<typeof createNextNavigationMock> | null }));
+vi.mock("next/navigation", async () => {
+  const { createNextNavigationMock: make } = await import("@/test/helpers/nextNavigation");
+  nav.current = make();
+  return nav.current;
+});
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 
@@ -44,6 +52,15 @@ describe("GuardianCard — reads the real connection", () => {
     render(<GuardianCard index={0} />);
     expect(await screen.findByText("Connected")).toBeInTheDocument();
     expect(screen.queryByText(/waiting/i)).not.toBeInTheDocument();
+    // Parents have no name field: the card names the connected account by its email.
+    expect(screen.getByTestId("guardian-connected-to")).toHaveTextContent("Connected to Mum@Example.com");
+  });
+
+  it("names no parent until the parent has confirmed", async () => {
+    status({ state: "awaiting_parent_confirmation", relationship_status: "PENDING", linked_parent_email: null });
+    render(<GuardianCard index={0} />);
+    expect(await screen.findByText("Waiting for your parent to confirm")).toBeInTheDocument();
+    expect(screen.queryByTestId("guardian-connected-to")).not.toBeInTheDocument();
   });
 
   it("a pending link is never shown as connected", async () => {
@@ -106,7 +123,11 @@ describe("GuardianInvitePopup — after onboarding", () => {
     expect(dialog).toHaveTextContent("You can keep using GenEd right now");
     expect(dialog).toHaveTextContent("Your parent needs to create their own parent account using mum@example.com");
     expect(dialog).toHaveTextContent("your accounts connect automatically");
-    expect(dialog).toHaveTextContent("/register?redirect=%2Fparent");
+    // No raw URL in the popup: a button opens the parent sign-up form.
+    expect(dialog).not.toHaveTextContent("/register");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create parent account" }));
+    expect(nav.current!.router.push).toHaveBeenCalledWith(PARENT_SIGN_UP);
+    expect(PARENT_SIGN_UP).toBe("/register?role=parent&redirect=%2Fparent");
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Send the invitation again" }));
     expect(await within(dialog).findByText("Invitation sent again.")).toBeInTheDocument();
