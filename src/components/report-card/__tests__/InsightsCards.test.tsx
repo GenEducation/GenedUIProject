@@ -17,6 +17,7 @@ const fact = (over: Partial<InsightFact>): InsightFact => ({ id: "f1", kind: "ma
 const note = (headline = "Mathematics is going well.", over: Partial<InsightView> = {}): InsightView => ({
   generated_at: new Date(Date.now() - 2 * 86_400_000).toISOString(),
   headline,
+  headline_evidence: ["f1", "f2"],
   working_well: [{ text: "Mathematics mastery is 75 percent.", evidence: ["f1"] }],
   needs_attention: [{ text: "One mix-up has come up twice.", evidence: ["f2"] }],
   next_steps: [{ kind: "clear_mixup", text: "Talk it through, then try the question again.", evidence: ["f2"] }],
@@ -80,6 +81,7 @@ describe("the key insights card", () => {
     const attention = within(card).getByText("One mix-up has come up twice.").closest("li") as HTMLElement;
     expect(within(attention).getByText("SYNTHETIC wrong idea: seen 2 times")).toBeInTheDocument();
     expect(within(card).getByText("Talk it through, then try the question again.")).toBeInTheDocument();
+    expect(within(card).getAllByText("Mathematics: 75% mastery").length).toBeGreaterThanOrEqual(2); // under the headline and its sentence
     expect(within(card).getByText("Updated 2 days ago")).toBeInTheDocument();
     expect(within(card).getByText(/not a judgement of the child/)).toBeInTheDocument();
   });
@@ -158,6 +160,15 @@ describe("a subject's insight", () => {
     expect(await screen.findByText("Mathematics is steady.")).toBeInTheDocument();
     const item = screen.getByText("Mastery is 75 percent here.").closest("li") as HTMLElement;
     expect(within(item).getByText("Mathematics: 75% mastery")).toBeInTheDocument();
+  });
+
+  it("shows the overview's sentences about the subject when the note covers a single subject and has no entries", async () => {
+    backend(() => response({ insight: note("Mathematics is going well.", { subjects: [] }) }));
+    mount(<SubjectInsight data={data} subject="Mathematics" />);
+    expect(await screen.findByText("Mathematics is going well.")).toBeInTheDocument();
+    expect(screen.getByText("Mathematics mastery is 75 percent.")).toBeInTheDocument();
+    expect(screen.getByText("One mix-up has come up twice."), "its fact is a Mathematics fact, so it is about this subject").toBeInTheDocument();
+    expect(screen.queryByText("Talk it through, then try the question again."), "next steps stay on the overview").not.toBeInTheDocument();
   });
 
   it("says a note for the subject comes with more answers when the note has nothing for it", async () => {

@@ -101,6 +101,8 @@ export interface InsightItem {
 export interface InsightView {
   generated_at: string;
   headline: string;
+  /** The facts the headline rests on. */
+  headline_evidence: string[];
   working_well: InsightItem[];
   needs_attention: InsightItem[];
   next_steps: Array<InsightItem & { kind: string }>;

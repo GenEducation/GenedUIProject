@@ -84,9 +84,10 @@ function Note({ note }: { note: InsightView }) {
   const warn = BAND_TONES.Approaching;
   return (
     <div className="flex flex-col gap-3">
-      <p className="rounded-2xl border-l-4 bg-[var(--rs-surface-2)] px-4 py-3 text-[15px] font-semibold leading-snug text-[var(--rs-ink)]" style={{ borderColor: "var(--rs-brand)" }}>
-        {note.headline}
-      </p>
+      <div className="rounded-2xl border-l-4 bg-[var(--rs-surface-2)] px-4 py-3" style={{ borderColor: "var(--rs-brand)" }}>
+        <p className="text-[15px] font-semibold leading-snug text-[var(--rs-ink)]">{note.headline}</p>
+        <Chips ids={note.headline_evidence} facts={facts} />
+      </div>
       {note.working_well.length > 0 && (
         <Block title="What's working well" icon={<TintIcon name="insights/positive-insight" color="#fff" size={14} />} bg={good.wash[0]} edge={good.edge} accent={good.accent}>
           <Items items={note.working_well} facts={facts} />
@@ -122,57 +123,74 @@ function Block({ title, icon, bg, edge, accent, children }: { title: string; ico
 }
 
 /** Each sentence with the measured figures it rests on, as small chips. */
+function Chips({ ids, facts }: { ids: string[]; facts: Map<string, InsightFact> }) {
+  const shown = ids.map((id) => facts.get(id)).filter((f): f is InsightFact => !!f);
+  if (shown.length === 0) return null;
+  return (
+    <span className="mt-1 flex flex-wrap gap-1.5">
+      {shown.map((f) => (
+        <span key={f.id} className="rounded-full border border-[var(--rs-line)] bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--rs-ink-soft)]">
+          {factText(f)}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function Items({ items, facts }: { items: InsightItem[]; facts: Map<string, InsightFact> }) {
   return (
     <ul className="flex flex-col gap-2.5">
       {items.map((item, i) => (
         <li key={i} className="text-[13px] leading-relaxed text-[var(--rs-ink)]">
           {item.text}
-          <span className="mt-1 flex flex-wrap gap-1.5">
-            {item.evidence.map((id) => facts.get(id)).filter((f): f is InsightFact => !!f).map((f) => (
-              <span key={f.id} className="rounded-full border border-[var(--rs-line)] bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--rs-ink-soft)]">
-                {factText(f)}
-              </span>
-            ))}
-          </span>
+          <Chips ids={item.evidence} facts={facts} />
         </li>
       ))}
     </ul>
   );
 }
 
-/** A subject's own insight, for its Insights tab; null when the note has nothing for the subject. */
+/** A subject's own insight, for its Insights tab. A note about several subjects has an entry for each; a note about one has
+ *  none (the overview is already about it), so that subject's tab shows the overview's sentences that rest on its facts. */
 export function SubjectInsight({ data, subject }: { data: ReportCardData; subject: string }) {
   const { insights } = useReportExtras();
   if (!insights) return null;
   const response = insights.state.status === "ready" ? insights.state.data : null;
+  const note = response?.insight ?? null;
   const code = data.chapters.find((c) => c.subject === subject)?.subject_code;
-  const entry = response?.insight?.subjects.find((s) => s.subject_code === code);
-  if (!response || !response.insight || !entry) {
-    return (
-      <ComingSoon
-        icon={<Icon name="insights/ai-insight" size={22} />}
-        title="Subject insights"
-        text={response?.status === "disabled" || !response
-          ? "An analysis of strengths, what to work on and how this subject is going chapter to chapter."
-          : "A note for this subject appears here once there are enough answers in it."}
-      />
-    );
-  }
-  const facts = new Map(response.insight.facts.map((f) => [f.id, f]));
+  const none = (
+    <ComingSoon
+      icon={<Icon name="insights/ai-insight" size={22} />}
+      title="Subject insights"
+      text={!response || response.status === "disabled"
+        ? "An analysis of strengths, what to work on and how this subject is going chapter to chapter."
+        : "A note for this subject appears here once there are enough answers in it."}
+    />
+  );
+  if (!note) return none;
+
+  const facts = new Map(note.facts.map((f) => [f.id, f]));
+  const entry = note.subjects.find((s) => s.subject_code === code);
+  const own = new Set(note.facts.filter((f) => f.subject_code === code).map((f) => f.id));
+  const about = (items: InsightItem[]) => items.filter((i) => i.evidence.some((e) => own.has(e)));
+  const headline = entry?.headline ?? (note.subjects.length === 0 && note.headline_evidence.some((e) => own.has(e)) ? note.headline : null);
+  const working = entry ? entry.working_well : note.subjects.length === 0 ? about(note.working_well) : [];
+  const attention = entry ? entry.needs_attention : note.subjects.length === 0 ? about(note.needs_attention) : [];
+  if (!headline && working.length === 0 && attention.length === 0) return none;
+
   const good = BAND_TONES.Advanced;
   const warn = BAND_TONES.Approaching;
   return (
     <div className="flex flex-col gap-3">
-      <p className="rounded-2xl border-l-4 bg-[var(--rs-surface-2)] px-4 py-3 text-[15px] font-semibold leading-snug text-[var(--rs-ink)]" style={{ borderColor: "var(--rs-brand)" }}>{entry.headline}</p>
-      {entry.working_well.length > 0 && (
+      {headline && <p className="rounded-2xl border-l-4 bg-[var(--rs-surface-2)] px-4 py-3 text-[15px] font-semibold leading-snug text-[var(--rs-ink)]" style={{ borderColor: "var(--rs-brand)" }}>{headline}</p>}
+      {working.length > 0 && (
         <Block title="What's working well" icon={<TintIcon name="insights/positive-insight" color="#fff" size={14} />} bg={good.wash[0]} edge={good.edge} accent={good.accent}>
-          <Items items={entry.working_well} facts={facts} />
+          <Items items={working} facts={facts} />
         </Block>
       )}
-      {entry.needs_attention.length > 0 && (
+      {attention.length > 0 && (
         <Block title="Needs attention" icon={<TintIcon name="insights/needs-attention" color="#fff" size={14} />} bg={warn.wash[0]} edge={warn.edge} accent={warn.accent}>
-          <Items items={entry.needs_attention} facts={facts} />
+          <Items items={attention} facts={facts} />
         </Block>
       )}
     </div>
