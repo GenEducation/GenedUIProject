@@ -18,6 +18,7 @@ interface SignUpData {
   password: string;
   confirmPassword?: string;
   role: "student" | "parent";
+  full_name?: string;
   age?: string;
   grade?: string;
   phone?: string;
@@ -524,6 +525,26 @@ export function SignUp({
         >
           <ArrowLeft size={20} />
         </button>
+
+        <div>
+          <label className={labelCls} htmlFor="parent-full-name">Your Name</label>
+          <input
+            id="parent-full-name"
+            name="full_name"
+            value={signupData.full_name || ""}
+            onChange={onChange}
+            type="text"
+            autoComplete="name"
+            maxLength={80}
+            placeholder="Your full name"
+            className={inputCls(!!errors.full_name)}
+          />
+          {errors.full_name ? (
+            <p className={errorCls}>{errors.full_name}</p>
+          ) : (
+            <p className="text-[#122D30]/50 text-[10px] font-medium mt-1.5 ml-0.5">Your child sees this name once you&apos;re connected.</p>
+          )}
+        </div>
 
         {!googleToken && (
           <>

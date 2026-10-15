@@ -215,6 +215,15 @@ describe("SignUp — parent flow", () => {
     }
   });
 
+  it("asks the parent for their name, saying who sees it", async () => {
+    render(<Harness onSubmit={vi.fn()} />);
+    await goToParentCredentials();
+    const name = screen.getByLabelText("Your Name");
+    expect(name).toHaveAttribute("name", "full_name");
+    expect(name).toHaveAttribute("maxLength", "80");
+    expect(screen.getByText("Your child sees this name once you're connected.")).toBeInTheDocument();
+  });
+
   it("calls onSubmit once credentials and phone are filled", async () => {
     const onSubmit = vi.fn((e: FormEvent<HTMLFormElement>) => e.preventDefault());
     render(<Harness onSubmit={onSubmit} />);

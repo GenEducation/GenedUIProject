@@ -26,8 +26,10 @@ export interface GuardianStatus {
   guardian_consent_recorded: boolean;
   relationship_status: "PENDING" | "APPROVED" | "REJECTED" | "REVOKED" | null;
   relationship_with_invited_parent: boolean | null;
-  /** The connected guardian account's email, only once the parent confirmed (APPROVED); parents have no name field. */
+  /** The connected guardian account's email, only once the parent confirmed (APPROVED). */
   linked_parent_email?: string | null;
+  /** That parent's name (`PUT /parent/profile` or given at sign-up), on the same terms; null when they gave none. */
+  linked_parent_name?: string | null;
   invitation_sent_at: string | null;
   last_invitation_at: string | null;
   reminders_sent: number;

@@ -105,6 +105,22 @@ export function ParentHome() {
     };
   }, [parentProfile?.user_id]);
 
+  // The parent's own name lives on the server (`GET /parent/profile`): once read, it replaces the username in the
+  // greeting and Settings. Read once per account; a parent without one keeps the username.
+  useEffect(() => {
+    if (!parentProfile?.user_id) return;
+    let cancelled = false;
+    parentService.fetchParentName().then((name) => {
+      const current = useParentStore.getState().parentProfile;
+      if (!cancelled && name && current && current.name !== name) {
+        useParentStore.getState().setParentProfile({ ...current, name });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [parentProfile?.user_id]);
+
   // Sync URL → state on mount / pathname change.
   //   /parent/:id, /parent/:id/analytics  → Home
   //   /parent/:id/report                   → Report Card

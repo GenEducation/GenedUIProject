@@ -52,12 +52,19 @@ describe("GuardianCard — reads the real connection", () => {
     render(<GuardianCard index={0} />);
     expect(await screen.findByText("Connected")).toBeInTheDocument();
     expect(screen.queryByText(/waiting/i)).not.toBeInTheDocument();
-    // Parents have no name field: the card names the connected account by its email.
-    expect(screen.getByTestId("guardian-connected-to")).toHaveTextContent("Connected to Mum@Example.com");
+    // The connected parent by name, with their email beside it.
+    expect(screen.getByTestId("guardian-connected-to")).toHaveTextContent("Connected to Sunita Sharma (Mum@Example.com)");
+  });
+
+  it("falls back to the parent's email when they gave no name", async () => {
+    status({ linked_parent_name: null });
+    render(<GuardianCard index={0} />);
+    expect(await screen.findByTestId("guardian-connected-to")).toHaveTextContent("Connected to Mum@Example.com");
+    expect(screen.getByTestId("guardian-connected-to")).not.toHaveTextContent("(");
   });
 
   it("names no parent until the parent has confirmed", async () => {
-    status({ state: "awaiting_parent_confirmation", relationship_status: "PENDING", linked_parent_email: null });
+    status({ state: "awaiting_parent_confirmation", relationship_status: "PENDING", linked_parent_email: null, linked_parent_name: null });
     render(<GuardianCard index={0} />);
     expect(await screen.findByText("Waiting for your parent to confirm")).toBeInTheDocument();
     expect(screen.queryByTestId("guardian-connected-to")).not.toBeInTheDocument();

@@ -40,6 +40,12 @@ export const parentHandlers = [
     return HttpResponse.json({ student_id: body.student_id, parent_id: body.parent_id, status: "APPROVED", requested_at: "now" });
   }),
   http.get(`${BASE}/parent/guardian/invitations`, () => HttpResponse.json([])),
+  // The parent's own name: none given by default; a save echoes it back trimmed, as the server stores it.
+  http.get(`${BASE}/parent/profile`, () => HttpResponse.json({ display_name: null })),
+  http.put(`${BASE}/parent/profile`, async ({ request }) => {
+    const body = (await request.json()) as { display_name: string };
+    return HttpResponse.json({ display_name: body.display_name.trim().replace(/\s+/g, " ") });
+  }),
 
   // The student's side: by default the parent email is verified and the parent is already connected.
   http.get(`${BASE}/parent/guardian/status`, ({ request }) =>
@@ -72,6 +78,7 @@ export function guardianStatus(overrides: Record<string, unknown> = {}) {
     relationship_status: "APPROVED",
     relationship_with_invited_parent: true,
     linked_parent_email: "Mum@Example.com",
+    linked_parent_name: "Sunita Sharma",
     invitation_sent_at: "2026-10-01T09:00:00Z",
     last_invitation_at: "2026-10-01T09:00:00Z",
     reminders_sent: 0,

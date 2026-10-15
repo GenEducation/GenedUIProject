@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 import { useParentStore } from "../../../store/useParentStore";
 import { ParentSettingsView } from "../ParentSettingsView";
+import { parentService } from "../../../services/parentService";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -14,6 +15,7 @@ vi.mock("../../../services/parentService", () => ({
   parentService: {
     fetchStudentGrade: vi.fn(async () => 7),
     fetchLatestActivity: vi.fn(async () => null),
+    updateParentName: vi.fn(async (name: string) => name.trim().replace(/\s+/g, " ")),
   },
 }));
 
@@ -66,5 +68,26 @@ describe("ParentSettingsView", () => {
     expect(unlinkStudent).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole("button", { name: "Unlink" }));
     expect(unlinkStudent).toHaveBeenCalledWith("s1");
+  });
+  it("lets a parent add the name their child sees, and keeps it", async () => {
+    seed({ parentProfile: { ...PROFILE, name: undefined } });
+    render(<ParentSettingsView />);
+    expect(screen.getByText("Not added")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Your name" }), { target: { value: "  Priya   Sharma " } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(parentService.updateParentName).toHaveBeenCalledWith("Priya   Sharma"));
+    await waitFor(() => expect(useParentStore.getState().parentProfile?.name).toBe("Priya Sharma"));
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+  });
+
+  it("does not save an empty name", async () => {
+    seed({ parentProfile: { ...PROFILE, name: undefined } });
+    render(<ParentSettingsView />);
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Your name" }), { target: { value: "   " } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Please enter your name.");
+    expect(parentService.updateParentName).not.toHaveBeenCalled();
   });
 });

@@ -18,6 +18,7 @@ const initialSignUpData: SignUpFields = {
   role: "student",
   grade: "",
   phone: "",
+  full_name: "",
   otp_code: "",
   parent_email: "",
   parent_otp_code: "",
@@ -76,6 +77,9 @@ export default function RegisterPage() {
         else if (signupData.password !== signupData.confirmPassword) errs.confirmPassword = "Passwords do not match";
       }
       if (signupData.role === "parent") {
+        const name = signupData.full_name?.trim() ?? "";
+        if (!name) errs.full_name = "Your name is compulsory";
+        else if (name.length > 80) errs.full_name = "Your name must be at most 80 characters";
         if (!signupData.phone?.trim()) errs.phone = "Phone is compulsory";
         else if (!/^\d{10}$/.test(signupData.phone.trim())) errs.phone = "Phone must be a 10-digit number";
       }

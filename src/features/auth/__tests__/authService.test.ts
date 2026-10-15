@@ -90,6 +90,15 @@ describe("authService — request shaping", () => {
     });
   });
 
+  it("signUp (parent) sends the parent's trimmed name as full_name, and omits it when blank", async () => {
+    const fetchMock = stubFetchOk();
+    await signUp({ role: "parent", email: "mom@x.com", password: "pw", otp_code: "9999", phone: "555", full_name: "  Sunita Sharma " });
+    expect(firstCall(fetchMock).body).toMatchObject({ role: "PARENT", full_name: "Sunita Sharma" });
+    const blank = stubFetchOk();
+    await signUp({ role: "parent", email: "mom@x.com", password: "pw", otp_code: "9999", phone: "555", full_name: "   " });
+    expect(firstCall(blank).body).not.toHaveProperty("full_name");
+  });
+
   it("signUp (student) passes age and partner_id; never sends fields the strict backend refuses", async () => {
     const fetchMock = stubFetchOk();
     await signUp({

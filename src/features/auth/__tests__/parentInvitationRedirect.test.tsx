@@ -34,6 +34,7 @@ const PARENT_FIELDS: Record<string, string> = {
   password: "Mangoes7",
   confirmPassword: "Mangoes7",
   phone: "9999999999",
+  full_name: "Mum Synthetic",
   otp_code: "123456",
 };
 vi.mock("@/features/auth/components/SignUp", () => ({
@@ -41,10 +42,12 @@ vi.mock("@/features/auth/components/SignUp", () => ({
     onSubmit,
     onChange,
     onSwitchToSignin,
+    errors,
   }: {
     onSubmit: (e: FormEvent<HTMLFormElement>) => void;
     onChange: (e: { target: { name: string; value: string } }) => void;
     onSwitchToSignin: () => void;
+    errors?: Record<string, string>;
   }) => (
     <form onSubmit={onSubmit}>
       <button
@@ -53,6 +56,10 @@ vi.mock("@/features/auth/components/SignUp", () => ({
       >
         Fill as parent
       </button>
+      <button type="button" onClick={() => onChange({ target: { name: "full_name", value: "   " } })}>
+        Clear the name
+      </button>
+      {errors?.full_name && <p role="alert">{errors.full_name}</p>}
       <button type="submit">Create Account</button>
       <button type="button" onClick={onSwitchToSignin}>Log in instead</button>
     </form>
@@ -154,6 +161,18 @@ describe("a parent's invitation link survives landing → log in / sign up", () 
     render(<RegisterPage />);
     fireEvent.click(screen.getByRole("button", { name: "Log in instead" }));
     expect(routerMock.push).toHaveBeenCalledWith(`/login?redirect=${encoded}`);
+  });
+
+  it("a parent cannot sign up without their name", async () => {
+    let posted = false;
+    server.use(http.post(`${BASE}/auth/sign-up`, () => { posted = true; return HttpResponse.json(makeAuthToken({ role: "parent", user_id: "p1" })); }));
+    window.history.pushState({}, "", `/register?redirect=${encoded}`);
+    render(<RegisterPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Fill as parent" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear the name" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create Account" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your name is compulsory");
+    expect(posted).toBe(false);
   });
 
   it("signing up as a parent returns to the invitation's confirmation screen", async () => {
