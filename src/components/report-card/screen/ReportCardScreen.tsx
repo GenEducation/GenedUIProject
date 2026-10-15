@@ -256,7 +256,7 @@ function BrandNew({ firstName, onStart }: { firstName: string; onStart?: () => v
     <><b>Open a chapter</b> → its progress and steps appear</>,
     <><b>Answer its questions</b> → each skill gets a level, from Good start to Strong</>,
     <><b>Keep going</b> → learning outcomes are marked mastered, and skills to revisit show up</>,
-    <><b>Coming soon</b> → chapter tests, subject trends and AI insights</>,
+    <><b>Come back each week</b> → your activity, subject trends and mix-ups to clear fill in over time</>,
   ];
   return (
     <section className={`${CARD} rc-rise mx-auto w-full max-w-[720px] p-6 sm:p-8`}>

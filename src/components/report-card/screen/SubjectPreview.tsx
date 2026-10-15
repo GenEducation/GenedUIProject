@@ -79,7 +79,7 @@ export function SubjectPreview({
       <div className="grid grid-cols-3 gap-2 px-4 pt-4">
         <MiniStat label="Coverage" value={`${s.coverage}%`} color={COVERAGE_COLOR} />
         <MiniStat label="Completed" value={`${s.chaptersCompleted}/${s.chaptersTotal}`} />
-        <MiniStat label="Study time" value={minutes > 0 ? formatMinutes(minutes) : "—"} />
+        <MiniStat label={s.v1 ? "Study time (est.)" : "Study time"} value={minutes > 0 ? formatMinutes(minutes) : "—"} />
       </div>
       <div className="px-4 pt-3">
         <Bar value={s.coverage} color={COVERAGE_COLOR} className="h-1.5" />
@@ -139,7 +139,7 @@ function MiniStat({ label, value, color }: { label: string; value: React.ReactNo
     <div className="rounded-xl border border-[var(--rs-line)] bg-[var(--rs-surface-2)] px-2 py-2.5 text-center">
       <p className="text-[15px] font-bold tabular-nums text-[var(--rs-ink)]" style={color ? { color } : undefined}>{value}</p>
       <p className="mt-0.5 flex items-center justify-center gap-1 text-[10.5px] font-semibold uppercase tracking-[0.05em] text-[var(--rs-ink-soft)]">
-        {label === "Study time" && <Icon name="session-content/time" size={11} />}
+        {label.startsWith("Study time") && <Icon name="session-content/time" size={11} />}
         {label}
       </p>
     </div>

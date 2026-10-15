@@ -30,6 +30,8 @@ export interface ChapterSkill {
 /** The new backend's facts about one chapter (`/v1/learner/...`, `/v1/instances/{id}/report`). */
 export interface ChapterFacts {
   chapter_id?: string;
+  /** The subject's code (`social_science`), which the trends route keys on. */
+  subject_code?: string;
   chapter_number?: number;
   book_title?: string;
   /** The student's lesson for this chapter; absent until they open it. */
@@ -41,7 +43,16 @@ export interface ChapterFacts {
   correct?: number | null;
   outcomes?: Array<{ code: string; title: string; mastered: boolean }> | null;
   skills?: ChapterSkill[];
+  /** Right answers given alone and with help, and hints asked for; absent until the chapter is opened. */
+  help?: AnswerHelp | null;
   last_active_at?: string;
+}
+
+/** How much of the right answers stood on their own (the backend's assistance ledger). */
+export interface AnswerHelp {
+  correct_alone: number;
+  correct_with_help: number;
+  hints_used: number;
 }
 
 /** A chapter row: the old `/chapter-mastery` shape plus the new backend's facts. */

@@ -4,15 +4,20 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ReportCardBody } from "./ReportCardBody";
 import { RC_PRINT_PORTAL_STYLES } from "./styles";
+import { RC_PRINT_REPORT_STYLES } from "./print/printStyles";
+import { ReportCardPrint } from "./print/ReportCardPrint";
 import type { ReportCardData, ReportCardUI, ReportRole } from "./types";
 
 const PORTAL_ID = "rc-print-root";
 const STYLE_ID = "rc-print-portal-styles";
 
 /** Client-side "Download PDF": renders a print-optimised copy of the report
+ *  (the new backend's layout for a student or parent, the MVP's for a teacher)
  *  into a <body>-level portal, waits for fonts/layout, then opens the browser
  *  print dialog (Save as PDF). Works identically inside the student, parent,
- *  and teacher shells because the portal is a direct child of <body>. */
+ *  and teacher shells because the portal is a direct child of <body>. The portal
+ *  element must be rendered inside the report's `ReportExtrasProvider`: the print
+ *  layout reads the activity, trends, mix-ups and note from it. */
 export function usePrintPdf({ data, role, filename }: { data: ReportCardData; role: ReportRole; filename: string }) {
   const [active, setActive] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -24,7 +29,7 @@ export function usePrintPdf({ data, role, filename }: { data: ReportCardData; ro
     if (!document.getElementById(STYLE_ID)) {
       const style = document.createElement("style");
       style.id = STYLE_ID;
-      style.textContent = RC_PRINT_PORTAL_STYLES;
+      style.textContent = RC_PRINT_PORTAL_STYLES + RC_PRINT_REPORT_STYLES;
       document.head.appendChild(style);
     }
     let el = document.getElementById(PORTAL_ID) as HTMLElement | null;
@@ -100,7 +105,11 @@ export function usePrintPdf({ data, role, filename }: { data: ReportCardData; ro
   const printPortal =
     active && root
       ? createPortal(
-          React.createElement("div", { className: "report-root" }, React.createElement(ReportCardBody, { data, ui: printUi })),
+          React.createElement(
+            "div",
+            { className: "report-root" },
+            role === "teacher" ? React.createElement(ReportCardBody, { data, ui: printUi }) : React.createElement(ReportCardPrint, { data }),
+          ),
           root
         )
       : null;
