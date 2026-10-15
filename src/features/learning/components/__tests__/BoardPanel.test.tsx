@@ -14,10 +14,10 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 const node = makeLessonInstance().active_node!;
 const store = () => useLessonStore.getState();
 
-async function open(instance = makeLessonInstance()) {
+async function open(instance = makeLessonInstance(), subject: string | null = null) {
   lessonFixture.setInstance(instance);
   await store().load(LESSON_ID);
-  return render(<BoardPanel />);
+  return render(<BoardPanel subject={subject} />);
 }
 
 beforeEach(() => {
@@ -109,14 +109,34 @@ describe("the answer box's calculator", () => {
       ),
     );
   };
+  // A maths lesson's box is the maths field, which stands in here as a box taking its LaTeX (MathLive itself needs a
+  // real browser): words as typed, `$…$` for maths picked from its `/` menu.
   const answerBox = () => screen.getByRole("textbox", { name: "Your answer" }) as HTMLInputElement;
 
   it("works out a root as they type, and sends the number for a number answer", async () => {
     withCheck("numeric");
-    await open();
-    fireEvent.change(answerBox(), { target: { value: "√144" } });
+    await open(undefined, "Mathematics");
+    fireEvent.change(answerBox(), { target: { value: "$\\sqrt{144}$" } });
     expect(screen.getByText("= 12")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
     await waitFor(() => expect(answerRequests[0]).toMatchObject({ response: { kind: "numeric", value: "12" } }));
+  });
+
+  it("sends typed words as typed, and picked maths in the checker's form", async () => {
+    withCheck("symbolic");
+    await open(undefined, "Mathematics");
+    fireEvent.change(answerBox(), { target: { value: "x = $2x+\\frac{3}{4}$" } });
+    fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
+    await waitFor(() => expect(answerRequests[0]).toMatchObject({ response: { kind: "text", text: "x = 2*x+(3/4)" } }));
+  });
+
+  it("keeps the plain box outside maths, spaces and all", async () => {
+    withCheck("numeric_set");
+    await open(undefined, "Science");
+    const box = screen.getByRole("textbox", { name: "Your answer" });
+    expect(box.getAttribute("placeholder")).toBe("Your answer");
+    fireEvent.change(box, { target: { value: "30 and 20" } });
+    fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
+    await waitFor(() => expect(answerRequests[0]).toMatchObject({ response: { kind: "text", text: "30 and 20" } }));
   });
 });

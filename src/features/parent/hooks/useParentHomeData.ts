@@ -10,6 +10,7 @@ import {
   DEFAULT_PERIOD,
   fillDailySeries,
   minutesBySubject,
+  subjectKey,
   periodOption,
   sessionTrendPct,
   totalMinutes,
@@ -131,7 +132,7 @@ export function useParentHomeData(studentId: string | null): ParentHomeData {
   const subjectItems = useMemo(
     () => items.map((item) => ({
       ...item,
-      minutes: chapterMinutes === undefined ? null : Math.round(chapterMinutes?.[item.subject] ?? 0),
+      minutes: chapterMinutes === undefined ? null : Math.round(chapterMinutes?.[subjectKey(item.subject)] ?? 0),
     })),
     [items, chapterMinutes],
   );

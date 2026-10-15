@@ -1,11 +1,16 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import type { ReportCardData, ReportCardUI } from "../types";
 import type { OverallSummary, SubjectSummary } from "../selectors";
 import { toneFor } from "../subjectVisuals";
-import { CARD, FOCUS_RING, Ring, SoonTag } from "./primitives";
+import { CARD, FOCUS_RING, Ring } from "./primitives";
+import { IndependenceBar } from "./SectionCards";
+import { formatEstimate } from "@/features/learning/activity/useChapterTime";
+import { useReportExtras } from "../sections/ReportExtras";
+import { recentMinutes } from "../sections/reportSections";
 import { Icon, TintIcon } from "./icons";
 
 export function SummaryHeader({
@@ -16,6 +21,11 @@ export function SummaryHeader({
   overall: OverallSummary;
   onOpenSubject: (subject: string) => void;
 }) {
+  const extras = useReportExtras();
+  const v1 = data.chapters.some((c) => c.skills !== undefined);
+  const study = extras.activity?.state.status === "ready" ? recentMinutes(extras.activity.state.data.series) : null;
+  // The PDF is written from the same sections the screen shows, so it waits until none is still being read.
+  const sectionsLoading = [extras.activity, extras.trends, extras.misconceptions, extras.insights].some((s) => s?.state.status === "loading");
   const masteryTone = toneFor(overall.avgMastery, overall.sessions > 0 || overall.avgMastery > 0);
   const meta = [
     data.displayGrade != null ? `Grade ${data.displayGrade}` : null,
@@ -29,22 +39,35 @@ export function SummaryHeader({
     <section aria-label="Report summary" className={`${CARD} rc-rise grid grid-cols-[auto_minmax(0,1fr)] gap-5 p-5 @[540px]/hdr:grid-cols-[minmax(0,1fr)_auto_auto] @[540px]/hdr:items-center @[540px]/hdr:gap-x-0 @[540px]/hdr:p-6 @[980px]/hdr:grid-cols-[minmax(0,0.9fr)_auto_auto_minmax(0,1.3fr)] @[980px]/hdr:gap-y-0`}>
       {/* Identity */}
       <div className="col-span-2 min-w-0 @[540px]/hdr:col-span-1 @[540px]/hdr:pr-6">
-        <h1 className="truncate text-[26px] font-extrabold leading-tight tracking-[-0.02em] text-[var(--rs-ink)] @[700px]/hdr:text-[30px]">
-          {data.displayName}
-        </h1>
-        {meta.length > 0 && (
-          <p className="mt-1 text-[14.5px] font-medium text-[var(--rs-ink-soft)]">{meta.join("  •  ")}</p>
-        )}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--rs-line-strong)] bg-[var(--rs-mint)] px-3 py-1.5 text-[12.5px] font-semibold text-[var(--rs-brand-deep)]">
-            <Icon name="filters/date-filter" size={15} />
-            {data.reportPeriod}
-          </span>
-          {ui.canDownload && ui.onPrint && (
-            <Button variant="outline" size="sm" pill onClick={ui.onPrint} loading={ui.isPdfGenerating} leadingIcon={<Icon name="misc/download" size={15} />}>
-              Download PDF
-            </Button>
+        <div className="flex items-center gap-4 @[700px]/hdr:gap-5">
+          {/* The same picture and ring as the student's home greeting, sized to the name, details and date beside it. */}
+          {data.avatarSrc && (
+            <span
+              className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full @[700px]/hdr:h-24 @[700px]/hdr:w-24"
+              style={{ border: "3px solid white", boxShadow: "0 0 0 3px var(--rs-mint), 0 8px 20px rgb(7 94 99 / 0.2)" }}
+            >
+              <Image src={data.avatarSrc} alt="" fill sizes="96px" className="scale-[1.035] object-cover" />
+            </span>
           )}
+          <div className="min-w-0">
+            <h1 className="truncate text-[26px] font-extrabold leading-tight tracking-[-0.02em] text-[var(--rs-ink)] @[700px]/hdr:text-[30px]">
+              {data.displayName}
+            </h1>
+            {meta.length > 0 && (
+              <p className="mt-1 text-[14.5px] font-medium text-[var(--rs-ink-soft)]">{meta.join("  •  ")}</p>
+            )}
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--rs-line-strong)] bg-[var(--rs-mint)] px-3 py-1.5 text-[12.5px] font-semibold text-[var(--rs-brand-deep)]">
+                <Icon name="filters/date-filter" size={15} />
+                {data.reportPeriod}
+              </span>
+              {ui.canDownload && ui.onPrint && (
+                <Button variant="outline" size="sm" pill onClick={ui.onPrint} loading={ui.isPdfGenerating} disabled={sectionsLoading} leadingIcon={<Icon name="misc/download" size={15} />}>
+                  Download PDF
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -71,9 +94,13 @@ export function SummaryHeader({
           value={<>{overall.chaptersCompleted} <span className="text-[var(--rs-ink-soft)]">/ {overall.chaptersTotal}</span></>}
           label="Chapters Completed"
         />
-        {/* The new backend (chapters carrying skills) doesn't report tests yet. */}
-        {overall.tests === 0 && data.chapters.some((c) => c.skills !== undefined) ? (
-          <HeaderStat icon={<Icon name="metrics/tests" size={26} />} value={<SoonTag />} label="Tests" />
+        {/* The new backend has no tests; it reports estimated study time instead (the activity read, last 30 days). */}
+        {v1 ? (
+          <HeaderStat
+            icon={<Icon name="session-content/time" size={26} />}
+            value={study ? formatEstimate(study.minutes) : <span className="text-[var(--rs-ink-soft)]">—</span>}
+            label="Study time (est.), 30 days"
+          />
         ) : (
           <HeaderStat icon={<Icon name="metrics/tests" size={26} />} value={overall.tests} label={overall.tests === 1 ? "Test" : "Tests"} />
         )}
@@ -92,6 +119,13 @@ export function SummaryHeader({
           </p>
         )}
       </div>
+
+      {/* Right answers alone vs with help, across every chapter. */}
+      {v1 && extras.help && extras.answered > 0 && (
+        <div className="col-span-2 border-t border-[var(--rs-line)] pt-4 @[540px]/hdr:col-span-3 @[980px]/hdr:col-span-4">
+          <IndependenceBar help={extras.help} />
+        </div>
+      )}
     </section>
     </div>
   );

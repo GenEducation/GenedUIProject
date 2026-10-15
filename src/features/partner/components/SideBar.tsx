@@ -27,19 +27,13 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
 
   return (
     <aside className="w-20 lg:w-64 h-screen bg-[#F6F7F2] flex flex-col p-4 lg:p-6 border-r border-gray-100 transition-all duration-300">
-      {/* Logo & Workspace Info */}
-      <div className="mb-12 flex flex-col gap-5">
-        <div className="w-full h-12 lg:h-16 flex items-center justify-center lg:justify-start overflow-hidden">
-          {/* Favicon for Mobile/Tablet */}
-          <div className="block lg:hidden">
-            <GenEdLogo variant="mark" height={40} />
-          </div>
-          {/* Full Logo for Desktop */}
-          <div className="hidden lg:block">
-            <GenEdLogo height={52} priority />
-          </div>
+      {/* Logo & Workspace Info: only beside the full sidebar. The collapsed rail (below lg) has no logo; the top bar
+          shows the full one, centred, instead of a mark squeezed into the rail. */}
+      <div className="mb-12 hidden lg:flex flex-col gap-5">
+        <div className="w-full h-16 flex items-center justify-start overflow-hidden">
+          <GenEdLogo height={52} priority />
         </div>
-        <div className="hidden lg:block">
+        <div>
           <h1 className="text-[#122D30] text-sm font-black uppercase tracking-widest leading-none">
             Partner Portal
           </h1>

@@ -174,9 +174,8 @@ export const forbiddenRequests: string[] = [];
 export const presenceBeats: string[] = [];
 export const presence = { active: true };
 
-/** The server's study session and chapter totals, as `/students/{id}/session/current` and `/time/by-chapter` answer. */
-export const activity: { session: { open: boolean; started_at: string | null; elapsed_seconds: number; credited_seconds: number; server_time: string }; chapters: unknown[]; fail: boolean } = {
-  session: { open: true, started_at: "2026-10-14T10:00:00+00:00", elapsed_seconds: 600, credited_seconds: 300, server_time: "x" },
+/** This learner's chapter totals, as `/students/{id}/time/by-chapter` answers. */
+export const activity: { chapters: unknown[]; fail: boolean } = {
   chapters: [{ chapter_id: "00000000-0000-4000-8000-000000000001", chapter_name: "SYNTHETIC", subject: "math", total_minutes: 12.4, session_count: 2 }],
   fail: false,
 };
@@ -209,7 +208,6 @@ export const lessonFixture = {
     presenceBeats.length = 0;
     presence.active = true;
     activity.fail = false;
-    activity.session = { open: true, started_at: "2026-10-14T10:00:00+00:00", elapsed_seconds: 600, credited_seconds: 300, server_time: "x" };
     resumeRequests.length = 0;
     stepRequests.length = 0;
   },
@@ -419,11 +417,9 @@ export const lessonHandlers = [
     return HttpResponse.json({}, { status: 410 });
   }),
 
-  http.get(`${BASE}/students/:studentId/session/current`, () =>
-    activity.fail ? HttpResponse.json({}, { status: 500 }) : HttpResponse.json(activity.session),
+  http.get(`${BASE}/students/:studentId/time/by-chapter`, () =>
+    activity.fail ? HttpResponse.json({}, { status: 500 }) : HttpResponse.json(activity.chapters),
   ),
-
-  http.get(`${BASE}/students/:studentId/time/by-chapter`, () => HttpResponse.json(activity.chapters)),
 
   http.post(`${BASE}/v1/instances/:instanceId/presence`, async ({ request }) => {
     const body = (await request.json()) as { source_id: string };

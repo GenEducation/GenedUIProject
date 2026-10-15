@@ -126,7 +126,8 @@ export function AddChildSteps({
 
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
-    <li className="relative rounded-2xl border border-white/90 bg-white/60 p-4">
+    // Its own tinted card with a visible edge: these sit on a white panel, where white-on-white gave no edge at all.
+    <li className="relative rounded-2xl border border-[var(--pp-line)] bg-[var(--pp-bg)] p-4">
       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#D9F279] text-[14px] font-extrabold text-[var(--pp-ink)] tabular-nums">{n}</span>
       <p className="mt-3 text-[14px] font-bold text-[var(--pp-ink)]">{title}</p>
       <div className="mt-1 text-[13px] leading-relaxed text-[var(--pp-ink-soft)] [&_strong]:font-bold [&_strong]:text-[var(--pp-ink)]">{children}</div>

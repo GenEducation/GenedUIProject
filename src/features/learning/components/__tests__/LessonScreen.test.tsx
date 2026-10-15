@@ -47,7 +47,8 @@ describe("LessonScreen", () => {
     const crumbs = screen.getByRole("navigation", { name: "Breadcrumb" });
     expect(within(crumbs).getByRole("link", { name: "Mathematics" })).toHaveAttribute("href", "/student/subjects/Mathematics");
     expect(within(crumbs).getByText("SYNTHETIC chapter 2")).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("timer")).toHaveAccessibleName("Session time 00:00");
+    // No student signed in here, so the chapter clock has nothing to read yet.
+    expect(screen.getByRole("timer")).toHaveAccessibleName("Chapter time loading");
     expect(screen.getByRole("link", { name: "Leave lesson" })).toHaveAttribute("href", "/student/subjects/Mathematics");
 
     expect(screen.getByRole("region", { name: "Whiteboard" })).toBeInTheDocument();
@@ -59,11 +60,13 @@ describe("LessonScreen", () => {
     expect(within(screen.getByRole("region", { name: "Whiteboard" })).queryByText("SYNTHETIC reply.")).toBeNull();
   });
 
-  it("shows the server's session time and this chapter's estimated time, so a refresh or another tab continues them", async () => {
+  it("shows one clock: this chapter's time from the server, so a refresh or another tab continues it", async () => {
     useStudentStore.setState({ studentProfile: { user_id: "00000000-0000-4000-8000-0000000000bb" } as never });
     render(<LessonScreen instanceId={LESSON_ID} />);
-    await waitFor(() => expect(screen.getByRole("timer")).toHaveAccessibleName(/^Session time 10:0\d$/));
-    expect(await screen.findByLabelText("Chapter time 12 min")).toBeInTheDocument();
+    // 12.4 credited minutes = 12:24, counting on from there.
+    await waitFor(() => expect(screen.getByRole("timer")).toHaveAccessibleName(/^Chapter time 12:2\d$/));
+    expect(screen.getAllByRole("timer")).toHaveLength(1);
+    expect(screen.queryByText("Session time")).toBeNull();
     useStudentStore.setState({ studentProfile: null });
   });
 

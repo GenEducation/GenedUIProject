@@ -54,6 +54,8 @@ export const parentHandlers = [
     const body = (await request.json()) as { student_id: string };
     return HttpResponse.json(guardianStatus({ student_id: body.student_id, state: "awaiting_parent_registration", relationship_status: null, invitation_sent: true }));
   }),
+  // The student's own link: none by default.
+  http.get(`${BASE}/parent/link/status`, () => HttpResponse.json(null)),
 ];
 
 /** A `GET /parent/guardian/status` body; defaults to a linked, approved, confirmed guardian. */

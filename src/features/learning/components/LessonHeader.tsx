@@ -7,9 +7,8 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { StudentAvatar } from "@/features/student/components/StudentAvatar";
 import { isRevisiting, useLessonStore } from "../useLessonStore";
 import { useUiText } from "../i18n";
-import { useChapterTime, formatEstimate } from "../activity/useChapterTime";
-import { useSessionClock } from "../activity/useSessionClock";
-import { formatDuration, useSessionTimer } from "../useSessionTimer";
+import { useChapterClock } from "../activity/useChapterTime";
+import { formatDuration } from "../useSessionTimer";
 
 interface LessonHeaderProps {
   subject: string | null;
@@ -67,15 +66,11 @@ export function LessonHeader({
   gridTemplate,
   onOpenSteps,
 }: LessonHeaderProps) {
-  const instanceId = useLessonStore((s) => s.instanceId);
   const studentId = useStudentStore((s) => s.studentProfile?.user_id);
   const chapterId = useLessonStore((s) => s.instance?.chapter_id);
-  // The session clock is the server's (it survives a refresh, another tab and another device); this tab's own clock
-  // stands in until the server has answered, or when it cannot be reached.
-  const localSeconds = useSessionTimer(instanceId);
-  const serverSeconds = useSessionClock(studentId);
-  const seconds = serverSeconds ?? localSeconds;
-  const chapterMinutes = useChapterTime(studentId, chapterId);
+  // One clock: the time on this chapter across every sitting, the backend's credited figure (the same one the report
+  // card and the parent portal show), running between reads. Until the server answers it reads "--:--".
+  const chapterSeconds = useChapterClock(studentId, chapterId);
   const t = useUiText();
   const avatarId = useStudentStore((s) => s.avatarId);
   const done = useLessonStore((s) => s.instance?.nodes_done ?? null);
@@ -115,12 +110,15 @@ export function LessonHeader({
         />
       </Link>
 
+      {/* Wide layout: inset like the board panel's own top row (`px-5` in BoardPanel), so the breadcrumb lines up
+          with the Chat/Voice switch and the step title under it rather than with the panel's rounded outer edge. */}
       <div
-        className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4"
+        className={`flex min-w-0 flex-1 items-center gap-3 sm:gap-4 ${gridTemplate ? "self-stretch pl-5" : ""}`}
         style={gridTemplate ? { gridColumn: "3" } : undefined}
       >
-        <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
-          <ol className="flex min-w-0 items-center gap-2 text-[15px] text-[var(--ls-ink-mid)]">
+        {/* Wide layout: the row is as tall as the logo; the breadcrumb sits on its baseline (the chips stay centred). */}
+        <nav aria-label="Breadcrumb" className={`min-w-0 flex-1 ${gridTemplate ? "self-end pb-1" : ""}`}>
+          <ol className="flex min-w-0 items-center gap-2 text-[15px] text-[var(--ls-ink-mid)] lg:text-[17px]">
             {subject && (
               <>
                 <li className="hidden shrink-0 sm:block">
@@ -146,7 +144,7 @@ export function LessonHeader({
         </nav>
         <Chip
           role="timer"
-          aria-label={`${t("sessionTime")} ${formatDuration(seconds)}`}
+          aria-label={`${t("chapterTime")} ${chapterSeconds === null ? "loading" : formatDuration(chapterSeconds)}`}
           icon={
             <Timer
               size={26}
@@ -155,19 +153,9 @@ export function LessonHeader({
               aria-hidden
             />
           }
-          value={formatDuration(seconds)}
-          label={t("sessionTime")}
+          value={chapterSeconds === null ? "--:--" : formatDuration(chapterSeconds)}
+          label={t("chapterTime")}
         />
-        {chapterMinutes !== null && (
-          <div className="hidden md:block [@media(max-height:500px)]:hidden">
-            <Chip
-              aria-label={`${t("chapterTime")} ${formatEstimate(chapterMinutes)}`}
-              icon={<Timer size={26} strokeWidth={2.2} className="text-[var(--ls-primary)]" aria-hidden />}
-              value={`≈ ${formatEstimate(chapterMinutes)}`}
-              label={t("chapterTime")}
-            />
-          </div>
-        )}
         {done !== null && total !== null && total > 0 && (
           <div className="hidden md:block [@media(max-height:500px)]:hidden">
             <Chip

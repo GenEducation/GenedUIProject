@@ -10,6 +10,7 @@ import { Reveal } from "../parts/Reveal";
 import { Icon, TintIcon } from "./icons";
 import { Bar, COVERAGE_COLOR, FOCUS_RING, MetaStat, Ring, SkillLevelChip, plural } from "./primitives";
 import { formatMinutes } from "./SubjectPreview";
+import { IndependenceBar } from "./SectionCards";
 
 const STATUS_TONE: Record<ChapterStatus, { bg: string; fg: string }> = {
   Completed: { bg: BAND_TONES.Advanced.tint, fg: BAND_TONES.Advanced.ink },
@@ -70,6 +71,9 @@ export function ChapterRow({ row, ui, index }: { row: ChapterRowModel; ui: Repor
               <>
                 {row.chapter.book_title && <span className="truncate">{row.chapter.book_title}</span>}
                 {row.started && row.steps && <span>Step {row.steps.done} of {row.steps.total}</span>}
+                {row.started && row.minutes != null && row.minutes > 0 && (
+                  <span className="inline-flex items-center gap-1" title="Estimated active study time"><Icon name="session-content/time" size={12} />≈ {formatMinutes(row.minutes)}</span>
+                )}
               </>
             ) : (
               <>
@@ -114,7 +118,9 @@ export function ChapterRow({ row, ui, index }: { row: ChapterRowModel; ui: Repor
           )}
         </div>
 
-        <div className="flex items-center gap-2 self-center">
+        {/* The chevron lines up with the ring itself (56px), not the ring and its "Mastery" label together, so it sits
+            level with the ring pointing either way. */}
+        <div className="flex items-start gap-2 self-center">
           <Ring
             value={row.mastery}
             color={row.started ? tone.accent : "var(--rs-ink-soft)"}
@@ -126,7 +132,7 @@ export function ChapterRow({ row, ui, index }: { row: ChapterRowModel; ui: Repor
             {/* No answered skill yet: nothing measured, so no figure (not a 0% that reads as failing). */}
             {v1 && !measured ? <span className="text-[13px] font-bold text-[var(--rs-ink-soft)]">—</span> : undefined}
           </Ring>
-          <span className="w-5">
+          <span className="flex h-14 w-5 items-center justify-center">
             {expandable && (
               <TintIcon
                 name="actions/dropdown"
@@ -167,6 +173,7 @@ function ChapterSkills({ row }: { row: ChapterRowModel }) {
           )}
         </div>
       )}
+      {row.chapter.help && row.answers && row.answers.correct > 0 && <IndependenceBar help={row.chapter.help} />}
       {row.skills.length > 0 && (
         <div>
           <h5 className="text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]">Skills</h5>

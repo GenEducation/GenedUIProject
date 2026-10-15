@@ -119,3 +119,115 @@ export function summarizeReport(report: string, owners: Record<string, "partner"
     },
   };
 }
+
+// ─────────────────────────────────────────────────────────
+// THE REPORT'S SECTIONS, AS STRUCTURED LISTS
+// ─────────────────────────────────────────────────────────
+
+/** A concept the run proposed: new to GenEd, or matched to one it has. */
+export interface ReportConcept { title: string; definition: string; resolution: string; lo: string | null }
+/** A question with its answer, as far as the key can be read. */
+export interface ReportQuestion { prompt: string; answer: string | null; note?: string }
+
+export interface ParsedReport {
+  /** Pages missing from the run (the reading failed). */
+  unreadablePages: number[];
+  /** Pages whose text was marked not fully legible: page number and the text read. */
+  visualCheck: { page: number; text: string }[];
+  concepts: ReportConcept[];
+  questions: ReportQuestion[];
+  variants: ReportQuestion[];
+  removed: ReportQuestion[];
+  skipped: { reason: string; prompt: string }[];
+  held: string[];
+  figures: { role: string; reason: string; target: string }[];
+  warnings: number;
+  passed: boolean;
+}
+
+/** The report's `## ` sections, by heading (lower-cased, without its parenthesised note), as their `- ` lines. */
+function sections(report: string): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  let current = "_head";
+  out.set(current, []);
+  for (const raw of report.split("\n")) {
+    const line = raw.trimEnd();
+    const heading = line.match(/^##\s+(.*)$/);
+    if (heading) {
+      current = heading[1].replace(/\s*\(.*$/, "").trim().toLowerCase();
+      out.set(current, []);
+      continue;
+    }
+    if (current === "_head") {
+      if (line && !line.startsWith("# ")) out.get(current)!.push(line);
+    } else if (line.startsWith("- ")) {
+      out.get(current)!.push(line.slice(2));
+    }
+  }
+  return out;
+}
+
+/**
+ * The answer in a key as the report prints it (`{'kind': 'numeric', 'value': '12', ...}`), as plain text: the
+ * key's value, values or accepted answers. Null when it can't be read; the question still shows.
+ */
+export function answerFromKey(key: string): string | null {
+  const list = key.match(/'(?:values|accept|accepted|answers|expected)':\s*\[([^\]]*)\]/);
+  if (list) {
+    const items = [...list[1].matchAll(/'([^']*)'|(-?\d+(?:\.\d+)?)/g)].map((m) => m[1] ?? m[2]).filter(Boolean);
+    if (items.length) return items.join(", ");
+  }
+  const one = key.match(/'(?:value|expected|answer|text|key)':\s*(?:'([^']*)'|(-?\d+(?:\.\d+)?))/);
+  if (one) return one[1] ?? one[2];
+  return null;
+}
+
+const strip = (s: string) => s.replace(/^`[^`]*`\s*/, "").trim();
+
+export function parseReport(report: string): ParsedReport {
+  const s = sections(report);
+  // By how the heading starts: the backend adds notes after some ("Held back: waiting for its picture").
+  const get = (name: string) => [...s.entries()].find(([heading]) => heading.startsWith(name))?.[1] ?? [];
+  const validation = get("validation");
+  return {
+    unreadablePages: get("pages that could not be read")
+      .map((l) => Number(l.match(/page (\d+)/i)?.[1]))
+      .filter((n) => Number.isFinite(n)),
+    visualCheck: get("pages needing a visual check").flatMap((l) => {
+      const m = l.match(/^page (\d+), section [^:]*:\s*(.*)$/);
+      return m ? [{ page: Number(m[1]), text: m[2] }] : [];
+    }),
+    concepts: get("components").flatMap((l) => {
+      const m = l.match(/^\[([^\]]+)\]\s+`[^`]*`\s+([^:]+):\s*(.*?)(?:\s*\(LO ([^,)]+)[^)]*\))?$/);
+      return m ? [{ resolution: m[1], title: m[2].trim(), definition: m[3].trim(), lo: m[4] ?? null }] : [];
+    }),
+    questions: get("items").map((l) => {
+      const [left, key = ""] = l.split(" -> key ");
+      return { prompt: strip(left).replace(/^[a-z_]+:\s*/, ""), answer: answerFromKey(key) };
+    }),
+    variants: get("number-changed questions").map((l) => {
+      const [left, rest = ""] = l.split(" -> key ");
+      const [key, of = ""] = rest.split("; number-changed version of: ");
+      return { prompt: strip(left), answer: answerFromKey(key), note: of ? `From: ${of}` : undefined };
+    }),
+    removed: get("keys the independent check did not reproduce").map((l) => {
+      const m = l.match(/^override key `[^`]*`:\s*(.*?) -> key (.*?); independent answer (.*)$/);
+      return m
+        ? { prompt: m[1], answer: answerFromKey(m[2]), note: `The second check got ${m[3]}` }
+        : { prompt: l, answer: null };
+    }),
+    skipped: get("skipped questions").map((l) => {
+      const m = l.match(/^section \S+ \[[^\]]*\]\s*([^:]+):\s*(.*)$/);
+      return m ? { reason: m[1].replace(/_/g, " "), prompt: m[2] } : { reason: "", prompt: l };
+    }),
+    held: get("held back").map(strip),
+    figures: get("pictures and their visuals")
+      .filter((l) => l.startsWith("["))
+      .map((l) => {
+        const m = l.match(/^\[[^\]]*\]\s*([^:]+):\s*([^;]*);\s*([^;]*(?:;\s*step [^;]*)?)/);
+        return m ? { role: m[1].trim(), reason: m[2].trim(), target: m[3].trim() } : { role: "", reason: l, target: "" };
+      }),
+    warnings: validation.filter((l) => l.startsWith("warning ")).length,
+    passed: validation.includes("passed"),
+  };
+}

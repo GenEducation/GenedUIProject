@@ -1,7 +1,9 @@
 "use client";
 
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
+import { useState } from "react";
 import { learnerService } from "@/features/student/learner/learnerService";
+import { useFreshChapterCard } from "@/features/student/learner/useFreshChapterCard";
 import { paletteFor } from "@/features/student/learner/cardPalettes";
 import { isRevisiting, useLessonStore } from "../useLessonStore";
 import { useUiText } from "../i18n";
@@ -18,6 +20,11 @@ export const lessonVoiceEnabled = (): boolean => process.env.NEXT_PUBLIC_LESSON_
 function ChapterCard() {
   const instanceId = useLessonStore((s) => s.instanceId);
   const chapter = useLessonLaunch((s) => (s.instanceId === instanceId ? s.chapter : null));
+  const chapterId = useLessonStore((s) => s.instance?.chapter_id);
+  // The card's signed URL can expire across a reload: read a fresh one, and never show a broken image meanwhile.
+  const refreshCard = useFreshChapterCard(instanceId, chapterId);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const cardSrc = chapter?.card ? learnerService.cardSrc(chapter.card.image_url) : null;
   const done = useLessonStore((s) => s.instance?.nodes_done ?? 0);
   const total = useLessonStore((s) => s.instance?.nodes_total ?? 0);
   const revisiting = useLessonStore((s) => isRevisiting(s.instance));
@@ -29,12 +36,16 @@ function ChapterCard() {
       className="relative overflow-hidden rounded-[22px] border border-white/70 shadow-[var(--ls-shadow)]"
       style={{ background: `linear-gradient(150deg, ${pal.sky[0]} 0%, ${pal.sky[1]} 100%)` }}
     >
-      {chapter?.card ? (
+      {cardSrc && cardSrc !== failedSrc ? (
         // eslint-disable-next-line @next/next/no-img-element -- signed, expiring API URL.
         <img
-          src={learnerService.cardSrc(chapter.card.image_url)}
+          src={cardSrc}
           alt=""
           className="block aspect-[16/10] w-full object-cover"
+          onError={() => {
+            setFailedSrc(cardSrc); // the text cover shows until a fresh URL arrives
+            refreshCard();
+          }}
         />
       ) : (
         <div className="relative aspect-[16/10] w-full p-4">

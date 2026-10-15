@@ -4,7 +4,7 @@ import { FEATURES } from "@/constants/features";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, Users, X } from "lucide-react";
+import { FileText, Home, Menu, Settings, Users, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { useParentStore } from "../store/useParentStore";
@@ -256,8 +256,8 @@ export function ParentHome() {
   }
 
   const navItems = [
-    { key: "analytics", label: "Home", icon: "nav_home", href: navStudentId ? `/parent/${navStudentId}` : "/parent" },
-    { key: "report", label: "Report Card", icon: "nav_report_card", href: navStudentId ? `/parent/${navStudentId}/report` : "/parent" },
+    { key: "analytics", label: "Home", icon: Home, href: navStudentId ? `/parent/${navStudentId}` : "/parent" },
+    { key: "report", label: "Report Card", icon: FileText, href: navStudentId ? `/parent/${navStudentId}/report` : "/parent" },
   ] as const;
 
   // While the family loads: the hat loader covers this after sign-in or
@@ -285,21 +285,25 @@ export function ParentHome() {
         <ParentHomeView studentId={selectedStudentId!} />
       ) : activeDashboardView === "subject" && subjectFromUrl ? (
         <SubjectInsightsView studentId={selectedStudentId!} subject={subjectFromUrl} childName={selectedStudent?.name} />
+      ) : activeDashboardView === "report" ? (
+        // The report is a page of cards itself: straight on the portal's background, not framed inside another card.
+        <div className="portal-legacy-type rc-embedded">
+          <StudentReportCard
+            parentId={parentProfile?.user_id}
+            childId={selectedStudentId!}
+            childName={selectedStudent?.name || undefined}
+            childAvatar={studentAvatars[selectedStudentId!]}
+            loadingFallback={
+              <ParentReportPreparing
+                childName={selectedStudent?.name}
+                avatar={studentAvatars[selectedStudentId!]}
+              />
+            }
+          />
+        </div>
       ) : (
         <div className="portal-legacy-type overflow-hidden rounded-[24px] border border-[var(--pp-line)] bg-white">
-          {activeDashboardView === "report" ? (
-            <StudentReportCard
-              parentId={parentProfile?.user_id}
-              childId={selectedStudentId!}
-              childName={selectedStudent?.name || undefined}
-              loadingFallback={
-                <ParentReportPreparing
-                  childName={selectedStudent?.name}
-                  avatar={studentAvatars[selectedStudentId!]}
-                />
-              }
-            />
-          ) : activeDashboardView === "schedule" && FEATURES.schedule ? (
+          {activeDashboardView === "schedule" && FEATURES.schedule ? (
             <ParentScheduleView
               studentId={selectedStudentId!}
               parentId={parentProfile!.user_id}
@@ -384,8 +388,7 @@ export function ParentHome() {
                 onClick={closeSidebarOnMobile}
                 className={`${NAV_ROW} ${active ? NAV_ROW_ACTIVE : ""}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element -- tiny static icon */}
-                <img src={ICON(item.icon)} alt="" width={22} height={22} className="shrink-0" />
+                <NavIcon icon={item.icon} active={active} />
                 {item.label}
               </Link>
             );
@@ -411,8 +414,7 @@ export function ParentHome() {
             onClick={closeSidebarOnMobile}
             className={`${NAV_ROW} ${activeDashboardView === "profile" ? NAV_ROW_ACTIVE : ""}`}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element -- tiny static icon */}
-            <img src={ICON("nav_settings")} alt="" width={22} height={22} className="shrink-0" />
+            <NavIcon icon={Settings} active={activeDashboardView === "profile"} />
             Settings
           </Link>
         </nav>
@@ -450,7 +452,15 @@ export function ParentHome() {
             {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset */}
             <img src={LOGO_SRC} alt="GenEd" width={354} height={140} className="h-auto w-[96px]" />
           </div>
-          {/* Greeting: beside the bell on desktop, its own line on phones. */}
+          {/* Greeting: beside the bell on desktop, its own line on phones. The report card has no greeting, only its
+              title: its own header names the child. */}
+          {activeDashboardView === "report" ? (
+            <div className="order-last w-full min-w-0 lg:order-none lg:w-auto lg:flex-1">
+              <h1 className="truncate text-[22px] font-bold leading-tight tracking-tight text-[var(--pp-ink)] lg:text-[28px]">
+                Report Card
+              </h1>
+            </div>
+          ) : (
           <div className="order-last w-full min-w-0 lg:order-none lg:w-auto lg:flex-1">
             {/* Settings is about the parent's own account, not a child: a plain title there. */}
             <h1 className="truncate text-[22px] font-bold leading-tight tracking-tight text-[var(--pp-ink)] lg:text-[28px]">
@@ -466,6 +476,7 @@ export function ParentHome() {
               </p>
             )}
           </div>
+          )}
           <div className="ml-auto lg:ml-0">
             <NotificationBell userId={parentProfile?.user_id || ""} align="right" />
           </div>
@@ -499,7 +510,8 @@ export function ParentHome() {
         </div>
 
         <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-3 lg:px-8 lg:pb-8">
-          <div className="rounded-[28px] border border-white/60 bg-white/25 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-sm sm:p-6 lg:p-7">
+          {/* The report card brings its own cards; this glass panel frames the other pages. */}
+          <div className={activeDashboardView === "report" && selectedStudent ? "" : "rounded-[28px] border border-white/60 bg-white/25 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-sm sm:p-6 lg:p-7"}>
             {content}
           </div>
         </main>
@@ -542,4 +554,23 @@ function safeDecode(value: string): string {
   } catch {
     return value;
   }
+}
+
+/**
+ * A sidebar item's icon: one outline set for every item; on the page you're on, teal and filled. (The old
+ * images drew Home solid and the others as outlines, so Home looked selected wherever you were.)
+ */
+function NavIcon({ icon: Icon, active }: { icon: LucideIcon; active: boolean }) {
+  return (
+    <Icon
+      aria-hidden
+      size={21}
+      strokeWidth={active ? 2.2 : 1.8}
+      // The page you're on is filled: a soft teal inside its outline (solid would hide the gear's hole and the
+      // document's lines); the others are outlines only.
+      fill={active ? "currentColor" : "none"}
+      fillOpacity={active ? 0.2 : undefined}
+      className={`shrink-0 ${active ? "text-[var(--pp-green)]" : "text-[var(--pp-ink-soft)]"}`}
+    />
+  );
 }
