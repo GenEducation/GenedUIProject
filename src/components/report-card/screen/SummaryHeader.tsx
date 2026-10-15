@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/Button";
 import type { ReportCardData, ReportCardUI } from "../types";
 import type { OverallSummary, SubjectSummary } from "../selectors";
 import { toneFor } from "../subjectVisuals";
-import { CARD, FOCUS_RING, Ring, SoonTag } from "./primitives";
+import { CARD, FOCUS_RING, Ring } from "./primitives";
+import { IndependenceBar } from "./SectionCards";
+import { formatEstimate } from "@/features/learning/activity/useChapterTime";
+import { useReportExtras } from "../sections/ReportExtras";
+import { recentMinutes } from "../sections/reportSections";
 import { Icon, TintIcon } from "./icons";
 
 export function SummaryHeader({
@@ -16,6 +20,11 @@ export function SummaryHeader({
   overall: OverallSummary;
   onOpenSubject: (subject: string) => void;
 }) {
+  const extras = useReportExtras();
+  const v1 = data.chapters.some((c) => c.skills !== undefined);
+  const study = extras.activity?.state.status === "ready" ? recentMinutes(extras.activity.state.data.series) : null;
+  // The PDF is written from the same sections the screen shows, so it waits until none is still being read.
+  const sectionsLoading = [extras.activity, extras.trends, extras.misconceptions, extras.insights].some((s) => s?.state.status === "loading");
   const masteryTone = toneFor(overall.avgMastery, overall.sessions > 0 || overall.avgMastery > 0);
   const meta = [
     data.displayGrade != null ? `Grade ${data.displayGrade}` : null,
@@ -41,7 +50,7 @@ export function SummaryHeader({
             {data.reportPeriod}
           </span>
           {ui.canDownload && ui.onPrint && (
-            <Button variant="outline" size="sm" pill onClick={ui.onPrint} loading={ui.isPdfGenerating} leadingIcon={<Icon name="misc/download" size={15} />}>
+            <Button variant="outline" size="sm" pill onClick={ui.onPrint} loading={ui.isPdfGenerating} disabled={sectionsLoading} leadingIcon={<Icon name="misc/download" size={15} />}>
               Download PDF
             </Button>
           )}
@@ -71,9 +80,13 @@ export function SummaryHeader({
           value={<>{overall.chaptersCompleted} <span className="text-[var(--rs-ink-soft)]">/ {overall.chaptersTotal}</span></>}
           label="Chapters Completed"
         />
-        {/* The new backend (chapters carrying skills) doesn't report tests yet. */}
-        {overall.tests === 0 && data.chapters.some((c) => c.skills !== undefined) ? (
-          <HeaderStat icon={<Icon name="metrics/tests" size={26} />} value={<SoonTag />} label="Tests" />
+        {/* The new backend has no tests; it reports estimated study time instead (the activity read, last 30 days). */}
+        {v1 ? (
+          <HeaderStat
+            icon={<Icon name="session-content/time" size={26} />}
+            value={study ? formatEstimate(study.minutes) : <span className="text-[var(--rs-ink-soft)]">—</span>}
+            label="Study time (est.), 30 days"
+          />
         ) : (
           <HeaderStat icon={<Icon name="metrics/tests" size={26} />} value={overall.tests} label={overall.tests === 1 ? "Test" : "Tests"} />
         )}
@@ -92,6 +105,13 @@ export function SummaryHeader({
           </p>
         )}
       </div>
+
+      {/* Right answers alone vs with help, across every chapter. */}
+      {v1 && extras.help && extras.answered > 0 && (
+        <div className="col-span-2 border-t border-[var(--rs-line)] pt-4 @[540px]/hdr:col-span-3 @[980px]/hdr:col-span-4">
+          <IndependenceBar help={extras.help} />
+        </div>
+      )}
     </section>
     </div>
   );

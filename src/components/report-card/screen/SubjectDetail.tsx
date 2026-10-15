@@ -11,11 +11,12 @@ import { TestItem } from "../parts/TestItem";
 import { CARD, ComingSoon, FOCUS_RING, SkillLevelChip } from "./primitives";
 import { Icon } from "./icons";
 import { ChapterRow } from "./ChapterRow";
+import { SubjectInsight } from "./InsightsCards";
 import { Lightbulb } from "lucide-react";
 
 export type DetailTab = "chapters" | "progress" | "tests" | "insights";
 
-const TABS: { id: DetailTab; label: string }[] = [
+const ALL_TABS: { id: DetailTab; label: string }[] = [
   { id: "chapters", label: "Chapters" },
   { id: "progress", label: "Skills" },
   { id: "tests", label: "Tests" },
@@ -38,6 +39,8 @@ export function SubjectDetail({
   onTab: (tab: DetailTab) => void;
 }) {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  // The new backend has no chapter tests; the Tests tab stays for the teacher's report only.
+  const TABS = data.chapters.some((c) => c.skills !== undefined) ? ALL_TABS.filter((t) => t.id !== "tests") : ALL_TABS;
 
   const onKeyDown = (e: React.KeyboardEvent, i: number) => {
     const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
@@ -95,7 +98,7 @@ export function SubjectDetail({
           {tab === "chapters" && <ChaptersTab data={data} ui={ui} subject={summary.subject} />}
           {tab === "progress" && <ProgressTab data={data} ui={ui} subject={summary.subject} />}
           {tab === "tests" && <TestsTab data={data} ui={ui} subject={summary.subject} />}
-          {tab === "insights" && <InsightsTab summary={summary} />}
+          {tab === "insights" && (summary.v1 ? <SubjectInsight data={data} subject={summary.subject} /> : <InsightsTab summary={summary} />)}
         </motion.div>
       </AnimatePresence>
     </section>

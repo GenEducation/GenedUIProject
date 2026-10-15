@@ -10,7 +10,7 @@ import { FunFactCard } from "@/components/shared/loaders/FunFactCard";
 import type {
   SubjectData, ChapterMasteryItem, SkillCGItem, TestSubmission, DashboardProfile,
   EvolutionAnalysisData, SubjectEvolutionData, StudentProgressData,
-  ReportCardData, ReportCardUI, ReportRole,
+  ReportCardData, ReportCardDataset, ReportCardUI, ReportRole,
 } from "./types";
 import { RC_STYLES, RC_SCREEN_STYLES } from "./styles";
 import { applySimulation } from "./utils";
@@ -18,7 +18,8 @@ import { ReportCardScreen, isEmptyReport } from "./screen/ReportCardScreen";
 import { Icon } from "./screen/icons";
 import { Button } from "@/components/ui/Button";
 import { usePrintPdf } from "./usePrintPdf";
-import { loadV1Report } from "./v1Report";
+import { loadV1Report, type ReportSummaryFacts, type ReportWho, type V1Dataset } from "./v1Report";
+import { ReportExtrasProvider } from "./sections/ReportExtras";
 import {
   loadSubjectCatalog,
   requireExactSubject,
@@ -83,6 +84,9 @@ export function StudentReportCard({
   const [progressReport, setProgressReport] = useState<StudentProgressData | null>(null);
   const [subjectEvolutions, setSubjectEvolutions] = useState<SubjectEvolutionData[]>([]);
   const [chapterEvolutions, setChapterEvolutions] = useState<EvolutionAnalysisData[]>([]);
+  // The new backend's header facts: who the report is for, and the answer totals (alone vs with help).
+  const [v1Profile, setV1Profile] = useState<V1Dataset["profile"] | null>(null);
+  const [v1Summary, setV1Summary] = useState<ReportSummaryFacts | null>(null);
 
   // Expander/subject/clamp UI state (screen only). Subjects default COLLAPSED.
   const [openSubjects, setOpenSubjects] = useState<Set<string>>(() => new Set());
@@ -104,7 +108,7 @@ export function StudentReportCard({
   const studentId = studentProfile?.user_id;
 
   /** Fill every dataset slice at once (each loader returns them all). */
-  const applyDataset = (d: Awaited<ReturnType<typeof loadV1Report>>) => {
+  const applyDataset = (d: ReportCardDataset) => {
     setTotalSessions(d.totalSessions);
     setSubjects(d.subjects);
     setChapters(d.chapters);
@@ -145,20 +149,26 @@ export function StudentReportCard({
   }, [teacherId, childId]);
 
   // Student and parent: the new backend's learner routes (see v1Report.ts).
+  const who: ReportWho | null = useMemo(
+    () => (parentId && childId ? { role: "parent", childId } : studentId ? { role: "student", studentId } : null),
+    [parentId, childId, studentId],
+  );
   const fetchV1 = useCallback(async () => {
-    const who = parentId && childId ? ({ role: "parent", childId } as const) : studentId ? ({ role: "student" } as const) : null;
     if (!who) return;
     setIsLoading(true);
     setError(null);
     try {
-      applyDataset(await loadV1Report(who));
+      const dataset = await loadV1Report(who);
+      applyDataset(dataset);
+      setV1Profile(dataset.profile);
+      setV1Summary(dataset.summary);
     } catch (err) {
       console.error("[ReportCard] Failed to load data:", err);
       setError("Failed to load report data. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  }, [parentId, childId, studentId]);
+  }, [who]);
 
   const load = useCallback(
     () => (teacherId && childId ? fetchTeacherReportData() : fetchV1()),
@@ -192,8 +202,10 @@ export function StudentReportCard({
     resolvedStudentName ||
     (dashboardProfile?.name ? titleCase(dashboardProfile.name) : undefined) ||
     "Student";
-  const displayGrade = studentProfile?.grade ?? dashboardProfile?.grade ?? null;
-  const displayBoard = studentProfile?.school_board ?? dashboardProfile?.board ?? null;
+  // A parent's own profile says nothing about the child: the report carries the child's grade and board.
+  const reportIsAboutAnother = role !== "student";
+  const displayGrade = (reportIsAboutAnother ? v1Profile?.grade : studentProfile?.grade) ?? v1Profile?.grade ?? dashboardProfile?.grade ?? null;
+  const displayBoard = (reportIsAboutAnother ? v1Profile?.board : studentProfile?.school_board) ?? v1Profile?.board ?? dashboardProfile?.board ?? null;
 
   const data: ReportCardData = useMemo(() => {
     const ds = applySimulation(simMode, {
@@ -218,8 +230,6 @@ export function StudentReportCard({
   const { isGenerating, triggerPrint, printPortal } = usePrintPdf({ data, role, filename: `${safeName}_Report_Card` });
 
   const isBrandNew = isEmptyReport(data);
-  // The PDF layout is built on the MVP's data (scores, tests, analyses); for the new backend it's coming soon.
-  const isV1 = role !== "teacher";
 
   const ui: ReportCardUI = {
     variant: "screen",
@@ -233,7 +243,7 @@ export function StudentReportCard({
     onStartSession: role === "student" ? () => router.push("/student") : undefined,
     onPrint: triggerPrint,
     isPdfGenerating: isGenerating,
-    canDownload: !isBrandNew && !isV1,
+    canDownload: !isBrandNew,
   };
 
   // ── Loading / Error ─────────────────────────────────────
@@ -273,8 +283,11 @@ export function StudentReportCard({
       {/* Source Serif + JetBrains Mono for the print layout and the legacy rc-* parts. */}
       <link rel="stylesheet" href={FONT_HREF} />
       <style>{RC_STYLES + RC_SCREEN_STYLES}</style>
-      <ReportCardScreen data={data} ui={ui} />
-      {printPortal}
+      <ReportExtrasProvider who={role === "teacher" ? null : who} summary={v1Summary}>
+        <ReportCardScreen data={data} ui={ui} />
+        {/* Inside the provider: the printed layout reads the same sections the screen shows. */}
+        {printPortal}
+      </ReportExtrasProvider>
     </>
   );
 }
