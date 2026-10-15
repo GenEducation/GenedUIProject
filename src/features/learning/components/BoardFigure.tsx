@@ -36,9 +36,10 @@ export function BoardFigure({ figureGroupId }: { figureGroupId: string }) {
   }
 
   const onError = () => {
-    // One refresh per figure: an expired URL gets a fresh one; a second failure is real.
-    if (refreshedFor === figureGroupId) return setFailed();
-    setRefreshedFor(figureGroupId);
+    // One refresh per figure and manifest: an expired URL gets a fresh one; a second failure is real. A later expiry
+    // (a new manifest) gets its own refresh.
+    if (refreshedFor === key) return setFailed();
+    setRefreshedFor(key);
     void refreshManifest().catch(setFailed);
   };
 

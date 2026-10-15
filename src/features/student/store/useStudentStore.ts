@@ -912,13 +912,17 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     });
 
     try {
-      await studentService.linkParent(
+      const link = await studentService.linkParent(
         studentProfile.user_id,
         parentEmailOrPhone,
       );
+      // A new link is PENDING until the parent confirms it; never call that "linked".
       set({
         partnerRequestStatus: "success",
-        partnerRequestMessage: "Parent successfully linked to your profile.",
+        partnerRequestMessage:
+          link?.status === "APPROVED"
+            ? "You're connected to your parent or guardian."
+            : "Request sent. Your parent or guardian needs to confirm it in their GenEd account.",
       });
     } catch (error) {
       console.error("Link Parent Error:", asError(error).request_id, asError(error).message ?? error);

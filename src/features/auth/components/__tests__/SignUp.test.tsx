@@ -6,13 +6,14 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 
 // SignUp lazily does `await import("../authService")` for sendOtp; intercept that
 // resolved module so no real network/env-dependent code runs.
-vi.mock("../../authService", () => ({ sendOtp: vi.fn() }));
+vi.mock("../../authService", () => ({ sendOtp: vi.fn(), sendGuardianOtp: vi.fn() }));
 
-import { sendOtp } from "../../authService";
+import { sendOtp, sendGuardianOtp } from "../../authService";
 import { SignUp } from "../SignUp";
 import type { SignUpFields } from "../../authService";
 
 const sendOtpMock = vi.mocked(sendOtp);
+const sendGuardianOtpMock = vi.mocked(sendGuardianOtp);
 
 const initial: SignUpFields = {
   email: "",
@@ -23,6 +24,7 @@ const initial: SignUpFields = {
   phone: "",
   otp_code: "",
   parent_email: "",
+  parent_otp_code: "",
   username: "",
 };
 
@@ -55,6 +57,7 @@ function Harness(props: {
 
 beforeEach(() => {
   sendOtpMock.mockReset().mockResolvedValue({ success: true, message: "sent" });
+  sendGuardianOtpMock.mockReset().mockResolvedValue({ status: "success", message: "sent" });
 });
 
 // Step transitions are gated behind framer-motion's <AnimatePresence mode="wait">,
@@ -88,6 +91,9 @@ describe("SignUp — student flow", () => {
     fireEvent.change(screen.getByPlaceholderText("parent@example.com"), {
       target: { value: "parent@example.com" },
     });
+    // The parent's address is verified with the code we email them.
+    fireEvent.click(screen.getByRole("button", { name: "Send code to parent" }));
+    fireEvent.change(await screen.findByPlaceholderText("6-digit code"), { target: { value: "123456" } });
     fireEvent.change(screen.getByPlaceholderText("Create a password"), {
       target: { value: "Mangoes7" },
     });
@@ -99,6 +105,35 @@ describe("SignUp — student flow", () => {
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(sendGuardianOtpMock).toHaveBeenCalledWith("parent@example.com");
+  });
+
+  it("asks for the parent's code before the account is created", async () => {
+    const onSubmit = vi.fn((e: FormEvent<HTMLFormElement>) => e.preventDefault());
+    render(<Harness onSubmit={onSubmit} />);
+    await goToStudentStep2();
+    fireEvent.change(screen.getByPlaceholderText("e.g. creative_coder"), { target: { value: "curious_kid" } });
+    fireEvent.change(screen.getByPlaceholderText("parent@example.com"), { target: { value: "parent@example.com" } });
+    fireEvent.change(screen.getByPlaceholderText("Create a password"), { target: { value: "Mangoes7" } });
+    fireEvent.change(screen.getByPlaceholderText("Confirm your password"), { target: { value: "Mangoes7" } });
+    await selectGrade("Grade 6");
+
+    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+
+    expect(await screen.findByText("Send a code to your parent and type it here")).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("a code sent to one address is cleared when the address changes", async () => {
+    render(<Harness />);
+    await goToStudentStep2();
+    fireEvent.change(screen.getByPlaceholderText("parent@example.com"), { target: { value: "mum@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send code to parent" }));
+    const code = await screen.findByPlaceholderText("6-digit code");
+    fireEvent.change(code, { target: { value: "123456" } });
+    fireEvent.change(screen.getByPlaceholderText("parent@example.com"), { target: { value: "dad@example.com" } });
+    await waitFor(() => expect(screen.queryByPlaceholderText("6-digit code")).not.toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Send code to parent" })).toBeInTheDocument();
   });
 
   it("blocks an incomplete student submission with inline errors", async () => {
@@ -168,6 +203,26 @@ describe("SignUp — parent flow", () => {
       target: { value: "Mangoes7" },
     });
   }
+
+  it("a parent's invitation link (/register?role=parent) opens the parent form directly", async () => {
+    window.history.pushState({}, "", "/register?role=parent&redirect=%2Fparent");
+    try {
+      render(<Harness onSubmit={vi.fn()} />);
+      expect(await screen.findByPlaceholderText("scholar@gened.edu")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Back to role selection" })).toBeInTheDocument();
+    } finally {
+      window.history.pushState({}, "", "/");
+    }
+  });
+
+  it("asks the parent for their name, saying who sees it", async () => {
+    render(<Harness onSubmit={vi.fn()} />);
+    await goToParentCredentials();
+    const name = screen.getByLabelText("Your Name");
+    expect(name).toHaveAttribute("name", "full_name");
+    expect(name).toHaveAttribute("maxLength", "80");
+    expect(screen.getByText("Your child sees this name once you're connected.")).toBeInTheDocument();
+  });
 
   it("calls onSubmit once credentials and phone are filled", async () => {
     const onSubmit = vi.fn((e: FormEvent<HTMLFormElement>) => e.preventDefault());

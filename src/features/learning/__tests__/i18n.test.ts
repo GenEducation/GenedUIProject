@@ -6,7 +6,7 @@ const KEYS: UiKey[] = [
   "checkpoint", "quickCheck", "yourAnswer", "checkAnswer", "hint", "calculator", "typeInChat", "gettingReady", "correct", "notQuite",
   "unreadable", "lookingAtIt", "moveOn", "nextStep", "talkItThrough", "repliesCount", "roundTricky", "tryNew", "keepGoing", "tutor",
   "listening", "muted", "hearing", "connecting", "reconnecting", "speaking", "thinking", "voiceOff", "modePush", "tapOrHold",
-  "unmuteToSpeak", "listeningRelease", "listeningTap", "end", "backToTyping", "sessionTime", "chapterTime", "stepsDone", "muteMic", "unmuteMic",
+  "unmuteToSpeak", "listeningRelease", "listeningTap", "end", "backToTyping", "sessionTime", "chapterTime", "stepsDone", "revisiting", "muteMic", "unmuteMic",
 ];
 
 describe("the lesson screen's own words", () => {

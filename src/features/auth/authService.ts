@@ -16,11 +16,19 @@ export interface SignUpFields {
   confirmPassword?: string;
   // Partner accounts are admin-provisioned only; not a public signup role.
   role: "student" | "parent";
+  /** Parent only: their name, which their connected child sees (`identity.parent_profiles`). */
+  full_name?: string;
   age?: string;
   grade?: string;
   phone?: string;
   otp_code?: string;
   parent_email?: string;
+  /**
+   * The code `POST /auth/send-otp/guardian` emailed to `parent_email`, which the parent reads out to the student.
+   * It verifies the parent's address, so the parent's account connects to this one automatically once they register
+   * with that same address and confirm.
+   */
+  parent_otp_code?: string;
   /** A school to request on sign-up; the membership starts PENDING until that school approves. Omit to join GenEd. */
   partner_id?: string;
 }
@@ -94,7 +102,8 @@ export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
   if (data.username) body.username = data.username;
 
   if (data.role === "student") {
-    if (data.parent_email) body.parent_email = data.parent_email;
+    if (data.parent_email) body.parent_email = data.parent_email.trim();
+    if (data.parent_email && data.parent_otp_code) body.parent_otp_code = data.parent_otp_code.trim();
     if (data.email) body.email_id = data.email;
     if (data.otp_code) body.otp_code = data.otp_code;
     if (data.grade) body.grade = Number(data.grade);
@@ -105,6 +114,7 @@ export async function signUp(data: SignUpFields): Promise<AuthTokenResponse> {
     body.otp_code = data.otp_code;
     if (data.role === "parent") {
       if (data.phone) body.phone = data.phone;
+      if (data.full_name?.trim()) body.full_name = data.full_name.trim();
     }
   }
 
@@ -178,6 +188,24 @@ export async function sendOtp(email: string): Promise<{ success: boolean; messag
 
   if (!response.ok) {
     await handleAuthError(response, "Failed to send OTP");
+  }
+
+  return response.json();
+}
+
+/**
+ * Emails a verification code to the parent or guardian address a student is signing up with. The backend answers
+ * the same whether or not anyone has an account at that address; the code verifies nothing but this address.
+ */
+export async function sendGuardianOtp(email: string): Promise<{ status: string; message: string }> {
+  const response = await fetch(`${AUTH_API_BASE_URL}/auth/send-otp/guardian`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: email.trim() }),
+  });
+
+  if (!response.ok) {
+    await handleAuthError(response, "Failed to send the code to your parent");
   }
 
   return response.json();

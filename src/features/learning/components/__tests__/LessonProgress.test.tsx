@@ -46,3 +46,32 @@ describe("a finished lesson", () => {
     expect(screen.getByText("All steps done")).toBeInTheDocument();
   });
 });
+
+describe("revisiting skills after every planned step is done", () => {
+  it("keeps the backend's 17 of 17 and 100%, and says revisit work is under way (rail, chapter card, header)", async () => {
+    const { LessonHeader } = await import("../LessonHeader");
+    const { LessonRail } = await import("../LessonRail");
+    lessonFixture.setInstance(makeLessonInstance({
+      state: "active",
+      nodes_done: 17,
+      nodes_total: 17,
+      active_node: { ...makeLessonInstance().active_node!, reason: "revisit_remedial", title: "SYNTHETIC revisit" },
+    }));
+    await store().load(LESSON_ID);
+    render(<><LessonRail /><LessonHeader subject={null} chapterTitle="SYNTHETIC chapter" exitHref="/student" /></>);
+    // The counts are the canonical ones, unchanged.
+    expect(screen.getByText("17 of 17 steps done")).toBeInTheDocument();
+    expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Steps completed" })).toHaveAttribute("aria-valuenow", "17");
+    expect(screen.getByText("17/17")).toBeInTheDocument();
+    // Rail line, chapter card caption and header chip label.
+    expect(screen.getAllByText("Revisiting skills")).toHaveLength(3);
+    expect(screen.queryByText("Steps done")).not.toBeInTheDocument();
+  });
+
+  it("an ordinary step says nothing about revisiting", async () => {
+    await store().load(LESSON_ID);
+    render(<LessonProgressRail />);
+    expect(screen.queryByText("Revisiting skills")).not.toBeInTheDocument();
+  });
+});

@@ -52,6 +52,8 @@ const EN = {
   sessionTime: "Session time",
   chapterTime: "Chapter time",
   stepsDone: "Steps done",
+  /** The plan's own steps are all done and the learner is on a revisit step (`active_node.reason` "revisit_…"). */
+  revisiting: "Revisiting skills",
 } as const;
 
 export type UiKey = keyof typeof EN;
@@ -98,6 +100,7 @@ const HI: Table = {
   sessionTime: "सत्र का समय",
   chapterTime: "अध्याय का समय",
   stepsDone: "पूरे हुए चरण",
+  revisiting: "कौशल दोहरा रहे हैं",
 };
 
 const HI_LATN: Table = {
@@ -141,6 +144,7 @@ const HI_LATN: Table = {
   sessionTime: "Session ka samay",
   chapterTime: "Chapter ka samay",
   stepsDone: "Poore hue steps",
+  revisiting: "Skills dohra rahe hain",
 };
 
 const MR: Table = {
@@ -184,6 +188,7 @@ const MR: Table = {
   sessionTime: "सत्राची वेळ",
   chapterTime: "प्रकरणाची वेळ",
   stepsDone: "पूर्ण झालेले टप्पे",
+  revisiting: "कौशल्यांची उजळणी",
 };
 
 const PA: Table = {
@@ -227,6 +232,7 @@ const PA: Table = {
   sessionTime: "ਸੈਸ਼ਨ ਦਾ ਸਮਾਂ",
   chapterTime: "ਅਧਿਆਇ ਦਾ ਸਮਾਂ",
   stepsDone: "ਪੂਰੇ ਹੋਏ ਕਦਮ",
+  revisiting: "ਹੁਨਰ ਦੁਹਰਾ ਰਹੇ ਹਾਂ",
 };
 
 const TA: Table = {
@@ -270,6 +276,7 @@ const TA: Table = {
   sessionTime: "அமர்வு நேரம்",
   chapterTime: "அத்தியாய நேரம்",
   stepsDone: "முடிந்த படிகள்",
+  revisiting: "திறன்களை மீண்டும் பார்க்கிறோம்",
 };
 
 const TE: Table = {
@@ -313,6 +320,7 @@ const TE: Table = {
   sessionTime: "సెషన్ సమయం",
   chapterTime: "అధ్యాయం సమయం",
   stepsDone: "పూర్తైన దశలు",
+  revisiting: "నైపుణ్యాలను మళ్లీ చూస్తున్నాం",
 };
 
 const KN: Table = {
@@ -356,6 +364,7 @@ const KN: Table = {
   sessionTime: "ಅಧಿವೇಶನದ ಸಮಯ",
   chapterTime: "ಅಧ್ಯಾಯದ ಸಮಯ",
   stepsDone: "ಮುಗಿದ ಹಂತಗಳು",
+  revisiting: "ಕೌಶಲಗಳನ್ನು ಮತ್ತೆ ನೋಡುತ್ತಿದ್ದೇವೆ",
 };
 
 const TABLES: Record<SessionLanguage, Table> = { en: EN, hi: HI, "hi-Latn": HI_LATN, mr: MR, pa: PA, ta: TA, te: TE, kn: KN };

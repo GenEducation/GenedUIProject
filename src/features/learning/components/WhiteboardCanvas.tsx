@@ -39,10 +39,14 @@ export function WhiteboardCanvas({
   const manifest = useLessonStore((s) => s.manifest);
   const payload = useLessonStore((s) => s.payload);
   const refreshManifest = useLessonStore((s) => s.refreshManifest);
+  const figureStatus = useLessonStore((s) => s.figureStatus);
 
+  // A figure presented live is placed once its picture is decoded (or has definitely failed), not before: its ink-in
+  // then starts as it can be drawn, together with the tutor's words about it (held until then in the chat).
   const figures = useMemo<PlacedFigure[]>(() => {
     const groups = figureGroupsOf(payload);
     const withPictures = ids
+      .filter((id) => figureStatus[id] !== "pending")
       .map((id) => ({ id, picture: picturesFor(manifest, id)[0] }))
       .filter((f) => f.picture);
     const rects = layoutFigures(
@@ -50,7 +54,7 @@ export function WhiteboardCanvas({
       withPictures.map((f) => f.id),
     );
     return withPictures.map((f, i) => ({ id: f.id, rect: rects[i], src: f.picture!.src, alt: altTextOf(groups.get(f.id)) }));
-  }, [ids, manifest, payload]);
+  }, [ids, manifest, payload, figureStatus]);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const size = useRef<Size>({ w: 0, h: 0 });
@@ -98,17 +102,19 @@ export function WhiteboardCanvas({
     // Re-frame when the target or its place changes, not on every render.
   }, [measured, target?.id, target?.rect.x, target?.rect.y, target?.rect.w, target?.rect.h, refitKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Signed URLs expire: a failed picture refreshes the manifest once; failing again, it says so instead.
+  // Signed URLs expire: a failed picture refreshes the manifest once; failing again, it says so instead. Both are kept per
+  // URL, so the fresh URLs of a later expiry get their own refresh rather than being refused for an old failure.
   const [refreshed, setRefreshed] = useState<Set<string>>(() => new Set());
   const [failed, setFailed] = useState<Set<string>>(() => new Set());
-  const onPictureError = (id: string) => {
-    if (refreshed.has(id)) {
-      setFailed((prev) => new Set(prev).add(id));
+  const onPictureError = (key: string) => {
+    if (refreshed.has(key)) {
+      setFailed((prev) => new Set(prev).add(key));
       return;
     }
-    setRefreshed((prev) => new Set(prev).add(id));
-    void refreshManifest().catch(() => setFailed((prev) => new Set(prev).add(id)));
+    setRefreshed((prev) => new Set(prev).add(key));
+    void refreshManifest().catch(() => setFailed((prev) => new Set(prev).add(key)));
   };
+  const pictureKey = (f: PlacedFigure) => `${f.id}|${f.src}`;
 
   // Figures already on the board when it mounts (history) just appear; later ones ink in.
   const [onMount] = useState(() => new Set(ids));
@@ -171,7 +177,7 @@ export function WhiteboardCanvas({
               <span className="lesson-hand absolute -left-2 -top-9 text-[22px] text-[var(--ls-ink-faint)]" aria-hidden>
                 {i + 1}
               </span>
-              {failed.has(f.id) ? (
+              {failed.has(pictureKey(f)) || figureStatus[f.id] === "failed" || figureStatus[f.id] === "retrying" ? (
                 <div className="grid h-full w-full place-items-center rounded-[28px] border-2 border-dashed border-[var(--ls-border-strong)]">
                   <p className="lesson-hand text-[26px] text-[var(--ls-ink-faint)]">This picture couldn&apos;t load.</p>
                 </div>
@@ -181,7 +187,7 @@ export function WhiteboardCanvas({
                   src={f.src}
                   alt={f.alt}
                   draggable={false}
-                  onError={() => onPictureError(f.id)}
+                  onError={() => onPictureError(pictureKey(f))}
                   className="h-full w-full object-contain mix-blend-multiply"
                 />
               )}

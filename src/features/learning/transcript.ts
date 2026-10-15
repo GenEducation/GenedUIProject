@@ -17,14 +17,19 @@ export interface LessonTurn {
   failure: { reason: FailureReason; retryable: boolean; message?: string } | null;
   outcome: "correct" | "incorrect" | "quarantined" | null;
   createdAt: string;
+  /**
+   * The lesson step (instance node) the turn belongs to: the node it was asked on, confirmed by its `turn_started`.
+   * The transcript draws a step boundary where it changes, and a turn of a step the lesson has left takes no more events.
+   */
+  nodeId: string | null;
 }
 
 export const replyText = (turn: LessonTurn): string => turn.deltas.map((d) => d.text ?? "").join("");
 
-export function newTurn(turnId: string, kind: TurnKind, learnerText: string | null): LessonTurn {
+export function newTurn(turnId: string, kind: TurnKind, learnerText: string | null, nodeId: string | null = null): LessonTurn {
   return {
     turnId, kind, learnerText, deltas: [], figureGroupIds: [], status: "streaming", lastSeq: 0,
-    failure: null, outcome: null, createdAt: new Date().toISOString(),
+    failure: null, outcome: null, createdAt: new Date().toISOString(), nodeId,
   };
 }
 
@@ -32,8 +37,8 @@ const RECORDED_STATUS: Record<string, TurnStatus> = {
   completed: "completed", incomplete: "incomplete", failed: "failed", interrupted: "interrupted",
 };
 
-/** A recorded turn from history as an on-screen turn; its whole reply is one delta. */
-export function fromRecorded(turn: RecordedTurn): LessonTurn {
+/** A recorded turn from history as an on-screen turn; its whole reply is one delta. History is read per node: `nodeId` is that node. */
+export function fromRecorded(turn: RecordedTurn, nodeId: string | null = null): LessonTurn {
   const last = turn.transcript_through_seq ?? turn.committed_through_seq ?? 0;
   return {
     turnId: turn.turn_id,
@@ -46,6 +51,7 @@ export function fromRecorded(turn: RecordedTurn): LessonTurn {
     failure: turn.failure_reason ? { reason: turn.failure_reason, retryable: false } : null,
     outcome: turn.outcome ?? null,
     createdAt: turn.created_at,
+    nodeId,
   };
 }
 
@@ -59,6 +65,9 @@ export function applyEvent(turn: LessonTurn, event: SequencedTurnEvent): LessonT
   if (event.turn_id !== turn.turnId || event.seq <= turn.lastSeq) return turn;
   const next: LessonTurn = { ...turn, lastSeq: event.seq };
   switch (event.type) {
+    case "turn_started":
+      next.nodeId = event.instance_node_id;
+      break;
     case "text_delta":
       next.deltas = [...turn.deltas, { seq: event.seq, text: event.text }];
       break;

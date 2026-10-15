@@ -5,7 +5,8 @@ import { useState } from "react";
 import { learnerService } from "@/features/student/learner/learnerService";
 import { useFreshChapterCard } from "@/features/student/learner/useFreshChapterCard";
 import { paletteFor } from "@/features/student/learner/cardPalettes";
-import { useLessonStore } from "../useLessonStore";
+import { isRevisiting, useLessonStore } from "../useLessonStore";
+import { useUiText } from "../i18n";
 import { LessonProgressRail } from "./LessonProgressRail";
 
 /** Whether this build connects voice mode to the backend (`/v1/voice`); off until the voice service is live. */
@@ -26,6 +27,8 @@ function ChapterCard() {
   const cardSrc = chapter?.card ? learnerService.cardSrc(chapter.card.image_url) : null;
   const done = useLessonStore((s) => s.instance?.nodes_done ?? 0);
   const total = useLessonStore((s) => s.instance?.nodes_total ?? 0);
+  const revisiting = useLessonStore((s) => isRevisiting(s.instance));
+  const t = useUiText();
   const pal = paletteFor(chapter?.palette);
 
   return (
@@ -59,6 +62,11 @@ function ChapterCard() {
               <div className="h-1.5 overflow-hidden rounded-full bg-white/60">
                 <div className="h-full rounded-full" style={{ width: `${Math.round((done / total) * 100)}%`, background: pal.a }} />
               </div>
+              {revisiting && (
+                <p className="mt-1 text-[11px] font-semibold" style={{ color: pal.ink }}>
+                  {t("revisiting")}
+                </p>
+              )}
             </div>
           )}
         </div>

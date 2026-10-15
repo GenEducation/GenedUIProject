@@ -15,6 +15,7 @@ import { useHydrated } from "@/hooks/useHydrated";
 import { ParentLoaderBackdrop } from "@/features/parent/components/loader/ParentLoader";
 import { GenEdLogo } from "@/components/shared/GenEdLogo";
 import { BrandLoadingScreen } from "@/components/shared/loaders/BrandLoadingScreen";
+import { safeRedirect, withRedirect } from "@/features/auth/usePostAuthRedirect";
 
 function storedRole(): string | null {
   try {
@@ -30,6 +31,12 @@ export default function HomePage() {
   const hydrated = useHydrated();
   const [showVideo, setShowVideo] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // AuthGuard sends a signed-out visitor here with `?redirect=<where they were going>` (a parent's invitation
+  // link, say). Log in / Get started carry it on, so /login and /register return them there afterwards.
+  // Read after hydration only, so the server's links and the first client render agree.
+  const authRedirect = hydrated ? safeRedirect(new URLSearchParams(window.location.search).get("redirect")) : null;
+  const loginHref = withRedirect("/login", authRedirect);
+  const registerHref = withRedirect("/register", authRedirect);
 
   // Escape closes the video modal and the mobile menu
   useEffect(() => {
@@ -90,7 +97,7 @@ export default function HomePage() {
       try {
         const profile = JSON.parse(profileStr);
         const searchParams = new URLSearchParams(window.location.search);
-        const redirectPath = searchParams.get("redirect");
+        const redirectPath = safeRedirect(searchParams.get("redirect"));
 
         if (redirectPath) {
           if (redirectPath.startsWith("/parent") && role !== "parent") {
@@ -221,8 +228,8 @@ export default function HomePage() {
               <a href="#contact">Contact</a>
             </div>
             <div className="navcta">
-              <Link className="btn btn-ghost" href="/login">Log in</Link>
-              <Link className="btn btn-ghost" href="/register">Get started</Link>
+              <Link className="btn btn-ghost" href={loginHref}>Log in</Link>
+              <Link className="btn btn-ghost" href={registerHref}>Get started</Link>
               <Link className="btn btn-primary" href="/pre-order">{campaignLabel("Pre-order")}</Link>
             </div>
             <button className="hamburger" aria-label="Open menu" onClick={() => setMenuOpen(true)}>
@@ -244,8 +251,8 @@ export default function HomePage() {
           <a href="#parents" onClick={closeMenu}>For Parents</a>
           <a href="#schools" onClick={closeMenu}>For Schools</a>
           <a href="#contact" onClick={closeMenu}>Contact</a>
-          <Link className="btn btn-ghost" href="/login" onClick={closeMenu}>Log in</Link>
-          <Link className="btn btn-ghost" href="/register" onClick={closeMenu}>Get started</Link>
+          <Link className="btn btn-ghost" href={loginHref} onClick={closeMenu}>Log in</Link>
+          <Link className="btn btn-ghost" href={registerHref} onClick={closeMenu}>Get started</Link>
           <Link className="btn btn-primary" href="/pre-order" onClick={closeMenu}>{campaignLabel("Pre-order")}</Link>
         </div>
       </div>
@@ -448,7 +455,7 @@ export default function HomePage() {
           <p>GenEd is live and ready — a focused, distraction-free AI tutor that actually adapts to how your child learns.</p>
           <div className="cta-row">
             <Link className="btn btn-citron" href="/pre-order">{campaignLabel("Pre-order the Deskbot")} <svg className="icon" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></Link>
-            <Link className="btn btn-ghost" href="/register" style={{ color: "#fff", borderColor: "rgba(255,255,255,0.35)" }}>Get started free</Link>
+            <Link className="btn btn-ghost" href={registerHref} style={{ color: "#fff", borderColor: "rgba(255,255,255,0.35)" }}>Get started free</Link>
           </div>
         </div>
       </section>

@@ -16,12 +16,16 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
  * One SYNTHETIC lesson on the new backend (`/v1/instances/*`). Text is labelled
  * SYNTHETIC: the backend's rule is no invented curriculum content, even in UI
  * fixtures. Turns stream real SSE frames (`id: <turn_id>:<seq>`); a script can
- * cut a stream short (`dropAfter`) so tests exercise resume.
+ * cut a stream short (`dropAfter`) so tests exercise resume, or hold one open
+ * mid-reply (`holdStream`) so tests can move on while the tutor is still talking.
+ * The payload and the manifest are per node, as the backend's are: NODE_1 has
+ * FIGURE_GROUP (`pic-1`), NODE_2 has FIGURE_GROUP_2 (`pic-2`).
  */
 export const LESSON_ID = "22222222-0000-4000-8000-000000000001";
 export const NODE_1 = "33333333-0000-4000-8000-000000000001";
 export const NODE_2 = "33333333-0000-4000-8000-000000000002";
 export const FIGURE_GROUP = "44444444-0000-4000-8000-000000000001";
+export const FIGURE_GROUP_2 = "44444444-0000-4000-8000-000000000002";
 export const CHECK_ITEM = "55555555-0000-4000-8000-000000000001";
 export const OPTION_A = "66666666-0000-4000-8000-00000000000a";
 
@@ -52,7 +56,14 @@ export function makeLessonInstance(overrides: Partial<InstanceState> = {}): Inst
   };
 }
 
-export const syntheticPayload = (title = "SYNTHETIC node 2"): TeacherPayload => ({
+/** Each node's one figure group and picture. */
+const NODE_FIGURES: Record<string, { group: string; picture: string; alt: string }> = {
+  [NODE_1]: { group: FIGURE_GROUP, picture: "pic-1", alt: "SYNTHETIC figure" },
+  [NODE_2]: { group: FIGURE_GROUP_2, picture: "pic-2", alt: "SYNTHETIC figure two" },
+};
+const figuresOf = (instanceNodeId: string | undefined) => NODE_FIGURES[instanceNodeId ?? NODE_1] ?? NODE_FIGURES[NODE_1];
+
+export const syntheticPayload = (title = "SYNTHETIC node 2", instanceNodeId: string = NODE_1): TeacherPayload => ({
   schema_version: "teacher_node_v5",
   node: {
     id: "88888888-0000-4000-8000-000000000001",
@@ -61,9 +72,9 @@ export const syntheticPayload = (title = "SYNTHETIC node 2"): TeacherPayload => 
     teach_only: false,
     sections: [{ id: "s1", title: "SYNTHETIC section", path: ["SYNTHETIC section"], chunks: [{ id: "c1", text: "SYNTHETIC text.", page: 1 }] }],
     figure_groups: [{
-      id: FIGURE_GROUP,
+      id: figuresOf(instanceNodeId).group,
       reading_order: 1,
-      figures: [{ source: "generated_visual", id: "pic-1", width_px: 800, height_px: 600, mime: "image/png", printed_text: "", learner_alt_text: "SYNTHETIC figure" }],
+      figures: [{ source: "generated_visual", id: figuresOf(instanceNodeId).picture, width_px: 800, height_px: 600, mime: "image/png", printed_text: "", learner_alt_text: figuresOf(instanceNodeId).alt }],
     }],
     check_items: [{
       id: CHECK_ITEM,
@@ -78,12 +89,16 @@ export const syntheticPayload = (title = "SYNTHETIC node 2"): TeacherPayload => 
   student_context: { next_nodes: [{ node_id: "n3", title: "SYNTHETIC node 3", type: "practice" }] },
 });
 
-const syntheticManifest = (): PresentationManifest => ({
-  expires_at: 4_102_444_800,
-  figures: {
-    "pic-1": { figure_group_id: FIGURE_GROUP, url: "/v1/visual-images/pic-1?exp=1&sig=synthetic", width_px: 800, height_px: 600, mime: "image/png", sha256: "0".repeat(64) },
-  },
-});
+/** The picture's signed URL as the manifest names it; `signature` changes when the fixture re-signs (a later expiry). */
+export const pictureUrl = (picture: string, signature = "synthetic") => `/v1/visual-images/${picture}?exp=1&sig=${signature}`;
+
+const syntheticManifest = (instanceNodeId: string | undefined): PresentationManifest => {
+  const { group, picture } = figuresOf(instanceNodeId);
+  const figures: PresentationManifest["figures"] = state.manifestOmits.has(group)
+    ? {}
+    : { [picture]: { figure_group_id: group, url: pictureUrl(picture, state.signature), width_px: 800, height_px: 600, mime: "image/png", sha256: "0".repeat(64) } };
+  return { expires_at: 4_102_444_800, figures };
+};
 
 /** What the server streams for a turn: the events after `turn_started`, numbered from seq 2. */
 export type TurnScript = (request: TurnRequest) => Array<Omit<SequencedTurnEvent, "v" | "turn_id" | "seq">>;
@@ -101,6 +116,20 @@ interface State {
   dropAfter: number | null;
   log: Map<string, SequencedTurnEvent[]>;
   manifestReads: number;
+  /** The next N manifest reads fail with a 503. */
+  manifestFailures: number;
+  /** Figure groups the manifest leaves out (a picture not signed yet). */
+  manifestOmits: Set<string>;
+  /** The signature on manifest URLs; `resign` changes it, as a new expiry window would. */
+  signature: string;
+  /** While set, manifest and payload reads wait for it (a slow network). */
+  nodeReadGate: Promise<void> | null;
+  /** The next N payload reads fail with a 500 (the step's payload cannot be built). */
+  payloadFailures: number;
+  /** The next N turn POSTs are refused with a 503 before any stream starts. */
+  turnFailures: number;
+  /** The next turn stream sends this many frames, then waits for `releaseStream` (the tutor still talking). */
+  holdAfter: number | null;
 }
 
 const state: State = {
@@ -110,7 +139,19 @@ const state: State = {
   dropAfter: null,
   log: new Map(),
   manifestReads: 0,
+  manifestFailures: 0,
+  manifestOmits: new Set(),
+  signature: "synthetic",
+  nodeReadGate: null,
+  payloadFailures: 0,
+  turnFailures: 0,
+  holdAfter: null,
 };
+
+/** Releases of held streams, in order. */
+const heldStreams: Array<() => void> = [];
+/** How many manifest reads have started (including failed ones). */
+let manifestAttempts = 0;
 
 /** Every turn request the client sent, oldest first. */
 export const turnRequests: TurnRequest[] = [];
@@ -147,6 +188,15 @@ export const lessonFixture = {
     state.dropAfter = null;
     state.log.clear();
     state.manifestReads = 0;
+    state.manifestFailures = 0;
+    state.manifestOmits = new Set();
+    state.signature = "synthetic";
+    state.nodeReadGate = null;
+    state.payloadFailures = 0;
+    state.turnFailures = 0;
+    state.holdAfter = null;
+    heldStreams.length = 0;
+    manifestAttempts = 0;
     turnRequests.length = 0;
     answerRequests.length = 0;
     deliveryRequests.length = 0;
@@ -171,11 +221,57 @@ export const lessonFixture = {
   get manifestReads() {
     return state.manifestReads;
   },
+  /** Every manifest read that reached the server, the failed ones too. */
+  get manifestAttempts() {
+    return manifestAttempts;
+  },
+  failNextManifests: (n: number) => void (state.manifestFailures = n),
+  omitFromManifest: (...groups: string[]) => void (state.manifestOmits = new Set(groups)),
+  resign: (signature: string) => void (state.signature = signature),
+  /** Hold the payload and manifest reads until the returned function is called. */
+  holdNodeReads: (): (() => void) => {
+    let release = () => {};
+    state.nodeReadGate = new Promise<void>((resolve) => (release = resolve));
+    return () => {
+      state.nodeReadGate = null;
+      release();
+    };
+  },
+  failNextPayloads: (n: number) => void (state.payloadFailures = n),
+  failNextTurns: (n: number) => void (state.turnFailures = n),
+  holdStream: (afterFrames: number | null) => void (state.holdAfter = afterFrames),
+  /** Let the oldest held stream send the rest of its frames. */
+  releaseStream: () => heldStreams.shift()?.(),
 };
 
+const frameOf = (e: SequencedTurnEvent) => `id: ${e.turn_id}:${e.seq}\nevent: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`;
+
 function sse(events: SequencedTurnEvent[]): Response {
-  const body = events.map((e) => `id: ${e.turn_id}:${e.seq}\nevent: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`).join("");
+  const body = events.map(frameOf).join("");
   return new HttpResponse(body, { headers: { "content-type": "text/event-stream" } });
+}
+
+/** A stream that sends `after` frames, then waits to be released (or cancelled by the client) before sending the rest. */
+function heldSse(events: SequencedTurnEvent[], after: number): Response {
+  let release = () => {};
+  const released = new Promise<void>((resolve) => (release = resolve));
+  heldStreams.push(release);
+  let cancelled = false;
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(events.slice(0, after).map(frameOf).join("")));
+      void released.then(() => {
+        if (cancelled) return;
+        controller.enqueue(encoder.encode(events.slice(after).map(frameOf).join("")));
+        controller.close();
+      });
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+  return new HttpResponse(stream, { headers: { "content-type": "text/event-stream" } });
 }
 
 const ours = (id: unknown) => String(id) === state.instance.id;
@@ -184,11 +280,32 @@ export const lessonHandlers = [
   // Falls through (returns undefined) for the chapter list's own instances.
   http.get(`${BASE}/v1/instances/:instanceId`, ({ params }) => (ours(params.instanceId) ? HttpResponse.json(state.instance) : undefined)),
 
-  http.get(`${BASE}/v1/instances/:instanceId/teacher-payload`, () => HttpResponse.json(syntheticPayload(state.instance.active_node?.title))),
+  http.get(`${BASE}/v1/instances/:instanceId/teacher-payload`, async () => {
+    const node = state.instance.active_node;
+    if (state.nodeReadGate) await state.nodeReadGate;
+    if (state.payloadFailures > 0) {
+      state.payloadFailures -= 1;
+      return HttpResponse.json(
+        { status: "error", error_code: "CORE_9000", message: "Something went wrong.", request_id: "r", retryable: false, details: {} },
+        { status: 500 },
+      );
+    }
+    return HttpResponse.json(syntheticPayload(node?.title, node?.instance_node_id));
+  }),
 
-  http.get(`${BASE}/v1/instances/:instanceId/teacher-payload/presentation-manifest`, () => {
+  http.get(`${BASE}/v1/instances/:instanceId/teacher-payload/presentation-manifest`, async () => {
+    const node = state.instance.active_node?.instance_node_id;
+    manifestAttempts += 1;
+    if (state.nodeReadGate) await state.nodeReadGate;
+    if (state.manifestFailures > 0) {
+      state.manifestFailures -= 1;
+      return HttpResponse.json(
+        { status: "error", error_code: "CORE_9999", message: "Unavailable.", request_id: "r", retryable: true, details: {} },
+        { status: 503 },
+      );
+    }
     state.manifestReads += 1;
-    return HttpResponse.json(syntheticManifest());
+    return HttpResponse.json(syntheticManifest(node));
   }),
 
   http.get(`${BASE}/v1/instances/:instanceId/teacher-turns`, () => HttpResponse.json(state.history)),
@@ -196,12 +313,24 @@ export const lessonHandlers = [
   http.post(`${BASE}/v1/instances/:instanceId/teacher-turns`, async ({ request }) => {
     const body = (await request.json()) as TurnRequest;
     turnRequests.push(body);
+    if (state.turnFailures > 0) {
+      state.turnFailures -= 1;
+      return HttpResponse.json(
+        { status: "error", error_code: "TUTR_1503", message: "The teacher is not available right now.", request_id: "r", retryable: false, details: {} },
+        { status: 503 },
+      );
+    }
     const events: SequencedTurnEvent[] = [
       { v: 3, turn_id: body.turn_id, seq: 1, type: "turn_started", kind: body.kind, instance_node_id: body.instance_node_id, instance_revision: state.instance.revision ?? 0, protocol: "teacher_turn_stream_v3" },
       ...state.script(body).map((e, i) => ({ ...e, v: 3, turn_id: body.turn_id, seq: i + 2 }) as SequencedTurnEvent),
     ];
     for (const e of events) if (e.type === "state_changed") state.instance = e.instance;
     state.log.set(body.turn_id, events);
+    if (state.holdAfter !== null) {
+      const after = state.holdAfter;
+      state.holdAfter = null;
+      return heldSse(events, after);
+    }
     return sse(state.dropAfter === null ? events : events.slice(0, state.dropAfter));
   }),
 

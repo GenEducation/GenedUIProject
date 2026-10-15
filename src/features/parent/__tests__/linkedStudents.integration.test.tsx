@@ -26,12 +26,14 @@ describe("parent linked students (integration)", () => {
     expect(s.selectedStudentId).toBe("s2"); // s2 is APPROVED, s1 is PENDING
   });
 
-  it("approving a pending child sends the status and updates locally", async () => {
+  it("approving a pending child sends the status with the parent's confirmation and updates locally", async () => {
     let sentStatus: string | null = null;
+    let sentConfirmed: boolean | undefined;
     server.use(
       http.patch(`${BASE}/parent/link/:studentId/status`, async ({ params, request }) => {
-        const body = (await request.json()) as { status: string };
+        const body = (await request.json()) as { status: string; guardian_confirmed?: boolean };
         sentStatus = body.status;
+        sentConfirmed = body.guardian_confirmed;
         return HttpResponse.json({ student_id: params.studentId, parent_id: "p1", status: body.status, requested_at: "now" });
       }),
     );
@@ -40,6 +42,7 @@ describe("parent linked students (integration)", () => {
     await useParentStore.getState().updateStudentStatus("s1", "APPROVED");
 
     expect(sentStatus).toBe("APPROVED");
+    expect(sentConfirmed).toBe(true);
     expect(useParentStore.getState().linkedStudents.find((x) => x.student_id === "s1")?.status).toBe("APPROVED");
   });
 

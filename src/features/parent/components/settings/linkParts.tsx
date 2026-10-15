@@ -35,9 +35,15 @@ export function Avatar({ src, size = 44 }: { src?: string; size?: number }) {
   );
 }
 
+/**
+ * A child waiting for this parent. Approving is the parent's explicit
+ * confirmation that they are the child's parent or guardian, so it takes a
+ * second, clearly worded step; the backend refuses an approval without it.
+ */
 export function RequestRow({ student, avatar }: { student: LinkedStudent; avatar?: string }) {
   const updateStudentStatus = useParentStore((s) => s.updateStudentStatus);
   const [busy, setBusy] = useState<"APPROVED" | "REJECTED" | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState(false);
   const when = relative(student.requested_at);
   const name = childName(student);
@@ -67,14 +73,31 @@ export function RequestRow({ student, avatar }: { student: LinkedStudent; avatar
         <p className="text-[12.5px] text-[var(--pp-ink-soft)]">Wants to connect{when ? ` · ${when}` : ""}</p>
         {error && <p role="alert" className="mt-0.5 text-[12px] font-semibold text-[#C02659]">That didn&apos;t go through. Please try again.</p>}
       </div>
-      <div className="flex w-full gap-2 sm:w-auto">
-        <Button variant="outline" size="sm" className="flex-1 sm:flex-none" disabled={!!busy} loading={busy === "REJECTED"} aria-label={`Decline ${name}`} onClick={() => decide("REJECTED")}>
-          Decline
-        </Button>
-        <Button variant="primary" size="sm" className="flex-1 sm:flex-none" disabled={!!busy} loading={busy === "APPROVED"} leadingIcon={<Check size={15} strokeWidth={3} />} aria-label={`Approve ${name}`} onClick={() => decide("APPROVED")}>
-          Approve
-        </Button>
-      </div>
+      {confirming ? (
+        <div className="w-full space-y-2.5">
+          <p className="text-[13px] leading-relaxed text-[var(--pp-ink)]">
+            Confirm that you are <strong>{name}</strong>&apos;s parent or legal guardian. Your accounts connect and you
+            will see their progress, reports and learning conversations. You can remove the connection in Settings.
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="flex-1 sm:flex-none" disabled={!!busy} onClick={() => setConfirming(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" size="sm" className="flex-1 sm:flex-none" disabled={!!busy} loading={busy === "APPROVED"} leadingIcon={<Check size={15} strokeWidth={3} />} onClick={() => decide("APPROVED")}>
+              Yes, I&apos;m their parent or guardian
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex w-full gap-2 sm:w-auto">
+          <Button variant="outline" size="sm" className="flex-1 sm:flex-none" disabled={!!busy} loading={busy === "REJECTED"} aria-label={`Decline ${name}`} onClick={() => decide("REJECTED")}>
+            Decline
+          </Button>
+          <Button variant="primary" size="sm" className="flex-1 sm:flex-none" disabled={!!busy} leadingIcon={<Check size={15} strokeWidth={3} />} aria-label={`Approve ${name}`} onClick={() => setConfirming(true)}>
+            Approve
+          </Button>
+        </div>
+      )}
     </motion.li>
   );
 }
