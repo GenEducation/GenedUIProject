@@ -22,4 +22,6 @@ export const parentHandlers = [
     return HttpResponse.json({ student_id: params.studentId, parent_id: "p1", status: body.status, requested_at: "now" });
   }),
   http.delete(`${BASE}/parent/link/:studentId`, () => new HttpResponse(null, { status: 204 })),
+  // The student's own link: none by default.
+  http.get(`${BASE}/parent/link/status`, () => HttpResponse.json(null)),
 ];

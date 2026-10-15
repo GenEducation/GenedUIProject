@@ -278,6 +278,14 @@ export const studentService = {
     return response.json();
   },
 
+  /** The student's own guardian link (`GET /parent/link/status`): its status, or null when there is none. */
+  fetchGuardianLink: async (studentId: string): Promise<{ parent_id: string; status: "PENDING" | "APPROVED" | "REJECTED" | "REVOKED"; requested_at: string } | null> => {
+    const response = await authFetch(`${API_BASE_URL}/parent/link/status?student_id=${encodeURIComponent(studentId)}`, {
+      headers: { accept: "application/json" },
+    });
+    return response.json();
+  },
+
   linkParent: async (studentId: string, parentEmailOrPhone: string) => {
     const response = await authFetch(`${API_BASE_URL}/parent/link`, {
       method: "POST",
@@ -445,29 +453,4 @@ export const studentService = {
     return response.json();
   },
 
-  fetchLanguagePreferences: async (studentId: string) => {
-    const response = await authFetch(
-      `${API_BASE_URL}/students/${studentId}/language-preferences`,
-      { headers: { accept: "application/json" } }
-    );
-    return response.json();
-  },
-
-  updateLanguagePreferences: async (
-    studentId: string,
-    payload: { preferred_language?: string | null; secondary_languages?: string[] | null }
-  ) => {
-    const response = await authFetch(
-      `${API_BASE_URL}/students/${studentId}/language-preferences`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          accept: "application/json",
-        },
-        body: JSON.stringify(payload),
-      }
-    );
-    return response.json();
-  },
 };

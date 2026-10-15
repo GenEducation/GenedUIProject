@@ -1,31 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loader2, Plus, ShieldCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useStudentStore } from "../../store/useStudentStore";
+import { studentService } from "../../services/studentService";
 import { CardHeading, ProfileCard, StatusPill } from "./ProfileCard";
 
+type LinkStatus = "PENDING" | "APPROVED" | "REJECTED" | "REVOKED";
+
 /**
- * Invite-only: the student side can send a guardian link (`POST /parent/link`)
- * but has no call to read an existing link back, so "Invite sent" only lasts
- * for this visit.
+ * The student's guardian connection, read from their link (`GET /parent/link/status`): connected once a guardian
+ * approved it, waiting while it is pending, otherwise not connected with a way to invite (`POST /parent/link`).
  */
 export function GuardianCard({ index }: { index: number }) {
   const { linkParent, partnerRequestStatus } = useStudentStore();
+  const studentId = useStudentStore((s) => s.studentProfile?.user_id);
   const [open, setOpen] = useState(false);
   const [contact, setContact] = useState("");
-  const [sent, setSent] = useState(false);
+  // undefined until read (or when it couldn't be read: no pill rather than a wrong one), null when there is no link.
+  const [link, setLink] = useState<LinkStatus | null | undefined>(undefined);
   const sending = partnerRequestStatus === "loading";
+
+  const refresh = useCallback(async () => {
+    if (!studentId) return;
+    try {
+      const current = await studentService.fetchGuardianLink(studentId);
+      setLink(current?.status ?? null);
+    } catch {
+      setLink(undefined);
+    }
+  }, [studentId]);
+
+  useEffect(() => {
+    if (!studentId) return;
+    let cancelled = false;
+    studentService
+      .fetchGuardianLink(studentId)
+      .then((current) => { if (!cancelled) setLink(current?.status ?? null); })
+      .catch(() => { if (!cancelled) setLink(undefined); });
+    return () => { cancelled = true; };
+  }, [studentId]);
+
+  const connected = link === "APPROVED";
 
   const handleInvite = async () => {
     const value = contact.trim();
     if (!value) return;
     await linkParent(value);
     if (useStudentStore.getState().partnerRequestStatus === "success") {
-      setSent(true);
       setContact("");
       setOpen(false);
+      await refresh();
     }
   };
 
@@ -38,8 +64,14 @@ export function GuardianCard({ index }: { index: number }) {
       />
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 sm:pl-[68px]">
-        {sent ? <StatusPill tone="on">Invite sent</StatusPill> : <StatusPill tone="off">Not connected</StatusPill>}
-        {!open && (
+        {link === "APPROVED" ? (
+          <StatusPill tone="on">Connected</StatusPill>
+        ) : link === "PENDING" ? (
+          <StatusPill tone="pending">Waiting for approval</StatusPill>
+        ) : link !== undefined ? (
+          <StatusPill tone="off">Not connected</StatusPill>
+        ) : null}
+        {!open && !connected && link !== undefined && (
           <Button variant="primary" size="md" onClick={() => setOpen(true)} leadingIcon={<Plus size={17} />} className="rounded-full px-6">
             Invite / Link guardian
           </Button>

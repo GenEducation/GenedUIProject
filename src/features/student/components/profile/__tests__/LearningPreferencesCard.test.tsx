@@ -9,10 +9,9 @@ import { LearningPreferencesCard } from "../LearningPreferencesCard";
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 
 beforeEach(() => {
-  // The card also loads the voice list and language settings; neither matters here.
+  // The card also loads the voice list, which doesn't matter here.
   server.use(
     http.get(`${BASE}/voices`, () => HttpResponse.json([])),
-    http.get(`${BASE}/students/:id/language-preferences`, () => HttpResponse.json({ preferred_language: "en", secondary_languages: [], multilingual_enabled: false })),
   );
   localStorage.setItem("gened_auth_token", "token-synthetic");
   useStudentStore.setState({
