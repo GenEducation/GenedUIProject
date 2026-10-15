@@ -15,7 +15,7 @@ import { Lightbulb } from "lucide-react";
 
 export type DetailTab = "chapters" | "progress" | "tests" | "insights";
 
-const TABS: { id: DetailTab; label: string }[] = [
+const ALL_TABS: { id: DetailTab; label: string }[] = [
   { id: "chapters", label: "Chapters" },
   { id: "progress", label: "Skills" },
   { id: "tests", label: "Tests" },
@@ -38,6 +38,8 @@ export function SubjectDetail({
   onTab: (tab: DetailTab) => void;
 }) {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  // The new backend has no chapter tests; the Tests tab stays for the teacher's report only.
+  const TABS = data.chapters.some((c) => c.skills !== undefined) ? ALL_TABS.filter((t) => t.id !== "tests") : ALL_TABS;
 
   const onKeyDown = (e: React.KeyboardEvent, i: number) => {
     const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;

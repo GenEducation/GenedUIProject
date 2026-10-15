@@ -9,6 +9,9 @@ import { BAND_TONES } from "../subjectVisuals";
 import { deriveUnlocks } from "../utils";
 import { Button } from "@/components/ui/Button";
 import { CARD, ComingSoon, SkillLevelChip, Sparkline, SubjectGlyph } from "./primitives";
+import { ActivityCard, MisconceptionsCard } from "./SectionCards";
+import { useReportExtras } from "../sections/ReportExtras";
+import { trendLine } from "../sections/reportSections";
 import { Icon, TintIcon } from "./icons";
 
 const BULLETS = 2;
@@ -20,6 +23,8 @@ export function InsightsPanel({ data, subjects }: { data: ReportCardData; subjec
   return (
     <div className="flex flex-col gap-4">
       {v1 && <KeepPractising data={data} />}
+      {v1 && <ActivityCard />}
+      {v1 && <MisconceptionsCard />}
       <KeyInsights data={data} />
       <SubjectTrends data={data} subjects={subjects} />
       {unlocks.length > 0 && (
@@ -220,8 +225,10 @@ function Bullets({ items }: { items: string[] }) {
 // ─────────────────────────────────────────────────────────
 
 function SubjectTrends({ data, subjects }: { data: ReportCardData; subjects: SubjectSummary[] }) {
+  const { trends } = useReportExtras();
   if (subjects.length === 0) return null;
-  // Trends are drawn from session scores the new backend doesn't report: one placeholder, not a row of "no trend".
+  if (trends) return <WeeklyTrends data={data} subjects={subjects} section={trends} />;
+  // The teacher's report: session scores from the old analyses.
   if (!subjects.some((s) => subjectTrend(data, s.subject))) {
     return (
       <section aria-label="Subject trends" className={`${CARD} p-5`}>
@@ -235,6 +242,47 @@ function SubjectTrends({ data, subjects }: { data: ReportCardData; subjects: Sub
     );
   }
   return (
+    <TrendsShell>
+      {subjects.map((s, i) => {
+        const trend = subjectTrend(data, s.subject);
+        return <TrendRow key={s.subject} s={s} i={i} line={trend && { values: trend.points, delta: trend.delta }} none="Trend appears after a few sessions" />;
+      })}
+    </TrendsShell>
+  );
+}
+
+/** The new backend's trends: week by week, the share of the skills answered on that the learner knows. */
+function WeeklyTrends({ data, subjects, section }: { data: ReportCardData; subjects: SubjectSummary[]; section: NonNullable<ReturnType<typeof useReportExtras>["trends"]> }) {
+  const { state, retry } = section;
+  if (state.status !== "ready") {
+    return (
+      <section aria-label="Subject trends" className={`${CARD} p-5`}>
+        <h2 className="text-[17px] font-bold text-[var(--rs-ink)]">Subject Trends</h2>
+        {state.status === "loading" ? (
+          <p className="mt-3 text-[13px] text-[var(--rs-ink-soft)]">Loading…</p>
+        ) : (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <p className="text-[13px] text-[var(--rs-ink-soft)]">Couldn&apos;t load this section.</p>
+            <Button variant="outline" size="sm" pill onClick={retry}>Retry</Button>
+          </div>
+        )}
+      </section>
+    );
+  }
+  // The trends are keyed by subject code; the card's subjects by name, which each chapter carries both of.
+  const codeOf = new Map(data.chapters.filter((c) => c.subject_code).map((c) => [c.subject, c.subject_code as string]));
+  return (
+    <TrendsShell note="The share of the skills answered on that are Got it or Strong, week by week.">
+      {subjects.map((s, i) => {
+        const points = state.data.subjects.find((t) => t.subject_code === codeOf.get(s.subject))?.points ?? [];
+        return <TrendRow key={s.subject} s={s} i={i} line={trendLine(points)} none="Trend appears after answers in a couple of weeks" />;
+      })}
+    </TrendsShell>
+  );
+}
+
+function TrendsShell({ note = "How mastery has moved across recent sessions", children }: { note?: string; children: React.ReactNode }) {
+  return (
     <section aria-labelledby="rc-trends-title" className={`${CARD} p-5`}>
       <header className="flex items-center gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--rs-mint)]">
@@ -242,39 +290,36 @@ function SubjectTrends({ data, subjects }: { data: ReportCardData; subjects: Sub
         </span>
         <div>
           <h2 id="rc-trends-title" className="text-[17px] font-bold leading-tight text-[var(--rs-ink)]">Subject Trends</h2>
-          <p className="text-[12.5px] text-[var(--rs-ink-soft)]">How mastery has moved across recent sessions</p>
+          <p className="text-[12.5px] text-[var(--rs-ink-soft)]">{note}</p>
         </div>
       </header>
-
-      <ul className="mt-4 flex flex-col gap-2">
-        {subjects.map((s, i) => {
-          const trend = subjectTrend(data, s.subject);
-          return (
-            <motion.li
-              key={s.subject}
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.15 + i * 0.05 }}
-              className="grid grid-cols-[auto_minmax(0,1fr)_minmax(70px,1.2fr)_auto] items-center gap-3 rounded-2xl border border-[var(--rs-line)] bg-[var(--rs-surface-2)] px-3 py-2.5"
-            >
-              <SubjectGlyph subject={s.subject} tone={s.tone} size={38} />
-              <div className="min-w-0 leading-tight">
-                <p className="truncate text-[13.5px] font-semibold text-[var(--rs-ink)]">{s.subject}</p>
-                <p className="mt-1 text-[13px] font-bold tabular-nums" style={{ color: s.tone.ink }}>{s.mastery}%</p>
-              </div>
-              {trend ? (
-                <>
-                  <Sparkline points={trend.points} color={s.tone.accent} height={34} />
-                  <Delta value={trend.delta} />
-                </>
-              ) : (
-                <p className="col-span-2 text-right text-[11.5px] leading-snug text-[var(--rs-ink-soft)]">Trend appears after a few sessions</p>
-              )}
-            </motion.li>
-          );
-        })}
-      </ul>
+      <ul className="mt-4 flex flex-col gap-2">{children}</ul>
     </section>
+  );
+}
+
+function TrendRow({ s, i, line, none }: { s: SubjectSummary; i: number; line: { values: number[]; delta: number } | null; none: string }) {
+  return (
+    <motion.li
+      initial={{ opacity: 0, x: 10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.4, delay: 0.15 + i * 0.05 }}
+      className="grid grid-cols-[auto_minmax(0,1fr)_minmax(70px,1.2fr)_auto] items-center gap-3 rounded-2xl border border-[var(--rs-line)] bg-[var(--rs-surface-2)] px-3 py-2.5"
+    >
+      <SubjectGlyph subject={s.subject} tone={s.tone} size={38} />
+      <div className="min-w-0 leading-tight">
+        <p className="truncate text-[13.5px] font-semibold text-[var(--rs-ink)]">{s.subject}</p>
+        <p className="mt-1 text-[13px] font-bold tabular-nums" style={{ color: s.tone.ink }}>{s.measured ? `${s.mastery}%` : "—"}</p>
+      </div>
+      {line ? (
+        <>
+          <Sparkline points={line.values} color={s.tone.accent} height={34} />
+          <Delta value={line.delta} />
+        </>
+      ) : (
+        <p className="col-span-2 text-right text-[11.5px] leading-snug text-[var(--rs-ink-soft)]">{none}</p>
+      )}
+    </motion.li>
   );
 }
 
