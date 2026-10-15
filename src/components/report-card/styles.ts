@@ -376,6 +376,11 @@ export const RC_SCREEN_STYLES = `
       linear-gradient(180deg, #F2F6F2 0%, #F6F7F2 100%);
   }
   .rc-screen h1, .rc-screen h2, .rc-screen h3, .rc-screen h4 { font-family: var(--font-display); }
+  /* Inside a portal page (the parent's), the portal's own background and gutters frame it: no second backdrop. */
+  .rc-embedded .rc-screen { background: transparent; padding: 0; }
+  /* ...and it fills the page's width from the page's left edge, as the portal's other pages do, rather than a
+     centred 1440px column that leaves a gap on either side of a wide screen. */
+  .rc-embedded .rc-screen > .mx-auto { max-width: none; margin-left: 0; margin-right: 0; }
 
   @keyframes rc-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   .rc-rise { animation: rc-rise .55s cubic-bezier(.22,1,.36,1) both; }

@@ -743,3 +743,67 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
     "Noto Sans Kannada", "Kohinoor Devanagari", "Gurmukhi MN", "Tamil Sangam MN", "Kohinoor Telugu", "Kannada Sangam MN",
     "Nirmala UI", "Mangal", "Raavi", "Latha", "Gautami", "Tunga", ui-sans-serif, system-ui, sans-serif;
 }
+
+/* The lesson's maths field (MathLive `<math-field>`): it takes the look of the box around it, so a maths answer or a
+   message with maths in it reads as the same input, not a widget dropped in. */
+.lesson-mathfield {
+  display: block;
+  width: 100%;
+  min-height: 1.6em;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  outline: none;
+  --caret-color: var(--ls-primary, #075E63);
+  --selection-background-color: rgb(7 94 99 / 0.14);
+  --contains-highlight-background-color: rgb(217 242 121 / 0.35);
+  /* Words typed in the field are just words: no tint behind the text run the caret is in. */
+  --text-highlight-background-color: transparent;
+  --highlight-text: transparent;
+  --primary: var(--ls-primary, #075E63);
+  /* Words in the field use the page's own type, not MathLive's. */
+  --text-font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+}
+.lesson-mathfield::part(menu-toggle) { display: none; }
+/* With a real keyboard the maths keyboard's button is clutter (and makes the field taller than a text box); a touch
+   screen keeps it. */
+@media (hover: hover) and (pointer: fine) {
+  .lesson-mathfield::part(virtual-keyboard-toggle) { display: none; }
+}
+.lesson-mathfield::part(placeholder) { color: var(--ls-ink-faint, #8A9A9C); }
+/* A check's answer box is written in the board's hand, as the plain answer box is. */
+.lesson-answer-field .lesson-mathfield { --text-font-family: var(--font-hand); }
+
+/* MathLive's maths keyboard (it slides up from the bottom on touch screens): the lesson's light palette, whatever the
+   device's dark-mode setting, instead of MathLive's own dark theme. */
+body {
+  --keyboard-background: #F6F7F2;
+  --keyboard-border: #E3E8E2;
+  --keyboard-horizontal-rule: #E3E8E2;
+  --keyboard-accent-color: #075E63;
+  --keyboard-toolbar-text: #5E7477;
+  --keyboard-toolbar-text-active: #075E63;
+  --keyboard-toolbar-background-hover: rgb(7 94 99 / 0.08);
+  --keyboard-toolbar-background-selected: transparent;
+  --keycap-background: #FFFFFF;
+  --keycap-background-hover: #EEF5F3;
+  --keycap-background-active: #DCEBE7;
+  --keycap-background-pressed: #DCEBE7;
+  --keycap-border: #E3E8E2;
+  --keycap-border-bottom: #CFD9D3;
+  --keycap-text: #122D30;
+  --keycap-text-active: #122D30;
+  --keycap-text-hover: #122D30;
+  --keycap-text-pressed: #122D30;
+  --keycap-secondary-background: #DCEBE7;
+  --keycap-secondary-background-hover: #CBE2DC;
+  --keycap-secondary-text: #075E63;
+  --keycap-secondary-border: #CFD9D3;
+  --keycap-secondary-border-bottom: #B9CCC6;
+  --keycap-primary-background: #075E63;
+  --keycap-primary-background-hover: #064E52;
+  --keycap-primary-text: #FFFFFF;
+  --keycap-shift-color: #075E63;
+}

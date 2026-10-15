@@ -70,6 +70,9 @@ export function ChapterRow({ row, ui, index }: { row: ChapterRowModel; ui: Repor
               <>
                 {row.chapter.book_title && <span className="truncate">{row.chapter.book_title}</span>}
                 {row.started && row.steps && <span>Step {row.steps.done} of {row.steps.total}</span>}
+                {row.started && row.minutes != null && row.minutes > 0 && (
+                  <span className="inline-flex items-center gap-1"><Icon name="session-content/time" size={12} />≈ {formatMinutes(row.minutes)}</span>
+                )}
               </>
             ) : (
               <>
@@ -114,7 +117,9 @@ export function ChapterRow({ row, ui, index }: { row: ChapterRowModel; ui: Repor
           )}
         </div>
 
-        <div className="flex items-center gap-2 self-center">
+        {/* The chevron lines up with the ring itself (56px), not the ring and its "Mastery" label together, so it sits
+            level with the ring pointing either way. */}
+        <div className="flex items-start gap-2 self-center">
           <Ring
             value={row.mastery}
             color={row.started ? tone.accent : "var(--rs-ink-soft)"}
@@ -126,7 +131,7 @@ export function ChapterRow({ row, ui, index }: { row: ChapterRowModel; ui: Repor
             {/* No answered skill yet: nothing measured, so no figure (not a 0% that reads as failing). */}
             {v1 && !measured ? <span className="text-[13px] font-bold text-[var(--rs-ink-soft)]">—</span> : undefined}
           </Ring>
-          <span className="w-5">
+          <span className="flex h-14 w-5 items-center justify-center">
             {expandable && (
               <TintIcon
                 name="actions/dropdown"

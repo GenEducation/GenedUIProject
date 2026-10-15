@@ -32,9 +32,10 @@ function EmptyBoard() {
  * full screen across the top; below, an endless canvas (pan, zoom) holding
  * every figure shown, with the step's title, the question card and the
  * filmstrip floating over it; the quick chips at the foot. The tutor's words
- * live in the chat, not here.
+ * live in the chat, not here. `subject` is the lesson's, so a maths lesson's
+ * answer box offers maths notation.
  */
-export function BoardPanel() {
+export function BoardPanel({ subject = null }: { subject?: string | null }) {
   const node = useLessonStore((s) => s.instance?.active_node ?? null);
   const title = useLessonStore((s) => s.payload?.node.title ?? s.instance?.active_node?.title ?? null);
   const finished = useLessonStore((s) => s.instance?.state === "completed");
@@ -122,7 +123,7 @@ export function BoardPanel() {
           data-no-pan
           className="absolute bottom-32 right-4 top-16 z-10 flex w-[min(380px,46%)] flex-col overflow-y-auto overscroll-contain px-1.5 pb-3 pt-1.5 empty:hidden [&:not(:has(*))]:hidden"
         >
-          <StepCard />
+          <StepCard subject={subject} />
         </div>
 
         {finished && (

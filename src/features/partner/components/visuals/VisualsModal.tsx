@@ -88,14 +88,14 @@ function VisualsModalBody({ subject, counts, onClose, onChanged }: Required<Pick
   return (
     <div className="flex flex-col min-h-full">
       {/* Header */}
-      <header className="shrink-0 flex items-start gap-4 px-5 md:px-7 pt-6 pb-4 bg-white border-b border-[#122D30]/5">
-        <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#075E63] text-white flex items-center justify-center">
+      <header className="shrink-0 flex items-start gap-3 sm:gap-4 px-4 sm:px-5 md:px-7 pt-5 sm:pt-6 pb-4 bg-white border-b border-[#122D30]/5">
+        <div className="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-2xl bg-[#075E63] text-white flex items-center justify-center">
           <Images size={20} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">Teaching visuals</p>
           <h2 className="text-lg md:text-xl font-black text-[#122D30] tracking-tight truncate">{subject.title}</h2>
-          <p className="text-[11px] font-bold text-[#122D30]/50 uppercase tracking-wider truncate">
+          <p className="text-[11px] font-bold text-[#122D30]/50 uppercase tracking-wider line-clamp-2 sm:truncate">
             {subject.book_title} · Ch {subject.chapter_ordinal} · Grade {subject.grade} · {subject.subject}
           </p>
         </div>
@@ -134,10 +134,11 @@ function VisualsModalBody({ subject, counts, onClose, onChanged }: Required<Pick
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col gap-4 px-5 md:px-7 py-5"
+            className="flex-1 flex flex-col gap-4 px-4 sm:px-5 md:px-7 py-5"
           >
             {/* Tabs */}
-            <div role="tablist" aria-label="Visual state" className="flex gap-1 p-1 bg-white rounded-2xl border border-[#122D30]/5 self-start">
+            {/* Equal segments across a phone's width; their natural size, to the left, when there is room. */}
+            <div role="tablist" aria-label="Visual state" className="flex w-full gap-1 p-1 bg-white rounded-2xl border border-[#122D30]/5 sm:w-auto sm:self-start">
               {TABS.map((t) => {
                 const active = t.id === tab;
                 const n = counts?.[t.id];
@@ -149,7 +150,7 @@ function VisualsModalBody({ subject, counts, onClose, onChanged }: Required<Pick
                     role="tab"
                     aria-selected={active}
                     onClick={() => setTab(t.id)}
-                    className={`px-3.5 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors ${
+                    className={`flex-1 sm:flex-none whitespace-nowrap px-2 sm:px-3.5 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-wider sm:tracking-widest transition-colors ${
                       active ? "bg-[#075E63] text-white" : "text-[#122D30]/45 hover:text-[#122D30] hover:bg-[#075E63]/5"
                     }`}
                   >

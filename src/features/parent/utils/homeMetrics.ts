@@ -121,9 +121,16 @@ export function chapterProgress(rows: ChapterRow[]): { started: number; total: n
 }
 
 /** Study minutes per subject from the per-chapter breakdown. */
+/** A subject as a key that a code ("social_science") and its name ("Social Science") share. */
+export const subjectKey = (s: string) => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+
+/** Minutes per subject, keyed by `subjectKey`: the backend names a subject by its code, the page by its name. */
 export function minutesBySubject(rows: { subject: string; total_minutes: number }[]): Record<string, number> {
   const totals: Record<string, number> = {};
-  for (const r of rows) totals[r.subject] = (totals[r.subject] ?? 0) + r.total_minutes;
+  for (const r of rows) {
+    const key = subjectKey(r.subject);
+    totals[key] = (totals[key] ?? 0) + r.total_minutes;
+  }
   return totals;
 }
 

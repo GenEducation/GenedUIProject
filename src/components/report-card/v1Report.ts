@@ -6,13 +6,14 @@ import type { ChapterMasteryItem, ChapterSkill, ReportCardDataset, SkillLevel, S
 /**
  * The report card's data from the new backend's learner routes (backend `contracts/openapi/api.json`):
  *
+ *   both     GET /students/{id}/time/by-chapter                                   credited minutes per chapter
  *   student  GET /v1/learner/available-subjects, /v1/learner/chapters?subject=   every chapter they can open
  *            GET /v1/learner/recent-chapters                                      the ones they've worked on
  *            GET /v1/instances/{id}/report                                        each worked chapter's facts
  *            GET /v1/skills                                                       skill levels
  *   parent   GET /v1/parent/children/{id}/recent-chapters, /skills, /instances/{id}/report   (an APPROVED link only)
  *
- * The backend has no overall score, session count, tests, time spent or AI analyses any more; those stay empty and
+ * The backend has no overall score, session count, tests or AI analyses any more; those stay empty and
  * the report card shows them as coming soon. Nothing here is invented: every number is one of the backend's facts.
  */
 
@@ -40,7 +41,13 @@ interface SkillsOut {
   }>;
 }
 
-export type ReportWho = { role: "student" } | { role: "parent"; childId: string };
+export type ReportWho = { role: "student"; studentId: string } | { role: "parent"; childId: string };
+
+/** `GET /students/{id}/time/by-chapter`: an estimate of credited presence, never the wall clock. */
+interface ChapterTimeOut {
+  chapter_id: string;
+  total_minutes: number;
+}
 
 /** The most chapters either recent-chapters route returns. */
 const RECENT_LIMIT = 50;
@@ -80,14 +87,17 @@ export async function loadV1Report(who: ReportWho): Promise<ReportCardDataset> {
   const reportPath = (instanceId: string) =>
     who.role === "parent" ? `${base}/instances/${encodeURIComponent(instanceId)}/report` : `/v1/instances/${encodeURIComponent(instanceId)}/report`;
 
-  const [recentOut, skillsOut, subjectsOut] = await Promise.all([
+  const learnerId = who.role === "parent" ? who.childId : who.studentId;
+  const [recentOut, skillsOut, subjectsOut, timesOut] = await Promise.all([
     getJson<RecentChaptersOut>(`${recentPath}?limit=${RECENT_LIMIT}`, who),
     maybe(getJson<SkillsOut>(skillsPath, who)),
     // Only the student can list every chapter they could open; a parent sees the chapters the child has opened.
     who.role === "student"
       ? maybe(getJson<{ subjects: Array<{ subject: string }> }>("/v1/learner/available-subjects", who))
       : Promise.resolve(null),
+    maybe(getJson<ChapterTimeOut[]>(`/students/${encodeURIComponent(learnerId)}/time/by-chapter`, who)),
   ]);
+  const minutesByChapter = new Map((Array.isArray(timesOut) ? timesOut : []).map((t) => [t.chapter_id, Number(t.total_minutes) || 0]));
 
   const recent = (recentOut.chapters ?? []).filter((c) => c.state !== "abandoned");
   const subjectNames = (subjectsOut?.subjects ?? []).map((s) => s.subject);
@@ -130,6 +140,8 @@ export async function loadV1Report(who: ReportWho): Promise<ReportCardDataset> {
       outcomes: report?.outcomes.map((o) => ({ code: o.code, title: o.title, mastered: o.mastered })) ?? null,
       skills,
       last_active_at: chapter.last_active_at,
+      // Credited minutes; absent until the time read answers (a chapter with none yet is 0).
+      ...(timesOut ? { time_minutes: minutesByChapter.get(chapter.chapter_id) ?? 0 } : {}),
     };
   };
 

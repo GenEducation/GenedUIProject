@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { studentService } from "@/features/student/services/studentService";
 import { getStudentDisplayName, titleCase } from "@/features/student/utils/displayName";
+import { studentAvatarSrc } from "@/constants/studentAvatars";
 import { FunFactCard } from "@/components/shared/loaders/FunFactCard";
 import type {
   SubjectData, ChapterMasteryItem, SkillCGItem, TestSubmission, DashboardProfile,
@@ -46,16 +47,19 @@ export function StudentReportCard({
   teacherId,
   childId,
   childName,
+  childAvatar,
   loadingFallback,
 }: {
   parentId?: string;
   teacherId?: string;
   childId?: string;
   childName?: string;
+  /** The child's profile picture as the parent portal shows it (an image path). */
+  childAvatar?: string;
   /** Replaces the default loading screen (the parent portal has its own). */
   loadingFallback?: ReactNode;
 } = {}) {
-  const { studentProfile } = useStudentStore();
+  const { studentProfile, avatarId } = useStudentStore();
   const router = useRouter();
 
   const role: ReportRole = teacherId ? "teacher" : parentId ? "parent" : "student";
@@ -146,7 +150,7 @@ export function StudentReportCard({
 
   // Student and parent: the new backend's learner routes (see v1Report.ts).
   const fetchV1 = useCallback(async () => {
-    const who = parentId && childId ? ({ role: "parent", childId } as const) : studentId ? ({ role: "student" } as const) : null;
+    const who = parentId && childId ? ({ role: "parent", childId } as const) : studentId ? ({ role: "student", studentId } as const) : null;
     if (!who) return;
     setIsLoading(true);
     setError(null);
@@ -206,13 +210,15 @@ export function StudentReportCard({
       ...ds,
       displayName,
       firstName: displayName.split(" ")[0],
+      // A parent sees the child's picture from the portal; a student their own; a teacher none yet.
+      avatarSrc: role === "parent" ? childAvatar ?? null : role === "student" ? studentAvatarSrc(avatarId) : null,
       displayGrade,
       displayBoard,
       overallAvg,
       generatedAt: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
       reportPeriod: new Date(progressReport?.updated_at ?? Date.now()).toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
     };
-  }, [simMode, totalSessions, subjects, chapters, skillTree, testSubmissions, progressReport, subjectEvolutions, chapterEvolutions, displayName, displayGrade, displayBoard]);
+  }, [simMode, totalSessions, subjects, chapters, skillTree, testSubmissions, progressReport, subjectEvolutions, chapterEvolutions, displayName, displayGrade, displayBoard, role, childAvatar, avatarId]);
 
   const safeName = (displayName || "Student").replace(/[^a-z0-9]/gi, "_");
   const { isGenerating, triggerPrint, printPortal } = usePrintPdf({ data, role, filename: `${safeName}_Report_Card` });

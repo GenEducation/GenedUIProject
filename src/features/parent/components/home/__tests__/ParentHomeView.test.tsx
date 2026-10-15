@@ -45,6 +45,14 @@ function serveChild({ timeOk = true } = {}) {
         Array.from({ length: 14 }, (_, i) => ({ subject, document_title: `Ch ${i}`, completion_percentage: i < started ? 50 : 0 })),
       );
     }),
+    // The backend names subjects by code; the page matches them to its own names.
+    http.get(`${BASE}/students/:id/time/by-chapter`, () =>
+      HttpResponse.json([
+        { chapter_id: "c1", subject: "english", chapter_name: "a", total_minutes: 500, session_count: 3 },
+        { chapter_id: "c2", subject: "english", chapter_name: "b", total_minutes: 360, session_count: 2 },
+        { chapter_id: "c3", subject: "mathematics", chapter_name: "c", total_minutes: 610, session_count: 4 },
+      ]),
+    ),
     http.get(`${BASE}/students/:id/time/by-period`, () =>
       timeOk
         ? HttpResponse.json([
@@ -104,12 +112,11 @@ describe("ParentHomeView", () => {
     const english = await screen.findByRole("link", { name: /^English: Advanced, 84% mastery/ });
     expect(english).toHaveAttribute("href", "/parent/s1/subject/English");
     expect(within(english).getByText("28")).toBeInTheDocument();
-    // Study time per chapter is switched off (FEATURES.chapterTime), so it reads as zero.
-    await waitFor(() => expect(within(english).getByText("0m")).toBeInTheDocument());
+    await waitFor(() => expect(within(english).getByText("14h 20m")).toBeInTheDocument());
     expect(within(english).getByText("11/14")).toBeInTheDocument();
 
     await screen.findByRole("link", { name: /^Mathematics: Approaching, 45% mastery/ });
     const science = await screen.findByRole("link", { name: /^Science: Proficient, 68% mastery/ });
-    await waitFor(() => expect(within(science).getByText("0m")).toBeInTheDocument());
+    await waitFor(() => expect(within(science).getByText("0m")).toBeInTheDocument()); // no time logged
   });
 });

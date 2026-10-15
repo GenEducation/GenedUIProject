@@ -209,6 +209,7 @@
 .gened-landing .cta .wrap { position: relative; z-index: 1; text-align: center; max-width: 760px; }
 .gened-landing .cta h2 { color: #fff; font-size: clamp(32px, 4.4vw, 54px); }
 .gened-landing .cta p { color: #A9CCC7; font-size: 19px; margin: 18px auto 32px; max-width: 54ch; }
+.gened-landing .cta .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 .gened-landing .cta .ring { position: absolute; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 50%; }
 .gened-landing .cta .r1 { width: 680px; height: 680px; top: -340px; left: 50%; transform: translateX(-50%); }
 .gened-landing .cta .r2 { width: 980px; height: 980px; top: -490px; left: 50%; transform: translateX(-50%); }
@@ -256,7 +257,44 @@
 @media (max-width: 560px) {
   .gened-landing .grid-4 { grid-template-columns: 1fr; }
   .gened-landing .steps { grid-template-columns: 1fr; }
-  .gened-landing .stats .grid-4 { grid-template-columns: 1fr; }
-  .gened-landing .foot-grid { grid-template-columns: 1fr; }
   .gened-landing .wrap { padding: 0 20px; }
+  /* The hero's and the closing call's two buttons share one line on a phone, as equal halves. */
+  .gened-landing .hero .cta-row,
+  .gened-landing .cta .cta-row { flex-wrap: nowrap; gap: 10px; }
+  .gened-landing .hero .cta-row .btn,
+  .gened-landing .cta .cta-row .btn { flex: 1 1 0; min-width: 0; justify-content: center; white-space: nowrap; padding: 13px 12px; font-size: 14px; gap: 6px; }
+  .gened-landing .cta p { font-size: 16px; margin: 14px auto 26px; }
+
+  /* The four figures as two rows of two, divided by inner lines only, instead of a tall column of four. */
+  .gened-landing .stats .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .gened-landing .stat { padding: 18px 10px; }
+  .gened-landing .stat:nth-child(2n) { border-right: 0; }
+  .gened-landing .stat:nth-last-child(-n+2) { border-bottom: 0; }
+  .gened-landing .stat .n { font-size: 38px; }
+  .gened-landing .stat .t { font-size: 13px; }
+
+  /* Cards: the icon beside the title and text rather than on its own line above them, and less padding, so a
+     card is a few lines tall, not half a screen. */
+  .gened-landing .card,
+  .gened-landing .card-dark { padding: 20px; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; align-items: start; }
+  .gened-landing .card .ico,
+  .gened-landing .card-dark .ico { width: 42px; height: 42px; border-radius: 12px; margin-bottom: 0; grid-row: span 2; }
+  .gened-landing .card h3,
+  .gened-landing .card-dark h3 { font-size: 18px; margin-bottom: 4px; align-self: center; }
+  .gened-landing .card p,
+  .gened-landing .card-dark p { font-size: 14.5px; grid-column: 2; }
+  .gened-landing .step { padding: 22px; }
+  .gened-landing .step .num { font-size: 36px; }
+  .gened-landing .step h4 { margin: 10px 0 6px; }
+
+  /* Footer: the brand across the top, the link lists two to a row. */
+  .gened-landing .foot-grid { grid-template-columns: repeat(2, 1fr); gap: 28px 20px; }
+  .gened-landing .foot-grid > :first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 360px) {
+  /* Too narrow for both at a readable size: one under the other, full width. */
+  .gened-landing .hero .cta-row,
+  .gened-landing .cta .cta-row { flex-wrap: wrap; }
+  .gened-landing .hero .cta-row .btn,
+  .gened-landing .cta .cta-row .btn { flex-basis: 100%; }
 }

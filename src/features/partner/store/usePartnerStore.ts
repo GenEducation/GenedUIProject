@@ -129,6 +129,9 @@ interface PartnerState {
 
   // --- Subject Data ---
   subjects: Subject[];
+  /** The chapter just uploaded and started: the registry opens it, scrolls to it and marks it, then clears this. */
+  justUploadedId: string | null;
+  clearJustUploaded: () => void;
   subjectFilters: SubjectFilters;
   subjectPagination: SubjectPagination;
 
@@ -211,6 +214,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   totalEnrollments: 0,
   selectedStudent: null,
   subjects: [],
+  justUploadedId: null,
+  clearJustUploaded: () => set({ justUploadedId: null }),
   subjectFilters: {},
   subjectPagination: { total_count: 0, limit: 20, offset: 0 },
   isLoading: false,
@@ -384,7 +389,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const source = await sourcesService.register(input);
     await sourcesService.start(source.source_id);
     // Back to the first page, where the new chapter is (newest first).
-    set({ subjectPagination: { ...get().subjectPagination, offset: 0 } });
+    set({ subjectPagination: { ...get().subjectPagination, offset: 0 }, justUploadedId: source.source_id });
     await get().fetchSubjects();
   },
 

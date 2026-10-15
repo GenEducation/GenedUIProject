@@ -78,7 +78,8 @@ export function SegmentedInput({ length, value, onChange, disabled }: SegmentedI
   };
 
   return (
-    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+    // The boxes keep their size where there is room and share a narrow one (a phone-width card) instead of overflowing it.
+    <div style={{ display: 'flex', gap: 'clamp(4px, 1.6vw, 8px)', justifyContent: 'center', width: '100%', minWidth: 0 }}>
       {Array.from({ length }).map((_, i) => {
         const char = value[i] || '';
         return (
@@ -94,7 +95,8 @@ export function SegmentedInput({ length, value, onChange, disabled }: SegmentedI
             onPaste={handlePaste}
             aria-label={`Character ${i + 1} of ${length}`}
             style={{
-              width: 'clamp(38px, 11vw, 48px)',
+              flex: '0 1 48px',
+              minWidth: 0,
               height: 'clamp(48px, 13vw, 56px)',
               fontSize: '22px',
               fontWeight: 800,

@@ -211,6 +211,8 @@ export interface ReportCardDataset {
 export interface ReportCardData extends ReportCardDataset {
   displayName: string;
   firstName: string;
+  /** The student's profile picture (an image path), as their home page and the parent portal show it. */
+  avatarSrc?: string | null;
   displayGrade: number | null;
   displayBoard: string | null;
   overallAvg: number;

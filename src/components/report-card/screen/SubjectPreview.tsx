@@ -79,7 +79,7 @@ export function SubjectPreview({
       <div className="grid grid-cols-3 gap-2 px-4 pt-4">
         <MiniStat label="Coverage" value={`${s.coverage}%`} color={COVERAGE_COLOR} />
         <MiniStat label="Completed" value={`${s.chaptersCompleted}/${s.chaptersTotal}`} />
-        <MiniStat label="Study time" value={minutes > 0 ? formatMinutes(minutes) : s.v1 ? <span className="text-[12px] uppercase tracking-[0.06em] text-[var(--rs-ink-soft)]" title="Coming soon">Soon</span> : "—"} />
+        <MiniStat label="Study time" value={minutes > 0 ? formatMinutes(minutes) : "—"} />
       </div>
       <div className="px-4 pt-3">
         <Bar value={s.coverage} color={COVERAGE_COLOR} className="h-1.5" />

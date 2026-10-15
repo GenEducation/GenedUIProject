@@ -12,8 +12,9 @@ import {
   Home as HomeIcon,
   Target,
   CalendarDays,
-  BarChart3,
+  FileText,
   User,
+  type LucideIcon,
 } from "lucide-react";
 import { UpgradeButton } from "@/features/billing/UpgradeButton";
 import { GenEdLogo } from "@/components/shared/GenEdLogo";
@@ -29,6 +30,22 @@ const C = {
   sidebarName: STUDENT_COLORS.sidebarLightName,
 };
 
+/**
+ * A nav item's icon: one outline set; the page you're on is filled (a soft tint of its colour inside the outline,
+ * which keeps details like the document's lines) and a touch bolder. It takes its colour from the item.
+ */
+function NavIcon({ icon: Icon, active }: { icon: LucideIcon; active: boolean }) {
+  return (
+    <Icon
+      aria-hidden
+      size={18}
+      strokeWidth={active ? 2.2 : 1.9}
+      fill={active ? "currentColor" : "none"}
+      fillOpacity={active ? 0.2 : undefined}
+    />
+  );
+}
+
 /* ═══ NAV ITEM ═══ */
 function NavItem({
   icon,
@@ -36,7 +53,7 @@ function NavItem({
   active,
   onClick,
 }: {
-  icon: React.ReactNode;
+  icon: LucideIcon;
   label: string;
   active: boolean;
   onClick: () => void;
@@ -62,7 +79,7 @@ function NavItem({
       }}
     >
       <span className="w-[22px] flex items-center justify-center flex-shrink-0">
-        {icon}
+        <NavIcon icon={icon} active={active} />
       </span>
       <span>{label}</span>
       {active && (
@@ -129,11 +146,11 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
   const mobileWidth = Math.min(264, 300);
 
   const navItems = [
-    { icon: <HomeIcon size={18} strokeWidth={1.9} />,     label: STRINGS.nav.home,       key: "home",     path: "/student" },
-    ...(FEATURES.practice ? [{ icon: <Target size={18} strokeWidth={1.9} />,       label: STRINGS.nav.practice,   key: "practice", path: "/student/practice" }] : []),
-    ...(FEATURES.schedule ? [{ icon: <CalendarDays size={18} strokeWidth={1.9} />, label: STRINGS.nav.schedule,   key: "schedule", path: "/student/schedule" }] : []),
-    { icon: <BarChart3 size={18} strokeWidth={1.9} />,    label: STRINGS.nav.reportCard, key: "report",   path: "/student/report-card" },
-    { icon: <User size={18} strokeWidth={1.9} />,         label: STRINGS.nav.profile,    key: "me",       path: "/student/profile" },
+    { icon: HomeIcon,     label: STRINGS.nav.home,       key: "home",     path: "/student" },
+    ...(FEATURES.practice ? [{ icon: Target,       label: STRINGS.nav.practice,   key: "practice", path: "/student/practice" }] : []),
+    ...(FEATURES.schedule ? [{ icon: CalendarDays, label: STRINGS.nav.schedule,   key: "schedule", path: "/student/schedule" }] : []),
+    { icon: FileText,    label: STRINGS.nav.reportCard, key: "report",   path: "/student/report-card" },
+    { icon: User,         label: STRINGS.nav.profile,    key: "me",       path: "/student/profile" },
   ];
 
   return (
@@ -275,7 +292,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                     if (!active) e.currentTarget.style.background = "transparent";
                   }}
                 >
-                  {item.icon}
+                  <NavIcon icon={item.icon} active={active} />
                 </button>
               );
             })}

@@ -40,6 +40,18 @@ describe("ChatPanel", () => {
     expect(turnRequests.at(-1)).toMatchObject({ kind: "learner_message", text: "SYNTHETIC question" });
   });
 
+  it("in a maths lesson, sends what the maths field holds as words with $…$ maths, and draws it in the bubble", async () => {
+    await useLessonStore.getState().load(LESSON_ID);
+    render(<ChatPanel onShowFigure={vi.fn()} subject="Mathematics" />);
+    lessonFixture.setScript(replyScript("SYNTHETIC ", "answer."));
+    // What MathLive holds after "The line " + /line + "AB" + " is long".
+    type("The line $ \\overleftrightarrow{AB} $ is long, 100\\% sure");
+    enter();
+    expect(await screen.findByText("SYNTHETIC answer.")).toBeInTheDocument();
+    expect(turnRequests.at(-1)).toMatchObject({ kind: "learner_message", text: "The line $\\overleftrightarrow{AB}$ is long, 100% sure" });
+    expect(document.querySelector("li .katex")).not.toBeNull();
+  });
+
   it("while the tutor replies, Send becomes Stop, and Stop interrupts", async () => {
     server.use(http.post(`${BASE}/v1/instances/:id/teacher-turns`, async ({ request }) => {
       const { turn_id } = (await request.json()) as { turn_id: string };

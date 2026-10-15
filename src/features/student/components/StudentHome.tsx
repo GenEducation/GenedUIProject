@@ -466,10 +466,13 @@ export function StudentHome() {
             <div className="flex items-start justify-between mb-8 relative z-20" style={fade(0.06)}>
               <div className="flex items-center gap-4">
                 {/* Hidden on small screens: the greeting already clamps down to
-                    22px there and an avatar beside it crowds the line. */}
+                    22px there and an avatar beside it crowds the line. Sized to
+                    the greeting block beside it (heading + subtitle, both of
+                    which scale with the viewport), so the two read as one unit
+                    rather than a small circle next to a taller block of text. */}
                 <div className="hidden md:flex flex-shrink-0 rounded-full overflow-hidden"
-                  style={{ width: 56, height: 56, border: "2px solid white", boxShadow: `0 0 0 3px ${STUDENT_COLORS.softSurface}, 0 6px 16px rgb(7 94 99 / 0.18)` }}>
-                  <StudentAvatar id={avatarId} size={56} />
+                  style={{ width: "clamp(52px, calc(6vw + 8px), 72px)", aspectRatio: "1", border: "2px solid white", boxShadow: `0 0 0 3px ${STUDENT_COLORS.softSurface}, 0 6px 16px rgb(7 94 99 / 0.18)` }}>
+                  <StudentAvatar id={avatarId} size={72} />
                 </div>
                 <div>
                   <h1 className="font-extrabold leading-tight m-0"

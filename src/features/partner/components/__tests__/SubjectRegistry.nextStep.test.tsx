@@ -52,12 +52,13 @@ describe("SubjectRegistry — the next step after a run", () => {
   it("explains the failed checks and who can fix each in the ingestion path", async () => {
     render(<SubjectRegistry onUploadClick={vi.fn()} />);
     await screen.findByText("SYNTHETIC no questions");
-    fireEvent.click(screen.getByRole("button", { name: /Show ingestion path/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Run details/ }));
     const next = screen.getByRole("note", { name: "What to do next" });
     const checks = within(next).getByRole("list", { name: "Checks that did not pass" });
     expect(within(checks).getByText(/Too few questions GenEd can check · you can fix this/)).toBeInTheDocument();
     expect(within(checks).getByText(/A GenEd check did not pass · GenEd will look at this/)).toBeInTheDocument();
-    const steps = screen.getByRole("list", { name: "Ingestion steps" });
+    fireEvent.click(screen.getByRole("button", { name: /Show all \d steps/ }));
+    const steps = screen.getByRole("group", { name: "Ingestion steps" });
     expect(within(steps).getByText(/Skipped: the chapter did not pass its checks/)).toBeInTheDocument();
   });
 });
@@ -73,7 +74,7 @@ describe("SubjectRegistry — a published chapter", () => {
       }),
     ]);
     render(<SubjectRegistry onUploadClick={vi.fn()} />);
-    expect(await screen.findByText("Live")).toBeInTheDocument();
+    expect(await screen.findByText("Live for students")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Review & publish/ })).not.toBeInTheDocument();
   });
 });

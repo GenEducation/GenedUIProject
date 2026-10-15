@@ -39,9 +39,10 @@ describe("the report card on the new backend", () => {
         { chapter_id: "c-2", source_id: "s", number: 2, title: "SYNTHETIC Decimals", book_title: "SYNTHETIC Book", palette: "p", card: null },
       ] })),
       http.get(`${BASE}/v1/instances/:id/report`, () => HttpResponse.json(report)),
+      http.get(`${BASE}/students/s-1/time/by-chapter`, () => HttpResponse.json([{ chapter_id: "c-1", chapter_name: "x", subject: "mathematics", total_minutes: 42.6, session_count: 3 }])),
     );
 
-    const d = await loadV1Report({ role: "student" });
+    const d = await loadV1Report({ role: "student", studentId: "s-1" });
 
     expect(asked).toEqual(["?limit=50"]);
     expect(d.totalSessions).toBe(1);
@@ -50,6 +51,7 @@ describe("the report card on the new backend", () => {
     expect(worked).toMatchObject({
       subject: "Mathematics", document_title: "SYNTHETIC Fractions", completion_percentage: 50, mastery_score: 0.5,
       status: "in_progress", nodes_done: 3, nodes_total: 6, answered: 9, correct: 7, last_active_at: "2026-10-10T10:00:00Z",
+      time_minutes: 42.6,
     });
     expect(worked.skills?.map((s) => s.level)).toEqual(["got_it", "getting_there"]);
     expect(untouched).toMatchObject({ document_title: "SYNTHETIC Decimals", completion_percentage: 0, study_count: 0, skills: [] });
@@ -80,7 +82,7 @@ describe("the report card on the new backend", () => {
       http.get(`${BASE}/v1/learner/available-subjects`, () => HttpResponse.json({ grade: 6, subjects: [] })),
       http.get(`${BASE}/v1/instances/:id/report`, () => HttpResponse.json({ message: "nope" }, { status: 500 })),
     );
-    const [ch] = (await loadV1Report({ role: "student" })).chapters;
+    const [ch] = (await loadV1Report({ role: "student", studentId: "s-1" })).chapters;
     expect(ch).toMatchObject({ document_title: "SYNTHETIC Fractions", answered: null, correct: null, outcomes: null });
   });
 });
