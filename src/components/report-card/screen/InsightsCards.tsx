@@ -1,19 +1,19 @@
 "use client";
 
 import React from "react";
-import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { ReportCardData } from "../types";
 import { relativeDay } from "../selectors";
 import { BAND_TONES } from "../subjectVisuals";
 import { useReportExtras } from "../sections/ReportExtras";
-import { factText, type InsightFact, type InsightItem, type InsightView } from "../sections/reportSections";
+import type { InsightItem, InsightView } from "../sections/reportSections";
 import { CARD, ComingSoon } from "./primitives";
 import { Icon, TintIcon } from "./icons";
+import { SectionHeader } from "./SectionCards";
 
 // The written note on the card (backend `GET /v1/learner/insights`): a headline, what is working well, what needs
-// attention and what to do next, each sentence with the measured figures it rests on beside it. It is written by a model
-// after a session ends, held to fixed rules by the backend, and says so.
+// attention and what to do next. It is written by a model from the measured figures after a session ends, held to fixed
+// rules by the backend, and says so. The figures themselves are on the rest of the page, so the note stays short prose.
 
 /** Key Insights on the overview: loading, a note, or what to expect when there is none. */
 export function KeyInsightsCard() {
@@ -22,29 +22,23 @@ export function KeyInsightsCard() {
   const { state, retry, reload } = insights;
   const data = state.status === "ready" ? state.data : null;
   const note = data?.insight ?? null;
+  const subtitle = data?.refreshing
+    ? <span role="status">Updating…</span>
+    : note ? `By GenEd AI · updated ${relativeDay(note.generated_at).toLowerCase()}` : "A short summary of how things are going";
 
   return (
     <section aria-labelledby="rc-insights-title" className={`${CARD} p-5`}>
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="rc-insights-title" className="flex items-center gap-2.5 text-[18px] font-bold text-[var(--rs-ink)]">
-          <Icon name="insights/key-insight" size={26} />
-          Key Insights
-        </h2>
-        {data && (
-          <div className="flex items-center gap-2.5">
-            {data.refreshing ? (
-              <span className="text-[12px] font-medium text-[var(--rs-ink-soft)]" role="status">Updating…</span>
-            ) : note ? (
-              <span className="text-[12px] text-[var(--rs-ink-soft)]">Updated {relativeDay(note.generated_at).toLowerCase()}</span>
-            ) : null}
-            {data.can_reload && (
-              <Button variant="outline" size="sm" pill onClick={reload} disabled={data.refreshing} leadingIcon={<RefreshCw size={14} aria-hidden />}>
-                Reload
-              </Button>
-            )}
-          </div>
+      <SectionHeader
+        id="rc-insights-title"
+        icon="insights/key-insight"
+        title="Key Insights"
+        subtitle={subtitle}
+        action={data?.can_reload && (
+          <Button variant="tertiary" size="sm" pill onClick={reload} disabled={data.refreshing} leadingIcon={<TintIcon name="misc/refresh" color="currentColor" size={13} />}>
+            Reload
+          </Button>
         )}
-      </header>
+      />
 
       <div className="mt-4">
         {state.status === "loading" && <p className="text-[13px] text-[var(--rs-ink-soft)]">Loading…</p>}
@@ -79,74 +73,58 @@ function NoNote({ status, refreshing }: { status: "ready" | "none" | "unavailabl
 }
 
 function Note({ note }: { note: InsightView }) {
-  const facts = new Map(note.facts.map((f) => [f.id, f]));
-  const good = BAND_TONES.Advanced;
-  const warn = BAND_TONES.Approaching;
   return (
-    <div className="flex flex-col gap-3">
-      <div className="rounded-2xl border-l-4 bg-[var(--rs-surface-2)] px-4 py-3" style={{ borderColor: "var(--rs-brand)" }}>
-        <p className="text-[15px] font-semibold leading-snug text-[var(--rs-ink)]">{note.headline}</p>
-        <Chips ids={note.headline_evidence} facts={facts} />
-      </div>
-      {note.working_well.length > 0 && (
-        <Block title="What's working well" icon={<TintIcon name="insights/positive-insight" color="#fff" size={14} />} bg={good.wash[0]} edge={good.edge} accent={good.accent}>
-          <Items items={note.working_well} facts={facts} />
-        </Block>
-      )}
-      {note.needs_attention.length > 0 && (
-        <Block title="Needs attention" icon={<TintIcon name="insights/needs-attention" color="#fff" size={14} />} bg={warn.wash[0]} edge={warn.edge} accent={warn.accent}>
-          <Items items={note.needs_attention} facts={facts} />
-        </Block>
-      )}
-      {note.next_steps.length > 0 && (
-        <Block title="Next steps" icon={<TintIcon name="actions/right-arrow" color="#fff" size={12} />} bg="var(--rs-surface-2)" edge="var(--rs-line-strong)" accent="var(--rs-brand)">
-          <Items items={note.next_steps} facts={facts} />
-        </Block>
-      )}
-      <p className="px-1 text-[11.5px] leading-snug text-[var(--rs-ink-soft)]">
-        Written by AI from the figures on this page and checked against them. It is a summary of what was measured, not a judgement of the child.
-      </p>
+    <div>
+      <Headline text={note.headline} />
+      <Groups
+        groups={[
+          { title: "Working well", kind: "good", items: note.working_well },
+          { title: "Needs attention", kind: "warn", items: note.needs_attention },
+          { title: "Next steps", kind: "next", items: note.next_steps },
+        ]}
+      />
     </div>
   );
 }
 
-function Block({ title, icon, bg, edge, accent, children }: { title: string; icon: React.ReactNode; bg: string; edge: string; accent: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl border p-4" style={{ background: bg, borderColor: edge }}>
-      <div className="flex items-center gap-2.5">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full text-white" style={{ background: accent }}>{icon}</span>
-        <h3 className="text-[14px] font-bold text-[var(--rs-ink)]">{title}</h3>
-      </div>
-      <div className="mt-2.5 pl-[38px]">{children}</div>
-    </div>
-  );
+/** The note's one-line summary, as the card's lead sentence. */
+function Headline({ text }: { text: string }) {
+  return <p className="text-[16px] font-semibold leading-snug text-[var(--rs-ink)]">{text}</p>;
 }
 
-/** Each sentence with the measured figures it rests on, as small chips. */
-function Chips({ ids, facts }: { ids: string[]; facts: Map<string, InsightFact> }) {
-  const shown = ids.map((id) => facts.get(id)).filter((f): f is InsightFact => !!f);
+const KINDS = {
+  good: { icon: "marks/check", tone: BAND_TONES.Advanced },
+  warn: { icon: "marks/flag", tone: BAND_TONES.Approaching },
+  next: { icon: "actions/right-arrow", tone: BAND_TONES.Proficient },
+} as const;
+
+type Group = { title: string; kind: keyof typeof KINDS; items: InsightItem[] };
+
+/** One row per group, divided: its mark in a small well, its title, then its sentences under the title. */
+function Groups({ groups }: { groups: Group[] }) {
+  const shown = groups.filter((g) => g.items.length > 0);
   if (shown.length === 0) return null;
   return (
-    <span className="mt-1 flex flex-wrap gap-1.5">
-      {shown.map((f) => (
-        <span key={f.id} className="rounded-full border border-[var(--rs-line)] bg-white px-2 py-0.5 text-[11px] font-medium text-[var(--rs-ink-soft)]">
-          {factText(f)}
-        </span>
-      ))}
-    </span>
-  );
-}
-
-function Items({ items, facts }: { items: InsightItem[]; facts: Map<string, InsightFact> }) {
-  return (
-    <ul className="flex flex-col gap-2.5">
-      {items.map((item, i) => (
-        <li key={i} className="text-[13px] leading-relaxed text-[var(--rs-ink)]">
-          {item.text}
-          <Chips ids={item.evidence} facts={facts} />
-        </li>
-      ))}
-    </ul>
+    <div className="mt-3 divide-y divide-[var(--rs-line)] border-t border-[var(--rs-line)]">
+      {shown.map(({ title, kind, items }) => {
+        const { icon, tone } = KINDS[kind];
+        return (
+          <div key={title} className="flex gap-3 py-3.5 last:pb-0">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={{ background: tone.tint }}>
+              <TintIcon name={icon} color={tone.ink} size={15} />
+            </span>
+            <div className="min-w-0 pt-1">
+              <h3 className="text-[13.5px] font-bold leading-tight text-[var(--rs-ink)]">{title}</h3>
+              <ul className="mt-1.5 flex flex-col gap-1.5">
+                {items.map((item, i) => (
+                  <li key={i} className="text-[13.5px] leading-snug text-[var(--rs-ink-soft)]">{item.text}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -169,7 +147,6 @@ export function SubjectInsight({ data, subject }: { data: ReportCardData; subjec
   );
   if (!note) return none;
 
-  const facts = new Map(note.facts.map((f) => [f.id, f]));
   const entry = note.subjects.find((s) => s.subject_code === code);
   const own = new Set(note.facts.filter((f) => f.subject_code === code).map((f) => f.id));
   const about = (items: InsightItem[]) => items.filter((i) => i.evidence.some((e) => own.has(e)));
@@ -178,21 +155,15 @@ export function SubjectInsight({ data, subject }: { data: ReportCardData; subjec
   const attention = entry ? entry.needs_attention : note.subjects.length === 0 ? about(note.needs_attention) : [];
   if (!headline && working.length === 0 && attention.length === 0) return none;
 
-  const good = BAND_TONES.Advanced;
-  const warn = BAND_TONES.Approaching;
   return (
-    <div className="flex flex-col gap-3">
-      {headline && <p className="rounded-2xl border-l-4 bg-[var(--rs-surface-2)] px-4 py-3 text-[15px] font-semibold leading-snug text-[var(--rs-ink)]" style={{ borderColor: "var(--rs-brand)" }}>{headline}</p>}
-      {working.length > 0 && (
-        <Block title="What's working well" icon={<TintIcon name="insights/positive-insight" color="#fff" size={14} />} bg={good.wash[0]} edge={good.edge} accent={good.accent}>
-          <Items items={working} facts={facts} />
-        </Block>
-      )}
-      {attention.length > 0 && (
-        <Block title="Needs attention" icon={<TintIcon name="insights/needs-attention" color="#fff" size={14} />} bg={warn.wash[0]} edge={warn.edge} accent={warn.accent}>
-          <Items items={attention} facts={facts} />
-        </Block>
-      )}
+    <div>
+      {headline && <Headline text={headline} />}
+      <Groups
+        groups={[
+          { title: "Working well", kind: "good", items: working },
+          { title: "Needs attention", kind: "warn", items: attention },
+        ]}
+      />
     </div>
   );
 }

@@ -7,10 +7,7 @@ import type { ReportCardData, ReportCardUI } from "../types";
 import type { OverallSummary, SubjectSummary } from "../selectors";
 import { toneFor } from "../subjectVisuals";
 import { CARD, FOCUS_RING, Ring } from "./primitives";
-import { IndependenceBar } from "./SectionCards";
-import { formatEstimate } from "@/features/learning/activity/useChapterTime";
 import { useReportExtras } from "../sections/ReportExtras";
-import { recentMinutes } from "../sections/reportSections";
 import { Icon, TintIcon } from "./icons";
 
 export function SummaryHeader({
@@ -23,7 +20,6 @@ export function SummaryHeader({
 }) {
   const extras = useReportExtras();
   const v1 = data.chapters.some((c) => c.skills !== undefined);
-  const study = extras.activity?.state.status === "ready" ? recentMinutes(extras.activity.state.data.series) : null;
   // The PDF is written from the same sections the screen shows, so it waits until none is still being read.
   const sectionsLoading = [extras.activity, extras.trends, extras.misconceptions, extras.insights].some((s) => s?.state.status === "loading");
   const masteryTone = toneFor(overall.avgMastery, overall.sessions > 0 || overall.avgMastery > 0);
@@ -94,12 +90,12 @@ export function SummaryHeader({
           value={<>{overall.chaptersCompleted} <span className="text-[var(--rs-ink-soft)]">/ {overall.chaptersTotal}</span></>}
           label="Chapters Completed"
         />
-        {/* The new backend has no tests; it reports estimated study time instead (the activity read, last 30 days). */}
+        {/* The new backend has no tests; it reports every answer and how many were right. */}
         {v1 ? (
           <HeaderStat
-            icon={<Icon name="session-content/time" size={26} />}
-            value={study ? formatEstimate(study.minutes) : <span className="text-[var(--rs-ink-soft)]">—</span>}
-            label="Study time (est.), 30 days"
+            icon={<Icon name="metrics/tests" size={26} />}
+            value={extras.answered > 0 ? <>{extras.correct} <span className="text-[var(--rs-ink-soft)]">/ {extras.answered}</span></> : <span className="text-[var(--rs-ink-soft)]">—</span>}
+            label="Right Answers"
           />
         ) : (
           <HeaderStat icon={<Icon name="metrics/tests" size={26} />} value={overall.tests} label={overall.tests === 1 ? "Test" : "Tests"} />
@@ -120,12 +116,6 @@ export function SummaryHeader({
         )}
       </div>
 
-      {/* Right answers alone vs with help, across every chapter. */}
-      {v1 && extras.help && extras.answered > 0 && (
-        <div className="col-span-2 border-t border-[var(--rs-line)] pt-4 @[540px]/hdr:col-span-3 @[980px]/hdr:col-span-4">
-          <IndependenceBar help={extras.help} />
-        </div>
-      )}
     </section>
     </div>
   );
@@ -157,18 +147,17 @@ function Callout({
       type="button"
       onClick={() => onOpen(subject.subject)}
       className={`group flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-[transform,box-shadow] duration-300 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-20px_rgba(18,45,48,0.4)] ${FOCUS_RING}`}
-      style={{ background: `linear-gradient(135deg, ${tone.wash[0]}, ${tone.wash[1]})`, borderColor: tone.edge }}
+      style={{ background: "var(--rs-surface-2)", borderColor: "var(--rs-line)" }}
     >
-      {/* Strongest subject gets a soft-surface well + teal glyph;
-          needs-attention keeps its band colour. */}
+      {/* Strongest subject: a trophy in a mint well; needs attention: a flag on its band colour. */}
       <span
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
         style={{ background: kind === "strong" ? "var(--rs-mint)" : tone.accent }}
       >
         <TintIcon
-          name={kind === "strong" ? "insights/positive-insight" : "insights/needs-attention"}
+          name={kind === "strong" ? "session-content/achievement" : "marks/flag"}
           color={kind === "strong" ? "var(--rs-brand)" : "#fff"}
-          size={15}
+          size={16}
         />
       </span>
       <span className="min-w-0 flex-1 leading-tight">

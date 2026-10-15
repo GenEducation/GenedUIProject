@@ -4,7 +4,8 @@ import { http, HttpResponse } from "msw";
 import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { server } from "@/test/msw/server";
 import { ReportExtrasProvider } from "../sections/ReportExtras";
-import { ActivityCard, IndependenceBar, MisconceptionsCard, dayShade } from "../screen/SectionCards";
+import { ActivityCard, FocusCard, IndependenceBar } from "../screen/SectionCards";
+import { makeData } from "./fixtures";
 import { recentMinutes, trendLine, type ActivityPeriod, type ActivitySeries } from "../sections/reportSections";
 import type { ReportWho } from "../v1Report";
 
@@ -44,11 +45,6 @@ function backend(over: { activity?: object | number; trends?: object; misconcept
 }
 
 describe("pure display rules", () => {
-  it("shades a day by its answers, and an active day with none still shows", () => {
-    const p = (answers: number, active_days = 0) => ({ period: "2026-10-14", answers, correct: 0, minutes: 0, active_days, skills_levelled_up: null });
-    expect([p(0), p(0, 1), p(1), p(3), p(6)].map(dayShade)).toEqual([0, 1, 2, 3, 4]);
-  });
-
   it("sums the last 30 days' minutes, and says when tracking started inside that window", () => {
     const s = series(84, { 0: 5, 2: 5, 40: 9 }); // the 40-days-ago day is outside the last 30
     expect(recentMinutes(s)).toEqual({ minutes: 40, partial: false });
@@ -64,40 +60,40 @@ describe("pure display rules", () => {
   });
 });
 
-describe("the activity card", () => {
-  it("shows the streak, the active days, the estimated study time and a calendar of the days", async () => {
+describe("the study habits card", () => {
+  it("shows the streak, the active days and the estimated study time over the last 30 days, with a bar a day", async () => {
     backend();
     mount(<ActivityCard />);
 
-    const card = await screen.findByRole("region", { name: "Activity" });
+    const card = await screen.findByRole("region", { name: "Study habits" });
     const stat = (label: string) => within(card).getByText(label).closest("div") as HTMLElement;
     await waitFor(() => expect(stat("Day streak")).toHaveTextContent("3")); // the streak, from its own read
-    expect(stat("Day streak")).toHaveTextContent("best 9");
-    expect(stat("Active days")).toHaveTextContent("3last 84 days");
-    expect(stat("Study time (est.)")).toHaveTextContent("56 minlast 30 days"); // (5 + 2 + 7) answers x 4 minutes
-    expect(within(card).getByRole("img", { name: "Activity over the last 84 days: 3 active" })).toBeInTheDocument();
-    expect(within(card).getByText(/never the time it was left open/)).toBeInTheDocument();
+    expect(stat("Day streak")).toHaveTextContent("Best 9");
+    expect(stat("Active days")).toHaveTextContent("3of 30");
+    expect(stat("Study time")).toHaveTextContent("56 minEstimated"); // (5 + 2 + 7) answers x 4 minutes
+    expect(within(card).getByRole("img", { name: "Answers each day over the last 30 days: 3 active" })).toBeInTheDocument();
+    expect(within(card).getByText("75% of right answers on their own")).toBeInTheDocument();
   });
 
   it("names when tracking began, so earlier days read as untracked and not as zero", async () => {
     const s = series(84, { 0: 3, 20: 4 });
     backend({ activity: { ...s, measured_since: s.periods[78].period } });
     mount(<ActivityCard />);
-    expect(await screen.findByText(/Tracked since/)).toBeInTheDocument();
+    expect(await screen.findByText(/Study time is tracked from/)).toBeInTheDocument();
   });
 
-  it("keeps the calendar when only the streak can't be read", async () => {
+  it("keeps the days when only the streak can't be read", async () => {
     backend({ streak: 500 });
     mount(<ActivityCard />);
-    const card = await screen.findByRole("region", { name: "Activity" });
-    await within(card).findByRole("img", { name: /Activity over the last 84 days/ });
+    const card = await screen.findByRole("region", { name: "Study habits" });
+    await within(card).findByRole("img", { name: /Answers each day/ });
     expect(within(card).getByText("Day streak").nextSibling).toHaveTextContent("—");
   });
 
   it("says what fills an empty card", async () => {
     backend({ activity: series(84) });
     mount(<ActivityCard />);
-    expect(await screen.findByText(/Activity appears here once lessons are worked through/)).toBeInTheDocument();
+    expect(await screen.findByText(/This fills in as lessons are worked through/)).toBeInTheDocument();
   });
 
   it("shows Couldn't load with Retry, and retrying reads it again", async () => {
@@ -107,12 +103,12 @@ describe("the activity card", () => {
 
     backend(); // the next read works
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    expect(await screen.findByRole("img", { name: /Activity over the last 84 days/ })).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: /Answers each day/ })).toBeInTheDocument();
   });
 
   it("is not offered to the teacher's report", () => {
     render(<ReportExtrasProvider who={null} summary={null}><ActivityCard /></ReportExtrasProvider>);
-    expect(screen.queryByRole("region", { name: "Activity" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Study habits" })).not.toBeInTheDocument();
   });
 });
 
@@ -129,43 +125,52 @@ describe("right answers alone and with help", () => {
   });
 });
 
-describe("the mix-ups card", () => {
+describe("what to work on", () => {
   const item = (n: number, over: Record<string, unknown> = {}) => ({
     misconception_id: `m-${n}`, title: `SYNTHETIC idea ${n}`, chapter_id: "c-1", chapter_title: "SYNTHETIC Fractions", subject_code: "mathematics",
     first_seen_at: "2026-10-01T10:00:00Z", last_seen_at: "2026-10-10T10:00:00Z", times_seen: 2, resolved: false, ...over,
   });
-
-  it("lists what is still open and what is fixed, by the curriculum's own words", async () => {
-    backend({ misconceptions: { misconceptions: [item(1), item(2, { resolved: true, times_seen: 1 })] } });
-    mount(<MisconceptionsCard />);
-
-    const card = await screen.findByRole("region", { name: "Mix-ups to clear" });
-    await within(card).findByText("SYNTHETIC idea 1");
-    expect(within(card).getByText("Still open")).toBeInTheDocument();
-    expect(within(card).getByText("Fixed")).toBeInTheDocument();
-    expect(within(card).getByText(/seen 2 times/)).toBeInTheDocument();
-    expect(within(card).getByText(/seen 1 time,/)).toBeInTheDocument();
+  const k = (id: string, over: Record<string, unknown> = {}) => ({ component_id: id, title: `SYNTHETIC ${id}`, level: "getting_there", status: "keep_practising", due: false, needs_adult_support: false, ...over });
+  const data = (skills: object[] = [k("compare", { due: true }), k("order", { needs_adult_support: true })]) => makeData({
+    chapters: [{ subject: "Mathematics", subject_code: "mathematics", document_title: "SYNTHETIC Fractions", completion_percentage: 50, mastery_score: 0.5, study_count: 1, grade: 6,
+      skills: [{ ...k("add"), level: "got_it", status: null }, ...skills] } as never],
   });
 
-  it("folds a long list behind View all", async () => {
-    backend({ misconceptions: { misconceptions: [1, 2, 3, 4, 5, 6].map((n) => item(n)) } });
-    mount(<MisconceptionsCard />);
-    await screen.findByText("SYNTHETIC idea 4");
-    expect(screen.queryByText("SYNTHETIC idea 5")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "View all 6" }));
-    await waitFor(() => expect(screen.getByText("SYNTHETIC idea 6")).toBeInTheDocument());
+  it("lists the skills to practise, due first, and the mix-ups still open, with a count of those cleared", async () => {
+    backend({ misconceptions: { misconceptions: [item(1), item(2, { resolved: true })] } });
+    mount(<FocusCard data={data()} />);
+
+    const card = await screen.findByRole("region", { name: "What to work on" });
+    expect(within(card).queryByText("SYNTHETIC add"), "a skill that is fine stays off the list").not.toBeInTheDocument();
+    const skills = within(card).getAllByText(/^SYNTHETIC (compare|order)$/).map((n) => n.textContent);
+    expect(skills).toEqual(["SYNTHETIC compare", "SYNTHETIC order"]);
+    expect(within(card).getByText("Revisit due")).toBeInTheDocument();
+    expect(within(card).getByText("Could use an adult's help")).toBeInTheDocument();
+    expect(await within(card).findByText("SYNTHETIC idea 1")).toBeInTheDocument();
+    expect(within(card).queryByText("SYNTHETIC idea 2")).not.toBeInTheDocument();
+    expect(within(card).getByText("1 mix-up already cleared")).toBeInTheDocument();
   });
 
-  it("says what fills it when nothing is recorded", async () => {
+  it("folds long lists behind View all", async () => {
+    backend({ misconceptions: { misconceptions: [1, 2, 3, 4, 5].map((n) => item(n)) } });
+    mount(<FocusCard data={data()} />);
+    await screen.findByText("SYNTHETIC idea 3");
+    expect(screen.queryByText("SYNTHETIC idea 4")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "View all" }));
+    await waitFor(() => expect(screen.getByText("SYNTHETIC idea 5")).toBeInTheDocument());
+  });
+
+  it("says so when there is nothing to work on", async () => {
     backend();
-    mount(<MisconceptionsCard />);
-    expect(await screen.findByText(/No mix-ups recorded yet/)).toBeInTheDocument();
+    mount(<FocusCard data={data([])} />);
+    expect(await screen.findByText(/Nothing to revisit right now/)).toBeInTheDocument();
   });
 
-  it("shows Couldn't load with Retry when the read fails", async () => {
+  it("keeps the skills and offers Retry when the mix-ups can't be read", async () => {
     backend({ misconceptions: 500 });
-    mount(<MisconceptionsCard />);
-    expect(await screen.findByText(/Couldn.t load this section/)).toBeInTheDocument();
+    mount(<FocusCard data={data()} />);
+    expect(await screen.findByText(/Couldn.t load the mix-ups/)).toBeInTheDocument();
+    expect(screen.getByText("SYNTHETIC compare")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });
 });

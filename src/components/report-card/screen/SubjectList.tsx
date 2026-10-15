@@ -66,15 +66,13 @@ function SubjectRow({
       aria-label={`${s.subject}: ${s.bandLabel}, ${s.measured ? `${s.mastery}% mastery` : "mastery not measured yet"}, ${s.coverage}% coverage`}
       className={`group relative block w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-300 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-26px_rgba(18,45,48,0.5)] ${FOCUS_RING}`}
       style={{
-        background: `linear-gradient(100deg, ${tone.wash[0]}, ${tone.wash[1]} 65%)`,
-        borderColor: active ? tone.accent : tone.edge,
-        boxShadow: active ? `0 0 0 1.5px ${tone.accent}, 0 18px 36px -26px rgba(18,45,48,0.5)` : undefined,
+        // A neutral card: the band colour lives only on the mastery marks (glyph, chip, bar, ring). Selection is the brand's.
+        background: active ? "var(--rs-surface-2)" : "#fff",
+        borderColor: active ? "var(--rs-brand)" : "var(--rs-line)",
+        boxShadow: active ? "0 0 0 1px var(--rs-brand), 0 18px 36px -26px rgba(18,45,48,0.5)" : undefined,
       }}
     >
-      {/* Band edge */}
-      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: tone.accent }} />
-
-      <div className="flex items-start gap-3.5 p-4 pl-5 @[560px]/list:gap-4">
+      <div className="flex items-start gap-3.5 p-4 @[560px]/list:gap-4">
         <SubjectGlyph subject={s.subject} tone={tone} size={52} />
 
         <div className="min-w-0 flex-1">
@@ -115,7 +113,7 @@ function SubjectRow({
 
         <TintIcon
           name="actions/right-arrow"
-          color={active ? tone.accent : "var(--rs-ink-soft)"}
+          color={active ? "var(--rs-brand)" : "var(--rs-ink-soft)"}
           size={14}
           className="self-center transition-transform duration-300 group-hover:translate-x-0.5"
         />

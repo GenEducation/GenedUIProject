@@ -51,11 +51,8 @@ export function SubjectPreview({
         )}
       </div>
 
-      {/* Header wash */}
-      <div
-        className="mx-4 mt-3 rounded-2xl border p-4"
-        style={{ background: `linear-gradient(120deg, ${tone.wash[0]}, ${tone.wash[1]})`, borderColor: tone.edge }}
-      >
+      {/* Header: a neutral panel; the band colour is on the glyph, chip and ring only. */}
+      <div className="mx-4 mt-3 rounded-2xl border border-[var(--rs-line)] bg-[var(--rs-surface-2)] p-4">
         <div className="flex items-start gap-3.5">
           <SubjectGlyph subject={s.subject} tone={tone} size={56} />
           <div className="min-w-0 flex-1">
@@ -117,8 +114,7 @@ export function SubjectPreview({
                     key={o.subject}
                     type="button"
                     onClick={() => onSelect(o.subject)}
-                    className={`inline-flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-[12.5px] font-semibold text-[var(--rs-ink)] transition-colors hover:brightness-[0.98] ${FOCUS_RING}`}
-                    style={{ background: o.tone.wash[0], borderColor: o.tone.edge }}
+                    className={`inline-flex items-center gap-2 rounded-full border border-[var(--rs-line)] bg-white py-1 pl-1 pr-3 text-[12.5px] font-semibold text-[var(--rs-ink)] transition-colors hover:border-[var(--rs-line-strong)] hover:bg-[var(--rs-surface-2)] ${FOCUS_RING}`}
                   >
                     <SubjectGlyph subject={o.subject} tone={o.tone} size={24} />
                     {o.subject}

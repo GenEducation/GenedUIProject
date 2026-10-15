@@ -5,8 +5,7 @@ import { motion } from "framer-motion";
 import { ringArc } from "../utils";
 import { BAND_TONES, type BandTone, type MasteryBand } from "../subjectVisuals";
 import type { SkillLevel } from "../types";
-import { MaskIcon } from "../MaskIcon";
-import { reportSubjectIcon } from "./icons";
+import { TintIcon, subjectIconName } from "./icons";
 
 /** Neutral teal-grey for coverage, so it never competes with the mastery band. */
 export const COVERAGE_COLOR = "#6A9295";
@@ -101,7 +100,7 @@ export function SubjectGlyph({ subject, tone, size = 48 }: { subject: string; to
       className="flex shrink-0 items-center justify-center rounded-full transition-colors duration-500"
       style={{ width: size, height: size, background: tone.tint }}
     >
-      <MaskIcon src={reportSubjectIcon(subject)} color={tone.accent} size={Math.round(size * 0.52)} />
+      <TintIcon name={subjectIconName(subject)} color={tone.accent} size={Math.round(size * 0.5)} />
     </span>
   );
 }

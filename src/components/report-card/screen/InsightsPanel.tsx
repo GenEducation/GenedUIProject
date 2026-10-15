@@ -8,8 +8,8 @@ import { keyInsights, subjectTrend, type SubjectSummary } from "../selectors";
 import { BAND_TONES } from "../subjectVisuals";
 import { deriveUnlocks } from "../utils";
 import { Button } from "@/components/ui/Button";
-import { CARD, ComingSoon, SkillLevelChip, Sparkline, SubjectGlyph } from "./primitives";
-import { ActivityCard, MisconceptionsCard } from "./SectionCards";
+import { CARD, ComingSoon, Sparkline, SubjectGlyph } from "./primitives";
+import { ActivityCard, FocusCard, SectionHeader, SectionStatus } from "./SectionCards";
 import { KeyInsightsCard } from "./InsightsCards";
 import { useReportExtras } from "../sections/ReportExtras";
 import { trendLine } from "../sections/reportSections";
@@ -17,17 +17,32 @@ import { Icon, TintIcon } from "./icons";
 
 const BULLETS = 2;
 
-export function InsightsPanel({ data, subjects }: { data: ReportCardData; subjects: SubjectSummary[] }) {
+// The overview, split by column so each side reads top to bottom:
+//   main  subjects (the list, rendered by the screen) → what to work on
+//   side  key insights → study habits → subject trends
+// On a narrow screen it is one column: insights first, then subjects, work, habits and trends.
+
+/** Below the subject list: what to practise and the mix-ups to clear (the new backend only). */
+export function OverviewMain({ data }: { data: ReportCardData }) {
+  const v1 = data.chapters.some((c) => c.skills !== undefined);
+  return v1 ? <FocusCard data={data} /> : null;
+}
+
+/** The summary of how things are going: the written note, or the teacher report's own insights. */
+export function OverviewInsights({ data }: { data: ReportCardData }) {
+  const extras = useReportExtras();
+  const v1 = data.chapters.some((c) => c.skills !== undefined);
+  return v1 && extras.insights ? <KeyInsightsCard /> : <KeyInsights data={data} />;
+}
+
+/** Study habits, the subject trends and (teacher report) what unlocks next. */
+export function OverviewHabits({ data, subjects }: { data: ReportCardData; subjects: SubjectSummary[] }) {
   // The new backend (its chapters carry skills) has no learning-arc analyses, so nothing "unlocks" them any more.
   const v1 = data.chapters.some((c) => c.skills !== undefined);
   const unlocks = v1 ? [] : deriveUnlocks(data);
-  const extras = useReportExtras();
   return (
-    <div className="flex flex-col gap-4">
-      {v1 && <KeepPractising data={data} />}
+    <>
       {v1 && <ActivityCard />}
-      {v1 && <MisconceptionsCard />}
-      {v1 && extras.insights ? <KeyInsightsCard /> : <KeyInsights data={data} />}
       <SubjectTrends data={data} subjects={subjects} />
       {unlocks.length > 0 && (
         <section aria-label="What unlocks next" className={`${CARD} p-5`}>
@@ -47,63 +62,17 @@ export function InsightsPanel({ data, subjects }: { data: ReportCardData; subjec
           </ul>
         </section>
       )}
-    </div>
+    </>
   );
 }
 
-// ─────────────────────────────────────────────────────────
-// KEEP PRACTISING — the backend's own revisit list
-// ─────────────────────────────────────────────────────────
-
-const PRACTISE_SHOWN = 5;
-
-/** Skills the backend asks to revisit (due first), and any it flags for an adult's help. */
-function KeepPractising({ data }: { data: ReportCardData }) {
-  const [showAll, setShowAll] = useState(false);
-  const items = data.chapters.flatMap((c) =>
-    (c.skills ?? [])
-      .filter((k) => k.status === "keep_practising" || k.due || k.needs_adult_support)
-      .map((k) => ({ ...k, chapter: c.document_title, subject: c.subject })),
-  ).sort((a, b) => Number(b.due) - Number(a.due) || Number(b.needs_adult_support) - Number(a.needs_adult_support));
-  const shown = showAll ? items : items.slice(0, PRACTISE_SHOWN);
-
+/** The wide screen's right column. */
+export function InsightsPanel({ data, subjects }: { data: ReportCardData; subjects: SubjectSummary[] }) {
   return (
-    <section aria-labelledby="rc-practise-title" className={`${CARD} p-5`}>
-      <header className="flex items-center justify-between gap-3">
-        <h2 id="rc-practise-title" className="flex items-center gap-2.5 text-[18px] font-bold text-[var(--rs-ink)]">
-          <Icon name="session-content/practice" size={24} />
-          Keep practising
-        </h2>
-        {items.length > PRACTISE_SHOWN && (
-          <Button variant="tertiary" size="sm" pill onClick={() => setShowAll((v) => !v)} aria-expanded={showAll}>
-            {showAll ? "Show less" : `View all ${items.length}`}
-          </Button>
-        )}
-      </header>
-      {items.length === 0 ? (
-        <p className="mt-3 text-[13px] leading-relaxed text-[var(--rs-ink-soft)]">
-          Nothing to revisit right now. Skills that need another go show up here as chapters are worked through.
-        </p>
-      ) : (
-        <ul className="mt-3 flex flex-col gap-2">
-          {shown.map((k) => (
-            <li key={`${k.chapter}::${k.component_id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--rs-line)] bg-[var(--rs-surface-2)] px-3.5 py-2.5">
-              <div className="min-w-0 flex-1 leading-tight">
-                <p className="text-[13.5px] font-semibold text-[var(--rs-ink)]">{k.title}</p>
-                <p className="mt-0.5 truncate text-[11.5px] text-[var(--rs-ink-soft)]">{k.subject} · {k.chapter}</p>
-                {(k.due || k.needs_adult_support) && (
-                  <p className="mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5 text-[11.5px] font-semibold text-[var(--rs-ink)]">
-                    {k.due && <span>Revisit due</span>}
-                    {k.needs_adult_support && <span>Could use an adult&apos;s help</span>}
-                  </p>
-                )}
-              </div>
-              <SkillLevelChip level={k.level} />
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+    <div className="flex flex-col gap-5">
+      <OverviewInsights data={data} />
+      <OverviewHabits data={data} subjects={subjects} />
+    </div>
   );
 }
 
@@ -126,17 +95,17 @@ function KeyInsights({ data }: { data: ReportCardData }) {
 
   return (
     <section aria-labelledby="rc-insights-title" className={`${CARD} p-5`}>
-      <header className="flex items-center justify-between gap-3">
-        <h2 id="rc-insights-title" className="flex items-center gap-2.5 text-[18px] font-bold text-[var(--rs-ink)]">
-          <Icon name="insights/key-insight" size={26} />
-          Key Insights
-        </h2>
-        {hasMore && (
+      <SectionHeader
+        id="rc-insights-title"
+        icon="insights/key-insight"
+        title="Key Insights"
+        subtitle="A short summary of how things are going"
+        action={hasMore && (
           <Button variant="tertiary" size="sm" pill onClick={() => setShowAll((v) => !v)} aria-expanded={showAll}>
             {showAll ? "Show less" : "View all"}
           </Button>
         )}
-      </header>
+      />
 
       {!insights ? (
         <div className="mt-4">
@@ -150,12 +119,12 @@ function KeyInsights({ data }: { data: ReportCardData }) {
       ) : (
         <div className="mt-4 flex flex-col gap-3">
           {insights.working.length > 0 && (
-            <InsightBlock icon={<TintIcon name="insights/positive-insight" color="#fff" size={14} />} title="What's working well" bg={good.wash[0]} edge={good.edge} accent={good.accent}>
+            <InsightBlock icon={<TintIcon name="marks/check" color="#fff" size={14} />} title="What's working well" bg="var(--rs-surface-2)" edge="var(--rs-line)" accent={good.accent}>
               <Bullets items={clip(insights.working)} />
             </InsightBlock>
           )}
           {attention.length > 0 && (
-            <InsightBlock icon={<TintIcon name="insights/needs-attention" color="#fff" size={14} />} title="Needs attention" bg={warn.wash[0]} edge={warn.edge} accent={warn.accent}>
+            <InsightBlock icon={<TintIcon name="marks/flag" color="#fff" size={13} />} title="Needs attention" bg="var(--rs-surface-2)" edge="var(--rs-line)" accent={warn.accent}>
               <Bullets items={clip(attention)} />
             </InsightBlock>
           )}
@@ -255,26 +224,19 @@ function SubjectTrends({ data, subjects }: { data: ReportCardData; subjects: Sub
 
 /** The new backend's trends: week by week, the share of the skills answered on that the learner knows. */
 function WeeklyTrends({ data, subjects, section }: { data: ReportCardData; subjects: SubjectSummary[]; section: NonNullable<ReturnType<typeof useReportExtras>["trends"]> }) {
-  const { state, retry } = section;
+  const { state } = section;
   if (state.status !== "ready") {
     return (
-      <section aria-label="Subject trends" className={`${CARD} p-5`}>
-        <h2 className="text-[17px] font-bold text-[var(--rs-ink)]">Subject Trends</h2>
-        {state.status === "loading" ? (
-          <p className="mt-3 text-[13px] text-[var(--rs-ink-soft)]">Loading…</p>
-        ) : (
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <p className="text-[13px] text-[var(--rs-ink-soft)]">Couldn&apos;t load this section.</p>
-            <Button variant="outline" size="sm" pill onClick={retry}>Retry</Button>
-          </div>
-        )}
+      <section aria-labelledby="rc-trends-title" className={`${CARD} p-5`}>
+        <SectionHeader id="rc-trends-title" icon="trends/subject-trends" title="Subject Trends" />
+        <div className="mt-4"><SectionStatus section={section} /></div>
       </section>
     );
   }
   // The trends are keyed by subject code; the card's subjects by name, which each chapter carries both of.
   const codeOf = new Map(data.chapters.filter((c) => c.subject_code).map((c) => [c.subject, c.subject_code as string]));
   return (
-    <TrendsShell note="The share of the skills answered on that are Got it or Strong, week by week.">
+    <TrendsShell note="Skills known in each subject, week by week">
       {subjects.map((s, i) => {
         const points = state.data.subjects.find((t) => t.subject_code === codeOf.get(s.subject))?.points ?? [];
         return <TrendRow key={s.subject} s={s} i={i} line={trendLine(points)} none="Trend appears after answers in a couple of weeks" />;
@@ -286,15 +248,7 @@ function WeeklyTrends({ data, subjects, section }: { data: ReportCardData; subje
 function TrendsShell({ note = "How mastery has moved across recent sessions", children }: { note?: string; children: React.ReactNode }) {
   return (
     <section aria-labelledby="rc-trends-title" className={`${CARD} p-5`}>
-      <header className="flex items-center gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--rs-mint)]">
-          <Icon name="trends/subject-trends" size={24} />
-        </span>
-        <div>
-          <h2 id="rc-trends-title" className="text-[17px] font-bold leading-tight text-[var(--rs-ink)]">Subject Trends</h2>
-          <p className="text-[12.5px] text-[var(--rs-ink-soft)]">{note}</p>
-        </div>
-      </header>
+      <SectionHeader id="rc-trends-title" icon="trends/subject-trends" title="Subject Trends" subtitle={note} />
       <ul className="mt-4 flex flex-col gap-2">{children}</ul>
     </section>
   );

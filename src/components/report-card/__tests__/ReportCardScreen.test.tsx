@@ -133,21 +133,21 @@ describe("ReportCardScreen — the new backend's chapters", () => {
     render(<Harness data={v1} />);
 
     // Overview: the backend's revisit list, and placeholders where AI insights and trends were.
-    const practise = screen.getByRole("region", { name: "Keep practising" });
+    const practise = screen.getByRole("region", { name: "What to work on" });
     expect(within(practise).getByText("SYNTHETIC compare")).toBeInTheDocument();
     expect(within(practise).getByText("Getting there")).toBeInTheDocument();
     expect(screen.getByText("AI learning insights")).toBeInTheDocument();
     expect(screen.getByText("Subject trends")).toBeInTheDocument();
-    // No tests on the new backend: the header shows estimated study time in their place (— until the activity read lands).
+    // No tests on the new backend: the header shows the right answers in their place.
     const header = within(screen.getByRole("region", { name: "Report summary" }));
-    expect(header.getByText("Study time (est.), 30 days")).toBeInTheDocument();
+    expect(header.getByText("Right Answers")).toBeInTheDocument();
     expect(header.queryByText("Tests")).not.toBeInTheDocument();
 
     fireEvent.click(subjectRow(/^Mathematics:/));
     fireEvent.click(await screen.findByRole("button", { name: /View chapter breakdown/ }));
     const detail = await screen.findByRole("region", { name: "Mathematics details" });
-    expect(within(detail).getByText("Step 3 of 6")).toBeInTheDocument();
-    expect(within(detail).getByText("7/9")).toBeInTheDocument();
+    expect(within(detail).getByText("Step 4 of 6")).toBeInTheDocument();
+    expect(within(detail).getByText("Answers").nextSibling).toHaveTextContent("7/9");
 
     fireEvent.click(within(detail).getByRole("button", { name: /SYNTHETIC Fractions/ }));
     expect(await within(detail).findByText("SYNTHETIC add")).toBeInTheDocument();
@@ -202,14 +202,16 @@ describe("ReportCardScreen — the sections the new backend added", () => {
     );
   }
 
-  it("fills the header with study time and right answers alone vs with help, and the overview with activity and mix-ups", async () => {
+  it("fills the header with the right answers, study habits with time and help, and what to work on with the mix-ups", async () => {
     renderWithBackend();
 
     const header = within(screen.getByRole("region", { name: "Report summary" }));
-    expect(await header.findByText("1h")).toBeInTheDocument(); // (4 + 2) answers x 10 minutes
-    expect(header.getByText("75% of right answers on their own")).toBeInTheDocument();
-    expect(await screen.findByRole("region", { name: "Activity" })).toBeInTheDocument();
-    expect(await screen.findByText("SYNTHETIC idea")).toBeInTheDocument();
+    expect(header.getByText("Right Answers").previousSibling).toHaveTextContent("8 / 10");
+    const habits = within(await screen.findByRole("region", { name: "Study habits" }));
+    expect(await habits.findByText("1h")).toBeInTheDocument(); // (4 + 2) answers x 10 minutes
+    expect(habits.getByText("75% of right answers on their own")).toBeInTheDocument();
+    const focus = within(screen.getByRole("region", { name: "What to work on" }));
+    expect(await focus.findByText("SYNTHETIC idea")).toBeInTheDocument();
     // Study time reaches the chapter and subject too, as an estimate.
     fireEvent.click(subjectRow(/^Mathematics:/));
     expect(await screen.findByText("1h 15m")).toBeInTheDocument();

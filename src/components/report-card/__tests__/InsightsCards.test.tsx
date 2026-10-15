@@ -70,20 +70,18 @@ describe("the figures behind a sentence", () => {
 });
 
 describe("the key insights card", () => {
-  it("shows the note with the figures each sentence rests on, and when it was written", async () => {
+  it("shows the note as a headline and short groups, and when it was written", async () => {
     backend(() => response());
     mount(<KeyInsightsCard />);
 
     const card = await screen.findByRole("region", { name: /Key Insights/ });
     expect(await within(card).findByText("Mathematics is going well.")).toBeInTheDocument();
-    const good = within(card).getByText("Mathematics mastery is 75 percent.").closest("li") as HTMLElement;
-    expect(within(good).getByText("Mathematics: 75% mastery")).toBeInTheDocument();
-    const attention = within(card).getByText("One mix-up has come up twice.").closest("li") as HTMLElement;
-    expect(within(attention).getByText("SYNTHETIC wrong idea: seen 2 times")).toBeInTheDocument();
+    expect(within(card).getByRole("heading", { name: "Working well" })).toBeInTheDocument();
+    expect(within(card).getByText("Mathematics mastery is 75 percent.")).toBeInTheDocument();
+    expect(within(card).getByRole("heading", { name: "Needs attention" })).toBeInTheDocument();
+    expect(within(card).getByText("One mix-up has come up twice.")).toBeInTheDocument();
     expect(within(card).getByText("Talk it through, then try the question again.")).toBeInTheDocument();
-    expect(within(card).getAllByText("Mathematics: 75% mastery").length).toBeGreaterThanOrEqual(2); // under the headline and its sentence
-    expect(within(card).getByText("Updated 2 days ago")).toBeInTheDocument();
-    expect(within(card).getByText(/not a judgement of the child/)).toBeInTheDocument();
+    expect(within(card).getByText("By GenEd AI · updated 2 days ago")).toBeInTheDocument();
   });
 
   it("keeps the previous note on screen and reads again until the new one is written", async () => {
@@ -154,12 +152,11 @@ describe("a subject's insight", () => {
                { subject: "Science", subject_code: "science", document_title: "SYNTHETIC", completion_percentage: 0, mastery_score: 0, study_count: 0, grade: 6, skills: [] } as never],
   });
 
-  it("shows the subject's own entry with its figures, found by the subject's code", async () => {
+  it("shows the subject's own entry, found by the subject's code", async () => {
     backend(() => response());
     mount(<SubjectInsight data={data} subject="Mathematics" />);
     expect(await screen.findByText("Mathematics is steady.")).toBeInTheDocument();
-    const item = screen.getByText("Mastery is 75 percent here.").closest("li") as HTMLElement;
-    expect(within(item).getByText("Mathematics: 75% mastery")).toBeInTheDocument();
+    expect(screen.getByText("Mastery is 75 percent here.")).toBeInTheDocument();
   });
 
   it("shows the overview's sentences about the subject when the note covers a single subject and has no entries", async () => {

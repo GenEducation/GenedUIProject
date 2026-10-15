@@ -2,17 +2,16 @@
 
 import React, { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import type { AnalysisPattern, AnalysisRecommendation, EvolutionAnalysisJson, ReportCardData, ReportCardUI } from "../types";
+import type { AnalysisPattern, AnalysisRecommendation, ChapterSkill, EvolutionAnalysisJson, ReportCardData, ReportCardUI, SkillLevel } from "../types";
 import { chapterRows, type ChapterSort, type SubjectSummary } from "../selectors";
 import { BAND_TONES } from "../subjectVisuals";
 import { deriveTopicInsights, testAggregate } from "../utils";
 import { TopicMastery } from "../parts/TopicMastery";
 import { TestItem } from "../parts/TestItem";
-import { CARD, ComingSoon, FOCUS_RING, SkillLevelChip } from "./primitives";
-import { Icon } from "./icons";
-import { ChapterRow } from "./ChapterRow";
+import { CARD, ComingSoon, FOCUS_RING, SKILL_LEVELS } from "./primitives";
+import { Icon, TintIcon } from "./icons";
+import { ChapterRow, SkillList } from "./ChapterRow";
 import { SubjectInsight } from "./InsightsCards";
-import { Lightbulb } from "lucide-react";
 
 export type DetailTab = "chapters" | "progress" | "tests" | "insights";
 
@@ -115,8 +114,19 @@ function ChaptersTab({ data, ui, subject }: { data: ReportCardData; ui: ReportCa
 
   return (
     <>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="whitespace-nowrap text-[17px] font-bold text-[var(--rs-ink)]">Chapters ({rows.length})</h3>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="whitespace-nowrap text-[17px] font-bold text-[var(--rs-ink)]">Chapters ({rows.length})</h3>
+          {rows.length > 0 && (
+            <p className="mt-0.5 text-[12.5px] text-[var(--rs-ink-soft)]">
+              {(["Completed", "In progress", "Not started"] as const)
+                .map((st) => ({ st, n: rows.filter((r) => r.status === st).length }))
+                .filter((c) => c.n > 0)
+                .map((c) => `${c.n} ${c.st.toLowerCase()}`)
+                .join(" · ")}
+            </p>
+          )}
+        </div>
         {rows.length > 1 && (
           <label className="flex items-center gap-2 whitespace-nowrap text-[12.5px] text-[var(--rs-ink-soft)]">
             Sort by
@@ -149,18 +159,15 @@ function ProgressTab({ data, ui, subject }: { data: ReportCardData; ui: ReportCa
       return <Empty icon={<Icon name="session-content/practice" size={22} />} text="Skills appear here once questions in this subject's chapters have been answered." />;
     }
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-5">
+        <LevelSummary skills={withSkills.flatMap((r) => r.skills)} />
         {withSkills.map((r) => (
           <div key={r.key}>
-            <h4 className="text-[13px] font-bold text-[var(--rs-ink)]">{r.title}</h4>
-            <ul className="mt-2 flex flex-col divide-y divide-[var(--rs-line)] rounded-xl border border-[var(--rs-line)] bg-white">
-              {r.skills.map((k) => (
-                <li key={k.component_id} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-                  <span className="min-w-0 text-[13px] text-[var(--rs-ink)]">{k.title}</span>
-                  <SkillLevelChip level={k.level} />
-                </li>
-              ))}
-            </ul>
+            <h4 className="flex items-center gap-2 text-[13.5px] font-bold text-[var(--rs-ink)]">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold" style={{ background: r.tone.tint, color: r.tone.ink }}>{r.n}</span>
+              {r.title}
+            </h4>
+            <SkillList skills={r.skills} />
           </div>
         ))}
       </div>
@@ -223,13 +230,13 @@ function InsightsTab({ summary }: { summary: SubjectSummary }) {
       )}
       {(strengths.length > 0 || weaknesses.length > 0) && (
         <div className="grid gap-3 @[640px]/detail:grid-cols-2">
-          {strengths.length > 0 && <ListCard title="Strengths" items={strengths} bg={good.wash[0]} edge={good.edge} ink={good.ink} />}
-          {weaknesses.length > 0 && <ListCard title="To work on" items={weaknesses} bg={warn.wash[0]} edge={warn.edge} ink={warn.ink} />}
+          {strengths.length > 0 && <ListCard title="Strengths" items={strengths} bg="var(--rs-surface-2)" edge="var(--rs-line)" ink={good.ink} />}
+          {weaknesses.length > 0 && <ListCard title="To work on" items={weaknesses} bg="var(--rs-surface-2)" edge="var(--rs-line)" ink={warn.ink} />}
         </div>
       )}
       {recs.length > 0 && (
         <div>
-          <h4 className="citron-eyebrow text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]"><Lightbulb size={14} strokeWidth={2.2} aria-hidden />Recommendations</h4>
+          <h4 className="citron-eyebrow text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]"><TintIcon name="insights/key-insight" color="currentColor" size={14} />Recommendations</h4>
           <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-[13px] leading-relaxed text-[var(--rs-ink)]">
             {recs.map((r, i) => <li key={i}>{typeof r === "string" ? r : (r.action ?? r.recommendation ?? r.text ?? "")}</li>)}
           </ul>
@@ -255,6 +262,37 @@ function ListCard({ title, items, bg, edge, ink }: { title: string; items: strin
       <h4 className="text-[12px] font-bold uppercase tracking-[0.08em]" style={{ color: ink }}>{title}</h4>
       <ul className="mt-2 flex list-disc flex-col gap-1 pl-4 text-[13px] leading-relaxed text-[var(--rs-ink)]">
         {items.map((x, i) => <li key={i}>{x}</li>)}
+      </ul>
+    </div>
+  );
+}
+
+const LEVEL_ORDER: SkillLevel[] = ["strong", "got_it", "good_start", "getting_there", "not_started"];
+/** Strong takes the page's citron (its "mastered" colour) so it never blurs into Got it's teal. */
+const levelColor = (level: SkillLevel) => (level === "strong" ? "var(--rs-citron-deep)" : SKILL_LEVELS[level].tone.accent);
+
+/** Every skill in the subject by level: one bar split by level, and the count at each. */
+function LevelSummary({ skills }: { skills: ChapterSkill[] }) {
+  const counts = LEVEL_ORDER.map((level) => ({ level, n: skills.filter((k) => k.level === level).length })).filter((c) => c.n > 0);
+  const known = skills.filter((k) => k.level === "strong" || k.level === "got_it").length;
+  return (
+    <div className="rounded-2xl border border-[var(--rs-line)] bg-[var(--rs-surface-2)] p-4">
+      <p className="text-[14px] font-bold text-[var(--rs-ink)]">
+        {known} of {skills.length} skills known
+        <span className="ml-1.5 text-[12.5px] font-medium text-[var(--rs-ink-soft)]">(Got it or Strong)</span>
+      </p>
+      <div className="mt-2.5 flex h-2.5 gap-0.5 overflow-hidden rounded-full" role="img" aria-label={counts.map((c) => `${c.n} ${SKILL_LEVELS[c.level].label}`).join(", ")}>
+        {counts.map((c) => (
+          <span key={c.level} className="rounded-full" style={{ flexGrow: c.n, background: levelColor(c.level) }} />
+        ))}
+      </div>
+      <ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
+        {counts.map((c) => (
+          <li key={c.level} className="inline-flex items-center gap-1.5 text-[12px] text-[var(--rs-ink-soft)]">
+            <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: levelColor(c.level) }} />
+            <b className="font-bold tabular-nums text-[var(--rs-ink)]">{c.n}</b> {SKILL_LEVELS[c.level].label}
+          </li>
+        ))}
       </ul>
     </div>
   );

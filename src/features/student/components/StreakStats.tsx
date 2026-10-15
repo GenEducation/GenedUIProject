@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Clock3, Flame, Star, type LucideIcon } from "lucide-react";
+import { BookOpenCheck, Clock3, Flame, Star, type LucideIcon } from "lucide-react";
 
 import { STUDENT_COLORS } from "../theme/colors";
 import { STRINGS } from "../constants/strings";
@@ -13,20 +13,18 @@ import { STRINGS } from "../constants/strings";
  */
 export interface StreakStatsData {
   currentStreak: number;
-  totalSessions: number;
   longestStreak: number;
 }
 
 const STATS: {
-  key: "currentStreak" | "totalSessions" | "longestStreak";
+  key: "currentStreak" | "longestStreak";
   Icon: LucideIcon;
   label: string;
   color: string;
   unit: string;
 }[] = [
-  { key: "currentStreak", Icon: Flame, label: STRINGS.streak.dayStreak, color: STUDENT_COLORS.warn, unit: "Days" },
-  { key: "totalSessions", Icon: BookOpen, label: STRINGS.streak.sessions, color: STUDENT_COLORS.tutorSoft, unit: "" },
-  { key: "longestStreak", Icon: Star, label: STRINGS.streak.longestStreak, color: STUDENT_COLORS.subjectMath, unit: "Days" },
+  { key: "currentStreak", Icon: Flame, label: STRINGS.streak.dayStreak, color: STUDENT_COLORS.warn, unit: "Day" },
+  { key: "longestStreak", Icon: Star, label: STRINGS.streak.longestStreak, color: STUDENT_COLORS.subjectMath, unit: "Day" },
 ];
 
 /**
@@ -47,6 +45,7 @@ export function StreakStats({
   isLoading,
   variant = "card",
   totalMinutes,
+  chapters,
 }: {
   data: StreakStatsData | null;
   isLoading?: boolean;
@@ -57,6 +56,11 @@ export function StreakStats({
    * `undefined` to leave the card out.
    */
   totalMinutes?: number | null;
+  /**
+   * Card variant only. When passed, a "Chapters Completed" card (completed / total, as the report card counts them) sits
+   * after the current streak: `null` if it couldn't be loaded (shows "—"), or `undefined` to leave the card out.
+   */
+  chapters?: { completed: number; total: number } | null;
 }) {
   if (variant === "strip") {
     return (
@@ -100,13 +104,27 @@ export function StreakStats({
   }
 
   const showTime = totalMinutes !== undefined;
-  const cards: { key: string; Icon: LucideIcon; label: string; parts: { n: number; u: string }[] | null }[] = [
-    ...STATS.map((s) => ({
-      key: s.key,
-      Icon: s.Icon,
-      label: s.label,
-      parts: [{ n: data?.[s.key] ?? 0, u: s.unit }],
-    })),
+  const showChapters = chapters !== undefined;
+  type Card = { key: string; Icon: LucideIcon; label: string; parts: { n: number; u: string }[] | null; of?: number };
+  const streaks: Card[] = STATS.map((s) => ({
+    key: s.key,
+    Icon: s.Icon,
+    label: s.label,
+    // "1 Day", "0 Days", "4 Days".
+    parts: [{ n: data?.[s.key] ?? 0, u: (data?.[s.key] ?? 0) === 1 ? s.unit : `${s.unit}s` }],
+  }));
+  const cards: Card[] = [
+    streaks[0],
+    ...(showChapters
+      ? [{
+          key: "chaptersCompleted",
+          Icon: BookOpenCheck,
+          label: STRINGS.streak.chaptersCompleted,
+          parts: chapters == null ? null : [{ n: chapters.completed, u: "" }],
+          of: chapters?.total,
+        }]
+      : []),
+    ...streaks.slice(1),
     ...(showTime
       ? [{
           key: "timeSpent",
@@ -119,7 +137,7 @@ export function StreakStats({
 
   return (
     <div
-      className={showTime ? "grid grid-cols-2 lg:grid-cols-4" : "grid grid-cols-3"}
+      className={cards.length === 4 ? "grid grid-cols-2 lg:grid-cols-4" : cards.length === 3 ? "grid grid-cols-3" : "grid grid-cols-2"}
       style={{ gap: "clamp(8px, 1.2vw, 14px)" }}
     >
       {isLoading
@@ -201,6 +219,9 @@ export function StreakStats({
                           )}
                         </span>
                       ))}
+                  {s.parts !== null && s.of != null && (
+                    <span style={{ fontSize: "0.72em", marginLeft: 5, color: STUDENT_COLORS.textMuted }}>/ {s.of}</span>
+                  )}
                 </div>
               </div>
             );

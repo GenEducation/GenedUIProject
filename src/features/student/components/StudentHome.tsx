@@ -26,6 +26,7 @@ import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { StreakStats } from "./StreakStats";
 import { useTotalStudyMinutes } from "../hooks/useTotalStudyMinutes";
+import { useChaptersCompleted } from "../hooks/useChaptersCompleted";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
@@ -251,6 +252,7 @@ export function StudentHome() {
   // `undefined` while loading still shows the card, with 0 until it arrives;
   // `null` (failed) shows "—".
   const totalMinutes = useTotalStudyMinutes(studentProfile?.user_id) ?? (studentProfile?.user_id ? 0 : null);
+  const chapters = useChaptersCompleted(studentProfile?.user_id) ?? null;
   const [showConfetti,   setShowConfetti]   = useState(false);
   const [aprilState,     setAprilState]     = useState<AprilState>("idle");
   const [hoveredAgent,   setHoveredAgent]   = useState<string | null>(null);
@@ -525,7 +527,7 @@ export function StudentHome() {
             {/* ── STAT STRIP ── */}
             <div className="mb-8" style={{ ...fade(0.22) }}>
               <SectionHeading icon={TrendingUp} className="mb-4">Your progress</SectionHeading>
-              <StreakStats data={studentStats} isLoading={isStatsLoading} variant="card" totalMinutes={totalMinutes} />
+              <StreakStats data={studentStats} isLoading={isStatsLoading} variant="card" totalMinutes={totalMinutes} chapters={chapters} />
             </div>
 
             {/* ── MY SUBJECTS ── */}

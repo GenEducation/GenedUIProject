@@ -9,7 +9,7 @@ import { BandChip, CARD, SubjectGlyph } from "./primitives";
 import { Icon, TintIcon } from "./icons";
 import { SummaryHeader } from "./SummaryHeader";
 import { SubjectList } from "./SubjectList";
-import { InsightsPanel } from "./InsightsPanel";
+import { InsightsPanel, OverviewHabits, OverviewInsights, OverviewMain } from "./InsightsPanel";
 import { SubjectPreview } from "./SubjectPreview";
 import { SubjectDetail, type DetailTab } from "./SubjectDetail";
 import { ListChecks } from "lucide-react";
@@ -18,7 +18,7 @@ import { ListChecks } from "lucide-react";
  * The on-screen report card. Three levels, stepped through like cascading
  * panels:
  *
- *   overview  [ subject list ][ key insights + trends ]
+ *   overview  [ subject list + what to work on ][ key insights + study habits + trends ]
  *   preview   [ subject list ][ subject preview       ]
  *   detail    [ preview      ][ chapter breakdown     ]
  *
@@ -135,8 +135,10 @@ export function ReportCardScreen({ data, ui }: { data: ReportCardData; ui: Repor
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -64 }}
                         transition={{ duration: 0.4, ease: EASE }}
+                        className="flex flex-col gap-5"
                       >
                         {list}
+                        {level === "overview" && <OverviewMain data={data} />}
                       </motion.div>
                     ) : (
                       <motion.div key="preview" layoutId="rc-preview" transition={{ duration: 0.5, ease: EASE }} className="sticky top-4">
@@ -202,8 +204,10 @@ export function ReportCardScreen({ data, ui }: { data: ReportCardData; ui: Repor
                 >
                   {level === "overview" && (
                     <>
+                      <OverviewInsights data={data} />
                       {list}
-                      <InsightsPanel data={data} subjects={subjects} />
+                      <OverviewMain data={data} />
+                      <OverviewHabits data={data} subjects={subjects} />
                     </>
                   )}
                   {level === "preview" && preview}
@@ -228,8 +232,7 @@ export function ReportCardScreen({ data, ui }: { data: ReportCardData; ui: Repor
 function CompactSubjectBar({ summary: s, onBack }: { summary: SubjectSummary; onBack: () => void }) {
   return (
     <div
-      className="sticky top-2 z-10 flex items-center gap-3 rounded-2xl border px-3 py-2.5 shadow-[0_10px_24px_-18px_rgba(18,45,48,0.5)] backdrop-blur-md"
-      style={{ background: `linear-gradient(110deg, ${s.tone.wash[0]}F2, ${s.tone.wash[1]}F2)`, borderColor: s.tone.edge }}
+      className="sticky top-2 z-10 flex items-center gap-3 rounded-2xl border border-[var(--rs-line)] bg-white/95 px-3 py-2.5 shadow-[0_10px_24px_-18px_rgba(18,45,48,0.5)] backdrop-blur-md"
     >
       <Button variant="tertiary" size="sm" pill iconOnly onClick={onBack} aria-label="Back to subject preview">
         <TintIcon name="actions/right-arrow" color="var(--rs-ink)" size={12} className="rotate-180" />
