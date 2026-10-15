@@ -9,6 +9,7 @@ import type { ReportWho } from "../v1Report";
  *   GET /v1/learner/trends?weeks=12                     week by week, the share of answered skills known
  *   GET /v1/learner/misconceptions                      the wrong ideas answers showed, open or resolved
  *   GET /students/{id}/streak                           current and longest streak
+ *   GET /v1/learner/insights, POST .../insights/refresh the written note (and the reload button)
  *
  * A parent reads the same bodies from `/v1/parent/children/{id}/...` (an APPROVED link only).
  */
@@ -78,6 +79,48 @@ export interface Misconception {
   resolved: boolean;
 }
 
+export type InsightSignal = "positive" | "concern" | "neutral";
+
+/** One measured thing an insight's sentence rests on (`kind` and `unit` are closed sets; the card words them). */
+export interface InsightFact {
+  id: string;
+  kind: string;
+  subject_code: string | null;
+  label: string | null;
+  value: number;
+  of: number | null;
+  unit: string;
+  signal: InsightSignal;
+}
+
+export interface InsightItem {
+  text: string;
+  evidence: string[];
+}
+
+export interface InsightView {
+  generated_at: string;
+  headline: string;
+  working_well: InsightItem[];
+  needs_attention: InsightItem[];
+  next_steps: Array<InsightItem & { kind: string }>;
+  subjects: Array<{ subject_code: string; headline: string; working_well: InsightItem[]; needs_attention: InsightItem[] }>;
+  /** Only the facts the sentences cite. */
+  facts: InsightFact[];
+}
+
+export interface InsightsResponse {
+  /** `none`: not enough answers yet; `unavailable`: the last attempt failed and nothing is stored; `disabled`: off. */
+  status: "ready" | "none" | "unavailable" | "disabled";
+  /** A newer note is being written; the one shown (if any) is the previous. */
+  refreshing: boolean;
+  can_reload: boolean;
+  insight: InsightView | null;
+}
+
+/** How often, and how many times, to read again while a note is being written (a test shortens the wait). */
+export const INSIGHT_POLLING = { ms: 3000, max: 20 };
+
 async function getJson<T>(path: string, who: ReportWho): Promise<T> {
   const response = await authFetch(`${API}${path}`, { headers: { accept: "application/json" }, allow403: who.role === "parent" });
   return response.json() as Promise<T>;
@@ -105,6 +148,36 @@ export const loadTrends = (who: ReportWho) => getJson<Trends>(`${base(who)}/tren
 
 export const loadMisconceptions = async (who: ReportWho): Promise<Misconception[]> =>
   (await getJson<{ misconceptions: Misconception[] }>(`${base(who)}/misconceptions`, who)).misconceptions;
+
+export const loadInsights = (who: ReportWho) => getJson<InsightsResponse>(`${base(who)}/insights`, who);
+
+/** The reload button (a student's own; the backend refuses anyone else). */
+export async function refreshInsights(): Promise<InsightsResponse> {
+  const response = await authFetch(`${API}/v1/learner/insights/refresh`, { method: "POST", headers: { accept: "application/json" } });
+  return response.json() as Promise<InsightsResponse>;
+}
+
+/** An evidence fact in words, for the chip beside the sentence it supports. */
+export function factText(f: InsightFact): string {
+  const name = f.label ?? "";
+  const of = f.of ?? 0;
+  switch (f.kind) {
+    case "skills_known": return `${name}: ${f.value} of ${of} skills known`;
+    case "mastery": return `${name}: ${f.value}% mastery`;
+    case "weekly_trend": return `${name}: ${f.value > 0 ? "+" : ""}${f.value} points over ${of} weeks`;
+    case "levelled_up": return `${f.value} ${f.value === 1 ? "skill" : "skills"} moved up in ${of} weeks`;
+    case "keep_practising": return `To revisit: ${name}`;
+    case "needs_adult_help": return `An adult's help: ${name}`;
+    case "misconception_open": return `${name}: seen ${f.value} ${f.value === 1 ? "time" : "times"}`;
+    case "misconception_fixed": return `Cleared: ${name}`;
+    case "answers_alone_share": return `${f.value}% of ${of} right answers on their own`;
+    case "active_days": return `${f.value} of ${of} days active`;
+    case "study_minutes": return `About ${f.value} min in ${of} days`;
+    case "streak": return `${f.value}-day streak`;
+    case "chapters_completed": return `${name}: ${f.value} of ${of} chapters done`;
+    default: return name || `${f.value}`;
+  }
+}
 
 /** Estimated minutes over the last `days` periods of a day series, and whether the series starts before the first
  *  measured date (so the figure covers less than the window says). */

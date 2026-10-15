@@ -10,6 +10,7 @@ import { deriveUnlocks } from "../utils";
 import { Button } from "@/components/ui/Button";
 import { CARD, ComingSoon, SkillLevelChip, Sparkline, SubjectGlyph } from "./primitives";
 import { ActivityCard, MisconceptionsCard } from "./SectionCards";
+import { KeyInsightsCard } from "./InsightsCards";
 import { useReportExtras } from "../sections/ReportExtras";
 import { trendLine } from "../sections/reportSections";
 import { Icon, TintIcon } from "./icons";
@@ -20,12 +21,13 @@ export function InsightsPanel({ data, subjects }: { data: ReportCardData; subjec
   // The new backend (its chapters carry skills) has no learning-arc analyses, so nothing "unlocks" them any more.
   const v1 = data.chapters.some((c) => c.skills !== undefined);
   const unlocks = v1 ? [] : deriveUnlocks(data);
+  const extras = useReportExtras();
   return (
     <div className="flex flex-col gap-4">
       {v1 && <KeepPractising data={data} />}
       {v1 && <ActivityCard />}
       {v1 && <MisconceptionsCard />}
-      <KeyInsights data={data} />
+      {v1 && extras.insights ? <KeyInsightsCard /> : <KeyInsights data={data} />}
       <SubjectTrends data={data} subjects={subjects} />
       {unlocks.length > 0 && (
         <section aria-label="What unlocks next" className={`${CARD} p-5`}>

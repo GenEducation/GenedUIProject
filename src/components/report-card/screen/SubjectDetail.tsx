@@ -11,6 +11,7 @@ import { TestItem } from "../parts/TestItem";
 import { CARD, ComingSoon, FOCUS_RING, SkillLevelChip } from "./primitives";
 import { Icon } from "./icons";
 import { ChapterRow } from "./ChapterRow";
+import { SubjectInsight } from "./InsightsCards";
 import { Lightbulb } from "lucide-react";
 
 export type DetailTab = "chapters" | "progress" | "tests" | "insights";
@@ -97,7 +98,7 @@ export function SubjectDetail({
           {tab === "chapters" && <ChaptersTab data={data} ui={ui} subject={summary.subject} />}
           {tab === "progress" && <ProgressTab data={data} ui={ui} subject={summary.subject} />}
           {tab === "tests" && <TestsTab data={data} ui={ui} subject={summary.subject} />}
-          {tab === "insights" && <InsightsTab summary={summary} />}
+          {tab === "insights" && (summary.v1 ? <SubjectInsight data={data} subject={summary.subject} /> : <InsightsTab summary={summary} />)}
         </motion.div>
       </AnimatePresence>
     </section>
