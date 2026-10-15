@@ -23,6 +23,8 @@ export function SummaryHeader({
   const extras = useReportExtras();
   const v1 = data.chapters.some((c) => c.skills !== undefined);
   const study = extras.activity?.state.status === "ready" ? recentMinutes(extras.activity.state.data.series) : null;
+  // The PDF is written from the same sections the screen shows, so it waits until none is still being read.
+  const sectionsLoading = [extras.activity, extras.trends, extras.misconceptions, extras.insights].some((s) => s?.state.status === "loading");
   const masteryTone = toneFor(overall.avgMastery, overall.sessions > 0 || overall.avgMastery > 0);
   const meta = [
     data.displayGrade != null ? `Grade ${data.displayGrade}` : null,
@@ -48,7 +50,7 @@ export function SummaryHeader({
             {data.reportPeriod}
           </span>
           {ui.canDownload && ui.onPrint && (
-            <Button variant="outline" size="sm" pill onClick={ui.onPrint} loading={ui.isPdfGenerating} leadingIcon={<Icon name="misc/download" size={15} />}>
+            <Button variant="outline" size="sm" pill onClick={ui.onPrint} loading={ui.isPdfGenerating} disabled={sectionsLoading} leadingIcon={<Icon name="misc/download" size={15} />}>
               Download PDF
             </Button>
           )}

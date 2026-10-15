@@ -230,8 +230,6 @@ export function StudentReportCard({
   const { isGenerating, triggerPrint, printPortal } = usePrintPdf({ data, role, filename: `${safeName}_Report_Card` });
 
   const isBrandNew = isEmptyReport(data);
-  // The PDF layout is built on the MVP's data (scores, tests, analyses); for the new backend it's coming soon.
-  const isV1 = role !== "teacher";
 
   const ui: ReportCardUI = {
     variant: "screen",
@@ -245,7 +243,7 @@ export function StudentReportCard({
     onStartSession: role === "student" ? () => router.push("/student") : undefined,
     onPrint: triggerPrint,
     isPdfGenerating: isGenerating,
-    canDownload: !isBrandNew && !isV1,
+    canDownload: !isBrandNew,
   };
 
   // ── Loading / Error ─────────────────────────────────────
@@ -287,8 +285,9 @@ export function StudentReportCard({
       <style>{RC_STYLES + RC_SCREEN_STYLES}</style>
       <ReportExtrasProvider who={role === "teacher" ? null : who} summary={v1Summary}>
         <ReportCardScreen data={data} ui={ui} />
+        {/* Inside the provider: the printed layout reads the same sections the screen shows. */}
+        {printPortal}
       </ReportExtrasProvider>
-      {printPortal}
     </>
   );
 }
