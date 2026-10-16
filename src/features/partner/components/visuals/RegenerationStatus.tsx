@@ -1,25 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Loader2, RefreshCcw, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
 import { visualsService } from "../../services/visualsService";
 import type { ReasonCode, VisualDetail } from "../../types/visuals";
 import { ReasonFields } from "./ReasonFields";
+import { composeNote, marksText, overLimit, type Mark } from "./markup";
+import { MarksPreview } from "./MarksPreview";
 
 interface RegenerationStatusProps {
   detail: VisualDetail;
   onOpen: (id: string) => void;
   /** Re-read the detail (after asking again, or on a 409). */
   onChanged: () => void;
+  /** Changes marked on the picture; sent first in the note. */
+  marks?: Mark[];
+  /** The marks went with a request: the caller clears them. */
+  onMarksSent?: () => void;
+  /** Back to the picture to change the marks. */
+  onEditMarks?: () => void;
 }
 
 /**
  * The "new version" story for a rejected visual: in progress (the detail hook
  * polls), ready (link to it), failed (try again), or never asked for (ask now).
  */
-export function RegenerationStatus({ detail, onOpen, onChanged }: RegenerationStatusProps) {
+export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMarksSent, onEditMarks }: RegenerationStatusProps) {
   const regen = detail.regeneration;
   const previousReasons = detail.decision?.reason_codes ?? [];
   const [asking, setAsking] = useState(false);
@@ -27,6 +35,13 @@ export function RegenerationStatus({ detail, onOpen, onChanged }: RegenerationSt
   const [note, setNote] = useState(detail.decision?.note ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const marked = marks.length > 0;
+  // With marks, the form opens on its own: they need reasons to go with them.
+  const showForm = asking || marked;
+  // As when rejecting: the marks explain it, so "Something else" stands in until a reason is picked.
+  useEffect(() => {
+    if (marked) setReasons((r) => (r.length ? r : ["other"]));
+  }, [marked]);
 
   const requestNewVersion = async (codes: ReasonCode[], text: string | null) => {
     setSubmitting(true);
@@ -34,6 +49,7 @@ export function RegenerationStatus({ detail, onOpen, onChanged }: RegenerationSt
     try {
       await visualsService.regenerate(detail.id, { reason_codes: codes, note: text });
       setAsking(false);
+      if (marked) onMarksSent?.();
       onChanged();
     } catch (e) {
       const err = asError(e);
@@ -96,17 +112,31 @@ export function RegenerationStatus({ detail, onOpen, onChanged }: RegenerationSt
         <p className="text-sm font-bold text-[#122D30]">No new version was asked for.</p>
       )}
 
-      {asking ? (
+      {showForm ? (
         <>
-          <ReasonFields reasons={reasons} onReasonsChange={setReasons} note={note} onNoteChange={setNote} />
-          <div className="flex justify-end gap-2">
-            <Button variant="tertiary" onClick={() => setAsking(false)} disabled={submitting}>
-              Cancel
-            </Button>
+          <MarksPreview marks={marks} onEdit={onEditMarks} />
+          <ReasonFields
+            reasons={reasons}
+            onReasonsChange={setReasons}
+            note={note}
+            onNoteChange={setNote}
+            reserved={marked ? marksText(marks).length + 1 : 0}
+          />
+          <div className="flex items-center justify-end gap-2">
+            {overLimit(marks, note) > 0 && (
+              <p role="alert" className="mr-auto text-[11px] font-bold text-red-600">
+                {overLimit(marks, note)} characters too long. Shorten a mark or the note.
+              </p>
+            )}
+            {!marked && (
+              <Button variant="tertiary" onClick={() => setAsking(false)} disabled={submitting}>
+                Cancel
+              </Button>
+            )}
             <Button
-              disabled={reasons.length === 0}
+              disabled={reasons.length === 0 || overLimit(marks, note) > 0}
               loading={submitting}
-              onClick={() => void requestNewVersion(reasons, note.trim() || null)}
+              onClick={() => void requestNewVersion(reasons, composeNote(marks, note))}
             >
               Make a new version
             </Button>

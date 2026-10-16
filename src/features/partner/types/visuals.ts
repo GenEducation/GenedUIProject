@@ -67,10 +67,10 @@ export interface VisualSummary {
 }
 
 export interface VisualSpec {
-  title: string;
+  title: string | null;
   purpose: string;
   layout: string;
-  caption: string;
+  caption: string | null;
   objects: { id: string; what: string; colour: string; position: string; notes: string }[];
   texts: { text: string; role: "title" | "label" | "note" | "caption"; where: string }[];
   /** Which `concept.passages` the picture uses. */
@@ -90,11 +90,11 @@ export interface VisualConcept {
   definition: string;
   /** The textbook text the picture is based on. */
   passages: { ref: string; text: string }[];
-  figure_descriptions: string[];
+  figure_descriptions?: string[];
   feedback: null | {
     reason_codes: ReasonCode[];
     note: string | null;
-    previous_spec: VisualSpec;
+    previous_spec: VisualSpec | null;
   };
 }
 
@@ -127,7 +127,8 @@ export interface VisualFamilyMember {
 
 export interface VisualDetail extends Omit<VisualSummary, "caption"> {
   concept: VisualConcept;
-  spec: VisualSpec;
+  /** Null when the visual has no generation spec (e.g. a textbook figure that wasn't redrawn from one). */
+  spec: VisualSpec | null;
   checks: Record<string, unknown>;
   provenance: Record<string, unknown>;
   decision: VisualDecisionView | null;

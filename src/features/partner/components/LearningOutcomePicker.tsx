@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Minus } from "lucide-react";
 import { Select } from "@/components/ui/Select";
 import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
@@ -102,6 +102,15 @@ export function LearningOutcomePicker({
   const toggle = (code: string) =>
     onSelectedChange(selected.includes(code) ? selected.filter((c) => c !== code) : [...selected, code]);
 
+  // Select all keeps what's already picked first (the first pick names the suggested strand) and adds the rest in list
+  // order; with everything picked, it clears them all.
+  const allCodes = (outcomes ?? []).map((lo) => lo.code);
+  const pickedCount = allCodes.filter((c) => selected.includes(c)).length;
+  const allPicked = allCodes.length > 0 && pickedCount === allCodes.length;
+  const somePicked = pickedCount > 0 && !allPicked;
+  const toggleAll = () =>
+    onSelectedChange(allPicked ? [] : [...selected, ...allCodes.filter((c) => !selected.includes(c))]);
+
   if (!ready) {
     return (
       <p className="text-[11px] font-bold text-[#122D30]/40 px-1">
@@ -113,9 +122,33 @@ export function LearningOutcomePicker({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <div className="flex items-baseline justify-between">
+        <div className="flex items-center justify-between gap-3">
           <span className={labelClass}>Learning outcomes</span>
-          <span className="text-[10px] font-bold text-[#122D30]/40">{selected.length} selected</span>
+          {outcomes && outcomes.length > 0 ? (
+            <label className="relative flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 transition-colors hover:bg-[#122D30]/5">
+              <span className="text-[10px] font-bold text-[#122D30]/45">
+                {pickedCount} of {allCodes.length} selected
+              </span>
+              <input
+                type="checkbox"
+                checked={allPicked}
+                ref={(el) => { if (el) el.indeterminate = somePicked; }}
+                onChange={toggleAll}
+                className="peer sr-only"
+              />
+              <span
+                aria-hidden
+                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border-[1.5px] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#122D30]/40 ${
+                  allPicked || somePicked ? "border-[#122D30] bg-[#075E63] text-white" : "border-[#122D30]/25 bg-white"
+                }`}
+              >
+                {allPicked ? <Check size={10} /> : somePicked ? <Minus size={10} /> : null}
+              </span>
+              <span className="text-[11px] font-bold text-[#122D30]">Select all</span>
+            </label>
+          ) : (
+            <span className="text-[10px] font-bold text-[#122D30]/40">{selected.length} selected</span>
+          )}
         </div>
         {error ? (
           <p role="alert" className="text-xs font-bold text-red-600 px-1">{error}</p>

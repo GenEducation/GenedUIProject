@@ -9,12 +9,18 @@ interface ReasonFieldsProps {
   onReasonsChange: (next: ReasonCode[]) => void;
   note: string;
   onNoteChange: (next: string) => void;
+  /** Characters of the note the marks on the picture already use (they're sent first, in the same note). */
+  reserved?: number;
 }
 
 /** Reject / regenerate reasons: multi-select chips (≥ 1 required by the caller) and an optional note. */
-export function ReasonFields({ reasons, onReasonsChange, note, onNoteChange }: ReasonFieldsProps) {
+export function ReasonFields({ reasons, onReasonsChange, note, onNoteChange, reserved = 0 }: ReasonFieldsProps) {
   const noteId = useId();
   const hintId = useId();
+
+  // The marks and the note share one limit: the note gets what the marks leave.
+  const room = Math.max(0, NOTE_MAX - reserved);
+  const used = reserved + note.length;
 
   const toggle = (code: ReasonCode) =>
     onReasonsChange(reasons.includes(code) ? reasons.filter((r) => r !== code) : [...reasons, code]);
@@ -50,19 +56,20 @@ export function ReasonFields({ reasons, onReasonsChange, note, onNoteChange }: R
             Note <span className="normal-case tracking-normal font-bold">(optional)</span>
           </label>
           <span
-            className={`text-[10px] font-bold tabular-nums ${note.length >= NOTE_MAX ? "text-red-500" : "text-[#122D30]/40"}`}
+            className={`text-[10px] font-bold tabular-nums ${used >= NOTE_MAX ? "text-red-500" : "text-[#122D30]/40"}`}
             aria-live="polite"
           >
-            {note.length}/{NOTE_MAX}
+            {reserved > 0 && <span className="mr-1 font-medium">incl. marks</span>}
+            {used}/{NOTE_MAX}
           </span>
         </div>
         <textarea
           id={noteId}
           value={note}
-          maxLength={NOTE_MAX}
+          maxLength={room}
           rows={3}
           aria-describedby={hintId}
-          onChange={(e) => onNoteChange(e.target.value.slice(0, NOTE_MAX))}
+          onChange={(e) => onNoteChange(e.target.value.slice(0, room))}
           placeholder="What should the new picture do differently?"
           className="w-full px-3 py-2 bg-[#F6F7F2] border border-[#122D30]/10 focus:border-[#122D30]/40 rounded-xl text-sm text-[#122D30] outline-none placeholder:text-[#122D30]/30 resize-none"
         />

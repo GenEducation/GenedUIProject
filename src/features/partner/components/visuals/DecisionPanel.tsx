@@ -8,12 +8,18 @@ import { asError } from "@/utils/errors";
 import { visualsService } from "../../services/visualsService";
 import type { ReasonCode, VisualDecisionOut, VisualDetail } from "../../types/visuals";
 import { ReasonFields } from "./ReasonFields";
+import { composeNote, marksText, overLimit, type Mark } from "./markup";
+import { MarksPreview } from "./MarksPreview";
 
 interface DecisionPanelProps {
   detail: VisualDetail;
   onDecided: (result: VisualDecisionOut) => void;
   /** 409: already decided, or the visual changed since it was shown. The caller reloads it. */
   onConflict: () => void;
+  /** Changes marked on the picture; sent first in the note when rejecting. */
+  marks?: Mark[];
+  /** Back to the picture to change the marks. */
+  onEditMarks?: () => void;
 }
 
 /** True when the key press came from a text field, so shortcuts don't fire while typing. */
@@ -23,7 +29,7 @@ export function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 /** Accept (one click) or reject (reasons, note, "make a new version"). Only rendered for a pending visual. */
-export function DecisionPanel({ detail, onDecided, onConflict }: DecisionPanelProps) {
+export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEditMarks }: DecisionPanelProps) {
   const [mode, setMode] = useState<"idle" | "reject">("idle");
   const [reasons, setReasons] = useState<ReasonCode[]>([]);
   const [note, setNote] = useState("");
@@ -31,6 +37,18 @@ export function DecisionPanel({ detail, onDecided, onConflict }: DecisionPanelPr
   const [submitting, setSubmitting] = useState<"accept" | "reject" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const toggleId = useId();
+  const marked = marks.length > 0;
+  const over = overLimit(marks, note);
+  const reserved = marked ? marksText(marks).length + 1 : 0;
+
+  // Marking the picture means asking for a new version: open the reject form, with "make a new version" on.
+  // The marks are the explanation, so "Something else (explain in the note)" stands in until the partner picks a reason.
+  useEffect(() => {
+    if (!marked) return;
+    setMode("reject");
+    setRegenerate(true);
+    setReasons((r) => (r.length ? r : ["other"]));
+  }, [marked]);
 
   const submit = async (decision: "accept" | "reject") => {
     setSubmitting(decision);
@@ -44,7 +62,7 @@ export function DecisionPanel({ detail, onDecided, onConflict }: DecisionPanelPr
               content_hash: detail.content_hash,
               decision,
               reason_codes: reasons,
-              note: note.trim() || null,
+              note: composeNote(regenerate ? marks : [], note),
               regenerate,
             },
       );
@@ -116,7 +134,13 @@ export function DecisionPanel({ detail, onDecided, onConflict }: DecisionPanelPr
             exit={{ opacity: 0, y: -6 }}
             className="bg-white rounded-xl p-4 text-[#122D30] flex flex-col gap-4"
           >
-            <ReasonFields reasons={reasons} onReasonsChange={setReasons} note={note} onNoteChange={setNote} />
+            {marked && regenerate && <MarksPreview marks={marks} onEdit={onEditMarks} />}
+            {marked && !regenerate && (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">
+                Your marks are only sent when you ask for a new version.
+              </p>
+            )}
+            <ReasonFields reasons={reasons} onReasonsChange={setReasons} note={note} onNoteChange={setNote} reserved={regenerate ? reserved : 0} />
 
             <label htmlFor={toggleId} className="relative flex items-center gap-3 cursor-pointer select-none">
               <input
@@ -139,9 +163,14 @@ export function DecisionPanel({ detail, onDecided, onConflict }: DecisionPanelPr
               <Button variant="tertiary" onClick={() => setMode("idle")} disabled={!!submitting}>
                 Cancel
               </Button>
+              {regenerate && over > 0 && (
+                <p role="alert" className="mr-auto self-center text-[11px] font-bold text-red-600">
+                  {over} characters too long. Shorten a mark or the note.
+                </p>
+              )}
               <Button
                 variant="destructiveSolid"
-                disabled={reasons.length === 0}
+                disabled={reasons.length === 0 || (regenerate && over > 0)}
                 loading={submitting === "reject"}
                 onClick={() => void submit("reject")}
               >

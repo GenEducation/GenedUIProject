@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, BookOpenText, Check, History, ListChecks, Sparkles, TriangleAlert, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpenText, Check, Crop, History, ListChecks, PenLine, SquareDashedMousePointer, Sparkles, TriangleAlert, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useVisualDetail } from "../../hooks/useVisualDetail";
 import { REASON_LABELS, type CandidateState, type VisualDecisionOut, type VisualDetail } from "../../types/visuals";
@@ -10,6 +10,9 @@ import { DecisionPanel, isTypingTarget } from "./DecisionPanel";
 import { RegenerationStatus } from "./RegenerationStatus";
 import { VisualImage } from "./VisualImage";
 import { Skeleton } from "../Skeleton";
+import { MarkupLayer } from "./MarkupLayer";
+import { MarkList } from "./MarkList";
+import { specParts, type Box, type Mark } from "./markup";
 
 interface VisualDetailPaneProps {
   id: string;
@@ -60,7 +63,7 @@ function SectionLabel({ icon, children }: { icon: React.ReactNode; children: Rea
 }
 
 function Passages({ detail }: { detail: VisualDetail }) {
-  const refs = new Set(detail.spec.source_refs);
+  const refs = new Set(detail.spec?.source_refs ?? []);
   const used = refs.size ? detail.concept.passages.filter((p) => refs.has(p.ref)) : detail.concept.passages;
   const others = refs.size ? detail.concept.passages.filter((p) => !refs.has(p.ref)) : [];
 
@@ -138,6 +141,31 @@ function FamilyTimeline({ detail, onOpen }: { detail: VisualDetail; onOpen: (id:
 export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: VisualDetailPaneProps) {
   const { detail, loading, error, reload } = useVisualDetail(id);
   const [zoomed, setZoomed] = useState(false);
+  // Mark up: boxes and pins on the picture, sent as plain instructions in the redraw note (see markup.ts).
+  const [marking, setMarking] = useState(false);
+  const [tool, setTool] = useState<Mark["kind"]>("change");
+  const [marks, setMarks] = useState<Mark[]>([]);
+  const [activeMark, setActiveMark] = useState<string | null>(null);
+  const markSeq = useRef(0);
+  // A new version can be asked for while the visual is pending, or once rejected with none on the way.
+  const canMark =
+    !!detail?.image_url &&
+    (detail.state === "pending" || (detail.state === "rejected" && (!detail.regeneration || detail.regeneration.state === "failed")));
+
+  const addMark = (kind: Mark["kind"], box: Box) => {
+    const id = `mark-${++markSeq.current}`;
+    // One crop at most: a new one replaces the last.
+    setMarks((ms) => [...(kind === "crop" ? ms.filter((m) => m.kind !== "crop") : ms), { id, kind, box, part: "", instruction: "" }]);
+    setActiveMark(id);
+  };
+  const changeMark = (id: string, patch: Partial<Pick<Mark, "part" | "instruction">>) =>
+    setMarks((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+  const removeMark = (id: string) => setMarks((ms) => ms.filter((m) => m.id !== id));
+  const pictureRef = useRef<HTMLDivElement>(null);
+  const editMarks = () => {
+    setMarking(true);
+    pictureRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+  };
 
   // → moves to the next pending visual.
   useEffect(() => {
@@ -197,15 +225,68 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
         >
           {/* Left: the picture */}
           <div className="flex flex-col gap-4 lg:sticky lg:top-[68px] self-start w-full">
-            <div className="relative rounded-2xl border border-[#122D30]/10 overflow-hidden bg-white">
+            <div ref={pictureRef} className="relative rounded-2xl border border-[#122D30]/10 overflow-hidden bg-white">
               <div className={zoomed ? "overflow-auto max-h-[70vh]" : ""} data-testid="visual-zoom-frame">
                 <VisualImage
                   imageUrl={detail.image_url}
                   alt={detail.title}
                   onExpired={() => void reload()}
                   className={zoomed ? "!w-[200%] max-w-none" : ""}
-                />
+                >
+                  {canMark && (marking || marks.length > 0) && (
+                    <MarkupLayer
+                      width={detail.width}
+                      height={detail.height}
+                      marks={marks}
+                      tool={marking ? tool : null}
+                      activeId={activeMark}
+                      onAdd={addMark}
+                      onSelect={setActiveMark}
+                    />
+                  )}
+                </VisualImage>
               </div>
+
+              {/* Mark up: pick a tool, then drag on the picture (a tap drops a pin). */}
+              {canMark && marking && (
+                <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white/95 p-1 shadow-[0_6px_18px_-8px_rgb(18_45_48/0.45)] ring-1 ring-[#122D30]/10">
+                  <div role="radiogroup" aria-label="Mark-up tool" className="flex gap-1">
+                    {([
+                      { kind: "change", label: "Mark a change", icon: <SquareDashedMousePointer size={14} /> },
+                      { kind: "crop", label: "Crop", icon: <Crop size={14} /> },
+                    ] as const).map((t) => (
+                      <Button
+                        key={t.kind}
+                        size="sm"
+                        pill
+                        role="radio"
+                        aria-checked={tool === t.kind}
+                        variant={tool === t.kind ? "primary" : "tertiary"}
+                        leadingIcon={t.icon}
+                        onClick={() => setTool(t.kind)}
+                      >
+                        {t.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <Button size="sm" pill variant="outline" onClick={() => setMarking(false)}>
+                    Done
+                  </Button>
+                </div>
+              )}
+
+              {canMark && !marking && (
+                <Button
+                  size="sm"
+                  pill
+                  variant="outline"
+                  leadingIcon={<PenLine size={14} />}
+                  onClick={() => setMarking(true)}
+                  className="!absolute bottom-2 right-12 bg-white/90"
+                >
+                  {marks.length ? "Edit marks" : "Mark up"}
+                </Button>
+              )}
               {detail.image_url && (
                 <Button
                   iconOnly
@@ -220,6 +301,23 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
                 </Button>
               )}
             </div>
+            {canMark && marking && marks.length === 0 && (
+              <p className="text-xs font-bold text-[#122D30]/55">
+                {tool === "crop"
+                  ? "Drag over the area to keep. Everything outside it is left out of the new version."
+                  : "Drag a box over the part to change, or tap to drop a pin. Add as many as you need."}
+              </p>
+            )}
+            {canMark && (
+              <MarkList
+                marks={marks}
+                parts={specParts(detail.spec)}
+                activeId={activeMark}
+                onSelect={setActiveMark}
+                onChange={changeMark}
+                onRemove={removeMark}
+              />
+            )}
             <FamilyTimeline detail={detail} onOpen={onOpen} />
           </div>
 
@@ -252,7 +350,7 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
 
             <Passages detail={detail} />
 
-            {detail.spec.checklist.length > 0 && (
+            {detail.spec && detail.spec.checklist.length > 0 && (
               <section>
                 <SectionLabel icon={<ListChecks size={12} />}>The picture should show</SectionLabel>
                 <ul className="flex flex-col gap-1.5">
@@ -305,10 +403,19 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
                 detail={detail}
                 onDecided={(result) => onDecided(detail.id, result)}
                 onConflict={() => void reload()}
+                marks={marks}
+                onEditMarks={editMarks}
               />
             )}
 
-            <RegenerationStatus detail={detail} onOpen={onOpen} onChanged={() => void reload()} />
+            <RegenerationStatus
+              detail={detail}
+              onOpen={onOpen}
+              onChanged={() => void reload()}
+              marks={canMark ? marks : []}
+              onMarksSent={() => { setMarks([]); setMarking(false); }}
+              onEditMarks={editMarks}
+            />
           </div>
         </motion.div>
       )}

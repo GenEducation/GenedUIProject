@@ -136,6 +136,13 @@ describe("VisualsModal — detail and decisions", () => {
     return ctx;
   }
 
+  it("opens a visual that has no generation spec without crashing, and skips its checklist", async () => {
+    visualsFixture.reset(() => [makeVisual({ spec: null })]);
+    await openDetail("SYNTHETIC shape 1");
+    expect(screen.getByText("From the textbook")).toBeInTheDocument();
+    expect(screen.queryByText("The picture should show")).not.toBeInTheDocument();
+  });
+
   it("accepts with {content_hash, decision} and moves to the next pending visual", async () => {
     const { onChanged } = await openDetail("SYNTHETIC shape 2");
     fireEvent.click(screen.getByRole("button", { name: /Accept/ }));
@@ -169,6 +176,39 @@ describe("VisualsModal — detail and decisions", () => {
       reason_codes: ["cluttered"],
       note: "SYNTHETIC note",
       regenerate: true,
+    });
+  });
+
+  it("marks a change on the picture and sends it, worded, at the top of the note", async () => {
+    await openDetail("SYNTHETIC shape 2");
+    fireEvent.click(screen.getByRole("button", { name: "Mark up" }));
+
+    const surface = screen.getByTestId("markup-surface");
+    surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 400, height: 300, right: 400, bottom: 300, x: 0, y: 0, toJSON: () => ({}) });
+    fireEvent.pointerDown(surface, { button: 0, clientX: 10, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(surface, { clientX: 100, clientY: 80, pointerId: 1 });
+    fireEvent.pointerUp(surface, { clientX: 100, clientY: 80, pointerId: 1 });
+
+    const list = await screen.findByRole("list", { name: "Changes marked on the picture" });
+    expect(within(list).getByText("top left")).toBeInTheDocument();
+    fireEvent.click(within(list).getByRole("button", { name: "Remove" }));
+
+    // Marking opens the reject form with a new version on, shows what will be sent, and needs nothing else to send it.
+    expect(screen.getByRole("switch", { name: "Make a new version" })).toBeChecked();
+    const preview = screen.getByRole("region", { name: "Sent with this remake" });
+    expect(within(preview).getByText("Top left: remove it.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Something else (explain in the note)" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.change(screen.getByLabelText(/^Note/), { target: { value: "SYNTHETIC note" } });
+    const submit = screen.getByRole("button", { name: "Reject & remake" });
+    expect(submit).toBeEnabled();
+    fireEvent.click(submit);
+
+    await waitFor(() => expect(posts("/decision")).toHaveLength(1));
+    expect(posts("/decision")[0].body).toMatchObject({
+      decision: "reject",
+      regenerate: true,
+      reason_codes: ["other"],
+      note: "Changes marked on the picture:\n1. Top left: remove it.\nSYNTHETIC note",
     });
   });
 

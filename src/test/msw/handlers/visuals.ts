@@ -116,7 +116,7 @@ function summary(v: VisualDetail): VisualSummary {
     grade: v.grade,
     chapter: v.chapter,
     title: v.title,
-    caption: v.spec.caption,
+    caption: v.spec?.caption ?? null,
     image_sha256: v.image_sha256,
     width: v.width,
     height: v.height,
