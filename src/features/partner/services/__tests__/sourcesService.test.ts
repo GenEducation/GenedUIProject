@@ -53,4 +53,22 @@ describe("sourcesService", () => {
     );
     expect(localStorage.getItem("gened_auth_token")).toBe("token-synthetic");
   });
+
+  it("deletes a chapter with DELETE /v1/sources/{id}, and surfaces the server's refusal for one it keeps", async () => {
+    const failed = makeSource({ state: "failed" });
+    const ready = makeSource({ state: "ready" });
+    sourcesFixture.set(failed);
+    sourcesFixture.set(ready);
+    await sourcesService.remove(failed.source_id);
+    expect(sourcesFixture.get(failed.source_id)).toBeUndefined();
+    await sourcesService.remove(ready.source_id).then(
+      () => expect.unreachable(),
+      (e) => {
+        expect(e).toBeInstanceOf(ApiRequestError);
+        expect(e.status).toBe(409);
+        expect(e.message).toMatch(/ready cannot be deleted/);
+      },
+    );
+    expect(sourcesFixture.get(ready.source_id)).toBeDefined();
+  });
 });
