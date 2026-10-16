@@ -14,7 +14,7 @@ const profile = { user_id: "u-synthetic", username: "synthetic-kid", email: "kid
 async function nameAndSave() {
   render(<CompleteProfileBanner studentProfile={profile} />);
   fireEvent.change(screen.getByPlaceholderText("What should we call you?"), { target: { value: "Synthetic Kid" } });
-  fireEvent.change(screen.getByPlaceholderText(/Give your AI tutor a name/), { target: { value: "Rocky" } });
+  fireEvent.change(screen.getByLabelText(/Your AI tutor.s name/), { target: { value: "Rocky" } });
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 }
 

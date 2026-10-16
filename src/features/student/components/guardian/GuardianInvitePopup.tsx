@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
-import { X } from "lucide-react";
+import { Check, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useStudentStore } from "../../store/useStudentStore";
 import { useGuardianStatus } from "../../hooks/useGuardianStatus";
@@ -92,58 +92,96 @@ export function GuardianInvitePopup() {
   };
 
   const email = status.parent_email;
+  const steps = [
+    {
+      done: true,
+      text: (
+        <>
+          Invitation emailed{status.reminders_sent > 0 ? ", with a reminder" : ""}
+          {status.can_resend_invitation && (
+            <>
+              <span aria-hidden className="mx-1.5 text-[var(--surface-border)]">·</span>
+              {/* eslint-disable-next-line no-restricted-syntax -- inline text action inside a sentence, not a standalone button. */}
+              <button
+                type="button"
+                onClick={resend}
+                disabled={sending}
+                className="font-bold text-[var(--primary)] underline-offset-2 hover:underline disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-ring)] rounded"
+              >
+                {sending ? "Sending…" : "Send again"}
+              </button>
+            </>
+          )}
+        </>
+      ),
+    },
+    { done: false, text: <>They create a parent account with <strong className="font-bold text-[var(--ink)] [overflow-wrap:anywhere]">{email}</strong></> },
+    { done: false, text: <>They confirm they&apos;re your parent, and your accounts connect automatically</> },
+  ];
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center p-3 sm:items-center sm:p-6">
-      <div aria-hidden className="absolute inset-0 bg-black/25 backdrop-blur-[2px]" onClick={dismiss} />
+      <div aria-hidden className="absolute inset-0 bg-[rgb(18_45_48/0.45)] backdrop-blur-[4px]" onClick={dismiss} />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative w-full max-w-md rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl sm:p-7"
+        className="relative w-full max-w-[480px] rounded-[28px] bg-white px-6 pb-6 pt-7 shadow-[0_30px_70px_-24px_rgb(18_45_48/0.45)] sm:px-8 sm:pb-8 sm:pt-8"
       >
+        {/* eslint-disable-next-line no-restricted-syntax -- icon-only dialog close in the corner. */}
         <button
           type="button"
           aria-label="Close"
           onClick={dismiss}
-          className="absolute right-3 top-3 rounded-full p-2 text-gray-400 hover:bg-gray-100"
+          className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--canvas)] hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-ring)]"
         >
-          <X size={18} />
+          <X size={20} />
         </button>
-        <h2 id={titleId} className="pr-8 text-lg font-bold text-[var(--primary-ink)]">
+
+        <span aria-hidden className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--soft-surface)]/70 text-[var(--primary)]">
+          <Users size={26} strokeWidth={1.9} />
+        </span>
+        <h2 id={titleId} className="mt-5 pr-10 text-[24px] font-extrabold leading-tight text-[var(--ink)]">
           Invite your parent to GenEd
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-gray-600">
-          You verified <strong>{email}</strong> as your parent&apos;s email, but there&apos;s no GenEd parent account with
-          that email yet.
+        <p className="mt-2 text-[14.5px] leading-relaxed text-[var(--text-mid)]">
+          There&apos;s no GenEd parent account for <strong className="font-bold text-[var(--ink)] [overflow-wrap:anywhere]">{email}</strong>{" "}
+          yet. You can keep using GenEd right now; you don&apos;t need to wait for them.
         </p>
-        <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-gray-600">
-          <li>You can keep using GenEd right now. You don&apos;t need to wait for them.</li>
-          <li>
-            Your parent needs to create their own parent account using <strong>{email}</strong>.
-          </li>
-          <li>Once they sign up and confirm they&apos;re your parent or guardian, your accounts connect automatically.</li>
-        </ul>
-        <p className="mt-3 text-xs text-gray-500">
-          We&apos;ve emailed them an invitation{status.reminders_sent > 0 ? " and a reminder" : ""}. If your parent is
-          with you, they can create their account here on this device.
+
+        {/* What happens next, with the step already behind them ticked off. */}
+        <ol className="mt-5 space-y-3 rounded-2xl bg-[var(--soft-surface)]/45 px-4 py-4">
+          {steps.map((step, i) => (
+            <li key={i} className="flex items-start gap-3">
+              <span
+                aria-hidden
+                className={`mt-px flex h-6 w-6 flex-none items-center justify-center rounded-full text-[12px] font-extrabold ${step.done ? "bg-[var(--primary)] text-white" : "bg-white text-[var(--primary)] ring-1 ring-[var(--surface-border)]"}`}
+              >
+                {step.done ? <Check size={13} strokeWidth={3} /> : i + 1}
+              </span>
+              <span className={`text-[14px] leading-snug ${step.done ? "text-[var(--text-mid)]" : "text-[var(--ink)]"}`}>
+                {step.text}
+                {step.done && <span className="sr-only"> (done)</span>}
+              </span>
+            </li>
+          ))}
+        </ol>
+
+        <p className="mt-4 text-[13px] leading-relaxed text-[var(--text-mid)]">
+          Is your parent with you? They can create their account here on this device.
         </p>
         {note && (
-          <p role="status" className="mt-3 text-xs font-semibold text-[var(--primary-ink)]">
+          <p role="status" className="mt-2 text-[13px] font-semibold text-[var(--primary)]">
             {note}
           </p>
         )}
-        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={dismiss}>
+
+        <div className="mt-6 flex flex-col-reverse gap-2.5 sm:flex-row sm:items-center">
+          <Button variant="tertiary" onClick={dismiss} className="rounded-full sm:mr-auto">
             Maybe later
           </Button>
-          <Button variant={status.can_resend_invitation ? "outline" : "primary"} onClick={() => router.push(PARENT_SIGN_UP)}>
+          <Button variant="primary" onClick={() => router.push(PARENT_SIGN_UP)} className="rounded-full">
             Create parent account
           </Button>
-          {status.can_resend_invitation && (
-            <Button variant="primary" loading={sending} disabled={sending} onClick={resend}>
-              Send the invitation again
-            </Button>
-          )}
         </div>
       </div>
     </div>

@@ -50,6 +50,6 @@ describe("Guardian connection", () => {
     });
     render(<GuardianCard index={0} />);
     expect(await screen.findByText("Not connected")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Invite \/ Link guardian/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Invite guardian/ })).toBeInTheDocument();
   });
 });

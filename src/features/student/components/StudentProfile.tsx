@@ -9,6 +9,7 @@ import { useSidebarStore } from "../store/useSidebarStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { getStudentDisplayName, titleCase } from "../utils/displayName";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
+import { useChaptersCompleted } from "../hooks/useChaptersCompleted";
 import { fetchProfile } from "@/features/auth/authService";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { AvatarPickerModal } from "./AvatarPickerModal";
@@ -29,6 +30,7 @@ export function StudentProfile() {
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const startTutorial = useTutorialStore((s) => s.startTutorial);
+  const chapters = useChaptersCompleted(studentProfile?.user_id);
 
   useDebouncedResize(() => applyResponsive(window.innerWidth >= 1024));
 
@@ -108,7 +110,7 @@ export function StudentProfile() {
             <div className="absolute -bottom-32 right-10 h-[300px] w-[300px] rounded-full bg-[rgb(217_242_121/0.28)] blur-3xl" />
           </div>
 
-          <div className="relative mx-auto w-full max-w-[1240px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8 lg:px-10">
+          <div className="@container/profile relative mx-auto w-full max-w-[1240px] px-4 pb-16 pt-6 sm:px-8 sm:pt-8 lg:px-10">
             {/* Page title */}
             <header className="mb-6 hidden items-center gap-5 md:flex">
               {/* eslint-disable-next-line no-restricted-syntax -- round icon-only back control from the profile mockup; Button has no icon-only circle size. */}
@@ -132,12 +134,13 @@ export function StudentProfile() {
               avatarId={avatarId}
               onEditAvatar={() => setAvatarPickerOpen(true)}
               streak={studentStats?.currentStreak ?? 0}
-              sessions={studentStats?.totalSessions ?? 0}
+              chapters={chapters ?? null}
             />
 
             {/* 2×2: preferences | guardian / school | device. One grid (not two
-                columns) so each row's cards share a height and line up. */}
-            <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
+                columns) so each row's cards share a height and line up. Two columns only once the page itself is
+                wide enough for two roomy cards (the sidebar takes part of the screen, so the screen width can't say). */}
+            <div className="mt-5 grid grid-cols-1 gap-5 @[1040px]/profile:grid-cols-2">
               <LearningPreferencesCard index={1} />
               <GuardianCard index={2} />
               <SchoolCard index={3} />
@@ -153,24 +156,27 @@ export function StudentProfile() {
                     description="Watch the quick tour again, or sign out from GenEd."
                   />
                 </div>
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={() => startTutorial()}
-                  leadingIcon={<PlayCircle size={16} />}
-                  className="self-start rounded-full px-6 sm:self-center"
-                >
-                  Watch the quick tour
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="md"
-                  onClick={logoutStudent}
-                  leadingIcon={<LogOut size={16} />}
-                  className="self-start rounded-full px-7 sm:self-center"
-                >
-                  Log out
-                </Button>
+                {/* Side by side at every width: on a phone they share the row under the text instead of stacking. */}
+                <div className="flex flex-wrap gap-2.5 sm:flex-none">
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => startTutorial()}
+                    leadingIcon={<PlayCircle size={16} />}
+                    className="flex-1 whitespace-nowrap rounded-full px-5 sm:flex-none"
+                  >
+                    Watch the quick tour
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="md"
+                    onClick={logoutStudent}
+                    leadingIcon={<LogOut size={16} />}
+                    className="flex-1 whitespace-nowrap rounded-full px-5 sm:flex-none"
+                  >
+                    Log out
+                  </Button>
+                </div>
               </div>
             </ProfileCard>
           </div>

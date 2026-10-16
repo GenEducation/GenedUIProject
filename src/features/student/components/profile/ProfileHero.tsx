@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Flame, Pencil, Sparkles } from "lucide-react";
+import { BookOpenCheck, Flame, Pencil, Sparkles } from "lucide-react";
 import type { StudentAvatarId } from "@/constants/studentAvatars";
 import { StudentAvatar } from "../StudentAvatar";
 import { ProfileCard } from "./ProfileCard";
@@ -12,7 +12,9 @@ interface ProfileHeroProps {
   avatarId: StudentAvatarId;
   onEditAvatar: () => void;
   streak: number;
-  sessions: number;
+  /** Chapters completed out of all the student's chapters, counted as the report card counts them; `null` while
+   *  loading or if it couldn't be read (shows "—"). */
+  chapters: { completed: number; total: number } | null;
 }
 
 function Stat({
@@ -24,7 +26,7 @@ function Stat({
 }: {
   icon: React.ReactNode;
   iconClass: string;
-  value: number;
+  value: React.ReactNode;
   label: string;
   note: string;
 }) {
@@ -42,7 +44,7 @@ function Stat({
   );
 }
 
-export function ProfileHero({ name, gradeLine, tutorName, avatarId, onEditAvatar, streak, sessions }: ProfileHeroProps) {
+export function ProfileHero({ name, gradeLine, tutorName, avatarId, onEditAvatar, streak, chapters }: ProfileHeroProps) {
   return (
     <ProfileCard index={0} className="overflow-hidden">
       {/* A citron glow tucked behind the avatar — the only warm light on the page. */}
@@ -88,11 +90,11 @@ export function ProfileHero({ name, gradeLine, tutorName, avatarId, onEditAvatar
             note={streak > 0 ? "Keep it going!" : "Start one today!"}
           />
           <Stat
-            icon={<BookOpen size={20} strokeWidth={2.2} />}
+            icon={<BookOpenCheck size={20} strokeWidth={2.2} />}
             iconClass="bg-[var(--soft-surface)] text-[var(--primary)]"
-            value={sessions}
-            label="Sessions completed"
-            note={sessions > 0 ? "Great progress!" : "Your first is waiting"}
+            value={chapters ? <>{chapters.completed}<span className="ml-1 text-[0.6em] text-[var(--text-muted)]">/ {chapters.total}</span></> : "—"}
+            label="Chapters completed"
+            note={!chapters ? "" : chapters.completed > 0 ? "Great progress!" : "Your first is waiting"}
           />
         </div>
       </div>

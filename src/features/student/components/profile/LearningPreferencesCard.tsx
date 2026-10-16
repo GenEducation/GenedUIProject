@@ -32,7 +32,9 @@ function Row({
   footnote?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 py-5 first:pt-0 last:pb-0 sm:flex-row sm:items-center">
+    // Side by side only when the card itself has room (it sits in a 2-up grid on wide screens, so the screen's width
+    // says nothing about the card's); otherwise the control drops under the text.
+    <div className="flex flex-col gap-3 py-5 first:pt-0 last:pb-0 @[460px]/prefs:flex-row @[460px]/prefs:items-center">
       <div className="flex min-w-0 flex-1 items-start gap-4">
         <CardIcon size={44}>{icon}</CardIcon>
         <div className="min-w-0 pt-0.5">
@@ -40,7 +42,7 @@ function Row({
           <p className="mt-1 text-[13px] leading-snug text-[var(--text-mid)]">{description}</p>
         </div>
       </div>
-      <div className="flex flex-col gap-1.5 pl-[60px] sm:w-[240px] sm:flex-none sm:pl-0">
+      <div className="flex flex-col gap-1.5 pl-[60px] @[460px]/prefs:w-[240px] @[460px]/prefs:flex-none @[460px]/prefs:pl-0">
         {control}
         {footnote && <p className="text-[12px] text-[var(--text-muted)]">{footnote}</p>}
       </div>
@@ -91,7 +93,7 @@ export function LearningPreferencesCard({ index }: { index: number }) {
         <h2 className="text-[18px] font-extrabold text-[var(--ink)]">Learning preferences</h2>
       </div>
 
-      <div className="mt-6 divide-y divide-[var(--surface-border)]">
+      <div className="@container/prefs mt-6 divide-y divide-[var(--surface-border)]">
         <Row
           icon={<Mic size={20} strokeWidth={2} />}
           title="Tutor voice"

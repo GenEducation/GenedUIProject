@@ -52,15 +52,18 @@ describe("GuardianCard — reads the real connection", () => {
     render(<GuardianCard index={0} />);
     expect(await screen.findByText("Connected")).toBeInTheDocument();
     expect(screen.queryByText(/waiting/i)).not.toBeInTheDocument();
-    // The connected parent by name, with their email beside it.
-    expect(screen.getByTestId("guardian-connected-to")).toHaveTextContent("Connected to Sunita Sharma (Mum@Example.com)");
+    // The connected parent by name, with their email under it.
+    const who = screen.getByTestId("guardian-connected-to");
+    expect(who).toHaveTextContent("Sunita Sharma");
+    expect(who).toHaveTextContent("Mum@Example.com");
   });
 
   it("falls back to the parent's email when they gave no name", async () => {
     status({ linked_parent_name: null });
     render(<GuardianCard index={0} />);
-    expect(await screen.findByTestId("guardian-connected-to")).toHaveTextContent("Connected to Mum@Example.com");
-    expect(screen.getByTestId("guardian-connected-to")).not.toHaveTextContent("(");
+    const who = await screen.findByTestId("guardian-connected-to");
+    expect(who).toHaveTextContent("Mum@Example.com");
+    expect(who.textContent?.match(/Mum@Example\.com/g)).toHaveLength(1); // no second line repeating the email
   });
 
   it("names no parent until the parent has confirmed", async () => {
@@ -87,7 +90,7 @@ describe("GuardianCard — reads the real connection", () => {
     status(NO_ACCOUNT);
     render(<GuardianCard index={0} />);
     expect(await screen.findByText("Invitation sent")).toBeInTheDocument();
-    expect(screen.getByText(/You can keep learning in the meantime/)).toBeInTheDocument();
+    expect(screen.getByText(/They need to sign up with it/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Resend invitation" }));
     expect(await screen.findByText("Invitation sent again.")).toBeInTheDocument();
   });
@@ -126,9 +129,9 @@ describe("GuardianInvitePopup — after onboarding", () => {
     status(NO_ACCOUNT);
     render(<GuardianInvitePopup />);
     const dialog = await screen.findByRole("dialog", { name: "Invite your parent to GenEd" });
-    expect(dialog).toHaveTextContent("there's no GenEd parent account with that email yet");
+    expect(dialog).toHaveTextContent("There's no GenEd parent account for mum@example.com yet");
     expect(dialog).toHaveTextContent("You can keep using GenEd right now");
-    expect(dialog).toHaveTextContent("Your parent needs to create their own parent account using mum@example.com");
+    expect(dialog).toHaveTextContent("They create a parent account with mum@example.com");
     expect(dialog).toHaveTextContent("your accounts connect automatically");
     // No raw URL in the popup: a button opens the parent sign-up form.
     expect(dialog).not.toHaveTextContent("/register");
@@ -136,7 +139,7 @@ describe("GuardianInvitePopup — after onboarding", () => {
     expect(nav.current!.router.push).toHaveBeenCalledWith(PARENT_SIGN_UP);
     expect(PARENT_SIGN_UP).toBe("/register?role=parent&redirect=%2Fparent");
 
-    fireEvent.click(within(dialog).getByRole("button", { name: "Send the invitation again" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send again" }));
     expect(await within(dialog).findByText("Invitation sent again.")).toBeInTheDocument();
   });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Plus, ShieldCheck, Users } from "lucide-react";
+import { BookOpen, Check, Clock3, FileText, Loader2, Plus, ShieldCheck, Users, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useStudentStore } from "../../store/useStudentStore";
 import { useGuardianStatus } from "../../hooks/useGuardianStatus";
@@ -9,6 +9,74 @@ import type { GuardianStatus } from "../../services/studentService";
 import { studentService } from "../../services/studentService";
 import { VerifyParentEmail } from "../guardian/VerifyParentEmail";
 import { CardHeading, ProfileCard, StatusPill } from "./ProfileCard";
+
+const SEES: { Icon: LucideIcon; text: string }[] = [
+  { Icon: FileText, text: "Report card" },
+  { Icon: BookOpen, text: "Subject progress" },
+  { Icon: Clock3, text: "Study time" },
+];
+
+const STEPS = ["Invite", "They confirm", "You're linked"];
+
+/** How many of the steps above are behind the student: an invitation out (or an email to verify) is the first. */
+function stepsDone(status: GuardianStatus | null): number {
+  switch (status?.state) {
+    case "awaiting_parent_confirmation":
+    case "awaiting_parent_registration":
+    case "email_unverified":
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+/**
+ * The card's footer panel: who can see the student's learning, and what. Connected: the three things the guardian sees.
+ * Otherwise: the three steps to a connection on one line, with those behind the student ticked off. Kept to two short
+ * lines so the card never grows taller than its row partner in the 2-up grid.
+ */
+function PrivacyPanel({ linked, done }: { linked: boolean; done: number }) {
+  return (
+    <div className="mt-5 rounded-2xl bg-[var(--soft-surface)]/55 px-4 py-3 sm:ml-[68px]">
+      <p className="flex items-center gap-2 text-[13px] font-semibold text-[var(--ink)]">
+        <ShieldCheck size={17} className="flex-none text-[var(--primary)]" aria-hidden />
+        {linked ? "Only they can see your learning" : "Nothing is shared until they confirm"}
+      </p>
+      {linked ? (
+        <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="What they can see">
+          {SEES.map(({ Icon, text }) => (
+            <li key={text} className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[12px] font-semibold text-[var(--text-mid)]">
+              <Icon size={13} strokeWidth={2.2} className="text-[var(--primary)]" aria-hidden />
+              {text}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ol className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1" aria-label="How connecting works">
+          {STEPS.map((text, i) => {
+            const isDone = i < done;
+            const isNow = i === done;
+            return (
+              <li key={text} className="flex items-center gap-1.5">
+                {i > 0 && <span aria-hidden className="h-px w-4 bg-[var(--surface-border)]" />}
+                <span
+                  aria-hidden
+                  className={`flex h-5 w-5 flex-none items-center justify-center rounded-full text-[10.5px] font-extrabold ${isDone ? "bg-[var(--primary)] text-white" : isNow ? "bg-white text-[var(--primary)] ring-[1.5px] ring-[var(--primary)]" : "bg-white text-[var(--text-muted)]"}`}
+                >
+                  {isDone ? <Check size={11} strokeWidth={3} /> : i + 1}
+                </span>
+                <span className={`text-[12px] ${isNow ? "font-bold text-[var(--ink)]" : "font-medium text-[var(--text-mid)]"}`}>
+                  {text}
+                  {isDone && <span className="sr-only"> (done)</span>}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </div>
+  );
+}
 
 /** What the pill says for each state: a PENDING link is never "connected". */
 export function guardianPill(status: GuardianStatus | null): { tone: "on" | "pending" | "off"; label: string } {
@@ -74,52 +142,67 @@ export function GuardianCard({ index }: { index: number }) {
   };
 
   const canAskByContact = !status || status.state === "no_parent_email" || status.state === "declined";
+  const linked = status?.state === "linked";
+  const who = status?.linked_parent_name || status?.linked_parent_email || null;
 
   return (
     <ProfileCard index={index} className="flex flex-col">
       <CardHeading
         icon={<Users size={24} strokeWidth={1.9} />}
-        title="Guardian connection"
-        description="Invite your parent or guardian to stay informed about your learning journey and progress."
+        title="Guardian"
+        description={linked ? "Your parent or guardian can follow your progress and reports." : "Invite a parent or guardian to follow your progress and reports."}
       />
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 sm:pl-[68px]">
-        <StatusPill tone={pill.tone}>{pill.label}</StatusPill>
-        {canAskByContact && !open && (
-          <Button variant="primary" size="md" onClick={() => setOpen(true)} leadingIcon={<Plus size={17} />} className="rounded-full px-6">
-            Invite / Link guardian
-          </Button>
-        )}
-      </div>
-
-      {status?.state === "linked" && (status.linked_parent_name || status.linked_parent_email) && (
-        <p className="mt-3 text-[13px] leading-relaxed text-[var(--text-mid)] sm:ml-[68px]" data-testid="guardian-connected-to">
-          Connected to <strong className="break-words">{status.linked_parent_name || status.linked_parent_email}</strong>
-          {status.linked_parent_name && status.linked_parent_email && (
-            <span className="break-all text-[12px] text-[var(--text-mid)]"> ({status.linked_parent_email})</span>
+      {/* Connected: who it is, in one row. Otherwise: where the link stands, and the invite. */}
+      {linked ? (
+        <div
+          className="mt-5 flex items-center gap-3 rounded-2xl border border-[var(--surface-border)] px-4 py-3 sm:ml-[68px]"
+          data-testid="guardian-connected-to"
+        >
+          <span
+            aria-hidden
+            className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[var(--soft-surface)] text-[15px] font-extrabold uppercase text-[var(--primary)]"
+          >
+            {(who ?? "G").charAt(0)}
+          </span>
+          {/* The status sits under who it is, so a long email keeps the row's full width on any screen. */}
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="break-all text-[14px] font-bold text-[var(--ink)]">{who ?? "Your guardian"}</p>
+            {status?.linked_parent_name && status.linked_parent_email && (
+              <p className="mt-0.5 break-all text-[12.5px] text-[var(--text-mid)]">{status.linked_parent_email}</p>
+            )}
+            <p className="mt-1 inline-flex items-center gap-1 text-[12.5px] font-bold text-[var(--primary)]">
+              <Check size={13} strokeWidth={3} aria-hidden />
+              {pill.label}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 sm:pl-[68px]">
+          <StatusPill tone={pill.tone}>{pill.label}</StatusPill>
+          {canAskByContact && !open && (
+            <Button variant="primary" size="md" onClick={() => setOpen(true)} leadingIcon={<Plus size={17} />} className="rounded-full px-6">
+              Invite guardian
+            </Button>
           )}
-        </p>
+          {status?.state === "awaiting_parent_registration" && status.can_resend_invitation && (
+            <Button variant="outline" size="sm" pill loading={resending} disabled={resending} onClick={resend}>
+              Resend invitation
+            </Button>
+          )}
+        </div>
       )}
 
       {status && status.state !== "linked" && status.state !== "no_parent_email" && (
         <div className="mt-4 space-y-2 sm:ml-[68px]" data-testid="guardian-detail">
           {status.state === "awaiting_parent_registration" && (
-            <>
-              <p className="text-[13px] leading-relaxed text-[var(--text-mid)]">
-                We invited <strong>{status.parent_email}</strong>. Once your parent creates their GenEd account with that
-                email and confirms, you&apos;re connected automatically. You can keep learning in the meantime.
-              </p>
-              {status.can_resend_invitation && (
-                <Button variant="outline" size="sm" loading={resending} disabled={resending} onClick={resend}>
-                  Resend invitation
-                </Button>
-              )}
-            </>
+            <p className="text-[13px] leading-relaxed text-[var(--text-mid)]">
+              Sent to <strong className="break-all">{status.parent_email}</strong>. They need to sign up with it.
+            </p>
           )}
           {status.state === "awaiting_parent_confirmation" && (
             <p className="text-[13px] leading-relaxed text-[var(--text-mid)]">
-              Your parent has a GenEd account. You&apos;re connected as soon as they confirm they&apos;re your parent or
-              guardian.
+              They already have a GenEd account. You&apos;ll be connected as soon as they confirm.
             </p>
           )}
           {status.state === "email_unverified" && studentId && status.parent_email && (
@@ -155,16 +238,9 @@ export function GuardianCard({ index }: { index: number }) {
         </form>
       )}
 
-      {/* Spacer: in the 2-up grid this card matches its row partner's height,
-          so the privacy note settles at the bottom instead of leaving a gap. */}
+      {/* Spacer: when its row partner is taller, the footer panel settles at the bottom. */}
       <div aria-hidden className="flex-1" />
-      <div className="mt-5 flex items-start gap-3 rounded-2xl bg-[var(--soft-surface)]/55 px-4 py-3.5 sm:ml-[68px]">
-        <ShieldCheck size={20} className="mt-0.5 flex-none text-[var(--primary)]" aria-hidden />
-        <p className="text-[13px] leading-relaxed text-[var(--text-mid)]">
-          Your learning data is private and only shared with your guardian once they confirm they&apos;re your parent or
-          guardian.
-        </p>
-      </div>
+      <PrivacyPanel linked={linked} done={stepsDone(status)} />
     </ProfileCard>
   );
 }
