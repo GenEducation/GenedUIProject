@@ -17,7 +17,7 @@ export function RevisitPrompt() {
   if (!options) return null;
   return (
     <Modal open={open} onClose={busy ? undefined : close} size="md" title="Welcome back" titleVisible={false}>
-      <div className="lesson-rise rounded-[24px] bg-[var(--ls-card-warm)] p-5 sm:p-6">
+      <div className="lesson-rise max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-[24px] bg-[var(--ls-card-warm)] p-5 sm:p-6">
         <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--ls-primary)]">Welcome back</p>
         <h2 className="lesson-hand mt-1 text-[26px] leading-tight text-[var(--ls-primary)]">Want to go over anything first?</h2>
         <div className="mt-4">

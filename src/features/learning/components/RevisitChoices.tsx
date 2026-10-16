@@ -145,7 +145,7 @@ export function RevisitChoices({
             </Button>
           )}
           {(showAll || options.weak.length === 0) && (
-            <ul className="mt-2 flex flex-col gap-2" aria-label="Other sections">
+            <ul className="mt-2 flex max-h-56 flex-col gap-2 overflow-y-auto overscroll-contain pr-1" aria-label="Other sections">
               {others.map((section) => (
                 <SectionRow
                   key={section.instance_node_id}
