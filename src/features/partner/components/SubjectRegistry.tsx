@@ -21,7 +21,6 @@ import { IngestionPathPanel } from "./IngestionPathPanel";
 import { RunOutcome, RunProgress } from "./RunStatus";
 import {
   ACTIVE_STATES,
-  DELETABLE_STATES,
   SOURCE_STATE_LABELS,
   STARTABLE_STATES,
   type SourceState,
@@ -62,7 +61,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const subjectFilters = usePartnerStore((state) => state.subjectFilters);
   const subjectPagination = usePartnerStore((state) => state.subjectPagination);
 
-  const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [deleteFor, setDeleteFor] = React.useState<Subject | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
@@ -155,14 +154,16 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   };
 
   const handleDelete = async () => {
-    if (!deleteId) return;
+    if (!deleteFor) return;
     setIsDeleting(true);
     setDeleteError(null);
     try {
-      await removeSubject(deleteId);
-      setDeleteId(null);
+      await removeSubject(deleteFor.id);
+      setDeleteFor(null);
     } catch (err) {
+      // The server says why (a 409 names the chapter's state); the list may have moved on meanwhile.
       setDeleteError(asError(err).message || "Failed to delete. Please try again.");
+      void fetchSubjects();
     } finally {
       setIsDeleting(false);
     }
@@ -569,11 +570,17 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           </span>
                         )}
 
-                        {DELETABLE_STATES.has(subject.state) && (
-                          <Button iconOnly variant="destructive" aria-label="Delete" onClick={(e) => { e.stopPropagation(); setDeleteId(subject.id); }}>
-                            <Trash2 size={19} />
-                          </Button>
-                        )}
+                        {/* Every stage offers delete; the server decides, and the confirm shows its reason when it refuses. */}
+                        <Button
+                          iconOnly
+                          variant="destructive"
+                          aria-label="Delete"
+                          title="Delete chapter"
+                          disabled={isDeleting && deleteFor?.id === subject.id}
+                          onClick={(e) => { e.stopPropagation(); setDeleteError(null); setDeleteFor(subject); }}
+                        >
+                          <Trash2 size={19} />
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -620,11 +627,11 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
-        isOpen={!!deleteId}
-        onClose={() => { setDeleteId(null); setDeleteError(null); }}
+        isOpen={!!deleteFor}
+        onClose={() => { setDeleteFor(null); setDeleteError(null); }}
         onConfirm={handleDelete}
         title="Delete this chapter?"
-        message="It will be removed from your registry. Only chapters that haven't produced reviewable content can be deleted."
+        message={`"${deleteFor?.title ?? ""}" will be removed from your registry, with its uploaded PDF and run results.`}
         isLoading={isDeleting}
         error={deleteError}
       />

@@ -51,13 +51,13 @@ const renderRegistry = async () => {
 };
 
 describe("SubjectRegistry — chapter sources", () => {
-  it("lists the partner's sources with their state and only the actions that state allows", async () => {
+  it("lists the partner's sources with their state and the actions that state allows", async () => {
     await renderRegistry();
 
     const ready = rowFor("SYNTHETIC with visuals");
     expect(within(ready).getByText("Ready for your review")).toBeInTheDocument();
     expect(within(ready).getByRole("button", { name: "Run ingestion again" })).toBeInTheDocument();
-    expect(within(ready).queryByRole("button", { name: "Delete" })).toBeNull();
+    expect(within(ready).getByRole("button", { name: "Delete" })).toBeInTheDocument();
 
     const fresh = rowFor("SYNTHETIC not started");
     expect(within(fresh).getByText("Not started")).toBeInTheDocument();
@@ -71,7 +71,39 @@ describe("SubjectRegistry — chapter sources", () => {
     const queued = rowFor("SYNTHETIC queued");
     expect(within(queued).getByRole("button", { name: "Stop Ingestion" })).toBeInTheDocument();
     expect(within(queued).queryByRole("button", { name: /Start ingestion|Run ingestion again|Retry/ })).toBeNull();
-    expect(within(queued).queryByRole("button", { name: "Delete" })).toBeNull();
+    expect(within(queued).getByRole("button", { name: "Delete" })).toBeInTheDocument();
+  });
+
+  it("offers delete on every stage, asks first, and removes the chapter once the server agrees", async () => {
+    let deletes = 0;
+    server.events.on("request:start", ({ request }) => {
+      if (request.method === "DELETE") deletes += 1;
+    });
+    await renderRegistry();
+    for (const title of ["SYNTHETIC with visuals", "SYNTHETIC not started", "SYNTHETIC failed", "SYNTHETIC queued"]) {
+      expect(within(rowFor(title)).getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    }
+
+    fireEvent.click(within(rowFor("SYNTHETIC failed")).getByRole("button", { name: "Delete" }));
+    expect(await screen.findByText("Delete this chapter?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Keep It" }));
+    await waitFor(() => expect(screen.queryByText("Delete this chapter?")).toBeNull());
+    expect(deletes).toBe(0);
+
+    fireEvent.click(within(rowFor("SYNTHETIC failed")).getByRole("button", { name: "Delete" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete Permanently" }));
+    await waitFor(() => expect(screen.queryByText("SYNTHETIC failed")).toBeNull());
+    expect(deletes).toBe(1);
+    expect(screen.getByText("SYNTHETIC with visuals")).toBeInTheDocument();
+  });
+
+  it("shows the server's reason in the confirm when it refuses a delete, and keeps the chapter", async () => {
+    await renderRegistry();
+    fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "Delete" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete Permanently" }));
+    expect(await screen.findByText("A chapter that is ready cannot be deleted.")).toBeInTheDocument();
+    expect(screen.getByText("Delete this chapter?")).toBeInTheDocument();
+    expect(rowFor("SYNTHETIC with visuals")).toBeInTheDocument();
   });
 
   it("explains a refused action instead of failing silently", async () => {
