@@ -21,5 +21,5 @@ export const META_PIXEL_ID = "1132054889546244";
 /** Web-app pilot offer, shown on the campaign page. Seats are hardcoded until
  *  the sign-up count can be read back from the Google Form's sheet. */
 export const PILOT_SEATS = 30;
-export const PILOT_START = "16 Oct";
+export const PILOT_START = "23 Oct";
 export const PILOT_TAGLINE = `Free pilot · Only ${PILOT_SEATS} families · Starts ${PILOT_START}`;
