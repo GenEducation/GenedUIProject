@@ -13,6 +13,7 @@ import type {
   AnswerResult,
   InstanceState,
   PresentationManifest,
+  RevisitOptions,
   SequencedTurnEvent,
   TeacherPayload,
   TurnRequest,
@@ -76,6 +77,12 @@ interface LessonState {
   completedSteps: Array<{ instanceNodeId: string; title: string }>;
   /** The chapter report, read once the lesson completes. */
   report: ChapterReport | null;
+  /** Coming back to the chapter: section scores, the weak ones, and where the learner would carry on. */
+  revisitOptions: RevisitOptions | null;
+  /** The "welcome back" choice is showing (an active chapter with weak sections; a finished one shows it in its summary). */
+  revisitPromptOpen: boolean;
+  /** A review or start over is in flight. */
+  reviewBusy: boolean;
   /** The titles of the steps seen on this screen, by instance node id: the transcript's step boundaries name them. */
   stepTitles: Record<string, string>;
   /** Figures presented live on this screen, and whether the board can show them (see `FigureReadiness`). */
@@ -101,6 +108,12 @@ interface LessonState {
   done: () => Promise<void>;
   /** After a failed practice round. */
   choose: (choice: "try_now" | "keep_going") => Promise<void>;
+  /** Close the "welcome back" choice and carry on where the learner was. */
+  closeRevisitPrompt: () => void;
+  /** Replay these sections (canonical instance node ids), then carry on where the learner was. */
+  reviewSections: (sectionIds: string[]) => Promise<void>;
+  /** Start the chapter over; resolves to the new instance's id (the caller navigates to it). */
+  startOver: () => Promise<string | null>;
   askHint: (itemId: string) => Promise<void>;
   refreshManifest: () => Promise<void>;
   /** Read the current step's payload and pictures again after `stepLoadError`; the step then opens if it never did. */
@@ -147,6 +160,9 @@ const initial = {
   notDeliveredItemId: null,
   completedSteps: [],
   report: null,
+  revisitOptions: null,
+  revisitPromptOpen: false,
+  reviewBusy: false,
   stepTitles: {},
   figureStatus: {},
   stepPending: false,
@@ -191,6 +207,10 @@ function withFigures(presented: string[], ids: string[]): string[] {
  */
 export const isRevisiting = (instance: InstanceState | null): boolean =>
   instance?.state === "active" && Boolean(instance.active_node?.reason?.startsWith("revisit_"));
+
+/** The learner is replaying a section they chose to review (`active_node.reason` "revisit_review"). */
+export const isReviewingSection = (instance: InstanceState | null): boolean =>
+  instance?.state === "active" && instance.active_node?.reason === "revisit_review";
 
 /** A turn's words wait while a figure it presented is still on its way to the board (FIGURES_IN_TEACHING_v1 §9.2). */
 export const heldForFigure = (turn: LessonTurn, status: Record<string, FigureReadiness>): boolean =>
@@ -353,6 +373,22 @@ export const useLessonStore = create<LessonState>((set, get) => {
     if (get().instanceId === instanceId) set({ report });
   };
 
+  /**
+   * Read the revisit options; with `prompt`, open the "welcome back" choice when an active chapter has weak sections and
+   * no review is under way. A failed read only means no choice is offered: the lesson carries on as it was.
+   */
+  const loadRevisitOptions = async (instanceId: string, prompt: boolean) => {
+    let options: RevisitOptions | null = null;
+    try {
+      options = await lessonService.revisitOptions(instanceId);
+    } catch {
+      options = null;
+    }
+    if (get().instanceId !== instanceId) return;
+    const offer = prompt && options?.state === "active" && options.weak.length > 0 && !options.review_in_progress;
+    set((state) => ({ revisitOptions: options, revisitPromptOpen: offer || (state.revisitPromptOpen && Boolean(options)) }));
+  };
+
   /** The step gap (`stepPending`): a message sent inside it waits for it to close. */
   let gap: { closed: Promise<void>; close: () => void } | null = null;
   const openGap = () => {
@@ -488,6 +524,10 @@ export const useLessonStore = create<LessonState>((set, get) => {
       });
     }
     if (instance.state === "completed" && previous?.state !== "completed") void loadReport(instance.id).catch(() => undefined);
+    // The sections the learner chose to review are done: offer what is still weak (a finished chapter's summary does).
+    if (beforeNode?.reason === "revisit_review" && instance.active_node?.reason !== "revisit_review") {
+      void loadRevisitOptions(instance.id, instance.state === "active");
+    }
   };
 
   const onEvent = (turnId: string, event: SequencedTurnEvent) => {
@@ -641,6 +681,8 @@ export const useLessonStore = create<LessonState>((set, get) => {
           focusedFigureId: presented.at(-1) ?? null,
           stepTitles: node ? { [node.instance_node_id]: node.title } : {},
         });
+        // Coming back: the weak sections to offer for review (non-fatal; the lesson opens either way).
+        void loadRevisitOptions(instanceId, true);
         if (instance.state === "completed") {
           // A finished lesson has no active node to load; show its report.
           await loadReport(instanceId).catch(() => undefined);
@@ -783,6 +825,43 @@ export const useLessonStore = create<LessonState>((set, get) => {
       if (!instanceId || instance?.revision === undefined) return;
       const revision = instance.revision;
       await stepCommand(() => lessonService.choose(instanceId, { request_id: uuid(), expected_revision: revision, choice }));
+    },
+
+    closeRevisitPrompt: () => set({ revisitPromptOpen: false }),
+
+    reviewSections: async (sectionIds) => {
+      const { instanceId, instance } = get();
+      if (!instanceId || instance?.revision === undefined || sectionIds.length === 0) return;
+      set({ reviewBusy: true });
+      try {
+        await lessonService.review(instanceId, {
+          request_id: uuid(),
+          expected_revision: instance.revision,
+          section_ids: sectionIds,
+        });
+      } catch (error) {
+        set({ reviewBusy: false });
+        await rereadIfStale(error);
+        throw error;
+      }
+      // The lesson is on another node (or a finished chapter reopened): open it afresh, with the tutor speaking first.
+      await get().load(instanceId);
+    },
+
+    startOver: async () => {
+      const { instanceId, instance } = get();
+      if (!instanceId || instance?.revision === undefined) return null;
+      set({ reviewBusy: true });
+      try {
+        const fresh = await lessonService.review(instanceId, {
+          request_id: uuid(),
+          expected_revision: instance.revision,
+          start_over: true,
+        });
+        return fresh.id;
+      } finally {
+        set({ reviewBusy: false });
+      }
     },
 
     askHint: async (itemId) => {

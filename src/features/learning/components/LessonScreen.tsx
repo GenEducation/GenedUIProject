@@ -11,6 +11,7 @@ import { LessonRail } from "./LessonRail";
 import { BoardPanel } from "./BoardPanel";
 import { ChatPanel } from "./ChatPanel";
 import { RailDrawer } from "./RailDrawer";
+import { RevisitPrompt } from "./RevisitPrompt";
 import { ResizeHandle } from "./ResizeHandle";
 import { CHAT, RAIL, fitWidths, gridTemplate, useLessonFrame, useLessonWidths } from "./layout";
 
@@ -188,6 +189,7 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
       )}
 
       {mode === "compact" && <RailDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />}
+      <RevisitPrompt />
     </div>
   );
 }

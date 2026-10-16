@@ -46,6 +46,8 @@ export interface ChapterFacts {
   /** Right answers given alone and with help, and hints asked for; absent until the chapter is opened. */
   help?: AnswerHelp | null;
   last_active_at?: string;
+  /** Completed once and open again (reviewing sections, or started over). It stays Completed. */
+  revisiting?: boolean;
 }
 
 /** How much of the right answers stood on their own (the backend's assistance ledger). */

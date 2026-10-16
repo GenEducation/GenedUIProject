@@ -105,6 +105,9 @@ export function ChapterRow({ row, ui, index }: { row: ChapterRowModel; ui: Repor
             <h4 className="text-[15.5px] font-bold leading-snug text-[var(--rs-ink)]">{row.title}</h4>
             <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-[var(--rs-ink-soft)]">
               <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: status.bg, color: status.fg }}>{row.status}</span>
+              {row.revisiting && (
+                <span className="rounded-full bg-[var(--rs-surface-2)] px-2 py-0.5 text-[11px] font-semibold text-[var(--rs-ink-soft)]">Revisiting</span>
+              )}
               {meta.map((m) => (
                 <React.Fragment key={m}>
                   <span aria-hidden className="text-[var(--rs-line-strong)]">•</span>

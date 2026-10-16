@@ -50,6 +50,8 @@ export interface ReportBody {
     help: AnswerHelp | null;
     outcomes: Array<{ code: string; title: string; mastered: boolean }> | null;
     last_active_at: string | null;
+    /** Completed once and open again (reviewing sections or started over); `status` stays `completed`. */
+    revisiting?: boolean;
   }>;
 }
 
@@ -121,6 +123,7 @@ export async function loadV1Report(who: ReportWho): Promise<V1Dataset> {
       help: opened ? c.help : undefined,
       skills,
       last_active_at: c.last_active_at ?? undefined,
+      revisiting: c.revisiting === true,
       time_minutes: minutes.get(c.chapter_id),
     };
   });

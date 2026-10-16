@@ -40,6 +40,8 @@ export function RecentChapterRow({
   const [reported, setReported] = useState(false);
   const showCard = src !== null && failedSrc !== src;
   const done = chapter.state === "completed";
+  // Finished once and open again: it stays finished, and the row says it is being revisited.
+  const revisiting = chapter.revisiting === true && !done;
   const percent = chapterPercent(chapter);
 
   return (
@@ -49,7 +51,7 @@ export function RecentChapterRow({
       onClick={() => onOpen(chapter)}
       disabled={disabled}
       aria-busy={opening}
-      aria-label={`${chapter.chapter_title}, ${subjectLabel}, ${done ? "finished" : `${percent}% done`}. ${done ? "Review" : "Continue"}`}
+      aria-label={`${chapter.chapter_title}, ${subjectLabel}, ${done ? "finished" : revisiting ? "finished, revisiting" : `${percent}% done`}. ${done ? "Review" : "Continue"}`}
       className="group flex w-full cursor-pointer items-center rounded-[14px] text-left transition-shadow hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-60"
       style={{
         background: STUDENT_COLORS.card,
@@ -110,12 +112,12 @@ export function RecentChapterRow({
       <span className="flex shrink-0 items-center" style={{ gap: 8 }}>
         {opening ? (
           <Loader2 size={18} className="animate-spin" style={{ color }} aria-hidden />
-        ) : done ? (
+        ) : done || revisiting ? (
           <span
             className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
             style={{ background: `${color}18`, color }}
           >
-            <Check size={12} strokeWidth={3} aria-hidden /> Done
+            <Check size={12} strokeWidth={3} aria-hidden /> {revisiting ? "Revisiting" : "Done"}
           </span>
         ) : (
           <span className="relative">

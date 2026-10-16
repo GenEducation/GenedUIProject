@@ -54,6 +54,8 @@ const EN = {
   stepsDone: "Steps done",
   /** The plan's own steps are all done and the learner is on a revisit step (`active_node.reason` "revisit_…"). */
   revisiting: "Revisiting skills",
+  /** The learner chose to go over a section again (`active_node.reason` "revisit_review"). */
+  reviewingSection: "Revisiting a section",
 } as const;
 
 export type UiKey = keyof typeof EN;

@@ -56,6 +56,8 @@ interface ContinueLearningCardProps {
   gradeLabel?: string;
   /** When it was last studied, e.g. "2h ago", after the eyebrow. */
   lastStudied?: string;
+  /** A chapter finished once and open again (reviewing sections, or started over). */
+  revisiting?: boolean;
   onStart: () => void;
   style?: React.CSSProperties;
 }
@@ -99,6 +101,7 @@ export function ContinueLearningCard({
   session,
   gradeLabel,
   lastStudied,
+  revisiting = false,
   onStart,
   style,
 }: ContinueLearningCardProps) {
@@ -176,7 +179,7 @@ export function ContinueLearningCard({
           }}
         >
           <History size={14} strokeWidth={2} aria-hidden />
-          <span>Pick up where you left off</span>
+          <span>{revisiting ? "Revisiting a finished chapter" : "Pick up where you left off"}</span>
           {lastStudied && (
             <span className="font-semibold normal-case tracking-normal" style={{ opacity: 0.75 }}>
               · {lastStudied}

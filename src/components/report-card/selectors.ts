@@ -43,6 +43,8 @@ export interface ChapterRowModel {
   answers: { answered: number; correct: number } | null;
   outcomes: { mastered: number; total: number } | null;
   skills: ChapterSkill[];
+  /** Completed and being gone over again: still Completed, with a "Revisiting" chip. */
+  revisiting: boolean;
 }
 
 export type ChapterSort = "order" | "mastery" | "recent";
@@ -92,6 +94,7 @@ export function chapterRows(data: ReportCardDataset, subject: string, sort: Chap
         ? { mastered: ch.outcomes.filter((o) => o.mastered).length, total: ch.outcomes.length }
         : null,
       skills: ch.skills ?? [],
+      revisiting: ch.revisiting === true,
     };
   });
 

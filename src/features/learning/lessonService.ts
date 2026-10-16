@@ -7,6 +7,8 @@ import type {
   InstanceState,
   PresentationManifest,
   RecordedTurn,
+  ReviewBody,
+  RevisitOptions,
   TeacherPayload,
   TurnInterruptOut,
   TurnRequest,
@@ -77,6 +79,14 @@ export const lessonService = {
     instanceId: string,
     body: { request_id: string; expected_revision: number; choice: "try_now" | "keep_going" },
   ): Promise<InstanceState> => (await authFetch(`${instancePath(instanceId)}/choice`, json(body))).json(),
+
+  /** Coming back to the chapter: every section's score, the weak ones, and where the learner would carry on. */
+  revisitOptions: async (instanceId: string): Promise<RevisitOptions> =>
+    (await authFetch(`${instancePath(instanceId)}/revisit-options`)).json(),
+
+  /** Replay the chosen sections then carry on where the learner was, or start over (the answer is the new instance). */
+  review: async (instanceId: string, body: ReviewBody): Promise<InstanceState> =>
+    (await authFetch(`${instancePath(instanceId)}/review`, json(body))).json(),
 
   report: async (instanceId: string): Promise<ChapterReport> =>
     (await authFetch(`${instancePath(instanceId)}/report`)).json(),
