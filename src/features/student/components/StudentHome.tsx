@@ -522,6 +522,7 @@ export function StudentHome() {
                     : undefined
                 }
                 lastStudied={timeAgo(continueRow.chapter.last_active_at)}
+                revisiting={continueRow.chapter.revisiting === true}
                 onStart={() => void openRecent(continueRow.chapter, continueRow.subject)}
                 style={fade(0.14)}
               />

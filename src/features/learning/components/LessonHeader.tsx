@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronRight, Flag, ListChecks, Timer, X } from "lucide-react";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { StudentAvatar } from "@/features/student/components/StudentAvatar";
-import { isRevisiting, useLessonStore } from "../useLessonStore";
+import { isReviewingSection, isRevisiting, useLessonStore } from "../useLessonStore";
 import { useUiText } from "../i18n";
 import { useChapterClock } from "../activity/useChapterTime";
 import { formatDuration } from "../useSessionTimer";
@@ -76,6 +76,7 @@ export function LessonHeader({
   const done = useLessonStore((s) => s.instance?.nodes_done ?? null);
   const total = useLessonStore((s) => s.instance?.nodes_total ?? null);
   const revisiting = useLessonStore((s) => isRevisiting(s.instance));
+  const reviewing = useLessonStore((s) => isReviewingSection(s.instance));
 
   return (
     <header
@@ -170,7 +171,7 @@ export function LessonHeader({
                 </span>
               }
               value={`${done}/${total}`}
-              label={revisiting ? t("revisiting") : t("stepsDone")}
+              label={revisiting ? t(reviewing ? "reviewingSection" : "revisiting") : t("stepsDone")}
             />
           </div>
         )}

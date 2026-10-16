@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
+import { chapterRows } from "../selectors";
 import { loadV1Report, type ReportBody } from "../v1Report";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
@@ -55,6 +56,20 @@ describe("the report card on the new backend", () => {
     expect([second.instance_id, second.answered, second.help, second.time_minutes]).toEqual([undefined, undefined, undefined, undefined]);
     // What the backend does not report stays empty, for the screen to show as coming soon.
     expect([d.testSubmissions, d.chapterEvolutions, d.subjectEvolutions, d.progressReport]).toEqual([[], [], [], null]);
+  });
+
+  it("keeps a finished chapter Completed while the student revisits it, and says so", async () => {
+    const revisited = { ...worked, status: "completed" as const, completion: 1, revisiting: true };
+    server.use(
+      http.get(`${BASE}/v1/learner/report`, () => HttpResponse.json({ ...body, chapters: [revisited, untouched] })),
+      http.get(`${BASE}/students/s-1/time/by-chapter`, () => HttpResponse.json([])),
+    );
+
+    const d = await loadV1Report({ role: "student", studentId: "s-1" });
+    const rows = chapterRows(d, "Mathematics");
+
+    expect(rows[0]).toMatchObject({ status: "Completed", coverage: 100, revisiting: true });
+    expect(rows[1].revisiting).toBe(false);
   });
 
   it("keeps nothing measured as no mastery, not a score: the card reads 'measured' from the skills", async () => {

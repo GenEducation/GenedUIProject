@@ -5,6 +5,9 @@ import type {
   InstanceState,
   PresentationManifest,
   RecordedTurn,
+  ReviewBody,
+  RevisitOptions,
+  RevisitSection,
   SequencedTurnEvent,
   TeacherPayload,
   TurnRequest,
@@ -153,6 +156,28 @@ const heldStreams: Array<() => void> = [];
 /** How many manifest reads have started (including failed ones). */
 let manifestAttempts = 0;
 
+/** Every review (or start over) the client asked for, oldest first. */
+export const reviewRequests: ReviewBody[] = [];
+/** The instance a start over creates. */
+export const FRESH_LESSON_ID = "22222222-0000-4000-8000-0000000000ff";
+/** What `revisit-options` answers; null: nothing weak (built from the instance). */
+let revisit: RevisitOptions | null = null;
+
+/** A SYNTHETIC section of the lesson, finished, with its score. */
+export const makeSection = (step: number, overrides: Partial<RevisitSection> = {}): RevisitSection => ({
+  instance_node_id: `77777777-0000-4000-8000-${String(step).padStart(12, "0")}`,
+  node_id: `88888888-0000-4000-8000-${String(step).padStart(12, "0")}`,
+  step,
+  title: `SYNTHETIC section ${step}`,
+  type: "practice",
+  status: "passed",
+  scored: 2,
+  correct: 2,
+  score: 1,
+  in_review: false,
+  ...overrides,
+});
+
 /** Every turn request the client sent, oldest first. */
 export const turnRequests: TurnRequest[] = [];
 export const answerRequests: AnswerBody[] = [];
@@ -210,6 +235,23 @@ export const lessonFixture = {
     activity.fail = false;
     resumeRequests.length = 0;
     stepRequests.length = 0;
+    reviewRequests.length = 0;
+    revisit = null;
+  },
+  /** What `revisit-options` answers (`weak` is worked out from `sections` unless given). */
+  setRevisitOptions: (options: Partial<RevisitOptions> & { sections: RevisitSection[] }) => {
+    const weak = options.sections.filter((s) => (s.status === "below_pass_mark" || s.status === "not_attempted") && !s.in_review);
+    revisit = {
+      instance_id: state.instance.id,
+      state: state.instance.state,
+      revision: state.instance.revision ?? 0,
+      weak,
+      resume: state.instance.state === "active"
+        ? { instance_node_id: NODE_1, step: options.sections.length + 1, title: "SYNTHETIC node 2", nodes_done: state.instance.nodes_done, nodes_total: state.instance.nodes_total }
+        : null,
+      review_in_progress: options.sections.some((s) => s.in_review),
+      ...options,
+    };
   },
   failNextDeliveries: (n: number) => void (deliveryFailures = n),
   /** Make `/responses` refuse an answer whose (session, item) was never confirmed, as the backend does in `required` mode. */
@@ -411,6 +453,45 @@ export const lessonHandlers = [
       return HttpResponse.json(state.instance);
     }),
   ),
+
+  http.get(`${BASE}/v1/instances/:instanceId/revisit-options`, ({ params }) => {
+    if (!ours(params.instanceId)) return undefined;
+    return HttpResponse.json(
+      revisit ?? {
+        instance_id: state.instance.id, state: state.instance.state, revision: state.instance.revision ?? 0,
+        sections: [], weak: [], resume: null, review_in_progress: false,
+      },
+    );
+  }),
+
+  http.post(`${BASE}/v1/instances/:instanceId/review`, async ({ request }) => {
+    const body = (await request.json()) as ReviewBody;
+    reviewRequests.push(body);
+    if (body.start_over) {
+      return HttpResponse.json(makeLessonInstance({ id: FRESH_LESSON_ID, nodes_done: 0, revision: 0 }));
+    }
+    // The first chosen section is now the active node, a replay of it; the plan's progress does not move.
+    const section = revisit?.sections.find((s) => s.instance_node_id === body.section_ids?.[0]);
+    state.instance = {
+      ...state.instance,
+      state: "active",
+      revision: (state.instance.revision ?? 0) + 1,
+      next_action: "answer_checks",
+      active_node: {
+        ...makeLessonInstance().active_node!,
+        instance_node_id: "99999999-0000-4000-8000-000000000001",
+        title: section?.title ?? "SYNTHETIC section",
+        reason: "revisit_review",
+      },
+    };
+    revisit = revisit && {
+      ...revisit,
+      sections: revisit.sections.map((s) => (body.section_ids?.includes(s.instance_node_id) ? { ...s, in_review: true } : s)),
+      weak: revisit.weak.filter((s) => !body.section_ids?.includes(s.instance_node_id)),
+      review_in_progress: true,
+    };
+    return HttpResponse.json(state.instance);
+  }),
 
   http.post(`${BASE}/v1/instances/:instanceId/hints`, ({ request }) => {
     forbiddenRequests.push(new URL(request.url).pathname);

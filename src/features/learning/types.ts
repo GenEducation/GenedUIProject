@@ -270,6 +270,47 @@ export interface AnswerResult {
   reading?: { item_id: string; original: string; suggestion: string } | null;
 }
 
+/**
+ * How the learner did on one section (canonical step) of the chapter, from its latest pass: the share of its questions
+ * right on the first try without help. 60% passes. `not_attempted`: finished with nothing answered; `not_reached`: not yet.
+ */
+export interface RevisitSection {
+  instance_node_id: string;
+  node_id: string;
+  /** 1-based, in plan order. */
+  step: number;
+  title: string;
+  type: "teach" | "practice" | "assess";
+  status: "passed" | "below_pass_mark" | "not_attempted" | "not_reached";
+  scored: number;
+  correct: number;
+  /** 0 to 1; null when nothing was answered. */
+  score: number | null;
+  /** A replay of this section is waiting or under way. */
+  in_review: boolean;
+}
+
+/** `GET /v1/instances/{id}/revisit-options`: what a learner coming back to the chapter can choose. */
+export interface RevisitOptions {
+  instance_id: string;
+  state: "active" | "completed" | "abandoned";
+  revision: number;
+  sections: RevisitSection[];
+  /** Below the pass mark or not attempted, in plan order (not counting one already being reviewed). */
+  weak: RevisitSection[];
+  /** Where the learner carries on; null on a completed chapter. */
+  resume: { instance_node_id: string; step: number; title: string; nodes_done: number; nodes_total: number } | null;
+  review_in_progress: boolean;
+}
+
+/** `POST /v1/instances/{id}/review`: replay `section_ids`, or `start_over` (which answers with the new instance). */
+export interface ReviewBody {
+  request_id: string;
+  expected_revision: number;
+  section_ids?: string[];
+  start_over?: boolean;
+}
+
 /** `GET /v1/instances/{id}/report`. */
 export interface ChapterReport {
   instance_id: string;

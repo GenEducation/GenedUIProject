@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { isRevisiting, useLessonStore } from "../useLessonStore";
+import { isReviewingSection, isRevisiting, useLessonStore } from "../useLessonStore";
 import { useUiText } from "../i18n";
 import type { NodeOutline } from "../types";
 
@@ -71,7 +71,9 @@ export function LessonProgressRail() {
     steps.push({ key: active.instance_node_id, label: active.title, state: "current" });
     nextNodes.forEach((n, i) => steps.push({ key: `next-${n.node_id}-${i}`, label: n.title, state: "todo" }));
     // The backend names only up to three upcoming steps; the rest are a count until it serves the full plan.
-    const more = Math.max(0, instance.nodes_total - instance.nodes_done - 1 - nextNodes.length);
+    // A section being reviewed is not one of the plan's remaining steps, so it is not taken off their count.
+    const current = isReviewingSection(instance) ? 0 : 1;
+    const more = Math.max(0, instance.nodes_total - instance.nodes_done - current - nextNodes.length);
     if (more > 0) steps.push({ key: "more", label: `${more} more ${more === 1 ? "step" : "steps"}`, state: "todo", quiet: true });
   }
 
@@ -150,7 +152,9 @@ export function LessonProgressRail() {
         {/* Every planned step can be done while revisit steps remain: the counts stay as they are, and this says why the
             lesson goes on. */}
         {isRevisiting(instance) && (
-          <p className="mt-1 text-[12px] font-semibold text-[var(--ls-primary)]">{t("revisiting")}</p>
+          <p className="mt-1 text-[12px] font-semibold text-[var(--ls-primary)]">
+            {t(isReviewingSection(instance) ? "reviewingSection" : "revisiting")}
+          </p>
         )}
       </div>
     </div>

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { learnerService } from "@/features/student/learner/learnerService";
 import { useFreshChapterCard } from "@/features/student/learner/useFreshChapterCard";
 import { paletteFor } from "@/features/student/learner/cardPalettes";
-import { isRevisiting, useLessonStore } from "../useLessonStore";
+import { isReviewingSection, isRevisiting, useLessonStore } from "../useLessonStore";
 import { useUiText } from "../i18n";
 import { LessonProgressRail } from "./LessonProgressRail";
 
@@ -28,6 +28,7 @@ function ChapterCard() {
   const done = useLessonStore((s) => s.instance?.nodes_done ?? 0);
   const total = useLessonStore((s) => s.instance?.nodes_total ?? 0);
   const revisiting = useLessonStore((s) => isRevisiting(s.instance));
+  const reviewing = useLessonStore((s) => isReviewingSection(s.instance));
   const t = useUiText();
   const pal = paletteFor(chapter?.palette);
 
@@ -64,7 +65,7 @@ function ChapterCard() {
               </div>
               {revisiting && (
                 <p className="mt-1 text-[11px] font-semibold" style={{ color: pal.ink }}>
-                  {t("revisiting")}
+                  {t(reviewing ? "reviewingSection" : "revisiting")}
                 </p>
               )}
             </div>

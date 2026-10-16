@@ -42,6 +42,10 @@ export interface RecentChapter {
   started_at: string;
   completed_at: string | null;
   last_active_at: string;
+  /** The learner has completed this chapter at least once (in any session). A completed chapter stays completed. */
+  completed_once?: boolean;
+  /** Completed once and open again: reviewing sections, or started over. */
+  revisiting?: boolean;
   /** `'<subject>:<n>'`: the card palette, for the gradient while there's no card. */
   palette: string;
   card: ChapterCard | null;
@@ -92,4 +96,6 @@ export interface InstanceState {
   /** Every answer, done or engagement names it as `expected_revision`; a stale one is a 409 (CORE_3103). */
   revision?: number;
   active_node?: ActiveNode | null;
+  /** When this session first completed. It stays set while the learner reviews sections of it, so it stays finished. */
+  first_completed_at?: string | null;
 }
