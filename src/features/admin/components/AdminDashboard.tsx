@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import * as Sentry from "@sentry/nextjs";
 import {
@@ -34,6 +35,8 @@ import { IngestionsView } from "./IngestionsView";
 import { WakeWordModelsView } from "./WakeWordModelsView";
 import { DevicesView } from "./DevicesView";
 import { DeviceDetailView } from "./DeviceDetailView";
+import { MAINTENANCE_COPY, isMaintenanceRoute } from "../maintenance";
+import { MaintenanceModal, MaintenancePanel } from "./MaintenanceNotice";
 
 interface NavItem {
   label: string;
@@ -61,6 +64,16 @@ export function AdminDashboard() {
   const router = useRouter();
   const pathname = usePathname();
 
+  // The gated nav entry whose notice is open, remembered together with the
+  // screen it was opened from. Deriving `open` from that pairing rather than
+  // clearing it in an effect means a browser Back closes the dialog for free:
+  // the pathname no longer matches, so it simply stops being open.
+  const [maintenanceFor, setMaintenanceFor] = useState<{
+    label: string;
+    atPath: string;
+  } | null>(null);
+  const maintenanceOpen = maintenanceFor?.atPath === pathname;
+
   const handleLogout = () => {
     Sentry.setUser(null);
     localStorage.removeItem("gened_auth_token");
@@ -76,6 +89,16 @@ export function AdminDashboard() {
   const isFullBleed = pathname === "/admin/analytics";
 
   const renderView = () => {
+    // FIRST, above everything. A gated screen must not mount, and that
+    // includes the nested device detail route below — which would otherwise
+    // fire its device calls at a backend we are deliberately leaving alone.
+    // This one check also covers typed URLs, browser history, and every
+    // in-app router.push into a gated route, so those call sites need no
+    // edits and the gate lifts by deleting these two lines.
+    if (isMaintenanceRoute(pathname)) {
+      return <MaintenancePanel onBack={() => router.push("/admin")} />;
+    }
+
     // Nested detail routes have to be matched before the exact-match switch,
     // which would otherwise drop them through to the default.
     if (pathname.startsWith("/admin/devices/")) {
@@ -128,12 +151,22 @@ export function AdminDashboard() {
             const active =
               pathname === item.href ||
               (item.href !== "/admin" && pathname.startsWith(item.href));
+            // Derived, never a field on NAV — a second list would be free to
+            // disagree with the one the view switch reads.
+            const gated = isMaintenanceRoute(item.href);
             const Icon = item.icon;
             return (
               <button aria-label={item.label}
                 key={item.href}
-                onClick={() => router.push(item.href)}
-                title={item.label}
+                onClick={
+                  gated
+                    ? () => setMaintenanceFor({ label: item.label, atPath: pathname })
+                    : () => router.push(item.href)
+                }
+                // aria-disabled, not disabled: a disabled button fires no
+                // click, and the whole point is that clicking explains itself.
+                aria-disabled={gated || undefined}
+                title={gated ? `${item.label} — ${MAINTENANCE_COPY.title}` : item.label}
                 aria-current={active ? "page" : undefined}
                 className={`flex w-full items-center justify-center lg:justify-start gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   active
@@ -170,6 +203,15 @@ export function AdminDashboard() {
           {renderView()}
         </div>
       </main>
+
+      {/* Rendered unconditionally with `open`, not behind `{state && …}`:
+          Modal lives inside AnimatePresence, which needs the element to stay
+          mounted to run its exit animation. */}
+      <MaintenanceModal
+        open={maintenanceOpen}
+        screenLabel={maintenanceFor?.label ?? null}
+        onClose={() => setMaintenanceFor(null)}
+      />
     </div>
   );
 }
