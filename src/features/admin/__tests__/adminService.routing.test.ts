@@ -103,31 +103,18 @@ describe("send call sites", () => {
 
 // The three that build their own URL. Each is checked separately because each
 // is a separate chance to have forgotten one.
-// The one call whose destination depends on the request BODY rather than the
-// path: the new backend refuses TEACHER until the schools port lands.
+// Every role now goes to the new backend: the TEACHER refusal that forced an
+// exception here was lifted by the identity port (b1273d8).
 describe("creating an account", () => {
-  it("sends a TEACHER create to the MVP even with accounts writes enabled", async () => {
-    const svc = await loadService(ACCOUNTS_WRITES);
-    const fetchMock = stubFetch({ user_id: "t1" });
-    await svc.createUser({
-      role: "TEACHER",
-      email: "t@test.invalid",
-      username: "t",
-      password: "x",
-      partner_id: "00000000-0000-0000-0000-000000000000",
-    });
-    expect(urlOf(fetchMock)).toBe(`${MVP}/admin/users`);
-  });
-
-  it("sends every other role to the new backend", async () => {
-    const svc = await loadService(ACCOUNTS_WRITES);
-    for (const role of ["STUDENT", "PARENT", "PARTNER"] as const) {
+  it.each(["STUDENT", "PARENT", "PARTNER", "TEACHER"] as const)(
+    "sends a %s create to the new backend",
+    async (role) => {
+      const svc = await loadService(ACCOUNTS_WRITES);
       const fetchMock = stubFetch({ user_id: "u1" });
       await svc.createUser({ role, email: `${role}@test.invalid`, username: role, password: "x" });
       expect(urlOf(fetchMock)).toBe(`${NEW}/admin/users`);
-      vi.unstubAllGlobals();
-    }
-  });
+    },
+  );
 });
 
 describe("the direct authFetch call sites", () => {

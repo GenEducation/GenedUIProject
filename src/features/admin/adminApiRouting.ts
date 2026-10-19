@@ -186,20 +186,6 @@ export function adminApiBase(pathWithQuery: string, method: AdminMethod): string
   return enabled.has(rule.group) ? NEW_BASE : MVP_BASE;
 }
 
-export interface AdminUrlOptions {
-  /**
-   * Force this call to the MVP whatever the group lists say.
-   *
-   * For the handful of calls the new backend cannot serve yet for reasons
-   * that live in the request BODY, not the path — today only creating a
-   * TEACHER account, which the backend refuses with ADMN_1101 until the
-   * schools port lands. Keeping it here rather than teaching the rule table
-   * to read bodies means the table stays about paths, and this exception is
-   * greppable and deletable in one place when the backend catches up.
-   */
-  forceMvp?: boolean;
-}
-
 /**
  * The absolute URL for an admin call. The only function service code needs.
  *
@@ -208,11 +194,6 @@ export interface AdminUrlOptions {
  * a superset of the write list — and could be sent to the new backend. Making
  * it required turns that into a compile error instead.
  */
-export function adminUrl(
-  pathWithQuery: string,
-  method: AdminMethod,
-  options: AdminUrlOptions = {},
-): string {
-  const base = options.forceMvp ? MVP_BASE : adminApiBase(pathWithQuery, method);
-  return `${base}${pathWithQuery}`;
+export function adminUrl(pathWithQuery: string, method: AdminMethod): string {
+  return `${adminApiBase(pathWithQuery, method)}${pathWithQuery}`;
 }

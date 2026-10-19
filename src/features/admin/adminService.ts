@@ -1,5 +1,5 @@
 import { ApiRequestError, authFetch } from "@/utils/authFetch";
-import { adminUrl, type AdminMethod, type AdminUrlOptions } from "./adminApiRouting";
+import { adminUrl, type AdminMethod } from "./adminApiRouting";
 import type { EducationBoard } from "@/types/education";
 import type {
   AdminDeviceDetail,
@@ -190,9 +190,8 @@ async function send<T>(
   path: string,
   method: Extract<AdminMethod, "POST" | "PATCH" | "DELETE">,
   body?: unknown,
-  options?: AdminUrlOptions,
 ): Promise<T> {
-  const res = await authFetch(adminUrl(path, method, options), {
+  const res = await authFetch(adminUrl(path, method), {
     method,
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
@@ -225,13 +224,7 @@ export function listUsers(params: ListUsersQuery = {}): Promise<PaginatedUsers> 
 export const getUser = (id: string) => getJson<Record<string, unknown>>(`/admin/users/${id}`);
 
 export const createUser = (payload: CreateUserPayload) =>
-  send<Record<string, unknown>>("/admin/users", "POST", payload, {
-    // The new backend refuses TEACHER with ADMN_1101 ("Teacher accounts
-    // cannot be created yet") until the schools port lands, so that one role
-    // keeps going to the MVP. Every other role follows the accounts group.
-    // Delete this once the backend accepts TEACHER.
-    forceMvp: payload.role === "TEACHER",
-  });
+  send<Record<string, unknown>>("/admin/users", "POST", payload);
 
 export const updateUser = (
   id: string,
