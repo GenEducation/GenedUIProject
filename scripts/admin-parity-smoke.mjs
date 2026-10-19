@@ -62,6 +62,8 @@
  *   FAIL  ERROR       a gateway could not be reached.
  */
 
+import { createHash } from "node:crypto";
+
 const REQUIRED = ["ADMIN_TOKEN", "MVP_BASE", "NEW_BASE"];
 const missing = REQUIRED.filter((k) => !process.env[k]);
 if (missing.length) {
@@ -114,17 +116,26 @@ const GROUPS = {
       {
         name: "import template (STUDENT)",
         path: "/admin/users/import/template?role=STUDENT",
-        kind: "text",
+        kind: "zip",
+        expect:
+          "the new template lists only the columns this import supports and drops the " +
+          "shared default password (backend tools/parity/bulk_import.py, \"the template\")",
       },
       {
         name: "import template (PARENT)",
         path: "/admin/users/import/template?role=PARENT",
-        kind: "text",
+        kind: "zip",
+        expect:
+          "the new template lists only the columns this import supports and drops the " +
+          "shared default password (backend tools/parity/bulk_import.py, \"the template\")",
       },
       {
         name: "import template (PARTNER)",
         path: "/admin/users/import/template?role=PARTNER",
-        kind: "text",
+        kind: "zip",
+        expect:
+          "the new template lists only the columns this import supports and drops the " +
+          "shared default password (backend tools/parity/bulk_import.py, \"the template\")",
       },
     ],
     follow: [
@@ -209,6 +220,19 @@ async function get(base, path, kind) {
       redirect: "manual",
       signal: controller.signal,
     });
+    if (kind === "zip") {
+      // The import templates are .xlsx, i.e. ZIP archives that embed a
+      // creation timestamp in every entry header. Raw bytes therefore always
+      // differ between two servers and say nothing. Zeroing the DOS
+      // date/time fields makes the comparison about the CONTENT again -- a
+      // changed column set still shows up, a different generation moment
+      // does not.
+      const bytes = Buffer.from(await res.arrayBuffer());
+      return {
+        status: res.status,
+        body: { bytes: bytes.length, sha256: zipFingerprint(bytes) },
+      };
+    }
     const raw = await res.text();
     if (kind === "text") return { status: res.status, body: raw };
     try {
@@ -221,6 +245,18 @@ async function get(base, path, kind) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** sha256 of a ZIP with every entry's mod-time/date zeroed. */
+function zipFingerprint(buf) {
+  const copy = Buffer.from(buf);
+  for (let i = 0; i + 4 <= copy.length; i++) {
+    const sig = copy.readUInt32LE(i);
+    // local file header: time/date at +10; central directory: at +12
+    if (sig === 0x04034b50) copy.writeUInt32LE(0, i + 10);
+    else if (sig === 0x02014b50) copy.writeUInt32LE(0, i + 12);
+  }
+  return createHash("sha256").update(copy).digest("hex").slice(0, 16);
 }
 
 // ── Comparing ──────────────────────────────────────────────────
@@ -260,6 +296,35 @@ function key(row) {
 }
 
 const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Drop keys that exist on only ONE side and are null there.
+ *
+ * The new backend returns fields the MVP never had (`preferred_language`,
+ * `tutor_voice`). While they are null they carry no information and the UI
+ * cannot show them, so reporting them would bury real differences in noise.
+ * Deliberately narrow: a new-only field with an actual VALUE is still
+ * reported, because that is a behaviour change worth seeing.
+ */
+function reconcileNewOnlyNulls(a, b) {
+  if (Array.isArray(a) && Array.isArray(b) && a.length === b.length) {
+    const pairs = a.map((x, i) => reconcileNewOnlyNulls(x, b[i]));
+    return [pairs.map((p) => p[0]), pairs.map((p) => p[1])];
+  }
+  if (a && b && typeof a === "object" && typeof b === "object") {
+    const ra = {};
+    const rb = {};
+    for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+      if (!(k in a) && b[k] === null) continue;
+      if (!(k in b) && a[k] === null) continue;
+      const [x, y] = reconcileNewOnlyNulls(a[k], b[k]);
+      if (k in a) ra[k] = x;
+      if (k in b) rb[k] = y;
+    }
+    return [ra, rb];
+  }
+  return [a, b];
+}
 
 /** Up to `limit` JSON paths where the two bodies disagree. */
 function diffPaths(a, b, prefix = "", out = [], limit = 12) {
@@ -302,6 +367,12 @@ function show(v) {
 
 // ── Running ────────────────────────────────────────────────────
 
+/**
+ * A check carrying `expect` is one the backend changed ON PURPOSE. It must
+ * differ -- and if it ever stops differing, that is reported too, because a
+ * deliberate change that quietly got reverted is exactly what this catches.
+ * Same semantics as EXPECTED in backend/tools/parity/_common.py.
+ */
 async function runCheck(check) {
   const [mvp, nw] = await Promise.all([
     get(MVP_BASE, check.path, check.kind),
@@ -329,12 +400,19 @@ async function runCheck(check) {
     };
   }
 
-  const a = normalise(mvp.body);
-  const b = normalise(nw.body);
+  const [a, b] = reconcileNewOnlyNulls(normalise(mvp.body), normalise(nw.body));
 
   // Two matching failures are not parity. An expired token (401 on both) or a
   // route neither side serves would otherwise be counted as a pass, and a gate
   // signed off on "9/9 matched" that was really nine 401s.
+  if (check.expect && eq(a, b)) {
+    return {
+      verdict: "DIFFERS",
+      note: `expected to differ but matched -- was the change reverted? (${check.expect})`,
+      paths: [],
+    };
+  }
+
   if (mvp.status >= 400 && eq(a, b)) {
     return {
       verdict: "NO EVIDENCE",
@@ -344,6 +422,10 @@ async function runCheck(check) {
   }
 
   if (eq(a, b)) return { verdict: "same", note: `${mvp.status}`, paths: [] };
+
+  if (check.expect) {
+    return { verdict: "differs as intended", note: check.expect, paths: [] };
+  }
 
   if (eq(sortUnordered(a), sortUnordered(b))) {
     return {
@@ -361,6 +443,7 @@ const TAGS = {
   "order only": "WARN",
   "MVP ONLY": "TODO",
   "NO EVIDENCE": "TODO",
+  "differs as intended": "OK  ",
   DIFFERS: "FAIL",
   ERROR: "FAIL",
 };
@@ -380,6 +463,7 @@ async function main() {
     "order only": 0,
     "MVP ONLY": 0,
     "NO EVIDENCE": 0,
+    "differs as intended": 0,
     DIFFERS: 0,
     ERROR: 0,
   };
@@ -419,6 +503,8 @@ async function main() {
 
   const total = Object.values(tally).reduce((a, b) => a + b, 0);
   const parts = [`${tally.same}/${total} matched`];
+  if (tally["differs as intended"])
+    parts.push(`${tally["differs as intended"]} differ as intended`);
   if (tally["order only"]) parts.push(`${tally["order only"]} order-only`);
   if (tally["MVP ONLY"]) parts.push(`${tally["MVP ONLY"]} not served by the new gateway`);
   if (tally["NO EVIDENCE"]) parts.push(`${tally["NO EVIDENCE"]} failed on both sides`);
