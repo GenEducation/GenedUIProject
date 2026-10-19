@@ -1,4 +1,5 @@
 import { ApiRequestError, authFetch } from "@/utils/authFetch";
+import { adminUrl, type AdminMethod } from "./adminApiRouting";
 import type { EducationBoard } from "@/types/education";
 import type {
   AdminDeviceDetail,
@@ -15,7 +16,8 @@ import type {
 } from "./devices/types";
 import type { DeviceReport } from "./devices/reportTypes";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+// Where each call goes is adminApiRouting's decision, not this module's --
+// see that file for the group table and why the default is always the MVP.
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -180,16 +182,16 @@ export type CreateUserPayload =
 // ── Helpers ────────────────────────────────────────────────────
 
 async function getJson<T>(path: string): Promise<T> {
-  const res = await authFetch(`${API_BASE_URL}${path}`);
+  const res = await authFetch(adminUrl(path, "GET"));
   return res.json();
 }
 
 async function send<T>(
   path: string,
-  method: "POST" | "PATCH" | "DELETE",
+  method: Extract<AdminMethod, "POST" | "PATCH" | "DELETE">,
   body?: unknown,
 ): Promise<T> {
-  const res = await authFetch(`${API_BASE_URL}${path}`, {
+  const res = await authFetch(adminUrl(path, method), {
     method,
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
@@ -342,7 +344,9 @@ export const getWakewordReport = (jobId: string) =>
 
 /** Download a trained ONNX (authed → blob → save). */
 export async function downloadWakewordModel(jobId: string, modelName: string): Promise<void> {
-  const res = await authFetch(`${API_BASE_URL}/admin/wakeword-models/${jobId}/download`);
+  const res = await authFetch(
+    adminUrl(`/admin/wakeword-models/${jobId}/download`, "GET"),
+  );
   if (!res.ok) throw new Error("Failed to download model");
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
@@ -584,8 +588,10 @@ export interface ImportContext {
 
 /** Download the per-role template (authed → fetch as blob, then save). */
 export async function downloadImportTemplate(role: ImportRole): Promise<void> {
+  // Routed by the WRITE rule despite being a GET, so the template and the
+  // upload that consumes it always come from the same backend.
   const res = await authFetch(
-    `${API_BASE_URL}/admin/users/import/template?role=${encodeURIComponent(role)}`,
+    adminUrl(`/admin/users/import/template?role=${encodeURIComponent(role)}`, "GET"),
   );
   if (!res.ok) throw new Error("Failed to download template");
   const blob = await res.blob();
@@ -618,7 +624,7 @@ export async function importUsers(
   }
   const form = new FormData();
   form.append("file", file);
-  const res = await authFetch(`${API_BASE_URL}/admin/users/import?${qs.toString()}`, {
+  const res = await authFetch(adminUrl(`/admin/users/import?${qs.toString()}`, "POST"), {
     method: "POST",
     body: form,
   });

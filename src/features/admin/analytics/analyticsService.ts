@@ -1,4 +1,5 @@
 import { authFetch } from "@/utils/authFetch";
+import { adminUrl } from "../adminApiRouting";
 
 import type {
   DiagnosticRow,
@@ -10,11 +11,12 @@ import type {
   PanelName,
 } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+// BASE is a path fragment, not an origin: every endpoint below hangs off it,
+// so they all land in adminApiRouting's "analytics" group together.
 const BASE = "/admin/analytics";
 
 async function getJson<T>(path: string): Promise<T> {
-  const res = await authFetch(`${API_BASE_URL}${path}`);
+  const res = await authFetch(adminUrl(path, "GET"));
   return res.json() as Promise<T>;
 }
 
