@@ -119,6 +119,24 @@ describe("authService — request shaping", () => {
     expect(body).toEqual({ token: "gtoken", role: "STUDENT", grade: 8 });
   });
 
+  it("signUp (student) passes age and partner_id; never sends fields the strict backend refuses", async () => {
+    const fetchMock = stubFetchOk();
+    await signUp({
+      role: "student", username: "riya_7", email: "", password: "Mangoes7",
+      parent_email: "mum@example.com", grade: "6", age: "11", partner_id: "c2a1",
+    });
+    const { body } = firstCall(fetchMock);
+    expect(body).toMatchObject({ age: 11, partner_id: "c2a1", grade: 6 });
+    expect(body).not.toHaveProperty("school_board");
+  });
+
+  it("googleSignUp drops username (422 on the strict backend) and passes age/partner_id", async () => {
+    const fetchMock = stubFetchOk();
+    await googleSignUp("gtoken", { role: "student", username: "riya_7", grade: "6", age: "11", partner_id: "c2a1" });
+    const { body } = firstCall(fetchMock);
+    expect(body).toEqual({ token: "gtoken", role: "STUDENT", grade: 6, age: 11, partner_id: "c2a1" });
+  });
+
   it("sendOtp and requestPasswordReset post {email}", async () => {
     const otpMock = stubFetchOk();
     await sendOtp("a@x.com");

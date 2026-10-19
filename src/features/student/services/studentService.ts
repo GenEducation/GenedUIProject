@@ -26,7 +26,6 @@ export interface AvailableAgent {
 export interface AvailableAgentSubject {
   subject?: string;
   agents?: AvailableAgent[];
-  is_onboarding_complete?: boolean;
   subject_coverage_percentage?: number;
 }
 
@@ -92,6 +91,23 @@ export type ComprehensionInteractionType =
   | "retell"
   | "free_response";
 
+export type PartnerAssociationStatus = "NOT_REQUESTED" | "PENDING" | "APPROVED" | "REJECTED" | "REVOKED";
+
+/** A row of `GET /partners`. */
+export interface PartnerSummary {
+  id: string;
+  organization: string;
+}
+
+/** A row of `GET /student/partners`; `is_effective` marks the one APPROVED school. */
+export interface StudentPartnerRow {
+  partner_id: string;
+  organization: string;
+  board: string | null;
+  association_status: PartnerAssociationStatus;
+  is_effective: boolean;
+}
+
 export const studentService = {
   fetchAvailableTeachers: async () => {
     const response = await authFetch(`${API_BASE_URL}/student/available-teachers`);
@@ -107,6 +123,11 @@ export const studentService = {
     return response.json();
   },
 
+  /**
+   * @deprecated `/get-session` (the old tutor chat) is not served by the new
+   * backend; it is replaced by the lesson routes. A 404 already yields an empty
+   * list, so the old chat screens degrade to "no history" until they're removed.
+   */
   fetchSessions: async (userId: string) => {
     try {
       const response = await authFetch(`${API_BASE_URL}/get-session`, {
@@ -152,28 +173,21 @@ export const studentService = {
     return response.json();
   },
 
-  fetchAvailablePartners: async () => {
+  /** GET /partners: every school, GenEd included (a picker). */
+  fetchAvailablePartners: async (): Promise<PartnerSummary[]> => {
     const response = await authFetch(`${API_BASE_URL}/partners`);
     return response.json();
   },
 
-  fetchStudentPartners: async (userId: string) => {
-    const response = await authFetch(`${API_BASE_URL}/student/partners?student_id=${userId}`);
+  /** GET /student/partners: every real school (GenEd excluded) with this student's request status. */
+  fetchStudentPartners: async (userId: string): Promise<StudentPartnerRow[]> => {
+    const response = await authFetch(`${API_BASE_URL}/student/partners?student_id=${encodeURIComponent(userId)}`);
     return response.json();
   },
 
-  fetchEnrolledPartners: async (userId: string) => {
-    const response = await authFetch(`${API_BASE_URL}/api/students/${userId}/available-agents`);
-    return response.json();
-  },
-
-  fetchOnboardingStatus: async (studentId: string) => {
-    const response = await authFetch(`${API_BASE_URL}/api/onboarding/subject/status/${studentId}`);
-    return response.json();
-  },
-
-  sendPartnerRequest: async (userId: string, partnerId: string) => {
-    const url = `${API_BASE_URL}/student/partner?student_id=${userId}&partner_id=${partnerId}`;
+  /** POST /student/partner: "Partner request sent" (PENDING) or "Partner added successfully" (GenEd). */
+  sendPartnerRequest: async (userId: string, partnerId: string): Promise<{ message: string }> => {
+    const url = `${API_BASE_URL}/student/partner?student_id=${encodeURIComponent(userId)}&partner_id=${encodeURIComponent(partnerId)}`;
     const response = await authFetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "accept": "application/json" }
@@ -412,15 +426,6 @@ export const studentService = {
       chapter_name: chapterName,
     });
     const response = await authFetch(`${API_BASE_URL}/rag/api/ncert/pdf-url?${params}`);
-    return response.json();
-  },
-
-  fetchPartnerIngestionPdfUrl: async (
-    ingestionBatchId: string
-  ): Promise<{ pdf_url: string; chapter_name: string; grade: number; subject: string; ttl_seconds: number }> => {
-    const response = await authFetch(
-      `${API_BASE_URL}/rag/api/partner/ingestions/${encodeURIComponent(ingestionBatchId)}/pdf-url`
-    );
     return response.json();
   },
 

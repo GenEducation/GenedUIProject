@@ -1,0 +1,20 @@
+/** SYNTHETIC: the shape of a real ingestion review report, with placeholder content. */
+export const SYNTHETIC_REPORT = [
+  "# Ingestion review: synthetic-source",
+  "",
+  "Source: SYNTHETIC Book, chapter 6 \"SYNTHETIC chapter\"",
+  "",
+  "## Counts",
+  "- sections 4, chunks 185, figure groups 35, crops 41",
+  "- components 8 (unassessable 5)",
+  "- items 14 (keys computed from printed numbers 4, number-changed variants 8), skipped questions 0",
+  "- nodes 15 (plan 10, retry nodes 5)",
+  "",
+  "## Validation",
+  "- VIOLATION plan_lo_uncovered plans[6]: G6-MATH-LO1.2.1 has no node via component_of",
+  ...Array.from({ length: 3 }, (_, i) => `- VIOLATION figure_group_unresolved 0000000${i}-synthetic: teaching group has no confirmed component link`),
+  "- VIOLATION node_checks nodes[2]: SYNTHETIC structural detail",
+  "",
+  "## Components",
+  "- [novel] `6.1:abc` SYNTHETIC concept",
+].join("\n");

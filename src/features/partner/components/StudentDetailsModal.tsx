@@ -4,18 +4,6 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { X, Check, Loader2, User, Mail, BookOpen, School, Calendar, Clock } from "lucide-react";
 
-interface StudentProfile {
-  id: string;
-  username: string;
-  email: string;
-  age: string | number;
-  grade: string | number;
-  school_board: string;
-  status: "APPROVED" | "PENDING";
-  requested_at: string;
-  updated_at?: string;
-}
-
 interface StudentDetailsModalProps {
   studentId: string;
   studentName: string;
@@ -26,19 +14,9 @@ interface StudentDetailsModalProps {
   onReject: (studentId: string) => Promise<void>;
 }
 
-import { authFetch } from "@/utils/authFetch";
 import { usePartnerStore } from "@/features/partner/store/usePartnerStore";
+import { partnerStudentsService, type PartnerStudentProfile } from "@/features/partner/services/partnerStudentsService";
 import { Button } from "@/components/ui/Button";
-
-const CORE_API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
-if (!CORE_API_URL) {
-  // In a component we can't easily throw at top level without crashing the whole app render 
-  // but since we already throw in services/stores, this is just for local consistency.
-  // Actually, we'll keep it consistent with the other files.
-  throw new Error("NEXT_PUBLIC_CORE_API_URL is required. Set it in your .env.local file.");
-}
-
-const getBaseUrl = () => CORE_API_URL;
 
 const formatDate = (iso: string) => {
   try {
@@ -60,7 +38,7 @@ export function StudentDetailsModal({
   onAccept,
   onReject,
 }: StudentDetailsModalProps) {
-  const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [profile, setProfile] = useState<PartnerStudentProfile | null>(null);
   const [isFetching, setIsFetching] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -92,13 +70,12 @@ export function StudentDetailsModal({
       return;
     }
 
-    authFetch(`${getBaseUrl()}/partner/students/${studentId}?partner_id=${partnerId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load student profile");
-        return res.json();
-      })
-      .then((data: StudentProfile) => {
-        setProfile(data);
+    partnerStudentsService
+      .profile(partnerId, studentId)
+      .then((data) => {
+        // The backend answers null when the student is no longer linked to this school.
+        if (data === null) setFetchError("This student is no longer linked to your school.");
+        else setProfile(data);
         setIsFetching(false);
       })
       .catch((error) => {
@@ -189,9 +166,9 @@ export function StudentDetailsModal({
               <div className="space-y-3">
                 {[
                   { icon: <Mail size={14} />, label: "Email", value: profile.email },
-                  { icon: <User size={14} />, label: "Age", value: String(profile.age) },
+                  { icon: <User size={14} />, label: "Age", value: profile.age == null ? "—" : String(profile.age) },
                   { icon: <BookOpen size={14} />, label: "Grade", value: `Grade ${profile.grade}` },
-                  { icon: <School size={14} />, label: "Board", value: profile.school_board },
+                  { icon: <School size={14} />, label: "Board", value: profile.school_board ?? "—" },
                   { icon: <Calendar size={14} />, label: "Requested", value: formatDate(profile.requested_at) },
                   // updated_at only for APPROVED students
                   ...(profile.status === "APPROVED" && profile.updated_at

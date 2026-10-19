@@ -1,3 +1,5 @@
+import { apiErrorFromResponse } from "./apiError";
+
 export interface ApiError {
   status: number;
   error_code: string;
@@ -147,22 +149,7 @@ export async function authFetch(
       });
     }
 
-    let body: ApiErrorBody = {};
-    try {
-      body = await response.json();
-    } catch {
-      // Non-JSON response — fall back to generic error
-    }
-
-    throw new ApiRequestError({
-      status: response.status,
-      error_code: body.error_code || `HTTP_${response.status}`,
-      message: body.message || `Request failed with status ${response.status}`,
-      request_id: body.request_id || requestId,
-      retryable: body.retryable ?? false,
-      retry_after: body.retry_after,
-      details: body.details || {},
-    });
+    throw await apiErrorFromResponse(response);
   }
 
   return response;

@@ -11,10 +11,21 @@ import { useParentStore } from "@/features/parent/store/useParentStore";
 import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { campaignLabel } from "@/constants/campaign";
 import "./landing.css";
+import { useHydrated } from "@/hooks/useHydrated";
+import { ParentLoaderBackdrop } from "@/features/parent/components/loader/ParentLoader";
+
+function storedRole(): string | null {
+  try {
+    return localStorage.getItem("gened_user_role");
+  } catch {
+    return null;
+  }
+}
 
 export default function HomePage() {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
+  const hydrated = useHydrated();
   const [showVideo, setShowVideo] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -104,6 +115,7 @@ export default function HomePage() {
               username: profile.username || "",
               email: profile.email || "",
               role: profile.role || "parent",
+              name: profile.name || profile.full_name || undefined,
             });
           } else if (role === "teacher") {
             useTeacherStore.getState().setTeacherProfile({
@@ -141,6 +153,7 @@ export default function HomePage() {
             username: profile.username || "",
             email: profile.email || "",
             role: profile.role || "parent",
+            name: profile.name || profile.full_name || undefined,
           });
         } else if (role === "teacher") {
           useTeacherStore.getState().setTeacherProfile({
@@ -166,6 +179,15 @@ export default function HomePage() {
   }, [router]);
 
   if (isChecking) {
+    // A returning parent is on their way into the portal: show the parent
+    // loader's atmosphere so the hand-over to it is seamless.
+    if (hydrated && storedRole() === "parent") {
+      return (
+        <div className="relative h-screen w-full">
+          <ParentLoaderBackdrop />
+        </div>
+      );
+    }
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#F7F6F1]">
         <div className="flex flex-col items-center gap-4">

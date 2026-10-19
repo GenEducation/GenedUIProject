@@ -7,6 +7,7 @@ import { AuthShell } from "@/features/auth/components/AuthShell";
 import { requestPasswordReset, resetPassword } from "@/features/auth/authService";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
+import { passwordRuleError } from "@/features/auth/passwordRule";
 
 export default function ForgotPasswordPage() {
   const [step, setStep] = useState(1);
@@ -38,7 +39,8 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     if (!otpCode || !newPassword || !confirmPassword) return;
     if (newPassword !== confirmPassword) { setError("Passwords do not match"); return; }
-    if (newPassword.length < 6) { setError("Password must be at least 6 characters"); return; }
+    const ruleError = passwordRuleError(newPassword);
+    if (ruleError) { setError(ruleError); return; }
     setIsSubmitting(true);
     setError(null);
     try {

@@ -10,6 +10,15 @@ interface NotificationState {
   notifications: Notification[];
   unreadCount: number;
   isLoading: boolean;
+  /**
+   * True once a fetch has actually returned.
+   *
+   * `unreadCount` starts at 0, which is indistinguishable from a genuine zero,
+   * so anything watching the count *rise* cannot tell the first load from a
+   * new arrival without this. The desk buddy uses it to avoid acting startled
+   * every time the app opens.
+   */
+  hasFetched: boolean;
   error: string | null;
   
   fetchNotifications: (userId: string) => Promise<void>;
@@ -24,6 +33,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
   isLoading: false,
+  hasFetched: false,
   error: null,
 
   fetchNotifications: async (userId: string) => {
@@ -34,7 +44,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       set({
         notifications,
         unreadCount: notifications.filter(n => !n.is_read).length,
-        isLoading: false
+        isLoading: false,
+        hasFetched: true
       });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
