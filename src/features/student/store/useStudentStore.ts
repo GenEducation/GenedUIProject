@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { FEATURES } from "@/constants/features";
 import * as Sentry from "@sentry/nextjs";
 import {
   studentService,
@@ -6,6 +7,7 @@ import {
   type ComprehensionInteractionType,
   type ConversationActionType,
   type SessionRow,
+  type PartnerAssociationStatus,
 } from "../services/studentService";
 import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import {
@@ -16,6 +18,7 @@ import {
 } from "../utils/parseContent";
 import type { GeoGebraAppletParameters } from "@/utils/geogebraLoader";
 import { voiceService, type VoiceEvent } from "../services/voiceService";
+import { usePetStore } from "./usePetStore";
 import { appendStreamedText } from "../utils/voiceStreamMerge";
 import {
   isCompatibleVoiceSessionId,
@@ -29,6 +32,7 @@ import {
   type ExactSubject,
 } from "@/features/subjects/subjectCatalog";
 import { asError } from "@/utils/errors";
+import { isStudentAvatarId, type StudentAvatarId } from "@/constants/studentAvatars";
 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
@@ -130,6 +134,13 @@ export interface ActivityAction {
   words?: string[];
 }
 
+/**
+ * Debugging only: pet reactions that arrived before the voice reply they
+ * belong to (the backend now sends the reaction first). Drained onto the next
+ * tutor message. See ChatMessage.debugPetEmotions.
+ */
+const pendingPetDebug: { emotion: string; cause: string }[] = [];
+
 export interface ChatMessage {
   id: string;
   text: string;
@@ -153,6 +164,11 @@ export interface ChatMessage {
   toolStatus?: string;
   phase?: string;
   actions?: ActivityAction[];
+  // Debugging the pet-emotion leak reports: every backend `pet_emotion` frame
+  // that arrived while this turn was the active one, in order. Not shown in
+  // the normal chat UI — VoiceTranscript surfaces it, bracketed, next to the
+  // reply it came with. Remove once debugged.
+  debugPetEmotions?: { emotion: string; cause: string }[];
 }
 
 /** The tutor's active read-aloud / karaoke directive. */
@@ -275,7 +291,6 @@ export interface AgentItem {
   name: string;
   subject: ExactSubject;
   grade: number;
-  is_onboarding_complete?: boolean;
   subject_coverage_percentage?: number;
   document_titles?: string[];
 }
@@ -284,8 +299,8 @@ export interface PartnerItem {
   id: string;
   partner_id?: string;
   organization: string;
-  board?: string;
-  association_status?: "NOT_REQUESTED" | "PENDING" | "APPROVED" | "REJECTED" | "REVOKED";
+  board?: string | null;
+  association_status?: PartnerAssociationStatus;
   is_effective?: boolean;
 }
 
@@ -335,16 +350,6 @@ const manageCacheEviction = (cache: Record<string, ChatMessage[]>, newSessionId:
 
 // -- Store interface ----------------------------------------------------------─
 
-export interface OnboardingSubject {
-  subject: string;
-  status: "PENDING" | "COMPLETED";
-}
-
-export interface OnboardingStatus {
-  board: string;
-  subjects: OnboardingSubject[];
-}
-
 export interface StudentState {
   studentProfile: StudentProfile | null;
   recentChats: ChatSession[];
@@ -387,8 +392,6 @@ export interface StudentState {
   isRateLimitHit: boolean;
   rateLimitMessage: string | null;
   activeActivity: ActivityAction | null;
-  onboardingStatus: OnboardingStatus | null;
-  isOnboardingLoading: boolean;
   studentStats: { currentStreak: number; longestStreak: number; totalSessions: number } | null;
   isStatsLoading: boolean;
   sessionMode: "chat" | "voice" | null;
@@ -439,7 +442,6 @@ export interface StudentState {
   fetchAvailablePartners: () => Promise<void>;
   fetchEnrolledPartners: () => Promise<void>;
   fetchChatHistory: (sessionId: string) => Promise<void>;
-  fetchOnboardingStatus: () => Promise<void>;
   refreshAvailableAgents: () => Promise<void>;
   openExistingChat: (chat: ChatSession) => void;
   openChatById: (sessionId: string, agentId?: string) => Promise<void>;
@@ -506,14 +508,31 @@ export interface StudentState {
 
 // -- Store --------------------------------------------------------------------─
 
-export type AvatarId = "graduate-boy" | "graduate-girl";
+/**
+ * Which of the two profile illustrations the student picked.
+ *
+ * This is their *profile picture* — who they are, on the sidebar chip, the
+ * chat header and the profile hero. Deliberately separate from the desk
+ * buddy's appearance, which lives in `usePetStore`: a companion and an
+ * identity are different things, and collapsing them made the profile feel
+ * like a toy.
+ */
+export type AvatarId = StudentAvatarId;
+
+const DEFAULT_AVATAR_ID: AvatarId = "boy_01_green_hoodie";
 
 const getInitialAvatarId = (): AvatarId => {
   if (typeof window === "undefined") {
-    return "graduate-boy";
+    return DEFAULT_AVATAR_ID;
   }
-  const saved = localStorage.getItem("gened_avatar_id");
-  return saved === "graduate-girl" ? "graduate-girl" : "graduate-boy";
+  try {
+    const saved = localStorage.getItem("gened_avatar_id");
+    if (isStudentAvatarId(saved)) return saved;
+    // Choices saved before the illustrated set replaced the two graduates.
+    return saved === "graduate-girl" ? "girl_01_yellow_hoodie" : DEFAULT_AVATAR_ID;
+  } catch {
+    return DEFAULT_AVATAR_ID;
+  }
 };
 
 const getInitialVoicePrefs = () => {
@@ -567,8 +586,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   hasFetchedAgents: false,
   isMuted: false,
   rateLimitMessage: null,
-  onboardingStatus: null,
-  isOnboardingLoading: false,
   studentStats: null,
   isStatsLoading: false,
   sessionMode: null,
@@ -604,6 +621,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     localStorage.removeItem("gened_auth_token");
     localStorage.removeItem("gened_user_profile");
     localStorage.removeItem("gened_partner_id");
+    localStorage.removeItem("gened_avatar_id");
     set({
       studentProfile: null,
       activeChat: null,
@@ -619,7 +637,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       hasFetchedAgents: false,
       sessionMode: null,
       pttHeld: false,
-      onboardingStatus: null,
       isRateLimitHit: false,
       rateLimitMessage: null,
       comprehensionResults: {},
@@ -653,24 +670,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     });
   },
 
-  fetchOnboardingStatus: async () => {
-    const { studentProfile, isOnboardingLoading } = get();
-    if (!studentProfile || isOnboardingLoading) return;
-
-    set({ isOnboardingLoading: true });
-    try {
-      const status = await studentService.fetchOnboardingStatus(studentProfile.user_id);
-      set({ onboardingStatus: status });
-    } catch (error) {
-      console.error("Failed to fetch onboarding status:", asError(error).request_id, asError(error).message ?? error);
-    } finally {
-      set({ isOnboardingLoading: false });
-    }
-  },
-
   fetchStudentStats: async () => {
     const { studentProfile, isStatsLoading } = get();
-    if (!studentProfile || isStatsLoading) return;
+    if (!FEATURES.streak || !studentProfile || isStatsLoading) return;
 
     set({ isStatsLoading: true });
     try {
@@ -807,7 +809,6 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
                       ...agent,
                       grade,
                       subject: exactSubject,
-                      is_onboarding_complete: subject.is_onboarding_complete,
                       subject_coverage_percentage:
                         typeof subject.subject_coverage_percentage === "number"
                           ? subject.subject_coverage_percentage
@@ -840,18 +841,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     await get().fetchAvailableAgents();
   },
 
+  // `/student/partners` already lists every real school with this student's
+  // status, which is exactly what the "Connect to a school" list needs; the
+  // global `/partners` would also offer the GenEd placeholder.
   fetchAvailablePartners: async () => {
-    const { studentProfile } = get();
-    if (!studentProfile) return;
-    try {
-      const data: PartnerItem[] = await studentService.fetchStudentPartners(studentProfile.user_id);
-      set({
-        availablePartners: data,
-        enrolledPartners: data.filter((partner) => partner.is_effective),
-      });
-    } catch (error) {
-      console.error("Fetch Partners Error:", asError(error).request_id, asError(error).message ?? error);
-    }
+    await get().fetchEnrolledPartners();
   },
 
   fetchEnrolledPartners: async () => {
@@ -860,7 +854,9 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
     set({ isEnrolledPartnersLoading: true });
     try {
-      const data: PartnerItem[] = await studentService.fetchStudentPartners(studentProfile.user_id);
+      // GET /student/partners?student_id= — every real school, with this student's status.
+      const rows = await studentService.fetchStudentPartners(studentProfile.user_id);
+      const data: PartnerItem[] = rows.map((row) => ({ ...row, id: row.partner_id }));
       set({
         availablePartners: data,
         enrolledPartners: data.filter((partner) => partner.is_effective),
@@ -894,18 +890,15 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         studentProfile.user_id,
         partnerId,
       );
-      const message =
-        data.message ||
-        data.organization ||
-        "Successfully enrolled in partner module.";
+      const message = data.message || "Successfully enrolled in partner module.";
 
       set({
         partnerRequestStatus: "success",
         partnerRequestMessage: String(message),
       });
 
-      // Refresh the enrolled partners list so the UI reflects the new connection
-      await get().fetchAvailablePartners();
+      // Refresh the list so the dropdown marks the school "Request pending".
+      await get().fetchEnrolledPartners();
     } catch (error) {
       console.error("Partner Request Error:", asError(error).request_id, asError(error).message ?? error);
       set({
@@ -1417,6 +1410,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     }
 
     console.log("🎙️ [StudentStore] Starting Voice Session for Chat:", effectiveChat);
+    pendingPetDebug.length = 0;
     set({ voiceSessionStatus: "connecting", isRateLimitHit: false, rateLimitMessage: null });
 
     // Ensure chat mode is voice
@@ -1441,6 +1435,44 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       await voiceService.startSession(
         studentProfile.user_id,
         (event: VoiceEvent) => {
+          if (event.type === "pet_emotion" || event.type === "answer_graded") {
+            usePetStore
+              .getState()
+              .ingestPetFrame(event, `voice:${voiceService.getSessionId() ?? "pending"}`);
+            // Debugging the pet-emotion reports: tag the reply each frame belongs
+            // to, so VoiceTranscript can show it bracketed next to that reply.
+            // See ChatMessage.debugPetEmotions.
+            //
+            // Since v3 the backend holds each reply until its reaction is sent,
+            // so a reaction arrives *before* its reply exists: with no reply
+            // streaming it waits in `pendingPetDebug` and is attached to the
+            // next tutor message (below, in the transcript reveal). A lesson-end
+            // `celebration` comes after its turn, so it goes on the last reply.
+            if (event.type === "pet_emotion" && typeof event.emotion === "string") {
+              const emotion = event.emotion;
+              const cause = typeof event.cause === "string" ? event.cause : "unknown";
+              set((state) => {
+                const messages = [...state.messages];
+                let idx = state.streamingMessageId
+                  ? messages.findIndex((m) => m.id === state.streamingMessageId && m.sender === "ai")
+                  : -1;
+                if (idx === -1 && emotion !== "celebration") {
+                  pendingPetDebug.push({ emotion, cause });
+                  return {};
+                }
+                if (idx === -1) {
+                  for (let i = messages.length - 1; i >= 0; i--) {
+                    if (messages[i].sender === "ai") { idx = i; break; }
+                  }
+                }
+                if (idx === -1) return {};
+                const prev = messages[idx].debugPetEmotions ?? [];
+                messages[idx] = { ...messages[idx], debugPetEmotions: [...prev, { emotion, cause }] };
+                return { messages };
+              });
+            }
+            return;
+          }
           if (event.type === "connected") {
             // Clears any rotation notice from the socket we just replaced.
             set({ voiceSessionStatus: "active", sessionNotice: null });
@@ -1861,11 +1893,15 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
               updatedMessages[updatedMessages.length - 1] = appendStreamedText(lastMsg, content, role);
             } else {
               newId = `voice-${Date.now()}`;
+              // A reaction that arrived ahead of this reply (see the pet_emotion
+              // branch above) belongs to it.
+              const heldReactions = sender === "ai" ? pendingPetDebug.splice(0) : [];
               updatedMessages.push({
                 id: newId,
                 text: content,
                 sender,
                 timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                ...(heldReactions.length ? { debugPetEmotions: heldReactions } : {}),
               });
             }
 
@@ -2011,7 +2047,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   setAvatarId: (id) => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("gened_avatar_id", id);
+      try {
+        localStorage.setItem("gened_avatar_id", id);
+      } catch {
+        // Private mode / blocked storage: the choice still holds this session.
+      }
     }
     set({ avatarId: id });
   },
@@ -2202,6 +2242,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         answer
       );
       if (result) {
+        usePetStore.getState().recordWidgetAnswer({ directiveId, isCorrect: result.is_correct });
         set((state) => ({
           comprehensionResults: {
             ...state.comprehensionResults,
@@ -2240,6 +2281,11 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         answer
       );
       if (result) {
+        usePetStore.getState().recordWidgetAnswer({
+          directiveId,
+          isCorrect: result.is_correct,
+          attempts: result.attempts,
+        });
         set((state) => ({
           interactiveResults: {
             ...state.interactiveResults,
@@ -2543,6 +2589,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       };
 
       const handleEvent = (event: StreamEvent) => {
+        if (event.type === "pet_emotion" || event.type === "answer_graded") {
+          const chat = get().activeChat;
+          usePetStore
+            .getState()
+            .ingestPetFrame(event, `chat:${chat?.session_id || chat?.id || "new"}`);
+          return;
+        }
         if (event.type === "planning") {
           const status = event.text || event.message || "";
           const phase = event.phase || "thinking";

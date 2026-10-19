@@ -1,5 +1,6 @@
 "use client";
 
+import { FEATURES } from "@/constants/features";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, Send, Sparkles, Loader2, ArrowLeft, AlertTriangle, Menu } from "lucide-react";
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -91,9 +92,9 @@ function TestPageContent() {
   const isLastSection = currentSectionIdx === groupedSections.length - 1;
 
   const backRoute =
-    from === "assessments" ? "/student/assessments" :
-    from === "schedule" ? "/student/schedule" :
-    "/student/assessments";
+    from === "schedule" && FEATURES.schedule ? "/student/schedule" :
+    FEATURES.practice ? "/student/assessments" :
+    "/student";
 
   useEffect(() => {
     if (!currentTest && !isLoading && !testResult) {

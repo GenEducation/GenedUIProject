@@ -4,9 +4,9 @@ import { PartnerRequestModal } from "@/features/student/components/PartnerReques
 import { TestReadyModal } from "@/features/student/components/TestReadyModal";
 import { CompleteProfileBanner } from "@/features/student/components/CompleteProfileBanner";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
-import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
-import { GeneralOnboardingWizard } from "@/features/onboarding/components/GeneralOnboarding/GeneralOnboardingWizard";
-import { OnboardingPromptCard } from "@/features/onboarding/components/OnboardingPromptCard";
+import { PlacementGate } from "@/features/placement/components/PlacementGate";
+import { usePlacementStore } from "@/features/placement/store/usePlacementStore";
+import { PetCompanion } from "@/features/student/components/PetCompanion";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useNotificationStore } from "@/store/useNotificationStore";
@@ -18,9 +18,7 @@ export default function StudentLayout({
   children: React.ReactNode;
 }) {
   const { studentProfile } = useStudentStore();
-  const { dnaStatus, checkDNAStatus } = useOnboardingStore();
   const { fetchNotifications, initStream } = useNotificationStore();
-  const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const pathname = usePathname();
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
@@ -31,12 +29,6 @@ export default function StudentLayout({
   const dismissToast = (id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
-
-  useEffect(() => {
-    if (studentProfile?.user_id) {
-      checkDNAStatus(studentProfile.user_id);
-    }
-  }, [studentProfile, checkDNAStatus]);
 
   // Fetch notification history so the bell's unread badge is correct before the bell mounts
   useEffect(() => {
@@ -70,9 +62,20 @@ export default function StudentLayout({
 
   const isProfileIncomplete = studentProfile && !studentProfile.name;
 
-  // Only show the onboarding prompt on the main student home page.
+  // The same condition PlacementBoard itself opens on (see its `open`), so the
+  // pet is suppressed exactly while the placement form owns the screen rather
+  // than on a second, drifting definition of "in placement".
+  const placementPhase = usePlacementStore((s) => s.phase);
+  const placementOpen =
+    placementPhase !== "idle" &&
+    placementPhase !== "checking" &&
+    placementPhase !== "unavailable";
+
+  // Only prompt for a missing profile on the main student home page.
   // Sub-pages (report card, settings, sessions, etc.) shouldn't be interrupted.
   const isHomePage = pathname === "/student";
+  // The lesson screen has its own tutor on the page; a second creature would compete with it.
+  const isLesson = pathname?.startsWith("/student/lesson/") ?? false;
 
   return (
     <>
@@ -90,24 +93,17 @@ export default function StudentLayout({
         <CompleteProfileBanner studentProfile={studentProfile} />
       )}
 
-      {/* Optional onboarding — non-blocking prompt card, home page only */}
-      {dnaStatus === "PENDING" && studentProfile && !showOnboardingWizard && !isProfileIncomplete && isHomePage && (
-        <OnboardingPromptCard
-          onStart={() => setShowOnboardingWizard(true)}
-          userId={studentProfile.user_id}
-        />
-      )}
+      {/* Placement test. Mounted here, not on a page, because an attempt
+          outlives any one route — and because the gate itself must wait for
+          CompleteProfileBanner above to finish collecting the student's name
+          and their AI companion's name first. */}
+      <PlacementGate />
 
-      {/* Onboarding wizard — shown on any page once the user clicks "Start" */}
-      {showOnboardingWizard && studentProfile && (
-        <GeneralOnboardingWizard
-          studentProfile={studentProfile}
-          onComplete={() => {
-            checkDNAStatus(studentProfile.user_id);
-            setShowOnboardingWizard(false);
-          }}
-        />
-      )}
+      {/* Opt-in desk pet. Mounted here rather than on a page so dragging it
+          survives navigation, and suppressed while a blocking flow owns the
+          screen — onboarding shows its own creature inside the modal, and a
+          draggable toy during a mandatory placement test is a distraction. */}
+      <PetCompanion suppressed={Boolean(isProfileIncomplete) || placementOpen || isLesson} />
 
       {/* Global Real-time Toasts stack */}
       <ToastStack toasts={toasts} onDismiss={dismissToast} />

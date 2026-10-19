@@ -1,65 +1,62 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
 import { updateProfile } from "@/features/auth/authService";
 import { useStudentStore, StudentProfile } from "../store/useStudentStore";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
-import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
+import { sleepy, surprised, thinking, happy } from "blobatar/expression";
+import { StudentBlobatar } from "./StudentBlobatar";
+import { usePetStore } from "../store/usePetStore";
+import { blobatarSeed } from "../theme/blobatar";
 
 interface CompleteProfileBannerProps {
   studentProfile: StudentProfile;
 }
 
+/**
+ * The naming step ahead of placement. `layout.tsx` only mounts this while
+ * `studentProfile.name` is empty, and only a successful save populates that
+ * field — there is no dismiss path. Placement is mandatory, and
+ * `PlacementGate` waits on this same field, so a student cannot reach the
+ * home page (or skip straight into it) without giving a name first.
+ */
 export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerProps) {
-  const [skipped, setSkipped] = useState(
-    () => localStorage.getItem(`gened_profile_banner_skipped_${studentProfile.user_id}`) === "true"
-  );
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [aiName, setAiName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
   const setStudentProfile = useStudentStore((s) => s.setStudentProfile);
+  const setPetSeed = usePetStore((s) => s.setPetSeed);
   const { startTutorial } = useTutorialStore();
-
-  if (skipped) return null;
 
   const maybeLaunchTutorial = () => {
     const isNewUser = localStorage.getItem("gened_new_user") === "true";
     if (isNewUser) {
       localStorage.removeItem("gened_new_user");
-      localStorage.removeItem("start_tutorial_after_onboarding");
       startTutorial();
     }
   };
 
-  const handleDismiss = () => {
-    // Key by user_id so a different user on the same device isn't affected
-    localStorage.setItem(`gened_profile_banner_skipped_${studentProfile.user_id}`, "true");
-    setSkipped(true);
-    maybeLaunchTutorial();
-  };
-
   const handleSave = async () => {
+    if (!name.trim()) {
+      setError("Please enter your name to continue.");
+      return;
+    }
+
     setIsSaving(true);
     setError("");
     try {
       const updates: {
         user_id: string;
-        name?: string;
+        name: string;
         age?: number;
         ai_name?: string;
-      } = { user_id: studentProfile.user_id };
-      if (name.trim()) updates.name = name.trim();
+      } = { user_id: studentProfile.user_id, name: name.trim() };
       if (age.trim()) updates.age = Number(age);
       if (aiName.trim()) updates.ai_name = aiName.trim();
-
-      if (Object.keys(updates).length <= 1) {
-        handleDismiss();
-        return;
-      }
 
       const response = await updateProfile(updates);
 
@@ -71,12 +68,15 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
         ai_name: response.ai_name,
       };
       setStudentProfile(updatedProfile);
+      // Freeze the buddy the student just watched appear. From here the
+      // creature is theirs: editing their name later changes the greeting,
+      // not the companion.
+      setPetSeed(blobatarSeed(studentProfile, response.name));
+      setSaved(true);
       localStorage.setItem("gened_user_profile", JSON.stringify(response));
       if (response.access_token) {
         localStorage.setItem("gened_auth_token", response.access_token);
       }
-      localStorage.setItem(`gened_profile_banner_skipped_${studentProfile.user_id}`, "true");
-      setSkipped(true);
       maybeLaunchTutorial();
     } catch (err) {
       setError(asError(err).message || "Failed to update profile");
@@ -85,24 +85,47 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
     }
   };
 
+  /**
+   * The buddy is generated from the name as it is typed, so it visibly becomes
+   * a different creature with each keystroke — this is the moment the whole
+   * feature exists for. The pose ladder rides on top: asleep until the student
+   * says who they are, awake at the name, waiting while the save is in flight,
+   * pleased once it lands.
+   */
+  const pose = saved
+    ? happy
+    : isSaving
+      ? thinking
+      : name.trim()
+        ? surprised
+        : sleepy;
+
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20 backdrop-blur-sm">
       <div className="relative w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl border border-gray-100 p-8">
-        <Button iconOnly size="sm" variant="tertiary" className="absolute top-4 right-4" aria-label="Dismiss" onClick={handleDismiss}>
-          <X size={18} />
-        </Button>
+        <div className="flex flex-col items-center mb-4">
+          <StudentBlobatar
+            size={96}
+            animate="always"
+            expression={pose}
+            seed={blobatarSeed(studentProfile, name)}
+          />
+          <p className="mt-2 text-xs font-semibold text-gray-400">
+            Say hello — this one&apos;s yours.
+          </p>
+        </div>
 
         <h3 className="text-lg font-bold text-[var(--primary-ink)] mb-1">
           Tell us a bit about yourself
         </h3>
         <p className="text-xs text-gray-500 mb-6">
-          Personalize your experience. All fields are optional.
+          We need your name before we can build your onboarding test. Age and your AI tutor&apos;s name are optional.
         </p>
 
         <div className="space-y-4">
           <div>
             <label className="block text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
-              Your Name
+              Your Name <span className="text-red-400 normal-case">(required)</span>
             </label>
             <input
               value={name}
@@ -144,19 +167,13 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
           <p className="mt-3 text-xs text-red-500 font-medium">{error}</p>
         )}
 
-        <div className="flex gap-3 mt-6">
-          <button
-            onClick={handleDismiss}
-            className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
-          >
-            Skip for now
-          </button>
+        <div className="mt-6">
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="flex-1 py-3 rounded-xl bg-[var(--primary)] text-sm font-bold text-white shadow-lg shadow-[var(--primary)]/20 hover:shadow-xl hover:shadow-[var(--primary)]/30 transition-all active:scale-[0.98] disabled:opacity-60"
+            className="w-full py-3 rounded-xl bg-[var(--primary)] text-sm font-bold text-white shadow-lg shadow-[var(--primary)]/20 hover:shadow-xl hover:shadow-[var(--primary)]/30 transition-all active:scale-[0.98] disabled:opacity-60"
           >
-            {isSaving ? "Saving..." : "Save"}
+            {isSaving ? "Saving..." : "Continue"}
           </button>
         </div>
       </div>

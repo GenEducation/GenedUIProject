@@ -38,10 +38,6 @@ yarn-error.log*
 # ...but keep the committed template
 !.env.production.example
 
-# playwright test artifacts
-/test-results/
-/playwright-report/
-
 
 # vercel
 .vercel

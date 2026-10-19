@@ -33,7 +33,6 @@ export default defineConfig({
         "src/components/analytics/UnitCard.tsx": { lines: 95 },
         "src/features/auth/components/SignUp.tsx": { lines: 50 },
         "src/features/auth/components/ResetPassword.tsx": { lines: 90 },
-        "src/features/onboarding/components/GeneralOnboarding/GeneralOnboardingWizard.tsx": { lines: 95 },
         // Phase 6 — portal breadth (teacher / parent / admin)
         "src/features/teacher/services/teacherService.ts": { lines: 80, functions: 85 },
         "src/features/teacher/store/useTeacherStore.ts": { lines: 80, functions: 85 },
@@ -43,6 +42,28 @@ export default defineConfig({
         "src/features/parent/store/useParentStore.ts": { lines: 80 },
         "src/features/admin/adminService.ts": { lines: 60 },
         "src/features/admin/components/DataTable.tsx": { lines: 95, branches: 80 },
+        // Placement form — the payload each widget emits is the contract with
+        // the grading backend, so these stay covered.
+        "src/components/ui/Modal.tsx": { lines: 85, functions: 90 },
+        "src/features/placement/store/usePlacementStore.ts": { lines: 85, branches: 80 },
+        "src/features/placement/utils/slotGrid.ts": { lines: 95, branches: 90 },
+        "src/features/placement/components/items/McqItem.tsx": { lines: 95 },
+        "src/features/placement/components/items/MultiSelectItem.tsx": { lines: 95 },
+        "src/features/placement/components/items/TrueFalseItem.tsx": { lines: 95 },
+        "src/features/placement/components/items/NumericItem.tsx": { lines: 95 },
+        "src/features/placement/components/items/FillBlankItem.tsx": { lines: 95 },
+        "src/features/placement/components/items/MatchItem.tsx": { lines: 85 },
+        "src/features/placement/components/items/OrderItem.tsx": { lines: 75 },
+        // Visual library review (partner) — decision bodies are the contract
+        // with the review backend; regeneration polling must stop on its own.
+        "src/features/partner/services/visualsService.ts": { lines: 85, functions: 80 },
+        "src/features/partner/services/sourcesService.ts": { lines: 85, functions: 85 },
+        "src/features/partner/hooks/useVisualDetail.ts": { lines: 95, functions: 95 },
+        "src/features/partner/hooks/useVisualsIndex.ts": { lines: 85 },
+        "src/features/partner/hooks/useVisualsList.ts": { lines: 85 },
+        "src/features/partner/components/visuals/DecisionPanel.tsx": { lines: 85 },
+        // Student chapter list — the student's route into a lesson.
+        "src/features/student/learner/learnerService.ts": { lines: 90, functions: 90 },
       },
     },
   },

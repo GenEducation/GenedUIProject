@@ -22,12 +22,17 @@ export function getRedirectParam(): string | null {
  * authorized and rendered, fading the overlay out from there.
  */
 export function completeAndRedirect(router: ReturnType<typeof useRouter>, path: string): void {
-  const watchdog = setTimeout(() => {
-    useLoaderStore.getState().stopLoading();
+  // The watchdog covers the whole hand-off — celebration, navigation and the
+  // destination's own loading — so it is not cleared on navigation. It only
+  // acts if this hand-off still owns the loader: a newer load (a fresh login,
+  // say) bumps loadId and is left alone.
+  const { loadId } = useLoaderStore.getState();
+  setTimeout(() => {
+    const state = useLoaderStore.getState();
+    if (state.isVisible && state.loadId === loadId) state.stopLoading();
   }, HANDOFF_WATCHDOG_MS);
 
   useLoaderStore.getState().beginHandoff(() => {
-    clearTimeout(watchdog);
     router.replace(path);
   });
 }

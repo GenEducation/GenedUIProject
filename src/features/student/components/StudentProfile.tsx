@@ -15,16 +15,17 @@ import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { StreakStats } from "./StreakStats";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { updateProfile, fetchProfile } from "@/features/auth/authService";
-import { studentService } from "@/features/student/services/studentService";
+import { studentService, type PartnerAssociationStatus } from "@/features/student/services/studentService";
 import { fetchVoices } from "@/features/student/services/voiceCatalogService";
 import { DEFAULT_GEMINI_VOICE, type GeminiVoice } from "@/constants/geminiVoices";
 import { PttHotkeyConfig } from "./PttHotkeyConfig";
 import { DevicePairingModal } from "./DevicePairingModal";
 import { AvatarPickerModal } from "./AvatarPickerModal";
 import { TeacherConnections } from "./TeacherConnections";
-import { StudentAvatarIllustration } from "./StudentAvatarIllustration";
-import { GeneralOnboardingWizard } from "@/features/onboarding/components/GeneralOnboarding/GeneralOnboardingWizard";
-import { useOnboardingStore } from "@/features/onboarding/store/useOnboardingStore";
+import { StudentAvatar } from "./StudentAvatar";
+import { PetTunerModal } from "./PetTunerModal";
+import { usePetStore } from "../store/usePetStore";
+import { useHydrated } from "@/hooks/useHydrated";
 import { useTestStore } from "../store/useTestStore";
 import { Select } from "@/components/ui/Select";
 
@@ -61,7 +62,11 @@ const C = {
 /* ─── "How {tutor} sees you" — derived from the profile API ─────────────────
  * The /students/{id}/profile endpoint returns a `general_onboarding` block
  * with the student's self-reported preferences. We turn each non-empty list
- * into a trait card instead of hardcoding generic learner archetypes. */
+ * into a trait card instead of hardcoding generic learner archetypes.
+ *
+ * Read-only. The questionnaire that used to populate it was removed with the
+ * old onboarding; the block is still served for students who filled it in
+ * before that, and the backend may populate it from elsewhere later. */
 interface GeneralOnboarding {
   learning_preferences?: string[];
   interests?: string[];
@@ -76,6 +81,15 @@ const TRAIT_GROUPS: { key: keyof GeneralOnboarding; icon: string; title: string 
   { key: "strengths",            icon: "💪", title: "Strengths"      },
   { key: "weaknesses",           icon: "🎯", title: "Growing On"     },
 ];
+
+/** Dropdown hint for a school the student already has a request with. */
+const PARTNER_STATUS_HINT: Record<PartnerAssociationStatus, string | undefined> = {
+  NOT_REQUESTED: undefined,
+  PENDING: "Request pending",
+  APPROVED: "Connected",
+  REJECTED: "Request declined",
+  REVOKED: "Access ended",
+};
 
 const sentenceCase = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
@@ -357,7 +371,7 @@ export function StudentProfile() {
   const router = useRouter();
   const {
     studentProfile, logoutStudent,
-    availablePartners, fetchAvailablePartners,
+    availablePartners,
     sendPartnerRequest, partnerRequestStatus,
     enrolledPartners, fetchEnrolledPartners, isEnrolledPartnersLoading,
     linkParent, studentStats, fetchStudentStats,
@@ -370,6 +384,13 @@ export function StudentProfile() {
 
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const avatarColor = C.sun;
+  // Rendered as off until hydration: the stored value is invisible to the
+  // server, and the knob's position would otherwise mismatch on first paint.
+  const petHydrated = useHydrated();
+  const petEnabled = usePetStore((s) => s.petEnabled) && petHydrated;
+  const setPetEnabled = usePetStore((s) => s.setPetEnabled);
+  const resetPetPosition = usePetStore((s) => s.resetPetPosition);
+  const [petTunerOpen, setPetTunerOpen] = useState(false);
   const [soundEnabled,     setSoundEnabled]      = useState(true);
   const [parentInput,      setParentInput]       = useState("");
   const [selectedPartner,  setSelectedPartner]   = useState("");
@@ -397,20 +418,18 @@ export function StudentProfile() {
   const [isLanguageSaving, setIsLanguageSaving] = useState<boolean>(false);
   const [pairingModalOpen, setPairingModalOpen] = useState<boolean>(false);
   const [avatarPickerOpen, setAvatarPickerOpen] = useState<boolean>(false);
-  const [showOnboardingWizard, setShowOnboardingWizard] = useState<boolean>(false);
-  const checkDNAStatus = useOnboardingStore((s) => s.checkDNAStatus);
 
   /* responsive sidebar */
   useDebouncedResize(() => applyResponsive(window.innerWidth >= 1024));
 
   useEffect(() => {
     setMounted(true);
-    fetchAvailablePartners();
+    // One request fills both lists: `/student/partners` returns every school with this student's status.
     fetchEnrolledPartners();
     fetchStudentStats();
     if (studentProfile?.user_id) loadStudentTests(studentProfile.user_id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchAvailablePartners, fetchEnrolledPartners, fetchStudentStats, studentProfile?.user_id]);
+  }, [fetchEnrolledPartners, fetchStudentStats, studentProfile?.user_id]);
 
   /**
    * Heal a stale localStorage profile by pulling the latest from auth-service
@@ -687,15 +706,7 @@ export function StudentProfile() {
                   boxShadow: `0 8px 24px ${avatarColor}30`, border: "3px solid white",
                   overflow: "hidden",
                 }}>
-                  {avatarId === "graduate-girl" ? (
-                    <img
-                      src="/avatars/girl-graduate.png"
-                      alt="Girl graduate avatar"
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                    />
-                  ) : (
-                    <StudentAvatarIllustration bg={avatarColor} />
-                  )}
+                  <StudentAvatar id={avatarId} size={88} />
                 </div>
                 <button
                   onClick={() => setAvatarPickerOpen(true)}
@@ -751,24 +762,13 @@ export function StudentProfile() {
                       </div>
                     ))}
                   </div>
-                  <p style={{ fontSize: 10, color: C.textMuted, marginTop: 12, fontStyle: "italic", textAlign: "center" as const }}>Based on your onboarding and learning patterns</p>
+                  <p style={{ fontSize: 10, color: C.textMuted, marginTop: 12, fontStyle: "italic", textAlign: "center" as const }}>Based on your learning patterns</p>
                 </>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", gap: 12, padding: "8px 0" }}>
                   <p style={{ fontSize: 12, color: C.textMuted, textAlign: "center" as const, margin: 0 }}>
-                    Complete onboarding to see how {aiTutorName} understands your learning style.
+                    {aiTutorName} builds this picture as you learn together. Keep going and it&apos;ll fill in.
                   </p>
-                  <button
-                    onClick={() => setShowOnboardingWizard(true)}
-                    style={{
-                      padding: "10px 20px", borderRadius: 12, border: "none",
-                      background: C.genPurple, color: "white", fontSize: 13, fontWeight: 700,
-                      fontFamily: "var(--font-display)", cursor: "pointer",
-                      boxShadow: `0 4px 14px ${C.genPurple}40`,
-                    }}
-                  >
-                    ✨ Start Questionnaire
-                  </button>
                 </div>
               )}
             </div>
@@ -917,14 +917,9 @@ export function StudentProfile() {
                   options={availablePartners.map((p, i) => ({
                     value: String(p.partner_id ?? p.id ?? `avp-${i}`),
                     label: p.organization ?? "",
-                    hint:
-                      p.association_status === "PENDING"
-                        ? "Request pending"
-                        : p.association_status === "APPROVED"
-                          ? "Connected"
-                          : undefined,
-                    disabled:
-                      p.association_status === "PENDING" || p.association_status === "APPROVED",
+                    hint: p.association_status ? PARTNER_STATUS_HINT[p.association_status] : undefined,
+                    // Any existing association blocks a new request ("Association already exists").
+                    disabled: !!p.association_status && p.association_status !== "NOT_REQUESTED",
                   }))}
                   buttonStyle={{
                     padding: "10px 14px",
@@ -1031,6 +1026,62 @@ export function StudentProfile() {
                   </button>
                 </div>
 
+                {/* Two rows, because these are two different things.
+                    Appearance belongs to the *creature*, which a student meets
+                    in onboarding and sees again on their test results whether
+                    or not the desk pet is switched on — and on a phone, where
+                    the desk pet never renders. Gating it behind the pet toggle
+                    left students looking at a buddy they could not change. */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 14, background: C.pageBg, border: `1px solid ${C.border}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 16 }}>🫧</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Your Buddy</div>
+                      <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
+                        Shape, colour and eyes
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => setPetTunerOpen(true)}>
+                    Customize
+                  </Button>
+                </div>
+
+                {/* The floating companion itself. Desktop only: it has no
+                    cursor to watch on a phone and would cover content, so the
+                    row is hidden there rather than offering a switch that does
+                    nothing. */}
+                <div className="hidden md:flex" style={{ alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: 14, background: C.pageBg, border: `1px solid ${C.border}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 16 }}>🪄</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Desk Buddy</div>
+                      <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
+                        Let it float on your screen
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {petEnabled && (
+                      // eslint-disable-next-line no-restricted-syntax -- low-emphasis inline action inside a settings row; <Button>'s min-height would break the row's alignment.
+                      <button
+                        onClick={resetPetPosition}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 11, fontWeight: 700, color: C.textMid }}
+                      >
+                        Reset position
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setPetEnabled(!petEnabled)}
+                      aria-pressed={petEnabled}
+                      aria-label="Desk Buddy"
+                      style={{ width: 44, height: 26, borderRadius: 13, cursor: "pointer", border: "none", background: petEnabled ? C.growth : C.border, position: "relative" as const, transition: "background 0.2s", flexShrink: 0 }}
+                    >
+                      <div style={{ width: 20, height: 20, borderRadius: "50%", background: "white", position: "absolute" as const, top: 3, left: petEnabled ? 21 : 3, transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }} />
+                    </button>
+                  </div>
+                </div>
+
                 {/* Voice Settings */}
                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 10, borderTop: `1px solid ${C.border}`, paddingTop: 14, marginTop: 4 }}>
                   <SectionHeader icon="🎙️" label="Voice Settings" />
@@ -1128,24 +1179,16 @@ export function StudentProfile() {
       </main>
 
       <DevicePairingModal isOpen={pairingModalOpen} onClose={() => setPairingModalOpen(false)} />
+      {/* Tunes the buddy, not the profile picture — reachable here as well as
+          from the pet's own gear, so it does not vanish with the pet. */}
+      <PetTunerModal isOpen={petTunerOpen} onClose={() => setPetTunerOpen(false)} showPetSettings={petEnabled} />
+
       <AvatarPickerModal
         isOpen={avatarPickerOpen}
         onClose={() => setAvatarPickerOpen(false)}
         selectedId={avatarId}
         onSelect={setAvatarId}
       />
-
-      {/* General onboarding questionnaire — launched from the "How AI sees you" empty state */}
-      {showOnboardingWizard && studentProfile && (
-        <GeneralOnboardingWizard
-          studentProfile={studentProfile}
-          onComplete={() => {
-            setShowOnboardingWizard(false);
-            checkDNAStatus(studentProfile.user_id);
-            loadDashboardProfile();
-          }}
-        />
-      )}
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

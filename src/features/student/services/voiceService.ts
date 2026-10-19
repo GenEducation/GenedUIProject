@@ -77,6 +77,14 @@ class VoiceService {
   private ws: WebSocket | null = null;
   private audioCtx: AudioContext | null = null;
   private micCtx: AudioContext | null = null;
+  /**
+   * Levels for the desk pet, which listens and talks along. Input is the RMS of
+   * the last mic buffer the processor already walks (0 while muted); output is
+   * read on demand from an analyser tapped onto tutor playback.
+   */
+  private inputLevel = 0;
+  private outAnalyser: AnalyserNode | null = null;
+  private outSamples: Float32Array<ArrayBuffer> | null = null;
   private mediaStream: MediaStream | null = null;
   private processor: ScriptProcessorNode | null = null;
   private isSessionActive = false;
@@ -249,10 +257,14 @@ class VoiceService {
 
         if (this.isMuted) {
           i16.fill(0);
+          this.inputLevel = 0;
         } else {
+          let sumSq = 0;
           for (let i = 0; i < input.length; i++) {
             i16[i] = Math.max(-1, Math.min(1, input[i])) * 0x7fff;
+            sumSq += input[i] * input[i];
           }
+          this.inputLevel = Math.sqrt(sumSq / Math.max(1, input.length));
         }
 
         this.ws.send(i16.buffer);
@@ -488,7 +500,7 @@ class VoiceService {
 
     const source = this.audioCtx!.createBufferSource();
     source.buffer = audioBuffer;
-    source.connect(this.audioCtx!.destination);
+    source.connect(this.getOutputNode());
     this.activeSources.push(source);
     source.onended = () => {
       this.activeSources = this.activeSources.filter(s => s !== source);
@@ -662,6 +674,45 @@ class VoiceService {
     this.onEventCallback = null;
     this.onTextRevealCallback = null;
     this.onConnectionQualityCallback = null;
+  }
+
+  /**
+   * Where tutor audio is played into: an analyser in front of the speakers, so
+   * the pet can read how loudly the tutor is talking. Created lazily against
+   * whichever context is current, since `audioCtx` outlives sessions.
+   */
+  private getOutputNode(): AudioNode {
+    const ctx = this.audioCtx!;
+    if (!this.outAnalyser || this.outAnalyser.context !== ctx) {
+      this.outAnalyser = ctx.createAnalyser();
+      this.outAnalyser.fftSize = 512;
+      this.outAnalyser.connect(ctx.destination);
+      this.outSamples = null;
+    }
+    return this.outAnalyser;
+  }
+
+  /** The backend session this socket is on, once `session_id` has arrived. */
+  getSessionId(): string | null {
+    return this.currentSessionId;
+  }
+
+  /** The student's mic level, 0–1 RMS. 0 while muted or with no session. */
+  getInputLevel(): number {
+    return this.isSessionActive ? this.inputLevel : 0;
+  }
+
+  /** The tutor's playback level, 0–1 RMS, read now. */
+  getOutputLevel(): number {
+    const a = this.outAnalyser;
+    if (!a || !this.isSessionActive) return 0;
+    if (!this.outSamples || this.outSamples.length !== a.fftSize) {
+      this.outSamples = new Float32Array(a.fftSize);
+    }
+    a.getFloatTimeDomainData(this.outSamples);
+    let sumSq = 0;
+    for (let i = 0; i < this.outSamples.length; i++) sumSq += this.outSamples[i] * this.outSamples[i];
+    return Math.sqrt(sumSq / this.outSamples.length);
   }
 
   setMuted(muted: boolean) {
