@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, Pencil, Upload } from "lucide-react";
-import { listUsers, deleteUser, updateUser, AdminUser, Role, Plan, ImportRole } from "../adminService";
+import { deleteUser, updateUser, AdminUser, Role, Plan, ImportRole } from "../adminService";
+import { fetchAllUsers } from "../fetchAllUsers";
 import { CreateAccountModal } from "./CreateAccountModal";
 import { BulkImportModal } from "./BulkImportModal";
 import { DataTable, Column } from "./DataTable";
@@ -31,9 +32,12 @@ export function UsersView({ title }: Props) {
   const load = useCallback(() => {
     setLoading(true);
     setError("");
-    // Load all users so every column can be searched/filtered client-side.
-    listUsers({ page: 1, pageSize: 1000 })
-      .then((res) => setRows(res.items))
+    // Every column is searched and filtered client-side, so the screen wants
+    // the whole list -- but it has to be PAGED for it. Asking for one huge
+    // page worked only against the MVP, which did not enforce its own cap;
+    // the new backend rejects anything over 200 with a 422.
+    fetchAllUsers()
+      .then((res) => setRows(res.users))
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load users"))
       .finally(() => setLoading(false));
   }, []);

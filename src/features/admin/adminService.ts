@@ -204,12 +204,15 @@ export const getStats = () => getJson<AdminStats>("/admin/stats");
 
 // ── Users ──────────────────────────────────────────────────────
 
-export function listUsers(params: {
+export interface ListUsersQuery {
   role?: string;
   q?: string;
   page?: number;
+  /** Server maximum is 200; larger values are rejected with a 422. */
   pageSize?: number;
-} = {}): Promise<PaginatedUsers> {
+}
+
+export function listUsers(params: ListUsersQuery = {}): Promise<PaginatedUsers> {
   const qs = new URLSearchParams();
   if (params.role) qs.set("role", params.role);
   if (params.q) qs.set("q", params.q);
