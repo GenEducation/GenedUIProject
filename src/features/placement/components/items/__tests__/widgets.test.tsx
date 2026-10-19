@@ -117,6 +117,36 @@ describe("placement item widgets", () => {
       // real wording.
       expect(onChange).toHaveBeenLastCalledWith({ text: "But" });
     });
+
+    it("sends null when the field is blank, so the item counts as unanswered", async () => {
+      const { onChange } = renderItem(item("CBSE-G6-ENG-03"));
+      await userEvent.type(screen.getByRole("textbox"), " ");
+      expect(onChange).toHaveBeenLastCalledWith(null);
+    });
+
+    describe("in Hindi", () => {
+      const hindi = (): PlacementItem => ({ ...item("CBSE-G6-ENG-03"), item_language: "hi" });
+
+      it("converts Latin keystrokes to Devanagari and shows a live preview", async () => {
+        const { onChange } = renderItem(hindi());
+        await userEvent.type(screen.getByRole("textbox"), "namaste");
+        expect(onChange).toHaveBeenLastCalledWith({ text: "नमस्ते" });
+        expect(screen.getByText("नमस्ते")).toBeInTheDocument();
+      });
+
+      it("passes real Devanagari through without converting it twice", async () => {
+        const { onChange } = renderItem(hindi());
+        fireEvent.change(screen.getByRole("textbox"), { target: { value: "नमस्ते" } });
+        expect(onChange).toHaveBeenLastCalledWith({ text: "नमस्ते" });
+      });
+
+      it("sends null when cleared", async () => {
+        const { onChange } = renderItem(hindi());
+        await userEvent.type(screen.getByRole("textbox"), "a");
+        await userEvent.clear(screen.getByRole("textbox"));
+        expect(onChange).toHaveBeenLastCalledWith(null);
+      });
+    });
   });
 
   describe("order", () => {
