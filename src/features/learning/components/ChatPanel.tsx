@@ -8,6 +8,7 @@ import { ChatTurn } from "./ChatTurn";
 import { ChatInput } from "./ChatInput";
 import { VoiceWaveform } from "./VoiceWaveform";
 import { lessonVoiceEnabled } from "./LessonRail";
+import { useLessonPresence } from "../useLessonPresence";
 import { useVoiceSession, type VoiceSession } from "../voice/useVoiceSession";
 
 const VOICE_UNAVAILABLE: VoiceSession = {
@@ -37,10 +38,19 @@ export function ChatPanel({ onShowFigure }: { onShowFigure: (figureGroupId: stri
   const voiceMode = useLessonStore((s) => s.voiceMode);
   const voiceAvailable = lessonVoiceEnabled();
   // Voice replies land in the same transcript; only the input area changes.
-  const live = useVoiceSession(voiceMode && voiceAvailable && status === "ready" && canTalk);
+  const voiceActive = voiceMode && voiceAvailable && status === "ready" && canTalk;
+  const live = useVoiceSession(voiceActive);
   // With voice switched off for this build, voice mode still opens and says so, rather than the button doing nothing.
   const voice = voiceAvailable ? live : VOICE_UNAVAILABLE;
   const replying = turns.some((t) => t.status === "streaming");
+  const instanceId = useLessonStore((s) => s.instanceId);
+  // Estimated learning time: text beats while the learner is here; a live voice session reports itself server-side.
+  useLessonPresence({
+    instanceId,
+    ready: status === "ready",
+    streaming: replying,
+    voiceRunning: voiceActive && live.phase !== "offline",
+  });
 
   const listRef = useRef<HTMLOListElement>(null);
   const [atBottom, setAtBottom] = useState(true);
