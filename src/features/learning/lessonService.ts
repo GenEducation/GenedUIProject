@@ -72,6 +72,10 @@ export const lessonService = {
     body: { request_id: string; expected_revision: number; choice: "try_now" | "keep_going" },
   ): Promise<InstanceState> => (await authFetch(`${instancePath(instanceId)}/choice`, json(body))).json(),
 
+  /** A text presence beat from this tab (`source_id`: random per mount); `active: false` means it was not credited. */
+  presence: async (instanceId: string, sourceId: string): Promise<{ active: boolean }> =>
+    (await authFetch(`${instancePath(instanceId)}/presence`, json({ source_id: sourceId }))).json(),
+
   report: async (instanceId: string): Promise<ChapterReport> =>
     (await authFetch(`${instancePath(instanceId)}/report`)).json(),
 
