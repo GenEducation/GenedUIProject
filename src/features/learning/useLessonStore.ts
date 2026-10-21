@@ -1008,11 +1008,3 @@ export function picturesFor(manifest: PresentationManifest | null, figureGroupId
     .filter(([, figure]) => figure.figure_group_id === figureGroupId)
     .map(([pictureId, figure]) => ({ pictureId, ...figure, src: lessonService.pictureSrc(figure.url) }));
 }
-
-// TEMP-DEBUG(revisit-close): who closes the welcome-back prompt. Remove before commit.
-if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
-  useLessonStore.subscribe((s, p) => {
-    if (p.revisitPromptOpen && !s.revisitPromptOpen) console.trace("[revisit-debug] prompt closed", { status: s.status, state: s.instance?.state });
-    if (p.instance?.state === "active" && s.instance?.state !== "active") console.trace("[revisit-debug] instance not active", s.instance?.state);
-  });
-}
