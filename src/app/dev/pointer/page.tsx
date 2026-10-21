@@ -33,8 +33,8 @@ export default function DevPointerHarness() {
     padding: "6px 12px",
     borderRadius: 8,
     border: "1px solid #D6D3F0",
-    background: "#EDE9FE",
-    color: "#5B4DC7",
+    background: "#DCEBE7",
+    color: "#075E63",
     cursor: "pointer",
   };
 

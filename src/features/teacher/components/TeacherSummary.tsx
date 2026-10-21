@@ -38,7 +38,7 @@ export function TeacherSummary({ overview, approvedAvgMastery, isLoading }: Teac
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, delay: i * 0.05, ease: "easeOut" }}
-            className="rounded-2xl border border-border bg-white p-5 shadow-[0_1px_2px_rgba(4,46,92,.06),0_1px_3px_rgba(4,46,92,.05)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(4,46,92,.07)]"
+            className="rounded-2xl border border-border bg-white p-5 shadow-[0_1px_2px_rgba(18,45,48,.06),0_1px_3px_rgba(18,45,48,.05)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(18,45,48,.07)]"
           >
             <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-xl ${stat.tint}`}>
               <Icon size={17} />

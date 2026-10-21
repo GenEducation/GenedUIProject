@@ -1,22 +1,23 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import {
   CHECK_ITEM, FIGURE_GROUP, LESSON_ID, OPTION_A,
-  answerRequests, lessonFixture, makeLessonInstance, stepRequests, turnRequests,
+  answerRequests, forbiddenRequests, lessonFixture, makeLessonInstance, stepRequests, syntheticPayload, turnRequests,
 } from "@/test/msw/handlers/lesson";
+import { http, HttpResponse } from "msw";
+import { server } from "@/test/msw/server";
 import { useLessonStore } from "../../useLessonStore";
 import type { CheckItem } from "../../types";
 
 import { BoardPanel } from "../BoardPanel";
-import { responseFor } from "../StepCard";
-
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 const node = makeLessonInstance().active_node!;
 const store = () => useLessonStore.getState();
 
-async function open(instance = makeLessonInstance()) {
+async function open(instance = makeLessonInstance(), subject: string | null = null) {
   lessonFixture.setInstance(instance);
   await store().load(LESSON_ID);
-  return render(<BoardPanel />);
+  return render(<BoardPanel subject={subject} />);
 }
 
 beforeEach(() => {
@@ -46,46 +47,6 @@ describe("BoardPanel — figures", () => {
     fireEvent.error(await screen.findByRole("img", { name: "SYNTHETIC figure" }));
     expect(await screen.findByText("This picture couldn't load.")).toBeInTheDocument();
   });
-
-  it("keeps every figure on the board; the filmstrip focuses one without removing the others", async () => {
-    lessonFixture.setHistory([
-      { turn_id: "t1", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [FIGURE_GROUP] },
-      { turn_id: "t2", kind: "learner_message", status: "completed", created_at: "x", figure_group_ids: ["g-second"] },
-    ]);
-    await open();
-    // A second picture the board has a URL for (as if from an earlier node's manifest).
-    act(() => useLessonStore.setState((s) => ({
-      manifest: { ...s.manifest!, figures: { ...s.manifest!.figures, "pic-2": { figure_group_id: "g-second", url: "/v1/visual-images/pic-2", width_px: 10, height_px: 10, mime: "image/png", sha256: "0".repeat(64) } } },
-    })));
-    const board = screen.getByRole("list", { name: "Figures on the board" });
-    expect(within(board).getAllByRole("listitem")).toHaveLength(2);
-    expect(within(board).getAllByRole("listitem")[1]).toHaveAttribute("aria-current", "true");
-
-    const strip = screen.getByRole("navigation", { name: "Figures shown in this lesson" });
-    fireEvent.click(within(strip).getByRole("button", { name: "Previous figure" }));
-    expect(store().focusedFigureId).toBe(FIGURE_GROUP);
-    expect(within(board).getAllByRole("listitem")).toHaveLength(2);
-    expect(within(board).getAllByRole("listitem")[0]).toHaveAttribute("aria-current", "true");
-  });
-
-  it("a figure presented now is inked in; ones already on the board just appear", async () => {
-    await open();
-    expect(document.querySelector(`[data-figure-id="${FIGURE_GROUP}"]`)?.className).not.toMatch(/lesson-writing/);
-    act(() => useLessonStore.setState((s) => ({
-      presentedFigureIds: [...s.presentedFigureIds, "g-new"],
-      focusedFigureId: "g-new",
-      manifest: { ...s.manifest!, figures: { ...s.manifest!.figures, "pic-new": { figure_group_id: "g-new", url: "/v1/visual-images/pic-new", width_px: 10, height_px: 10, mime: "image/png", sha256: "0".repeat(64) } } },
-    })));
-    expect(document.querySelector('[data-figure-id="g-new"]')?.className).toMatch(/lesson-writing/);
-  });
-
-  it("leaves out a figure it has no picture for", async () => {
-    lessonFixture.setHistory([
-      { turn_id: "t1", kind: "opening", status: "completed", created_at: "x", figure_group_ids: ["earlier-group", FIGURE_GROUP] },
-    ]);
-    await open();
-    expect(within(screen.getByRole("list", { name: "Figures on the board" })).getAllByRole("listitem")).toHaveLength(1);
-  });
 });
 
 describe("BoardPanel — the step card", () => {
@@ -101,11 +62,12 @@ describe("BoardPanel — the step card", () => {
     await waitFor(() => expect(turnRequests.at(-1)?.kind).toBe("result_reaction"));
   });
 
-  it("Hint records the request and asks the tutor for a hint turn", async () => {
+  it("Hint is only a hint turn: the server records it, and /hints is never called", async () => {
     await open();
     fireEvent.click(screen.getByRole("button", { name: "Hint" }));
     await waitFor(() => expect(turnRequests.at(-1)).toMatchObject({ kind: "hint", item_id: CHECK_ITEM }));
-    expect(stepRequests[0]).toMatchObject({ route: "hints", body: { item_id: CHECK_ITEM } });
+    expect(forbiddenRequests).toEqual([]);
+    expect(stepRequests).toEqual([]);
   });
 
   it("a teach step with every check answered and enough talk offers Next step", async () => {
@@ -113,12 +75,6 @@ describe("BoardPanel — the step card", () => {
     fireEvent.click(screen.getByRole("button", { name: /Next step/ }));
     await waitFor(() => expect(stepRequests).toEqual([{ route: "done", body: expect.objectContaining({ expected_revision: 4 }) }]));
     await waitFor(() => expect(store().instance?.nodes_done).toBe(2));
-  });
-
-  it("a teach step still short of talk asks the learner to talk it through", async () => {
-    await open(makeLessonInstance({ active_node: { ...node, answered_item_ids: [CHECK_ITEM], engagement_count: 0 } }));
-    expect(screen.getByText("Talk it through with your tutor to unlock the next step.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Next step/ })).toBeNull();
   });
 
   it("after a failed round, offers the choice with the recommended one first", async () => {
@@ -141,11 +97,46 @@ describe("BoardPanel — the step card", () => {
   });
 });
 
-describe("responseFor", () => {
-  const check = (response_type: CheckItem["response_type"]) => ({ response_type }) as CheckItem;
-  it("numeric checks send a number; the other typed checks send text", () => {
-    expect(responseFor(check("numeric"), " 3/4 ")).toEqual({ kind: "numeric", value: "3/4" });
-    expect(responseFor(check("numeric_set"), "2, 3")).toEqual({ kind: "text", text: "2, 3" });
-    expect(responseFor(check("symbolic"), "2x+1")).toEqual({ kind: "text", text: "2x+1" });
+describe("the answer box's calculator", () => {
+  const withCheck = (response_type: CheckItem["response_type"]) => {
+    const base = syntheticPayload();
+    server.use(
+      http.get(`${BASE}/v1/instances/:instanceId/teacher-payload`, () =>
+        HttpResponse.json({
+          ...base,
+          node: { ...base.node, check_items: [{ ...base.node.check_items[0], response_type, options: [] }] },
+        }),
+      ),
+    );
+  };
+  // A maths lesson's box is the maths field, which stands in here as a box taking its LaTeX (MathLive itself needs a
+  // real browser): words as typed, `$…$` for maths picked from its `/` menu.
+  const answerBox = () => screen.getByRole("textbox", { name: "Your answer" }) as HTMLInputElement;
+
+  it("works out a root as they type, and sends the number for a number answer", async () => {
+    withCheck("numeric");
+    await open(undefined, "Mathematics");
+    fireEvent.change(answerBox(), { target: { value: "$\\sqrt{144}$" } });
+    expect(screen.getByText("= 12")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
+    await waitFor(() => expect(answerRequests[0]).toMatchObject({ response: { kind: "numeric", value: "12" } }));
+  });
+
+  it("sends typed words as typed, and picked maths in the checker's form", async () => {
+    withCheck("symbolic");
+    await open(undefined, "Mathematics");
+    fireEvent.change(answerBox(), { target: { value: "x = $2x+\\frac{3}{4}$" } });
+    fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
+    await waitFor(() => expect(answerRequests[0]).toMatchObject({ response: { kind: "text", text: "x = 2*x+(3/4)" } }));
+  });
+
+  it("keeps the plain box outside maths, spaces and all", async () => {
+    withCheck("numeric_set");
+    await open(undefined, "Science");
+    const box = screen.getByRole("textbox", { name: "Your answer" });
+    expect(box.getAttribute("placeholder")).toBe("Your answer");
+    fireEvent.change(box, { target: { value: "30 and 20" } });
+    fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
+    await waitFor(() => expect(answerRequests[0]).toMatchObject({ response: { kind: "text", text: "30 and 20" } }));
   });
 });

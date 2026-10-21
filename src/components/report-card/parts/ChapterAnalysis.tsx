@@ -67,14 +67,14 @@ export function ChapterAnalysis({
                 <svg viewBox="0 0 480 100" width="100%" height="100" preserveAspectRatio="none">
                   {arc.gridLines.map((g, i) => (
                     <g key={i}>
-                      <line x1="20" y1={g.y} x2="460" y2={g.y} stroke="#EDEAE0" strokeWidth="1" strokeDasharray="2 3" />
+                      <line x1="20" y1={g.y} x2="460" y2={g.y} stroke="var(--rule)" strokeWidth="1" strokeDasharray="2 3" />
                       <text x="4" y={g.y + 3} className="rc-spark-grid-label">{g.label.slice(0, 3)}</text>
                     </g>
                   ))}
-                  {arc.areaPath && <path d={arc.areaPath} fill="rgba(29,78,216,.06)" stroke="none" />}
-                  <path d={arc.path} fill="none" stroke="#1D4ED8" strokeWidth="2.5" />
+                  {arc.areaPath && <path d={arc.areaPath} fill="rgba(7,94,99,.07)" stroke="none" />}
+                  <path d={arc.path} fill="none" stroke="var(--emerald)" strokeWidth="2.5" />
                   {arc.points.map((p, i) => (
-                    <circle key={i} cx={p.x} cy={p.y} r="4" fill={SPARK_COLORS[p.level]} />
+                    <circle key={i} cx={p.x} cy={p.y} r="4" fill={SPARK_COLORS[p.level]} stroke="#fff" strokeWidth="1.5" />
                   ))}
                 </svg>
                 <div className="rc-spark-legend">

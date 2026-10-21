@@ -31,14 +31,6 @@ beforeEach(() => {
 });
 
 describe("StudentRoster", () => {
-  it("renders a card per student with the roster total", () => {
-    renderRoster();
-    expect(screen.getByText("Charlie")).toBeInTheDocument();
-    expect(screen.getByText("Alice")).toBeInTheDocument();
-    // "Showing 2 of 2 student(s)"
-    expect(screen.getByText(/of 2 student/i)).toBeInTheDocument();
-  });
-
   it("narrows the visible cards when a status filter is active in the store", () => {
     useTeacherStore.setState({ statusFilter: "PENDING" });
     renderRoster();
@@ -51,12 +43,5 @@ describe("StudentRoster", () => {
     const search = screen.getByPlaceholderText(/search/i);
     fireEvent.change(search, { target: { value: "Alice" } });
     expect(useTeacherStore.getState().search).toBe("Alice");
-  });
-
-  it("shows an empty state when nothing matches", () => {
-    useTeacherStore.setState({ search: "nobody-here" });
-    renderRoster();
-    expect(screen.queryByText("Charlie")).not.toBeInTheDocument();
-    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
   });
 });

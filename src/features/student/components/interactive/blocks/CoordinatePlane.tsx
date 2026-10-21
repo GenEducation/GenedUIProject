@@ -60,8 +60,8 @@ export default function CoordinatePlane({ directiveId, meta, disabled, readOnly 
           const gy = yr[0] + i * gridStep;
           return <line key={`h${i}`} x1={px(xr[0])} y1={py(gy)} x2={px(xr[1])} y2={py(gy)} stroke={COLORS.border} strokeWidth={0.5} />;
         })}
-        <line x1={px(xr[0])} y1={py(Math.max(0, yr[0]))} x2={px(xr[1])} y2={py(Math.max(0, yr[0]))} stroke="#888780" strokeWidth={1.5} />
-        <line x1={px(Math.max(0, xr[0]))} y1={py(yr[0])} x2={px(Math.max(0, xr[0]))} y2={py(yr[1])} stroke="#888780" strokeWidth={1.5} />
+        <line x1={px(xr[0])} y1={py(Math.max(0, yr[0]))} x2={px(xr[1])} y2={py(Math.max(0, yr[0]))} stroke={COLORS.apparatus} strokeWidth={1.5} />
+        <line x1={px(Math.max(0, xr[0]))} y1={py(yr[0])} x2={px(Math.max(0, xr[0]))} y2={py(yr[1])} stroke={COLORS.apparatus} strokeWidth={1.5} />
         {points.map((p, i) => <circle key={i} cx={px(p[0])} cy={py(p[1])} r={6} fill={COLORS.brand} />)}
       </svg>
       <p style={{ marginTop: 6, fontSize: 13, color: COLORS.muted }}>

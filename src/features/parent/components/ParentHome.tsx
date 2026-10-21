@@ -4,29 +4,32 @@ import { FEATURES } from "@/constants/features";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, Users, X } from "lucide-react";
+import { FileText, Home, Menu, Settings, Users, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { useParentStore } from "../store/useParentStore";
-import type { LinkedStudent } from "../services/parentService";
+import { parentService, type LinkedStudent } from "../services/parentService";
+import { GuardianConfirmation } from "./GuardianConfirmation";
 import { titleCase } from "@/features/student/utils/displayName";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 import dynamic from "next/dynamic";
 import { ParentChatExploration } from "./ParentChatExploration";
-import { ParentProfileView } from "./ParentProfileView";
+import { ParentSettingsView } from "./settings/ParentSettingsView";
 import { ParentScheduleView } from "./ParentScheduleView";
 import { ParentMomentsView } from "./ParentMomentsView";
 import { ParentStudentPicker } from "./ParentStudentPicker";
 import { ParentStudentSwitcher } from "./ParentStudentSwitcher";
 import { assignStudentAvatars } from "../utils/studentAvatars";
-import { hasEnteredPortal, markPortalEntered } from "../utils/portalEntry";
+import { dismissConnectPrompt, hasDismissedConnectPrompt, hasEnteredPortal, markPortalEntered } from "../utils/portalEntry";
+import { ConnectChildDialog } from "./settings/ConnectChildDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ParentHomeView } from "./home/ParentHomeView";
-import { ParentSubjectView } from "./home/ParentSubjectView";
+import { SubjectInsightsView } from "./subject/SubjectInsightsView";
 import { ICON, NAV_ROW, NAV_ROW_ACTIVE, PORTAL_THEME } from "./home/theme";
 import { greetingFor } from "../utils/homeMetrics";
 import { ParentReportPreparing } from "./loader/ParentReportPreparing";
 import { PortalBusyProvider, PortalProgressBar } from "./loader/PortalProgress";
-import { asError } from "@/utils/errors";
+import { GlassSkeleton } from "./loader/GlassSkeleton";
 
 // The GenEd logo shared for the portal (Deep Ocean + Citron).
 const LOGO_SRC = "/brand/gened-logo-deep-ocean-transparent.png";
@@ -47,103 +50,94 @@ export function ParentHome() {
   const { 
     parentProfile, 
     linkedStudents, 
-    selectedStudentId, 
+    selectedStudentId: storedStudentId,
     setSelectedStudentId,
     fetchLinkedStudents,
     isFetchingStudents,
     hasFetchedStudents,
-    activeDashboardView,
+    activeDashboardView: storedView,
     setDashboardView,
   } = useParentStore();
 
+  // The URL is the source of truth for which child and which page are shown.
+  // Reading it here (rather than only via the sync effect below) means the
+  // first render after a navigation is already the right page; the store
+  // copy, kept for other consumers, catches up a moment later.
+  const fromUrl = routeFromPath(pathname);
+  const activeDashboardView = fromUrl.view ?? storedView;
+  const selectedStudentId = fromUrl.view === "profile" ? null : fromUrl.studentId ?? storedStudentId;
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isLinking, setIsLinking] = useState(false);
-  const [linkingError, setLinkingError] = useState<string | null>(null);
   const [linkingSuccess, setLinkingSuccess] = useState<string | null>(null);
 
-  // Auto parent linking if search query parameters are present
-  useEffect(() => {
-    const token = searchParams.get("token");
-    const studentId = searchParams.get("student_id");
-
-    if (!token || !studentId || !parentProfile?.user_id) return;
-
-    let cancelled = false;
-    const controller = new AbortController();
-
-    async function autoLink() {
-      setIsLinking(true);
-      setLinkingError(null);
-      setLinkingSuccess(null);
-      try {
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
-
-        // 1. Verify token first
-        const verifyResp = await fetch(
-          `${API_BASE_URL}/parent/verify-token?student_id=${studentId}&token=${token}`,
-          { signal: controller.signal }
-        );
-        if (!verifyResp.ok) {
-          const errData = await verifyResp.json().catch(() => ({}));
-          throw new Error(errData.message || "Failed to verify parent token.");
-        }
-        const verifyData = await verifyResp.json();
-
-        // 2. Confirm link
-        const confirmResp = await fetch(`${API_BASE_URL}/parent/confirm-link`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("gened_auth_token")}`,
-          },
-          body: JSON.stringify({
-            student_id: studentId,
-            parent_id: parentProfile!.user_id,
-            token: token,
-          }),
-          signal: controller.signal,
-        });
-
-        if (!confirmResp.ok) {
-          const errData = await confirmResp.json().catch(() => ({}));
-          throw new Error(errData.message || "Failed to link account.");
-        }
-
-        if (!cancelled) {
-          setLinkingSuccess(`Successfully linked with student "${verifyData.student_username}"!`);
-
-          // Refresh students list in parent store
-          await fetchLinkedStudents();
-
-          // Clean URL params without page reload
-          const newUrl = window.location.pathname;
-          window.history.replaceState({}, "", newUrl);
-        }
-      } catch (err) {
-        if (!cancelled && asError(err).name !== "AbortError") {
-          setLinkingError(asError(err).message || "Failed to establish parent-student link.");
-        }
-      } finally {
-        if (!cancelled) setIsLinking(false);
+  // The invitation link from the parent's email (`/parent?token=…&student_id=…`) opens a confirmation screen
+  // (GuardianConfirmation): nothing is linked until the parent says, in so many words, that they are the child's
+  // parent or guardian. The backend links a parent to a child who verified their email whether or not they ever
+  // open this link; the link is a convenience.
+  const inviteToken = searchParams.get("token");
+  const inviteStudentId = searchParams.get("student_id");
+  const [invitationClosed, setInvitationClosed] = useState(false);
+  const showInvitation = !!inviteToken && !!inviteStudentId && !!parentProfile?.user_id && !invitationClosed;
+  const finishInvitation = useCallback(
+    (linked: boolean) => {
+      if (linked) {
+        setLinkingSuccess("You're connected. Your child's learning now shows up here.");
+        void fetchLinkedStudents();
       }
-    }
+      setInvitationClosed(true);
+      // Drop the token from the address bar without a reload.
+      window.history.replaceState({}, "", window.location.pathname);
+    },
+    [fetchLinkedStudents],
+  );
 
-    autoLink();
-    return () => { cancelled = true; controller.abort(); };
-  }, [searchParams, parentProfile, fetchLinkedStudents]);
+  // Children who named this parent's email but are already connected to another guardian account: the parent
+  // is told why they can't connect, instead of finding nothing.
+  const [otherGuardianNames, setOtherGuardianNames] = useState<string[]>([]);
+  useEffect(() => {
+    if (!parentProfile?.user_id) return;
+    let cancelled = false;
+    parentService.fetchGuardianInvitations(parentProfile.user_id).then((found) => {
+      if (!cancelled) setOtherGuardianNames(found.filter((i) => i.state === "other_guardian").map((i) => i.student_name));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [parentProfile?.user_id]);
+
+  // The parent's own name lives on the server (`GET /parent/profile`): once read, it replaces the username in the
+  // greeting and Settings. Read once per account; a parent without one keeps the username.
+  useEffect(() => {
+    if (!parentProfile?.user_id) return;
+    let cancelled = false;
+    parentService.fetchParentName().then((name) => {
+      const current = useParentStore.getState().parentProfile;
+      if (!cancelled && name && current && current.name !== name) {
+        useParentStore.getState().setParentProfile({ ...current, name });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [parentProfile?.user_id]);
 
   // Sync URL → state on mount / pathname change.
   //   /parent/:id, /parent/:id/analytics  → Home
   //   /parent/:id/report                   → Report Card
   //   /parent/:id/subject/:subject         → one subject in depth
   //   /parent/:id/{chat,schedule,moments}  → older views, still reachable by link
-  //   /parent/profile                      → Settings
+  //   /parent/settings                     → Settings (/parent/profile redirects here)
   const urlParts = pathname.split("/").filter(Boolean);
   const subjectFromUrl =
     urlParts[2] === "subject" && urlParts[3] ? safeDecode(urlParts[3]) : null;
   useEffect(() => {
     const [, id, section] = pathname.split("/").filter(Boolean);
     if (id === "profile") {
+      // The old address for Settings; keep bookmarks working.
+      router.replace("/parent/settings");
+      return;
+    }
+    if (id === "settings") {
       setDashboardView("profile");
       setSelectedStudentId(null);
       return;
@@ -200,14 +194,27 @@ export function ParentHome() {
   }, []);
   // The account-link flow (?token=) and the parent's own profile page aren't
   // about any one child, so they skip the picker.
-  const isLinkingFlow = !!searchParams.get("token");
-  const isProfilePage = pathname === "/parent/profile";
+  const isLinkingFlow = !!inviteToken && !invitationClosed;
+  const isProfilePage = pathname === "/parent/settings" || pathname === "/parent/profile";
 
   // With nothing to choose between, the tab counts as entered straight away.
   useEffect(() => {
     if (portalEntered || !hasFetchedStudents) return;
     if (!hasMultipleStudents || isLinkingFlow || isProfilePage) enterPortal();
   }, [portalEntered, hasFetchedStudents, hasMultipleStudents, isLinkingFlow, isProfilePage, enterPortal]);
+
+  // First run: no child connected yet, so before Home show how to connect one.
+  // "Later" holds for this login; the empty Home can bring it back.
+  const [connectDismissed, setConnectDismissed] = useState(hasDismissedConnectPrompt);
+  const pendingStudents = useMemo(() => linkedStudents.filter((s) => s.status === "PENDING"), [linkedStudents]);
+  const pendingAvatars = useMemo(() => assignStudentAvatars(pendingStudents.map((s) => s.student_id)), [pendingStudents]);
+  const showConnectPrompt =
+    hasFetchedStudents && approvedStudents.length === 0 && !isLinkingFlow && !isProfilePage && !connectDismissed;
+  const dismissConnect = useCallback(() => {
+    dismissConnectPrompt();
+    setConnectDismissed(true);
+  }, []);
+  const refreshStudents = useCallback(() => { void fetchLinkedStudents(); }, [fetchLinkedStudents]);
 
   const studentName = (s: LinkedStudent) => s.name || `Student ID: ...${s.student_id.slice(-4)}`;
   const parentName = titleCase(parentProfile?.name?.trim() || parentProfile?.username || "Parent");
@@ -265,62 +272,70 @@ export function ParentHome() {
   }
 
   const navItems = [
-    { key: "analytics", label: "Home", icon: "nav_home", href: navStudentId ? `/parent/${navStudentId}` : "/parent" },
-    { key: "report", label: "Report Card", icon: "nav_report_card", href: navStudentId ? `/parent/${navStudentId}/report` : "/parent" },
+    { key: "analytics", label: "Home", icon: Home, href: navStudentId ? `/parent/${navStudentId}` : "/parent" },
+    { key: "report", label: "Report Card", icon: FileText, href: navStudentId ? `/parent/${navStudentId}/report` : "/parent" },
   ] as const;
 
-  // While the family loads, the parent loader covers the screen.
+  // While the family loads: the hat loader covers this after sign-in or
+  // sign-up; on a refresh or a new tab there's none, so a light skeleton.
   const content = isFetchingStudents && !hasFetchedStudents ? (
-    <div className="min-h-[50vh]" aria-busy="true" />
-  ) : activeDashboardView === "profile" ? (
-    <div className="portal-legacy-type overflow-hidden rounded-[24px] border border-[var(--pp-line)]">
-      <ParentProfileView profile={parentProfile} />
+    <div aria-busy="true" aria-label="Loading" className="space-y-5">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => <GlassSkeleton key={i} className="h-[150px] rounded-2xl" />)}
+      </div>
+      <GlassSkeleton className="h-[300px] rounded-2xl" />
     </div>
+  ) : activeDashboardView === "profile" ? (
+    <ParentSettingsView profile={parentProfile} />
   ) : selectedStudent ? (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={`${selectedStudentId}-${activeDashboardView}-${subjectFromUrl ?? ""}`}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -8 }}
-        transition={{ duration: 0.3 }}
-      >
-        {activeDashboardView === "analytics" ? (
-          <ParentHomeView studentId={selectedStudentId!} />
-        ) : activeDashboardView === "subject" && subjectFromUrl ? (
-          <ParentSubjectView studentId={selectedStudentId!} subject={subjectFromUrl} />
-        ) : (
-          <div className="portal-legacy-type overflow-hidden rounded-[24px] border border-[var(--pp-line)] bg-white">
-            {activeDashboardView === "report" ? (
-              <StudentReportCard
-                parentId={parentProfile?.user_id}
-                childId={selectedStudentId!}
-                childName={selectedStudent?.name || undefined}
-                loadingFallback={
-                  <ParentReportPreparing
-                    childName={selectedStudent?.name}
-                    avatar={studentAvatars[selectedStudentId!]}
-                  />
-                }
+    // The new page replaces the old one at once and fades in. No exit
+    // animation: waiting for the old page to fade out first (AnimatePresence
+    // "wait") left it on screen whenever that fade was interrupted.
+    <motion.div
+      key={`${selectedStudentId}-${activeDashboardView}-${subjectFromUrl ?? ""}`}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+    >
+      {activeDashboardView === "analytics" ? (
+        <ParentHomeView studentId={selectedStudentId!} />
+      ) : activeDashboardView === "subject" && subjectFromUrl ? (
+        <SubjectInsightsView studentId={selectedStudentId!} subject={subjectFromUrl} childName={selectedStudent?.name} />
+      ) : activeDashboardView === "report" ? (
+        // The report is a page of cards itself: straight on the portal's background, not framed inside another card.
+        <div className="portal-legacy-type rc-embedded">
+          <StudentReportCard
+            parentId={parentProfile?.user_id}
+            childId={selectedStudentId!}
+            childName={selectedStudent?.name || undefined}
+            childAvatar={studentAvatars[selectedStudentId!]}
+            loadingFallback={
+              <ParentReportPreparing
+                childName={selectedStudent?.name}
+                avatar={studentAvatars[selectedStudentId!]}
               />
-            ) : activeDashboardView === "schedule" && FEATURES.schedule ? (
-              <ParentScheduleView
-                studentId={selectedStudentId!}
-                parentId={parentProfile!.user_id}
-                studentName={selectedStudent?.name}
-              />
-            ) : activeDashboardView === "moments" ? (
-              <ParentMomentsView
-                studentId={selectedStudentId!}
-                studentName={selectedStudent?.name}
-              />
-            ) : (
-              <ParentChatExploration />
-            )}
-          </div>
-        )}
-      </motion.div>
-    </AnimatePresence>
+            }
+          />
+        </div>
+      ) : (
+        <div className="portal-legacy-type overflow-hidden rounded-[24px] border border-[var(--pp-line)] bg-white">
+          {activeDashboardView === "schedule" && FEATURES.schedule ? (
+            <ParentScheduleView
+              studentId={selectedStudentId!}
+              parentId={parentProfile!.user_id}
+              studentName={selectedStudent?.name}
+            />
+          ) : activeDashboardView === "moments" ? (
+            <ParentMomentsView
+              studentId={selectedStudentId!}
+              studentName={selectedStudent?.name}
+            />
+          ) : (
+            <ParentChatExploration />
+          )}
+        </div>
+      )}
+    </motion.div>
   ) : (
     <div className="flex min-h-[50vh] flex-col items-center justify-center p-8 text-center">
       <span className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[var(--pp-mint)] text-[var(--pp-green-deep)]">
@@ -329,8 +344,13 @@ export function ParentHome() {
       <h2 className="mb-3 text-2xl font-bold">Link your child to get started</h2>
       <p className="max-w-md text-sm text-[var(--pp-ink-soft)]">
         Once your child&apos;s account is linked, you&apos;ll see how they&apos;re learning here. You can manage links in{" "}
-        <Link href="/parent/profile" className="font-semibold text-[var(--pp-green-deep)] underline-offset-2 hover:underline">Settings</Link>.
+        <Link href="/parent/settings" className="font-semibold text-[var(--pp-green-deep)] underline-offset-2 hover:underline">Settings</Link>.
       </p>
+      {!isLinkingFlow && (
+        <Button variant="primary" className="mt-6" onClick={() => setConnectDismissed(false)}>
+          Show me how
+        </Button>
+      )}
     </div>
   );
 
@@ -348,7 +368,7 @@ export function ParentHome() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 z-40 bg-[#13293D]/30 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-[#122D30]/30 backdrop-blur-sm lg:hidden"
           />
         )}
       </AnimatePresence>
@@ -384,8 +404,7 @@ export function ParentHome() {
                 onClick={closeSidebarOnMobile}
                 className={`${NAV_ROW} ${active ? NAV_ROW_ACTIVE : ""}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element -- tiny static icon */}
-                <img src={ICON(item.icon)} alt="" width={22} height={22} className="shrink-0" />
+                <NavIcon icon={item.icon} active={active} />
                 {item.label}
               </Link>
             );
@@ -406,13 +425,12 @@ export function ParentHome() {
           )}
 
           <Link
-            href="/parent/profile"
+            href="/parent/settings"
             aria-current={activeDashboardView === "profile" ? "page" : undefined}
             onClick={closeSidebarOnMobile}
             className={`${NAV_ROW} ${activeDashboardView === "profile" ? NAV_ROW_ACTIVE : ""}`}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element -- tiny static icon */}
-            <img src={ICON("nav_settings")} alt="" width={22} height={22} className="shrink-0" />
+            <NavIcon icon={Settings} active={activeDashboardView === "profile"} />
             Settings
           </Link>
         </nav>
@@ -450,39 +468,56 @@ export function ParentHome() {
             {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset */}
             <img src={LOGO_SRC} alt="GenEd" width={354} height={140} className="h-auto w-[96px]" />
           </div>
-          {/* Greeting: beside the bell on desktop, its own line on phones. */}
+          {/* Greeting: beside the bell on desktop, its own line on phones. The report card has no greeting, only its
+              title: its own header names the child. */}
+          {activeDashboardView === "report" ? (
+            <div className="order-last w-full min-w-0 lg:order-none lg:w-auto lg:flex-1">
+              <h1 className="truncate text-[22px] font-bold leading-tight tracking-tight text-[var(--pp-ink)] lg:text-[28px]">
+                Report Card
+              </h1>
+            </div>
+          ) : (
           <div className="order-last w-full min-w-0 lg:order-none lg:w-auto lg:flex-1">
+            {/* Settings is about the parent's own account, not a child: a plain title there. */}
             <h1 className="truncate text-[22px] font-bold leading-tight tracking-tight text-[var(--pp-ink)] lg:text-[28px]">
-              {greetingFor()}, {parentName}!
+              {activeDashboardView === "profile" ? "Settings" : `${greetingFor()}, ${parentName}!`}
             </h1>
-            {navStudent && (
+            {activeDashboardView === "profile" ? (
+              <p className="mt-0.5 truncate text-[14px] text-[var(--pp-ink-soft)] lg:text-[15px]">
+                Your account and the children connected to it.
+              </p>
+            ) : navStudent && (
               <p className="mt-0.5 truncate text-[14px] text-[var(--pp-ink-soft)] lg:text-[15px]">
                 Here&apos;s how {studentName(navStudent)} is doing on their learning journey.
               </p>
             )}
           </div>
+          )}
           <div className="ml-auto lg:ml-0">
             <NotificationBell userId={parentProfile?.user_id || ""} align="right" />
           </div>
         </header>
 
-        {/* Auto-linking status banners */}
-        {isLinking && (
-          <div className="mx-4 mt-3 flex items-center gap-2.5 rounded-xl border border-blue-100 bg-[#eff6ff] px-5 py-3 text-xs font-bold text-blue-700 lg:mx-8">
-            <div className="h-2.5 w-2.5 animate-ping rounded-full bg-blue-500" />
-            Verifying and establishing link with your child...
-          </div>
+        {showInvitation && (
+          <GuardianConfirmation
+            token={inviteToken!}
+            studentId={inviteStudentId!}
+            parentId={parentProfile!.user_id}
+            parentEmail={parentProfile?.email}
+            onFinished={finishInvitation}
+          />
         )}
         {linkingSuccess && (
-          <div className="mx-4 mt-3 flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-xs font-bold text-emerald-700 lg:mx-8">
-            <span>🎉 {linkingSuccess}</span>
+          <div role="status" className="mx-4 mt-3 flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-xs font-bold text-emerald-700 lg:mx-8">
+            <span>{linkingSuccess}</span>
             <button onClick={() => setLinkingSuccess(null)} className="px-2 py-1 font-black hover:text-emerald-950">Dismiss</button>
           </div>
         )}
-        {linkingError && (
-          <div className="mx-4 mt-3 flex items-center justify-between rounded-xl border border-rose-100 bg-rose-50 px-5 py-3 text-xs font-bold text-rose-700 lg:mx-8">
-            <span>⚠️ {linkingError}</span>
-            <button onClick={() => setLinkingError(null)} className="px-2 py-1 font-black hover:text-rose-950">Dismiss</button>
+        {otherGuardianNames.length > 0 && (
+          <div role="note" className="mx-4 mt-3 rounded-xl border border-amber-100 bg-amber-50 px-5 py-3 text-xs font-semibold text-amber-800 lg:mx-8">
+            {otherGuardianNames.join(", ")} named your email as their parent&apos;s, but{" "}
+            {otherGuardianNames.length > 1 ? "they are" : "is"} already connected to another guardian account. A child
+            can have one guardian account on GenEd; that guardian can remove the connection in their Settings.
           </div>
         )}
 
@@ -491,14 +526,42 @@ export function ParentHome() {
         </div>
 
         <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-3 lg:px-8 lg:pb-8">
-          <div className="rounded-[28px] border border-white/60 bg-white/25 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-sm sm:p-6 lg:p-7">
+          {/* The report card brings its own cards; this glass panel frames the other pages. */}
+          <div className={activeDashboardView === "report" && selectedStudent ? "" : "rounded-[28px] border border-white/60 bg-white/25 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-sm sm:p-6 lg:p-7"}>
             {content}
           </div>
         </main>
       </div>
+
+      <ConnectChildDialog
+        open={showConnectPrompt}
+        parentName={parentName}
+        email={parentProfile?.email}
+        pending={pendingStudents}
+        avatars={pendingAvatars}
+        onRefresh={refreshStudents}
+        onDismiss={dismissConnect}
+      />
     </div>
     </PortalBusyProvider>
   );
+}
+
+type DashboardView = ReturnType<typeof useParentStore.getState>["activeDashboardView"];
+
+/**
+ * Which page a portal URL names. `view` is null for bare /parent, where the
+ * picker or the store's own choice decides.
+ */
+export function routeFromPath(pathname: string): { view: DashboardView | null; studentId: string | null } {
+  const [, id, section] = pathname.split("/").filter(Boolean);
+  if (id === "settings" || id === "profile") return { view: "profile", studentId: null };
+  if (!id) return { view: null, studentId: null };
+  if (section === "schedule" && !FEATURES.schedule) return { view: "analytics", studentId: id };
+  if (section === "report" || section === "subject" || section === "chat" || section === "schedule" || section === "moments") {
+    return { view: section, studentId: id };
+  }
+  return { view: "analytics", studentId: id };
 }
 
 function safeDecode(value: string): string {
@@ -507,4 +570,23 @@ function safeDecode(value: string): string {
   } catch {
     return value;
   }
+}
+
+/**
+ * A sidebar item's icon: one outline set for every item; on the page you're on, teal and filled. (The old
+ * images drew Home solid and the others as outlines, so Home looked selected wherever you were.)
+ */
+function NavIcon({ icon: Icon, active }: { icon: LucideIcon; active: boolean }) {
+  return (
+    <Icon
+      aria-hidden
+      size={21}
+      strokeWidth={active ? 2.2 : 1.8}
+      // The page you're on is filled: a soft teal inside its outline (solid would hide the gear's hole and the
+      // document's lines); the others are outlines only.
+      fill={active ? "currentColor" : "none"}
+      fillOpacity={active ? 0.2 : undefined}
+      className={`shrink-0 ${active ? "text-[var(--pp-green)]" : "text-[var(--pp-ink-soft)]"}`}
+    />
+  );
 }

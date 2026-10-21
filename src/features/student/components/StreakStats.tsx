@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Flame, Star, type LucideIcon } from "lucide-react";
+import { BookOpenCheck, Clock3, Flame, Star, type LucideIcon } from "lucide-react";
 
 import { STUDENT_COLORS } from "../theme/colors";
 import { STRINGS } from "../constants/strings";
@@ -13,30 +13,54 @@ import { STRINGS } from "../constants/strings";
  */
 export interface StreakStatsData {
   currentStreak: number;
-  totalSessions: number;
   longestStreak: number;
 }
 
 const STATS: {
-  key: "currentStreak" | "totalSessions" | "longestStreak";
+  key: "currentStreak" | "longestStreak";
   Icon: LucideIcon;
   label: string;
   color: string;
   unit: string;
 }[] = [
-  { key: "currentStreak", Icon: Flame, label: STRINGS.streak.dayStreak, color: STUDENT_COLORS.warn, unit: "Days" },
-  { key: "totalSessions", Icon: BookOpen, label: STRINGS.streak.sessions, color: STUDENT_COLORS.tutorSoft, unit: "" },
-  { key: "longestStreak", Icon: Star, label: STRINGS.streak.longestStreak, color: STUDENT_COLORS.subjectMath, unit: "Days" },
+  { key: "currentStreak", Icon: Flame, label: STRINGS.streak.dayStreak, color: STUDENT_COLORS.warn, unit: "Day" },
+  { key: "longestStreak", Icon: Star, label: STRINGS.streak.longestStreak, color: STUDENT_COLORS.subjectMath, unit: "Day" },
 ];
+
+/**
+ * Minutes → value/unit pairs for the card ("45 min", "2h 15m", "3h").
+ * Kept as parts so the numbers render large and the units small, matching
+ * the other cards' "0 Days".
+ */
+export function studyTimeParts(minutes: number): { n: number; u: string }[] {
+  const total = Math.max(0, Math.round(minutes));
+  if (total < 60) return [{ n: total, u: "min" }];
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return m ? [{ n: h, u: "h" }, { n: m, u: "m" }] : [{ n: h, u: "h" }];
+}
 
 export function StreakStats({
   data,
   isLoading,
   variant = "card",
+  totalMinutes,
+  chapters,
 }: {
   data: StreakStatsData | null;
   isLoading?: boolean;
   variant?: "card" | "strip";
+  /**
+   * Card variant only. When passed, a fourth "Time Spent" card is shown:
+   * a number of minutes, `null` if it couldn't be loaded (shows "—"), or
+   * `undefined` to leave the card out.
+   */
+  totalMinutes?: number | null;
+  /**
+   * Card variant only. When passed, a "Chapters Completed" card (completed / total, as the report card counts them) sits
+   * after the current streak: `null` if it couldn't be loaded (shows "—"), or `undefined` to leave the card out.
+   */
+  chapters?: { completed: number; total: number } | null;
 }) {
   if (variant === "strip") {
     return (
@@ -79,10 +103,45 @@ export function StreakStats({
     );
   }
 
+  const showTime = totalMinutes !== undefined;
+  const showChapters = chapters !== undefined;
+  type Card = { key: string; Icon: LucideIcon; label: string; parts: { n: number; u: string }[] | null; of?: number };
+  const streaks: Card[] = STATS.map((s) => ({
+    key: s.key,
+    Icon: s.Icon,
+    label: s.label,
+    // "1 Day", "0 Days", "4 Days".
+    parts: [{ n: data?.[s.key] ?? 0, u: (data?.[s.key] ?? 0) === 1 ? s.unit : `${s.unit}s` }],
+  }));
+  const cards: Card[] = [
+    streaks[0],
+    ...(showChapters
+      ? [{
+          key: "chaptersCompleted",
+          Icon: BookOpenCheck,
+          label: STRINGS.streak.chaptersCompleted,
+          parts: chapters == null ? null : [{ n: chapters.completed, u: "" }],
+          of: chapters?.total,
+        }]
+      : []),
+    ...streaks.slice(1),
+    ...(showTime
+      ? [{
+          key: "timeSpent",
+          Icon: Clock3,
+          label: STRINGS.streak.timeSpent,
+          parts: totalMinutes == null ? null : studyTimeParts(totalMinutes),
+        }]
+      : []),
+  ];
+
   return (
-    <div className="grid grid-cols-3" style={{ gap: "clamp(8px, 1.2vw, 14px)" }}>
+    <div
+      className={cards.length === 4 ? "grid grid-cols-2 lg:grid-cols-4" : cards.length === 3 ? "grid grid-cols-3" : "grid grid-cols-2"}
+      style={{ gap: "clamp(8px, 1.2vw, 14px)" }}
+    >
       {isLoading
-        ? [1, 2, 3].map((n) => (
+        ? cards.map((c) => c.key).map((n) => (
             <div
               key={n}
               className="rounded-2xl animate-pulse"
@@ -102,8 +161,7 @@ export function StreakStats({
               <div className="rounded mt-3" style={{ background: STUDENT_COLORS.border + "60", height: 22, width: 68 }} />
             </div>
           ))
-        : STATS.map((s) => {
-            const value = data?.[s.key] ?? 0;
+        : cards.map((s) => {
             return (
               <div
                 key={s.key}
@@ -130,10 +188,12 @@ export function StreakStats({
                   <span
                     className="rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{
-                      background: s.color + "1F",
-                      width: "clamp(24px, 2.2vw, 30px)",
-                      height: "clamp(24px, 2.2vw, 30px)",
-                      color: s.color,
+                      // Soft-surface well, teal glyph — calm chrome; citron is
+                      // kept for the screen's one key moment.
+                      background: STUDENT_COLORS.softSurface,
+                      width: "clamp(26px, 2.4vw, 32px)",
+                      height: "clamp(26px, 2.4vw, 32px)",
+                      color: STUDENT_COLORS.primary,
                     }}
                   >
                     <s.Icon size={16} strokeWidth={2.2} />
@@ -149,9 +209,18 @@ export function StreakStats({
                     fontSize: "clamp(19px, 2.1vw, 26px)",
                   }}
                 >
-                  {value}
-                  {s.unit && (
-                    <span style={{ fontSize: "0.72em", marginLeft: 5 }}>{s.unit}</span>
+                  {s.parts === null
+                    ? "—"
+                    : s.parts.map((p, i) => (
+                        <span key={i} style={{ marginLeft: i ? 6 : 0 }}>
+                          {p.n}
+                          {p.u && (
+                            <span style={{ fontSize: "0.72em", marginLeft: p.u.length > 1 ? 5 : 1 }}>{p.u}</span>
+                          )}
+                        </span>
+                      ))}
+                  {s.parts !== null && s.of != null && (
+                    <span style={{ fontSize: "0.72em", marginLeft: 5, color: STUDENT_COLORS.textMuted }}>/ {s.of}</span>
                   )}
                 </div>
               </div>

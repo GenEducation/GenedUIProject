@@ -23,6 +23,38 @@ export interface LearnerChapter {
   card: ChapterCard | null;
 }
 
+/**
+ * One of the chapters a student last worked on (`GET /v1/learner/recent-chapters`): the chapter and its newest
+ * lesson instance in one entry, most recently active first.
+ */
+export interface RecentChapter {
+  chapter_id: string;
+  chapter_title: string;
+  chapter_number: number;
+  book_title: string;
+  /** The subject's code, e.g. `mathematics`, `social_science` (not the display name). */
+  subject: string;
+  /** The newest lesson instance for this chapter: resume it at `/student/lesson/{instance_id}`. */
+  instance_id: string;
+  state: "active" | "completed" | "abandoned";
+  nodes_done: number;
+  nodes_total: number;
+  started_at: string;
+  completed_at: string | null;
+  last_active_at: string;
+  /** The learner has completed this chapter at least once (in any session). A completed chapter stays completed. */
+  completed_once?: boolean;
+  /** Completed once and open again: reviewing sections, or started over. */
+  revisiting?: boolean;
+  /** `'<subject>:<n>'`: the card palette, for the gradient while there's no card. */
+  palette: string;
+  card: ChapterCard | null;
+}
+
+export interface RecentChaptersOut {
+  chapters: RecentChapter[];
+}
+
 export interface LearnerChaptersOut {
   subject: string;
   grade: number;
@@ -57,9 +89,13 @@ export interface InstanceState {
   next_action: InstanceNextAction;
   nodes_done: number;
   nodes_total: number;
+  /** The finished parts, in plan order, with their titles (absent from an older backend). */
+  completed_nodes?: Array<{ instance_node_id: string; title: string }>;
   // The lesson screen's fields. Optional so the chapter list's fixtures stay small.
   plan_version_id?: string;
   /** Every answer, done or engagement names it as `expected_revision`; a stale one is a 409 (CORE_3103). */
   revision?: number;
   active_node?: ActiveNode | null;
+  /** When this session first completed. It stays set while the learner reviews sections of it, so it stays finished. */
+  first_completed_at?: string | null;
 }

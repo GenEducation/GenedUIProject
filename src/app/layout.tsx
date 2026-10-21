@@ -1,33 +1,14 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display, Plus_Jakarta_Sans, Mukta, Source_Serif_4, JetBrains_Mono, Kalam, Fredoka, Nunito } from "next/font/google";
+import { Nunito_Sans, Mukta, Source_Serif_4, JetBrains_Mono, Kalam, Fredoka, Nunito } from "next/font/google";
 import "./globals.css";
-// Blobatar's motion layer. Required — an `animate` prop renders inline SVG but
-// nothing moves without this stylesheet. `gaze.css` arms the cursor-tracking
-// layer; it registers `--mo-track-travel` at 0px, so every blobatar still
-// holds still until something sets an excursion.
-import "blobatar/motion.css";
-import "blobatar/gaze.css";
 import { GlobalLoader } from "@/components/shared/loaders/GlobalLoader";
 import { TutorialVideoModal } from "@/components/shared/TutorialVideoModal";
 
-// Inter + Playfair back the out-of-scope teacher/parent/lab portals (see
-// .portal-legacy-type in globals.css) — kept even though the student app
-// no longer uses them directly.
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-});
-
-// Student app + onboarding + auth type system. Jakarta is Latin-only, so
-// --font-display chains Mukta behind it (see globals.css) to keep Devanagari
-// headings in-family for Hindi subject/chapter content.
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
+// Site-wide type: Nunito Sans for headings and body, with Mukta chained
+// behind it (see globals.css) for Devanagari. The lesson screen keeps its own
+// Fredoka + Nunito pairing below.
+const nunitoSans = Nunito_Sans({
+  variable: "--font-nunito-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
 });
@@ -86,7 +67,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${playfair.variable} ${jakarta.variable} ${mukta.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} ${kalam.variable} ${fredoka.variable} ${nunito.variable} antialiased font-sans`}>
+      <body className={`${nunitoSans.variable} ${mukta.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} ${kalam.variable} ${fredoka.variable} ${nunito.variable} antialiased font-sans`}>
         <GlobalLoader />
         {children}
         <TutorialVideoModal />

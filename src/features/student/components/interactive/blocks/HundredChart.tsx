@@ -13,7 +13,7 @@ export default function HundredChart({ directiveId, meta, disabled, readOnly }: 
   const start: number = render.start ?? 1;
   const end: number = render.end ?? 100;
   const columns: number = render.columns || 10;
-  const fill: string = render.fill_color || "#378ADD";
+  const fill: string = render.fill_color || COLORS.brand;
   const max: number | undefined = interaction.max_selections;
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "select_cells";
@@ -68,7 +68,7 @@ export default function HundredChart({ directiveId, meta, disabled, readOnly }: 
             background = `${sets[0].color}33`; borderColor = sets[0].color; color = COLORS.ink;
           } else if (hasHighlights) {
             // non-member: display-only
-            background = "#FFFFFF"; color = "#C7CBD3"; borderColor = COLORS.border;
+            background = "#FFFFFF"; color = "#C5D1CF"; borderColor = COLORS.border;
           }
 
           return (

@@ -71,7 +71,7 @@ export const CONN_STYLES: Record<
   ConnState,
   { icon: LucideIcon; className: string; label: string }
 > = {
-  ONLINE: { icon: Wifi, className: "bg-[#059F6D]/15 text-[#059F6D]", label: "Online" },
+  ONLINE: { icon: Wifi, className: "bg-[#075E63]/15 text-[#075E63]", label: "Online" },
   STALE: { icon: TriangleAlert, className: "bg-amber-500/15 text-amber-300", label: "Stale" },
   NEEDS_ATTENTION: {
     icon: TriangleAlert,
@@ -101,7 +101,7 @@ export const SERVICE_STYLES: Record<
   ServiceState,
   { icon: LucideIcon; className: string; label: string }
 > = {
-  OK: { icon: Wrench, className: "bg-[#059F6D]/15 text-[#059F6D]", label: "Passing" },
+  OK: { icon: Wrench, className: "bg-[#075E63]/15 text-[#075E63]", label: "Passing" },
   SERVICE_REQUIRED: {
     icon: Wrench,
     className: "bg-rose-500/15 text-rose-300",

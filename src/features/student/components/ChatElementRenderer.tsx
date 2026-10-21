@@ -46,9 +46,9 @@ function PointerRefCallout({ text, textEnd, label, page }: {
         alignItems: "center",
         gap: 10,
         width: "100%",
-        background: "linear-gradient(135deg, #EFF6FF 0%, #F0F9FF 100%)",
-        border: "1.5px solid #BFDBFE",
-        borderLeft: "4px solid #1A6BBF",
+        background: "linear-gradient(135deg, #EAF2EF 0%, #F6F7F2 100%)",
+        border: "1.5px solid #CFE0DB",
+        borderLeft: "4px solid #B8D63F",
         borderRadius: 10,
         padding: "10px 14px",
         cursor: "pointer",
@@ -57,13 +57,13 @@ function PointerRefCallout({ text, textEnd, label, page }: {
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLButtonElement).style.background =
-          "linear-gradient(135deg, #DBEAFE 0%, #E0F2FE 100%)";
+          "linear-gradient(135deg, #DCEBE7 0%, #EAF2EF 100%)";
         (e.currentTarget as HTMLButtonElement).style.boxShadow =
           "0 2px 8px rgba(26,107,191,0.15)";
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLButtonElement).style.background =
-          "linear-gradient(135deg, #EFF6FF 0%, #F0F9FF 100%)";
+          "linear-gradient(135deg, #EAF2EF 0%, #F6F7F2 100%)";
         (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
       }}
     >
@@ -77,7 +77,7 @@ function PointerRefCallout({ text, textEnd, label, page }: {
             margin: 0,
             fontSize: 11,
             fontWeight: 700,
-            color: "#1A6BBF",
+            color: "#075E63",
             textTransform: "uppercase",
             letterSpacing: "0.06em",
             marginBottom: 2,
@@ -105,7 +105,7 @@ function PointerRefCallout({ text, textEnd, label, page }: {
         flexShrink: 0,
         fontSize: 11,
         fontWeight: 600,
-        color: "#1A6BBF",
+        color: "#075E63",
         whiteSpace: "nowrap",
         fontFamily: "var(--font-body)",
       }}>
@@ -141,7 +141,7 @@ function FigureDescribeBlock({ figureAssetUrl, prompt, directiveId }: {
       ) : imageUrl ? (
         <img src={imageUrl} alt="Scene" className="max-w-full rounded-xl shadow-sm" />
       ) : (
-        <div className="w-full p-4 bg-[#FFF8E1] text-[#F57F17] rounded-xl text-xs font-medium text-center">
+        <div className="w-full p-4 bg-[var(--warning-bg)] text-[var(--warning-ink)] rounded-xl text-xs font-medium text-center">
           🖼️ Image unavailable
         </div>
       )}
@@ -168,7 +168,7 @@ export const ChatElementRenderer = React.memo(({ elements, isReadOnly = false }:
         if (el.type === "visual") {
           if (el.content === "error") {
             return (
-              <div key={el.id} className="bg-[#FFF8E1] text-[#F57F17] px-3 py-2 rounded-lg text-xs font-medium self-center my-2">
+              <div key={el.id} className="bg-[var(--warning-bg)] text-[var(--warning-ink)] px-3 py-2 rounded-lg text-xs font-medium self-center my-2">
                 📐 Visual unavailable — {el.meta?.label || "Visual"}
               </div>
             );
@@ -207,7 +207,7 @@ export const ChatElementRenderer = React.memo(({ elements, isReadOnly = false }:
                 ) : imgSource ? (
                   <img src={imgSource} alt={el.meta.label || "Figure"} className="max-w-full sm:max-w-[480px] h-auto rounded-xl" />
                 ) : (
-                  <div className="bg-[#FFF8E1] text-[#F57F17] px-3 py-2 rounded-lg text-xs font-medium">📐 Figure ID: unknown</div>
+                  <div className="bg-[var(--warning-bg)] text-[var(--warning-ink)] px-3 py-2 rounded-lg text-xs font-medium">📐 Figure ID: unknown</div>
                 )}
               </div>
             );

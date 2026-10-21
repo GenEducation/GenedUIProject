@@ -7,7 +7,7 @@ import {
   useStudentStore,
 } from "../store/useStudentStore";
 import { StudentChatInput } from "./StudentChatInput";
-import { ChevronRight, Clock, Bot, Menu } from "lucide-react";
+import { ChevronRight, Clock, Bot, Menu, CalendarDays, Zap } from "lucide-react";
 import { RateLimitPrompt } from "@/features/billing/components/RateLimitPrompt";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { ActivityHeatmap } from "./ActivityHeatmap";
@@ -74,9 +74,9 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
       background: linear-gradient(
         to right,
         var(--primary-ink),
-        #03b1ed,
-        #00a866,
-        #430163,
+        var(--tutor),
+        var(--tutor-soft),
+        var(--tutor-light),
         var(--primary-ink)
       );
       background-size: 300% auto;
@@ -111,7 +111,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             }
           }}
           data-tutorial="hamburger-menu"
-          className="w-10 h-10 rounded-xl bg-[#F4F3EE] flex items-center justify-center text-[var(--primary-ink)]/60 hover:text-[var(--primary-ink)] transition-all"
+          className="w-10 h-10 rounded-xl bg-[#F6F7F2] flex items-center justify-center text-[var(--primary-ink)]/60 hover:text-[var(--tutor)] transition-all"
         >
           <Menu size={20} />
         </button>
@@ -132,7 +132,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
                 {greeting}, {username}!
               </h1>
               <p className="text-sm sm:text-base font-bold text-[var(--primary-ink)]/50 tracking-tight">
-                You&apos;re on a <span className="text-[#00B894] font-extrabold">{studentStats?.currentStreak ?? 0}-day streak</span>. Ready to keep going?
+                You&apos;re on a <span className="citron-mark text-[var(--primary-ink)] font-extrabold">{studentStats?.currentStreak ?? 0}-day streak</span>. Ready to keep going?
               </p>
             </motion.header>
 
@@ -154,7 +154,8 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             transition={{ duration: 0.2, delay: 0.1 }}
             className="space-y-3"
           >
-            <h2 className="text-sm font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest px-2">
+            <h2 className="citron-eyebrow text-sm font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest px-2">
+              <CalendarDays size={14} strokeWidth={2.2} aria-hidden />
               Activity
             </h2>
             <div className="bg-white rounded-2xl p-5 border border-[var(--primary-ink)]/5 shadow-sm">
@@ -170,10 +171,10 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             className="space-y-4"
           >
             <div className="flex items-center justify-between px-2">
-              <h2 className="text-sm font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest">Quick Start</h2>
+              <h2 className="citron-eyebrow text-sm font-extrabold text-[var(--primary-ink)]/40 uppercase tracking-widest"><Zap size={14} strokeWidth={2.2} aria-hidden />Quick Start</h2>
               <button
                 onClick={() => setAgentPickerOpen(true)}
-                className="text-[10px] font-bold text-[var(--primary-ink)]/40 hover:text-[var(--primary-ink)] uppercase tracking-widest flex items-center gap-1 transition-colors"
+                className="text-[10px] font-bold text-[var(--primary-ink)]/40 hover:text-[var(--tutor)] uppercase tracking-widest flex items-center gap-1 transition-colors"
               >
                 All Subjects <ChevronRight size={12} />
               </button>
@@ -284,13 +285,13 @@ function HubCard({ title, subtitle, subject, onStartChat, onStartVoice, delay }:
       <div className="flex gap-2 w-full">
         <button
           onClick={onStartChat}
-          className="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-[#00B894]/10 text-[#00B894] hover:bg-[#00B894]/20 border border-[#00B894]/20 cursor-pointer"
+          className="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-[var(--soft-surface)] text-[var(--tutor)] hover:bg-[var(--tutor)]/15 border border-[var(--tutor)]/15 cursor-pointer"
         >
           Chat
         </button>
         <button
           onClick={onStartVoice}
-          className="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-[#00B894] text-white hover:bg-[#00B894]/90 cursor-pointer"
+          className="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] cursor-pointer"
         >
           Voice
         </button>

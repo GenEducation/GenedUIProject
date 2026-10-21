@@ -2,7 +2,15 @@ import { create } from "zustand";
 import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
 import { partnerStudentsService } from "../services/partnerStudentsService";
-import type { RegisterSourceInput, SourceState, SourceView } from "../types/sources";
+import type {
+  ExcludedPages,
+  ExcludedPagesDecision,
+  SourceReleaseRef, SourceOutcome, SuggestionsState,
+  RegisterSourceInput,
+  SourceProgress,
+  SourceState,
+  SourceView,
+} from "../types/sources";
 
 export interface Student {
   id: string;
@@ -35,6 +43,29 @@ export interface Subject {
   has_report: boolean;
   /** Reconciliation questions the last run is waiting on (`sourcesService.questions`). */
   questions: number;
+  /** How far the current run is, while `running` (null before it first reports). */
+  progress: SourceProgress | null;
+  /** Pages the server left out at upload as the solutions appendix; the partner confirms or includes them. */
+  excluded_pages: ExcludedPages | null;
+  /** What is being ingested, how far each step got and where the result went (`IngestionPathPanel`). */
+  edition_label: string;
+  pdf_file_name: string;
+  page_count: number;
+  first_pdf_page: number;
+  last_pdf_page: number;
+  strand: string;
+  lo_codes: string[];
+  visuals: Record<string, number> | null;
+  release: SourceReleaseRef | null;
+  /** The server's next step for this chapter; null from a server that predates it. */
+  outcome: SourceOutcome | null;
+  /** The last run left questions to complete (`SourceAuthoringModal`); how many the partner did; AI drafts' state. */
+  has_authoring: boolean;
+  authored: number;
+  suggestions: SuggestionsState | null;
+  queued_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
   created_at: string;
 }
 
@@ -53,6 +84,24 @@ export function toSubject(source: SourceView): Subject {
     detail: source.detail,
     has_report: source.has_report,
     questions: source.questions,
+    progress: source.progress ?? null,
+    excluded_pages: source.excluded_pages ?? null,
+    edition_label: source.edition_label,
+    pdf_file_name: source.pdf_file_name,
+    page_count: source.page_count,
+    first_pdf_page: source.chapter.first_pdf_page,
+    last_pdf_page: source.chapter.last_pdf_page,
+    strand: source.strand,
+    lo_codes: source.lo_codes,
+    visuals: source.visuals,
+    release: source.release ?? null,
+    outcome: source.outcome ?? null,
+    has_authoring: source.has_authoring ?? false,
+    authored: source.authored ?? 0,
+    suggestions: source.suggestions ?? null,
+    queued_at: source.queued_at,
+    started_at: source.started_at ?? null,
+    finished_at: source.finished_at,
     created_at: source.created_at,
   };
 }
@@ -80,6 +129,9 @@ interface PartnerState {
 
   // --- Subject Data ---
   subjects: Subject[];
+  /** The chapter just uploaded and started: the registry opens it, scrolls to it and marks it, then clears this. */
+  justUploadedId: string | null;
+  clearJustUploaded: () => void;
   subjectFilters: SubjectFilters;
   subjectPagination: SubjectPagination;
 
@@ -111,6 +163,8 @@ interface PartnerState {
   uploadSource: (input: RegisterSourceInput) => Promise<void>;
   startIngestion: (sourceId: string) => Promise<void>;
   cancelIngestion: (sourceId: string) => Promise<void>;
+  /** Answer about the pages left out at upload: confirm the cut, or include them (the chapter runs again). */
+  decideExcludedPages: (sourceId: string, decision: ExcludedPagesDecision) => Promise<void>;
   removeSubject: (sourceId: string) => Promise<void>;
   removeStudent: (studentId: string) => Promise<void>;
   setShowUploadModal: (show: boolean) => void;
@@ -160,6 +214,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   totalEnrollments: 0,
   selectedStudent: null,
   subjects: [],
+  justUploadedId: null,
+  clearJustUploaded: () => set({ justUploadedId: null }),
   subjectFilters: {},
   subjectPagination: { total_count: 0, limit: 20, offset: 0 },
   isLoading: false,
@@ -333,7 +389,7 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     const source = await sourcesService.register(input);
     await sourcesService.start(source.source_id);
     // Back to the first page, where the new chapter is (newest first).
-    set({ subjectPagination: { ...get().subjectPagination, offset: 0 } });
+    set({ subjectPagination: { ...get().subjectPagination, offset: 0 }, justUploadedId: source.source_id });
     await get().fetchSubjects();
   },
 
@@ -344,6 +400,11 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
   cancelIngestion: async (sourceId) => {
     const source = await sourcesService.cancel(sourceId);
+    replaceSubject(set, source);
+  },
+
+  decideExcludedPages: async (sourceId, decision) => {
+    const source = await sourcesService.decideExcludedPages(sourceId, decision);
     replaceSubject(set, source);
   },
 

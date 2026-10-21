@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getDocument } from "pdfjs-dist";
+
+/** Where scripts/copy-pdfjs-assets.mjs puts pdf.js's image decoders. */
+export const PDFJS_WASM_URL = "/pdfjs-wasm/";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 
 export interface PageDimensions {
@@ -32,7 +35,8 @@ export function usePdfDocument(url: string): UsePdfDocumentResult {
     setLoading(true);
     setError(null);
 
-    const loadTask = getDocument({ url, withCredentials: false });
+    // wasmUrl: pdf.js decodes JPEG 2000 and JBIG2 images (textbook scans) with these; without them it skips the images.
+    const loadTask = getDocument({ url, withCredentials: false, wasmUrl: PDFJS_WASM_URL });
 
     loadTask.promise
       .then(async (doc) => {

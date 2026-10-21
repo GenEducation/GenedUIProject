@@ -55,10 +55,10 @@ export default function ForgotPasswordPage() {
 
   const inputCls = (hasError = false) =>
     `w-full rounded-xl border ${
-      hasError ? "border-rose-400 bg-rose-50/30" : "border-[#042e5c]/15 bg-white/70"
-    } px-5 py-3.5 text-sm text-[#0E1F2B] transition-all duration-200 placeholder:text-[#0E1F2B]/25 hover:border-[#059F6D]/40 focus:border-[#059F6D] focus:outline-none focus:ring-2 focus:ring-[#059F6D]/15`;
+      hasError ? "border-rose-400 bg-rose-50/30" : "border-[#122D30]/15 bg-white/70"
+    } px-5 py-3.5 text-sm text-[#122D30] transition-all duration-200 placeholder:text-[#122D30]/25 hover:border-[#075E63]/40 focus:border-[#075E63] focus:outline-none focus:ring-2 focus:ring-[#075E63]/15`;
 
-  const labelCls = "block text-[9px] font-bold uppercase tracking-[0.28em] text-[#042e5c]/45 mb-2.5 pl-0.5";
+  const labelCls = "block text-[9px] font-bold uppercase tracking-[0.28em] text-[#122D30]/45 mb-2.5 pl-0.5";
 
   return (
     <AuthShell
@@ -85,7 +85,7 @@ export default function ForgotPasswordPage() {
               </div>
               <Link
                 href="/login"
-                className="group relative w-full overflow-hidden rounded-xl bg-[#059F6D] py-4 text-sm font-bold text-white transition-all duration-300 flex items-center justify-center shadow-lg shadow-[#059F6D]/20 hover:shadow-xl hover:shadow-[#059F6D]/40"
+                className="group relative w-full overflow-hidden rounded-xl bg-[#075E63] py-4 text-sm font-bold text-white transition-all duration-300 flex items-center justify-center shadow-lg shadow-[#075E63]/20 hover:shadow-xl hover:shadow-[#075E63]/40"
               >
                 Sign In with New Password
               </Link>
@@ -100,7 +100,7 @@ export default function ForgotPasswordPage() {
                 {[1, 2].map((s) => (
                   <div
                     key={s}
-                    className={`h-1.5 w-8 rounded-full transition-all duration-300 ${s <= step ? "bg-[#059F6D]" : "bg-[#042e5c]/10"}`}
+                    className={`h-1.5 w-8 rounded-full transition-all duration-300 ${s <= step ? "bg-[#075E63]" : "bg-[#122D30]/10"}`}
                   />
                 ))}
               </div>
@@ -146,7 +146,7 @@ export default function ForgotPasswordPage() {
                         <button aria-label={showPassword ? "Hide password" : "Show password"}
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-[#042e5c]/30 hover:text-[#059F6D] transition-colors"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-[#122D30]/30 hover:text-[#075E63] transition-colors"
                         >
                           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
@@ -199,7 +199,7 @@ export default function ForgotPasswordPage() {
                   )}
                   <Link
                     href="/login"
-                    className="text-sm font-semibold text-[#059F6D] hover:text-[#047a54] hover:underline transition-colors"
+                    className="text-sm font-semibold text-[#075E63] hover:text-[#064C50] hover:underline transition-colors"
                   >
                     Return to Sign In
                   </Link>

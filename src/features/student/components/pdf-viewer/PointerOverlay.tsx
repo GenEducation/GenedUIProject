@@ -52,8 +52,8 @@ export function PointerOverlay({ rect, label, visible }: PointerOverlayProps) {
                 height: rect.height + 6,
                 borderRadius: 6,
                 border: `2px solid ${ACCENT}`,
-                background: "rgba(91,77,199,0.12)",
-                boxShadow: "0 4px 18px rgba(91,77,199,0.28)",
+                background: "rgba(7,94,99,0.12)",
+                boxShadow: "0 4px 18px rgba(7,94,99,0.28)",
                 pointerEvents: "none",
                 zIndex: 30,
               }}
@@ -97,7 +97,7 @@ export function PointerOverlay({ rect, label, visible }: PointerOverlayProps) {
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                boxShadow: "0 6px 16px rgba(91,77,199,0.35)",
+                boxShadow: "0 6px 16px rgba(7,94,99,0.35)",
                 pointerEvents: "none",
               }}
             >

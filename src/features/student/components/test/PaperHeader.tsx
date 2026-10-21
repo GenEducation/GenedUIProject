@@ -26,12 +26,12 @@ export function PaperHeader({
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-[var(--primary-ink)] to-[#0a4a8a] text-white shadow-xl shadow-[var(--primary-ink)]/20"
+      className="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-[var(--primary-ink)] to-[var(--primary)] text-white shadow-xl shadow-[var(--primary-ink)]/20"
     >
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="space-y-2 flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <FileText size={16} className="text-white/60" />
+            <FileText size={16} className="text-[#5FA8A3]" />
             <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/50">
               Chapter Test
             </span>
@@ -44,7 +44,7 @@ export function PaperHeader({
             {paperMeta && (
               <>
                 <span className="w-1 h-1 rounded-full bg-white/30" />
-                <span>{paperMeta.total_marks} Marks</span>
+                <span className="font-bold text-white">{paperMeta.total_marks} Marks</span>
               </>
             )}
           </div>

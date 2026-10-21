@@ -15,13 +15,15 @@ interface VisualImageProps {
   onExpired?: () => void;
   className?: string;
   imgClassName?: string;
+  /** Drawn over the picture, inside its frame (marks). */
+  children?: React.ReactNode;
 }
 
 /**
  * A visual's picture: a plain `<img>` on the signed public path, no auth
  * header. Keeps the 4:3 frame whether or not there is an image to show.
  */
-export function VisualImage({ imageUrl, alt, onExpired, className = "", imgClassName = "" }: VisualImageProps) {
+export function VisualImage({ imageUrl, alt, onExpired, className = "", imgClassName = "", children }: VisualImageProps) {
   const refetched = useRef(false);
   // The URL that failed. Show the placeholder until a refetch hands back a
   // different one: the same URL would never fire another error, leaving the
@@ -43,7 +45,7 @@ export function VisualImage({ imageUrl, alt, onExpired, className = "", imgClass
       {broken ? (
         <div
           data-testid="visual-image-placeholder"
-          className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#1A3D2C]/30"
+          className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#122D30]/30"
         >
           <ImageOff size={28} strokeWidth={1.5} />
           <span className="text-[10px] font-black uppercase tracking-widest">Image unavailable</span>
@@ -58,6 +60,7 @@ export function VisualImage({ imageUrl, alt, onExpired, className = "", imgClass
           className={`absolute inset-0 h-full w-full object-contain ${imgClassName}`}
         />
       )}
+      {!broken && children}
     </div>
   );
 }

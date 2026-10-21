@@ -9,15 +9,16 @@ import { BandChip, CARD, SubjectGlyph } from "./primitives";
 import { Icon, TintIcon } from "./icons";
 import { SummaryHeader } from "./SummaryHeader";
 import { SubjectList } from "./SubjectList";
-import { InsightsPanel } from "./InsightsPanel";
+import { InsightsPanel, OverviewHabits, OverviewInsights, OverviewMain } from "./InsightsPanel";
 import { SubjectPreview } from "./SubjectPreview";
 import { SubjectDetail, type DetailTab } from "./SubjectDetail";
+import { ListChecks } from "lucide-react";
 
 /**
  * The on-screen report card. Three levels, stepped through like cascading
  * panels:
  *
- *   overview  [ subject list ][ key insights + trends ]
+ *   overview  [ subject list + what to work on ][ key insights + study habits + trends ]
  *   preview   [ subject list ][ subject preview       ]
  *   detail    [ preview      ][ chapter breakdown     ]
  *
@@ -38,7 +39,7 @@ export function ReportCardScreen({ data, ui }: { data: ReportCardData; ui: Repor
 
   const subjects = useMemo(() => subjectSummaries(data), [data]);
   const overall = useMemo(() => overallSummary(data, subjects), [data, subjects]);
-  const isBrandNew = data.totalSessions === 0 && data.subjects.length === 0 && !data.progressReport;
+  const isBrandNew = isEmptyReport(data);
 
   // A subject can vanish when the dataset changes (child switch, simulation).
   const current = view.level === "overview" ? null : subjects.find((s) => s.subject === view.subject) ?? null;
@@ -134,8 +135,10 @@ export function ReportCardScreen({ data, ui }: { data: ReportCardData; ui: Repor
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -64 }}
                         transition={{ duration: 0.4, ease: EASE }}
+                        className="flex flex-col gap-5"
                       >
                         {list}
+                        {level === "overview" && <OverviewMain data={data} />}
                       </motion.div>
                     ) : (
                       <motion.div key="preview" layoutId="rc-preview" transition={{ duration: 0.5, ease: EASE }} className="sticky top-4">
@@ -201,8 +204,10 @@ export function ReportCardScreen({ data, ui }: { data: ReportCardData; ui: Repor
                 >
                   {level === "overview" && (
                     <>
+                      <OverviewInsights data={data} />
                       {list}
-                      <InsightsPanel data={data} subjects={subjects} />
+                      <OverviewMain data={data} />
+                      <OverviewHabits data={data} subjects={subjects} />
                     </>
                   )}
                   {level === "preview" && preview}
@@ -227,8 +232,7 @@ export function ReportCardScreen({ data, ui }: { data: ReportCardData; ui: Repor
 function CompactSubjectBar({ summary: s, onBack }: { summary: SubjectSummary; onBack: () => void }) {
   return (
     <div
-      className="sticky top-2 z-10 flex items-center gap-3 rounded-2xl border px-3 py-2.5 shadow-[0_10px_24px_-18px_rgba(19,41,61,0.5)] backdrop-blur-md"
-      style={{ background: `linear-gradient(110deg, ${s.tone.wash[0]}F2, ${s.tone.wash[1]}F2)`, borderColor: s.tone.edge }}
+      className="sticky top-2 z-10 flex items-center gap-3 rounded-2xl border border-[var(--rs-line)] bg-white/95 px-3 py-2.5 shadow-[0_10px_24px_-18px_rgba(18,45,48,0.5)] backdrop-blur-md"
     >
       <Button variant="tertiary" size="sm" pill iconOnly onClick={onBack} aria-label="Back to subject preview">
         <TintIcon name="actions/right-arrow" color="var(--rs-ink)" size={12} className="rotate-180" />
@@ -238,40 +242,46 @@ function CompactSubjectBar({ summary: s, onBack }: { summary: SubjectSummary; on
         <p className="truncate text-[15px] font-bold text-[var(--rs-ink)]">{s.subject}</p>
         <p className="text-[11.5px] text-[var(--rs-ink-soft)]">{s.chaptersCompleted}/{s.chaptersTotal} chapters completed</p>
       </div>
-      <BandChip band={`${s.mastery}%`} tone={s.tone} />
+      <BandChip band={s.measured ? `${s.mastery}%` : "—"} tone={s.tone} />
     </div>
   );
 }
 
+/** Nothing to report yet. On the new backend (its chapters carry skills) that means no chapter opened, even though
+ *  every subject the student can study is already listed. */
+export function isEmptyReport(data: ReportCardData): boolean {
+  if (data.chapters.some((c) => c.skills !== undefined)) return data.totalSessions === 0;
+  return data.totalSessions === 0 && data.subjects.length === 0 && !data.progressReport;
+}
+
 function BrandNew({ firstName, onStart }: { firstName: string; onStart?: () => void }) {
   const steps = [
-    <><b>1 session</b> → subject &amp; chapter scores appear</>,
-    <><b>2+ sessions on a chapter</b> → its learning-arc analysis unlocks</>,
-    <><b>2+ chapters in a subject</b> → subject learning trends</>,
-    <><b>An analysed subject</b> → cross-subject AI insights</>,
+    <><b>Open a chapter</b> → its progress and steps appear</>,
+    <><b>Answer its questions</b> → each skill gets a level, from Good start to Strong</>,
+    <><b>Keep going</b> → learning outcomes are marked mastered, and skills to revisit show up</>,
+    <><b>Come back each week</b> → your activity, subject trends and mix-ups to clear fill in over time</>,
   ];
   return (
     <section className={`${CARD} rc-rise mx-auto w-full max-w-[720px] p-6 sm:p-8`}>
       <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--rs-mint)] text-[var(--rs-brand-deep)]">
         <Icon name="session-content/achievement" size={26} />
       </span>
-      <h2 className="mt-4 text-[22px] font-bold text-[var(--rs-ink)]">No sessions yet</h2>
+      <h2 className="mt-4 text-[22px] font-bold text-[var(--rs-ink)]">No chapters yet</h2>
       <p className="mt-1.5 text-[14px] leading-relaxed text-[var(--rs-ink-soft)]">
-        {firstName}&apos;s report fills in after the first learning session — every score and insight here comes from
-        real session activity.
+        {firstName}&apos;s report fills in once a chapter is opened. Every figure here comes from real lesson activity.
       </p>
-      <h3 className="mt-6 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]">How this report builds</h3>
+      <h3 className="citron-eyebrow mt-6 text-[11.5px] font-bold uppercase tracking-[0.08em] text-[var(--rs-ink-soft)]"><ListChecks size={14} strokeWidth={2.2} aria-hidden />How this report builds</h3>
       <ol className="mt-3 flex flex-col gap-2.5">
         {steps.map((s, i) => (
           <li key={i} className="flex items-center gap-3 rounded-2xl border border-[var(--rs-line)] bg-[var(--rs-surface-2)] px-4 py-3 text-[13.5px] text-[var(--rs-ink)]">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--rs-brand)] text-[12px] font-bold text-white">{i + 1}</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--rs-mint)] text-[12px] font-bold text-[var(--rs-brand)]">{i + 1}</span>
             <span>{s}</span>
           </li>
         ))}
       </ol>
       {onStart && (
         <Button variant="primary" size="lg" onClick={onStart} className="mt-6">
-          Start your first session
+          Pick a chapter
         </Button>
       )}
     </section>

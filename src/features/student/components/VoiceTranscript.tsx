@@ -40,7 +40,7 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto rounded-2xl border border-[#E2E8F0] bg-white/70 backdrop-blur-sm px-3 sm:px-5 py-4"
+        className="flex-1 overflow-y-auto rounded-2xl border border-[#E3E8E2] bg-white/75 backdrop-blur-sm px-3 sm:px-5 py-4 shadow-[0_1px_2px_rgba(18,45,48,0.04),0_10px_30px_-18px_rgba(18,45,48,0.18)]"
         style={{ scrollbarWidth: "thin" }}
       >
         {messages.length === 0 ? (
@@ -52,7 +52,7 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
             >
               Listening…
             </p>
-            <p className="text-[12px]" style={{ color: "rgba(4,46,92,0.4)" }}>
+            <p className="text-[12px]" style={{ color: "rgba(18,45,48,0.4)" }}>
               Say hello to get started — your conversation appears here.
             </p>
           </div>
@@ -75,28 +75,20 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
               if (!text && !hasElements) return null;
               return (
                 <div key={m.id} className="flex items-start gap-3 text-[14px] leading-relaxed">
-                  <span
-                    className="font-extrabold tracking-wide uppercase text-[10px] mt-1 min-w-[44px]"
-                    style={{ color }}
-                  >
-                    {label}
+                  <span className="mt-1 min-w-[44px] flex-shrink-0">
+                    {/* Speaker label: the tutor's colour (set below) keeps her turns
+                        findable at a glance; the student's stays plain ink. */}
+                    <span
+                      className="font-extrabold tracking-wide uppercase text-[10px]"
+                      style={{ color }}
+                    >
+                      {label}
+                    </span>
                   </span>
                   <div className="flex-1 flex flex-col gap-3">
                     {showPlainText && (
-                      <div className="text-[#1A202C] voice-transcript-md">
+                      <div className="text-[#122D30] voice-transcript-md">
                         <MarkdownRenderer content={text} />
-                      </div>
-                    )}
-                    {/* Debugging the pet-emotion leak reports: not the reply text, just
-                        the backend `pet_emotion` frame(s) (see ChatMessage.debugPetEmotions)
-                        that arrived alongside it — emotion and cause, in the order they
-                        came in. Remove once debugged. */}
-                    {!!m.debugPetEmotions?.length && (
-                      <div
-                        className="text-[10px] font-mono leading-snug whitespace-pre-wrap break-words rounded-lg px-2 py-1.5"
-                        style={{ background: "#FEF3C7", color: "#78350F", border: "1px dashed #F59E0B" }}
-                      >
-                        [{m.debugPetEmotions.map((e) => `${e.emotion} ← ${e.cause}`).join(", ")}]
                       </div>
                     )}
                     {hasElements && <MessageElements elements={m.elements!} />}

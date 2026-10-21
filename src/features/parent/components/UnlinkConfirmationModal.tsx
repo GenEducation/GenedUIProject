@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useId } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, X, AlertTriangle } from "lucide-react";
+import { UserMinus, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 interface UnlinkConfirmationModalProps {
@@ -12,73 +12,80 @@ interface UnlinkConfirmationModalProps {
   studentName: string;
 }
 
-export function UnlinkConfirmationModal({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  studentName 
+/** Confirms removing a child from the parent's account. Escape or the backdrop cancels. */
+export function UnlinkConfirmationModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  studentName
 }: UnlinkConfirmationModalProps) {
+  const titleId = useId();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-[#0E1F2B]/60 backdrop-blur-md z-[100]"
+            className="fixed inset-0 z-[100] bg-[#122D30]/45 backdrop-blur-sm"
           />
 
-          {/* Modal Container */}
-          <div className="fixed inset-0 flex items-center justify-center z-[101] p-6 pointer-events-none">
+          <div className="pointer-events-none fixed inset-0 z-[101] flex items-center justify-center p-4">
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby={titleId}
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="w-full max-w-md bg-white rounded-[32px] shadow-[0_40px_100px_rgba(14,31,43,0.3)] overflow-hidden pointer-events-auto border border-[#1a3a2a]/5"
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              transition={{ type: "spring", stiffness: 420, damping: 32 }}
+              className="pointer-events-auto relative w-full max-w-[420px] overflow-hidden rounded-[28px] border border-white/80 bg-[#F5FAF9] p-6 shadow-[0_40px_90px_-30px_rgba(18,45,48,0.55)] sm:p-7"
             >
-              {/* Top Banner / Icon Area */}
-              <div className="bg-red-50 p-8 flex flex-col items-center text-center relative border-b border-red-100/50">
-                <Button iconOnly size="sm" variant="tertiary" className="absolute top-6 right-6" aria-label="Close" onClick={onClose}>
-                  <X size={20} />
+              {/* Button sets its own position, so the wrapper places it */}
+              <div className="absolute right-4 top-4">
+                <Button iconOnly size="sm" variant="tertiary" aria-label="Close" onClick={onClose}>
+                  <X size={18} />
                 </Button>
-                
-                <div className="w-20 h-20 rounded-[28px] bg-white flex items-center justify-center text-red-500 shadow-xl shadow-red-500/10 mb-6">
-                  <Trash2 size={32} strokeWidth={2.5} />
-                </div>
-                
-                <h3 className="text-2xl font-black text-[#1a3a2a] leading-tight mb-2">Remove Scholar?</h3>
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 text-red-600 border border-red-200">
-                  <AlertTriangle size={12} strokeWidth={3} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Permanent Action</span>
-                </div>
               </div>
 
-              {/* Content Area */}
-              <div className="p-8 space-y-8">
-                <p className="text-[#1a3a2a]/60 text-center text-sm leading-relaxed">
-                  Are you sure you want to remove <span className="font-black text-[#1a3a2a] text-base px-2 py-0.5 bg-[#F4F3EE] rounded-lg">{studentName}</span> from your account? This will immediately disconnect your access to their learning analytics and chat history.
-                </p>
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FCDDE7] text-[#C02659]">
+                <UserMinus size={26} strokeWidth={2.3} />
+              </span>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <Button variant="outline" size="lg" fullWidth onClick={onClose}>
-                    Keep
-                  </Button>
-                  <Button
-                    variant="destructiveSolid"
-                    size="lg"
-                    fullWidth
-                    onClick={() => {
-                      onConfirm();
-                      onClose();
-                    }}
-                  >
-                    Unlink
-                  </Button>
-                </div>
+              <h3 id={titleId} className="mt-5 text-[22px] font-extrabold leading-tight tracking-[-0.01em] text-[#122D30]">
+                Remove <span>{studentName}</span>?
+              </h3>
+              <p className="mt-2 text-[14px] leading-relaxed text-[#5E7477]">
+                You&apos;ll stop seeing their progress, reports and chats straight away. To reconnect later, they&apos;ll need to send you a new invite.
+              </p>
+
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <Button variant="outline" size="lg" fullWidth onClick={onClose} autoFocus>
+                  Keep
+                </Button>
+                <Button
+                  variant="destructiveSolid"
+                  size="lg"
+                  fullWidth
+                  onClick={() => {
+                    onConfirm();
+                    onClose();
+                  }}
+                >
+                  Unlink
+                </Button>
               </div>
             </motion.div>
           </div>

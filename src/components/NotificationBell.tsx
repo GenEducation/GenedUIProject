@@ -59,7 +59,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, alig
       case "success": return <CheckCircle2 size={16} className="text-green-500" />;
       case "error": return <AlertCircle size={16} className="text-red-500" />;
       case "message": return <MessageSquare size={16} className="text-blue-500" />;
-      default: return <Info size={16} className="text-[#1a3a2a]/60" />;
+      default: return <Info size={16} className="text-[#122D30]/60" />;
     }
   };
 
@@ -69,11 +69,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, alig
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Notifications"
         aria-expanded={isOpen}
-        className="relative w-10 h-10 rounded-xl bg-[#F4F3EE] hover:bg-[#E5F2E9] flex items-center justify-center text-[#1a3a2a] transition-all group"
+        className="relative w-10 h-10 rounded-xl bg-[#F6F7F2] hover:bg-[#E8F2EF] flex items-center justify-center text-[#122D30] transition-all group"
       >
         <Bell size={20} className={unreadCount > 0 ? "animate-swing" : ""} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#059669] text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#075E63] text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -88,10 +88,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, alig
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
             className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} mt-3 w-80 sm:w-96 z-50 ${PANEL_CLASSNAME}`}
           >
-            <div className="p-5 border-b border-[#1a3a2a]/5 flex items-center justify-between bg-[#FBFBFA]">
+            <div className="p-5 border-b border-[#122D30]/5 flex items-center justify-between bg-[#FBFBF8]">
               <div>
-                <h3 className="text-sm font-black text-[#1a3a2a] uppercase tracking-widest">Notifications</h3>
-                <p className="text-[10px] font-bold text-[#1a3a2a]/40 uppercase tracking-tight mt-0.5">
+                <h3 className="text-sm font-black text-[#122D30] uppercase tracking-widest">Notifications</h3>
+                <p className="text-[10px] font-bold text-[#122D30]/40 uppercase tracking-tight mt-0.5">
                   {unreadCount} UNREAD MESSAGES
                 </p>
               </div>
@@ -102,26 +102,26 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, alig
 
             <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
               {notifications.length > 0 ? (
-                <div className="divide-y divide-[#1a3a2a]/5">
+                <div className="divide-y divide-[#122D30]/5">
                   {notifications.map((notif) => (
                     <div 
                       key={notif.id}
-                      className={`p-5 flex gap-4 transition-colors group relative border-b border-[#1a3a2a]/5 last:border-b-0 ${!notif.is_read ? 'bg-[#059669]/5' : ''}`}
+                      className={`p-5 flex gap-4 transition-colors group relative border-b border-[#122D30]/5 last:border-b-0 ${!notif.is_read ? 'bg-[#075E63]/5' : ''}`}
                     >
                       <div className="shrink-0 mt-1">
                         {getIcon(notif.type)}
                       </div>
                       <div className="flex-1 space-y-1">
                         {notif.title && (
-                          <h4 className={`text-sm tracking-tight ${!notif.is_read ? 'font-black text-[#1a3a2a]' : 'font-bold text-[#1a3a2a]/70'}`}>
+                          <h4 className={`text-sm tracking-tight ${!notif.is_read ? 'font-black text-[#122D30]' : 'font-bold text-[#122D30]/70'}`}>
                             {notif.title}
                           </h4>
                         )}
-                        <p className={`text-xs leading-relaxed ${!notif.is_read ? 'font-semibold text-[#1a3a2a]/90' : 'font-medium text-[#1a3a2a]/60'}`}>
+                        <p className={`text-xs leading-relaxed ${!notif.is_read ? 'font-semibold text-[#122D30]/90' : 'font-medium text-[#122D30]/60'}`}>
                           {notif.message}
                         </p>
                         <div className="flex items-center justify-between pt-1.5">
-                          <p className="text-[10px] font-medium text-[#1a3a2a]/40 uppercase tracking-wider">
+                          <p className="text-[10px] font-medium text-[#122D30]/40 uppercase tracking-wider">
                             {timeAgo(notif.created_at)}
                           </p>
                           {!notif.is_read && (
@@ -131,7 +131,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, alig
                                 e.preventDefault();
                                 markAsRead(notif.id);
                               }}
-                              className="text-[10px] uppercase tracking-widest font-black text-[#059669] hover:bg-[#059669]/10 px-2 py-1 rounded-md transition-colors shadow-sm border border-[#059669]/20"
+                              className="text-[10px] uppercase tracking-widest font-black text-[#075E63] hover:bg-[#075E63]/10 px-2 py-1 rounded-md transition-colors shadow-sm border border-[#075E63]/20"
                             >
                               Mark Read
                             </button>
@@ -143,10 +143,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, alig
                 </div>
               ) : (
                 <div className="p-12 text-center space-y-3">
-                  <div className="w-12 h-12 bg-[#F4F3EE] rounded-2xl flex items-center justify-center mx-auto text-[#1a3a2a]/20">
+                  <div className="w-12 h-12 bg-[#F6F7F2] rounded-2xl flex items-center justify-center mx-auto text-[#122D30]/20">
                     <Bell size={24} />
                   </div>
-                  <p className="text-sm font-bold text-[#1a3a2a]/40">No new notifications</p>
+                  <p className="text-sm font-bold text-[#122D30]/40">No new notifications</p>
                 </div>
               )}
             </div>
@@ -163,11 +163,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, alig
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(26, 58, 42, 0.1);
+          background: rgba(18,45,48, 0.1);
           border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(26, 58, 42, 0.2);
+          background: rgba(18,45,48, 0.2);
         }
         @keyframes swing {
           0%, 100% { transform: rotate(0deg); }

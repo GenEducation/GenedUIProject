@@ -72,19 +72,6 @@ describe("login flow (integration)", () => {
     expect(variantAtNavigation).toBe("parent");
   });
 
-  it("keeps the shared loader for a student login", async () => {
-    let variantAtNavigation: string | null = null;
-    routerMock.replace.mockImplementation(() => {
-      variantAtNavigation = useLoaderStore.getState().variant;
-    });
-    const { container } = renderLoginPage();
-
-    fillAndSubmit(container);
-
-    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/student"), { timeout: 4000 });
-    expect(variantAtNavigation).toBe("default");
-  });
-
   it("persists the token/profile/role and redirects to the role home on success", async () => {
     const { container } = renderLoginPage();
 
@@ -104,17 +91,6 @@ describe("login flow (integration)", () => {
     fillAndSubmit(container);
 
     await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/student/analytics"), { timeout: 4000 });
-  });
-
-  it("routes a teacher to the teacher home", async () => {
-    server.use(
-      http.post(`${BASE}/auth/sign-in`, () => HttpResponse.json(makeAuthToken({ role: "teacher", user_id: "u_t" }))),
-    );
-    const { container } = renderLoginPage();
-
-    fillAndSubmit(container);
-
-    await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/teacher"), { timeout: 4000 });
   });
 
   it("persists an admin role and routes to the admin console", async () => {

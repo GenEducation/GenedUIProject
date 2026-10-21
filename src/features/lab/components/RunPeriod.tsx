@@ -188,7 +188,7 @@ export function RunPeriod({ slot, userId, onBack, onRosterImportClick }: RunPeri
           <button
             onClick={handleActivate}
             disabled={isBusy || isLoadingCapacity || isLoadingSeating || seatingError || noRosterError || startBlocked !== null}
-            className="flex items-center gap-2 rounded-xl bg-emerald px-5 py-3.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(5,159,109,.28)] hover:-translate-y-0.5 hover:bg-emerald-600 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-xl bg-emerald px-5 py-3.5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(7,94,99,.28)] hover:-translate-y-0.5 hover:bg-emerald-600 disabled:opacity-50"
           >
             <PlayCircle size={18} />
             {isBusy

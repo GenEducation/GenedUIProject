@@ -1,7 +1,8 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useLessonStore } from "../useLessonStore";
+import { isReviewingSection, isRevisiting, useLessonStore } from "../useLessonStore";
+import { useUiText } from "../i18n";
 import type { NodeOutline } from "../types";
 
 type StepState = "done" | "current" | "todo";
@@ -49,6 +50,7 @@ export function LessonProgressRail() {
   const instance = useLessonStore((s) => s.instance);
   const nextNodes = useLessonStore((s) => s.payload?.student_context.next_nodes ?? NO_NODES);
   const completedSteps = useLessonStore((s) => s.completedSteps);
+  const t = useUiText();
 
   if (!instance) return <div className="h-40 animate-pulse rounded-xl bg-[var(--ls-soft)]" />;
 
@@ -56,17 +58,22 @@ export function LessonProgressRail() {
   const active = instance.active_node;
   const steps: Step[] = [];
 
-  const earlier = Math.max(0, instance.nodes_done - completedSteps.length);
+  // The backend names every finished part, so a reloaded lesson lists them by title; an older one names none, and the steps
+  // finished while this screen was open are all there is to show.
+  const named = instance.completed_nodes?.map((c) => ({ instanceNodeId: c.instance_node_id, title: c.title })) ?? completedSteps;
+  const earlier = Math.max(0, instance.nodes_done - named.length);
   if (earlier > 0) {
     steps.push({ key: "earlier", label: `${earlier} ${earlier === 1 ? "step" : "steps"} done`, state: "done", quiet: true });
   }
-  for (const step of completedSteps) steps.push({ key: step.instanceNodeId, label: step.title, state: "done" });
+  for (const step of named) steps.push({ key: step.instanceNodeId, label: step.title, state: "done" });
 
   if (!finished && active) {
     steps.push({ key: active.instance_node_id, label: active.title, state: "current" });
     nextNodes.forEach((n, i) => steps.push({ key: `next-${n.node_id}-${i}`, label: n.title, state: "todo" }));
     // The backend names only up to three upcoming steps; the rest are a count until it serves the full plan.
-    const more = Math.max(0, instance.nodes_total - instance.nodes_done - 1 - nextNodes.length);
+    // A section being reviewed is not one of the plan's remaining steps, so it is not taken off their count.
+    const current = isReviewingSection(instance) ? 0 : 1;
+    const more = Math.max(0, instance.nodes_total - instance.nodes_done - current - nextNodes.length);
     if (more > 0) steps.push({ key: "more", label: `${more} more ${more === 1 ? "step" : "steps"}`, state: "todo", quiet: true });
   }
 
@@ -90,9 +97,13 @@ export function LessonProgressRail() {
             <span className="relative z-[1] shrink-0">
               <Marker state={step.state} />
             </span>
-            <span className="min-w-0 pt-1">
+            <span className="min-w-0 flex-1 pt-1">
+              {/* In a narrow rail (the student dragged it in, or the window is
+                  small) a step name collapses to one line with "…"; the full
+                  name stays on hover and for screen readers. */}
               <span
-                className={`block text-[15px] leading-snug ${
+                title={step.label}
+                className={`block text-[15px] leading-snug @max-[230px]:truncate @max-[230px]:text-[14px] ${
                   step.state === "current"
                     ? "font-bold text-[var(--ls-primary)]"
                     : step.quiet
@@ -138,6 +149,13 @@ export function LessonProgressRail() {
           <span>{finished ? "All steps done" : `${instance.nodes_done} of ${instance.nodes_total} steps done`}</span>
           <span className="tabular-nums">{pct}%</span>
         </p>
+        {/* Every planned step can be done while revisit steps remain: the counts stay as they are, and this says why the
+            lesson goes on. */}
+        {isRevisiting(instance) && (
+          <p className="mt-1 text-[12px] font-semibold text-[var(--ls-primary)]">
+            {t(isReviewingSection(instance) ? "reviewingSection" : "revisiting")}
+          </p>
+        )}
       </div>
     </div>
   );

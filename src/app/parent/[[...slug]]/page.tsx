@@ -1,18 +1,8 @@
-"use client";
-
-import { AuthGuard } from "@/components/auth/AuthGuard";
-import { ParentHome } from "@/features/parent/components/ParentHome";
-
 /**
- * Catch-all page for the entire Parent portal.
- * All sub-routes (/parent, /parent/profile, /parent/[studentId]/analytics, etc.)
- * render through ParentHome, which uses usePathname() to determine the active view.
- * This prevents the sidebar from remounting on internal navigation.
+ * Every Parent portal URL (/parent, /parent/settings, /parent/:id/report…)
+ * matches here so the route exists, but the portal itself is rendered by
+ * ../layout.tsx, which stays mounted across navigations. See there for why.
  */
 export default function ParentCatchAllPage() {
-  return (
-    <AuthGuard requiredRole="parent">
-      <ParentHome />
-    </AuthGuard>
-  );
+  return null;
 }

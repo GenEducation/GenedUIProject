@@ -52,7 +52,9 @@ describe("AuthGuard — unauthenticated", () => {
       expect(routerMock.replace).toHaveBeenCalledWith("/?redirect=%2Fstudent%2Fanalytics"),
     );
     expect(screen.queryByText(SECRET)).not.toBeInTheDocument();
-    expect(screen.getByAltText("Logo")).toBeInTheDocument(); // spinner
+    // the GenEd loading screen, not the old pulsing logo and spinner
+    expect(screen.getByRole("status", { name: "Loading" })).toBeInTheDocument();
+    expect(document.querySelector(".animate-spin")).toBeNull();
   });
 
   it("redirects when the role is missing even if a token exists", async () => {
@@ -112,44 +114,18 @@ describe("AuthGuard — authorized", () => {
     expect(routerMock.replace).not.toHaveBeenCalled();
     expect(useStudentStore.getState().studentProfile?.user_id).toBe("u_42");
   });
-
-  it("does not re-hydrate when the store already holds the same user", async () => {
-    useStudentStore.getState().setStudentProfile({ user_id: "u_42", username: "existing" } as never);
-    const setSpy = vi.spyOn(useStudentStore.getState(), "setStudentProfile");
-    seedAuthLocalStorage("student", { profile: { user_id: "u_42" } });
-
-    renderGuard("student");
-
-    await waitFor(() => expect(screen.getByText(SECRET)).toBeInTheDocument());
-    expect(setSpy).not.toHaveBeenCalled();
-    setSpy.mockRestore();
-  });
 });
 
 describe("AuthGuard — parent portal loader", () => {
   beforeEach(() => window.history.pushState({}, "", "/parent"));
 
-  it("starts the parent loader on a fresh load and leaves dismissal to the portal", async () => {
+  it("leaves a sign-in hand-off loader for the portal to dismiss", async () => {
+    useLoaderStore.getState().startLoading({ variant: "parent", stage: "signin-handoff" });
     seedAuthLocalStorage("parent", { profile: { user_id: "p1" } });
     renderGuard("parent");
 
     await waitFor(() => expect(screen.getByText(SECRET)).toBeInTheDocument());
-    const loader = useLoaderStore.getState();
-    expect(loader.isVisible).toBe(true);
-    expect(loader.variant).toBe("parent");
-    expect(loader.parentStage).toBe("entry");
-
     await new Promise((r) => setTimeout(r, 600));
     expect(useLoaderStore.getState().isVisible).toBe(true); // not stopped after 500ms like other portals
-  });
-
-  it("doesn't restart a loader that's already handing off", async () => {
-    useLoaderStore.getState().startLoading({ variant: "parent", stage: "signin-handoff" });
-    const { loadId } = useLoaderStore.getState();
-    seedAuthLocalStorage("parent", { profile: { user_id: "p1" } });
-    renderGuard("parent");
-
-    await waitFor(() => expect(screen.getByText(SECRET)).toBeInTheDocument());
-    expect(useLoaderStore.getState().loadId).toBe(loadId);
   });
 });

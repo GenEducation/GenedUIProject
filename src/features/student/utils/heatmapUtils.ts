@@ -86,9 +86,9 @@ export function buildHeatmapMonths(activityData: Record<string, number>): Heatma
 }
 
 export function getActivityColor(count: number, isFuture: boolean): string {
-  if (isFuture) return "rgba(4,46,92,0.025)";
+  if (isFuture) return "rgba(18,45,48,0.025)";
   switch (count) {
-    case 0: return "rgba(4,46,92,0.06)";
+    case 0: return "rgba(18,45,48,0.06)";
     case 1: return "#9be9a8";
     case 2: return "#40c463";
     case 3: return "#30a14e";

@@ -6,18 +6,21 @@ import { RefreshCw } from "lucide-react";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { studentService } from "@/features/student/services/studentService";
 import { getStudentDisplayName, titleCase } from "@/features/student/utils/displayName";
+import { studentAvatarSrc } from "@/constants/studentAvatars";
 import { FunFactCard } from "@/components/shared/loaders/FunFactCard";
 import type {
   SubjectData, ChapterMasteryItem, SkillCGItem, TestSubmission, DashboardProfile,
   EvolutionAnalysisData, SubjectEvolutionData, StudentProgressData,
-  ReportCardData, ReportCardUI, ReportRole,
+  ReportCardData, ReportCardDataset, ReportCardUI, ReportRole,
 } from "./types";
 import { RC_STYLES, RC_SCREEN_STYLES } from "./styles";
 import { applySimulation } from "./utils";
-import { ReportCardScreen } from "./screen/ReportCardScreen";
+import { ReportCardScreen, isEmptyReport } from "./screen/ReportCardScreen";
 import { Icon } from "./screen/icons";
 import { Button } from "@/components/ui/Button";
 import { usePrintPdf } from "./usePrintPdf";
+import { loadV1Report, type ReportSummaryFacts, type ReportWho, type V1Dataset } from "./v1Report";
+import { ReportExtrasProvider } from "./sections/ReportExtras";
 import {
   loadSubjectCatalog,
   requireExactSubject,
@@ -45,16 +48,19 @@ export function StudentReportCard({
   teacherId,
   childId,
   childName,
+  childAvatar,
   loadingFallback,
 }: {
   parentId?: string;
   teacherId?: string;
   childId?: string;
   childName?: string;
+  /** The child's profile picture as the parent portal shows it (an image path). */
+  childAvatar?: string;
   /** Replaces the default loading screen (the parent portal has its own). */
   loadingFallback?: ReactNode;
 } = {}) {
-  const { studentProfile } = useStudentStore();
+  const { studentProfile, avatarId } = useStudentStore();
   const router = useRouter();
 
   const role: ReportRole = teacherId ? "teacher" : parentId ? "parent" : "student";
@@ -82,6 +88,9 @@ export function StudentReportCard({
   const [progressReport, setProgressReport] = useState<StudentProgressData | null>(null);
   const [subjectEvolutions, setSubjectEvolutions] = useState<SubjectEvolutionData[]>([]);
   const [chapterEvolutions, setChapterEvolutions] = useState<EvolutionAnalysisData[]>([]);
+  // The new backend's header facts: who the report is for, and the answer totals (alone vs with help).
+  const [v1Profile, setV1Profile] = useState<V1Dataset["profile"] | null>(null);
+  const [v1Summary, setV1Summary] = useState<ReportSummaryFacts | null>(null);
 
   // Expander/subject/clamp UI state (screen only). Subjects default COLLAPSED.
   const [openSubjects, setOpenSubjects] = useState<Set<string>>(() => new Set());
@@ -102,15 +111,26 @@ export function StudentReportCard({
   // ── Data Fetching ─────────────────────────────────────
   const studentId = studentProfile?.user_id;
 
-  const fetchParentReportData = useCallback(async () => {
-    if (!childId || !(parentId || teacherId)) return;
+  /** Fill every dataset slice at once (each loader returns them all). */
+  const applyDataset = (d: ReportCardDataset) => {
+    setTotalSessions(d.totalSessions);
+    setSubjects(d.subjects);
+    setChapters(d.chapters);
+    setSkillTree(d.skillTree);
+    setTestSubmissions(d.testSubmissions);
+    setProgressReport(d.progressReport);
+    setSubjectEvolutions(d.subjectEvolutions);
+    setChapterEvolutions(d.chapterEvolutions);
+  };
+
+  // The teacher's report still comes from the MVP route: the new backend has no teacher equivalent yet.
+  const fetchTeacherReportData = useCallback(async () => {
+    if (!childId || !teacherId) return;
     setIsLoading(true);
     setError(null);
     try {
       const catalog = await loadSubjectCatalog();
-      const data = parentId
-        ? await studentService.fetchParentReport(parentId, childId)
-        : await studentService.fetchTeacherReport(teacherId!, childId);
+      const data = await studentService.fetchTeacherReport(teacherId, childId);
       const grade = data.profile?.grade;
       if (!Number.isInteger(grade)) {
         throw new Error("A valid student grade is required to build a report.");
@@ -125,135 +145,42 @@ export function StudentReportCard({
       setSubjectEvolutions((data.subject_evolutions ?? []).filter((row: SubjectEvolutionData) => hasExactReportSubject(row, grade, catalog)));
       setChapterEvolutions((data.chapter_evolutions ?? []).filter((row: EvolutionAnalysisData) => hasExactReportSubject(row, grade, catalog)));
     } catch (err) {
-      console.error("[ReportCard] Failed to load parent report data:", err);
+      console.error("[ReportCard] Failed to load teacher report data:", err);
       setError("Failed to load report data. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  }, [parentId, teacherId, childId]);
+  }, [teacherId, childId]);
 
-  const fetchAll = useCallback(async () => {
-    if (!studentId) return;
+  // Student and parent: the new backend's learner routes (see v1Report.ts).
+  const who: ReportWho | null = useMemo(
+    () => (parentId && childId ? { role: "parent", childId } : studentId ? { role: "student", studentId } : null),
+    [parentId, childId, studentId],
+  );
+  const fetchV1 = useCallback(async () => {
+    if (!who) return;
     setIsLoading(true);
     setError(null);
-
     try {
-      const [catalog, profileData, subjectListData] = await Promise.all([
-        loadSubjectCatalog(),
-        studentService.fetchDashboardProfile(studentId).catch(() => null),
-        studentService.fetchAnalyticsSubjects(studentId).catch(() => ({ subjects: [] })),
-      ]);
-
-      if (profileData) setDashboardProfile(profileData);
-      const grade = profileData?.grade ?? studentProfile?.grade;
-      if (!Number.isInteger(grade)) {
-        throw new Error("A valid student grade is required to build a report.");
-      }
-      const rawSubjectNames: unknown[] = Array.isArray(subjectListData?.subjects)
-        ? subjectListData.subjects
-        : [];
-      const subjectNames = rawSubjectNames.flatMap((subject) => {
-        try {
-          return [requireExactSubject(subject, grade, catalog)];
-        } catch {
-          return [];
-        }
-      });
-      setTotalSessions(subjectListData?.session_count ?? 0);
-
-      const perSubjectResults = await Promise.all(
-        subjectNames.map(async (subject) => {
-          const [summaryData, masteryData, treeData, subjectEvoData] = await Promise.all([
-            studentService.fetchSkillSummary(studentId, subject).catch(() => null),
-            studentService.fetchChapterMastery(studentId, subject).catch(() => []),
-            studentService.fetchSkillTree(studentId, subject).catch(() => []),
-            studentService.fetchSubjectEvolution(studentId, subject).catch(() => null),
-          ]);
-
-          const subjectEntry: SubjectData | null = summaryData
-            ? {
-                subject,
-                overall_score: summaryData.overall_score ?? 0,
-                skill_index: summaryData.skill_index ?? 0,
-                adaptive_mode: summaryData.adaptive_mode ?? "PRACTICE",
-                session_count: summaryData.session_count ?? 0,
-              }
-            : null;
-
-          const chapterEntries: ChapterMasteryItem[] = Array.isArray(masteryData)
-            ? masteryData.map((ch: ChapterMasteryItem) => ({ ...ch, subject }))
-            : [];
-          const cgEntries: SkillCGItem[] = Array.isArray(treeData)
-            ? treeData.map((cg: SkillCGItem) => ({ ...cg, subject }))
-            : [];
-
-          return { subjectEntry, chapterEntries, cgEntries, subjectEvoData };
-        })
-      );
-
-      const allSubjects: SubjectData[] = [];
-      const allChapters: ChapterMasteryItem[] = [];
-      const allCGs: SkillCGItem[] = [];
-      const allSubjectEvos: SubjectEvolutionData[] = [];
-
-      for (const { subjectEntry, chapterEntries, cgEntries, subjectEvoData } of perSubjectResults) {
-        if (subjectEntry) allSubjects.push(subjectEntry);
-        allChapters.push(...chapterEntries);
-        allCGs.push(...cgEntries);
-        if (subjectEvoData && !subjectEvoData.detail) allSubjectEvos.push(subjectEvoData);
-      }
-
-      const [testData, progressData, timeByChapterData] = await Promise.all([
-        studentService.fetchTestSubmissions(studentId).catch(() => []),
-        studentService.fetchProgressReport(studentId).catch(() => null),
-        studentService.fetchTimeByChapter(studentId).catch(() => []),
-      ]);
-
-      if (Array.isArray(timeByChapterData)) {
-        const timeByKey = new Map<string, { total_minutes: number; session_count: number }>();
-        for (const t of timeByChapterData) {
-          const key = `${t.subject ?? ""}::${(t.chapter_name ?? "").toLowerCase()}`;
-          timeByKey.set(key, t);
-        }
-        for (const ch of allChapters) {
-          const key = `${ch.subject}::${ch.document_title.toLowerCase()}`;
-          const t = timeByKey.get(key);
-          if (t) {
-            ch.time_minutes = t.total_minutes;
-            ch.time_sessions = t.session_count;
-          }
-        }
-      }
-
-      setSubjects(allSubjects);
-      setChapters(allChapters);
-      setSkillTree(allCGs);
-      setSubjectEvolutions(allSubjectEvos);
-
-      if (Array.isArray(testData)) setTestSubmissions(testData);
-      if (progressData && !progressData.detail) setProgressReport(progressData);
-
-      const chapterEvoResults = await Promise.all(
-        allChapters.map((ch) =>
-          studentService.fetchChapterEvolution(studentId, ch.subject, ch.document_title).catch(() => null)
-        )
-      );
-      setChapterEvolutions(chapterEvoResults.filter((r) => r && !r.detail) as EvolutionAnalysisData[]);
+      const dataset = await loadV1Report(who);
+      applyDataset(dataset);
+      setV1Profile(dataset.profile);
+      setV1Summary(dataset.summary);
     } catch (err) {
       console.error("[ReportCard] Failed to load data:", err);
       setError("Failed to load report data. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  }, [studentId, studentProfile?.grade]);
+  }, [who]);
 
+  const load = useCallback(
+    () => (teacherId && childId ? fetchTeacherReportData() : fetchV1()),
+    [teacherId, childId, fetchTeacherReportData, fetchV1],
+  );
   useEffect(() => {
-    if (childId && (parentId || teacherId)) {
-      fetchParentReportData();
-    } else {
-      fetchAll();
-    }
-  }, [fetchAll, fetchParentReportData, parentId, teacherId, childId]);
+    void load();
+  }, [load]);
 
   // Watchdog: fetchAll() no-ops (leaving isLoading true forever) if studentId
   // never hydrates from the store, and a hung network request has no other
@@ -279,8 +206,10 @@ export function StudentReportCard({
     resolvedStudentName ||
     (dashboardProfile?.name ? titleCase(dashboardProfile.name) : undefined) ||
     "Student";
-  const displayGrade = studentProfile?.grade ?? dashboardProfile?.grade ?? null;
-  const displayBoard = studentProfile?.school_board ?? dashboardProfile?.board ?? null;
+  // A parent's own profile says nothing about the child: the report carries the child's grade and board.
+  const reportIsAboutAnother = role !== "student";
+  const displayGrade = (reportIsAboutAnother ? v1Profile?.grade : studentProfile?.grade) ?? v1Profile?.grade ?? dashboardProfile?.grade ?? null;
+  const displayBoard = (reportIsAboutAnother ? v1Profile?.board : studentProfile?.school_board) ?? v1Profile?.board ?? dashboardProfile?.board ?? null;
 
   const data: ReportCardData = useMemo(() => {
     const ds = applySimulation(simMode, {
@@ -293,18 +222,20 @@ export function StudentReportCard({
       ...ds,
       displayName,
       firstName: displayName.split(" ")[0],
+      // A parent sees the child's picture from the portal; a student their own; a teacher none yet.
+      avatarSrc: role === "parent" ? childAvatar ?? null : role === "student" ? studentAvatarSrc(avatarId) : null,
       displayGrade,
       displayBoard,
       overallAvg,
       generatedAt: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
       reportPeriod: new Date(progressReport?.updated_at ?? Date.now()).toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
     };
-  }, [simMode, totalSessions, subjects, chapters, skillTree, testSubmissions, progressReport, subjectEvolutions, chapterEvolutions, displayName, displayGrade, displayBoard]);
+  }, [simMode, totalSessions, subjects, chapters, skillTree, testSubmissions, progressReport, subjectEvolutions, chapterEvolutions, displayName, displayGrade, displayBoard, role, childAvatar, avatarId]);
 
   const safeName = (displayName || "Student").replace(/[^a-z0-9]/gi, "_");
   const { isGenerating, triggerPrint, printPortal } = usePrintPdf({ data, role, filename: `${safeName}_Report_Card` });
 
-  const isBrandNew = data.totalSessions === 0 && data.subjects.length === 0 && !data.progressReport;
+  const isBrandNew = isEmptyReport(data);
 
   const ui: ReportCardUI = {
     variant: "screen",
@@ -325,10 +256,10 @@ export function StudentReportCard({
   if (isLoading) {
     if (loadingFallback) return <>{loadingFallback}</>;
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--canvas)] flex items-center justify-center">
         <div className="text-center">
-          <RefreshCw size={28} className="text-[#059F6D] animate-spin mx-auto mb-3" />
-          <p className="text-sm text-slate-500 font-medium">Generating your report card…</p>
+          <RefreshCw size={28} className="text-[var(--primary)] animate-spin mx-auto mb-3" />
+          <p className="text-sm text-[var(--text-muted)] font-medium">Generating your report card…</p>
           <FunFactCard className="mt-6" />
         </div>
       </div>
@@ -337,12 +268,12 @@ export function StudentReportCard({
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--canvas)] flex items-center justify-center">
         <div className="text-center max-w-sm">
-          <p className="text-sm text-red-500 font-medium mb-3">{error}</p>
+          <p className="text-sm text-[var(--danger-ink)] font-medium mb-3">{error}</p>
           <Button
             variant="outline"
-            onClick={() => (childId && (parentId || teacherId) ? fetchParentReportData() : fetchAll())}
+            onClick={() => void load()}
             leadingIcon={<Icon name="misc/refresh" size={16} />}
           >
             Retry
@@ -358,8 +289,11 @@ export function StudentReportCard({
       {/* Source Serif + JetBrains Mono for the print layout and the legacy rc-* parts. */}
       <link rel="stylesheet" href={FONT_HREF} />
       <style>{RC_STYLES + RC_SCREEN_STYLES}</style>
-      <ReportCardScreen data={data} ui={ui} />
-      {printPortal}
+      <ReportExtrasProvider who={role === "teacher" ? null : who} summary={v1Summary}>
+        <ReportCardScreen data={data} ui={ui} />
+        {/* Inside the provider: the printed layout reads the same sections the screen shows. */}
+        {printPortal}
+      </ReportExtrasProvider>
     </>
   );
 }

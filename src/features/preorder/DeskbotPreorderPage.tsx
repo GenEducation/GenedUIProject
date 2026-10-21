@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { GenEdLogo } from "@/components/shared/GenEdLogo";
 import "@/app/pre-order/pre-order.css";
 import { DeviceScrollScene } from "@/features/preorder/components/DeviceScrollScene";
 import { PreorderModal } from "@/features/preorder/components/PreorderModal";
@@ -66,7 +66,7 @@ export function DeskbotPreorderPage() {
       <header className="po-header">
         <div className="po-wrap">
           <Link href="/" className="po-logo" aria-label="GenEd home">
-            <Image src="/Logo.svg" alt="GenEd" width={140} height={28} priority />
+            <GenEdLogo height={44} priority />
           </Link>
           <div className="po-header-cta">
             <Link href="/" className="po-back">

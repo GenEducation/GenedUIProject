@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Check, RotateCcw } from "lucide-react";
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
 import { useLessonStore } from "../useLessonStore";
+import { RevisitChoices } from "./RevisitChoices";
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
@@ -17,10 +18,13 @@ function Stat({ value, label }: { value: string; label: string }) {
 /**
  * The finished chapter, from the backend's report: steps done, answers right,
  * each learning outcome's status, and the skills still worth practising. Every
- * figure is the report's; nothing here is computed or invented.
+ * figure is the report's; nothing here is computed or invented. Below it, the
+ * way back in: the sections to go over again (`RevisitChoices`), so a finished
+ * chapter is never a dead end.
  */
 export function LessonSummary() {
   const report = useLessonStore((s) => s.report);
+  const options = useLessonStore((s) => (s.revisitOptions?.instance_id === s.instanceId ? s.revisitOptions : null));
   const instanceId = useLessonStore((s) => s.instanceId);
   const subject = useLessonLaunch((s) => (s.instanceId === instanceId ? s.subject : null));
   const exitHref = subject ? `/student/subjects/${encodeURIComponent(subject)}` : "/student";
@@ -80,12 +84,22 @@ export function LessonSummary() {
             </div>
           )}
 
-          <Link
-            href={exitHref}
-            className="self-start rounded-full bg-[var(--ls-primary)] px-5 py-2.5 text-[14px] font-semibold text-white hover:bg-[var(--ls-primary-hover)]"
-          >
-            Back to chapters
-          </Link>
+          {/* Coming back to a finished chapter: replay the sections that went badly, or start over. */}
+          {options && options.sections.length > 0 ? (
+            <div className="border-t border-[var(--ls-border)] pt-5">
+              <h3 className="text-[13px] font-semibold text-[var(--ls-ink-mid)]">Go over it again</h3>
+              <div className="mt-2">
+                <RevisitChoices options={options} exitHref={exitHref} />
+              </div>
+            </div>
+          ) : (
+            <Link
+              href={exitHref}
+              className="self-start rounded-full bg-[var(--ls-primary)] px-5 py-2.5 text-[14px] font-semibold text-white hover:bg-[var(--ls-primary-hover)]"
+            >
+              Back to chapters
+            </Link>
+          )}
         </div>
       ) : (
         <div className="p-6" aria-busy="true">

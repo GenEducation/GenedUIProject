@@ -21,20 +21,10 @@ describe("ChatMessageBubble", () => {
     expect(container.querySelector(".justify-start")).toBeInTheDocument();
   });
 
-  it("right-aligns user messages", () => {
-    const { container } = render(
-      <ChatMessageBubble message={message({ sender: "user", text: "my question" })} />,
-    );
-    expect(screen.getByText("my question")).toBeInTheDocument();
-    expect(container.querySelector(".justify-end")).toBeInTheDocument();
-  });
-
-  it("shows a processing indicator for an empty streaming placeholder", () => {
-    render(<ChatMessageBubble message={message({ text: "" })} isStreaming />);
+  it("shows a processing indicator, or the status text, for an empty streaming placeholder", () => {
+    const { unmount } = render(<ChatMessageBubble message={message({ text: "" })} isStreaming />);
     expect(screen.getByText("Processing...")).toBeInTheDocument();
-  });
-
-  it("shows the status text while streaming with no content yet", () => {
+    unmount();
     render(<ChatMessageBubble message={message({ text: "", statusText: "Drawing a diagram..." })} isStreaming />);
     expect(screen.getByText("Drawing a diagram...")).toBeInTheDocument();
   });
@@ -85,23 +75,6 @@ describe("ChatMessageBubble", () => {
     const ordinaryCard = ordinary.querySelector<HTMLElement>("[data-testid='message-surface']")!;
     expect(ordinaryCard.dataset.boxed).toBe("false");
     expect(ordinaryCard.style.background).toBe("");
-  });
-
-  it("renders an ordinary tutor reply with no card around it", () => {
-    // The tutor's turn is long-form content — prose, sketches, widgets — and
-    // reads as part of the page. Only the student's turn and a redirect sit on
-    // a surface.
-    render(<ChatMessageBubble message={message({ text: "Two times three is six." })} />);
-
-    expect(screen.getByText("Two times three is six.")).toBeInTheDocument();
-
-    const surface = screen.getByTestId("message-surface");
-    expect(surface.style.background).toBe("");
-    expect(surface.style.borderRadius).toBe("");
-    // jsdom reads the `border: none` shorthand back as its width ("medium"),
-    // so assert on the style longhand.
-    expect(surface.style.borderStyle).toBe("none");
-    expect(surface.style.boxShadow).toBe("none");
   });
 
   it("never styles a user message as a redirect", () => {

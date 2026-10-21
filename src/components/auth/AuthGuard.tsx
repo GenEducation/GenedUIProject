@@ -9,6 +9,7 @@ import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 import { loadSubjectCatalog } from "@/features/subjects/subjectCatalog";
 import { ParentLoaderBackdrop } from "@/features/parent/components/loader/ParentLoader";
+import { BrandLoadingScreen } from "@/components/shared/loaders/BrandLoadingScreen";
 
 type Role = "student" | "parent" | "partner" | "admin" | "teacher";
 
@@ -115,23 +116,21 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
 
       setIsAuthorized(true);
 
-      // The parent portal keeps its loader up until the family has loaded
-      // (ParentHome finishes it). On a refresh or a new tab nothing is
-      // showing yet, so start it here — after a short delay, so a fast load
-      // never flashes it.
-      if (requiredRole === "parent") {
-        const loader = useLoaderStore.getState();
-        if (!loader.isVisible) {
-          loader.startLoading({ variant: "parent", stage: "entry", appearDelayMs: 200 });
-        }
-        return;
-      }
+      // The parent loader (the hat toss) is for signing up and signing in
+      // only. When one is handing off, the portal dismisses it once the
+      // family has loaded, so it isn't stopped here. A refresh, a new tab or
+      // a bookmark starts none; the portal shows its own light skeleton.
+      if (requiredRole === "parent") return;
 
       // This route is now authorized and rendering — it's the destination of
       // any post-auth handoff, so it owns tearing the overlay down. A short
       // delay lets the first paint land before the loader fades out.
       const timeout = setTimeout(() => {
-        useLoaderStore.getState().stopLoading();
+        const loader = useLoaderStore.getState();
+        // The logo-toss loader (partners) leaves on its own fade once told the
+        // destination is ready; the journey loader is simply stopped.
+        if (loader.variant === "parent") loader.finishLoading();
+        else loader.stopLoading();
       }, 500);
 
       return () => clearTimeout(timeout);
@@ -152,14 +151,7 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
         </div>
       );
     }
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#F7F6F1]">
-        <div className="flex flex-col items-center gap-4">
-          <img src="/Logo.svg" alt="Logo" className="h-12 w-auto animate-pulse" />
-          <div className="w-8 h-8 border-4 border-[#2D5540] border-t-transparent rounded-full animate-spin" />
-        </div>
-      </div>
-    );
+    return <BrandLoadingScreen />;
   }
 
   return <>{children}</>;

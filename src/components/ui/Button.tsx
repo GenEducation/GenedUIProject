@@ -25,14 +25,14 @@ const t = (token: string, fallback: string) => `var(${token}, ${fallback})`;
  */
 /* eslint-disable no-restricted-syntax -- documented token fallbacks, see above */
 const FALLBACK = {
-  primary: STUDENT_COLORS.primary, // #059F6D
-  primaryHover: "#04835a",
-  primaryActive: "#036c4a",
-  primarySoft: "rgba(5,159,109,0.08)",
-  primaryRing: "rgba(5,159,109,0.35)",
-  primaryInk: "#042E5C",
-  neutralHover: "rgba(4,46,92,0.05)",
-  neutralBorder: "rgba(4,46,92,0.12)",
+  primary: STUDENT_COLORS.primary, // #075E63
+  primaryHover: "#064C50",
+  primaryActive: "#053C40",
+  primarySoft: "rgba(7,94,99,0.08)",
+  primaryRing: "rgba(7,94,99,0.32)",
+  primaryInk: "#122D30",
+  neutralHover: "rgba(18,45,48,0.05)",
+  neutralBorder: "rgba(18,45,48,0.14)",
   danger: STUDENT_COLORS.danger, // #E8635A
   dangerHover: "#d9524a",
   dangerActive: "#c2453e",
@@ -81,7 +81,7 @@ const VARIANT_SURFACE: Record<ButtonVariant, Surface> = {
   secondary: {
     "--btn-bg": "transparent",
     "--btn-bg-hover": t("--primary-soft", FALLBACK.primarySoft),
-    "--btn-bg-active": "rgba(5,159,109,0.14)",
+    "--btn-bg-active": "rgba(7,94,99,0.14)",
     "--btn-fg": t("--primary", FALLBACK.primary),
     "--btn-border": t("--primary", FALLBACK.primary),
     "--btn-ring": t("--primary-ring", FALLBACK.primaryRing),
@@ -89,7 +89,7 @@ const VARIANT_SURFACE: Record<ButtonVariant, Surface> = {
   outline: {
     "--btn-bg": "transparent",
     "--btn-bg-hover": t("--btn-neutral-hover", FALLBACK.neutralHover),
-    "--btn-bg-active": "rgba(4,46,92,0.09)",
+    "--btn-bg-active": "rgba(18,45,48,0.09)",
     "--btn-fg": t("--primary-ink", FALLBACK.primaryInk),
     "--btn-border": t("--btn-neutral-border", FALLBACK.neutralBorder),
     "--btn-ring": t("--primary-ring", FALLBACK.primaryRing),
@@ -97,7 +97,7 @@ const VARIANT_SURFACE: Record<ButtonVariant, Surface> = {
   tertiary: {
     "--btn-bg": "transparent",
     "--btn-bg-hover": t("--btn-neutral-hover", FALLBACK.neutralHover),
-    "--btn-bg-active": "rgba(4,46,92,0.09)",
+    "--btn-bg-active": "rgba(18,45,48,0.09)",
     "--btn-fg": t("--primary-ink", FALLBACK.primaryInk),
     "--btn-border": "transparent",
     "--btn-ring": t("--primary-ring", FALLBACK.primaryRing),
@@ -170,7 +170,7 @@ const ICON_ONLY_STYLES: Record<ButtonSize, React.CSSProperties> = {
 const SPINNER_SIZE: Record<ButtonSize, number> = { sm: 12, md: 14, lg: 16 };
 
 const BASE_CLASS = [
-  "relative inline-flex items-center justify-center whitespace-nowrap font-semibold",
+  "inline-flex items-center justify-center whitespace-nowrap font-semibold",
   "select-none cursor-pointer",
   "bg-[var(--btn-bg)] text-[var(--btn-fg)] border-[1.5px] border-solid border-[var(--btn-border)]",
   "transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out",
@@ -185,6 +185,12 @@ const BASE_CLASS = [
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--btn-ring)]",
   "disabled:cursor-not-allowed disabled:opacity-[var(--btn-disabled-opacity,0.45)]",
 ].join(" ");
+
+// The spinner is absolutely placed, so the button must be positioned. Default
+// to `relative`, but let a caller's `absolute`/`fixed`/`sticky` win: with both
+// classes present, Tailwind emits `relative` later and it would silently
+// override the caller (e.g. a modal's close X dropping out of its corner).
+const POSITION_CLASS = /(^|\s)(absolute|fixed|sticky)(\s|$)/;
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -264,7 +270,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       data-variant={variant}
-      className={`${BASE_CLASS} ${fullWidth ? "w-full" : ""} ${className ?? ""}`}
+      className={`${BASE_CLASS} ${POSITION_CLASS.test(className ?? "") ? "" : "relative"} ${fullWidth ? "w-full" : ""} ${className ?? ""}`}
       style={{
         fontFamily: t("--font-body", "ui-sans-serif, system-ui"),
         borderRadius: pill

@@ -126,7 +126,7 @@ export function AssessmentsPage() {
       if (submissionId) {
         await loadSubmission(submissionId);
       }
-      router.push("/student/test?from=assessments");
+      router.push("/student/test?from=practice");
     } catch (error) {
       console.error("Error loading past test:", error);
     } finally {
@@ -182,7 +182,7 @@ export function AssessmentsPage() {
             className={`${FIELD_CLASSNAME} ${FIELD_FOCUS_CLASSNAME} pl-12 pr-4`}
           />
         </div>
-        <button aria-label="Filter" className="w-12 h-12 rounded-2xl bg-white border border-[rgba(4,46,92,0.05)] flex items-center justify-center text-[var(--primary-ink)]/40 hover:text-[var(--primary-ink)] transition-all">
+        <button aria-label="Filter" className="w-12 h-12 rounded-2xl bg-white border border-[rgba(18,45,48,0.05)] flex items-center justify-center text-[var(--primary-ink)]/40 hover:text-[var(--primary-ink)] transition-all">
           <Filter size={18} />
         </button>
       </div>
@@ -222,7 +222,7 @@ export function AssessmentsPage() {
                     return (
                     <div
                       key={t.test_id}
-                      className="bg-white p-6 rounded-3xl border border-[rgba(4,46,92,0.05)] shadow-sm flex items-center justify-between gap-4"
+                      className="bg-white p-6 rounded-3xl border border-[rgba(18,45,48,0.05)] shadow-sm flex items-center justify-between gap-4"
                     >
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-center gap-2">
@@ -289,7 +289,7 @@ export function AssessmentsPage() {
                     transition={{ delay: Math.min(idx * 0.05, 0.4) }}
                     className="group"
                   >
-                    <div className="bg-white p-8 rounded-[40px] border border-[rgba(4,46,92,0.05)] shadow-sm hover:shadow-2xl hover:shadow-[var(--primary-ink)]/10 transition-all flex flex-col h-full relative overflow-hidden">
+                    <div className="bg-white p-8 rounded-[40px] border border-[rgba(18,45,48,0.05)] shadow-sm hover:shadow-2xl hover:shadow-[var(--primary-ink)]/10 transition-all flex flex-col h-full relative overflow-hidden">
                       {/* Decorative Element */}
                       <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
                         <BookOpen size={80} />

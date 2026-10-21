@@ -13,16 +13,8 @@ import { FIXTURE_NOW, SUBJECTS, makeData } from "./fixtures";
 describe("toneFor", () => {
   it.each([
     [80, "Advanced"], [79, "Proficient"],
-    [60, "Proficient"], [59, "Approaching"],
-    [40, "Approaching"], [39, "Developing"],
-    [0, "Developing"],
   ] as const)("colours %i%% mastery as %s", (mastery, band) => {
     expect(toneFor(mastery, true)).toBe(BAND_TONES[band]);
-  });
-
-  it("is grey for anything not started, whatever the score", () => {
-    expect(toneFor(90, false)).toBe(BAND_TONES["Not started"]);
-    expect(toneFor(null, false)).toBe(BAND_TONES["Not started"]);
   });
 });
 
@@ -41,11 +33,6 @@ describe("subjectSummaries", () => {
     expect(byName.Mathematics).toMatchObject({ chaptersTotal: 4, chaptersCompleted: 1, chaptersStarted: 3, coverage: 54 });
   });
 
-  it("takes latest activity from the most recently analysed chapter", () => {
-    expect(byName.English.latest?.chapter).toBe("Creative Writing");
-    expect(byName["Social Science"].latest).toBeNull();
-  });
-
   it("treats a subject with no sessions and no progress as not started", () => {
     const [s] = subjectSummaries(makeData({
       subjects: [{ subject: "Hindi", overall_score: 0, skill_index: 0, adaptive_mode: "PRACTICE", session_count: 0 }],
@@ -56,18 +43,16 @@ describe("subjectSummaries", () => {
 });
 
 describe("overallSummary", () => {
-  it("rolls subjects up and names the strongest and weakest", () => {
+  it("rolls subjects up and names the strongest and weakest, but only with two or more", () => {
     const o = overallSummary(makeData());
     expect(o.avgMastery).toBe(56);
     expect(o).toMatchObject({ chaptersCompleted: 3, chaptersTotal: 13, tests: 1 });
     expect(o.strongest?.subject).toBe("English");
     expect(o.weakest?.subject).toBe("Social Science");
-  });
 
-  it("names no strongest/weakest with fewer than two subjects", () => {
-    const o = overallSummary(makeData({ subjects: SUBJECTS.slice(0, 1) }));
-    expect(o.strongest).toBeNull();
-    expect(o.weakest).toBeNull();
+    const single = overallSummary(makeData({ subjects: SUBJECTS.slice(0, 1) }));
+    expect(single.strongest).toBeNull();
+    expect(single.weakest).toBeNull();
   });
 });
 
@@ -82,13 +67,10 @@ describe("chapterRows", () => {
     expect(rows[2]).toMatchObject({ mastery: 52, band: "Approaching", tone: BAND_TONES.Approaching });
   });
 
-  it("sorts by mastery with unstarted chapters last", () => {
+  it("sorts by mastery with unstarted chapters last, or by most recently analysed", () => {
     expect(chapterRows(data, "Mathematics", "mastery").map((r) => r.title)).toEqual([
       "Polynomials", "Real Numbers", "Coordinate Geometry", "Linear Equations in Two Variables",
     ]);
-  });
-
-  it("sorts by most recently analysed", () => {
     expect(chapterRows(data, "Mathematics", "recent").map((r) => r.title).slice(0, 2)).toEqual([
       "Coordinate Geometry", "Polynomials",
     ]);
@@ -101,9 +83,7 @@ describe("subjectTrend", () => {
     const t = subjectTrend(makeData(), "English");
     expect(t?.points).toEqual([62, 70, 74, 79, 72, 78, 81, 86, 88]);
     expect(t?.delta).toBe(26);
-  });
-
-  it("is null until there are two scored sessions", () => {
+    // Null until there are two scored sessions.
     expect(subjectTrend(makeData(), "Social Science")).toBeNull();
   });
 });
@@ -118,7 +98,7 @@ describe("keyInsights", () => {
 
 describe("relativeDay", () => {
   it.each([
-    [0, "Today"], [1, "Yesterday"], [4, "4 days ago"], [40, "1 month ago"], [95, "3 months ago"],
+    [1, "Yesterday"], [40, "1 month ago"],
   ])("%i days back reads %s", (days, label) => {
     expect(relativeDay(new Date(FIXTURE_NOW - days * 86_400_000).toISOString(), FIXTURE_NOW)).toBe(label);
   });

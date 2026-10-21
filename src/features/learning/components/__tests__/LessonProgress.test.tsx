@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, within, waitFor } from "@testing-library/react";
-import { LESSON_ID, NODE_2, lessonFixture, makeLessonInstance } from "@/test/msw/handlers/lesson";
+import { render, screen, within } from "@testing-library/react";
+import { LESSON_ID, lessonFixture, makeLessonInstance } from "@/test/msw/handlers/lesson";
 import { useLessonStore } from "../../useLessonStore";
 
 import { LessonProgressRail } from "../LessonProgressRail";
@@ -30,18 +30,6 @@ describe("LessonProgressRail", () => {
     expect(screen.getByRole("progressbar", { name: "Steps completed" })).toHaveAttribute("aria-valuenow", "1");
     expect(screen.getByText("20%")).toBeInTheDocument();
   });
-
-  it("a step finished on this screen keeps its title", async () => {
-    await store().load(LESSON_ID);
-    render(<LessonProgressRail />);
-    lessonFixture.setScript(() => [
-      { type: "state_changed", instance: makeLessonInstance({ nodes_done: 2, revision: 5, active_node: { ...makeLessonInstance().active_node!, instance_node_id: NODE_2, title: "SYNTHETIC node 3" } }) },
-      { type: "turn_completed", status: "completed", finish_reason: "stop" },
-    ]);
-    await store().send("SYNTHETIC done talking");
-    expect(store().completedSteps).toEqual([{ instanceNodeId: makeLessonInstance().active_node!.instance_node_id, title: "SYNTHETIC node 2" }]);
-    await waitFor(() => expect(steps().slice(0, 3)).toEqual(["1 step done (done)", "SYNTHETIC node 2 (done)", "SYNTHETIC node 3Learn (current)"]));
-  });
 });
 
 describe("a finished lesson", () => {
@@ -57,14 +45,33 @@ describe("a finished lesson", () => {
     expect(screen.getByText("Lesson complete")).toBeInTheDocument();
     expect(screen.getByText("All steps done")).toBeInTheDocument();
   });
+});
 
-  it("finishing during the lesson reads the report", async () => {
+describe("revisiting skills after every planned step is done", () => {
+  it("keeps the backend's 17 of 17 and 100%, and says revisit work is under way (rail, chapter card, header)", async () => {
+    const { LessonHeader } = await import("../LessonHeader");
+    const { LessonRail } = await import("../LessonRail");
+    lessonFixture.setInstance(makeLessonInstance({
+      state: "active",
+      nodes_done: 17,
+      nodes_total: 17,
+      active_node: { ...makeLessonInstance().active_node!, reason: "revisit_remedial", title: "SYNTHETIC revisit" },
+    }));
     await store().load(LESSON_ID);
-    lessonFixture.setScript(() => [
-      { type: "state_changed", instance: makeLessonInstance({ state: "completed", next_action: "completed", nodes_done: 5, active_node: null }) },
-      { type: "turn_completed", status: "completed", finish_reason: "stop" },
-    ]);
-    await store().send("SYNTHETIC last answer");
-    await waitFor(() => expect(store().report?.nodes_done).toBe(5));
+    render(<><LessonRail /><LessonHeader subject={null} chapterTitle="SYNTHETIC chapter" exitHref="/student" /></>);
+    // The counts are the canonical ones, unchanged.
+    expect(screen.getByText("17 of 17 steps done")).toBeInTheDocument();
+    expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Steps completed" })).toHaveAttribute("aria-valuenow", "17");
+    expect(screen.getByText("17/17")).toBeInTheDocument();
+    // Rail line, chapter card caption and header chip label.
+    expect(screen.getAllByText("Revisiting skills")).toHaveLength(3);
+    expect(screen.queryByText("Steps done")).not.toBeInTheDocument();
+  });
+
+  it("an ordinary step says nothing about revisiting", async () => {
+    await store().load(LESSON_ID);
+    render(<LessonProgressRail />);
+    expect(screen.queryByText("Revisiting skills")).not.toBeInTheDocument();
   });
 });

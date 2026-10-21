@@ -5,6 +5,7 @@
  * - answers and the report: `gened_learning/routes.py`, `gened_learning/reporting.py`.
  * The UI never decides correctness or progression; it renders what these say.
  */
+import type { SkillLevel } from "@/components/report-card/types";
 import type { InstanceState } from "@/features/student/learner/types";
 
 export type { ActiveNode, InstanceState, InstanceNextAction } from "@/features/student/learner/types";
@@ -34,6 +35,8 @@ export interface TurnRequest {
   interrupts?: { turn_id: string; visible_seq: number };
   modality?: "text" | "voice";
   language?: VoiceLanguage;
+  /** The learner session whose confirmed check deliveries a message may answer (backend ADR 0035 decision 5). */
+  session_id?: string;
 }
 
 export type FailureReason =
@@ -249,7 +252,11 @@ export interface AnswerBody {
   response?: AnswerResponse;
   transcript?: string;
   confirmed_reading?: boolean;
+  /** The learner session the check's delivery was confirmed in; without it the answer is refused (`check_not_delivered`). */
+  session_id?: string;
 }
+
+export type { DeliveryBody } from "./delivery/checkDelivery";
 
 /** `needs_confirmation`: nothing was committed; `reading` holds a "did you mean …?" to resubmit. */
 export interface AnswerResult {
@@ -262,6 +269,68 @@ export interface AnswerResult {
   replayed: boolean;
   instance: InstanceState;
   reading?: { item_id: string; original: string; suggestion: string } | null;
+}
+
+/**
+ * How the learner did on one section (canonical step) of the chapter, from its latest pass: the share of its questions
+ * right on the first try without help. 60% passes. `not_attempted`: finished with nothing answered; `not_reached`: not yet.
+ */
+export interface RevisitSection {
+  instance_node_id: string;
+  node_id: string;
+  /** 1-based, in plan order. */
+  step: number;
+  title: string;
+  type: "teach" | "practice" | "assess";
+  status: "passed" | "below_pass_mark" | "not_attempted" | "not_reached";
+  scored: number;
+  correct: number;
+  /** 0 to 1; null when nothing was answered. */
+  score: number | null;
+  /** A replay of this section is waiting or under way. */
+  in_review: boolean;
+  /**
+   * The learner's mastery of the skills this section teaches or checks (BKT, `progress_levels_v2`), read now, not from a
+   * pass. Sections that share skills share levels. Absent from a backend that does not send it yet; null when the
+   * section targets no skills.
+   */
+  mastery?: SectionMastery | null;
+}
+
+/** One skill a section targets, with the learner's level on it (the report card's vocabulary). */
+export interface SectionSkill {
+  component_id: string;
+  title: string;
+  level: SkillLevel;
+  /** The BKT estimate, 0 to 1; null before any evidence on this skill. */
+  p_known: number | null;
+}
+
+/** A section's mastery: its weakest skill's level, and every skill it targets. */
+export interface SectionMastery {
+  level: SkillLevel;
+  skills: SectionSkill[];
+}
+
+/** `GET /v1/instances/{id}/revisit-options`: what a learner coming back to the chapter can choose. */
+export interface RevisitOptions {
+  instance_id: string;
+  state: "active" | "completed" | "abandoned";
+  revision: number;
+  sections: RevisitSection[];
+  /** Below the pass mark or not attempted, in plan order (not counting one already being reviewed). */
+  weak: RevisitSection[];
+  /** Where the learner carries on; null on a completed chapter. */
+  resume: { instance_node_id: string; step: number; title: string; nodes_done: number; nodes_total: number } | null;
+  review_in_progress: boolean;
+}
+
+/** `POST /v1/instances/{id}/review`: replay `section_ids`, or `start_over` (which answers with the new instance). */
+export interface ReviewBody {
+  request_id: string;
+  expected_revision: number;
+  section_ids?: string[];
+  start_over?: boolean;
 }
 
 /** `GET /v1/instances/{id}/report`. */

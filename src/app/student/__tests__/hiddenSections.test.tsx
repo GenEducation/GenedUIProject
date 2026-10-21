@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from "vitest";
 const redirect = vi.hoisted(() => vi.fn((url: string) => { throw new Error(`REDIRECT ${url}`); }));
 vi.mock("next/navigation", () => ({ redirect }));
 
-import PracticeLayout from "../assessments/layout";
+import PracticeLayout from "../practice/layout";
 import ScheduleLayout from "../schedule/layout";
 import { FEATURES } from "@/constants/features";
 
@@ -14,8 +14,13 @@ describe("hidden student sections", () => {
     expect(FEATURES.schedule).toBe(false);
   });
 
+  it("serves streak and chapter time from the learning activity model", () => {
+    expect(FEATURES.streak).toBe(true);
+    expect(FEATURES.chapterTime).toBe(true);
+  });
+
   it.each([
-    ["/student/assessments", PracticeLayout],
+    ["/student/practice", PracticeLayout],
     ["/student/schedule", ScheduleLayout],
   ])("%s redirects to student home on the server", (_path, Layout) => {
     expect(() => Layout({ children: "page" })).toThrow("REDIRECT /student");

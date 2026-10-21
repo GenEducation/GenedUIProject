@@ -20,13 +20,13 @@ export function SessionStartingOverlay() {
       <div className="flex flex-col items-center gap-4">
         <div
           className="w-10 h-10 border-4 rounded-full animate-spin"
-          style={{ borderColor: "#E2E8F0", borderTopColor: "var(--tutor)" }}
+          style={{ borderColor: "#E3E8E2", borderTopColor: "var(--tutor)" }}
         />
         <p
           style={{
             fontSize: 12,
             fontWeight: 700,
-            color: "#94A3B8",
+            color: "#7F9295",
             letterSpacing: "0.15em",
             textTransform: "uppercase",
           }}

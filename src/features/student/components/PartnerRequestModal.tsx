@@ -48,8 +48,8 @@ export function PartnerRequestModal() {
                       <Loader2 className="w-8 h-8 text-[#2d6a4a] animate-spin" />
                     </div>
                   </div>
-                  <h3 className="text-xl font-bold text-[#1a3a2a]">Sending Request</h3>
-                  <p className="text-sm text-[#1a3a2a]/60">Please wait while we connect your profile...</p>
+                  <h3 className="text-xl font-bold text-[#122D30]">Sending Request</h3>
+                  <p className="text-sm text-[#122D30]/60">Please wait while we connect your profile...</p>
                 </div>
               )}
 
@@ -58,13 +58,13 @@ export function PartnerRequestModal() {
                   <div className="w-16 h-16 bg-[#bce4cc]/40 rounded-full flex items-center justify-center mb-2">
                     <CheckCircle2 className="w-8 h-8 text-[#2d6a4a]" />
                   </div>
-                  <h3 className="text-xl font-bold text-[#1a3a2a]">Success!</h3>
-                  <p className="text-[#1a3a2a]/60 text-sm max-w-[280px] mx-auto leading-relaxed">
+                  <h3 className="text-xl font-bold text-[#122D30]">Success!</h3>
+                  <p className="text-[#122D30]/60 text-sm max-w-[280px] mx-auto leading-relaxed">
                     {partnerRequestMessage}
                   </p>
                   <button 
                     onClick={() => setPartnerModalOpen(false)}
-                    className="w-full mt-6 bg-[#2d6a4a] hover:bg-[#1a3a2a] text-white rounded-2xl py-3 font-bold text-[14px] transition-colors shadow-lg shadow-[#2d6a4a]/20"
+                    className="w-full mt-6 bg-[#2d6a4a] hover:bg-[#075E63] text-white rounded-2xl py-3 font-bold text-[14px] transition-colors shadow-lg shadow-[#2d6a4a]/20"
                   >
                     Done
                   </button>
@@ -76,12 +76,12 @@ export function PartnerRequestModal() {
                   <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-2">
                     <XCircle className="w-8 h-8 text-red-600" />
                   </div>
-                  <h3 className="text-xl font-bold text-[#1a3a2a] max-w-[280px] mx-auto leading-tight">
+                  <h3 className="text-xl font-bold text-[#122D30] max-w-[280px] mx-auto leading-tight">
                     {partnerRequestMessage}
                   </h3>
                   <button 
                     onClick={() => setPartnerModalOpen(false)}
-                    className="w-full mt-6 bg-[#f4f3ee] hover:bg-[#e4e3de] text-[#1a3a2a] rounded-2xl py-3 font-bold text-[14px] transition-colors"
+                    className="w-full mt-6 bg-[#F6F7F2] hover:bg-[#e4e3de] text-[#122D30] rounded-2xl py-3 font-bold text-[14px] transition-colors"
                   >
                     Close
                   </button>

@@ -1,9 +1,12 @@
 "use client";
 
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
+import { useState } from "react";
 import { learnerService } from "@/features/student/learner/learnerService";
+import { useFreshChapterCard } from "@/features/student/learner/useFreshChapterCard";
 import { paletteFor } from "@/features/student/learner/cardPalettes";
-import { useLessonStore } from "../useLessonStore";
+import { isReviewingSection, isRevisiting, useLessonStore } from "../useLessonStore";
+import { useUiText } from "../i18n";
 import { LessonProgressRail } from "./LessonProgressRail";
 
 /** Whether this build connects voice mode to the backend (`/v1/voice`); off until the voice service is live. */
@@ -17,6 +20,16 @@ export const lessonVoiceEnabled = (): boolean => process.env.NEXT_PUBLIC_LESSON_
 function ChapterCard() {
   const instanceId = useLessonStore((s) => s.instanceId);
   const chapter = useLessonLaunch((s) => (s.instanceId === instanceId ? s.chapter : null));
+  const chapterId = useLessonStore((s) => s.instance?.chapter_id);
+  // The card's signed URL can expire across a reload: read a fresh one, and never show a broken image meanwhile.
+  const refreshCard = useFreshChapterCard(instanceId, chapterId);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const cardSrc = chapter?.card ? learnerService.cardSrc(chapter.card.image_url) : null;
+  const done = useLessonStore((s) => s.instance?.nodes_done ?? 0);
+  const total = useLessonStore((s) => s.instance?.nodes_total ?? 0);
+  const revisiting = useLessonStore((s) => isRevisiting(s.instance));
+  const reviewing = useLessonStore((s) => isReviewingSection(s.instance));
+  const t = useUiText();
   const pal = paletteFor(chapter?.palette);
 
   return (
@@ -24,12 +37,16 @@ function ChapterCard() {
       className="relative overflow-hidden rounded-[22px] border border-white/70 shadow-[var(--ls-shadow)]"
       style={{ background: `linear-gradient(150deg, ${pal.sky[0]} 0%, ${pal.sky[1]} 100%)` }}
     >
-      {chapter?.card ? (
+      {cardSrc && cardSrc !== failedSrc ? (
         // eslint-disable-next-line @next/next/no-img-element -- signed, expiring API URL.
         <img
-          src={learnerService.cardSrc(chapter.card.image_url)}
+          src={cardSrc}
           alt=""
           className="block aspect-[16/10] w-full object-cover"
+          onError={() => {
+            setFailedSrc(cardSrc); // the text cover shows until a fresh URL arrives
+            refreshCard();
+          }}
         />
       ) : (
         <div className="relative aspect-[16/10] w-full p-4">
@@ -40,6 +57,19 @@ function ChapterCard() {
           <p className="lesson-display relative mt-1 text-[20px] font-semibold leading-tight" style={{ color: pal.ink }}>
             {chapter?.title ?? "Let's begin"}
           </p>
+          {/* Without cover art the card still says where the learner is in the chapter. */}
+          {total > 0 && (
+            <div className="absolute inset-x-4 bottom-4">
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/60">
+                <div className="h-full rounded-full" style={{ width: `${Math.round((done / total) * 100)}%`, background: pal.a }} />
+              </div>
+              {revisiting && (
+                <p className="mt-1 text-[11px] font-semibold" style={{ color: pal.ink }}>
+                  {t(reviewing ? "reviewingSection" : "revisiting")}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -51,8 +81,8 @@ function ChapterCard() {
  */
 export function LessonRail() {
   return (
-    <aside aria-label="Lesson" className="lesson-rail relative flex h-full flex-col overflow-hidden">
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
+    <aside aria-label="Lesson" className="lesson-rail @container relative flex h-full flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4 @max-[230px]:gap-4 @max-[230px]:p-3">
         <ChapterCard />
 
         <section aria-labelledby="lesson-progress-heading" className="flex flex-col gap-4">

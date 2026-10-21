@@ -63,10 +63,12 @@ export function TestTimer({ totalSeconds, onExpired }: TestTimerProps) {
             ? "bg-red-500/20 text-red-300"
             : isWarning
             ? "bg-amber-500/20 text-amber-300"
-            : "bg-white/10 text-white/80"
+            : "bg-white/10 text-white"
         }`}
       >
+        {/* Calm state: a teal-light clock on the dark paper header; warning/critical keep their own hue. */}
         <motion.div
+          className={!isCritical && !isWarning ? "text-[#5FA8A3]" : undefined}
           animate={
             isCritical
               ? { scale: [1, 1.2, 1], rotate: [0, -5, 5, 0] }
@@ -95,25 +97,25 @@ export function TestTimer({ totalSeconds, onExpired }: TestTimerProps) {
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white rounded-3xl p-5 sm:p-8 max-w-md w-[calc(100%-2rem)] sm:w-full mx-4 text-center shadow-2xl space-y-5"
             >
-              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto">
-                <Clock size={28} className="text-red-500" />
+              <div className="w-16 h-16 rounded-full bg-[var(--danger-bg)] flex items-center justify-center mx-auto">
+                <Clock size={28} className="text-[var(--danger)]" />
               </div>
               <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--primary-ink)]">Time&apos;s Up!</h2>
               <p className="text-[var(--primary-ink)]/60 text-[15px]">
                 Your test will be submitted automatically in{" "}
-                <span className="font-bold text-red-500">{graceCountdown}s</span>
+                <span className="font-bold text-[var(--danger-ink)]">{graceCountdown}s</span>
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={handleSubmitNow}
-                  className="flex-1 py-3 bg-[var(--primary-ink)] text-white rounded-xl font-bold text-[15px] hover:bg-[#064282] transition-all"
+                  className="flex-1 py-3 bg-[var(--primary)] text-white rounded-xl font-bold text-[15px] hover:bg-[var(--primary-hover)] transition-all"
                 >
                   Submit Now
                 </button>
                 {!extensionUsed && (
                   <button
                     onClick={handleExtend}
-                    className="flex-1 py-3 bg-amber-100 text-amber-700 rounded-xl font-bold text-[15px] hover:bg-amber-200 transition-all"
+                    className="flex-1 py-3 bg-[var(--soft-surface)] text-[var(--primary)] rounded-xl font-bold text-[15px] hover:bg-[#CBE0DA] transition-all"
                   >
                     +2 min
                   </button>

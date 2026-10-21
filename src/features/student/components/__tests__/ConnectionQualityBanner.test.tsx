@@ -16,14 +16,9 @@ describe("ConnectionQualityBanner", () => {
     expect(container.textContent).toBe("");
   });
 
-  it("shows a non-terminal backend notice", () => {
-    render(
-      <ConnectionQualityBanner
-        quality={null}
-        notice={rotating("We have five minutes left in today's lesson.")}
-      />,
-    );
-    expect(screen.getByText(/five minutes left/i)).toBeInTheDocument();
+  it("still reports a genuinely poor connection", () => {
+    render(<ConnectionQualityBanner quality="poor" />);
+    expect(screen.getByText("Poor internet connection")).toBeInTheDocument();
   });
 
   it("does not dress a planned rotation as a connection failure", () => {
@@ -51,39 +46,19 @@ describe("ConnectionQualityBanner", () => {
     expect(screen.queryByText("Reconnecting…")).not.toBeInTheDocument();
   });
 
-  it("shows a deliberate session ending in its own right", () => {
-    render(
-      <ConnectionQualityBanner
-        quality={null}
-        notice={ended("That is a LOT of learning for one day — well done!")}
-      />,
-    );
-    expect(screen.getByText(/LOT of learning/i)).toBeInTheDocument();
-  });
-
-  it("distinguishes a finished lesson from one that is still going", () => {
+  it("shows a deliberate ending in its own style, with no spinner", () => {
     // "Ended" must not look like "hold on": the lesson is over and nothing is pending.
     const { container: endedUi } = render(
-      <ConnectionQualityBanner quality={null} notice={ended("See you tomorrow!")} />,
+      <ConnectionQualityBanner quality={null} notice={ended("That is a LOT of learning for one day — well done!")} />,
     );
     const { container: rotatingUi } = render(
       <ConnectionQualityBanner quality={null} notice={rotating("Back in a second!")} />,
     );
 
+    expect(screen.getByText(/LOT of learning/i)).toBeInTheDocument();
     expect(bgOf(endedUi)).toBeTruthy();
     expect(bgOf(endedUi)).not.toBe(bgOf(rotatingUi));
-  });
-
-  it("shows no spinner once the lesson has ended", () => {
     // A spinner tells the child to wait. After a cap there is nothing to wait for.
-    const { container } = render(
-      <ConnectionQualityBanner quality={null} notice={ended("See you tomorrow!")} />,
-    );
-    expect(container.querySelector(".animate-spin")).toBeNull();
-  });
-
-  it("still reports a genuinely poor connection", () => {
-    render(<ConnectionQualityBanner quality="poor" />);
-    expect(screen.getByText("Poor internet connection")).toBeInTheDocument();
+    expect(endedUi.querySelector(".animate-spin")).toBeNull();
   });
 });

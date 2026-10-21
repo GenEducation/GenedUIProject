@@ -9,36 +9,22 @@ afterEach(() => vi.useRealTimers());
 const tick = (seconds: number) => act(() => vi.advanceTimersByTime(seconds * 1000));
 
 describe("TestTimer — countdown", () => {
-  it("renders the initial time as MM:SS", () => {
-    render(<TestTimer totalSeconds={125} onExpired={vi.fn()} />);
-    expect(screen.getByText("02:05")).toBeInTheDocument();
-  });
-
-  it("decrements once per second", () => {
-    render(<TestTimer totalSeconds={10} onExpired={vi.fn()} />);
-    tick(3);
-    expect(screen.getByText("00:07")).toBeInTheDocument();
-  });
-
-  it("does not call onExpired while time remains", () => {
+  it("renders MM:SS and decrements once per second without expiring early", () => {
     const onExpired = vi.fn();
-    render(<TestTimer totalSeconds={30} onExpired={onExpired} />);
-    tick(5);
+    render(<TestTimer totalSeconds={125} onExpired={onExpired} />);
+    expect(screen.getByText("02:05")).toBeInTheDocument();
+    tick(3);
+    expect(screen.getByText("02:02")).toBeInTheDocument();
     expect(onExpired).not.toHaveBeenCalled();
   });
 });
 
 describe("TestTimer — expiry", () => {
-  it("shows the time's-up modal once the countdown reaches zero", () => {
-    render(<TestTimer totalSeconds={2} onExpired={vi.fn()} />);
-    tick(2);
-    expect(screen.getByText("Time's Up!")).toBeInTheDocument();
-  });
-
-  it("auto-calls onExpired once the 10s grace period elapses", () => {
+  it("shows the time's-up modal at zero and auto-calls onExpired after the 10s grace", () => {
     const onExpired = vi.fn();
     render(<TestTimer totalSeconds={1} onExpired={onExpired} />);
     tick(1); // hits zero, modal opens, grace countdown starts at 10
+    expect(screen.getByText("Time's Up!")).toBeInTheDocument();
     expect(onExpired).not.toHaveBeenCalled();
     tick(10);
     expect(onExpired).toHaveBeenCalledTimes(1);

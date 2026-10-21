@@ -17,7 +17,7 @@ export interface ParentAlert {
 const SEVERITY: Record<ParentAlert["severity"], { bar: string; tint: string; icon: string }> = {
   warning: { bar: "#EC3F72", tint: "#FCE3EB", icon: "alert_math_warning" },
   info: { bar: "#F5A50B", tint: "#FDF0CF", icon: "alert_hindi_clock" },
-  success: { bar: "#16A36B", tint: "#DDF4E9", icon: "alert_science_badge" },
+  success: { bar: "#075E63", tint: "#DDF4E9", icon: "alert_science_badge" },
 };
 
 export function AlertsPanel({ alerts }: { alerts: ParentAlert[] }) {

@@ -5,6 +5,7 @@
 import type {
   AnalysisFocusArea,
   ChapterMasteryItem,
+  ChapterSkill,
   EvolutionAnalysisData,
   ReportCardDataset,
   SubjectEvolutionData,
@@ -35,13 +36,21 @@ export interface ChapterRowModel {
   sessions: number;
   minutes: number | null;
   evo: EvolutionAnalysisData | undefined;
-  /** Last analysis time, used for "Recent" sorting and latest activity. */
+  /** When the chapter was last worked on (else its last analysis), for "Recent" sorting and latest activity. */
   updatedAt: string | null;
+  /** The new backend's facts; null where it has none for this chapter. */
+  steps: { done: number; total: number } | null;
+  answers: { answered: number; correct: number } | null;
+  outcomes: { mastered: number; total: number } | null;
+  skills: ChapterSkill[];
+  /** Completed and being gone over again: still Completed, with a "Revisiting" chip. */
+  revisiting: boolean;
 }
 
 export type ChapterSort = "order" | "mastery" | "recent";
 
-function chapterStatus(ch: ChapterMasteryItem): ChapterStatus {
+/** Shared with the profile's "Chapters completed" stat so both count alike. */
+export function chapterStatus(ch: ChapterMasteryItem): ChapterStatus {
   if (ch.status === "completed" || ch.completion_percentage >= 100) return "Completed";
   if (ch.completion_percentage > 0 || ch.study_count > 0) return "In progress";
   return "Not started";
@@ -62,6 +71,8 @@ export function chapterRows(data: ReportCardDataset, subject: string, sort: Chap
     const started = status !== "Not started";
     const mastery = toPct(ch.mastery_score);
     const evo = chapterEvolution(data, subject, ch.document_title);
+    // New backend: no answered skill yet means nothing measured, so it isn't coloured as a low score.
+    const rated = ch.skills === undefined || ch.skills.some((k) => k.level !== "not_started");
     return {
       n: i + 1,
       key: `${subject}::${ch.document_title}`,
@@ -71,12 +82,19 @@ export function chapterRows(data: ReportCardDataset, subject: string, sort: Chap
       mastery,
       coverage: Math.round(ch.completion_percentage),
       started,
-      band: masteryBand(mastery, started),
-      tone: toneFor(mastery, started),
+      band: masteryBand(mastery, started && rated),
+      tone: toneFor(mastery, started && rated),
       sessions: ch.time_sessions ?? ch.study_count,
       minutes: ch.time_minutes != null ? Math.round(ch.time_minutes) : null,
       evo,
-      updatedAt: evo?.updated_at ?? null,
+      updatedAt: ch.last_active_at ?? evo?.updated_at ?? null,
+      steps: ch.nodes_total != null && ch.nodes_done != null ? { done: ch.nodes_done, total: ch.nodes_total } : null,
+      answers: ch.answered != null && ch.correct != null ? { answered: ch.answered, correct: ch.correct } : null,
+      outcomes: ch.outcomes && ch.outcomes.length > 0
+        ? { mastered: ch.outcomes.filter((o) => o.mastered).length, total: ch.outcomes.length }
+        : null,
+      skills: ch.skills ?? [],
+      revisiting: ch.revisiting === true,
     };
   });
 
@@ -109,6 +127,13 @@ export interface SubjectSummary {
   chaptersStarted: number;
   latest: { chapter: string; at: string } | null;
   evolution: SubjectEvolutionData | undefined;
+  /** From the new backend: `sessions` then counts chapters opened (it has no session count), and there's no study time. */
+  v1: boolean;
+  /** Has a mastery to show. On the new backend, only once some skill in the subject has been answered: before that
+   *  `mastery` is a placeholder 0, shown as "—" and left out of averages and comparisons. */
+  measured: boolean;
+  /** The chip's words: the band, or "No answers yet" for an opened subject with nothing measured. */
+  bandLabel: string;
 }
 
 export function subjectSummaries(data: ReportCardDataset): SubjectSummary[] {
@@ -121,24 +146,35 @@ export function subjectSummaries(data: ReportCardDataset): SubjectSummary[] {
         : 0;
     const chaptersStarted = chapters.filter((c) => chapterStatus(c) !== "Not started").length;
     const started = s.session_count > 0 || chaptersStarted > 0 || mastery > 0;
+    const v1 = chapters.some((c) => c.skills !== undefined);
+    const measured = !v1 || chapters.some((c) => (c.skills ?? []).some((k) => k.level !== "not_started"));
+    const band = masteryBand(mastery, started && measured);
 
     const latestEvo = data.chapterEvolutions
       .filter((e) => e.subject === s.subject && e.updated_at)
       .sort((a, b) => time(b.updated_at) - time(a.updated_at))[0];
+    const latestWorked = chapters
+      .filter((c) => c.last_active_at)
+      .sort((a, b) => time(b.last_active_at) - time(a.last_active_at))[0];
 
     return {
       subject: s.subject,
       mastery,
       coverage,
       started,
-      band: masteryBand(mastery, started),
-      tone: toneFor(mastery, started),
+      band,
+      tone: toneFor(mastery, started && measured),
       sessions: s.session_count,
       chaptersTotal: chapters.length,
       chaptersCompleted: chapters.filter((c) => chapterStatus(c) === "Completed").length,
       chaptersStarted,
-      latest: latestEvo ? { chapter: latestEvo.document_title, at: latestEvo.updated_at! } : null,
+      latest: latestWorked
+        ? { chapter: latestWorked.document_title, at: latestWorked.last_active_at! }
+        : latestEvo ? { chapter: latestEvo.document_title, at: latestEvo.updated_at! } : null,
       evolution: data.subjectEvolutions.find((e) => e.subject === s.subject),
+      v1,
+      measured,
+      bandLabel: started && !measured ? "No answers yet" : band,
     };
   });
 }
@@ -151,6 +187,8 @@ export interface OverallSummary {
   /** Mean chapter coverage across subjects. */
   progress: number;
   avgMastery: number;
+  /** Some subject has a mastery to show; else the average is "—". */
+  measured: boolean;
   chaptersCompleted: number;
   chaptersTotal: number;
   tests: number;
@@ -160,7 +198,8 @@ export interface OverallSummary {
 }
 
 export function overallSummary(data: ReportCardDataset, summaries = subjectSummaries(data)): OverallSummary {
-  const started = summaries.filter((s) => s.started);
+  // Only subjects with a mastery to compare (see `measured`).
+  const started = summaries.filter((s) => s.started && s.measured);
   const avg = (xs: number[]) => (xs.length > 0 ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : 0);
   const ranked = [...started].sort((a, b) => b.mastery - a.mastery);
   // Strongest vs. weakest only means something with two distinct subjects.
@@ -168,7 +207,8 @@ export function overallSummary(data: ReportCardDataset, summaries = subjectSumma
 
   return {
     progress: avg(summaries.map((s) => s.coverage)),
-    avgMastery: avg(summaries.map((s) => s.mastery)),
+    avgMastery: avg(summaries.filter((s) => s.measured).map((s) => s.mastery)),
+    measured: summaries.some((s) => s.measured && s.started),
     chaptersCompleted: summaries.reduce((sum, s) => sum + s.chaptersCompleted, 0),
     chaptersTotal: summaries.reduce((sum, s) => sum + s.chaptersTotal, 0),
     tests: data.testSubmissions.length,

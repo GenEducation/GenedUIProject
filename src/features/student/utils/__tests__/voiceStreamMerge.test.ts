@@ -11,29 +11,16 @@ describe("appendTranscriptChunk", () => {
     const text = chunks.reduce(appendTranscriptChunk, "");
 
     expect(text).toBe("But sometimes");
+    // Preserves the spacing the provider already sent.
+    expect(["Same idea jus", "t with differen", "t shapes."].reduce(appendTranscriptChunk, "")).toBe(
+      "Same idea just with different shapes.",
+    );
   });
 
-  it("preserves the spacing the provider already sent", () => {
-    const chunks = ["Same idea jus", "t with differen", "t shapes."];
-    const text = chunks.reduce(appendTranscriptChunk, "");
-
-    expect(text).toBe("Same idea just with different shapes.");
-    expect(text).not.toContain("jus t");
-    expect(text).not.toContain("differen t");
-  });
-
-  it("does not inject a separator on the first chunk", () => {
+  it("adds no separator on the first chunk, an empty chunk, or one that brings its own space", () => {
     expect(appendTranscriptChunk("", "Great!")).toBe("Great!");
-  });
-
-  it("leaves leading and trailing whitespace inside chunks alone", () => {
-    // A chunk that already carries its own space is never given a second one.
-    expect(appendTranscriptChunk("keeps goin", "g like that.")).toBe("keeps going like that.");
-    expect(appendTranscriptChunk("Do you see", " the pattern?")).toBe("Do you see the pattern?");
-  });
-
-  it("handles an empty chunk without altering the buffer", () => {
     expect(appendTranscriptChunk("hello", "")).toBe("hello");
+    expect(appendTranscriptChunk("Do you see", " the pattern?")).toBe("Do you see the pattern?");
   });
 
   it("spaces chunks that land exactly on a word boundary", () => {
@@ -45,13 +32,9 @@ describe("appendTranscriptChunk", () => {
     const text = chunks.reduce(appendTranscriptChunk, "");
 
     expect(text).toBe("He can't read the newspaper.");
-  });
-
-  it("still spaces two- and three-letter chunks that are real words", () => {
-    const chunks = ["Can", "you", "guess", "something", "else", "that", "would", "be", "super", "hard", "for", "him", "to", "do?"];
-    const text = chunks.reduce(appendTranscriptChunk, "");
-
-    expect(text).toBe("Can you guess something else that would be super hard for him to do?");
+    // Two- and three-letter chunks that are real words are still spaced.
+    const short = ["Can", "you", "guess", "something", "else", "that", "would", "be", "super", "hard", "for", "him", "to", "do?"];
+    expect(short.reduce(appendTranscriptChunk, "")).toBe("Can you guess something else that would be super hard for him to do?");
   });
 
   it("does not space punctuation that attaches to the previous chunk", () => {

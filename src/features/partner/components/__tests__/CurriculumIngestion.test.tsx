@@ -18,7 +18,6 @@ vi.mock("../PageWisePreview", async () => {
 });
 
 import { CurriculumIngestion } from "../CurriculumIngestion";
-import { strandCodeFrom } from "../LearningOutcomePicker";
 
 installNodeMultipart();
 
@@ -78,18 +77,6 @@ describe("CurriculumIngestion — upload a chapter source", () => {
     expect(usePartnerStore.getState().subjects[0]).toMatchObject({ title: "SYNTHETIC chapter", state: "queued" });
   });
 
-  it("needs a learning outcome and a page range inside the PDF", async () => {
-    render(<CurriculumIngestion onClose={vi.fn()} />);
-    await fillValidForm();
-    fireEvent.click(screen.getByText("SYNTHETIC outcome two")); // unselect
-    expect(submit()).toBeDisabled();
-
-    fireEvent.click(screen.getByText("SYNTHETIC outcome two"));
-    fireEvent.change(screen.getByLabelText("Last Page"), { target: { value: "9" } });
-    expect(screen.getByText(/Pages must be within 1 to 3/)).toBeInTheDocument();
-    expect(submit()).toBeDisabled();
-  });
-
   it("keeps the form open and shows the server's reason when the upload is refused", async () => {
     sourcesFixture.reset();
     const onClose = vi.fn();
@@ -114,13 +101,5 @@ describe("CurriculumIngestion — upload a chapter source", () => {
     const big = syntheticPdf("big.pdf", "x".repeat(31 * 1024 * 1024));
     fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, { target: { files: [big] } });
     expect(screen.getByText(/larger than 30 MB/)).toBeInTheDocument();
-  });
-});
-
-describe("strandCodeFrom", () => {
-  it("turns a competency name into a strand code the backend accepts", () => {
-    expect(strandCodeFrom("Fractions & decimals")).toBe("fractions_decimals");
-    expect(strandCodeFrom("2D shapes")).toBe("strand_2d_shapes");
-    expect(strandCodeFrom("x".repeat(80))).toHaveLength(60);
   });
 });

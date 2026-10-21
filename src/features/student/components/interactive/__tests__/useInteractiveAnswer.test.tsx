@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 
 // ── Controllable store mock ───────────────────────────────────────────────────
 const submitInteractiveAnswer = vi.fn();
@@ -19,7 +19,7 @@ beforeEach(() => {
 });
 
 describe("useInteractiveAnswer", () => {
-  it("posts the stringified answer in the grader shape", async () => {
+  it("posts the stringified answer in the grader shape and stays submitted", async () => {
     submitInteractiveAnswer.mockResolvedValue({ is_correct: true, attempts: 1 });
     const { result } = renderHook(() => useInteractiveAnswer("d1", "select_cells", true));
 
@@ -28,16 +28,7 @@ describe("useInteractiveAnswer", () => {
     });
 
     expect(submitInteractiveAnswer).toHaveBeenCalledWith("d1", "select_cells", JSON.stringify({ selected: [0, 1] }));
-  });
-
-  it("marks submitted=true optimistically and keeps it after a graded result", async () => {
-    submitInteractiveAnswer.mockResolvedValue({ is_correct: false, attempts: 1 });
-    const { result } = renderHook(() => useInteractiveAnswer("d1", "order", true));
-
-    await act(async () => {
-      await result.current.submit({ order: ["a", "b"] });
-    });
-
+    // submitted stays true after a graded result.
     expect(result.current.submitted).toBe(true);
     expect(result.current.submitError).toBe(false);
   });
@@ -56,16 +47,8 @@ describe("useInteractiveAnswer", () => {
     expect(result.current.submitted).toBe(false);
     expect(result.current.submitError).toBe(true);
     expect(result.current.isCorrect).toBeUndefined();
-  });
 
-  it("dismissError clears the error so the student can resubmit", async () => {
-    submitInteractiveAnswer.mockResolvedValue(null);
-    const { result } = renderHook(() => useInteractiveAnswer("d1", "select_cells", true));
-    await act(async () => {
-      await result.current.submit({ selected: [0] });
-    });
-    expect(result.current.submitError).toBe(true);
-
+    // dismissError clears the error so the student can resubmit.
     act(() => result.current.dismissError());
     expect(result.current.submitError).toBe(false);
   });
@@ -94,26 +77,22 @@ describe("useInteractiveAnswer", () => {
     expect(result.current.isCorrect).toBe(true);
     expect(result.current.attempts).toBe(2);
     expect(result.current.studentAnswer).toEqual({ selected: [0, 3] });
-  });
 
-  it("survives a corrupt cached student_answer without throwing", () => {
+    // A corrupt cached student_answer does not throw.
     interactiveResults = { d1: { is_correct: false, attempts: 1, student_answer: "{not json" } };
-    const { result } = renderHook(() => useInteractiveAnswer("d1", "select_cells", true));
-    expect(result.current.studentAnswer).toBeUndefined();
-    expect(result.current.submitted).toBe(true);
+    const corrupt = renderHook(() => useInteractiveAnswer("d1", "select_cells", true)).result;
+    expect(corrupt.current.studentAnswer).toBeUndefined();
+    expect(corrupt.current.submitted).toBe(true);
   });
 
-  it("retry is a no-op when allowRetry is false", () => {
+  it("retry clears the cached result only when allowRetry is true", () => {
     interactiveResults = { d1: { is_correct: false, attempts: 1, student_answer: "{}" } };
     const { result } = renderHook(() => useInteractiveAnswer("d1", "select_cells", false));
     act(() => result.current.retry());
     expect(clearInteractiveResult).not.toHaveBeenCalled();
-  });
 
-  it("retry clears the cached result when allowRetry is true", () => {
-    interactiveResults = { d1: { is_correct: false, attempts: 1, student_answer: "{}" } };
-    const { result } = renderHook(() => useInteractiveAnswer("d1", "select_cells", true));
-    act(() => result.current.retry());
+    const retryable = renderHook(() => useInteractiveAnswer("d1", "select_cells", true)).result;
+    act(() => retryable.current.retry());
     expect(clearInteractiveResult).toHaveBeenCalledWith("d1");
   });
 });

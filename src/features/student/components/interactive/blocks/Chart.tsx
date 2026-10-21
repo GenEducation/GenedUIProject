@@ -11,7 +11,7 @@ export default function Chart({ directiveId, meta, disabled, readOnly }: Interac
   const render = meta?.render || {};
   const interaction = meta?.interaction || {};
   const data: Datum[] = render.data || [];
-  const fill: string = render.fill_color || "#85B7EB";
+  const fill: string = render.fill_color || COLORS.brandLight;
   const max: number = interaction.max_selections || 1;
   const allowRetry = !!interaction.allow_retry && !readOnly;
   const it = meta?.interaction_type || "select_cells";

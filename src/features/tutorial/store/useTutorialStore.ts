@@ -77,11 +77,14 @@ interface TutorialState {
   completedActions: Record<string, boolean>;
   hasEnded: boolean;
   hasDismissedCelebration: boolean;
+  /** Whether this run ends in confetti on Home: only a new student's first tour does, never a replay. */
+  celebrateOnEnd: boolean;
 
-  startTutorial: () => void;
+  /** `celebrate`: the onboarding run for a new student. A replay (Profile's "Watch the quick tour") passes nothing. */
+  startTutorial: (options?: { celebrate?: boolean }) => void;
   nextStep: () => void;
   prevStep: () => void;
-  /** User watched the video to the end and deliberately closed it — show confetti. */
+  /** User watched the video to the end and deliberately closed it — confetti, if this run celebrates. */
   completeTutorial: () => void;
   /** User dismissed the tutorial early (header X) — no confetti. */
   skipTutorial: () => void;
@@ -98,19 +101,22 @@ export const useTutorialStore = create<TutorialState>()(
       completedActions: {},
       hasEnded: false,
       hasDismissedCelebration: true, // Default to true so old users don't see it
+      celebrateOnEnd: false,
 
       getCurrentStep: () => {
         const { currentStepIndex } = get();
         return TUTORIAL_SEQUENCE[currentStepIndex] || null;
       },
 
-      startTutorial: () => {
+      startTutorial: (options) => {
         set({
           isActive: true,
           currentStepIndex: 0,
           completedActions: {},
           hasEnded: false,
-          hasDismissedCelebration: false, // Reset to false when starting
+          hasDismissedCelebration: true, // Armed only when a celebrating run finishes
+          // `=== true`, not truthiness: an onClick handler passes its click event as the first argument.
+          celebrateOnEnd: options?.celebrate === true,
         });
       },
 
@@ -119,7 +125,7 @@ export const useTutorialStore = create<TutorialState>()(
         if (currentStepIndex < TUTORIAL_SEQUENCE.length - 1) {
           set({ currentStepIndex: currentStepIndex + 1 });
         } else {
-          set({ isActive: false, hasEnded: true, hasDismissedCelebration: false });
+          set({ isActive: false, hasEnded: true, hasDismissedCelebration: !get().celebrateOnEnd });
         }
       },
 
@@ -131,8 +137,8 @@ export const useTutorialStore = create<TutorialState>()(
       },
 
       completeTutorial: () => {
-        // Watched the whole video → reward with confetti on home screen
-        set({ isActive: false, hasEnded: true, hasDismissedCelebration: false });
+        // Watched the whole video → confetti on Home, but only after the onboarding run, never a replay
+        set({ isActive: false, hasEnded: true, hasDismissedCelebration: !get().celebrateOnEnd });
       },
 
       skipTutorial: () => {

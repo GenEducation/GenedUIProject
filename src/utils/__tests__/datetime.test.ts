@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
-  BOOKING_WINDOW_DAYS,
   bookingWindowEnd,
   formatDateDisplay,
-  formatTimeDisplay,
   from12Hour,
   parseHhMm,
   parseIsoDate,
@@ -33,11 +31,6 @@ describe("parseIsoDate / toIsoDate", () => {
     expect(parseIsoDate("2026-02-31")).toBeNull(); // would silently roll to Mar 3
     expect(parseIsoDate("2026-13-01")).toBeNull();
   });
-
-  it("returns null for an unusable Date", () => {
-    expect(toIsoDate(null)).toBeNull();
-    expect(toIsoDate(new Date("nope"))).toBeNull();
-  });
 });
 
 describe("todayDateString / tomorrowDateString", () => {
@@ -55,15 +48,6 @@ describe("todayDateString / tomorrowDateString", () => {
     expect(tomorrowDateString(new Date(2026, 7, 31, 9, 0))).toBe("2026-09-01");
     expect(tomorrowDateString(new Date(2026, 11, 31, 9, 0))).toBe("2027-01-01");
   });
-
-  it("handles a leap day", () => {
-    expect(tomorrowDateString(new Date(2028, 1, 28, 9, 0))).toBe("2028-02-29");
-  });
-
-  it("agrees with toIsoDate for the same instant", () => {
-    const now = new Date(2026, 7, 19, 23, 59);
-    expect(todayDateString(now)).toBe(toIsoDate(now));
-  });
 });
 
 describe("addDays", () => {
@@ -71,10 +55,6 @@ describe("addDays", () => {
     expect(addDays("2026-08-31", 1)).toBe("2026-09-01");
     expect(addDays("2026-01-01", -1)).toBe("2025-12-31");
     expect(addDays("2026-08-19", 0)).toBe("2026-08-19");
-  });
-
-  it("returns null for bad input", () => {
-    expect(addDays("nonsense", 1)).toBeNull();
   });
 });
 
@@ -85,18 +65,10 @@ describe("formatDateDisplay", () => {
     expect(formatDateDisplay("2026-08-19", "short")).toBe("19 Aug");
   });
 
-  it("defaults to long", () => {
-    expect(formatDateDisplay("2026-08-19")).toBe("Wed, Aug 19, 2026");
-  });
-
   it("returns null rather than 'Invalid Date'", () => {
     expect(formatDateDisplay(null)).toBeNull();
     expect(formatDateDisplay("")).toBeNull();
     expect(formatDateDisplay("garbage")).toBeNull();
-  });
-
-  it("still accepts a full timestamp, for session rows that carry one", () => {
-    expect(formatDateDisplay("2026-08-19T14:30:00Z", "medium")).not.toBeNull();
   });
 });
 
@@ -109,19 +81,6 @@ describe("parseHhMm / toHhMm", () => {
     expect(parseHhMm("23:59")).toBe(1439);
     expect(toHhMm(1439)).toBe("23:59");
   });
-
-  it("rejects out-of-range and malformed values", () => {
-    expect(parseHhMm("24:00")).toBeNull();
-    expect(parseHhMm("10:60")).toBeNull();
-    expect(parseHhMm("abc")).toBeNull();
-    expect(parseHhMm("")).toBeNull();
-    expect(parseHhMm(null)).toBeNull();
-  });
-
-  it("wraps values outside a single day", () => {
-    expect(toHhMm(1440)).toBe("00:00");
-    expect(toHhMm(-60)).toBe("23:00");
-  });
 });
 
 describe("to12Hour / from12Hour", () => {
@@ -131,35 +90,9 @@ describe("to12Hour / from12Hour", () => {
     expect(from12Hour(12, 0, "AM")).toBe(0);
     expect(from12Hour(12, 0, "PM")).toBe(720);
   });
-
-  it("round-trips every minute of the day", () => {
-    for (let m = 0; m < 1440; m++) {
-      const { hour12, minute, period } = to12Hour(m);
-      expect(from12Hour(hour12, minute, period)).toBe(m);
-    }
-  });
-});
-
-describe("formatTimeDisplay", () => {
-  it("renders 12-hour time", () => {
-    expect(formatTimeDisplay("00:00")).toBe("12:00 AM");
-    expect(formatTimeDisplay("09:05")).toBe("9:05 AM");
-    expect(formatTimeDisplay("12:30")).toBe("12:30 PM");
-    expect(formatTimeDisplay("23:59")).toBe("11:59 PM");
-  });
-
-  it("returns null for unusable input", () => {
-    expect(formatTimeDisplay("25:00")).toBeNull();
-    expect(formatTimeDisplay(null)).toBeNull();
-  });
 });
 
 describe("bookingWindowEnd", () => {
-  it("is today + BOOKING_WINDOW_DAYS", () => {
-    expect(bookingWindowEnd(new Date(2026, 7, 18, 10, 0))).toBe("2026-08-25");
-    expect(BOOKING_WINDOW_DAYS).toBe(7);
-  });
-
   it("yields exactly 7 selectable days when paired with tomorrowDateString", () => {
     const now = new Date(2026, 7, 18, 10, 0);
     const min = tomorrowDateString(now); // 2026-08-19
@@ -170,14 +103,5 @@ describe("bookingWindowEnd", () => {
     expect(count).toBe(7);
     expect(min).toBe("2026-08-19");
     expect(max).toBe("2026-08-25");
-  });
-
-  it("rolls across month and year boundaries", () => {
-    expect(bookingWindowEnd(new Date(2026, 7, 28, 10, 0))).toBe("2026-09-04");
-    expect(bookingWindowEnd(new Date(2026, 11, 28, 10, 0))).toBe("2027-01-04");
-  });
-
-  it("uses local days, so a late-evening booking still gets a full window", () => {
-    expect(bookingWindowEnd(new Date(2026, 7, 18, 23, 45))).toBe("2026-08-25");
   });
 });

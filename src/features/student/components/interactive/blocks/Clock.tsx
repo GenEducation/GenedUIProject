@@ -31,9 +31,9 @@ export default function Clock({ directiveId, meta, disabled, readOnly }: Interac
             const a = (i * 30 * Math.PI) / 180;
             return <line key={i} x1={cx + 62 * Math.sin(a)} y1={cy - 62 * Math.cos(a)} x2={cx + 70 * Math.sin(a)} y2={cy - 70 * Math.cos(a)} stroke={COLORS.border} strokeWidth={2} />;
           })}
-          <line x1={cx} y1={cy} x2={cx + 38 * Math.sin(ha)} y2={cy - 38 * Math.cos(ha)} stroke="#26215C" strokeWidth={5} strokeLinecap="round" />
+          <line x1={cx} y1={cy} x2={cx + 38 * Math.sin(ha)} y2={cy - 38 * Math.cos(ha)} stroke={COLORS.ink} strokeWidth={5} strokeLinecap="round" />
           <line x1={cx} y1={cy} x2={cx + 58 * Math.sin(ma)} y2={cy - 58 * Math.cos(ma)} stroke={COLORS.brand} strokeWidth={3} strokeLinecap="round" />
-          <circle cx={cx} cy={cy} r={4} fill="#26215C" />
+          <circle cx={cx} cy={cy} r={4} fill={COLORS.ink} />
         </svg>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 160 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: COLORS.muted }}>

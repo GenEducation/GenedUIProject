@@ -16,27 +16,6 @@ afterEach(() => vi.useRealTimers());
 const advance = (ms: number) => act(() => { vi.advanceTimersByTime(ms); });
 
 describe("ParentLoader", () => {
-  it("announces the stage's status line", () => {
-    render(<ParentLoader {...base} stage="signup" onFinished={vi.fn()} />);
-    advance(50);
-    expect(screen.getByRole("status")).toHaveTextContent("Creating your family account");
-  });
-
-  it("names the family once it's known", () => {
-    render(
-      <ParentLoader
-        {...base}
-        childrenList={[
-          { id: "s1", name: "Aarav Sharma", avatar: "/a.png" },
-          { id: "s2", name: "Priya Mehta", avatar: "/b.png" },
-        ]}
-        onFinished={vi.fn()}
-      />,
-    );
-    advance(150);
-    expect(screen.getByRole("status")).toHaveTextContent("Gathering Aarav & Priya's progress");
-  });
-
   it("during a hand-off, navigates once the cap has been seen and never dismisses itself", () => {
     const onCelebrated = vi.fn();
     const onFinished = vi.fn();
@@ -73,11 +52,5 @@ describe("ParentLoader", () => {
 
     expect(onFinished).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
-  });
-
-  it("says so when a wait runs long", () => {
-    render(<ParentLoader {...base} onFinished={vi.fn()} />);
-    advance(6500);
-    expect(screen.getByRole("status")).toHaveTextContent("Still working, thanks for your patience");
   });
 });

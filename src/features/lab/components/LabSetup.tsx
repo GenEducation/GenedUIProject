@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, MonitorSmartphone, Wifi, WifiOff, TriangleAlert, Link2, ArrowRightLeft, Settings2, Ban, X, ChevronRight, RefreshCw, type LucideIcon } from "lucide-react";
+import { Plus, MonitorSmartphone, Wifi, WifiOff, TriangleAlert, Link2, ArrowRightLeft, Settings2, Ban, X, ChevronLeft, ChevronRight, RefreshCw, type LucideIcon } from "lucide-react";
 import { useLabStore } from "../store/useLabStore";
 import { DeviceTokenModal } from "./DeviceTokenModal";
 import { LabDevicePairingWizard } from "./LabDevicePairingWizard";
@@ -17,8 +17,8 @@ import { ApiRequestError } from "@/utils/authFetch";
 import { Button } from "@/components/ui/Button";
 
 const healthStyles: Record<LabDeviceHealth, { icon: LucideIcon; className: string; label: string }> = {
-  ONLINE: { icon: Wifi, className: "bg-[#E5F2E9] text-[#1A3D2C]", label: "Online" },
-  OFFLINE: { icon: WifiOff, className: "bg-[#F4F3EE] text-[#1A3D2C]/50", label: "Offline" },
+  ONLINE: { icon: Wifi, className: "bg-[#E8F2EF] text-[#122D30]", label: "Online" },
+  OFFLINE: { icon: WifiOff, className: "bg-[#F6F7F2] text-[#122D30]/50", label: "Offline" },
   NEEDS_ATTENTION: { icon: TriangleAlert, className: "bg-danger-bg text-danger-ink", label: "Needs attention" },
 };
 
@@ -49,8 +49,8 @@ function LastUpdatedLabel({ fetchedAt }: { fetchedAt?: number }) {
 
   return (
     <span
-      className={`mr-1 text-[11px] font-semibold tabular-nums ${
-        isLagging ? "text-warning-ink" : "text-[#1A3D2C]/35"
+      className={`mr-1 whitespace-nowrap text-[11px] font-semibold tabular-nums ${
+        isLagging ? "text-warning-ink" : "text-[#122D30]/35"
       }`}
       title={isLagging ? "The device list has not refreshed recently" : undefined}
     >
@@ -154,14 +154,16 @@ export function LabSetup({ partnerId }: LabSetupProps) {
     : null;
 
   return (
-    <div className="flex h-full">
+    // Laid out by its own width (the portal's sidebar takes a share of the window): the lab list beside the chosen
+    // lab's devices when there is room; otherwise one at a time, the list first, a lab's devices with a way back.
+    <div className="@container/lab flex h-full min-w-0">
       {/* Lab list */}
-      <div className="w-80 shrink-0 border-r border-[#1A3D2C]/5 bg-white/40 p-6 overflow-y-auto">
+      <div className={`${selectedLab ? "hidden @[900px]/lab:block" : "block"} w-full shrink-0 border-[#122D30]/5 bg-white/40 p-4 overflow-y-auto @[600px]/lab:p-6 @[900px]/lab:w-72 @[900px]/lab:border-r @[1200px]/lab:w-80`}>
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-xs font-black uppercase tracking-widest text-[#1A3D2C]/60">Labs</h3>
+          <h3 className="text-xs font-black uppercase tracking-widest text-[#122D30]/60">Labs</h3>
           <button aria-label="Create lab"
             onClick={() => setCreateLabOpen(true)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1A3D2C] text-white hover:bg-[#0f2a1d]"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#075E63] text-white hover:bg-[#053C40]"
           >
             <Plus size={16} />
           </button>
@@ -170,11 +172,11 @@ export function LabSetup({ partnerId }: LabSetupProps) {
         {isLoadingLabs ? (
           <div className="space-y-2">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-16 animate-pulse rounded-xl bg-[#1A3D2C]/5" />
+              <div key={i} className="h-16 animate-pulse rounded-xl bg-[#075E63]/5" />
             ))}
           </div>
         ) : labs.length === 0 ? (
-          <p className="text-sm text-[#1A3D2C]/40">No labs yet. Create one to register devices.</p>
+          <p className="text-sm text-[#122D30]/40">No labs yet. Create one to register devices.</p>
         ) : (
           <div className="space-y-2">
             {labs.map((lab) => {
@@ -192,14 +194,14 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                     selectedLabId === lab.id ? "bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)]" : "hover:bg-white/60"
                   }`}
                 >
-                  <div>
-                    <p className="text-sm font-bold text-[#1A3D2C]">{lab.name}</p>
-                    <p className="mt-0.5 text-[11px] text-[#1A3D2C]/50">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-[#122D30]">{lab.name}</p>
+                    <p className="mt-0.5 text-[11px] text-[#122D30]/50">
                       {deviceCount} device{deviceCount === 1 ? "" : "s"}
                       {lab.location ? ` · ${lab.location}` : ""}
                     </p>
                   </div>
-                  <ChevronRight size={16} className="shrink-0 text-[#1A3D2C]/30" />
+                  <ChevronRight size={16} className="shrink-0 text-[#122D30]/30" />
                 </button>
               );
             })}
@@ -208,36 +210,45 @@ export function LabSetup({ partnerId }: LabSetupProps) {
       </div>
 
       {/* Devices */}
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className={`${selectedLab ? "block" : "hidden @[900px]/lab:block"} min-w-0 flex-1 overflow-y-auto p-4 @[600px]/lab:p-6 @[1200px]/lab:p-8`}>
         {!selectedLab ? (
-          <div className="flex h-full flex-col items-center justify-center text-center text-[#1A3D2C]/40">
+          <div className="flex h-full flex-col items-center justify-center text-center text-[#122D30]/40">
             <MonitorSmartphone size={40} className="mb-3" />
             <p className="text-sm font-semibold">Select a lab to manage its devices</p>
           </div>
         ) : (
           <>
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-black text-[#1A3D2C]">{selectedLab.name}</h2>
-                <p className="mt-1 text-sm text-[#1A3D2C]/50">
+            {/* One lab at a time (narrow): the way back to the list. */}
+            {/* eslint-disable-next-line no-restricted-syntax -- a back link above the heading, not a sized action button */}
+            <button
+              type="button"
+              onClick={() => setSelectedLabId(null)}
+              className="mb-3 inline-flex items-center gap-1 rounded text-xs font-bold text-[#075E63] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#075E63]/40 @[900px]/lab:hidden"
+            >
+              <ChevronLeft size={14} aria-hidden /> All labs
+            </button>
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-lg font-black text-[#122D30] @[600px]/lab:text-xl">{selectedLab.name}</h2>
+                <p className="mt-1 text-sm text-[#122D30]/50">
                   {selectedLab.location || "No location set"} · default session{" "}
                   {Math.round(selectedLab.default_session_seconds / 60)} min
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <LastUpdatedLabel fetchedAt={devicesFetchedAt[selectedLab.id]} />
                 <button
                   onClick={handleManualRefresh}
                   disabled={isRefreshing}
                   aria-label="Refresh device health"
                   title="Refresh device health"
-                  className="flex items-center justify-center rounded-xl border border-[#1A3D2C]/10 p-2.5 text-[#1A3D2C]/60 hover:bg-[#1A3D2C]/5 disabled:opacity-50"
+                  className="flex items-center justify-center rounded-xl border border-[#122D30]/10 p-2.5 text-[#122D30]/60 hover:bg-[#075E63]/5 disabled:opacity-50"
                 >
                   <RefreshCw size={14} className={isRefreshing ? "animate-spin" : ""} />
                 </button>
                 <button
                   onClick={() => setRegisterDeviceOpen(true)}
-                  className="flex items-center gap-2 rounded-xl border border-[#1A3D2C]/10 px-3 py-2.5 text-xs font-bold text-[#1A3D2C]/60 hover:bg-[#1A3D2C]/5"
+                  className="flex items-center gap-2 rounded-xl border border-[#122D30]/10 px-3 py-2.5 text-xs font-bold text-[#122D30]/60 hover:bg-[#075E63]/5"
                   title="Manual token registration is retained only as a pilot fallback"
                 >
                   <Settings2 size={14} />
@@ -248,7 +259,7 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                     setReconnectDevice(null);
                     setPairingOpen(true);
                   }}
-                  className="flex items-center gap-2 rounded-xl bg-[#1A3D2C] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#0f2a1d]"
+                  className="flex items-center gap-2 whitespace-nowrap rounded-xl bg-[#075E63] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#053C40]"
                 >
                   <Plus size={16} />
                   Pair devices
@@ -261,9 +272,9 @@ export function LabSetup({ partnerId }: LabSetupProps) {
             )}
 
             {visibleDevices.length === 0 ? (
-              <p className="text-sm text-[#1A3D2C]/40">No devices registered yet.</p>
+              <p className="text-sm text-[#122D30]/40">No devices registered yet.</p>
             ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr))]">
                 {visibleDevices.map((device) => {
                   const health = healthStyles[device.health_status];
                   const HealthIcon = health.icon;
@@ -277,18 +288,18 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                     <div
                       key={device.id}
                       className={`rounded-2xl border p-4 ${
-                        device.revoked_at ? "border-[#1A3D2C]/5 bg-[#F4F3EE] opacity-60" : "border-[#1A3D2C]/5 bg-white"
+                        device.revoked_at ? "border-[#122D30]/5 bg-[#F6F7F2] opacity-60" : "border-[#122D30]/5 bg-white"
                       }`}
                     >
                       <div className="flex items-start justify-between">
                         <div>
-                          <p className="text-sm font-bold text-[#1A3D2C]">{device.device_label}</p>
-                          <p className="mt-0.5 font-mono text-[11px] text-[#1A3D2C]/40">
+                          <p className="text-sm font-bold text-[#122D30]">{device.device_label}</p>
+                          <p className="mt-0.5 font-mono text-[11px] text-[#122D30]/40">
                             {displayHardwareId(device.hardware_id)}
                           </p>
                         </div>
                         {device.is_spare && (
-                          <span className="rounded-full bg-[#1A3D2C]/5 px-2 py-0.5 text-[10px] font-bold uppercase text-[#1A3D2C]/50">
+                          <span className="rounded-full bg-[#075E63]/5 px-2 py-0.5 text-[10px] font-bold uppercase text-[#122D30]/50">
                             Spare
                           </span>
                         )}
@@ -308,7 +319,7 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                           </span>
                         )}
                       </span>
-                      <div className="mt-2 space-y-0.5 text-[11px] text-[#1A3D2C]/45">
+                      <div className="mt-2 space-y-0.5 text-[11px] text-[#122D30]/45">
                         {device.device_model && <p>{device.device_model}</p>}
                         {device.firmware_version && <p>Software {device.firmware_version}</p>}
                         {device.last_connected_at && (
@@ -327,14 +338,14 @@ export function LabSetup({ partnerId }: LabSetupProps) {
                               setReconnectDevice(device);
                               setPairingOpen(true);
                             }}
-                            className="flex items-center justify-center gap-1 rounded-lg bg-[#1A3D2C]/5 py-2 text-[10px] font-bold text-[#1A3D2C] hover:bg-[#1A3D2C]/10"
+                            className="flex items-center justify-center gap-1 rounded-lg bg-[#075E63]/5 py-2 text-[10px] font-bold text-[#122D30] hover:bg-[#075E63]/10"
                           >
                             <Link2 size={12} />
                             Reconnect
                           </button>
                           <button
                             onClick={() => setMovingDevice(device)}
-                            className="flex items-center justify-center gap-1 rounded-lg bg-[#1A3D2C]/5 py-2 text-[10px] font-bold text-[#1A3D2C] hover:bg-[#1A3D2C]/10"
+                            className="flex items-center justify-center gap-1 rounded-lg bg-[#075E63]/5 py-2 text-[10px] font-bold text-[#122D30] hover:bg-[#075E63]/10"
                           >
                             <ArrowRightLeft size={12} />
                             Move
@@ -472,10 +483,10 @@ function CreateLabModal({
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="fixed left-1/2 top-1/2 z-[101] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-[1.5rem] bg-white p-7 shadow-[0_24px_60px_rgba(4,46,92,.22)]"
+            className="fixed left-1/2 top-1/2 z-[101] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-[1.5rem] bg-white p-7 shadow-[0_24px_60px_rgba(18,45,48,.22)]"
           >
             <div className="mb-5 flex items-center justify-between">
-              <h3 className="font-serif text-lg font-semibold text-[#1A3D2C]">New lab</h3>
+              <h3 className="font-serif text-lg font-semibold text-[#122D30]">New lab</h3>
               <Button iconOnly size="sm" variant="tertiary" aria-label="Close" onClick={onClose}>
                 <X size={18} />
               </Button>
@@ -485,19 +496,19 @@ function CreateLabModal({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Lab name (e.g. Computer Lab 1)"
-                className="w-full rounded-xl border border-[#1A3D2C]/10 px-3.5 py-2.5 text-sm outline-none focus:border-[#1A3D2C]/40"
+                className="w-full rounded-xl border border-[#122D30]/10 px-3.5 py-2.5 text-sm outline-none focus:border-[#122D30]/40"
               />
               <input
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="Location (optional)"
-                className="w-full rounded-xl border border-[#1A3D2C]/10 px-3.5 py-2.5 text-sm outline-none focus:border-[#1A3D2C]/40"
+                className="w-full rounded-xl border border-[#122D30]/10 px-3.5 py-2.5 text-sm outline-none focus:border-[#122D30]/40"
               />
               {error && <p className="text-xs text-danger-ink">{error}</p>}
               <button
                 onClick={handleSubmit}
                 disabled={!name.trim() || isSubmitting}
-                className="w-full rounded-xl bg-[#1A3D2C] py-3 text-sm font-bold text-white hover:bg-[#0f2a1d] disabled:opacity-50"
+                className="w-full rounded-xl bg-[#075E63] py-3 text-sm font-bold text-white hover:bg-[#053C40] disabled:opacity-50"
               >
                 {isSubmitting ? "Creating…" : "Create lab"}
               </button>
@@ -557,10 +568,10 @@ function RegisterDeviceModal({
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="fixed left-1/2 top-1/2 z-[101] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-[1.5rem] bg-white p-7 shadow-[0_24px_60px_rgba(4,46,92,.22)]"
+            className="fixed left-1/2 top-1/2 z-[101] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-[1.5rem] bg-white p-7 shadow-[0_24px_60px_rgba(18,45,48,.22)]"
           >
             <div className="mb-5 flex items-center justify-between">
-              <h3 className="font-serif text-lg font-semibold text-[#1A3D2C]">Register device</h3>
+              <h3 className="font-serif text-lg font-semibold text-[#122D30]">Register device</h3>
               <Button iconOnly size="sm" variant="tertiary" aria-label="Close" onClick={onClose}>
                 <X size={18} />
               </Button>
@@ -570,15 +581,15 @@ function RegisterDeviceModal({
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
                 placeholder="Desk label (e.g. Desk 1)"
-                className="w-full rounded-xl border border-[#1A3D2C]/10 px-3.5 py-2.5 text-sm outline-none focus:border-[#1A3D2C]/40"
+                className="w-full rounded-xl border border-[#122D30]/10 px-3.5 py-2.5 text-sm outline-none focus:border-[#122D30]/40"
               />
               <input
                 value={hardwareId}
                 onChange={(e) => setHardwareId(e.target.value)}
                 placeholder="Hardware ID (unique)"
-                className="w-full rounded-xl border border-[#1A3D2C]/10 px-3.5 py-2.5 text-sm outline-none focus:border-[#1A3D2C]/40"
+                className="w-full rounded-xl border border-[#122D30]/10 px-3.5 py-2.5 text-sm outline-none focus:border-[#122D30]/40"
               />
-              <label className="flex items-center gap-2 text-sm text-[#1A3D2C]/70">
+              <label className="flex items-center gap-2 text-sm text-[#122D30]/70">
                 <input type="checkbox" checked={isSpare} onChange={(e) => setIsSpare(e.target.checked)} />
                 Mark as spare (used for reassignment, not auto-allocated)
               </label>
@@ -586,7 +597,7 @@ function RegisterDeviceModal({
               <button
                 onClick={handleSubmit}
                 disabled={!label.trim() || !hardwareId.trim() || isSubmitting}
-                className="w-full rounded-xl bg-[#1A3D2C] py-3 text-sm font-bold text-white hover:bg-[#0f2a1d] disabled:opacity-50"
+                className="w-full rounded-xl bg-[#075E63] py-3 text-sm font-bold text-white hover:bg-[#053C40] disabled:opacity-50"
               >
                 {isSubmitting ? "Registering…" : "Register device"}
               </button>

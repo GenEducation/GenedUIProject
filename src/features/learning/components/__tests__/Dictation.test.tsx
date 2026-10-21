@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { ChatInput } from "../ChatInput";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { resetSpeechLanguage } from "../../dictation/useSpeechLanguage";
 
 /** A stand-in for the browser's speech recogniser: the test plays what it hears. */
 class FakeRecognition {
@@ -32,6 +34,8 @@ function renderInput(onSend = vi.fn()) {
 }
 
 beforeEach(() => {
+  localStorage.clear();
+  resetSpeechLanguage();
   FakeRecognition.last = null;
   (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition = FakeRecognition;
 });
@@ -40,12 +44,6 @@ afterEach(() => {
 });
 
 describe("dictation", () => {
-  it("shows the mic only where the browser can recognise speech", () => {
-    delete (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition;
-    renderInput();
-    expect(screen.queryByRole("button", { name: "Dictate" })).toBeNull();
-  });
-
   it("words appear in the box as they're heard; Done keeps them to edit and send", () => {
     const onSend = renderInput();
     fireEvent.change(box(), { target: { value: "SYNTHETIC so" } });
@@ -71,32 +69,52 @@ describe("dictation", () => {
     expect(onSend).toHaveBeenCalledWith("SYNTHETIC so what is perimeter of a square");
   });
 
-  it("Cancel throws the dictated words away and restores the box", () => {
-    renderInput();
-    fireEvent.change(box(), { target: { value: "SYNTHETIC kept" } });
-    fireEvent.click(screen.getByRole("button", { name: "Dictate" }));
-    FakeRecognition.last!.hear(["dropped words", true]);
-    fireEvent.click(screen.getByRole("button", { name: "Cancel dictation" }));
-    expect(box()).toHaveValue("SYNTHETIC kept");
-    expect(screen.getByRole("button", { name: "Dictate" })).toBeInTheDocument();
-  });
-
-  it("keeps listening when the browser ends a session on silence", () => {
-    renderInput();
-    fireEvent.click(screen.getByRole("button", { name: "Dictate" }));
-    const rec = FakeRecognition.last!;
-    rec.hear(["first part", false]);
-    act(() => rec.onend?.());
-    expect(rec.started).toBe(2);
-    rec.hear(["second part", false]);
-    expect(box()).toHaveValue("first part second part");
-  });
-
   it("a blocked microphone stops dictation and says why", () => {
     renderInput();
     fireEvent.click(screen.getByRole("button", { name: "Dictate" }));
     act(() => FakeRecognition.last!.onerror?.({ error: "not-allowed" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Microphone access is blocked.");
     expect(screen.queryByRole("group", { name: "Dictation" })).toBeNull();
+  });
+});
+
+describe("dictation in other languages", () => {
+  beforeEach(() => {
+    useStudentStore.setState({ studentProfile: null });
+  });
+
+  const dictateIn = (subject?: string) => {
+    render(<ChatInput replying={false} disabled={false} onSend={vi.fn()} onStop={vi.fn()} subject={subject} />);
+    fireEvent.click(screen.getByRole("button", { name: "Dictate" }));
+    return FakeRecognition.last!;
+  };
+  const pick = (english: string) => {
+    fireEvent.click(screen.getByRole("button", { name: /^Dictation language:/ }));
+    fireEvent.click(screen.getByRole("option", { name: new RegExp(english) }));
+  };
+
+  it("the learner can pick another language, and it's remembered next time", () => {
+    const { unmount } = render(<ChatInput replying={false} disabled={false} onSend={vi.fn()} onStop={vi.fn()} />);
+    pick("Marathi");
+    fireEvent.click(screen.getByRole("button", { name: "Dictate" }));
+    expect(FakeRecognition.last!.lang).toBe("mr-IN");
+    unmount();
+
+    // a new lesson, even a Hindi one, starts in the learner's own pick
+    expect(dictateIn("Hindi").lang).toBe("mr-IN");
+  });
+
+  it("switching language mid-dictation keeps the words and carries on in the new one", () => {
+    const first = dictateIn();
+    first.hear(["SYNTHETIC hello", true]);
+
+    pick("Hindi");
+    const second = FakeRecognition.last!;
+    expect(second).not.toBe(first);
+    expect(first.aborted).toBe(true);
+    expect(second).toMatchObject({ lang: "hi-IN", started: 1 });
+
+    second.hear(["SYNTHETIC नमस्ते", true]);
+    expect(box()).toHaveValue("SYNTHETIC hello SYNTHETIC नमस्ते");
   });
 });

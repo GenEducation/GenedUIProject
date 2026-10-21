@@ -21,7 +21,7 @@ interface Props {
 }
 
 const inputCls =
-  "w-full rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white focus:border-[#059F6D] focus:outline-none";
+  "w-full rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white focus:border-[#075E63] focus:outline-none";
 const labelCls =
   "block text-[9px] font-bold uppercase tracking-[0.22em] text-white/40 mb-1.5";
 
@@ -54,7 +54,7 @@ export function EntityEditModal({ title, fields, initial, onClose, onSave }: Pro
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#13283a] p-6 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#122D30] p-6 shadow-2xl">
         <h2 className="text-lg font-bold mb-5">{title}</h2>
         <div className="space-y-4">
           {fields.map((f) => (

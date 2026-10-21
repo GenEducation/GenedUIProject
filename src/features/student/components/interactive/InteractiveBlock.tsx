@@ -10,7 +10,7 @@ function Fallback({ label }: { label?: string }) {
     <div
       className="my-2 self-center"
       style={{
-        background: "#FFF8E1", color: "#F57F17", padding: "8px 14px",
+        background: "var(--warning-bg)", color: "var(--warning-ink)", padding: "8px 14px",
         borderRadius: 12, fontSize: 12, fontWeight: 600, fontFamily: "var(--font-body)",
       }}
     >

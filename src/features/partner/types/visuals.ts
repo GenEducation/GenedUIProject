@@ -46,6 +46,9 @@ export const NOTE_MAX = 500;
 export interface VisualCritique {
   passes: boolean;
   problems: string[];
+  /** One per problem: `content` changes what the picture says (a colour, count, label, position), else `style`.
+   * A textbook-figure redraw reaches you even with content problems: compare it with the original. */
+  kinds?: ("content" | "style")[];
 }
 
 /** `drawn`: a picture the model drew; `textbook_crop`: the figure as printed, cut from its textbook page. */
@@ -79,10 +82,10 @@ export interface VisualSummary {
 }
 
 export interface VisualSpec {
-  title: string;
+  title: string | null;
   purpose: string;
   layout: string;
-  caption: string;
+  caption: string | null;
   objects: { id: string; what: string; colour: string; position: string; notes: string }[];
   texts: { text: string; role: "title" | "label" | "note" | "caption"; where: string }[];
   /** Which `concept.passages` the picture uses. */
@@ -102,7 +105,7 @@ export interface VisualConcept {
   definition: string;
   /** The textbook text the picture is based on. */
   passages: { ref: string; text: string }[];
-  figure_descriptions: string[];
+  figure_descriptions?: string[];
   feedback: null | {
     reason_codes: ReasonCode[];
     note: string | null;
@@ -140,7 +143,7 @@ export interface VisualFamilyMember {
 
 export interface VisualDetail extends Omit<VisualSummary, "caption"> {
   concept: VisualConcept;
-  /** Null for a textbook crop: it was cut from the page, not drawn from a spec. */
+  /** Null when the visual has no generation spec: a textbook crop, cut from the page rather than drawn from a spec. */
   spec: VisualSpec | null;
   checks: Record<string, unknown>;
   provenance: Record<string, unknown>;

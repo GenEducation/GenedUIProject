@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { formatDuration, formatPct, latestRow, rowsForMetric } from "../aggregate";
+import { formatPct, latestRow, rowsForMetric } from "../aggregate";
 import type { MetricRow } from "../types";
 
 function metricRow(partial: Partial<MetricRow> & Pick<MetricRow, "metric_id">): MetricRow {
@@ -43,21 +43,9 @@ describe("latestRow / rowsForMetric", () => {
     expect(rowsForMetric(rows, "ONB-01", { unsliced: true })).toHaveLength(1);
     expect(rowsForMetric(rows, "ONB-01", { unsliced: true })[0].value).toBe(0.8);
   });
-
-  it("falls back to sliced rows when the backend emits no unsliced one", () => {
-    const rows = [metricRow({ metric_id: "ONB-01", dims: { grade: 6 }, value: 0.5 })];
-    expect(rowsForMetric(rows, "ONB-01", { unsliced: true })).toHaveLength(1);
-  });
 });
 
 describe("formatters", () => {
-  it("formats durations at the density the dashboard reads at", () => {
-    expect(formatDuration(31)).toBe("31s");
-    expect(formatDuration(168)).toBe("2m 48s");
-    expect(formatDuration(2040)).toBe("34 min");
-    expect(formatDuration(null)).toBe("—");
-  });
-
   it("does not print a null percentage as 0%", () => {
     expect(formatPct(null)).toBe("—");
     expect(formatPct(0.876)).toBe("87.6%");

@@ -158,9 +158,9 @@ function SubjectCard({ subj, si, data, ui }: { subj: SubjectData; si: number; da
                           letterSpacing: "0.05em",
                           padding: "2px 6px",
                           borderRadius: "4px",
-                          background: ch.status === "completed" ? "rgba(16, 185, 129, 0.1)" : "rgba(245, 158, 11, 0.1)",
-                          color: ch.status === "completed" ? "#048a5d" : "#b36b00",
-                          border: `1px solid ${ch.status === "completed" ? "rgba(16, 185, 129, 0.3)" : "rgba(245, 158, 11, 0.3)"}`
+                          background: ch.status === "completed" ? "var(--soft)" : "rgba(245, 158, 11, 0.1)",
+                          color: ch.status === "completed" ? "var(--emerald)" : "#b36b00",
+                          border: `1px solid ${ch.status === "completed" ? "#C9DFD8" : "rgba(245, 158, 11, 0.3)"}`
                         }}>
                           {ch.status === "completed" ? "Completed" : "In Progress"}
                         </span>
@@ -217,8 +217,8 @@ export function ReportCardBody({ data, ui }: { data: ReportCardData; ui: ReportC
   const bandLegend = [
     { lbl: "Developing", range: "< 40", color: "#EF4444" },
     { lbl: "Approaching", range: "40–59", color: "#F59E0B" },
-    { lbl: "Proficient", range: "60–79", color: "#10B981" },
-    { lbl: "Advanced", range: "80+", color: "#059F6D" },
+    { lbl: "Proficient", range: "60–79", color: "#2F7A7E" },
+    { lbl: "Advanced", range: "80+", color: "#075E63" },
   ];
 
   return (
@@ -271,7 +271,7 @@ export function ReportCardBody({ data, ui }: { data: ReportCardData; ui: ReportC
                       <div className="rc-dial" key={s.subject}>
                         <svg viewBox="0 0 40 40">
                           <circle cx="20" cy="20" r={r} fill="none" stroke="rgba(255,255,255,.18)" strokeWidth="4" />
-                          <circle cx="20" cy="20" r={r} fill="none" stroke="#5EEAD4" strokeWidth="4" strokeDasharray={circ.toFixed(1)} strokeDashoffset={offset.toFixed(1)} strokeLinecap="round" transform="rotate(-90 20 20)" />
+                          <circle cx="20" cy="20" r={r} fill="none" stroke="#5FA8A3" strokeWidth="4" strokeDasharray={circ.toFixed(1)} strokeDashoffset={offset.toFixed(1)} strokeLinecap="round" transform="rotate(-90 20 20)" />
                           <text x="20" y="24" textAnchor="middle" fontFamily="var(--display)" fontWeight="700" fontSize="14" fill="#fff">{score}</text>
                         </svg>
                         <div className="rc-dial-txt">

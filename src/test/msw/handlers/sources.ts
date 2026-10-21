@@ -1,5 +1,7 @@
 import { http, HttpResponse } from "msw";
 import type {
+  AuthoredQuestions,
+  AuthoringResponse,
   LearningOutcome,
   QuestionsResponse,
   RecordedAnswer,
@@ -44,7 +46,10 @@ export function makeSource(overrides: Partial<SourceView> = {}): SourceView {
     visuals: null,
     has_report: false,
     questions: 0,
+    progress: null,
+    release: null,
     queued_at: null,
+    started_at: null,
     finished_at: null,
     created_at: new Date(Date.UTC(2026, 0, 1, 0, seq)).toISOString(),
     updated_at: new Date(Date.UTC(2026, 0, 1, 0, seq)).toISOString(),
@@ -56,6 +61,11 @@ const store = new Map<string, SourceView>();
 const reports = new Map<string, string>();
 const questions = new Map<string, QuestionsResponse>();
 const releases = new Map<string, SourceRelease>();
+const authoring = new Map<string, AuthoringResponse>();
+/** Drafts the fake worker returns for the next suggestions request (they arrive on the next GET). */
+const pendingDrafts = new Map<string, AuthoringResponse["authored"]["added"]>();
+/** The last authored questions PUT, for asserting what the screen sent. */
+export let lastAuthored: AuthoredQuestions | null = null;
 /** The last release decisions POST, for asserting what the screen sent. */
 export let lastReleaseDecisions: ReleaseDecision[] | null = null;
 /** The last answers PUT, for asserting what the screen sent. */
@@ -71,6 +81,9 @@ export const sourcesFixture = {
     reports.clear();
     questions.clear();
     releases.clear();
+    authoring.clear();
+    pendingDrafts.clear();
+    lastAuthored = null;
     lastReleaseDecisions = null;
     lastAnswers = null;
     seq = 0;
@@ -92,6 +105,26 @@ export const sourcesFixture = {
     if (s) store.set(id, { ...s, state: "review_needed", questions: q.questions.length });
   },
   /** Give a source a staged release, as the worker does when a run ends ready. */
+  /** Make a source a run that found too few questions the partner can complete (ADR 0036), as the worker does. */
+  setAuthoring: (id: string, a: AuthoringResponse) => {
+    authoring.set(id, structuredClone(a));
+    const s = store.get(id);
+    if (s) {
+      store.set(id, {
+        ...s,
+        state: "invalid",
+        has_authoring: true,
+        outcome: {
+          next_step: "add_questions",
+          findings: [{ check: "single_component_share", count: 1, owner: "partner" }],
+          can_run_again: false,
+          run_again_blocked: "same_result",
+        },
+      });
+    }
+  },
+  /** The drafts the fake worker writes for the next suggestions request. */
+  setDrafts: (id: string, drafts: AuthoringResponse["authored"]["added"]) => void pendingDrafts.set(id, drafts),
   setRelease: (id: string, release: SourceRelease) => void releases.set(id, structuredClone(release)),
   getRelease: (id: string) => releases.get(id),
   /** Give a source a review report (and `has_report: true`), as the worker does when a run finishes. */
@@ -112,7 +145,7 @@ const SINGLE_FIELDS = [
 ] as const;
 
 const STARTABLE = new Set<SourceState>(["registered", "review_needed", "invalid", "ready", "failed"]);
-const DELETABLE = new Set<SourceState>(["registered", "invalid", "failed"]);
+const DELETABLE = new Set<SourceState>(["registered", "review_needed", "invalid", "ready", "failed"]);
 
 export const sourcesHandlers = [
   http.get(`${SOURCES}/learning-outcomes`, ({ request }) => {
@@ -194,8 +227,33 @@ export const sourcesHandlers = [
     const s = store.get(String(params.id));
     if (!s) return notFound();
     if (!DELETABLE.has(s.state)) return conflict(`A chapter that is ${s.state} cannot be deleted.`);
+    // Mirrors the backend: a source a published release came from is kept, because learners study it.
+    if (s.release?.state === "published" || releases.get(s.source_id)?.release.state === "published") {
+      return conflict("A published chapter cannot be deleted: learners study it.");
+    }
     store.delete(s.source_id);
     return new HttpResponse(null, { status: 204 });
+  }),
+
+  // Mirrors the backend: answer a pending cut only; including the pages widens the range and queues a re-run.
+  http.put(`${SOURCES}/:id/excluded-pages`, async ({ params, request }) => {
+    const s = store.get(String(params.id));
+    if (!s) return notFound();
+    const cut = s.excluded_pages;
+    if (!cut || cut.status !== "pending") return conflict("This chapter has no left-out pages waiting for an answer.");
+    const { decision } = (await request.json()) as { decision: "confirm" | "include" };
+    if (decision === "confirm") {
+      store.set(s.source_id, { ...s, excluded_pages: { ...cut, status: "confirmed" } });
+    } else {
+      if (!STARTABLE.has(s.state)) return conflict(`The pages can be added back once this chapter is no longer ${s.state}.`);
+      store.set(s.source_id, {
+        ...s,
+        state: "queued",
+        chapter: { ...s.chapter, last_pdf_page: cut.last_page },
+        excluded_pages: { ...cut, status: "included" },
+      });
+    }
+    return HttpResponse.json(store.get(s.source_id));
   }),
 
   http.get(`${SOURCES}/:id/reconciliation`, ({ params }) => {
@@ -203,7 +261,7 @@ export const sourcesHandlers = [
     return q ? HttpResponse.json(q) : HttpResponse.json({ message: "This chapter has no questions waiting." }, { status: 404 });
   }),
 
-  // Mirrors the backend's rules for a PARTNER: only `novel` or `same_as` a concept of this chapter it offered.
+  // Mirrors the backend's rules: `novel`, `same_as` an offered concept of this chapter, or `match` an offered published one.
   http.put(`${SOURCES}/:id/reconciliation`, async ({ params, request }) => {
     const q = questions.get(String(params.id));
     if (!q) return conflict("This chapter has no questions waiting.");
@@ -213,7 +271,10 @@ export const sourcesHandlers = [
       const question = q.questions.find((x) => x.key === key);
       if (!question) return HttpResponse.json({ message: `There is no question about ${key} in this chapter's last run.` }, { status: 422 });
       if (!q.allowed_answers.includes(answer.decision)) {
-        return HttpResponse.json({ message: "Only a GenEd admin can match a concept to one already published in the catalogue." }, { status: 422 });
+        return HttpResponse.json({ message: "That answer is not allowed here." }, { status: 422 });
+      }
+      if (answer.decision === "match" && !question.candidates.some((c) => c.where === "catalogue" && c.component_id === answer.component_id)) {
+        return HttpResponse.json({ message: `Pick one of the published concepts offered for ${question.proposal.title}.` }, { status: 422 });
       }
       if (answer.decision === "same_as" && !question.candidates.some((c) => c.where === "this_chapter" && c.proposal_key === answer.proposal_key)) {
         return HttpResponse.json({ message: `Pick one of the concepts of this chapter offered for ${question.proposal.title}.` }, { status: 422 });
@@ -222,6 +283,55 @@ export const sourcesHandlers = [
     const next = { ...q, questions: q.questions.map((x) => (decisions[x.key] ? { ...x, answer: decisions[x.key] } : x)) };
     questions.set(String(params.id), next);
     return HttpResponse.json(next);
+  }),
+
+  http.get(`${SOURCES}/:id/authoring`, ({ params }) => {
+    const id = String(params.id);
+    const a = authoring.get(id);
+    if (!a) return HttpResponse.json({ message: "This chapter has nothing to complete." }, { status: 404 });
+    // The fake worker finishes a request between two reads.
+    if (a.suggestions && a.suggestions.state !== "ready" && a.suggestions.state !== "failed") {
+      a.suggestions = { ...a.suggestions, state: "ready", drafts: pendingDrafts.get(id) ?? [] };
+      a.can_suggest = true;
+    }
+    return HttpResponse.json(a);
+  }),
+
+  // Mirrors the backend's check: answers only for removed questions, added questions for a concept of their section.
+  http.put(`${SOURCES}/:id/authoring`, async ({ params, request }) => {
+    const id = String(params.id);
+    const a = authoring.get(id);
+    if (!a) return conflict("This chapter has nothing to complete.");
+    const body = (await request.json()) as AuthoredQuestions;
+    lastAuthored = body;
+    for (const key of Object.keys(body.answers)) {
+      if (!a.removed.some((r) => r.item_key === key)) {
+        return HttpResponse.json({ message: "That printed question is not one this chapter's last run removed." }, { status: 422 });
+      }
+    }
+    for (const q of body.added) {
+      if (a.concepts.find((c) => c.key === q.concept_key)?.section_key !== q.section_key) {
+        return HttpResponse.json({ message: "It must check a concept from its own part of the chapter." }, { status: 422 });
+      }
+    }
+    const next = { ...a, authored: body, authored_at: new Date().toISOString() };
+    authoring.set(id, next);
+    const s = store.get(id);
+    if (s?.outcome) store.set(id, { ...s, outcome: { ...s.outcome, can_run_again: true, run_again_blocked: null } });
+    return HttpResponse.json(next);
+  }),
+
+  http.post(`${SOURCES}/:id/authoring/suggestions`, ({ params }) => {
+    const id = String(params.id);
+    const a = authoring.get(id);
+    if (!a?.can_suggest) return conflict("Suggestions are already being written.");
+    const next: AuthoringResponse = {
+      ...a,
+      can_suggest: false,
+      suggestions: { state: "requested", requested_at: new Date().toISOString(), drafts: [], detail: null },
+    };
+    authoring.set(id, next);
+    return HttpResponse.json(next, { status: 202 });
   }),
 
   http.get(`${SOURCES}/:id/release`, ({ params }) => {

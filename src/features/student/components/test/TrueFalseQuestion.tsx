@@ -37,13 +37,13 @@ export function TrueFalseQuestion({
               onClick={() => !disabled && onSelect(option)}
               className={`flex-1 p-3 sm:p-4 rounded-xl text-center transition-all border-2 flex items-center justify-center gap-2 ${
                 isSelected
-                  ? "bg-[var(--primary-ink)]/5 border-[var(--primary-ink)] text-[var(--primary-ink)]"
-                  : "bg-white border-[var(--primary-ink)]/10 text-[var(--primary-ink)]/70 hover:border-[var(--primary-ink)]/30"
+                  ? "bg-[var(--soft-surface)]/50 border-[var(--primary)] text-[var(--ink)]"
+                  : "bg-white border-[var(--surface-border)] text-[var(--text-mid)] hover:border-[var(--primary)]/40"
               } ${disabled ? "cursor-default" : "cursor-pointer"}`}
             >
               <div
                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                  isSelected ? "border-[var(--primary-ink)] bg-[var(--primary-ink)]" : "border-[var(--primary-ink)]/20"
+                  isSelected ? "border-[var(--primary)] bg-[var(--primary)]" : "border-[var(--primary-ink)]/20"
                 }`}
               >
                 {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
@@ -69,7 +69,7 @@ export function TrueFalseQuestion({
             disabled={disabled}
             placeholder="Write your justification here..."
             rows={3}
-            className="w-full p-3 sm:p-4 rounded-xl border-2 border-[var(--primary-ink)]/10 focus:border-[var(--primary-ink)]/30 focus:ring-4 focus:ring-[var(--primary-ink)]/5 outline-none transition-all text-[15px] resize-none"
+            className="w-full p-3 sm:p-4 rounded-xl border-2 border-[var(--primary-ink)]/10 focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10 outline-none transition-all text-[15px] resize-none"
           />
         </motion.div>
       )}

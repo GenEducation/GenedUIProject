@@ -34,7 +34,7 @@ export function TestReadyModal() {
 
   const handleContinue = () => {
     dismissTestReadyPrompt();
-    router.push("/student/test?from=assessments");
+    router.push("/student/test?from=practice");
   };
 
   // "Later" leaves the test alone — it is already reachable from Practice,
@@ -61,7 +61,8 @@ export function TestReadyModal() {
       <div className="flex flex-col items-center text-center" style={{ padding: "32px 28px 24px" }}>
         <div
           className="flex items-center justify-center rounded-[20px] mb-5"
-          style={{ width: 64, height: 64, background: `${C.tutor}14`, color: C.tutor }}
+          // Soft-surface well + teal glyph: calm, on-brand good news.
+          style={{ width: 64, height: 64, background: C.softSurface, color: C.primary }}
         >
           <ClipboardCheck size={30} strokeWidth={2.2} />
         </div>

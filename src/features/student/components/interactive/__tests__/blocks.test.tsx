@@ -187,9 +187,10 @@ const FIXTURES: Record<string, Fixture> = {
 };
 
 describe("interactive blocks — render, interact, submit", () => {
-  for (const [type, f] of Object.entries(FIXTURES)) {
-    it(`${type}: renders prompt, accepts interaction, posts the right shape`, async () => {
-      const { container } = render(<InteractiveBlock directiveId={"dir-" + type} meta={meta(type, f) as any} />);
+  it("every block renders its prompt, accepts interaction, and posts the right shape", async () => {
+    for (const [type, f] of Object.entries(FIXTURES)) {
+      submitInteractiveAnswer.mockClear();
+      const { container, unmount } = render(<InteractiveBlock directiveId={"dir-" + type} meta={meta(type, f) as any} />);
 
       // 1. Prompt is visible (regression guard for the question/prompt field mapping).
       expect(screen.getByText(PROMPT(type))).toBeInTheDocument();
@@ -197,20 +198,21 @@ describe("interactive blocks — render, interact, submit", () => {
       // 2. Student interacts, then submits.
       f.interact(container);
       const btn = checkBtn();
-      expect(btn).not.toBeDisabled();
+      expect(btn, type).not.toBeDisabled();
       await act(async () => {
         fireEvent.click(btn);
       });
 
       // 3. Posted with the correct interaction_type and a parseable answer.
-      expect(submitInteractiveAnswer).toHaveBeenCalledTimes(1);
+      expect(submitInteractiveAnswer, type).toHaveBeenCalledTimes(1);
       const [dir, itype, payload] = submitInteractiveAnswer.mock.calls[0];
       expect(dir).toBe("dir-" + type);
-      expect(itype).toBe(f.interactionType);
+      expect(itype, type).toBe(f.interactionType);
       const answer = JSON.parse(payload);
       f.expectAnswer?.(answer);
-    });
-  }
+      unmount();
+    }
+  });
 
   it("drag_match renders both columns and stays un-submittable until a pair is made", () => {
     const f: Fixture = {
@@ -227,12 +229,10 @@ describe("interactive blocks — render, interact, submit", () => {
 });
 
 describe("unknown / error blocks fall back gracefully", () => {
-  it("renders the fallback chip for an unknown interactive_type", () => {
-    render(<InteractiveBlock directiveId="x" meta={{ interactive_type: "made_up", directive_id: "x" } as any} />);
+  it("renders the fallback chip for an unknown interactive_type or an error block", () => {
+    const { unmount } = render(<InteractiveBlock directiveId="x" meta={{ interactive_type: "made_up", directive_id: "x" } as any} />);
     expect(screen.getByText(/Activity unavailable/i)).toBeInTheDocument();
-  });
-
-  it("renders the fallback chip for an error block", () => {
+    unmount();
     render(<InteractiveBlock directiveId="x" meta={{ is_fallback: true, label: "Oops" } as any} />);
     expect(screen.getByText(/Activity unavailable/i)).toBeInTheDocument();
   });

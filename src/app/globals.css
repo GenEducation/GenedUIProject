@@ -2,21 +2,21 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #042E5C; /* Primary Navy */
-  --navy: #042E5C;
-  --emerald: #059F6D;
-  --academic-grey: #F8F9FA;
+  --foreground: #122D30; /* Ink */
+  --navy: #122D30;
+  --emerald: #075E63;
+  --academic-grey: #F6F7F2;
 
   /* Teacher portal token layer — additive, does not alter existing tokens above. */
-  --ink: #042E5C;
-  --muted: #6b7d91;
-  --muted-light: #94a3b8;
-  --border: #e6ecf2;
-  --paper: #FBFBFA;
-  --navy-700: #073e75;
-  --navy-300: #8fb9e6;
-  --emerald-600: #048a5d;
-  --emerald-50: #e7f7f0;
+  --ink: #122D30;
+  --muted: #5E7477;
+  --muted-light: #8FA1A3;
+  --border: #E3E8E2;
+  --paper: #FBFBF8;
+  --navy-700: #0B474B;
+  --navy-300: #9CC5C1;
+  --emerald-600: #064E52;
+  --emerald-50: #E8F2EF;
   --warning: #E8A33D;
   --warning-ink: #8a5a16;
   --warning-bg: #fff6e6;
@@ -31,14 +31,14 @@
      StudentChatSidebar.tsx / StudentProfile.tsx, which each re-declared a
      similar-but-diverging purple/blue/green palette instead of using the
      brand navy/emerald above. */
-  --primary: #059F6D;        /* every primary CTA — brand emerald (= --emerald) */
-  --primary-ink: #042E5C;    /* body text ink (= --navy) */
-  --tutor: #5B4DC7;          /* Nia only: chat bubbles, voice orb, presence */
-  --tutor-light: #8B7FE8;
-  --tutor-soft: #4A90D9;     /* secondary accent used alongside --tutor in gradients */
+  --primary: #075E63;        /* every primary CTA — deep ocean (= --emerald) */
+  --primary-ink: #122D30;    /* body text ink (= --navy) */
+  --tutor: #075E63;          /* Nia only: chat bubbles, voice orb, presence */
+  --tutor-light: #3C8A8E;
+  --tutor-soft: #5FA8A3;     /* secondary accent used alongside --tutor in gradients */
   --warn-2: #F0AD4E;         /* streak-at-risk / celebratory accent */
   --danger-2: #E8635A;       /* destructive actions, distinct shade from --danger */
-  --growth: #00B894;         /* success / PRO badge */
+  --growth: #4E8F2F;         /* success / PRO badge */
 
   --subject-english: #4A90D9;
   --subject-math: #2D6A4F;
@@ -46,14 +46,21 @@
   --subject-social: #B0543F;
   --subject-hindi: #7B5EA7;
 
-  --text-primary: #1a2332;
-  --text-mid: #4a5568;
-  --text-muted: #94a3b8;
-  --text-faint: #cbd5e1;
-  --surface-page: #F7F8FC;
+  --text-primary: #122D30;
+  --text-mid: #3E5558;
+  --text-muted: #5E7477;
+  --text-faint: #C5D1CF;
+  --surface-page: #F6F7F2;
   --surface-card: #FFFFFF;
-  --surface-border: #e2e8f0;
-  --surface-sunken: #F4F3EE; /* recessed field bg (inputs/selects); only the 5 FIELD_CLASSNAME sites use this token today */
+  --surface-border: #E3E8E2;
+  --surface-sunken: #F6F7F2; /* recessed field bg (inputs/selects); only the 5 FIELD_CLASSNAME sites use this token today */
+
+  /* Deep Ocean + Citron brand surfaces. */
+  --accent: #D9F279;         /* citron — fills/highlights only, always under ink text */
+  --accent-deep: #B8D63F;
+  --accent-ink: #122D30;
+  --canvas: #F6F7F2;
+  --soft-surface: #DCEBE7;
 
   --radius-card: 24px; /* matches Profile's list cards, the actual majority usage — nothing consumed the old 16px value */
   --radius-control: 10px;
@@ -61,19 +68,19 @@
 
   /* --- Button system ---------------------------------------------------
      Interaction shades for the Button component. Before these existed each
-     call site invented its own hover (e.g. #0f2a1d, `/90`, `bg-[#1A3D2C]/10`),
+     call site invented its own hover (e.g. #053C40, `/90`, `bg-[#075E63]/10`),
      so the same action darkened by a different amount on every screen. */
-  --primary-hover: #04835a;
-  --primary-active: #036c4a;
-  --primary-soft: rgba(5, 159, 109, 0.08);   /* tertiary/secondary hover wash */
-  --primary-ring: rgba(5, 159, 109, 0.35);   /* focus-visible ring */
+  --primary-hover: #064C50;
+  --primary-active: #053C40;
+  --primary-soft: rgba(7, 94, 99, 0.08);   /* tertiary/secondary hover wash */
+  --primary-ring: rgba(7, 94, 99, 0.32);   /* focus-visible ring */
   --danger-2-hover: #d9524a;
   --danger-2-active: #c2453e;
   --danger-2-soft: rgba(232, 99, 90, 0.08);
   --danger-2-border: rgba(232, 99, 90, 0.2);
   --danger-2-on-dark: #F8A9A2;               /* lifted for dark admin/partner shells */
-  --btn-neutral-border: rgba(4, 46, 92, 0.12);
-  --btn-neutral-hover: rgba(4, 46, 92, 0.05);
+  --btn-neutral-border: rgba(18, 45, 48, 0.14);
+  --btn-neutral-hover: rgba(18, 45, 48, 0.05);
   --btn-disabled-opacity: 0.45;   /* one value, replacing opacity-30/40/50/60/70 */
   --btn-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -95,6 +102,17 @@
   --color-navy-300: var(--navy-300);
   --color-emerald-600: var(--emerald-600);
   --color-emerald-50: var(--emerald-50);
+  /* The rest of Tailwind's emerald scale, re-pointed at a deep-ocean ramp so
+     every `*-emerald-*` utility follows the brand instead of default green. */
+  --color-emerald-100: #D3E6E2;
+  --color-emerald-200: #B0D2CC;
+  --color-emerald-300: #82B7AF;
+  --color-emerald-400: #4F9690;
+  --color-emerald-500: #1F7A7E;
+  --color-emerald-700: #064C50;
+  --color-emerald-800: #053C40;
+  --color-emerald-900: #042F32;
+  --color-emerald-950: #032528;
   --color-warning: var(--warning);
   --color-warning-ink: var(--warning-ink);
   --color-warning-bg: var(--warning-bg);
@@ -104,24 +122,33 @@
   --color-danger-bg: var(--danger-bg);
   --color-info: var(--info);
 
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-canvas: var(--canvas);
+  --color-soft-surface: var(--soft-surface);
+
   /* Tailwind utility generation (font-sans, font-serif) reads these — the
      real, inheritable custom properties are declared on :root above so
      plain CSS rules and inline `var(--font-body)` styles work too. */
   --font-sans: var(--font-body);
-  --font-serif: "Playfair Display", var(--font-playfair), ui-serif, Georgia, serif;
+  /* `font-serif` was the portals' Playfair display face; it now resolves to
+     the shared display stack so those headings follow the brand type. */
+  --font-serif: var(--font-display);
 }
 
 /* Student app + onboarding + auth type system, declared on `body` (not
-   :root) because next/font's --font-jakarta/--font-mukta/etc. variables are
+   :root) because next/font's --font-nunito-sans/--font-mukta/etc. variables are
    themselves attached via CSS-module classes on <body> in layout.tsx.
    Custom properties only see var() references defined on the SAME element
-   or an ancestor — :root is body's ancestor, so a var(--font-jakarta)
+   or an ancestor — :root is body's ancestor, so a var(--font-nunito-sans)
    reference declared on :root would be invalid at that scope and the whole
    property would compute to nothing. Declaring them here, alongside the
    variables they reference, keeps every var() resolvable. */
 body {
-  --font-display: var(--font-jakarta), var(--font-mukta), ui-sans-serif, system-ui;
-  --font-body: var(--font-mukta), ui-sans-serif, system-ui;
+  --font-display: var(--font-nunito-sans), var(--font-mukta), ui-sans-serif, system-ui;
+  --font-body: var(--font-nunito-sans), var(--font-mukta), ui-sans-serif, system-ui;
   /* Report Card "document" typography — distinct on purpose. */
   --font-report-display: var(--font-source-serif), Georgia, serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
@@ -136,14 +163,9 @@ body {
   line-height: 1.6;
 }
 
-/* Pin the out-of-scope teacher/parent/lab portals to the pre-P1 Inter +
-   Playfair pairing so the font-token migration doesn't change how they
-   look. Apply this class to those portals' root elements — they're
-   descendants of body, so var(--font-inter)/var(--font-playfair) (also
-   declared on body) resolve fine here. */
 .portal-legacy-type {
-  --font-display: "Playfair Display", var(--font-playfair), ui-serif, Georgia, serif;
-  --font-body: "Inter", var(--font-inter), ui-sans-serif, system-ui;
+  /* Intentionally empty: every portal now shares the Nunito Sans + Mukta
+     stack declared on body. Kept as a hook for portal-wide overrides. */
 }
 
 /* Sidebar Transition Utilities */
@@ -152,11 +174,11 @@ body {
 }
 
 .chat-pill-shadow {
-  box-shadow: 0 4px 20px -4px rgba(4, 46, 92, 0.1), 0 2px 8px -2px rgba(4, 46, 92, 0.05);
+  box-shadow: 0 4px 20px -4px rgba(18,45,48, 0.1), 0 2px 8px -2px rgba(18,45,48, 0.05);
 }
 
 .chat-pill-focus {
-  box-shadow: 0 0 0 2px rgba(5, 159, 109, 0.1), 0 8px 30px -4px rgba(4, 46, 92, 0.15);
+  box-shadow: 0 0 0 2px rgba(7,94,99, 0.1), 0 8px 30px -4px rgba(18,45,48, 0.15);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -177,8 +199,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* The thumb (the part you drag) */
 ::-webkit-scrollbar-thumb {
-  /* Using a very light shade of blue to match the "sanctuary" aesthetic */
-  background-color: #E0F2FE; 
+  background-color: #DCEBE7;
   border-radius: 20px;
   /* Smooth transition for hover states */
   transition: background-color 0.2s ease;
@@ -186,15 +207,117 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Thumb hover state */
 ::-webkit-scrollbar-thumb:hover {
-  /* Slightly deeper blue on hover for better visibility */
-  background-color: #BAE6FD; 
+  background-color: #B0D2CC;
 }
 
 /* Firefox Support */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #E0F2FE transparent;
+  scrollbar-color: #DCEBE7 transparent;
 }
+
+/* ── Brand cursors ──────────────────────────────────────────────────────────
+   A tailless deep-ocean dart everywhere; over anything clickable the same
+   dart turns citron (its "you can act on this" meaning) — nothing else
+   changes. Text (fields and readable copy) gets a matching deep-ocean
+   I-beam. SVGs live in /public/cursors; hotspots: dart tip (5 5), I-beam
+   centre (16 16). The
+   trailing keyword is the native fallback if the image can't load.
+   !important on the pointer rule is needed to beat the many inline
+   `cursor: "pointer"` styles, and it also covers text nested inside a
+   clickable element so a card's paragraph doesn't flip to the I-beam.
+   Disabled controls show the plain deep-ocean dart (never the citron one,
+   never a browser default); drag areas keep grab/grabbing. */
+:root {
+  --cursor-default: url("/cursors/arrow.svg") 5 5, auto;
+  --cursor-pointer: url("/cursors/pointer.svg") 5 5, pointer;
+  --cursor-text: url("/cursors/text.svg") 16 16, text;
+}
+html { cursor: var(--cursor-default); }
+.cursor-default,
+[style*="cursor: default"] { cursor: var(--cursor-default) !important; }
+a[href],
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[role="tab"], [role="radio"], [role="checkbox"], [role="switch"],
+[role="menuitem"], [role="option"],
+summary, label[for], select:not(:disabled),
+input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled),
+input[type="submit"]:not(:disabled), input[type="button"]:not(:disabled),
+input[type="range"]:not(:disabled), input[type="color"]:not(:disabled),
+.cursor-pointer:not(:disabled),
+[style*="cursor: pointer"]:not(:disabled) { cursor: var(--cursor-pointer) !important; }
+
+/* Text: typing fields, editable areas and readable copy. */
+input:not([type="checkbox"], [type="radio"], [type="submit"], [type="button"], [type="reset"], [type="range"], [type="color"], [type="file"], [type="image"], [type="hidden"]),
+textarea, [contenteditable=""], [contenteditable="true"],
+p, li, h1, h2, h3, h4, h5, h6, blockquote, pre, code, td, th, dd, dt, figcaption {
+  cursor: var(--cursor-text);
+}
+/* Disabled: the plain brand dart. !important beats Tailwind's
+   `disabled:cursor-not-allowed` and inline cursor styles, and covers
+   buttons, which browsers otherwise give their own default arrow. */
+:is(button, input, textarea, select, fieldset):disabled,
+:is(button, input, textarea, select, fieldset):disabled *,
+[aria-disabled="true"], [aria-disabled="true"] * { cursor: var(--cursor-default) !important; }
+/* Browsers give <label> their own default arrow; treat field captions like
+   any other text, and labels that wrap a checkbox/radio (clicking toggles
+   it) like anything clickable. */
+label:not([for]) { cursor: var(--cursor-text); }
+label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled)) { cursor: var(--cursor-pointer); }
+
+/* Text inside something clickable stays the clickable pointer. */
+:is(a[href], button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, label[for], .cursor-pointer, [style*="cursor: pointer"])
+  :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, pre, code, td, th, dd, dt, figcaption, span, svg, img) {
+  cursor: var(--cursor-pointer) !important;
+}
+
+/* ── Citron accents ─────────────────────────────────────────────────────────
+   Citron is the eye-catcher, so it is rationed: per screen, the ONE thing that
+   matters most (a headline word, the key action) plus progress/achievement
+   fills. Always a fill under ink text or on a dark ground — never text on a
+   light background. Structural chrome (section labels, scrollbars, icon
+   wells) stays teal / soft surface so the citron moments keep their pull. */
+
+/* Section eyebrow ("Your progress", "My subjects"): a quiet teal tick —
+   structure, not emphasis. (Class name kept for existing call sites.) */
+.citron-eyebrow { display: flex; align-items: center; gap: 10px; }
+.citron-eyebrow::before {
+  content: ""; width: 16px; height: 3px; border-radius: 3px;
+  background: var(--primary); opacity: 0.35; flex-shrink: 0;
+}
+/* An eyebrow that leads with an icon names its section with that instead of the dash. */
+.citron-eyebrow:has(> svg:first-child)::before { display: none; }
+.citron-eyebrow > svg:first-child { color: var(--eyebrow-icon, var(--primary)); flex-shrink: 0; }
+
+/* The tutor voice picker: bars bouncing on the card whose sample is playing. */
+.voice-bars > span { width: 3px; height: 100%; border-radius: 2px; background: currentColor; transform-origin: bottom; animation: voice-bar 0.9s ease-in-out infinite; }
+.voice-bars > span:nth-child(2) { animation-delay: -0.3s; }
+.voice-bars > span:nth-child(3) { animation-delay: -0.6s; }
+@keyframes voice-bar { 0%, 100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .voice-bars > span { animation: none; transform: scaleY(0.7); } }
+
+/* Highlighter stroke behind a word or two in a heading. */
+.citron-mark {
+  background: linear-gradient(transparent 62%, rgb(217 242 121 / 0.9) 62%, rgb(217 242 121 / 0.9) 92%, transparent 92%);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  padding: 0 0.08em;
+}
+
+/* Quieter variant for running text (bold terms in tutor replies): a thin
+   citron underline stroke, so many marks in one answer don't shout. */
+.citron-underline {
+  background: linear-gradient(transparent 80%, rgb(217 242 121 / 0.75) 80%, rgb(217 242 121 / 0.75) 96%, transparent 96%);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+
+/* Horizontal rails (subject carousel): a slim soft-teal thumb — present but
+   quiet. (Class name kept for existing call sites.) */
+.citron-scroll { scrollbar-color: #B0D2CC transparent; }
+.citron-scroll::-webkit-scrollbar { height: 4px; }
+.citron-scroll::-webkit-scrollbar-track { background: transparent; }
+.citron-scroll::-webkit-scrollbar-thumb { background-color: #B0D2CC; }
+.citron-scroll::-webkit-scrollbar-thumb:hover { background-color: #82B7AF; }
 
 /* Button loading spinner. Deliberately NOT Tailwind's `animate-spin`: tests
    assert on `.animate-spin` to detect a page's own loading state, and a Button
@@ -237,7 +360,7 @@ h1, h2, h3, h4, h5, h6 {
 .auth-canvas {
   position: relative;
   isolation: isolate;
-  background-color: var(--surface-page, #F7F8FC);
+  background-color: var(--surface-page, #F6F7F2);
   background-image: url("/patterns/auth-doodles-v2.webp");
   background-repeat: repeat;
   background-size: 768px 512px;
@@ -340,7 +463,7 @@ h1, h2, h3, h4, h5, h6 {
   inset: 0 auto 0 0;
   width: 1px;
   pointer-events: none;
-  background: rgb(4 46 92 / 0.06);
+  background: rgb(18 45 48 / 0.06);
 }
 
 
@@ -376,7 +499,7 @@ h1, h2, h3, h4, h5, h6 {
   --btn-ring: var(--pl-ring);
 
   color: var(--pl-ink);
-  /* Jakarta for Latin text, falling through to Mukta for anything it can't
+  /* Nunito Sans for Latin text, falling through to Mukta for anything it can't
      shape (Devanagari) — the same stack `--font-display` already declares.
      Set here, not just on the prompt/heading elements, so every default
      (buttons, labels, the rail) inherits it instead of the browser's system
@@ -490,6 +613,8 @@ h1, h2, h3, h4, h5, h6 {
   cursor: grab;
 }
 .lesson-paper { cursor: inherit; }
+/* Whiteboard text keeps the canvas's grab/grabbing hand, not the I-beam. */
+.lesson-canvas :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, pre, code, td, th, dd, dt, figcaption) { cursor: inherit; }
 .lesson-canvas[data-panning] {
   cursor: grabbing;
 }
@@ -560,6 +685,20 @@ h1, h2, h3, h4, h5, h6 {
   animation: lesson-twinkle 1.4s ease-in-out infinite;
 }
 
+/* The tutor's star-and-hat mark while it talks: a gentle breathe. */
+@keyframes lesson-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.lesson-breathe {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lesson-breathe 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lesson-breathe { animation: none; }
+}
+
 /* ── Whiteboard: a figure added to the board is inked in left to right, a
    touch soft until the ink settles. */
 @keyframes lesson-ink {
@@ -581,39 +720,6 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-mukta), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* The perched pet (PlacementPerchPet): a finish flag on the board's top edge
-   that lights up citron when the pet reaches it, and a citron halo behind the
-   pet. Citron is the sheet's own highlight colour, so the celebration reads as
-   part of this surface rather than a trophy bolted onto it. */
-.placement-theme { --pl-perch-pole: #E7ECE4; --pl-perch-glow: var(--pl-accent); }
-.pl-perch-pennant {
-  fill: var(--pl-surface);
-  transform-origin: 4.4px 8.5px;
-  animation: pl-perch-flutter 1.8s ease-in-out infinite;
-  transition: fill 0.4s ease;
-}
-.pl-perch-flag[data-reached] .pl-perch-pennant { fill: var(--pl-perch-glow); }
-@keyframes pl-perch-flutter {
-  0%, 100% { transform: scaleX(1) skewY(0); }
-  50% { transform: scaleX(0.9) skewY(-5deg); }
-}
-.pl-perch-halo {
-  background: radial-gradient(closest-side, rgb(217 242 121 / 0.7), rgb(217 242 121 / 0));
-  opacity: 0;
-  transform: scale(0.6);
-  transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.pl-perch-halo[data-on] {
-  opacity: 1;
-  transform: scale(1);
-  animation: pl-perch-halo 2.4s ease-in-out 0.6s infinite;
-}
-@keyframes pl-perch-halo { 50% { transform: scale(1.12); opacity: 0.7; } }
-@media (prefers-reduced-motion: reduce) {
-  .pl-perch-pennant,
-  .pl-perch-halo[data-on] { animation: none; }
-}
-
 /* ── Learning Signal (admin analytics) ──────────────────────────
    The admin shell is dark, but this dashboard is a light reading surface: it
    is dense with charts, tables and small type, and the reference design it
@@ -628,7 +734,7 @@ h1, h2, h3, h4, h5, h6 {
   --ls-muted: #6B7F74;
   --ls-faint: #9BAAA1;
 
-  --ls-emerald: #059F6D;
+  --ls-emerald: #075E63;
   --ls-emerald-soft: #E6F4EE;
   --ls-blue: #4A90D9;
   --ls-blue-soft: #E8F1FA;
@@ -656,329 +762,6 @@ h1, h2, h3, h4, h5, h6 {
   fill: var(--ls-faint);
 }
 
-/* ── Desk pet: emotion motion ────────────────────────────────────────────
-   Physics moves (hop, run, jump…) are drawn by `usePetLocomotion`. These are
-   the rest: one-shot `pet-move-*` keyframes added and removed by that hook,
-   and held `pet-loop-*` keyframes that last as long as an emotion does. All
-   transform from the creature's feet, so a squash reads as weight. */
-.pet-body,
-.pet-css-move,
-.pet-loop {
-  transform-origin: 50% 90%;
-}
-
-@keyframes pet-move-wobble {
-  0%, 100% { transform: rotate(0); }
-  15% { transform: rotate(-6deg); }
-  35% { transform: rotate(5deg); }
-  55% { transform: rotate(-3deg); }
-  75% { transform: rotate(1deg); }
-}
-@keyframes pet-move-nod {
-  0%, 50%, 100% { transform: rotate(0); }
-  12%, 34% { transform: rotate(8deg) translateY(2px); }
-  23%, 45% { transform: rotate(0); }
-}
-/* Proud: chest out and standing tall, held a beat, then settling. */
-@keyframes pet-move-puff {
-  0%, 100% { transform: scale(1); }
-  25% { transform: scale(1.14, 1.08) translateY(-5px); }
-  40%, 75% { transform: scale(1.06, 1.16) translateY(-6px); }
-}
-@keyframes pet-move-sink {
-  0% { transform: translateY(0) scale(1); }
-  60% { transform: translateY(4px) scale(1.03, 0.95); }
-  100% { transform: translateY(0) scale(1); }
-}
-@keyframes pet-move-pop {
-  0%, 100% { transform: scale(1); }
-  30% { transform: scale(1.14) translateY(-6px); }
-  60% { transform: scale(1.04); }
-}
-@keyframes pet-move-lean {
-  0%, 100% { transform: rotate(0); }
-  50% { transform: rotate(var(--pet-lean, -6deg)); }
-}
-.pet-move-wobble { animation: pet-move-wobble 0.9s ease-in-out; }
-.pet-move-nod    { animation: pet-move-nod 1.4s ease-in-out; }
-.pet-move-puff   { animation: pet-move-puff 1.2s ease-in-out; }
-.pet-move-sink   { animation: pet-move-sink 1.4s ease-in-out; }
-.pet-move-pop    { animation: pet-move-pop 0.6s ease-out; }
-.pet-move-lean   { animation: pet-move-lean 1.2s ease-in-out; }
-
-/* Cheer: "arms up" — a quick tall stretch after the hop, then a springy settle. */
-@keyframes pet-move-stretch {
-  0%, 100% { transform: scale(1); }
-  30% { transform: scale(0.9, 1.2) translateY(-6px); }
-  55% { transform: scale(1.08, 0.94); }
-  75% { transform: scale(0.98, 1.03); }
-}
-/* Impressed: "whoa" — rocks back and up, holds, and eases forward again. */
-@keyframes pet-move-recoil {
-  0%, 100% { transform: rotate(0) translateY(0); }
-  25%, 65% { transform: rotate(calc(var(--pet-lean, -6deg) * -1.6)) translateY(-5px) scale(1.04); }
-}
-/* Apologetic: a bashful "oops" — squashes small and sinks, then eases back. */
-@keyframes pet-move-shrink {
-  0%, 100% { transform: scale(1) translateY(0); }
-  30%, 70% { transform: scale(0.88, 0.84) translateY(5px); }
-}
-.pet-move-shrink  { animation: pet-move-shrink 1.2s ease-in-out; }
-.pet-move-stretch { animation: pet-move-stretch 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.pet-move-recoil  { animation: pet-move-recoil 1.3s ease-in-out; }
-
-@keyframes pet-loop-breathe { 50% { transform: scale(1.03, 0.98); } }
-/* `--pet-talk` (0–1) is written from the tutor's playback level, so the bob
-   swells with the voice rather than ticking on a fixed beat. */
-@keyframes pet-loop-talk {
-  0%, 100% { transform: translateY(0) scaleY(1); }
-  50% { transform: translateY(calc(var(--pet-talk, 0.4) * -5px)) scaleY(calc(1 - var(--pet-talk, 0.4) * 0.06)); }
-}
-@keyframes pet-loop-lean {
-  0%, 100% { transform: rotate(var(--pet-lean, -5deg)); }
-  50% { transform: rotate(calc(var(--pet-lean, -5deg) * 1.4)) scale(1.02); }
-}
-@keyframes pet-loop-rock { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
-@keyframes pet-loop-doze {
-  0%, 100% { transform: translateY(2px) scale(1, 0.98); }
-  50% { transform: translateY(3px) scale(1.02, 0.96); }
-}
-@keyframes pet-loop-tilt { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
-@keyframes pet-loop-beat {
-  0%, 40%, 100% { transform: scale(1); }
-  10%, 30% { transform: scale(1.08); }
-  20% { transform: scale(1.02); }
-}
-@keyframes pet-loop-sway {
-  0%, 100% { transform: translateY(3px) rotate(-2deg); }
-  50% { transform: translateY(4px) rotate(2deg); }
-}
-.pet-loop-breathe { animation: pet-loop-breathe 4s ease-in-out infinite; }
-.pet-loop-talk    { animation: pet-loop-talk 0.34s ease-in-out infinite; }
-.pet-loop-lean    { animation: pet-loop-lean 2.4s ease-in-out infinite; }
-.pet-loop-rock    { animation: pet-loop-rock 1.6s ease-in-out infinite; }
-.pet-loop-doze    { animation: pet-loop-doze 4s ease-in-out infinite; }
-.pet-loop-tilt    { animation: pet-loop-tilt 2.2s ease-in-out infinite; }
-.pet-loop-beat    { animation: pet-loop-beat 1.4s ease-in-out infinite; }
-.pet-loop-sway    { animation: pet-loop-sway 3.4s ease-in-out infinite; }
-
-/* Curious: head tilts one way, *stays* there thinking, then back — not the
-   even metronome of `tilt`, which is Reconnecting's. */
-@keyframes pet-loop-ponder {
-  0%, 100% { transform: rotate(0); }
-  20%, 60% { transform: rotate(-11deg) translateY(-1px); }
-  75% { transform: rotate(3deg); }
-}
-/* Supportive: a slow, calming sway-and-breathe — the "it's okay" rhythm. */
-@keyframes pet-loop-soothe {
-  0%, 100% { transform: rotate(-2.5deg) scale(1, 1); }
-  50% { transform: rotate(2.5deg) scale(1.03, 0.98); }
-}
-/* Amused: a giggle — fast, small, uneven jiggle. */
-@keyframes pet-loop-giggle {
-  0%, 100% { transform: translateY(0) rotate(0); }
-  20% { transform: translateY(-3px) rotate(-2deg); }
-  40% { transform: translateY(0) rotate(1deg); }
-  60% { transform: translateY(-2px) rotate(2deg); }
-  80% { transform: translateY(0) rotate(-1deg); }
-}
-.pet-loop-ponder { animation: pet-loop-ponder 2.2s ease-in-out infinite; }
-.pet-loop-soothe { animation: pet-loop-soothe 3.2s ease-in-out infinite; }
-.pet-loop-giggle { animation: pet-loop-giggle 0.42s linear infinite; }
-
-/* ── Desk pet: face marks (PetFaceAccents) ──────────────────────────────── */
-/* An eye mark sits inside blobatar's `.mo-eyes` (so it glances with it) and
-   re-applies its own eye's offsets from the same inherited `--mo-*` vars the
-   eye does — the pose's `edx`/`edy` and that eye's gaze (`--mo-gz-*1` for the
-   left, `*2` for the right) — mirroring `.mo-eye`'s `translate` in blobatar's
-   motion.css and gaze.css. Those vars are what a pose morph transitions, so
-   the mark moves in lockstep with its eye. `--pg-wrap` is the eye's side
-   (−1/+1), as `--mo-wrap` is for the eye; `--pg-sel` picks its gaze var. */
-.pet-mark-eye {
-  --pg-sel: calc((var(--pg-wrap) + 1) / 2);
-  translate:
-    calc((var(--mo-edx, 0) * var(--pg-wrap)
-      + var(--mo-gz-dx1, 0) + (var(--mo-gz-dx2, 0) - var(--mo-gz-dx1, 0)) * var(--pg-sel)) * 1px)
-    calc((var(--mo-edy, 0)
-      + var(--mo-gz-dy1, 0) + (var(--mo-gz-dy2, 0) - var(--mo-gz-dy1, 0)) * var(--pg-sel)) * 1px);
-}
-/* The mark's anchor offset is in the eye's radii, scaled by the eye's live
-   size — so a blush hung off the bottom edge rises as the eye squints shut. */
-.pet-mark-offset {
-  translate:
-    calc(var(--pg-ox) * (var(--mo-esx, 1) + var(--mo-esx2, 0) * var(--pg-sel)) * 1px)
-    calc(var(--pg-oy) * (var(--mo-esy, 1) + var(--mo-esy2, 0) * var(--pg-sel)) * 1px);
-}
-@keyframes pet-accent-in { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
-.pet-accent-blush,
-.pet-accent-crease,
-.pet-accent-tear {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: pet-accent-in 0.3s ease-out both;
-}
-/* The blush warms in a little after the face does. */
-.pet-accent-blush { animation-delay: 0.08s; }
-/* The happy tear rolls a little way down the cheek. */
-@keyframes pet-accent-tear-roll { 0%, 30% { transform: translateY(0); } 100% { transform: translateY(3px); opacity: 0.4; } }
-.pet-accent-tear { animation: pet-accent-in 0.25s ease-out both, pet-accent-tear-roll 1.6s ease-in 0.3s both; }
-/* Star glints twinkle: scale and turn a quarter, twice a second-ish. */
-@keyframes pet-accent-glint {
-  0%, 100% { transform: scale(1) rotate(0); opacity: 1; }
-  50% { transform: scale(0.55) rotate(45deg); opacity: 0.75; }
-}
-.pet-accent-glint { transform-box: fill-box; transform-origin: center; animation: pet-accent-glint 0.9s ease-in-out infinite; }
-/* The "?" pops in, then bobs. */
-@keyframes pet-accent-question {
-  0% { opacity: 0; transform: translateY(6px) scale(0.5); }
-  18% { opacity: 1; transform: translateY(-1px) scale(1.1); }
-  28%, 100% { transform: translateY(0) scale(1); }
-}
-@keyframes pet-accent-bob { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-3px) rotate(6deg); } }
-.pet-accent-question {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: pet-accent-question 0.7s ease-out both, pet-accent-bob 1.4s ease-in-out 0.7s infinite;
-}
-/* Curious's "…": three dots lighting up in turn, like a thought forming. */
-@keyframes pet-accent-dot {
-  0%, 100% { opacity: 0.3; transform: translateY(0); }
-  30% { opacity: 1; transform: translateY(-1.5px); }
-}
-.pet-accent-dot {
-  transform-box: fill-box;
-  transform-origin: center;
-  opacity: 0.3;
-  animation: pet-accent-dot 1.2s ease-in-out infinite;
-}
-.pet-accent-dot-2 { animation-delay: 0.2s; }
-.pet-accent-dot-3 { animation-delay: 0.4s; }
-/* Apologetic's sweat drop: appears, then slips a little way down. */
-@keyframes pet-accent-sweat {
-  0% { opacity: 0; transform: translateY(-2px) scale(0.6); }
-  20% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0.85; transform: translateY(3px) scale(1); }
-}
-.pet-accent-sweat { transform-box: fill-box; transform-origin: center; animation: pet-accent-sweat 1.8s ease-in both; }
-/* Proud's shine: one band of light sweeping across the face, then gone. */
-@keyframes pet-accent-sheen {
-  0% { transform: translateX(-60px); opacity: 0; }
-  15% { opacity: 0.6; }
-  85% { opacity: 0.6; }
-  100% { transform: translateX(60px); opacity: 0; }
-}
-.pet-accent-sheen { animation: pet-accent-sheen 1.1s ease-in-out 0.35s both; }
-
-/* ── Desk pet: emotion particles (usePetLocomotion.burst) ───────────────── */
-.pet-particle {
-  position: absolute;
-  margin-left: -0.5em;
-  line-height: 1;
-  font-weight: 800;
-  pointer-events: none;
-  white-space: nowrap;
-  opacity: 0;
-  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.18);
-}
-/* Cheer: green sparks pop up and out. */
-.pet-p-spark { font-size: 15px; color: #1D9E75; animation: pet-p-pop 0.8s ease-out both; }
-/* Encouraging: two small warm sparks rising slowly — "go on, you've got this". */
-.pet-p-lift { font-size: 11px; color: #E8A33D; animation: pet-p-lift 1.4s ease-out both; }
-/* Excited: a fast, multicolour spray, farther and wider. */
-.pet-p-burst { font-size: 12px; color: var(--c); animation: pet-p-spray 1s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
-/* Supportive: one heart drifting slowly up, swaying. */
-.pet-p-heart { font-size: 18px; color: #FF6F91; animation: pet-p-float 1.9s ease-out both; }
-/* Amused: little "ha"s bubbling up at an angle. */
-.pet-p-ha { font-size: 11px; color: #7F5AF0; font-style: italic; animation: pet-p-ha 1.1s ease-out both; }
-/* Impressed: twinkles that appear in place around the head and wink out. */
-.pet-p-twinkle { font-size: 13px; color: #9B7BFF; animation: pet-p-twinkle 1.3s ease-in-out both; }
-
-@keyframes pet-p-pop {
-  0% { opacity: 0; transform: translate(0, 0) scale(0.3); }
-  25% { opacity: 1; transform: translate(calc(var(--dx) * 0.5), calc(var(--dy) * 0.6)) scale(1.2); }
-  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.6) rotate(90deg); }
-}
-@keyframes pet-p-lift {
-  0% { opacity: 0; transform: translate(0, 4px) scale(0.5); }
-  25% { opacity: 1; transform: translate(0, -6px) scale(1); }
-  100% { opacity: 0; transform: translate(calc(var(--dx) * 0.3), -34px) scale(0.8); }
-}
-@keyframes pet-p-spray {
-  0% { opacity: 1; transform: translate(0, 0) scale(0.6); }
-  100% { opacity: 0; transform: translate(calc(var(--dx) * 1.8), calc(var(--dy) * 1.3)) scale(1) rotate(200deg); }
-}
-@keyframes pet-p-float {
-  0% { opacity: 0; transform: translate(0, 4px) scale(0.5); }
-  20% { opacity: 1; transform: translate(-3px, -8px) scale(1); }
-  60% { transform: translate(4px, -26px) scale(1); }
-  100% { opacity: 0; transform: translate(-2px, -44px) scale(0.9); }
-}
-@keyframes pet-p-ha {
-  0% { opacity: 0; transform: translate(0, 0) rotate(-10deg) scale(0.6); }
-  25% { opacity: 1; transform: translate(calc(var(--dx) * 0.4), calc(var(--dy) * 0.4)) rotate(8deg) scale(1.05); }
-  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(-6deg) scale(0.9); }
-}
-@keyframes pet-p-twinkle {
-  0%, 100% { opacity: 0; transform: translate(calc(var(--dx) * 0.8), calc(var(--dy) * 0.6)) scale(0.2) rotate(0); }
-  45% { opacity: 1; transform: translate(calc(var(--dx) * 0.8), calc(var(--dy) * 0.6)) scale(1.1) rotate(60deg); }
-}
-
-.pet-dust {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  margin-left: -4px;
-  border-radius: 50%;
-  background: rgba(148, 163, 184, 0.55);
-  pointer-events: none;
-  animation: pet-dust 0.55s ease-out forwards;
-}
-@keyframes pet-dust {
-  to { opacity: 0; transform: translate(var(--dx), -10px) scale(1.8); }
-}
-.pet-confetti {
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  border-radius: 2px;
-  background: var(--c);
-  pointer-events: none;
-  opacity: 0;
-  animation: pet-confetti 1.4s ease-in forwards;
-}
-@keyframes pet-confetti {
-  0% { opacity: 1; transform: translate(0, 0) rotate(0); }
-  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(300deg); }
-}
-
-@keyframes pet-badge-in {
-  from { opacity: 0; transform: scale(0.6) translateY(4px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-@keyframes pet-badge-zzz {
-  0% { opacity: 0; transform: translate(0, 6px); }
-  40% { opacity: 1; }
-  100% { opacity: 0; transform: translate(6px, -10px); }
-}
-@keyframes pet-badge-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-.pet-badge { animation: pet-badge-in 0.25s ease-out; }
-.pet-badge-zzz { animation: pet-badge-zzz 2.4s ease-in-out infinite; }
-.pet-badge-blink { animation: pet-badge-blink 1.2s ease-in-out infinite; }
-
-@media (prefers-reduced-motion: reduce) {
-  [class*="pet-move-"],
-  [class*="pet-loop-"],
-  [class*="pet-accent-"],
-  .pet-badge-zzz,
-  .pet-badge-blink { animation: none !important; }
-  .pet-dust,
-  .pet-confetti,
-  .pet-particle,
-  /* A sweep with no motion is just a stripe across the face: hide it, and
-     the rest of the marks (blush, glints, "?", laugh lines) show static. */
-  .pet-accent-sheen { display: none; }
-}
-
 @layer components {
 /* Cards drawn on the whiteboard (StepCard): a wobbly ink edge on paper, like the visuals' hand-drawn boxes. */
 .lesson-sketch,
@@ -994,4 +777,76 @@ h1, h2, h3, h4, h5, h6 {
   border-width: 1.5px;
   border-radius: 12px 4px 13px 5px / 5px 13px 4px 12px;
 }
+}
+
+/* Voice lessons run in eight languages. Latin and Devanagari come from the body fonts; the other scripts fall to the
+   platform's own faces, named per script so a missing glyph never shows as a box (Gurmukhi, Tamil, Telugu, Kannada). */
+.font-indic {
+  font-family: var(--font-body), "Noto Sans Devanagari", "Noto Sans Gurmukhi", "Noto Sans Tamil", "Noto Sans Telugu",
+    "Noto Sans Kannada", "Kohinoor Devanagari", "Gurmukhi MN", "Tamil Sangam MN", "Kohinoor Telugu", "Kannada Sangam MN",
+    "Nirmala UI", "Mangal", "Raavi", "Latha", "Gautami", "Tunga", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* The lesson's maths field (MathLive `<math-field>`): it takes the look of the box around it, so a maths answer or a
+   message with maths in it reads as the same input, not a widget dropped in. */
+.lesson-mathfield {
+  display: block;
+  width: 100%;
+  min-height: 1.6em;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  outline: none;
+  --caret-color: var(--ls-primary, #075E63);
+  --selection-background-color: rgb(7 94 99 / 0.14);
+  --contains-highlight-background-color: rgb(217 242 121 / 0.35);
+  /* Words typed in the field are just words: no tint behind the text run the caret is in. */
+  --text-highlight-background-color: transparent;
+  --highlight-text: transparent;
+  --primary: var(--ls-primary, #075E63);
+  /* Words in the field use the page's own type, not MathLive's. */
+  --text-font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+}
+.lesson-mathfield::part(menu-toggle) { display: none; }
+/* With a real keyboard the maths keyboard's button is clutter (and makes the field taller than a text box); a touch
+   screen keeps it. */
+@media (hover: hover) and (pointer: fine) {
+  .lesson-mathfield::part(virtual-keyboard-toggle) { display: none; }
+}
+.lesson-mathfield::part(placeholder) { color: var(--ls-ink-faint, #8A9A9C); }
+/* A check's answer box is written in the board's hand, as the plain answer box is. */
+.lesson-answer-field .lesson-mathfield { --text-font-family: var(--font-hand); }
+
+/* MathLive's maths keyboard (it slides up from the bottom on touch screens): the lesson's light palette, whatever the
+   device's dark-mode setting, instead of MathLive's own dark theme. */
+body {
+  --keyboard-background: #F6F7F2;
+  --keyboard-border: #E3E8E2;
+  --keyboard-horizontal-rule: #E3E8E2;
+  --keyboard-accent-color: #075E63;
+  --keyboard-toolbar-text: #5E7477;
+  --keyboard-toolbar-text-active: #075E63;
+  --keyboard-toolbar-background-hover: rgb(7 94 99 / 0.08);
+  --keyboard-toolbar-background-selected: transparent;
+  --keycap-background: #FFFFFF;
+  --keycap-background-hover: #EEF5F3;
+  --keycap-background-active: #DCEBE7;
+  --keycap-background-pressed: #DCEBE7;
+  --keycap-border: #E3E8E2;
+  --keycap-border-bottom: #CFD9D3;
+  --keycap-text: #122D30;
+  --keycap-text-active: #122D30;
+  --keycap-text-hover: #122D30;
+  --keycap-text-pressed: #122D30;
+  --keycap-secondary-background: #DCEBE7;
+  --keycap-secondary-background-hover: #CBE2DC;
+  --keycap-secondary-text: #075E63;
+  --keycap-secondary-border: #CFD9D3;
+  --keycap-secondary-border-bottom: #B9CCC6;
+  --keycap-primary-background: #075E63;
+  --keycap-primary-background-hover: #064E52;
+  --keycap-primary-text: #FFFFFF;
+  --keycap-shift-color: #075E63;
 }

@@ -51,13 +51,13 @@ const renderRegistry = async () => {
 };
 
 describe("SubjectRegistry — chapter sources", () => {
-  it("lists the partner's sources with their state and only the actions that state allows", async () => {
+  it("lists the partner's sources with their state and the actions that state allows", async () => {
     await renderRegistry();
 
     const ready = rowFor("SYNTHETIC with visuals");
-    expect(within(ready).getByText("Ready")).toBeInTheDocument();
+    expect(within(ready).getByText("Ready for your review")).toBeInTheDocument();
     expect(within(ready).getByRole("button", { name: "Run ingestion again" })).toBeInTheDocument();
-    expect(within(ready).queryByRole("button", { name: "Delete" })).toBeNull();
+    expect(within(ready).getByRole("button", { name: "Delete" })).toBeInTheDocument();
 
     const fresh = rowFor("SYNTHETIC not started");
     expect(within(fresh).getByText("Not started")).toBeInTheDocument();
@@ -66,17 +66,74 @@ describe("SubjectRegistry — chapter sources", () => {
 
     const failed = rowFor("SYNTHETIC failed");
     expect(within(failed).getByText("SYNTHETIC: the PDF could not be read")).toBeInTheDocument();
+    expect(within(failed).getByRole("button", { name: "Retry ingestion" })).toBeInTheDocument();
 
     const queued = rowFor("SYNTHETIC queued");
     expect(within(queued).getByRole("button", { name: "Stop Ingestion" })).toBeInTheDocument();
-    expect(within(queued).queryByRole("button", { name: /Start|Run/ })).toBeNull();
-    expect(within(queued).queryByRole("button", { name: "Delete" })).toBeNull();
+    expect(within(queued).queryByRole("button", { name: /Start ingestion|Run ingestion again|Retry/ })).toBeNull();
+    // Delete is shown but disabled where the server would refuse it, with the reason.
+    expect(within(queued).getByRole("button", { name: "Delete" })).toBeDisabled();
+    expect(within(queued).getByTitle("Stop the queued run first, then delete the chapter.")).toBeInTheDocument();
   });
 
-  it("starts a run and shows it queued", async () => {
+  it("offers delete on every stage the server allows, asks first, and removes the chapter once the server agrees", async () => {
+    let deletes = 0;
+    server.events.on("request:start", ({ request }) => {
+      if (request.method === "DELETE") deletes += 1;
+    });
     await renderRegistry();
-    fireEvent.click(within(rowFor("SYNTHETIC not started")).getByRole("button", { name: "Start ingestion" }));
-    expect(await within(rowFor("SYNTHETIC not started")).findByText("Queued")).toBeInTheDocument();
+    for (const title of ["SYNTHETIC with visuals", "SYNTHETIC not started", "SYNTHETIC failed"]) {
+      expect(within(rowFor(title)).getByRole("button", { name: "Delete" })).toBeEnabled();
+    }
+    expect(within(rowFor("SYNTHETIC queued")).getByRole("button", { name: "Delete" })).toBeDisabled();
+
+    fireEvent.click(within(rowFor("SYNTHETIC failed")).getByRole("button", { name: "Delete" }));
+    expect(await screen.findByText("Delete this chapter?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Keep It" }));
+    await waitFor(() => expect(screen.queryByText("Delete this chapter?")).toBeNull());
+    expect(deletes).toBe(0);
+
+    fireEvent.click(within(rowFor("SYNTHETIC failed")).getByRole("button", { name: "Delete" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete Permanently" }));
+    await waitFor(() => expect(screen.queryByText("SYNTHETIC failed")).toBeNull());
+    expect(deletes).toBe(1);
+    expect(screen.getByText("SYNTHETIC with visuals")).toBeInTheDocument();
+  });
+
+  it("deletes a ready chapter (waiting for review), which the server now allows", async () => {
+    await renderRegistry();
+    fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "Delete" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete Permanently" }));
+    await waitFor(() => expect(screen.queryByText("SYNTHETIC with visuals")).toBeNull());
+  });
+
+  it("disables delete on a published chapter, with the reason", async () => {
+    sourcesFixture.set(
+      makeSource({
+        state: "ready",
+        release: { batch_id: "b-1", state: "published", staged_at: "2026-10-01T00:00:00Z", published_at: "2026-10-02T00:00:00Z" },
+        chapter: { ordinal: 5, title: "SYNTHETIC published", first_pdf_page: 1, last_pdf_page: 3 },
+      }),
+    );
+    await renderRegistry();
+    const row = await waitFor(() => rowFor("SYNTHETIC published"));
+    expect(within(row).getByRole("button", { name: "Delete" })).toBeDisabled();
+    expect(within(row).getByTitle("Published chapters can't be deleted: students are learning from them.")).toBeInTheDocument();
+  });
+
+  it("shows the server's reason in the confirm when it refuses a delete, and keeps the chapter", async () => {
+    // An older run's release was published: the list can't see it, so the server's 409 is what explains it.
+    server.use(
+      http.delete(`${BASE}/v1/sources/:id`, () =>
+        HttpResponse.json({ message: "A published chapter cannot be deleted: learners study it." }, { status: 409 }),
+      ),
+    );
+    await renderRegistry();
+    fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "Delete" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete Permanently" }));
+    expect(await screen.findByText("A published chapter cannot be deleted: learners study it.")).toBeInTheDocument();
+    expect(screen.getByText("Delete this chapter?")).toBeInTheDocument();
+    expect(rowFor("SYNTHETIC with visuals")).toBeInTheDocument();
   });
 
   it("explains a refused action instead of failing silently", async () => {
@@ -90,6 +147,29 @@ describe("SubjectRegistry — chapter sources", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("SYNTHETIC: this chapter is already running.");
   });
 
+  it("asks before re-running a chapter with results, starts nothing on Cancel, and retries a failed one at once", async () => {
+    let runs = 0;
+    server.events.on("request:start", ({ request }) => {
+      if (request.method === "POST" && new URL(request.url).pathname.endsWith("/ingestions")) runs += 1;
+    });
+    await renderRegistry();
+    const rerun = () => fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "Run ingestion again" }));
+
+    rerun();
+    expect(screen.getByText("Run this chapter again?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByText("Run this chapter again?")).toBeNull();
+
+    rerun();
+    fireEvent.click(screen.getByRole("button", { name: "Run again" }));
+    await waitFor(() => expect(runs).toBe(1));
+
+    // A failed run has nothing to lose: Retry starts straight away.
+    fireEvent.click(within(rowFor("SYNTHETIC failed")).getByRole("button", { name: "Retry ingestion" }));
+    expect(screen.queryByText("Run this chapter again?")).toBeNull();
+    await waitFor(() => expect(runs).toBe(2));
+  });
+
   it("keeps polling while a run is queued or running, and stops when none is", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     await renderRegistry();
@@ -100,21 +180,28 @@ describe("SubjectRegistry — chapter sources", () => {
     const queuedId = usePartnerStore.getState().subjects.find((x) => x.title === "SYNTHETIC queued")!.id;
     sourcesFixture.setState(queuedId, "ready");
     await act(() => vi.advanceTimersByTimeAsync(LIST_POLL_MS));
-    await waitFor(() => expect(within(rowFor("SYNTHETIC queued")).getByText("Ready")).toBeInTheDocument());
+    await waitFor(() => expect(within(rowFor("SYNTHETIC queued")).getByText("Ready for your review")).toBeInTheDocument());
     const settled = listCalls;
     await act(() => vi.advanceTimersByTimeAsync(LIST_POLL_MS * 2));
     expect(listCalls).toBe(settled);
   });
 
-  it("deletes a chapter that never produced anything", async () => {
+  it("shows a processing chapter's phase, stage and percent from the backend's progress", async () => {
+    const running = makeSource({
+      state: "running",
+      chapter: { ordinal: 5, title: "SYNTHETIC running", first_pdf_page: 1, last_pdf_page: 36 },
+      progress: { stage: "read_pages", step: 2, steps: 9, done: 12, total: 36, percent: 42.7, updated_at: "2026-10-13T10:00:00Z" },
+    });
+    sourcesFixture.set(running);
     await renderRegistry();
-    const id = usePartnerStore.getState().subjects.find((x) => x.title === "SYNTHETIC not started")!.id;
-    fireEvent.click(within(rowFor("SYNTHETIC not started")).getByRole("button", { name: "Delete" }));
-    expect(await screen.findByText("Delete this chapter?")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Delete Permanently/ }));
-    await waitFor(() => expect(screen.queryByText("SYNTHETIC not started")).toBeNull());
-    expect(sourcesFixture.get(id)).toBeUndefined();
+
+    const row = rowFor("SYNTHETIC running");
+    expect(within(row).getByRole("status")).toHaveTextContent("Reading pages · 12 of 36 pages");
+    expect(within(row).getByText("42%")).toBeInTheDocument();
+    const bar = within(row).getByRole("progressbar");
+    expect(bar).toHaveAttribute("aria-valuenow", "42");
   });
+
 });
 
 describe("SubjectRegistry — ingestion report", () => {
@@ -127,35 +214,19 @@ describe("SubjectRegistry — ingestion report", () => {
     await renderRegistry();
 
     expect(within(rowFor("SYNTHETIC not started")).queryByRole("button", { name: /report|needs fixing/ })).toBeNull();
-    fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "See what needs fixing" }));
+    fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "What needs fixing" }));
 
     const dialog = await screen.findByRole("dialog");
     expect(await within(dialog).findByText(/isn't taught by any concept in this chapter: G6-MATH-LO1\.2\.1/)).toBeInTheDocument();
     expect(within(dialog).getByText(/3 textbook figures need to be linked/)).toBeInTheDocument();
     expect(within(dialog).getByText(/You can fix this/)).toBeInTheDocument();
-    expect(within(dialog).getByText("Concepts").nextSibling).toHaveTextContent("8");
-    expect(within(dialog).getByText("Full technical report")).toBeInTheDocument();
+    expect(within(dialog).getAllByText("Concepts")[0].nextSibling).toHaveTextContent("8");
+    expect(within(dialog).getByRole("button", { name: /Technical details for GenEd/ })).toBeInTheDocument();
     expect(openIngestedPdf).not.toHaveBeenCalled();
-  });
-
-  it("says when there is no report yet", async () => {
-    const id = sourcesFixture.get(SYNTHETIC_SOURCE)!.source_id;
-    sourcesFixture.set({ ...sourcesFixture.get(id)!, state: "invalid", has_report: true }); // flagged, but nothing stored
-    await renderRegistry();
-    fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "See what needs fixing" }));
-    expect(await within(await screen.findByRole("dialog")).findByRole("alert")).toHaveTextContent("This chapter has no report yet.");
   });
 });
 
 describe("SubjectRegistry — visuals", () => {
-  it("shows the visuals icon with the pending count only on the source that has visuals", async () => {
-    await renderRegistry();
-    const icon = await screen.findByRole("button", { name: "Review visuals (2 to review)" });
-    expect(rowFor("SYNTHETIC with visuals")).toContainElement(icon);
-    expect(within(rowFor("SYNTHETIC with visuals")).getByText("2")).toBeInTheDocument();
-    expect(within(rowFor("SYNTHETIC not started")).queryByRole("button", { name: /Review visuals/ })).toBeNull();
-  });
-
   it("opens the popup without opening the PDF", async () => {
     const openIngestedPdf = vi.fn();
     usePartnerStore.setState({ openIngestedPdf });
@@ -164,13 +235,5 @@ describe("SubjectRegistry — visuals", () => {
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Open SYNTHETIC shape 1" })).toBeInTheDocument();
     expect(openIngestedPdf).not.toHaveBeenCalled();
-  });
-
-  it("opens the chapter's PDF when the row is clicked", async () => {
-    const openIngestedPdf = vi.fn();
-    usePartnerStore.setState({ openIngestedPdf });
-    await renderRegistry();
-    fireEvent.click(rowFor("SYNTHETIC not started"));
-    expect(openIngestedPdf).toHaveBeenCalledWith(expect.objectContaining({ title: "SYNTHETIC not started" }));
   });
 });

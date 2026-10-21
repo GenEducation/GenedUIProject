@@ -13,15 +13,43 @@ export interface InteractiveProps {
 // suffix this value, which CSS custom properties can't support.
 export const COLORS = {
   brand: STUDENT_COLORS.tutor,
-  brandSoft: "#EDE9FE",
-  success: "#00B894",
-  danger: "#E53E3E",
-  ink: "#1A202C",
-  muted: "#94A3B8",
-  border: "#E2E8F0",
-  cell: "#F1EFFA",
-  panel: "#F7F6FD",
+  brandSoft: STUDENT_COLORS.softSurface,
+  brandLight: STUDENT_COLORS.tutorSoft,
+  // Text-safe "correct" colour (deep ocean). The citron below is what marks a
+  // correct answer visually — always as a fill under ink, never as text.
+  success: STUDENT_COLORS.tutor,
+  danger: "#C2453E",
+  ink: STUDENT_COLORS.ink as string,
+  muted: "#7F9295",
+  border: "#E3E8E2",
+  // Neutral strokes for apparatus (scale beam, axes, angle base).
+  apparatus: "#8FA1A3",
+  cell: "#EEF4F1",
+  // The lesson screen's tutor surface, so an activity reads as Nia's.
+  panel: "#F1F7F4",
+  accent: STUDENT_COLORS.accent,
+  accentDeep: STUDENT_COLORS.accentDeep,
+  accentInk: STUDENT_COLORS.ink,
 };
+
+// Categorical fills for manipulatives that need several distinct colours.
+// SERIES_ON_WHITE_TEXT all carry white labels at ≥4.5:1; SERIES_FILL is for
+// unlabelled shapes (spinner sectors) and may include citron.
+export const SERIES_ON_WHITE_TEXT = [
+  STUDENT_COLORS.tutor,
+  STUDENT_COLORS.ink,
+  STUDENT_COLORS.subjectSocial,
+  STUDENT_COLORS.tutorLight,
+  STUDENT_COLORS.textMuted,
+];
+export const SERIES_FILL = [
+  STUDENT_COLORS.tutor,
+  STUDENT_COLORS.accentDeep,
+  STUDENT_COLORS.ink,
+  STUDENT_COLORS.danger,
+  STUDENT_COLORS.tutorSoft,
+  STUDENT_COLORS.warn,
+];
 
 export const FONT = "var(--font-body)";
 

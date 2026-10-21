@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, Lock, Sparkles } from "lucide-react";
 import { CreateChapterTestResponse, PaperSection } from "../../types/test";
 import { useState, useMemo } from "react";
+import { STUDENT_COLORS as C } from "../../theme/colors";
 
 interface AssessmentSidebarProps {
   currentTest: CreateChapterTestResponse;
@@ -59,7 +60,7 @@ export function AssessmentSidebar({
   return (
     <>
       {/* Compact progress indicator — visible below xl, replaces the full constellation sidebar */}
-      <div className="flex xl:hidden gap-2 overflow-x-auto pb-1 -mx-1 px-1 custom-scrollbar">
+      <div className="flex xl:hidden gap-2 overflow-x-auto pb-1 -mx-1 px-1 citron-scroll">
         {sidebarSections.map((section, sIdx) => {
           const isCurrent = sIdx === currentSectionIdx;
           const isCompleted = section.questions.every((q) => isQuestionAnswered(q.question_id));
@@ -71,10 +72,10 @@ export function AssessmentSidebar({
               key={sIdx}
               className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-2xl border text-[11px] font-bold transition-all ${
                 isCompleted
-                  ? "bg-emerald-50 border-emerald-400 text-emerald-600"
+                  ? "bg-[var(--accent)] border-[var(--accent-deep)] text-[var(--accent-ink)]"
                   : isCurrent
-                  ? "bg-white border-cyan-400 text-cyan-600 shadow-sm"
-                  : "bg-white border-slate-200 text-slate-400"
+                  ? "bg-white border-[var(--primary)] text-[var(--primary)] shadow-sm"
+                  : "bg-white border-[var(--surface-border)] text-[var(--text-muted)]"
               }`}
             >
               <span className="w-6 h-6 rounded-full flex items-center justify-center border border-current text-[11px] font-black flex-shrink-0">
@@ -86,7 +87,7 @@ export function AssessmentSidebar({
         })}
       </div>
 
-      <aside className="w-[450px] hidden xl:flex flex-col sticky top-24 h-[calc(100vh-120px)] bg-white rounded-[40px] border border-slate-100 overflow-hidden shadow-2xl shadow-slate-200/50">
+      <aside className="w-[450px] hidden xl:flex flex-col sticky top-24 h-[calc(100vh-120px)] bg-white rounded-[40px] border border-[var(--surface-border)] overflow-hidden shadow-2xl shadow-[var(--ink)]/5">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
           className="absolute top-0 left-0 w-full h-full opacity-[0.03]"
@@ -95,10 +96,10 @@ export function AssessmentSidebar({
             backgroundSize: "32px 32px",
           }}
         />
-        <div className="absolute top-4 left-4 w-12 h-12 border-t-2 border-l-2 border-slate-200 rounded-tl-2xl" />
-        <div className="absolute top-4 right-4 w-12 h-12 border-t-2 border-r-2 border-slate-200 rounded-tr-2xl" />
-        <div className="absolute bottom-4 left-4 w-12 h-12 border-b-2 border-l-2 border-slate-200 rounded-bl-2xl" />
-        <div className="absolute bottom-4 right-4 w-12 h-12 border-b-2 border-r-2 border-slate-200 rounded-br-2xl" />
+        <div className="absolute top-4 left-4 w-12 h-12 border-t-2 border-l-2 border-[var(--soft-surface)] rounded-tl-2xl" />
+        <div className="absolute top-4 right-4 w-12 h-12 border-t-2 border-r-2 border-[var(--soft-surface)] rounded-tr-2xl" />
+        <div className="absolute bottom-4 left-4 w-12 h-12 border-b-2 border-l-2 border-[var(--soft-surface)] rounded-bl-2xl" />
+        <div className="absolute bottom-4 right-4 w-12 h-12 border-b-2 border-r-2 border-[var(--soft-surface)] rounded-br-2xl" />
       </div>
 
       <div className="relative flex-1 overflow-y-auto custom-scrollbar p-12 space-y-24 pt-20">
@@ -130,10 +131,10 @@ export function AssessmentSidebar({
                           ? "M 136 0 L 136 64 L 56 64 L 56 128"
                           : "M 56 0 L 56 64 L 136 64 L 136 128"
                       }
-                      stroke={isCompleted ? "#10B981" : "#00F2FF"}
+                      stroke={isCompleted ? C.accentDeep : C.primary}
                       strokeWidth="2"
                       strokeDasharray="4 4"
-                      className="opacity-20"
+                      className="opacity-25"
                     />
                     <motion.path
                       d={
@@ -141,7 +142,7 @@ export function AssessmentSidebar({
                           ? "M 136 0 L 136 64 L 56 64 L 56 128"
                           : "M 56 0 L 56 64 L 136 64 L 136 128"
                       }
-                      stroke={isCompleted ? "#10B981" : "#00F2FF"}
+                      stroke={isCompleted ? C.accentDeep : C.primary}
                       strokeWidth="2"
                       initial={{ pathLength: 0 }}
                       animate={{ pathLength: isCompleted ? 1 : 0.5 }}
@@ -149,7 +150,7 @@ export function AssessmentSidebar({
                     />
                     <motion.circle
                       r="4"
-                      fill="#00F2FF"
+                      fill={C.accentDeep}
                       animate={{ offsetDistance: ["0%", "100%"] }}
                       transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                       style={{
@@ -173,12 +174,12 @@ export function AssessmentSidebar({
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  className="absolute -inset-6 border border-dashed border-cyan-400/20 rounded-full"
+                  className="absolute -inset-6 border border-dashed border-[var(--primary)]/20 rounded-full"
                 />
                 <motion.div
                   animate={{ rotate: -360 }}
                   transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                  className="absolute -inset-4 border-2 border-purple-400/20 rounded-full border-t-transparent border-b-transparent"
+                  className="absolute -inset-4 border-2 border-[var(--primary)]/25 rounded-full border-t-transparent border-b-transparent"
                 />
 
                 <div
@@ -186,10 +187,10 @@ export function AssessmentSidebar({
                     w-16 h-16 rounded-full flex items-center justify-center relative transition-all duration-500
                     ${
                       isCompleted
-                        ? "bg-emerald-50 text-emerald-500 border-2 border-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.2)]"
+                        ? "bg-[var(--accent)] text-[var(--accent-ink)] border-2 border-[var(--accent-deep)] shadow-[0_0_25px_rgba(217,242,121,0.55)]"
                         : isCurrent
-                        ? "bg-white text-cyan-500 border-2 border-cyan-400 shadow-[0_0_30px_rgba(0,242,255,0.3)]"
-                        : "bg-white border border-slate-200 text-slate-300"
+                        ? "bg-white text-[var(--primary)] border-2 border-[var(--primary)] shadow-[0_0_30px_rgba(7,94,99,0.22)]"
+                        : "bg-white border border-[var(--surface-border)] text-[var(--text-faint)]"
                     }
                     group-hover:scale-110
                   `}
@@ -199,14 +200,14 @@ export function AssessmentSidebar({
                   <div
                     className={`absolute -right-1 -bottom-1 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${
                       isCompleted
-                        ? "bg-emerald-500"
+                        ? "bg-[var(--ink)]"
                         : isLocked
-                        ? "bg-slate-300"
-                        : "bg-cyan-400 shadow-[0_0_10px_rgba(0,242,255,0.5)]"
+                        ? "bg-[var(--text-faint)]"
+                        : "bg-[var(--primary)] shadow-[0_0_10px_rgba(7,94,99,0.4)]"
                     }`}
                   >
                     {isCompleted ? (
-                      <Check size={12} className="text-white" strokeWidth={4} />
+                      <Check size={12} className="text-[var(--accent)]" strokeWidth={4} />
                     ) : isLocked ? (
                       <Lock size={12} className="text-white" />
                     ) : (
@@ -237,8 +238,8 @@ export function AssessmentSidebar({
                         absolute top-1/2 -translate-y-1/2 w-56 p-5 rounded-2xl border backdrop-blur-xl transition-all z-30 pointer-events-none
                         ${
                           isCurrent
-                            ? "border-cyan-200 bg-white shadow-2xl shadow-cyan-100/50"
-                            : "border-slate-100 bg-white/90 shadow-xl shadow-slate-100/50"
+                            ? "border-[var(--soft-surface)] bg-white shadow-2xl shadow-[var(--primary)]/10"
+                            : "border-[var(--surface-border)] bg-white/90 shadow-xl shadow-[var(--ink)]/5"
                         }
                       `}
                       style={{
@@ -250,7 +251,7 @@ export function AssessmentSidebar({
                         <div className="flex items-center justify-between">
                           <span
                             className={`text-[9px] font-black uppercase tracking-[0.2em] ${
-                              isCurrent ? "text-cyan-500" : "text-slate-400"
+                              isCurrent ? "text-[var(--primary)]" : "text-[var(--text-muted)]"
                             }`}
                           >
                             {hasPaperSections
@@ -260,31 +261,31 @@ export function AssessmentSidebar({
                           <Sparkles
                             size={10}
                             className={
-                              isCurrent ? "text-cyan-400 animate-pulse" : "text-slate-200"
+                              isCurrent ? "text-[var(--primary)] animate-pulse" : "text-[var(--text-faint)]"
                             }
                           />
                         </div>
                         <h4
                           className={`text-[13px] font-black uppercase truncate ${
-                            isCurrent ? "text-slate-800" : "text-slate-400"
+                            isCurrent ? "text-[var(--ink)]" : "text-[var(--text-muted)]"
                           }`}
                         >
                           {section.title}
                         </h4>
                         <div className="pt-3 flex flex-col gap-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                            <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
                               {answeredCount}/{totalCount} Completed
                             </span>
                           </div>
-                          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden flex gap-1 p-[1px]">
+                          <div className="h-1.5 bg-[var(--canvas)] rounded-full overflow-hidden flex gap-1 p-[1px]">
                             {section.questions.map((q, qIdx) => (
                               <div
                                 key={qIdx}
                                 className={`flex-1 rounded-full transition-all duration-500 ${
                                   isQuestionAnswered(q.question_id)
-                                    ? "bg-cyan-400 shadow-[0_0_5px_rgba(0,242,255,0.5)]"
-                                    : "bg-slate-200"
+                                    ? "bg-[var(--primary)]"
+                                    : "bg-[var(--surface-border)]"
                                 }`}
                               />
                             ))}

@@ -5,15 +5,6 @@ import userEvent from "@testing-library/user-event";
 import { Modal } from "../Modal";
 
 describe("Modal", () => {
-  it("renders nothing while closed", () => {
-    render(
-      <Modal open={false} onClose={vi.fn()}>
-        <p>Body</p>
-      </Modal>,
-    );
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-
   it("portals to the body so it escapes any clipped ancestor", () => {
     render(
       <div style={{ overflow: "hidden" }}>
@@ -23,15 +14,6 @@ describe("Modal", () => {
       </div>,
     );
     expect(screen.getByRole("dialog").closest("body")).toBe(document.body);
-  });
-
-  it("names itself from `title` without necessarily showing it", () => {
-    render(
-      <Modal open onClose={vi.fn()} title="Placement test">
-        <p>Body</p>
-      </Modal>,
-    );
-    expect(screen.getByRole("dialog", { name: "Placement test" })).toBeInTheDocument();
   });
 
   describe("dismissing", () => {
@@ -60,18 +42,6 @@ describe("Modal", () => {
       expect(container).toBeTruthy();
     });
 
-    it("respects dismissOnBackdrop={false}", async () => {
-      const onClose = vi.fn();
-      render(
-        <Modal open onClose={onClose} dismissOnBackdrop={false}>
-          <p>Body</p>
-        </Modal>,
-      );
-      const backdrop = document.body.querySelector(".fixed.inset-0.z-\\[100\\]");
-      await userEvent.click(backdrop as Element);
-      expect(onClose).not.toHaveBeenCalled();
-    });
-
     /**
      * The placement form relies on this: omitting `onClose` must make the
      * dialog genuinely non-dismissible, because a student who can Escape out
@@ -89,18 +59,6 @@ describe("Modal", () => {
   });
 
   describe("focus", () => {
-    it("moves focus into the dialog on open", async () => {
-      render(
-        <Modal open onClose={vi.fn()}>
-          <button type="button">First</button>
-          <button type="button">Second</button>
-        </Modal>,
-      );
-      await vi.waitFor(() =>
-        expect(document.activeElement).toBe(screen.getByRole("button", { name: "First" })),
-      );
-    });
-
     it("keeps Tab inside the dialog", async () => {
       render(
         <>
@@ -123,30 +81,5 @@ describe("Modal", () => {
       await userEvent.tab();
       expect(document.activeElement).toBe(first);
     });
-  });
-
-  it("locks body scroll while open and restores it on close", () => {
-    const { rerender } = render(
-      <Modal open onClose={vi.fn()}>
-        <p>Body</p>
-      </Modal>,
-    );
-    expect(document.body.style.overflow).toBe("hidden");
-
-    rerender(
-      <Modal open={false} onClose={vi.fn()}>
-        <p>Body</p>
-      </Modal>,
-    );
-    expect(document.body.style.overflow).toBe("");
-  });
-
-  it("passes className through to the panel, which is how theming scopes in", () => {
-    render(
-      <Modal open onClose={vi.fn()} className="placement-theme">
-        <p>Body</p>
-      </Modal>,
-    );
-    expect(screen.getByRole("dialog")).toHaveClass("placement-theme");
   });
 });

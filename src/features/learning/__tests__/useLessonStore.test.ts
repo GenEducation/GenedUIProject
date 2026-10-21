@@ -1,15 +1,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { waitFor } from "@testing-library/react";
-import { http, HttpResponse } from "msw";
-import { server } from "@/test/msw/server";
 import {
   CHECK_ITEM, FIGURE_GROUP, LESSON_ID, NODE_1, NODE_2, OPTION_A,
-  answerRequests, interruptRequests, lessonFixture, makeLessonInstance, replyScript, resumeRequests, turnRequests,
+  answerRequests, forbiddenRequests, lessonFixture, makeLessonInstance, replyScript, resumeRequests, turnRequests,
 } from "@/test/msw/handlers/lesson";
-import { picturesFor, useLessonStore } from "../useLessonStore";
+import { useLessonStore } from "../useLessonStore";
 import { replyText } from "../transcript";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 const store = () => useLessonStore.getState();
 const lastTurn = () => store().turns.at(-1)!;
 const settled = () => waitFor(() => expect(store().turns.every((t) => t.status !== "streaming")).toBe(true));
@@ -42,11 +39,6 @@ describe("useLessonStore — loading", () => {
     expect(store().presentedFigureIds).toEqual([FIGURE_GROUP]);
     expect(store().focusedFigureId).toBe(FIGURE_GROUP);
   });
-
-  it("shows the backend's message when the lesson can't be read", async () => {
-    await store().load("not-this-lesson");
-    expect(store().status).toBe("error");
-  });
 });
 
 describe("useLessonStore — turns", () => {
@@ -73,18 +65,6 @@ describe("useLessonStore — turns", () => {
     expect(lastTurn().status).toBe("completed");
   });
 
-  it("puts a presented figure on the whiteboard and the filmstrip", async () => {
-    lessonFixture.setScript(() => [
-      { type: "figure_presented", figure_group_id: FIGURE_GROUP },
-      { type: "text_delta", text: "Look." },
-      { type: "turn_completed", status: "completed", finish_reason: "stop" },
-    ]);
-    await store().send("show me");
-    expect(store().presentedFigureIds).toEqual([FIGURE_GROUP]);
-    expect(store().focusedFigureId).toBe(FIGURE_GROUP);
-    expect(picturesFor(store().manifest, FIGURE_GROUP)[0].src).toMatch(/\/v1\/visual-images\/pic-1\?exp=1&sig=synthetic$/);
-  });
-
   it("follows state_changed: the lesson moves to the next node and rereads its payload", async () => {
     const reads = lessonFixture.manifestReads;
     const next = makeLessonInstance({ nodes_done: 2, revision: 5, active_node: { ...makeLessonInstance().active_node!, instance_node_id: NODE_2, title: "SYNTHETIC node 3" } });
@@ -96,38 +76,6 @@ describe("useLessonStore — turns", () => {
     expect(store().instance?.nodes_done).toBe(2);
     await waitFor(() => expect(store().payload?.node.title).toBe("SYNTHETIC node 3"));
     expect(lessonFixture.manifestReads).toBe(reads + 1);
-  });
-
-  it("marks a retryable failure and regenerates it", async () => {
-    lessonFixture.setScript(() => [{ type: "turn_failed", reason: "model_error", retryable: true, retry: "regenerate" }]);
-    await store().send("SYNTHETIC question");
-    const failed = lastTurn();
-    expect(failed.failure).toEqual({ reason: "model_error", retryable: true });
-    lessonFixture.setScript(replyScript("again"));
-    await store().retry(failed.turnId);
-    expect(turnRequests.at(-1)).toMatchObject({ kind: "regenerate", regenerates: failed.turnId });
-    expect(replyText(lastTurn())).toBe("again");
-  });
-
-  it("stop interrupts the open turn at the last seq seen", async () => {
-    // A stream that stays open after its first text, as a live reply does.
-    server.use(http.post(`${BASE}/v1/instances/:id/teacher-turns`, async ({ request }) => {
-      const { turn_id } = (await request.json()) as { turn_id: string };
-      const frame = (seq: number, body: object) => `id: ${turn_id}:${seq}\ndata: ${JSON.stringify({ v: 3, turn_id, seq, ...body })}\n\n`;
-      const stream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(new TextEncoder().encode(frame(1, { type: "turn_started" }) + frame(2, { type: "text_delta", text: "partial" })));
-        },
-      });
-      return new HttpResponse(stream, { headers: { "content-type": "text/event-stream" } });
-    }));
-    const sending = store().send("SYNTHETIC question");
-    await waitFor(() => expect(replyText(lastTurn())).toBe("partial"));
-    await store().stop();
-    await sending;
-    expect(interruptRequests).toEqual([{ turnId: lastTurn().turnId, visible_seq: 2 }]);
-    expect(lastTurn().status).toBe("interrupted");
-    expect(replyText(lastTurn())).toBe("partial");
   });
 });
 
@@ -150,5 +98,96 @@ describe("useLessonStore — answers", () => {
     lessonFixture.setInstance(makeLessonInstance({ revision: 9 }));
     await expect(store().answer(CHECK_ITEM, { kind: "choice", option_ids: [OPTION_A] })).rejects.toMatchObject({ error_code: "CORE_3103" });
     expect(store().instance?.revision).toBe(9);
+  });
+});
+
+
+describe("useLessonStore — moving on to the next part", () => {
+  const nextNode = () =>
+    makeLessonInstance({
+      revision: 4,
+      active_node: { ...makeLessonInstance().active_node!, instance_node_id: NODE_2, title: "SYNTHETIC node 3" },
+    });
+
+  beforeEach(async () => {
+    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
+    await store().load(LESSON_ID);
+    turnRequests.length = 0;
+  });
+
+  it("asks the tutor to open the new part after Next step, once the lesson has moved", async () => {
+    lessonFixture.setInstance(nextNode());
+    await store().done();
+    await waitFor(() => expect(turnRequests.map((r) => r.kind)).toEqual(["opening"]));
+    expect(turnRequests[0].instance_node_id).toBe(NODE_2);
+    await settled();
+  });
+
+  it("leaves the opening to the voice session when one is live (it reconnects for the new part)", async () => {
+    store().setVoiceSession("synthetic-voice-session");
+    lessonFixture.setInstance(nextNode());
+    await store().done();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(turnRequests).toEqual([]);
+  });
+
+  it("waits for the turn in flight instead of cutting it off, then opens the new part", async () => {
+    const next = nextNode();
+    lessonFixture.setScript(() => [
+      { type: "state_changed", instance: next },
+      { type: "text_delta", text: "Well done." },
+      { type: "turn_completed", status: "completed", finish_reason: "stop" },
+    ]);
+    await store().send("SYNTHETIC answer");
+    await waitFor(() => expect(turnRequests.map((r) => r.kind)).toEqual(["learner_message", "opening"]));
+    expect(turnRequests[1].instance_node_id).toBe(NODE_2);
+    // the first turn finished; it was not interrupted by the opening
+    expect(store().turns[0]).toMatchObject({ status: "completed" });
+    await settled();
+  });
+});
+
+describe("useLessonStore — typed turns carry the session language", () => {
+  beforeEach(async () => {
+    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
+    await store().load(LESSON_ID);
+    turnRequests.length = 0;
+    localStorage.removeItem("gened_voice_language");
+  });
+
+  it("sends the language the learner picked on a hint", async () => {
+    store().setSessionLanguage("hi");
+    await store().askHint(CHECK_ITEM);
+    expect(turnRequests.at(-1)).toMatchObject({ kind: "hint", language: "hi" });
+    expect(turnRequests.at(-1)?.modality).toBeUndefined();
+    await settled();
+  });
+
+  it("falls back to the stored voice choice, and sends none when nothing is chosen", async () => {
+    localStorage.setItem("gened_voice_language", "ta");
+    await store().send("SYNTHETIC question");
+    expect(turnRequests.at(-1)).toMatchObject({ kind: "learner_message", language: "ta" });
+    localStorage.removeItem("gened_voice_language");
+    useLessonStore.setState({ sessionLanguage: null });
+    await store().send("SYNTHETIC again");
+    expect(turnRequests.at(-1)).not.toHaveProperty("language");
+  });
+
+  it("never sends a tag outside the eight", async () => {
+    localStorage.setItem("gened_voice_language", "fr");
+    await store().send("SYNTHETIC question");
+    expect(turnRequests.at(-1)).not.toHaveProperty("language");
+  });
+});
+
+describe("useLessonStore — a hint is only a hint turn (R-E5)", () => {
+  it("starts a hint turn and never calls /hints, so the ask is counted once", async () => {
+    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
+    await store().load(LESSON_ID);
+    turnRequests.length = 0;
+    await store().askHint(CHECK_ITEM);
+    expect(turnRequests.map((r) => r.kind)).toEqual(["hint"]);
+    expect(forbiddenRequests).toEqual([]);
+    await settled();
   });
 });

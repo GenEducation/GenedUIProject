@@ -12,8 +12,53 @@ export interface SubjectData {
   session_count: number;
 }
 
-/** The `/chapter-mastery` row. Defined in the service that fetches it. */
-export type ChapterMasteryItem = ChapterMastery;
+/** A skill's level in words (backend `progress_levels_v2`); never a mastery claim from thin evidence. */
+export type SkillLevel = "not_started" | "good_start" | "getting_there" | "got_it" | "strong";
+
+/** One skill of a chapter (`GET /v1/skills`). */
+export interface ChapterSkill {
+  component_id: string;
+  title: string;
+  level: SkillLevel;
+  /** Its revisit state in the chapter: `queued`, `revisiting`, `keep_practising`, `resolved`. */
+  status: string | null;
+  /** A spaced revisit is due. */
+  due: boolean;
+  needs_adult_support: boolean;
+}
+
+/** The new backend's facts about one chapter (`/v1/learner/...`, `/v1/instances/{id}/report`). */
+export interface ChapterFacts {
+  chapter_id?: string;
+  /** The subject's code (`social_science`), which the trends route keys on. */
+  subject_code?: string;
+  chapter_number?: number;
+  book_title?: string;
+  /** The student's lesson for this chapter; absent until they open it. */
+  instance_id?: string;
+  nodes_done?: number;
+  nodes_total?: number;
+  /** Questions answered and answered right; null when the chapter's report couldn't be read. */
+  answered?: number | null;
+  correct?: number | null;
+  outcomes?: Array<{ code: string; title: string; mastered: boolean }> | null;
+  skills?: ChapterSkill[];
+  /** Right answers given alone and with help, and hints asked for; absent until the chapter is opened. */
+  help?: AnswerHelp | null;
+  last_active_at?: string;
+  /** Completed once and open again (reviewing sections, or started over). It stays Completed. */
+  revisiting?: boolean;
+}
+
+/** How much of the right answers stood on their own (the backend's assistance ledger). */
+export interface AnswerHelp {
+  correct_alone: number;
+  correct_with_help: number;
+  hints_used: number;
+}
+
+/** A chapter row: the old `/chapter-mastery` shape plus the new backend's facts. */
+export type ChapterMasteryItem = ChapterMastery & ChapterFacts;
 
 export interface SkillLOItem {
   skill_id: string;
@@ -179,6 +224,8 @@ export interface ReportCardDataset {
 export interface ReportCardData extends ReportCardDataset {
   displayName: string;
   firstName: string;
+  /** The student's profile picture (an image path), as their home page and the parent portal show it. */
+  avatarSrc?: string | null;
   displayGrade: number | null;
   displayBoard: string | null;
   overallAvg: number;

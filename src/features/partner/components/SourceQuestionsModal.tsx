@@ -50,7 +50,7 @@ export function SourceQuestionsModal(props: SourceQuestionsModalProps) {
       onClose={onClose}
       size="full"
       title={subject ? `Questions about ${subject.title}` : "Questions"}
-      panelStyle={{ maxWidth: "min(880px, 100%)", background: "#F8F9F8" }}
+      panelStyle={{ maxWidth: "min(880px, 100%)", background: "#F6F7F2" }}
     >
       {/* Keyed so each chapter starts from its own recorded answers. */}
       {subject && <QuestionsBody key={subject.source_id} {...props} subject={subject} />}
@@ -120,14 +120,14 @@ function QuestionsBody({ subject, onClose, onSaved, onRerun }: SourceQuestionsMo
 
   return (
     <div className="flex flex-col min-h-full">
-      <header className="shrink-0 flex items-start gap-4 px-5 md:px-7 pt-6 pb-4 bg-white border-b border-[#1A3D2C]/5">
-        <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#1A3D2C] text-white flex items-center justify-center">
+      <header className="shrink-0 flex items-start gap-4 px-5 md:px-7 pt-6 pb-4 bg-white border-b border-[#122D30]/5">
+        <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#075E63] text-white flex items-center justify-center">
           <HelpCircle size={20} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/40">Concepts that look alike</p>
-          <h2 className="text-lg md:text-xl font-black text-[#1A3D2C] tracking-tight truncate">{subject.title}</h2>
-          <p className="text-xs text-[#1A3D2C]/60 mt-1 max-w-xl">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">Concepts that look alike</p>
+          <h2 className="text-lg md:text-xl font-black text-[#122D30] tracking-tight truncate">{subject.title}</h2>
+          <p className="text-xs text-[#122D30]/60 mt-1 max-w-xl">
             The run found concepts that look like others. It never decides on its own whether two concepts are the
             same, so tell it: is each one new, or the same as another concept in this chapter?
           </p>
@@ -139,9 +139,9 @@ function QuestionsBody({ subject, onClose, onSaved, onRerun }: SourceQuestionsMo
 
       <div className="flex-1 px-5 md:px-7 py-5 flex flex-col gap-4">
         {loadError ? (
-          <p role="alert" className="text-sm font-bold text-[#1A3D2C]/70 py-10 text-center">{loadError}</p>
+          <p role="alert" className="text-sm font-bold text-[#122D30]/70 py-10 text-center">{loadError}</p>
         ) : !data ? (
-          <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#1A3D2C]/40 py-10">
+          <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#122D30]/40 py-10">
             <Loader2 size={16} className="animate-spin" aria-hidden /> Loading the questions…
           </p>
         ) : (
@@ -162,7 +162,7 @@ function QuestionsBody({ subject, onClose, onSaved, onRerun }: SourceQuestionsMo
       </div>
 
       {data && (
-        <footer className="sticky bottom-0 shrink-0 bg-white border-t border-[#1A3D2C]/5 px-5 md:px-7 py-4 flex flex-col gap-3">
+        <footer className="sticky bottom-0 shrink-0 bg-white border-t border-[#122D30]/5 px-5 md:px-7 py-4 flex flex-col gap-3">
           {error && (
             <p role="alert" className="flex items-start gap-2 text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
               <AlertCircle size={14} className="mt-px shrink-0" aria-hidden /> {error}
@@ -170,7 +170,7 @@ function QuestionsBody({ subject, onClose, onSaved, onRerun }: SourceQuestionsMo
           )}
           {savedAll && !changed ? (
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <p role="status" className="flex-1 flex items-center gap-2 text-sm font-bold text-[#1A3D2C]">
+              <p role="status" className="flex-1 flex items-center gap-2 text-sm font-bold text-[#122D30]">
                 <CheckCircle2 size={16} className="text-emerald-600" aria-hidden />
                 Answers saved. Run the chapter again to use them.
               </p>
@@ -180,7 +180,7 @@ function QuestionsBody({ subject, onClose, onSaved, onRerun }: SourceQuestionsMo
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <p className="flex-1 text-xs font-bold text-[#1A3D2C]/50">
+              <p className="flex-1 text-xs font-bold text-[#122D30]/50">
                 {answered} of {questions.length} answered
               </p>
               <Button disabled={answered === 0 || !changed} loading={saving} onClick={() => void save()}>
@@ -221,29 +221,29 @@ function QuestionCard({
   const shown = expanded ? ranked : ranked.slice(0, SHOWN_CANDIDATES);
 
   return (
-    <section aria-label={`Question ${index}: ${p.title}`} className="rounded-2xl bg-white border border-[#1A3D2C]/5 p-4 md:p-5">
-      <p className="text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/40">Question {index}</p>
-      <h3 className="mt-1 text-base font-black text-[#1A3D2C]">{p.title}</h3>
-      <p className="mt-1 text-sm text-[#1A3D2C]/70 leading-relaxed">{p.definition}</p>
-      <p className="mt-1.5 text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/35">{p.lo_code}</p>
+    <section aria-label={`Question ${index}: ${p.title}`} className="rounded-2xl bg-white border border-[#122D30]/5 p-4 md:p-5">
+      <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">Question {index}</p>
+      <h3 className="mt-1 text-base font-black text-[#122D30]">{p.title}</h3>
+      <p className="mt-1 text-sm text-[#122D30]/70 leading-relaxed">{p.definition}</p>
+      <p className="mt-1.5 text-[10px] font-black uppercase tracking-widest text-[#122D30]/35">{p.lo_code}</p>
 
       <fieldset className="mt-4">
-        <legend className="text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/50 mb-2">Is it…</legend>
+        <legend className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/50 mb-2">Is it…</legend>
         <div className="flex flex-col gap-1.5">
           <Option group={group} value="novel" checked={choice === "novel"} onChoose={onChoose}>
-            <span className="text-sm font-bold text-[#1A3D2C]">It&apos;s a new concept</span>
+            <span className="text-sm font-bold text-[#122D30]">It&apos;s a new concept</span>
           </Option>
 
           {shown.map((c) => {
             const canPick = pickable(c);
             const label = (
               <span className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
-                {canPick && <span className="text-sm text-[#1A3D2C]/60">Same as</span>}
-                <span className="text-sm font-bold text-[#1A3D2C]">{c.title}</span>
-                <span className="text-[10px] font-black tabular-nums text-[#1A3D2C]/50">{percent(c.similarity)} alike</span>
+                {canPick && <span className="text-sm text-[#122D30]/60">Same as</span>}
+                <span className="text-sm font-bold text-[#122D30]">{c.title}</span>
+                <span className="text-[10px] font-black tabular-nums text-[#122D30]/50">{percent(c.similarity)} alike</span>
                 <span
                   className={`px-2 py-px rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                    c.where === "this_chapter" ? "bg-[#D1E6D9]/40 text-[#1A3D2C] border-[#1A3D2C]/10" : "bg-sky-50 text-sky-700 border-sky-200"
+                    c.where === "this_chapter" ? "bg-[#DCEBE7]/40 text-[#122D30] border-[#122D30]/10" : "bg-sky-50 text-sky-700 border-sky-200"
                   }`}
                 >
                   {c.where === "this_chapter" ? "This chapter" : "Catalogue"}
@@ -255,12 +255,12 @@ function QuestionCard({
                 {label}
               </Option>
             ) : (
-              <div key={valueOf(c)} className="flex items-start gap-3 rounded-xl px-3 py-2 bg-[#F8F9F8]">
+              <div key={valueOf(c)} className="flex items-start gap-3 rounded-xl px-3 py-2 bg-[#F6F7F2]">
                 <span className="mt-1 h-4 w-4 shrink-0" aria-hidden />
                 <div className="min-w-0">
                   {label}
-                  <p className="text-[11px] text-[#1A3D2C]/50 mt-0.5">
-                    Already published. Only a GenEd admin can match a concept to it.
+                  <p className="text-[11px] text-[#122D30]/50 mt-0.5">
+                    Already published. It can&apos;t be chosen here.
                   </p>
                 </div>
               </div>
@@ -294,17 +294,17 @@ function Option({
     // `relative` keeps the hidden radio inside its row; see LearningOutcomePicker for why that matters in a modal.
     <label
       className={`relative flex items-start gap-3 rounded-xl px-3 py-2 cursor-pointer border transition-colors ${
-        checked ? "border-[#1A3D2C] bg-[#D1E6D9]/30" : "border-transparent hover:bg-[#F8F9F8]"
+        checked ? "border-[#122D30] bg-[#DCEBE7]/30" : "border-transparent hover:bg-[#F6F7F2]"
       }`}
     >
       <input type="radio" name={group} value={value} checked={checked} onChange={() => onChoose(value)} className="peer sr-only" />
       <span
         aria-hidden
-        className={`mt-1 h-4 w-4 shrink-0 rounded-full border-[1.5px] flex items-center justify-center peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#1A3D2C]/40 ${
-          checked ? "border-[#1A3D2C]" : "border-[#1A3D2C]/30"
+        className={`mt-1 h-4 w-4 shrink-0 rounded-full border-[1.5px] flex items-center justify-center peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#122D30]/40 ${
+          checked ? "border-[#122D30]" : "border-[#122D30]/30"
         }`}
       >
-        {checked && <span className="h-2 w-2 rounded-full bg-[#1A3D2C]" />}
+        {checked && <span className="h-2 w-2 rounded-full bg-[#075E63]" />}
       </span>
       {children}
     </label>

@@ -182,7 +182,7 @@ export const LoaderJourney: React.FC<LoaderJourneyProps> = ({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                className="mt-4 text-[#042e5c]/60 font-semibold text-sm tracking-wide"
+                className="mt-4 text-[#122D30]/60 font-semibold text-sm tracking-wide"
               >
                 All done!
               </motion.p>

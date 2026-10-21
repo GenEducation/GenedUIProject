@@ -5,9 +5,9 @@ import React from "react";
  * changes. Mint surfaces, navy ink, a single green for "good".
  */
 export const PORTAL_THEME = {
-  "--pp-ink": "#13293D",
-  "--pp-ink-soft": "#5E7186",
-  "--pp-green": "#16A36B",
+  "--pp-ink": "#122D30",
+  "--pp-ink-soft": "#5E7477",
+  "--pp-green": "#075E63",
   "--pp-green-deep": "#0E7C55",
   "--pp-mint": "#E4F5EE",
   "--pp-mint-strong": "#CDEEDF",

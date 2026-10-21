@@ -1,13 +1,18 @@
 "use client";
 
-import { useEffect, useState, type ButtonHTMLAttributes, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type FormEvent } from "react";
 import { ArrowRight, Check, Lightbulb, Loader2, X } from "lucide-react";
 import { asError } from "@/utils/errors";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLessonStore } from "../useLessonStore";
+import { useUiText, type UiKey } from "../i18n";
 import { calculation } from "../check/arithmetic";
+import { useCheckShown } from "../delivery/useCheckShown";
 import type { AnswerResponse, AnswerResult, CheckItem } from "../types";
 import { BoardFigure } from "./BoardFigure";
+import { MathField, type MathFieldHandle } from "../math/MathField";
+import { answerFromField, calcTextFromField } from "../math/latex";
+import { isMathsSubject } from "./ChatInput";
 
 /** The structured answer each check type is scored from (backend `gened_assessment/scorer.py`). */
 export function responseFor(check: CheckItem, value: string): AnswerResponse {
@@ -18,11 +23,11 @@ export function responseFor(check: CheckItem, value: string): AnswerResponse {
 /** Ordering and matching need drag-and-drop answers the board doesn't draw yet; the chat accepts them as text. */
 const TYPED_TYPES = new Set<CheckItem["response_type"]>(["numeric", "numeric_set", "symbolic", "string_set"]);
 
-const RESULT_COPY: Record<AnswerResult["outcome"], { tone: "good" | "try" | "info"; text: string } | null> = {
-  correct: { tone: "good", text: "That's right!" },
-  incorrect: { tone: "try", text: "Not quite. Your tutor will help." },
-  unscorable: { tone: "info", text: "Your tutor couldn't read that answer. Try writing it another way." },
-  quarantined: { tone: "info", text: "Your tutor will look at this one." },
+const RESULT_COPY: Record<AnswerResult["outcome"], { tone: "good" | "try" | "info"; key: UiKey } | null> = {
+  correct: { tone: "good", key: "correct" },
+  incorrect: { tone: "try", key: "notQuite" },
+  unscorable: { tone: "info", key: "unreadable" },
+  quarantined: { tone: "info", key: "lookingAtIt" },
   needs_confirmation: null,
 };
 
@@ -30,6 +35,7 @@ const RESULT_COPY: Record<AnswerResult["outcome"], { tone: "good" | "try" | "inf
 const NOTE_MS = 3200;
 
 function ResultNote({ result }: { result: AnswerResult }) {
+  const t = useUiText();
   const copy = RESULT_COPY[result.outcome];
   if (!copy) return null;
   const tone =
@@ -47,7 +53,7 @@ function ResultNote({ result }: { result: AnswerResult }) {
       transition={{ type: "spring", duration: 0.45, bounce: 0.25 }}
       className={`lesson-sketch-sm lesson-hand flex items-center gap-2 px-3 py-2 text-[18px] font-bold ${tone}`}>
       {copy.tone === "good" ? <Check size={16} aria-hidden /> : copy.tone === "try" ? <X size={16} aria-hidden /> : null}
-      {copy.text}
+      {t(copy.key)}
     </motion.p>
   );
 }
@@ -84,31 +90,57 @@ function SketchButton({
   );
 }
 
-const cardClass = "lesson-rise lesson-sketch p-5 text-[var(--ls-ink)]";
+const cardClass = "lesson-rise lesson-sketch shrink-0 p-5 text-[var(--ls-ink)]";
 
-function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: AnswerResult) => void }) {
+function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (r: AnswerResult) => void; subject: string | null }) {
+  const t = useUiText();
   const answer = useLessonStore((s) => s.answer);
   const askHint = useLessonStore((s) => s.askHint);
+  const notDelivered = useLessonStore((s) => s.notDeliveredItemId === check.id);
+  const cardRef = useRef<HTMLFormElement>(null);
+  // The delivery is confirmed once the card is actually on screen.
+  useCheckShown(cardRef, check.id);
   const [selected, setSelected] = useState<string | null>(null);
   const [typed, setTyped] = useState("");
+  // A maths lesson's answer box is typed like any other, with maths from its `/` menu: it holds LaTeX, and `typed` is
+  // what is sent (the words as typed, the maths in the checker's form). Other subjects keep the plain box.
+  const [answerLatex, setAnswerLatex] = useState("");
+  const isMath = isMathsSubject(subject);
+  // The field's value as of the last key, so an Enter typed right after it sends what is in the box.
+  const latexNow = useRef("");
+  const mathRef = useRef<MathFieldHandle>(null);
+  const onMath = (latex: string) => {
+    latexNow.current = latex;
+    setAnswerLatex(latex);
+    setTyped(answerFromField(latex));
+  };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isChoice = check.response_type === "mcq";
   const isTyped = TYPED_TYPES.has(check.response_type);
-  // A sum typed as the answer ("540 * 40") is worked out as they type, and its result is what's sent.
-  const sum = isTyped ? calculation(typed) : null;
+  // A calculation typed as the answer ("540 * 40", "sqrt(144)") is worked out as they type. There are no
+  // calculator keys: whatever they type (2^3, pi, log 100, sin 30…) is worked out. For a number answer its
+  // result is what's sent; for an expression or words, what they typed is (√2 stays √2), and the result only helps.
+  const sum = isTyped ? calculation(isMath && answerLatex ? calcTextFromField(answerLatex) : typed) : null;
 
   useEffect(() => {
     setSelected(null);
     setTyped("");
+    setAnswerLatex("");
+    latexNow.current = "";
     setError(null);
+    // A new question starts at its top, whatever the dock was scrolled to for the last one.
+    cardRef.current?.closest<HTMLElement>("[data-no-pan]")?.scrollTo?.({ top: 0 });
   }, [check.id]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    // A maths answer is read from the field as it is now, not from the last render.
+    const answerNow = isMath ? answerFromField(latexNow.current) : typed;
+    const sumNow = isMath ? calculation(latexNow.current ? calcTextFromField(latexNow.current) : "") : sum;
     const response: AnswerResponse | null = isChoice
       ? selected ? { kind: "choice", option_ids: [selected] } : null
-      : typed.trim() ? responseFor(check, sum ?? typed) : null;
+      : answerNow.trim() ? responseFor(check, check.response_type === "numeric" ? sumNow ?? answerNow : answerNow) : null;
     if (!response) return;
     setBusy(true);
     setError(null);
@@ -123,9 +155,9 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
   };
 
   return (
-    <form onSubmit={submit} className={cardClass} aria-labelledby={`check-${check.id}`}>
+    <form ref={cardRef} onSubmit={submit} className={cardClass} aria-labelledby={`check-${check.id}`}>
       <p className="lesson-hand lesson-underline inline-block text-[18px] font-bold text-[var(--ls-primary)]">
-        {check.role === "checkpoint" ? "Checkpoint" : "Quick check"}
+        {check.role === "checkpoint" ? t("checkpoint") : t("quickCheck")}
       </p>
       <h2 id={`check-${check.id}`} className="lesson-hand mt-2 text-[21px] font-bold leading-snug">
         {check.prompt}
@@ -159,53 +191,91 @@ function CheckCard({ check, onResult }: { check: CheckItem; onResult: (r: Answer
       )}
 
       {isTyped && (
-        <div className="relative mt-4">
-          <label htmlFor={`answer-${check.id}`} className="sr-only">Your answer</label>
-          <input
-            id={`answer-${check.id}`}
-            value={typed}
-            onChange={(e) => setTyped(e.target.value)}
-            inputMode="text"
-            maxLength={check.response_type === "numeric" ? 64 : 500}
-            autoComplete="off"
-            placeholder="Your answer"
-            aria-describedby={sum ? `sum-${check.id}` : undefined}
-            className="lesson-hand w-full border-0 border-b-2 border-dashed border-[var(--ls-ink-faint)] bg-transparent px-1 py-2 text-[20px] text-[var(--ls-ink)] outline-none placeholder:text-[var(--ls-ink-faint)] focus:border-solid focus:border-[var(--ls-primary)]"
-          />
-          {/* The worked-out result, written on just after what they typed, like a calculator's ghost. */}
-          <AnimatePresence>
-            {sum && (
-              <motion.p
-                id={`sum-${check.id}`}
-                aria-live="polite"
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                className="lesson-hand pointer-events-none absolute inset-y-0 left-0 flex items-center overflow-hidden whitespace-pre px-1 text-[20px]"
+        <div className="mt-4">
+          {isMath ? (
+            <>
+              {/* The whole answer line takes a click, its padding and dashed rule too, not only the field inside it. */}
+              <div
+                onMouseDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
+                  e.preventDefault();
+                  mathRef.current?.focus();
+                }}
+                className="lesson-answer-field cursor-text border-b-2 border-dashed border-[var(--ls-ink-faint)] px-1 py-2 text-[20px] text-[var(--ls-ink)] focus-within:border-solid focus-within:border-[var(--ls-primary)]"
               >
-                <span className="invisible">{typed}</span>
-                <span className="text-[var(--ls-primary)]"> = {sum}</span>
-              </motion.p>
-            )}
-          </AnimatePresence>
+                <MathField
+                  ref={mathRef}
+                  value={answerLatex}
+                  onChange={onMath}
+                  onEnter={(now) => { latexNow.current = now; cardRef.current?.requestSubmit(); }}
+                  disabled={busy}
+                  ariaLabel={t("yourAnswer")}
+                  placeholder={`${t("yourAnswer")} ( / for maths )`}
+                />
+              </div>
+              {sum && (
+                <p id={`sum-${check.id}`} aria-live="polite" className="lesson-hand mt-1.5 px-1 text-[18px] text-[var(--ls-primary)]">
+                  = {sum}
+                </p>
+              )}
+            </>
+          ) : (
+          <div className="relative">
+            <label htmlFor={`answer-${check.id}`} className="sr-only">{t("yourAnswer")}</label>
+            <input
+              id={`answer-${check.id}`}
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              inputMode="text"
+              maxLength={check.response_type === "numeric" ? 64 : 500}
+              autoComplete="off"
+              placeholder={t("yourAnswer")}
+              aria-describedby={sum ? `sum-${check.id}` : undefined}
+              className="lesson-hand w-full border-0 border-b-2 border-dashed border-[var(--ls-ink-faint)] bg-transparent px-1 py-2 text-[20px] text-[var(--ls-ink)] outline-none placeholder:text-[var(--ls-ink-faint)] focus:border-solid focus:border-[var(--ls-primary)]"
+            />
+            {/* The worked-out result, written on just after what they typed, like a calculator's ghost. */}
+            <AnimatePresence>
+              {sum && (
+                <motion.p
+                  id={`sum-${check.id}`}
+                  aria-live="polite"
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="lesson-hand pointer-events-none absolute inset-y-0 left-0 flex items-center overflow-hidden whitespace-pre px-1 text-[20px]"
+                >
+                  <span className="invisible">{typed}</span>
+                  <span className="text-[var(--ls-primary)]"> = {sum}</span>
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
+          )}
         </div>
       )}
 
       {!isChoice && !isTyped && (
-        <p className="lesson-hand mt-3 text-[17px] text-[var(--ls-ink-mid)]">Type your answer to this one in the chat.</p>
+        <p className="lesson-hand mt-3 text-[17px] text-[var(--ls-ink-mid)]">{t("typeInChat")}</p>
       )}
 
       {error && <p role="alert" className="mt-3 text-[13px] text-[#9A2E1E]">{error}</p>}
+      {/* The answer wasn't counted because the question hadn't reached your tutor's session yet: neutral, never "incorrect". */}
+      {notDelivered && !error && (
+        <p role="status" className="lesson-hand mt-3 text-[17px] text-[var(--ls-ink-mid)]">
+          {t("gettingReady")}
+        </p>
+      )}
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
+      {/* The buttons stay in view at the foot of the dock whatever the card's height: a tall card scrolls above them. */}
+      <div className="sticky bottom-0 z-[1] -mx-5 -mb-5 mt-4 flex flex-wrap items-center gap-3 rounded-b-[18px] border-t border-dashed border-[var(--ls-ink-faint)] bg-[#fffdf6] px-5 pb-5 pt-3">
         {(isChoice || isTyped) && (
           <SketchButton type="submit" disabled={busy || (isChoice ? !selected : !typed.trim())} loading={busy}>
-            Check answer
+            {t("checkAnswer")}
           </SketchButton>
         )}
         <SketchButton type="button" variant="tertiary" onClick={() => void askHint(check.id)}>
-          <Lightbulb size={16} aria-hidden /> Hint
+          <Lightbulb size={16} aria-hidden /> {t("hint")}
         </SketchButton>
       </div>
     </form>
@@ -243,7 +313,8 @@ function ConfirmReading({ check, original, suggestion }: { check: CheckItem; ori
  * (on a teach step that is ready) moving on. Nothing here decides correctness
  * or progression; every outcome comes back from the backend.
  */
-export function StepCard() {
+export function StepCard({ subject = null }: { subject?: string | null }) {
+  const t = useUiText();
   const instance = useLessonStore((s) => s.instance);
   const payload = useLessonStore((s) => s.payload);
   const done = useLessonStore((s) => s.done);
@@ -263,6 +334,8 @@ export function StepCard() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Whether the tutor has drawn anything on the board yet.
+  const hasFigures = useLessonStore((st) => st.presentedFigureIds.length > 0);
   const node = instance?.active_node;
   // A result belongs to the step it was given on.
   useEffect(() => setLastResult(null), [node?.instance_node_id]);
@@ -288,7 +361,7 @@ export function StepCard() {
   if (instance.next_action === "choose" && node.choice) {
     body = (
       <div className={cardClass}>
-        <h2 className="lesson-hand text-[21px] font-bold">That round was tricky. What next?</h2>
+        <h2 className="lesson-hand text-[21px] font-bold">{t("roundTricky")}</h2>
         <div className="mt-4 flex flex-wrap gap-3">
           {node.choice.options.map((option) => (
             <SketchButton
@@ -297,7 +370,7 @@ export function StepCard() {
               disabled={busy}
               onClick={() => void run(() => choose(option))}
             >
-              {option === "try_now" ? "Try a new question" : "Keep going"}
+              {option === "try_now" ? t("tryNew") : t("keepGoing")}
             </SketchButton>
           ))}
         </div>
@@ -306,21 +379,27 @@ export function StepCard() {
   } else if (reading && checks.get(reading.item_id)) {
     body = <ConfirmReading check={checks.get(reading.item_id)!} original={reading.original} suggestion={reading.suggestion} />;
   } else if (unanswered.length > 0 && checks.get(unanswered[0])) {
-    body = <CheckCard check={checks.get(unanswered[0])!} onResult={showResult} />;
+    body = <CheckCard check={checks.get(unanswered[0])!} onResult={showResult} subject={subject} />;
   } else if (node.type === "teach" && node.engagement_count >= node.engagement_required) {
     body = (
       <div className={`${cardClass} flex flex-wrap items-center gap-4`}>
-        <p className="lesson-hand flex-1 text-[20px] font-bold">Got it? Move on when you&apos;re ready.</p>
+        <p className="lesson-hand flex-1 text-[20px] font-bold">{t("moveOn")}</p>
         <SketchButton disabled={busy} loading={busy} onClick={() => void run(done)}>
-          Next step <ArrowRight size={16} aria-hidden />
+          {t("nextStep")} <ArrowRight size={16} aria-hidden />
         </SketchButton>
       </div>
     );
-  } else if (node.type === "teach") {
+  } else if (node.type === "teach" && !hasFigures) {
+    // Only on a board still waiting for its first visual: once the tutor has drawn, the note would just sit on
+    // the picture, and the chat already carries the conversation.
     body = (
-      <p className="lesson-hand text-center text-[18px] text-[var(--ls-ink-mid)]">
-        Talk it through with your tutor to unlock the next step.
-      </p>
+      <div className="lesson-hand text-center text-[18px] text-[var(--ls-ink-mid)]">
+        <p>{t("talkItThrough")}</p>
+        {/* Only a real reply counts (a "hmm", "ok" or a lone word does not), so the learner can see where they stand. */}
+        <p className="mt-1 text-[16px] tabular-nums" aria-live="polite">
+          {t("repliesCount", { n: Math.min(node.engagement_count, node.engagement_required), m: node.engagement_required })}
+        </p>
+      </div>
     );
   }
 
@@ -329,7 +408,7 @@ export function StepCard() {
 
   return (
     // `mt-auto` sits the card at the foot of its dock; when taller than the dock, it scrolls from the top.
-    <div className="mt-auto flex flex-col gap-3">
+    <div className="mt-auto flex shrink-0 flex-col gap-3">
       <AnimatePresence>{lastResult && <ResultNote key={resultKey} result={lastResult} />}</AnimatePresence>
       {body}
       {error && <p role="alert" className="text-[13px] text-[#9A2E1E]">{error}</p>}

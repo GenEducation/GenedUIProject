@@ -3,16 +3,16 @@
 import React, { useId } from "react";
 import { motion } from "framer-motion";
 import { ringArc } from "../utils";
-import type { BandTone, MasteryBand } from "../subjectVisuals";
-import { MaskIcon } from "../MaskIcon";
-import { reportSubjectIcon } from "./icons";
+import { BAND_TONES, type BandTone, type MasteryBand } from "../subjectVisuals";
+import type { SkillLevel } from "../types";
+import { TintIcon, subjectIconName } from "./icons";
 
-/** Neutral colour for coverage, so it never competes with the mastery band. */
-export const COVERAGE_COLOR = "#7C93B8";
+/** Neutral teal-grey for coverage, so it never competes with the mastery band. */
+export const COVERAGE_COLOR = "#6A9295";
 
 /** The white card every screen panel sits on. */
 export const CARD =
-  "rounded-[20px] border border-[var(--rs-line)] bg-white shadow-[0_1px_2px_rgba(19,41,61,0.04),0_12px_32px_-22px_rgba(19,41,61,0.22)]";
+  "rounded-[20px] border border-[var(--rs-line)] bg-white shadow-[0_1px_2px_rgba(18,45,48,0.04),0_12px_32px_-22px_rgba(18,45,48,0.22)]";
 
 export const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--rs-brand)]";
@@ -100,7 +100,7 @@ export function SubjectGlyph({ subject, tone, size = 48 }: { subject: string; to
       className="flex shrink-0 items-center justify-center rounded-full transition-colors duration-500"
       style={{ width: size, height: size, background: tone.tint }}
     >
-      <MaskIcon src={reportSubjectIcon(subject)} color={tone.accent} size={Math.round(size * 0.52)} />
+      <TintIcon name={subjectIconName(subject)} color={tone.accent} size={Math.round(size * 0.5)} />
     </span>
   );
 }
@@ -170,4 +170,51 @@ export function MetaStat({ icon, value, caption }: { icon: React.ReactNode; valu
 
 export function plural(n: number, word: string) {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
+// ─────────────────────────────────────────────────────────
+// SKILL LEVELS + COMING SOON — the new backend's words, and what it doesn't measure yet
+// ─────────────────────────────────────────────────────────
+
+/** A skill level as the learner reads it (backend `progress_levels_v2`), coloured on the band palette. */
+export const SKILL_LEVELS: Record<SkillLevel, { label: string; tone: BandTone }> = {
+  strong: { label: "Strong", tone: BAND_TONES.Advanced },
+  got_it: { label: "Got it", tone: BAND_TONES.Proficient },
+  good_start: { label: "Good start", tone: BAND_TONES.Approaching },
+  getting_there: { label: "Getting there", tone: BAND_TONES.Developing },
+  not_started: { label: "Not started", tone: BAND_TONES["Not started"] },
+};
+
+export function SkillLevelChip({ level }: { level: SkillLevel }) {
+  const { label, tone } = SKILL_LEVELS[level] ?? SKILL_LEVELS.not_started;
+  return (
+    <span className="shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: tone.tint, color: tone.ink }}>
+      {label}
+    </span>
+  );
+}
+
+/** A small "Coming soon" tag, for a figure the backend doesn't report yet. */
+export function SoonTag() {
+  return (
+    <span className="whitespace-nowrap rounded-full bg-[var(--rs-surface-2)] px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[var(--rs-ink-soft)] ring-1 ring-[var(--rs-line)]">
+      Coming soon
+    </span>
+  );
+}
+
+/** Where a whole section used to be: what it will show, once the backend measures it again. */
+export function ComingSoon({ icon, title, text, compact = false }: { icon: React.ReactNode; title: string; text: string; compact?: boolean }) {
+  return (
+    <div className={`flex items-start gap-3 rounded-2xl border border-dashed border-[var(--rs-line-strong)] bg-[var(--rs-surface-2)]/60 ${compact ? "p-4" : "p-5"}`}>
+      <span className="mt-0.5 shrink-0 text-[var(--rs-ink-soft)]">{icon}</span>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[14px] font-bold text-[var(--rs-ink)]">{title}</p>
+          <SoonTag />
+        </div>
+        <p className="mt-1 text-[13px] leading-relaxed text-[var(--rs-ink-soft)]">{text}</p>
+      </div>
+    </div>
+  );
 }

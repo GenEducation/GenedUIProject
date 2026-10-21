@@ -23,8 +23,22 @@ export const STARTABLE_STATES: ReadonlySet<SourceState> = new Set([
   "failed",
 ]);
 
-/** States a source may be deleted in: it produced nothing reviewable. */
-export const DELETABLE_STATES: ReadonlySet<SourceState> = new Set(["registered", "invalid", "failed"]);
+/**
+ * States a source may be deleted in: every state but `queued` (cancel it first) and `running` (it cannot be stopped).
+ * A source whose chapter was published is never deleted, whatever its state (see `deleteBlockedReason`).
+ */
+export const DELETABLE_STATES: ReadonlySet<SourceState> = new Set(["registered", "review_needed", "invalid", "ready", "failed"]);
+
+/**
+ * Why the server would refuse to delete this source (`DELETE /v1/sources/{id}`), or null when it would not. The server
+ * also refuses a source an older, published run came from, which the list cannot see; its 409 says so.
+ */
+export function deleteBlockedReason(source: { state: SourceState; release?: SourceReleaseRef | null }): string | null {
+  if (source.release?.state === "published") return "Published chapters can't be deleted: students are learning from them.";
+  if (source.state === "queued") return "Stop the queued run first, then delete the chapter.";
+  if (source.state === "running") return "A run in progress can't be stopped. Delete the chapter once it finishes.";
+  return null;
+}
 
 /** States the worker is still on; the registry keeps polling while any row is in one. */
 export const ACTIVE_STATES: ReadonlySet<SourceState> = new Set(["queued", "running"]);
@@ -39,12 +53,146 @@ export const SOURCE_STATE_LABELS: Record<SourceState, string> = {
   failed: "Failed",
 };
 
+/** The stages of an ingestion run, in order (backend `gened_ingestion.progress.STAGES`). A run without teaching
+ * visuals skips `visuals`. */
+export type IngestionStage =
+  | "render"
+  | "read_pages"
+  | "components"
+  | "reconcile"
+  | "questions"
+  | "figures"
+  | "lesson"
+  | "visuals"
+  | "submit";
+
+/** Each stage as a partner reads it, and what its counted units are called (if it has any). */
+export const INGESTION_STAGES: Record<IngestionStage, { label: string; unit?: string }> = {
+  render: { label: "Preparing the pages" },
+  read_pages: { label: "Reading pages", unit: "pages" },
+  components: { label: "Finding the key concepts" },
+  reconcile: { label: "Checking against existing concepts" },
+  questions: { label: "Writing practice questions" },
+  figures: { label: "Collecting figures" },
+  lesson: { label: "Planning the lesson" },
+  visuals: { label: "Drawing teaching visuals", unit: "visuals" },
+  submit: { label: "Saving everything" },
+};
+
+/**
+ * How far a run is (`SourceView.progress`): which stage of how many, the units done in it when it has countable
+ * ones, and the percent of the whole run, which never goes backwards. While `running` it is the current run;
+ * afterwards where the last run stopped (100 when it finished). Null before a run first reports.
+ */
+export interface SourceProgress {
+  stage: IngestionStage;
+  /** 1-based position of `stage` among `steps`. */
+  step: number;
+  steps: number;
+  done: number;
+  /** 0 for a stage without countable units: show the stage name without a count. */
+  total: number;
+  /** 0–100. */
+  percent: number;
+  updated_at: string;
+  /** What the run has produced so far, kept for the rest of the run (absent from older runs). A count appears
+   * once the stage that makes it has finished. */
+  counts?: Partial<Record<IngestionCount, number>>;
+  /** When each stage the run has reached started. */
+  stage_started_at?: Partial<Record<IngestionStage, string>>;
+  /** The checks the chapter failed, by check code, and how often; empty until validation and for a chapter that
+   * passed. `SourceView.outcome.findings` adds who can fix each. */
+  findings?: Record<string, number>;
+}
+
+/** What the partner can do next about a chapter (backend `SourceOutcome.next_step`; see
+ * backend `docs/specs/PARTNER_INGESTION_OUTCOME_v1.md`). */
+export type NextStep =
+  | "wait"
+  | "start"
+  | "answer_questions"
+  | "review_release"
+  | "review_visuals"
+  /** Questions need their picture, but no redraw waits for you: the drawing failed its own checks. Run again. */
+  | "redraw_pictures"
+  | "add_questions"
+  | "upload_pages_with_questions"
+  | "upload_clearer_pdf"
+  | "upload_again"
+  | "contact_gened"
+  | "run_again"
+  | "none";
+
+/** One failed check: `partner` means a different upload fixes it, `gened` a problem on GenEd's side. */
+export interface SourceFinding {
+  check: string;
+  count: number;
+  owner: "partner" | "gened";
+}
+
+/** The server's decision about what a chapter's newest run means for the partner: render `next_step` as the row's
+ * one action, and the run button only when `can_run_again` (a re-run of an upload whose failed checks are the
+ * partner's is refused with 409: it would end the same way). */
+export interface SourceOutcome {
+  next_step: NextStep;
+  findings: SourceFinding[];
+  can_run_again: boolean;
+  run_again_blocked: "already_running" | "same_result" | null;
+}
+
+/** The closed names of what a run reports it produced (backend `gened_ingestion.progress.COUNTS`). */
+export type IngestionCount =
+  | "pages"
+  | "unreadable_pages"
+  | "model_calls"
+  | "sections"
+  | "components"
+  | "components_new"
+  | "components_matched"
+  | "questions"
+  | "questions_computed"
+  | "question_variants"
+  | "questions_skipped"
+  | "questions_removed"
+  | "questions_held"
+  | "misconceptions"
+  | "figure_groups"
+  | "lesson_nodes"
+  | "plan_steps"
+  | "violations"
+  | "warnings";
+
+/**
+ * Where a source's newest run landed: the review batch it was staged as. `ready` waits for the partner's review,
+ * `blocked` failed the server's checks, `published` reached students, `abandoned` was replaced by a later run.
+ */
+export interface SourceReleaseRef {
+  batch_id: string;
+  state: "staging" | "blocked" | "ready" | "published" | "abandoned";
+  staged_at: string;
+  published_at: string | null;
+}
+
 export interface SourceChapter {
   ordinal: number;
   title: string;
   first_pdf_page: number;
   last_pdf_page: number;
 }
+
+/**
+ * Pages of the upload the server left out because they are the chapter's solutions appendix (the answers to its
+ * questions), not lessons. `pending` until the partner confirms the cut or includes the pages
+ * (`PUT /v1/sources/{id}/excluded-pages`); publishing waits for an answer.
+ */
+export interface ExcludedPages {
+  first_page: number;
+  last_page: number;
+  reason: "solutions_appendix";
+  status: "pending" | "confirmed" | "included";
+}
+
+export type ExcludedPagesDecision = "confirm" | "include";
 
 export interface SourceView {
   source_id: string;
@@ -69,7 +217,24 @@ export interface SourceView {
   has_report: boolean;
   /** How many reconciliation questions the last run is waiting on (state `review_needed`). */
   questions: number;
+  /** How far the current (or last) run got; poll `GET /v1/sources` every few seconds while `running`. */
+  progress?: SourceProgress | null;
+  /** Pages left out at upload as the solutions appendix; null when nothing was left out. */
+  excluded_pages?: ExcludedPages | null;
+  /** The review batch the newest run was staged as; null until a run reaches review. */
+  release?: SourceReleaseRef | null;
+  /** What to do next, who can fix a failed check, and whether running again is allowed. */
+  outcome?: SourceOutcome;
+  /** Whether `GET /v1/sources/{id}/authoring` has something to complete (the last run found too few questions). */
+  has_authoring?: boolean;
+  /** How many questions the partner answered or added so far. */
+  authored?: number;
+  authored_at?: string | null;
+  /** The partner's request for AI-drafted questions; null when none. */
+  suggestions?: SuggestionsState | null;
   queued_at: string | null;
+  /** When the server picked up the newest run. */
+  started_at?: string | null;
   finished_at: string | null;
   created_at: string;
   updated_at: string;
@@ -237,3 +402,87 @@ export interface ReleaseDecisionResult {
 
 /** The portal's own cap, under the backend's 50 MB and common proxy limits. */
 export const MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
+
+// ── Completing a chapter's questions (backend ADR 0036; docs/specs/PARTNER_INGESTION_OUTCOME_v1.md) ──
+
+/** A section of the chapter, with its printed text, to write questions about. */
+export interface AuthoringSection {
+  key: string;
+  title: string;
+  text: string;
+}
+
+/** A concept the run proposed in one section; every question checks exactly one. */
+export interface AuthoringConcept {
+  key: string;
+  section_key: string;
+  title: string;
+  definition: string;
+}
+
+/** A printed question the run removed that the partner's key would rescue. */
+export interface RemovedQuestion {
+  /** Answer it under this key in `AuthoredQuestions.answers`. */
+  item_key: string;
+  section_key: string;
+  prompt: string;
+  /** `answer_check_disagreed` (often a picture question), `not_machine_scorable` (an open question), or another. */
+  reason: string;
+  /** Printed choices: answer with `correct_option_index`. */
+  options: string[];
+  /** The key the run read, which the independent check did not reproduce. */
+  run_key: string | null;
+  /** The run tied it to no concept: name one of its section's in `concept_key`. */
+  needs_concept: boolean;
+}
+
+/** The partner's key for a removed printed question: exactly one of the three keys. */
+export interface PrintedAnswer {
+  expected_numeric?: string;
+  correct_option_index?: number;
+  accepted_answers?: string[];
+  concept_key?: string;
+}
+
+export type AddedAnswerKind = "numeric" | "mcq" | "string_set";
+
+/** A question for one proposed concept: typed (`partner`) or a model draft the partner accepted (`ai_assisted`). */
+export interface AddedQuestion {
+  id: string;
+  section_key: string;
+  concept_key: string;
+  prompt: string;
+  answer_kind: AddedAnswerKind;
+  expected_numeric?: string;
+  options?: string[];
+  correct_option_index?: number;
+  accepted_answers?: string[];
+  origin: "partner" | "ai_assisted";
+}
+
+/** Everything the partner completed; `PUT .../authoring` replaces it. */
+export interface AuthoredQuestions {
+  answers: Record<string, PrintedAnswer>;
+  added: AddedQuestion[];
+}
+
+export type SuggestionsState = "requested" | "running" | "ready" | "failed";
+
+export interface Suggestions {
+  state: SuggestionsState;
+  requested_at: string;
+  /** Drafts; each counts only once accepted into `added` with `origin: "ai_assisted"`. */
+  drafts: AddedQuestion[];
+  detail: string | null;
+}
+
+/** `GET /v1/sources/{id}/authoring`. */
+export interface AuthoringResponse {
+  sections: AuthoringSection[];
+  concepts: AuthoringConcept[];
+  removed: RemovedQuestion[];
+  authored: AuthoredQuestions;
+  authored_at: string | null;
+  suggestions: Suggestions | null;
+  can_suggest: boolean;
+}

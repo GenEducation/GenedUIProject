@@ -57,7 +57,7 @@ export default function DevVisualsHarness() {
   if (process.env.NODE_ENV === "production") return null;
 
   return (
-    <div style={{ background: "#F7F8FC", minHeight: "100vh", padding: "32px 0" }}>
+    <div style={{ background: "#F6F7F2", minHeight: "100vh", padding: "32px 0" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }} data-testid="dev-chat-column">
         <ChatMessageBubble
           message={message({

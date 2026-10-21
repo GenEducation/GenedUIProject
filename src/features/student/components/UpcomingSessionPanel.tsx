@@ -158,7 +158,7 @@ export function UpcomingSessionPanel({ session, style }: UpcomingSessionPanelPro
                 padding: "clamp(10px, 1.2vw, 14px) clamp(16px, 2vw, 22px)",
                 fontSize: "clamp(12px, 1.2vw, 15px)",
                 transition: "transform 0.15s, box-shadow 0.2s",
-                boxShadow: isReady ? "0 4px 14px rgba(91,77,199,0.28)" : "none",
+                boxShadow: isReady ? "0 4px 14px rgba(7,94,99,0.28)" : "none",
               }}
             >
               {isStarting ? "Opening…" : isReady ? "Start now →" : "Getting ready…"}

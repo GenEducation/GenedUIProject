@@ -61,8 +61,12 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
     <div
       className="my-3 relative overflow-hidden"
       style={{
-        background: mode === "READ_ALOUD" ? "#EFF6FF" : "#FDF2F8",
-        border: mode === "READ_ALOUD" ? "1px solid #4A90D920" : "1px solid #F9A8D430",
+        // Read-aloud (the student's turn to read) sits on the tutor surface;
+        // listen-and-repeat (Aanya reads first) on warm paper with a teal edge.
+        background: mode === "READ_ALOUD" ? "#EAF2EF" : "#FBFBF8",
+        border: mode === "READ_ALOUD" ? "1px solid rgba(7,94,99,0.12)" : "1px solid #E4E9E3",
+        boxShadow: isPlaying ? "0 0 0 3px rgba(7,94,99,0.14)" : "none",
+        transition: "box-shadow 0.25s ease",
         borderRadius: 18,
         padding: "18px 20px",
       }}
@@ -71,7 +75,7 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
       <div
         style={{
           position: "absolute", left: 0, top: 0, bottom: 0, width: 4,
-          background: mode === "READ_ALOUD" ? "linear-gradient(180deg, var(--tutor-soft), var(--tutor))" : "linear-gradient(180deg, #BE185D, #F9A8D4)",
+          background: mode === "READ_ALOUD" ? "linear-gradient(180deg, var(--tutor-soft), var(--tutor))" : "var(--tutor)",
           borderRadius: "18px 0 0 18px",
         }}
       />
@@ -83,13 +87,13 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
             display: "inline-flex", alignItems: "center", gap: 5,
             fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
             textTransform: "uppercase", color: "var(--tutor)",
-            background: "#5B4DC710", borderRadius: 8, padding: "3px 10px",
+            background: "#075E6310", borderRadius: 8, padding: "3px 10px",
           }}
         >
           <span
             style={{
               width: 6, height: 6, borderRadius: "50%",
-              background: mode === "READ_ALOUD" ? "#00B894" : "var(--tutor)",
+              background: mode === "READ_ALOUD" ? "var(--tutor-soft)" : "var(--tutor)",
               display: "inline-block",
               animation: isActive && recordingState !== "completed" ? "pulse 1.5s infinite" : "none",
             }}
@@ -106,11 +110,14 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
               width: 36, height: 36, borderRadius: "50%", border: "none",
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: isLoading ? "default" : "pointer",
-              background: isPlaying || isPaused ? "var(--tutor)" : "#EDE9FE",
+              background: isPlaying || isPaused ? "var(--tutor)" : "#DCEBE7",
               color: isPlaying || isPaused ? "#fff" : "var(--tutor)",
               transition: "all 0.2s",
               flexShrink: 0,
-              boxShadow: "0 2px 8px rgba(91,77,199,0.18)",
+              // While Aanya is speaking the button wears the citron "live" ring.
+              boxShadow: isPlaying
+                ? "0 0 0 3px var(--accent), 0 2px 8px rgba(7,94,99,0.18)"
+                : "0 2px 8px rgba(7,94,99,0.18)",
             }}
           >
             {isLoading
@@ -125,7 +132,7 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
 
       <div
         className="whitespace-pre-wrap leading-relaxed"
-        style={{ fontSize: 16, color: "#1A202C", fontFamily: "var(--font-body)", fontWeight: 500, paddingLeft: 4 }}
+        style={{ fontSize: 16, color: "#122D30", fontFamily: "var(--font-body)", fontWeight: 500, paddingLeft: 4 }}
       >
         {displayedText}
       </div>
@@ -143,7 +150,7 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
         >
           <div
             style={{
-              width: 6, height: 6, borderRadius: "50%", background: "#00B894",
+              width: 7, height: 7, borderRadius: "50%", background: "var(--tutor)",
               animation: "pulse 1s infinite",
             }}
           />
@@ -158,10 +165,10 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
           style={{
             marginTop: 12, display: "flex", alignItems: "center", gap: 6,
             fontSize: 10, fontWeight: 800, letterSpacing: "0.1em",
-            textTransform: "uppercase", color: "#00B894", paddingLeft: 4,
+            textTransform: "uppercase", color: "var(--tutor)", paddingLeft: 4,
           }}
         >
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#00B894" }} />
+          <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--tutor)" }} />
           Reading Task Completed
         </motion.div>
       )}

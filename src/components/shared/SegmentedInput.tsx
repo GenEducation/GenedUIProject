@@ -78,7 +78,8 @@ export function SegmentedInput({ length, value, onChange, disabled }: SegmentedI
   };
 
   return (
-    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+    // The boxes keep their size where there is room and share a narrow one (a phone-width card) instead of overflowing it.
+    <div style={{ display: 'flex', gap: 'clamp(4px, 1.6vw, 8px)', justifyContent: 'center', width: '100%', minWidth: 0 }}>
       {Array.from({ length }).map((_, i) => {
         const char = value[i] || '';
         return (
@@ -92,17 +93,19 @@ export function SegmentedInput({ length, value, onChange, disabled }: SegmentedI
             onKeyDown={e => handleKeyDown(e, i)}
             onChange={e => handleChange(e, i)}
             onPaste={handlePaste}
+            aria-label={`Character ${i + 1} of ${length}`}
             style={{
-              width: '44px',
-              height: '56px',
-              fontSize: '24px',
+              flex: '0 1 48px',
+              minWidth: 0,
+              height: 'clamp(48px, 13vw, 56px)',
+              fontSize: '22px',
               fontWeight: 800,
               textAlign: 'center',
               textTransform: 'uppercase',
-              borderRadius: '12px',
-              border: `2px solid ${char ? '#5B4DC7' : '#E2E8F0'}`,
-              background: disabled ? '#F7F8FC' : '#FFFFFF',
-              color: '#1A202C',
+              borderRadius: '14px',
+              border: `1.5px solid ${char ? 'var(--primary)' : 'var(--surface-border)'}`,
+              background: disabled ? 'var(--canvas)' : char ? 'rgb(220 235 231 / 0.35)' : '#FFFFFF',
+              color: 'var(--ink)',
               outline: 'none',
               transition: 'all 0.2s',
               fontFamily: "var(--font-body)"

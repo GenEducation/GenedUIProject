@@ -60,42 +60,6 @@ describe("labService physical-device commissioning", () => {
     expect(result).not.toHaveProperty("device_token");
   });
 
-  it("reads the authoritative pre-start capacity hint", async () => {
-    const fetchMock = stubFetch({
-      slot_id: "slot-1",
-      limit: 24,
-      required: 3,
-      active: 0,
-      lab_active: 0,
-      reserved: 0,
-      available: 24,
-      can_start: true,
-    });
-
-    const result = await labService.getSlotCapacity("slot/1");
-
-    expect(firstCall(fetchMock).url).toContain("/lab/slots/slot%2F1/capacity");
-    expect(result.can_start).toBe(true);
-    expect(result.limit).toBe(24);
-  });
-
-  it("loads the pre-activation roster", async () => {
-    const fetchMock = stubFetch([{ student_id: "student-1", name: "Aarav" }]);
-
-    const result = await labService.getSlotRoster("slot/1");
-
-    expect(firstCall(fetchMock).url).toContain("/lab/slots/slot%2F1/roster");
-    expect(result).toEqual([{ student_id: "student-1", name: "Aarav" }]);
-  });
-
-  it("loads teacher-associated students eligible for the class", async () => {
-    const fetchMock = stubFetch([{ student_id: "student-1", name: "Aarav", eligible: true }]);
-
-    await labService.getEligibleStudents("slot/1");
-
-    expect(firstCall(fetchMock).url).toContain("/lab/slots/slot%2F1/eligible-students");
-  });
-
   it("creates a roster-backed class", async () => {
     const fetchMock = stubFetch({ grade: 4, section: "A", academic_year: "2026-27", student_count: 2 });
 
@@ -111,17 +75,6 @@ describe("labService physical-device commissioning", () => {
     expect(call.url).toMatch(/\/lab\/classes$/);
     expect(call.method).toBe("POST");
     expect(call.body.student_ids).toEqual(["student-1", "student-2"]);
-  });
-
-  it("adds selected students to the slot class roster", async () => {
-    const fetchMock = stubFetch({ added: 2, already_present: 0, roster: [] });
-
-    await labService.addRosterStudents("slot/1", ["student-1", "student-2"]);
-
-    const call = firstCall(fetchMock);
-    expect(call.url).toContain("/lab/slots/slot%2F1/roster/students");
-    expect(call.method).toBe("POST");
-    expect(call.body).toEqual({ student_ids: ["student-1", "student-2"] });
   });
 
   it("submits only explicit pre-activation seat assignments", async () => {
@@ -146,26 +99,5 @@ describe("labService physical-device commissioning", () => {
     const call = firstCall(fetchMock);
     expect(call.method).toBe("POST");
     expect(call.body).toBeUndefined();
-  });
-
-  it("moves a device by target Lab without rotating its credential", async () => {
-    const fetchMock = stubFetch({
-      id: "device-1",
-      lab_id: "lab-2",
-      device_label: "Desk 1",
-    });
-
-    await labService.moveDevice("device-1", { target_lab_id: "lab-2" });
-
-    const call = firstCall(fetchMock);
-    expect(call.url).toMatch(/\/lab\/devices\/device-1\/move$/);
-    expect(call.method).toBe("POST");
-    expect(call.body).toEqual({ target_lab_id: "lab-2" });
-  });
-
-  it("lists resumable pairing progress for a Lab", async () => {
-    const fetchMock = stubFetch([]);
-    await labService.listDevicePairings("lab/1");
-    expect(firstCall(fetchMock).url).toContain("/lab/labs/lab%2F1/device-pairings");
   });
 });

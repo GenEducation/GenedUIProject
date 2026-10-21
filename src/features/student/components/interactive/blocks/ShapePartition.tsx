@@ -27,12 +27,12 @@ export default function ShapePartition({ directiveId, meta, disabled, readOnly }
       const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
       const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
       const large = a2 - a1 > Math.PI ? 1 : 0;
-      return <path key={i} d={`M${cx} ${cy} L${x1} ${y1} A${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`} fill={i % 2 ? "#CECBF6" : "#EEEDFE"} stroke={COLORS.brand} strokeWidth={1.5} />;
+      return <path key={i} d={`M${cx} ${cy} L${x1} ${y1} A${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`} fill={i % 2 ? COLORS.brandSoft : `${COLORS.accent}55`} stroke={COLORS.brand} strokeWidth={1.5} />;
     });
   };
 
   const rect = () => Array.from({ length: parts }).map((_, i) => (
-    <rect key={i} x={8 + (i * 104) / parts} y={30} width={104 / parts} height={60} fill={i % 2 ? "#CECBF6" : "#EEEDFE"} stroke={COLORS.brand} strokeWidth={1.5} />
+    <rect key={i} x={8 + (i * 104) / parts} y={30} width={104 / parts} height={60} fill={i % 2 ? COLORS.brandSoft : `${COLORS.accent}55`} stroke={COLORS.brand} strokeWidth={1.5} />
   ));
 
   return (

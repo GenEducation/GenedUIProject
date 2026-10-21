@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState, useSyncExternalStore } from "react";
-import { Target } from "lucide-react";
+import { History } from "lucide-react";
 
 import { STUDENT_COLORS } from "../theme/colors";
 
@@ -17,10 +17,10 @@ const C = {
 };
 
 /** Pale lavender ground and the lighter blob that bleeds off the corner. */
-const BANNER_BG = "#EDEAFD";
-const BANNER_BLOB = "#E3DEFB";
+const BANNER_BG = "#E8F2EF";
+const BANNER_BLOB = "#DCEBE7";
 const TRACK = "#FFFFFF";
-const FILL = "#2E9E4F";
+const FILL = "#B8D63F";
 
 /** Banner mascot poses; one is picked at random per mount. */
 const POSES = [
@@ -54,6 +54,10 @@ interface ContinueLearningCardProps {
   session: ContinueLearningSession;
   /** Grade + board line, e.g. "Grade 8 CBSE". Omitted when unknown. */
   gradeLabel?: string;
+  /** When it was last studied, e.g. "2h ago", after the eyebrow. */
+  lastStudied?: string;
+  /** A chapter finished once and open again (reviewing sections, or started over). */
+  revisiting?: boolean;
   onStart: () => void;
   style?: React.CSSProperties;
 }
@@ -96,6 +100,8 @@ function Sparkle({
 export function ContinueLearningCard({
   session,
   gradeLabel,
+  lastStudied,
+  revisiting = false,
   onStart,
   style,
 }: ContinueLearningCardProps) {
@@ -172,8 +178,13 @@ export function ContinueLearningCard({
             fontSize: "clamp(9px, 0.9vw, 11px)",
           }}
         >
-          <Target size={14} strokeWidth={2} />
-          <span>Today&apos;s learning goal</span>
+          <History size={14} strokeWidth={2} aria-hidden />
+          <span>{revisiting ? "Revisiting a finished chapter" : "Pick up where you left off"}</span>
+          {lastStudied && (
+            <span className="font-semibold normal-case tracking-normal" style={{ opacity: 0.75 }}>
+              · {lastStudied}
+            </span>
+          )}
         </div>
 
         {/* Title block behind the purple rule */}
@@ -245,16 +256,16 @@ export function ContinueLearningCard({
             padding: "clamp(11px, 1.3vw, 14px) clamp(20px, 2.2vw, 26px)",
             fontSize: "clamp(13px, 1.3vw, 15px)",
             fontFamily: "var(--font-body)",
-            boxShadow: "0 6px 18px rgba(91,77,199,0.28)",
+            boxShadow: "0 6px 18px rgba(7,94,99,0.28)",
             transition: "transform 0.15s, box-shadow 0.2s",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = "translateY(-1px)";
-            e.currentTarget.style.boxShadow = "0 10px 24px rgba(91,77,199,0.34)";
+            e.currentTarget.style.boxShadow = "0 10px 24px rgba(7,94,99,0.34)";
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = "none";
-            e.currentTarget.style.boxShadow = "0 6px 18px rgba(91,77,199,0.28)";
+            e.currentTarget.style.boxShadow = "0 6px 18px rgba(7,94,99,0.28)";
           }}
         >
           <span>Continue Learning</span>

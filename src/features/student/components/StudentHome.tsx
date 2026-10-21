@@ -3,13 +3,19 @@
 import { FEATURES } from "@/constants/features";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Menu, Mic, MessageCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Menu, TrendingUp, Library, type LucideIcon } from "lucide-react";
 import Image from "next/image";
-import { useStudentStore, sessionRoutePath, isVoiceSession } from "../store/useStudentStore";
+import { useStudentStore } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
 import { getStudentDisplayName } from "../utils/displayName";
-import { selectContinueSession, selectImminentSession } from "../utils/sessionSelection";
+import { selectImminentSession } from "../utils/sessionSelection";
+import { asError } from "@/utils/errors";
+import { learnerService } from "../learner/learnerService";
+import { useLessonLaunch } from "../learner/useLessonLaunch";
+import { useRecentChapters } from "../learner/useRecentChapters";
+import { asLearnerChapter, chapterPercent, continueChapter, subjectName } from "../learner/recentChapters";
+import type { RecentChapter } from "../learner/types";
+import { RecentChapterRow } from "./chapters/RecentChapterRow";
 import { useScheduleStore } from "../store/useScheduleStore";
 import { UpcomingSessionPanel } from "./UpcomingSessionPanel";
 import { ContinueLearningCard } from "./ContinueLearningCard";
@@ -19,12 +25,16 @@ import { STUDENT_COLORS } from "../theme/colors";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
 import { StudentHomeSidebar } from "./StudentHomeSidebar";
 import { StreakStats } from "./StreakStats";
+import { useTotalStudyMinutes } from "../hooks/useTotalStudyMinutes";
+import { useChaptersCompleted } from "../hooks/useChaptersCompleted";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
+import { GuardianInvitePopup } from "./guardian/GuardianInvitePopup";
 import { Select } from "@/components/ui/Select";
 import { subjectMascot, SubjectIcon } from "@/features/subjects/subjectPresentation";
 import { subjectsForGrade, useSubjectCatalog, useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
+import { GenEdLogo } from "@/components/shared/GenEdLogo";
 
 /* Subject-card mascot: display size, and how far it bleeds above the card.
    The bleed is mirrored as paddingTop on the horizontal scroller, which would
@@ -50,6 +60,19 @@ const C = {
   card:      STUDENT_COLORS.card,
   border:    STUDENT_COLORS.border,
 };
+
+/** A home section's eyebrow: a small icon naming the section, then its label. */
+function SectionHeading({ icon: Icon, className = "", children }: { icon: LucideIcon; className?: string; children: React.ReactNode }) {
+  return (
+    <h2
+      className={`flex items-center gap-2 font-bold uppercase m-0 ${className}`}
+      style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}
+    >
+      <Icon size={15} strokeWidth={2.2} aria-hidden style={{ color: STUDENT_COLORS.primary }} className="shrink-0" />
+      {children}
+    </h2>
+  );
+}
 
 // Raw hex, not var() — these get alpha-suffix concatenated below
 // (`${vis.color}cc`, `vis.color + "14"`), which CSS custom properties can't
@@ -142,25 +165,6 @@ function AprilAvatar({ state = "idle", size = 52 }: { state?: AprilState; size?:
   );
 }
 
-/* ═══ PROGRESS RING ═══ */
-function ProgressRing({ percent, size = 40, stroke = 3.5, color }: { percent: number; size?: number; stroke?: number; color: string }) {
-  const r    = (size - stroke) / 2;
-  const circ = 2 * Math.PI * r;
-  const off  = circ * (1 - percent / 100);
-  // A round cap on a near-empty arc renders as a dot floating off the track
-  // rather than "barely started" — square the cap below ~6% so a low value
-  // still reads as a short flat sliver sitting on the track.
-  const cap = percent > 0 && percent < 6 ? "butt" : "round";
-  return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color + "18"} strokeWidth={stroke} />
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
-        strokeDasharray={circ} strokeDashoffset={off} strokeLinecap={cap}
-        style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1)" }} />
-    </svg>
-  );
-}
-
 /* ═══ CONFETTI ═══ */
 function Confetti({ active, onDone }: { active: boolean; onDone?: () => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -233,10 +237,10 @@ function FilterDropdown({ value, options, onChange, activeColor, defaultColor }:
 export function StudentHome() {
   const router = useRouter();
   const {
-    studentProfile, recentChats,
-    fetchSessions, fetchStudentStats,
-    openNewChat, openExistingChat,
-    studentStats, isSessionsLoading, isStatsLoading,
+    studentProfile,
+    fetchStudentStats,
+    openNewChat,
+    studentStats, isStatsLoading,
     avatarId,
   } = useStudentStore();
   const { sessions: scheduledSessions, loadScheduledSessions } = useScheduleStore();
@@ -246,6 +250,10 @@ export function StudentHome() {
   const { hasEnded, hasDismissedCelebration, dismissCelebration } = useTutorialStore();
 
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
+  // `undefined` while loading still shows the card, with 0 until it arrives;
+  // `null` (failed) shows "—".
+  const totalMinutes = useTotalStudyMinutes(studentProfile?.user_id) ?? (studentProfile?.user_id ? 0 : null);
+  const chapters = useChaptersCompleted(studentProfile?.user_id) ?? null;
   const [showConfetti,   setShowConfetti]   = useState(false);
   const [aprilState,     setAprilState]     = useState<AprilState>("idle");
   const [hoveredAgent,   setHoveredAgent]   = useState<string | null>(null);
@@ -254,7 +262,7 @@ export function StudentHome() {
   // the blank screen indefinitely. The stagger transition above still plays
   // on genuine visibility changes; it just no longer gates first paint.
   const [mounted,        setMounted]        = useState(true);
-  const [showAllSessions,setShowAllSessions]= useState(false);
+  const [showAllRecent,  setShowAllRecent]  = useState(false);
   const subjectsScrollRef = useRef<HTMLDivElement>(null);
   const scrollSubjects = (dir: "left" | "right") => {
     const el = subjectsScrollRef.current;
@@ -275,7 +283,6 @@ export function StudentHome() {
 
   // Filters
   const [filterDate, setFilterDate] = useState<string>("All Time");
-  const [filterType, setFilterType] = useState<string>("All");
   const [filterSubject, setFilterSubject] = useState<string>("All");
 
   /* responsive sidebar */
@@ -285,7 +292,6 @@ export function StudentHome() {
   useEffect(() => {
     let cancelled = false;
     if (studentProfile && !cancelled) {
-      fetchSessions();
       fetchStudentStats();
       if (FEATURES.schedule) loadScheduledSessions(studentProfile.user_id);
     }
@@ -295,7 +301,7 @@ export function StudentHome() {
   /* Mount */
   useEffect(() => { setMounted(true); }, []);
 
-  /* One-shot confetti — only fires once, right after the student closes the tutorial video */
+  /* One-shot confetti — only after a new student's first tour (a replay from Profile doesn't arm it) */
   useEffect(() => {
     if (!hasEnded || hasDismissedCelebration) return;
     setAprilState("celebrating");
@@ -319,46 +325,33 @@ export function StudentHome() {
   }));
   const isSubjectsLoading = !catalogLoaded && !catalogError;
 
-  /* All sessions mapped with relative time */
-  const allSessionsRaw = recentChats.map(chat => {
-    return {
-      ...chat,
-      vis: subjectVisual(chat.subject ?? ""),
-      mastery: typeof chat.chapter_completion_percentage === "number"
-        ? Math.round(chat.chapter_completion_percentage)
-        : 0,
-    };
+  /* Recent chapters (GET /v1/learner/recent-chapters): the chapters the student last worked on, newest first.
+     The API names subjects by code ("social_science"); match them to the student's own subject names. */
+  const recent = useRecentChapters(!!studentProfile);
+  const subjectNames = subjectGroups.map((group) => group.subject);
+  const recentRows = recent.chapters.map((chapter) => {
+    const subject = subjectName(chapter.subject, subjectNames);
+    return { chapter, subject, vis: subjectVisual(subject), percent: chapterPercent(chapter) };
   });
 
-  const allSessions = allSessionsRaw.filter(sess => {
-    if (filterSubject !== "All" && sess.vis.label !== filterSubject) return false;
-    
-    if (filterType !== "All") {
-      const isVoice = isVoiceSession(sess);
-      if (filterType === "Voice" && !isVoice) return false;
-      if (filterType === "Chat" && isVoice) return false;
-    }
+  /* Continue learning: the most recently active chapter still in progress, whatever the list's filters. */
+  const continueTarget = continueChapter(recent.chapters);
+  const continueRow = continueTarget ? recentRows.find((row) => row.chapter === continueTarget) ?? null : null;
 
+  const filteredRecent = recentRows.filter((row) => {
+    if (filterSubject !== "All" && row.subject !== filterSubject) return false;
     if (filterDate !== "All Time") {
       const now = new Date();
-      // Handle the timestamp fields available
-      const dateVal = sess.lastActive || sess.created_at || sess.session_date;
-      if (dateVal) {
-        const d = new Date(dateVal);
-        if (!isNaN(d.getTime())) {
-          const diffDays = (now.getTime() - d.getTime()) / 86400000;
-          if (filterDate === "Today" && d.toDateString() !== now.toDateString()) return false;
-          if (filterDate === "This Week" && diffDays > 7) return false;
-          if (filterDate === "This Month" && diffDays > 30) return false;
-        }
+      const d = new Date(row.chapter.last_active_at);
+      if (!isNaN(d.getTime())) {
+        const diffDays = (now.getTime() - d.getTime()) / 86400000;
+        if (filterDate === "Today" && d.toDateString() !== now.toDateString()) return false;
+        if (filterDate === "This Week" && diffDays > 7) return false;
+        if (filterDate === "This Month" && diffDays > 30) return false;
       }
     }
-    
     return true;
   });
-
-  /* Continue learning is independent of Recent Sessions filters and must be resumable. */
-  const continueSession = selectContinueSession(allSessionsRaw);
 
   // `useNow` (5s) is enough to decide *whether* a countdown belongs in the hero
   // slot; the clock inside the panel runs its own 1s tick. Before mount it
@@ -369,11 +362,10 @@ export function StudentHome() {
     ? null
     : selectImminentSession(scheduledSessions, now);
 
-  /* Recent Sessions retains completed sessions and only removes the card shown above. */
-  const recentSessions = allSessions.filter(session => session.id !== continueSession?.id);
-  const previewSessions = recentSessions.slice(0, 3);
-  const displayedSessions = showAllSessions ? recentSessions : previewSessions;
-  const hasMoreSessions = recentSessions.length > 3;
+  /* The recent list keeps finished chapters and leaves out only the one in the Continue card above. */
+  const recentList = filteredRecent.filter((row) => row.chapter.instance_id !== continueRow?.chapter.instance_id);
+  const displayedRecent = showAllRecent ? recentList : recentList.slice(0, 3);
+  const hasMoreRecent = recentList.length > 3;
 
   const getGreeting = () => {
     const h = new Date().getHours();
@@ -391,12 +383,26 @@ export function StudentHome() {
     router.push(`/student/subjects/${encodeURIComponent(subject)}`);
   };
 
-  const handleSessionClick = (session: typeof allSessions[0]) => {
-    openExistingChat(session);
-    // Voice sessions reopen in the voice UI; chat sessions in the chat UI.
-    // router.push (not window.location.href) — the full reload used to
-    // discard the SPA cache and re-fetch every script on each session open.
-    router.push(sessionRoutePath(session));
+  /* Open a recent chapter: its own lesson when in progress or finished (to review); a fresh one if abandoned. */
+  const launchLesson = useLessonLaunch((st) => st.launch);
+  const offerRevisit = useLessonLaunch((st) => st.offerRevisit);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [openError, setOpenError] = useState<string | null>(null);
+  const openRecent = async (chapter: RecentChapter, subject: string) => {
+    if (openingId) return;
+    setOpenError(null);
+    setOpeningId(chapter.instance_id);
+    try {
+      const instanceId = chapter.state === "abandoned"
+        ? (await learnerService.openChapter(chapter.chapter_id)).id
+        : chapter.instance_id;
+      launchLesson(instanceId, asLearnerChapter(chapter), subject);
+      offerRevisit(instanceId);
+      router.push(`/student/lesson/${encodeURIComponent(instanceId)}`);
+    } catch (e) {
+      setOpenError(asError(e).message || "That chapter couldn't open. Try again.");
+      setOpeningId(null);
+    }
   };
 
   const fade = (d = 0) => ({
@@ -413,6 +419,8 @@ export function StudentHome() {
     <div className="flex h-screen overflow-hidden relative" style={{ fontFamily: "var(--font-body)", background: C.pageBg }}>
 
       <SessionStartingOverlay />
+      {/* After onboarding: tells a student whose verified parent email has no account yet how they connect. */}
+      <GuardianInvitePopup />
 
       {/* ── SIDEBAR ── */}
       <StudentHomeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
@@ -420,18 +428,6 @@ export function StudentHome() {
       {/* ── MAIN ── */}
       <main className="flex-1 overflow-hidden flex flex-col relative min-w-0">
         <Confetti active={showConfetti} onDone={() => setShowConfetti(false)} />
-        {showConfetti && (
-          <motion.img
-            src="/loaders/journey/char-trophy.svg"
-            alt=""
-            aria-hidden="true"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 16 }}
-            className="absolute inset-0 m-auto z-50 w-28 h-28 object-contain pointer-events-none drop-shadow-xl"
-          />
-        )}
 
         {/* Mobile / collapsed topbar */}
         {!sidebarOpen && (
@@ -451,7 +447,7 @@ export function StudentHome() {
 
             {/* Logo centered */}
             <div className="flex-1 flex justify-center">
-              <Image src="/Logo.svg" alt="GenEd" width={90} height={32} style={{ height: 32, width: "auto" }} priority />
+              <GenEdLogo height={38} priority />
             </div>
 
             {/* Notification bell on right, balancing the hamburger. The
@@ -477,15 +473,18 @@ export function StudentHome() {
             <div className="flex items-start justify-between mb-8 relative z-20" style={fade(0.06)}>
               <div className="flex items-center gap-4">
                 {/* Hidden on small screens: the greeting already clamps down to
-                    22px there and a creature beside it crowds the line. */}
+                    22px there and an avatar beside it crowds the line. Sized to
+                    the greeting block beside it (heading + subtitle, both of
+                    which scale with the viewport), so the two read as one unit
+                    rather than a small circle next to a taller block of text. */}
                 <div className="hidden md:flex flex-shrink-0 rounded-full overflow-hidden"
-                  style={{ width: 56, height: 56, border: "2px solid white", boxShadow: `0 4px 12px ${C.sun}30` }}>
-                  <StudentAvatar id={avatarId} size={56} />
+                  style={{ width: "clamp(52px, calc(6vw + 8px), 72px)", aspectRatio: "1", border: "2px solid white", boxShadow: `0 0 0 3px ${STUDENT_COLORS.softSurface}, 0 6px 16px rgb(7 94 99 / 0.18)` }}>
+                  <StudentAvatar id={avatarId} size={72} />
                 </div>
                 <div>
                   <h1 className="font-extrabold leading-tight m-0"
                     style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(22px, 3vw, 34px)" }}>
-                    {getGreeting()}, {username}!
+                    {getGreeting()}, <span className="citron-mark">{username}</span>!
                   </h1>
                   <p className="mt-2 font-medium leading-relaxed" style={{ color: C.textMid, fontSize: "clamp(13px, 1.4vw, 15px)" }}>
                     What would you like to learn today?
@@ -504,7 +503,7 @@ export function StudentHome() {
               <UpcomingSessionPanel session={imminentSession} style={fade(0.14)} />
             )}
 
-            {!imminentSession && isSessionsLoading && !continueSession && (
+            {!imminentSession && recent.loading && !continueRow && (
               <div className="rounded-[22px] mb-8 animate-pulse"
                 style={{ background: C.card, border: `1px solid ${C.border}`, padding: "clamp(18px, 2.4vw, 28px)" }}>
                 <div className="flex flex-col gap-3" style={{ maxWidth: "min(66%, 800px)" }}>
@@ -516,33 +515,31 @@ export function StudentHome() {
                 </div>
               </div>
             )}
-            {!imminentSession && continueSession && (
+            {!imminentSession && continueRow && (
               <ContinueLearningCard
-                session={continueSession}
+                session={{ title: continueRow.chapter.chapter_title, mastery: continueRow.percent, vis: continueRow.vis }}
                 gradeLabel={
                   studentProfile?.grade
                     ? `Grade ${studentProfile.grade}${studentProfile.school_board ? ` ${studentProfile.school_board}` : ""}`
                     : undefined
                 }
-                onStart={() => handleSessionClick(continueSession)}
+                lastStudied={timeAgo(continueRow.chapter.last_active_at)}
+                revisiting={continueRow.chapter.revisiting === true}
+                onStart={() => void openRecent(continueRow.chapter, continueRow.subject)}
                 style={fade(0.14)}
               />
             )}
 
             {/* ── STAT STRIP ── */}
             <div className="mb-8" style={{ ...fade(0.22) }}>
-              <h2 className="font-bold uppercase m-0 mb-4" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
-                Your progress
-              </h2>
-              <StreakStats data={studentStats} isLoading={isStatsLoading} variant="card" />
+              <SectionHeading icon={TrendingUp} className="mb-4">Your progress</SectionHeading>
+              <StreakStats data={studentStats} isLoading={isStatsLoading} variant="card" totalMinutes={totalMinutes} chapters={chapters} />
             </div>
 
             {/* ── MY SUBJECTS ── */}
             <div className="mb-8" style={fade(0.30)}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold uppercase m-0" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
-                  My subjects
-                </h2>
+                <SectionHeading icon={Library}>My subjects</SectionHeading>
               </div>
 
               {isSubjectsLoading ? (
@@ -598,7 +595,7 @@ export function StudentHome() {
                       </button>
                     </>
                   )}
-                  <div ref={subjectsScrollRef} className="flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)", scrollSnapType: "x mandatory", paddingTop: MASCOT_BLEED }}>
+                  <div ref={subjectsScrollRef} className="citron-scroll flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)", scrollSnapType: "x mandatory", paddingTop: MASCOT_BLEED }}>
                     {subjectGroups.map((group) => {
                     const vis = group.vis;
                     const hov = hoveredAgent === group.key;
@@ -694,18 +691,17 @@ export function StudentHome() {
               )}
             </div>
 
-            {/* ── RECENT SESSIONS ── */}
+            {/* ── RECENT CHAPTERS ── */}
             <div style={fade(0.38)}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold uppercase m-0 flex items-center gap-2" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
-                  Recent sessions
+                <h2 className="citron-eyebrow font-bold uppercase m-0" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
+                  Recent chapters
                 </h2>
               </div>
 
               {/* Filters UI */}
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div className="flex flex-wrap items-center gap-3">
-                  {/* Date Filter */}
                   <FilterDropdown
                     value={filterDate}
                     options={["All Time", "Today", "This Week", "This Month"]}
@@ -713,40 +709,17 @@ export function StudentHome() {
                     activeColor={C.genPurple}
                     defaultColor={C.textMid}
                   />
-
-                  {/* Type Filter */}
-                  <FilterDropdown
-                    value={filterType === "All" ? "All Types" : filterType === "Voice" ? "Voice Sessions" : "Chat Sessions"}
-                    options={["All Types", "Voice Sessions", "Chat Sessions"]}
-                    onChange={v => {
-                      if (v === "All Types") setFilterType("All");
-                      else if (v === "Voice Sessions") setFilterType("Voice");
-                      else if (v === "Chat Sessions") setFilterType("Chat");
-                    }}
-                    activeColor={C.genPurple}
-                    defaultColor={C.textMid}
-                  />
-
-                  {/* Subject Filter */}
                   <FilterDropdown
                     value={filterSubject === "All" ? "All Subjects" : filterSubject}
-                    options={[
-                      "All Subjects",
-                      ...subjectGroups.map((group) => group.subject),
-                    ]}
-                    onChange={v => {
-                      if (v === "All Subjects") setFilterSubject("All");
-                      else setFilterSubject(v);
-                    }}
+                    options={["All Subjects", ...subjectNames]}
+                    onChange={(v) => setFilterSubject(v === "All Subjects" ? "All" : v)}
                     activeColor={C.genPurple}
                     defaultColor={C.textMid}
                   />
-
-                  {(filterDate !== "All Time" || filterType !== "All" || filterSubject !== "All") && (
+                  {(filterDate !== "All Time" || filterSubject !== "All") && (
                     <button
                       onClick={() => {
                         setFilterDate("All Time");
-                        setFilterType("All");
                         setFilterSubject("All");
                       }}
                       className="text-xs font-semibold text-gray-400 hover:text-red-500 bg-transparent border-none cursor-pointer transition-colors"
@@ -756,93 +729,76 @@ export function StudentHome() {
                   )}
                 </div>
 
-                {hasMoreSessions && (
+                {hasMoreRecent && (
                   <button
-                    onClick={() => setShowAllSessions(v => !v)}
+                    onClick={() => setShowAllRecent((v) => !v)}
                     className="font-semibold cursor-pointer bg-transparent border-none flex-shrink-0"
                     style={{ color: C.genPurple, fontSize: "clamp(11px, 1vw, 13px)" }}>
-                    {showAllSessions ? "Show less ↑" : "See all →"}
+                    {showAllRecent ? "Show less ↑" : "See all →"}
                   </button>
                 )}
               </div>
 
-              {isSessionsLoading ? (
-                <div className="flex flex-col" style={{ gap: "clamp(6px, 0.8vw, 10px)" }}>
+              {openError && (
+                <p role="alert" className="mb-3 text-[13px]" style={{ color: C.coral }}>{openError}</p>
+              )}
+
+              {recent.loading && recent.chapters.length === 0 ? (
+                <div className="flex flex-col" style={{ gap: "clamp(6px, 0.8vw, 10px)" }} aria-busy="true">
                   {[1, 2, 3].map((n) => (
                     <div key={n} className="rounded-[14px] flex items-center animate-pulse"
                       style={{
                         background: C.card, border: `1px solid ${C.border}`,
-                        padding: "clamp(12px, 1.4vw, 16px) clamp(14px, 1.8vw, 20px)",
+                        padding: "clamp(10px, 1.2vw, 14px) clamp(12px, 1.6vw, 18px)",
                         gap: "clamp(10px, 1.4vw, 16px)",
                       }}>
-                      <div className="rounded-full flex-shrink-0" style={{ width: 38, height: 38, background: C.border + "50" }} />
+                      <div className="rounded-[10px] flex-shrink-0" style={{ width: 72, aspectRatio: "16 / 10", background: C.border + "50" }} />
                       <div className="flex-1 flex flex-col gap-2">
                         <div className="rounded" style={{ height: 13, width: "60%", background: C.border + "60" }} />
                         <div className="rounded" style={{ height: 10, width: "35%", background: C.border + "35" }} />
                       </div>
-                      <div className="rounded" style={{ height: 10, width: 50, background: C.border + "30" }} />
+                      <div className="rounded-full" style={{ height: 38, width: 38, background: C.border + "30" }} />
                     </div>
                   ))}
                 </div>
-              ) : displayedSessions.length > 0 ? (
+              ) : recent.error && recent.chapters.length === 0 ? (
+                <div className="rounded-2xl p-6 text-center" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+                  <p style={{ color: C.textMuted, fontSize: 14 }}>Your recent chapters couldn&apos;t load.</p>
+                  <button
+                    onClick={() => void recent.refresh()}
+                    className="mt-2 font-semibold bg-transparent border-none cursor-pointer"
+                    style={{ color: C.genPurple, fontSize: 13 }}
+                  >
+                    Try again
+                  </button>
+                </div>
+              ) : displayedRecent.length > 0 ? (
                 <div className="flex flex-col" style={{ gap: "clamp(6px, 0.8vw, 10px)" }}>
-                  {displayedSessions.map(sess => {
-                    const vis = sess.vis;
-                    return (
-                      <div key={sess.id}
-                        className="rounded-[14px] flex items-center cursor-pointer"
-                        style={{
-                          background: C.card, border: `1px solid ${C.border}`,
-                          padding: "clamp(12px, 1.4vw, 16px) clamp(14px, 1.8vw, 20px)",
-                          gap: "clamp(10px, 1.4vw, 16px)",
-                          boxShadow: "0 1px 4px rgba(0,0,0,0.03)",
-                          transition: "box-shadow 0.2s",
-                        }}
-                        onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)"}
-                        onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.03)"}
-                        onClick={() => handleSessionClick(sess)}
-                      >
-                        <div className="rounded-[11px] flex items-center justify-center flex-shrink-0"
-                          style={{ background: vis.bg, width: "clamp(34px, 3.2vw, 42px)", height: "clamp(34px, 3.2vw, 42px)", color: vis.color }}>
-                          <SubjectIcon subject={sess.subject ?? ""} size={18} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold truncate" style={{ color: C.text, fontSize: "clamp(13px, 1.3vw, 15px)" }}>
-                            <span
-                              title={isVoiceSession(sess) ? "Voice session" : "Chat session"}
-                              aria-label={isVoiceSession(sess) ? "Voice session" : "Chat session"}
-                              className="inline-flex align-middle"
-                              style={{ marginRight: 6, color: C.textMuted }}
-                            >
-                              {isVoiceSession(sess)
-                                ? <Mic size={14} strokeWidth={2} />
-                                : <MessageCircle size={14} strokeWidth={2} />}
-                            </span>
-                            {sess.title}
-                          </div>
-                          <div className="mt-0.5" style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>
-                            {vis.label} · {timeAgo(sess.lastActive)}
-                          </div>
-                        </div>
-                        <div className="flex items-center flex-shrink-0" style={{ gap: 8 }}>
-                          <div className="relative">
-                            <ProgressRing percent={sess.mastery} size={38} stroke={3.5} color={vis.color} />
-                            <div className="absolute inset-0 flex items-center justify-center font-bold"
-                              style={{ color: vis.color, fontSize: "clamp(9px, 0.9vw, 11px)" }}>
-                              {sess.mastery}%
-                            </div>
-                          </div>
-                          <div style={{ color: C.textFaint, fontSize: 18 }}>›</div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {displayedRecent.map((row) => (
+                    <RecentChapterRow
+                      key={row.chapter.instance_id}
+                      chapter={row.chapter}
+                      subjectLabel={row.vis.label}
+                      color={row.vis.color}
+                      when={timeAgo(row.chapter.last_active_at)}
+                      opening={openingId === row.chapter.instance_id}
+                      disabled={!!openingId}
+                      onOpen={(chapter) => void openRecent(chapter, row.subject)}
+                      onCardExpired={() => void recent.refresh()}
+                    />
+                  ))}
                 </div>
-              ) : allSessions.length <= 1 ? (
+              ) : (
                 <div className="rounded-2xl p-8 text-center" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-                  <p style={{ color: C.textMuted, fontSize: 14 }}>No other sessions yet. Keep learning!</p>
+                  <p style={{ color: C.textMuted, fontSize: 14 }}>
+                    {recentRows.length === 0
+                      ? "No chapters yet. Pick a subject above to start your first one!"
+                      : recentList.length === 0 && filteredRecent.length > 0
+                        ? "No other chapters yet. Keep learning!"
+                        : "No chapters match these filters."}
+                  </p>
                 </div>
-              ) : null}
+              )}
             </div>
 
           </div>

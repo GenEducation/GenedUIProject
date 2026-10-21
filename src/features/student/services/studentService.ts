@@ -1,7 +1,41 @@
 import { authFetch, ApiRequestError } from "@/utils/authFetch";
 import { asError } from "@/utils/errors";
+import { FEATURES } from "@/constants/features";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
+
+/**
+ * The student's guardian connection, each step separately (`GET /parent/guardian/status`). `state` sums it up:
+ * the parent email is missing or unverified; the parent has no account yet (the invitation is out); the parent has
+ * an account and has to confirm; they are linked; or the parent declined.
+ */
+export interface GuardianStatus {
+  student_id: string;
+  state:
+    | "no_parent_email"
+    | "email_unverified"
+    | "awaiting_parent_registration"
+    | "awaiting_parent_confirmation"
+    | "linked"
+    | "declined";
+  parent_email: string | null;
+  parent_email_supplied: boolean;
+  parent_email_verified: boolean;
+  parent_account_registered: boolean;
+  parent_onboarding_completed: boolean;
+  guardian_consent_recorded: boolean;
+  relationship_status: "PENDING" | "APPROVED" | "REJECTED" | "REVOKED" | null;
+  relationship_with_invited_parent: boolean | null;
+  /** The connected guardian account's email, only once the parent confirmed (APPROVED). */
+  linked_parent_email?: string | null;
+  /** That parent's name (`PUT /parent/profile` or given at sign-up), on the same terms; null when they gave none. */
+  linked_parent_name?: string | null;
+  invitation_sent_at: string | null;
+  last_invitation_at: string | null;
+  reminders_sent: number;
+  can_resend_invitation: boolean;
+  invitation_sent?: boolean | null;
+}
 
 if (!API_BASE_URL) {
   throw new Error("NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.");
@@ -152,14 +186,6 @@ export const studentService = {
     return response.json();
   },
 
-  fetchParentReport: async (parentId: string, studentId: string) => {
-    const response = await authFetch(
-      `${API_BASE_URL}/parent/students/${studentId}/report?parent_id=${parentId}`,
-      { headers: { accept: "application/json" } }
-    );
-    return response.json();
-  },
-
   fetchTeacherReport: async (teacherId: string, studentId: string) => {
     const response = await authFetch(
       `${API_BASE_URL}/teacher/students/${studentId}/report?teacher_id=${teacherId}`,
@@ -285,24 +311,45 @@ export const studentService = {
     return response.json();
   },
 
-  fetchTestSubmissions: async (studentId: string, subject?: string) => {
-    const url = subject
-      ? `${API_BASE_URL}/students/${studentId}/test-submissions?subject=${encodeURIComponent(subject)}`
-      : `${API_BASE_URL}/students/${studentId}/test-submissions`;
-    const response = await authFetch(url, {
-      headers: { "accept": "application/json" }
+  /** Where the student's guardian connection stands, read fresh from the server (`GET /parent/guardian/status`). */
+  fetchGuardianStatus: async (studentId: string): Promise<GuardianStatus> => {
+    const response = await authFetch(
+      `${API_BASE_URL}/parent/guardian/status?student_id=${encodeURIComponent(studentId)}`,
+      { headers: { accept: "application/json" } },
+    );
+    return response.json();
+  },
+
+  /** Emails a code to the parent address on the student's profile, to verify it after sign-up. */
+  sendParentEmailCode: async (studentId: string): Promise<void> => {
+    await authFetch(`${API_BASE_URL}/parent/guardian/email-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ student_id: studentId }),
+    });
+  },
+
+  /** The code the parent received; verifies their address and invites them. */
+  verifyParentEmail: async (studentId: string, code: string): Promise<GuardianStatus> => {
+    const response = await authFetch(`${API_BASE_URL}/parent/guardian/verify-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ student_id: studentId, code: code.trim() }),
     });
     return response.json();
   },
 
-  fetchDashboardProfile: async (studentId: string) => {
-    const response = await authFetch(`${API_BASE_URL}/students/${studentId}/profile`, {
-      headers: { "accept": "application/json" }
+  /** Sends the invitation to the verified parent address again (`invitation_sent` says whether it went). */
+  resendGuardianInvitation: async (studentId: string): Promise<GuardianStatus> => {
+    const response = await authFetch(`${API_BASE_URL}/parent/guardian/invitation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ student_id: studentId }),
     });
     return response.json();
   },
 
-  linkParent: async (studentId: string, parentEmailOrPhone: string) => {
+  linkParent: async (studentId: string, parentEmailOrPhone: string): Promise<{ status?: string }> => {
     const response = await authFetch(`${API_BASE_URL}/parent/link`, {
       method: "POST",
       headers: {
@@ -431,30 +478,6 @@ export const studentService = {
 
   // ── AI Analysis Reports ─────────────────────────────────────────────────────
 
-  fetchProgressReport: async (studentId: string) => {
-    const response = await authFetch(
-      `${API_BASE_URL}/students/${studentId}/progress-report`,
-      { headers: { accept: "application/json" } }
-    );
-    return response.json();
-  },
-
-  fetchSubjectEvolution: async (studentId: string, subject: string) => {
-    const response = await authFetch(
-      `${API_BASE_URL}/students/${studentId}/subject-evolution-analysis?subject=${encodeURIComponent(subject)}`,
-      { headers: { accept: "application/json" } }
-    );
-    return response.json();
-  },
-
-  fetchChapterEvolution: async (studentId: string, subject: string, documentTitle: string) => {
-    const response = await authFetch(
-      `${API_BASE_URL}/students/${studentId}/evolution-analysis?subject=${encodeURIComponent(subject)}&document_title=${encodeURIComponent(documentTitle)}`,
-      { headers: { accept: "application/json" } }
-    );
-    return response.json();
-  },
-
   // ── Time Tracking ─────────────────────────────────────────────────────────
 
   sendHeartbeat: async (studentId: string, sessionId: string): Promise<void> => {
@@ -477,6 +500,7 @@ export const studentService = {
   },
 
   fetchTimeByChapter: async (studentId: string, subject?: string) => {
+    if (!FEATURES.chapterTime) return [];
     const url = subject
       ? `${API_BASE_URL}/students/${studentId}/time/by-chapter?subject=${encodeURIComponent(subject)}`
       : `${API_BASE_URL}/students/${studentId}/time/by-chapter`;
@@ -492,29 +516,4 @@ export const studentService = {
     return response.json();
   },
 
-  fetchLanguagePreferences: async (studentId: string) => {
-    const response = await authFetch(
-      `${API_BASE_URL}/students/${studentId}/language-preferences`,
-      { headers: { accept: "application/json" } }
-    );
-    return response.json();
-  },
-
-  updateLanguagePreferences: async (
-    studentId: string,
-    payload: { preferred_language?: string | null; secondary_languages?: string[] | null }
-  ) => {
-    const response = await authFetch(
-      `${API_BASE_URL}/students/${studentId}/language-preferences`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          accept: "application/json",
-        },
-        body: JSON.stringify(payload),
-      }
-    );
-    return response.json();
-  },
 };

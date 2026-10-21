@@ -2,10 +2,13 @@ import { authFetch } from "@/utils/authFetch";
 import type {
   AnswerBody,
   AnswerResult,
+  DeliveryBody,
   ChapterReport,
   InstanceState,
   PresentationManifest,
   RecordedTurn,
+  ReviewBody,
+  RevisitOptions,
   TeacherPayload,
   TurnInterruptOut,
   TurnRequest,
@@ -58,9 +61,14 @@ export const lessonService = {
   answer: async (instanceId: string, body: AnswerBody): Promise<AnswerResult> =>
     (await authFetch(`${instancePath(instanceId)}/responses`, json(body))).json(),
 
-  /** Records that the learner asked for help on a check; the hint itself comes as a `hint` turn. */
-  hint: async (instanceId: string, body: { request_id: string; item_id: string }): Promise<InstanceState> =>
-    (await authFetch(`${instancePath(instanceId)}/hints`, json(body))).json(),
+  /** Confirms a check was delivered in this session (shown, or its audio played to the end). An answer counts only after this. */
+  checkDelivered: async (instanceId: string, itemId: string, body: DeliveryBody): Promise<void> => {
+    await authFetch(`${instancePath(instanceId)}/checks/${encodeURIComponent(itemId)}/delivered`, json(body));
+  },
+
+  /** A text presence beat for this tab (`source_id`). `active: false`: the server did not credit it (no recent action). */
+  presence: async (instanceId: string, sourceId: string): Promise<{ active: boolean }> =>
+    (await authFetch(`${instancePath(instanceId)}/presence`, json({ source_id: sourceId }))).json(),
 
   /** The learner's explicit done on the active teach node. */
   done: async (instanceId: string, body: { request_id: string; expected_revision: number }): Promise<InstanceState> =>
@@ -72,9 +80,13 @@ export const lessonService = {
     body: { request_id: string; expected_revision: number; choice: "try_now" | "keep_going" },
   ): Promise<InstanceState> => (await authFetch(`${instancePath(instanceId)}/choice`, json(body))).json(),
 
-  /** A text presence beat from this tab (`source_id`: random per mount); `active: false` means it was not credited. */
-  presence: async (instanceId: string, sourceId: string): Promise<{ active: boolean }> =>
-    (await authFetch(`${instancePath(instanceId)}/presence`, json({ source_id: sourceId }))).json(),
+  /** Coming back to the chapter: every section's score, the weak ones, and where the learner would carry on. */
+  revisitOptions: async (instanceId: string): Promise<RevisitOptions> =>
+    (await authFetch(`${instancePath(instanceId)}/revisit-options`)).json(),
+
+  /** Replay the chosen sections then carry on where the learner was, or start over (the answer is the new instance). */
+  review: async (instanceId: string, body: ReviewBody): Promise<InstanceState> =>
+    (await authFetch(`${instancePath(instanceId)}/review`, json(body))).json(),
 
   report: async (instanceId: string): Promise<ChapterReport> =>
     (await authFetch(`${instancePath(instanceId)}/report`)).json(),

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, RotateCw } from "lucide-react";
+import { BookOpen, RotateCw, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/student/PageHeader";
 import { SidebarToggle } from "@/components/student/SidebarToggle";
@@ -24,6 +24,7 @@ export function ChapterSelection({ subject }: { subject: string }) {
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const { data, loading, error, refresh } = useLearnerChapters(subject);
   const launch = useLessonLaunch((s) => s.launch);
+  const offerRevisit = useLessonLaunch((s) => s.offerRevisit);
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   // One list refetch per page visit for expired card signatures, however many tiles fail.
@@ -39,6 +40,7 @@ export function ChapterSelection({ subject }: { subject: string }) {
     try {
       const instance = await learnerService.openChapter(chapter.chapter_id);
       launch(instance.id, chapter, subject);
+      offerRevisit(instance.id);
       router.push(`/student/lesson/${encodeURIComponent(instance.id)}`);
     } catch (e) {
       setOpenError(asError(e).message || "Couldn't open this chapter. Please try again.");
@@ -73,18 +75,19 @@ export function ChapterSelection({ subject }: { subject: string }) {
           <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-8 py-6 sm:py-8">
             <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="m-0 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--primary-ink)]/45">
+                <p className={`m-0 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)] ${data ? "citron-eyebrow" : ""}`}>
+                  {data && <GraduationCap size={14} strokeWidth={2.2} aria-hidden />}
                   {data ? `Grade ${data.grade}` : " "}
                 </p>
                 <h2
                   className="m-0 mt-1 text-[clamp(22px,2.6vw,30px)] font-extrabold tracking-tight text-[var(--primary-ink)]"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
-                  Pick a chapter
+                  Pick a <span className="citron-mark">chapter</span>
                 </h2>
               </div>
               {data && chapters.length > 0 && (
-                <p className="m-0 text-sm font-semibold text-[var(--primary-ink)]/50">
+                <p className="m-0 rounded-full bg-[var(--soft-surface)] px-3 py-1 text-[12px] font-bold text-[var(--primary)]">
                   {chapters.length} chapter{chapters.length === 1 ? "" : "s"} ready
                 </p>
               )}
@@ -99,7 +102,7 @@ export function ChapterSelection({ subject }: { subject: string }) {
             {firstLoad ? (
               <div className={GRID} data-testid="chapters-loading">
                 {[0, 1, 2, 3, 4, 5].map((n) => (
-                  <div key={n} className="aspect-[16/10] rounded-[22px] bg-[var(--primary-ink)]/[0.05] animate-pulse" />
+                  <div key={n} className="aspect-[16/10] rounded-[22px] bg-[var(--soft-surface)]/60 animate-pulse" />
                 ))}
               </div>
             ) : error && !data ? (
@@ -111,7 +114,7 @@ export function ChapterSelection({ subject }: { subject: string }) {
               </div>
             ) : chapters.length === 0 ? (
               <div className="rounded-[22px] border-2 border-dashed border-[var(--primary-ink)]/10 px-6 py-14 text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--primary-ink)]/5 text-[var(--primary-ink)]/50">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--soft-surface)] text-[var(--primary)]">
                   <BookOpen size={22} />
                 </div>
                 <p className="m-0 text-base font-bold text-[var(--primary-ink)]">No chapters yet</p>
@@ -124,8 +127,8 @@ export function ChapterSelection({ subject }: { subject: string }) {
                 {books.map((book) => (
                   <section key={book} aria-label={books.length > 1 ? book : undefined}>
                     {books.length > 1 && (
-                      <h3 className="m-0 mb-3.5 flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--primary-ink)]/55">
-                        <BookOpen size={14} /> {book}
+                      <h3 className="citron-eyebrow m-0 mb-3.5 flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                        <BookOpen size={14} strokeWidth={2.2} aria-hidden /> {book}
                       </h3>
                     )}
                     <div className={GRID}>

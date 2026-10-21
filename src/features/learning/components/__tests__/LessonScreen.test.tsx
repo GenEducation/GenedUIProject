@@ -1,12 +1,32 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { LESSON_ID, lessonFixture } from "@/test/msw/handlers/lesson";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
 import { useLessonStore } from "../../useLessonStore";
-import { formatDuration } from "../../useSessionTimer";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), usePathname: () => "/student/lesson/x" }));
 import { LessonScreen } from "../LessonScreen";
+
+/** Pretend to be a given screen: "portrait" (phone upright) or "compact" (< 1024px). */
+function mockViewport(kind: "portrait" | "compact") {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: (query: string) => ({
+      matches: kind === "portrait" ? true : query.includes("1023px"),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }),
+  });
+}
+
+afterEach(() => {
+  // @ts-expect-error -- jsdom has no matchMedia; tests that need one add it.
+  delete window.matchMedia;
+  sessionStorage.clear();
+});
 
 beforeEach(() => {
   lessonFixture.reset();
@@ -27,7 +47,8 @@ describe("LessonScreen", () => {
     const crumbs = screen.getByRole("navigation", { name: "Breadcrumb" });
     expect(within(crumbs).getByRole("link", { name: "Mathematics" })).toHaveAttribute("href", "/student/subjects/Mathematics");
     expect(within(crumbs).getByText("SYNTHETIC chapter 2")).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("timer")).toHaveAccessibleName("Session time 00:00");
+    // No student signed in here, so the chapter clock has nothing to read yet.
+    expect(screen.getByRole("timer")).toHaveAccessibleName("Chapter time loading");
     expect(screen.getByRole("link", { name: "Leave lesson" })).toHaveAttribute("href", "/student/subjects/Mathematics");
 
     expect(screen.getByRole("region", { name: "Whiteboard" })).toBeInTheDocument();
@@ -39,20 +60,33 @@ describe("LessonScreen", () => {
     expect(within(screen.getByRole("region", { name: "Whiteboard" })).queryByText("SYNTHETIC reply.")).toBeNull();
   });
 
-  it("without launch info, falls back to a generic heading and exits home", () => {
+  it("shows one clock: this chapter's time from the server, so a refresh or another tab continues it", async () => {
+    useStudentStore.setState({ studentProfile: { user_id: "00000000-0000-4000-8000-0000000000bb" } as never });
     render(<LessonScreen instanceId={LESSON_ID} />);
-    expect(within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("Lesson")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Leave lesson" })).toHaveAttribute("href", "/student");
+    // 12.4 credited minutes = 12:24, counting on from there.
+    await waitFor(() => expect(screen.getByRole("timer")).toHaveAccessibleName(/^Chapter time 12:2\d$/));
+    expect(screen.getAllByRole("timer")).toHaveLength(1);
+    expect(screen.queryByText("Session time")).toBeNull();
+    useStudentStore.setState({ studentProfile: null });
   });
 
-  it("switches panels with the mobile tabs", () => {
-    render(<LessonScreen instanceId={LESSON_ID} />);
-    const chatTab = screen.getByRole("tab", { name: "Chat" });
-    expect(screen.getByRole("tab", { name: "Whiteboard" })).toHaveAttribute("aria-selected", "true");
-    fireEvent.click(chatTab);
-    expect(chatTab).toHaveAttribute("aria-selected", "true");
-    expect(document.getElementById("lesson-pane-chat")?.className).toMatch(/(^| )flex( |$)/);
-    expect(document.getElementById("lesson-pane-board")?.className).toMatch(/(^| )hidden( |$)/);
+  it("on a phone held upright, goes straight to the landscape lesson, turned to fill the screen", () => {
+    mockViewport("portrait");
+    const { unmount } = render(<LessonScreen instanceId={LESSON_ID} />);
+    // no prompt, no portrait tabs: the same board and chat side by side as a phone held sideways
+    expect(screen.queryByText("Turn your phone sideways")).toBeNull();
+    expect(screen.queryByRole("tab")).toBeNull();
+    expect(screen.getByRole("region", { name: "Whiteboard" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Chat with your tutor" })).toBeInTheDocument();
+    // jsdom's 1024 × 768 window, held "upright": laid out 768 wide × 1024 tall, turned to fill the screen
+    const root = document.querySelector('[data-orientation="turned"]') as HTMLElement;
+    expect(root.style.transform).toBe("translateX(1024px) rotate(90deg) scale(1)");
+    expect(root.style.width).toBe("768px");
+    expect(root.style.height).toBe("1024px");
+    // dragging code is told the screen is turned, and untold when the lesson closes
+    expect(document.documentElement.dataset.lessonRotated).toBe("true");
+    unmount();
+    expect(document.documentElement.dataset.lessonRotated).toBeUndefined();
   });
 
   it("Voice opens voice mode, which says voice isn't available while it's switched off", async () => {
@@ -70,12 +104,5 @@ describe("LessonScreen", () => {
     const alert = await screen.findByRole("alert");
     expect(within(alert).getByRole("button", { name: "Try again" })).toBeInTheDocument();
     await waitFor(() => expect(within(alert).getByRole("link", { name: "Back to chapters" })).toHaveAttribute("href", "/student"));
-  });
-});
-
-describe("formatDuration", () => {
-  it("pads minutes and seconds, and adds hours past one", () => {
-    expect(formatDuration(75)).toBe("01:15");
-    expect(formatDuration(3725)).toBe("1:02:05");
   });
 });

@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { WifiOff, Loader2, CheckCircle2 } from "lucide-react";
+import { STUDENT_COLORS } from "../theme/colors";
 
 interface ConnectionQualityBannerProps {
   quality: "good" | "poor" | "reconnecting" | null;
@@ -20,21 +21,23 @@ export function ConnectionQualityBanner({ quality, notice }: ConnectionQualityBa
   const config = notice
     ? notice.kind === "ended"
       ? {
-          // Settled green, and no spinner: the lesson is complete, not pending. A
-          // spinner here would tell the child to wait for something that is not coming.
-          bg: "#ECFDF5",
-          border: "#A7F3D0",
-          color: "#065F46",
-          icon: <CheckCircle2 size={14} />,
+          // Settled and celebratory, and no spinner: the lesson is complete, not
+          // pending. A spinner here would tell the child to wait for something that
+          // is not coming. A pale soft-surface wash with deep-ocean text — a step
+          // lighter than the rotating notice so the two stay distinguishable.
+          bg: "#EEF5F3",
+          border: `${STUDENT_COLORS.tutor}40`,
+          color: STUDENT_COLORS.tutor,
+          icon: <CheckCircle2 size={14} style={{ color: STUDENT_COLORS.tutor }} />,
           text: notice.message,
         }
       : {
-          // Tutor-purple, not warning-red. A rotation the child never asked about should
-          // not look like the connection dropping — it reads as "Aanya is doing
-          // something", which is what it is.
-          bg: "#EEF0FF",
-          border: "#C7CCF7",
-          color: "#4338CA",
+          // Tutor deep-ocean on the soft surface, not warning-red. A rotation the child
+          // never asked about should not look like the connection dropping — it reads
+          // as "Aanya is doing something", which is what it is.
+          bg: STUDENT_COLORS.softSurface,
+          border: `${STUDENT_COLORS.tutor}33`,
+          color: STUDENT_COLORS.tutor,
           icon: <Loader2 size={14} className="animate-spin" />,
           text: notice.message,
         }

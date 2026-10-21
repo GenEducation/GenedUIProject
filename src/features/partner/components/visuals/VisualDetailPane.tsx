@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, BookOpenText, Check, Crop, History, ListChecks, Sparkles, TriangleAlert, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpenText, Check, Crop, History, ListChecks, PenLine, SquareDashedMousePointer, Sparkles, TriangleAlert, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useVisualDetail } from "../../hooks/useVisualDetail";
 import {
@@ -17,6 +17,9 @@ import { DecisionPanel, isTypingTarget } from "./DecisionPanel";
 import { RegenerationStatus } from "./RegenerationStatus";
 import { VisualImage } from "./VisualImage";
 import { Skeleton } from "../Skeleton";
+import { MarkupLayer } from "./MarkupLayer";
+import { MarkList } from "./MarkList";
+import { specParts, type Box, type Mark } from "./markup";
 
 interface VisualDetailPaneProps {
   id: string;
@@ -41,7 +44,7 @@ const formatDate = (iso: string) => {
 
 const STATE_STYLE: Record<CandidateState, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-200",
-  accepted: "bg-[#D1E6D9]/60 text-[#1A3D2C] border-[#1A3D2C]/10",
+  accepted: "bg-[#DCEBE7]/60 text-[#122D30] border-[#122D30]/10",
   rejected: "bg-red-50 text-red-600 border-red-200",
 };
 
@@ -61,7 +64,7 @@ export function StateChip({ state }: { state: CandidateState }) {
 
 function SectionLabel({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <h5 className="flex items-center gap-2 text-[10px] font-black text-[#1A3D2C]/50 uppercase tracking-widest mb-2">
+    <h5 className="flex items-center gap-2 text-[10px] font-black text-[#122D30]/50 uppercase tracking-widest mb-2">
       {icon}
       {children}
     </h5>
@@ -82,10 +85,10 @@ function Passages({ detail }: { detail: VisualDetail }) {
         {used.map((p) => (
           <blockquote
             key={p.ref}
-            className="relative rounded-xl bg-[#FBFAF5] border border-[#1A3D2C]/5 pl-4 pr-3 py-3 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-r-full before:bg-[#1A3D2C]/60"
+            className="relative rounded-xl bg-[#FBFAF5] border border-[#122D30]/5 pl-4 pr-3 py-3 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-r-full before:bg-[#075E63]/60"
           >
-            <p className="text-[13px] leading-relaxed text-[#1A3D2C]/85 whitespace-pre-line">{p.text}</p>
-            <cite className="block mt-1.5 not-italic text-[9px] font-black uppercase tracking-widest text-[#1A3D2C]/35">
+            <p className="text-[13px] leading-relaxed text-[#122D30]/85 whitespace-pre-line">{p.text}</p>
+            <cite className="block mt-1.5 not-italic text-[9px] font-black uppercase tracking-widest text-[#122D30]/35">
               {p.ref}
             </cite>
           </blockquote>
@@ -93,14 +96,14 @@ function Passages({ detail }: { detail: VisualDetail }) {
       </div>
       {others.length > 0 && (
         <details className="mt-2 group">
-          <summary className="cursor-pointer text-[11px] font-bold text-[#1A3D2C]/50 hover:text-[#1A3D2C] select-none">
+          <summary className="cursor-pointer text-[11px] font-bold text-[#122D30]/50 hover:text-[#122D30] select-none">
             Other passages from this concept ({others.length})
           </summary>
           <div className="mt-2 flex flex-col gap-2">
             {others.map((p) => (
-              <blockquote key={p.ref} className="rounded-xl bg-[#F8F9F8] px-3 py-2.5">
-                <p className="text-xs leading-relaxed text-[#1A3D2C]/60 whitespace-pre-line">{p.text}</p>
-                <cite className="block mt-1 not-italic text-[9px] font-black uppercase tracking-widest text-[#1A3D2C]/30">
+              <blockquote key={p.ref} className="rounded-xl bg-[#F6F7F2] px-3 py-2.5">
+                <p className="text-xs leading-relaxed text-[#122D30]/60 whitespace-pre-line">{p.text}</p>
+                <cite className="block mt-1 not-italic text-[9px] font-black uppercase tracking-widest text-[#122D30]/30">
                   {p.ref}
                 </cite>
               </blockquote>
@@ -129,12 +132,12 @@ function FamilyTimeline({ detail, onOpen }: { detail: VisualDetail; onOpen: (id:
                 aria-current={current ? "true" : undefined}
                 onClick={() => onOpen(member.id)}
                 className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${
-                  current ? "bg-[#1A3D2C]/5 cursor-default" : "hover:bg-[#1A3D2C]/5"
+                  current ? "bg-[#075E63]/5 cursor-default" : "hover:bg-[#075E63]/5"
                 }`}
               >
-                <span className="text-xs font-black text-[#1A3D2C] w-16 shrink-0">Version {i + 1}</span>
+                <span className="text-xs font-black text-[#122D30] w-16 shrink-0">Version {i + 1}</span>
                 <StateChip state={member.state} />
-                <span className="ml-auto text-[11px] font-bold text-[#1A3D2C]/40">{formatDate(member.created_at)}</span>
+                <span className="ml-auto text-[11px] font-bold text-[#122D30]/40">{formatDate(member.created_at)}</span>
               </button>
             </li>
           );
@@ -147,6 +150,32 @@ function FamilyTimeline({ detail, onOpen }: { detail: VisualDetail; onOpen: (id:
 export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, onNext }: VisualDetailPaneProps) {
   const { detail, loading, error, reload } = useVisualDetail(id);
   const [zoomed, setZoomed] = useState(false);
+  // Mark up: boxes and pins on the picture, sent as plain instructions in the redraw note (see markup.ts).
+  const [marking, setMarking] = useState(false);
+  const [tool, setTool] = useState<Mark["kind"]>("change");
+  const [marks, setMarks] = useState<Mark[]>([]);
+  const [activeMark, setActiveMark] = useState<string | null>(null);
+  const markSeq = useRef(0);
+  // A new version can be asked for while the visual is pending, or once rejected with none on the way.
+  const canMark =
+    !!detail?.image_url &&
+    (detail.state === "pending" || (detail.state === "rejected" && (!detail.regeneration || detail.regeneration.state === "failed")));
+
+  const addMark = (kind: Mark["kind"], box: Box) => {
+    const id = `mark-${++markSeq.current}`;
+    // One crop at most: a new one replaces the last.
+    setMarks((ms) => [...(kind === "crop" ? ms.filter((m) => m.kind !== "crop") : ms), { id, kind, box, part: "", instruction: "" }]);
+    setActiveMark(id);
+  };
+  const changeMark = (id: string, patch: Partial<Pick<Mark, "part" | "instruction">>) =>
+    setMarks((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+  const removeMark = (id: string) => setMarks((ms) => ms.filter((m) => m.id !== id));
+  const pictureRef = useRef<HTMLDivElement>(null);
+  const editMarks = () => {
+    setMarking(true);
+    pictureRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+  };
+  // Adjust crop: cut a textbook figure again from its page (main's recrop flow, `CropEditor`).
   const [cropping, setCropping] = useState(false);
 
   // → moves to the next pending visual (not while cropping: arrows move a box there).
@@ -163,7 +192,7 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
 
   return (
     <div className="flex flex-col min-h-full">
-      <div className="sticky top-0 z-10 flex items-center gap-2 px-5 md:px-7 py-3 bg-white/90 backdrop-blur border-b border-[#1A3D2C]/5">
+      <div className="sticky top-0 z-10 flex items-center gap-2 px-5 md:px-7 py-3 bg-white/90 backdrop-blur border-b border-[#122D30]/5">
         <Button variant="tertiary" size="sm" leadingIcon={<ArrowLeft size={14} />} onClick={onBack}>
           All visuals
         </Button>
@@ -191,7 +220,7 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
 
       {error && !detail && (
         <div className="flex flex-col items-center gap-3 py-16 text-center px-6">
-          <p className="text-sm font-bold text-[#1A3D2C]">{error}</p>
+          <p className="text-sm font-bold text-[#122D30]">{error}</p>
           <Button variant="outline" onClick={() => void reload()}>
             Try again
           </Button>
@@ -211,15 +240,68 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
         >
           {/* Left: the picture */}
           <div className="flex flex-col gap-4 lg:sticky lg:top-[68px] self-start w-full">
-            <div className="relative rounded-2xl border border-[#1A3D2C]/10 overflow-hidden bg-white">
+            <div ref={pictureRef} className="relative rounded-2xl border border-[#122D30]/10 overflow-hidden bg-white">
               <div className={zoomed ? "overflow-auto max-h-[70vh]" : ""} data-testid="visual-zoom-frame">
                 <VisualImage
                   imageUrl={detail.image_url}
                   alt={detail.title}
                   onExpired={() => void reload()}
                   className={zoomed ? "!w-[200%] max-w-none" : ""}
-                />
+                >
+                  {canMark && (marking || marks.length > 0) && (
+                    <MarkupLayer
+                      width={detail.width}
+                      height={detail.height}
+                      marks={marks}
+                      tool={marking ? tool : null}
+                      activeId={activeMark}
+                      onAdd={addMark}
+                      onSelect={setActiveMark}
+                    />
+                  )}
+                </VisualImage>
               </div>
+
+              {/* Mark up: pick a tool, then drag on the picture (a tap drops a pin). */}
+              {canMark && marking && (
+                <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white/95 p-1 shadow-[0_6px_18px_-8px_rgb(18_45_48/0.45)] ring-1 ring-[#122D30]/10">
+                  <div role="radiogroup" aria-label="Mark-up tool" className="flex gap-1">
+                    {([
+                      { kind: "change", label: "Mark a change", icon: <SquareDashedMousePointer size={14} /> },
+                      { kind: "crop", label: "Crop", icon: <Crop size={14} /> },
+                    ] as const).map((t) => (
+                      <Button
+                        key={t.kind}
+                        size="sm"
+                        pill
+                        role="radio"
+                        aria-checked={tool === t.kind}
+                        variant={tool === t.kind ? "primary" : "tertiary"}
+                        leadingIcon={t.icon}
+                        onClick={() => setTool(t.kind)}
+                      >
+                        {t.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <Button size="sm" pill variant="outline" onClick={() => setMarking(false)}>
+                    Done
+                  </Button>
+                </div>
+              )}
+
+              {canMark && !marking && (
+                <Button
+                  size="sm"
+                  pill
+                  variant="outline"
+                  leadingIcon={<PenLine size={14} />}
+                  onClick={() => setMarking(true)}
+                  className="!absolute bottom-2 right-12 bg-white/90"
+                >
+                  {marks.length ? "Edit marks" : "Mark up"}
+                </Button>
+              )}
               {detail.image_url && (
                 <Button
                   iconOnly
@@ -234,6 +316,23 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
                 </Button>
               )}
             </div>
+            {canMark && marking && marks.length === 0 && (
+              <p className="text-xs font-bold text-[#122D30]/55">
+                {tool === "crop"
+                  ? "Drag over the area to keep. Everything outside it is left out of the new version."
+                  : "Drag a box over the part to change, or tap to drop a pin. Add as many as you need."}
+              </p>
+            )}
+            {canMark && (
+              <MarkList
+                marks={marks}
+                parts={specParts(detail.spec)}
+                activeId={activeMark}
+                onSelect={setActiveMark}
+                onChange={changeMark}
+                onRemove={removeMark}
+              />
+            )}
             {detail.kind === "figure" && (
               <div className="flex items-center gap-3">
                 <Button variant="outline" size="sm" leadingIcon={<Crop size={14} />} onClick={() => setCropping(true)}>
@@ -249,22 +348,22 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
           <div className="flex flex-col gap-6 min-w-0">
             <header>
               {detail.concept.section_title && (
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#1A3D2C]/40 mb-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40 mb-1">
                   {detail.concept.section_title}
                 </p>
               )}
-              <h3 className="text-xl md:text-2xl font-black text-[#1A3D2C] tracking-tight leading-tight">
+              <h3 className="text-xl md:text-2xl font-black text-[#122D30] tracking-tight leading-tight">
                 {detail.concept.title}
               </h3>
               {detail.concept.definition && (
-                <p className="mt-2 text-sm leading-relaxed text-[#1A3D2C]/70">{detail.concept.definition}</p>
+                <p className="mt-2 text-sm leading-relaxed text-[#122D30]/70">{detail.concept.definition}</p>
               )}
             </header>
 
             {detail.concept.feedback && (
-              <div className="rounded-xl bg-[#D1E6D9]/40 border border-[#1A3D2C]/10 px-4 py-3 flex items-start gap-2.5">
-                <Sparkles size={14} className="text-[#1A3D2C] mt-0.5 shrink-0" aria-hidden />
-                <p className="text-xs text-[#1A3D2C]/80">
+              <div className="rounded-xl bg-[#DCEBE7]/40 border border-[#122D30]/10 px-4 py-3 flex items-start gap-2.5">
+                <Sparkles size={14} className="text-[#122D30] mt-0.5 shrink-0" aria-hidden />
+                <p className="text-xs text-[#122D30]/80">
                   <span className="font-black">Made again after: </span>
                   {detail.concept.feedback.reason_codes.map((c) => REASON_LABELS[c] ?? c).join(", ")}
                   {detail.concept.feedback.note && <> — <q>{detail.concept.feedback.note}</q></>}
@@ -279,9 +378,9 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
                 <SectionLabel icon={<ListChecks size={12} />}>The picture should show</SectionLabel>
                 <ul className="flex flex-col gap-1.5">
                   {detail.spec.checklist.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-[13px] text-[#1A3D2C]/85">
-                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded-[5px] border-[1.5px] border-[#1A3D2C]/25 flex items-center justify-center">
-                        <Check size={10} className="text-[#1A3D2C]/30" aria-hidden />
+                    <li key={i} className="flex items-start gap-2.5 text-[13px] text-[#122D30]/85">
+                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded-[5px] border-[1.5px] border-[#122D30]/25 flex items-center justify-center">
+                        <Check size={10} className="text-[#122D30]/30" aria-hidden />
                       </span>
                       {item}
                     </li>
@@ -295,6 +394,12 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
                 <h5 className="flex items-center gap-2 text-xs font-black text-amber-800 mb-1.5">
                   <TriangleAlert size={13} aria-hidden /> The AI reviewer flagged:
                 </h5>
+                {detail.critique.kinds?.includes("content") && (
+                  <p className="text-xs font-bold text-amber-900 mb-1.5">
+                    This redraw differs from the textbook picture. Compare it with the original, and accept it only if
+                    these differences don&apos;t matter for what it teaches or the questions about it.
+                  </p>
+                )}
                 <ul className="list-disc pl-5 flex flex-col gap-1 text-xs text-amber-900/80">
                   {detail.critique.problems.map((p, i) => (
                     <li key={i}>{p}</li>
@@ -304,8 +409,8 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
             )}
 
             {detail.decision && (
-              <p className="text-xs text-[#1A3D2C]/60">
-                <span className="font-black text-[#1A3D2C]">
+              <p className="text-xs text-[#122D30]/60">
+                <span className="font-black text-[#122D30]">
                   {detail.decision.decision === "accept" ? "Accepted" : "Rejected"}
                 </span>{" "}
                 on {formatDate(detail.decision.decided_at)}
@@ -321,10 +426,19 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
                 detail={detail}
                 onDecided={(result) => onDecided(detail.id, result)}
                 onConflict={() => void reload()}
+                marks={marks}
+                onEditMarks={editMarks}
               />
             )}
 
-            <RegenerationStatus detail={detail} onOpen={onOpen} onChanged={() => void reload()} />
+            <RegenerationStatus
+              detail={detail}
+              onOpen={onOpen}
+              onChanged={() => void reload()}
+              marks={canMark ? marks : []}
+              onMarksSent={() => { setMarks([]); setMarking(false); }}
+              onEditMarks={editMarks}
+            />
           </div>
         </motion.div>
       )}

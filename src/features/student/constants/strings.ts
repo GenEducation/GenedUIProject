@@ -14,14 +14,14 @@ export const STRINGS = {
     practice: "Practice",
     schedule: "Schedule",
     reportCard: "Report Card",
-    me: "Me",
     profile: "Profile",
   },
 
   streak: {
     dayStreak: "Current Streak",
-    sessions: "Sessions Done",
+    chaptersCompleted: "Chapters Completed",
     longestStreak: "Longest Streak",
+    timeSpent: "Time Spent (est.)",
   },
 
   practice: {

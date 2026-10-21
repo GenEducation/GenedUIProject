@@ -44,7 +44,7 @@ function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: num
       animate={{ opacity: 1, x: 0, y: 0 }}
       exit={{ opacity: 0, x: 24 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className={`pointer-events-auto flex w-[320px] max-w-[90vw] items-start gap-3 rounded-xl border bg-white p-4 shadow-[0_24px_60px_rgba(4,46,92,.22)] ${
+      className={`pointer-events-auto flex w-[320px] max-w-[90vw] items-start gap-3 rounded-xl border bg-white p-4 shadow-[0_24px_60px_rgba(18,45,48,.22)] ${
         isError ? "border-l-4 border-l-danger border-border" : "border-l-4 border-l-emerald border-border"
       }`}
     >

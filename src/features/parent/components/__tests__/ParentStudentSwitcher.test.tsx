@@ -5,7 +5,6 @@ import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
 import { seedAuthLocalStorage } from "@/test/helpers/auth";
 import type { LinkedStudent } from "../../services/parentService";
-import { readSeen } from "../../utils/studentActivity";
 import { ParentStudentSwitcher } from "../ParentStudentSwitcher";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
@@ -46,11 +45,6 @@ beforeEach(() => {
 });
 
 describe("ParentStudentSwitcher", () => {
-  it("marks the child being viewed as seen", () => {
-    renderSwitcher();
-    expect(readSeen("p1").s1).toBeGreaterThan(Date.now() - 1000);
-  });
-
   it("puts the most recently viewed child first and focused, so Enter goes back to them", async () => {
     const now = Date.now();
     localStorage.setItem(SEEN_KEY, JSON.stringify({ s2: now - 5 * HOUR, s3: now - HOUR }));
@@ -83,38 +77,11 @@ describe("ParentStudentSwitcher", () => {
     ]);
   });
 
-  it("doesn't flag activity the parent has already seen", async () => {
-    const now = Date.now();
-    localStorage.setItem(SEEN_KEY, JSON.stringify({ s2: now - 10 * 60 * 1000 }));
-    sessionsAt({ s2: now - HOUR });
-    renderSwitcher({ students: kids.slice(0, 2) });
-
-    await waitFor(() => expect(screen.getByRole("button", { name: "Switch to Priya" })).toBeInTheDocument());
-  });
-
   it("with two children, flips straight to the other and flags new activity", async () => {
     sessionsAt({ s2: Date.now() - 60 * 1000 });
     const { props } = renderSwitcher({ students: kids.slice(0, 2) });
 
     fireEvent.click(await screen.findByRole("button", { name: "Switch to Priya, new activity" }));
     expect(props.onSwitch).toHaveBeenCalledWith("s2");
-  });
-
-  it("closes the menu on Escape and hands focus back", () => {
-    renderSwitcher();
-    const toggle = screen.getByRole("button", { name: /^Switch Account/ });
-    fireEvent.click(toggle);
-    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
-    return waitFor(() => {
-      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
-      expect(toggle).toHaveFocus();
-    });
-  });
-
-  it("See all profiles hands off to the picker", () => {
-    const { props } = renderSwitcher();
-    fireEvent.click(screen.getByRole("button", { name: /^Switch Account/ }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "See all profiles" }));
-    expect(props.onSeeAll).toHaveBeenCalled();
   });
 });

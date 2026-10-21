@@ -19,7 +19,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /* The preorder page's design tokens are scoped to `.gened-preorder`, and the
    Select panel portals to <body> — outside that scope — so the palette has to
    be passed as literal values rather than var() references. */
-const PO_GREEN = "#059f6d";
+const PO_GREEN = "#075E63";
 const PO_SELECT_TRIGGER_STYLE: CSSProperties = {
   background: "var(--cream)",
   border: "1px solid var(--line)",
@@ -31,7 +31,7 @@ const PO_SELECT_TRIGGER_STYLE: CSSProperties = {
 };
 const PO_SELECT_PANEL_STYLE: CSSProperties = {
   fontFamily: "Manrope, system-ui, sans-serif",
-  color: "#0a2a4a",
+  color: "#122D30",
 };
 
 const BUYER_TYPE_OPTIONS: SelectOption[] = [
@@ -167,7 +167,7 @@ export function PreorderModal({ isOpen, onClose }: Props) {
           contact: data.phone,
         },
         theme: {
-          color: "#059F6D",
+          color: "#075E63",
         },
         handler: async (response: RazorpayHandlerResponse) => {
           try {

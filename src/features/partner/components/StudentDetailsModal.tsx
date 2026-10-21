@@ -115,16 +115,16 @@ export function StudentDetailsModal({
     .slice(0, 2);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 bg-[#1A3D2C]/20 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 bg-[#075E63]/20 backdrop-blur-sm">
       <motion.div
         initial={{ opacity: 0, scale: 0.92, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92, y: 24 }}
         transition={{ type: "spring", stiffness: 300, damping: 28 }}
-        className="relative w-full max-w-sm md:max-w-md bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-[0_24px_80px_rgba(26,61,44,0.18)] overflow-hidden flex flex-col"
+        className="relative w-full max-w-sm md:max-w-md bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-[0_24px_80px_rgba(18,45,48,0.18)] overflow-hidden flex flex-col"
       >
         {/* Header strip */}
-        <div className="bg-[#1A3D2C] px-6 md:px-10 pt-8 pb-10 flex flex-col items-center text-center">
+        <div className="bg-[#075E63] px-6 md:px-10 pt-8 pb-10 flex flex-col items-center text-center">
           {/* Close */}
           <Button iconOnly size="sm" variant="tertiary" tone="onDark" className="absolute top-5 right-5" aria-label="Close" onClick={onClose} disabled={isBusy}>
             <X size={18} />
@@ -153,8 +153,8 @@ export function StudentDetailsModal({
         <div className="px-6 md:px-10 pt-6 pb-8 flex flex-col gap-5">
           {isFetching ? (
             <div className="flex flex-col items-center justify-center py-10 gap-3">
-              <Loader2 size={24} className="animate-spin text-[#1A3D2C]/30" />
-              <p className="text-[11px] font-bold text-[#1A3D2C]/30 uppercase tracking-widest">Loading profile…</p>
+              <Loader2 size={24} className="animate-spin text-[#122D30]/30" />
+              <p className="text-[11px] font-bold text-[#122D30]/30 uppercase tracking-widest">Loading profile…</p>
             </div>
           ) : fetchError ? (
             <div className="py-8 text-center">
@@ -177,11 +177,11 @@ export function StudentDetailsModal({
                 ].map(({ icon, label, value }) => (
                   <div
                     key={label}
-                    className="flex items-center gap-3 px-4 py-3 bg-[#F8F9F8] rounded-2xl"
+                    className="flex items-center gap-3 px-4 py-3 bg-[#F6F7F2] rounded-2xl"
                   >
-                    <span className="text-[#1A3D2C]/30 shrink-0">{icon}</span>
-                    <span className="text-[10px] font-black text-[#1A3D2C]/40 uppercase tracking-widest w-20 shrink-0">{label}</span>
-                    <span className="text-xs font-bold text-[#1A3D2C] truncate">{value}</span>
+                    <span className="text-[#122D30]/30 shrink-0">{icon}</span>
+                    <span className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest w-20 shrink-0">{label}</span>
+                    <span className="text-xs font-bold text-[#122D30] truncate">{value}</span>
                   </div>
                 ))}
               </div>
@@ -199,7 +199,7 @@ export function StudentDetailsModal({
                   <button
                     onClick={handleAccept}
                     disabled={isBusy}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#1A3D2C] text-white rounded-2xl hover:bg-[#1A3D2C]/90 transition-all font-bold text-sm shadow-lg shadow-[#1A3D2C]/10 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#075E63] text-white rounded-2xl hover:bg-[#075E63]/90 transition-all font-bold text-sm shadow-lg shadow-[#122D30]/10 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {isApproving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                     {isApproving ? "Approving…" : "Accept Request"}

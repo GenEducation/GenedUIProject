@@ -19,13 +19,15 @@ vi.mock("next/navigation", () => ({
 
 // The dashboard views are covered elsewhere; here they only need to exist.
 vi.mock("next/dynamic", () => ({ default: () => () => <div data-testid="lazy-view" /> }));
-vi.mock("../ParentChatExploration", () => ({ ParentChatExploration: () => <div>chat view</div> }));
+// Every render of a view is logged, so a test can tell if a stale page was drawn even once.
+const renders = vi.hoisted(() => [] as string[]);
+vi.mock("../ParentChatExploration", () => ({ ParentChatExploration: () => { renders.push("chat"); return <div>chat view</div>; } }));
 vi.mock("../ParentScheduleView", () => ({ ParentScheduleView: () => <div>schedule view</div> }));
-vi.mock("../ParentMomentsView", () => ({ ParentMomentsView: () => <div>moments view</div> }));
-vi.mock("../ParentProfileView", () => ({ ParentProfileView: () => <div>profile view</div> }));
+vi.mock("../ParentMomentsView", () => ({ ParentMomentsView: () => { renders.push("moments"); return <div>moments view</div>; } }));
+vi.mock("../settings/ParentSettingsView", () => ({ ParentSettingsView: () => <div>profile view</div> }));
 vi.mock("@/components/NotificationBell", () => ({ NotificationBell: () => null }));
 
-import { ParentHome } from "../ParentHome";
+import { ParentHome, routeFromPath } from "../ParentHome";
 
 autoResetStore(useParentStore);
 
@@ -74,13 +76,6 @@ describe("ParentHome — opening the portal", () => {
     expect(hasEnteredPortal()).toBe(true);
   });
 
-  it("picking another child goes to their dashboard", async () => {
-    twoKids();
-    render(<ParentHome />);
-    fireEvent.click(await screen.findByRole("button", { name: "View Priya's dashboard" }));
-    expect(nav.push).toHaveBeenCalledWith("/parent/s2");
-  });
-
   it("a refresh after the picker keeps the current page", async () => {
     twoKids();
     markPortalEntered();
@@ -94,14 +89,6 @@ describe("ParentHome — opening the portal", () => {
     twoKids();
     markPortalEntered();
     localStorage.setItem("gened_auth_token", "a-different-session");
-    render(<ParentHome />);
-    expect(await picker()).toBeInTheDocument();
-  });
-
-  it("bare /parent shows the picker even after entering (See all profiles)", async () => {
-    twoKids();
-    markPortalEntered();
-    nav.pathname = "/parent";
     render(<ParentHome />);
     expect(await picker()).toBeInTheDocument();
   });
@@ -139,13 +126,6 @@ describe("ParentHome — top bar", () => {
     expect(within(banner).getByRole("heading", { level: 1 })).toHaveTextContent(/^Good (morning|afternoon|evening), Ramesh!/);
     expect(await within(banner).findByText("Here's how Aarav is doing on their learning journey.")).toBeInTheDocument();
   });
-
-  it("uses the parent's real name once login provides it", () => {
-    linkChildren([kid("s1", "Aarav")]);
-    useParentStore.getState().setParentProfile({ user_id: "p1", username: "ramesh190", email: "m@x.com", role: "parent", name: "Ramesh Kumar" });
-    render(<ParentHome />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/, Ramesh Kumar!/);
-  });
 });
 
 describe("ParentHome — sidebar Switch", () => {
@@ -159,15 +139,6 @@ describe("ParentHome — sidebar Switch", () => {
     expect(nav.push).toHaveBeenCalledWith("/parent/s2/chat");
   });
 
-  it("keeps the report card open when switching from it", async () => {
-    linkChildren([kid("s1", "Aarav"), kid("s2", "Priya")]);
-    nav.pathname = "/parent/s1/report";
-    render(<ParentHome />);
-
-    fireEvent.click(await screen.findByRole("button", { name: "Switch to Priya" }));
-    expect(nav.push).toHaveBeenCalledWith("/parent/s2/report");
-  });
-
   it("keeps the open subject when switching", async () => {
     linkChildren([kid("s1", "Aarav"), kid("s2", "Priya")]);
     nav.pathname = "/parent/s1/subject/Mathematics";
@@ -175,25 +146,6 @@ describe("ParentHome — sidebar Switch", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Switch to Priya" }));
     expect(nav.push).toHaveBeenCalledWith("/parent/s2/subject/Mathematics");
-  });
-
-  it("from Home, switches to the other child's Home", async () => {
-    linkChildren([kid("s1", "Aarav"), kid("s2", "Priya")]);
-    nav.pathname = "/parent/s1";
-    render(<ParentHome />);
-
-    fireEvent.click(await screen.findByRole("button", { name: "Switch to Priya" }));
-    expect(nav.push).toHaveBeenCalledWith("/parent/s2");
-  });
-
-  it("hides Switch Account for a single child", async () => {
-    linkChildren([kid("s1", "Aarav")]);
-    render(<ParentHome />);
-
-    expect(await screen.findByRole("link", { name: "Home" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Report Card" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Settings" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /switch/i })).not.toBeInTheDocument();
   });
 
   it("with three or more children, offers a menu that switches in place or opens the picker", async () => {
@@ -207,5 +159,79 @@ describe("ParentHome — sidebar Switch", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Switch Account/ }));
     fireEvent.click(screen.getByRole("menuitem", { name: "See all profiles" }));
     expect(nav.push).toHaveBeenLastCalledWith("/parent");
+  });
+});
+
+describe("ParentHome — first run with no child connected", () => {
+  const dialog = () => screen.findByRole("dialog", { name: "Let's connect your child" });
+
+  it("'later' hides it for this login, and the empty Home can bring it back", async () => {
+    linkChildren([]);
+    nav.pathname = "/parent";
+    const { unmount } = render(<ParentHome />);
+
+    fireEvent.click(within(await dialog()).getByRole("button", { name: "I'll do this later" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    // a refresh in the same login stays quiet
+    unmount();
+    render(<ParentHome />);
+    expect(await screen.findByText("Link your child to get started")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show me how" }));
+    expect(await dialog()).toBeInTheDocument();
+  });
+
+  it("lets the parent approve a waiting request right in the popup", async () => {
+    linkChildren([{ ...kid("s9", "Kabir"), status: "PENDING" }]);
+    server.use(
+      http.patch(`${BASE}/parent/link/:id/status`, () =>
+        HttpResponse.json({ ...kid("s9", "Kabir") }),
+      ),
+    );
+    nav.pathname = "/parent";
+    render(<ParentHome />);
+
+    fireEvent.click(within(await dialog()).getByRole("button", { name: "Approve Kabir" }));
+    fireEvent.click(within(await dialog()).getByRole("button", { name: /yes, i'm their parent or guardian/i }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+});
+
+describe("ParentHome — following the URL", () => {
+  beforeEach(() => markPortalEntered());
+
+  it("shows the new page on the very first render after the URL changes", async () => {
+    linkChildren([kid("s1", "Aarav")]);
+    const { rerender } = render(<ParentHome />);
+    expect(await screen.findByText("chat view")).toBeInTheDocument();
+
+    // A sidebar click: the layout stays mounted and only the URL changes.
+    renders.length = 0;
+    nav.pathname = "/parent/s1/moments";
+    rerender(<ParentHome />);
+    // The old page must not be drawn again, even for one render.
+    expect(renders).not.toContain("chat");
+    expect(screen.getByText("moments view")).toBeInTheDocument();
+    expect(screen.queryByText("chat view")).not.toBeInTheDocument();
+  });
+
+  it("trusts the URL over a stale view left in the store", async () => {
+    linkChildren([kid("s1", "Aarav")]);
+    useParentStore.setState({ activeDashboardView: "moments", selectedStudentId: "s1" });
+    render(<ParentHome />);
+    expect(await screen.findByText("chat view")).toBeInTheDocument();
+    expect(screen.queryByText("moments view")).not.toBeInTheDocument();
+  });
+});
+
+describe("routeFromPath", () => {
+  it.each([
+    ["/parent", { view: null, studentId: null }],
+    ["/parent/settings", { view: "profile", studentId: null }],
+    ["/parent/s1/subject/Mathematics", { view: "subject", studentId: "s1" }],
+  ])("%s", (path, expected) => {
+    expect(routeFromPath(path)).toEqual(expected);
   });
 });

@@ -166,7 +166,7 @@ export function SlotScheduler({ teacherId, partnerId, onOpenSlot }: SlotSchedule
           <button
             onClick={() => setCreateOpen(true)}
             disabled={labs.length === 0}
-            className="flex items-center gap-2 rounded-xl bg-emerald px-4.5 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(5,159,109,.28)] transition-all hover:-translate-y-0.5 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-2 rounded-xl bg-emerald px-4.5 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(7,94,99,.28)] transition-all hover:-translate-y-0.5 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus size={17} />
             Schedule period
@@ -217,7 +217,7 @@ export function SlotScheduler({ teacherId, partnerId, onOpenSlot }: SlotSchedule
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: Math.min(i, 8) * 0.04, ease: "easeOut" }}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(4,46,92,.06)]"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(18,45,48,.06)]"
             >
               <div className="flex items-center gap-4">
                 <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-ink/5 text-ink">

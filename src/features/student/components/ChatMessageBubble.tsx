@@ -207,11 +207,18 @@ export const ChatMessageBubble = React.memo(
         {!isUser && (
           <div className="relative flex-shrink-0 mt-0.5">
             {isStreaming && (
-              <div className="absolute -inset-[3px] rounded-full border-[2px] border-transparent border-t-[var(--tutor)] border-r-[var(--tutor)]/20 animate-spin" style={{ animationDuration: '1s' }} />
+              <div className="absolute -inset-[3px] rounded-full border-[2px] border-transparent border-t-[var(--tutor)] border-r-[var(--tutor)] animate-spin" style={{ animationDuration: '1s' }} />
             )}
-            <div className="rounded-full overflow-hidden relative z-10 bg-white" style={{ border: "1px solid #E2E8F0", width: "clamp(32px, 8vw, 40px)", height: "clamp(32px, 8vw, 40px)" }}>
-              <Image src="/Favicon1.jpg" alt="AI Agent" width={40} height={40} className="object-cover w-full h-full" />
+            <div className="rounded-full overflow-hidden relative z-10 bg-white" style={{ border: "1px solid #E3E8E2", width: "clamp(32px, 8vw, 40px)", height: "clamp(32px, 8vw, 40px)" }}>
+              <Image src="/brand/gened-star.png" alt="AI Agent" width={40} height={40} className="object-contain w-full h-full p-[3px]" draggable={false} />
             </div>
+            {/* The tutor's presence spark — a teal dot ringed in canvas, the
+                same "Nia is here" mark the lesson screen uses. */}
+            <span
+              aria-hidden="true"
+              className={`absolute z-20 rounded-full ${isStreaming ? "animate-pulse" : ""}`}
+              style={{ right: -1, bottom: -1, width: 11, height: 11, background: "var(--tutor)", border: "2px solid var(--canvas)", boxShadow: "0 0 0 1px rgba(7,94,99,0.18)" }}
+            />
           </div>
         )}
 
@@ -232,11 +239,14 @@ export const ChatMessageBubble = React.memo(
                 borderRadius: isBoxed ? "1.75rem" : undefined,
                 borderTopRightRadius: isUser ? 6 : undefined,
                 borderTopLeftRadius: isSafetyRedirect ? 6 : undefined,
-                background: isUser ? "var(--tutor)" : isSafetyRedirect ? "#FFF8EC" : undefined,
-                color: isUser ? "#FFFFFF" : isSafetyRedirect ? "#7C4A11" : "#1A202C",
+                // The learner's turn sits on the soft deep-ocean surface under ink —
+                // the lesson screen's learner bubble — so deep ocean stays reserved
+                // for the tutor and the send action.
+                background: isUser ? "var(--soft-surface)" : isSafetyRedirect ? "#FFF8EC" : undefined,
+                color: isUser ? "var(--ink)" : isSafetyRedirect ? "#7C4A11" : "#122D30",
                 border: isSafetyRedirect ? "1px solid #F3D9AE" : "none",
                 boxShadow: isUser
-                  ? "0 2px 10px rgba(91,77,199,0.18)"
+                  ? "0 1px 2px rgba(18,45,48,0.04), 0 6px 18px -12px rgba(7,94,99,0.35)"
                   : isSafetyRedirect
                     ? "0 1px 4px rgba(0,0,0,0.05)"
                     : "none",
@@ -248,9 +258,9 @@ export const ChatMessageBubble = React.memo(
               }}
             >
               {message.text.length === 0 && !message.statusText && !message.elements && isStreaming ? (
-                <span style={{ color: "#94A3B8", fontWeight: 500 }} className="animate-pulse">Processing...</span>
+                <span style={{ color: "#7F9295", fontWeight: 500 }} className="animate-pulse">Processing...</span>
               ) : message.statusText && message.text.length === 0 && (!message.elements || message.elements.length === 0) ? (
-                <span style={{ color: "#94A3B8", fontWeight: 500 }} className="animate-pulse">
+                <span style={{ color: "#7F9295", fontWeight: 500 }} className="animate-pulse">
                   {message.statusText}
                 </span>
               ) : message.elements && message.elements.length > 0 ? (
@@ -280,14 +290,14 @@ export const ChatMessageBubble = React.memo(
           )}
 
           <div className={`flex items-center gap-3 ${isBoxed ? "px-2" : "px-0"}`}>
-            <span style={{ fontSize: "clamp(9px, 2vw, 11px)", fontWeight: 700, color: "#CBD5E1", textTransform: "uppercase", letterSpacing: "0.06em" }}>{message.timestamp}</span>
+            <span style={{ fontSize: "clamp(9px, 2vw, 11px)", fontWeight: 700, color: "#8FA1A3", textTransform: "uppercase", letterSpacing: "0.06em" }}>{message.timestamp}</span>
             {isUser && (
               <button aria-label="Copy message"
                 onClick={handleCopy}
-                style={{ width: 28, height: 28, borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8" }}
-                className="transition-all hover:bg-[#F7F8FC] hover:text-[var(--tutor)]"
+                style={{ width: 28, height: 28, borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#7F9295" }}
+                className="transition-all hover:bg-[var(--soft-surface)] hover:text-[var(--tutor)]"
               >
-                {copied ? <Check size={14} className="text-[#00B894]" /> : <Copy size={14} />}
+                {copied ? <Check size={14} className="text-[var(--tutor)]" /> : <Copy size={14} />}
               </button>
             )}
           </div>
@@ -307,10 +317,10 @@ export const ChatMessageBubble = React.memo(
               <div className="flex items-center gap-2">
                 <button aria-label="Copy message"
                   onClick={handleCopy}
-                  style={{ width: 32, height: 32, borderRadius: 10, background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", transition: "all 0.2s" }}
-                  className="hover:bg-[#F7F8FC] hover:text-[var(--tutor)]"
+                  style={{ width: 32, height: 32, borderRadius: 10, background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#7F9295", transition: "all 0.2s" }}
+                  className="hover:bg-[var(--soft-surface)] hover:text-[var(--tutor)]"
                 >
-                  {copied ? <Check size={15} className="text-[#00B894]" /> : <Copy size={15} />}
+                  {copied ? <Check size={15} className="text-[var(--tutor)]" /> : <Copy size={15} />}
                 </button>
 
                 {/* Read-aloud speaker button */}
@@ -321,16 +331,16 @@ export const ChatMessageBubble = React.memo(
                     width: 32,
                     height: 32,
                     borderRadius: 10,
-                    background: speakState === "speaking" ? "#EEF0FF" : "transparent",
+                    background: speakState === "speaking" ? "var(--soft-surface)" : "transparent",
                     border: "none",
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: speakState === "speaking" ? "var(--tutor)" : "#94A3B8",
+                    color: speakState === "speaking" ? "var(--tutor)" : "#7F9295",
                     transition: "all 0.2s",
                   }}
-                  className="hover:bg-[#F7F8FC] hover:text-[var(--tutor)]"
+                  className="hover:bg-[var(--soft-surface)] hover:text-[var(--tutor)]"
                 >
                   {speakState === "loading" ? (
                     <Loader2 size={15} className="animate-spin text-[var(--tutor)]" />
@@ -350,7 +360,7 @@ export const ChatMessageBubble = React.memo(
         {isUser && (
           <div
             className="flex-shrink-0 mt-0.5 rounded-full overflow-hidden hidden sm:block"
-            style={{ border: "1px solid #E2E8F0", width: 32, height: 32 }}
+            style={{ border: "1px solid #E3E8E2", width: 32, height: 32 }}
           >
             <StudentAvatar id={userAvatarId} size={32} />
           </div>

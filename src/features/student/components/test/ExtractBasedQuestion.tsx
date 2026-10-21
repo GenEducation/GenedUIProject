@@ -28,11 +28,12 @@ export function ExtractBasedQuestion({
 
   return (
     <div className="space-y-5">
+      {/* Passage as a quoted extract: canvas sheet with a teal margin rule. */}
       {question.extract_passage && (
-        <div className="relative p-3 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-200">
+        <div className="relative p-3 sm:p-5 rounded-2xl bg-[var(--canvas)] border border-[var(--surface-border)] border-l-4 border-l-[var(--primary)]">
           <div className="flex items-center gap-2 mb-3">
-            <BookOpen size={14} className="text-slate-400" />
-            <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+            <BookOpen size={14} className="text-[var(--primary)]" />
+            <span className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest">
               Read the passage carefully
             </span>
           </div>
@@ -53,7 +54,7 @@ export function ExtractBasedQuestion({
         disabled={disabled}
         placeholder={"Answer all parts here...\n(a) ...\n(b) ..."}
         rows={4}
-        className="w-full p-3 sm:p-4 rounded-xl border-2 border-[var(--primary-ink)]/10 focus:border-[var(--primary-ink)]/30 focus:ring-4 focus:ring-[var(--primary-ink)]/5 outline-none transition-all text-[15px] resize-none overflow-hidden min-h-[100px]"
+        className="w-full p-3 sm:p-4 rounded-xl border-2 border-[var(--primary-ink)]/10 focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10 outline-none transition-all text-[15px] resize-none overflow-hidden min-h-[100px]"
       />
     </div>
   );

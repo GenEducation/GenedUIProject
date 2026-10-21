@@ -14,7 +14,7 @@ const DOT_TONE: Record<HealthComponentStatus, string> = {
   ok: "bg-emerald",
   warn: "bg-warning",
   fail: "bg-danger",
-  unknown: "bg-[#1A3D2C]/25",
+  unknown: "bg-[#075E63]/25",
 };
 
 interface DeviceHealthStripProps {
@@ -48,7 +48,7 @@ export function DeviceHealthStrip({ device, onOpenDiagnostics }: DeviceHealthStr
       type="button"
       onClick={() => onOpenDiagnostics(device)}
       aria-label={`Diagnostics for ${device.device_label}. ${summary.isStale ? "Last known" : "Current"} self-test: ${spoken}.`}
-      className="mt-3 flex w-full items-center justify-between gap-2 rounded-xl border border-[#1A3D2C]/[0.06] bg-[#F4F3EE] px-2.5 py-2 text-left transition-colors hover:border-[#1A3D2C]/15 hover:bg-[#EFEDE4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1A3D2C]/25"
+      className="mt-3 flex w-full items-center justify-between gap-2 rounded-xl border border-[#122D30]/[0.06] bg-[#F6F7F2] px-2.5 py-2 text-left transition-colors hover:border-[#122D30]/15 hover:bg-[#EFEDE4] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#122D30]/25"
     >
       <div
         className={`flex shrink-0 items-center gap-1.5 transition-opacity ${
@@ -61,15 +61,15 @@ export function DeviceHealthStrip({ device, onOpenDiagnostics }: DeviceHealthStr
             <span
               key={component.key}
               title={`${component.label} — ${component.statusLabel}`}
-              className="relative flex h-6 w-6 items-center justify-center rounded-md bg-white shadow-[0_1px_2px_rgba(26,61,44,0.06)]"
+              className="relative flex h-6 w-6 items-center justify-center rounded-md bg-white shadow-[0_1px_2px_rgba(18,45,48,0.06)]"
             >
-              <Icon size={12} className="text-[#1A3D2C]/70" />
+              <Icon size={12} className="text-[#122D30]/70" />
               <span className="absolute -right-0.5 -top-0.5 flex h-1.5 w-1.5">
                 {showPulse && component.status === "ok" && (
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald opacity-60" />
                 )}
                 <span
-                  className={`relative inline-flex h-1.5 w-1.5 rounded-full ring-2 ring-[#F4F3EE] ${DOT_TONE[component.status]}`}
+                  className={`relative inline-flex h-1.5 w-1.5 rounded-full ring-2 ring-[#F6F7F2] ${DOT_TONE[component.status]}`}
                 />
               </span>
             </span>
@@ -79,7 +79,7 @@ export function DeviceHealthStrip({ device, onOpenDiagnostics }: DeviceHealthStr
 
       {/* The glyphs are the signal and never shrink; in a narrow card the
           timing text truncates away rather than bursting the tray. */}
-      <div className="flex min-w-0 items-center gap-1 overflow-hidden text-[10px] font-semibold text-[#1A3D2C]/45">
+      <div className="flex min-w-0 items-center gap-1 overflow-hidden text-[10px] font-semibold text-[#122D30]/45">
         {summary.uptimeLabel && (
           <>
             <span className="shrink-0 tabular-nums">{summary.uptimeLabel}</span>

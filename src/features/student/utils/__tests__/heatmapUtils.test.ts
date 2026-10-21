@@ -63,11 +63,11 @@ describe("buildHeatmapMonths", () => {
 
 describe("getActivityColor", () => {
   it("returns the placeholder color for future days regardless of count", () => {
-    expect(getActivityColor(4, true)).toBe("rgba(4,46,92,0.025)");
+    expect(getActivityColor(4, true)).toBe("rgba(18,45,48,0.025)");
   });
 
   it("maps counts 0-3 and 4+ to distinct colors", () => {
-    expect(getActivityColor(0, false)).toBe("rgba(4,46,92,0.06)");
+    expect(getActivityColor(0, false)).toBe("rgba(18,45,48,0.06)");
     expect(getActivityColor(1, false)).toBe("#9be9a8");
     expect(getActivityColor(2, false)).toBe("#40c463");
     expect(getActivityColor(3, false)).toBe("#30a14e");

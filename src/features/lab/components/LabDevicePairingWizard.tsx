@@ -192,13 +192,13 @@ export function LabDevicePairingWizard({
       aria-modal="true"
       aria-labelledby="pair-devices-title"
     >
-      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_60px_rgba(4,46,92,.22)]">
-        <div className="flex items-start justify-between border-b border-[#1A3D2C]/10 px-6 py-5">
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_60px_rgba(18,45,48,.22)]">
+        <div className="flex items-start justify-between border-b border-[#122D30]/10 px-6 py-5">
           <div>
-            <h2 id="pair-devices-title" className="text-xl font-black text-[#1A3D2C]">
+            <h2 id="pair-devices-title" className="text-xl font-black text-[#122D30]">
               {reconnectDevice ? `Reconnect ${reconnectDevice.device_label}` : "Pair devices"}
             </h2>
-            <p className="mt-1 text-sm text-[#1A3D2C]/60">
+            <p className="mt-1 text-sm text-[#122D30]/60">
               Enter the six-character code shown on each device. Devices will join{" "}
               <strong>{lab.name}</strong> automatically.
             </p>
@@ -209,16 +209,16 @@ export function LabDevicePairingWizard({
         </div>
 
         <div className="overflow-y-auto px-6 py-5">
-          <div className="mb-5 rounded-xl bg-[#F4F3EE] px-4 py-3 text-sm text-[#1A3D2C]/70">
+          <div className="mb-5 rounded-xl bg-[#F6F7F2] px-4 py-3 text-sm text-[#122D30]/70">
             No hardware ID, device token, WebSocket URL, or SSH access is needed. Keep each
             device on the pairing-code screen until it shows Ready.
           </div>
 
           <div className="space-y-4" aria-live="polite">
             {rows.map((row, index) => (
-              <div key={row.key} className="rounded-2xl border border-[#1A3D2C]/10 p-4">
+              <div key={row.key} className="rounded-2xl border border-[#122D30]/10 p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <p className="text-sm font-black text-[#1A3D2C]">
+                  <p className="text-sm font-black text-[#122D30]">
                     {row.existingDeviceId ? "Reconnect device" : `Device ${index + 1}`}
                   </p>
                   {rows.length > 1 && row.status !== "APPROVED_WAITING" && row.status !== "ONLINE" && (
@@ -228,9 +228,9 @@ export function LabDevicePairingWizard({
                   )}
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-[1fr_220px]">
-                  <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#1A3D2C]/50">
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+                  <div className="min-w-0">
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-[#122D30]/50">
                       Code shown on device
                     </label>
                     <div role="group" aria-label={`Pairing code for device ${index + 1}`}>
@@ -248,7 +248,7 @@ export function LabDevicePairingWizard({
                   </div>
                   <div className="space-y-3">
                     <label className="block">
-                      <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#1A3D2C]/50">
+                      <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#122D30]/50">
                         Desk label
                       </span>
                       <input
@@ -259,10 +259,10 @@ export function LabDevicePairingWizard({
                           row.status === "APPROVED_WAITING" ||
                           row.status === "ONLINE"
                         }
-                        className="w-full rounded-xl border border-[#1A3D2C]/10 px-3 py-2.5 text-sm outline-none focus:border-[#1A3D2C]/40 disabled:bg-[#F4F3EE]"
+                        className="w-full rounded-xl border border-[#122D30]/10 px-3 py-2.5 text-sm outline-none focus:border-[#122D30]/40 disabled:bg-[#F6F7F2]"
                       />
                     </label>
-                    <label className="flex items-center gap-2 text-sm text-[#1A3D2C]/70">
+                    <label className="flex items-center gap-2 text-sm text-[#122D30]/70">
                       <input
                         type="checkbox"
                         checked={row.isSpare}
@@ -280,7 +280,7 @@ export function LabDevicePairingWizard({
 
                 <div className="mt-3">
                   {row.status === "SUBMITTING" && (
-                    <p className="flex items-center gap-2 text-sm text-[#1A3D2C]/60">
+                    <p className="flex items-center gap-2 text-sm text-[#122D30]/60">
                       <Loader2 size={15} className="animate-spin" /> Approving pairing…
                     </p>
                   )}
@@ -314,21 +314,21 @@ export function LabDevicePairingWizard({
                 ])
               }
               disabled={waitingForDevice}
-              className="mt-4 flex items-center gap-2 rounded-xl border border-[#1A3D2C]/15 px-4 py-2.5 text-sm font-bold text-[#1A3D2C] hover:bg-[#1A3D2C]/5 disabled:opacity-50"
+              className="mt-4 flex items-center gap-2 rounded-xl border border-[#122D30]/15 px-4 py-2.5 text-sm font-bold text-[#122D30] hover:bg-[#075E63]/5 disabled:opacity-50"
             >
               <Plus size={16} /> Add another device
             </button>
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-[#1A3D2C]/10 px-6 py-4">
-          <p className="text-sm text-[#1A3D2C]/55">
+        <div className="flex items-center justify-between border-t border-[#122D30]/10 px-6 py-4">
+          <p className="text-sm text-[#122D30]/55">
             {onlineCount > 0 ? `${onlineCount} device${onlineCount === 1 ? "" : "s"} online` : ""}
           </p>
           {allFinished ? (
             <button
               onClick={onClose}
-              className="flex items-center gap-2 rounded-xl bg-[#1A3D2C] px-5 py-2.5 text-sm font-bold text-white"
+              className="flex items-center gap-2 rounded-xl bg-[#075E63] px-5 py-2.5 text-sm font-bold text-white"
             >
               <CheckCircle2 size={16} /> Done
             </button>
@@ -336,7 +336,7 @@ export function LabDevicePairingWizard({
             <button
               onClick={submit}
               disabled={!canSubmit || rows.some((row) => row.status === "SUBMITTING")}
-              className="rounded-xl bg-[#1A3D2C] px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-xl bg-[#075E63] px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               Pair {rows.length > 1 ? "devices" : "device"}
             </button>

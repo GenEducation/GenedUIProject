@@ -7,17 +7,19 @@ export const RC_STYLES = `
      app-wide --border/--muted tokens for every other component on screen
      (e.g. the sidebar) for as long as it stayed mounted. */
   .report-root {
-    --navy:#042E5C; --emerald:#059F6D; --bg:#F7F6F2; --border:#E4E1D8; --text:#1B2430; --muted:#6B7280;
-    --surface:#ffffff; --surface-2:#FBFAF6; --rule:#EDEAE0; --ink-2:#334155;
-    --adv-fg:#047857; --adv-bg:#ECFDF5; --adv-bd:#A7F3D0;
-    --pro-fg:#1D4ED8; --pro-bg:#EFF6FF; --pro-bd:#BFDBFE;
+    --navy:#122D30; --emerald:#075E63; --emerald-hover:#064C50; --bg:#F6F7F2; --border:#DCE6E2; --text:#122D30; --muted:#5E7477;
+    --surface:#ffffff; --surface-2:#F8FAF7; --rule:#E5EDEA; --ink-2:#2E4A4D; --soft:#DCEBE7;
+    /* Citron: fills under ink text, or a mark on a dark ground — never text on light. */
+    --citron:#D9F279; --citron-deep:#B8D63F; --citron-wash:#F3F9DC;
+    --adv-fg:#075E63; --adv-bg:#E8F2EF; --adv-bd:#C9DFD8;
+    --pro-fg:#2F7A7E; --pro-bg:#EEF5F3; --pro-bd:#CFE2DC;
     --app-fg:#B45309; --app-bg:#FFFBEB; --app-bd:#FDE68A;
     --dev-fg:#BE123C; --dev-bg:#FFF1F2; --dev-bd:#FECDD3;
-    --sr-tint:#EEF3FA; --sr-tint-2:#E3ECF6; --sr-accent:#2B4A7E; --sr-border:#D3E0F0;
-    --tm-tint:#F7F1FC; --tm-tint-2:#EFE3F8; --tm-accent:#6D28D9; --tm-border:#E3D3F2;
+    --sr-tint:#EFF5F3; --sr-tint-2:#E2EEEA; --sr-accent:#075E63; --sr-border:#CFE2DC;
+    --tm-tint:#EFF5F3; --tm-tint-2:#E2EEEA; --tm-accent:#122D30; --tm-border:#CFE2DC;
     --r:10px; --r-sm:6px; --r-lg:16px;
-    --sans:'Inter',sans-serif; --display:'Source Serif 4',Charter,Georgia,serif; --mono:'JetBrains Mono',monospace;
-    --shadow: 0 1px 2px rgba(4,46,92,.04), 0 8px 24px -12px rgba(4,46,92,.10);
+    --sans:var(--font-body); --display:'Source Serif 4',Charter,Georgia,serif; --mono:'JetBrains Mono',monospace;
+    --shadow: 0 1px 2px rgba(18,45,48,.04), 0 8px 24px -12px rgba(18,45,48,.10);
   }
   .report-root { background: var(--bg); font-family: var(--sans); color: var(--text); font-size: 15px; line-height: 1.55; }
   .rc-wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px 60px; }
@@ -29,9 +31,10 @@ export const RC_STYLES = `
   .rc-brand-mark { width: 28px; height: 28px; border-radius: 7px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 700; font-size: 15px; }
   .rc-brand-name { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; color: var(--navy); font-weight: 600; }
   .rc-report-no { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-  .rc-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--emerald); font-weight: 600; margin: 20px 0 10px; }
+  .rc-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--emerald); font-weight: 600; margin: 20px 0 10px; display: flex; align-items: center; gap: 10px; }
+  .rc-eyebrow::before { content: ""; width: 22px; height: 4px; border-radius: 4px; background: var(--emerald); opacity: .35; flex-shrink: 0; }
   .rc-head h1 { font-family: var(--display); font-weight: 600; font-size: 32px; line-height: 1.2; margin: 0 0 12px; color: var(--navy); }
-  .rc-head h1 em { font-style: italic; color: var(--emerald); }
+  .rc-head h1 em { font-style: italic; color: var(--emerald); background: linear-gradient(transparent 62%, var(--citron) 62%, var(--citron) 92%, transparent 92%); -webkit-box-decoration-break: clone; box-decoration-break: clone; padding: 0 .08em; }
   .rc-deck { font-size: 15px; color: var(--muted); max-width: 640px; margin: 0 0 20px; }
   .rc-meta-row { display: flex; gap: 26px; flex-wrap: wrap; font-size: 12.5px; }
   .rc-meta-item { display: flex; flex-direction: column; gap: 2px; }
@@ -45,40 +48,41 @@ export const RC_STYLES = `
   .rc-band-legend .lbl { font-weight: 600; color: var(--text); }
 
   /* summary band */
-  .rc-summary { margin-top: 22px; background: linear-gradient(160deg,var(--navy),#06407D); border-radius: var(--r-lg); padding: 26px 26px 22px; color: #fff; box-shadow: var(--shadow); }
+  .rc-summary { margin-top: 22px; background: linear-gradient(160deg,var(--navy),var(--emerald)); border-radius: var(--r-lg); padding: 26px 26px 22px; color: #fff; box-shadow: var(--shadow); }
   .rc-summary-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 26px; }
-  .rc-summary-lead-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #8FB4DE; margin-bottom: 8px; }
+  .rc-summary-lead-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #A9CCC7; margin-bottom: 8px; }
   .rc-summary-lead { font-family: var(--display); font-size: 18px; line-height: 1.5; font-weight: 500; }
   .rc-summary-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; align-content: start; }
   .rc-sstat { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: var(--r); padding: 11px 13px; }
   .rc-sstat .num { font-family: var(--display); font-size: 21px; font-weight: 700; }
-  .rc-sstat .lbl { font-size: 10.5px; color: #B9D0E8; margin-top: 2px; }
+  .rc-sstat:last-child .num { color: var(--citron); }
+  .rc-sstat .lbl { font-size: 10.5px; color: #B5CFCB; margin-top: 2px; }
   .rc-subject-dials { display: flex; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
   .rc-dial { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 999px; padding: 6px 14px 6px 6px; }
   .rc-dial svg { width: 36px; height: 36px; }
   .rc-dial-txt .name { font-size: 12.5px; font-weight: 600; }
-  .rc-dial-txt .band { font-size: 10.5px; color: #B9D0E8; display: inline-flex; align-items: center; gap: 3px; }
-  .rc-dial-trend { color: #5EEAD4; font-weight: 700; }
+  .rc-dial-txt .band { font-size: 10.5px; color: #B5CFCB; display: inline-flex; align-items: center; gap: 3px; }
+  .rc-dial-trend { color: #A9CCC7; font-weight: 700; }
 
   /* section framework */
   .rc-section { padding: 40px 0; border-bottom: 1px solid var(--border); }
   .rc-section:last-of-type { border-bottom: none; }
   .rc-sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
-  .rc-sec-n { font-family: var(--mono); font-size: 12px; color: var(--emerald); font-weight: 700; }
+  .rc-sec-n { font-family: var(--mono); font-size: 11.5px; color: var(--emerald); background: var(--soft); padding: 1px 7px; border-radius: 6px; font-weight: 700; align-self: center; }
   .rc-sec-head h2 { font-family: var(--display); font-size: 22px; font-weight: 600; margin: 0; color: var(--navy); }
   .rc-sec-sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; max-width: 620px; }
 
   /* subject cards */
   .rc-subject-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 16px; overflow: hidden; box-shadow: var(--shadow); }
   .rc-sc-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--rule); cursor: pointer; background: var(--surface-2); }
-  .rc-sc-head:hover { background: #F5F3EC; }
+  .rc-sc-head:hover { background: #EEF4F1; }
   .rc-sc-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
   .rc-sc-accent { width: 5px; height: 34px; border-radius: 3px; flex-shrink: 0; }
   .rc-sc-title { font-family: var(--display); font-size: 17px; font-weight: 600; color: var(--navy); }
   .rc-sc-headline { font-size: 12px; color: var(--muted); margin-top: 2px; font-style: italic; }
   .rc-sc-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
   .rc-chip { font-family: var(--mono); font-size: 10.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid; letter-spacing: .02em; white-space: nowrap; }
-  .rc-chip.advanced { color: var(--adv-fg); background: var(--adv-bg); border-color: var(--adv-bd); }
+  .rc-chip.advanced { color: var(--navy); background: var(--citron); border-color: var(--citron-deep); }
   .rc-chip.proficient { color: var(--pro-fg); background: var(--pro-bg); border-color: var(--pro-bd); }
   .rc-chip.approaching { color: var(--app-fg); background: var(--app-bg); border-color: var(--app-bd); }
   .rc-chip.developing { color: var(--dev-fg); background: var(--dev-bg); border-color: var(--dev-bd); }
@@ -108,7 +112,7 @@ export const RC_STYLES = `
   /* expanders */
   .rc-expander { margin-top: 14px; border: 1px solid var(--rule); border-radius: var(--r); overflow: hidden; }
   .rc-expander-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--surface-2); border: none; padding: 11px 16px; cursor: pointer; text-align: left; font-family: var(--sans); font-size: 12.5px; font-weight: 600; color: var(--navy); }
-  .rc-expander-btn:hover { background: #F2F0E8; }
+  .rc-expander-btn:hover { background: #EDF3F0; }
   .rc-expander-btn .plus { font-family: var(--mono); font-size: 15px; color: var(--emerald); transition: transform .2s; display: inline-block; }
   .rc-expander-panel { padding: 16px 18px 18px; border-top: 1px solid var(--rule); background: #fff; }
 
@@ -134,7 +138,7 @@ export const RC_STYLES = `
   .rc-dim-card { background: var(--surface-2); border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 10px 12px; }
   .rc-dim-head { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; gap: 6px; }
   .rc-dim-delta { font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
-  .rc-dim-delta.up { color: var(--adv-fg); background: var(--adv-bg); }
+  .rc-dim-delta.up { color: var(--emerald); background: var(--soft); }
   .rc-dim-delta.down { color: var(--dev-fg); background: var(--dev-bg); }
   .rc-dim-obs { font-size: 11.5px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
 
@@ -145,7 +149,7 @@ export const RC_STYLES = `
   .rc-log-obs { color: var(--muted); font-size: 12px; margin: 0; padding-left: 16px; }
 
   .rc-spark-wrap { margin-top: 4px; }
-  .rc-spark-grid-label { font-family: var(--mono); font-size: 8.5px; fill: #9AA6B2; }
+  .rc-spark-grid-label { font-family: var(--mono); font-size: 8.5px; fill: #8FA3A5; }
   .rc-spark-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 10.5px; color: var(--muted); margin-top: 6px; }
   .rc-spark-legend span { display: inline-flex; align-items: center; gap: 4px; }
   .rc-spark-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
@@ -178,7 +182,7 @@ export const RC_STYLES = `
   .rc-test-score { font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--navy); }
   .rc-test-date { font-family: var(--mono); font-size: 11px; color: var(--muted); }
   .rc-verdict { font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
-  .rc-verdict.pass { color: var(--adv-fg); background: var(--adv-bg); }
+  .rc-verdict.pass { color: var(--navy); background: var(--citron); }
   .rc-verdict.fail { color: var(--dev-fg); background: var(--dev-bg); }
   .rc-test-plus { font-family: var(--mono); color: var(--emerald); font-size: 15px; }
   .rc-test-panel { padding: 4px 16px 14px; border-top: 1px solid var(--rule); background: var(--surface-2); }
@@ -215,7 +219,7 @@ export const RC_STYLES = `
   .rc-list-card ul { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-2); }
   .rc-list-card li { margin-bottom: 6px; line-height: 1.5; }
 
-  .rc-hero { background: linear-gradient(160deg,#FBFAF6,#F2EFE5); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px 26px; margin-bottom: 20px; }
+  .rc-hero { background: linear-gradient(160deg,#FAFBF7,#EAF2EF); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px 26px; margin-bottom: 20px; }
   .rc-hero blockquote { font-family: var(--display); font-style: italic; font-size: 19px; color: var(--navy); margin: 0 0 10px; line-height: 1.5; }
 
   .rc-markdown { font-size: 13px; line-height: 1.7; color: var(--ink-2); }
@@ -245,13 +249,13 @@ export const RC_STYLES = `
   .rc-sr-point-item { display: flex; gap: 9px; align-items: flex-start; line-height: 1.5; }
   .rc-sr-point-tag { font-family: var(--mono); font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid; flex-shrink: 0; text-transform: uppercase; letter-spacing: .04em; margin-top: 1px; }
   .rc-sr-point-tag.friction { background: var(--dev-bg); color: var(--dev-fg); border-color: var(--dev-bd); }
-  .rc-sr-point-tag.breakthrough { background: var(--adv-bg); color: var(--adv-fg); border-color: var(--adv-bd); }
+  .rc-sr-point-tag.breakthrough { background: var(--soft); color: var(--emerald); border-color: #C9DFD8; }
   .rc-sr-point-tag.misconception { background: var(--app-bg); color: var(--app-fg); border-color: var(--app-bd); }
 
   .rc-sr-trajectory-card { padding: 9px 0; border-bottom: 1px dashed var(--rule); font-size: 12.5px; }
   .rc-sr-trajectory-card:last-child { border-bottom: none; }
   .rc-sr-traj-head { font-weight: 600; color: var(--navy); margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-  .rc-sr-traj-badge { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--sr-accent); background: rgba(43,74,126,.08); border: 1px solid rgba(43,74,126,.2); padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .rc-sr-traj-badge { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--sr-accent); background: rgba(7,94,99,.08); border: 1px solid rgba(7,94,99,.2); padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
   .rc-sr-traj-desc { color: var(--ink-2); font-size: 12px; line-height: 1.55; }
 
   .rc-sr-final { margin-top: 18px; background: linear-gradient(160deg,#FFFFFF,var(--sr-tint-2)); border: 1px solid var(--sr-border); border-radius: var(--r); padding: 14px 16px; }
@@ -268,8 +272,8 @@ export const RC_STYLES = `
   .rc-empty-msg { font-family: var(--display); font-size: 16px; color: var(--text); margin: 0 0 8px; }
   .rc-empty-eyebrow { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
   .rc-empty-when { font-size: 12.5px; color: var(--muted); line-height: 1.5; max-width: 56ch; }
-  .rc-empty-cta { margin-top: 12px; background: var(--navy); color: #fff; border: none; border-radius: 999px; padding: 8px 18px; font-family: var(--sans); font-weight: 600; font-size: 12.5px; cursor: pointer; }
-  .rc-empty-cta:hover { background: #06407D; }
+  .rc-empty-cta { margin-top: 12px; background: var(--emerald); color: #fff; border: none; border-radius: 999px; padding: 8px 18px; font-family: var(--sans); font-weight: 600; font-size: 12.5px; cursor: pointer; }
+  .rc-empty-cta:hover { background: var(--emerald-hover); }
 
   /* brand-new hero + how-it-builds checklist */
   .rc-empty { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 40px 32px; text-align: center; margin-top: 24px; }
@@ -278,13 +282,13 @@ export const RC_STYLES = `
   .rc-howto-title { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--emerald); font-weight: 600; margin-bottom: 12px; text-align: center; }
   .rc-howto-step { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px dashed var(--rule); }
   .rc-howto-step:last-child { border-bottom: none; }
-  .rc-howto-n { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--emerald); color: var(--emerald); font-family: var(--mono); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .rc-howto-n { width: 22px; height: 22px; border-radius: 50%; background: var(--soft); border: 1.5px solid #C9DFD8; color: var(--emerald); font-family: var(--mono); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .rc-howto-txt { font-size: 13px; color: var(--text); line-height: 1.5; }
   .rc-howto-txt b { color: var(--navy); }
   .rc-cta-center { text-align: center; margin-top: 22px; }
 
   /* what unlocks next */
-  .rc-unlocks { background: linear-gradient(160deg,#FBFAF6,#F3F0E7); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px 24px; margin-top: 8px; }
+  .rc-unlocks { background: linear-gradient(160deg,#FAFBF7,#EAF2EF); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px 24px; margin-top: 8px; }
   .rc-unlocks-title { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--emerald); font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
   .rc-unlock-row { display: flex; align-items: baseline; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--rule); }
   .rc-unlock-row:last-child { border-bottom: none; }
@@ -293,8 +297,8 @@ export const RC_STYLES = `
   .rc-unlock-detail { font-size: 12px; color: var(--muted); margin-left: auto; font-family: var(--mono); white-space: nowrap; }
 
   .rc-foot { padding: 36px 0 10px; text-align: center; }
-  .rc-print-btn { background: var(--navy); color: #fff; border: none; border-radius: 999px; padding: 13px 28px; font-family: var(--sans); font-weight: 600; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: var(--shadow); }
-  .rc-print-btn:hover:not(:disabled) { background: #06407D; }
+  .rc-print-btn { background: var(--emerald); color: #fff; border: none; border-radius: 999px; padding: 13px 28px; font-family: var(--sans); font-weight: 600; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: var(--shadow); }
+  .rc-print-btn:hover:not(:disabled) { background: var(--emerald-hover); }
   .rc-print-btn:disabled { cursor: not-allowed; opacity: .6; }
   .rc-foot-note { font-size: 11px; color: var(--muted); margin-top: 10px; font-family: var(--mono); }
 
@@ -342,7 +346,7 @@ export const RC_PRINT_PORTAL_STYLES = `
     body.rc-printing > *:not(#rc-print-root) { display: none !important; }
     body.rc-printing #rc-print-root { position: static !important; left: 0 !important; width: 100% !important; }
     @page { size: A4; margin: 14mm 12mm 18mm; }
-    .rc-print-footer { position: fixed; bottom: 6mm; left: 0; right: 0; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #6B7280; }
+    .rc-print-footer { position: fixed; bottom: 6mm; left: 0; right: 0; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #5E7477; }
   }
   .rc-print-footer { display: none; }
 `;
@@ -352,10 +356,11 @@ export const RC_PRINT_PORTAL_STYLES = `
 // topic tree, tests) that the screen embeds at the same typeface.
 export const RC_SCREEN_STYLES = `
   .rc-screen {
-    --rs-ink:#13293D; --rs-ink-soft:#5E7186;
-    --rs-line:#E3EEEA; --rs-line-strong:#CFE3DB;
-    --rs-mint:#E4F5EE; --rs-track:#E9F0EE; --rs-surface-2:#F7FBFA;
-    --rs-brand:#13997F; --rs-brand-deep:#0B6B5E;
+    --rs-ink:#122D30; --rs-ink-soft:#5E7477;
+    --rs-line:#E1EAE6; --rs-line-strong:#CCDED8;
+    --rs-mint:#DCEBE7; --rs-track:#E7EEEB; --rs-surface-2:#F7F9F5;
+    --rs-brand:#075E63; --rs-brand-deep:#064C50;
+    --rs-citron:#D9F279; --rs-citron-deep:#B8D63F;
     --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
     --font-body: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
     --sans: var(--font-body); --display: var(--font-display);
@@ -366,11 +371,16 @@ export const RC_SCREEN_STYLES = `
     line-height: 1.5;
     font-feature-settings: "ss01", "cv11";
     background:
-      radial-gradient(900px 420px at 0% -10%, rgba(19,153,127,.10), transparent 60%),
-      radial-gradient(700px 380px at 105% 8%, rgba(37,99,235,.06), transparent 60%),
-      linear-gradient(180deg, #F3F9F7 0%, #F7FAF9 100%);
+      radial-gradient(900px 420px at 0% -10%, rgba(7,94,99,.08), transparent 60%),
+      radial-gradient(640px 340px at 105% 4%, rgba(217,242,121,.22), transparent 62%),
+      linear-gradient(180deg, #F2F6F2 0%, #F6F7F2 100%);
   }
   .rc-screen h1, .rc-screen h2, .rc-screen h3, .rc-screen h4 { font-family: var(--font-display); }
+  /* Inside a portal page (the parent's), the portal's own background and gutters frame it: no second backdrop. */
+  .rc-embedded .rc-screen { background: transparent; padding: 0; }
+  /* ...and it fills the page's width from the page's left edge, as the portal's other pages do, rather than a
+     centred 1440px column that leaves a gap on either side of a wide screen. */
+  .rc-embedded .rc-screen > .mx-auto { max-width: none; margin-left: 0; margin-right: 0; }
 
   @keyframes rc-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   .rc-rise { animation: rc-rise .55s cubic-bezier(.22,1,.36,1) both; }

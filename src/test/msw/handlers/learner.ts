@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import type { InstanceState, LearnerChapter } from "@/features/student/learner/types";
+import type { InstanceState, LearnerChapter, RecentChapter } from "@/features/student/learner/types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 
@@ -24,7 +24,36 @@ export function makeChapter(overrides: Partial<LearnerChapter> = {}): LearnerCha
   };
 }
 
-const store: { subject: string; grade: number; chapters: LearnerChapter[] } = { subject: "Mathematics", grade: 6, chapters: [] };
+/** A recent chapter (`GET /v1/learner/recent-chapters`); SYNTHETIC like the rest. */
+export function makeRecentChapter(n: number, overrides: Partial<RecentChapter> = {}): RecentChapter {
+  const id = String(n).padStart(12, "0");
+  return {
+    chapter_id: `00000000-0000-4000-8000-${id}`,
+    chapter_title: `SYNTHETIC recent chapter ${n}`,
+    chapter_number: n,
+    book_title: "SYNTHETIC Book",
+    subject: "mathematics",
+    instance_id: `22222222-0000-4000-8000-${id}`,
+    state: "active",
+    nodes_done: 3,
+    nodes_total: 9,
+    started_at: "2026-10-01T09:00:00Z",
+    completed_at: null,
+    last_active_at: new Date(Date.now() - n * 3_600_000).toISOString(),
+    palette: `mathematics:${(n - 1) % 6}`,
+    card: null,
+    ...overrides,
+  };
+}
+
+const store: { subject: string; grade: number; chapters: LearnerChapter[]; recent: RecentChapter[] } = {
+  subject: "Mathematics",
+  grade: 6,
+  chapters: [],
+  recent: [],
+};
+/** The `limit` of the last recent-chapters read. */
+export let lastRecentLimit: number | null = null;
 const instances = new Map<string, InstanceState>();
 /** How many list reads, for asserting refetches. */
 export let chapterListReads = 0;
@@ -37,6 +66,8 @@ export const learnerFixture = {
     seq = 0;
     chapterListReads = 0;
     lastOpenedChapter = null;
+    lastRecentLimit = null;
+    store.recent = [];
     instances.clear();
     store.chapters = build?.() ?? [
       makeChapter({ card: { image_url: "/v1/visual-images/card-1?exp=1&sig=synthetic", width: 1600, height: 1000 } }),
@@ -45,12 +76,20 @@ export const learnerFixture = {
     ];
   },
   set: (chapters: LearnerChapter[]) => void (store.chapters = chapters),
+  /** The student's recent chapters, newest first. */
+  setRecent: (chapters: RecentChapter[]) => void (store.recent = chapters),
   instance: (id: string) => instances.get(id),
 };
 
 learnerFixture.reset();
 
 export const learnerHandlers = [
+  http.get(`${BASE}/v1/learner/recent-chapters`, ({ request }) => {
+    const limit = Number(new URL(request.url).searchParams.get("limit") ?? 10);
+    lastRecentLimit = limit;
+    return HttpResponse.json({ chapters: store.recent.slice(0, limit) });
+  }),
+
   http.get(`${BASE}/v1/learner/chapters`, ({ request }) => {
     chapterListReads += 1;
     const subject = new URL(request.url).searchParams.get("subject") ?? "";
@@ -62,7 +101,7 @@ export const learnerHandlers = [
   http.post(`${BASE}/v1/chapters/:chapterId/instances`, ({ params }) => {
     const chapterId = String(params.chapterId);
     lastOpenedChapter = chapterId;
-    if (!store.chapters.some((c) => c.chapter_id === chapterId)) {
+    if (!store.chapters.some((c) => c.chapter_id === chapterId) && !store.recent.some((c) => c.chapter_id === chapterId)) {
       return HttpResponse.json({ message: "This chapter isn't available to you." }, { status: 404 });
     }
     const id = `11111111-0000-4000-8000-${chapterId.slice(-12)}`;
