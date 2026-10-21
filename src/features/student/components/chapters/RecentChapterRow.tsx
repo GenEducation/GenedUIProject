@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, RotateCcw } from "lucide-react";
 import { learnerService } from "../../learner/learnerService";
 import { paletteFor } from "../../learner/cardPalettes";
 import { chapterPercent } from "../../learner/recentChapters";
@@ -117,7 +117,8 @@ export function RecentChapterRow({
             className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
             style={{ background: `${color}18`, color }}
           >
-            <Check size={12} strokeWidth={3} aria-hidden /> {revisiting ? "Revisiting" : "Done"}
+            {revisiting ? <RotateCcw size={12} strokeWidth={3} aria-hidden /> : <Check size={12} strokeWidth={3} aria-hidden />}{" "}
+            {revisiting ? "Revisiting" : "Done"}
           </span>
         ) : (
           <span className="relative">

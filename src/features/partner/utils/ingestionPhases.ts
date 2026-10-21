@@ -126,15 +126,3 @@ export function attentionLine(name: IngestionCount, value: number): string {
   return `${value} ${name}`;
 }
 
-/**
- * About how long is left, from the time so far and the percent done: null until the run is far enough along for the
- * guess to mean something (10%), or when it would read as "0 min". Stages run at different speeds, so it is shown as
- * "about".
- */
-export function minutesLeft(startedAt: string | null, updatedAt: string | null, percent: number | null): number | null {
-  if (!startedAt || !updatedAt || percent === null || percent < 10 || percent >= 100) return null;
-  const spent = new Date(updatedAt).getTime() - new Date(startedAt).getTime();
-  if (!Number.isFinite(spent) || spent <= 0) return null;
-  const left = Math.round(((spent / percent) * (100 - percent)) / 60_000);
-  return left >= 1 ? left : null;
-}

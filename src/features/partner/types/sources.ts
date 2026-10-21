@@ -23,8 +23,22 @@ export const STARTABLE_STATES: ReadonlySet<SourceState> = new Set([
   "failed",
 ]);
 
-/** States a source may be deleted in: it produced nothing reviewable. */
-export const DELETABLE_STATES: ReadonlySet<SourceState> = new Set(["registered", "invalid", "failed"]);
+/**
+ * States a source may be deleted in: every state but `queued` (cancel it first) and `running` (it cannot be stopped).
+ * A source whose chapter was published is never deleted, whatever its state (see `deleteBlockedReason`).
+ */
+export const DELETABLE_STATES: ReadonlySet<SourceState> = new Set(["registered", "review_needed", "invalid", "ready", "failed"]);
+
+/**
+ * Why the server would refuse to delete this source (`DELETE /v1/sources/{id}`), or null when it would not. The server
+ * also refuses a source an older, published run came from, which the list cannot see; its 409 says so.
+ */
+export function deleteBlockedReason(source: { state: SourceState; release?: SourceReleaseRef | null }): string | null {
+  if (source.release?.state === "published") return "Published chapters can't be deleted: students are learning from them.";
+  if (source.state === "queued") return "Stop the queued run first, then delete the chapter.";
+  if (source.state === "running") return "A run in progress can't be stopped. Delete the chapter once it finishes.";
+  return null;
+}
 
 /** States the worker is still on; the registry keeps polling while any row is in one. */
 export const ACTIVE_STATES: ReadonlySet<SourceState> = new Set(["queued", "running"]);

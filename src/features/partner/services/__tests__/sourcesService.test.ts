@@ -56,7 +56,7 @@ describe("sourcesService", () => {
 
   it("deletes a chapter with DELETE /v1/sources/{id}, and surfaces the server's refusal for one it keeps", async () => {
     const failed = makeSource({ state: "failed" });
-    const ready = makeSource({ state: "ready" });
+    const ready = makeSource({ state: "running" });
     sourcesFixture.set(failed);
     sourcesFixture.set(ready);
     await sourcesService.remove(failed.source_id);
@@ -66,7 +66,7 @@ describe("sourcesService", () => {
       (e) => {
         expect(e).toBeInstanceOf(ApiRequestError);
         expect(e.status).toBe(409);
-        expect(e.message).toMatch(/ready cannot be deleted/);
+        expect(e.message).toMatch(/running cannot be deleted/);
       },
     );
     expect(sourcesFixture.get(ready.source_id)).toBeDefined();

@@ -385,6 +385,7 @@ export function StudentHome() {
 
   /* Open a recent chapter: its own lesson when in progress or finished (to review); a fresh one if abandoned. */
   const launchLesson = useLessonLaunch((st) => st.launch);
+  const offerRevisit = useLessonLaunch((st) => st.offerRevisit);
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   const openRecent = async (chapter: RecentChapter, subject: string) => {
@@ -396,6 +397,7 @@ export function StudentHome() {
         ? (await learnerService.openChapter(chapter.chapter_id)).id
         : chapter.instance_id;
       launchLesson(instanceId, asLearnerChapter(chapter), subject);
+      offerRevisit(instanceId);
       router.push(`/student/lesson/${encodeURIComponent(instanceId)}`);
     } catch (e) {
       setOpenError(asError(e).message || "That chapter couldn't open. Try again.");

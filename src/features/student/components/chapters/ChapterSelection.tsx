@@ -24,6 +24,7 @@ export function ChapterSelection({ subject }: { subject: string }) {
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const { data, loading, error, refresh } = useLearnerChapters(subject);
   const launch = useLessonLaunch((s) => s.launch);
+  const offerRevisit = useLessonLaunch((s) => s.offerRevisit);
   const [openingId, setOpeningId] = useState<string | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   // One list refetch per page visit for expired card signatures, however many tiles fail.
@@ -39,6 +40,7 @@ export function ChapterSelection({ subject }: { subject: string }) {
     try {
       const instance = await learnerService.openChapter(chapter.chapter_id);
       launch(instance.id, chapter, subject);
+      offerRevisit(instance.id);
       router.push(`/student/lesson/${encodeURIComponent(instance.id)}`);
     } catch (e) {
       setOpenError(asError(e).message || "Couldn't open this chapter. Please try again.");

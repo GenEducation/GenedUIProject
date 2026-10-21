@@ -3,7 +3,7 @@
 import React from "react";
 import type { Subject } from "../store/usePartnerStore";
 import { NEXT_STEP_COPY, checkLabel, elapsed } from "../utils/ingestionPath";
-import { minutesLeft, nowLine, runPhases, type Phase } from "../utils/ingestionPhases";
+import { nowLine, runPhases, type Phase } from "../utils/ingestionPhases";
 import { shownPercent } from "../utils/ingestionProgress";
 
 /** A phase's segment of the bar: full when done, part-filled while it runs, red where a run stopped. */
@@ -20,8 +20,9 @@ function Segment({ phase, queued }: { phase: Phase; queued: boolean }) {
 }
 
 /**
- * A queued or running chapter, in its row: the phase and step it is on, the percent and about how long is left (how
- * long it has run is in the opened view, and on hover), and one bar in four phases. The run's one progress indicator.
+ * A queued or running chapter, in its row: the phase and step it is on, the percent (how long it has run is in the
+ * opened view, and on hover), and one bar in four phases. The run's one progress indicator. No time-left guess: the
+ * backend sends none, and stages run at too different speeds to extrapolate one.
  */
 export function RunProgress({ subject }: { subject: Subject }) {
   const queued = subject.state === "queued";
@@ -29,7 +30,6 @@ export function RunProgress({ subject }: { subject: Subject }) {
   const percent = shownPercent(subject.state, subject.progress);
   const now = subject.progress?.updated_at ?? null;
   const ran = queued ? null : elapsed(subject.started_at, now);
-  const left = queued ? null : minutesLeft(subject.started_at, now, percent);
   return (
     <div className="flex w-full min-w-0 flex-col gap-1.5">
       <div className="flex min-w-0 items-baseline justify-between gap-3">
@@ -39,7 +39,6 @@ export function RunProgress({ subject }: { subject: Subject }) {
         </p>
         <p className="shrink-0 text-[11.5px] lg:text-[12.5px] font-semibold tabular-nums text-[#122D30]/50" title={ran ? `Running for ${ran}` : undefined}>
           {percent !== null && <span className="text-[#075E63]">{percent}%</span>}
-          {left && <span> · ~{left} min left</span>}
         </p>
       </div>
       <div

@@ -5,6 +5,7 @@
  * - answers and the report: `gened_learning/routes.py`, `gened_learning/reporting.py`.
  * The UI never decides correctness or progression; it renders what these say.
  */
+import type { SkillLevel } from "@/components/report-card/types";
 import type { InstanceState } from "@/features/student/learner/types";
 
 export type { ActiveNode, InstanceState, InstanceNextAction } from "@/features/student/learner/types";
@@ -288,6 +289,27 @@ export interface RevisitSection {
   score: number | null;
   /** A replay of this section is waiting or under way. */
   in_review: boolean;
+  /**
+   * The learner's mastery of the skills this section teaches or checks (BKT, `progress_levels_v2`), read now, not from a
+   * pass. Sections that share skills share levels. Absent from a backend that does not send it yet; null when the
+   * section targets no skills.
+   */
+  mastery?: SectionMastery | null;
+}
+
+/** One skill a section targets, with the learner's level on it (the report card's vocabulary). */
+export interface SectionSkill {
+  component_id: string;
+  title: string;
+  level: SkillLevel;
+  /** The BKT estimate, 0 to 1; null before any evidence on this skill. */
+  p_known: number | null;
+}
+
+/** A section's mastery: its weakest skill's level, and every skill it targets. */
+export interface SectionMastery {
+  level: SkillLevel;
+  skills: SectionSkill[];
 }
 
 /** `GET /v1/instances/{id}/revisit-options`: what a learner coming back to the chapter can choose. */

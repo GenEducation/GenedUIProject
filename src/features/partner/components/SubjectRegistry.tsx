@@ -21,6 +21,7 @@ import { IngestionPathPanel } from "./IngestionPathPanel";
 import { RunOutcome, RunProgress } from "./RunStatus";
 import {
   ACTIVE_STATES,
+  deleteBlockedReason,
   SOURCE_STATE_LABELS,
   STARTABLE_STATES,
   type SourceState,
@@ -570,17 +571,26 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           </span>
                         )}
 
-                        {/* Every stage offers delete; the server decides, and the confirm shows its reason when it refuses. */}
-                        <Button
-                          iconOnly
-                          variant="destructive"
-                          aria-label="Delete"
-                          title="Delete chapter"
-                          disabled={isDeleting && deleteFor?.id === subject.id}
-                          onClick={(e) => { e.stopPropagation(); setDeleteError(null); setDeleteFor(subject); }}
-                        >
-                          <Trash2 size={19} />
-                        </Button>
+                        {/* Every stage shows delete. Where the server would refuse (queued, running, published) it is
+                            disabled with the reason; a refusal the list can't foresee still shows in the confirm. */}
+                        {(() => {
+                          const blocked = deleteBlockedReason(subject);
+                          return (
+                            // The tooltip sits on a wrapper: a disabled button gets no pointer events to show its own.
+                            <span title={blocked ?? "Delete chapter"} className="inline-flex">
+                              <Button
+                                iconOnly
+                                variant="destructive"
+                                aria-label="Delete"
+                                aria-description={blocked ?? undefined}
+                                disabled={blocked !== null || (isDeleting && deleteFor?.id === subject.id)}
+                                onClick={(e) => { e.stopPropagation(); setDeleteError(null); setDeleteFor(subject); }}
+                              >
+                                <Trash2 size={19} />
+                              </Button>
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
