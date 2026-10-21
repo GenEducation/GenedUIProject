@@ -76,6 +76,61 @@ describe("placement item widgets", () => {
       await userEvent.type(screen.getByRole("textbox"), "405");
       expect(onChange).toHaveBeenLastCalledWith({ value: 405 });
     });
+
+    it("shows block_spec.unit as a label", () => {
+      renderItem(item("CBSE-G6-MATH-01"));
+      expect(screen.getByText("₹")).toBeInTheDocument();
+    });
+
+    it("sends the text form for a fraction item", async () => {
+      const fraction: PlacementItem = {
+        ...item("CBSE-G6-MATH-01"),
+        block_spec: { input: "fraction" },
+      };
+      const { onChange } = renderItem(fraction);
+      await userEvent.type(screen.getByRole("textbox"), "3/4");
+      expect(onChange).toHaveBeenLastCalledWith({ text: "3/4" });
+    });
+  });
+
+  describe("fill_blank", () => {
+    it("sends what the student typed, uncorrected", async () => {
+      const { onChange } = renderItem(item("CBSE-G6-ENG-03"));
+      await userEvent.type(screen.getByRole("textbox"), "But");
+      // Not lowercased: the backend ignores case, and item statistics want the
+      // real wording.
+      expect(onChange).toHaveBeenLastCalledWith({ text: "But" });
+    });
+
+    it("sends null when the field is blank, so the item counts as unanswered", async () => {
+      const { onChange } = renderItem(item("CBSE-G6-ENG-03"));
+      await userEvent.type(screen.getByRole("textbox"), " ");
+      expect(onChange).toHaveBeenLastCalledWith(null);
+    });
+
+    describe("in Hindi", () => {
+      const hindi = (): PlacementItem => ({ ...item("CBSE-G6-ENG-03"), item_language: "hi" });
+
+      it("converts Latin keystrokes to Devanagari and shows a live preview", async () => {
+        const { onChange } = renderItem(hindi());
+        await userEvent.type(screen.getByRole("textbox"), "namaste");
+        expect(onChange).toHaveBeenLastCalledWith({ text: "नमस्ते" });
+        expect(screen.getByText("नमस्ते")).toBeInTheDocument();
+      });
+
+      it("passes real Devanagari through without converting it twice", async () => {
+        const { onChange } = renderItem(hindi());
+        fireEvent.change(screen.getByRole("textbox"), { target: { value: "नमस्ते" } });
+        expect(onChange).toHaveBeenLastCalledWith({ text: "नमस्ते" });
+      });
+
+      it("sends null when cleared", async () => {
+        const { onChange } = renderItem(hindi());
+        await userEvent.type(screen.getByRole("textbox"), "a");
+        await userEvent.clear(screen.getByRole("textbox"));
+        expect(onChange).toHaveBeenLastCalledWith(null);
+      });
+    });
   });
 
   describe("order", () => {

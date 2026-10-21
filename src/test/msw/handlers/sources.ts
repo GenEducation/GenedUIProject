@@ -384,7 +384,7 @@ export const sourcesHandlers = [
 
   http.get(`${SOURCES}/:id/pdf`, ({ params }) =>
     store.has(String(params.id))
-      ? new HttpResponse(new Blob(["%PDF-SYNTHETIC"], { type: "application/pdf" }), {
+      ? new HttpResponse("%PDF-SYNTHETIC", {
           headers: { "content-type": "application/pdf" },
         })
       : notFound(),

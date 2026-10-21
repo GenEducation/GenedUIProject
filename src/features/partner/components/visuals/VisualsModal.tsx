@@ -125,6 +125,10 @@ function VisualsModalBody({ subject, counts, onClose, onChanged }: Required<Pick
               }}
               onOpen={setSelectedId}
               onDecided={handleDecided}
+              onRecropped={(newId) => {
+                refreshAll();
+                setSelectedId(newId);
+              }}
               onNext={goNext}
             />
           </motion.div>

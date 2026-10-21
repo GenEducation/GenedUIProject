@@ -1,0 +1,182 @@
+"use client";
+
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { AuthShell } from "@/features/auth/components/AuthShell";
+import { SignUp } from "@/features/auth/components/SignUp";
+import { signUp, SignUpFields } from "@/features/auth/authService";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import { useLoaderStore } from "@/stores/useLoaderStore";
+import { completeAndRedirect, getRedirectParam, withRedirect } from "@/features/auth/usePostAuthRedirect";
+import { passwordRuleError } from "@/features/auth/passwordRule";
+
+const initialSignUpData: SignUpFields = {
+  email: "",
+  password: "",
+  confirmPassword: "",
+  role: "student",
+  grade: "",
+  phone: "",
+  full_name: "",
+  otp_code: "",
+  parent_email: "",
+  parent_otp_code: "",
+};
+
+export function RegisterForm() {
+  const router = useRouter();
+  const [signupData, setSignupData] = useState<SignUpFields>(initialSignUpData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [googleSignUpToken, setGoogleSignUpToken] = useState<string | null>(null);
+
+  // A school's join link (`/register?partner=<school id>`) requests that school on
+  // sign-up. `GET /partners` needs a signed-in user, so there is no picker here;
+  // the student's membership starts PENDING until the school approves it.
+  useEffect(() => {
+    const partnerId = new URLSearchParams(window.location.search).get("partner")?.trim();
+    if (partnerId) setSignupData((prev) => ({ ...prev, partner_id: partnerId }));
+  }, []);
+
+  const validateSignUp = () => {
+    const errs: Record<string, string> = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (signupData.role === "student") {
+      const hasPersonalEmail = !!signupData.email?.trim();
+      if (hasPersonalEmail) {
+        if (!emailRegex.test(signupData.email)) errs.email = "Please enter a valid email address";
+        if (signupData.username?.trim() && signupData.username.trim().length < 3)
+          errs.username = "Username must be at least 3 characters";
+        if (signupData.parent_email?.trim() && !emailRegex.test(signupData.parent_email.trim()))
+          errs.parent_email = "Please enter a valid parent email address";
+      } else {
+        if (!signupData.username?.trim()) errs.username = "Username is compulsory";
+        else if (signupData.username.trim().length < 3) errs.username = "Username must be at least 3 characters";
+        if (!signupData.parent_email?.trim()) errs.parent_email = "Parent or Guardian email is compulsory";
+        else if (!emailRegex.test(signupData.parent_email.trim())) errs.parent_email = "Please enter a valid parent email address";
+      }
+      // The parent's address is verified with the code we emailed them (guardian linking).
+      if (signupData.parent_email?.trim() && !errs.parent_email && !signupData.parent_otp_code?.trim())
+        errs.parent_otp_code = "Send a code to your parent and type it here";
+      if (!signupData.password.trim()) errs.password = "Password is compulsory";
+      else if (passwordRuleError(signupData.password)) errs.password = passwordRuleError(signupData.password)!;
+      if (!signupData.confirmPassword?.trim()) errs.confirmPassword = "Confirm Password is compulsory";
+      else if (signupData.password !== signupData.confirmPassword) errs.confirmPassword = "Passwords do not match";
+      const gradeNum = Number(signupData.grade);
+      if (!signupData.grade?.trim()) errs.grade = "Please select your grade";
+      else if (isNaN(gradeNum) || gradeNum <= 0 || gradeNum > 12) errs.grade = "Grade must be between 1 and 12";
+    } else {
+      if (!googleSignUpToken) {
+        if (!signupData.email.trim()) errs.email = "Email is compulsory";
+        else if (!emailRegex.test(signupData.email)) errs.email = "Please enter a valid email address";
+        if (!signupData.password.trim()) errs.password = "Password is compulsory";
+        else if (passwordRuleError(signupData.password)) errs.password = passwordRuleError(signupData.password)!;
+        if (!signupData.confirmPassword?.trim()) errs.confirmPassword = "Confirm Password is compulsory";
+        else if (signupData.password !== signupData.confirmPassword) errs.confirmPassword = "Passwords do not match";
+      }
+      if (signupData.role === "parent") {
+        const name = signupData.full_name?.trim() ?? "";
+        if (!name) errs.full_name = "Your name is compulsory";
+        else if (name.length > 80) errs.full_name = "Your name must be at most 80 characters";
+        if (!signupData.phone?.trim()) errs.phone = "Phone is compulsory";
+        else if (!/^\d{10}$/.test(signupData.phone.trim())) errs.phone = "Phone must be a 10-digit number";
+      }
+    }
+    return errs;
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrors({});
+    const validationErrors = validateSignUp();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+    setIsSubmitting(true);
+    // Parents get their own loader from the first moment of sign-up.
+    useLoaderStore.getState().startLoading(
+      signupData.role === "parent" ? { variant: "parent", stage: "signup" } : undefined,
+    );
+    try {
+      let authResponse;
+      if (googleSignUpToken) {
+        const { googleSignUp } = await import("@/features/auth/authService");
+        authResponse = await googleSignUp(googleSignUpToken, signupData);
+      } else {
+        authResponse = await signUp(signupData);
+      }
+
+      localStorage.setItem("gened_auth_token", authResponse.access_token);
+      localStorage.setItem("gened_user_profile", JSON.stringify(authResponse));
+
+      const normalizedRole = authResponse.role?.toLowerCase() ?? "student";
+      const role =
+        normalizedRole === "student" || normalizedRole === "parent"
+          ? (normalizedRole as "student" | "parent")
+          : ("student" as const);
+
+      localStorage.setItem("gened_user_role", role);
+
+      if (role === "student") {
+        useStudentStore.getState().setStudentProfile({
+          user_id: authResponse.user_id,
+          username: authResponse.username,
+          email: authResponse.email,
+          role: authResponse.role,
+          name: authResponse.name,
+          grade: authResponse.grade,
+          school_board: authResponse.school_board,
+          age: authResponse.age,
+          ai_name: authResponse.ai_name,
+          preferred_voice: authResponse.preferred_voice,
+          plan: authResponse.plan,
+          plan_expires_at: authResponse.plan_expires_at,
+        });
+        // The quick tour plays once the student has named themselves and their tutor (CompleteProfileBanner),
+        // so it can call the tutor by the name they chose.
+        localStorage.setItem("gened_new_user", "true");
+      }
+
+      // A parent who arrived from their invitation link goes back to it (the confirmation screen); the
+      // server links them by their verified email whether or not this survives.
+      completeAndRedirect(router, getRedirectParam(role) || `/${role}`);
+    } catch (error) {
+      useLoaderStore.getState().stopLoading();
+      const rawMsg = error instanceof Error ? error.message : "Unable to complete signup.";
+      setErrors({ root: rawMsg });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = event.target;
+    setSignupData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => {
+      if (!prev[name] && !prev.root) return prev;
+      const next = { ...prev };
+      delete next[name];
+      delete next.root;
+      return next;
+    });
+  };
+
+  return (
+    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
+      <AuthShell title="Create your account" width="xl">
+        <SignUp
+              signupData={signupData}
+              onChange={handleChange}
+              onSubmit={handleSubmit}
+              onSwitchToSignin={() => router.push(withRedirect("/login"))}
+              isSubmitting={isSubmitting}
+              errors={errors}
+          onGoogleSuccess={(token) => setGoogleSignUpToken(token)}
+        />
+      </AuthShell>
+    </GoogleOAuthProvider>
+  );
+}

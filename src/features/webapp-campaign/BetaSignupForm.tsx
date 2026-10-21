@@ -80,7 +80,7 @@ export function BetaSignupForm() {
           ✓
         </span>
         <h3>You&apos;re in!</h3>
-        <p>We&apos;ll WhatsApp you your access details before 16 October.</p>
+        <p>We&apos;ll WhatsApp you your access details before 23 October.</p>
         <p className="gc-form-muted">Know another parent whose child would benefit?</p>
         {/* eslint-disable-next-line no-restricted-syntax -- campaign-styled control (gc-btn), outside the app design system */}
         <button type="button" className="gc-btn gc-btn-primary" onClick={share}>
