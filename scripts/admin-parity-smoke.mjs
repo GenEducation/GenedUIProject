@@ -109,7 +109,16 @@ const VOLATILE = new Set([
 const GROUPS = {
   accounts: {
     checks: [
-      { name: "stats", path: "/admin/stats" },
+      {
+        name: "stats",
+        path: "/admin/stats",
+        expectPaths: {
+          ".ingestions_total":
+            "the MVP counts its partner_ingestions table; the new backend counts the chapter sources it " +
+            "actually ingests (curriculum.partner_sources), because nothing writes partner_ingestions here " +
+            "and the count would freeze once the MVP is off",
+        },
+      },
       { name: "users page 1", path: "/admin/users?page=1&page_size=25" },
       { name: "students", path: "/admin/students" },
       { name: "parents", path: "/admin/parents" },
@@ -163,7 +172,14 @@ const GROUPS = {
   // come from the same tables, so these must match exactly.
   analytics: {
     checks: [
-      { name: "analytics meta", path: "/admin/analytics/meta" },
+      {
+        name: "analytics meta",
+        path: "/admin/analytics/meta",
+        expect:
+          "the new backend's catalogue carries a version 2 of the twelve measurements that turn on a " +
+          "qualifying sitting, beside the MVP's version 1, so its list is longer (backend " +
+          "domains/analytics/definitions.py)",
+      },
       { name: "analytics dims", path: "/admin/analytics/dims/values" },
       { name: "funnel", path: "/admin/analytics/funnel?range=28d" },
       { name: "panel onboarding", path: "/admin/analytics/panels/onboarding?range=28d" },
@@ -172,6 +188,8 @@ const GROUPS = {
       {
         name: "journey summary",
         path: "/admin/analytics/panels/journey-summary?range=28d",
+        // The only field that differs is each server's own `now`.
+        ignorePaths: [".as_of"],
       },
     ],
     follow: [
@@ -181,7 +199,12 @@ const GROUPS = {
         detail: (id) => [
           {
             name: `metric series ${id}`,
+            // No from/to on purpose: the console always sends them, and what this compares is how each
+            // backend refuses a request that lacks them.
             path: `/admin/analytics/metrics/${encodeURIComponent(id)}/series?range=28d`,
+            expect:
+              "a missing required parameter is a 422 naming the field; the MVP answers 500 " +
+              "'Database query failed' (backend tools/parity/analytics.py)",
           },
         ],
       },
@@ -262,6 +285,40 @@ function zipFingerprint(buf) {
 // ── Comparing ──────────────────────────────────────────────────
 
 /** Drop volatile keys, recursively. Ids and timestamps are kept on purpose. */
+/**
+ * ISO-8601 instants, canonicalised.
+ *
+ * The two backends spell the same moment differently: the MVP ends a UTC
+ * timestamp `+00:00`, the new one `Z`. Both parse to the identical instant in
+ * every client, so a difference of spelling is not a difference of data — but
+ * compared as strings it drowns a response in false positives.
+ *
+ * Deliberately NOT a blanket mask of timestamp fields. The value still has to
+ * be the same instant; only the notation is normalised, so a row that really
+ * moved in time is still caught.
+ */
+function canonicalInstant(value) {
+  if (typeof value !== "string") return value;
+  if (!/^\d{4}-\d{2}-\d{2}T[\d:.]+(Z|[+-]\d{2}:\d{2})$/.test(value)) return value;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? value : new Date(parsed).toISOString();
+}
+
+/** Whether a response carried no rows: a bare empty array, or a page whose `items` is empty. */
+function isEmptyCollection(body) {
+  if (Array.isArray(body)) return body.length === 0;
+  if (body && typeof body === "object" && Array.isArray(body.items)) return body.items.length === 0;
+  return false;
+}
+
+/** A copy of `body` without the named top-level path (`.field`). */
+function dropPath(body, path) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return body;
+  const field = path.startsWith(".") ? path.slice(1) : path;
+  const { [field]: _dropped, ...rest } = body;
+  return rest;
+}
+
 function normalise(value) {
   if (Array.isArray(value)) return value.map(normalise);
   if (value && typeof value === "object") {
@@ -271,7 +328,7 @@ function normalise(value) {
     }
     return out;
   }
-  return value;
+  return canonicalInstant(value);
 }
 
 /**
@@ -393,6 +450,16 @@ async function runCheck(check) {
   }
 
   if (mvp.status !== nw.status) {
+    // A deliberate change can be a change of STATUS, not only of body -- the new backend answering 422 where
+    // the MVP answered 500, say. Without this the expectation never gets a chance: the status comparison
+    // returns first, and a documented improvement reads as a failure every run.
+    if (check.expect) {
+      return {
+        verdict: "differs as intended",
+        note: `${check.expect} (MVP ${mvp.status}, new ${nw.status})`,
+        paths: [],
+      };
+    }
     return {
       verdict: "DIFFERS",
       note: `status: MVP ${mvp.status}, new ${nw.status}`,
@@ -400,7 +467,13 @@ async function runCheck(check) {
     };
   }
 
-  const [a, b] = reconcileNewOnlyNulls(normalise(mvp.body), normalise(nw.body));
+  let [a, b] = reconcileNewOnlyNulls(normalise(mvp.body), normalise(nw.body));
+  // `ignorePaths` drops a field that is the RESPONDING server's own clock rather than stored data -- two
+  // servers asked at the same moment answer with their own `now`, and comparing those compares the clocks.
+  // Narrow by design: a row's own timestamp is data and stays compared.
+  for (const path of check.ignorePaths ?? []) {
+    [a, b] = [dropPath(a, path), dropPath(b, path)];
+  }
 
   // Two matching failures are not parity. An expired token (401 on both) or a
   // route neither side serves would otherwise be counted as a pass, and a gate
@@ -421,7 +494,51 @@ async function runCheck(check) {
     };
   }
 
+  // Two empty collections match for the same reason two 401s do: there was nothing to compare. Counting it as
+  // a pass is how a gate gets signed off on "6/10 matched" when four of them were empty on both sides.
+  if (!check.expect && isEmptyCollection(a) && isEmptyCollection(b)) {
+    return {
+      verdict: "NO EVIDENCE",
+      note: "empty on both sides; the route answers and the shape agrees, but no row was compared",
+      paths: [],
+    };
+  }
+
   if (eq(a, b)) return { verdict: "same", note: `${mvp.status}`, paths: [] };
+
+  // `expectPaths` is `expect` for one field rather than a whole response. A
+  // check with it must differ at exactly those paths and nowhere else, so a
+  // deliberate change to one count cannot hide a real change to the thirteen
+  // beside it -- which marking the whole check `expect` would do.
+  if (check.expectPaths) {
+    // diffPaths yields display lines ("<path>: MVP x / new y"), so the path is what precedes the first colon.
+    const lines = diffPaths(a, b);
+    const pathOf = (line) => line.slice(0, line.indexOf(": "));
+    const differing = lines.map(pathOf);
+    const named = Object.keys(check.expectPaths);
+    const unexpected = lines.filter((line) => !named.includes(pathOf(line)));
+    const matched = named.filter((p) => !differing.includes(p));
+    if (unexpected.length) {
+      return {
+        verdict: "DIFFERS",
+        note: `beyond the expected ${named.join(", ")}`,
+        paths: unexpected,
+      };
+    }
+    if (matched.length) {
+      return {
+        verdict: "DIFFERS",
+        note: `${matched.join(", ")} expected to differ but matched -- was the change reverted? ` +
+          matched.map((p) => `(${check.expectPaths[p]})`).join(" "),
+        paths: [],
+      };
+    }
+    return {
+      verdict: "differs as intended",
+      note: named.map((p) => `${p}: ${check.expectPaths[p]}`).join("; "),
+      paths: [],
+    };
+  }
 
   if (check.expect) {
     return { verdict: "differs as intended", note: check.expect, paths: [] };
