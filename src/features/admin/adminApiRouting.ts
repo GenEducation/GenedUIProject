@@ -165,6 +165,23 @@ function ruleFor(pathWithQuery: string): Rule | null {
   return ADMIN_ROUTE_RULES.find((rule) => matches(path, rule.prefix)) ?? null;
 }
 
+/**
+ * Whether reads of `group` go to the new backend.
+ *
+ * For the one case where the two backends do not serve the same shape: the
+ * Ingestions screen. The MVP lists rows of its `partner_ingestions` table; the
+ * new backend lists the chapter sources it actually ingests, which have no
+ * chunk count and do have a run state. So the group switches which *view*
+ * renders, not only which host it calls — and the rollback stays one flag:
+ * group off ⇒ old view ⇒ MVP, exactly as before.
+ *
+ * Prefer `adminUrl` everywhere else. A view asking this question is a view
+ * whose two backends disagree about the data, which should stay rare.
+ */
+export function readsNewBackend(group: AdminGroup): boolean {
+  return Boolean(NEW_BASE) && READ_GROUPS.has(group);
+}
+
 /** The group a path belongs to, or null when nothing claims it (⇒ MVP). */
 export function adminGroupForPath(pathWithQuery: string): AdminGroup | null {
   return ruleFor(pathWithQuery)?.group ?? null;

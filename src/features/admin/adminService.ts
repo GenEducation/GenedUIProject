@@ -133,6 +133,10 @@ export interface Assignment {
   updated_at: string;
 }
 
+/**
+ * A row of the MVP's `partner_ingestions` table. Read only while the
+ * `ingestions` group is off; the new backend has no such table.
+ */
 export interface Ingestion {
   id: string;
   partner_id: string | null;
@@ -145,6 +149,62 @@ export interface Ingestion {
   chunks_created: number;
   status: string;
   ingested_at: string;
+}
+
+/** How far a run has got, for the progress column. */
+export interface SourceProgress {
+  stage: string;
+  step: number;
+  steps: number;
+  done: number;
+  total: number;
+  percent: number;
+  updated_at: string;
+}
+
+/**
+ * A chapter source as the new backend lists it: the real unit of ingestion
+ * there, which is a chapter of a partner's book rather than a document.
+ *
+ * Deliberately not reshaped to look like `Ingestion`. There is no chunk count
+ * and no document type to map onto, and a run here has a state and a stage the
+ * old screen could not show; pretending otherwise would be inventing data.
+ */
+export interface SourceIngestion {
+  source_id: string;
+  partner_id: string;
+  partner_org: string | null;
+  board: string;
+  publisher: string;
+  subject: string;
+  grade: number;
+  book_title: string;
+  edition_label: string;
+  chapter: { ordinal: number; title: string; first_pdf_page: number; last_pdf_page: number };
+  pdf_file_name: string;
+  page_count: number;
+  state: "registered" | "queued" | "running" | "review_needed" | "invalid" | "ready" | "failed";
+  detail: string | null;
+  questions: number;
+  progress: SourceProgress | null;
+  outcome: { next_step: string; can_run_again: boolean };
+  queued_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SourceIngestionPage {
+  items: SourceIngestion[];
+  total_count: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ListIngestionsQuery {
+  limit?: number;
+  offset?: number;
 }
 
 interface CreateUserBase {
@@ -308,7 +368,22 @@ export const deleteAgent = (id: string) =>
 
 // ── Ingestions ─────────────────────────────────────────────────
 
+/** The MVP's list. Used only while the `ingestions` group is off. */
 export const listIngestions = () => getJson<Ingestion[]>("/admin/ingestions");
+
+/**
+ * One page of the new backend's chapter sources.
+ *
+ * Same path as `listIngestions`, so the routing table needs no second rule —
+ * but a different shape, which is why `SourceIngestionsView` and the old view
+ * are two components rather than one with a branch inside it.
+ */
+export function listSourceIngestions(params: ListIngestionsQuery = {}): Promise<SourceIngestionPage> {
+  const qs = new URLSearchParams();
+  qs.set("limit", String(params.limit ?? 50));
+  qs.set("offset", String(params.offset ?? 0));
+  return getJson<SourceIngestionPage>(`/admin/ingestions?${qs.toString()}`);
+}
 
 // ── Custom wake-word models ────────────────────────────────────
 
