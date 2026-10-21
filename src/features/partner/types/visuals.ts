@@ -31,6 +31,15 @@ export const REASON_LABELS: Record<ReasonCode, string> = {
 
 export const REASON_CODES = Object.keys(REASON_LABELS) as ReasonCode[];
 
+/** What a recorded decision can say: a partner's reasons, or one the backend records on their behalf. */
+export type DecisionReason = ReasonCode | "accepted_as_is" | "recropped";
+
+export const DECISION_REASON_LABELS: Record<DecisionReason, string> = {
+  ...REASON_LABELS,
+  accepted_as_is: "As it was",
+  recropped: "Replaced by a new crop",
+};
+
 /** Max length of the free-text note sent with a reject or regenerate. */
 export const NOTE_MAX = 500;
 
@@ -39,8 +48,14 @@ export interface VisualCritique {
   problems: string[];
 }
 
+/** `drawn`: a picture the model drew; `textbook_crop`: the figure as printed, cut from its textbook page. */
+export type VisualOrigin = "drawn" | "textbook_crop";
+
 export interface VisualSummary {
   id: string;
+  /** `figure`: a textbook figure (redrawn, or its crop); `node`: a lesson step; `card`: the chapter cover. */
+  kind: "node" | "figure" | "card";
+  origin: VisualOrigin;
   /** Sent back with the decision, so a stale view is rejected with a 409. */
   content_hash: string;
   component_id: string;
@@ -91,13 +106,14 @@ export interface VisualConcept {
   feedback: null | {
     reason_codes: ReasonCode[];
     note: string | null;
-    previous_spec: VisualSpec;
+    /** Null when a textbook crop was sent for a redraw: it had no spec. */
+    previous_spec: VisualSpec | null;
   };
 }
 
 export interface VisualDecisionView {
   decision: "accept" | "reject";
-  reason_codes: ReasonCode[];
+  reason_codes: DecisionReason[];
   note: string | null;
   actor_role: string;
   decided_at: string;
@@ -124,7 +140,8 @@ export interface VisualFamilyMember {
 
 export interface VisualDetail extends Omit<VisualSummary, "caption"> {
   concept: VisualConcept;
-  spec: VisualSpec;
+  /** Null for a textbook crop: it was cut from the page, not drawn from a spec. */
+  spec: VisualSpec | null;
   checks: Record<string, unknown>;
   provenance: Record<string, unknown>;
   decision: VisualDecisionView | null;
@@ -173,4 +190,36 @@ export interface VisualListParams {
    */
   before_id?: string;
   limit?: number;
+}
+
+/** A box on a page in thousandths of its height and width: [ymin, xmin, ymax, xmax]. */
+export type CropBox = [number, number, number, number];
+
+/** Most boxes one re-crop may cut; they are joined top to bottom into one picture. */
+export const CROP_MAX_BOXES = 6;
+
+export interface CropPage {
+  /** The PDF page number. */
+  page: number;
+  width: number;
+  height: number;
+  /** Relative, signed, public path, like `image_url`. */
+  image_url: string | null;
+}
+
+/** What the crop editor opens on: the figure's pages and its current crops, in the order the picture shows them. */
+export interface VisualCrop {
+  pages: CropPage[];
+  boxes: { page: number; box: CropBox }[];
+}
+
+export interface VisualRecropIn {
+  content_hash: string;
+  boxes: { page: number; box: CropBox }[];
+}
+
+/** The new textbook crop, pending review; `created` is false when the same crop already existed. */
+export interface VisualRecropOut {
+  id: string;
+  created: boolean;
 }
