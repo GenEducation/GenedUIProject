@@ -3,7 +3,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   signIn,
   signUp,
+  googleSignIn,
   googleSignUp,
+  sendOtp,
+  requestPasswordReset,
+  resetPassword,
   fetchProfile,
   confirmDevicePairing,
   type AuthTokenResponse,
@@ -77,6 +81,15 @@ describe("authService — request shaping", () => {
     });
   });
 
+  it("signUp (student) omits grade and email when not provided", async () => {
+    const fetchMock = stubFetchOk();
+    await signUp({ role: "student", email: "", password: "pw" });
+    const { body } = firstCall(fetchMock);
+    expect(body).not.toHaveProperty("grade");
+    expect(body).not.toHaveProperty("email_id");
+    expect(body).toEqual({ password: "pw", role: "STUDENT" });
+  });
+
   it("signUp (parent) always sends email_id + otp_code and includes phone", async () => {
     const fetchMock = stubFetchOk();
     await signUp({ role: "parent", email: "mom@x.com", password: "pw", otp_code: "9999", phone: "555" });
@@ -99,6 +112,22 @@ describe("authService — request shaping", () => {
     expect(firstCall(blank).body).not.toHaveProperty("full_name");
   });
 
+  it("googleSignIn posts {token} to /auth/google-sign-in", async () => {
+    const fetchMock = stubFetchOk();
+    await googleSignIn("gtoken");
+    const { url, body } = firstCall(fetchMock);
+    expect(url).toMatch(/\/auth\/google-sign-in$/);
+    expect(body).toEqual({ token: "gtoken" });
+  });
+
+  it("googleSignUp (student) sends token, role, and Number(grade)", async () => {
+    const fetchMock = stubFetchOk();
+    await googleSignUp("gtoken", { role: "student", grade: "8" });
+    const { url, body } = firstCall(fetchMock);
+    expect(url).toMatch(/\/auth\/google-sign-up$/);
+    expect(body).toEqual({ token: "gtoken", role: "STUDENT", grade: 8 });
+  });
+
   it("signUp (student) passes age and partner_id; never sends fields the strict backend refuses", async () => {
     const fetchMock = stubFetchOk();
     await signUp({
@@ -115,6 +144,27 @@ describe("authService — request shaping", () => {
     await googleSignUp("gtoken", { role: "student", username: "riya_7", grade: "6", age: "11", partner_id: "c2a1" });
     const { body } = firstCall(fetchMock);
     expect(body).toEqual({ token: "gtoken", role: "STUDENT", grade: 6, age: 11, partner_id: "c2a1" });
+  });
+
+  it("sendOtp and requestPasswordReset post {email}", async () => {
+    const otpMock = stubFetchOk();
+    await sendOtp("a@x.com");
+    expect(firstCall(otpMock).url).toMatch(/\/auth\/send-otp$/);
+    expect(firstCall(otpMock).body).toEqual({ email: "a@x.com" });
+
+    vi.unstubAllGlobals();
+    const resetMock = stubFetchOk();
+    await requestPasswordReset("a@x.com");
+    expect(firstCall(resetMock).url).toMatch(/\/auth\/forgot-password$/);
+    expect(firstCall(resetMock).body).toEqual({ email: "a@x.com" });
+  });
+
+  it("resetPassword posts {email, otp_code, new_password}", async () => {
+    const fetchMock = stubFetchOk();
+    await resetPassword({ email: "a@x.com", otp_code: "1234", new_password: "newpw" });
+    const { url, body } = firstCall(fetchMock);
+    expect(url).toMatch(/\/auth\/reset-password$/);
+    expect(body).toEqual({ email: "a@x.com", otp_code: "1234", new_password: "newpw" });
   });
 
   it("fetchProfile attaches the Bearer token from localStorage", async () => {
@@ -136,6 +186,11 @@ describe("authService — handleAuthError precedence", () => {
   it("joins a FastAPI detail[] array by msg", async () => {
     stubFetchError({ detail: [{ msg: "field a" }, { msg: "field b" }] });
     await expect(signIn({ username: "a", password: "b" })).rejects.toThrow("field a, field b");
+  });
+
+  it("falls back to a detail string", async () => {
+    stubFetchError({ detail: "single detail" });
+    await expect(signIn({ username: "a", password: "b" })).rejects.toThrow("single detail");
   });
 
   it("throws (with the default message) when the error body is not JSON", async () => {
@@ -164,6 +219,14 @@ describe("authService — confirmDevicePairing", () => {
     await expect(confirmDevicePairing({ user_code: "XYZ", student_id: "s1" })).rejects.toEqual({
       error_code: "DEVICE_1104",
       message: "Invalid code",
+    });
+  });
+
+  it("throws a default error object when the failure body is not JSON", async () => {
+    stubFetchError("gateway timeout", 504);
+
+    await expect(confirmDevicePairing({ user_code: "XYZ", student_id: "s1" })).rejects.toEqual({
+      message: "Pairing request failed.",
     });
   });
 });

@@ -30,6 +30,13 @@ afterEach(() => {
 });
 
 describe("parentService — request shaping", () => {
+  it("fetchLinkedStudents GETs /parent/students with the parent_id query", async () => {
+    const fetchMock = stubFetch([{ student_id: "s1", status: "APPROVED" }]);
+    const res = await parentService.fetchLinkedStudents("p1");
+    expect(res).toHaveLength(1);
+    expect(firstCall(fetchMock).url).toMatch(/\/parent\/students\?parent_id=p1$/);
+  });
+
   it("linkStudent POSTs {parent_id, student_id} to /parent/link", async () => {
     const fetchMock = stubFetch({ student_id: "s1", parent_id: "p1", status: "PENDING", requested_at: "now" });
     await parentService.linkStudent("p1", "s1");
@@ -54,6 +61,14 @@ describe("parentService — request shaping", () => {
     await parentService.updateStudentStatus("p1", "s1", "REJECTED");
     expect(firstCall(fetchMock).body).toEqual({ status: "REJECTED" });
   });
+
+  it("unlinkStudent DELETEs the student link and resolves void", async () => {
+    const fetchMock = stubFetch("", 200);
+    await expect(parentService.unlinkStudent("p1", "s1")).resolves.toBeUndefined();
+    const { url, init } = firstCall(fetchMock);
+    expect(url).toMatch(/\/parent\/link\/s1\?parent_id=p1$/);
+    expect(init.method).toBe("DELETE");
+  });
 });
 
 describe("parentService — non-ok responses reject", () => {
@@ -66,5 +81,50 @@ describe("parentService — non-ok responses reject", () => {
     const err = await parentService.fetchLinkedStudents("p1").catch((e) => e);
     expect(err).toBeInstanceOf(ApiRequestError);
     expect(err.status).toBe(500);
+  });
+
+  it("linkStudent rejects with ApiRequestError on 409", async () => {
+    stubFetch({ error: "already linked" }, 409);
+    const err = await parentService.linkStudent("p1", "s1").catch((e) => e);
+    expect(err).toBeInstanceOf(ApiRequestError);
+    expect(err.status).toBe(409);
+  });
+
+  it("updateStudentStatus rejects with ApiRequestError on 400", async () => {
+    stubFetch({ error: "bad" }, 400);
+    const err = await parentService.updateStudentStatus("p1", "s1", "REJECTED").catch((e) => e);
+    expect(err).toBeInstanceOf(ApiRequestError);
+    expect(err.status).toBe(400);
+  });
+
+  it("unlinkStudent rejects with ApiRequestError on 404", async () => {
+    stubFetch("", 404);
+    const err = await parentService.unlinkStudent("p1", "s1").catch((e) => e);
+    expect(err).toBeInstanceOf(ApiRequestError);
+    expect(err.status).toBe(404);
+  });
+});
+
+describe("parentService — guardian name and invitation", () => {
+  it("updateParentName PUTs {display_name} to /parent/profile and returns the name as stored", async () => {
+    const fetchMock = stubFetch({ display_name: "Sunita Sharma" });
+    await expect(parentService.updateParentName("  Sunita Sharma ")).resolves.toBe("Sunita Sharma");
+    const { url, init, body } = firstCall(fetchMock);
+    expect(url).toMatch(/\/parent\/profile$/);
+    expect(init.method).toBe("PUT");
+    expect(body).toEqual({ display_name: "  Sunita Sharma " });
+  });
+
+  it("verifyInvitation reads the emailed link's student and token without signing in", async () => {
+    const fetchMock = stubFetch({ student_id: "s1", valid: true });
+    await parentService.verifyInvitation("s1", "t/1");
+    expect(firstCall(fetchMock).url).toMatch(/\/parent\/verify-token\?student_id=s1&token=t%2F1$/);
+  });
+
+  it("verifyInvitation rejects with the server's message, or a plain one when the body isn't JSON", async () => {
+    stubFetch({ message: "SYNTHETIC: this invitation has expired." }, 410);
+    await expect(parentService.verifyInvitation("s1", "t1")).rejects.toThrow("SYNTHETIC: this invitation has expired.");
+    stubFetch("not json", 500);
+    await expect(parentService.verifyInvitation("s1", "t1")).rejects.toThrow("This invitation link is no longer valid.");
   });
 });

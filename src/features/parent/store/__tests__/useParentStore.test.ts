@@ -19,9 +19,11 @@ vi.mock("../../../student/services/studentService", () => ({
 }));
 
 import { parentService } from "../../services/parentService";
+import { studentService } from "../../../student/services/studentService";
 import { useParentStore } from "../useParentStore";
 
 const svc = vi.mocked(parentService, true);
+const studentSvc = vi.mocked(studentService, true);
 
 autoResetStore(useParentStore);
 
@@ -47,11 +49,23 @@ describe("useParentStore.fetchLinkedStudents — auto-select", () => {
     expect(useParentStore.getState().selectedStudentId).toBe("s2");
   });
 
+  it("does not auto-select when there is no approved child", async () => {
+    svc.fetchLinkedStudents.mockResolvedValue([linked("s1", "PENDING")]);
+    await useParentStore.getState().fetchLinkedStudents();
+    expect(useParentStore.getState().selectedStudentId).toBeNull();
+  });
+
   it("leaves an existing selection untouched", async () => {
     useParentStore.setState({ selectedStudentId: "s9" });
     svc.fetchLinkedStudents.mockResolvedValue([linked("s2", "APPROVED")]);
     await useParentStore.getState().fetchLinkedStudents();
     expect(useParentStore.getState().selectedStudentId).toBe("s9");
+  });
+
+  it("is a no-op without a parent profile", async () => {
+    useParentStore.setState({ parentProfile: null });
+    await useParentStore.getState().fetchLinkedStudents();
+    expect(svc.fetchLinkedStudents).not.toHaveBeenCalled();
   });
 });
 
@@ -71,9 +85,24 @@ describe("useParentStore.setSelectedStudentId", () => {
     expect(s.activeSessionHistory).toEqual([]);
     expect(s.activeDashboardView).toBe("analytics");
   });
+
+  it("clearing selection (null) does not force the analytics view", () => {
+    useParentStore.setState({ activeDashboardView: "profile" });
+    useParentStore.getState().setSelectedStudentId(null);
+    expect(useParentStore.getState().activeDashboardView).toBe("profile");
+  });
 });
 
 describe("useParentStore.updateStudentStatus — optimistic", () => {
+  it("optimistically updates the child's status locally", async () => {
+    useParentStore.setState({ linkedStudents: [linked("s1", "PENDING")], selectedStudentId: "s1" });
+    svc.updateStudentStatus.mockResolvedValue(linked("s1", "APPROVED"));
+
+    await useParentStore.getState().updateStudentStatus("s1", "APPROVED");
+
+    expect(useParentStore.getState().linkedStudents[0].status).toBe("APPROVED");
+  });
+
   it("auto-selects a newly approved child when nothing was selected", async () => {
     useParentStore.setState({ linkedStudents: [linked("s1", "PENDING")], selectedStudentId: null });
     svc.updateStudentStatus.mockResolvedValue(linked("s1", "APPROVED"));
@@ -91,6 +120,22 @@ describe("useParentStore.updateStudentStatus — optimistic", () => {
 });
 
 describe("useParentStore.unlinkStudent — reselection", () => {
+  it("removes the child and re-selects the next approved when the selected one is unlinked", async () => {
+    useParentStore.setState({
+      linkedStudents: [linked("s1", "APPROVED"), linked("s2", "APPROVED")],
+      selectedStudentId: "s1",
+      activeDashboardView: "chat",
+    });
+    svc.unlinkStudent.mockResolvedValue(undefined);
+
+    await useParentStore.getState().unlinkStudent("s1");
+
+    const s = useParentStore.getState();
+    expect(s.linkedStudents.map((x) => x.student_id)).toEqual(["s2"]);
+    expect(s.selectedStudentId).toBe("s2");
+    expect(s.activeDashboardView).toBe("analytics");
+  });
+
   it("resets selection to null when no approved child remains", async () => {
     useParentStore.setState({
       linkedStudents: [linked("s1", "APPROVED"), linked("s2", "PENDING")],
@@ -101,6 +146,18 @@ describe("useParentStore.unlinkStudent — reselection", () => {
     await useParentStore.getState().unlinkStudent("s1");
 
     expect(useParentStore.getState().selectedStudentId).toBeNull();
+  });
+
+  it("keeps the current selection when a different child is unlinked", async () => {
+    useParentStore.setState({
+      linkedStudents: [linked("s1", "APPROVED"), linked("s2", "APPROVED")],
+      selectedStudentId: "s1",
+    });
+    svc.unlinkStudent.mockResolvedValue(undefined);
+
+    await useParentStore.getState().unlinkStudent("s2");
+
+    expect(useParentStore.getState().selectedStudentId).toBe("s1");
   });
 });
 
@@ -113,6 +170,31 @@ describe("useParentStore.linkNewStudent", () => {
 
     expect(svc.linkStudent).toHaveBeenCalledWith("p1", "s5");
     expect(svc.fetchLinkedStudents).toHaveBeenCalled();
+  });
+});
+
+describe("useParentStore — session drill-down (via studentService)", () => {
+  it("fetchStudentSessions stores the child's sessions", async () => {
+    studentSvc.fetchSessions.mockResolvedValue({ sessions: [{ id: "sess1" }] } as never);
+    await useParentStore.getState().fetchStudentSessions("s1");
+    expect(useParentStore.getState().selectedStudentSessions).toEqual([{ id: "sess1" }]);
+    expect(useParentStore.getState().isFetchingSessions).toBe(false);
+  });
+
+  it("fetchSessionHistory stores the session transcript", async () => {
+    studentSvc.fetchChatHistory.mockResolvedValue({ history: [{ m: "hi" }] } as never);
+    await useParentStore.getState().fetchSessionHistory("s1", "sess1");
+    expect(useParentStore.getState().activeSessionHistory).toEqual([{ m: "hi" }]);
+    expect(useParentStore.getState().isFetchingHistory).toBe(false);
+  });
+});
+
+describe("useParentStore — view setters", () => {
+  it("setDashboardView and setActiveSessionId write their slices", () => {
+    useParentStore.getState().setDashboardView("schedule");
+    useParentStore.getState().setActiveSessionId("sess9");
+    expect(useParentStore.getState().activeDashboardView).toBe("schedule");
+    expect(useParentStore.getState().activeSessionId).toBe("sess9");
   });
 });
 

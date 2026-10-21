@@ -52,4 +52,24 @@ describe("ResetPassword", () => {
     expect(screen.getByText("Passwords do not match")).toBeInTheDocument();
     expect(resetPasswordMock).not.toHaveBeenCalled();
   });
+
+  it("rejects a password shorter than 8 characters", () => {
+    render(<ResetPassword token="tok" />);
+    fillForm({ password: "short1", confirm: "short1" });
+
+    fireEvent.click(screen.getByRole("button", { name: /reset password/i }));
+
+    expect(screen.getByText("Password must be at least 8 characters")).toBeInTheDocument();
+    expect(resetPasswordMock).not.toHaveBeenCalled();
+  });
+
+  it("surfaces the server error message on failure", async () => {
+    resetPasswordMock.mockRejectedValue(new Error("OTP expired"));
+    render(<ResetPassword token="tok" />);
+    fillForm();
+
+    fireEvent.click(screen.getByRole("button", { name: /reset password/i }));
+
+    await waitFor(() => expect(screen.getByText("OTP expired")).toBeInTheDocument());
+  });
 });
