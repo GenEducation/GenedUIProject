@@ -260,3 +260,38 @@ describe("the rule table", () => {
     expect([...groups].sort()).toEqual(["accounts", "analytics", "ingestions", "schools"]);
   });
 });
+
+describe("adminAuthBase", () => {
+  // The console's login was the last thing tying it to the MVP: every screen could be moved and the MVP would
+  // still have to run, because that is where an admin signs in.
+  it("signs in against the MVP until a host is configured", async () => {
+    const { adminAuthBase } = await load({ NEXT_PUBLIC_ADMIN_AUTH_URL: "" });
+
+    expect(adminAuthBase()).toBe(MVP);
+  });
+
+  it("signs in against the configured host once there is one", async () => {
+    const { adminAuthBase } = await load({ NEXT_PUBLIC_ADMIN_AUTH_URL: NEW });
+
+    expect(adminAuthBase()).toBe(NEW);
+  });
+
+  it("is separate from where the admin's API calls go", async () => {
+    // Deliberately two variables. Moving the screens and moving the login are different decisions, and either
+    // can be undone without the other.
+    const { adminAuthBase, adminApiBase } = await load({
+      NEXT_PUBLIC_ADMIN_AUTH_URL: NEW,
+      NEXT_PUBLIC_ADMIN_API_URL: NEW,
+      NEXT_PUBLIC_ADMIN_BACKEND_GROUPS: "",
+    });
+
+    expect(adminAuthBase()).toBe(NEW);
+    expect(adminApiBase("/admin/users", "GET")).toBe(MVP);
+  });
+
+  it("strips a trailing slash, like every other base", async () => {
+    const { adminAuthBase } = await load({ NEXT_PUBLIC_ADMIN_AUTH_URL: `${NEW}/` });
+
+    expect(adminAuthBase()).toBe(NEW);
+  });
+});

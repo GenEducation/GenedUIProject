@@ -20,6 +20,7 @@
  * - `NEXT_PUBLIC_ADMIN_API_URL`                  the new gateway. Empty ⇒ nothing moves.
  * - `NEXT_PUBLIC_ADMIN_BACKEND_GROUPS`           comma list; whose GETs go to the new backend.
  * - `NEXT_PUBLIC_ADMIN_BACKEND_WRITE_GROUPS`     comma list; whose writes do. Narrowed to the read list.
+ * - `NEXT_PUBLIC_ADMIN_AUTH_URL`                 where the admin signs in. Empty ⇒ the MVP, as before.
  */
 
 export type AdminGroup = "accounts" | "schools" | "analytics" | "ingestions";
@@ -113,6 +114,26 @@ function parseGroups(value: string | undefined): ReadonlySet<AdminGroup> {
 const MVP_BASE = trimBase(process.env.NEXT_PUBLIC_API_URL);
 const NEW_BASE = trimBase(process.env.NEXT_PUBLIC_ADMIN_API_URL);
 
+/**
+ * Where the admin console signs in.
+ *
+ * Separate from `NEXT_PUBLIC_API_URL`, which every other screen's sign-in uses,
+ * because the console is moving backend one screen group at a time and its
+ * login was the last thing still tied to the MVP — the one dependency that
+ * would keep the MVP running even with every admin screen moved over.
+ *
+ * Both stacks issue the same token: HS256, the same claims, the same
+ * `JWT_SECRET_KEY`. So this chooses the issuer and nothing else, and unsetting
+ * it puts the console back on the MVP's login with no other change — the same
+ * rollback the group flags give the screens.
+ *
+ * It must be the new backend's **gateway**, not its api. The gateway strips
+ * `/auth` before forwarding, so `/auth/sign-in` reaches the api as `/sign-in`;
+ * point this at the api directly and every sign-in is a 404 that reads as
+ * "the new backend has no login".
+ */
+const ADMIN_AUTH_BASE = trimBase(process.env.NEXT_PUBLIC_ADMIN_AUTH_URL);
+
 const READ_GROUPS = parseGroups(process.env.NEXT_PUBLIC_ADMIN_BACKEND_GROUPS);
 
 // Intersected with the read list, not asserted against it. A config that names
@@ -145,6 +166,7 @@ if (process.env.NODE_ENV !== "production") {
 export const ADMIN_ROUTING = Object.freeze({
   mvpBase: MVP_BASE,
   newBase: NEW_BASE,
+  authBase: ADMIN_AUTH_BASE || MVP_BASE,
   readGroups: READ_GROUPS,
   writeGroups: WRITE_GROUPS,
 });
@@ -163,6 +185,11 @@ function matches(path: string, prefix: string): boolean {
 function ruleFor(pathWithQuery: string): Rule | null {
   const path = stripQuery(pathWithQuery);
   return ADMIN_ROUTE_RULES.find((rule) => matches(path, rule.prefix)) ?? null;
+}
+
+/** Where `/auth/sign-in` goes for the admin console. The MVP until one is configured. */
+export function adminAuthBase(): string {
+  return ADMIN_AUTH_BASE || MVP_BASE;
 }
 
 /**

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 
 import { signIn } from "@/features/auth/authService";
+import { adminAuthBase } from "@/features/admin/adminApiRouting";
 import { Button } from "@/components/ui/Button";
 
 /**
@@ -31,7 +32,12 @@ export default function AdminLoginPage() {
 
     setIsSigningIn(true);
     try {
-      const token = await signIn({ username: username.trim(), password });
+      // The console's own sign-in host, which is the MVP until one is configured
+      // (`adminApiRouting.adminAuthBase`). Both stacks issue the same token.
+      const token = await signIn(
+        { username: username.trim(), password },
+        { baseUrl: adminAuthBase() },
+      );
 
       if (token.role?.toUpperCase() !== "ADMIN") {
         setError("This account is not an administrator.");

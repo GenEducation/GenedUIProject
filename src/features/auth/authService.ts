@@ -74,8 +74,21 @@ async function handleAuthError(response: Response, defaultMsg: string): Promise<
   throw await apiErrorFromResponse(response, defaultMsg);
 }
 
-export async function signIn(data: SignInFields): Promise<AuthTokenResponse> {
-  const response = await fetch(`${AUTH_API_BASE_URL}/auth/sign-in`, {
+/**
+ * Sign in, optionally against a different backend.
+ *
+ * `baseUrl` exists for the admin console, which is being moved to the new
+ * backend one screen group at a time and had its login left behind on the MVP
+ * — the one thing standing between the console and not needing the MVP at all.
+ * Both stacks issue the same token (HS256, the same claims, the same secret),
+ * so a token from either verifies against both; this only decides which one
+ * issues it. See `adminApiRouting.adminAuthBase`.
+ */
+export async function signIn(
+  data: SignInFields,
+  { baseUrl = AUTH_API_BASE_URL }: { baseUrl?: string } = {},
+): Promise<AuthTokenResponse> {
+  const response = await fetch(`${baseUrl}/auth/sign-in`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
