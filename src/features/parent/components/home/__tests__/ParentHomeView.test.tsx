@@ -25,13 +25,10 @@ const SUMMARY: Record<string, { overall_score: number; session_count: number }> 
 
 function serveChild({ timeOk = true } = {}) {
   server.use(
-    http.get(`${BASE}/api/students/:id/available-agents`, () =>
+    http.get(`${BASE}/parent/children/:id/available-subjects`, () =>
       HttpResponse.json({
-        partners: [{
-          subjects: ["English", "Mathematics", "Science"].map((subject) => ({
-            subject, agents: [{ agent_id: subject, subject, grade: 7 }],
-          })),
-        }],
+        grade: 7,
+        subjects: ["English", "Mathematics", "Science"].map((subject) => ({ subject, chapter_count: 1 })),
       }),
     ),
     http.get(`${BASE}/students/:id/skill-summary`, ({ request }) => {

@@ -74,6 +74,12 @@ export interface AvailableAgentsResponse {
   partners?: AvailableAgentPartner[];
 }
 
+/** `GET /v1/learner/available-subjects` and its parent twin: subjects with a published chapter for the grade. */
+export interface LearnerSubjectsOut {
+  grade: number;
+  subjects: { subject: string; chapter_count: number }[];
+}
+
 /**
  * A per-chapter mastery row from `/chapter-mastery`. The report card and the
  * analytics/assessments views all read this same payload, so it is defined
@@ -183,6 +189,21 @@ export const studentService = {
     signal?: AbortSignal
   ): Promise<AvailableAgentsResponse> => {
     const response = await authFetch(`${API_BASE_URL}/api/students/${userId}/available-agents`, { signal });
+    return response.json();
+  },
+
+  /** The signed-in STUDENT's subjects; grade and schools come from the token. */
+  fetchLearnerSubjects: async (signal?: AbortSignal): Promise<LearnerSubjectsOut> => {
+    const response = await authFetch(`${API_BASE_URL}/v1/learner/available-subjects`, { signal });
+    return response.json();
+  },
+
+  /** A child's subjects, for a PARENT with an APPROVED link to them. */
+  fetchChildSubjects: async (studentId: string, signal?: AbortSignal): Promise<LearnerSubjectsOut> => {
+    const response = await authFetch(
+      `${API_BASE_URL}/parent/children/${encodeURIComponent(studentId)}/available-subjects`,
+      { signal },
+    );
     return response.json();
   },
 

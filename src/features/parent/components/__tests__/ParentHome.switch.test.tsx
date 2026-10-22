@@ -40,7 +40,7 @@ function linkChildren(children: ReturnType<typeof kid>[]) {
     http.post(`${BASE}/get-session`, () => HttpResponse.json({ sessions: [] })),
     // Supporting data for the picker and Home; empty is enough here.
     http.get(`${BASE}/students/:id/profile`, () => HttpResponse.json({ grade: 7 })),
-    http.get(`${BASE}/api/students/:id/available-agents`, () => HttpResponse.json({ partners: [] })),
+    http.get(`${BASE}/parent/children/:id/available-subjects`, () => HttpResponse.json({ grade: 7, subjects: [] })),
     http.get(`${BASE}/students/:id/time/by-period`, () => HttpResponse.json([])),
     http.get(`${BASE}/students/:id/time/by-chapter`, () => HttpResponse.json([])),
   );
