@@ -5,7 +5,7 @@ import { ArrowRight, Loader2, RefreshCcw, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
 import { visualsService } from "../../services/visualsService";
-import type { ReasonCode, VisualDetail } from "../../types/visuals";
+import { REASON_LABELS, type ReasonCode, type VisualDetail } from "../../types/visuals";
 import { ReasonFields } from "./ReasonFields";
 import { composeNote, marksText, overLimit, type Mark } from "./markup";
 import { MarksPreview } from "./MarksPreview";
@@ -41,7 +41,8 @@ export function regenerationErrorText(error: string): string {
  */
 export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMarksSent, onEditMarks }: RegenerationStatusProps) {
   const regen = detail.regeneration;
-  const previousReasons = detail.decision?.reason_codes ?? [];
+  // Only a partner's own reasons can be sent again ("recropped" is the backend's).
+  const previousReasons = (detail.decision?.reason_codes ?? []).filter((c): c is ReasonCode => c in REASON_LABELS);
   const [asking, setAsking] = useState(false);
   const [reasons, setReasons] = useState<ReasonCode[]>(previousReasons);
   const [note, setNote] = useState(detail.decision?.note ?? "");

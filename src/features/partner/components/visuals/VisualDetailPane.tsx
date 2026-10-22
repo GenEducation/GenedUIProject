@@ -5,7 +5,14 @@ import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, BookOpenText, Check, Crop, History, ListChecks, PenLine, SquareDashedMousePointer, Sparkles, TriangleAlert, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useVisualDetail } from "../../hooks/useVisualDetail";
-import { REASON_LABELS, type CandidateState, type VisualDecisionOut, type VisualDetail } from "../../types/visuals";
+import {
+  DECISION_REASON_LABELS,
+  REASON_LABELS,
+  type CandidateState,
+  type VisualDecisionOut,
+  type VisualDetail,
+} from "../../types/visuals";
+import { CropEditor } from "./CropEditor";
 import { DecisionPanel, isTypingTarget } from "./DecisionPanel";
 import { RegenerationStatus } from "./RegenerationStatus";
 import { VisualImage } from "./VisualImage";
@@ -19,6 +26,8 @@ interface VisualDetailPaneProps {
   onBack: () => void;
   onOpen: (id: string) => void;
   onDecided: (id: string, result: VisualDecisionOut) => void;
+  /** A re-crop of this figure was saved: open the new crop, which is pending review. */
+  onRecropped: (newId: string) => void;
   /** Next pending visual, when there is one. */
   onNext: (() => void) | null;
 }
@@ -138,7 +147,7 @@ function FamilyTimeline({ detail, onOpen }: { detail: VisualDetail; onOpen: (id:
   );
 }
 
-export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: VisualDetailPaneProps) {
+export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, onNext }: VisualDetailPaneProps) {
   const { detail, loading, error, reload } = useVisualDetail(id);
   const [zoomed, setZoomed] = useState(false);
   // Mark up: boxes and pins on the picture, sent as plain instructions in the redraw note (see markup.ts).
@@ -166,10 +175,12 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
     setMarking(true);
     pictureRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
   };
+  // Adjust crop: cut a textbook figure again from its page (main's recrop flow, `CropEditor`).
+  const [cropping, setCropping] = useState(false);
 
-  // → moves to the next pending visual.
+  // → moves to the next pending visual (not while cropping: arrows move a box there).
   useEffect(() => {
-    if (!onNext) return;
+    if (!onNext || cropping) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "ArrowRight" || e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return;
       e.preventDefault();
@@ -177,7 +188,7 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onNext]);
+  }, [onNext, cropping]);
 
   return (
     <div className="flex flex-col min-h-full">
@@ -216,7 +227,11 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
         </div>
       )}
 
-      {detail && (
+      {detail && cropping && (
+        <CropEditor detail={detail} onCancel={() => setCropping(false)} onSaved={onRecropped} />
+      )}
+
+      {detail && !cropping && (
         <motion.div
           key={detail.id}
           initial={{ opacity: 0, x: 12 }}
@@ -318,6 +333,14 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
                 onRemove={removeMark}
               />
             )}
+            {detail.kind === "figure" && (
+              <div className="flex items-center gap-3">
+                <Button variant="outline" size="sm" leadingIcon={<Crop size={14} />} onClick={() => setCropping(true)}>
+                  Adjust crop
+                </Button>
+                <p className="text-[11px] text-[#1A3D2C]/50">Cut this figure again from its textbook page.</p>
+              </div>
+            )}
             <FamilyTimeline detail={detail} onOpen={onOpen} />
           </div>
 
@@ -392,7 +415,7 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onNext }: Visu
                 </span>{" "}
                 on {formatDate(detail.decision.decided_at)}
                 {detail.decision.reason_codes.length > 0 && (
-                  <> · {detail.decision.reason_codes.map((c) => REASON_LABELS[c] ?? c).join(", ")}</>
+                  <> · {detail.decision.reason_codes.map((c) => DECISION_REASON_LABELS[c] ?? c).join(", ")}</>
                 )}
                 {detail.decision.note && <> — <q>{detail.decision.note}</q></>}
               </p>

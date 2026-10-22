@@ -71,6 +71,14 @@ function open(subject: Subject = row) {
   return { onChanged };
 }
 
+/** Opens the list, then one visual's detail. */
+async function openDetail(name = "SYNTHETIC shape 2") {
+  const ctx = open();
+  fireEvent.click(await screen.findByRole("button", { name: `Open ${name}` }));
+  await screen.findByText("From the textbook");
+  return ctx;
+}
+
 describe("VisualsModal — list", () => {
   it("shows pending cards with the AI flagged and New version chips", async () => {
     open();
@@ -129,13 +137,6 @@ describe("VisualsModal — list", () => {
 });
 
 describe("VisualsModal — detail and decisions", () => {
-  async function openDetail(name = "SYNTHETIC shape 2") {
-    const ctx = open();
-    fireEvent.click(await screen.findByRole("button", { name: `Open ${name}` }));
-    await screen.findByText("From the textbook");
-    return ctx;
-  }
-
   it("opens a visual that has no generation spec without crashing, and skips its checklist", async () => {
     visualsFixture.reset(() => [makeVisual({ spec: null })]);
     await openDetail("SYNTHETIC shape 1");

@@ -14,7 +14,8 @@ interface SignInProps {
   };
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onSwitchToSignup: () => void;
+  /** Omit to hide the "Sign up" prompt (e.g. while sign-up is paused). */
+  onSwitchToSignup?: () => void;
   isSigningIn: boolean;
   errors: Record<string, string>;
   onGoogleSuccess: (token: string) => void;
@@ -136,16 +137,18 @@ export function SignIn({
 
       <GoogleAuthButton onSuccess={onGoogleSuccess} />
 
-      <div className="text-center text-sm font-medium text-[#3E5558]/60">
-        Don&apos;t have an account?{" "}
-        <button
-          type="button"
-          onClick={onSwitchToSignup}
-          className="font-bold text-[#075E63] hover:text-[#064C50] hover:underline transition-colors"
-        >
-          Sign up
-        </button>
-      </div>
+      {onSwitchToSignup ? (
+        <div className="text-center text-sm font-medium text-[#3E5558]/60">
+          Don&apos;t have an account?{" "}
+          <button
+            type="button"
+            onClick={onSwitchToSignup}
+            className="font-bold text-[#075E63] hover:text-[#064C50] hover:underline transition-colors"
+          >
+            Sign up
+          </button>
+        </div>
+      ) : null}
     </form>
   );
 }

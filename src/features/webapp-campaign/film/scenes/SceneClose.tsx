@@ -28,7 +28,7 @@ export function SceneClose({ p }: { p: Progress }) {
           <p>
             Free for the whole pilot · Maths, Science &amp; English · Class 6–9
             <br />
-            <b>Only {PILOT_SEATS} families</b> · Access starts 16 October
+            <b>Only {PILOT_SEATS} families</b> · Access starts 23 October
           </p>
           <span className="gc-btn gc-btn-citron gc-btn-lg gc-close-btn">
             Tap to join the free pilot

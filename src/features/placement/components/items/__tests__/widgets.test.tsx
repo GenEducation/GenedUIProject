@@ -57,6 +57,15 @@ describe("placement item widgets", () => {
     });
   });
 
+  describe("true_false", () => {
+    it("renders block_spec.statement and sends a string choice", async () => {
+      const { onChange } = renderItem(item("CBSE-G6-SCI-01"));
+      expect(screen.getByText(/Ice is less dense/)).toBeInTheDocument();
+      await userEvent.click(screen.getByText("True"));
+      expect(onChange).toHaveBeenCalledWith({ choice: "true" });
+    });
+  });
+
   describe("multi_select", () => {
     it("accumulates ids, and clears to null when the last one is unpicked", async () => {
       const { onChange } = renderItem(item("CBSE-G6-GEO-01"));
@@ -68,6 +77,13 @@ describe("placement item widgets", () => {
       // but a stable payload is easier to read in item statistics.
       expect(onChange).toHaveBeenLastCalledWith({ selected: ["a", "c"] });
     });
+
+    it("emits null rather than an empty answer", async () => {
+      const multi = item("CBSE-G6-GEO-01");
+      const { onChange } = renderItem(multi, { selected: ["a"] });
+      await userEvent.click(screen.getByText("Plateau"));
+      expect(onChange).toHaveBeenLastCalledWith(null);
+    });
   });
 
   describe("numeric", () => {
@@ -75,6 +91,61 @@ describe("placement item widgets", () => {
       const { onChange } = renderItem(item("CBSE-G6-MATH-01"));
       await userEvent.type(screen.getByRole("textbox"), "405");
       expect(onChange).toHaveBeenLastCalledWith({ value: 405 });
+    });
+
+    it("shows block_spec.unit as a label", () => {
+      renderItem(item("CBSE-G6-MATH-01"));
+      expect(screen.getByText("₹")).toBeInTheDocument();
+    });
+
+    it("sends the text form for a fraction item", async () => {
+      const fraction: PlacementItem = {
+        ...item("CBSE-G6-MATH-01"),
+        block_spec: { input: "fraction" },
+      };
+      const { onChange } = renderItem(fraction);
+      await userEvent.type(screen.getByRole("textbox"), "3/4");
+      expect(onChange).toHaveBeenLastCalledWith({ text: "3/4" });
+    });
+  });
+
+  describe("fill_blank", () => {
+    it("sends what the student typed, uncorrected", async () => {
+      const { onChange } = renderItem(item("CBSE-G6-ENG-03"));
+      await userEvent.type(screen.getByRole("textbox"), "But");
+      // Not lowercased: the backend ignores case, and item statistics want the
+      // real wording.
+      expect(onChange).toHaveBeenLastCalledWith({ text: "But" });
+    });
+
+    it("sends null when the field is blank, so the item counts as unanswered", async () => {
+      const { onChange } = renderItem(item("CBSE-G6-ENG-03"));
+      await userEvent.type(screen.getByRole("textbox"), " ");
+      expect(onChange).toHaveBeenLastCalledWith(null);
+    });
+
+    describe("in Hindi", () => {
+      const hindi = (): PlacementItem => ({ ...item("CBSE-G6-ENG-03"), item_language: "hi" });
+
+      it("converts Latin keystrokes to Devanagari and shows a live preview", async () => {
+        const { onChange } = renderItem(hindi());
+        await userEvent.type(screen.getByRole("textbox"), "namaste");
+        expect(onChange).toHaveBeenLastCalledWith({ text: "नमस्ते" });
+        expect(screen.getByText("नमस्ते")).toBeInTheDocument();
+      });
+
+      it("passes real Devanagari through without converting it twice", async () => {
+        const { onChange } = renderItem(hindi());
+        fireEvent.change(screen.getByRole("textbox"), { target: { value: "नमस्ते" } });
+        expect(onChange).toHaveBeenLastCalledWith({ text: "नमस्ते" });
+      });
+
+      it("sends null when cleared", async () => {
+        const { onChange } = renderItem(hindi());
+        await userEvent.type(screen.getByRole("textbox"), "a");
+        await userEvent.clear(screen.getByRole("textbox"));
+        expect(onChange).toHaveBeenLastCalledWith(null);
+      });
     });
   });
 
@@ -99,6 +170,14 @@ describe("placement item widgets", () => {
       await userEvent.click(screen.getByText("Ganga"));
       await userEvent.click(screen.getByText("Bay of Bengal"));
       expect(onChange).toHaveBeenLastCalledWith({ pairs: [["l1", "r2"]] });
+    });
+
+    it("releases a right item when another left item claims it", async () => {
+      const matchItem = item("CBSE-G6-GEO-07");
+      const { onChange } = renderItem(matchItem, { pairs: [["l1", "r2"]] });
+      await userEvent.click(screen.getByText("Narmada"));
+      await userEvent.click(screen.getByText("Bay of Bengal"));
+      expect(onChange).toHaveBeenLastCalledWith({ pairs: [["l2", "r2"]] });
     });
   });
 
@@ -137,6 +216,22 @@ describe("placement item widgets", () => {
 
       expect(onChange).toHaveBeenCalledWith({ point: { x: 10500, y: 14850 } });
       expect(screen.getByText(/d-maps\.com/)).toBeInTheDocument();
+    });
+
+    it("renders the other served map (india-states-outline) too — both are live, not just the rivers one", async () => {
+      const mapItem = item("CBSE-G6-GEO-06");
+      const onChange = vi.fn();
+      const { container } = render(<ItemRenderer item={mapItem} value={null} onChange={onChange} />);
+
+      const frame = container.querySelector('[class*="cursor-crosshair"]') as HTMLElement;
+      expect(frame).toBeInTheDocument();
+
+      Object.defineProperty(frame, "getBoundingClientRect", {
+        value: () => ({ left: 0, top: 0, width: 420, height: 594, right: 420, bottom: 594, x: 0, y: 0, toJSON() {} }),
+      });
+      fireEvent.click(frame, { clientX: 210, clientY: 297 });
+
+      expect(onChange).toHaveBeenCalledWith({ point: { x: 10500, y: 14850 } });
     });
 
     it("stays passable, and says so, when the asset name isn't vendored", async () => {
@@ -190,6 +285,21 @@ describe("placement item widgets", () => {
       await userEvent.click(screen.getByLabelText("Jul: 90"));
       expect(onChange).toHaveBeenCalledWith({ selected: ["jul"] });
     });
+
+    it("replaces the selection rather than adding to it", async () => {
+      const { onChange } = renderItem(item("CBSE-G6-GEO-03"), { selected: ["jun"] });
+      await userEvent.click(screen.getByLabelText("Aug: 70"));
+      expect(onChange).toHaveBeenCalledWith({ selected: ["aug"] });
+      expect(onChange).not.toHaveBeenCalledWith({ selected: expect.arrayContaining(["jun", "aug"]) });
+    });
+  });
+
+  describe("Hindi items", () => {
+    it("tags Devanagari content with lang=hi so it gets the Mukta stack", () => {
+      renderItem(item("CBSE-G6-HIN-01"));
+      const prompt = screen.getByText("इनमें से कौन सा शब्द संज्ञा है?");
+      expect(prompt).toHaveAttribute("lang", "hi");
+    });
   });
 
   describe("every item", () => {
@@ -200,10 +310,20 @@ describe("placement item widgets", () => {
       }
     });
 
+    it("shows no marks, score or correctness while answering", () => {
+      renderItem(item("CBSE-G6-MATH-01"));
+      expect(screen.queryByText(/mark/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/correct/i)).not.toBeInTheDocument();
+    });
+
     /**
      * A batch mixes 3–4 subjects across its cards, so — unlike a screen with
      * one subject heading — every card has to name its own subject or a
      * student answers a Geography question thinking it's English.
      */
+    it("shows the item's own subject, since a batch mixes several", () => {
+      renderItem(item("CBSE-G6-GEO-01"));
+      expect(screen.getByText(/Geography/)).toBeInTheDocument();
+    });
   });
 });

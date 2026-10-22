@@ -68,7 +68,8 @@ vi.mock("@/features/auth/components/SignUp", () => ({
 
 import HomePage from "@/app/page";
 import LoginPage from "@/app/login/page";
-import RegisterPage from "@/app/register/page";
+// /register shows "Sign-ups paused" while SIGNUP_ENABLED is off; the form it shows otherwise is tested directly.
+import { RegisterForm } from "@/app/register/RegisterForm";
 import { GlobalLoader } from "@/components/shared/loaders/GlobalLoader";
 
 autoResetStore(useLoaderStore);
@@ -150,15 +151,15 @@ describe("a parent's invitation link survives landing → log in / sign up", () 
     await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/student"), { timeout: 4000 });
   });
 
-  it("/login's Sign up keeps the invitation, and /register's Log in does too", async () => {
+  it("/login offers no Sign up while sign-ups are paused", () => {
     window.history.pushState({}, "", `/login?redirect=${encoded}`);
-    const { unmount } = render(<LoginPage />);
-    fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
-    expect(routerMock.push).toHaveBeenCalledWith(`/register?redirect=${encoded}`);
-    unmount();
+    render(<LoginPage />);
+    expect(screen.queryByRole("button", { name: "Sign up" })).toBeNull();
+  });
 
+  it("the sign-up form's Log in keeps the invitation", async () => {
     window.history.pushState({}, "", `/register?redirect=${encoded}`);
-    render(<RegisterPage />);
+    render(<RegisterForm />);
     fireEvent.click(screen.getByRole("button", { name: "Log in instead" }));
     expect(routerMock.push).toHaveBeenCalledWith(`/login?redirect=${encoded}`);
   });
@@ -167,7 +168,7 @@ describe("a parent's invitation link survives landing → log in / sign up", () 
     let posted = false;
     server.use(http.post(`${BASE}/auth/sign-up`, () => { posted = true; return HttpResponse.json(makeAuthToken({ role: "parent", user_id: "p1" })); }));
     window.history.pushState({}, "", `/register?redirect=${encoded}`);
-    render(<RegisterPage />);
+    render(<RegisterForm />);
     fireEvent.click(screen.getByRole("button", { name: "Fill as parent" }));
     fireEvent.click(screen.getByRole("button", { name: "Clear the name" }));
     fireEvent.click(screen.getByRole("button", { name: "Create Account" }));
@@ -178,7 +179,7 @@ describe("a parent's invitation link survives landing → log in / sign up", () 
   it("signing up as a parent returns to the invitation's confirmation screen", async () => {
     server.use(http.post(`${BASE}/auth/sign-up`, () => HttpResponse.json(makeAuthToken({ role: "parent", user_id: "p1" }))));
     window.history.pushState({}, "", `/register?redirect=${encoded}`);
-    render(<><GlobalLoader /><RegisterPage /></>);
+    render(<><GlobalLoader /><RegisterForm /></>);
     fireEvent.click(screen.getByRole("button", { name: "Fill as parent" }));
     fireEvent.click(screen.getByRole("button", { name: "Create Account" }));
     await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith(INVITE), { timeout: 4000 });

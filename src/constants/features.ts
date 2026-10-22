@@ -1,3 +1,6 @@
+/** New-account sign-up is paused; flip to `true` to restore /register and its links. */
+export const SIGNUP_ENABLED = false;
+
 /**
  * Portal sections switched off for now. Turning one off hides its nav links
  * and blocks its URLs (they redirect home), in both the student and parent

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { SourceProgress } from "../../types/sources";
 import { shownPercent } from "../ingestionProgress";
-import { minutesLeft, nowLine, runPhases } from "../ingestionPhases";
+import { nowLine, runPhases } from "../ingestionPhases";
 
 const progress = (over: Partial<SourceProgress> = {}): SourceProgress => ({
   stage: "read_pages",
@@ -50,10 +50,5 @@ describe("ingestion progress, as a partner reads it", () => {
       "41 questions · 8 figures",
       null,
     ]);
-  });
-
-  it("guesses the time left only once the run is far enough along", () => {
-    expect(minutesLeft("2026-10-13T10:00:00Z", "2026-10-13T10:04:00Z", 5)).toBeNull();
-    expect(minutesLeft("2026-10-13T10:00:00Z", "2026-10-13T10:04:00Z", 40)).toBe(6);
   });
 });

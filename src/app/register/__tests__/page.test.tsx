@@ -12,7 +12,7 @@ vi.mock("@/features/auth/components/SignUp", () => ({
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
-import RegisterPage from "../page";
+import { RegisterForm } from "../RegisterForm";
 
 afterEach(() => {
   seen.length = 0;
@@ -22,7 +22,14 @@ afterEach(() => {
 describe("register page — a school's join link", () => {
   it("pre-fills partner_id from ?partner=", async () => {
     window.history.replaceState(null, "", "/register?partner=c2a1-school");
-    render(<RegisterPage />);
+    render(<RegisterForm />);
     await waitFor(() => expect(seen.at(-1)?.partner_id).toBe("c2a1-school"));
+  });
+
+  it("leaves partner_id unset without the link (the student joins GenEd)", async () => {
+    window.history.replaceState(null, "", "/register");
+    render(<RegisterForm />);
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0));
+    expect(seen.at(-1)?.partner_id).toBeUndefined();
   });
 });

@@ -2,8 +2,10 @@ import { http, HttpResponse } from "msw";
 import type {
   CandidateState,
   ReasonCode,
+  VisualCrop,
   VisualDecisionIn,
   VisualDetail,
+  VisualRecropIn,
   VisualRegenerateIn,
   VisualSummary,
 } from "@/features/partner/types/visuals";
@@ -27,6 +29,8 @@ export function makeVisual(overrides: Partial<VisualDetail> = {}): VisualDetail 
   const id = overrides.id ?? `vis-${seq}`;
   return {
     id,
+    kind: "node",
+    origin: "drawn",
     content_hash: `hash-${id}`,
     component_id: `cmp-${seq}`,
     source_id: SYNTHETIC_SOURCE,
@@ -78,7 +82,21 @@ export function makeVisual(overrides: Partial<VisualDetail> = {}): VisualDetail 
   };
 }
 
+/** A SYNTHETIC textbook figure offered as its crop: no spec, its pages recorded unless `pages` is null. */
+export function makeCrop(overrides: Partial<VisualDetail> = {}, pages: VisualCrop | null = SYNTHETIC_CROP): VisualDetail {
+  const v = makeVisual({ kind: "figure", origin: "textbook_crop", spec: null, ...overrides });
+  if (pages) crops.set(v.id, structuredClone(pages));
+  return v;
+}
+
+/** One SYNTHETIC page, 800 × 1200, with the figure's crop at a tenth to a half of its height. */
+export const SYNTHETIC_CROP: VisualCrop = {
+  pages: [{ page: 12, width: 800, height: 1200, image_url: "/v1/visual-pages/page-12?exp=1&sig=synthetic" }],
+  boxes: [{ page: 12, box: [100, 100, 500, 900] }],
+};
+
 const store = new Map<string, VisualDetail>();
+const crops = new Map<string, VisualCrop>();
 /** How a queued regeneration ends when the detail is polled: each GET advances it one step. */
 let regenOutcome: "done" | "failed" = "done";
 
@@ -89,6 +107,7 @@ export const visualsFixture = {
    */
   reset(build?: () => VisualDetail[]) {
     store.clear();
+    crops.clear();
     seq = 0;
     regenOutcome = "done";
     const initial = build?.() ?? [
@@ -109,6 +128,8 @@ visualsFixture.reset();
 function summary(v: VisualDetail): VisualSummary {
   return {
     id: v.id,
+    kind: v.kind,
+    origin: v.origin,
     content_hash: v.content_hash,
     component_id: v.component_id,
     source_id: v.source_id,
@@ -219,6 +240,35 @@ export const visualsHandlers = [
     };
     const regeneration_id = body.decision === "reject" && body.regenerate ? startRegeneration(v) : null;
     return HttpResponse.json({ id: v.id, state: v.state, regeneration_id });
+  }),
+
+  http.get(`${VISUALS}/candidates/:id/crop`, ({ params }) => {
+    const v = store.get(String(params.id));
+    if (!v) return HttpResponse.json({ message: "Not found" }, { status: 404 });
+    const pages = crops.get(v.id);
+    if (!pages) return conflict("This figure's textbook pages are not available yet.");
+    return HttpResponse.json(pages);
+  }),
+
+  http.post(`${VISUALS}/candidates/:id/crop`, async ({ params, request }) => {
+    const v = store.get(String(params.id));
+    const pages = v && crops.get(v.id);
+    if (!v || !pages) return HttpResponse.json({ message: "Not found" }, { status: 404 });
+    const body = (await request.json()) as VisualRecropIn;
+    if (body.content_hash !== v.content_hash) return conflict("This visual changed since you opened it.");
+    const next = makeCrop({ parent_id: v.id, concept: v.concept }, { pages: pages.pages, boxes: body.boxes });
+    store.set(next.id, next);
+    if (v.state === "pending") {
+      v.state = "rejected";
+      v.decision = {
+        decision: "reject",
+        reason_codes: ["recropped"],
+        note: null,
+        actor_role: "PARTNER",
+        decided_at: new Date().toISOString(),
+      };
+    }
+    return HttpResponse.json({ id: next.id, created: true }, { status: 201 });
   }),
 
   http.post(`${VISUALS}/candidates/:id/regenerate`, async ({ params, request }) => {

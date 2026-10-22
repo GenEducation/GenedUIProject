@@ -78,7 +78,10 @@ describe("Learning preferences — tutor voice catalogue (the backend's app voic
   afterEach(() => vi.restoreAllMocks());
 
   const openCatalogue = async () => {
-    fireEvent.click(await screen.findByRole("button", { name: "Change voice" }));
+    // "Change voice" is on screen, disabled, while the voices load; a click then does nothing, so wait for the list.
+    const change = await screen.findByRole("button", { name: "Change voice" });
+    await waitFor(() => expect(change).toBeEnabled());
+    fireEvent.click(change);
     return screen.findByRole("radiogroup", { name: "Tutor voices" });
   };
 

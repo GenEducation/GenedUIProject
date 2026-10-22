@@ -33,6 +33,19 @@ afterEach(() => {
 });
 
 describe("teacherService.getStudents — response normalization", () => {
+  it("passes through the documented envelope shape", async () => {
+    const fetchMock = stubFetch({
+      students: [{ student_id: "s1", status: "APPROVED" }],
+      total_count: 1,
+      pending_count: 0,
+      approved_count: 1,
+    });
+    const res = await teacherService.getStudents("t1");
+    expect(res.students).toHaveLength(1);
+    expect(res.approved_count).toBe(1);
+    expect(firstCall(fetchMock).url).toMatch(/\/teacher\/students\?teacher_id=t1$/);
+  });
+
   it("normalizes a bare array into the envelope with computed counts", async () => {
     stubFetch([
       { student_id: "s1", status: "PENDING" },
@@ -52,6 +65,26 @@ describe("teacherService — graceful degradation to []", () => {
     await expect(teacherService.getRequests("t1")).resolves.toEqual([]);
   });
 
+  it("getRequests unwraps a nested {requests:[...]} shape", async () => {
+    stubFetch({ requests: [{ student_id: "s1" }] });
+    await expect(teacherService.getRequests("t1")).resolves.toHaveLength(1);
+  });
+
+  it("getChats unwraps chats/sessions and returns [] on error", async () => {
+    stubFetch({ sessions: [{ session_id: "x1" }] });
+    await expect(teacherService.getChats("t1", "s1")).resolves.toEqual([{ session_id: "x1" }]);
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("boom")));
+    await expect(teacherService.getChats("t1", "s1")).resolves.toEqual([]);
+  });
+
+  it("getChatMessages unwraps {messages:[...]} and returns [] on error", async () => {
+    stubFetch({ messages: [{ message_id: "m1" }] });
+    await expect(teacherService.getChatMessages("t1", "s1", "sess1")).resolves.toHaveLength(1);
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("boom")));
+    await expect(teacherService.getChatMessages("t1", "s1", "sess1")).resolves.toEqual([]);
+  });
 });
 
 describe("teacherService — request shaping", () => {
@@ -75,6 +108,12 @@ describe("teacherService — request shaping", () => {
 });
 
 describe("teacherService.assignStudent — allow403 recoverable path", () => {
+  it("returns the updated student on success", async () => {
+    stubFetch({ student_id: "s1", status: "APPROVED", subject: "Math" });
+    const res = await teacherService.assignStudent("t1", "s1", { status: "APPROVED", subject: "Math" });
+    expect(res.status).toBe("APPROVED");
+  });
+
   it("throws ApiRequestError (not a sign-out) on a 403 approval block", async () => {
     stubFetch(
       { error_code: "TCHR_1104", message: "Approval blocked: student not admitted.", request_id: "r1" },

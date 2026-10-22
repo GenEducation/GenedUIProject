@@ -71,18 +71,21 @@ describe("SubjectRegistry — chapter sources", () => {
     const queued = rowFor("SYNTHETIC queued");
     expect(within(queued).getByRole("button", { name: "Stop Ingestion" })).toBeInTheDocument();
     expect(within(queued).queryByRole("button", { name: /Start ingestion|Run ingestion again|Retry/ })).toBeNull();
-    expect(within(queued).getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    // Delete is shown but disabled where the server would refuse it, with the reason.
+    expect(within(queued).getByRole("button", { name: "Delete" })).toBeDisabled();
+    expect(within(queued).getByTitle("Stop the queued run first, then delete the chapter.")).toBeInTheDocument();
   });
 
-  it("offers delete on every stage, asks first, and removes the chapter once the server agrees", async () => {
+  it("offers delete on every stage the server allows, asks first, and removes the chapter once the server agrees", async () => {
     let deletes = 0;
     server.events.on("request:start", ({ request }) => {
       if (request.method === "DELETE") deletes += 1;
     });
     await renderRegistry();
-    for (const title of ["SYNTHETIC with visuals", "SYNTHETIC not started", "SYNTHETIC failed", "SYNTHETIC queued"]) {
-      expect(within(rowFor(title)).getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    for (const title of ["SYNTHETIC with visuals", "SYNTHETIC not started", "SYNTHETIC failed"]) {
+      expect(within(rowFor(title)).getByRole("button", { name: "Delete" })).toBeEnabled();
     }
+    expect(within(rowFor("SYNTHETIC queued")).getByRole("button", { name: "Delete" })).toBeDisabled();
 
     fireEvent.click(within(rowFor("SYNTHETIC failed")).getByRole("button", { name: "Delete" }));
     expect(await screen.findByText("Delete this chapter?")).toBeInTheDocument();
@@ -97,11 +100,38 @@ describe("SubjectRegistry — chapter sources", () => {
     expect(screen.getByText("SYNTHETIC with visuals")).toBeInTheDocument();
   });
 
-  it("shows the server's reason in the confirm when it refuses a delete, and keeps the chapter", async () => {
+  it("deletes a ready chapter (waiting for review), which the server now allows", async () => {
     await renderRegistry();
     fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "Delete" }));
     fireEvent.click(await screen.findByRole("button", { name: "Delete Permanently" }));
-    expect(await screen.findByText("A chapter that is ready cannot be deleted.")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("SYNTHETIC with visuals")).toBeNull());
+  });
+
+  it("disables delete on a published chapter, with the reason", async () => {
+    sourcesFixture.set(
+      makeSource({
+        state: "ready",
+        release: { batch_id: "b-1", state: "published", staged_at: "2026-10-01T00:00:00Z", published_at: "2026-10-02T00:00:00Z" },
+        chapter: { ordinal: 5, title: "SYNTHETIC published", first_pdf_page: 1, last_pdf_page: 3 },
+      }),
+    );
+    await renderRegistry();
+    const row = await waitFor(() => rowFor("SYNTHETIC published"));
+    expect(within(row).getByRole("button", { name: "Delete" })).toBeDisabled();
+    expect(within(row).getByTitle("Published chapters can't be deleted: students are learning from them.")).toBeInTheDocument();
+  });
+
+  it("shows the server's reason in the confirm when it refuses a delete, and keeps the chapter", async () => {
+    // An older run's release was published: the list can't see it, so the server's 409 is what explains it.
+    server.use(
+      http.delete(`${BASE}/v1/sources/:id`, () =>
+        HttpResponse.json({ message: "A published chapter cannot be deleted: learners study it." }, { status: 409 }),
+      ),
+    );
+    await renderRegistry();
+    fireEvent.click(within(rowFor("SYNTHETIC with visuals")).getByRole("button", { name: "Delete" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete Permanently" }));
+    expect(await screen.findByText("A published chapter cannot be deleted: learners study it.")).toBeInTheDocument();
     expect(screen.getByText("Delete this chapter?")).toBeInTheDocument();
     expect(rowFor("SYNTHETIC with visuals")).toBeInTheDocument();
   });

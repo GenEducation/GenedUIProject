@@ -145,7 +145,7 @@ const SINGLE_FIELDS = [
 ] as const;
 
 const STARTABLE = new Set<SourceState>(["registered", "review_needed", "invalid", "ready", "failed"]);
-const DELETABLE = new Set<SourceState>(["registered", "invalid", "failed"]);
+const DELETABLE = new Set<SourceState>(["registered", "review_needed", "invalid", "ready", "failed"]);
 
 export const sourcesHandlers = [
   http.get(`${SOURCES}/learning-outcomes`, ({ request }) => {
@@ -227,6 +227,10 @@ export const sourcesHandlers = [
     const s = store.get(String(params.id));
     if (!s) return notFound();
     if (!DELETABLE.has(s.state)) return conflict(`A chapter that is ${s.state} cannot be deleted.`);
+    // Mirrors the backend: a source a published release came from is kept, because learners study it.
+    if (s.release?.state === "published" || releases.get(s.source_id)?.release.state === "published") {
+      return conflict("A published chapter cannot be deleted: learners study it.");
+    }
     store.delete(s.source_id);
     return new HttpResponse(null, { status: 204 });
   }),
@@ -380,7 +384,7 @@ export const sourcesHandlers = [
 
   http.get(`${SOURCES}/:id/pdf`, ({ params }) =>
     store.has(String(params.id))
-      ? new HttpResponse(new Blob(["%PDF-SYNTHETIC"], { type: "application/pdf" }), {
+      ? new HttpResponse("%PDF-SYNTHETIC", {
           headers: { "content-type": "application/pdf" },
         })
       : notFound(),

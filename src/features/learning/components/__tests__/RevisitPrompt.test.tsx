@@ -4,6 +4,7 @@ import {
   FRESH_LESSON_ID, LESSON_ID, lessonFixture, makeLessonInstance, makeSection, reviewRequests,
 } from "@/test/msw/handlers/lesson";
 import { useLessonStore } from "../../useLessonStore";
+import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
 import { RevisitPrompt } from "../RevisitPrompt";
 import { LessonSummary } from "../LessonSummary";
 
@@ -23,13 +24,16 @@ beforeEach(() => {
   lessonFixture.reset();
   store().reset();
   replace.mockReset();
+  useLessonLaunch.setState({ revisitOfferFor: null });
   localStorage.setItem("gened_auth_token", "token-synthetic");
   lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
 });
 
-async function comeBack(sections = WEAK_AND_PASSED, instance = makeLessonInstance()) {
+/** The student opens the chapter from the home page or a chapter list: a visit, which may offer the choice once. */
+async function comeBack(sections = WEAK_AND_PASSED, instance = makeLessonInstance(), visit = true) {
   lessonFixture.setInstance(instance);
   lessonFixture.setRevisitOptions({ sections });
+  if (visit) useLessonLaunch.getState().offerRevisit(LESSON_ID);
   await store().load(LESSON_ID);
 }
 
@@ -46,7 +50,10 @@ describe("RevisitPrompt — coming back to a chapter in progress", () => {
     expect(screen.queryByRole("list", { name: "Other sections" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Pick another section/ }));
     const others = screen.getByRole("list", { name: "Other sections" });
-    expect(within(others).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(others).getAllByRole("listitem").map((r) => r.textContent)).toEqual([
+      "Step 1 · SYNTHETIC section 1100%",
+      "Step 3 · SYNTHETIC section 3100%",
+    ]);
   });
 
   it("replays the ticked sections in one request and does not offer again while they run", async () => {
@@ -74,6 +81,16 @@ describe("RevisitPrompt — coming back to a chapter in progress", () => {
     expect(reviewRequests).toEqual([]);
   });
 
+  it("stays open on Escape and on a click outside it: only Continue closes it", async () => {
+    await comeBack();
+    render(<RevisitPrompt />);
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.click(dialog.parentElement!.previousElementSibling!);
+    expect(store().revisitPromptOpen).toBe(true);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
   it("starting over asks first, then opens the new session", async () => {
     await comeBack();
     render(<RevisitPrompt />);
@@ -91,6 +108,52 @@ describe("RevisitPrompt — coming back to a chapter in progress", () => {
 
     store().reset();
     await comeBack([makeSection(1, { status: "below_pass_mark", score: 0.2, in_review: true })]);
+    await waitFor(() => expect(store().revisitOptions).not.toBeNull());
+    expect(store().revisitPromptOpen).toBe(false);
+  });
+});
+
+describe("RevisitPrompt — what a passed section says", () => {
+  const skill = (title: string, level: "got_it" | "getting_there" | "strong") => ({ component_id: title, title, level, p_known: 0.8 });
+
+  it("says the learner's mastery of its skills when the backend sends it, and the score or Done when it does not", async () => {
+    await comeBack([
+      makeSection(1, { type: "teach", scored: 0, correct: 0, score: null, mastery: { level: "got_it", skills: [skill("Place value", "got_it")] } }),
+      makeSection(2, { status: "below_pass_mark", correct: 1, score: 0.2, mastery: { level: "getting_there", skills: [skill("Place value", "getting_there")] } }),
+      makeSection(3, { mastery: { level: "getting_there", skills: [skill("Digit sums", "getting_there"), skill("Place value", "strong")] } }),
+      makeSection(4, { type: "teach", scored: 0, correct: 0, score: null, mastery: { level: "not_started", skills: [] } }),
+      makeSection(5, { correct: 4, scored: 5, score: 0.8, mastery: null }),
+    ]);
+    render(<RevisitPrompt />);
+    // A weak section keeps its score: it is why the section is offered.
+    const weak = await screen.findByRole("list", { name: "Sections to revisit" });
+    expect(within(weak).getByRole("listitem").textContent).toBe("Step 2 · SYNTHETIC section 220%");
+    fireEvent.click(screen.getByRole("button", { name: /Pick another section/ }));
+    const others = screen.getByRole("list", { name: "Other sections" });
+    expect(within(others).getAllByRole("listitem").map((r) => r.textContent)).toEqual([
+      "Step 1 · SYNTHETIC section 1Got it",
+      "Step 3 · SYNTHETIC section 3Getting there",
+      "Step 4 · SYNTHETIC section 4Done",
+      "Step 5 · SYNTHETIC section 580%",
+    ]);
+    expect(within(others).getByText("Getting there").closest("[title]")?.getAttribute("title")).toBe(
+      "Digit sums: Getting there\nPlace value: Strong\n2 of 2 right on the first try",
+    );
+  });
+});
+
+describe("RevisitPrompt — only on a visit", () => {
+  it("is not offered when the lesson loads without the chapter being opened (a reload, a remount)", async () => {
+    await comeBack(WEAK_AND_PASSED, makeLessonInstance(), false);
+    await waitFor(() => expect(store().revisitOptions).not.toBeNull());
+    expect(store().revisitPromptOpen).toBe(false);
+  });
+
+  it("is offered once per visit: loading the lesson again does not bring it back", async () => {
+    await comeBack();
+    await waitFor(() => expect(store().revisitPromptOpen).toBe(true));
+    store().closeRevisitPrompt();
+    await store().load(LESSON_ID);
     await waitFor(() => expect(store().revisitOptions).not.toBeNull());
     expect(store().revisitPromptOpen).toBe(false);
   });

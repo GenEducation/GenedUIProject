@@ -1,9 +1,12 @@
 import { authFetch } from "@/utils/authFetch";
 import type {
+  VisualCrop,
   VisualDecisionIn,
   VisualDecisionOut,
   VisualDetail,
   VisualListParams,
+  VisualRecropIn,
+  VisualRecropOut,
   VisualRegenerateIn,
   VisualRegenerateOut,
   VisualSummary,
@@ -62,6 +65,21 @@ export const visualsService = {
   /** For a visual that is already rejected (no new version asked, or the last attempt failed). */
   regenerate: async (id: string, body: VisualRegenerateIn): Promise<VisualRegenerateOut> => {
     const response = await authFetch(`${VISUALS_BASE}/candidates/${encodeURIComponent(id)}/regenerate`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return response.json();
+  },
+
+  /** A figure's textbook pages and current crop boxes; 409 when its pages were never recorded. */
+  getCrop: async (id: string): Promise<VisualCrop> => {
+    const response = await authFetch(`${VISUALS_BASE}/candidates/${encodeURIComponent(id)}/crop`);
+    return response.json();
+  },
+
+  /** Cut new boxes from the figure's pages: a new textbook crop to review. 409 when the visual changed. */
+  recrop: async (id: string, body: VisualRecropIn): Promise<VisualRecropOut> => {
+    const response = await authFetch(`${VISUALS_BASE}/candidates/${encodeURIComponent(id)}/crop`, {
       method: "POST",
       body: JSON.stringify(body),
     });

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { asError } from "@/utils/errors";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
+import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
 import { DeliveryLedger, type DeliveryBinding } from "./delivery/checkDelivery";
 import { forgetPictures, preloadPicture } from "./figures";
 import { lessonService } from "./lessonService";
@@ -374,18 +375,23 @@ export const useLessonStore = create<LessonState>((set, get) => {
   };
 
   /**
-   * Read the revisit options; with `prompt`, open the "welcome back" choice when an active chapter has weak sections and
-   * no review is under way. A failed read only means no choice is offered: the lesson carries on as it was.
+   * Read the revisit options and say whether to open the "welcome back" choice: an active chapter with weak sections and
+   * no review under way, either on a visit (`"visit"`: the student just opened the chapter, see
+   * `useLessonLaunch.offerRevisit`, never a reload or a step change) or once a chosen review is done (`"after-review"`).
+   * A failed read only means no choice is offered: the lesson carries on as it was.
    */
-  const loadRevisitOptions = async (instanceId: string, prompt: boolean) => {
+  const loadRevisitOptions = async (instanceId: string, prompt: "visit" | "after-review" | "none") => {
+    const generation = loadGeneration;
     let options: RevisitOptions | null = null;
     try {
       options = await lessonService.revisitOptions(instanceId);
     } catch {
       options = null;
     }
-    if (get().instanceId !== instanceId) return;
-    const offer = prompt && options?.state === "active" && options.weak.length > 0 && !options.review_in_progress;
+    // A load that is no longer the latest leaves the visit's offer for the one that is.
+    if (generation !== loadGeneration || get().instanceId !== instanceId) return;
+    const allowed = prompt === "after-review" || (prompt === "visit" && useLessonLaunch.getState().takeRevisitOffer(instanceId));
+    const offer = allowed && options?.state === "active" && options.weak.length > 0 && !options.review_in_progress;
     set((state) => ({ revisitOptions: options, revisitPromptOpen: offer || (state.revisitPromptOpen && Boolean(options)) }));
   };
 
@@ -526,7 +532,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
     if (instance.state === "completed" && previous?.state !== "completed") void loadReport(instance.id).catch(() => undefined);
     // The sections the learner chose to review are done: offer what is still weak (a finished chapter's summary does).
     if (beforeNode?.reason === "revisit_review" && instance.active_node?.reason !== "revisit_review") {
-      void loadRevisitOptions(instance.id, instance.state === "active");
+      void loadRevisitOptions(instance.id, instance.state === "active" ? "after-review" : "none");
     }
   };
 
@@ -681,8 +687,8 @@ export const useLessonStore = create<LessonState>((set, get) => {
           focusedFigureId: presented.at(-1) ?? null,
           stepTitles: node ? { [node.instance_node_id]: node.title } : {},
         });
-        // Coming back: the weak sections to offer for review (non-fatal; the lesson opens either way).
-        void loadRevisitOptions(instanceId, true);
+        // Coming back: the weak sections to offer for review, offered only on a visit (non-fatal; the lesson opens either way).
+        void loadRevisitOptions(instanceId, "visit");
         if (instance.state === "completed") {
           // A finished lesson has no active node to load; show its report.
           await loadReport(instanceId).catch(() => undefined);
