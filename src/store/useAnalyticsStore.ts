@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   studentService,
   type ChapterMastery,
+  type LearnerSubjectsOut,
 } from "@/features/student/services/studentService";
 import {
   loadSubjectCatalog,
@@ -91,20 +92,13 @@ interface AnalyticsState {
   fetchSkillProgressionData: (subject?: string, studentIdOverride?: string) => Promise<void>;
 }
 
-function extractExactSubjects(data: unknown, catalog: TaxonomySubject[]): ExactSubject[] {
+function exactSubjects(data: LearnerSubjectsOut, catalog: TaxonomySubject[]): ExactSubject[] {
   const subjects = new Set<ExactSubject>();
-  const partners = (data as { partners?: unknown })?.partners;
-  for (const partner of Array.isArray(partners) ? partners : []) {
-    for (const group of Array.isArray(partner?.subjects) ? partner.subjects : []) {
-      for (const agent of Array.isArray(group?.agents) ? group.agents : []) {
-        try {
-          subjects.add(
-            requireExactSubject(agent.subject ?? group.subject, Number(agent.grade), catalog),
-          );
-        } catch {
-          // Invalid historical rows are not analytics query options.
-        }
-      }
+  for (const { subject } of data.subjects ?? []) {
+    try {
+      subjects.add(requireExactSubject(subject, data.grade, catalog));
+    } catch {
+      // A subject outside the taxonomy is not an analytics query option.
     }
   }
   return Array.from(subjects).sort();
@@ -113,15 +107,19 @@ function extractExactSubjects(data: unknown, catalog: TaxonomySubject[]): ExactS
 /**
  * Every subject a student can study, validated against the taxonomy. Exposed
  * for views that need all subjects at once (the parent Home page) without
- * touching this store's single-subject selection.
+ * touching this store's single-subject selection. A student reads their own
+ * list; a parent passes `asParent` to read their child's.
  */
 export async function loadStudentSubjects(
   studentId: string,
   signal?: AbortSignal,
+  asParent = false,
 ): Promise<ExactSubject[]> {
   const catalog = await loadSubjectCatalog();
-  const data = await studentService.fetchAvailableAgents(studentId, signal);
-  return extractExactSubjects(data, catalog);
+  const data = asParent
+    ? await studentService.fetchChildSubjects(studentId, signal)
+    : await studentService.fetchLearnerSubjects(signal);
+  return exactSubjects(data, catalog);
 }
 
 // -- Store --------------------------------------------------------------------
@@ -176,9 +174,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     if (!targetSubject) {
       // First, fetch subjects if none selected
       try {
-        const catalog = await loadSubjectCatalog();
-        const agentData = await studentService.fetchAvailableAgents(effectiveStudentId);
-        const subjects = extractExactSubjects(agentData, catalog);
+        const subjects = await loadStudentSubjects(effectiveStudentId);
         set({ analyticsSubjects: subjects });
         if (subjects.length > 0) {
           get().fetchAnalyticsData(subjects[0], studentIdOverride);

@@ -17,10 +17,8 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 
 function serve({ history = true } = {}) {
   server.use(
-    http.get(`${BASE}/api/students/:id/available-agents`, () =>
-      HttpResponse.json({
-        partners: [{ subjects: [{ subject: "Mathematics", agents: [{ agent_id: "m", subject: "Mathematics", grade: 7 }] }] }],
-      }),
+    http.get(`${BASE}/parent/children/:id/available-subjects`, () =>
+      HttpResponse.json({ grade: 7, subjects: [{ subject: "Mathematics", chapter_count: 1 }] }),
     ),
     http.get(`${BASE}/students/:id/skill-summary`, () => HttpResponse.json({ overall_score: 0.68, skill_index: 1, session_count: 12 })),
     http.get(`${BASE}/students/:id/cg-scores`, () =>

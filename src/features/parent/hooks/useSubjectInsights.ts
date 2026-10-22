@@ -66,7 +66,7 @@ export function useSubjectInsights(studentId: string, subject: string): SubjectI
     const setInsights = (update: (prev: SubjectInsights) => SubjectInsights) =>
       setStore((prev) => ({ key, value: update(prev.key === key ? prev.value : INITIAL) }));
 
-    loadStudentSubjects(studentId)
+    loadStudentSubjects(studentId, undefined, true)
       .then((subjects) => {
         if (!live) return;
         if (!subjects.some((s) => s === subject)) {

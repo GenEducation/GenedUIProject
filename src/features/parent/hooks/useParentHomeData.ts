@@ -72,7 +72,7 @@ export function useParentHomeData(studentId: string | null): ParentHomeData {
       if (live) setSessionDates(dates);
     });
 
-    loadStudentSubjects(studentId, controller.signal)
+    loadStudentSubjects(studentId, controller.signal, true)
       .then((subjects) => {
         if (!live) return;
         setItems(subjects.map((subject) => ({
