@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
+import { FormModal } from "./ui/FormModal";
+import { ADMIN_INPUT, ADMIN_LABEL } from "./ui/fields";
 
 export interface EditField {
   key: string;
@@ -19,11 +20,6 @@ interface Props {
   /** Receives only the changed/typed values; numbers are coerced. */
   onSave: (values: Record<string, string | number>) => Promise<unknown>;
 }
-
-const inputCls =
-  "w-full rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white focus:border-[#075E63] focus:outline-none";
-const labelCls =
-  "block text-[9px] font-bold uppercase tracking-[0.22em] text-white/40 mb-1.5";
 
 export function EntityEditModal({ title, fields, initial, onClose, onSave }: Props) {
   const [vals, setVals] = useState<Record<string, string>>(() =>
@@ -53,47 +49,31 @@ export function EntityEditModal({ title, fields, initial, onClose, onSave }: Pro
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#122D30] p-6 shadow-2xl">
-        <h2 className="text-lg font-bold mb-5">{title}</h2>
-        <div className="space-y-4">
-          {fields.map((f) => (
-            <div key={f.key}>
-              <label className={labelCls}>{f.label}</label>
-              {f.type === "select" ? (
-                <Select
-                  theme="dark"
-                  size="lg"
-                  aria-label={f.label}
-                  value={vals[f.key] ?? ""}
-                  onChange={(v) => setVals((prev) => ({ ...prev, [f.key]: v }))}
-                  options={(f.options ?? []).map((option) => ({ value: option, label: option }))}
-                />
-              ) : (
-                <input
-                  className={inputCls}
-                  type={f.type === "number" ? "number" : "text"}
-                  value={vals[f.key] ?? ""}
-                  onChange={(e) => setVals((v) => ({ ...v, [f.key]: e.target.value }))}
-                />
-              )}
-            </div>
-          ))}
-          {error ? (
-            <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300">
-              {error}
-            </div>
-          ) : null}
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="tertiary" tone="onDark" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button variant="primary" tone="onDark" loading={saving} onClick={save}>
-              Save
-            </Button>
-          </div>
+    <FormModal title={title} onClose={onClose} onSubmit={save} submitting={saving} error={error}>
+      {fields.map((f) => (
+        <div key={f.key}>
+          <label className={ADMIN_LABEL} htmlFor={`entity-${f.key}`}>
+            {f.label}
+          </label>
+          {f.type === "select" ? (
+            <Select
+              size="lg"
+              aria-label={f.label}
+              value={vals[f.key] ?? ""}
+              onChange={(v) => setVals((prev) => ({ ...prev, [f.key]: v }))}
+              options={(f.options ?? []).map((option) => ({ value: option, label: option }))}
+            />
+          ) : (
+            <input
+              id={`entity-${f.key}`}
+              className={ADMIN_INPUT}
+              type={f.type === "number" ? "number" : "text"}
+              value={vals[f.key] ?? ""}
+              onChange={(e) => setVals((v) => ({ ...v, [f.key]: e.target.value }))}
+            />
+          )}
         </div>
-      </div>
-    </div>
+      ))}
+    </FormModal>
   );
 }

@@ -1,8 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { X, Upload, Download, FileSpreadsheet } from "lucide-react";
+import { Upload, Download, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { FormModal } from "./ui/FormModal";
+import { StatusPill, type PillTone } from "./ui/StatusPill";
+import { SECONDARY_ACTION } from "./ui/fields";
 import {
   downloadImportTemplate,
   importUsers,
@@ -19,11 +22,11 @@ interface Props {
   onDone?: () => void;
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  valid: "bg-sky-500/15 text-sky-300",
-  created: "bg-[#075E63]/15 text-[#075E63]",
-  skipped: "bg-amber-500/15 text-amber-300",
-  error: "bg-rose-500/15 text-rose-300",
+const STATUS_TONE: Record<string, PillTone> = {
+  valid: "info",
+  created: "success",
+  skipped: "pending",
+  error: "danger",
 };
 
 export function BulkImportModal({ role, context, contextLabel, onClose, onDone }: Props) {
@@ -95,160 +98,130 @@ export function BulkImportModal({ role, context, contextLabel, onClose, onDone }
     URL.revokeObjectURL(url);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-[#122D30] p-6 shadow-2xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-lg font-bold">
-            Bulk import {noun}
-            {contextLabel ? <span className="text-white/50"> → {contextLabel}</span> : null}
-          </h2>
-          <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Close" onClick={onClose}>
-            <X size={20} />
+  const footer = (
+    <div className="flex flex-wrap justify-end gap-2.5 border-t border-border bg-paper px-5 py-4 sm:px-6">
+      {committed ? (
+        <>
+          <Button variant="outline" onClick={downloadResults} leadingIcon={<Download size={15} />}>
+            Download results
           </Button>
-        </div>
-        <p className="text-xs text-white/40 mb-4">
-          Upload an .xlsx/.csv. Usernames are auto-generated from email. Blank passwords default to{" "}
-          <code className="text-white/60">welcometogened</code>.
-          {context ? " New accounts link to the selected " + context.type + "." : ""}
-        </p>
+          <Button onClick={onClose}>Done</Button>
+        </>
+      ) : (
+        <>
+          <Button variant="tertiary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button loading={loading} onClick={commit} disabled={!preview || preview.valid === 0}>
+            {`Create ${preview?.valid ?? 0} ${noun}`}
+          </Button>
+        </>
+      )}
+    </div>
+  );
 
-        {/* Controls */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <button
-            onClick={() => downloadImportTemplate(role)}
-            className="flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/5"
-          >
-            <Download size={14} /> Template
-          </button>
-          <button
-            onClick={() => inputRef.current?.click()}
-            className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/15"
-          >
-            <Upload size={14} /> {file ? "Change file" : "Choose file"}
-          </button>
-          {file ? (
-            <span className="flex items-center gap-1.5 text-xs text-white/50">
-              <FileSpreadsheet size={14} /> {file.name}
-            </span>
-          ) : null}
+  return (
+    <FormModal
+      title={`Bulk import ${noun}`}
+      subtitle={contextLabel ? <>Into <strong className="text-ink">{contextLabel}</strong></> : undefined}
+      size="full"
+      onClose={onClose}
+      error={error}
+      footer={footer}
+    >
+      <p className="text-[13px] leading-relaxed text-muted">
+        Upload an .xlsx/.csv. Usernames are auto-generated from email. Blank passwords default to{" "}
+        <code className="rounded bg-soft-surface px-1 py-0.5 font-mono text-[12px] text-ink">welcometogened</code>.
+        {context ? " New accounts link to the selected " + context.type + "." : ""}
+      </p>
+
+      {/* File picker */}
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-paper px-4 py-7 text-center transition-colors hover:border-emerald/40 hover:bg-emerald-50/50"
+      >
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-emerald shadow-[0_1px_2px_rgba(18,45,48,.06)]">
+          {file ? <FileSpreadsheet size={20} /> : <Upload size={20} />}
+        </span>
+        <span className="text-sm font-bold text-ink">{file ? file.name : "Choose a spreadsheet"}</span>
+        <span className="text-[12px] text-muted">{file ? "Click to choose a different file" : ".xlsx or .csv"}</span>
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".xlsx,.csv"
+        className="hidden"
+        onChange={(e) => onPick(e.target.files?.[0] ?? null)}
+      />
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button type="button" onClick={() => downloadImportTemplate(role)} className={SECONDARY_ACTION}>
+          <Download size={14} /> Download template
+        </button>
+        <label className="flex min-h-9 cursor-pointer items-center gap-2 text-[13px] font-semibold text-ink">
           <input
-            ref={inputRef}
-            type="file"
-            accept=".xlsx,.csv"
-            className="hidden"
-            onChange={(e) => onPick(e.target.files?.[0] ?? null)}
+            type="checkbox"
+            checked={sendWelcome}
+            onChange={(e) => setSendWelcome(e.target.checked)}
+            className="h-4 w-4 accent-[var(--emerald)]"
           />
-          <label className="ml-auto flex items-center gap-2 text-xs text-white/60 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={sendWelcome}
-              onChange={(e) => setSendWelcome(e.target.checked)}
-              className="accent-[#075E63]"
-            />
-            Send welcome emails
-          </label>
-        </div>
+          Send welcome emails
+        </label>
+      </div>
 
-        {error ? (
-          <div className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300">
-            {error}
-          </div>
-        ) : null}
-
-        {/* Summary counts */}
-        {summary ? (
-          <div className="mb-3 flex flex-wrap gap-2 text-xs">
-            {committed ? (
-              <>
-                <Pill className="bg-[#075E63]/15 text-[#075E63]">{committed.created} created</Pill>
-                <Pill className="bg-amber-500/15 text-amber-300">{committed.skipped} skipped</Pill>
-                <Pill className="bg-rose-500/15 text-rose-300">{committed.failed} failed</Pill>
-              </>
-            ) : (
-              <>
-                <Pill className="bg-sky-500/15 text-sky-300">{summary.valid} valid</Pill>
-                <Pill className="bg-amber-500/15 text-amber-300">{summary.skipped} will skip</Pill>
-                <Pill className="bg-rose-500/15 text-rose-300">{summary.invalid} errors</Pill>
-              </>
-            )}
-          </div>
-        ) : null}
-
-        {/* Preview / results table */}
-        {summary ? (
-          <div className="flex-1 overflow-auto rounded-lg border border-white/10">
-            <table className="w-full text-left text-xs">
-              <thead className="sticky top-0 bg-[#122D30] text-white/40">
-                <tr>
-                  <th className="px-3 py-2">#</th>
-                  <th className="px-3 py-2">Email</th>
-                  <th className="px-3 py-2">Username</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Linked</th>
-                  <th className="px-3 py-2">Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.rows.map((r) => (
-                  <tr key={r.row} className="border-t border-white/5">
-                    <td className="px-3 py-1.5 text-white/40">{r.row}</td>
-                    <td className="px-3 py-1.5">{r.email}</td>
-                    <td className="px-3 py-1.5 text-white/70">{r.username ?? "—"}</td>
-                    <td className="px-3 py-1.5">
-                      <span className={`rounded px-1.5 py-0.5 ${STATUS_STYLE[r.status] ?? ""}`}>
-                        {r.status}
-                      </span>
-                    </td>
-                    <td className="px-3 py-1.5 text-white/50">
-                      {[r.linked_partner, r.linked_teacher].filter(Boolean).join(" / ") || "—"}
-                    </td>
-                    <td className="px-3 py-1.5 text-rose-300/80">{r.messages.join("; ")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-
-        {/* Footer actions */}
-        <div className="mt-4 flex justify-end gap-3">
+      {/* Summary counts */}
+      {summary ? (
+        <div className="flex flex-wrap gap-2">
           {committed ? (
             <>
-              <Button
-                variant="outline"
-                tone="onDark"
-                onClick={downloadResults}
-                leadingIcon={<Download size={15} />}
-              >
-                Download results
-              </Button>
-              <Button variant="primary" tone="onDark" onClick={onClose}>
-                Done
-              </Button>
+              <StatusPill tone="brand">{committed.created} created</StatusPill>
+              <StatusPill tone="pending">{committed.skipped} skipped</StatusPill>
+              <StatusPill tone="danger">{committed.failed} failed</StatusPill>
             </>
           ) : (
             <>
-              <Button variant="tertiary" tone="onDark" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                tone="onDark"
-                loading={loading}
-                onClick={commit}
-                disabled={!preview || preview.valid === 0}
-              >
-                {`Create ${preview?.valid ?? 0} ${noun}`}
-              </Button>
+              <StatusPill tone="info">{summary.valid} valid</StatusPill>
+              <StatusPill tone="pending">{summary.skipped} will skip</StatusPill>
+              <StatusPill tone="danger">{summary.invalid} errors</StatusPill>
             </>
           )}
         </div>
-      </div>
-    </div>
-  );
-}
+      ) : null}
 
-function Pill({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <span className={`rounded-md px-2 py-1 font-semibold ${className}`}>{children}</span>;
+      {/* Preview / results table */}
+      {summary ? (
+        <div className="max-h-[45vh] overflow-auto rounded-xl border border-border">
+          <table className="w-full min-w-[560px] text-left text-[12.5px]">
+            <thead className="sticky top-0 bg-paper text-[10.5px] font-bold uppercase tracking-[0.08em] text-muted">
+              <tr>
+                <th className="px-3 py-2.5">#</th>
+                <th className="px-3 py-2.5">Email</th>
+                <th className="px-3 py-2.5">Username</th>
+                <th className="px-3 py-2.5">Status</th>
+                <th className="px-3 py-2.5">Linked</th>
+                <th className="px-3 py-2.5">Notes</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/70">
+              {summary.rows.map((r) => (
+                <tr key={r.row}>
+                  <td className="px-3 py-2 tabular-nums text-muted">{r.row}</td>
+                  <td className="px-3 py-2 font-semibold text-ink">{r.email}</td>
+                  <td className="px-3 py-2 text-ink/75">{r.username ?? "—"}</td>
+                  <td className="px-3 py-2">
+                    <StatusPill tone={STATUS_TONE[r.status] ?? "neutral"}>{r.status}</StatusPill>
+                  </td>
+                  <td className="px-3 py-2 text-muted">
+                    {[r.linked_partner, r.linked_teacher].filter(Boolean).join(" / ") || "—"}
+                  </td>
+                  <td className="px-3 py-2 text-danger-ink">{r.messages.join("; ")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </FormModal>
+  );
 }

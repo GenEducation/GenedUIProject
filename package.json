@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "copy-vad-assets": "node scripts/copy-vad-assets.mjs",
+    "admin-parity-smoke": "node scripts/admin-parity-smoke.mjs",
     "postinstall": "node scripts/copy-vad-assets.mjs && node scripts/copy-pdfjs-assets.mjs",
     "prepare": "husky"
   },

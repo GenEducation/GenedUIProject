@@ -27,7 +27,7 @@ export function Reported<T = unknown>({
   className = "",
 }: ReportedProps<T>) {
   if (!reading) {
-    return <span className={`text-white/40 ${className}`}>—</span>;
+    return <span className={`text-muted ${className}`}>—</span>;
   }
 
   const { state, value, unit, note } = reading;
@@ -91,7 +91,7 @@ export function Reported<T = unknown>({
           {rendered}
           {unit ? ` ${unit}` : ""}
           <span
-            className="ml-1.5 inline-block rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-normal text-white/50"
+            className="ml-1.5 inline-block rounded bg-soft-surface px-1.5 py-0.5 text-[10px] font-normal text-muted"
             title={note || "needs root"}
           >
             needs root
@@ -101,6 +101,6 @@ export function Reported<T = unknown>({
     }
 
     default:
-      return <span className={`text-white/40 ${className}`}>—</span>;
+      return <span className={`text-muted ${className}`}>—</span>;
   }
 }

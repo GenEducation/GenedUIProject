@@ -24,6 +24,18 @@ interface RegenerationStatusProps {
 }
 
 /**
+ * What to tell a partner about a failed redraw. The drawing service's "too many requests" refusal (HTTP 429,
+ * `RESOURCE_EXHAUSTED`, quota or rate limits) reaches us as raw provider text; it means "busy, try later", so it is
+ * said that way. Any other error is shown as the backend wrote it.
+ */
+export function regenerationErrorText(error: string): string {
+  if (/\b429\b|RESOURCE_EXHAUSTED|rate.?limit|quota/i.test(error)) {
+    return "The drawing service is busy right now. Wait a few minutes, then try again.";
+  }
+  return error;
+}
+
+/**
  * The "new version" story for a rejected visual: in progress (the detail hook
  * polls), ready (link to it), failed (try again), or never asked for (ask now).
  */
@@ -106,7 +118,12 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
           <TriangleAlert size={18} className="text-red-500 mt-0.5 shrink-0" aria-hidden />
           <div>
             <p className="text-sm font-bold text-[#122D30]">The new version couldn&apos;t be made.</p>
-            {regen?.error && <p className="text-xs text-[#122D30]/60 mt-0.5">{regen.error}</p>}
+            {regen?.error && (
+              // The provider's own wording stays on hover, for anyone reporting it.
+              <p className="text-xs text-[#122D30]/60 mt-0.5" title={regen.error}>
+                {regenerationErrorText(regen.error)}
+              </p>
+            )}
           </div>
         </div>
       ) : (

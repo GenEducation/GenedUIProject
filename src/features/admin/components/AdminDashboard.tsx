@@ -1,24 +1,9 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import * as Sentry from "@sentry/nextjs";
-import {
-  LayoutDashboard,
-  Users,
-  Building2,
-  GraduationCap,
-  Contact,
-  Link2,
-  Bot,
-  FileStack,
-  LogOut,
-  ShieldCheck,
-  Presentation,
-  UsersRound,
-  AudioLines,
-  MonitorSmartphone,
-  Activity,
-} from "lucide-react";
 
 import { StatsOverview } from "./StatsOverview";
 import { LearningSignalView } from "./analytics/LearningSignalView";
@@ -34,32 +19,53 @@ import { IngestionsView } from "./IngestionsView";
 import { WakeWordModelsView } from "./WakeWordModelsView";
 import { DevicesView } from "./DevicesView";
 import { DeviceDetailView } from "./DeviceDetailView";
+import { isMaintenanceRoute } from "../maintenance";
+import { MaintenanceModal, MaintenancePanel } from "./MaintenanceNotice";
+import { AdminSidebar } from "./shell/AdminSidebar";
+import { AdminTopBar } from "./shell/AdminTopBar";
+import { MobileNavDrawer } from "./shell/MobileNavDrawer";
 
-interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+/** Display name for the shell, from the profile the login page stored. */
+function readAdminName(): string {
+  if (typeof window === "undefined") return "Admin";
+  try {
+    const raw = localStorage.getItem("gened_user_profile");
+    const parsed = raw ? (JSON.parse(raw) as { username?: string; full_name?: string }) : null;
+    return parsed?.full_name || parsed?.username || "Admin";
+  } catch {
+    return "Admin";
+  }
 }
-
-const NAV: NavItem[] = [
-  { label: "Overview", href: "/admin", icon: LayoutDashboard },
-  { label: "Learning Signal", href: "/admin/analytics", icon: Activity },
-  { label: "Users", href: "/admin/users", icon: Users },
-  { label: "Students", href: "/admin/students", icon: GraduationCap },
-  { label: "Parents", href: "/admin/parents", icon: Contact },
-  { label: "Partners", href: "/admin/partners", icon: Building2 },
-  { label: "Devices", href: "/admin/devices", icon: MonitorSmartphone },
-  { label: "Teachers", href: "/admin/teachers", icon: Presentation },
-  { label: "Enrollments", href: "/admin/enrollments", icon: Link2 },
-  { label: "Assignments", href: "/admin/assignments", icon: UsersRound },
-  { label: "Agents", href: "/admin/agents", icon: Bot },
-  { label: "Ingestions", href: "/admin/ingestions", icon: FileStack },
-  { label: "Wake-word Models", href: "/admin/wakeword-models", icon: AudioLines },
-];
 
 export function AdminDashboard() {
   const router = useRouter();
   const pathname = usePathname();
+
+  // The gated nav entry whose notice is open, remembered together with the
+  // screen it was opened from. Deriving `open` from that pairing rather than
+  // clearing it in an effect means a browser Back closes the dialog for free:
+  // the pathname no longer matches, so it simply stops being open.
+  const [maintenanceFor, setMaintenanceFor] = useState<{
+    label: string;
+    atPath: string;
+  } | null>(null);
+  const maintenanceOpen = maintenanceFor?.atPath === pathname;
+
+  // Same trick for the phone drawer: it is open only on the screen it was
+  // opened from, so following a link inside it closes it with no effect.
+  const [menuOpenedAt, setMenuOpenedAt] = useState<string | null>(null);
+  const menuOpen = menuOpenedAt === pathname;
+  const closeMenu = useCallback(() => setMenuOpenedAt(null), []);
+
+  const [adminName] = useState(readAdminName);
+
+  const openGated = useCallback(
+    (label: string) => {
+      setMenuOpenedAt(null);
+      setMaintenanceFor({ label, atPath: pathname });
+    },
+    [pathname],
+  );
 
   const handleLogout = () => {
     Sentry.setUser(null);
@@ -69,13 +75,17 @@ export function AdminDashboard() {
     router.replace("/admin/login");
   };
 
-  // Learning Signal is a dense, chart-heavy dashboard designed to use the
-  // full width of the content area; every other view is a form/table console
-  // that reads better capped and centered. Rather than have each view fight
-  // its parent's width, the parent defers to the view.
-  const isFullBleed = pathname === "/admin/analytics";
-
   const renderView = () => {
+    // FIRST, above everything. A gated screen must not mount, and that
+    // includes the nested device detail route below — which would otherwise
+    // fire its device calls at a backend we are deliberately leaving alone.
+    // This one check also covers typed URLs, browser history, and every
+    // in-app router.push into a gated route, so those call sites need no
+    // edits and the gate lifts by deleting these two lines.
+    if (isMaintenanceRoute(pathname)) {
+      return <MaintenancePanel onBack={() => router.push("/admin")} />;
+    }
+
     // Nested detail routes have to be matched before the exact-match switch,
     // which would otherwise drop them through to the default.
     if (pathname.startsWith("/admin/devices/")) {
@@ -114,62 +124,51 @@ export function AdminDashboard() {
     }
   };
 
+  const sidebarProps = {
+    pathname,
+    onGated: openGated,
+    onLogout: handleLogout,
+  };
+
   return (
-    <div className="flex h-screen overflow-hidden bg-[#122D30] text-white">
-      {/* Sidebar */}
-      <aside className="w-20 lg:w-64 shrink-0 border-r border-white/10 bg-white/[0.02] flex flex-col transition-all duration-300">
-        <div className="flex items-center justify-center lg:justify-start gap-2.5 px-3 lg:px-6 h-16 border-b border-white/10">
-          <ShieldCheck className="h-6 w-6 text-[#075E63] shrink-0" />
-          <span className="hidden lg:inline font-bold tracking-tight">GenEd Admin</span>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          {NAV.map((item) => {
-            const active =
-              pathname === item.href ||
-              (item.href !== "/admin" && pathname.startsWith(item.href));
-            const Icon = item.icon;
-            return (
-              <button aria-label={item.label}
-                key={item.href}
-                onClick={() => router.push(item.href)}
-                title={item.label}
-                aria-current={active ? "page" : undefined}
-                className={`flex w-full items-center justify-center lg:justify-start gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  active
-                    ? "bg-[#075E63]/15 text-[#075E63]"
-                    : "text-white/55 hover:bg-white/5 hover:text-white"
-                }`}
-              >
-                <Icon size={18} />
-                <span className="hidden lg:block truncate">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <button
-          onClick={handleLogout}
-          title="Sign out"
-          className="m-3 flex items-center justify-center lg:justify-start gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/55 hover:bg-rose-500/10 hover:text-rose-300 transition-colors"
-        >
-          <LogOut size={18} className="shrink-0" />
-          <span className="hidden lg:block">Sign out</span>
-        </button>
+    <div className="flex h-screen overflow-hidden bg-canvas text-ink">
+      {/* md–lg: icon rail; lg+: full sidebar; below md it lives in the drawer. */}
+      <aside className="hidden w-20 shrink-0 border-r border-border bg-paper transition-[width] duration-300 md:block lg:w-[280px]">
+        <AdminSidebar {...sidebarProps} mode="rail" />
       </aside>
 
-      {/* Main */}
-      <main className="flex-1 overflow-auto">
-        <div
-          className={
-            isFullBleed
-              ? "min-h-full"
-              : "mx-auto max-w-6xl px-8 py-8"
-          }
-        >
-          {renderView()}
-        </div>
+      <MobileNavDrawer open={menuOpen} onClose={closeMenu}>
+        <AdminSidebar {...sidebarProps} mode="full" onNavigate={closeMenu} />
+      </MobileNavDrawer>
+
+      <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <AdminTopBar
+          pathname={pathname}
+          adminName={adminName}
+          onOpenMenu={() => setMenuOpenedAt(pathname)}
+        />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="mx-auto w-full max-w-[1400px] px-4 pb-16 pt-6 sm:px-6 sm:pt-8 lg:px-10"
+          >
+            {renderView()}
+          </motion.div>
+        </AnimatePresence>
       </main>
+
+      {/* Rendered unconditionally with `open`, not behind `{state && …}`:
+          Modal lives inside AnimatePresence, which needs the element to stay
+          mounted to run its exit animation. */}
+      <MaintenanceModal
+        open={maintenanceOpen}
+        screenLabel={maintenanceFor?.label ?? null}
+        onClose={() => setMaintenanceFor(null)}
+      />
     </div>
   );
 }

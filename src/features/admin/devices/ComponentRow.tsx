@@ -29,20 +29,20 @@ export function ComponentRow({
   return (
     <div
       className={`rounded-lg border p-3 ${
-        failed ? "border-rose-500/30 bg-rose-500/[0.07]" : "border-white/10 bg-white/[0.02]"
+        failed ? "border-danger/30 bg-danger-bg" : "border-border bg-paper"
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium text-white">{name}</span>
+        <span className="text-sm font-medium text-ink">{name}</span>
         <span
           className={`rounded-md px-2 py-0.5 text-[11px] ${
-            failed ? "bg-rose-500/15 text-rose-300" : "bg-[#059F6D]/15 text-[#059F6D]"
+            failed ? "bg-danger-bg text-danger-ink" : "bg-[#059F6D]/10 text-[#059F6D]"
           }`}
         >
           {status}
         </span>
       </div>
-      {report?.detail ? <p className="mt-1.5 text-xs text-white/50">{report.detail}</p> : null}
+      {report?.detail ? <p className="mt-1.5 text-xs text-muted">{report.detail}</p> : null}
       {scalarEntries.length > 0 ? (
         <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
           {scalarEntries.map(([k, v]) => (

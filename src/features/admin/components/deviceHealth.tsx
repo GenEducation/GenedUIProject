@@ -71,15 +71,15 @@ export const CONN_STYLES: Record<
   ConnState,
   { icon: LucideIcon; className: string; label: string }
 > = {
-  ONLINE: { icon: Wifi, className: "bg-[#075E63]/15 text-[#075E63]", label: "Online" },
-  STALE: { icon: TriangleAlert, className: "bg-amber-500/15 text-amber-300", label: "Stale" },
+  ONLINE: { icon: Wifi, className: "bg-emerald-50 text-emerald", label: "Online" },
+  STALE: { icon: TriangleAlert, className: "bg-warning-bg text-warning-ink", label: "Stale" },
   NEEDS_ATTENTION: {
     icon: TriangleAlert,
-    className: "bg-rose-500/15 text-rose-300",
+    className: "bg-danger-bg text-danger-ink",
     label: "Needs attention",
   },
-  OFFLINE: { icon: WifiOff, className: "bg-white/10 text-white/40", label: "Offline" },
-  REVOKED: { icon: Ban, className: "bg-white/10 text-white/30", label: "Revoked" },
+  OFFLINE: { icon: WifiOff, className: "bg-soft-surface text-muted", label: "Offline" },
+  REVOKED: { icon: Ban, className: "bg-soft-surface text-muted-light", label: "Revoked" },
 };
 
 // ── Serviceability ─────────────────────────────────────────────
@@ -101,13 +101,13 @@ export const SERVICE_STYLES: Record<
   ServiceState,
   { icon: LucideIcon; className: string; label: string }
 > = {
-  OK: { icon: Wrench, className: "bg-[#075E63]/15 text-[#075E63]", label: "Passing" },
+  OK: { icon: Wrench, className: "bg-emerald-50 text-emerald", label: "Passing" },
   SERVICE_REQUIRED: {
     icon: Wrench,
-    className: "bg-rose-500/15 text-rose-300",
+    className: "bg-danger-bg text-danger-ink",
     label: "Service required",
   },
-  UNKNOWN: { icon: CircleHelp, className: "bg-amber-500/15 text-amber-300", label: "Unknown" },
+  UNKNOWN: { icon: CircleHelp, className: "bg-warning-bg text-warning-ink", label: "Unknown" },
 };
 
 // ── Formatting ─────────────────────────────────────────────────

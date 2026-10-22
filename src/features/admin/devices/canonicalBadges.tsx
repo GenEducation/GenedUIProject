@@ -33,14 +33,14 @@ import type {
  * are not verdicts at all.
  */
 export const DIAG_STYLES: Record<DiagnosticStatus, string> = {
-  PASS: "bg-[#059F6D]/15 text-[#059F6D]",
-  WARN: "bg-amber-500/15 text-amber-300",
-  FAIL: "bg-rose-500/15 text-rose-300",
-  UNKNOWN: "bg-amber-500/10 text-amber-200/80",
-  STALE: "bg-amber-500/10 text-amber-200/80",
-  EXPECTED: "bg-sky-500/15 text-sky-300",
-  SKIP: "bg-white/10 text-white/40",
-  INFO: "bg-white/10 text-white/50",
+  PASS: "bg-[#059F6D]/10 text-[#059F6D]",
+  WARN: "bg-warning-bg text-warning-ink",
+  FAIL: "bg-danger-bg text-danger-ink",
+  UNKNOWN: "bg-warning-bg text-warning-ink",
+  STALE: "bg-warning-bg text-warning-ink",
+  EXPECTED: "bg-info/10 text-info",
+  SKIP: "bg-soft-surface text-muted",
+  INFO: "bg-soft-surface text-muted",
 };
 
 /**
@@ -49,12 +49,12 @@ export const DIAG_STYLES: Record<DiagnosticStatus, string> = {
  * UNKNOWN is amber, NEVER green.
  */
 export const READING_STYLES = {
-  OK: { text: "text-white/80" },
-  NOT_REPORTED: { text: "text-white/40 italic" },
-  NOT_IN_METRICS: { text: "text-white/40" },
-  UNKNOWN: { text: "text-amber-300", badge: "bg-amber-500/15 text-amber-300" },
-  SKIPPED: { text: "text-white/40" },
-  PARTIAL: { text: "text-white/80", badge: "bg-white/10 text-white/50" },
+  OK: { text: "text-ink" },
+  NOT_REPORTED: { text: "text-muted italic" },
+  NOT_IN_METRICS: { text: "text-muted" },
+  UNKNOWN: { text: "text-warning-ink", badge: "bg-warning-bg text-warning-ink" },
+  SKIPPED: { text: "text-muted" },
+  PARTIAL: { text: "text-ink", badge: "bg-soft-surface text-muted" },
 } as const;
 
 /** Worst-first, so the counts that matter are not buried under PASS. */
@@ -82,7 +82,7 @@ export function DiagnosticBadge({
     <span
       aria-label={label}
       className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
-        DIAG_STYLES[status] ?? "bg-white/10 text-white/50"
+        DIAG_STYLES[status] ?? "bg-soft-surface text-muted"
       }`}
     >
       {status}
@@ -96,9 +96,9 @@ export function DiagnosticBadge({
  * than anything being wrong.
  */
 export const CONNECTIVITY_STYLES: Record<ConnectivityState, string> = {
-  ONLINE: "bg-emerald-500/15 text-emerald-300",
-  OFFLINE: "bg-rose-500/15 text-rose-300",
-  UNKNOWN: "bg-amber-500/15 text-amber-300",
+  ONLINE: "bg-emerald-50 text-emerald",
+  OFFLINE: "bg-danger-bg text-danger-ink",
+  UNKNOWN: "bg-warning-bg text-warning-ink",
 };
 
 /**
@@ -120,7 +120,7 @@ export function CanonicalConnBadge({
     <span
       aria-label={`Connectivity: ${connectivity.state}`}
       className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${
-        CONNECTIVITY_STYLES[connectivity.state] ?? "bg-white/10 text-white/50"
+        CONNECTIVITY_STYLES[connectivity.state] ?? "bg-soft-surface text-muted"
       }`}
     >
       {connectivity.state}
@@ -141,9 +141,9 @@ export const CONNECTIVITY_REASONS: Record<string, string> = {
 };
 
 export const FRESHNESS_STYLES: Record<DiagnosticFreshness, string> = {
-  FRESH: "bg-emerald-500/15 text-emerald-300",
-  STALE: "bg-amber-500/15 text-amber-300",
-  NEVER_REPORTED: "bg-amber-500/15 text-amber-300",
+  FRESH: "bg-emerald-50 text-emerald",
+  STALE: "bg-warning-bg text-warning-ink",
+  NEVER_REPORTED: "bg-warning-bg text-warning-ink",
 };
 
 export const PROVENANCE_LABELS: Record<DeviceProvenance, string> = {

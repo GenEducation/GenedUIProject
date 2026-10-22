@@ -16,7 +16,7 @@ describe("Reported", () => {
     render(<Reported reading={reading} />);
     const el = screen.getByText("42 °C");
     expect(el).toBeInTheDocument();
-    expect(el.className).toContain("text-white/80");
+    expect(el.className).toContain("text-ink");
   });
 
   it("renders NOT_REPORTED as grey and italic, never amber", () => {
@@ -30,9 +30,9 @@ describe("Reported", () => {
     render(<Reported reading={reading} />);
     const el = screen.getByText("not reported by this firmware");
     expect(el).toBeInTheDocument();
-    expect(el.className).toContain("text-white/40");
+    expect(el.className).toContain("text-muted");
     expect(el.className).toContain("italic");
-    expect(el.className).not.toContain("amber");
+    expect(el.className).not.toContain("warning");
   });
 
   it("renders NOT_IN_METRICS as muted dash", () => {
@@ -46,11 +46,11 @@ describe("Reported", () => {
     render(<Reported reading={reading} />);
     const el = screen.getByText("—");
     expect(el).toBeInTheDocument();
-    expect(el.className).toContain("text-white/40");
-    expect(el.className).not.toContain("amber");
+    expect(el.className).toContain("text-muted");
+    expect(el.className).not.toContain("warning");
   });
 
-  it("renders UNKNOWN as amber with note, never green", () => {
+  it("renders UNKNOWN as warning with note, never green", () => {
     const reading: Reading = {
       state: "UNKNOWN",
       value: null,
@@ -61,7 +61,7 @@ describe("Reported", () => {
     render(<Reported reading={reading} />);
     const el = screen.getByText("audio server unreachable");
     expect(el).toBeInTheDocument();
-    expect(el.className).toContain("text-amber-300");
+    expect(el.className).toContain("text-warning-ink");
     expect(el.className).not.toContain("emerald");
     expect(el.className).not.toContain("green");
   });
@@ -77,8 +77,8 @@ describe("Reported", () => {
     render(<Reported reading={reading} />);
     const el = screen.getByText("not applicable on this hardware");
     expect(el).toBeInTheDocument();
-    expect(el.className).toContain("text-white/40");
-    expect(el.className).not.toContain("amber");
+    expect(el.className).toContain("text-muted");
+    expect(el.className).not.toContain("warning");
   });
 
   it("renders PARTIAL with value and 'needs root' badge", () => {
@@ -93,7 +93,7 @@ describe("Reported", () => {
     expect(screen.getByText(/eth0/)).toBeInTheDocument();
     const badge = screen.getByText("needs root");
     expect(badge).toBeInTheDocument();
-    expect(badge.className).toContain("bg-white/10");
+    expect(badge.className).toContain("bg-soft-surface");
   });
 
   it("renders dash fallback when reading is null or undefined", () => {

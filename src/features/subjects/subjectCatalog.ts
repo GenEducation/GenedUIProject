@@ -53,7 +53,9 @@ export const useSubjectCatalog = create<SubjectCatalogState>((set) => ({
   setError: (message) => set({ subjects: [], isLoaded: false, error: message }),
 }));
 
-const catalogRequests = new Map<EducationBoard, Promise<TaxonomySubject[]>>();
+// Keyed `"<origin>|<board>"`, not by board alone: the admin console reads this
+// catalogue from the new backend while the rest of the app is still on the MVP.
+const catalogRequests = new Map<string, Promise<TaxonomySubject[]>>();
 
 function profileBoard(): string | undefined {
   if (typeof window === "undefined") return undefined;
@@ -109,12 +111,19 @@ function parseCatalog(payload: unknown): TaxonomySubject[] {
  * The board comes from the backend-derived profile when a caller does not
  * explicitly provide one; CBSE is only the pre-profile/default-partner path.
  */
-export function loadSubjectCatalog(board?: string): Promise<TaxonomySubject[]> {
+export function loadSubjectCatalog(
+  board?: string,
+  { baseUrl = API_BASE_URL }: { baseUrl?: string } = {},
+): Promise<TaxonomySubject[]> {
   const resolvedBoard = resolveTaxonomyBoard(board);
-  let catalogRequest = catalogRequests.get(resolvedBoard);
+  // Keyed by origin as well as board: the admin console reads this from the new
+  // backend while the rest of the app is still on the MVP, and a board-only key
+  // would hand whichever asked first to whoever asked second.
+  const cacheKey = `${baseUrl}|${resolvedBoard}`;
+  let catalogRequest = catalogRequests.get(cacheKey);
   if (!catalogRequest) {
     catalogRequest = authFetch(
-      `${API_BASE_URL}/rag/taxonomy/subjects?board=${encodeURIComponent(resolvedBoard)}`,
+      `${baseUrl}/rag/taxonomy/subjects?board=${encodeURIComponent(resolvedBoard)}`,
     )
       .then(async (response) => parseCatalog(await response.json()))
       .then((subjects) => {
@@ -127,7 +136,7 @@ export function loadSubjectCatalog(board?: string): Promise<TaxonomySubject[]> {
         useSubjectCatalog.getState().setError(message);
         throw error;
       });
-    catalogRequests.set(resolvedBoard, catalogRequest);
+    catalogRequests.set(cacheKey, catalogRequest);
   }
   return catalogRequest;
 }
@@ -186,13 +195,16 @@ export function isSubjectValidationError(error: unknown): error is SubjectValida
   return error instanceof SubjectValidationError;
 }
 
-export function useTaxonomySubjects(board?: string): TaxonomySubject[] {
+export function useTaxonomySubjects(
+  board?: string,
+  { baseUrl }: { baseUrl?: string } = {},
+): TaxonomySubject[] {
   const subjects = useSubjectCatalog((state) => state.subjects);
   useEffect(() => {
-    void loadSubjectCatalog(board).catch(() => {
+    void loadSubjectCatalog(board, baseUrl ? { baseUrl } : undefined).catch(() => {
       // The catalogue store exposes the failure. Subject actions remain closed.
     });
-  }, [board]);
+  }, [board, baseUrl]);
   return subjects;
 }
 

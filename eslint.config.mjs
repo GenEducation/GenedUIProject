@@ -12,6 +12,17 @@ const HEX_LITERAL_SELECTOR = {
     "Raw hex color literal. Use STUDENT_COLORS (theme/colors.ts) or a CSS var(--token) instead — this file was migrated off local hex palettes.",
 };
 
+// The admin console talks to TWO backends during the MVP migration, and
+// src/features/admin/adminApiRouting.ts is the only thing allowed to decide
+// which. A call that builds its own URL silently keeps the MVP base forever —
+// three such calls already existed in adminService.ts and each had to be found
+// by hand. Passing adminUrl(...) (any call expression) satisfies this.
+const ADMIN_FETCH_SELECTOR = {
+  selector: "CallExpression[callee.name='authFetch'][arguments.0.type!='CallExpression']",
+  message:
+    "Build the URL with adminUrl(path, method) from @/features/admin/adminApiRouting. A hand-built URL pins this call to NEXT_PUBLIC_API_URL and will not follow the migration.",
+};
+
 const RAW_BUTTON_SELECTOR = {
   selector: "JSXOpeningElement[name.name='button']",
   message:
@@ -95,6 +106,24 @@ const eslintConfig = defineConfig([
       // later blocks replace the rule outright, so listing only the hex
       // selector here would switch the button guard off on these 12 files.
       "no-restricted-syntax": ["warn", HEX_LITERAL_SELECTOR, RAW_BUTTON_SELECTOR],
+    },
+  },
+  // Admin migration guard. Split by extension on purpose: the button guard
+  // above covers .tsx only, so the .ts block here cannot collide with it,
+  // while the .tsx block must re-list RAW_BUTTON_SELECTOR or it would switch
+  // that guard off across the admin console.
+  {
+    files: ["src/features/admin/**/*.ts"],
+    ignores: ["src/features/admin/adminApiRouting.ts", "**/__tests__/**"],
+    rules: {
+      "no-restricted-syntax": ["warn", ADMIN_FETCH_SELECTOR],
+    },
+  },
+  {
+    files: ["src/features/admin/**/*.tsx"],
+    ignores: ["**/__tests__/**"],
+    rules: {
+      "no-restricted-syntax": ["warn", ADMIN_FETCH_SELECTOR, RAW_BUTTON_SELECTOR],
     },
   },
   // Node build scripts under scripts/ are CommonJS by design (they are run

@@ -8,6 +8,7 @@ import { useParentStore } from "@/features/parent/store/useParentStore";
 import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 import { loadSubjectCatalog } from "@/features/subjects/subjectCatalog";
+import { adminReferenceBase } from "@/features/admin/adminApiRouting";
 import { ParentLoaderBackdrop } from "@/features/parent/components/loader/ParentLoader";
 import { BrandLoadingScreen } from "@/components/shared/loaders/BrandLoadingScreen";
 
@@ -110,7 +111,17 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
 
       // Warm the complete static taxonomy manifest once after authentication.
       // Subject-scoped actions await the same de-duplicated promise themselves.
-      void loadSubjectCatalog().catch((error) => {
+      //
+      // The admin console warms it from whichever backend its screens are on.
+      // This guard wraps every authenticated page, so before this it warmed the
+      // admin's catalogue from the MVP -- one live MVP call on every admin page
+      // load, long after the screens themselves had moved. It also poisoned the
+      // de-duplication: the admin components asked for the same board and got
+      // this promise back, so the move only took effect once this one did.
+      void loadSubjectCatalog(
+        undefined,
+        requiredRole === "admin" ? { baseUrl: adminReferenceBase() } : undefined,
+      ).catch((error) => {
         Sentry.captureException(error, { tags: { boundary: "subject_catalog" } });
       });
 

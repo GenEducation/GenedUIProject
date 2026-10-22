@@ -130,24 +130,24 @@ function Tile({
   floor?: boolean;
 }) {
   const valueColor = {
-    neutral: "text-white",
+    neutral: "text-ink",
     good: "text-[#059F6D]",
-    warn: "text-amber-300",
-    bad: "text-rose-300",
+    warn: "text-warning-ink",
+    bad: "text-danger-ink",
   }[accent];
 
   return (
     <div
       data-fleet-tile={label}
-      className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
+      className="rounded-2xl border border-border bg-white shadow-[0_1px_2px_rgba(18,45,48,.06),0_1px_3px_rgba(18,45,48,.05)] p-4"
     >
       <div className={`text-2xl font-bold ${valueColor}`}>
         {floor ? `${value}+` : value}
       </div>
-      <div className="mt-1 text-[11px] font-medium uppercase tracking-wider text-white/40">
+      <div className="mt-1 text-[11px] font-medium uppercase tracking-wider text-muted">
         {label}
       </div>
-      {sub ? <div className="mt-0.5 text-[11px] text-white/30">{sub}</div> : null}
+      {sub ? <div className="mt-0.5 text-[11px] text-muted-light">{sub}</div> : null}
     </div>
   );
 }
@@ -166,7 +166,7 @@ function ConnectivityCell({ row }: { row: FleetDeviceRow }) {
       >
         {CONNECTIVITY_SHORT[c.state]}
       </span>
-      <div className="mt-0.5 text-[11px] text-white/30">
+      <div className="mt-0.5 text-[11px] text-muted-light">
         {c.source === "NONE" ? "no presence channel" : c.source}
       </div>
     </div>
@@ -189,7 +189,7 @@ function DiagnosticCell({ row }: { row: FleetDeviceRow }) {
           label={`Verdict: ${row.diagnostic_verdict}`}
         />
       ) : (
-        <span className="text-[11px] text-white/30">No report yet</span>
+        <span className="text-[11px] text-muted-light">No report yet</span>
       )}
       <span
         aria-label={`Data age: ${row.diagnostic_freshness}`}
@@ -199,7 +199,7 @@ function DiagnosticCell({ row }: { row: FleetDeviceRow }) {
         {FRESHNESS_SHORT[row.diagnostic_freshness]}
       </span>
       {row.report_age_seconds !== null ? (
-        <span className="text-[11px] text-white/30">
+        <span className="text-[11px] text-muted-light">
           {relativeTime(row.received_at)}
         </span>
       ) : null}
@@ -209,14 +209,14 @@ function DiagnosticCell({ row }: { row: FleetDeviceRow }) {
 
 function AttentionCell({ row }: { row: FleetDeviceRow }) {
   if (!row.needs_attention) {
-    return <span className="text-[11px] text-white/25">—</span>;
+    return <span className="text-[11px] text-muted-light">—</span>;
   }
   return (
     <div className="flex flex-col gap-1">
       {row.attention_reasons.map((reason) => (
         <span
           key={reason}
-          className={`${PILL} bg-rose-500/15 text-rose-300`}
+          className={`${PILL} bg-danger-bg text-danger-ink`}
           data-attention-reason={reason}
         >
           <TriangleAlert size={12} />
@@ -238,13 +238,13 @@ function IdentityCell({ row }: { row: FleetDeviceRow }) {
   const alias = row.reported_device_id ?? row.lab_hardware_id ?? row.derived_device_key;
   return (
     <div className="min-w-0">
-      <div className="truncate font-medium text-white">
+      <div className="truncate font-medium text-ink">
         {row.label ?? alias ?? row.serial ?? "Unnamed device"}
       </div>
-      <div className="font-mono text-[11px] text-white/35">
+      <div className="font-mono text-[11px] text-muted-light">
         {row.serial ?? (
           <span
-            className="not-italic text-amber-200/70"
+            className="not-italic text-warning-ink"
             title={RECORD_HINTS[row.record]}
           >
             no serial yet
@@ -252,11 +252,19 @@ function IdentityCell({ row }: { row: FleetDeviceRow }) {
         )}
       </div>
       {row.serial && alias && alias !== row.label ? (
-        <div className="truncate font-mono text-[11px] text-white/25">{alias}</div>
+        <div className="truncate font-mono text-[11px] text-muted-light">{alias}</div>
       ) : null}
     </div>
   );
 }
+
+/*
+  Below md each row reflows into a stacked card: the header row hides and every
+  cell names itself from data-label. One DOM for both layouts, so a query for a
+  row or a badge never finds two copies.
+*/
+const CELL = "block md:table-cell md:px-3 md:py-3";
+const LABELLED = `${CELL} min-w-0 before:mb-1 before:block before:font-sans before:text-[10px] before:font-medium before:uppercase before:tracking-wider before:text-muted-light before:content-[attr(data-label)] md:before:content-none`;
 
 export function FleetTable() {
   const router = useRouter();
@@ -384,8 +392,8 @@ export function FleetTable() {
     <section className="mt-10">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">Fleet — all devices</h2>
-          <p className="text-sm text-white/40">
+          <h2 className="text-lg font-semibold tracking-tight text-ink">Fleet — all devices</h2>
+          <p className="text-sm text-muted">
             Every physical unit, in any mode: lab, personal, pre-registered and
             not-yet-reporting.
             {data ? ` ${cadenceLabel(data.report_interval_seconds)}.` : ""}
@@ -394,7 +402,7 @@ export function FleetTable() {
         <button
           onClick={() => void load(true)}
           disabled={refreshing}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-sm text-white/70 hover:bg-white/5 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-ink/80 hover:bg-canvas disabled:opacity-50"
         >
           <RefreshCw size={14} className={refreshing ? "animate-spin" : undefined} />
           Refresh
@@ -409,7 +417,7 @@ export function FleetTable() {
         capped tiles as exact counts the moment someone typed in the search box.
       */}
       {data?.truncated || stats?.truncated ? (
-        <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200">
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-warning-border bg-warning-bg px-4 py-2.5 text-sm text-warning-ink">
           <TriangleAlert size={16} className="mt-0.5 shrink-0" />
           <span>
             This fleet is larger than the server will scan in one request, so the
@@ -495,23 +503,22 @@ export function FleetTable() {
         </div>
       ) : null}
 
-      <div className="rounded-xl border border-white/10 bg-white/[0.02]">
-        <div className="flex flex-wrap items-center gap-2 border-b border-white/10 p-3">
+      <div className="rounded-2xl border border-border bg-white shadow-[0_1px_2px_rgba(18,45,48,.06),0_1px_3px_rgba(18,45,48,.05)]">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
           <div className="relative min-w-[220px] flex-1">
             <Search
               size={14}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/30"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-light"
             />
             <input
               aria-label="Search the fleet"
               placeholder="Serial, device id, hardware id or label"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="w-full rounded-lg border border-white/15 bg-transparent py-2 pl-9 pr-3 text-sm text-white placeholder:text-white/25"
+              className="w-full rounded-lg border border-border bg-transparent py-2 pl-9 pr-3 text-sm text-ink placeholder:text-muted-light"
             />
           </div>
           <Select
-            theme="dark"
             aria-label="Filter by connectivity"
             value={connectivity}
             onChange={(v) => {
@@ -521,7 +528,6 @@ export function FleetTable() {
             options={CONNECTIVITY_OPTIONS}
           />
           <Select
-            theme="dark"
             aria-label="Filter by data age"
             value={freshness}
             onChange={(v) => {
@@ -531,7 +537,6 @@ export function FleetTable() {
             options={FRESHNESS_OPTIONS}
           />
           <Select
-            theme="dark"
             aria-label="Filter by verdict"
             value={verdict}
             onChange={(v) => {
@@ -541,7 +546,6 @@ export function FleetTable() {
             options={VERDICT_OPTIONS}
           />
           <Select
-            theme="dark"
             aria-label="Filter by attention"
             value={attention}
             onChange={(v) => {
@@ -551,7 +555,6 @@ export function FleetTable() {
             options={ATTENTION_OPTIONS}
           />
           <Select
-            theme="dark"
             aria-label="Filter by record"
             value={record}
             onChange={(v) => {
@@ -561,7 +564,6 @@ export function FleetTable() {
             options={RECORD_OPTIONS}
           />
           <Select
-            theme="dark"
             aria-label="Filter by provenance"
             value={provenance}
             onChange={(v) => {
@@ -571,7 +573,6 @@ export function FleetTable() {
             options={PROVENANCE_OPTIONS}
           />
           <Select
-            theme="dark"
             aria-label="Sort the fleet"
             className="min-w-[190px]"
             value={sort}
@@ -588,7 +589,7 @@ export function FleetTable() {
             not by a test. The wording also matches the `include_revoked` query
             this actually sends.
           */}
-          <label className="flex items-center gap-2 text-xs text-white/50">
+          <label className="flex items-center gap-2 text-xs text-muted">
             <input
               type="checkbox"
               checked={includeRevoked}
@@ -602,16 +603,16 @@ export function FleetTable() {
         </div>
 
         {error ? (
-          <p className="p-6 text-sm text-rose-300">{error}</p>
+          <p className="p-6 text-sm text-danger-ink">{error}</p>
         ) : loading ? (
-          <p className="p-6 text-sm text-white/40">Loading the fleet…</p>
+          <p className="p-6 text-sm text-muted">Loading the fleet…</p>
         ) : rows.length === 0 ? (
-          <p className="p-6 text-sm text-white/40">No devices match these filters.</p>
+          <p className="p-6 text-sm text-muted">No devices match these filters.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-[11px] uppercase tracking-wider text-white/35">
-                <tr className="border-b border-white/10">
+          <div className="md:overflow-x-auto">
+            <table className="block w-full text-left text-sm md:table">
+              <thead className="hidden text-[11px] uppercase tracking-wider text-muted-light md:table-header-group">
+                <tr className="border-b border-border">
                   <th className="px-3 py-2 font-medium">Device</th>
                   <th className="px-3 py-2 font-medium">Mode</th>
                   <th className="px-3 py-2 font-medium">Registry</th>
@@ -623,67 +624,67 @@ export function FleetTable() {
                   <th className="px-3 py-2" />
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="block space-y-3 p-3 md:table-row-group md:space-y-0 md:p-0">
                 {rows.map((row) => (
                   <tr
                     key={row.fleet_key}
                     data-fleet-row={row.fleet_key}
-                    className="border-b border-white/5 align-top last:border-0"
+                    className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-border bg-paper p-3 align-top md:table-row md:rounded-none md:border-0 md:border-b md:bg-transparent md:p-0 md:last:border-0"
                   >
-                    <td className="max-w-[220px] px-3 py-3">
+                    <td className={`col-span-2 md:max-w-[220px] ${CELL}`}>
                       <IdentityCell row={row} />
                       {row.revoked ? (
-                        <span className={`${PILL} mt-1 bg-white/10 text-white/30`}>
+                        <span className={`${PILL} mt-1 bg-soft-surface text-muted-light`}>
                           Enrollment revoked
                         </span>
                       ) : null}
                     </td>
-                    <td className="px-3 py-3">
+                    <td data-label="Mode" className={LABELLED}>
                       {row.last_reported_mode ? (
-                        <span className="text-xs text-white/70">
+                        <span className="text-xs text-ink/80">
                           {row.last_reported_mode}
                         </span>
                       ) : (
                         <span
-                          className="text-[11px] text-white/25"
+                          className="text-[11px] text-muted-light"
                           title="Mode is read from a gened-health report. This device has not sent one, and it is never inferred from which table the record lives in."
                         >
                           not reported
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-3">
-                      <div className="text-xs text-white/70">
+                    <td data-label="Registry" className={LABELLED}>
+                      <div className="text-xs text-ink/80">
                         {row.provenance ? PROVENANCE_SHORT[row.provenance] : "—"}
                       </div>
                       <div
-                        className="mt-0.5 text-[11px] text-white/30"
+                        className="mt-0.5 text-[11px] text-muted-light"
                         title={RECORD_HINTS[row.record]}
                       >
                         {RECORD_LABELS[row.record]}
                       </div>
                     </td>
-                    <td className="px-3 py-3">
+                    <td data-label="Connectivity" className={LABELLED}>
                       <ConnectivityCell row={row} />
                     </td>
-                    <td className="px-3 py-3">
-                      <div className="text-xs text-white/70">
+                    <td data-label="Last seen" className={LABELLED}>
+                      <div className="text-xs text-ink/80">
                         {relativeTime(row.last_seen_at)}
                       </div>
-                      <div className="mt-0.5 text-[11px] text-white/30">
+                      <div className="mt-0.5 text-[11px] text-muted-light">
                         {row.last_seen_source ?? "never"}
                       </div>
                     </td>
-                    <td className="px-3 py-3">
+                    <td data-label="Diagnostic" className={LABELLED}>
                       <DiagnosticCell row={row} />
                     </td>
-                    <td className="px-3 py-3 font-mono text-[11px] text-white/60">
+                    <td data-label="Firmware" className={`${LABELLED} font-mono text-[11px] text-muted`}>
                       {row.firmware_version ?? "—"}
                     </td>
-                    <td className="px-3 py-3">
+                    <td data-label="Attention" className={LABELLED}>
                       <AttentionCell row={row} />
                     </td>
-                    <td className="px-3 py-3 text-right">
+                    <td className={`col-span-2 md:text-right ${CELL}`}>
                       {/*
                         Every row carries a server-minted fleet_key (serial:*, lab:*,
                         or health:*). All devices — canonical, legacy Lab, or
@@ -691,7 +692,7 @@ export function FleetTable() {
                       */}
                       <button
                         onClick={() => router.push(deviceHref(row))}
-                        className="inline-flex items-center gap-1 rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/5"
+                        className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs text-ink/80 hover:bg-canvas"
                       >
                         View <ChevronRight size={14} />
                       </button>
@@ -703,7 +704,7 @@ export function FleetTable() {
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 p-3 text-xs text-white/40">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border p-3 text-xs text-muted">
           <span>
             {total === 0
               ? "No devices"
@@ -713,7 +714,7 @@ export function FleetTable() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="rounded-md border border-white/15 px-2.5 py-1.5 text-white/70 enabled:hover:bg-white/5 disabled:opacity-40"
+              className="rounded-md border border-border px-2.5 py-1.5 text-ink/80 enabled:hover:bg-canvas disabled:opacity-40"
             >
               Previous
             </button>
@@ -723,7 +724,7 @@ export function FleetTable() {
             <button
               onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
               disabled={page >= lastPage}
-              className="rounded-md border border-white/15 px-2.5 py-1.5 text-white/70 enabled:hover:bg-white/5 disabled:opacity-40"
+              className="rounded-md border border-border px-2.5 py-1.5 text-ink/80 enabled:hover:bg-canvas disabled:opacity-40"
             >
               Next
             </button>

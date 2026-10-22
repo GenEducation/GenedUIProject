@@ -7,7 +7,7 @@
  */
 export const LS_COLORS = {
   emerald: "#075E63",
-  emeraldSoft: "#E6F4EE",
+  emeraldSoft: "#E8F2EF",
   blue: "#4A90D9",
   blueSoft: "#E8F1FA",
   amber: "#E8A33D",

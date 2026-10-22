@@ -10,7 +10,7 @@ interface ServicesPanelProps {
 
 export function ServicesPanel({ panel }: ServicesPanelProps) {
   if (panel.error) {
-    return <p className="text-sm text-rose-300">{panel.error}</p>;
+    return <p className="text-sm text-danger-ink">{panel.error}</p>;
   }
 
   const units = Array.isArray(panel.units?.value)
@@ -37,10 +37,10 @@ export function ServicesPanel({ panel }: ServicesPanelProps) {
       {/* App Serving Overview */}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
             App HTTP Status
           </dt>
-          <dd className="mt-1 text-sm font-mono text-white/80">
+          <dd className="mt-1 text-sm font-mono text-ink">
             {appServing?.http_status !== undefined && appServing?.http_status !== null
               ? String(appServing.http_status)
               : "—"}
@@ -48,10 +48,10 @@ export function ServicesPanel({ panel }: ServicesPanelProps) {
         </div>
 
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
             App PID
           </dt>
-          <dd className="mt-1 text-sm font-mono text-white/80">
+          <dd className="mt-1 text-sm font-mono text-ink">
             {appServing?.pid !== undefined && appServing?.pid !== null
               ? String(appServing.pid)
               : "—"}
@@ -59,10 +59,10 @@ export function ServicesPanel({ panel }: ServicesPanelProps) {
         </div>
 
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
             Journal Persistent
           </dt>
-          <dd className="mt-1 text-sm text-white/80">
+          <dd className="mt-1 text-sm text-ink">
             <Reported
               reading={panel.journal_persistent}
               format={(v) => (v ? "Persistent (/var/log/journal)" : "Volatile / None")}
@@ -71,10 +71,10 @@ export function ServicesPanel({ panel }: ServicesPanelProps) {
         </div>
 
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
             Restarts Sweep
           </dt>
-          <dd className="mt-1 text-sm text-white/80">
+          <dd className="mt-1 text-sm text-ink">
             {restarts.length === 0 ? "0 units restarted" : `${restarts.length} units restarted`}
           </dd>
         </div>
@@ -82,7 +82,7 @@ export function ServicesPanel({ panel }: ServicesPanelProps) {
 
       {/* Restart warnings */}
       {restarts.length > 0 ? (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-200">
+        <div className="rounded-lg border border-warning-border bg-warning-bg p-2.5 text-xs text-warning-ink">
           <strong>Restarts detected:</strong> {restarts.join(", ")}
         </div>
       ) : null}
@@ -90,7 +90,7 @@ export function ServicesPanel({ panel }: ServicesPanelProps) {
       {/* App Health Report Components */}
       {appComponents && Object.keys(appComponents).length > 0 ? (
         <div>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/40">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">
             App Health Components (Live)
           </h3>
           <div className="space-y-2">
@@ -104,26 +104,26 @@ export function ServicesPanel({ panel }: ServicesPanelProps) {
       {/* Systemd Units */}
       {units.length > 0 ? (
         <div>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/40">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">
             Systemd Service Units
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-white/10 text-[11px] text-white/40 uppercase">
+                <tr className="border-b border-border text-[11px] text-muted uppercase">
                   <th className="py-2 pr-3">Unit</th>
                   <th className="py-2 px-3">Active State</th>
                   <th className="py-2 px-3">Sub State</th>
                   <th className="py-2 pl-3">Restarts</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5 font-mono">
+              <tbody className="divide-y divide-border font-mono">
                 {units.map((u, idx) => (
                   <tr key={String(u.name ?? idx)}>
-                    <td className="py-2 pr-3 text-white font-medium">{String(u.name ?? "—")}</td>
-                    <td className="py-2 px-3 text-white/70">{String(u.active_state ?? "—")}</td>
-                    <td className="py-2 px-3 text-white/70">{String(u.sub_state ?? "—")}</td>
-                    <td className="py-2 pl-3 text-white/80">
+                    <td className="py-2 pr-3 text-ink font-medium">{String(u.name ?? "—")}</td>
+                    <td className="py-2 px-3 text-ink/80">{String(u.active_state ?? "—")}</td>
+                    <td className="py-2 px-3 text-ink/80">{String(u.sub_state ?? "—")}</td>
+                    <td className="py-2 pl-3 text-ink">
                       {u.restart_count !== undefined && u.restart_count !== null
                         ? String(u.restart_count)
                         : "—"}
@@ -138,11 +138,11 @@ export function ServicesPanel({ panel }: ServicesPanelProps) {
 
       {/* Source notes */}
       {panel.sources ? (
-        <div className="mt-2 border-t border-white/5 pt-2 text-[10px] text-white/35 space-y-0.5">
+        <div className="mt-2 border-t border-border pt-2 text-[10px] text-muted-light space-y-0.5">
           {Object.entries(panel.sources).map(([chk, src]) =>
             src.detail ? (
               <p key={chk}>
-                <span className="font-mono text-white/25">{chk}:</span> {src.detail}
+                <span className="font-mono text-muted-light">{chk}:</span> {src.detail}
               </p>
             ) : null,
           )}

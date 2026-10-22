@@ -19,6 +19,7 @@ import {
   type FirmwareRow,
   type StackedRow,
 } from "./DeviceCharts";
+import { LS_COLORS } from "../analytics/colors";
 import { Select } from "@/components/ui/Select";
 import {
   ConnBadge,
@@ -73,10 +74,10 @@ function StatCard({
   onClick?: () => void;
 }) {
   const valueColor = {
-    neutral: "text-white",
-    good: "text-[#075E63]",
-    warn: "text-amber-300",
-    bad: "text-rose-300",
+    neutral: "text-ink",
+    good: "text-emerald",
+    warn: "text-warning-ink",
+    bad: "text-danger-ink",
   }[accent];
 
   return (
@@ -90,15 +91,15 @@ function StatCard({
       data-kpi-tile={label}
       className={`rounded-xl border p-4 text-left transition-colors ${
         active
-          ? "border-[#075E63]/60 bg-[#075E63]/10"
-          : "border-white/10 bg-white/[0.03] enabled:hover:bg-white/[0.06]"
+          ? "border-emerald/60 bg-emerald/10"
+          : "border-border bg-paper enabled:hover:bg-canvas"
       } ${onClick ? "cursor-pointer" : "cursor-default"}`}
     >
       <div className={`text-2xl font-bold ${valueColor}`}>{value}</div>
-      <div className="mt-1 text-[11px] font-medium uppercase tracking-wider text-white/40">
+      <div className="mt-1 text-[11px] font-medium uppercase tracking-wider text-muted">
         {label}
       </div>
-      {sub ? <div className="mt-0.5 text-[11px] text-white/30">{sub}</div> : null}
+      {sub ? <div className="mt-0.5 text-[11px] text-muted-light">{sub}</div> : null}
     </button>
   );
 }
@@ -219,7 +220,7 @@ export function DevicesView() {
       { name: "Stale", value: local.stale, color: CHART_COLORS.warn },
       { name: "Needs attention", value: local.needsAttention, color: CHART_COLORS.bad },
       { name: "Offline", value: local.offline, color: CHART_COLORS.muted },
-      { name: "Revoked", value: local.revoked, color: "rgba(255,255,255,0.12)" },
+      { name: "Revoked", value: local.revoked, color: LS_COLORS.track },
     ],
     [local],
   );
@@ -272,8 +273,8 @@ export function DevicesView() {
         accessor: (d) => `${d.device_label} ${d.hardware_id}`,
         render: (d) => (
           <div>
-            <div className="font-medium text-white">{d.device_label}</div>
-            <div className="font-mono text-[11px] text-white/35">{d.hardware_id}</div>
+            <div className="font-medium text-ink">{d.device_label}</div>
+            <div className="font-mono text-[11px] text-muted-light">{d.hardware_id}</div>
           </div>
         ),
       },
@@ -303,7 +304,7 @@ export function DevicesView() {
         header: "Last seen",
         accessor: (d) => relativeTime(d.last_heartbeat_at),
         render: (d) => (
-          <span className={isHeartbeatStale(d) ? "text-amber-300" : undefined}>
+          <span className={isHeartbeatStale(d) ? "text-warning-ink" : undefined}>
             {relativeTime(d.last_heartbeat_at)}
           </span>
         ),
@@ -330,21 +331,21 @@ export function DevicesView() {
     <div>
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Devices</h1>
-          <p className="text-sm text-white/40">
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Devices</h1>
+          <p className="text-sm text-muted">
             {stats
               ? `${stats.total_devices} devices · ${stats.total_labs} labs · ${stats.partners_with_labs} schools`
               : `${local.total} devices`}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-white/30">
+          <span className="text-xs text-muted-light">
             {lastUpdatedAt ? `Updated ${relativeTime(lastUpdatedAt.toISOString())}` : "Loading…"}
           </span>
           <button
             onClick={refresh}
             disabled={isRefreshing}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-sm text-white/70 hover:bg-white/5 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm text-ink/80 hover:bg-canvas disabled:opacity-50"
           >
             <RefreshCw size={14} className={isRefreshing ? "animate-spin" : undefined} />
             Refresh
@@ -353,7 +354,7 @@ export function DevicesView() {
       </div>
 
       {data?.truncated ? (
-        <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200">
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-warning-border bg-warning-bg px-4 py-2.5 text-sm text-warning-ink">
           <TriangleAlert size={16} className="mt-0.5 shrink-0" />
           <span>
             Showing {devices.length} of {data.total} devices — this fleet exceeds the{" "}
@@ -364,7 +365,7 @@ export function DevicesView() {
       ) : null}
 
       {/* Connectivity — can we reach it? */}
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/30">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-light">
         Connectivity
       </p>
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
@@ -410,7 +411,7 @@ export function DevicesView() {
       </div>
 
       {/* Serviceability — is the hardware sound? */}
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-white/30">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-light">
         Serviceability
       </p>
       {/* Same 6-column rhythm as the connectivity row, two columns per tile. */}
@@ -484,12 +485,12 @@ export function DevicesView() {
             {tile ? (
               <button
                 onClick={() => setTile("")}
-                className="rounded-lg border border-[#075E63]/50 bg-[#075E63]/10 px-3 py-2 text-xs text-[#075E63] hover:bg-[#075E63]/20"
+                className="rounded-lg border border-emerald/50 bg-emerald/10 px-3 py-2 text-xs text-emerald hover:bg-emerald/20"
               >
                 Clear tile filter
               </button>
             ) : null}
-            <label className="flex items-center gap-2 text-xs text-white/50">
+            <label className="flex items-center gap-2 text-xs text-muted">
               <input
                 type="checkbox"
                 checked={showRevoked}
@@ -498,7 +499,6 @@ export function DevicesView() {
               Show revoked
             </label>
             <Select
-              theme="dark"
               aria-label="Sort devices"
               className="min-w-[170px]"
               value={sort}
@@ -510,7 +510,7 @@ export function DevicesView() {
         actions={(d) => (
           <button
             onClick={() => router.push(`/admin/devices/${encodeURIComponent(d.id)}`)}
-            className="inline-flex items-center gap-1 rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/5"
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs text-ink/80 hover:bg-canvas"
           >
             View <ChevronRight size={14} />
           </button>

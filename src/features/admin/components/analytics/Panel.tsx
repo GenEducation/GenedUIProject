@@ -19,12 +19,12 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={`ls-card p-5 ${className}`}>
+    <section className={`ls-card p-4 sm:p-5 ${className}`}>
       <header className="mb-4 flex items-start justify-between gap-4">
         <div className="flex items-start gap-2.5">
           {icon ? <span className="mt-0.5 shrink-0">{icon}</span> : null}
           <div>
-            <h2 className="text-[15px] font-bold tracking-tight" style={{ color: "var(--ls-ink)" }}>
+            <h2 className="font-serif text-[16px] font-bold" style={{ color: "var(--ls-ink)" }}>
               {title}
             </h2>
             {subtitle ? (
