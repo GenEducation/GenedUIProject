@@ -86,10 +86,28 @@ describe("IngestionsView", () => {
     expect(listSourceIngestions).not.toHaveBeenCalled();
   });
 
+  // A gateway that already serves the paged shape (a local stack pointed at
+  // the new service) used to crash the old screen on `rows.map`. The answer
+  // says which screen it belongs to, so the old one hands over.
+  it("hands over to the rebuilt screen when the old route answers with a page", async () => {
+    listIngestions.mockResolvedValue({ items: [SOURCE], total_count: 1, limit: 50, offset: 0 });
+    await renderView({ NEXT_PUBLIC_ADMIN_API_URL: "", NEXT_PUBLIC_ADMIN_BACKEND_GROUPS: "" });
+
+    expect(await screen.findByText("2. Fractions")).toBeInTheDocument();
+  });
+
+  it("says so, rather than crashing, when the old route answers with something else", async () => {
+    listIngestions.mockResolvedValue({ unexpected: true });
+    await renderView({ NEXT_PUBLIC_ADMIN_API_URL: "", NEXT_PUBLIC_ADMIN_BACKEND_GROUPS: "" });
+
+    expect(await screen.findByText(/unexpected format/i)).toBeInTheDocument();
+  });
+
   it("shows a chapter with its partner, its run state and how far it has got", async () => {
     await renderView({ NEXT_PUBLIC_ADMIN_API_URL: NEW, NEXT_PUBLIC_ADMIN_BACKEND_GROUPS: "ingestions" });
 
-    expect(await screen.findByText(/Book One · 2\. Fractions/)).toBeInTheDocument();
+    expect(await screen.findByText("2. Fractions")).toBeInTheDocument();
+    expect(screen.getByText("Book One")).toBeInTheDocument();
     expect(screen.getByText("Alpha School")).toBeInTheDocument();
     expect(screen.getByText("running")).toBeInTheDocument();
     expect(screen.getByText(/23% · read pages \(2\/9\)/)).toBeInTheDocument();

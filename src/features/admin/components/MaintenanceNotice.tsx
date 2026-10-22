@@ -16,14 +16,9 @@
 
 import { ArrowLeft, Wrench } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 import { MAINTENANCE_COPY } from "../maintenance";
-
-// The admin console is dark; Modal's panel is light by default. `panelStyle`
-// is the component's documented seam for scoped theming (see TestReadyModal).
-const PANEL_STYLE: React.CSSProperties = {
-  background: "#122D30",
-  border: "1px solid rgb(255 255 255 / 0.10)",
-};
+import { PageHeader } from "./ui/PageHeader";
 
 export function MaintenanceModal({
   open,
@@ -36,33 +31,27 @@ export function MaintenanceModal({
   onClose: () => void;
 }) {
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      size="sm"
-      title={MAINTENANCE_COPY.title}
-      panelStyle={PANEL_STYLE}
-    >
-      <div className="px-6 py-6 text-white">
-        <div className="mb-4 flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#075E63]/15 text-[#075E63]">
+    <Modal open={open} onClose={onClose} size="sm" title={MAINTENANCE_COPY.title}>
+      <div className="px-6 py-6">
+        <div className="mb-4 flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning-bg text-warning-ink">
             <Wrench size={18} />
           </span>
           {/* Visual only — Modal's `title` carries the accessible name. */}
-          <span className="text-base font-semibold">
-            {screenLabel ?? MAINTENANCE_COPY.title}
+          <span>
+            <span className="block font-serif text-lg font-bold text-ink">
+              {screenLabel ?? MAINTENANCE_COPY.title}
+            </span>
+            <span className="block text-[11px] font-bold uppercase tracking-[0.12em] text-warning-ink">
+              {MAINTENANCE_COPY.title}
+            </span>
           </span>
         </div>
 
-        <p className="text-sm leading-relaxed text-white/60">{MAINTENANCE_COPY.body}</p>
+        <p className="text-sm leading-relaxed text-muted">{MAINTENANCE_COPY.body}</p>
 
         <div className="mt-6 flex justify-end">
-          <button
-            onClick={onClose}
-            className="rounded-lg bg-[#075E63] px-4 py-2 text-sm font-medium text-white hover:bg-[#075E63]/85"
-          >
-            Got it
-          </button>
+          <Button onClick={onClose}>Got it</Button>
         </div>
       </div>
     </Modal>
@@ -72,23 +61,26 @@ export function MaintenanceModal({
 export function MaintenancePanel({ onBack }: { onBack: () => void }) {
   return (
     <div>
-      <button
-        onClick={onBack}
-        className="mb-4 inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white"
-      >
-        <ArrowLeft size={16} /> Back to overview
-      </button>
+      <PageHeader
+        title={MAINTENANCE_COPY.title}
+        subtitle="This screen is paused while the console moves to the new backend."
+        actions={
+          <Button variant="secondary" leadingIcon={<ArrowLeft size={16} />} onClick={onBack}>
+            Back to overview
+          </Button>
+        }
+      />
 
-      <div className="rounded-lg border border-white/10 bg-white/[0.03] px-6 py-8">
-        <div className="mb-3 flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#075E63]/15 text-[#075E63]">
-            <Wrench size={18} />
-          </span>
-          <h2 className="text-base font-semibold text-white">{MAINTENANCE_COPY.title}</h2>
+      <div className="flex flex-col items-start gap-4 rounded-2xl border border-warning-border bg-warning-bg/60 p-6 sm:flex-row sm:p-8">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-warning-ink shadow-[0_1px_2px_rgba(18,45,48,.06)]">
+          <Wrench size={22} />
+        </span>
+        <div>
+          <h2 className="font-serif text-lg font-bold text-ink">Nothing has been lost</h2>
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-warning-ink">
+            {MAINTENANCE_COPY.body}
+          </p>
         </div>
-        <p className="max-w-xl text-sm leading-relaxed text-white/60">
-          {MAINTENANCE_COPY.body}
-        </p>
       </div>
     </div>
   );

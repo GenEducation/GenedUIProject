@@ -70,24 +70,24 @@ function FindingRow({ finding }: { finding: DiagnosticFinding }) {
   return (
     <div
       className={`rounded-lg border p-3 ${
-        severe ? "border-rose-500/30 bg-rose-500/[0.07]" : "border-white/10 bg-white/[0.02]"
+        severe ? "border-danger/30 bg-danger-bg" : "border-border bg-paper"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <span className="text-sm font-medium text-white">{finding.title ?? finding.id}</span>
+          <span className="text-sm font-medium text-ink">{finding.title ?? finding.id}</span>
           {finding.subsystem ? (
-            <span className="ml-2 text-[11px] uppercase tracking-wider text-white/35">
+            <span className="ml-2 text-[11px] uppercase tracking-wider text-muted-light">
               {finding.subsystem}
             </span>
           ) : null}
         </div>
         <DiagnosticBadge status={status} />
       </div>
-      {finding.detail ? <p className="mt-1.5 text-xs text-white/50">{finding.detail}</p> : null}
+      {finding.detail ? <p className="mt-1.5 text-xs text-muted">{finding.detail}</p> : null}
       {finding.next_step ? (
-        <p className="mt-2 text-xs text-white/40">
-          <span className="text-white/30">Next step: </span>
+        <p className="mt-2 text-xs text-muted">
+          <span className="text-muted-light">Next step: </span>
           {finding.next_step}
         </p>
       ) : null}
@@ -100,7 +100,7 @@ function ConnectivityRow({ device }: { device: CanonicalDevice }) {
   const reason = c.reason ? CONNECTIVITY_REASONS[c.reason] ?? c.reason : null;
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2">
+    <div className="rounded-lg border border-border bg-paper px-3 py-2">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span
           aria-label={`Connectivity: ${c.state}`}
@@ -111,23 +111,23 @@ function ConnectivityRow({ device }: { device: CanonicalDevice }) {
           {c.state}
         </span>
         {c.source !== "NONE" ? (
-          <span className="text-[11px] text-white/35">
+          <span className="text-[11px] text-muted-light">
             via {c.source === "LAB_WS" ? "lab connection" : "device status"}
           </span>
         ) : null}
         {device.last_seen_at ? (
-          <span className="text-[11px] text-white/35">
+          <span className="text-[11px] text-muted-light">
             last contact{" "}
-            <span className="text-white/60">{relativeTime(device.last_seen_at)}</span>
+            <span className="text-muted">{relativeTime(device.last_seen_at)}</span>
             {device.last_seen_source ? (
-              <span className="text-white/25"> ({device.last_seen_source})</span>
+              <span className="text-muted-light"> ({device.last_seen_source})</span>
             ) : null}
           </span>
         ) : (
-          <span className="text-[11px] text-white/35">never heard from</span>
+          <span className="text-[11px] text-muted-light">never heard from</span>
         )}
       </div>
-      {reason ? <p className="mt-1 text-[11px] text-white/35">{reason}</p> : null}
+      {reason ? <p className="mt-1 text-[11px] text-muted-light">{reason}</p> : null}
     </div>
   );
 }
@@ -144,7 +144,7 @@ function LabRecordBadge({
       <ConnBadge device={device} />
       <ServiceChip device={device} showComponents={false} />
       {!labIsCurrent ? (
-        <span className="text-[11px] text-white/30">(then)</span>
+        <span className="text-[11px] text-muted-light">(then)</span>
       ) : null}
     </div>
   );
@@ -309,18 +309,18 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
 
   const reportMeta = device?.last_health_report;
 
-  if (loading) return <p className="text-sm text-white/40">Loading device…</p>;
+  if (loading) return <p className="text-sm text-muted">Loading device…</p>;
 
   if (error || (!device && !canonical && !report)) {
     return (
       <div>
         <button
           onClick={() => router.push("/admin/devices")}
-          className="mb-4 inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white"
+          className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"
         >
           <ArrowLeft size={16} /> All devices
         </button>
-        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+        <div className="rounded-lg border border-danger/30 bg-danger-bg px-4 py-3 text-sm text-danger-ink">
           {error || "Device not found."}
         </div>
       </div>
@@ -429,33 +429,33 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
       <div>
         <button
           onClick={() => router.push("/admin/devices")}
-          className="mb-4 inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white"
+          className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"
         >
           <ArrowLeft size={16} /> All devices
         </button>
 
         {/* 1. Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight text-ink">{title}</h1>
               {canonical ? (
                 <CanonicalConnBadge connectivity={canonical.connectivity} />
               ) : null}
               <span
-                className="rounded-md bg-white/10 px-2 py-0.5 text-xs font-medium text-white/70"
+                className="rounded-md bg-soft-surface px-2 py-0.5 text-xs font-medium text-ink/80"
                 title={modeSource ? `Mode source: ${modeSource}` : `Current mode: ${currentMode}`}
               >
                 {currentMode}
               </span>
               {labIsCurrent && device?.is_spare ? (
-                <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/50">
+                <span className="rounded-md bg-soft-surface px-2 py-0.5 text-xs text-muted">
                   Spare
                 </span>
               ) : null}
             </div>
 
-            <p className="mt-1 text-sm text-white/40">
+            <p className="mt-1 text-sm text-muted">
               {labIsCurrent && device ? (
                 <>
                   {device.partner_organization ?? "Unassigned"} › {device.lab_name ?? "—"}
@@ -481,7 +481,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }}
-              className="mt-1.5 inline-flex items-center gap-1.5 font-mono text-xs text-white/40 hover:text-white"
+              className="mt-1.5 inline-flex max-w-full items-center gap-1.5 break-all text-left font-mono text-xs text-muted hover:text-ink"
             >
               {displayIdentifier}
               {copied ? <Check size={12} /> : <Copy size={12} />}
@@ -492,14 +492,14 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
 
       {/* Banners */}
       {device?.revoked_at ? (
-        <div className="rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white/50">
+        <div className="rounded-lg border border-border bg-canvas px-4 py-2.5 text-sm text-muted">
           This device&apos;s Lab enrollment was revoked on {absoluteTime(device.revoked_at)}. It can
           no longer connect to the Lab.
         </div>
       ) : null}
 
       {tenancyState === "HISTORICAL" && device ? (
-        <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-2.5 text-sm text-sky-100">
+        <div className="rounded-lg border border-info/25 bg-info/10 px-4 py-2.5 text-sm text-info">
           <strong className="font-semibold">Previously enrolled in a Lab.</strong> This hardware was{" "}
           <span className="font-medium">{device.device_label}</span>
           {device.lab_name ? <> in {device.lab_name}</> : null}
@@ -512,47 +512,47 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
       ) : null}
 
       {labIsCurrent && neverConnected && device ? (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200">
+        <div className="rounded-lg border border-warning-border bg-warning-bg px-4 py-2.5 text-sm text-warning-ink">
           Approved during pairing but has never connected. It will not be allocated to students
           until it comes online.
         </div>
       ) : null}
 
       {actionError ? (
-        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300">
+        <div className="rounded-lg border border-danger/30 bg-danger-bg px-4 py-2.5 text-sm text-danger-ink">
           {actionError}
         </div>
       ) : null}
 
       {/* 2. At a Glance strip */}
-      <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">
+      <section className="rounded-2xl border border-border bg-white shadow-[0_1px_2px_rgba(18,45,48,.06),0_1px_3px_rgba(18,45,48,.05)] p-4">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">
           At a Glance
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 text-xs">
           <div>
-            <span className="block text-[11px] text-white/40 uppercase">Primary IP</span>
-            <span className="font-mono text-white/90 font-medium truncate block">{glanceIp}</span>
+            <span className="block text-[11px] text-muted uppercase">Primary IP</span>
+            <span className="font-mono text-ink font-medium truncate block">{glanceIp}</span>
           </div>
           <div>
-            <span className="block text-[11px] text-white/40 uppercase">SSID (Signal)</span>
-            <span className="text-white/90 truncate block">{glanceSsid}</span>
+            <span className="block text-[11px] text-muted uppercase">SSID (Signal)</span>
+            <span className="text-ink truncate block">{glanceSsid}</span>
           </div>
           <div>
-            <span className="block text-[11px] text-white/40 uppercase">Uptime</span>
-            <span className="text-white/90 truncate block">{glanceUptime}</span>
+            <span className="block text-[11px] text-muted uppercase">Uptime</span>
+            <span className="text-ink truncate block">{glanceUptime}</span>
           </div>
           <div>
-            <span className="block text-[11px] text-white/40 uppercase">SoC Temp</span>
-            <span className="font-mono text-white/90 truncate block">{glanceTemp}</span>
+            <span className="block text-[11px] text-muted uppercase">SoC Temp</span>
+            <span className="font-mono text-ink truncate block">{glanceTemp}</span>
           </div>
           <div>
-            <span className="block text-[11px] text-white/40 uppercase">Battery</span>
-            <span className="text-white/90 truncate block">{glanceBattery}</span>
+            <span className="block text-[11px] text-muted uppercase">Battery</span>
+            <span className="text-ink truncate block">{glanceBattery}</span>
           </div>
           <div>
-            <span className="block text-[11px] text-white/40 uppercase">Free on /</span>
-            <span className="font-mono text-white/90 truncate block">{glanceFree}</span>
+            <span className="block text-[11px] text-muted uppercase">Free on /</span>
+            <span className="font-mono text-ink truncate block">{glanceFree}</span>
           </div>
         </div>
       </section>
@@ -571,21 +571,21 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
         }
       >
         {diagnosticError ? (
-          <p className="text-sm text-rose-300">{diagnosticError}</p>
+          <p className="text-sm text-danger-ink">{diagnosticError}</p>
         ) : !canonical ? (
-          <p className="text-sm text-white/40">
+          <p className="text-sm text-muted">
             This device is not in the canonical registry yet, so no mode-independent
             diagnostic is available. Its state is{" "}
-            <strong className="text-amber-300">unknown</strong> — not confirmed healthy.
+            <strong className="text-warning-ink">unknown</strong> — not confirmed healthy.
           </p>
         ) : !diagnostic ? (
           <>
             <ConnectivityRow device={canonical} />
-            <p className="mt-3 text-sm text-white/40">
+            <p className="mt-3 text-sm text-muted">
               No gened-health report received yet. This device&apos;s diagnostic state is{" "}
-              <strong className="text-amber-300">unknown</strong> — not confirmed healthy.
+              <strong className="text-warning-ink">unknown</strong> — not confirmed healthy.
             </p>
-            <p className="mt-2 text-[11px] text-white/30">
+            <p className="mt-2 text-[11px] text-muted-light">
               {PROVENANCE_LABELS[canonical.provenance]}
             </p>
           </>
@@ -607,12 +607,12 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
               />
             </dl>
 
-            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/40">
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
               <span>Reported {absoluteTime(diagnostic.received_at)}</span>
               {diagnostic.diagnostic_freshness === "STALE" ? (
                 <span
                   aria-label="Diagnostic freshness: STALE"
-                  className="rounded-md bg-amber-500/15 px-2 py-0.5 text-amber-300"
+                  className="rounded-md bg-warning-bg px-2 py-0.5 text-warning-ink"
                 >
                   Stale data — expected every{" "}
                   {Math.round((diagnostic.report_interval_seconds ?? 3600) / 60)}m
@@ -621,13 +621,13 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
             </div>
 
             {diagnostic.collected_at ? (
-              <p className="mt-1 text-[11px] text-white/30">
+              <p className="mt-1 text-[11px] text-muted-light">
                 Device clock: {absoluteTime(diagnostic.collected_at)}
               </p>
             ) : null}
 
             {diagnostic.clock_synced === false ? (
-              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+              <div className="mt-3 rounded-lg border border-warning-border bg-warning-bg px-3 py-2 text-xs text-warning-ink">
                 This device reported that its clock is not synchronised, so the device clock above
                 is unreliable. Report age is measured by the server and is unaffected.
               </div>
@@ -650,17 +650,17 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
             {/* Findings */}
             <div className="mt-4">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
                   Findings
                 </p>
                 {findingsTotal > findings.length ? (
-                  <span className="text-[11px] text-white/40">
+                  <span className="text-[11px] text-muted">
                     Showing {findings.length} of {findingsTotal}
                   </span>
                 ) : null}
               </div>
               {findings.length === 0 ? (
-                <p className="text-sm text-white/40">
+                <p className="text-sm text-muted">
                   Nothing actionable in the latest report.
                   {diagnostic.overall === "PASS" ? ` All ${totalChecks} checks passed.` : null}
                 </p>
@@ -674,7 +674,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
             </div>
 
             {canonical.serial ? (
-              <p className="mt-4 border-t border-white/5 pt-2 text-[11px] text-white/25">
+              <p className="mt-4 border-t border-border pt-2 text-[11px] text-muted-light">
                 {PROVENANCE_LABELS[canonical.provenance]} · serial{" "}
                 <span className="font-mono">{canonical.serial}</span>
               </p>
@@ -757,8 +757,8 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
 
             {/* Self-test report metadata if present */}
             {reportMeta ? (
-              <div className="border-t border-white/5 pt-4">
-                <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-white/35">
+              <div className="border-t border-border pt-4">
+                <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-light">
                   Lab self-test report · {absoluteTime(reportMeta.checked_at)}
                 </p>
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3">
@@ -773,18 +773,18 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
             ) : null}
 
             {/* Self-test components */}
-            <div className="border-t border-white/5 pt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">
+            <div className="border-t border-border pt-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">
                 {labIsCurrent ? "Lab self-test" : "Lab self-test (historical)"}
               </h3>
               {!labIsCurrent && components.length > 0 ? (
-                <p className="mb-3 rounded-md border border-sky-500/25 bg-sky-500/10 px-2.5 py-1.5 text-[11px] text-sky-100">
+                <p className="mb-3 rounded-md border border-info/25 bg-info/10 px-2.5 py-1.5 text-[11px] text-info">
                   From the previous Lab enrollment. These component verdicts describe the hardware as it
                   was then, not now — the current verdict is in the System diagnostic card above.
                 </p>
               ) : null}
               {components.length === 0 ? (
-                <p className="text-sm text-white/40">
+                <p className="text-sm text-muted">
                   This device has never reported a Lab self-test.
                 </p>
               ) : (
@@ -797,13 +797,13 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
             </div>
 
             {/* Lab actions */}
-            <div className="border-t border-white/5 pt-4">
+            <div className="border-t border-border pt-4">
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-white/40">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">
                     Lab actions
                   </h3>
-                  <p className="text-[11px] text-white/35">
+                  <p className="text-[11px] text-muted-light">
                     {labIsCurrent
                       ? "These write to the Lab device record and are audited"
                       : "Unavailable: this Lab enrollment is historical"}
@@ -811,14 +811,14 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
                 </div>
                 <button
                   onClick={openLogs}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/5"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-ink/80 hover:bg-canvas"
                 >
                   <ScrollText size={14} /> Logs
                 </button>
               </div>
 
               {!labIsCurrent ? (
-                <p className="mb-3 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/50">
+                <p className="mb-3 rounded-lg border border-border bg-paper px-3 py-2 text-xs text-muted">
                   This hardware is no longer in {device.lab_name ?? "this Lab"}, so renaming, moving,
                   forcing online and rotating its token would only edit a record no device will read.
                   Revoke is still available and is how you retire this enrollment.
@@ -828,13 +828,13 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
               <div className="flex flex-wrap gap-2">
                 {/* Rename */}
                 {renaming ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <input
                       type="text"
                       value={labelDraft}
                       onChange={(e) => setLabelDraft(e.target.value)}
                       disabled={labActionsDisabled || busy === "rename"}
-                      className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                      className="min-w-0 rounded-lg border border-border bg-canvas px-2.5 py-1.5 text-xs text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                     />
                     <button
                       onClick={() =>
@@ -844,7 +844,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
                         })
                       }
                       disabled={busy === "rename"}
-                      className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                      className="rounded-lg bg-primary px-2.5 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-50"
                     >
                       Save
                     </button>
@@ -853,7 +853,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
                         setRenaming(false);
                         setLabelDraft(device.device_label);
                       }}
-                      className="rounded-lg border border-white/15 px-2.5 py-1.5 text-xs text-white/60 hover:bg-white/5"
+                      className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted hover:bg-canvas"
                     >
                       Cancel
                     </button>
@@ -862,7 +862,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
                   <button
                     onClick={() => setRenaming(true)}
                     disabled={labActionsDisabled}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-white/80 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-ink hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Pencil size={14} /> Rename
                   </button>
@@ -887,7 +887,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
                     />
                     <button
                       onClick={() => setMoving(false)}
-                      className="rounded-lg border border-white/15 px-2.5 py-1.5 text-xs text-white/60 hover:bg-white/5"
+                      className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted hover:bg-canvas"
                     >
                       Cancel
                     </button>
@@ -896,7 +896,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
                   <button
                     onClick={openMove}
                     disabled={labActionsDisabled}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-white/80 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-ink hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <ArrowRightLeft size={14} /> Move lab
                   </button>
@@ -908,7 +908,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
                     act("spare", () => labService.updateDevice(device.id, { is_spare: !device.is_spare }))
                   }
                   disabled={labActionsDisabled || busy === "spare"}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-white/80 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-ink hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {device.is_spare ? "Unmark spare" : "Mark as spare"}
                 </button>
@@ -927,7 +927,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
                     );
                   }}
                   disabled={labActionsDisabled || busy === "force"}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 px-3 py-1.5 text-xs text-amber-300 hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-warning-border px-3 py-1.5 text-xs text-warning-ink hover:bg-warning-bg disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Wifi size={14} /> Force online
                 </button>
@@ -947,7 +947,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
                     });
                   }}
                   disabled={labActionsDisabled || busy === "rotate"}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-white/80 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-ink hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <KeyRound size={14} /> Rotate token
                 </button>
@@ -961,7 +961,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
                     if (ok) void act("revoke", () => labService.revokeDevice(device.id));
                   }}
                   disabled={!!device.revoked_at || busy === "revoke"}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-300 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-danger/30 bg-danger-bg px-3 py-1.5 text-xs font-medium text-danger-ink hover:bg-danger/15 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Ban size={14} /> Revoke enrollment
                 </button>
@@ -973,21 +973,21 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
 
       {/* Device Logs Modal */}
       {logsOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="max-h-[80vh] w-full max-w-2xl overflow-hidden rounded-xl border border-white/15 bg-[#14151a] p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
+          <div className="max-h-[80vh] w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-white p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white">Device Logs</h3>
+              <h3 className="text-sm font-semibold text-ink">Device Logs</h3>
               <button
                 onClick={() => setLogsOpen(false)}
-                className="rounded-md border border-white/15 px-2 py-1 text-xs text-white/60 hover:text-white"
+                className="rounded-md border border-border px-2 py-1 text-xs text-muted hover:text-ink"
               >
                 Close
               </button>
             </div>
             {logsError ? (
-              <p className="text-xs text-rose-300">{logsError}</p>
+              <p className="text-xs text-danger-ink">{logsError}</p>
             ) : (
-              <pre className="max-h-[60vh] overflow-auto rounded-lg bg-black/40 p-3 font-mono text-[11px] text-white/80">
+              <pre className="max-h-[60vh] overflow-auto rounded-lg bg-canvas p-3 font-mono text-[11px] text-ink">
                 {JSON.stringify(logs, null, 2)}
               </pre>
             )}

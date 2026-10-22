@@ -21,32 +21,38 @@ import { PHASES, attentionLine, runPhases, type Phase } from "../utils/ingestion
 
 const sectionTitle = "text-[10px] lg:text-[11px] font-black text-[#122D30]/50 uppercase tracking-widest mb-2";
 
-/** Something running now: a teal dot with a soft ping, not a spinner (which reads as a "C"). */
+/**
+ * Something running now: a teal dot with a soft pulse, not a spinner (which reads as a "C"). Drawn in SVG: an HTML
+ * dot scaled by `animate-ping` is rasterised at its tiny size and stretched, so the pulse looked pixelated.
+ */
 function LiveDot({ size = 8 }: { size?: number }) {
   return (
-    <span aria-hidden className="relative inline-flex shrink-0" style={{ width: size, height: size }}>
-      <span className="absolute inset-0 rounded-full bg-[#075E63]/40 motion-safe:animate-ping" />
-      <span className="relative inline-flex h-full w-full rounded-full bg-[#075E63]" />
-    </span>
+    <svg aria-hidden width={size} height={size} viewBox="0 0 10 10" className="shrink-0 overflow-visible">
+      <circle cx="5" cy="5" r="5" fill="#075E63" className="live-pulse" />
+      <circle cx="5" cy="5" r="5" fill="#075E63" />
+    </svg>
   );
 }
 
-/** The phase running now: a ring that fills with how much of the phase is done, the live dot at its centre. */
+/**
+ * The phase running now: a ring that fills with how much of the phase is done, the live dot at its centre. One SVG
+ * at its pixel size, with whole-pixel strokes and the start turned to 12 o'clock inside the drawing, so it stays crisp.
+ */
 function PhaseRing({ fill }: { fill: number }) {
-  const r = 9;
+  const r = 10;
   const c = 2 * Math.PI * r;
+  const shown = Math.max(0.04, Math.min(1, fill));
   return (
-    <span aria-hidden className="relative flex h-6 w-6 shrink-0 items-center justify-center">
-      <svg viewBox="0 0 24 24" className="absolute inset-0 -rotate-90">
-        <circle cx="12" cy="12" r={r} fill="white" stroke="rgb(7 94 99 / 0.15)" strokeWidth="2.5" />
-        <circle
-          cx="12" cy="12" r={r} fill="none" stroke="#075E63" strokeWidth="2.5" strokeLinecap="round"
-          strokeDasharray={c} strokeDashoffset={c * (1 - Math.max(0.06, Math.min(1, fill)))}
-          className="transition-[stroke-dashoffset] duration-700 ease-out"
-        />
-      </svg>
-      <LiveDot size={6} />
-    </span>
+    <svg aria-hidden width="24" height="24" viewBox="0 0 24 24" className="shrink-0 overflow-visible">
+      <circle cx="12" cy="12" r={r} fill="white" stroke="rgb(7 94 99 / 0.15)" strokeWidth="2" />
+      <circle
+        cx="12" cy="12" r={r} fill="none" stroke="#075E63" strokeWidth="2" strokeLinecap="round"
+        strokeDasharray={c} strokeDashoffset={c * (1 - shown)} transform="rotate(-90 12 12)"
+        className="transition-[stroke-dashoffset] duration-700 ease-out"
+      />
+      <circle cx="12" cy="12" r="3" fill="#075E63" className="live-pulse" />
+      <circle cx="12" cy="12" r="3" fill="#075E63" />
+    </svg>
   );
 }
 

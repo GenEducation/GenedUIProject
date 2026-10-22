@@ -14,34 +14,38 @@ import {
   YAxis,
 } from "recharts";
 
+import { LS_COLORS } from "../analytics/colors";
+
 /**
- * Dark-theme recharts wrappers for the admin console. The app's existing charts
- * (src/components/analytics/*) are all light-themed against a white surface, so
- * none of their styling carries over — only the recharts API does.
+ * Recharts wrappers for the admin console, on the app's light surface. Colours
+ * come from LS_COLORS because recharts sets fill/stroke as SVG attributes and
+ * cannot resolve a CSS var() through them.
  */
 
-const GRID = "rgba(255,255,255,0.08)";
-const AXIS_TICK = { fill: "rgba(255,255,255,0.4)", fontSize: 11 };
+const INK = "#122D30"; // --ink; see LS_COLORS for why this is not a var()
+const GRID = LS_COLORS.grid;
+const AXIS_TICK = { fill: LS_COLORS.axis, fontSize: 11 };
 
 const TOOLTIP_STYLE = {
   contentStyle: {
-    background: "#122D30",
-    border: "1px solid rgba(255,255,255,0.1)",
+    background: "#FFFFFF",
+    border: `1px solid ${LS_COLORS.grid}`,
     borderRadius: 10,
     fontSize: 12,
-    color: "#fff",
+    color: INK,
+    boxShadow: "0 4px 12px rgba(18,45,48,0.08)",
   },
-  itemStyle: { color: "#fff" },
-  labelStyle: { color: "rgba(255,255,255,0.5)" },
-  cursor: { fill: "rgba(255,255,255,0.04)" },
+  itemStyle: { color: INK },
+  labelStyle: { color: LS_COLORS.axis },
+  cursor: { fill: LS_COLORS.track },
 } as const;
 
 export const CHART_COLORS = {
-  good: "#075E63",
-  warn: "#FBBF24",
-  bad: "#FB7185",
-  muted: "rgba(255,255,255,0.22)",
-  neutral: "#38BDF8",
+  good: LS_COLORS.emerald,
+  warn: LS_COLORS.amber,
+  bad: LS_COLORS.danger,
+  muted: LS_COLORS.axis,
+  neutral: LS_COLORS.blue,
 } as const;
 
 export function ChartCard({
@@ -56,13 +60,13 @@ export function ChartCard({
   empty?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+    <div className="rounded-2xl border border-border bg-white shadow-[0_1px_2px_rgba(18,45,48,.06),0_1px_3px_rgba(18,45,48,.05)] p-5">
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-white">{title}</h3>
-        {subtitle ? <p className="mt-0.5 text-xs text-white/40">{subtitle}</p> : null}
+        <h3 className="text-sm font-semibold text-ink">{title}</h3>
+        {subtitle ? <p className="mt-0.5 text-xs text-muted">{subtitle}</p> : null}
       </div>
       {empty ? (
-        <div className="flex h-[220px] items-center justify-center text-sm text-white/30">
+        <div className="flex h-[220px] items-center justify-center text-sm text-muted-light">
           No data
         </div>
       ) : (
@@ -103,7 +107,7 @@ export function DonutChart({ data }: { data: Slice[] }) {
           iconType="circle"
           iconSize={8}
           formatter={(value) => (
-            <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>{value}</span>
+            <span style={{ color: LS_COLORS.axis, fontSize: 12 }}>{value}</span>
           )}
         />
       </PieChart>

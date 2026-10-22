@@ -9,7 +9,7 @@ interface NetworkPanelProps {
 
 export function NetworkPanel({ panel }: NetworkPanelProps) {
   if (panel.error) {
-    return <p className="text-sm text-rose-300">{panel.error}</p>;
+    return <p className="text-sm text-danger-ink">{panel.error}</p>;
   }
 
   const wifiInterfaces: Record<string, unknown>[] = Array.isArray(panel.wifi?.value)
@@ -50,22 +50,22 @@ export function NetworkPanel({ panel }: NetworkPanelProps) {
     <div className="space-y-4">
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
             Primary IP
           </dt>
-          <dd className="mt-1 text-sm font-mono text-white/80">
+          <dd className="mt-1 text-sm font-mono text-ink">
             <Reported reading={panel.primary_ip} mono />
           </dd>
         </div>
 
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
             Server observed IP
           </dt>
-          <dd className="mt-1 text-sm font-mono text-white/80">
+          <dd className="mt-1 text-sm font-mono text-ink">
             <Reported reading={panel.server_observed_ip} mono />
             <span
-              className="block text-[10px] text-white/35 truncate"
+              className="block text-[10px] text-muted-light truncate"
               title="NAT-observed peer address, not device-reported"
             >
               (peer / NAT router)
@@ -74,10 +74,10 @@ export function NetworkPanel({ panel }: NetworkPanelProps) {
         </div>
 
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
             Own hotspot active
           </dt>
-          <dd className="mt-1 text-sm text-white/80">
+          <dd className="mt-1 text-sm text-ink">
             <Reported
               reading={panel.own_hotspot_active}
               format={(v) => (v ? "Active" : "Inactive")}
@@ -86,10 +86,10 @@ export function NetworkPanel({ panel }: NetworkPanelProps) {
         </div>
 
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
             Regulatory domain
           </dt>
-          <dd className="mt-1 text-sm font-mono text-white/80">
+          <dd className="mt-1 text-sm font-mono text-ink">
             <Reported reading={panel.regulatory_domain} mono />
           </dd>
         </div>
@@ -97,15 +97,15 @@ export function NetworkPanel({ panel }: NetworkPanelProps) {
 
       {/* WiFi Associations */}
       <div>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/40">
+        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">
           WiFi Association
         </h3>
         {panel.wifi?.state === "NOT_REPORTED" ? (
-          <p className="text-xs text-white/40 italic">
+          <p className="text-xs text-muted italic">
             WiFi association not reported by this firmware
           </p>
         ) : wifiInterfaces.length === 0 ? (
-          <p className="text-xs text-white/40">No wireless interfaces found or associated</p>
+          <p className="text-xs text-muted">No wireless interfaces found or associated</p>
         ) : (
           <div className="space-y-2">
             {wifiInterfaces.map((w, idx) => {
@@ -121,16 +121,16 @@ export function NetworkPanel({ panel }: NetworkPanelProps) {
               return (
                 <div
                   key={ifaceName}
-                  className="rounded-lg border border-white/10 bg-white/[0.02] p-3 text-xs"
+                  className="rounded-lg border border-border bg-paper p-3 text-xs"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-medium text-white">{ifaceName}</span>
-                      <span className="text-white/60 font-semibold">{ssid}</span>
+                      <span className="font-mono font-medium text-ink">{ifaceName}</span>
+                      <span className="text-muted font-semibold">{ssid}</span>
                     </div>
-                    {signal ? <span className="text-emerald-400 font-mono">{signal}</span> : null}
+                    {signal ? <span className="text-emerald font-mono">{signal}</span> : null}
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-white/50">
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-muted">
                     {band ? <span>Band: {band}</span> : null}
                     {channel ? <span>{channel}</span> : null}
                     {txBitrate ? <span>{txBitrate}</span> : null}
@@ -146,7 +146,7 @@ export function NetworkPanel({ panel }: NetworkPanelProps) {
       {/* Network Interfaces */}
       {networkInterfaces.length > 0 ? (
         <div>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/40">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">
             Network Interfaces
           </h3>
           <div className="space-y-2">
@@ -161,16 +161,16 @@ export function NetworkPanel({ panel }: NetworkPanelProps) {
               return (
                 <div
                   key={name}
-                  className="rounded-lg border border-white/10 bg-white/[0.02] p-3 text-xs"
+                  className="rounded-lg border border-border bg-paper p-3 text-xs"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono font-medium text-white">{name}</span>
-                    <span className="font-mono text-[11px] text-white/40">
+                    <span className="font-mono font-medium text-ink">{name}</span>
+                    <span className="font-mono text-[11px] text-muted">
                       {operstate} · {carrier}
                     </span>
                   </div>
                   {addrs.length > 0 ? (
-                    <div className="mt-1 font-mono text-[11px] text-white/70">
+                    <div className="mt-1 font-mono text-[11px] text-ink/80">
                       {addrs.join(", ")}
                     </div>
                   ) : null}
@@ -185,26 +185,26 @@ export function NetworkPanel({ panel }: NetworkPanelProps) {
       <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-3 text-xs">
         {routes.length > 0 ? (
           <div>
-            <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+            <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
               Default Routes
             </dt>
-            <dd className="mt-1 font-mono text-white/70">{routes.join(", ")}</dd>
+            <dd className="mt-1 font-mono text-ink/80">{routes.join(", ")}</dd>
           </div>
         ) : null}
         {nameservers.length > 0 ? (
           <div>
-            <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+            <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
               Nameservers
             </dt>
-            <dd className="mt-1 font-mono text-white/70">{nameservers.join(", ")}</dd>
+            <dd className="mt-1 font-mono text-ink/80">{nameservers.join(", ")}</dd>
           </div>
         ) : null}
         {hiddenIps.length > 0 ? (
           <div>
-            <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+            <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
               Hidden rescue addresses
             </dt>
-            <dd className="mt-1 font-mono text-white/70">{hiddenIps.join(", ")}</dd>
+            <dd className="mt-1 font-mono text-ink/80">{hiddenIps.join(", ")}</dd>
           </div>
         ) : null}
       </dl>
@@ -230,11 +230,11 @@ export function NetworkPanel({ panel }: NetworkPanelProps) {
 
       {/* Source notes */}
       {panel.sources ? (
-        <div className="mt-2 border-t border-white/5 pt-2 text-[10px] text-white/35 space-y-0.5">
+        <div className="mt-2 border-t border-border pt-2 text-[10px] text-muted-light space-y-0.5">
           {Object.entries(panel.sources).map(([chk, src]) =>
             src.detail ? (
               <p key={chk}>
-                <span className="font-mono text-white/25">{chk}:</span> {src.detail}
+                <span className="font-mono text-muted-light">{chk}:</span> {src.detail}
               </p>
             ) : null,
           )}

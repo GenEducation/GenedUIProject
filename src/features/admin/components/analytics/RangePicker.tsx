@@ -26,12 +26,12 @@ export function RangePicker({
 }) {
   return (
     <div
-      className="inline-flex items-center gap-1 rounded-xl border p-1"
+      className="flex w-full items-center gap-1 rounded-xl border p-1 sm:inline-flex sm:w-auto"
       style={{ borderColor: "var(--ls-border-strong)", background: "var(--ls-card)" }}
       role="group"
       aria-label="Date range"
     >
-      <Calendar size={14} className="ml-2 mr-0.5" style={{ color: "var(--ls-muted)" }} aria-hidden />
+      <Calendar size={14} className="ml-2 mr-0.5 hidden sm:block" style={{ color: "var(--ls-muted)" }} aria-hidden />
       {RANGES.map((range) => {
         const active = range.value === value;
         return (
@@ -40,7 +40,7 @@ export function RangePicker({
             type="button"
             onClick={() => onChange(range.value)}
             aria-pressed={active}
-            className="rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors"
+            className="min-h-8 flex-1 whitespace-nowrap rounded-lg px-1.5 py-1.5 text-[11.5px] font-bold sm:px-3 sm:text-[12px] transition-colors sm:flex-none"
             style={
               active
                 ? { background: "var(--ls-emerald-soft)", color: "var(--ls-emerald)" }

@@ -5,6 +5,7 @@ import { TriangleAlert } from "lucide-react";
 import type { SourceIngestion } from "../adminService";
 import { fetchAllIngestions, INGESTIONS_FETCH_CAP } from "../fetchAllIngestions";
 import { DataTable, Column } from "./DataTable";
+import { StatusPill, statusTone } from "./ui/StatusPill";
 
 /**
  * Ingestions as the new backend has them: a partner's chapter and the run that
@@ -15,17 +16,6 @@ import { DataTable, Column } from "./DataTable";
  * the MVP's table had no column for. Mapping one onto the other would have
  * meant inventing numbers, so the screen says what this backend actually knows.
  */
-
-/** Every state the backend can report, so a colour is never guessed. */
-const STATE_STYLES: Record<SourceIngestion["state"], string> = {
-  ready: "bg-[#075E63]/15 text-[#075E63]",
-  running: "bg-sky-500/15 text-sky-300",
-  queued: "bg-sky-500/10 text-sky-200",
-  registered: "bg-white/10 text-white/70",
-  review_needed: "bg-amber-500/15 text-amber-200",
-  invalid: "bg-rose-500/15 text-rose-300",
-  failed: "bg-rose-500/15 text-rose-300",
-};
 
 /** A run's position, as a percent when one is known and a stage name otherwise. */
 function progressText(row: SourceIngestion): string {
@@ -39,6 +29,12 @@ const columns: Column<SourceIngestion>[] = [
     key: "chapter",
     header: "Chapter",
     accessor: (s) => `${s.book_title} · ${s.chapter.ordinal}. ${s.chapter.title}`,
+    render: (s) => (
+      <span className="block min-w-[200px]">
+        <span className="block font-bold text-ink">{`${s.chapter.ordinal}. ${s.chapter.title}`}</span>
+        <span className="block text-[12px] font-normal text-muted">{s.book_title}</span>
+      </span>
+    ),
   },
   {
     key: "partner_org",
@@ -49,9 +45,9 @@ const columns: Column<SourceIngestion>[] = [
     filterable: true,
   },
   { key: "subject", header: "Subject", filterable: true },
-  { key: "grade", header: "Grade", accessor: (s) => s.grade, filterable: true },
-  { key: "board", header: "Board", filterable: true },
-  { key: "page_count", header: "Pages", accessor: (s) => s.page_count, align: "right" },
+  { key: "grade", header: "Grade", accessor: (s) => s.grade, filterable: true, align: "right" },
+  { key: "board", header: "Board", filterable: true, minWidth: "lg" },
+  { key: "page_count", header: "Pages", accessor: (s) => s.page_count, align: "right", minWidth: "lg" },
   {
     key: "questions",
     header: "Decisions",
@@ -59,21 +55,46 @@ const columns: Column<SourceIngestion>[] = [
     // screen that is a call to action rather than a status.
     accessor: (s) => s.questions,
     align: "right",
+    render: (s) =>
+      s.questions ? (
+        <span className="inline-flex min-w-7 justify-center rounded-full bg-warning-bg px-2 py-0.5 text-[12px] font-bold text-warning-ink">
+          {s.questions}
+        </span>
+      ) : (
+        <span className="text-muted-light">0</span>
+      ),
   },
   {
     key: "state",
     header: "State",
     filterable: true,
+    // Tone from the shared map, so every state has a colour and none is guessed here.
     render: (s) => (
-      <span
-        className={`rounded-md px-2 py-0.5 text-xs ${STATE_STYLES[s.state] ?? "bg-white/10 text-white/70"}`}
-        title={s.detail ?? undefined}
-      >
+      <StatusPill tone={statusTone(s.state)} dot title={s.detail ?? undefined}>
         {s.state.replace(/_/g, " ")}
+      </StatusPill>
+    ),
+  },
+  {
+    key: "progress",
+    header: "Progress",
+    accessor: progressText,
+    sortable: false,
+    minWidth: "xl",
+    render: (s) => (
+      <span className="block min-w-[150px]">
+        <span className="block text-[12px] text-muted">{progressText(s)}</span>
+        {s.progress ? (
+          <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-soft-surface">
+            <span
+              className="block h-full rounded-full bg-accent-deep"
+              style={{ width: `${Math.max(2, Math.min(100, s.progress.percent))}%` }}
+            />
+          </span>
+        ) : null}
       </span>
     ),
   },
-  { key: "progress", header: "Progress", accessor: progressText },
 ];
 
 export function SourceIngestionsView() {
@@ -101,25 +122,26 @@ export function SourceIngestionsView() {
   }, [load]);
 
   return (
-    <>
-      {truncated ? (
-        <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-200">
-          <TriangleAlert size={16} className="mt-0.5 shrink-0" />
-          <span>
-            Showing {rows.length} of {total} chapters — more than the {INGESTIONS_FETCH_CAP}
-            -chapter client-side limit. Filters below cover only the chapters loaded.
-          </span>
-        </div>
-      ) : null}
-      <DataTable
-        title="Ingestions"
-        noun="chapters"
-        rows={rows}
-        columns={columns}
-        getRowKey={(s) => s.source_id}
-        loading={loading}
-        error={error}
-      />
-    </>
+    <DataTable
+      title="Ingestions"
+      subtitle="Partner chapters and the runs that ingest them."
+      noun="chapters"
+      rows={rows}
+      columns={columns}
+      getRowKey={(s) => s.source_id}
+      loading={loading}
+      error={error}
+      banner={
+        truncated ? (
+          <div className="flex items-start gap-2.5 rounded-xl border border-warning-border bg-warning-bg px-4 py-3 text-sm text-warning-ink">
+            <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+            <span>
+              Showing {rows.length} of {total} chapters — more than the {INGESTIONS_FETCH_CAP}
+              -chapter client-side limit. Filters below cover only the chapters loaded.
+            </span>
+          </div>
+        ) : undefined
+      }
+    />
   );
 }

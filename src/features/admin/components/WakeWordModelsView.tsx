@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, FileText, X } from "lucide-react";
+import { Download, FileText } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -14,15 +14,8 @@ import {
 } from "../adminService";
 import { DataTable, Column } from "./DataTable";
 import { Button } from "@/components/ui/Button";
-
-const STATUS_STYLES: Record<string, string> = {
-  SUCCEEDED: "bg-[#075E63]/15 text-[#075E63]",
-  RUNNING: "bg-sky-500/15 text-sky-300",
-  PROVISIONING: "bg-sky-500/15 text-sky-300",
-  PENDING: "bg-amber-500/15 text-amber-300",
-  FAILED: "bg-rose-500/15 text-rose-300",
-  CANCELLED: "bg-white/10 text-white/50",
-};
+import { FormModal } from "./ui/FormModal";
+import { StatusPill, statusTone } from "./ui/StatusPill";
 
 function fmtBytes(n: number | null): string {
   if (!n) return "—";
@@ -75,11 +68,12 @@ export function WakeWordModelsView() {
       header: "Status",
       filterable: true,
       render: (m) => (
-        <span
-          className={`rounded-md px-2 py-0.5 text-xs ${STATUS_STYLES[m.status] ?? "bg-white/10 text-white/50"}`}
+        <StatusPill
+          tone={statusTone(m.status === "SUCCEEDED" ? "READY" : m.status === "PROVISIONING" ? "RUNNING" : m.status)}
+          dot
         >
           {m.status}
-        </span>
+        </StatusPill>
       ),
     },
     { key: "model_num_bytes", header: "Model", accessor: (m) => fmtBytes(m.model_num_bytes) },
@@ -105,7 +99,7 @@ export function WakeWordModelsView() {
             {m.has_report && (
               <button
                 onClick={() => openReport(m)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/5"
+                className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border-[1.5px] border-[var(--btn-neutral-border)] px-3 text-[12.5px] font-bold text-ink hover:bg-[var(--btn-neutral-hover)]"
               >
                 <FileText size={14} /> Report
               </button>
@@ -113,7 +107,7 @@ export function WakeWordModelsView() {
             {m.model_num_bytes ? (
               <button
                 onClick={() => downloadWakewordModel(m.id, m.model_name)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-[#075E63]/40 px-2.5 py-1.5 text-xs text-[#075E63] hover:bg-[#075E63]/10"
+                className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border-[1.5px] border-emerald/30 px-3 text-[12.5px] font-bold text-emerald hover:bg-emerald-50"
               >
                 <Download size={14} /> ONNX
               </button>
@@ -122,49 +116,35 @@ export function WakeWordModelsView() {
         )}
       />
 
-      {reportFor && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          onClick={() => setReportFor(null)}
-        >
-          <div
-            className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl border border-white/10 bg-[#122D30] shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-              <div>
-                <h2 className="text-lg font-bold tracking-tight text-white">Training Report</h2>
-                <p className="text-xs text-white/40">
-                  {reportFor.phrase} · {reportFor.model_name}
-                </p>
-              </div>
-              <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Close report" onClick={() => setReportFor(null)}>
-                <X size={18} />
-              </Button>
-            </div>
-
-            <div className="overflow-auto px-6 py-5">
-              {reportLoading ? (
-                <p className="text-sm text-white/40">Loading report…</p>
-              ) : reportError ? (
-                <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300">
-                  {reportError}
-                </div>
-              ) : report?.report_md ? (
-                <div className="prose prose-invert prose-sm max-w-none prose-headings:text-white prose-a:text-[#075E63]">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.report_md}</ReactMarkdown>
-                </div>
-              ) : report?.report_json ? (
-                <pre className="overflow-auto rounded-lg bg-white/[0.03] p-4 text-xs text-white/70">
-                  {JSON.stringify(report.report_json, null, 2)}
-                </pre>
-              ) : (
-                <p className="text-sm text-white/40">No report content.</p>
-              )}
-            </div>
+      <FormModal
+        open={Boolean(reportFor)}
+        title="Training report"
+        subtitle={reportFor ? `${reportFor.phrase} · ${reportFor.model_name}` : undefined}
+        size="lg"
+        onClose={() => setReportFor(null)}
+        error={reportError || undefined}
+        footer={
+          <div className="flex justify-end border-t border-border bg-paper px-5 py-4 sm:px-6">
+            <Button variant="tertiary" onClick={() => setReportFor(null)}>
+              Close
+            </Button>
           </div>
-        </div>
-      )}
+        }
+      >
+        {reportLoading ? (
+          <p className="text-sm text-muted">Loading report…</p>
+        ) : reportError ? null : report?.report_md ? (
+          <div className="prose prose-sm max-w-none prose-headings:font-serif prose-headings:text-ink prose-a:text-emerald">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.report_md}</ReactMarkdown>
+          </div>
+        ) : report?.report_json ? (
+          <pre className="overflow-auto rounded-xl bg-paper p-4 font-mono text-xs text-ink/80">
+            {JSON.stringify(report.report_json, null, 2)}
+          </pre>
+        ) : (
+          <p className="text-sm text-muted">No report content.</p>
+        )}
+      </FormModal>
     </>
   );
 }

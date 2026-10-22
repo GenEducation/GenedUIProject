@@ -1,26 +1,53 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pencil, GraduationCap } from "lucide-react";
+import { Pencil, GraduationCap, Presentation } from "lucide-react";
 import { listTeachers, updateTeacher, updateUser, TeacherRow } from "../adminService";
 import { DataTable, Column } from "./DataTable";
 import { EntityEditModal } from "./EntityEditModal";
 import { BulkImportModal } from "./BulkImportModal";
+import Link from "next/link";
 import { useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
 import { adminReferenceBase } from "../adminApiRouting";
+import { Identity } from "./ui/Avatar";
+import { EmptyState } from "./ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 
 const columns: Column<TeacherRow>[] = [
-  { key: "full_name", header: "Name", accessor: (t) => t.full_name ?? t.username },
-  { key: "email", header: "Email" },
+  {
+    key: "full_name",
+    header: "Teacher",
+    accessor: (t) => `${t.full_name ?? t.username} ${t.email}`,
+    render: (t) => (
+      <Identity primary={t.full_name ?? t.username} secondary={[t.title, t.email].filter(Boolean).join(" · ")} />
+    ),
+  },
   {
     key: "subjects",
     header: "Subjects",
     accessor: (t) => (t.subjects?.length ? t.subjects.join(", ") : "—"),
+    sortable: false,
+    render: (t) =>
+      t.subjects?.length ? (
+        <span className="flex max-w-[280px] flex-wrap gap-1">
+          {t.subjects.map((s) => (
+            <span key={s} className="rounded-md bg-soft-surface/70 px-1.5 py-0.5 text-[11.5px] font-semibold text-ink">
+              {s}
+            </span>
+          ))}
+        </span>
+      ) : (
+        <span className="text-muted-light">—</span>
+      ),
   },
-  { key: "title", header: "Title", accessor: (t) => t.title ?? "—" },
   { key: "partner_org", header: "School", accessor: (t) => t.partner_org ?? "—", filterable: true },
-  { key: "student_count", header: "Students", accessor: (t) => t.student_count },
+  {
+    key: "student_count",
+    header: "Students",
+    accessor: (t) => t.student_count,
+    align: "right",
+    render: (t) => <span className="font-bold tabular-nums text-ink">{t.student_count ?? 0}</span>,
+  },
 ];
 
 export function TeachersView() {
@@ -56,17 +83,30 @@ export function TeachersView() {
       <DataTable
         title="Teachers"
         noun="teachers"
+        emptyState={
+          <EmptyState
+            icon={Presentation}
+            bare
+            title="No teachers yet"
+            body="Teachers are added per school. Open Partners and use “Import teachers” on a school’s row."
+            action={
+              <Link href="/admin/partners" className="text-sm font-bold text-emerald hover:underline">
+                Go to Partners →
+              </Link>
+            }
+          />
+        }
         rows={rows}
         columns={columns}
         getRowKey={(t) => t.id}
         loading={loading}
         error={error}
         actions={(t) => (
-          <div className="flex items-center justify-end gap-1.5">
-            <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Import students into this teacher's roster" onClick={() => setBulk(t)}>
+          <div className="flex items-center justify-end gap-1">
+            <Button iconOnly size="sm" variant="tertiary" aria-label="Import students into this teacher's roster" title="Import students into roster" onClick={() => setBulk(t)}>
               <GraduationCap size={15} />
             </Button>
-            <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Edit" onClick={() => setEditing(t)}>
+            <Button iconOnly size="sm" variant="tertiary" aria-label="Edit" title="Edit teacher" onClick={() => setEditing(t)}>
               <Pencil size={15} />
             </Button>
           </div>

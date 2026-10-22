@@ -3,6 +3,9 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ADMIN_INPUT, ADMIN_LABEL } from "@/features/admin/components/ui/fields";
+import { ErrorNote } from "@/features/admin/components/ui/EmptyState";
 
 import { signIn } from "@/features/auth/authService";
 import { adminAuthBase } from "@/features/admin/adminApiRouting";
@@ -57,64 +60,62 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#122D30] px-4">
-      <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center justify-center h-14 w-14 rounded-2xl bg-[#075E63]/15 border border-[#075E63]/30 mb-4">
-            <ShieldCheck className="h-7 w-7 text-[#075E63]" />
-          </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">
-            GenEd Admin Console
-          </h1>
-          <p className="text-sm text-white/40 mt-1">Restricted access</p>
+    <div className="auth-canvas flex min-h-dvh w-full items-center justify-center px-4 py-10">
+      <div className="w-full max-w-[420px]">
+        <div className="mb-7 flex flex-col items-center text-center">
+          <GenEdLogo height={48} priority />
+          <span className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-emerald shadow-[0_1px_2px_rgba(18,45,48,.06)]">
+            <ShieldCheck size={13} /> Admin console
+          </span>
+          <h1 className="mt-3 font-serif text-[28px] font-bold leading-tight text-ink">Sign in to continue</h1>
+          <p className="mt-1 text-sm text-muted">Restricted to GenEd administrators.</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-6 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-8 shadow-2xl"
+          className="space-y-5 rounded-[24px] border border-border bg-white p-6 shadow-[0_30px_80px_rgba(18,45,48,.12)] sm:p-8"
         >
           <div>
-            <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-white/40 mb-2.5">
+            <label htmlFor="admin-username" className={ADMIN_LABEL}>
               Username
             </label>
             <input
+              id="admin-username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               type="text"
               autoComplete="username"
               placeholder="Enter your username"
-              className="w-full rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm text-white transition-all duration-200 placeholder:text-white/25 focus:border-[#075E63] focus:outline-none focus:ring-2 focus:ring-[#075E63]/20"
+              className={ADMIN_INPUT}
             />
           </div>
 
           <div>
-            <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-white/40 mb-2.5">
+            <label htmlFor="admin-password" className={ADMIN_LABEL}>
               Password
             </label>
             <div className="relative">
               <input
+                id="admin-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm text-white transition-all duration-200 placeholder:text-white/25 focus:border-[#075E63] focus:outline-none focus:ring-2 focus:ring-[#075E63]/20"
+                className={`${ADMIN_INPUT} pr-12`}
               />
-              <button aria-label={showPassword ? "Hide password" : "Show password"}
+              <button
+                aria-label={showPassword ? "Hide password" : "Show password"}
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-[#075E63] transition-colors"
+                className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-muted transition-colors hover:bg-ink/5 hover:text-ink"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
 
-          {error ? (
-            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-5 py-3.5 text-sm font-medium text-rose-300">
-              {error}
-            </div>
-          ) : null}
+          {error ? <ErrorNote>{error}</ErrorNote> : null}
 
           <Button type="submit" size="lg" fullWidth loading={isSigningIn}>
             Sign in to console

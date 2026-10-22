@@ -5,7 +5,10 @@ import { DevicesView } from "../DevicesView";
 import type { AdminDeviceListItem, AdminLabStats } from "../../devices/types";
 
 const push = vi.hoisted(() => vi.fn());
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+  usePathname: () => "/admin/devices",
+}));
 
 const getLabStats = vi.hoisted(() => vi.fn());
 vi.mock("../../adminService", () => ({ getLabStats }));
@@ -35,7 +38,7 @@ vi.mock("../DeviceCharts", () => ({
   DonutChart: () => <div data-testid="donut" />,
   BySchoolChart: () => <div data-testid="by-school" />,
   FirmwareChart: () => <div data-testid="firmware" />,
-  CHART_COLORS: { good: "#075E63", warn: "#FBBF24", bad: "#FB7185", muted: "#888", neutral: "#0af" },
+  CHART_COLORS: { good: "#075E63", warn: "#E8A33D", bad: "#D9534F", muted: "#888", neutral: "#0af" },
 }));
 
 const NOW = new Date("2026-08-06T12:00:00Z");
@@ -130,7 +133,7 @@ describe("DevicesView", () => {
 
   it("flags a device that claims ONLINE but stopped heartbeating as Stale", async () => {
     render(<DevicesView />);
-    const row = (await screen.findByText("Desk 5")).closest("tr")!;
+    const row = (await screen.findByText("Desk 5")).closest<HTMLElement>("tr, li")!; // table row or mobile card
     expect(within(row).getByText("Stale")).toBeInTheDocument();
   });
 

@@ -10,7 +10,7 @@ interface SystemPanelProps {
 
 export function SystemPanel({ panel }: SystemPanelProps) {
   if (panel.error) {
-    return <p className="text-sm text-rose-300">{panel.error}</p>;
+    return <p className="text-sm text-danger-ink">{panel.error}</p>;
   }
 
   const load1 = panel.load_1m?.value !== null && panel.load_1m?.value !== undefined ? Number(panel.load_1m.value).toFixed(2) : "—";
@@ -32,37 +32,37 @@ export function SystemPanel({ panel }: SystemPanelProps) {
     <div className="space-y-4">
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
             Uptime
           </dt>
-          <dd className="mt-1 text-sm text-white/80">
+          <dd className="mt-1 text-sm text-ink">
             <Reported reading={panel.uptime_human} />
           </dd>
         </div>
 
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
             SoC Temperature
           </dt>
-          <dd className="mt-1 text-sm font-mono text-white/80">
+          <dd className="mt-1 text-sm font-mono text-ink">
             <Reported reading={panel.soc_temperature_c} mono />
           </dd>
         </div>
 
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
             Load average (1, 5, 15m)
           </dt>
-          <dd className="mt-1 text-sm font-mono text-white/80">
+          <dd className="mt-1 text-sm font-mono text-ink">
             {loadSummary}
           </dd>
         </div>
 
         <div>
-          <dt className="text-[11px] font-medium uppercase tracking-wider text-white/35">
+          <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-light">
             Clock sync
           </dt>
-          <dd className="mt-1 text-sm text-white/80">
+          <dd className="mt-1 text-sm text-ink">
             <Reported
               reading={panel.clock_synchronized}
               format={(v) => (v ? "NTP Synchronized" : "Unsynchronized")}
@@ -95,10 +95,10 @@ export function SystemPanel({ panel }: SystemPanelProps) {
       {/* Memory Pressure / PSI */}
       {memoryObj ? (
         <div>
-          <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-white/40">
+          <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">
             Memory & Pressure
           </h3>
-          <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 text-xs">
+          <div className="rounded-lg border border-border bg-paper p-3 text-xs">
             <NestedFields obj={memoryObj} />
           </div>
         </div>
@@ -107,10 +107,10 @@ export function SystemPanel({ panel }: SystemPanelProps) {
       {/* Throttling Latched */}
       {throttlingObj ? (
         <div>
-          <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-white/40">
+          <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted">
             Power & Thermal Throttling
           </h3>
-          <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 text-xs">
+          <div className="rounded-lg border border-border bg-paper p-3 text-xs">
             <NestedFields obj={throttlingObj} />
           </div>
         </div>
@@ -118,11 +118,11 @@ export function SystemPanel({ panel }: SystemPanelProps) {
 
       {/* Source notes */}
       {panel.sources ? (
-        <div className="mt-2 border-t border-white/5 pt-2 text-[10px] text-white/35 space-y-0.5">
+        <div className="mt-2 border-t border-border pt-2 text-[10px] text-muted-light space-y-0.5">
           {Object.entries(panel.sources).map(([chk, src]) =>
             src.detail ? (
               <p key={chk}>
-                <span className="font-mono text-white/25">{chk}:</span> {src.detail}
+                <span className="font-mono text-muted-light">{chk}:</span> {src.detail}
               </p>
             ) : null,
           )}

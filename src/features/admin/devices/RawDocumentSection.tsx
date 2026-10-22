@@ -47,18 +47,18 @@ export function RawDocumentSection({ deviceKey }: RawDocumentSectionProps) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-white/40">
+      <p className="text-xs text-muted">
         The full stored gened-health JSON document. Evidence (command stdout and file contents)
         is excluded by default for bandwidth and performance.
       </p>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <label className="flex items-center gap-2 text-xs text-white/70 cursor-pointer">
+        <label className="flex items-center gap-2 text-xs text-ink/80 cursor-pointer">
           <input
             type="checkbox"
             checked={includeEvidence}
             onChange={(e) => handleToggleEvidence(e.target.checked)}
-            className="rounded border-white/20 bg-white/10 text-emerald-500 focus:ring-0"
+            className="rounded border-border bg-soft-surface text-emerald focus:ring-0"
           />
           Include raw command evidence (?evidence=true)
         </label>
@@ -68,7 +68,6 @@ export function RawDocumentSection({ deviceKey }: RawDocumentSectionProps) {
             <Button
               size="sm"
               variant="outline"
-              tone="onDark"
               onClick={handleCopy}
               leadingIcon={copied ? <Check size={13} /> : <Copy size={13} />}
             >
@@ -79,7 +78,6 @@ export function RawDocumentSection({ deviceKey }: RawDocumentSectionProps) {
           <Button
             size="sm"
             variant="secondary"
-            tone="onDark"
             onClick={handleFetch}
             disabled={loading}
             loading={loading}
@@ -90,13 +88,13 @@ export function RawDocumentSection({ deviceKey }: RawDocumentSectionProps) {
       </div>
 
       {error ? (
-        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+        <div className="rounded-lg border border-danger/30 bg-danger-bg p-3 text-xs text-danger-ink">
           {error}
         </div>
       ) : null}
 
       {data ? (
-        <pre className="max-h-96 overflow-auto rounded-lg border border-white/10 bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-white/80">
+        <pre className="max-h-96 overflow-auto rounded-lg border border-border bg-canvas p-3 font-mono text-[11px] leading-relaxed text-ink">
           {JSON.stringify(data, null, 2)}
         </pre>
       ) : null}

@@ -22,8 +22,8 @@ export function MetricRow({ k, v }: { k: string; v: unknown }) {
   const text = formatScalar(v);
   return (
     <div className="flex items-baseline justify-between gap-3 text-[11px]">
-      <dt className="shrink-0 text-white/35">{k}</dt>
-      <dd className="min-w-0 truncate font-mono text-white/70" title={text}>
+      <dt className="shrink-0 text-muted-light">{k}</dt>
+      <dd className="min-w-0 truncate font-mono text-ink/80" title={text}>
         {text}
       </dd>
     </div>
@@ -41,10 +41,10 @@ export function NestedFields({
   obj: Record<string, unknown>;
   depth?: number;
 }) {
-  if (!obj || typeof obj !== "object") return <p className="text-white/30">—</p>;
+  if (!obj || typeof obj !== "object") return <p className="text-muted-light">—</p>;
 
   const allEntries = Object.entries(obj);
-  if (allEntries.length === 0) return <p className="text-white/30">—</p>;
+  if (allEntries.length === 0) return <p className="text-muted-light">—</p>;
 
   const entries = allEntries.slice(0, MAX_KEYS);
   const truncatedKeysCount = allEntries.length - entries.length;
@@ -53,7 +53,7 @@ export function NestedFields({
     <div className="space-y-1">
       <dl
         className={`grid grid-cols-2 gap-x-4 gap-y-1.5 ${
-          depth > 0 ? "border-l border-white/10 pl-3" : ""
+          depth > 0 ? "border-l border-border pl-3" : ""
         }`}
       >
         {entries.map(([k, v]) => {
@@ -65,8 +65,8 @@ export function NestedFields({
             if (depth >= MAX_DEPTH) {
               return (
                 <div key={k} className="col-span-2">
-                  <dt className="text-[11px] text-white/35">{k}</dt>
-                  <dd className="font-mono text-[10px] text-white/50">
+                  <dt className="text-[11px] text-muted-light">{k}</dt>
+                  <dd className="font-mono text-[10px] text-muted">
                     {JSON.stringify(v)}
                   </dd>
                 </div>
@@ -74,7 +74,7 @@ export function NestedFields({
             }
             return (
               <div key={k} className="col-span-2">
-                <dt className="mb-1 text-[11px] text-white/35">{k}</dt>
+                <dt className="mb-1 text-[11px] text-muted-light">{k}</dt>
                 <dd>
                   <NestedFields
                     obj={v as Record<string, unknown>}
@@ -102,8 +102,8 @@ export function NestedFields({
 
           return (
             <div key={k} className="flex items-baseline justify-between gap-3 text-[11px]">
-              <dt className="shrink-0 text-white/35">{k}</dt>
-              <dd className="min-w-0 truncate font-mono text-white/70" title={text}>
+              <dt className="shrink-0 text-muted-light">{k}</dt>
+              <dd className="min-w-0 truncate font-mono text-ink/80" title={text}>
                 {text}
               </dd>
             </div>
@@ -111,7 +111,7 @@ export function NestedFields({
         })}
       </dl>
       {truncatedKeysCount > 0 ? (
-        <p className="text-[10px] italic text-white/30">
+        <p className="text-[10px] italic text-muted-light">
           +{truncatedKeysCount} more keys…
         </p>
       ) : null}
@@ -132,7 +132,7 @@ export function NestedMetric({
 }) {
   return (
     <div className="text-[11px]">
-      <dt className="mb-1.5 text-white/35">{k}</dt>
+      <dt className="mb-1.5 text-muted-light">{k}</dt>
       <dd>
         <NestedFields obj={v} />
       </dd>

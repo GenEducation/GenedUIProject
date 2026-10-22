@@ -54,7 +54,7 @@ export function JourneyStageCards({ summary }: { summary: JourneySummary | null 
         ) : null
       }
     >
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-stretch">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:flex xl:flex-row xl:items-stretch">
         {summary.steps.map((step, i) => {
           const tone = STAGE_TONES[i % STAGE_TONES.length];
           const Icon = STAGE_ICON[i % STAGE_ICON.length];

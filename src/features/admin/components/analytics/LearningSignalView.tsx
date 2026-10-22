@@ -27,6 +27,7 @@ import { InstrumentationHealth } from "./InstrumentationHealth";
 import { JourneyStageCards } from "./JourneyStageCards";
 import { LearningQualityPanel } from "./LearningQualityPanel";
 import { OnboardingInsightsPanel } from "./OnboardingInsightsPanel";
+import { PageHeader } from "../ui/PageHeader";
 import { RangePicker, type RangeValue } from "./RangePicker";
 
 interface Payload {
@@ -139,38 +140,31 @@ export function LearningSignalView() {
   );
 
   return (
-    <div className="learning-signal min-h-full w-full px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-        <div>
-          <h1
-            className="text-[26px] font-bold leading-tight tracking-tight"
-            style={{ color: "var(--ls-ink)" }}
-          >
-            Learning Signal
-          </h1>
-          <p className="mt-1 text-[13px]" style={{ color: "var(--ls-muted)" }}>
-            Understand where students progress or drop off in their learning journey.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {lastUpdatedAt ? (
-            <span className="text-[11px]" style={{ color: "var(--ls-faint)" }}>
-              Updated {formatAsOf(lastUpdatedAt.toISOString())}
-            </span>
-          ) : null}
-          <button
-            type="button"
-            onClick={refresh}
-            aria-label="Refresh"
-            className="rounded-lg border p-2 transition-colors"
-            style={{ borderColor: "var(--ls-border-strong)", color: "var(--ls-muted)" }}
-          >
-            <RefreshCw size={14} className={isRefreshing ? "animate-spin" : undefined} />
-          </button>
-          <RangePicker value={range} onChange={setRange} />
-        </div>
-      </header>
+    <div className="learning-signal w-full">
+      <PageHeader
+        title="Learning Signal"
+        subtitle="Understand where students progress or drop off in their learning journey."
+        actions={
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
+            {lastUpdatedAt ? (
+              <span className="order-3 w-full text-[11.5px] text-muted sm:order-none sm:w-auto">
+                Updated {formatAsOf(lastUpdatedAt.toISOString())}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              onClick={refresh}
+              aria-label="Refresh"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-muted transition-colors hover:text-ink"
+            >
+              <RefreshCw size={15} className={isRefreshing ? "animate-spin" : undefined} />
+            </button>
+            <div className="min-w-0 flex-1 sm:flex-none">
+              <RangePicker value={range} onChange={setRange} />
+            </div>
+          </div>
+        }
+      />
 
       {error ? (
         <div
@@ -178,7 +172,7 @@ export function LearningSignalView() {
           style={{
             borderColor: "var(--ls-danger)",
             background: "var(--ls-danger-soft)",
-            color: "#A33832",
+            color: "var(--danger-ink)",
           }}
           role="alert"
         >

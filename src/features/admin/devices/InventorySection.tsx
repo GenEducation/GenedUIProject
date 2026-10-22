@@ -17,21 +17,21 @@ function CheckCard({ check, metricsIncluded }: { check: InventoryCheck; metricsI
     <div
       className={`rounded-lg border p-3 ${
         isFail
-          ? "border-rose-500/30 bg-rose-500/[0.07]"
+          ? "border-danger/30 bg-danger-bg"
           : isWarn
-            ? "border-amber-500/30 bg-amber-500/[0.05]"
-            : "border-white/10 bg-white/[0.02]"
+            ? "border-warning-border bg-warning-bg"
+            : "border-border bg-paper"
       }`}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <span className="text-sm font-medium text-white">{check.title || check.id}</span>
-          <span className="ml-2 font-mono text-[11px] text-white/35">{check.id}</span>
+          <span className="text-sm font-medium text-ink">{check.title || check.id}</span>
+          <span className="ml-2 font-mono text-[11px] text-muted-light">{check.id}</span>
         </div>
         <div className="flex items-center gap-1.5">
           {check.permission_limited ? (
             <span
-              className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/50"
+              className="rounded bg-soft-surface px-1.5 py-0.5 text-[10px] text-muted"
               title="Ran without root privileges"
             >
               needs root
@@ -41,29 +41,29 @@ function CheckCard({ check, metricsIncluded }: { check: InventoryCheck; metricsI
         </div>
       </div>
 
-      {check.detail ? <p className="mt-1.5 text-xs text-white/70">{check.detail}</p> : null}
+      {check.detail ? <p className="mt-1.5 text-xs text-ink/80">{check.detail}</p> : null}
 
-      {check.error ? <p className="mt-1 text-xs text-rose-300 font-mono">{check.error}</p> : null}
+      {check.error ? <p className="mt-1 text-xs text-danger-ink font-mono">{check.error}</p> : null}
 
       {check.next_step ? (
-        <p className="mt-2 text-xs text-white/40">
-          <span className="text-white/30">Next step: </span>
+        <p className="mt-2 text-xs text-muted">
+          <span className="text-muted-light">Next step: </span>
           {check.next_step}
         </p>
       ) : null}
 
       {!metricsIncluded && (
-        <p className="mt-2 text-[11px] italic text-white/30">
+        <p className="mt-2 text-[11px] italic text-muted-light">
           Subsystem metrics withheld from report for security.
         </p>
       )}
 
       {metricsIncluded && check.metrics && Object.keys(check.metrics).length > 0 ? (
         <details className="mt-2.5 group">
-          <summary className="cursor-pointer list-none text-[11px] font-medium text-white/35 hover:text-white/60">
+          <summary className="cursor-pointer list-none text-[11px] font-medium text-muted-light hover:text-muted">
             Metrics ({Object.keys(check.metrics).length} keys) ▶
           </summary>
-          <div className="mt-2 rounded border border-white/5 bg-black/20 p-2.5">
+          <div className="mt-2 rounded border border-border bg-canvas p-2.5">
             <NestedFields obj={check.metrics} />
           </div>
         </details>
@@ -76,19 +76,19 @@ function SubsystemGroupView({ group }: { group: SubsystemGroup }) {
   const worst = (group.worst_status ?? "PASS") as DiagnosticStatus;
 
   return (
-    <details className="group rounded-lg border border-white/10 bg-white/[0.02] p-3">
+    <details className="group rounded-lg border border-border bg-paper p-3">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 select-none">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-white">
+          <span className="text-xs font-semibold uppercase tracking-wider text-ink">
             {group.subsystem}
           </span>
-          <span className="text-xs text-white/40">({group.checks.length} checks)</span>
+          <span className="text-xs text-muted">({group.checks.length} checks)</span>
         </div>
         <div className="flex items-center gap-2">
           {/* Tally chips */}
           <div className="flex gap-1">
             {Object.entries(group.tally).map(([st, count]) => {
-              const diagStyle = DIAG_STYLES[st as DiagnosticStatus] ?? "bg-white/10 text-white/50";
+              const diagStyle = DIAG_STYLES[st as DiagnosticStatus] ?? "bg-soft-surface text-muted";
               return (
                 <span
                   key={st}
@@ -103,7 +103,7 @@ function SubsystemGroupView({ group }: { group: SubsystemGroup }) {
         </div>
       </summary>
 
-      <div className="mt-3 space-y-2 border-t border-white/5 pt-3">
+      <div className="mt-3 space-y-2 border-t border-border pt-3">
         {group.checks.map((chk) => (
           <CheckCard key={chk.id} check={chk} metricsIncluded={group.metrics_included} />
         ))}
@@ -114,7 +114,7 @@ function SubsystemGroupView({ group }: { group: SubsystemGroup }) {
 
 export function InventorySection({ inventory }: InventorySectionProps) {
   if (!inventory) {
-    return <p className="text-sm text-white/40">No check inventory available.</p>;
+    return <p className="text-sm text-muted">No check inventory available.</p>;
   }
 
   const subsystems = inventory.subsystems || [];
@@ -122,7 +122,7 @@ export function InventorySection({ inventory }: InventorySectionProps) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-white/40">
+      <p className="text-xs text-muted">
         Every check declared and executed by gened-health on the device, grouped by subsystem.
       </p>
 
@@ -131,13 +131,13 @@ export function InventorySection({ inventory }: InventorySectionProps) {
       ))}
 
       {otherChecks.length > 0 ? (
-        <details className="group rounded-lg border border-white/10 bg-white/[0.02] p-3">
+        <details className="group rounded-lg border border-border bg-paper p-3">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 select-none">
-            <span className="text-xs font-semibold uppercase tracking-wider text-white">
+            <span className="text-xs font-semibold uppercase tracking-wider text-ink">
               Other Subsystems ({otherChecks.length} checks)
             </span>
           </summary>
-          <div className="mt-3 space-y-2 border-t border-white/5 pt-3">
+          <div className="mt-3 space-y-2 border-t border-border pt-3">
             {otherChecks.map((chk) => (
               <CheckCard key={chk.id} check={chk} metricsIncluded={true} />
             ))}

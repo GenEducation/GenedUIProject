@@ -2,14 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listAssignments, updateAssignment, Assignment } from "../adminService";
+import { UsersRound } from "lucide-react";
 import { DataTable, Column } from "./DataTable";
+import { Identity } from "./ui/Avatar";
+import { StatusPill, statusTone } from "./ui/StatusPill";
+import { EmptyState } from "./ui/EmptyState";
+import { StatusActions, statusFromQuery } from "./ui/StatusActions";
 
-const STATUS_ACTIONS = ["APPROVED", "REJECTED", "REVOKED"] as const;
+const STATUS_ORDER = ["PENDING", "APPROVED", "REJECTED", "REVOKED"];
+const titleCase = (v: string) => v.charAt(0) + v.slice(1).toLowerCase();
 
 export function AssignmentsView() {
   const [rows, setRows] = useState<Assignment[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [initialStatus] = useState(statusFromQuery);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -52,15 +59,28 @@ export function AssignmentsView() {
 
   const columns = useMemo<Column<Assignment>[]>(
     () => [
-      { key: "teacher_name", header: "Teacher", accessor: (a) => a.teacher_name, filterable: true },
-      { key: "student_username", header: "Student", accessor: (a) => a.student_username },
-      { key: "subject", header: "Subject", accessor: (a) => a.subject ?? "—" },
+      {
+        key: "teacher_name",
+        header: "Teacher",
+        accessor: (a) => a.teacher_name,
+        filterable: true,
+        render: (a) => <Identity primary={a.teacher_name ?? "—"} />,
+      },
+      {
+        key: "student_username",
+        header: "Student",
+        accessor: (a) => a.student_username,
+        render: (a) => <span className="font-semibold text-ink">{a.student_username}</span>,
+      },
+      { key: "subject", header: "Subject", accessor: (a) => a.subject ?? "—", filterable: true },
       {
         key: "status",
         header: "Status",
-        filterable: true,
+        sortable: false,
         render: (a) => (
-          <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs">{a.status}</span>
+          <StatusPill tone={statusTone(a.status)} dot>
+            {a.status}
+          </StatusPill>
         ),
       },
     ],
@@ -70,26 +90,16 @@ export function AssignmentsView() {
   return (
     <DataTable
       title="Assignments"
-      noun="teacher↔student links"
+      noun="assignments"
+      emptyState={<EmptyState icon={UsersRound} bare title="No assignments yet" body="A teacher’s roster requests show up here once teachers start adding students." />}
+      subtitle="Students on a teacher’s roster."
+      tabs={{ label: "Filter by status", accessor: (a) => a.status, order: STATUS_ORDER, format: titleCase, initial: initialStatus, highlight: "PENDING" }}
       rows={rows}
       columns={columns}
       getRowKey={(a) => `${a.teacher_id}-${a.student_id}`}
       loading={loading}
       error={error}
-      actions={(a) => (
-        <div className="flex items-center justify-end gap-2">
-          {STATUS_ACTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatus(a, s)}
-              disabled={a.status === s}
-              className="rounded-md border border-white/15 px-2 py-1 text-xs text-white/60 hover:bg-white/5 disabled:opacity-30"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
+      actions={(a) => <StatusActions status={a.status} onSet={(next) => setStatus(a, next)} />}
     />
   );
 }

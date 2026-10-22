@@ -63,4 +63,65 @@ describe("DataTable", () => {
     );
     expect(screen.getByText("Boom")).toBeInTheDocument();
   });
+
+  it("sorts by a column header, ascending then descending then off", () => {
+    // Headers exist only in the desktop table; the setup's matchMedia says phone.
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => ({ ...original(query), matches: true })) as typeof window.matchMedia;
+    try {
+      sortByHeader();
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
+  function sortByHeader() {
+    renderTable();
+    const names = () => screen.getAllByText(/Lovelace|Stone|Diaz/).map((el) => el.textContent);
+    const header = screen.getByRole("button", { name: /^Name/ });
+
+    fireEvent.click(header);
+    expect(names()).toEqual(["Ada Lovelace", "Bob Stone", "Cara Diaz"]);
+    fireEvent.click(header);
+    expect(names()).toEqual(["Cara Diaz", "Bob Stone", "Ada Lovelace"]);
+    fireEvent.click(header);
+    expect(names()).toEqual(["Ada Lovelace", "Bob Stone", "Cara Diaz"]);
+  }
+
+  it("pages long lists, 25 rows at a time", () => {
+    const many = Array.from({ length: 30 }, (_, i) => ({
+      id: String(i),
+      name: `Person ${String(i).padStart(2, "0")}`,
+      role: "STUDENT",
+      plan: "FREE",
+    }));
+    renderTable({ rows: many });
+    expect(screen.getByText("Person 24")).toBeInTheDocument();
+    expect(screen.queryByText("Person 25")).not.toBeInTheDocument();
+    expect(screen.getByText("1–25 of 30")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    expect(screen.getByText("Person 25")).toBeInTheDocument();
+    expect(screen.queryByText("Person 24")).not.toBeInTheDocument();
+  });
+
+  it("splits the list with counted tabs", () => {
+    renderTable({ tabs: { label: "Role", accessor: (r) => r.role } });
+    fireEvent.click(screen.getByRole("tab", { name: /STUDENT/ }));
+    expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
+    expect(screen.getByText("2 of 3 users")).toBeInTheDocument();
+  });
+
+  it("reports a non-list answer instead of crashing", () => {
+    renderTable({ rows: { items: [] } as unknown as Row[] });
+    expect(screen.getByRole("alert")).toHaveTextContent(/unexpected format/i);
+  });
+
+  // Citron is rationed to the one thing on a screen that asks for action.
+  it("draws the call-to-action tab's count in citron, and only while it has rows", () => {
+    renderTable({ tabs: { label: "Role", accessor: (r) => r.role, highlight: "STUDENT" } });
+    const count = screen.getByRole("tab", { name: /STUDENT/ }).querySelector("span")!;
+    expect(count.className).toContain("bg-accent");
+    expect(screen.getByRole("tab", { name: /TEACHER/ }).querySelector("span")!.className).not.toContain("bg-accent");
+  });
 });

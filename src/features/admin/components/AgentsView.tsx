@@ -69,10 +69,11 @@ export function AgentsView() {
         render: (a) => (
           <button
             onClick={() => toggle(a)}
-            className={`rounded-md px-2 py-0.5 text-xs ${
+            title={a.is_available ? "Click to hide" : "Click to make available"}
+            className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ring-1 ring-inset transition-colors ${
               a.is_available
-                ? "bg-[#075E63]/15 text-[#075E63]"
-                : "bg-white/10 text-white/50"
+                ? "bg-emerald-50 text-emerald-700 ring-emerald-100 hover:bg-emerald-100"
+                : "bg-canvas text-muted ring-border hover:text-ink"
             }`}
           >
             {a.is_available ? "Available" : "Hidden"}
@@ -94,11 +95,11 @@ export function AgentsView() {
         loading={loading}
         error={error}
         actions={(a) => (
-          <div className="flex items-center justify-end gap-2">
-            <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Edit" onClick={() => setEditing(a)}>
+          <div className="flex items-center justify-end gap-1">
+            <Button iconOnly size="sm" variant="tertiary" aria-label="Edit" title="Edit agent" onClick={() => setEditing(a)}>
               <Pencil size={15} />
             </Button>
-            <Button iconOnly size="sm" variant="destructive" tone="onDark" aria-label="Delete" onClick={() => remove(a)}>
+            <Button iconOnly size="sm" variant="destructive" aria-label="Delete" title="Delete agent" onClick={() => remove(a)}>
               <Trash2 size={15} />
             </Button>
           </div>

@@ -61,10 +61,22 @@ beforeEach(() => {
 });
 
 describe("sidebar", () => {
-  it("navigates on a screen that is not gated", () => {
+  // Live screens are real links, so cmd-click and middle-click open them in a
+  // new tab; the router handles the plain click.
+  it("links to a screen that is not gated", () => {
     renderAt("/admin");
-    fireEvent.click(screen.getByRole("button", { name: "Users" }));
-    expect(push).toHaveBeenCalledWith("/admin/users");
+    expect(screen.getByRole("link", { name: "Users" })).toHaveAttribute("href", "/admin/users");
+  });
+
+  it("marks the current screen", () => {
+    renderAt("/admin/users");
+    expect(screen.getByRole("link", { name: "Users" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Overview" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("labels the gated screens as paused in the nav", () => {
+    renderAt("/admin");
+    expect(screen.getAllByText("Paused")).toHaveLength(3);
   });
 
   it.each([
@@ -98,7 +110,8 @@ describe("sidebar", () => {
     rerender(<AdminDashboard />);
 
     await waitForElementToBeRemoved(() => screen.queryByRole("dialog"));
-    expect(screen.getByTestId("users-view")).toBeInTheDocument();
+    // The page cross-fades, so the new view mounts once the old one has left.
+    expect(await screen.findByTestId("users-view")).toBeInTheDocument();
   });
 
   it("marks a gated entry aria-disabled but still clickable", () => {

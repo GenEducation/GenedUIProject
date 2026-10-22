@@ -227,6 +227,34 @@ describe("VisualsModal — detail and decisions", () => {
     await waitFor(() => expect(gets("/candidates/vis-2").length).toBe(readsBefore + 1));
     expect(localStorage.getItem("gened_auth_token")).toBe("token-synthetic");
   });
+
+  it("shows the textbook passages it was drawn from, the checklist and the AI flags", async () => {
+    await openDetail("SYNTHETIC shape 1");
+    expect(screen.getByText("SYNTHETIC passage one.")).toBeVisible();
+    // p2 isn't in source_refs: tucked under "Other passages".
+    expect(screen.getByText(/Other passages from this concept \(1\)/)).toBeInTheDocument();
+    expect(screen.getByText("SYNTHETIC checklist item")).toBeInTheDocument();
+    expect(screen.getByText("The AI reviewer flagged:")).toBeInTheDocument();
+    expect(screen.getByText("SYNTHETIC problem: label overlaps")).toBeInTheDocument();
+  });
+
+  it("accepts with the A key", async () => {
+    await openDetail("SYNTHETIC shape 2");
+    // The shortcut belongs to the decision panel, which can mount after the passages; wait for it as a user would.
+    await screen.findByRole("region", { name: "Your decision" });
+    fireEvent.keyDown(document, { key: "a" });
+    await waitFor(() => expect(posts("/decision")).toHaveLength(1));
+  });
+
+  it("rejects without a new version when the toggle is off", async () => {
+    await openDetail("SYNTHETIC shape 2");
+    fireEvent.click(screen.getByRole("button", { name: /^Reject/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Wrong or misleading" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Make a new version" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
+    await waitFor(() => expect(posts("/decision")).toHaveLength(1));
+    expect(posts("/decision")[0].body).toMatchObject({ regenerate: false, note: null });
+  });
 });
 
 describe("VisualsModal — new versions", () => {
@@ -257,5 +285,48 @@ describe("VisualsModal — new versions", () => {
     await waitFor(() => expect(posts("/regenerate")).toHaveLength(1));
     expect(posts("/regenerate")[0].body).toEqual({ reason_codes: ["unclear"], note: "SYNTHETIC note" });
     expect(await screen.findByText("Making a new version…")).toBeInTheDocument();
+  });
+
+  it("says a rate-limited redraw in plain words, keeps the provider's text on hover, and still offers Try again", async () => {
+    const raw =
+      "TransientModelError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Resource exhausted. Please try again later.', 'status': 'RESOURCE_EXHAUSTED'}}";
+    visualsFixture.reset(() => [
+      rejected({ id: "r1", state: "failed", attempts: 3, result_candidate_id: null, error: raw, created_at: "2026-01-02T00:00:00Z", finished_at: "2026-01-02T00:01:00Z" }),
+    ]);
+    await openRejected();
+    const plain = screen.getByText("The drawing service is busy right now. Wait a few minutes, then try again.");
+    expect(plain).toHaveAttribute("title", raw);
+    expect(screen.queryByText(raw)).toBeNull();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
+  });
+
+  it("shows the empty state when nothing is waiting", async () => {
+    visualsFixture.reset(() => []);
+    open();
+    expect(await screen.findByText("No visuals waiting for review.")).toBeInTheDocument();
+  });
+
+  it("switches to the Accepted tab", async () => {
+    open();
+    await screen.findByRole("button", { name: "Open SYNTHETIC shape 1" });
+    fireEvent.click(screen.getByRole("tab", { name: /Accepted/ }));
+    expect(await screen.findByRole("button", { name: "Open SYNTHETIC shape 3" })).toBeInTheDocument();
+  });
+
+  it("shows a placeholder for a null image_url", async () => {
+    visualsFixture.reset(() => [makeVisual({ image_url: null })]);
+    open();
+    await screen.findByRole("button", { name: "Open SYNTHETIC shape 1" });
+    expect(screen.getByTestId("visual-image-placeholder")).toBeInTheDocument();
+  });
+
+  it("links to the new version once it is done", async () => {
+    visualsFixture.reset(() => [
+      rejected({ id: "r1", state: "done", attempts: 1, result_candidate_id: "vis-new", error: null, created_at: "2026-01-02T00:00:00Z", finished_at: "2026-01-02T00:01:00Z" }),
+      makeVisual({ id: "vis-new", parent_id: "vis-r" }),
+    ]);
+    await openRejected();
+    fireEvent.click(screen.getByRole("button", { name: "Review the new version" }));
+    await waitFor(() => expect(gets("/candidates/vis-new").length).toBe(1));
   });
 });

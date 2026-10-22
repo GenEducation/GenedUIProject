@@ -1,21 +1,60 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Pencil, GraduationCap, Presentation } from "lucide-react";
+import { Pencil, GraduationCap, Presentation, Building2, ExternalLink } from "lucide-react";
 import { listPartners, updatePartner, updateUser, PartnerRow, ImportRole } from "../adminService";
 import { DataTable, Column } from "./DataTable";
 import { EntityEditModal } from "./EntityEditModal";
 import { BulkImportModal } from "./BulkImportModal";
 import { EDUCATION_BOARDS, isEducationBoard } from "@/types/education";
+import { Identity } from "./ui/Avatar";
+import { StatusPill } from "./ui/StatusPill";
+import { EmptyState } from "./ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 
 const columns: Column<PartnerRow>[] = [
-  { key: "organization", header: "Organization", accessor: (p) => p.organization },
-  { key: "username", header: "Username" },
-  { key: "email", header: "Email" },
-  { key: "website", header: "Website", accessor: (p) => p.website },
-  { key: "board", header: "Board", accessor: (p) => p.board, filterable: true },
-  { key: "student_count", header: "Students", accessor: (p) => p.student_count },
+  {
+    key: "organization",
+    header: "Organization",
+    accessor: (p) => `${p.organization ?? ""} ${p.username} ${p.email}`,
+    render: (p) => (
+      <Identity primary={p.organization ?? p.username} secondary={`@${p.username} · ${p.email}`} />
+    ),
+  },
+  {
+    key: "website",
+    header: "Website",
+    accessor: (p) => p.website,
+    minWidth: "xl",
+    render: (p) =>
+      p.website ? (
+        <a
+          href={/^https?:\/\//.test(p.website) ? p.website : `https://${p.website}`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex max-w-[220px] items-center gap-1 truncate text-[13px] font-semibold text-emerald hover:underline"
+        >
+          <span className="truncate">{p.website.replace(/^https?:\/\//, "")}</span>
+          <ExternalLink size={12} className="shrink-0" />
+        </a>
+      ) : (
+        <span className="text-muted-light">—</span>
+      ),
+  },
+  {
+    key: "board",
+    header: "Board",
+    accessor: (p) => p.board,
+    filterable: true,
+    render: (p) => (p.board ? <StatusPill>{p.board}</StatusPill> : <span className="text-muted-light">—</span>),
+  },
+  {
+    key: "student_count",
+    header: "Students",
+    accessor: (p) => p.student_count,
+    align: "right",
+    render: (p) => <span className="font-bold tabular-nums text-ink">{p.student_count ?? 0}</span>,
+  },
 ];
 
 export function PartnersView() {
@@ -42,20 +81,21 @@ export function PartnersView() {
       <DataTable
         title="Partners"
         noun="partner organizations"
+        emptyState={<EmptyState icon={Building2} bare title="No partners yet" body="Create a partner account from Users to onboard a school." />}
         rows={rows}
         columns={columns}
         getRowKey={(p) => p.id}
         loading={loading}
         error={error}
         actions={(p) => (
-          <div className="flex items-center justify-end gap-1.5">
-            <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Import students" onClick={() => setBulk({ role: "STUDENT", id: p.id, label: p.organization ?? p.username })}>
+          <div className="flex items-center justify-end gap-1">
+            <Button iconOnly size="sm" variant="tertiary" aria-label="Import students" title="Import students" onClick={() => setBulk({ role: "STUDENT", id: p.id, label: p.organization ?? p.username })}>
               <GraduationCap size={15} />
             </Button>
-            <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Import teachers" onClick={() => setBulk({ role: "TEACHER", id: p.id, label: p.organization ?? p.username })}>
+            <Button iconOnly size="sm" variant="tertiary" aria-label="Import teachers" title="Import teachers" onClick={() => setBulk({ role: "TEACHER", id: p.id, label: p.organization ?? p.username })}>
               <Presentation size={15} />
             </Button>
-            <Button iconOnly size="sm" variant="tertiary" tone="onDark" aria-label="Edit" onClick={() => setEditing(p)}>
+            <Button iconOnly size="sm" variant="tertiary" aria-label="Edit" title="Edit partner" onClick={() => setEditing(p)}>
               <Pencil size={15} />
             </Button>
           </div>
