@@ -295,3 +295,56 @@ describe("adminAuthBase", () => {
     expect(adminAuthBase()).toBe(NEW);
   });
 });
+
+/**
+ * The subject catalogue (`/rag/taxonomy/subjects`) is reference data, not an
+ * `/admin/*` path, so the rule table never claimed it and it fell through to the
+ * MVP however many groups had moved. Phase 7 caught it in the browser: with the
+ * MVP stopped, the catalogue came back empty and the Create-account modal showed
+ * *no subject chips at all*, so an admin could not give a new TEACHER a subject.
+ *
+ * Both stacks serve it identically, so this follows the migration as a whole
+ * rather than any one group.
+ */
+describe("adminReferenceBase", () => {
+  it("stays on the MVP when no group has moved", async () => {
+    const { adminReferenceBase } = await load({
+      NEXT_PUBLIC_ADMIN_API_URL: NEW,
+      NEXT_PUBLIC_ADMIN_BACKEND_GROUPS: "",
+    });
+    expect(adminReferenceBase()).toBe(MVP);
+  });
+
+  it("stays on the MVP when there is no new backend configured", async () => {
+    const { adminReferenceBase } = await load({
+      NEXT_PUBLIC_ADMIN_API_URL: "",
+      NEXT_PUBLIC_ADMIN_BACKEND_GROUPS: EVERY_GROUP,
+    });
+    expect(adminReferenceBase()).toBe(MVP);
+  });
+
+  it("moves as soon as any one group has moved", async () => {
+    const { adminReferenceBase } = await load({
+      NEXT_PUBLIC_ADMIN_API_URL: NEW,
+      NEXT_PUBLIC_ADMIN_BACKEND_GROUPS: "accounts",
+    });
+    expect(adminReferenceBase()).toBe(NEW);
+  });
+
+  it("is on the new backend once every group has", async () => {
+    const { adminReferenceBase } = await load({
+      NEXT_PUBLIC_ADMIN_API_URL: NEW,
+      NEXT_PUBLIC_ADMIN_BACKEND_GROUPS: EVERY_GROUP,
+    });
+    expect(adminReferenceBase()).toBe(NEW);
+  });
+
+  it("ignores the write list — the catalogue is only ever read", async () => {
+    const { adminReferenceBase } = await load({
+      NEXT_PUBLIC_ADMIN_API_URL: NEW,
+      NEXT_PUBLIC_ADMIN_BACKEND_GROUPS: "analytics",
+      NEXT_PUBLIC_ADMIN_BACKEND_WRITE_GROUPS: "",
+    });
+    expect(adminReferenceBase()).toBe(NEW);
+  });
+});

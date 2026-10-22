@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { createUser, listPartners, CreateUserPayload, PartnerRow } from "../adminService";
 import { useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
+import { adminReferenceBase } from "../adminApiRouting";
 import { EDUCATION_BOARDS, isEducationBoard } from "@/types/education";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
@@ -29,6 +30,9 @@ export function CreateAccountModal({ onClose, onCreated }: Props) {
   const selectedPartnerBoard = partners.find((partner) => partner.id === form.partner_id)?.board;
   const catalog = useTaxonomySubjects(
     role === "TEACHER" ? selectedPartnerBoard : undefined,
+    // The console's own origin, not API_BASE_URL: with the MVP stopped this came
+    // back empty and the TEACHER form rendered no subject chips at all.
+    { baseUrl: adminReferenceBase() },
   );
   const taxonomySubjects = useMemo(
     () => Array.from(new Set(catalog.map((entry) => entry.name))),

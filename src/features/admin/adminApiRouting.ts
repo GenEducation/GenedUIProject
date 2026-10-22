@@ -193,6 +193,29 @@ export function adminAuthBase(): string {
 }
 
 /**
+ * Where the console reads shared *reference* data that is not an `/admin/*` path.
+ *
+ * Today that is one endpoint: `/rag/taxonomy/subjects`, the subject catalogue the
+ * Create-account modal and the Teachers filter need. It is not in the rule table
+ * because the table keys on `/admin/...` paths, so before this it fell through to
+ * `API_BASE_URL` and stayed on the MVP however many groups had moved — the console
+ * kept one live MVP call on every admin page load. With the MVP stopped the
+ * catalogue came back empty, and an empty catalogue renders as *no subject chips at
+ * all*, so an admin could not give a new TEACHER a subject. Phase 7 found this; no
+ * parity script could, because they compare one backend's response with the other's
+ * rather than watching which host the console asks.
+ *
+ * Both stacks serve it byte-identically (verified against the mini on 2026-10-22,
+ * CBSE 7 subjects and ICSE 1, identical), and the new gateway already routes
+ * `/rag/taxonomy` to core. So this follows the migration as a whole rather than one
+ * group: the moment any group is on the new backend, reference reads go there too.
+ * Nothing configured ⇒ the MVP, the same rollback as every other flag here.
+ */
+export function adminReferenceBase(): string {
+  return NEW_BASE && READ_GROUPS.size > 0 ? NEW_BASE : MVP_BASE;
+}
+
+/**
  * Whether reads of `group` go to the new backend.
  *
  * For the one case where the two backends do not serve the same shape: the

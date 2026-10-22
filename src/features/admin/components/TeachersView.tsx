@@ -7,6 +7,7 @@ import { DataTable, Column } from "./DataTable";
 import { EntityEditModal } from "./EntityEditModal";
 import { BulkImportModal } from "./BulkImportModal";
 import { useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
+import { adminReferenceBase } from "../adminApiRouting";
 import { Button } from "@/components/ui/Button";
 
 const columns: Column<TeacherRow>[] = [
@@ -28,7 +29,11 @@ export function TeachersView() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<TeacherRow | null>(null);
   const [bulk, setBulk] = useState<TeacherRow | null>(null);
-  const catalog = useTaxonomySubjects(editing?.board);
+  const catalog = useTaxonomySubjects(editing?.board, {
+    // Same reason as the Create-account modal: this is reference data the
+    // console must still get when the MVP is gone.
+    baseUrl: adminReferenceBase(),
+  });
   const taxonomySubjects = useMemo(
     () => Array.from(new Set(catalog.map((entry) => entry.name))),
     [catalog],
