@@ -49,7 +49,7 @@ beforeEach(() => {
   localStorage.setItem("gened_auth_token", "token-synthetic");
   lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
 });
-afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+afterEach(() => vi.unstubAllGlobals());
 
 describe("check delivery: a check shown on the board", () => {
   it("is confirmed once, after it renders, with the page's session id", async () => {
@@ -145,7 +145,6 @@ describe("check delivery: a check read aloud", () => {
     await server({ type: "ready", session_id: "voice-session-1", degraded: [] });
     await waitFor(() => expect(only("screen").at(-1)?.body.session_id).toBe("voice-session-1"));
   }
-  beforeEach(() => void vi.stubEnv("NEXT_PUBLIC_LESSON_VOICE", "true"));
 
   const startReply = async (no = 1) => {
     await server({ type: "response_started", response_no: no, turn_id });
