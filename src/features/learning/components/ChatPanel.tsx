@@ -7,15 +7,14 @@ import { useLessonStore } from "../useLessonStore";
 import { ChatTurn } from "./ChatTurn";
 import { ChatInput } from "./ChatInput";
 import { VoiceWaveform } from "./VoiceWaveform";
-import { lessonVoiceEnabled } from "./LessonRail";
 import { useVoiceLanguages } from "../voice/useVoiceLanguages";
 import { useVoiceSession, type VoiceSession } from "../voice/useVoiceSession";
 
-const VOICE_UNAVAILABLE: VoiceSession = {
+/** Voice mode with no session: shown with the error when the voice languages can't be read. */
+const VOICE_OFFLINE: Omit<VoiceSession, "error"> = {
   phase: "offline",
   heard: "",
   level: 0,
-  error: "Voice lessons aren't available yet. You can keep going in the chat.",
   muted: false,
   pushToTalk: false,
   held: false,
@@ -51,14 +50,12 @@ export function ChatPanel({
   const stepPending = useLessonStore((s) => s.stepPending);
   const stepLoadError = useLessonStore((s) => s.stepLoadError);
   const reloadStep = useLessonStore((s) => s.reloadStep);
-  const voiceAvailable = lessonVoiceEnabled();
   // Voice replies land in the same transcript; only the input area changes.
-  const wantsVoice = voiceMode && voiceAvailable && status === "ready" && canTalk;
+  const wantsVoice = voiceMode && status === "ready" && canTalk;
   // The languages come from the backend; the session opens once one is chosen, and a new choice restarts it.
   const { languages, language, setLanguage, error: languageError } = useVoiceLanguages(wantsVoice);
   const live = useVoiceSession(wantsVoice && !languageError, language);
-  // With voice switched off for this build, voice mode still opens and says so, rather than the button doing nothing.
-  const voice = !voiceAvailable ? VOICE_UNAVAILABLE : languageError ? { ...VOICE_UNAVAILABLE, error: languageError } : live;
+  const voice = languageError ? { ...VOICE_OFFLINE, error: languageError } : live;
   const replying = turns.some((t) => t.status === "streaming");
 
   const listRef = useRef<HTMLOListElement>(null);

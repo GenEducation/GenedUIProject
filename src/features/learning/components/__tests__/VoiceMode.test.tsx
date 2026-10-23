@@ -64,7 +64,6 @@ const setPreference = (preferred_language: string | null) =>
   useStudentStore.setState({ studentProfile: { user_id: "u", role: "STUDENT", preferred_language } as never });
 
 beforeEach(() => {
-  vi.stubEnv("NEXT_PUBLIC_LESSON_VOICE", "true");
   fake.options = null;
   fake.closed = 0;
   fake.startError = null;
@@ -82,7 +81,6 @@ beforeEach(() => {
   lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
 });
 afterEach(() => {
-  vi.unstubAllEnvs();
   localStorage.removeItem("gened_voice_language");
   localStorage.removeItem("voice_prefs");
   localStorage.removeItem("gened_voice_interrupt");

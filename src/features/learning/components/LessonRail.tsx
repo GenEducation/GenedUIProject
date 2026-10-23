@@ -9,9 +9,6 @@ import { isReviewingSection, isRevisiting, useLessonStore } from "../useLessonSt
 import { useUiText } from "../i18n";
 import { LessonProgressRail } from "./LessonProgressRail";
 
-/** Whether this build connects voice mode to the backend (`/v1/voice`); off until the voice service is live. */
-export const lessonVoiceEnabled = (): boolean => process.env.NEXT_PUBLIC_LESSON_VOICE === "true";
-
 /**
  * Where the prototype's mascot sat: the chapter itself. Its accepted cover art
  * when it has one, its subject's gradient when not, with the chapter number,

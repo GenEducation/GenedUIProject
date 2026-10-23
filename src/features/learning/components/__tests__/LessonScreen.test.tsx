@@ -89,13 +89,12 @@ describe("LessonScreen", () => {
     expect(document.documentElement.dataset.lessonRotated).toBeUndefined();
   });
 
-  it("Voice opens voice mode, which says voice isn't available while it's switched off", async () => {
+  it("Voice opens voice mode and Chat goes back to typing", () => {
     render(<LessonScreen instanceId={LESSON_ID} />);
     expect(screen.getByRole("button", { name: "Chat" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "Voice" }));
     expect(screen.getByRole("button", { name: "Voice" })).toHaveAttribute("aria-pressed", "true");
-    expect(await screen.findByText("Voice lessons aren't available yet. You can keep going in the chat.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Back to typing" }));
+    fireEvent.click(screen.getByRole("button", { name: "Chat" }));
     expect(screen.getByRole("button", { name: "Chat" })).toHaveAttribute("aria-pressed", "true");
   });
 
