@@ -29,10 +29,13 @@ interface PlacedFigure {
 export function WhiteboardCanvas({
   insets = () => NO_INSETS,
   refitKey,
+  onUserZoom,
 }: {
   insets?: () => Insets;
   /** Changes when the overlays change the clear area, so the focused figure is framed again. */
   refitKey?: unknown;
+  /** Each zoom the learner makes, as the factor the board moved by; the camera's own framing isn't one. */
+  onUserZoom?: (factor: number) => void;
 }) {
   const ids = useLessonStore((s) => s.presentedFigureIds);
   const focused = useLessonStore((s) => s.focusedFigureId);
@@ -62,6 +65,7 @@ export function WhiteboardCanvas({
   const camera = useBoardCamera(
     () => size.current,
     () => insets(),
+    onUserZoom,
   );
 
   // Track the viewport's size; the first real measurement frames the board.
