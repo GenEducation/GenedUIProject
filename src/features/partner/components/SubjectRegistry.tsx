@@ -565,7 +565,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                                 aria-hidden
                                 className="pointer-events-none absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center"
                               >
-                                {pendingVisuals}{visualsIndex.pendingFull ? "+" : ""}
+                                {pendingVisuals}{visualsIndex.pendingMayBeMore(subject) ? "+" : ""}
                               </span>
                             )}
                           </span>

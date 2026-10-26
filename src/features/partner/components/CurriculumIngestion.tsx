@@ -23,8 +23,24 @@ interface CurriculumIngestionProps {
 }
 
 const fieldLabel = "text-[10px] font-black text-[#122D30] uppercase tracking-widest px-1";
-const textInput =
-  "w-full px-5 py-3.5 bg-[#F6F7F2] border border-[#122D30]/10 focus:border-[#122D30]/40 rounded-2xl text-xs font-bold text-[#122D30] outline-none placeholder:text-[#122D30]/30 transition-all";
+const textInputBase =
+  "w-full px-5 py-3.5 border rounded-2xl text-xs font-bold text-[#122D30] outline-none placeholder:text-[#122D30]/30 transition-all";
+const textInput = `${textInputBase} bg-[#F6F7F2] border-[#122D30]/10 focus:border-[#122D30]/40`;
+const textInputMissing = `${textInputBase} bg-red-50/60 border-red-400 focus:border-red-500`;
+const selectButton: React.CSSProperties = {
+  background: "#F6F7F2",
+  border: "1px solid rgba(18,45,48,0.10)",
+  borderRadius: 16,
+  padding: "14px 20px",
+  fontSize: 12,
+  fontWeight: 700,
+  color: "#122D30",
+};
+const selectButtonMissing: React.CSSProperties = {
+  ...selectButton,
+  background: "rgba(254,242,242,0.6)",
+  border: "1px solid #f87171",
+};
 
 /**
  * Upload a chapter as a partner source (ADR 0014): the PDF, what it is (board,
@@ -93,10 +109,28 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
       ? `Pages must be within 1 to ${pageCount ?? "the last page"}, first before last.`
       : null;
   const chapterNumber = parseInt(chapterNo, 10);
-  const canSubmit =
-    !!file && !!grade && !!subjectName && !!publisher.trim() && !!bookTitle.trim() && !!edition.trim() &&
-    chapterNumber >= 1 && !!chapterTitle.trim() && first >= 1 && last >= 1 && !pageRangeError &&
-    loCodes.length > 0 && !!strand;
+  // What still blocks the upload, in the order the form shows it: the first is where a
+  // premature "Upload & Start" takes the partner. `id` is the element to scroll to and focus.
+  const missing = [
+    !file && { id: "src-file", label: "the chapter PDF" },
+    !grade && { id: "src-grade", label: "Grade" },
+    !subjectName && { id: "src-subject", label: "Subject" },
+    !publisher.trim() && { id: "src-publisher", label: "Publisher" },
+    !edition.trim() && { id: "src-edition", label: "Edition" },
+    !bookTitle.trim() && { id: "src-book", label: "Book Title" },
+    !(chapterNumber >= 1) && { id: "src-chapter-no", label: "Chapter No." },
+    !chapterTitle.trim() && { id: "src-chapter-title", label: "Chapter Title" },
+    (!(first >= 1) || !!pageRangeError) && { id: "src-first-page", label: "First Page" },
+    !(last >= 1) && { id: "src-last-page", label: "Last Page" },
+    loCodes.length === 0 && { id: "src-outcomes", label: "at least one learning outcome" },
+    !strand && { id: "src-outcomes", label: "a strand" },
+  ].filter((field): field is { id: string; label: string } => !!field);
+  const canSubmit = missing.length === 0;
+  // Set by the first premature submit; from then on every still-missing field is marked.
+  const [showMissing, setShowMissing] = useState(false);
+  const isMissing = (id: string) => showMissing && missing.some((field) => field.id === id);
+  const inputClass = (id: string) => (isMissing(id) ? textInputMissing : textInput);
+  const selectStyle = (id: string) => (isMissing(id) ? selectButtonMissing : selectButton);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -105,7 +139,15 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
   };
 
   const handleProcess = async () => {
-    if (!canSubmit || !file) return;
+    if (!canSubmit || !file) {
+      setShowMissing(true);
+      const target = missing[0] && document.getElementById(missing[0].id);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.focus({ preventScroll: true });
+      }
+      return;
+    }
     setIsProcessing(true);
     setSubmitError(null);
     try {
@@ -173,7 +215,9 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
                     className="hidden"
                     accept=".pdf"
                   />
-                  <div 
+                  <div
+                    id="src-file"
+                    tabIndex={-1}
                     onClick={() => fileInputRef.current?.click()}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => {
@@ -182,7 +226,7 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
                         validateFile(e.dataTransfer.files[0]);
                       }
                     }}
-                    className={`border-2 border-dashed ${fileError ? 'border-rose-400 bg-rose-50/30' : 'border-[#DCEBE7] bg-[#F8FBF9]'} rounded-[2rem] p-8 md:p-12 flex flex-col items-center justify-center text-center space-y-4 group-hover:bg-[#F0F7F2] group-hover:border-[#122D30]/20 transition-all cursor-pointer`}
+                    className={`outline-none border-2 border-dashed ${fileError || isMissing("src-file") ? 'border-rose-400 bg-rose-50/30' : 'border-[#DCEBE7] bg-[#F8FBF9]'} rounded-[2rem] p-8 md:p-12 flex flex-col items-center justify-center text-center space-y-4 group-hover:bg-[#F0F7F2] group-hover:border-[#122D30]/20 transition-all cursor-pointer`}
                   >
                     <div className={`w-16 h-16 ${fileError ? 'bg-rose-100 text-rose-500' : 'bg-[#DCEBE7] text-[#122D30]'} rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
                       <Upload size={24} />
@@ -224,6 +268,7 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-[#122D30] uppercase tracking-widest px-1">Grade</label>
                     <Select
+                      id="src-grade"
                       aria-label="Grade"
                       placeholder="Grade"
                       accentColor="#122D30"
@@ -241,15 +286,7 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
                         }
                       }}
                       options={gradeOptions.map((g) => ({ value: String(g), label: `Grade ${g}` }))}
-                      buttonStyle={{
-                        background: "#F6F7F2",
-                        border: "1px solid rgba(18,45,48,0.10)",
-                        borderRadius: 16,
-                        padding: "14px 20px",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: "#122D30",
-                      }}
+                      buttonStyle={selectStyle("src-grade")}
                     />
                   </div>
                   <div className="space-y-2">
@@ -261,21 +298,14 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
                       value={board}
                       onChange={() => {}}
                       options={[{ value: board, label: board }]}
-                      buttonStyle={{
-                        background: "#F6F7F2",
-                        border: "1px solid rgba(18,45,48,0.10)",
-                        borderRadius: 16,
-                        padding: "14px 20px",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: "#122D30",
-                      }}
+                      buttonStyle={selectButton}
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-[#122D30] uppercase tracking-widest px-1">Subject</label>
                   <Select
+                    id="src-subject"
                     aria-label="Subject"
                     placeholder="Select Subject"
                     accentColor="#122D30"
@@ -285,50 +315,42 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
                       setLoCodes([]);
                     }}
                     options={subjectOptions.map((subject) => ({ value: subject, label: subject }))}
-                    buttonStyle={{
-                      background: "#F6F7F2",
-                      border: "1px solid rgba(18,45,48,0.10)",
-                      borderRadius: 16,
-                      padding: "14px 20px",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: "#122D30",
-                    }}
+                    buttonStyle={selectStyle("src-subject")}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label htmlFor="src-publisher" className={fieldLabel}>Publisher</label>
-                    <input id="src-publisher" value={publisher} onChange={(e) => setPublisher(e.target.value)} placeholder="e.g. NCERT" className={textInput} />
+                    <input id="src-publisher" value={publisher} onChange={(e) => setPublisher(e.target.value)} placeholder="e.g. NCERT" className={inputClass("src-publisher")} />
                   </div>
                   <div className="space-y-2">
                     <label htmlFor="src-edition" className={fieldLabel}>Edition</label>
-                    <input id="src-edition" value={edition} onChange={(e) => setEdition(e.target.value)} placeholder="e.g. Reprint 2025-26" className={textInput} />
+                    <input id="src-edition" value={edition} onChange={(e) => setEdition(e.target.value)} placeholder="e.g. Reprint 2025-26" className={inputClass("src-edition")} />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="src-book" className={fieldLabel}>Book Title</label>
-                  <input id="src-book" value={bookTitle} onChange={(e) => setBookTitle(e.target.value)} placeholder="e.g. Ganita Prakash" className={textInput} />
+                  <input id="src-book" value={bookTitle} onChange={(e) => setBookTitle(e.target.value)} placeholder="e.g. Ganita Prakash" className={inputClass("src-book")} />
                 </div>
                 <div className="grid grid-cols-[110px_1fr] gap-4">
                   <div className="space-y-2">
                     <label htmlFor="src-chapter-no" className={fieldLabel}>Chapter No.</label>
-                    <input id="src-chapter-no" type="number" min={1} value={chapterNo} onChange={(e) => setChapterNo(e.target.value)} placeholder="e.g. 2" className={textInput} />
+                    <input id="src-chapter-no" type="number" min={1} value={chapterNo} onChange={(e) => setChapterNo(e.target.value)} placeholder="e.g. 2" className={inputClass("src-chapter-no")} />
                   </div>
                   <div className="space-y-2">
                     <label htmlFor="src-chapter-title" className={fieldLabel}>Chapter Title</label>
-                    <input id="src-chapter-title" value={chapterTitle} onChange={(e) => setChapterTitle(e.target.value)} placeholder="e.g. Lines and Angles" className={textInput} />
+                    <input id="src-chapter-title" value={chapterTitle} onChange={(e) => setChapterTitle(e.target.value)} placeholder="e.g. Lines and Angles" className={inputClass("src-chapter-title")} />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label htmlFor="src-first-page" className={fieldLabel}>First Page</label>
-                      <input id="src-first-page" type="number" min={1} value={firstPage} onChange={(e) => setFirstPage(e.target.value)} className={textInput} />
+                      <input id="src-first-page" type="number" min={1} value={firstPage} onChange={(e) => setFirstPage(e.target.value)} className={inputClass("src-first-page")} />
                     </div>
                     <div className="space-y-2">
                       <label htmlFor="src-last-page" className={fieldLabel}>Last Page</label>
-                      <input id="src-last-page" type="number" min={1} max={pageCount ?? undefined} value={lastPage} onChange={(e) => setLastPage(e.target.value)} className={textInput} />
+                      <input id="src-last-page" type="number" min={1} max={pageCount ?? undefined} value={lastPage} onChange={(e) => setLastPage(e.target.value)} className={inputClass("src-last-page")} />
                     </div>
                   </div>
                   <p className={`text-[10px] px-1 ${pageRangeError ? "font-bold text-red-600" : "text-[#122D30]/45"}`}>
@@ -336,17 +358,32 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
                   </p>
                 </div>
 
-                <LearningOutcomePicker
-                  board={board}
-                  subject={subjectName}
-                  grade={Number.isInteger(gradeNum) ? gradeNum : null}
-                  selected={loCodes}
-                  onSelectedChange={setLoCodes}
-                  strand={strand}
-                  onStrandChange={setStrand}
-                />
+                <div
+                  id="src-outcomes"
+                  tabIndex={-1}
+                  className={`outline-none rounded-2xl transition-shadow ${isMissing("src-outcomes") ? "ring-1 ring-red-400 ring-offset-8" : ""}`}
+                >
+                  <LearningOutcomePicker
+                    board={board}
+                    subject={subjectName}
+                    grade={Number.isInteger(gradeNum) ? gradeNum : null}
+                    selected={loCodes}
+                    onSelectedChange={setLoCodes}
+                    strand={strand}
+                    onStrandChange={setStrand}
+                  />
+                </div>
               </div>
             </div>
+
+            {showMissing && missing.length > 0 && (
+              <div role="alert" className="mx-6 md:mx-10 mb-2 flex items-start gap-2 px-4 py-3 rounded-2xl bg-red-50 border border-red-200 text-xs font-bold text-red-700">
+                <AlertCircle size={14} className="mt-px shrink-0" aria-hidden />
+                {missing[0].id === "src-first-page" && pageRangeError
+                  ? pageRangeError
+                  : `Add ${missing[0].label} to upload${missing.length > 1 ? `, and fill the other marked fields` : ""}.`}
+              </div>
+            )}
 
             {submitError && (
               <div role="alert" className="mx-6 md:mx-10 mb-2 flex items-start gap-2 px-4 py-3 rounded-2xl bg-red-50 border border-red-200 text-xs font-bold text-red-700">
@@ -366,7 +403,7 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
               </button>
               <button 
                 onClick={handleProcess}
-                disabled={isProcessing || !canSubmit}
+                disabled={isProcessing}
                 className="flex-[2] py-4 bg-[#075E63] text-white text-xs font-black rounded-2xl hover:bg-[#075E63]/90 transition-all shadow-[0_8px_30px_rgba(18,45,48,0.2)] uppercase tracking-widest disabled:opacity-30"
               >
                 {isProcessing ? "Uploading..." : "Upload & Start"}

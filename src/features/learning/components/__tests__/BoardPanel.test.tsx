@@ -9,7 +9,7 @@ import { server } from "@/test/msw/server";
 import { useLessonStore } from "../../useLessonStore";
 import type { CheckItem } from "../../types";
 
-import { BoardPanel } from "../BoardPanel";
+import { BoardPanel, CARD_MAX_HEIGHT } from "../BoardPanel";
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 const node = makeLessonInstance().active_node!;
 const store = () => useLessonStore.getState();
@@ -49,7 +49,41 @@ describe("BoardPanel — figures", () => {
   });
 });
 
+describe("BoardPanel — the question card follows the learner's zoom", () => {
+  const cardZoom = () => Number(screen.getByRole("form", { name: "SYNTHETIC check?" }).closest("[data-card-zoom]")!.getAttribute("data-card-zoom"));
+
+  it("starts at its own size even though the board zoomed itself to frame the figure", async () => {
+    await open();
+    expect(cardZoom()).toBe(1);
+  });
+
+  it("grows and shrinks with the zoom buttons, within readable bounds", async () => {
+    await open();
+    fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+    expect(cardZoom()).toBe(1.25);
+    for (let i = 0; i < 6; i++) fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+    expect(cardZoom()).toBe(1.5);
+    for (let i = 0; i < 8; i++) fireEvent.click(screen.getByRole("button", { name: "Zoom out" }));
+    expect(cardZoom()).toBe(0.85);
+  });
+
+  it("follows a ctrl+wheel (trackpad pinch) zoom on the board", async () => {
+    await open();
+    fireEvent.wheel(screen.getByRole("region", { name: "Whiteboard canvas" }), { deltaY: -40, ctrlKey: true });
+    expect(cardZoom()).toBeGreaterThan(1);
+  });
+});
+
 describe("BoardPanel — the step card", () => {
+  it("caps the card's height by the screen's, however long the question, so a long one scrolls inside it", async () => {
+    await open();
+    const dock = screen.getByRole("form", { name: "SYNTHETIC check?" }).closest("[data-no-pan]") as HTMLElement;
+    expect(dock.getAttribute("style")).toContain(`max-height: ${CARD_MAX_HEIGHT}`);
+    expect(dock.className).toContain("overflow-y-auto");
+    // Anchored at the foot of the board, not stretched from the title down: a short question makes a short card.
+    expect(dock.className).not.toMatch(/\btop-16\b/);
+  });
+
   it("answers a multiple-choice check, shows the result, and the tutor reacts", async () => {
     await open();
     const card = screen.getByRole("form", { name: "SYNTHETIC check?" });

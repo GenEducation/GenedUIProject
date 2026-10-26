@@ -27,7 +27,9 @@ function pairingErrorMessage(err: unknown): string {
   }
 }
 
-type Result = { kind: "paired" } | { kind: "notWoken" } | { kind: "error"; message: string } | null;
+// `pushed` says whether the token also reached the device over MQTT. Production has no broker, so `false` is the
+// normal answer: the device collects its token by polling `/auth/device/pairing/status`. Either way it is paired.
+type Result = { kind: "paired" } | { kind: "approved" } | { kind: "error"; message: string } | null;
 
 /**
  * The device shows a one-time code; the student types it here and we confirm
@@ -50,7 +52,7 @@ export function DevicePairCard({ index }: { index: number }) {
     try {
       const res = await confirmDevicePairing({ user_code: code, student_id: studentId });
       if (res.status === "approved") {
-        setResult(res.pushed ? { kind: "paired" } : { kind: "notWoken" });
+        setResult(res.pushed ? { kind: "paired" } : { kind: "approved" });
         setCode("");
         setEntering(false);
       } else {
@@ -86,11 +88,17 @@ export function DevicePairCard({ index }: { index: number }) {
             Device paired! It&apos;ll be ready in a few seconds.
           </p>
         )}
-        {result?.kind === "notWoken" && (
-          <p role="status" className="mb-4 flex items-start gap-2 rounded-xl bg-[var(--warning-bg)] px-3.5 py-2.5 text-[13px] font-semibold leading-snug text-[var(--warning-ink)]">
-            <TriangleAlert size={16} className="mt-px flex-none" aria-hidden />
-            Pairing was approved, but we couldn&apos;t wake the device. Restart it and pair again with the new code.
-          </p>
+        {result?.kind === "approved" && (
+          <div role="status" className="mb-4 flex items-start gap-2 rounded-xl bg-[var(--accent)]/70 px-3.5 py-2.5 text-[var(--accent-ink)]">
+            <CheckCircle2 size={16} className="mt-px flex-none" aria-hidden />
+            <div className="leading-snug">
+              <p className="text-[13px] font-bold">Approved: your device will finish pairing in a few seconds.</p>
+              {/* Only older devices, which listen over MQTT alone, can miss it. */}
+              <p className="mt-0.5 text-[12px] font-medium opacity-80">
+                If it still shows a code after a minute, restart it and pair again.
+              </p>
+            </div>
+          </div>
         )}
 
         {!entering ? (
@@ -111,7 +119,7 @@ export function DevicePairCard({ index }: { index: number }) {
 
             <p className="mt-4 flex items-center gap-2 text-[13px] text-[var(--text-muted)]">
               <Info size={15} className="flex-none" aria-hidden />
-              Find the code under Settings on your device. It changes every few minutes.
+              The code shows on your device&apos;s screen while it isn&apos;t paired. It stays valid for 10 minutes.
             </p>
 
             <div className="mt-5 flex flex-wrap gap-2">
