@@ -43,14 +43,28 @@ export function deleteBlockedReason(source: { state: SourceState; release?: Sour
 /** States the worker is still on; the registry keeps polling while any row is in one. */
 export const ACTIVE_STATES: ReadonlySet<SourceState> = new Set(["queued", "running"]);
 
+/**
+ * The registry's status filter, in the order a run moves through them. Worded as the rows say it (`NEXT_STEP_COPY`):
+ * the filter can only ask the server for a state, so each hint names the row titles that state can show.
+ */
 export const SOURCE_STATE_LABELS: Record<SourceState, string> = {
   registered: "Not started",
-  queued: "Queued",
+  queued: "Waiting to start",
   running: "Processing",
-  review_needed: "Needs review",
-  invalid: "Didn't pass checks",
-  ready: "Ready",
-  failed: "Failed",
+  review_needed: "Confirm concepts",
+  invalid: "Needs a fix",
+  ready: "Ready for review or live",
+  failed: "Something went wrong",
+};
+
+export const SOURCE_STATE_HINTS: Record<SourceState, string> = {
+  registered: "Uploaded, not run yet",
+  queued: "In line for a run",
+  running: "Reading, understanding or building",
+  review_needed: "Tell us which concepts are the same",
+  invalid: "Upload again, add questions or accept redraws",
+  ready: "Ready for your review, or live for students",
+  failed: "The run stopped; run it again",
 };
 
 /** The stages of an ingestion run, in order (backend `gened_ingestion.progress.STAGES`). A run without teaching

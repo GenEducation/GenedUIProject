@@ -22,6 +22,7 @@ import { RunOutcome, RunProgress } from "./RunStatus";
 import {
   ACTIVE_STATES,
   deleteBlockedReason,
+  SOURCE_STATE_HINTS,
   SOURCE_STATE_LABELS,
   STARTABLE_STATES,
   type SourceState,
@@ -40,7 +41,11 @@ export const RUN_POLL_MS = 4_000;
 
 const STATE_OPTIONS = [
   { value: "", label: "All Statuses" },
-  ...(Object.entries(SOURCE_STATE_LABELS) as [SourceState, string][]).map(([value, label]) => ({ value, label })),
+  ...(Object.entries(SOURCE_STATE_LABELS) as [SourceState, string][]).map(([value, label]) => ({
+    value,
+    label,
+    hint: SOURCE_STATE_HINTS[value],
+  })),
 ];
 
 const inputClass =
@@ -280,6 +285,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                     value={draft.state ?? ""}
                     onChange={(v) => setDraft((d) => ({ ...d, state: (v || undefined) as SourceState | undefined }))}
                     options={STATE_OPTIONS}
+                    panelWidth={300}
                   />
                 </div>
               </div>
