@@ -12,6 +12,24 @@ import { QuickActions } from "./QuickActions";
 
 const NODE_TYPE_LABEL = { teach: "Learn", practice: "Practice", assess: "Check" } as const;
 
+/**
+ * How far the question card's text follows the learner's zoom: enough to read it bigger or fit more in, never so far
+ * that it stops being readable or outgrows its dock.
+ */
+export const CARD_ZOOM_MIN = 0.85;
+export const CARD_ZOOM_MAX = 1.5;
+const clampCardZoom = (zoom: number) => Math.min(CARD_ZOOM_MAX, Math.max(CARD_ZOOM_MIN, zoom));
+
+/**
+ * The tallest the docked question card grows, whatever the question's length: 45% of the screen's height (never under
+ * 240px), and never past the room between the title band and the filmstrip. A longer question scrolls inside the card,
+ * its Check button staying in view.
+ */
+export const CARD_MAX_HEIGHT = "min(calc(100% - 12rem), max(240px, 45vh))";
+
+/** Whether the docked step holds a card: its zoom wrapper is always there, the card inside it only sometimes. */
+const holdsCard = (step: HTMLElement) => (step.firstElementChild?.childElementCount ?? 0) > 0;
+
 /** The board before the tutor has drawn anything: a sketched frame waiting for it. */
 function EmptyBoard() {
   return (
@@ -47,7 +65,7 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
   // The canvas frames figures in what the overlays leave clear: the title band, the docked question card, the filmstrip.
   const insets = useCallback((): Insets => {
     const step = stepRef.current;
-    const stepWidth = step && step.offsetWidth > 0 && step.childElementCount > 0 ? step.offsetWidth + 24 : 0;
+    const stepWidth = step && step.offsetWidth > 0 && holdsCard(step) ? step.offsetWidth + 24 : 0;
     return { top: 72, right: stepWidth, bottom: 128, left: 0 };
   }, []);
 
@@ -56,10 +74,15 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
   useEffect(() => {
     const el = stepRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => setStepWidth(el.childElementCount > 0 ? el.offsetWidth : 0));
+    const observer = new ResizeObserver(() => setStepWidth(holdsCard(el) ? el.offsetWidth : 0));
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+
+  // The question card is docked, not on the board, so it doesn't pan; its text does follow the zooms the learner makes
+  // (not the board's own framing of each new figure, which would resize it at every figure), within readable bounds.
+  const [cardZoom, setCardZoom] = useState(1);
+  const onUserZoom = useCallback((factor: number) => setCardZoom((zoom) => clampCardZoom(zoom * factor)), []);
 
   const modeButton = (on: boolean, label: string, Icon: typeof Mic, onClick: () => void, disabled = false) => (
     // eslint-disable-next-line no-restricted-syntax -- a segment of the mode switch.
@@ -103,7 +126,7 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
       <div className="relative mx-4 min-h-0 flex-1 overflow-hidden rounded-[22px] border border-[var(--ls-border)]">
         {hasFilmstrip ? (
           // Every figure shown this session stays on an endless board; the camera glides to each new one.
-          <WhiteboardCanvas insets={insets} refitKey={stepWidth} />
+          <WhiteboardCanvas insets={insets} refitKey={stepWidth} onUserZoom={onUserZoom} />
         ) : (
           <div className="lesson-board absolute inset-0 grid place-items-center">{!finished && <EmptyBoard />}</div>
         )}
@@ -121,9 +144,13 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
         <div
           ref={stepRef}
           data-no-pan
-          className="absolute bottom-32 right-4 top-16 z-10 flex w-[min(380px,46%)] flex-col overflow-y-auto overscroll-contain px-1.5 pb-3 pt-1.5 empty:hidden [&:not(:has(*))]:hidden"
+          className="absolute bottom-32 right-4 z-10 flex w-[min(380px,46%)] flex-col overflow-y-auto overscroll-contain px-1.5 pb-3 pt-1.5 [&:not(:has(>div>*))]:hidden"
+          style={{ maxHeight: CARD_MAX_HEIGHT }}
         >
-          <StepCard subject={subject} />
+          {/* CSS zoom, not a transform: the card re-wraps to its dock's width instead of spilling past it. */}
+          <div data-card-zoom={cardZoom.toFixed(2)} style={{ zoom: cardZoom }}>
+            <StepCard subject={subject} />
+          </div>
         </div>
 
         {finished && (

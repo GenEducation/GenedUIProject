@@ -29,12 +29,24 @@ export interface BoardCamera {
   bind: (element: HTMLElement | null) => void;
 }
 
-export function useBoardCamera(viewport: () => Size, insets: () => Insets = () => NO_INSETS): BoardCamera {
+/**
+ * `onUserZoom` hears each zoom the learner makes (buttons, pinch, ctrl/⌘+wheel) as the factor the board actually moved
+ * by, after clamping; the camera's own framing flights are not reported.
+ */
+export function useBoardCamera(
+  viewport: () => Size,
+  insets: () => Insets = () => NO_INSETS,
+  onUserZoom?: (factor: number) => void,
+): BoardCamera {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const scale = useMotionValue(1);
   const running = useRef<AnimationPlaybackControls[]>([]);
   const element = useRef<HTMLElement | null>(null);
+  const userZoomed = useRef(onUserZoom);
+  useEffect(() => {
+    userZoomed.current = onUserZoom;
+  }, [onUserZoom]);
 
   const get = useCallback((): Camera => ({ x: x.get(), y: y.get(), scale: scale.get() }), [x, y, scale]);
   const set = useCallback(
@@ -44,6 +56,15 @@ export function useBoardCamera(viewport: () => Size, insets: () => Insets = () =
       scale.set(c.scale);
     },
     [x, y, scale],
+  );
+  // Apply a learner's zoom at once and report how far it really went (a clamped zoom may not move at all).
+  const zoomNow = useCallback(
+    (factor: number, at: { x: number; y: number }) => {
+      const before = scale.get();
+      set(zoomAt(get(), factor, at.x, at.y));
+      if (scale.get() !== before) userZoomed.current?.(scale.get() / before);
+    },
+    [get, set, scale],
   );
   const stop = useCallback(() => {
     running.current.forEach((a) => a.stop());
@@ -71,7 +92,10 @@ export function useBoardCamera(viewport: () => Size, insets: () => Insets = () =
     (factor: number, at?: { x: number; y: number }, options: { instant?: boolean } = {}) => {
       const vp = viewport();
       const point = at ?? { x: vp.w / 2, y: vp.h / 2 };
-      flyTo(zoomAt(get(), factor, point.x, point.y), options);
+      const before = get().scale;
+      const target = zoomAt(get(), factor, point.x, point.y);
+      flyTo(target, options);
+      if (target.scale !== before) userZoomed.current?.(target.scale / before);
     },
     [flyTo, get, viewport],
   );
@@ -109,7 +133,7 @@ export function useBoardCamera(viewport: () => Size, insets: () => Insets = () =
       if (pointers.size === 2 && pinch) {
         const [a, b] = [...pointers.values()];
         const distance = Math.hypot(a.x - b.x, a.y - b.y);
-        set(zoomAt(get(), distance / pinch.distance, (a.x + b.x) / 2, (a.y + b.y) / 2));
+        zoomNow(distance / pinch.distance, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
         pinch.distance = distance;
         return;
       }
@@ -149,7 +173,7 @@ export function useBoardCamera(viewport: () => Size, insets: () => Insets = () =
       if (e.ctrlKey || e.metaKey) {
         // Trackpad pinch arrives as ctrl+wheel; a mouse wheel with ctrl/⌘ zooms too.
         const p = local(e);
-        set(zoomAt(get(), Math.exp(-e.deltaY * unit * 0.0075), p.x, p.y));
+        zoomNow(Math.exp(-e.deltaY * unit * 0.0075), p);
       } else {
         x.set(x.get() - e.deltaX * unit);
         y.set(y.get() - e.deltaY * unit);
@@ -168,7 +192,7 @@ export function useBoardCamera(viewport: () => Size, insets: () => Insets = () =
       el.removeEventListener("pointercancel", onUp);
       el.removeEventListener("wheel", onWheel);
     };
-  }, [get, set, stop, x, y]);
+  }, [stop, x, y, zoomNow]);
 
   useEffect(() => stop, [stop]);
 

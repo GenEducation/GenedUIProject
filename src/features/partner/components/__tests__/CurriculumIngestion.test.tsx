@@ -96,6 +96,23 @@ describe("CurriculumIngestion — upload a chapter source", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("takes the partner to the first empty field instead of uploading an incomplete form", async () => {
+    // jsdom has no layout, so no scrollIntoView.
+    Element.prototype.scrollIntoView = vi.fn();
+    const onClose = vi.fn();
+    render(<CurriculumIngestion onClose={onClose} />);
+    await fillValidForm();
+    fireEvent.change(screen.getByLabelText("Book Title"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("Chapter Title"), { target: { value: "" } });
+
+    fireEvent.click(submit());
+
+    expect(screen.getByLabelText("Book Title")).toHaveFocus();
+    expect(screen.getByRole("alert")).toHaveTextContent("Add Book Title to upload");
+    expect(lastUpload).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("refuses a PDF over the upload limit before sending it", () => {
     render(<CurriculumIngestion onClose={vi.fn()} />);
     const big = syntheticPdf("big.pdf", "x".repeat(31 * 1024 * 1024));
