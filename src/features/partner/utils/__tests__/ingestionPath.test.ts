@@ -51,6 +51,15 @@ describe("pathSteps", () => {
     expect(steps[6].status).toBe("not_reached");
   });
 
+  it("draws a run waiting on the partner's answers as waiting, not stopped", () => {
+    const steps = pathSteps("review_needed", at("reconcile", 4));
+    expect(steps[3].status).toBe("waiting");
+    expect(steps.some((s) => s.status === "stopped")).toBe(false);
+    const phases = runPhases("review_needed", at("reconcile", 4));
+    expect(phases.some((p) => p.status === "waiting")).toBe(true);
+    expect(phases.some((p) => p.status === "stopped")).toBe(false);
+  });
+
   it("shows a finished run as done throughout", () => {
     const steps = pathSteps("ready", at("submit", 9, { percent: 100 }));
     expect(steps.every((s) => s.status === "done")).toBe(true);

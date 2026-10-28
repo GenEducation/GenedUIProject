@@ -69,7 +69,7 @@ export const ATTENTION_COUNTS: ReadonlySet<IngestionCount> = new Set([
   "violations",
 ]);
 
-export type StepStatus = "done" | "current" | "stopped" | "pending" | "not_reached" | "skipped";
+export type StepStatus = "done" | "current" | "stopped" | "waiting" | "pending" | "not_reached" | "skipped";
 
 export interface PathStep {
   stage: IngestionStage;
@@ -99,7 +99,9 @@ export function pathSteps(state: SourceState, reported: SourceProgress | null): 
     let status: StepStatus = "pending";
     if (progress && at >= 0) {
       if (i < at || (i === at && finished)) status = "done";
-      else if (i === at) status = state === "running" ? "current" : "stopped";
+      // review_needed paused for the partner's answers: waiting on them, not a failure.
+      else if (i === at) status = state === "running" ? "current" : state === "review_needed" ? "waiting" : "stopped";
+      else if (state === "review_needed") status = "pending";
       else if (state !== "running" && state !== "queued") status = finished ? "done" : "not_reached";
     }
     // A run that cannot pass draws no visuals (the costliest step); it never reports the stage.

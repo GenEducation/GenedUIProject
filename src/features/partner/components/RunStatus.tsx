@@ -8,7 +8,7 @@ import { shownPercent } from "../utils/ingestionProgress";
 
 /** A phase's segment of the bar: full when done, part-filled while it runs, red where a run stopped. */
 function Segment({ phase, queued }: { phase: Phase; queued: boolean }) {
-  const color = phase.status === "stopped" ? "bg-red-400" : queued ? "bg-amber-400" : "bg-[#075E63]";
+  const color = phase.status === "stopped" ? "bg-red-400" : phase.status === "waiting" || queued ? "bg-amber-400" : "bg-[#075E63]";
   return (
     <div className="h-1.5 lg:h-2 flex-1 overflow-hidden rounded-full bg-[#122D30]/10">
       <div

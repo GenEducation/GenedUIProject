@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { AlertCircle, Check, ChevronDown, Circle, Clock, Cog, FileText, Images, Info, ListTree, Minus, PenLine, Sparkles, Upload, X } from "lucide-react";
+import { AlertCircle, Check, ChevronDown, Circle, Clock, Cog, FileText, Hourglass, Images, Info, ListTree, Minus, PenLine, Sparkles, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { Subject } from "../store/usePartnerStore";
 import {
@@ -61,6 +61,7 @@ function StatusDot({ status }: { status: PathStep["status"] | Milestone["status"
   if (status === "done") return <span className={`${base} border-[#075E63] bg-[#075E63] text-white`}><Check size={11} aria-hidden /></span>;
   if (status === "current") return <span className={`${base} border-[#075E63] bg-white`}><LiveDot size={6} /></span>;
   if (status === "skipped") return <span className={`${base} border-[#122D30]/15 bg-white text-[#122D30]/30`}><Minus size={11} aria-hidden /></span>;
+  if (status === "waiting") return <span className={`${base} border-amber-400 bg-amber-50 text-amber-600`}><Hourglass size={11} aria-hidden /></span>;
   if (status === "stopped" || status === "problem") return <span className={`${base} border-red-400 bg-red-50 text-red-600`}><X size={11} aria-hidden /></span>;
   return <span className={`${base} border-[#122D30]/15 bg-white text-[#122D30]/20`}><Circle size={6} aria-hidden /></span>;
 }
@@ -69,6 +70,7 @@ const STATUS_WORDS: Record<PathStep["status"] | Milestone["status"], string> = {
   done: "done",
   current: "in progress",
   stopped: "stopped here",
+  waiting: "waiting on you",
   problem: "needs attention",
   pending: "not started",
   not_reached: "not reached",
@@ -203,15 +205,16 @@ function PhaseRow({ phase, running }: { phase: Phase; running: boolean }) {
           {took && <span className="ml-2 text-[11px] font-semibold text-[#122D30]/40">{took}</span>}
           {phase.status === "current" && running && <span className="ml-2 text-[11px] font-semibold tabular-nums text-[#075E63]">{Math.round(phase.fill * 100)}% of this phase</span>}
           {phase.status === "stopped" && <span className="ml-2 text-[11px] font-semibold text-red-600">stopped here</span>}
+          {phase.status === "waiting" && <span className="ml-2 text-[11px] font-semibold text-amber-700">waiting on you</span>}
         </p>
         <p className={`text-[11px] lg:text-[12px] ${muted ? "text-[#122D30]/35" : "text-[#122D30]/70"}`}>{phase.summary ?? phase.does}</p>
-        {(phase.status === "current" || phase.status === "stopped") && (
+        {(phase.status === "current" || phase.status === "stopped" || phase.status === "waiting") && (
           <ul className="mt-1.5 flex flex-col gap-1" aria-label={`${phase.label}: steps`}>
             {phase.steps.map((s) => {
-              const active = s.status === "current" || s.status === "stopped";
+              const active = s.status === "current" || s.status === "stopped" || s.status === "waiting";
               return (
                 <li key={s.stage} className={`flex flex-wrap items-center gap-1.5 text-[11px] ${active ? "font-bold text-[#122D30]" : s.status === "done" ? "text-[#122D30]/60" : "text-[#122D30]/35"}`}>
-                  {s.status === "done" ? <Check size={11} aria-hidden className="text-[#075E63]" /> : active ? (s.status === "stopped" ? <X size={11} aria-hidden className="text-red-600" /> : <span className="mx-[1.5px] inline-flex"><LiveDot size={8} /></span>) : <Circle size={6} aria-hidden className="mx-[2.5px]" />}
+                  {s.status === "done" ? <Check size={11} aria-hidden className="text-[#075E63]" /> : active ? (s.status === "stopped" ? <X size={11} aria-hidden className="text-red-600" /> : s.status === "waiting" ? <Hourglass size={11} aria-hidden className="text-amber-600" /> : <span className="mx-[1.5px] inline-flex"><LiveDot size={8} /></span>) : <Circle size={6} aria-hidden className="mx-[2.5px]" />}
                   {s.label}
                   {active && <KindBadge kind={s.kind} />}
                   {active && s.unitLine && <span className="rounded-md bg-[#075E63]/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[#075E63]">{s.unitLine}</span>}
