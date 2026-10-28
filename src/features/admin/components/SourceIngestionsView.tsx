@@ -17,11 +17,15 @@ import { StatusPill, statusTone } from "./ui/StatusPill";
  * meant inventing numbers, so the screen says what this backend actually knows.
  */
 
-/** A run's position, as a percent when one is known and a stage name otherwise. */
-function progressText(row: SourceIngestion): string {
+/**
+ * A run's position. The percent is the run's only while it is running; afterwards (or while a new run is queued)
+ * it is where the last run stopped, so only the stage is shown.
+ */
+export function progressText(row: Pick<SourceIngestion, "state" | "progress">): string {
   if (!row.progress) return row.state === "registered" ? "Not started" : "—";
   const { stage, percent, step, steps } = row.progress;
-  return `${Math.round(percent)}% · ${stage.replace(/_/g, " ")} (${step}/${steps})`;
+  const where = `${stage.replace(/_/g, " ")} (${step}/${steps})`;
+  return row.state === "running" ? `${Math.round(percent)}% · ${where}` : where;
 }
 
 const columns: Column<SourceIngestion>[] = [
@@ -84,7 +88,7 @@ const columns: Column<SourceIngestion>[] = [
     render: (s) => (
       <span className="block min-w-[150px]">
         <span className="block text-[12px] text-muted">{progressText(s)}</span>
-        {s.progress ? (
+        {s.progress && s.state === "running" ? (
           <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-soft-surface">
             <span
               className="block h-full rounded-full bg-accent-deep"
