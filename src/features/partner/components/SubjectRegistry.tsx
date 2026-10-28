@@ -39,6 +39,18 @@ export const LIST_POLL_MS = 10_000;
 /** While a run is processing, this often: the backend reports progress every couple of seconds. */
 export const RUN_POLL_MS = 4_000;
 
+/**
+ * Whether a row gets its start / retry / run-again button. With an outcome the server decides: `start` and `run_again`
+ * (which is how a lost `running` run comes back) offer it, other steps keep the re-run of a finished run; never when
+ * `can_run_again` is false. Without an outcome (an older server) the startable states decide.
+ */
+export function canRunFromRow(subject: Pick<Subject, "state" | "outcome">): boolean {
+  const outcome = subject.outcome;
+  if (!outcome) return STARTABLE_STATES.has(subject.state);
+  if (!outcome.can_run_again) return false;
+  return outcome.next_step === "run_again" || outcome.next_step === "start" || STARTABLE_STATES.has(subject.state);
+}
+
 const STATE_OPTIONS = [
   { value: "", label: "All Statuses" },
   ...(Object.entries(SOURCE_STATE_LABELS) as [SourceState, string][]).map(([value, label]) => ({
@@ -354,7 +366,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             const awaitingAnswers = subject.state === "review_needed" && subject.questions > 0;
             // The server's next step; a re-run of an upload whose failed checks are the partner's would end the same way.
             const next = subject.outcome?.next_step ?? null;
-            const canRunAgain = STARTABLE_STATES.has(subject.state) && (subject.outcome?.can_run_again ?? true);
+            // The server decides: a lost `running` run comes back as `run_again`. Rows from a server without outcomes
+            // fall back to the states a run can start from.
+            const canRunAgain = canRunFromRow(subject);
             // A chapter the partner can complete with questions of their own offers that first; uploading stays in its path.
             const addQuestions = next === "add_questions";
             const needsUpload = next !== null && UPLOAD_STEPS.has(next) && !addQuestions;
@@ -518,7 +532,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                             >
                               <Play size={18} />
                             </Button>
-                          ) : subject.state === "failed" || subject.state === "invalid" ? (
+                          ) : subject.state === "failed" || subject.state === "invalid" || ACTIVE_STATES.has(subject.state) ? (
                             <Button
                               iconOnly
                               variant="outline"

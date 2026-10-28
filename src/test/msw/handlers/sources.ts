@@ -208,7 +208,9 @@ export const sourcesHandlers = [
   http.post(`${SOURCES}/:id/ingestions`, ({ params }) => {
     const s = store.get(String(params.id));
     if (!s) return notFound();
-    if (!STARTABLE.has(s.state)) return conflict(`This chapter is already ${s.state}.`);
+    // A lost run comes back as `run_again` whatever its state says (backend: a stale `running` row).
+    const lost = s.outcome?.next_step === "run_again" && s.outcome.can_run_again;
+    if (!STARTABLE.has(s.state) && !lost) return conflict(`This chapter is already ${s.state}.`);
     const next = { ...s, state: "queued" as const, detail: null };
     store.set(s.source_id, next);
     return HttpResponse.json(next, { status: 202 });

@@ -77,4 +77,36 @@ describe("SubjectRegistry — a published chapter", () => {
     expect(await screen.findByText("Live for students")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Review & publish/ })).not.toBeInTheDocument();
   });
+
+  it("offers Retry on a lost running run the server says to run again, and starts it", async () => {
+    const lost = makeSource({
+      source_id: "synthetic-lost-run",
+      state: "running",
+      chapter: { ordinal: 3, title: "SYNTHETIC lost run", first_pdf_page: 1, last_pdf_page: 1 },
+      started_at: "2026-10-13T09:00:00Z",
+      progress: { stage: "questions", step: 5, steps: 9, done: 0, total: 0, percent: 50, updated_at: "2026-10-13T09:05:00Z" },
+      outcome: { next_step: "run_again", findings: [], can_run_again: true, run_again_blocked: null },
+    });
+    sourcesFixture.reset(() => [lost]);
+    render(<SubjectRegistry onUploadClick={vi.fn()} />);
+    await screen.findByText("SYNTHETIC lost run");
+    expect(screen.getByText(/^No update since /)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry ingestion" }));
+    expect(await screen.findByText("Waiting in line to start")).toBeInTheDocument();
+  });
+
+  it("offers no run button on a running run the server has not given up on", async () => {
+    const live = makeSource({
+      source_id: "synthetic-live-run",
+      state: "running",
+      chapter: { ordinal: 4, title: "SYNTHETIC live run", first_pdf_page: 1, last_pdf_page: 1 },
+      progress: { stage: "questions", step: 5, steps: 9, done: 0, total: 0, percent: 50, updated_at: new Date().toISOString() },
+      outcome: { next_step: "wait", findings: [], can_run_again: false, run_again_blocked: "already_running" },
+    });
+    sourcesFixture.reset(() => [live]);
+    render(<SubjectRegistry onUploadClick={vi.fn()} />);
+    await screen.findByText("SYNTHETIC live run");
+    expect(screen.queryByRole("button", { name: /Retry ingestion|Run ingestion again/ })).toBeNull();
+    expect(screen.queryByText(/^No update since /)).toBeNull();
+  });
 });
