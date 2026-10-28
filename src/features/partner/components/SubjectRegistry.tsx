@@ -489,7 +489,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           </Button>
                         )}
 
-                        {subject.state === "ready" && !live && (
+                        {/* Only when the server says review is next (a ready run with blocking findings is not); a server
+                            without outcomes falls back to an unpublished ready chapter. */}
+                        {(subject.outcome ? next === "review_release" : subject.state === "ready" && !live) && (
                           <Button
                             pill
                             variant="secondary"

@@ -109,4 +109,24 @@ describe("SubjectRegistry — a published chapter", () => {
     expect(screen.queryByRole("button", { name: /Retry ingestion|Run ingestion again/ })).toBeNull();
     expect(screen.queryByText(/^No update since /)).toBeNull();
   });
+
+  it("offers Review & publish only when the server's next step is review_release", async () => {
+    const base = { state: "ready" as const, has_report: true, release: null };
+    const toReview = makeSource({
+      ...base, source_id: "synthetic-to-review",
+      chapter: { ordinal: 5, title: "SYNTHETIC to review", first_pdf_page: 1, last_pdf_page: 1 },
+      outcome: { next_step: "review_release", findings: [], can_run_again: true, run_again_blocked: null },
+    });
+    const toVisuals = makeSource({
+      ...base, source_id: "synthetic-to-visuals",
+      chapter: { ordinal: 6, title: "SYNTHETIC to visuals", first_pdf_page: 1, last_pdf_page: 1 },
+      outcome: { next_step: "contact_gened", findings: [], can_run_again: false, run_again_blocked: "same_result" },
+    });
+    sourcesFixture.reset(() => [toReview, toVisuals]);
+    render(<SubjectRegistry onUploadClick={vi.fn()} />);
+    await screen.findByText("SYNTHETIC to review");
+    expect(screen.getAllByRole("button", { name: /Review & publish/ })).toHaveLength(1);
+    const row = document.querySelector('[data-source-row="synthetic-to-visuals"]') as HTMLElement;
+    expect(within(row).queryByRole("button", { name: /Review & publish/ })).toBeNull();
+  });
 });
