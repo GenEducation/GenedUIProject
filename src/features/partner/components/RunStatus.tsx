@@ -90,7 +90,7 @@ export function RunOutcome({ subject }: { subject: Subject }) {
     if (!subject.detail || !["failed", "invalid", "review_needed"].includes(subject.state)) return null;
     return (
       <p className={`${titleClass} items-start`}>
-        <span aria-hidden className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${subject.state === "review_needed" ? "bg-sky-500" : "bg-red-500"}`} />
+        <span aria-hidden className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-red-500" />
         <span className="line-clamp-2" title={subject.detail}>{subject.detail}</span>
       </p>
     );

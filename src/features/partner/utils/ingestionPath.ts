@@ -196,14 +196,15 @@ export function elapsed(fromIso: string | null, toIso: string | null): string | 
   return `${Math.floor(min / 60)} h ${min % 60} min`;
 }
 
-/** What each next step says to the partner. `tone` colours it; `upload` steps open the upload form prefilled. */
+/** What each next step says to the partner. `tone` colours it: every finished run that can't go on to review and publish
+ * is a `problem` (red), so a stuck chapter stands out. `upload` steps open the upload form prefilled. */
 export const NEXT_STEP_COPY: Record<NextStep, { title: string; body: string; tone: "info" | "action" | "problem" | "done" }> = {
   start: { title: "Ready to process", body: "Start the run when you are ready.", tone: "action" },
   wait: { title: "Processing", body: "Nothing to do yet; this updates on its own.", tone: "info" },
   answer_questions: {
     title: "Tell us which concepts are the same",
     body: "Some concepts look alike. Answer the questions, then run the chapter again.",
-    tone: "action",
+    tone: "problem",
   },
   review_release: {
     title: "Ready for your review",
@@ -214,17 +215,17 @@ export const NEXT_STEP_COPY: Record<NextStep, { title: string; body: string; ton
   review_visuals: {
     title: "Accept the redrawn pictures, then run again",
     body: "Some questions need their picture. Once you accept the redraws, the next run can include them.",
-    tone: "action",
+    tone: "problem",
   },
   redraw_pictures: {
     title: "Run again to redraw a picture",
     body: "Some questions are about a picture, and GenEd's redraw of it didn't pass its own checks, so there is nothing for you to accept yet. Run the chapter again to draw it again.",
-    tone: "action",
+    tone: "problem",
   },
   add_questions: {
     title: "Add questions to finish this chapter",
     body: "This run didn't pass: GenEd found too few questions it can check, and a chapter can't be published without them. Give the answers of printed questions, write your own, or let AI suggest some. Every question is reviewed before students see it.",
-    tone: "action",
+    tone: "problem",
   },
   upload_pages_with_questions: {
     title: "Upload pages that include the exercises",
@@ -244,7 +245,7 @@ export const NEXT_STEP_COPY: Record<NextStep, { title: string; body: string; ton
   contact_gened: {
     title: "GenEd needs to look at this",
     body: "This is not something your upload can fix. GenEd has the report; you can run it again after a fix.",
-    tone: "info",
+    tone: "problem",
   },
   run_again: { title: "Something went wrong", body: "The run stopped before it finished. Run it again.", tone: "problem" },
 };
