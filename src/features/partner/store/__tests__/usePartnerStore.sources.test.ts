@@ -50,4 +50,26 @@ describe("usePartnerStore — chapter sources", () => {
       }),
     ).rejects.toThrow(/within 1 to 3/);
   });
+
+  it("keeps a saved chapter when its run does not start, and says to press Start", async () => {
+    const { server } = await import("@/test/msw/server");
+    const { http, HttpResponse } = await import("msw");
+    server.use(
+      http.post(`${process.env.NEXT_PUBLIC_API_URL}/v1/sources/:id/ingestions`, () =>
+        HttpResponse.json({ message: "SYNTHETIC queue unavailable" }, { status: 503 }),
+      ),
+    );
+    usePartnerStore.setState({ subjectPagination: { total_count: 9, limit: 20, offset: 20 }, uploadNotice: null });
+    await usePartnerStore.getState().uploadSource({
+      file: syntheticPdf(), board: "CBSE", publisher: "NCERT", subject: "Mathematics", grade: 6, book_title: "SYNTHETIC Book",
+      edition_label: "E", chapter_ordinal: 2, chapter_title: "SYNTHETIC unstarted", first_pdf_page: 1, last_pdf_page: 3,
+      strand: "s", lo_codes: ["G6-MATH-LO1.2.1"],
+    });
+    const state = usePartnerStore.getState();
+    const row = state.subjects.find((s) => s.title === "SYNTHETIC unstarted");
+    expect(row?.state).toBe("registered");
+    expect(state.justUploadedId).toBe(row?.id);
+    expect(state.subjectPagination.offset).toBe(0);
+    expect(state.uploadNotice).toBe("Uploaded; it didn't start — press Start");
+  });
 });

@@ -132,6 +132,9 @@ interface PartnerState {
   /** The chapter just uploaded and started: the registry opens it, scrolls to it and marks it, then clears this. */
   justUploadedId: string | null;
   clearJustUploaded: () => void;
+  /** Said on the list after an upload whose chapter was saved but whose run did not start. */
+  uploadNotice: string | null;
+  clearUploadNotice: () => void;
   subjectFilters: SubjectFilters;
   subjectPagination: SubjectPagination;
 
@@ -216,6 +219,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   subjects: [],
   justUploadedId: null,
   clearJustUploaded: () => set({ justUploadedId: null }),
+  uploadNotice: null,
+  clearUploadNotice: () => set({ uploadNotice: null }),
   subjectFilters: {},
   subjectPagination: { total_count: 0, limit: 20, offset: 0 },
   isLoading: false,
@@ -386,10 +391,21 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   },
 
   uploadSource: async (input) => {
+    // A refused register throws: the form shows why. Once the chapter is saved, a refused start must not lose it.
     const source = await sourcesService.register(input);
-    await sourcesService.start(source.source_id);
+    let started = true;
+    try {
+      await sourcesService.start(source.source_id);
+    } catch (error) {
+      console.error("uploadSource start error:", error);
+      started = false;
+    }
     // Back to the first page, where the new chapter is (newest first).
-    set({ subjectPagination: { ...get().subjectPagination, offset: 0 }, justUploadedId: source.source_id });
+    set({
+      subjectPagination: { ...get().subjectPagination, offset: 0 },
+      justUploadedId: source.source_id,
+      uploadNotice: started ? null : "Uploaded; it didn't start — press Start",
+    });
     await get().fetchSubjects();
   },
 

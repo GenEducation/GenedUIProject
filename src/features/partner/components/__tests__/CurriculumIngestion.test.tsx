@@ -96,6 +96,22 @@ describe("CurriculumIngestion — upload a chapter source", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("closes once the chapter is saved even when its run does not start", async () => {
+    const onClose = vi.fn();
+    render(<CurriculumIngestion onClose={onClose} />);
+    await fillValidForm();
+    const { server } = await import("@/test/msw/server");
+    const { http, HttpResponse } = await import("msw");
+    server.use(
+      http.post(`${process.env.NEXT_PUBLIC_API_URL}/v1/sources/:id/ingestions`, () =>
+        HttpResponse.json({ message: "SYNTHETIC queue unavailable" }, { status: 503 }),
+      ),
+    );
+    fireEvent.click(submit());
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(usePartnerStore.getState().uploadNotice).toBe("Uploaded; it didn't start — press Start");
+  });
+
   it("takes the partner to the first empty field instead of uploading an incomplete form", async () => {
     // jsdom has no layout, so no scrollIntoView.
     Element.prototype.scrollIntoView = vi.fn();

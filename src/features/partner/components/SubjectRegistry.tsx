@@ -111,6 +111,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
     return () => clearTimeout(timer);
   }, [justUploadedId, subjects, clearJustUploaded]);
   const [actionError, setActionError] = useState<string | null>(null);
+  const uploadNotice = usePartnerStore((state) => state.uploadNotice);
+  const clearUploadNotice = usePartnerStore((state) => state.clearUploadNotice);
   const [busyId, setBusyId] = useState<string | null>(null);
   // Re-running a chapter whose run produced results (ready / review_needed) needs a confirm: the new run
   // replaces them. A failed or invalid run has nothing to lose, so its Retry starts straight away.
@@ -321,6 +323,16 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {uploadNotice && (
+        <div role="status" className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800">
+          <AlertCircle size={14} className="shrink-0" aria-hidden />
+          <span className="flex-1">{uploadNotice}</span>
+          <Button iconOnly size="sm" variant="tertiary" aria-label="Dismiss" onClick={clearUploadNotice}>
+            <X size={14} />
+          </Button>
+        </div>
+      )}
 
       {actionError && (
         <div role="alert" className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-700">
