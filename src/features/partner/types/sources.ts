@@ -414,8 +414,8 @@ export interface ReleaseDecisionResult {
   error: string | null;
 }
 
-/** The portal's own cap, under the backend's 50 MB and common proxy limits. */
-export const MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
+/** The portal's cap: the backend's own 50 MB limit. */
+export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 // ── Completing a chapter's questions (backend ADR 0036; docs/specs/PARTNER_INGESTION_OUTCOME_v1.md) ──
 

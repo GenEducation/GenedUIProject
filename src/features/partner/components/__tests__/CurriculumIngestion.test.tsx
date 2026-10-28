@@ -115,8 +115,15 @@ describe("CurriculumIngestion — upload a chapter source", () => {
 
   it("refuses a PDF over the upload limit before sending it", () => {
     render(<CurriculumIngestion onClose={vi.fn()} />);
-    const big = syntheticPdf("big.pdf", "x".repeat(31 * 1024 * 1024));
+    const big = syntheticPdf("big.pdf", "x".repeat(51 * 1024 * 1024));
     fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, { target: { files: [big] } });
-    expect(screen.getByText(/larger than 30 MB/)).toBeInTheDocument();
+    expect(screen.getByText(/larger than 50 MB/)).toBeInTheDocument();
+  });
+
+  it("accepts a PDF between the old 30 MB cap and the backend's 50 MB", () => {
+    render(<CurriculumIngestion onClose={vi.fn()} />);
+    const mid = syntheticPdf("mid.pdf", "x".repeat(40 * 1024 * 1024));
+    fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, { target: { files: [mid] } });
+    expect(screen.queryByText(/larger than/)).not.toBeInTheDocument();
   });
 });
