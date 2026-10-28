@@ -141,6 +141,10 @@ interface PartnerState {
   // --- UI State ---
   isLoading: boolean;
   isSubjectsLoading: boolean;
+  /** The last list read's error message while reads keep failing; null once one succeeds. */
+  subjectsError: string | null;
+  /** Consecutive failed list reads. */
+  subjectsFailures: number;
   showUploadModal: boolean;
 
   // --- PDF Viewer State ---
@@ -159,7 +163,9 @@ interface PartnerState {
   revokeStudent: (studentId: string) => Promise<void>;
 
   // Subject Actions
-  fetchSubjects: () => Promise<void>;
+  /** Re-read the list. `background` (polling) leaves the loading flag alone. A response older than one already
+   * applied is dropped. */
+  fetchSubjects: (options?: { background?: boolean }) => Promise<void>;
   setSubjectFilters: (filters: SubjectFilters) => void;
   setSubjectOffset: (offset: number) => void;
   /** Register a chapter and queue its first run; throws `ApiRequestError` with a readable message. */
@@ -210,6 +216,10 @@ function requirePartnerId(): string {
   return partnerId;
 }
 
+/** List reads in the order they were sent, and the newest one applied: a slow older response must not overwrite it. */
+let subjectsRequestSeq = 0;
+let subjectsAppliedSeq = 0;
+
 export const usePartnerStore = create<PartnerState>((set, get) => ({
   students: [],
   pendingRequests: [],
@@ -225,6 +235,8 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   subjectPagination: { total_count: 0, limit: 20, offset: 0 },
   isLoading: false,
   isSubjectsLoading: false,
+  subjectsError: null,
+  subjectsFailures: 0,
   showUploadModal: false,
   viewerPdfUrl: null,
   viewerTitle: null,
@@ -366,8 +378,10 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     set((state) => ({ subjectPagination: { ...state.subjectPagination, offset } }));
   },
 
-  fetchSubjects: async () => {
-    set({ isSubjectsLoading: true });
+  fetchSubjects: async (options) => {
+    const background = options?.background ?? false;
+    const seq = ++subjectsRequestSeq;
+    if (!background) set({ isSubjectsLoading: true });
     const { subjectFilters, subjectPagination } = get();
 
     try {
@@ -379,14 +393,23 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         limit: subjectPagination.limit,
         offset: subjectPagination.offset,
       });
+      if (seq < subjectsAppliedSeq) return;
+      subjectsAppliedSeq = seq;
       set({
-        isSubjectsLoading: false,
+        ...(background ? {} : { isSubjectsLoading: false }),
+        subjectsError: null,
+        subjectsFailures: 0,
         subjects: page.items.map(toSubject),
         subjectPagination: { total_count: page.total_count, limit: page.limit, offset: page.offset },
       });
     } catch (error) {
       console.error("fetchSubjects error:", error);
-      set({ isSubjectsLoading: false });
+      if (seq < subjectsAppliedSeq) return;
+      set((state) => ({
+        ...(background ? {} : { isSubjectsLoading: false }),
+        subjectsError: error instanceof Error ? error.message : String(error),
+        subjectsFailures: state.subjectsFailures + 1,
+      }));
     }
   },
 

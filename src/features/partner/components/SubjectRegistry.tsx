@@ -69,6 +69,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const subjects = usePartnerStore((state) => state.subjects);
   const isSubjectsLoading = usePartnerStore((state) => state.isSubjectsLoading);
   const fetchSubjects = usePartnerStore((state) => state.fetchSubjects);
+  const subjectsError = usePartnerStore((state) => state.subjectsError);
+  const subjectsFailures = usePartnerStore((state) => state.subjectsFailures);
   const removeSubject = usePartnerStore((state) => state.removeSubject);
   const cancelIngestion = usePartnerStore((state) => state.cancelIngestion);
   const decideExcludedPages = usePartnerStore((state) => state.decideExcludedPages);
@@ -112,6 +114,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   }, [justUploadedId, subjects, clearJustUploaded]);
   const [actionError, setActionError] = useState<string | null>(null);
   const uploadNotice = usePartnerStore((state) => state.uploadNotice);
+
   const clearUploadNotice = usePartnerStore((state) => state.clearUploadNotice);
   const [busyId, setBusyId] = useState<string | null>(null);
   // Re-running a chapter whose run produced results (ready / review_needed) needs a confirm: the new run
@@ -131,11 +134,17 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   // going, faster while one is processing so its progress bar moves.
   const hasActiveRun = subjects.some((s) => ACTIVE_STATES.has(s.state));
   const hasRunningRun = subjects.some((s) => s.state === "running");
+  // While reads fail, keep retrying even with no run going, so the banner clears once GenEd answers again.
+  const retrying = subjectsError !== null;
   useEffect(() => {
-    if (!hasActiveRun) return;
-    const timer = setInterval(() => void fetchSubjects(), hasRunningRun ? RUN_POLL_MS : LIST_POLL_MS);
+    if (!hasActiveRun && !retrying) return;
+    // A hidden tab skips its ticks; the next visible one catches up.
+    const timer = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      void fetchSubjects({ background: true });
+    }, hasRunningRun ? RUN_POLL_MS : LIST_POLL_MS);
     return () => clearInterval(timer);
-  }, [hasActiveRun, hasRunningRun, fetchSubjects]);
+  }, [hasActiveRun, hasRunningRun, retrying, fetchSubjects]);
 
   /** Start or stop a run, showing the server's reason when it doesn't fit (409). */
   const runAction = async (subject: Subject, action: (id: string) => Promise<void>) => {
@@ -323,6 +332,13 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {subjectsError && (
+        <div role="status" className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800">
+          <AlertCircle size={14} className="shrink-0" aria-hidden />
+          <span className="flex-1">Can&apos;t reach GenEd, retrying{subjectsFailures > 1 ? ` (${subjectsFailures} tries)` : ""}</span>
+        </div>
+      )}
 
       {uploadNotice && (
         <div role="status" className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800">
