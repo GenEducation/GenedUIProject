@@ -67,7 +67,9 @@ export function phaseSummary(key: PhaseKey, counts: Partial<Record<IngestionCoun
 }
 
 /** The four phases of a run, from its state and progress. */
-export function runPhases(state: SourceState, progress: SourceProgress | null, visualsSent = 0): Phase[] {
+export function runPhases(state: SourceState, reported: SourceProgress | null, visualsSent = 0): Phase[] {
+  // A queued run has not begun: what progress there is belongs to the previous run.
+  const progress = state === "queued" ? null : reported;
   const steps = pathSteps(state, progress);
   const byStage = new Map(steps.map((s) => [s.stage, s]));
   const startOf = (stage: IngestionStage) => progress?.stage_started_at?.[stage] ?? null;

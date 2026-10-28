@@ -89,7 +89,9 @@ const ORDER = Object.keys(INGESTION_STAGES) as IngestionStage[];
  * Every stage of the run as a step: finished, running, where a run stopped, or still to come. Before a run
  * reports, every stage is pending. A run without visuals (8 steps) leaves `visuals` out.
  */
-export function pathSteps(state: SourceState, progress: SourceProgress | null): PathStep[] {
+export function pathSteps(state: SourceState, reported: SourceProgress | null): PathStep[] {
+  // A queued run has not begun: what progress there is belongs to the previous run.
+  const progress = state === "queued" ? null : reported;
   const stages = progress && progress.steps < ORDER.length ? ORDER.filter((s) => s !== "visuals") : ORDER;
   const at = progress ? stages.indexOf(progress.stage) : -1;
   const finished = state === "ready" || state === "invalid";

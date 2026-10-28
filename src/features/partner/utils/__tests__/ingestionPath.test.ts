@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { elapsed, milestones, pathSteps } from "../ingestionPath";
+import { runPhases } from "../ingestionPhases";
 import type { SourceProgress } from "../../types/sources";
 
 const at = (stage: SourceProgress["stage"], step: number, over: Partial<SourceProgress> = {}): SourceProgress => ({
@@ -11,6 +12,13 @@ describe("pathSteps", () => {
     const steps = pathSteps("queued", null);
     expect(steps).toHaveLength(9);
     expect(steps.every((s) => s.status === "pending")).toBe(true);
+  });
+
+  it("ignores the previous run's progress while a new run is queued", () => {
+    const old = at("questions", 5, { done: 3, total: 9, stage_started_at: { render: "2026-10-13T09:00:00Z" } });
+    expect(pathSteps("queued", old).every((s) => s.status === "pending" && s.startedAt === null)).toBe(true);
+    const phases = runPhases("queued", old);
+    expect(phases.every((p) => p.status === "pending" && p.fill === 0)).toBe(true);
   });
 
   it("marks the stages before the current one done and shows what they produced", () => {
