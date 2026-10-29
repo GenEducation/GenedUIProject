@@ -71,19 +71,24 @@ describe("Completing a chapter's questions", () => {
 
   it("saves printed keys and a typed question, then runs with them", async () => {
     const dialog = await openAuthoring();
+    fireEvent.click(within(dialog).getByRole("tab", { name: /Printed questions/ }));
     const picture = within(dialog).getByRole("article", { name: "SYNTHETIC picture question?" });
     fireEvent.click(within(picture).getByLabelText("SYNTHETIC blue"));
     const open = within(dialog).getByRole("article", { name: "SYNTHETIC open question?" });
     fireEvent.change(within(open).getByLabelText("Answers to accept (one per line)"), { target: { value: "SYNTHETIC one\nSYNTHETIC two" } });
     fireEvent.change(within(open).getByLabelText("Concept it checks"), { target: { value: "2.1:beta" } });
 
+    expect(within(dialog).getByText("2 of 2 answered")).toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole("tab", { name: /Your questions/ }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Write a question" }));
     const form = within(dialog).getByRole("form", { name: "Write a question" });
     fireEvent.change(within(form).getByLabelText("Question"), { target: { value: "SYNTHETIC what is 2 + 3?" } });
     fireEvent.change(within(form).getByLabelText("The answer"), { target: { value: "5" } });
     fireEvent.click(within(form).getByRole("button", { name: "Add question" }));
 
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save questions" }));
+    expect(within(dialog).getByText("2 printed · 1 written by you")).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save for later" }));
     expect(await within(dialog).findByText(/3 questions saved/)).toBeInTheDocument();
     expect(lastAuthored?.answers).toEqual({
       "item-a": { correct_option_index: 1 },
@@ -112,11 +117,55 @@ describe("Completing a chapter's questions", () => {
     expect(await within(dialog).findByText("Writing suggestions…")).toBeInTheDocument();
     const draft = await within(dialog).findByRole("article", { name: "SYNTHETIC drafted question?" }, { timeout: 6000 });
     fireEvent.click(within(draft).getByRole("button", { name: "Accept" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save questions" }));
+    expect(within(dialog).getByText(/1 suggestion accepted/)).toBeInTheDocument();
+    expect(within(dialog).queryByRole("article", { name: "SYNTHETIC drafted question?" })).not.toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save for later" }));
     await waitFor(() => expect(lastAuthored?.added).toHaveLength(1));
     expect(lastAuthored?.added[0]).toMatchObject({ prompt: "SYNTHETIC drafted question?", origin: "ai_assisted" });
     expect(lastAuthored?.added[0].id).not.toBe("draft-1");
   }, 10000);
+});
+
+describe("The popup's layout", () => {
+  it("opens on the AI's suggestions, before the printed questions", async () => {
+    const dialog = await openAuthoring();
+    const tabs = within(dialog).getAllByRole("tab").map((t) => t.textContent);
+    expect(tabs).toEqual(["Suggested by AI", "Your questions", "Printed questions0/2"]);
+    expect(within(dialog).getByRole("tab", { name: /Suggested by AI/ })).toHaveAttribute("aria-selected", "true");
+    expect(within(dialog).getByRole("button", { name: "Suggest questions" })).toBeInTheDocument();
+    expect(within(dialog).queryByRole("article", { name: "SYNTHETIC picture question?" })).not.toBeInTheDocument();
+  });
+
+  it("skips a draft without accepting it", async () => {
+    sourcesFixture.setAuthoring(SID, {
+      ...AUTHORING,
+      suggestions: {
+        state: "ready",
+        requested_at: "2026-10-29T00:00:00Z",
+        detail: null,
+        drafts: [
+          { id: "draft-1", section_key: "2.1", concept_key: "2.1:beta", prompt: "SYNTHETIC skipped?", answer_kind: "numeric", expected_numeric: "1", origin: "ai_assisted" },
+        ],
+      },
+    });
+    const dialog = await openAuthoring();
+    const draft = within(dialog).getByRole("article", { name: "SYNTHETIC skipped?" });
+    fireEvent.click(within(draft).getByRole("button", { name: "Skip" }));
+    expect(within(dialog).queryByRole("article", { name: "SYNTHETIC skipped?" })).not.toBeInTheDocument();
+    expect(within(dialog).getByText("No suggestions left to review")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Save and run" })).toBeDisabled();
+  });
+
+  it("saves and runs in one step", async () => {
+    const dialog = await openAuthoring();
+    fireEvent.click(within(dialog).getByRole("tab", { name: /Printed questions/ }));
+    const picture = within(dialog).getByRole("article", { name: "SYNTHETIC picture question?" });
+    fireEvent.click(within(picture).getByLabelText("SYNTHETIC red"));
+    expect(within(picture).getByText("Answered")).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save and run" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(lastAuthored?.answers).toEqual({ "item-a": { correct_option_index: 0 } });
+  });
 });
 
 describe("Key rules", () => {
