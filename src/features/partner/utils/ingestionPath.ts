@@ -252,7 +252,20 @@ export const NEXT_STEP_COPY: Record<NextStep, { title: string; body: string; ton
     tone: "problem",
   },
   run_again: { title: "Something went wrong", body: "The run stopped before it finished. Run it again.", tone: "problem" },
+  fix_chapter_details: {
+    title: "Check the chapter's number and title",
+    body: "GenEd already has this chapter of the book under another title. Correct the details to match, then it runs again.",
+    tone: "problem",
+  },
+  fix_edition_label: {
+    title: "Check the book's edition",
+    body: "GenEd already has this book under another edition. Correct the edition to match, then it runs again.",
+    tone: "problem",
+  },
 };
+
+/** Next steps fixed by correcting the chapter's details rather than uploading again. */
+export const CORRECTION_STEPS: ReadonlySet<NextStep> = new Set(["fix_chapter_details", "fix_edition_label"]);
 
 /** Plain words for the checks a partner can act on; any other check reads as a generic failed check. */
 export const CHECK_LABELS: Record<string, string> = {

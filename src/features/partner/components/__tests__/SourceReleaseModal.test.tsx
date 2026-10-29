@@ -112,6 +112,18 @@ describe("Reviewing and publishing a chapter", () => {
     expect(within(questions).getByText("Yes")).toBeInTheDocument(); // counts towards mastery
   });
 
+  it("says students still see the earlier publication while a newer release waits", async () => {
+    const live = { ...RELEASE.release, batch_id: "11111111-0000-4000-8000-000000000000", state: "published" };
+    sourcesFixture.setRelease(SID, { ...RELEASE, live });
+    const dialog = await openReview();
+    expect(within(dialog).getByRole("note")).toHaveTextContent("Students still see the version you published earlier");
+  });
+
+  it("shows no such note for a chapter never published", async () => {
+    const dialog = await openReview();
+    expect(within(dialog).queryByText(/Students still see/)).toBeNull();
+  });
+
   it("accepts a part with the hash it showed, and needs a reason to reject", async () => {
     const dialog = await openReview();
     fireEvent.click(within(dialog).getByRole("button", { name: "Accept SYNTHETIC concept" }));

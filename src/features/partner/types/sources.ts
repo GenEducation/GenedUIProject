@@ -117,6 +117,23 @@ export interface SourceProgress {
   /** The checks the chapter failed, by check code, and how often; empty until validation and for a chapter that
    * passed. `SourceView.outcome.findings` adds who can fix each. */
   findings?: Record<string, number>;
+  /** Core's reason for refusing the run's release (a `chapter_mismatch` names the title core already has). */
+  refusal?: SourceRefusal | null;
+}
+
+export interface SourceRefusal {
+  code: string;
+  path: string;
+  detail: string;
+}
+
+/** `PUT /v1/sources/{id}/chapter`: where the chapter sits. 409 while it runs, once core has filed it, or when another
+ * chapter already has that place. */
+export interface ChapterCorrection {
+  book_title: string;
+  edition_label: string;
+  chapter_ordinal: number;
+  chapter_title: string;
 }
 
 /** What the partner can do next about a chapter (backend `SourceOutcome.next_step`; see
@@ -135,6 +152,10 @@ export type NextStep =
   | "upload_again"
   | "contact_gened"
   | "run_again"
+  /** Core files this book's chapter under another title (or the book under another edition): correct the chapter's
+   * details (`PUT /v1/sources/{id}/chapter`), then run it again. */
+  | "fix_chapter_details"
+  | "fix_edition_label"
   | "none";
 
 /** One failed check: `partner` means a different upload fixes it, `gened` a problem on GenEd's side. */
@@ -399,6 +420,8 @@ export interface ReleaseProposal {
 export interface SourceRelease {
   release: ReleaseSummary;
   proposals: ReleaseProposal[];
+  /** The release students see now, when it is not the one under review (a newer run is waiting); null otherwise. */
+  live?: ReleaseSummary | null;
 }
 
 export interface ReleaseDecision {

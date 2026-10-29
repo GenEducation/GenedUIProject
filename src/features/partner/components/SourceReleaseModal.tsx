@@ -165,6 +165,12 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun }: SourceReleaseMo
               </p>
             ) : null}
 
+            {!published && data?.live?.state === "published" && (
+              <p role="note" className="flex items-center gap-2 rounded-2xl bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-900">
+                <CheckCircle2 size={16} aria-hidden /> Students still see the version you published earlier. Publishing this one replaces it.
+              </p>
+            )}
+
             <div className="grid grid-cols-3 gap-2.5">
               <Count label="To review" value={pending.length} tone={pending.length ? "warn" : "neutral"} />
               <Count label="Accepted" value={accepted} tone="good" />

@@ -3,6 +3,7 @@ import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
 import { partnerStudentsService } from "../services/partnerStudentsService";
 import type {
+  ChapterCorrection,
   ExcludedPages,
   ExcludedPagesDecision,
   SourceReleaseRef, SourceOutcome, SuggestionsState,
@@ -171,6 +172,8 @@ interface PartnerState {
   /** Register a chapter and queue its first run; throws `ApiRequestError` with a readable message. */
   uploadSource: (input: RegisterSourceInput) => Promise<void>;
   startIngestion: (sourceId: string) => Promise<void>;
+  /** Save the corrected chapter details, then run the chapter again. */
+  correctChapter: (sourceId: string, place: ChapterCorrection) => Promise<void>;
   cancelIngestion: (sourceId: string) => Promise<void>;
   /** Answer about the pages left out at upload: confirm the cut, or include them (the chapter runs again). */
   decideExcludedPages: (sourceId: string, decision: ExcludedPagesDecision) => Promise<void>;
@@ -430,6 +433,13 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       uploadNotice: started ? null : "Uploaded; it didn't start — press Start",
     });
     await get().fetchSubjects();
+  },
+
+  correctChapter: async (sourceId, place) => {
+    const corrected = await sourcesService.correctChapter(sourceId, place);
+    replaceSubject(set, corrected);
+    const started = await sourcesService.start(sourceId);
+    replaceSubject(set, started);
   },
 
   startIngestion: async (sourceId) => {
