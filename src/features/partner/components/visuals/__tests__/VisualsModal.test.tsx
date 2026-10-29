@@ -218,6 +218,21 @@ describe("VisualsModal — detail and decisions", () => {
     expect(posts("/decision")[0].body).toMatchObject({ reason_codes: ["cluttered"], regenerate: true });
   });
 
+  it("sends the reject on Enter when the clicked reason didn't take focus (Safari)", async () => {
+    await openDetail("SYNTHETIC shape 2");
+    fireEvent.click(screen.getByRole("button", { name: /^Reject/ }));
+
+    (document.activeElement as HTMLElement | null)?.blur();
+    fireEvent.keyDown(document.body, { key: "Enter" });
+    expect(screen.getByRole("alert")).toHaveTextContent("Pick what's wrong first");
+
+    fireEvent.click(screen.getByRole("button", { name: "Too busy" }));
+    (document.activeElement as HTMLElement | null)?.blur();
+    fireEvent.keyDown(document.body, { key: "Enter" });
+    await waitFor(() => expect(posts("/decision")).toHaveLength(1));
+    expect(posts("/decision")[0].body).toMatchObject({ reason_codes: ["cluttered"], regenerate: true });
+  });
+
   it("sends the marks on Enter in a mark's field", async () => {
     await openDetail("SYNTHETIC shape 2");
     fireEvent.click(screen.getByRole("button", { name: "Mark up" }));

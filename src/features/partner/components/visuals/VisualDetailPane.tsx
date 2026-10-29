@@ -192,6 +192,22 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
     return () => document.removeEventListener("keydown", onKey);
   }, [onNext, cropping]);
 
+  // Enter sends the open reject / new-version form even when nothing in it has focus: Safari and Firefox on a Mac
+  // don't focus a reason when it's clicked. Fields and buttons keep their own Enter (handled ones prevent default).
+  useEffect(() => {
+    if (cropping) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Enter" || e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest?.("input, textarea, select, button, a[href], [contenteditable='true'], [role='button'], [role='option']")) return;
+      if (!sendRef.current) return;
+      e.preventDefault();
+      sendRef.current();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [cropping]);
+
   return (
     <div className="flex flex-col min-h-full">
       <div className="sticky top-0 z-10 flex items-center gap-2 px-5 md:px-7 py-3 bg-white/90 backdrop-blur border-b border-[#122D30]/5">
