@@ -14,7 +14,7 @@ export const PHASES: { key: PhaseKey; label: string; stages: IngestionStage[]; d
   { key: "deliver", label: "Deliver", stages: ["submit"], does: "Saved and sent to you for review. Nothing reaches students until you publish." },
 ];
 
-export type PhaseStatus = "done" | "current" | "stopped" | "pending" | "not_reached";
+export type PhaseStatus = "done" | "current" | "stopped" | "waiting" | "pending" | "not_reached";
 
 export interface Phase {
   key: PhaseKey;
@@ -67,7 +67,9 @@ export function phaseSummary(key: PhaseKey, counts: Partial<Record<IngestionCoun
 }
 
 /** The four phases of a run, from its state and progress. */
-export function runPhases(state: SourceState, progress: SourceProgress | null, visualsSent = 0): Phase[] {
+export function runPhases(state: SourceState, reported: SourceProgress | null, visualsSent = 0): Phase[] {
+  // A queued run has not begun: what progress there is belongs to the previous run.
+  const progress = state === "queued" ? null : reported;
   const steps = pathSteps(state, progress);
   const byStage = new Map(steps.map((s) => [s.stage, s]));
   const startOf = (stage: IngestionStage) => progress?.stage_started_at?.[stage] ?? null;
@@ -77,14 +79,15 @@ export function runPhases(state: SourceState, progress: SourceProgress | null, v
     let status: PhaseStatus = "pending";
     if (statuses.includes("current")) status = "current";
     else if (statuses.includes("stopped")) status = "stopped";
+    else if (statuses.includes("waiting")) status = "waiting";
     else if (own.length && statuses.every((s) => s === "done" || s === "skipped")) status = "done";
     else if (statuses.some((s) => s === "done")) status = state === "running" ? "current" : "not_reached";
     else if (statuses.includes("not_reached")) status = "not_reached";
 
     let fill = status === "done" ? 1 : 0;
-    if (status === "current" || status === "stopped") {
+    if (status === "current" || status === "stopped" || status === "waiting") {
       const doneCount = own.filter((s) => s.status === "done" || s.status === "skipped").length;
-      const at = own.find((s) => s.status === "current" || s.status === "stopped");
+      const at = own.find((s) => s.status === "current" || s.status === "stopped" || s.status === "waiting");
       const partial = at && progress && progress.stage === at.stage && progress.total > 0 ? Math.min(progress.done, progress.total) / progress.total : 0;
       fill = own.length ? (doneCount + partial) / own.length : 0;
     }

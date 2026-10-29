@@ -2,6 +2,7 @@ import { authFetch } from "@/utils/authFetch";
 import type {
   AuthoredQuestions,
   AuthoringResponse,
+  ChapterCorrection,
   ExcludedPagesDecision,
   LearningOutcome,
   QuestionsResponse,
@@ -73,6 +74,12 @@ export const sourcesService = {
   /** Queue a run; the worker picks it up. */
   start: async (id: string): Promise<SourceView> => {
     const response = await authFetch(`${sourcePath(id)}/ingestions`, { method: "POST" });
+    return response.json();
+  },
+
+  /** Correct the chapter's book, edition, number or title; the chapter can then run again. */
+  correctChapter: async (id: string, place: ChapterCorrection): Promise<SourceView> => {
+    const response = await authFetch(`${sourcePath(id)}/chapter`, { method: "PUT", body: JSON.stringify(place) });
     return response.json();
   },
 

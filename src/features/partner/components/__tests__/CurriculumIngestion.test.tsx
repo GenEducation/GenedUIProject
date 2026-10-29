@@ -96,6 +96,22 @@ describe("CurriculumIngestion — upload a chapter source", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("closes once the chapter is saved even when its run does not start", async () => {
+    const onClose = vi.fn();
+    render(<CurriculumIngestion onClose={onClose} />);
+    await fillValidForm();
+    const { server } = await import("@/test/msw/server");
+    const { http, HttpResponse } = await import("msw");
+    server.use(
+      http.post(`${process.env.NEXT_PUBLIC_API_URL}/v1/sources/:id/ingestions`, () =>
+        HttpResponse.json({ message: "SYNTHETIC queue unavailable" }, { status: 503 }),
+      ),
+    );
+    fireEvent.click(submit());
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(usePartnerStore.getState().uploadNotice).toBe("Uploaded; it didn't start — press Start");
+  });
+
   it("takes the partner to the first empty field instead of uploading an incomplete form", async () => {
     // jsdom has no layout, so no scrollIntoView.
     Element.prototype.scrollIntoView = vi.fn();
@@ -115,8 +131,15 @@ describe("CurriculumIngestion — upload a chapter source", () => {
 
   it("refuses a PDF over the upload limit before sending it", () => {
     render(<CurriculumIngestion onClose={vi.fn()} />);
-    const big = syntheticPdf("big.pdf", "x".repeat(31 * 1024 * 1024));
+    const big = syntheticPdf("big.pdf", "x".repeat(51 * 1024 * 1024));
     fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, { target: { files: [big] } });
-    expect(screen.getByText(/larger than 30 MB/)).toBeInTheDocument();
+    expect(screen.getByText(/larger than 50 MB/)).toBeInTheDocument();
+  });
+
+  it("accepts a PDF between the old 30 MB cap and the backend's 50 MB", () => {
+    render(<CurriculumIngestion onClose={vi.fn()} />);
+    const mid = syntheticPdf("mid.pdf", "x".repeat(40 * 1024 * 1024));
+    fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, { target: { files: [mid] } });
+    expect(screen.queryByText(/larger than/)).not.toBeInTheDocument();
   });
 });

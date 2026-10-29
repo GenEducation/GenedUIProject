@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, ChevronDown, Images, Play, RotateCw, AlertCircle, FileText, HelpCircle, ShieldCheck, Route, Upload, PenLine } from "lucide-react";
+import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, ChevronDown, Images, Play, RotateCw, AlertCircle, FileText, HelpCircle, ShieldCheck, Route, Upload, PenLine, PencilLine } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePartnerStore, SubjectFilters, type Subject } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
@@ -27,7 +27,8 @@ import {
   STARTABLE_STATES,
   type SourceState,
 } from "../types/sources";
-import { UPLOAD_STEPS } from "../utils/ingestionPath";
+import { CORRECTION_STEPS, UPLOAD_STEPS } from "../utils/ingestionPath";
+import { ChapterCorrectionModal } from "./ChapterCorrectionModal";
 
 interface SubjectRegistryProps {
   /** Open the upload form; with a chapter, prefilled from it (the next step after a run that needs a new upload). */
@@ -38,6 +39,18 @@ interface SubjectRegistryProps {
 export const LIST_POLL_MS = 10_000;
 /** While a run is processing, this often: the backend reports progress every couple of seconds. */
 export const RUN_POLL_MS = 4_000;
+
+/**
+ * Whether a row gets its start / retry / run-again button. With an outcome the server decides: `start` and `run_again`
+ * (which is how a lost `running` run comes back) offer it, other steps keep the re-run of a finished run; never when
+ * `can_run_again` is false. Without an outcome (an older server) the startable states decide.
+ */
+export function canRunFromRow(subject: Pick<Subject, "state" | "outcome">): boolean {
+  const outcome = subject.outcome;
+  if (!outcome) return STARTABLE_STATES.has(subject.state);
+  if (!outcome.can_run_again) return false;
+  return outcome.next_step === "run_again" || outcome.next_step === "start" || STARTABLE_STATES.has(subject.state);
+}
 
 const STATE_OPTIONS = [
   { value: "", label: "All Statuses" },
@@ -57,6 +70,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const subjects = usePartnerStore((state) => state.subjects);
   const isSubjectsLoading = usePartnerStore((state) => state.isSubjectsLoading);
   const fetchSubjects = usePartnerStore((state) => state.fetchSubjects);
+  const subjectsError = usePartnerStore((state) => state.subjectsError);
+  const subjectsFailures = usePartnerStore((state) => state.subjectsFailures);
   const removeSubject = usePartnerStore((state) => state.removeSubject);
   const cancelIngestion = usePartnerStore((state) => state.cancelIngestion);
   const decideExcludedPages = usePartnerStore((state) => state.decideExcludedPages);
@@ -75,6 +90,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const [reportFor, setReportFor] = useState<Subject | null>(null);
   const [questionsFor, setQuestionsFor] = useState<Subject | null>(null);
   const [authoringFor, setAuthoringFor] = useState<Subject | null>(null);
+  const [correctionFor, setCorrectionFor] = useState<Subject | null>(null);
   const [releaseFor, setReleaseFor] = useState<Subject | null>(null);
   const [pathOpen, setPathOpen] = useState<ReadonlySet<string>>(new Set());
   const togglePath = (id: string) =>
@@ -99,6 +115,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
     return () => clearTimeout(timer);
   }, [justUploadedId, subjects, clearJustUploaded]);
   const [actionError, setActionError] = useState<string | null>(null);
+  const uploadNotice = usePartnerStore((state) => state.uploadNotice);
+
+  const clearUploadNotice = usePartnerStore((state) => state.clearUploadNotice);
   const [busyId, setBusyId] = useState<string | null>(null);
   // Re-running a chapter whose run produced results (ready / review_needed) needs a confirm: the new run
   // replaces them. A failed or invalid run has nothing to lose, so its Retry starts straight away.
@@ -117,11 +136,17 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   // going, faster while one is processing so its progress bar moves.
   const hasActiveRun = subjects.some((s) => ACTIVE_STATES.has(s.state));
   const hasRunningRun = subjects.some((s) => s.state === "running");
+  // While reads fail, keep retrying even with no run going, so the banner clears once GenEd answers again.
+  const retrying = subjectsError !== null;
   useEffect(() => {
-    if (!hasActiveRun) return;
-    const timer = setInterval(() => void fetchSubjects(), hasRunningRun ? RUN_POLL_MS : LIST_POLL_MS);
+    if (!hasActiveRun && !retrying) return;
+    // A hidden tab skips its ticks; the next visible one catches up.
+    const timer = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      void fetchSubjects({ background: true });
+    }, hasRunningRun ? RUN_POLL_MS : LIST_POLL_MS);
     return () => clearInterval(timer);
-  }, [hasActiveRun, hasRunningRun, fetchSubjects]);
+  }, [hasActiveRun, hasRunningRun, retrying, fetchSubjects]);
 
   /** Start or stop a run, showing the server's reason when it doesn't fit (409). */
   const runAction = async (subject: Subject, action: (id: string) => Promise<void>) => {
@@ -319,6 +344,23 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         )}
       </AnimatePresence>
 
+      {subjectsError && (
+        <div role="status" className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800">
+          <AlertCircle size={14} className="shrink-0" aria-hidden />
+          <span className="flex-1">Can&apos;t reach GenEd, retrying{subjectsFailures > 1 ? ` (${subjectsFailures} tries)` : ""}</span>
+        </div>
+      )}
+
+      {uploadNotice && (
+        <div role="status" className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800">
+          <AlertCircle size={14} className="shrink-0" aria-hidden />
+          <span className="flex-1">{uploadNotice}</span>
+          <Button iconOnly size="sm" variant="tertiary" aria-label="Dismiss" onClick={clearUploadNotice}>
+            <X size={14} />
+          </Button>
+        </div>
+      )}
+
       {actionError && (
         <div role="alert" className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-700">
           <AlertCircle size={14} className="shrink-0" aria-hidden />
@@ -363,9 +405,12 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             const awaitingAnswers = subject.state === "review_needed" && subject.questions > 0;
             // The server's next step; a re-run of an upload whose failed checks are the partner's would end the same way.
             const next = subject.outcome?.next_step ?? null;
-            const canRunAgain = STARTABLE_STATES.has(subject.state) && (subject.outcome?.can_run_again ?? true);
+            // The server decides: a lost `running` run comes back as `run_again`. Rows from a server without outcomes
+            // fall back to the states a run can start from.
+            const canRunAgain = canRunFromRow(subject);
             // A chapter the partner can complete with questions of their own offers that first; uploading stays in its path.
             const addQuestions = next === "add_questions";
+            const needsCorrection = next !== null && CORRECTION_STEPS.has(next);
             const needsUpload = next !== null && UPLOAD_STEPS.has(next) && !addQuestions;
             const showPath = pathOpen.has(subject.id);
             // Published: live for students, nothing left to review (the server's next step is `none`).
@@ -484,7 +529,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           </Button>
                         )}
 
-                        {subject.state === "ready" && !live && (
+                        {/* Only when the server says review is next (a ready run with blocking findings is not); a server
+                            without outcomes falls back to an unpublished ready chapter. */}
+                        {(subject.outcome ? next === "review_release" : subject.state === "ready" && !live) && (
                           <Button
                             pill
                             variant="secondary"
@@ -502,6 +549,16 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                             onClick={(e) => { e.stopPropagation(); setAuthoringFor(subject); }}
                           >
                             Add questions
+                          </Button>
+                        )}
+
+                        {needsCorrection && (
+                          <Button
+                            pill
+                            leadingIcon={<PencilLine size={16} />}
+                            onClick={(e) => { e.stopPropagation(); setCorrectionFor(subject); }}
+                          >
+                            Fix chapter details
                           </Button>
                         )}
 
@@ -527,7 +584,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                             >
                               <Play size={18} />
                             </Button>
-                          ) : subject.state === "failed" || subject.state === "invalid" ? (
+                          ) : subject.state === "failed" || subject.state === "invalid" || ACTIVE_STATES.has(subject.state) ? (
                             <Button
                               iconOnly
                               variant="outline"
@@ -685,6 +742,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         onSaved={() => void fetchSubjects()}
         onRerun={(subject) => startIngestion(subject.id)}
       />
+
+      {/* Correcting where a chapter sits, when core files it differently */}
+      <ChapterCorrectionModal subject={correctionFor} onClose={() => setCorrectionFor(null)} />
 
       {/* Completing a chapter's questions (ADR 0036) */}
       <SourceAuthoringModal

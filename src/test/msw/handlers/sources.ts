@@ -208,7 +208,9 @@ export const sourcesHandlers = [
   http.post(`${SOURCES}/:id/ingestions`, ({ params }) => {
     const s = store.get(String(params.id));
     if (!s) return notFound();
-    if (!STARTABLE.has(s.state)) return conflict(`This chapter is already ${s.state}.`);
+    // A lost run comes back as `run_again` whatever its state says (backend: a stale `running` row).
+    const lost = s.outcome?.next_step === "run_again" && s.outcome.can_run_again;
+    if (!STARTABLE.has(s.state) && !lost) return conflict(`This chapter is already ${s.state}.`);
     const next = { ...s, state: "queued" as const, detail: null };
     store.set(s.source_id, next);
     return HttpResponse.json(next, { status: 202 });
@@ -233,6 +235,31 @@ export const sourcesHandlers = [
     }
     store.delete(s.source_id);
     return new HttpResponse(null, { status: 204 });
+  }),
+
+  // Mirrors the backend: correct where the chapter sits, refused while it runs or when another chapter has the place.
+  http.put(`${SOURCES}/:id/chapter`, async ({ params, request }) => {
+    const s = store.get(String(params.id));
+    if (!s) return notFound();
+    if (s.state === "queued" || s.state === "running") {
+      return conflict("This chapter is running; correct it once the run has finished.");
+    }
+    const place = (await request.json()) as {
+      book_title: string; edition_label: string; chapter_ordinal: number; chapter_title: string;
+    };
+    const taken = [...store.values()].find(
+      (o) => o.source_id !== s.source_id && o.book_title === place.book_title && o.chapter.ordinal === place.chapter_ordinal,
+    );
+    if (taken) return conflict(`Chapter ${place.chapter_ordinal} of this book is already uploaded as '${taken.chapter.title}'.`);
+    const next = {
+      ...s,
+      book_title: place.book_title,
+      edition_label: place.edition_label,
+      chapter: { ...s.chapter, ordinal: place.chapter_ordinal, title: place.chapter_title },
+      outcome: { next_step: "start" as const, findings: [], can_run_again: true, run_again_blocked: null },
+    };
+    store.set(s.source_id, next);
+    return HttpResponse.json(next);
   }),
 
   // Mirrors the backend: answer a pending cut only; including the pages widens the range and queues a re-run.

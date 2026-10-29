@@ -3,6 +3,7 @@ import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
 import { partnerStudentsService } from "../services/partnerStudentsService";
 import type {
+  ChapterCorrection,
   ExcludedPages,
   ExcludedPagesDecision,
   SourceReleaseRef, SourceOutcome, SuggestionsState,
@@ -132,12 +133,19 @@ interface PartnerState {
   /** The chapter just uploaded and started: the registry opens it, scrolls to it and marks it, then clears this. */
   justUploadedId: string | null;
   clearJustUploaded: () => void;
+  /** Said on the list after an upload whose chapter was saved but whose run did not start. */
+  uploadNotice: string | null;
+  clearUploadNotice: () => void;
   subjectFilters: SubjectFilters;
   subjectPagination: SubjectPagination;
 
   // --- UI State ---
   isLoading: boolean;
   isSubjectsLoading: boolean;
+  /** The last list read's error message while reads keep failing; null once one succeeds. */
+  subjectsError: string | null;
+  /** Consecutive failed list reads. */
+  subjectsFailures: number;
   showUploadModal: boolean;
 
   // --- PDF Viewer State ---
@@ -156,12 +164,16 @@ interface PartnerState {
   revokeStudent: (studentId: string) => Promise<void>;
 
   // Subject Actions
-  fetchSubjects: () => Promise<void>;
+  /** Re-read the list. `background` (polling) leaves the loading flag alone. A response older than one already
+   * applied is dropped. */
+  fetchSubjects: (options?: { background?: boolean }) => Promise<void>;
   setSubjectFilters: (filters: SubjectFilters) => void;
   setSubjectOffset: (offset: number) => void;
   /** Register a chapter and queue its first run; throws `ApiRequestError` with a readable message. */
   uploadSource: (input: RegisterSourceInput) => Promise<void>;
   startIngestion: (sourceId: string) => Promise<void>;
+  /** Save the corrected chapter details, then run the chapter again. */
+  correctChapter: (sourceId: string, place: ChapterCorrection) => Promise<void>;
   cancelIngestion: (sourceId: string) => Promise<void>;
   /** Answer about the pages left out at upload: confirm the cut, or include them (the chapter runs again). */
   decideExcludedPages: (sourceId: string, decision: ExcludedPagesDecision) => Promise<void>;
@@ -207,6 +219,10 @@ function requirePartnerId(): string {
   return partnerId;
 }
 
+/** List reads in the order they were sent, and the newest one applied: a slow older response must not overwrite it. */
+let subjectsRequestSeq = 0;
+let subjectsAppliedSeq = 0;
+
 export const usePartnerStore = create<PartnerState>((set, get) => ({
   students: [],
   pendingRequests: [],
@@ -216,10 +232,14 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
   subjects: [],
   justUploadedId: null,
   clearJustUploaded: () => set({ justUploadedId: null }),
+  uploadNotice: null,
+  clearUploadNotice: () => set({ uploadNotice: null }),
   subjectFilters: {},
   subjectPagination: { total_count: 0, limit: 20, offset: 0 },
   isLoading: false,
   isSubjectsLoading: false,
+  subjectsError: null,
+  subjectsFailures: 0,
   showUploadModal: false,
   viewerPdfUrl: null,
   viewerTitle: null,
@@ -361,8 +381,10 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
     set((state) => ({ subjectPagination: { ...state.subjectPagination, offset } }));
   },
 
-  fetchSubjects: async () => {
-    set({ isSubjectsLoading: true });
+  fetchSubjects: async (options) => {
+    const background = options?.background ?? false;
+    const seq = ++subjectsRequestSeq;
+    if (!background) set({ isSubjectsLoading: true });
     const { subjectFilters, subjectPagination } = get();
 
     try {
@@ -374,23 +396,50 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         limit: subjectPagination.limit,
         offset: subjectPagination.offset,
       });
+      if (seq < subjectsAppliedSeq) return;
+      subjectsAppliedSeq = seq;
       set({
-        isSubjectsLoading: false,
+        ...(background ? {} : { isSubjectsLoading: false }),
+        subjectsError: null,
+        subjectsFailures: 0,
         subjects: page.items.map(toSubject),
         subjectPagination: { total_count: page.total_count, limit: page.limit, offset: page.offset },
       });
     } catch (error) {
       console.error("fetchSubjects error:", error);
-      set({ isSubjectsLoading: false });
+      if (seq < subjectsAppliedSeq) return;
+      set((state) => ({
+        ...(background ? {} : { isSubjectsLoading: false }),
+        subjectsError: error instanceof Error ? error.message : String(error),
+        subjectsFailures: state.subjectsFailures + 1,
+      }));
     }
   },
 
   uploadSource: async (input) => {
+    // A refused register throws: the form shows why. Once the chapter is saved, a refused start must not lose it.
     const source = await sourcesService.register(input);
-    await sourcesService.start(source.source_id);
+    let started = true;
+    try {
+      await sourcesService.start(source.source_id);
+    } catch (error) {
+      console.error("uploadSource start error:", error);
+      started = false;
+    }
     // Back to the first page, where the new chapter is (newest first).
-    set({ subjectPagination: { ...get().subjectPagination, offset: 0 }, justUploadedId: source.source_id });
+    set({
+      subjectPagination: { ...get().subjectPagination, offset: 0 },
+      justUploadedId: source.source_id,
+      uploadNotice: started ? null : "Uploaded; it didn't start — press Start",
+    });
     await get().fetchSubjects();
+  },
+
+  correctChapter: async (sourceId, place) => {
+    const corrected = await sourcesService.correctChapter(sourceId, place);
+    replaceSubject(set, corrected);
+    const started = await sourcesService.start(sourceId);
+    replaceSubject(set, started);
   },
 
   startIngestion: async (sourceId) => {
