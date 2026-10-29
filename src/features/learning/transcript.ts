@@ -34,12 +34,13 @@ export function newTurn(turnId: string, kind: TurnKind, learnerText: string | nu
 }
 
 const RECORDED_STATUS: Record<string, TurnStatus> = {
-  completed: "completed", incomplete: "incomplete", failed: "failed", interrupted: "interrupted",
+  open: "streaming", completed: "completed", incomplete: "incomplete", failed: "failed", interrupted: "interrupted",
 };
 
 /** A recorded turn from history as an on-screen turn; its whole reply is one delta. History is read per node: `nodeId` is that node. */
 export function fromRecorded(turn: RecordedTurn, nodeId: string | null = null): LessonTurn {
-  const last = turn.transcript_through_seq ?? turn.committed_through_seq ?? 0;
+  // An open turn carries no text yet (the server writes it on close), so its stream is resumed from the start.
+  const last = turn.status === "open" ? 0 : (turn.transcript_through_seq ?? turn.committed_through_seq ?? 0);
   return {
     turnId: turn.turn_id,
     kind: turn.kind,

@@ -6,9 +6,31 @@ import { NEXT_STEP_COPY, checkLabel, elapsed } from "../utils/ingestionPath";
 import { nowLine, runPhases, type Phase } from "../utils/ingestionPhases";
 import { shownPercent } from "../utils/ingestionProgress";
 
+/** A running chapter whose worker has said nothing for this long is probably lost. */
+export const STALE_AFTER_MS = 10 * 60 * 1000;
+
+/** "No update since 10:42" when a running run's last report is older than `STALE_AFTER_MS`; null otherwise. */
+export function staleLine(state: Subject["state"], progress: Subject["progress"], now = Date.now()): string | null {
+  if (state !== "running" || !progress?.updated_at) return null;
+  const last = Date.parse(progress.updated_at);
+  if (Number.isNaN(last) || now - last <= STALE_AFTER_MS) return null;
+  return `No update since ${new Date(last).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+/** "Step started 4 min ago" from the current stage's start, when the run reports one; null otherwise. */
+export function stepStartedLine(state: Subject["state"], progress: Subject["progress"], now = Date.now()): string | null {
+  if (state !== "running" || !progress) return null;
+  const started = progress.stage_started_at?.[progress.stage];
+  if (!started) return null;
+  const at = Date.parse(started);
+  if (Number.isNaN(at)) return null;
+  const minutes = Math.max(0, Math.floor((now - at) / 60_000));
+  return minutes < 1 ? "Step started just now" : `Step started ${minutes} min ago`;
+}
+
 /** A phase's segment of the bar: full when done, part-filled while it runs, red where a run stopped. */
 function Segment({ phase, queued }: { phase: Phase; queued: boolean }) {
-  const color = phase.status === "stopped" ? "bg-red-400" : queued ? "bg-amber-400" : "bg-[#075E63]";
+  const color = phase.status === "stopped" ? "bg-red-400" : phase.status === "waiting" || queued ? "bg-amber-400" : "bg-[#075E63]";
   return (
     <div className="h-1.5 lg:h-2 flex-1 overflow-hidden rounded-full bg-[#122D30]/10">
       <div
@@ -30,6 +52,8 @@ export function RunProgress({ subject }: { subject: Subject }) {
   const percent = shownPercent(subject.state, subject.progress);
   const now = subject.progress?.updated_at ?? null;
   const ran = queued ? null : elapsed(subject.started_at, now);
+  const stale = staleLine(subject.state, subject.progress);
+  const stepStarted = stepStartedLine(subject.state, subject.progress);
   return (
     <div className="flex w-full min-w-0 flex-col gap-1.5">
       <div className="flex min-w-0 items-baseline justify-between gap-3">
@@ -52,6 +76,12 @@ export function RunProgress({ subject }: { subject: Subject }) {
       >
         {phases.map((p) => <Segment key={p.key} phase={p} queued={queued} />)}
       </div>
+      {(stale || stepStarted) && (
+        <p className="flex flex-wrap gap-x-3 text-[11px] lg:text-[12px] font-semibold">
+          {stepStarted && <span className="text-[#122D30]/50">{stepStarted}</span>}
+          {stale && <span className="text-amber-700">{stale}</span>}
+        </p>
+      )}
       <div className="flex gap-1 text-[10px] lg:text-[11px] font-bold uppercase tracking-wider" aria-hidden>
         {phases.map((p) => (
           <span key={p.key} className={`min-w-0 flex-1 truncate ${p.status === "current" ? "text-[#075E63]" : p.status === "done" ? "text-[#122D30]/50" : "text-[#122D30]/25"}`}>

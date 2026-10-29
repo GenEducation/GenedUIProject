@@ -189,6 +189,10 @@ const confirmedDeliveries = new Set<string>();
 let requireDelivery = false;
 export const interruptRequests: Array<{ turnId: string; visible_seq: number }> = [];
 export const resumeRequests: Array<{ turnId: string; afterSeq: number }> = [];
+/** What `/interrupt` reports the turn's status as: `interrupted`, or the status it had already closed with (a Stop that lost the race). */
+let interruptStatus = "interrupted";
+/** Close the next resume stream after this many frames (the resumed connection drops too). */
+let dropResumeAfter: number | null = null;
 /** `/done` and `/choice` bodies, in order, tagged with their route. */
 export const stepRequests: Array<{ route: "done" | "choice"; body: Record<string, unknown> }> = [];
 
@@ -234,6 +238,8 @@ export const lessonFixture = {
     presence.active = true;
     activity.fail = false;
     resumeRequests.length = 0;
+    interruptStatus = "interrupted";
+    dropResumeAfter = null;
     stepRequests.length = 0;
     reviewRequests.length = 0;
     revisit = null;
@@ -260,6 +266,11 @@ export const lessonFixture = {
   setHistory: (history: RecordedTurn[]) => void (state.history = history),
   setScript: (script: TurnScript) => void (state.script = script),
   dropAfter: (frames: number | null) => void (state.dropAfter = frames),
+  /** Seed a turn's event log, as the server holds it (a turn admitted before this page loaded). */
+  setLog: (turnId: string, events: Array<Omit<SequencedTurnEvent, "v" | "turn_id" | "seq">>) =>
+    void state.log.set(turnId, events.map((e, i) => ({ ...e, v: 3, turn_id: turnId, seq: i + 1 }) as SequencedTurnEvent)),
+  interruptReports: (status: string) => void (interruptStatus = status),
+  dropResumeAfter: (frames: number | null) => void (dropResumeAfter = frames),
   get manifestReads() {
     return state.manifestReads;
   },
@@ -380,13 +391,27 @@ export const lessonHandlers = [
     const turnId = String(params.turnId);
     const afterSeq = Number(new URL(request.url).searchParams.get("after_seq") ?? 0);
     resumeRequests.push({ turnId, afterSeq });
-    return sse((state.log.get(turnId) ?? []).filter((e) => e.seq > afterSeq));
+    const events = (state.log.get(turnId) ?? []).filter((e) => e.seq > afterSeq);
+    if (state.holdAfter !== null) {
+      const after = state.holdAfter;
+      state.holdAfter = null;
+      return heldSse(events, after);
+    }
+    if (dropResumeAfter !== null) {
+      const after = dropResumeAfter;
+      dropResumeAfter = null;
+      return sse(events.slice(0, after));
+    }
+    return sse(events);
   }),
 
   http.post(`${BASE}/v1/instances/:instanceId/teacher-turns/:turnId/interrupt`, async ({ params, request }) => {
     const { visible_seq } = (await request.json()) as { visible_seq: number };
     interruptRequests.push({ turnId: String(params.turnId), visible_seq });
-    return HttpResponse.json({ turn_id: params.turnId, status: "interrupted", transcript_through_seq: visible_seq });
+    // A turn already closed keeps its whole transcript; the report is only recorded (backend `stop`).
+    const closed = interruptStatus !== "interrupted";
+    const through = closed ? (state.log.get(String(params.turnId))?.at(-1)?.seq ?? visible_seq) : visible_seq;
+    return HttpResponse.json({ turn_id: params.turnId, status: interruptStatus, transcript_through_seq: through });
   }),
 
   http.post(`${BASE}/v1/instances/:instanceId/responses`, async ({ request }) => {

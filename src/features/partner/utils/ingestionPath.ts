@@ -69,7 +69,7 @@ export const ATTENTION_COUNTS: ReadonlySet<IngestionCount> = new Set([
   "violations",
 ]);
 
-export type StepStatus = "done" | "current" | "stopped" | "pending" | "not_reached" | "skipped";
+export type StepStatus = "done" | "current" | "stopped" | "waiting" | "pending" | "not_reached" | "skipped";
 
 export interface PathStep {
   stage: IngestionStage;
@@ -89,7 +89,9 @@ const ORDER = Object.keys(INGESTION_STAGES) as IngestionStage[];
  * Every stage of the run as a step: finished, running, where a run stopped, or still to come. Before a run
  * reports, every stage is pending. A run without visuals (8 steps) leaves `visuals` out.
  */
-export function pathSteps(state: SourceState, progress: SourceProgress | null): PathStep[] {
+export function pathSteps(state: SourceState, reported: SourceProgress | null): PathStep[] {
+  // A queued run has not begun: what progress there is belongs to the previous run.
+  const progress = state === "queued" ? null : reported;
   const stages = progress && progress.steps < ORDER.length ? ORDER.filter((s) => s !== "visuals") : ORDER;
   const at = progress ? stages.indexOf(progress.stage) : -1;
   const finished = state === "ready" || state === "invalid";
@@ -97,7 +99,9 @@ export function pathSteps(state: SourceState, progress: SourceProgress | null): 
     let status: StepStatus = "pending";
     if (progress && at >= 0) {
       if (i < at || (i === at && finished)) status = "done";
-      else if (i === at) status = state === "running" ? "current" : "stopped";
+      // review_needed paused for the partner's answers: waiting on them, not a failure.
+      else if (i === at) status = state === "running" ? "current" : state === "review_needed" ? "waiting" : "stopped";
+      else if (state === "review_needed") status = "pending";
       else if (state !== "running" && state !== "queued") status = finished ? "done" : "not_reached";
     }
     // A run that cannot pass draws no visuals (the costliest step); it never reports the stage.
@@ -248,7 +252,20 @@ export const NEXT_STEP_COPY: Record<NextStep, { title: string; body: string; ton
     tone: "problem",
   },
   run_again: { title: "Something went wrong", body: "The run stopped before it finished. Run it again.", tone: "problem" },
+  fix_chapter_details: {
+    title: "Check the chapter's number and title",
+    body: "GenEd already has this chapter of the book under another title. Correct the details to match, then it runs again.",
+    tone: "problem",
+  },
+  fix_edition_label: {
+    title: "Check the book's edition",
+    body: "GenEd already has this book under another edition. Correct the edition to match, then it runs again.",
+    tone: "problem",
+  },
 };
+
+/** Next steps fixed by correcting the chapter's details rather than uploading again. */
+export const CORRECTION_STEPS: ReadonlySet<NextStep> = new Set(["fix_chapter_details", "fix_edition_label"]);
 
 /** Plain words for the checks a partner can act on; any other check reads as a generic failed check. */
 export const CHECK_LABELS: Record<string, string> = {

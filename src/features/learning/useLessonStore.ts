@@ -571,6 +571,47 @@ export const useLessonStore = create<LessonState>((set, get) => {
     return false;
   };
 
+  /**
+   * Resume a turn's stream from its cursor (`/events`, which never re-runs the model) until it closes, at most
+   * MAX_RESUMES times; a turn that never closes ends as a dropped stream. Replayed events are dropped by `applyEvent`.
+   */
+  const follow = async (instanceId: string, turnId: string, abort: AbortController, closed: boolean) => {
+    for (let attempt = 0; !closed && attempt < MAX_RESUMES && !abort.signal.aborted; attempt += 1) {
+      const cursor = currentTurn(turnId)?.lastSeq ?? 0;
+      closed = await consume(turnId, await lessonService.resumeTurn(instanceId, turnId, cursor, abort.signal), abort.signal);
+    }
+    if (!closed && !abort.signal.aborted) {
+      updateTurn(turnId, (t) => ({ ...t, status: "failed", failure: { reason: "stream_interrupted", retryable: false } }));
+    }
+  };
+
+  /**
+   * Follow a turn the server already admitted (open in history after a reload, or one a Stop found already finished)
+   * to its end, from its cursor. It owns the stream handle, as a sent turn does, so Stop and a new turn reach it.
+   */
+  const resumeTurn = async (turnId: string) => {
+    const instanceId = get().instanceId;
+    if (!instanceId) return;
+    streamAbort?.abort();
+    const abort = new AbortController();
+    streamAbort = abort;
+    streamTurnId = turnId;
+    try {
+      await follow(instanceId, turnId, abort, false);
+    } catch (error) {
+      if (abort.signal.aborted) return;
+      updateTurn(turnId, (t) => ({ ...t, status: "failed", failure: { reason: "stream_interrupted", retryable: false } }));
+      console.warn("Resuming the lesson turn failed:", asError(error).request_id, asError(error).message ?? error);
+    } finally {
+      if (streamAbort === abort) {
+        streamAbort = null;
+        streamTurnId = null;
+      }
+      lastReplyAt = Date.now();
+      openIfDue();
+    }
+  };
+
   /** Start a turn and follow it to its end, resuming from the cursor if the stream drops. */
   const runTurn = async (unsessioned: TurnRequest, learnerText: string | null) => {
     const instanceId = get().instanceId;
@@ -595,18 +636,8 @@ export const useLessonStore = create<LessonState>((set, get) => {
     }));
 
     try {
-      let closed = await consume(request.turn_id, await lessonService.startTurn(instanceId, request, abort.signal), abort.signal);
-      for (let attempt = 0; !closed && attempt < MAX_RESUMES && !abort.signal.aborted; attempt += 1) {
-        const cursor = currentTurn(request.turn_id)?.lastSeq ?? 0;
-        closed = await consume(
-          request.turn_id,
-          await lessonService.resumeTurn(instanceId, request.turn_id, cursor, abort.signal),
-          abort.signal,
-        );
-      }
-      if (!closed && !abort.signal.aborted) {
-        updateTurn(request.turn_id, (t) => ({ ...t, status: "failed", failure: { reason: "stream_interrupted", retryable: false } }));
-      }
+      const closed = await consume(request.turn_id, await lessonService.startTurn(instanceId, request, abort.signal), abort.signal);
+      await follow(instanceId, request.turn_id, abort, closed);
     } catch (error) {
       if (abort.signal.aborted) return;
       // An HTTP refusal (the turn never started) carries the backend's reason; anything else is a dropped stream.
@@ -699,6 +730,10 @@ export const useLessonStore = create<LessonState>((set, get) => {
         if (generation !== loadGeneration) return;
         set({ status: "ready" });
 
+        // A reply still open on the server (the page was reloaded while it streamed) is followed to its end.
+        const open = turns.findLast((t) => t.status === "streaming");
+        if (open) void resumeTurn(open.turnId);
+
         // A fresh node opens with the tutor speaking first.
         if (instance.state === "active" && node && turns.length === 0) {
           void runTurn({ turn_id: uuid(), kind: "opening", instance_node_id: node.instance_node_id }, null);
@@ -737,6 +772,14 @@ export const useLessonStore = create<LessonState>((set, get) => {
       updateTurn(open.turnId, (t) => ({ ...t, status: "interrupted" }));
       try {
         const out = await lessonService.interruptTurn(instanceId, open.turnId, visibleSeq(open, get().figureStatus));
+        // It had already finished on the server, so the stop changed nothing: show the whole reply, read from the log.
+        // Not when a newer turn has taken the stream meanwhile: that one is never cut for an older reply.
+        const newer = streamAbort !== null && !streamAbort.signal.aborted;
+        if (out.status !== "interrupted" && out.status !== "open" && !newer) {
+          updateTurn(open.turnId, (t) => ({ ...t, status: "streaming" }));
+          await resumeTurn(open.turnId);
+          return;
+        }
         const through = out.transcript_through_seq;
         if (typeof through === "number") {
           updateTurn(open.turnId, (t) => ({ ...t, deltas: t.deltas.filter((d) => d.seq <= through) }));
