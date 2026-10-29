@@ -152,7 +152,9 @@ function triggerStyles(
  * in the preorder modal, the student portal and the admin console.
  *
  * Keyboard: Enter/Space/Arrow to open, Up/Down/Home/End to move, Enter to
- * select, Esc to close and restore focus, printable keys for typeahead.
+ * select, Esc to close and restore focus, printable keys for typeahead. Inside
+ * a form, Enter on the closed trigger submits the form instead, as it would
+ * from a text field (Space/Arrow still open it).
  */
 export function Select<T extends string | number = string>({
   value,
@@ -271,6 +273,12 @@ export function Select<T extends string | number = string>({
     if (disabled) return;
 
     if (!isOpen) {
+      const form = triggerRef.current?.form;
+      if (e.key === "Enter" && form) {
+        e.preventDefault();
+        form.requestSubmit();
+        return;
+      }
       if (["Enter", " ", "ArrowDown", "ArrowUp"].includes(e.key)) {
         e.preventDefault();
         open();

@@ -230,7 +230,15 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="bg-[#FBFCFB] border border-[#122D30]/5 rounded-[1.5rem] p-5">
+            {/* A form, so Enter in any field (a dropdown included) applies the filters. */}
+            <form
+              aria-label="Filters"
+              className="bg-[#FBFCFB] border border-[#122D30]/5 rounded-[1.5rem] p-5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleApply();
+              }}
+            >
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
                 {/* Search */}
                 <div className="lg:col-span-2">
@@ -292,6 +300,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
               <div className="flex items-center gap-2 justify-end">
                 <button
+                  type="button"
                   onClick={handleClear}
                   className="flex items-center gap-1.5 px-4 py-2 text-[#122D30]/50 hover:text-[#122D30] text-xs font-bold transition-colors"
                 >
@@ -299,13 +308,13 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                   Clear
                 </button>
                 <button
-                  onClick={handleApply}
+                  type="submit"
                   className="px-5 py-2 bg-[#075E63] text-white text-xs font-bold rounded-xl hover:bg-[#075E63]/90 transition-all"
                 >
                   Apply Filters
                 </button>
               </div>
-            </div>
+            </form>
           </motion.div>
         )}
       </AnimatePresence>

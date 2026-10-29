@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { makeSource, sourcesFixture } from "@/test/msw/handlers/sources";
 import { visualsFixture } from "@/test/msw/handlers/visuals";
 import { usePartnerStore } from "@/features/partner/store/usePartnerStore";
@@ -76,5 +77,23 @@ describe("SubjectRegistry — a published chapter", () => {
     render(<SubjectRegistry onUploadClick={vi.fn()} />);
     expect(await screen.findByText("Live for students")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Review & publish/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("SubjectRegistry — the filter bar", () => {
+  it("applies the filters on Enter, from the search box or a dropdown", async () => {
+    const user = userEvent.setup();
+    render(<SubjectRegistry onUploadClick={vi.fn()} />);
+    await screen.findByText("SYNTHETIC no questions");
+    await user.click(screen.getByRole("button", { name: /Filters/ }));
+
+    await user.type(screen.getByPlaceholderText("Book or chapter title..."), "nothing matches{Enter}");
+    await waitFor(() => expect(usePartnerStore.getState().subjectFilters).toEqual({ search: "nothing matches" }));
+    await waitFor(() => expect(screen.queryByText("SYNTHETIC no questions")).toBeNull());
+
+    await user.clear(screen.getByPlaceholderText("Book or chapter title..."));
+    screen.getByRole("combobox", { name: "Status" }).focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(usePartnerStore.getState().subjectFilters).toEqual({}));
   });
 });

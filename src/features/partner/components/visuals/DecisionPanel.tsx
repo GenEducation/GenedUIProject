@@ -40,6 +40,7 @@ export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEdi
   const marked = marks.length > 0;
   const over = overLimit(marks, note);
   const reserved = marked ? marksText(marks).length + 1 : 0;
+  const canReject = reasons.length > 0 && !(regenerate && over > 0);
 
   // Marking the picture means asking for a new version: open the reject form, with "make a new version" on.
   // The marks are the explanation, so "Something else (explain in the note)" stands in until the partner picks a reason.
@@ -140,7 +141,16 @@ export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEdi
                 Your marks are only sent when you ask for a new version.
               </p>
             )}
-            <ReasonFields reasons={reasons} onReasonsChange={setReasons} note={note} onNoteChange={setNote} reserved={regenerate ? reserved : 0} />
+            <ReasonFields
+              reasons={reasons}
+              onReasonsChange={setReasons}
+              note={note}
+              onNoteChange={setNote}
+              reserved={regenerate ? reserved : 0}
+              onSubmit={() => {
+                if (canReject && !submitting) void submit("reject");
+              }}
+            />
 
             <label htmlFor={toggleId} className="relative flex items-center gap-3 cursor-pointer select-none">
               <input
@@ -170,7 +180,7 @@ export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEdi
               )}
               <Button
                 variant="destructiveSolid"
-                disabled={reasons.length === 0 || (regenerate && over > 0)}
+                disabled={!canReject}
                 loading={submitting === "reject"}
                 onClick={() => void submit("reject")}
               >

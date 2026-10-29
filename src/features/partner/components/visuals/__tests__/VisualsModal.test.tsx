@@ -180,6 +180,27 @@ describe("VisualsModal — detail and decisions", () => {
     });
   });
 
+  it("sends the reject on Enter in the note, and keeps Shift+Enter and Ctrl+Enter for new lines", async () => {
+    await openDetail("SYNTHETIC shape 2");
+    fireEvent.click(screen.getByRole("button", { name: /^Reject/ }));
+    const note = screen.getByLabelText(/Note/) as HTMLTextAreaElement;
+
+    // Nothing is sent until a reason is picked.
+    fireEvent.keyDown(note, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "Too busy" }));
+
+    fireEvent.change(note, { target: { value: "SYNTHETIC line 1" } });
+    note.setSelectionRange(note.value.length, note.value.length);
+    fireEvent.keyDown(note, { key: "Enter", ctrlKey: true });
+    expect(note.value).toBe("SYNTHETIC line 1\n");
+    fireEvent.keyDown(note, { key: "Enter", shiftKey: true });
+    expect(posts("/decision")).toHaveLength(0);
+
+    fireEvent.keyDown(note, { key: "Enter" });
+    await waitFor(() => expect(posts("/decision")).toHaveLength(1));
+    expect(posts("/decision")[0].body).toMatchObject({ reason_codes: ["cluttered"], note: "SYNTHETIC line 1" });
+  });
+
   it("marks a change on the picture and sends it, worded, at the top of the note", async () => {
     await openDetail("SYNTHETIC shape 2");
     fireEvent.click(screen.getByRole("button", { name: "Mark up" }));

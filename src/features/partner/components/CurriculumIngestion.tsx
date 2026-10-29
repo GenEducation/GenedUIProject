@@ -192,7 +192,15 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
 
         <div className="flex-1 flex overflow-hidden">
           {/* Left Column: Form */}
-          <div className={`flex flex-col ${hasFile ? "w-full md:w-[550px] border-r border-gray-100" : "w-full"} overflow-y-auto`}>
+          <form
+            noValidate
+            aria-label="Upload a chapter"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!isProcessing) void handleProcess();
+            }}
+            className={`flex flex-col ${hasFile ? "w-full md:w-[550px] border-r border-gray-100" : "w-full"} overflow-y-auto`}
+          >
             <div className="p-6 md:p-10 space-y-6 md:space-y-8">
               {/* Header */}
               <div>
@@ -395,6 +403,7 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
             {/* Footer inside Left Column */}
             <div className="mt-auto p-6 md:p-10 bg-white border-t border-gray-50 flex gap-3">
               <button 
+                type="button"
                 disabled={isProcessing}
                 onClick={onClose}
                 className="flex-1 py-4 text-xs font-black text-[#122D30]/60 hover:bg-gray-50 rounded-2xl transition-all uppercase tracking-widest"
@@ -402,14 +411,14 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
                 Cancel
               </button>
               <button 
-                onClick={handleProcess}
+                type="submit"
                 disabled={isProcessing}
                 className="flex-[2] py-4 bg-[#075E63] text-white text-xs font-black rounded-2xl hover:bg-[#075E63]/90 transition-all shadow-[0_8px_30px_rgba(18,45,48,0.2)] uppercase tracking-widest disabled:opacity-30"
               >
                 {isProcessing ? "Uploading..." : "Upload & Start"}
               </button>
             </div>
-          </div>
+          </form>
 
           {/* Right Column: Page-Wise Preview */}
           <AnimatePresence>

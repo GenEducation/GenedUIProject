@@ -106,6 +106,7 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
   if (regen && !failed) return null;
 
   const canRetryDirectly = failed && previousReasons.length > 0;
+  const canAsk = reasons.length > 0 && overLimit(marks, note) === 0;
 
   return (
     <div
@@ -139,6 +140,9 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
             note={note}
             onNoteChange={setNote}
             reserved={marked ? marksText(marks).length + 1 : 0}
+            onSubmit={() => {
+              if (canAsk && !submitting) void requestNewVersion(reasons, composeNote(marks, note));
+            }}
           />
           <div className="flex items-center justify-end gap-2">
             {overLimit(marks, note) > 0 && (
@@ -152,7 +156,7 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
               </Button>
             )}
             <Button
-              disabled={reasons.length === 0 || overLimit(marks, note) > 0}
+              disabled={!canAsk}
               loading={submitting}
               onClick={() => void requestNewVersion(reasons, composeNote(marks, note))}
             >

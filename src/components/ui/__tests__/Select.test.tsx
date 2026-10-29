@@ -66,6 +66,25 @@ describe("Select", () => {
     expect(document.activeElement).toBe(trigger());
   });
 
+  it("submits its form on Enter once closed, and still opens on Space", () => {
+    const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
+    render(
+      <form onSubmit={onSubmit}>
+        <Harness />
+      </form>,
+    );
+
+    fireEvent.keyDown(trigger(), { key: "Enter" });
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(trigger()).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.keyDown(trigger(), { key: " " });
+    expect(trigger()).toHaveAttribute("aria-expanded", "true");
+    fireEvent.keyDown(trigger(), { key: "ArrowDown" });
+    fireEvent.keyDown(trigger(), { key: "Enter" }); // picks the option, doesn't submit
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
   it("filters options when searchable and reports when nothing matches", () => {
     render(<Harness searchable />);
     openPanel();

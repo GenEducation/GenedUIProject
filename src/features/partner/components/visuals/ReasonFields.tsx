@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { Button } from "@/components/ui/Button";
+import { enterToSubmit } from "@/utils/enterToSubmit";
 import { NOTE_MAX, REASON_CODES, REASON_LABELS, type ReasonCode } from "../../types/visuals";
 
 interface ReasonFieldsProps {
@@ -11,10 +12,12 @@ interface ReasonFieldsProps {
   onNoteChange: (next: string) => void;
   /** Characters of the note the marks on the picture already use (they're sent first, in the same note). */
   reserved?: number;
+  /** Enter in the note sends the form (Shift+Enter or Ctrl+Enter for a new line). The caller checks it can. */
+  onSubmit?: () => void;
 }
 
 /** Reject / regenerate reasons: multi-select chips (≥ 1 required by the caller) and an optional note. */
-export function ReasonFields({ reasons, onReasonsChange, note, onNoteChange, reserved = 0 }: ReasonFieldsProps) {
+export function ReasonFields({ reasons, onReasonsChange, note, onNoteChange, reserved = 0, onSubmit }: ReasonFieldsProps) {
   const noteId = useId();
   const hintId = useId();
 
@@ -70,11 +73,13 @@ export function ReasonFields({ reasons, onReasonsChange, note, onNoteChange, res
           rows={3}
           aria-describedby={hintId}
           onChange={(e) => onNoteChange(e.target.value.slice(0, room))}
+          onKeyDown={onSubmit ? enterToSubmit(onSubmit) : undefined}
           placeholder="What should the new picture do differently?"
           className="w-full px-3 py-2 bg-[#F6F7F2] border border-[#122D30]/10 focus:border-[#122D30]/40 rounded-xl text-sm text-[#122D30] outline-none placeholder:text-[#122D30]/30 resize-none"
         />
         <p id={hintId} className="mt-1 text-[11px] text-[#122D30]/50">
           Don&apos;t include names or personal details. This note is used to improve the picture.
+          {onSubmit && <span className="ml-1 text-[#122D30]/40">Enter to send, Shift+Enter for a new line.</span>}
         </p>
       </div>
     </div>

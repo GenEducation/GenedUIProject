@@ -19,6 +19,7 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
+import { enterToSubmit } from "@/utils/enterToSubmit";
 import { sourcesService } from "../services/sourcesService";
 import { removedReason } from "../utils/ingestionPath";
 import type {
@@ -843,7 +844,7 @@ function QuestionForm({
       )}
       <label className="flex flex-col gap-1">
         <span className={label}>Question</span>
-        <textarea className={field} rows={3} value={q.prompt} onChange={(e) => setQ({ ...q, prompt: e.target.value })} />
+        <textarea className={field} rows={3} value={q.prompt} onChange={(e) => setQ({ ...q, prompt: e.target.value })} onKeyDown={enterToSubmit()} />
       </label>
       <label className="flex flex-col gap-1 sm:max-w-[220px]">
         <span className={label}>Answer type</span>
