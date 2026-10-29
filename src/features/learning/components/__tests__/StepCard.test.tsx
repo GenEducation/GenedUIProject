@@ -67,7 +67,13 @@ describe("StepCard: a part that is not finished", () => {
   it("offers Next step once enough replies counted", () => {
     useLessonStore.setState({
       instance: makeLessonInstance({
-        active_node: { ...makeLessonInstance().active_node!, engagement_count: 2, engagement_required: 2, check_item_ids: [] },
+        active_node: {
+          ...makeLessonInstance().active_node!,
+          engagement_count: 2,
+          engagement_required: 2,
+          check_item_ids: [],
+          done_available: true,
+        },
       }),
     });
     render(<StepCard />);

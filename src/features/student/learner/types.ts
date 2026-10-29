@@ -77,6 +77,10 @@ export interface ActiveNode {
   round_ordinal: number | null;
   answered_item_ids: string[];
   check_item_ids: string[];
+  /** The backend currently accepts `/done`; false on evidence-driven teach nodes. */
+  done_available: boolean;
+  /** The deterministic re-teaching step after a failed teach round. */
+  teach_step: "s1" | "s2" | "s3" | null;
   choice?: { options: Array<"try_now" | "keep_going">; recommended: "try_now" | "keep_going" } | null;
   pending_reading?: { item_id: string; original: string; suggestion: string } | null;
 }
