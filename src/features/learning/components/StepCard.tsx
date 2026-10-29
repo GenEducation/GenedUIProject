@@ -310,7 +310,7 @@ function ConfirmReading({ check, original, suggestion }: { check: CheckItem; ori
 /**
  * What the learner can do on the board right now, read off the lesson state:
  * a check to answer, a reading to confirm, a choice after a failed round, or
- * (on a teach step that is ready) moving on. Nothing here decides correctness
+ * (on a teach step where the backend allows it) moving on. Nothing here decides correctness
  * or progression; every outcome comes back from the backend.
  */
 export function StepCard({ subject = null }: { subject?: string | null }) {
@@ -380,7 +380,7 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
     body = <ConfirmReading check={checks.get(reading.item_id)!} original={reading.original} suggestion={reading.suggestion} />;
   } else if (unanswered.length > 0 && checks.get(unanswered[0])) {
     body = <CheckCard check={checks.get(unanswered[0])!} onResult={showResult} subject={subject} />;
-  } else if (node.type === "teach" && node.engagement_count >= node.engagement_required) {
+  } else if (node.type === "teach" && node.done_available) {
     body = (
       <div className={`${cardClass} flex flex-wrap items-center gap-4`}>
         <p className="lesson-hand flex-1 text-[20px] font-bold">{t("moveOn")}</p>

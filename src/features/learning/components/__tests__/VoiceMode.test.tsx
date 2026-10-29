@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
-import { LESSON_ID, NODE_1, lessonFixture } from "@/test/msw/handlers/lesson";
+import { LESSON_ID, NODE_1, NODE_2, lessonFixture, makeLessonInstance } from "@/test/msw/handlers/lesson";
 import { makeCapabilities, voiceFixture, voiceCapabilityRequests } from "@/test/msw/handlers/voice";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { readFileSync } from "node:fs";
@@ -129,6 +129,41 @@ describe("voice mode", () => {
     expect(screen.getByText("SYNTHETIC what is this")).toBeInTheDocument();
     expect(screen.getByText("SYNTHETIC spoken answer.")).toBeInTheDocument();
     expect(store().turns.at(-1)).toMatchObject({ learnerText: "SYNTHETIC what is this", status: "completed" });
+  });
+
+  it("keeps the source-node socket until its final feedback audio drains", async () => {
+    await openVoice();
+    await server({ type: "ready", session_id: "s-1", degraded: [] });
+    const turn_id = "aaaaaaaa-0000-4000-8000-000000000009";
+    await server({ type: "response_started", response_no: 9, turn_id });
+    await server({
+      type: "teacher_event",
+      response_no: 9,
+      event: { v: 3, turn_id, seq: 1, type: "turn_started", kind: "learner_message", instance_node_id: NODE_1, instance_revision: 4, protocol: "teacher_turn_stream_v3" },
+    });
+    await emit({ t: "ui", ev: "speaking", on: true, responseNo: 9 });
+    await server({
+      type: "teacher_event",
+      response_no: 9,
+      event: {
+        v: 3,
+        turn_id,
+        seq: 2,
+        type: "state_changed",
+        instance: makeLessonInstance({
+          revision: 5,
+          nodes_done: 2,
+          active_node: { ...makeLessonInstance().active_node!, instance_node_id: NODE_2 },
+        }),
+      },
+    });
+
+    expect(fake.closed).toBe(0);
+    expect(fake.options!.init.instance_node_id).toBe(NODE_1);
+
+    await emit({ t: "ui", ev: "drained", responseNo: 9 });
+    await waitFor(() => expect(fake.closed).toBe(1));
+    await waitFor(() => expect(fake.options!.init.instance_node_id).toBe(NODE_2));
   });
 
   it("a cancelled reply that never closed is settled as interrupted", async () => {

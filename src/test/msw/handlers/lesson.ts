@@ -54,6 +54,8 @@ export function makeLessonInstance(overrides: Partial<InstanceState> = {}): Inst
       round_ordinal: null,
       answered_item_ids: [],
       check_item_ids: [CHECK_ITEM],
+      done_available: false,
+      teach_step: null,
     },
     ...overrides,
   };

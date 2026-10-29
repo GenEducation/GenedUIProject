@@ -105,7 +105,7 @@ interface LessonState {
     response: AnswerResponse,
     options?: { channel?: "typed" | "choice"; confirmedReading?: boolean },
   ) => Promise<AnswerResult | null>;
-  /** The learner's explicit done on a teach node (allowed once engaged enough and every probe is attempted). */
+  /** The learner's explicit done on a teach node, only when the backend advertises `done_available`. */
   done: () => Promise<void>;
   /** After a failed practice round. */
   choose: (choice: "try_now" | "keep_going") => Promise<void>;
