@@ -171,6 +171,8 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
     setMarks((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch } : m)));
   const removeMark = (id: string) => setMarks((ms) => ms.filter((m) => m.id !== id));
   const pictureRef = useRef<HTMLDivElement>(null);
+  // The open reject / new-version form's "try to send", for Enter in a mark's field.
+  const sendRef = useRef<(() => void) | null>(null);
   const editMarks = () => {
     setMarking(true);
     pictureRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
@@ -331,6 +333,7 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
                 onSelect={setActiveMark}
                 onChange={changeMark}
                 onRemove={removeMark}
+                onSubmit={() => sendRef.current?.()}
               />
             )}
             {detail.kind === "figure" && (
@@ -428,6 +431,7 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
                 onConflict={() => void reload()}
                 marks={marks}
                 onEditMarks={editMarks}
+                sendRef={sendRef}
               />
             )}
 
@@ -438,6 +442,7 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
               marks={canMark ? marks : []}
               onMarksSent={() => { setMarks([]); setMarking(false); }}
               onEditMarks={editMarks}
+              sendRef={sendRef}
             />
           </div>
         </motion.div>

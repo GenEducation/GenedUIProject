@@ -12,12 +12,16 @@ interface ReasonFieldsProps {
   onNoteChange: (next: string) => void;
   /** Characters of the note the marks on the picture already use (they're sent first, in the same note). */
   reserved?: number;
-  /** Enter in the note sends the form (Shift+Enter or Ctrl+Enter for a new line). The caller checks it can. */
+  /**
+   * Enter sends the form: in the note (Shift+Enter or Ctrl+Enter for a new line) or on a reason (Space still picks
+   * it). The caller checks it can, and sets `missingReason` when it couldn't for want of a reason.
+   */
   onSubmit?: () => void;
+  missingReason?: boolean;
 }
 
 /** Reject / regenerate reasons: multi-select chips (≥ 1 required by the caller) and an optional note. */
-export function ReasonFields({ reasons, onReasonsChange, note, onNoteChange, reserved = 0, onSubmit }: ReasonFieldsProps) {
+export function ReasonFields({ reasons, onReasonsChange, note, onNoteChange, reserved = 0, onSubmit, missingReason = false }: ReasonFieldsProps) {
   const noteId = useId();
   const hintId = useId();
 
@@ -31,7 +35,7 @@ export function ReasonFields({ reasons, onReasonsChange, note, onNoteChange, res
   return (
     <div className="flex flex-col gap-4">
       <fieldset>
-        <legend className="text-[10px] font-black text-[#122D30]/50 uppercase tracking-widest mb-2">
+        <legend className={`text-[10px] font-black uppercase tracking-widest mb-2 ${missingReason ? "text-red-600" : "text-[#122D30]/50"}`}>
           What&apos;s wrong? <span className="normal-case tracking-normal font-bold">(pick at least one)</span>
         </legend>
         <div className="flex flex-wrap gap-2">
@@ -45,12 +49,22 @@ export function ReasonFields({ reasons, onReasonsChange, note, onNoteChange, res
                 variant={on ? "primary" : "outline"}
                 aria-pressed={on}
                 onClick={() => toggle(code)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter" || !onSubmit) return;
+                  e.preventDefault();
+                  onSubmit();
+                }}
               >
                 {REASON_LABELS[code]}
               </Button>
             );
           })}
         </div>
+        {missingReason && (
+          <p role="alert" className="mt-2 text-[11px] font-bold text-red-600">
+            Pick what&apos;s wrong first, then press Enter again.
+          </p>
+        )}
       </fieldset>
 
       <div>

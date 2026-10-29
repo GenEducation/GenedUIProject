@@ -28,3 +28,11 @@ function insertNewline(el: HTMLTextAreaElement) {
   el.selectionStart = el.selectionEnd = start + 1;
   el.dispatchEvent(new Event("input", { bubbles: true }));
 }
+
+/** Enter on a native select submits its form, as Enter in a text field does (browsers do nothing). */
+export function submitFormOnEnter(e: React.KeyboardEvent<HTMLSelectElement>) {
+  const form = e.currentTarget.form;
+  if (e.key !== "Enter" || !form) return;
+  e.preventDefault();
+  form.requestSubmit();
+}

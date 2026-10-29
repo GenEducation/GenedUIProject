@@ -21,6 +21,8 @@ interface RegenerationStatusProps {
   onMarksSent?: () => void;
   /** Back to the picture to change the marks. */
   onEditMarks?: () => void;
+  /** Set to "try to send" while the form shows, so Enter in a mark's field sends it too. */
+  sendRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 /**
@@ -39,7 +41,7 @@ export function regenerationErrorText(error: string): string {
  * The "new version" story for a rejected visual: in progress (the detail hook
  * polls), ready (link to it), failed (try again), or never asked for (ask now).
  */
-export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMarksSent, onEditMarks }: RegenerationStatusProps) {
+export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMarksSent, onEditMarks, sendRef }: RegenerationStatusProps) {
   const regen = detail.regeneration;
   // Only a partner's own reasons can be sent again ("recropped" is the backend's).
   const previousReasons = (detail.decision?.reason_codes ?? []).filter((c): c is ReasonCode => c in REASON_LABELS);
@@ -47,6 +49,8 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
   const [reasons, setReasons] = useState<ReasonCode[]>(previousReasons);
   const [note, setNote] = useState(detail.decision?.note ?? "");
   const [submitting, setSubmitting] = useState(false);
+  // Set by Enter with no reason picked, so the reasons say why nothing was sent.
+  const [tried, setTried] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const marked = marks.length > 0;
   // With marks, the form opens on its own: they need reasons to go with them.
@@ -72,6 +76,20 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
       setSubmitting(false);
     }
   };
+
+  const canAsk = reasons.length > 0 && overLimit(marks, note) === 0;
+  const trySubmit = () => {
+    setTried(true);
+    if (canAsk && !submitting) void requestNewVersion(reasons, composeNote(marks, note));
+  };
+  const formShown = detail.state === "rejected" && showForm && (!regen || regen.state === "failed");
+  useEffect(() => {
+    if (!sendRef || !formShown) return;
+    sendRef.current = trySubmit;
+    return () => {
+      if (sendRef.current === trySubmit) sendRef.current = null;
+    };
+  });
 
   if (detail.state !== "rejected") return null;
 
@@ -106,8 +124,6 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
   if (regen && !failed) return null;
 
   const canRetryDirectly = failed && previousReasons.length > 0;
-  const canAsk = reasons.length > 0 && overLimit(marks, note) === 0;
-
   return (
     <div
       className={`rounded-2xl border p-4 flex flex-col gap-3 ${
@@ -140,9 +156,8 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
             note={note}
             onNoteChange={setNote}
             reserved={marked ? marksText(marks).length + 1 : 0}
-            onSubmit={() => {
-              if (canAsk && !submitting) void requestNewVersion(reasons, composeNote(marks, note));
-            }}
+            onSubmit={trySubmit}
+            missingReason={tried && reasons.length === 0}
           />
           <div className="flex items-center justify-end gap-2">
             {overLimit(marks, note) > 0 && (
@@ -151,7 +166,14 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
               </p>
             )}
             {!marked && (
-              <Button variant="tertiary" onClick={() => setAsking(false)} disabled={submitting}>
+              <Button
+                variant="tertiary"
+                onClick={() => {
+                  setAsking(false);
+                  setTried(false);
+                }}
+                disabled={submitting}
+              >
                 Cancel
               </Button>
             )}

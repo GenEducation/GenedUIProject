@@ -185,9 +185,11 @@ describe("VisualsModal — detail and decisions", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Reject/ }));
     const note = screen.getByLabelText(/Note/) as HTMLTextAreaElement;
 
-    // Nothing is sent until a reason is picked.
+    // Nothing is sent until a reason is picked, and the reasons say so.
     fireEvent.keyDown(note, { key: "Enter" });
+    expect(screen.getByRole("alert")).toHaveTextContent("Pick what's wrong first");
     fireEvent.click(screen.getByRole("button", { name: "Too busy" }));
+    expect(screen.queryByText(/Pick what's wrong first/)).toBeNull();
 
     fireEvent.change(note, { target: { value: "SYNTHETIC line 1" } });
     note.setSelectionRange(note.value.length, note.value.length);
@@ -199,6 +201,43 @@ describe("VisualsModal — detail and decisions", () => {
     fireEvent.keyDown(note, { key: "Enter" });
     await waitFor(() => expect(posts("/decision")).toHaveLength(1));
     expect(posts("/decision")[0].body).toMatchObject({ reason_codes: ["cluttered"], note: "SYNTHETIC line 1" });
+  });
+
+  it("sends the reject on Enter from a picked reason or the new-version switch", async () => {
+    await openDetail("SYNTHETIC shape 2");
+    fireEvent.click(screen.getByRole("button", { name: /^Reject/ }));
+
+    fireEvent.keyDown(screen.getByRole("switch", { name: "Make a new version" }), { key: "Enter" });
+    expect(screen.getByRole("alert")).toHaveTextContent("Pick what's wrong first");
+    expect(posts("/decision")).toHaveLength(0);
+
+    const chip = screen.getByRole("button", { name: "Too busy" });
+    fireEvent.click(chip);
+    fireEvent.keyDown(chip, { key: "Enter" });
+    await waitFor(() => expect(posts("/decision")).toHaveLength(1));
+    expect(posts("/decision")[0].body).toMatchObject({ reason_codes: ["cluttered"], regenerate: true });
+  });
+
+  it("sends the marks on Enter in a mark's field", async () => {
+    await openDetail("SYNTHETIC shape 2");
+    fireEvent.click(screen.getByRole("button", { name: "Mark up" }));
+    const surface = screen.getByTestId("markup-surface");
+    surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 400, height: 300, right: 400, bottom: 300, x: 0, y: 0, toJSON: () => ({}) });
+    fireEvent.pointerDown(surface, { button: 0, clientX: 10, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(surface, { clientX: 100, clientY: 80, pointerId: 1 });
+    fireEvent.pointerUp(surface, { clientX: 100, clientY: 80, pointerId: 1 });
+
+    const field = await screen.findByLabelText("What to do, change 1");
+    fireEvent.change(field, { target: { value: "SYNTHETIC make it bigger" } });
+    fireEvent.keyDown(field, { key: "Enter" });
+
+    await waitFor(() => expect(posts("/decision")).toHaveLength(1));
+    expect(posts("/decision")[0].body).toMatchObject({
+      decision: "reject",
+      regenerate: true,
+      reason_codes: ["other"],
+      note: expect.stringContaining("SYNTHETIC make it bigger"),
+    });
   });
 
   it("marks a change on the picture and sends it, worded, at the top of the note", async () => {

@@ -20,6 +20,8 @@ interface DecisionPanelProps {
   marks?: Mark[];
   /** Back to the picture to change the marks. */
   onEditMarks?: () => void;
+  /** Set to "try to send" while the reject form shows, so Enter in a mark's field sends it too. */
+  sendRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 /** True when the key press came from a text field, so shortcuts don't fire while typing. */
@@ -29,7 +31,7 @@ export function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 /** Accept (one click) or reject (reasons, note, "make a new version"). Only rendered for a pending visual. */
-export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEditMarks }: DecisionPanelProps) {
+export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEditMarks, sendRef }: DecisionPanelProps) {
   const [mode, setMode] = useState<"idle" | "reject">("idle");
   const [reasons, setReasons] = useState<ReasonCode[]>([]);
   const [note, setNote] = useState("");
@@ -41,6 +43,19 @@ export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEdi
   const over = overLimit(marks, note);
   const reserved = marked ? marksText(marks).length + 1 : 0;
   const canReject = reasons.length > 0 && !(regenerate && over > 0);
+  // Set by Enter with no reason picked, so the reasons say why nothing was sent.
+  const [tried, setTried] = useState(false);
+  const trySubmit = () => {
+    setTried(true);
+    if (canReject && !submitting) void submit("reject");
+  };
+  useEffect(() => {
+    if (!sendRef || mode !== "reject") return;
+    sendRef.current = trySubmit;
+    return () => {
+      if (sendRef.current === trySubmit) sendRef.current = null;
+    };
+  });
 
   // Marking the picture means asking for a new version: open the reject form, with "make a new version" on.
   // The marks are the explanation, so "Something else (explain in the note)" stands in until the partner picks a reason.
@@ -147,9 +162,8 @@ export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEdi
               note={note}
               onNoteChange={setNote}
               reserved={regenerate ? reserved : 0}
-              onSubmit={() => {
-                if (canReject && !submitting) void submit("reject");
-              }}
+              onSubmit={trySubmit}
+              missingReason={tried && reasons.length === 0}
             />
 
             <label htmlFor={toggleId} className="relative flex items-center gap-3 cursor-pointer select-none">
@@ -160,6 +174,11 @@ export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEdi
                 aria-checked={regenerate}
                 checked={regenerate}
                 onChange={(e) => setRegenerate(e.target.checked)}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter") return;
+                  e.preventDefault();
+                  trySubmit();
+                }}
                 className="peer sr-only"
               />
               <span
@@ -170,7 +189,14 @@ export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEdi
             </label>
 
             <div className="flex justify-end gap-2 pt-1 border-t border-[#122D30]/5">
-              <Button variant="tertiary" onClick={() => setMode("idle")} disabled={!!submitting}>
+              <Button
+                variant="tertiary"
+                onClick={() => {
+                  setMode("idle");
+                  setTried(false);
+                }}
+                disabled={!!submitting}
+              >
                 Cancel
               </Button>
               {regenerate && over > 0 && (

@@ -19,7 +19,7 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
-import { enterToSubmit } from "@/utils/enterToSubmit";
+import { enterToSubmit, submitFormOnEnter } from "@/utils/enterToSubmit";
 import { sourcesService } from "../services/sourcesService";
 import { removedReason } from "../utils/ingestionPath";
 import type {
@@ -454,6 +454,9 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
                           setAnswers((prev) => ({ ...prev, [q.item_key]: d }));
                           touch();
                         }}
+                        onSubmit={() => {
+                          if (dirty && !editing && !saving && !rerunning) void save();
+                        }}
                       />
                     ))}
                   </div>
@@ -602,11 +605,32 @@ const field =
 const selectField = `${field} appearance-none pr-9 bg-no-repeat bg-[length:14px] bg-[position:right_0.75rem_center] bg-[url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23122D30' stroke-opacity='.5' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")]`;
 const label = "text-[10px] font-black uppercase tracking-widest text-[#122D30]/50";
 
-function ConceptSelect({ concepts, value, onChange }: { concepts: AuthoringConcept[]; value: string; onChange: (v: string) => void }) {
+/** Enter submits the select's form; outside one, it calls `onEnter`. */
+function ConceptSelect({
+  concepts,
+  value,
+  onChange,
+  onEnter,
+}: {
+  concepts: AuthoringConcept[];
+  value: string;
+  onChange: (v: string) => void;
+  onEnter?: () => void;
+}) {
   return (
     <label className="flex flex-col gap-1">
       <span className={label}>Concept it checks</span>
-      <select className={selectField} value={value} onChange={(e) => onChange(e.target.value)}>
+      <select
+        className={selectField}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.currentTarget.form) return submitFormOnEnter(e);
+          if (e.key !== "Enter" || !onEnter) return;
+          e.preventDefault();
+          onEnter();
+        }}
+      >
         <option value="">Choose a concept…</option>
         {concepts.map((c) => (
           <option key={c.key} value={c.key}>{c.title}</option>
@@ -621,13 +645,21 @@ function RemovedCard({
   concepts,
   draft,
   onChange,
+  onSubmit,
 }: {
   question: RemovedQuestion;
   concepts: AuthoringConcept[];
   draft: AnswerDraft;
   onChange: (d: AnswerDraft) => void;
+  /** Enter in an answer (not the one-per-line box) saves. */
+  onSubmit?: () => void;
 }) {
   const done = !!answerOf(question, draft);
+  const saveOnEnter = (e: React.KeyboardEvent) => {
+    if (e.key !== "Enter" || !onSubmit || e.nativeEvent.isComposing) return;
+    e.preventDefault();
+    onSubmit();
+  };
   return (
     <article
       aria-label={question.prompt}
@@ -666,6 +698,7 @@ function RemovedCard({
                   name={`opt-${question.item_key}`}
                   checked={picked}
                   onChange={() => onChange({ ...draft, value: String(i) })}
+                  onKeyDown={saveOnEnter}
                 />
                 {o}
               </label>
@@ -693,7 +726,7 @@ function RemovedCard({
           <label className="flex flex-col gap-1">
             <span className={label}>{draft.kind === "numeric" ? "The answer" : "Answers to accept (one per line)"}</span>
             {draft.kind === "numeric" ? (
-              <input className={field} inputMode="decimal" value={draft.value} onChange={(e) => onChange({ ...draft, value: e.target.value })} />
+              <input className={field} inputMode="decimal" value={draft.value} onChange={(e) => onChange({ ...draft, value: e.target.value })} onKeyDown={saveOnEnter} />
             ) : (
               <textarea className={field} rows={2} value={draft.value} onChange={(e) => onChange({ ...draft, value: e.target.value })} />
             )}
@@ -701,7 +734,7 @@ function RemovedCard({
         </div>
       )}
       {question.needs_concept && (
-        <ConceptSelect concepts={concepts} value={draft.concept} onChange={(concept) => onChange({ ...draft, concept })} />
+        <ConceptSelect concepts={concepts} value={draft.concept} onChange={(concept) => onChange({ ...draft, concept })} onEnter={onSubmit} />
       )}
     </article>
   );
@@ -819,6 +852,7 @@ function QuestionForm({
           <span className={label}>Part of the chapter</span>
           <select
             className={selectField}
+            onKeyDown={submitFormOnEnter}
             value={q.section_key}
             onChange={(e) => {
               const s = e.target.value;
@@ -848,7 +882,7 @@ function QuestionForm({
       </label>
       <label className="flex flex-col gap-1 sm:max-w-[220px]">
         <span className={label}>Answer type</span>
-        <select className={selectField} value={q.answer_kind} onChange={(e) => setQ({ ...q, answer_kind: e.target.value as AddedAnswerKind })}>
+        <select className={selectField} onKeyDown={submitFormOnEnter} value={q.answer_kind} onChange={(e) => setQ({ ...q, answer_kind: e.target.value as AddedAnswerKind })}>
           {(Object.keys(KIND_LABEL) as AddedAnswerKind[]).map((k) => (
             <option key={k} value={k}>{KIND_LABEL[k]}</option>
           ))}
@@ -871,6 +905,7 @@ function QuestionForm({
               <span className={label}>Correct choice</span>
               <select
                 className={selectField}
+                onKeyDown={submitFormOnEnter}
                 value={q.correct_option_index ?? ""}
                 onChange={(e) => setQ({ ...q, correct_option_index: e.target.value === "" ? undefined : Number(e.target.value) })}
               >

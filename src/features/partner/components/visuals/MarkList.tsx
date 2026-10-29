@@ -13,10 +13,12 @@ interface MarkListProps {
   onSelect: (id: string) => void;
   onChange: (id: string, patch: Partial<Pick<Mark, "part" | "instruction">>) => void;
   onRemove: (id: string) => void;
+  /** Enter in a mark's "what to do" field tries to send the form the marks go with. */
+  onSubmit?: () => void;
 }
 
 /** One row per mark, numbered as in the note: where it is, which part, what to do. */
-export function MarkList({ marks, parts, activeId, onSelect, onChange, onRemove }: MarkListProps) {
+export function MarkList({ marks, parts, activeId, onSelect, onChange, onRemove, onSubmit }: MarkListProps) {
   const ordered = orderedMarks(marks);
   if (ordered.length === 0) return null;
   const partOptions = [{ value: "", label: "Which part? (optional)" }, ...parts.map((p) => ({ value: p, label: p.replace(/^the /, "") }))];
@@ -75,6 +77,11 @@ export function MarkList({ marks, parts, activeId, onSelect, onChange, onRemove 
                 value={m.instruction}
                 maxLength={INSTRUCTION_MAX}
                 onChange={(e) => onChange(m.id, { instruction: e.target.value.slice(0, INSTRUCTION_MAX) })}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter" || !onSubmit || e.nativeEvent.isComposing) return;
+                  e.preventDefault();
+                  onSubmit();
+                }}
                 aria-label={m.kind === "crop" ? "Anything else about the crop" : `What to do, change ${i + 1}`}
                 placeholder={m.kind === "crop" ? "Anything else? (optional)" : "What should change here?"}
                 className="w-full rounded-xl border border-[#122D30]/10 bg-white px-3 py-2 text-[13px] text-[#122D30] outline-none placeholder:text-[#122D30]/30 focus:border-[#122D30]/40"

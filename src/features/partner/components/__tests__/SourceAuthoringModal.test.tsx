@@ -168,6 +168,37 @@ describe("The popup's layout", () => {
   });
 });
 
+describe("Enter in the popup", () => {
+  it("saves from a printed answer, and leaves the one-per-line box to new lines", async () => {
+    const dialog = await openAuthoring();
+    fireEvent.click(within(dialog).getByRole("tab", { name: /Printed questions/ }));
+    const open = within(dialog).getByRole("article", { name: "SYNTHETIC open question?" });
+    const accepted = within(open).getByLabelText("Answers to accept (one per line)");
+    fireEvent.change(accepted, { target: { value: "SYNTHETIC one" } });
+    fireEvent.keyDown(accepted, { key: "Enter" });
+    expect(within(dialog).getByText("Not saved")).toBeInTheDocument();
+
+    fireEvent.click(within(open).getByRole("button", { name: "A number" }));
+    const number = within(open).getByLabelText("The answer");
+    fireEvent.change(number, { target: { value: "7" } });
+    fireEvent.change(within(open).getByLabelText("Concept it checks"), { target: { value: "2.1:beta" } });
+    fireEvent.keyDown(number, { key: "Enter" });
+    expect(await within(dialog).findByText(/1 question saved/)).toBeInTheDocument();
+    expect(lastAuthored?.answers).toEqual({ "item-b": { expected_numeric: "7", concept_key: "2.1:beta" } });
+  });
+
+  it("adds a written question on Enter from one of its dropdowns", async () => {
+    const dialog = await openAuthoring();
+    fireEvent.click(within(dialog).getByRole("tab", { name: /Your questions/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Write a question" }));
+    const form = within(dialog).getByRole("form", { name: "Write a question" });
+    fireEvent.change(within(form).getByLabelText("Question"), { target: { value: "SYNTHETIC what is 2 + 3?" } });
+    fireEvent.change(within(form).getByLabelText("The answer"), { target: { value: "5" } });
+    fireEvent.keyDown(within(form).getByLabelText("Answer type"), { key: "Enter" });
+    expect(within(dialog).getByText("1 written by you")).toBeInTheDocument();
+  });
+});
+
 describe("Key rules", () => {
   const removed = AUTHORING.removed[1];
   it("needs a concept when the run tied the question to none", () => {
