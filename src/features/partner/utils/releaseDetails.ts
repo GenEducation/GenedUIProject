@@ -168,7 +168,8 @@ export function answerOf(rule: unknown, options: Map<string, string>): { label: 
         values: list(r.pairs).map((pair) => `${entryText((pair as Rec)?.left)} → ${entryText((pair as Rec)?.right)}`),
       };
     case "judge":
-      return { label: "Marked by", values: ["The tutor, against a marking guide"] };
+      // A printed open question (backend ADR 0041): discussed while teaching, never marked.
+      return { label: "Open question", values: ["Discussed while teaching; never marked"] };
     default:
       return null;
   }

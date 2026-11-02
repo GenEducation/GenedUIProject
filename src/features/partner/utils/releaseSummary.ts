@@ -27,6 +27,10 @@ const KINDS: Record<string, KindInfo> = {
   source_section: { label: "Textbook sections", hint: "The sections read from the PDF." },
   source_manifest: { label: "Book details", hint: "Which book, edition and chapter this is." },
   graph_and_recovery: { label: "Links between concepts", hint: "Which concepts come before others, and how to recover." },
+  teaching_only: {
+    label: "Taught with open questions only",
+    hint: "No question in this chapter can be checked automatically. Accept it to publish the chapter for teaching and discussion; nothing in it measures mastery.",
+  },
 };
 
 export const KIND_ORDER = Object.keys(KINDS);
