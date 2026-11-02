@@ -8,27 +8,47 @@
  * Pure functions, no MathLive import, so they are tested on their own.
  */
 
-/** Characters LaTeX text mode escapes, and how `\text{…}` spells them. */
-const TEXT_ESCAPES: Array<[string, string]> = [
-  ["\\textbackslash{}", "\\"],
-  ["\\textbackslash", "\\"],
-  ["\\{", "{"],
-  ["\\}", "}"],
-  ["\\$", "$"],
-  ["\\%", "%"],
-  ["\\&", "&"],
-  ["\\_", "_"],
-  ["\\#", "#"],
-  ["\\textasciitilde{}", "~"],
-  ["\\textasciicircum{}", "^"],
-];
+/**
+ * How MathLive writes characters in words (text) mode: some as a LaTeX name rather than the character itself, the
+ * first name its table has for it (`node_modules/mathlive`, `TEXT_SYMBOLS`), so a typed `*` arrives as
+ * `\textasteriskcentered` and `!` as `\!`. Each goes back to the character as typed; the `\text…` names `escapeForField`
+ * writes are here too.
+ */
+const TEXT_COMMANDS: Record<string, string> = {
+  "!": "!", "#": "#", $: "$", "%": "%", "&": "&", _: "_", "{": "{", "}": "}", " ": " ",
+  textasteriskcentered: "*", lbrack: "[", rbrack: "]", backslash: "\\", textbackslash: "\\",
+  textasciicircum: "^", textasciitilde: "~", textunderscore: "_", textbraceleft: "{", textbraceright: "}",
+  textdollar: "$", nobreakspace: " ", textsterling: "£", euro: "€", degree: "°", ldots: "…", textellipsis: "…",
+  textbullet: "•", textdagger: "†", textdaggerdbl: "‡", AA: "Å", AE: "Æ", O: "Ø", ss: "ß", aa: "å", ae: "æ",
+  i: "ı", OE: "Œ", oe: "œ", j: "ȷ", maltese: "✠",
+};
+/** The LaTeX quotes MathLive writes for typed curly ones (a phone's smart punctuation). */
+const TEXT_QUOTES: Array<[string, string]> = [["``", "\u201C"], ["''", "\u201D"]];
 
-function unescapeText(s: string): string {
-  let out = s;
-  for (const [from, to] of TEXT_ESCAPES) out = out.split(from).join(to);
-  return out.replace(/~/g, " ");
+/**
+ * The words-mode character written at `i` as a LaTeX name (`\textasteriskcentered`, `\%`, `\textbackslash{}`), and
+ * where it ends, or null. A lettered name ends at its first non-letter; a `{}` after it, or the one space MathLive puts
+ * between it and a following letter (as LaTeX does: `\ldots a` is "…a"), belongs to it.
+ */
+function textCommandAt(s: string, i: number): { char: string; end: number } | null {
+  const quote = TEXT_QUOTES.find(([from]) => s.startsWith(from, i));
+  if (quote) return { char: quote[1], end: i + 2 };
+  const m = /^\\(?:([a-zA-Z]+)(?:\{\}| (?=[a-zA-Z*]))?|([^a-zA-Z]))/.exec(s.slice(i));
+  const name = m && (m[1] ?? m[2]);
+  if (!m || !name || !Object.hasOwn(TEXT_COMMANDS, name)) return null;
+  return { char: TEXT_COMMANDS[name], end: i + m[0].length };
 }
 
+function unescapeText(s: string): string {
+  let out = "";
+  for (let i = 0; i < s.length; ) {
+    const cmd = textCommandAt(s, i);
+    if (cmd) { out += cmd.char; i = cmd.end; continue; }
+    out += s[i] === "~" ? " " : s[i];
+    i++;
+  }
+  return out;
+}
 
 /** The index just past the `}` matching the `{` at `open`, or -1. */
 function closingBrace(s: string, open: number): number {
@@ -61,14 +81,20 @@ export function chatTextFromLatex(latex: string): string {
         i = end;
         continue;
       }
-      const escape = TEXT_ESCAPES.find(([from]) => latex.startsWith(from, i));
-      if (escape) {
-        out += escape[1];
-        i += escape[0].length;
+      const cmd = textCommandAt(latex, i);
+      if (cmd) {
+        out += cmd.char;
+        i = cmd.end;
         continue;
       }
       out += c;
       i++;
+      continue;
+    }
+    const quote = c === "`" || c === "'" ? textCommandAt(latex, i) : null;
+    if (quote) {
+      out += quote.char;
+      i = quote.end;
       continue;
     }
     if (c === "$") {

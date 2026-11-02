@@ -30,6 +30,13 @@ describe("a maths lesson's answer box (typed like any text box, maths from the /
     expect(answerFromField("x = $ 2\\frac{1}{2} $")).toBe("x = 2+1/2");
     expect(calcTextFromField("$\\sqrt{144}$")).toBe("sqrt(144)");
   });
+
+  it("keeps a typed * (MathLive writes it as \\textasteriskcentered in words), so 3*4 is times as 3x4 is", () => {
+    expect(answerFromField("3\\textasteriskcentered4")).toBe("3*4");
+    expect(answerFromField("3 \\textasteriskcentered 4")).toBe("3 * 4");
+    expect(answerFromField("2\\textasteriskcentered x")).toBe("2*x");
+    expect(calcTextFromField("12\\textasteriskcentered3")).toBe("12*3");
+  });
 });
 
 describe("chat messages", () => {
@@ -52,6 +59,24 @@ describe("chat messages", () => {
       { math: true, value: "\\frac{1}{2}" },
       { math: false, value: " kg" },
     ]);
+  });
+});
+
+describe("characters MathLive writes by name in words", () => {
+  it.each([
+    ["Wow\\!", "Wow!"],
+    ["\\lbrack1, 2\\rbrack", "[1, 2]"],
+    ["2\\textasciicircum3", "2^3"],
+    ["90\\degree", "90°"],
+    ["\\textsterling5 or \\euro5", "£5 or €5"],
+    ["\\ldots a", "…a"],
+    ["``hi''", "\u201Chi\u201D"],
+    ["a\\textbackslash{}b", "a\\b"],
+    ["\\text{2\\textasteriskcentered3}", "2*3"],
+  ])("%s → %s", (latex, text) => expect(chatTextFromLatex(latex)).toBe(text));
+
+  it("leaves a name it doesn't know as written", () => {
+    expect(chatTextFromLatex("\\infty")).toBe("\\infty");
   });
 });
 

@@ -156,6 +156,14 @@ export const MathField = forwardRef<MathFieldHandle, MathFieldProps>(function Ma
     live.current.onChange(field.value);
     field.focus();
   };
+  // The arrow keys move the highlight past the menu's visible rows: scroll it along, as any list box does.
+  const listRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    if (!menu) return;
+    const row = listRef.current?.children[menu.index] as HTMLElement | undefined;
+    row?.scrollIntoView?.({ block: "nearest" });
+  }, [menu]);
+
   const chooseRef = useRef(choose);
   useEffect(() => {
     chooseRef.current = choose;
@@ -334,7 +342,7 @@ export const MathField = forwardRef<MathFieldHandle, MathFieldProps>(function Ma
             </span>
             <span className="text-[var(--ls-ink-faint)]">Enter to insert · Esc keeps “/”</span>
           </div>
-          <ul className="max-h-[264px] overflow-y-auto py-1">
+          <ul ref={listRef} className="max-h-[264px] overflow-y-auto overscroll-contain py-1">
               {matches.map((n, i) => (
                 <li
                   key={n.id}
