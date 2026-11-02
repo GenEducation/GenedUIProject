@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion, useMotionValueEvent, useTransform } from "framer-motion";
-import { Maximize, Minus, Plus } from "lucide-react";
+import { Minus, Plus, ScanSearch } from "lucide-react";
 import { picturesFor, useLessonStore } from "../useLessonStore";
 import { altTextOf, figureGroupsOf } from "../figures";
 import { boardSize, bounds, fitCamera, layoutFigures, NO_INSETS, type Insets, type Rect, type Size } from "../board/geometry";
@@ -154,7 +154,7 @@ export function WhiteboardCanvas({
         style={{ x: camera.x, y: camera.y, scale: camera.scale, transformOrigin: "0 0", willChange: "transform" }}
       >
         <ol aria-label="Figures on the board">
-          {figures.map((f, i) => (
+          {figures.map((f) => (
             <li
               key={f.id}
               data-figure-id={f.id}
@@ -179,7 +179,7 @@ export function WhiteboardCanvas({
                 }`}
               />
               <span className="lesson-hand absolute -left-2 -top-9 text-[22px] text-[var(--ls-ink-faint)]" aria-hidden>
-                {i + 1}
+                {ids.indexOf(f.id) + 1}
               </span>
               {failed.has(pictureKey(f)) || figureStatus[f.id] === "failed" || figureStatus[f.id] === "retrying" ? (
                 <div className="grid h-full w-full place-items-center rounded-[28px] border-2 border-dashed border-[var(--ls-border-strong)]">
@@ -218,8 +218,8 @@ export function WhiteboardCanvas({
           <Plus size={16} />
         </button>
         {/* eslint-disable-next-line no-restricted-syntax -- a round zoom tool. */}
-        <button type="button" aria-label="Show everything" className={control} onClick={fitAll}>
-          <Maximize size={15} />
+        <button type="button" aria-label="Show everything" title="Zoom to fit everything" className={control} onClick={fitAll}>
+          <ScanSearch size={16} />
         </button>
       </div>
     </motion.div>

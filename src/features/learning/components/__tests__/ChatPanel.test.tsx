@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
 import {
-  LESSON_ID, interruptRequests, lessonFixture, replyScript, turnRequests,
+  FIGURE_GROUP, LESSON_ID, interruptRequests, lessonFixture, replyScript, turnRequests,
 } from "@/test/msw/handlers/lesson";
 import { useLessonStore } from "../../useLessonStore";
 
@@ -29,6 +29,14 @@ beforeEach(() => {
 });
 
 describe("ChatPanel", () => {
+  it("a reply that showed a figure carries its board number as a tag, not the picture, and the tag opens it", async () => {
+    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", teacher_text: "SYNTHETIC look at this.", created_at: "2026-10-09T10:24:00Z", figure_group_ids: [FIGURE_GROUP] }]);
+    const onShowFigure = await open();
+    expect(document.querySelector("li img")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Show figure 1 on the whiteboard" }));
+    expect(onShowFigure).toHaveBeenCalledWith(FIGURE_GROUP);
+  });
+
   it("Enter sends and clears; the message and the streamed reply appear", async () => {
     await open();
     lessonFixture.setScript(replyScript("SYNTHETIC ", "answer."));

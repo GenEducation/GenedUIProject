@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { RotateCcw } from "lucide-react";
+import { ImageIcon, RotateCcw } from "lucide-react";
 import { StudentAvatar } from "@/features/student/components/StudentAvatar";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { heldForFigure, picturesFor, useLessonStore } from "../useLessonStore";
@@ -33,13 +33,15 @@ interface ChatTurnProps {
 /**
  * One exchange: the learner's message (if the turn had one), then the tutor's reply. A reply that presented a figure
  * keeps its words back until the figure is on the board (FIGURES_IN_TEACHING_v1 §9.2), so it never talks about a
- * picture the learner cannot see; a figure that could not load is said plainly, with a retry, beside the words.
+ * picture the learner cannot see; a figure that could not load is said plainly, with a retry, beside the words. The
+ * picture itself lives on the whiteboard only: the reply carries a tag with its board number that opens it there.
  */
 export const ChatTurn = memo(function ChatTurn({ turn, onShowFigure, onRetry }: ChatTurnProps) {
   const avatarId = useStudentStore((s) => s.avatarId);
   const manifest = useLessonStore((s) => s.manifest);
   const figureStatus = useLessonStore((s) => s.figureStatus);
   const retryFigure = useLessonStore((s) => s.retryFigure);
+  const presented = useLessonStore((s) => s.presentedFigureIds);
   const onStep = useLessonStore((s) => !turn.nodeId || s.instance?.active_node?.instance_node_id === turn.nodeId);
   const held = heldForFigure(turn, figureStatus);
   const text = held ? "" : replyText(turn);
@@ -47,8 +49,8 @@ export const ChatTurn = memo(function ChatTurn({ turn, onShowFigure, onRetry }: 
   const time = timeOf(turn.createdAt);
   const figures = turn.figureGroupIds
     .filter((id) => figureStatus[id] === undefined || figureStatus[id] === "ready")
-    .map((id) => ({ id, picture: picturesFor(manifest, id)[0] }))
-    .filter((f) => f.picture);
+    .filter((id) => picturesFor(manifest, id).length > 0)
+    .map((id) => ({ id, number: presented.indexOf(id) + 1 }));
   const unloaded = turn.figureGroupIds.filter((id) => figureStatus[id] === "failed" || figureStatus[id] === "retrying");
   const failedOpening = turn.kind === "opening" && turn.status === "failed";
   const canRetry = onStep && (failedOpening || Boolean(turn.failure?.retryable));
@@ -58,7 +60,7 @@ export const ChatTurn = memo(function ChatTurn({ turn, onShowFigure, onRetry }: 
       {turn.learnerText && (
         <div className="flex items-start justify-end gap-2">
           <div className="flex max-w-[82%] flex-col items-end">
-            <p className="whitespace-pre-wrap break-words rounded-[20px] rounded-br-md bg-[var(--ls-soft)] px-4 py-3 text-[15px] leading-relaxed">
+            <p className="whitespace-pre-wrap break-words rounded-[20px] rounded-br-md bg-[var(--ls-primary)] px-4 py-3 text-[15px] leading-relaxed text-white">
               <LearnerText text={turn.learnerText} />
             </p>
             {time && <span className="mt-1 text-[11px] text-[var(--ls-ink-faint)]">{time}</span>}
@@ -87,19 +89,21 @@ export const ChatTurn = memo(function ChatTurn({ turn, onShowFigure, onRetry }: 
             ) : null}
 
             {figures.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {figures.map(({ id, picture }) => (
-                  // eslint-disable-next-line no-restricted-syntax -- a figure thumbnail that opens it on the whiteboard.
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {figures.map(({ id, number }) => (
+                  // eslint-disable-next-line no-restricted-syntax -- a figure tag that opens it on the whiteboard.
                   <button
                     key={id}
                     type="button"
                     onClick={() => onShowFigure(id)}
-                    aria-label="Show this figure on the whiteboard"
+                    aria-label={number > 0 ? `Show figure ${number} on the whiteboard` : "Show this figure on the whiteboard"}
                     title="Show on the whiteboard"
-                    className="overflow-hidden rounded-xl border border-[var(--ls-border)] bg-white p-1.5 transition-shadow hover:shadow-[var(--ls-shadow)]"
+                    className="lesson-display inline-flex items-center gap-1.5 rounded-full border border-[var(--ls-border-strong)] bg-white py-1 pl-1 pr-3 text-[12.5px] font-semibold text-[var(--ls-primary)] transition-[background,box-shadow] hover:bg-[var(--ls-primary-soft)] hover:shadow-[var(--ls-shadow)]"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- signed, expiring API URL; next/image can't cache it. */}
-                    <img src={picture!.src} alt="" className="block h-36 w-auto max-w-[280px] object-contain" />
+                    <span aria-hidden className="grid h-5 w-5 place-items-center rounded-full bg-[var(--ls-accent)]">
+                      <ImageIcon size={11} strokeWidth={2.4} />
+                    </span>
+                    {number > 0 ? `Figure ${number}` : "Figure"}
                   </button>
                 ))}
               </div>
