@@ -83,6 +83,15 @@ export const sourcesService = {
     return response.json();
   },
 
+  /** Keep only these learning outcomes (a subset of the uploaded ones); the chapter can then run again. */
+  correctOutcomes: async (id: string, loCodes: string[]): Promise<SourceView> => {
+    const response = await authFetch(`${sourcePath(id)}/outcomes`, {
+      method: "PUT",
+      body: JSON.stringify({ lo_codes: loCodes }),
+    });
+    return response.json();
+  },
+
   /** Take a queued run off the queue (a running one can't be stopped). */
   cancel: async (id: string): Promise<SourceView> => {
     const response = await authFetch(`${sourcePath(id)}/ingestions`, { method: "DELETE" });

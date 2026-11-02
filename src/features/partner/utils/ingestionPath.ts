@@ -262,6 +262,11 @@ export const NEXT_STEP_COPY: Record<NextStep, { title: string; body: string; ton
     body: "GenEd already has this book under another edition. Correct the edition to match, then it runs again.",
     tone: "problem",
   },
+  fix_outcomes: {
+    title: "Remove learning outcomes this chapter doesn't teach",
+    body: "No part of the lesson covers some of the learning outcomes you chose. Remove them and the chapter runs again with the pages already read; they stay available for the chapter that teaches them.",
+    tone: "problem",
+  },
 };
 
 /** Next steps fixed by correcting the chapter's details rather than uploading again. */

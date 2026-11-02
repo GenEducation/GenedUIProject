@@ -119,6 +119,10 @@ export interface SourceProgress {
   findings?: Record<string, number>;
   /** Core's reason for refusing the run's release (a `chapter_mismatch` names the title core already has). */
   refusal?: SourceRefusal | null;
+  /** The chosen learning outcomes no lesson step of the run reaches: the chapter does not teach them. */
+  uncovered_outcomes?: string[];
+  /** The partner's last removal of outcomes, after this run. */
+  outcome_correction?: { corrected_at: string; removed: string[] } | null;
 }
 
 export interface SourceRefusal {
@@ -156,6 +160,9 @@ export type NextStep =
    * details (`PUT /v1/sources/{id}/chapter`), then run it again. */
   | "fix_chapter_details"
   | "fix_edition_label"
+  /** The chapter does not teach some chosen learning outcomes (`SourceProgress.uncovered_outcomes`): remove them
+   * (`PUT /v1/sources/{id}/outcomes`), then run it again. */
+  | "fix_outcomes"
   | "none";
 
 /** One failed check: `partner` means a different upload fixes it, `gened` a problem on GenEd's side. */
