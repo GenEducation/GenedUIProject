@@ -104,8 +104,8 @@ describe("BoardPanel — the step card", () => {
     expect(stepRequests).toEqual([]);
   });
 
-  it("a teach step with every check answered and enough talk offers Next step", async () => {
-    await open(makeLessonInstance({ active_node: { ...node, answered_item_ids: [CHECK_ITEM], engagement_count: 1 } }));
+  it("offers Next step only when the backend says done is available", async () => {
+    await open(makeLessonInstance({ active_node: { ...node, answered_item_ids: [CHECK_ITEM], done_available: true } }));
     fireEvent.click(screen.getByRole("button", { name: /Next step/ }));
     await waitFor(() => expect(stepRequests).toEqual([{ route: "done", body: expect.objectContaining({ expected_revision: 4 }) }]));
     await waitFor(() => expect(store().instance?.nodes_done).toBe(2));

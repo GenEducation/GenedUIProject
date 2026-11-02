@@ -73,6 +73,15 @@ export function useVoiceSession(active: boolean, language: string | null): Voice
   // whose opening the server then speaks (backend ADR 0025: a fresh `init`, no resume).
   const activeNodeId = useLessonStore((s) => s.instance?.active_node?.instance_node_id ?? null);
   const [session, setSession] = useState<VoiceSession>(STARTING);
+  // A state_changed frame can move the lesson before the source node's final audio has drained. Keep the socket bound to
+  // that source node until playback finishes; reconnecting sooner cancels the feedback the learner is still hearing.
+  const [sessionNodeId, setSessionNodeId] = useState(activeNodeId);
+  useEffect(() => {
+    if (activeNodeId === sessionNodeId) return;
+    if (sessionNodeId === null || session.phase === "listening" || session.phase === "offline") {
+      setSessionNodeId(activeNodeId);
+    }
+  }, [activeNodeId, session.phase, sessionNodeId]);
   const pipelineRef = useRef<VoicePipelineInstance | null>(null);
   // Hold to talk is the student's own setting, the same one Profile's "Voice activation" shows and changes.
   const pushToTalk = useStudentStore((s) => s.voicePrefs.listenMode === "ptt");
@@ -135,7 +144,7 @@ export function useVoiceSession(active: boolean, language: string | null): Voice
 
   useEffect(() => {
     const store = useLessonStore.getState();
-    const startNode = store.instance?.active_node?.instance_node_id;
+    const startNode = sessionNodeId;
     if (!active || !language || !instanceId || !startNode) return;
     let pipeline: VoicePipelineInstance | null = null;
     let closed = false;
@@ -257,7 +266,7 @@ export function useVoiceSession(active: boolean, language: string | null): Voice
       setSession(STARTING); // the next session starts from scratch
     };
     // The server takes the language and the node once, at `init`: a new one reconnects with it.
-  }, [active, instanceId, activeNodeId, language]);
+  }, [active, instanceId, language, sessionNodeId]);
 
   return { ...session, language, setMuted, pushToTalk, held, setPushToTalk, press, release };
 }
