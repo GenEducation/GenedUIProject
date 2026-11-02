@@ -45,6 +45,7 @@ export function ReleaseProposalDetails({ proposal, lookup }: { proposal: Release
       case "source_section": return <SectionDetails v={v} />;
       case "source_manifest": return <BookDetails v={v} />;
       case "graph_and_recovery": return <LinksDetails v={v} lookup={lookup} />;
+      case "teaching_only": return <TeachingOnlyDetails v={v} />;
       default: return <FallbackDetails v={v} />;
     }
   })();
@@ -207,11 +208,32 @@ function QuestionDetails({ v, lookup }: KindProps) {
         </Field>
         <Field label="Thinking level">{thinkingLevel(v.bloom)}</Field>
         <Field label="Difficulty"><Difficulty value={v.difficulty} /></Field>
-        <Field label="Counts towards mastery">{typeof v.mastery_eligible === "boolean" ? (v.mastery_eligible ? "Yes" : "No, practice only") : null}</Field>
+        <Field label="Counts towards mastery">
+          {typeof v.mastery_eligible === "boolean"
+            ? v.mastery_eligible ? "Yes" : str((v.rule as Rec | undefined)?.kind) === "judge" ? "No, discussion only" : "No, practice only"
+            : null}
+        </Field>
         <Field label="From section">{str(v.section_version_id) ? lookup.section.get(str(v.section_version_id)!) ?? null : null}</Field>
         <Field label="Figures">{figures ? `${figures} figure${figures === 1 ? "" : "s"}` : null}</Field>
         <Field label="Answer checks">{checks ? `${checks} sample answer${checks === 1 ? "" : "s"} checked` : null}</Field>
       </Fields>
+    </div>
+  );
+}
+
+/** The release's acceptance that no question in the chapter can be scored (backend ADR 0041). */
+function TeachingOnlyDetails({ v }: { v: Rec }) {
+  const questions = list(v.open_questions).map((q) => str(q)).filter((q): q is string => !!q);
+  return (
+    <div className="space-y-3.5">
+      <Field label="What you are accepting" wide>{str(v.description)}</Field>
+      <Field label={`Open questions (${questions.length})`} wide>
+        {questions.length ? (
+          <ul className="list-disc space-y-1 pl-4">
+            {questions.map((q, i) => <li key={i}>{q}</li>)}
+          </ul>
+        ) : null}
+      </Field>
     </div>
   );
 }

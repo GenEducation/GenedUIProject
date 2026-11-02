@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, ChevronDown, Images, Play, RotateCw, AlertCircle, FileText, HelpCircle, ShieldCheck, Route, Upload, PenLine, PencilLine } from "lucide-react";
+import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, ChevronDown, Images, Play, RotateCw, AlertCircle, FileText, HelpCircle, ShieldCheck, Route, Upload, PenLine, PencilLine, ListChecks } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePartnerStore, SubjectFilters, type Subject } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
@@ -29,6 +29,7 @@ import {
 } from "../types/sources";
 import { CORRECTION_STEPS, UPLOAD_STEPS } from "../utils/ingestionPath";
 import { ChapterCorrectionModal } from "./ChapterCorrectionModal";
+import { OutcomesCorrectionModal } from "./OutcomesCorrectionModal";
 
 interface SubjectRegistryProps {
   /** Open the upload form; with a chapter, prefilled from it (the next step after a run that needs a new upload). */
@@ -91,6 +92,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const [questionsFor, setQuestionsFor] = useState<Subject | null>(null);
   const [authoringFor, setAuthoringFor] = useState<Subject | null>(null);
   const [correctionFor, setCorrectionFor] = useState<Subject | null>(null);
+  const [outcomesFor, setOutcomesFor] = useState<Subject | null>(null);
   const [releaseFor, setReleaseFor] = useState<Subject | null>(null);
   const [pathOpen, setPathOpen] = useState<ReadonlySet<string>>(new Set());
   const togglePath = (id: string) =>
@@ -411,6 +413,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             // A chapter the partner can complete with questions of their own offers that first; uploading stays in its path.
             const addQuestions = next === "add_questions";
             const needsCorrection = next !== null && CORRECTION_STEPS.has(next);
+            const fixOutcomes = next === "fix_outcomes";
             const needsUpload = next !== null && UPLOAD_STEPS.has(next) && !addQuestions;
             const showPath = pathOpen.has(subject.id);
             // Published: live for students, nothing left to review (the server's next step is `none`).
@@ -559,6 +562,16 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                             onClick={(e) => { e.stopPropagation(); setCorrectionFor(subject); }}
                           >
                             Fix chapter details
+                          </Button>
+                        )}
+
+                        {fixOutcomes && (
+                          <Button
+                            pill
+                            leadingIcon={<ListChecks size={16} />}
+                            onClick={(e) => { e.stopPropagation(); setOutcomesFor(subject); }}
+                          >
+                            Remove outcomes
                           </Button>
                         )}
 
@@ -745,6 +758,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
       {/* Correcting where a chapter sits, when core files it differently */}
       <ChapterCorrectionModal subject={correctionFor} onClose={() => setCorrectionFor(null)} />
+      <OutcomesCorrectionModal subject={outcomesFor} onClose={() => setOutcomesFor(null)} />
 
       {/* Completing a chapter's questions (ADR 0036) */}
       <SourceAuthoringModal

@@ -27,7 +27,10 @@ describe("release details in words", () => {
     expect(answerOf({ kind: "mcq", correct_option_id: "o2" }, new Map([["o2", "SYNTHETIC b"]]))).toEqual({ label: "Correct option", values: ["SYNTHETIC b"] });
     expect(answerOf({ kind: "sequence", expected_order: ["one", { text: "two" }] }, none)?.values).toEqual(["one", "two"]);
     expect(answerOf({ kind: "matching", pairs: [{ left: "a", right: "b" }] }, none)?.values).toEqual(["a → b"]);
-    expect(answerOf({ kind: "judge", rubric_id: "r" }, none)?.values[0]).toMatch(/tutor/);
+    expect(answerOf({ kind: "judge", rubric_id: null }, none)).toEqual({
+      label: "Open question",
+      values: ["Discussed while teaching; never marked"],
+    });
     expect(answerOf({ kind: "unknown" }, none)).toBeNull();
   });
 });

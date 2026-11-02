@@ -174,6 +174,7 @@ interface PartnerState {
   startIngestion: (sourceId: string) => Promise<void>;
   /** Save the corrected chapter details, then run the chapter again. */
   correctChapter: (sourceId: string, place: ChapterCorrection) => Promise<void>;
+  correctOutcomes: (sourceId: string, loCodes: string[]) => Promise<void>;
   cancelIngestion: (sourceId: string) => Promise<void>;
   /** Answer about the pages left out at upload: confirm the cut, or include them (the chapter runs again). */
   decideExcludedPages: (sourceId: string, decision: ExcludedPagesDecision) => Promise<void>;
@@ -437,6 +438,13 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
   correctChapter: async (sourceId, place) => {
     const corrected = await sourcesService.correctChapter(sourceId, place);
+    replaceSubject(set, corrected);
+    const started = await sourcesService.start(sourceId);
+    replaceSubject(set, started);
+  },
+
+  correctOutcomes: async (sourceId, loCodes) => {
+    const corrected = await sourcesService.correctOutcomes(sourceId, loCodes);
     replaceSubject(set, corrected);
     const started = await sourcesService.start(sourceId);
     replaceSubject(set, started);

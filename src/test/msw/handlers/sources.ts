@@ -262,6 +262,25 @@ export const sourcesHandlers = [
     return HttpResponse.json(next);
   }),
 
+  // Mirrors the backend: keep a non-empty subset of the uploaded outcomes, never while running.
+  http.put(`${SOURCES}/:id/outcomes`, async ({ params, request }) => {
+    const s = store.get(String(params.id));
+    if (!s) return notFound();
+    if (s.state === "queued" || s.state === "running") {
+      return conflict("This chapter is running; change its outcomes once the run has finished.");
+    }
+    const { lo_codes } = (await request.json()) as { lo_codes: string[] };
+    const unknown = lo_codes.filter((c) => !s.lo_codes.includes(c));
+    if (unknown.length) return conflict(`Only outcomes the chapter was uploaded with can stay: ${unknown.join(", ")}.`);
+    const next = {
+      ...s,
+      lo_codes: s.lo_codes.filter((c) => lo_codes.includes(c)),
+      outcome: { next_step: "start" as const, findings: [], can_run_again: true, run_again_blocked: null },
+    };
+    store.set(s.source_id, next);
+    return HttpResponse.json(next);
+  }),
+
   // Mirrors the backend: answer a pending cut only; including the pages widens the range and queues a re-run.
   http.put(`${SOURCES}/:id/excluded-pages`, async ({ params, request }) => {
     const s = store.get(String(params.id));
