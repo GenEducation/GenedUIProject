@@ -1,15 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, Check, CheckCircle2, ChevronDown, Loader2, Play, Rocket, ShieldCheck, X } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, ChevronDown, Images, Loader2, Play, Rocket, ShieldCheck, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
+import { ApiRequestError } from "@/utils/authFetch";
 import { sourcesService } from "../services/sourcesService";
 import { REJECT_REASONS, type ReleaseProposal, type ReleaseReason, type SourceRelease } from "../types/sources";
 import { groupByKind, summarize } from "../utils/releaseSummary";
 import { buildLookup, type ReleaseLookup } from "../utils/releaseDetails";
 import { ReleaseProposalDetails } from "./ReleaseProposalDetails";
+import { RedrawTallyBar } from "./visuals/RedrawTallyBar";
+import { openRedrawsFrom, openRedrawsText } from "../utils/redrawTally";
+import type { VisualRedrawTally } from "../types/visuals";
 import type { Subject } from "../store/usePartnerStore";
 
 interface SourceReleaseModalProps {
@@ -20,6 +24,8 @@ interface SourceReleaseModalProps {
   onPublished: () => void;
   /** Queue the chapter's next run (used when there is nothing to review yet). */
   onRerun: (subject: Subject) => Promise<void>;
+  /** Open the chapter's visuals on its redraws (from the redraw warning); no link without it. */
+  onReviewRedraws?: (subject: Subject) => void;
 }
 
 /**
@@ -44,11 +50,13 @@ export function SourceReleaseModal(props: SourceReleaseModalProps) {
   );
 }
 
-function ReleaseBody({ subject, onClose, onPublished, onRerun }: SourceReleaseModalProps & { subject: Subject }) {
+function ReleaseBody({ subject, onClose, onPublished, onRerun, onReviewRedraws }: SourceReleaseModalProps & { subject: Subject }) {
   const [data, setData] = useState<SourceRelease | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null); // a proposal id, a group kind, "all", "publish" or "rerun"
+  // Redraws still open when "Publish" was pressed: the partner is asked before publishing anyway.
+  const [confirmRedraws, setConfirmRedraws] = useState<VisualRedrawTally | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -86,16 +94,34 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun }: SourceReleaseMo
     }
   };
 
-  const publish = async () => {
+  /**
+   * Publish; while redraws are still open, ask first. The server checks too:
+   * a redraw asked for after this view loaded comes back as 409
+   * `redraws_open`, which opens the same question.
+   */
+  const publish = async (anyway = false) => {
     if (!data?.release.artifact_hash) return;
+    const open = data.visual_review?.redraws;
+    if (!anyway && open && open.open > 0) {
+      setConfirmRedraws(open);
+      return;
+    }
     setBusy("publish");
     setError(null);
     try {
-      await sourcesService.publishRelease(subject.source_id, data.release.artifact_hash);
+      await sourcesService.publishRelease(subject.source_id, data.release.artifact_hash, anyway);
+      setConfirmRedraws(null);
       await load();
       onPublished();
     } catch (e) {
-      setError(asError(e).message || "The chapter wasn't published. Please try again.");
+      const asked = e instanceof ApiRequestError ? openRedrawsFrom(e.details) : null;
+      if (asked) {
+        setConfirmRedraws(asked);
+        void load();
+      } else {
+        setConfirmRedraws(null);
+        setError(asError(e).message || "The chapter wasn't published. Please try again.");
+      }
     } finally {
       setBusy(null);
     }
@@ -171,6 +197,25 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun }: SourceReleaseMo
               </p>
             )}
 
+            {data.visual_review && data.visual_review.targets.total > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">
+                  <Images size={12} aria-hidden /> Teaching visuals
+                </p>
+                <RedrawTallyBar
+                  summary={data.visual_review}
+                  onShowRedraws={onReviewRedraws ? () => onReviewRedraws(subject) : undefined}
+                />
+                {!published && data.visual_review.redraws.open > 0 && (
+                  <p role="note" className="flex items-center gap-2 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm font-bold text-amber-800">
+                    <AlertCircle size={16} className="shrink-0" aria-hidden />
+                    {openRedrawsText(data.visual_review.redraws)}. Review them before publishing, or publish now and
+                    review them after.
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-3 gap-2.5">
               <Count label="To review" value={pending.length} tone={pending.length ? "warn" : "neutral"} />
               <Count label="Accepted" value={accepted} tone="good" />
@@ -201,6 +246,29 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun }: SourceReleaseMo
               <AlertCircle size={14} className="mt-px shrink-0" aria-hidden /> {error}
             </p>
           )}
+          {confirmRedraws ? (
+            <div
+              role="alertdialog"
+              aria-label="Publish anyway?"
+              className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-black text-amber-900">
+                  {openRedrawsText(confirmRedraws)}. Publish anyway?
+                </p>
+                <p className="mt-0.5 text-xs font-bold text-amber-800/80">
+                  A redraw you accept later still reaches lessons. A question waiting for its picture stays out until
+                  the chapter is run again.
+                </p>
+              </div>
+              <Button variant="secondary" disabled={busy === "publish"} onClick={() => setConfirmRedraws(null)}>
+                Wait for redraws
+              </Button>
+              <Button leadingIcon={<Rocket size={14} />} loading={busy === "publish"} onClick={() => void publish(true)}>
+                Publish anyway
+              </Button>
+            </div>
+          ) : (
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <p className="flex-1 text-xs font-bold text-[#122D30]/55">
               {rejected.length
@@ -226,6 +294,7 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun }: SourceReleaseMo
               </Button>
             )}
           </div>
+          )}
         </footer>
       )}
     </div>

@@ -237,3 +237,36 @@ describe("SubjectRegistry — visuals", () => {
     expect(openIngestedPdf).not.toHaveBeenCalled();
   });
 });
+
+describe("SubjectRegistry — redraws", () => {
+  it("shows running redraws on the row, and says when the last one is ready to review", async () => {
+    visualsFixture.reset(() => []);
+    const { makeVisual } = await import("@/test/msw/handlers/visuals");
+    const rejected = makeVisual({ state: "rejected" });
+    rejected.regeneration = {
+      id: "regen-1", state: "claimed", attempts: 1, result_candidate_id: null, error: null,
+      created_at: "2026-01-01T00:00:00Z", finished_at: null,
+    };
+    visualsFixture.set(rejected);
+    await renderRegistry();
+
+    const row = rowFor("SYNTHETIC with visuals");
+    expect(await within(row).findByTitle("1 redraw still drawing")).toBeInTheDocument();
+    expect(screen.queryByText(/All redraws for/)).toBeNull();
+
+    // The worker finishes: a new version waits for review. Closing the popup re-reads the tallies.
+    const next = makeVisual({ parent_id: rejected.id });
+    visualsFixture.set(next);
+    rejected.regeneration = { ...rejected.regeneration, state: "done", result_candidate_id: next.id, finished_at: "2026-01-01T00:02:00Z" };
+    fireEvent.click(within(row).getByRole("button", { name: /Review visuals/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Close" }));
+
+    const notice = (await screen.findByText(/All redraws for SYNTHETIC with visuals are done: 1 ready to review/)).closest("div")!;
+    expect(within(row).queryByTitle(/still drawing/)).toBeNull();
+
+    fireEvent.click(within(notice).getByRole("button", { name: "Review them" }));
+    const list = await screen.findByRole("list", { name: "Redraws" });
+    expect(within(list).getByText("Ready to review")).toBeInTheDocument();
+    expect(screen.queryByText(/All redraws for/)).toBeNull();
+  });
+});

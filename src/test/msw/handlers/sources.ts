@@ -411,7 +411,23 @@ export const sourcesHandlers = [
   http.post(`${SOURCES}/:id/release/publish`, async ({ params, request }) => {
     const r = releases.get(String(params.id));
     if (!r) return notFound();
-    const { artifact_hash } = (await request.json()) as { artifact_hash: string };
+    const { artifact_hash, acknowledge_open_redraws } = (await request.json()) as {
+      artifact_hash: string;
+      acknowledge_open_redraws?: boolean;
+    };
+    // Mirrors the backend: open redraws ask first (409 `redraws_open`), until the partner says to publish anyway.
+    const open = r.visual_review?.redraws;
+    if (open && open.open > 0 && !acknowledge_open_redraws) {
+      return HttpResponse.json(
+        {
+          error_code: "CORE_3106",
+          message: "The request is invalid.",
+          request_id: "req-synthetic",
+          details: { reason: "redraws_open", detail: "SYNTHETIC", queued: open.queued, drawing: open.drawing, ready: open.ready },
+        },
+        { status: 409 },
+      );
+    }
     if (r.proposals.some((p) => p.state !== "accepted")) {
       return HttpResponse.json({ message: "every proposal needs a human acceptance before publication" }, { status: 409 });
     }

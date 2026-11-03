@@ -148,11 +148,23 @@ export const sourcesService = {
     return response.json();
   },
 
-  /** Publish the newest release; a 409 says what still blocks it. */
-  publishRelease: async (id: string, artifactHash: string): Promise<Record<string, unknown>> => {
+  /**
+   * Publish the newest release; a 409 says what still blocks it. While redraws are still queued, drawing or
+   * waiting for review the backend answers 409 with `details.reason ===
+   * "redraws_open"` and the counts; ask the partner, then call again with
+   * `acknowledgeOpenRedraws`.
+   */
+  publishRelease: async (
+    id: string,
+    artifactHash: string,
+    acknowledgeOpenRedraws = false,
+  ): Promise<Record<string, unknown>> => {
     const response = await authFetch(`${sourcePath(id)}/release/publish`, {
       method: "POST",
-      body: JSON.stringify({ artifact_hash: artifactHash }),
+      body: JSON.stringify({
+        artifact_hash: artifactHash,
+        ...(acknowledgeOpenRedraws ? { acknowledge_open_redraws: true } : {}),
+      }),
     });
     return response.json();
   },
