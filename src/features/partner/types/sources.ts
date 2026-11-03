@@ -5,6 +5,8 @@
  * visual library uses.
  */
 
+import type { VisualReviewSummary } from "./visuals";
+
 export type SourceState =
   | "registered"
   | "queued"
@@ -429,6 +431,8 @@ export interface SourceRelease {
   proposals: ReleaseProposal[];
   /** The release students see now, when it is not the one under review (a newer run is waiting); null otherwise. */
   live?: ReleaseSummary | null;
+  /** Where the review of the chapter's visuals stands: its pictures and the redraws asked for. */
+  visual_review?: VisualReviewSummary | null;
 }
 
 export interface ReleaseDecision {

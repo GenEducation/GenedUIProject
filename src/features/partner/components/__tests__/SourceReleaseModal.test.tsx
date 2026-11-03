@@ -156,4 +156,62 @@ describe("Reviewing and publishing a chapter", () => {
     expect(sourcesFixture.getRelease(SID)!.release.state).toBe("published");
     expect(within(dialog).queryByRole("button", { name: /Accept/ })).toBeNull();
   });
+
+  it("asks before publishing while redraws are still open, and publishes anyway on confirm", async () => {
+    const tally = (queued: number, drawing: number, ready: number) => ({
+      source_id: SID,
+      targets: { total: 50, to_review: 8, accepted: 30, rejected: 12, reviewed: 42 },
+      redraws: { queued, drawing, ready, reviewed: 0, failed: 0, total: queued + drawing + ready, open: queued + drawing + ready },
+      all_ready: queued + drawing === 0,
+    });
+    sourcesFixture.setRelease(SID, { ...RELEASE, visual_review: tally(4, 2, 3) });
+    const dialog = await openReview();
+
+    // The tally and the warning are there before anything is clicked.
+    const progress = within(dialog).getByRole("region", { name: "Review progress" });
+    expect(within(progress).getByText("Sent for redraw")).toBeInTheDocument();
+    expect(progress).toHaveTextContent("42/50");
+    expect(progress).toHaveTextContent("6 drawing · 3 ready");
+    expect(dialog).toHaveTextContent("6 redraws still running, 3 waiting for review");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Accept all 5" }));
+    await waitFor(() => expect(lastReleaseDecisions).toHaveLength(5));
+    const publish = await within(dialog).findByRole("button", { name: "Publish chapter" });
+    await waitFor(() => expect(publish).toBeEnabled());
+
+    fireEvent.click(publish);
+    const ask = await within(dialog).findByRole("alertdialog", { name: "Publish anyway?" });
+    expect(ask).toHaveTextContent("6 redraws still running, 3 waiting for review. Publish anyway?");
+    expect(sourcesFixture.getRelease(SID)!.release.state).toBe("ready");
+
+    // "Wait" closes the question and publishes nothing.
+    fireEvent.click(within(ask).getByRole("button", { name: "Wait for redraws" }));
+    expect(within(dialog).queryByRole("alertdialog")).toBeNull();
+    expect(sourcesFixture.getRelease(SID)!.release.state).toBe("ready");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Publish chapter" }));
+    fireEvent.click(within(await within(dialog).findByRole("alertdialog")).getByRole("button", { name: "Publish anyway" }));
+    expect(await within(dialog).findByText(/Published. Students of your school can open this chapter./)).toBeInTheDocument();
+    expect(sourcesFixture.getRelease(SID)!.release.state).toBe("published");
+  });
+
+  it("publishes straight away when every redraw is reviewed", async () => {
+    sourcesFixture.setRelease(SID, {
+      ...RELEASE,
+      visual_review: {
+        source_id: SID,
+        targets: { total: 2, to_review: 0, accepted: 2, rejected: 0, reviewed: 2 },
+        redraws: { queued: 0, drawing: 0, ready: 0, reviewed: 1, failed: 0, total: 1, open: 0 },
+        all_ready: true,
+      },
+    });
+    const dialog = await openReview();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Accept all 5" }));
+    await waitFor(() => expect(lastReleaseDecisions).toHaveLength(5));
+    const publish = await within(dialog).findByRole("button", { name: "Publish chapter" });
+    await waitFor(() => expect(publish).toBeEnabled());
+    fireEvent.click(publish);
+    expect(await within(dialog).findByText(/Published. Students of your school can open this chapter./)).toBeInTheDocument();
+    expect(within(dialog).queryByRole("alertdialog")).toBeNull();
+  });
 });

@@ -406,3 +406,49 @@ describe("VisualsModal — new versions", () => {
     await waitFor(() => expect(gets("/candidates/vis-new").length).toBe(1));
   });
 });
+
+describe("VisualsModal — redraws", () => {
+  it("says a reject asked for a redraw, and lists it under Redraws with its state", async () => {
+    await openDetail("SYNTHETIC shape 2");
+    fireEvent.click(screen.getByRole("button", { name: /^Reject/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Too busy" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reject & remake" }));
+
+    const notice = await screen.findByText(/Sent for a redraw/);
+    fireEvent.click(within(notice.closest("p")!).getByRole("button", { name: "Show redraws" }));
+
+    const list = await screen.findByRole("list", { name: "Redraws" });
+    const row = within(list).getByText("SYNTHETIC shape 2").closest("li")!;
+    expect(row).toHaveTextContent("Queued");
+    expect(gets("/v1/visuals/redraws").at(-1)!.url.searchParams.get("source_id")).toBe(SYNTHETIC_SOURCE);
+  });
+
+  it("opens the new version of a ready redraw, and offers Try again on a failed one", async () => {
+    visualsFixture.reset(() => [
+      makeVisual({ state: "rejected" }),
+      makeVisual({ state: "rejected" }),
+    ]);
+    const ready = visualsFixture.get("vis-1")!;
+    const next = makeVisual({ parent_id: ready.id, title: "SYNTHETIC new version" });
+    visualsFixture.set(next);
+    ready.regeneration = {
+      id: "regen-vis-1", state: "done", attempts: 1, result_candidate_id: next.id, error: null,
+      created_at: "2026-01-01T00:00:00Z", finished_at: "2026-01-01T00:02:00Z",
+    };
+    visualsFixture.get("vis-2")!.regeneration = {
+      id: "regen-vis-2", state: "failed", attempts: 3, result_candidate_id: null, error: "SYNTHETIC",
+      created_at: "2026-01-01T00:01:00Z", finished_at: "2026-01-01T00:03:00Z",
+    };
+    render(<VisualsModal subject={row} initialTab="redraws" onClose={vi.fn()} onChanged={vi.fn()} />);
+
+    const list = await screen.findByRole("list", { name: "Redraws" });
+    const items = within(list).getAllByRole("listitem");
+    expect(items[0]).toHaveTextContent("Ready to review"); // what needs the partner comes first
+    expect(items[1]).toHaveTextContent("Failed");
+    expect(within(items[1]).getByRole("button", { name: "Try again" })).toBeInTheDocument();
+
+    fireEvent.click(within(items[0]).getByRole("button", { name: "Review" }));
+    expect(await screen.findByText("From the textbook")).toBeInTheDocument();
+    expect(gets(`/v1/visuals/candidates/${next.id}`)).toHaveLength(1);
+  });
+});

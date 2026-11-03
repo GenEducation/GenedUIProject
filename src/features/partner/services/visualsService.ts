@@ -1,5 +1,7 @@
 import { authFetch } from "@/utils/authFetch";
 import type {
+  RedrawItem,
+  RedrawState,
   VisualCrop,
   VisualDecisionIn,
   VisualDecisionOut,
@@ -9,6 +11,7 @@ import type {
   VisualRecropOut,
   VisualRegenerateIn,
   VisualRegenerateOut,
+  VisualReviewSummary,
   VisualSummary,
 } from "../types/visuals";
 
@@ -83,6 +86,28 @@ export const visualsService = {
       method: "POST",
       body: JSON.stringify(body),
     });
+    return response.json();
+  },
+
+  /**
+   * Each chapter's review tally, in one call for the whole list (the backend
+   * takes 1–100 chapters). A chapter the partner may not see is absent.
+   */
+  summary: async (sourceIds: string[]): Promise<VisualReviewSummary[]> => {
+    if (sourceIds.length === 0) return [];
+    const query = new URLSearchParams();
+    for (const id of sourceIds.slice(0, 100)) query.append("source_id", id);
+    const response = await authFetch(`${VISUALS_BASE}/summary?${query.toString()}`);
+    return response.json();
+  },
+
+  /** The redraws asked for in these chapters, newest first. */
+  redraws: async (sourceIds: string[], state?: RedrawState): Promise<RedrawItem[]> => {
+    if (sourceIds.length === 0) return [];
+    const query = new URLSearchParams();
+    for (const id of sourceIds.slice(0, 100)) query.append("source_id", id);
+    if (state) query.set("state", state);
+    const response = await authFetch(`${VISUALS_BASE}/redraws?${query.toString()}`);
     return response.json();
   },
 

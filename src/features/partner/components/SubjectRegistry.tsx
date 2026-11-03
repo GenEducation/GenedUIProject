@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, ChevronDown, Images, Play, RotateCw, AlertCircle, FileText, HelpCircle, ShieldCheck, Route, Upload, PenLine, PencilLine, ListChecks } from "lucide-react";
+import { Plus, Sparkles, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, ChevronDown, Images, Play, RotateCw, AlertCircle, FileText, HelpCircle, ShieldCheck, Route, Upload, PenLine, PencilLine, ListChecks } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePartnerStore, SubjectFilters, type Subject } from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
 import { resolveTaxonomyBoard, useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
 import { useVisualsIndex } from "../hooks/useVisualsIndex";
-import { VisualsModal } from "./visuals/VisualsModal";
+import { useRedrawSummary } from "../hooks/useRedrawSummary";
+import { VisualsModal, type Tab as VisualsTab } from "./visuals/VisualsModal";
 import { SourceReportModal } from "./SourceReportModal";
 import { SourceQuestionsModal } from "./SourceQuestionsModal";
 import { SourceReleaseModal } from "./SourceReleaseModal";
@@ -88,6 +89,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [visualsFor, setVisualsFor] = useState<Subject | null>(null);
+  // The tab the visuals popup opens on: "redraws" from the ready notice or the release review; null picks by counts.
+  const [visualsTab, setVisualsTab] = useState<VisualsTab | null>(null);
   const [reportFor, setReportFor] = useState<Subject | null>(null);
   const [questionsFor, setQuestionsFor] = useState<Subject | null>(null);
   const [authoringFor, setAuthoringFor] = useState<Subject | null>(null);
@@ -125,6 +128,15 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   // replaces them. A failed or invalid run has nothing to lose, so its Retry starts straight away.
   const [rerunFor, setRerunFor] = useState<Subject | null>(null);
   const visualsIndex = useVisualsIndex(subjects);
+  const redrawSummary = useRedrawSummary(subjects);
+  const openRedraws = (subject: Subject) => {
+    redrawSummary.dismissReady(subject.source_id);
+    setVisualsTab("redraws");
+    setVisualsFor(subject);
+  };
+  const readyNotices = redrawSummary.justReady
+    .map((id) => subjects.find((s) => s.source_id === id))
+    .filter((s): s is Subject => !!s);
   const subjectNames = [...new Set(useTaxonomySubjects(resolveTaxonomyBoard()).map((s) => s.name))];
 
   // Local draft state for filter inputs — committed on Apply
@@ -363,6 +375,34 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         </div>
       )}
 
+      {readyNotices.map((subject) => {
+        const ready = redrawSummary.summaryFor(subject)?.redraws.ready ?? 0;
+        return (
+          <div
+            key={subject.source_id}
+            role="status"
+            className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800"
+          >
+            <Sparkles size={14} className="shrink-0" aria-hidden />
+            <span className="flex-1">
+              All redraws for {subject.title} are done: {ready} ready to review.
+            </span>
+            <Button size="sm" variant="tertiary" onClick={() => openRedraws(subject)}>
+              Review them
+            </Button>
+            <Button
+              iconOnly
+              size="sm"
+              variant="tertiary"
+              aria-label="Dismiss"
+              onClick={() => redrawSummary.dismissReady(subject.source_id)}
+            >
+              <X size={14} />
+            </Button>
+          </div>
+        );
+      })}
+
       {actionError && (
         <div role="alert" className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-700">
           <AlertCircle size={14} className="shrink-0" aria-hidden />
@@ -402,6 +442,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             const visualCounts = visualsIndex.countsFor(subject);
             const hasVisuals = !!visualCounts && visualCounts.pending + visualCounts.accepted + visualCounts.rejected > 0;
             const pendingVisuals = visualCounts?.pending ?? 0;
+            const redrawTally = redrawSummary.summaryFor(subject)?.redraws;
+            const redrawsRunning = redrawTally ? redrawTally.queued + redrawTally.drawing : 0;
             const busy = busyId === subject.id;
             // A chapter waiting on questions says so with its button; its raw detail names server paths.
             const awaitingAnswers = subject.state === "review_needed" && subject.questions > 0;
@@ -653,6 +695,16 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                                 {pendingVisuals}{visualsIndex.pendingMayBeMore(subject) ? "+" : ""}
                               </span>
                             )}
+                            {redrawsRunning > 0 && (
+                              <span
+                                title={`${redrawsRunning} redraw${redrawsRunning === 1 ? "" : "s"} still drawing`}
+                                className="pointer-events-none absolute -bottom-1.5 -right-1.5 inline-flex items-center gap-0.5 bg-[#075E63] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center tabular-nums"
+                              >
+                                <RotateCw size={7} className="animate-spin" aria-hidden />
+                                {redrawsRunning}
+                                <span className="sr-only"> redraws still drawing</span>
+                              </span>
+                            )}
                           </span>
                         )}
 
@@ -772,6 +824,10 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
       <SourceReleaseModal
         subject={releaseFor}
         onClose={() => setReleaseFor(null)}
+        onReviewRedraws={(subject) => {
+          setReleaseFor(null);
+          openRedraws(subject);
+        }}
         onPublished={() => void fetchSubjects()}
         onRerun={(subject) => startIngestion(subject.id)}
       />
@@ -790,11 +846,18 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
       <VisualsModal
         subject={visualsFor}
         counts={visualsFor ? visualsIndex.countsFor(visualsFor) : null}
+        summary={visualsFor ? redrawSummary.summaryFor(visualsFor) : null}
+        initialTab={visualsTab}
         onClose={() => {
           setVisualsFor(null);
+          setVisualsTab(null);
           void visualsIndex.refresh();
+          void redrawSummary.refresh();
         }}
-        onChanged={() => void visualsIndex.refresh()}
+        onChanged={() => {
+          void visualsIndex.refresh();
+          void redrawSummary.refresh();
+        }}
       />
 
       {/* Ingested PDF Viewer */}

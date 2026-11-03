@@ -226,3 +226,51 @@ export interface VisualRecropOut {
   id: string;
   created: boolean;
 }
+
+/** A chapter's picture slots, each as far as its newest visual: a slot whose redraw landed is back to review. */
+export interface VisualTargetTally {
+  total: number;
+  to_review: number;
+  accepted: number;
+  rejected: number;
+  /** accepted + rejected */
+  reviewed: number;
+}
+
+export type RedrawState = "queued" | "drawing" | "ready" | "reviewed" | "failed";
+
+export interface VisualRedrawTally extends Record<RedrawState, number> {
+  total: number;
+  /** queued + drawing + ready: what publishing now would leave behind. */
+  open: number;
+}
+
+/** `GET /v1/visuals/summary`: where the review of one chapter's visuals stands. */
+export interface VisualReviewSummary {
+  source_id: string;
+  targets: VisualTargetTally;
+  redraws: VisualRedrawTally;
+  /** At least one redraw was asked for, and none is still queued or drawing. */
+  all_ready: boolean;
+}
+
+/** `GET /v1/visuals/redraws`: one redraw the partner asked for. */
+export interface RedrawItem {
+  id: string;
+  /** The rejected visual the redraw replaces. */
+  candidate_id: string;
+  source_id: string;
+  kind: "node" | "figure" | "card";
+  target_key: string;
+  title: string;
+  state: RedrawState;
+  attempts: number;
+  requested_at: string;
+  finished_at: string | null;
+  /** The new visual, once drawn: open it to review. */
+  result_candidate_id: string | null;
+  /** Why a failed redraw failed, as a class (`busy`, `not_needed`, `worker_lost`, `render_timeout`, ...). */
+  failure: string | null;
+  /** The rejected visual's signed image. */
+  image_url: string | null;
+}

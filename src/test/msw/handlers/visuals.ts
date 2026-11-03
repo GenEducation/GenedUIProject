@@ -2,6 +2,9 @@ import { http, HttpResponse } from "msw";
 import type {
   CandidateState,
   ReasonCode,
+  RedrawItem,
+  RedrawState,
+  VisualReviewSummary,
   VisualCrop,
   VisualDecisionIn,
   VisualDetail,
@@ -209,7 +212,64 @@ function advanceRegeneration(v: VisualDetail) {
   }
 }
 
+function redrawState(v: VisualDetail): RedrawState | null {
+  const r = v.regeneration;
+  if (!r) return null;
+  if (r.state === "queued" || r.state === "failed") return r.state;
+  if (r.state === "claimed") return "drawing";
+  const result = r.result_candidate_id ? store.get(r.result_candidate_id) : undefined;
+  return result && result.state !== "pending" ? "reviewed" : "ready";
+}
+
+function redrawItems(sourceIds: string[]): RedrawItem[] {
+  return visualsFixture
+    .all()
+    .filter((v) => sourceIds.includes(v.source_id) && v.regeneration)
+    .map((v) => ({
+      id: v.regeneration!.id,
+      candidate_id: v.id,
+      source_id: v.source_id,
+      kind: v.kind as RedrawItem["kind"],
+      target_key: `teach:${v.id}`,
+      title: v.title,
+      state: redrawState(v)!,
+      attempts: v.regeneration!.attempts,
+      requested_at: v.regeneration!.created_at,
+      finished_at: v.regeneration!.finished_at,
+      result_candidate_id: v.regeneration!.result_candidate_id,
+      failure: v.regeneration!.state === "failed" ? "render_crashed" : null,
+      image_url: v.image_url,
+    }))
+    .sort((a, b) => (a.requested_at < b.requested_at ? 1 : -1));
+}
+
+/** The backend's tally, approximated on the fixture: a visual replaced by a redraw counts through its new version. */
+function reviewSummary(sourceId: string): VisualReviewSummary {
+  const visuals = visualsFixture.all().filter((v) => v.source_id === sourceId);
+  const replaced = new Set(visuals.map((v) => v.regeneration?.result_candidate_id && v.id).filter(Boolean));
+  const slots = visuals.filter((v) => !replaced.has(v.id));
+  const count = (state: CandidateState) => slots.filter((v) => v.state === state).length;
+  const targets = { to_review: count("pending"), accepted: count("accepted"), rejected: count("rejected"), reviewed: 0, total: 0 };
+  targets.reviewed = targets.accepted + targets.rejected;
+  targets.total = targets.reviewed + targets.to_review;
+  const redraws = { queued: 0, drawing: 0, ready: 0, reviewed: 0, failed: 0, total: 0, open: 0 };
+  for (const item of redrawItems([sourceId])) redraws[item.state] += 1;
+  redraws.total = redraws.queued + redraws.drawing + redraws.ready + redraws.reviewed + redraws.failed;
+  redraws.open = redraws.queued + redraws.drawing + redraws.ready;
+  return { source_id: sourceId, targets, redraws, all_ready: redraws.total > 0 && redraws.queued + redraws.drawing === 0 };
+}
+
 export const visualsHandlers = [
+  http.get(`${VISUALS}/summary`, ({ request }) => {
+    const ids = new URL(request.url).searchParams.getAll("source_id");
+    return HttpResponse.json(ids.map(reviewSummary));
+  }),
+  http.get(`${VISUALS}/redraws`, ({ request }) => {
+    const q = new URL(request.url).searchParams;
+    const state = q.get("state");
+    return HttpResponse.json(redrawItems(q.getAll("source_id")).filter((r) => !state || r.state === state));
+  }),
+
   http.get(`${VISUALS}/candidates`, ({ request }) => list(new URL(request.url))),
   http.get(`${VISUALS}/library`, ({ request }) => list(new URL(request.url), "accepted")),
 
