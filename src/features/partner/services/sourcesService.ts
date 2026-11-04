@@ -5,6 +5,7 @@ import type {
   ChapterCorrection,
   ExcludedPagesDecision,
   LearningOutcome,
+  PartnerBook,
   QuestionsResponse,
   RecordedAnswer,
   ReleaseDecision,
@@ -195,6 +196,16 @@ export const sourcesService = {
 
   learningOutcomes: async (board: string, subject: string, grade: number): Promise<LearningOutcome[]> => {
     const response = await authFetch(`${SOURCES_BASE}/learning-outcomes${toQuery({ board, subject, grade })}`);
+    return response.json();
+  },
+
+  /**
+   * The books this partner filed chapters under, most recently used first;
+   * `subject` (exact catalogue name) and `grade` narrow it. Never another
+   * partner's books: the backend scopes it to the signed-in partner.
+   */
+  books: async (params: { subject?: string; grade?: number } = {}): Promise<PartnerBook[]> => {
+    const response = await authFetch(`${SOURCES_BASE}/books${toQuery(params)}`);
     return response.json();
   },
 

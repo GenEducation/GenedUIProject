@@ -3,6 +3,7 @@ import type {
   AuthoredQuestions,
   AuthoringResponse,
   LearningOutcome,
+  PartnerBook,
   QuestionsResponse,
   RecordedAnswer,
   ReleaseDecision,
@@ -155,6 +156,25 @@ export const sourcesHandlers = [
   }),
 
   http.get(`${SOURCES}/strands`, () => HttpResponse.json(strands)),
+  // Mirrors the backend: each distinct book (title and edition) of the partner's own sources, newest first.
+  http.get(`${SOURCES}/books`, ({ request }) => {
+    const q = new URL(request.url).searchParams;
+    const books = new Map<string, PartnerBook>();
+    const newestFirst = [...store.values()].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+    for (const s of newestFirst) {
+      if (q.get("subject") && s.subject !== q.get("subject")) continue;
+      if (q.get("grade") && s.grade !== Number(q.get("grade"))) continue;
+      const key = [s.book_title, s.edition_label, s.subject, s.grade].join("|");
+      const found = books.get(key);
+      if (found) found.chapters += 1;
+      else
+        books.set(key, {
+          book_title: s.book_title, edition_label: s.edition_label, board: s.board, publisher: s.publisher,
+          subject: s.subject, grade: s.grade, chapters: 1, last_used_at: s.created_at,
+        });
+    }
+    return HttpResponse.json([...books.values()]);
+  }),
 
   http.get(SOURCES, ({ request }) => {
     const q = new URL(request.url).searchParams;
