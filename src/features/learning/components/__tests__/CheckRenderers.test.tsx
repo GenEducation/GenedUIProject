@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CHECK_ITEM, LESSON_ID, lessonFixture, syntheticPayload } from "@/test/msw/handlers/lesson";
 import { useLessonStore } from "../../useLessonStore";
@@ -123,6 +123,119 @@ describe("matching", () => {
         { left: "SYNTHETIC left 3", right: "SYNTHETIC gamma" },
       ],
     });
+  });
+});
+
+const numeric = (entry: CheckItem["entry"]): CheckItem => ({ ...base, response_type: "numeric", options: [], entry });
+
+describe("number line", () => {
+  beforeEach(() => show(numeric({ mode: "number_line", min: "0", max: "10", step: "1" })));
+
+  it("replaces the typed box, is named by the question, and shows its ticks and a not-placed state", () => {
+    const range = screen.getByRole("slider", { name: /SYNTHETIC question/ });
+    expect(range).toHaveAttribute("min", "0");
+    expect(range).toHaveAttribute("max", "10");
+    expect(range).toHaveAttribute("aria-valuetext", "Not placed yet");
+    expect(screen.queryByLabelText("Your answer")).not.toBeInTheDocument();
+    expect(screen.getByText("Place the point on the line.")).toBeInTheDocument();
+    expect(submit()).toBeDisabled();
+  });
+
+  it("is completed with the keyboard alone: arrows on the line, or the number typed", async () => {
+    const user = userEvent.setup();
+    // A native range input steps with the arrow keys in a real browser (jsdom does not implement that), so the change it fires is
+    // simulated here; the buttons and the typed number below are the keyboard-reachable paths this test can drive end to end.
+    fireEvent.change(screen.getByRole("slider"), { target: { value: "3" } });
+    expect(screen.getByRole("slider")).toHaveAttribute("aria-valuetext", "Your point: 3");
+    screen.getByRole("button", { name: "Check answer" }).focus();
+    await user.click(submit());
+    expect(answer).toHaveBeenCalledWith(base.id, { kind: "numeric", value: "3" });
+  });
+
+  it("has tap alternatives: smaller and larger buttons, and a box to type the number", async () => {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Larger" }));
+    expect(screen.getByText("Your point: 0")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Larger" }));
+    await user.click(screen.getByRole("button", { name: "Smaller" }));
+    expect(screen.getByText("Your point: 0")).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Or type the number"));
+    await user.type(screen.getByLabelText("Or type the number"), "6");
+    expect(screen.getByText("Your point: 6")).toBeInTheDocument();
+    await user.click(submit());
+    expect(answer).toHaveBeenCalledWith(base.id, { kind: "numeric", value: "6" });
+  });
+
+  it("sends nothing until a value is placed", async () => {
+    const user = userEvent.setup();
+    await user.tab();
+    await user.tab();
+    expect(answer).not.toHaveBeenCalled();
+    expect(submit()).toBeDisabled();
+  });
+});
+
+describe("slider", () => {
+  beforeEach(() => show(numeric({ mode: "slider", min: "0", max: "1", step: "1/4" })));
+
+  it("steps by its own step, with fractions, and sends the decimal it landed on", async () => {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Larger" }));
+    await user.click(screen.getByRole("button", { name: "Larger" }));
+    expect(screen.getByText("Your point: 0.25")).toBeInTheDocument();
+    await user.click(submit());
+    expect(answer).toHaveBeenCalledWith(base.id, { kind: "numeric", value: "0.25" });
+  });
+
+  it("has no tick labels or placed marker: that is the number line's look", () => {
+    expect(screen.queryByText("Place the point on the line.")).not.toBeInTheDocument();
+  });
+});
+
+describe("tile builder", () => {
+  beforeEach(() => show({ ...base, response_type: "symbolic", options: [], entry: { mode: "tiles", tiles: ["2", "*", "x", "+", "3"] } }));
+
+  it("starts empty with a bank of tiles, and is named for a screen reader", () => {
+    expect(screen.getByRole("group", { name: "Tiles" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Your expression" })).toBeInTheDocument();
+    expect(screen.getByText("Tap tiles to build your answer.")).toBeInTheDocument();
+    expect(submit()).toBeDisabled();
+  });
+
+  it("is built with the keyboard alone, in order, and sends the expression the tiles spell", async () => {
+    const user = userEvent.setup();
+    for (const name of ["Add 3", "Add +", "Add 2", "Add *", "Add x"]) {
+      screen.getByRole("button", { name }).focus();
+      await user.keyboard("{Enter}");
+    }
+    expect(screen.getByRole("status")).toHaveTextContent("Add x");
+    expect(screen.getByRole("button", { name: "Add 3" })).toBeDisabled();
+    submit().focus();
+    await user.keyboard("{Enter}");
+    expect(answer).toHaveBeenCalledWith(base.id, { kind: "text", text: "3 + 2 * x" });
+  });
+
+  it("takes a tile back by pressing it, by Undo, by Backspace, or all at once", async () => {
+    const user = userEvent.setup();
+    for (const name of ["Add 2", "Add *", "Add x", "Add +"]) await user.click(screen.getByRole("button", { name }));
+    await user.click(screen.getByRole("button", { name: "Remove *" }));
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    screen.getByRole("button", { name: "Add 3" }).focus();
+    await user.keyboard("{Backspace}");
+    expect(screen.queryByRole("button", { name: "Remove x" })).not.toBeInTheDocument();
+    await user.keyboard("{Backspace}");
+    expect(screen.getByText("Tap tiles to build your answer.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add 2" }));
+    await user.click(screen.getByRole("button", { name: "Clear" }));
+    expect(submit()).toBeDisabled();
+  });
+});
+
+describe("a numeric check without an entry", () => {
+  it("is still a typed box", async () => {
+    await show(numeric(null));
+    expect(screen.getByLabelText("Your answer")).toBeInTheDocument();
+    expect(screen.queryByRole("slider")).not.toBeInTheDocument();
   });
 });
 

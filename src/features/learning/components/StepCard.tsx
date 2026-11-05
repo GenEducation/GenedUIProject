@@ -9,8 +9,10 @@ import { useUiText, type UiKey } from "../i18n";
 import { calculation } from "../check/arithmetic";
 import { formatOf, initialArrangement, isArranged, isComplete, responseFromArrangement, type Arrangement } from "../check/formats";
 import { Matching } from "../check/Matching";
+import { LineInput } from "../check/LineInput";
 import { MultiSelect } from "../check/MultiSelect";
 import { Sequencing } from "../check/Sequencing";
+import { TileBuilder } from "../check/TileBuilder";
 import { useCheckShown } from "../delivery/useCheckShown";
 import type { AnswerResponse, AnswerResult, CheckItem } from "../types";
 import { BoardFigure } from "./BoardFigure";
@@ -125,7 +127,7 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isChoice = format === "single_choice";
-  const isTyped = TYPED_TYPES.has(check.response_type);
+  const isTyped = TYPED_TYPES.has(check.response_type) && !arrangedFormat; // a line, slider or tiles replaces the typed box
   // A calculation typed as the answer ("540 * 40", "sqrt(144)") is worked out as they type. There are no
   // calculator keys: whatever they type (2^3, pi, log 100, sin 30…) is worked out. For a number answer its
   // result is what's sent; for an expression or words, what they typed is (√2 stays √2), and the result only helps.
@@ -207,6 +209,12 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
       )}
       {format === "sequencing" && (
         <Sequencing check={check} order={arranged.order} onChange={(order) => setArranged({ ...arranged, order })} disabled={busy} />
+      )}
+      {(format === "number_line" || format === "slider") && (
+        <LineInput check={check} number={arranged.number} onChange={(number) => setArranged({ ...arranged, number })} disabled={busy} />
+      )}
+      {format === "tile_builder" && (
+        <TileBuilder check={check} built={arranged.built} onChange={(built) => setArranged({ ...arranged, built })} disabled={busy} />
       )}
       {format === "matching_pairs" && (
         <Matching check={check} pairs={arranged.pairs} onChange={(pairs) => setArranged({ ...arranged, pairs })} disabled={busy} />

@@ -200,7 +200,13 @@ export interface CheckItem {
   selection?: "single" | "multiple";
   /** A `matching` check's left-hand entries, to pair with `options` (`teacher_node_v9`, W2 P1). */
   left_entries?: string[];
+  /** How a `numeric` or `symbolic` check's answer is entered: a number line, a slider, or tiles (`teacher_node_v10`, W2 P2). */
+  entry?: CheckEntry | null;
 }
+
+export type CheckEntry =
+  | { mode: "number_line" | "slider"; min: string; max: string; step: string }
+  | { mode: "tiles"; tiles: string[] };
 
 export interface NodeOutline {
   node_id: string;

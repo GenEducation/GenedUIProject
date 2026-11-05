@@ -62,3 +62,26 @@ describe("the format registry", () => {
     expect(initialArrangement(sequence).order).toEqual(["SYNTHETIC one", "SYNTHETIC two", "SYNTHETIC three"]);
   });
 });
+
+describe("the P2 formats", () => {
+  const numeric = (entry: CheckItem["entry"]): CheckItem => check({ response_type: "numeric", options: [], entry });
+  const line = { mode: "number_line", min: "0", max: "10", step: "1" } as const;
+
+  it("takes a number line, a slider and tiles from the entry, and a check without one is answered as before", () => {
+    expect(formatOf(numeric(line))).toBe("number_line");
+    expect(formatOf(numeric({ ...line, mode: "slider" }))).toBe("slider");
+    expect(formatOf(check({ response_type: "symbolic", options: [], entry: { mode: "tiles", tiles: ["2", "x"] } }))).toBe("tile_builder");
+    expect(formatOf(numeric(null))).toBe("typed_entry");
+    expect(formatOf(numeric(undefined))).toBe("typed_entry");
+    expect(formatOf(check({ response_type: "string_set", options: [], entry: line }))).toBe("typed_entry");
+  });
+
+  it("builds a numeric response from a placed number and a text response from the tiles in order, once there is something", () => {
+    const n = numeric(line);
+    expect(responseFromArrangement(n, initialArrangement(n))).toBeNull();
+    expect(responseFromArrangement(n, { ...initialArrangement(n), number: "7" })).toEqual({ kind: "numeric", value: "7" });
+    const tiled = check({ response_type: "symbolic", options: [], entry: { mode: "tiles", tiles: ["2", "*", "x", "+", "3"] } });
+    expect(responseFromArrangement(tiled, initialArrangement(tiled))).toBeNull();
+    expect(responseFromArrangement(tiled, { ...initialArrangement(tiled), built: [4, 3, 0, 1, 2] })).toEqual({ kind: "text", text: "3 + 2 * x" });
+  });
+});
