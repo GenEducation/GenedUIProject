@@ -9,6 +9,8 @@ import { useUiText, type UiKey } from "../i18n";
 import { calculation } from "../check/arithmetic";
 import { formatOf, initialArrangement, isArranged, isComplete, responseFromArrangement, type Arrangement } from "../check/formats";
 import { Matching } from "../check/Matching";
+import { BlankFiller } from "../check/BlankFiller";
+import { GroupSorter } from "../check/GroupSorter";
 import { LineInput } from "../check/LineInput";
 import { MultiSelect } from "../check/MultiSelect";
 import { Sequencing } from "../check/Sequencing";
@@ -215,6 +217,12 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
       )}
       {format === "tile_builder" && (
         <TileBuilder check={check} built={arranged.built} onChange={(built) => setArranged({ ...arranged, built })} disabled={busy} />
+      )}
+      {format === "grouping" && (
+        <GroupSorter check={check} pairs={arranged.pairs} onChange={(pairs) => setArranged({ ...arranged, pairs })} disabled={busy} />
+      )}
+      {format === "blanks" && (
+        <BlankFiller check={check} pairs={arranged.pairs} onChange={(pairs) => setArranged({ ...arranged, pairs })} disabled={busy} />
       )}
       {format === "matching_pairs" && (
         <Matching check={check} pairs={arranged.pairs} onChange={(pairs) => setArranged({ ...arranged, pairs })} disabled={busy} />

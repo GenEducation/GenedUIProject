@@ -13,6 +13,8 @@ export type CheckFormat =
   | "number_line"
   | "slider"
   | "tile_builder"
+  | "grouping"
+  | "blanks"
   | "typed_entry";
 
 export function formatOf(check: CheckItem): CheckFormat {
@@ -26,6 +28,10 @@ export function formatOf(check: CheckItem): CheckFormat {
       return "matching_pairs";
     case "sequence":
       return "sequencing";
+    case "grouping":
+      return "grouping";
+    case "blanks":
+      return "blanks";
     default:
       return "typed_entry";
   }
@@ -42,7 +48,7 @@ export interface Arrangement {
   chosen: string[];
   /** The entries in the learner's order, as text (sequencing). */
   order: string[];
-  /** Left entry -> the right option's text chosen for it (matching). */
+  /** Left entry -> the option's text chosen for it (matching, grouping: the group; blanks: the bank entry). */
   pairs: Record<string, string>;
   /** The number placed on a line or slider, as the text to send; null until the learner places one. */
   number: string | null;
@@ -74,6 +80,9 @@ export function isComplete(check: CheckItem, value: Arrangement): boolean {
       return value.number !== null && value.number !== "";
     case "tile_builder":
       return value.built.length > 0;
+    case "grouping":
+    case "blanks":
+      return (check.left_entries ?? []).length > 0 && (check.left_entries ?? []).every((left) => !!value.pairs[left]);
     default:
       return false;
   }
@@ -89,6 +98,8 @@ export function responseFromArrangement(check: CheckItem, value: Arrangement): A
     case "sequencing":
       return { kind: "ordered", items: value.order };
     case "matching_pairs":
+    case "grouping":
+    case "blanks":
       return { kind: "pairs", pairs: (check.left_entries ?? []).map((left) => ({ left, right: value.pairs[left] })) };
     case "number_line":
     case "slider":

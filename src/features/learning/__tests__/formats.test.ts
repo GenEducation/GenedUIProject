@@ -85,3 +85,27 @@ describe("the P2 formats", () => {
     expect(responseFromArrangement(tiled, { ...initialArrangement(tiled), built: [4, 3, 0, 1, 2] })).toEqual({ kind: "text", text: "3 + 2 * x" });
   });
 });
+
+describe("the P2b formats", () => {
+  const grouping = check({ response_type: "grouping", left_entries: ["a", "b", "c"], options: [{ id: "g1", text: "G1" }, { id: "g2", text: "G2" }] });
+  const blanks = check({ response_type: "blanks", left_entries: ["1", "2"] });
+
+  it("reads grouping and blanks from the payload and treats them as arranged", () => {
+    expect(formatOf(grouping)).toBe("grouping");
+    expect(formatOf(blanks)).toBe("blanks");
+    expect(isArranged("grouping") && isArranged("blanks")).toBe(true);
+  });
+
+  it("is complete only when every entry or blank has an answer, and answers with pairs in the payload's order", () => {
+    expect(isComplete(grouping, { ...initialArrangement(grouping), pairs: { a: "G1", b: "G2" } })).toBe(false);
+    expect(responseFromArrangement(grouping, { ...initialArrangement(grouping), pairs: { c: "G2", a: "G1", b: "G1" } })).toEqual({
+      kind: "pairs",
+      pairs: [{ left: "a", right: "G1" }, { left: "b", right: "G1" }, { left: "c", right: "G2" }],
+    });
+    expect(responseFromArrangement(blanks, { ...initialArrangement(blanks), pairs: { "2": "y" } })).toBeNull();
+    expect(responseFromArrangement(blanks, { ...initialArrangement(blanks), pairs: { "2": "y", "1": "x" } })).toEqual({
+      kind: "pairs",
+      pairs: [{ left: "1", right: "x" }, { left: "2", right: "y" }],
+    });
+  });
+});

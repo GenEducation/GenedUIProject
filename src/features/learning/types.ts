@@ -192,13 +192,14 @@ export interface CheckOption {
 export interface CheckItem {
   id: string;
   prompt: string;
-  response_type: "numeric" | "numeric_set" | "symbolic" | "string_set" | "mcq" | "sequence" | "matching";
+  response_type: "numeric" | "numeric_set" | "symbolic" | "string_set" | "mcq" | "sequence" | "matching" | "grouping" | "blanks";
   role: "checkpoint" | "formative_probe";
   options: CheckOption[];
   figure_groups: FigureGroup[];
   /** `multiple`: an `mcq` whose key is a set of options, answered by choosing several (`teacher_node_v9`, W2 P1). */
   selection?: "single" | "multiple";
-  /** A `matching` check's left-hand entries, to pair with `options` (`teacher_node_v9`, W2 P1). */
+  /** A `matching` check's left-hand entries to pair with `options` (`teacher_node_v9`); a `grouping` check's entries to sort into the
+   *  groups in `options`, and a `blanks` check's blank numbers to fill from the bank in `options` (`teacher_node_v11`, W2 P2b). */
   left_entries?: string[];
   /** How a `numeric` or `symbolic` check's answer is entered: a number line, a slider, or tiles (`teacher_node_v10`, W2 P2). */
   entry?: CheckEntry | null;

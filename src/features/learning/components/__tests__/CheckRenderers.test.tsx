@@ -231,6 +231,104 @@ describe("tile builder", () => {
   });
 });
 
+const groups: CheckItem = {
+  ...base,
+  response_type: "grouping",
+  options: [{ id: "g1", text: "SYNTHETIC red" }, { id: "g2", text: "SYNTHETIC yellow" }],
+  left_entries: ["apple", "banana", "cherry"],
+};
+
+describe("grouping", () => {
+  beforeEach(() => show(groups));
+
+  it("gives every entry its own labelled group buttons, with nothing chosen and nothing sendable", () => {
+    expect(screen.getAllByRole("radiogroup")).toHaveLength(3);
+    expect(screen.getByRole("radiogroup", { name: "Group for apple" })).toBeInTheDocument();
+    expect(screen.queryAllByRole("radio", { checked: true })).toHaveLength(0);
+    expect(submit()).toBeDisabled();
+  });
+
+  it("is completed with the keyboard alone, lets two entries share a group, and sends every entry's group", async () => {
+    const user = userEvent.setup();
+    const pick = async (entry: string, group: string) => {
+      within(screen.getByRole("radiogroup", { name: `Group for ${entry}` })).getByRole("radio", { name: group }).focus();
+      await user.keyboard(" ");
+    };
+    await pick("apple", "SYNTHETIC red");
+    await pick("banana", "SYNTHETIC yellow");
+    expect(submit()).toBeDisabled();
+    await pick("cherry", "SYNTHETIC red");
+    submit().focus();
+    await user.keyboard("{Enter}");
+    expect(answer).toHaveBeenCalledWith(base.id, {
+      kind: "pairs",
+      pairs: [
+        { left: "apple", right: "SYNTHETIC red" },
+        { left: "banana", right: "SYNTHETIC yellow" },
+        { left: "cherry", right: "SYNTHETIC red" },
+      ],
+    });
+  });
+
+  it("lets an entry be moved to another group with one tap", async () => {
+    const user = userEvent.setup();
+    const apple = () => within(screen.getByRole("radiogroup", { name: "Group for apple" }));
+    await user.click(apple().getByRole("radio", { name: "SYNTHETIC red" }));
+    await user.click(apple().getByRole("radio", { name: "SYNTHETIC yellow" }));
+    expect(apple().getByRole("radio", { name: "SYNTHETIC yellow" })).toBeChecked();
+    expect(apple().getByRole("radio", { name: "SYNTHETIC red" })).not.toBeChecked();
+  });
+});
+
+const blanks: CheckItem = {
+  ...base,
+  response_type: "blanks",
+  options: [{ id: "w1", text: "alpha" }, { id: "w2", text: "beta" }, { id: "w3", text: "gamma" }, { id: "w4", text: "SYNTHETIC distractor" }],
+  left_entries: ["1", "2", "3"],
+};
+
+describe("blanks", () => {
+  beforeEach(() => show(blanks));
+
+  it("shows numbered blanks and a word bank, the first blank current, nothing sendable", () => {
+    expect(screen.getByRole("button", { name: "Blank 1: empty" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("group", { name: "Word bank" })).toBeInTheDocument();
+    expect(submit()).toBeDisabled();
+  });
+
+  it("fills the blanks in order with the keyboard, each bank entry once, and sends the pairs", async () => {
+    const user = userEvent.setup();
+    for (const word of ["beta", "alpha", "gamma"]) {
+      screen.getByRole("button", { name: word }).focus();
+      await user.keyboard("{Enter}");
+    }
+    expect(screen.getByRole("button", { name: "Blank 1: beta" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "alpha" })).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("Put gamma in blank 3");
+    submit().focus();
+    await user.keyboard("{Enter}");
+    expect(answer).toHaveBeenCalledWith(base.id, {
+      kind: "pairs",
+      pairs: [
+        { left: "1", right: "beta" },
+        { left: "2", right: "alpha" },
+        { left: "3", right: "gamma" },
+      ],
+    });
+  });
+
+  it("empties a filled blank by pressing it, and then fills that one next", async () => {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "alpha" }));
+    await user.click(screen.getByRole("button", { name: "beta" }));
+    await user.click(screen.getByRole("button", { name: "Blank 1: alpha" }));
+    expect(screen.getByRole("button", { name: "Blank 1: empty" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "gamma" }));
+    expect(screen.getByRole("button", { name: "Blank 1: gamma" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Blank 2: beta" })).toBeInTheDocument();
+  });
+});
+
 describe("a numeric check without an entry", () => {
   it("is still a typed box", async () => {
     await show(numeric(null));
