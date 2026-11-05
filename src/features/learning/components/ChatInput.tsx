@@ -1,5 +1,6 @@
 "use client";
 
+import { useLessonStore } from "../useLessonStore";
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Check, Mic, SendHorizontal, Square, X } from "lucide-react";
 import { useDictation } from "../dictation/useDictation";
@@ -74,15 +75,26 @@ export function ChatInput({ replying, disabled, onSend, onStop, subject = null }
   // Maths lessons: the field holds LaTeX and the message is made from it; elsewhere the box holds the message.
   const [latex, setLatex] = useState("");
   const [plain, setPlain] = useState("");
+  // A quote chosen in the book to ask about (W1): the box takes it, once per quote, and the learner writes the question.
+  const draft = useLessonStore((state) => state.chatDraft);
+  const [takenDraft, setTakenDraft] = useState(0);
   const text = maths ? chatTextFromLatex(latex) : plain;
   const setText = (next: string) => (maths ? setLatex(latexFromChatText(next)) : setPlain(next));
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const mathRef = useRef<MathFieldHandle>(null);
+  if (draft && draft.nonce !== takenDraft) {
+    setTakenDraft(draft.nonce);
+    setText(draft.text.slice(0, MAX_MESSAGE));
+  }
   // Shared with voice mode: a pick in either place applies to both.
   const { language, pick: pickLanguage } = useSpeechLanguage(subject);
   const dictation = useDictation(dictationLanguage(language)?.recognition);
   const dictating = dictation.state === "listening";
   const focusBox = () => (maths && !dictating ? mathRef.current?.focus() : areaRef.current?.focus());
+  useLayoutEffect(() => {
+    if (draft) focusBox();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a new quote moves the focus
+  }, [draft?.nonce]);
   // What was in the box when dictation began; dictated words are added after it.
   const [before, setBefore] = useState("");
   const shown = dictating ? [before.trimEnd(), dictation.transcript].filter(Boolean).join(" ") : text;

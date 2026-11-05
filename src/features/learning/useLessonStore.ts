@@ -14,6 +14,7 @@ import type {
   AnswerResult,
   InstanceState,
   PresentationManifest,
+  ReadingIntent,
   RevisitOptions,
   SequencedTurnEvent,
   TeacherPayload,
@@ -35,6 +36,12 @@ const MANIFEST_RETRY_MS = 300;
  * once); this only bounds a request that never answers, after which the words show with a retry for the picture.
  */
 const FIGURE_WAIT_MS = 8000;
+/** What the learner sees said for each reading control: their own words in the chat, as for any message. */
+const READING_MESSAGES = {
+  read_with_me: "Can we read this together?",
+  read_it: "I've read it.",
+} as const;
+
 /** The longest a new step's opening waits for the step's payload and pictures, for a read that never answers. */
 const STEP_LOAD_WAIT_MS = 10_000;
 
@@ -96,8 +103,14 @@ interface LessonState {
   /** The step (instance node) whose payload could not be read when the lesson moved to it: said in the chat, with a retry. */
   stepLoadError: string | null;
 
+  /** A quote the learner chose in the book to ask about: the chat box takes it (a new `nonce` is a new quote). */
+  chatDraft: { text: string; nonce: number } | null;
+  setChatDraft: (text: string) => void;
+
   load: (instanceId: string) => Promise<void>;
   send: (text: string) => Promise<void>;
+  /** "Read with me" / "I've read it" from the book: a message the tutor answers, that is never an answer, engagement or progress. */
+  sendReading: (intent: ReadingIntent) => Promise<void>;
   stop: () => Promise<void>;
   retry: (turnId: string) => Promise<void>;
   answer: (
@@ -150,6 +163,7 @@ const initial = {
   error: null,
   instance: null,
   payload: null,
+  chatDraft: null,
   manifest: null,
   turns: [],
   presentedFigureIds: [],
@@ -761,6 +775,28 @@ export const useLessonStore = create<LessonState>((set, get) => {
           interrupts: openTurnInterrupt(),
         },
         trimmed,
+      );
+    },
+
+    setChatDraft: (text) => set((state) => ({ chatDraft: { text, nonce: (state.chatDraft?.nonce ?? 0) + 1 } })),
+
+    sendReading: async (intent) => {
+      if (gap) await gap.closed;
+      const node = activeNodeId();
+      if (!node) return;
+      const text = READING_MESSAGES[intent];
+      await runTurn(
+        {
+          turn_id: uuid(),
+          kind: "learner_message",
+          instance_node_id: node,
+          text,
+          latency_ms: lastReplyAt ? Math.min(Date.now() - lastReplyAt, 3_600_000) : 0,
+          routing_mode: "conversation_only",
+          reading_intent: intent,
+          interrupts: openTurnInterrupt(),
+        },
+        text,
       );
     },
 

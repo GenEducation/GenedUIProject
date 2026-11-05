@@ -37,7 +37,15 @@ export interface TurnRequest {
   language?: VoiceLanguage;
   /** The learner session whose confirmed check deliveries a message may answer (backend ADR 0035 decision 5). */
   session_id?: string;
+  /**
+   * The message came from a reading control on the book panel (W1). It is conversation whatever its words: never an answer,
+   * never engagement, never progress. Needs `routing_mode: "conversation_only"`.
+   */
+  reading_intent?: "read_with_me" | "read_it";
 }
+
+/** What a reading control asks of the tutor. */
+export type ReadingIntent = NonNullable<TurnRequest["reading_intent"]>;
 
 export type FailureReason =
   | "first_token_timeout" | "stream_interrupted" | "model_error" | "policy_refused" | "safety_refused"
@@ -196,17 +204,46 @@ export interface NodeOutline {
   type: "teach" | "practice" | "assess";
 }
 
-/** `GET /v1/instances/{id}/teacher-payload` (`teacher_node_v5`), narrowed to what the screen reads. */
+/** One chunk of a passage as printed: a paragraph, or a glossary `note` that sits beside it (`teacher_node_v8`). */
+export interface PassageChunk {
+  id: string;
+  element_type: string;
+  text: string;
+  page: number;
+}
+
+/** A part of a passage: the book's own part ("I", "II") or a piece between two interruptions. */
+export interface PassageSegment {
+  segment: number;
+  chunks: PassageChunk[];
+}
+
+/** A text the learner reads, complete up to the segment the step's activities refer to; never beyond it. */
+export interface Passage {
+  id: string;
+  title: string;
+  segments: PassageSegment[];
+}
+
+/** What the step's own chunks are for in a reading-based chapter (`teacher_node_v8`). */
+export type ReadingRole = "pre_reading" | "reading" | "post_reading" | "mixed";
+
+/**
+ * `GET /v1/instances/{id}/teacher-payload`, narrowed to what the screen reads. The payload is the version the session
+ * was stored as (v5 to v8), so the reading fields are absent on an older one: no passage, no panel.
+ */
 export interface TeacherPayload {
-  schema_version: "teacher_node_v5";
+  schema_version: string;
   node: {
     id: string;
     title: string;
     type: "teach" | "practice" | "assess";
     teach_only: boolean;
-    sections: Array<{ id: string; title: string; path: string[]; chunks: Array<{ id: string; text: string; page: number }> }>;
+    sections: Array<{ id: string; title: string; path: string[]; chunks: Array<{ id: string; element_type?: string; text: string; page: number }> }>;
     figure_groups: FigureGroup[];
     check_items: CheckItem[];
+    reading_role?: ReadingRole | null;
+    passages?: Passage[];
     est_minutes: number;
   };
   student_context: {
