@@ -452,3 +452,47 @@ describe("VisualsModal — redraws", () => {
     expect(gets(`/v1/visuals/candidates/${next.id}`)).toHaveLength(1);
   });
 });
+
+describe("VisualsModal — progress and tabs", () => {
+  const summary = {
+    source_id: SYNTHETIC_SOURCE,
+    targets: { total: 52, to_review: 42, accepted: 9, rejected: 1, reviewed: 10 },
+    redraws: { queued: 0, drawing: 0, ready: 2, reviewed: 0, failed: 0, total: 2, open: 2 },
+    all_ready: true,
+  };
+  const counts = { pending: 63, accepted: 9, rejected: 3 };
+
+  it("says the bar counts pictures while the tabs count versions, and opens Redraws from what is ready", async () => {
+    render(<VisualsModal subject={row} counts={counts} summary={summary} onClose={vi.fn()} onChanged={vi.fn()} />);
+    const progress = await screen.findByRole("region", { name: "Review progress" });
+    expect(progress).toHaveTextContent("Pictures reviewed10/52");
+    expect(progress).toHaveTextContent(/Counts each picture once, at its newest version\. The tabs below count every version/);
+    // The Redraws tab sits right below: no "See redraws" link repeats it.
+    expect(within(progress).queryByRole("button", { name: "See redraws" })).toBeNull();
+
+    fireEvent.click(within(progress).getByRole("button", { name: "2 redrawn, ready to review" }));
+    expect(screen.getByRole("tab", { name: /Redraws/ })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("tabpanel")).toHaveAttribute("aria-labelledby", "visuals-tab-redraws");
+  });
+
+  it("moves between tabs with the arrow keys, Home and End, keeping one tab in the Tab order", async () => {
+    render(<VisualsModal subject={row} counts={counts} onClose={vi.fn()} onChanged={vi.fn()} />);
+    const tablist = await screen.findByRole("tablist", { name: "Visual state" });
+    const tab = (name: RegExp) => within(tablist).getByRole("tab", { name });
+    expect(tab(/To review/)).toHaveAttribute("tabindex", "0");
+    expect(tab(/Accepted/)).toHaveAttribute("tabindex", "-1");
+    expect(tab(/To review/)).toHaveAttribute("aria-controls", "visuals-tabpanel");
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(tab(/Accepted/)).toHaveAttribute("aria-selected", "true");
+    expect(tab(/Accepted/)).toHaveFocus();
+    fireEvent.keyDown(tablist, { key: "End" });
+    expect(tab(/Redraws/)).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(tablist, { key: "ArrowRight" }); // wraps
+    expect(tab(/To review/)).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(tablist, { key: "ArrowLeft" });
+    expect(tab(/Redraws/)).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(tablist, { key: "Home" });
+    expect(tab(/To review/)).toHaveFocus();
+  });
+});

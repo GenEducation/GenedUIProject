@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type KeyboardEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Images, RotateCw, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
@@ -133,6 +133,21 @@ function VisualsModalBody({
     id === "redraws" ? (summary?.redraws.open ?? redraws.items.length) || undefined : counts?.[id];
   const loading = tab === "redraws" ? redraws.loading : list.loading;
 
+  // Arrow keys, Home and End move between tabs (and select them), as a tablist does.
+  const onTabKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const i = TABS.findIndex((t) => t.id === tab);
+    const to =
+      e.key === "ArrowRight" ? (i + 1) % TABS.length
+      : e.key === "ArrowLeft" ? (i - 1 + TABS.length) % TABS.length
+      : e.key === "Home" ? 0
+      : e.key === "End" ? TABS.length - 1
+      : -1;
+    if (to === -1) return;
+    e.preventDefault();
+    setTab(TABS[to].id);
+    document.getElementById(`visuals-tab-${TABS[to].id}`)?.focus();
+  };
+
   return (
     <div className="flex flex-col min-h-full">
       {/* Header */}
@@ -204,11 +219,18 @@ function VisualsModalBody({
             exit={{ opacity: 0 }}
             className="flex-1 flex flex-col gap-4 px-4 sm:px-5 md:px-7 py-5"
           >
-            {summary && <RedrawTallyBar summary={summary} onShowRedraws={tab === "redraws" ? undefined : showRedraws} />}
+            {summary && (
+              <RedrawTallyBar summary={summary} onShowRedraws={tab === "redraws" ? undefined : showRedraws} showLink={false} explainCounts />
+            )}
 
             {/* Tabs */}
-            {/* Equal segments across a phone's width; their natural size, to the left, when there is room. */}
-            <div role="tablist" aria-label="Visual state" className="flex w-full gap-1 p-1 bg-white rounded-2xl border border-[#122D30]/5 sm:w-auto sm:self-start">
+            {/* A 2×2 block on a phone, where four labels with counts don't fit one row; one row, to the left, when there is room. */}
+            <div
+              role="tablist"
+              aria-label="Visual state"
+              onKeyDown={onTabKey}
+              className="grid grid-cols-2 w-full gap-1 p-1 bg-white rounded-2xl border border-[#122D30]/5 sm:flex sm:w-auto sm:self-start"
+            >
               {TABS.map((t) => {
                 const active = t.id === tab;
                 const n = tabCount(t.id);
@@ -216,22 +238,25 @@ function VisualsModalBody({
                   // eslint-disable-next-line no-restricted-syntax -- segmented tab, styled as part of the tablist
                   <button
                     key={t.id}
+                    id={`visuals-tab-${t.id}`}
                     type="button"
                     role="tab"
                     aria-selected={active}
+                    aria-controls="visuals-tabpanel"
+                    tabIndex={active ? 0 : -1}
                     onClick={() => setTab(t.id)}
-                    className={`flex-1 sm:flex-none whitespace-nowrap px-2 sm:px-3.5 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-wider sm:tracking-widest transition-colors ${
-                      active ? "bg-[#075E63] text-white" : "text-[#122D30]/45 hover:text-[#122D30] hover:bg-[#075E63]/5"
+                    className={`sm:flex-none whitespace-nowrap px-3 sm:px-3.5 py-2 sm:py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider sm:tracking-widest transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#075E63] ${
+                      active ? "bg-[#075E63] text-white" : "text-[#122D30]/65 hover:text-[#122D30] hover:bg-[#075E63]/5"
                     }`}
                   >
                     {t.label}
-                    {n ? <span className={`ml-1.5 tabular-nums ${active ? "text-white/60" : "text-[#122D30]/30"}`}>{n}</span> : null}
+                    {n ? <span className={`ml-1.5 tabular-nums ${active ? "text-white/80" : "text-[#122D30]/65"}`}>{n}</span> : null}
                   </button>
                 );
               })}
             </div>
 
-            <div role="tabpanel" aria-label={activeTab.label} className="flex-1">
+            <div role="tabpanel" id="visuals-tabpanel" aria-labelledby={`visuals-tab-${tab}`} className="flex-1">
               {tab === "redraws" ? (
                 redraws.error && !redraws.items.length ? (
                   <div className="flex flex-col items-center gap-3 py-16 text-center">

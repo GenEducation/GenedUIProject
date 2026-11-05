@@ -171,7 +171,14 @@ describe("Reviewing and publishing a chapter", () => {
     const progress = within(dialog).getByRole("region", { name: "Review progress" });
     expect(within(progress).getByText("Sent for redraw")).toBeInTheDocument();
     expect(progress).toHaveTextContent("42/50");
-    expect(progress).toHaveTextContent("6 drawing · 3 ready");
+    expect(progress).toHaveTextContent("(6 drawing)");
+    // What is ready is the way in to the redraws; no second "See redraws" link says the same.
+    expect(within(progress).getByRole("button", { name: "3 redrawn, ready to review" })).toBeInTheDocument();
+    expect(within(progress).queryByRole("button", { name: "See redraws" })).toBeNull();
+    expect(within(progress).getByRole("progressbar", { name: "Pictures reviewed" })).toHaveAttribute(
+      "aria-valuetext",
+      "42 of 50 pictures reviewed: 30 accepted, 12 rejected, 9 sent for redraw",
+    );
     expect(dialog).toHaveTextContent("6 redraws still running, 3 waiting for review");
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Accept all 5" }));
