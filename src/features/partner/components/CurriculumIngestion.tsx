@@ -349,16 +349,13 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
                     onPick={(book) => {
                       setBookTitle(book.book_title);
                       setEdition(book.edition_label);
+                      if (book.publisher) setPublisher(book.publisher);
                     }}
                     books={pastBooks}
+                    edition={edition}
                     placeholder="e.g. Ganita Prakash"
                     className={inputClass("src-book")}
                   />
-                  {pastBooks.length > 0 && (
-                    <p className="text-[10px] px-1 text-[#122D30]/45">
-                      Pick a book you filed before, or type a new one.
-                    </p>
-                  )}
                 </div>
                 <div className="grid grid-cols-[110px_1fr] gap-4">
                   <div className="space-y-2">

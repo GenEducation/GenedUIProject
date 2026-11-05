@@ -105,6 +105,7 @@ export function ChapterCorrectionModal({ subject, onClose }: ChapterCorrectionMo
                 setEdition(book.edition_label);
               }}
               books={pastBooks}
+              edition={edition}
               className={inputClass}
             />
           </label>
