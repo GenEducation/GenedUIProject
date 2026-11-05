@@ -4,6 +4,8 @@ import { useState, useRef } from "react";
 import { usePartnerStore, type Subject } from "../store/usePartnerStore";
 import { PageWisePreview } from "./PageWisePreview";
 import { LearningOutcomePicker } from "./LearningOutcomePicker";
+import { BookPicker } from "./BookPicker";
+import { usePartnerBooks } from "../hooks/usePartnerBooks";
 import { MAX_UPLOAD_BYTES } from "../types/sources";
 import { asError } from "@/utils/errors";
 import { Select } from "@/components/ui/Select";
@@ -66,6 +68,8 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
   const [strand, setStrand] = useState(prefill?.strand ?? "");
 
   const gradeNum = parseInt(grade, 10);
+  // The partner's own books for what the form has picked so far: the Book Title offers them.
+  const pastBooks = usePartnerBooks(subjectName, Number.isInteger(gradeNum) ? gradeNum : null);
   // Loads the catalogue on mount rather than assuming an earlier screen already
   // did — ingestion is the boundary where an off-taxonomy name would be written.
   const catalog = useTaxonomySubjects(board);
@@ -338,7 +342,20 @@ export function CurriculumIngestion({ onClose, prefill }: CurriculumIngestionPro
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="src-book" className={fieldLabel}>Book Title</label>
-                  <input id="src-book" value={bookTitle} onChange={(e) => setBookTitle(e.target.value)} placeholder="e.g. Ganita Prakash" className={inputClass("src-book")} />
+                  <BookPicker
+                    id="src-book"
+                    value={bookTitle}
+                    onChange={setBookTitle}
+                    onPick={(book) => {
+                      setBookTitle(book.book_title);
+                      setEdition(book.edition_label);
+                      if (book.publisher) setPublisher(book.publisher);
+                    }}
+                    books={pastBooks}
+                    edition={edition}
+                    placeholder="e.g. Ganita Prakash"
+                    className={inputClass("src-book")}
+                  />
                 </div>
                 <div className="grid grid-cols-[110px_1fr] gap-4">
                   <div className="space-y-2">

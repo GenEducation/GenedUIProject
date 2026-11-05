@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { lastUpload, sourcesFixture } from "@/test/msw/handlers/sources";
+import { lastUpload, makeSource, sourcesFixture } from "@/test/msw/handlers/sources";
 import { syntheticPdf, installNodeMultipart } from "@/test/multipart";
 import { resetSubjectCatalogForTests } from "@/features/subjects/subjectCatalog";
 import { usePartnerStore } from "@/features/partner/store/usePartnerStore";
@@ -141,5 +141,24 @@ describe("CurriculumIngestion — upload a chapter source", () => {
     const mid = syntheticPdf("mid.pdf", "x".repeat(40 * 1024 * 1024));
     fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, { target: { files: [mid] } });
     expect(screen.queryByText(/larger than/)).not.toBeInTheDocument();
+  });
+
+  it("offers the partner's past books of the picked subject and grade, and fills the edition from one", async () => {
+    sourcesFixture.reset(() => [
+      makeSource({ book_title: "SYNTHETIC Past Book", edition_label: "SYNTHETIC 2025" }),
+      makeSource({ book_title: "SYNTHETIC Grade 7 Book", grade: 7 }),
+    ]);
+    render(<CurriculumIngestion onClose={vi.fn()} />);
+    await pick("Grade", "Grade 6");
+    await pick("Subject", "Mathematics");
+
+    const book = screen.getByRole("combobox", { name: "Book Title" });
+    fireEvent.focus(book);
+    const list = await screen.findByRole("listbox", { name: "Books you filed before" });
+    await waitFor(() => expect(within(list).getAllByRole("option")).toHaveLength(1));
+    fireEvent.click(within(list).getByRole("option", { name: /SYNTHETIC Past Book/ }));
+
+    expect(book).toHaveValue("SYNTHETIC Past Book");
+    expect(screen.getByLabelText("Edition")).toHaveValue("SYNTHETIC 2025");
   });
 });

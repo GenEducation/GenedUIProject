@@ -6,6 +6,8 @@ import { PencilLine } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
 import { usePartnerStore, type Subject } from "../store/usePartnerStore";
+import { usePartnerBooks } from "../hooks/usePartnerBooks";
+import { BookPicker } from "./BookPicker";
 
 interface ChapterCorrectionModalProps {
   subject: Subject | null;
@@ -26,6 +28,8 @@ export function ChapterCorrectionModal({ subject, onClose }: ChapterCorrectionMo
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The partner's own books of this chapter's subject and grade: picking one files the chapter under it exactly.
+  const pastBooks = usePartnerBooks(subject?.subject ?? "", subject?.grade ?? null, !!subject);
 
   useEffect(() => {
     if (!subject) return;
@@ -92,7 +96,18 @@ export function ChapterCorrectionModal({ subject, onClose }: ChapterCorrectionMo
         <div className="flex flex-col gap-3 mb-5">
           <label className="text-xs font-semibold text-[#122D30]/70">
             Book title
-            <input className={inputClass} value={bookTitle} onChange={(e) => setBookTitle(e.target.value)} />
+            <BookPicker
+              id="correction-book"
+              value={bookTitle}
+              onChange={setBookTitle}
+              onPick={(book) => {
+                setBookTitle(book.book_title);
+                setEdition(book.edition_label);
+              }}
+              books={pastBooks}
+              edition={edition}
+              className={inputClass}
+            />
           </label>
           <label className="text-xs font-semibold text-[#122D30]/70">
             Edition

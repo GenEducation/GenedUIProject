@@ -534,3 +534,18 @@ export interface AuthoringResponse {
   suggestions: Suggestions | null;
   can_suggest: boolean;
 }
+
+/** `GET /v1/sources/books`: a book the partner filed chapters under, for the upload form's book picker. */
+export interface PartnerBook {
+  book_title: string;
+  /** Filled in with the title when the partner picks the book, so one book is never filed under two editions. */
+  edition_label: string;
+  board: string;
+  publisher: string;
+  /** The exact catalogue subject name. */
+  subject: string;
+  grade: number;
+  /** How many of the partner's uploads name this book and edition. */
+  chapters: number;
+  last_used_at: string;
+}
