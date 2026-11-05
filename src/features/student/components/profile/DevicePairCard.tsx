@@ -1,15 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, Info, KeyRound, Loader2, MonitorSmartphone, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { SegmentedInput } from "@/components/shared/SegmentedInput";
 import { confirmDevicePairing } from "@/features/auth/authService";
 import { asError } from "@/utils/errors";
+import { BotList, type BotListTheme } from "@/components/shared/BotList";
+import { listMyBots, removeMyBot, type PairedBot } from "../../services/botService";
 import { useStudentStore } from "../../store/useStudentStore";
 import { CardHeading, ProfileCard } from "./ProfileCard";
 
 const CODE_LENGTH = 6;
+
+const BOT_THEME: BotListTheme = {
+  row: "bg-[var(--soft-surface)]/45",
+  ink: "text-[var(--text-primary)]",
+  soft: "text-[var(--text-muted)]",
+  icon: "bg-white text-[var(--primary)]",
+  danger: "text-[var(--danger-ink)]",
+};
 
 function pairingErrorMessage(err: unknown): string {
   const e = asError(err);
@@ -42,6 +52,22 @@ export function DevicePairCard({ index }: { index: number }) {
   const [result, setResult] = useState<Result>(null);
   // The code boxes only appear once the student chooses to enter a code.
   const [entering, setEntering] = useState(false);
+  // The bots paired to this account (backend ADR 0043); null while loading, and left out if the list can't load.
+  const [bots, setBots] = useState<PairedBot[] | null>(null);
+  const [botsFailed, setBotsFailed] = useState(false);
+
+  const loadBots = useCallback(async () => {
+    try {
+      setBots(await listMyBots());
+      setBotsFailed(false);
+    } catch {
+      setBotsFailed(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadBots();
+  }, [loadBots]);
 
   const ready = code.length === CODE_LENGTH && !!studentId && !loading;
 
@@ -55,6 +81,7 @@ export function DevicePairCard({ index }: { index: number }) {
         setResult(res.pushed ? { kind: "paired" } : { kind: "approved" });
         setCode("");
         setEntering(false);
+        void loadBots();
       } else {
         setResult({ kind: "error", message: "Pairing response was unexpected. Please try again." });
       }
@@ -70,11 +97,28 @@ export function DevicePairCard({ index }: { index: number }) {
     <ProfileCard index={index}>
       <CardHeading
         icon={<MonitorSmartphone size={24} strokeWidth={1.9} />}
-        title="Pair your learning device"
-        description="Enter the one-time code shown on your GenEd device to pair it with your account."
+        title="Your GenEd bot"
+        description="Pair a bot with the one-time code on its screen. A bot stays connected while you use it."
       />
 
       <div className="mt-5 sm:pl-[68px]">
+        {bots !== null && (
+          <div className="mb-4">
+            <BotList
+              bots={bots}
+              theme={BOT_THEME}
+              emptyText="No bot paired yet."
+              onRemove={async (bot) => {
+                await removeMyBot(bot.id);
+                setBots((prev) => (prev ?? []).filter((b) => b.id !== bot.id));
+              }}
+            />
+          </div>
+        )}
+        {botsFailed && bots === null && (
+          <p className="mb-4 text-[13px] text-[var(--text-muted)]">Your paired bots couldn&apos;t be loaded right now.</p>
+        )}
+
         {/* Result messages stay visible after the entry row collapses. */}
         {result?.kind === "error" && (
           <p role="alert" className="mb-4 flex items-start gap-2 rounded-xl bg-[var(--danger-bg)] px-3.5 py-2.5 text-[13px] font-semibold leading-snug text-[var(--danger-ink)]">
