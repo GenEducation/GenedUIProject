@@ -332,7 +332,11 @@ describe("usePlacementStore", () => {
         next_block: null,
       });
 
-      expect(usePlacementStore.getState().startedAt).toBeGreaterThanOrEqual(before);
+      // beforeEach already reached the first item, so startedAt was stamped before `before` was read:
+      // it can trail `before` by a millisecond or more on a slow runner, never lead it.
+      const startedAt = usePlacementStore.getState().startedAt;
+      expect(startedAt).toEqual(expect.any(Number));
+      expect(startedAt).toBeLessThanOrEqual(before);
       expect(usePlacementStore.getState().completedAt).toBeNull();
 
       const store = usePlacementStore.getState();
@@ -341,6 +345,7 @@ describe("usePlacementStore", () => {
       await usePlacementStore.getState().goNext();
 
       expect(usePlacementStore.getState().completedAt).toBeGreaterThanOrEqual(before);
+      expect(usePlacementStore.getState().startedAt).toBe(startedAt);
     });
   });
 
