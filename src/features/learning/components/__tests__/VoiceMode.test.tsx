@@ -42,7 +42,6 @@ vi.mock("../../voice/loadPipeline", () => ({
 }));
 
 import { ChatPanel } from "../ChatPanel";
-import { resetSpeechLanguage } from "../../dictation/useSpeechLanguage";
 
 const emit = (e: PipelineEvent) => act(() => fake.options!.onEvent(e));
 const server = (msg: object) => emit({ t: "server", msg } as PipelineEvent);
@@ -75,8 +74,6 @@ beforeEach(() => {
   voiceFixture.reset();
   useStudentStore.setState({ studentProfile: null, voicePrefs: { listenMode: "continuous", pttHotkey: "Space" } });
   store().reset();
-  localStorage.removeItem("gened_dictation_language");
-  resetSpeechLanguage();
   localStorage.setItem("gened_auth_token", "token-synthetic");
   lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
 });
@@ -94,6 +91,18 @@ describe("voice mode", () => {
     await openVoice();
     expect(fake.options!.interrupt).toBe("never");
     expect(fake.options!.vad).toEqual({ confirm_ms: 300 });
+  });
+
+  it("the composer's mic opens voice mode; ending it brings the composer back", async () => {
+    await store().load(LESSON_ID);
+    render(<ChatPanel onShowFigure={vi.fn()} />);
+    expect(fake.options).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Talk to your tutor" }));
+    expect(store().voiceMode).toBe(true);
+    await waitFor(() => expect(fake.options).not.toBeNull());
+    expect(screen.queryByRole("textbox", { name: "Message your tutor" })).toBeNull();
+    act(() => store().setVoiceMode(false));
+    expect(screen.getByRole("textbox", { name: "Message your tutor" })).toBeInTheDocument();
   });
 
   it("opens the gateway's voice socket for this lesson, with the token as a subprotocol", async () => {

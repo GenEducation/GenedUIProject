@@ -34,7 +34,7 @@ export function ChatPanel({
   subject = null,
 }: {
   onShowFigure: (figureGroupId: string) => void;
-  /** The lesson's subject, so dictation can start in its language. */
+  /** The lesson's subject: a maths lesson writes in the maths field. */
   subject?: string | null;
 }) {
   const turns = useLessonStore((s) => s.turns);
@@ -182,6 +182,7 @@ export function ChatPanel({
         onSend={onSend}
         onStop={() => void stop()}
         subject={subject}
+        onVoice={() => setVoiceMode(true)}
       />
       )}
     </section>

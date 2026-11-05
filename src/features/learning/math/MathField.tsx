@@ -97,7 +97,7 @@ function loadMathLive() {
 
 export interface MathFieldHandle {
   focus: () => void;
-  /** Put words at the caret (dictation), as words. */
+  /** Put words at the caret, as words. */
   insertText: (text: string) => void;
 }
 

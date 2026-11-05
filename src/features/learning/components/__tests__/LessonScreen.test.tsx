@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { LESSON_ID, lessonFixture } from "@/test/msw/handlers/lesson";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
@@ -89,13 +89,11 @@ describe("LessonScreen", () => {
     expect(document.documentElement.dataset.lessonRotated).toBeUndefined();
   });
 
-  it("Voice opens voice mode and Chat goes back to typing", () => {
+  it("has no Chat/Voice switch over the board: voice mode starts from the chat's mic", () => {
     render(<LessonScreen instanceId={LESSON_ID} />);
-    expect(screen.getByRole("button", { name: "Chat" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByRole("button", { name: "Voice" }));
-    expect(screen.getByRole("button", { name: "Voice" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByRole("button", { name: "Chat" }));
-    expect(screen.getByRole("button", { name: "Chat" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("button", { name: "Chat" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Voice" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Talk to your tutor" })).toBeInTheDocument();
   });
 
   it("offers a retry when the lesson can't be read", async () => {

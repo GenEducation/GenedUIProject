@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MessageSquareText, Mic } from "lucide-react";
 import { useLessonStore } from "../useLessonStore";
 import { WhiteboardCanvas } from "./WhiteboardCanvas";
 import type { Insets } from "../board/geometry";
@@ -46,8 +45,8 @@ function EmptyBoard() {
 }
 
 /**
- * The centre column and the screen's hero: the whiteboard. A mode switch and
- * full screen across the top; below, an endless canvas (pan, zoom) holding
+ * The centre column and the screen's hero: the whiteboard. The step's kind
+ * across the top (voice mode starts from the chat's mic); below, an endless canvas (pan, zoom) holding
  * every figure shown, with the step's title, the question card and the
  * filmstrip floating over it; the quick chips at the foot. The tutor's words
  * live in the chat, not here. `subject` is the lesson's, so a maths lesson's
@@ -58,8 +57,6 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
   const title = useLessonStore((s) => s.payload?.node.title ?? s.instance?.active_node?.title ?? null);
   const finished = useLessonStore((s) => s.instance?.state === "completed");
   const hasFilmstrip = useLessonStore((s) => s.presentedFigureIds.length > 0);
-  const voiceMode = useLessonStore((s) => s.voiceMode);
-  const setVoiceMode = useLessonStore((s) => s.setVoiceMode);
 
   const stepRef = useRef<HTMLDivElement>(null);
   // The canvas frames figures in what the overlays leave clear: the title band, the docked question card, the filmstrip.
@@ -84,37 +81,9 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
   const [cardZoom, setCardZoom] = useState(1);
   const onUserZoom = useCallback((factor: number) => setCardZoom((zoom) => clampCardZoom(zoom * factor)), []);
 
-  const modeButton = (on: boolean, label: string, Icon: typeof Mic, onClick: () => void, disabled = false) => (
-    // eslint-disable-next-line no-restricted-syntax -- a segment of the mode switch.
-    <button
-      type="button"
-      aria-pressed={on}
-      disabled={disabled}
-      onClick={onClick}
-      title={disabled ? "Voice lessons are coming soon" : undefined}
-      className={`lesson-display flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-5 text-[15px] font-medium transition-[background,box-shadow] disabled:cursor-not-allowed disabled:opacity-50 ${
-        on ? "bg-[var(--ls-primary)] text-white shadow-[var(--ls-shadow-pop)]" : "text-[var(--ls-ink-mid)] hover:text-[var(--ls-ink)]"
-      }`}
-    >
-      {/* The selected mode's icon sits on citron, the other's on white. */}
-      <span
-        className={`grid h-8 w-8 place-items-center rounded-full ${
-          on ? "bg-[var(--ls-accent)] text-[var(--ls-primary)]" : "bg-white text-[var(--ls-primary)] shadow-sm"
-        }`}
-      >
-        <Icon size={16} strokeWidth={2.3} aria-hidden />
-      </span>
-      {label}
-    </button>
-  );
-
   return (
     <section aria-label="Whiteboard" className="lesson-panel flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex items-center gap-3 px-5 pb-3 pt-4">
-        <div className="flex rounded-full bg-[var(--ls-sage)] p-1">
-          {modeButton(!voiceMode, "Chat", MessageSquareText, () => setVoiceMode(false))}
-          {modeButton(voiceMode, "Voice", Mic, () => setVoiceMode(true))}
-        </div>
         <span className="flex-1" />
         {node && (
           <span className="lesson-display hidden rounded-full bg-[var(--ls-accent)] px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--ls-primary)] sm:inline">
