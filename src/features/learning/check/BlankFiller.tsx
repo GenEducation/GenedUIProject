@@ -27,14 +27,30 @@ export function BlankFiller({
   const [note, setNote] = useState("");
   const firstEmpty = blanks.find((b) => !pairs[b]) ?? null;
   const current = picked && !pairs[picked] ? picked : firstEmpty;
-  const used = new Set(Object.values(pairs));
+  // A word the text needs twice is in the bank twice: a chip is used when its text has been placed as many times as there are
+  // chips of that text up to and including this one, so the second copy stays available after the first is placed.
+  const placed = new Map<string, number>();
+  for (const word of Object.values(pairs))
+    placed.set(word, (placed.get(word) ?? 0) + 1);
+  const seen = new Map<string, number>();
+  const isUsed = (text: string) => {
+    const nth = (seen.get(text) ?? 0) + 1;
+    seen.set(text, nth);
+    return (placed.get(text) ?? 0) >= nth;
+  };
 
   const root = useRef<HTMLDivElement>(null);
   // The entry just used disables, which would drop the keyboard's place: the focus goes to the next entry still in the bank.
   const refocus = (afterIndex: number) =>
     window.setTimeout(() => {
-      const bank = [...(root.current?.querySelectorAll<HTMLButtonElement>("button[data-bank-index]:not(:disabled)") ?? [])];
-      (bank.find((b) => Number(b.dataset.bankIndex) > afterIndex) ?? bank[0])?.focus();
+      const bank = [
+        ...(root.current?.querySelectorAll<HTMLButtonElement>(
+          "button[data-bank-index]:not(:disabled)",
+        ) ?? []),
+      ];
+      (
+        bank.find((b) => Number(b.dataset.bankIndex) > afterIndex) ?? bank[0]
+      )?.focus();
     }, 0);
   const fill = (word: string, index: number) => {
     if (!current) return;
@@ -72,23 +88,33 @@ export function BlankFiller({
         ))}
       </div>
       <div>
-        <p id={`wordbank-${check.id}`} className="lesson-hand mb-1 text-[16px] text-[var(--ls-ink-mid)]">
+        <p
+          id={`wordbank-${check.id}`}
+          className="lesson-hand mb-1 text-[16px] text-[var(--ls-ink-mid)]"
+        >
           {t("wordBank")}
         </p>
-        <div role="group" aria-labelledby={`wordbank-${check.id}`} className="flex flex-wrap gap-2">
-          {check.options.map((word, index) => (
-            // eslint-disable-next-line no-restricted-syntax -- a bank entry: pressing it puts it in the current blank.
-            <button
-              key={word.id}
-              type="button"
-              disabled={disabled || used.has(word.text) || current === null}
-              data-bank-index={index}
-              onClick={() => fill(word.text, index)}
-              className="lesson-sketch-sm lesson-hand min-h-11 px-4 py-2 text-[18px] disabled:opacity-40"
-            >
-              {word.text}
-            </button>
-          ))}
+        <div
+          role="group"
+          aria-labelledby={`wordbank-${check.id}`}
+          className="flex flex-wrap gap-2"
+        >
+          {check.options.map((word, index) => {
+            const taken = isUsed(word.text);
+            return (
+              // eslint-disable-next-line no-restricted-syntax -- a bank entry: pressing it puts it in the current blank.
+              <button
+                key={word.id}
+                type="button"
+                disabled={disabled || taken || current === null}
+                data-bank-index={index}
+                onClick={() => fill(word.text, index)}
+                className="lesson-sketch-sm lesson-hand min-h-11 px-4 py-2 text-[18px] disabled:opacity-40"
+              >
+                {word.text}
+              </button>
+            );
+          })}
         </div>
       </div>
       <p role="status" aria-live="polite" className="sr-only">
