@@ -196,6 +196,10 @@ export interface CheckItem {
   role: "checkpoint" | "formative_probe";
   options: CheckOption[];
   figure_groups: FigureGroup[];
+  /** `multiple`: an `mcq` whose key is a set of options, answered by choosing several (`teacher_node_v9`, W2 P1). */
+  selection?: "single" | "multiple";
+  /** A `matching` check's left-hand entries, to pair with `options` (`teacher_node_v9`, W2 P1). */
+  left_entries?: string[];
 }
 
 export interface NodeOutline {

@@ -7,6 +7,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useLessonStore } from "../useLessonStore";
 import { useUiText, type UiKey } from "../i18n";
 import { calculation } from "../check/arithmetic";
+import { formatOf, initialArrangement, isArranged, isComplete, responseFromArrangement, type Arrangement } from "../check/formats";
+import { Matching } from "../check/Matching";
+import { MultiSelect } from "../check/MultiSelect";
+import { Sequencing } from "../check/Sequencing";
 import { useCheckShown } from "../delivery/useCheckShown";
 import type { AnswerResponse, AnswerResult, CheckItem } from "../types";
 import { BoardFigure } from "./BoardFigure";
@@ -101,6 +105,10 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
   // The delivery is confirmed once the card is actually on screen.
   useCheckShown(cardRef, check.id);
   const [selected, setSelected] = useState<string | null>(null);
+  const format = formatOf(check);
+  const arrangedFormat = isArranged(format);
+  // What the learner has built for a multiple-select, matching or sequencing check (the board draws these itself).
+  const [arranged, setArranged] = useState<Arrangement>(() => initialArrangement(check));
   const [typed, setTyped] = useState("");
   // A maths lesson's answer box is typed like any other, with maths from its `/` menu: it holds LaTeX, and `typed` is
   // what is sent (the words as typed, the maths in the checker's form). Other subjects keep the plain box.
@@ -116,7 +124,7 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
   };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isChoice = check.response_type === "mcq";
+  const isChoice = format === "single_choice";
   const isTyped = TYPED_TYPES.has(check.response_type);
   // A calculation typed as the answer ("540 * 40", "sqrt(144)") is worked out as they type. There are no
   // calculator keys: whatever they type (2^3, pi, log 100, sin 30…) is worked out. For a number answer its
@@ -125,12 +133,14 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
 
   useEffect(() => {
     setSelected(null);
+    setArranged(initialArrangement(check));
     setTyped("");
     setAnswerLatex("");
     latexNow.current = "";
     setError(null);
     // A new question starts at its top, whatever the dock was scrolled to for the last one.
     cardRef.current?.closest<HTMLElement>("[data-no-pan]")?.scrollTo?.({ top: 0 });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reset per question (`check.id`), not on every payload refresh
   }, [check.id]);
 
   const submit = async (event: FormEvent) => {
@@ -138,7 +148,9 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
     // A maths answer is read from the field as it is now, not from the last render.
     const answerNow = isMath ? answerFromField(latexNow.current) : typed;
     const sumNow = isMath ? calculation(latexNow.current ? calcTextFromField(latexNow.current) : "") : sum;
-    const response: AnswerResponse | null = isChoice
+    const response: AnswerResponse | null = arrangedFormat
+      ? responseFromArrangement(check, arranged)
+      : isChoice
       ? selected ? { kind: "choice", option_ids: [selected] } : null
       : answerNow.trim() ? responseFor(check, check.response_type === "numeric" ? sumNow ?? answerNow : answerNow) : null;
     if (!response) return;
@@ -188,6 +200,16 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
             </button>
           ))}
         </div>
+      )}
+
+      {format === "multiple_select" && (
+        <MultiSelect check={check} chosen={arranged.chosen} onChange={(chosen) => setArranged({ ...arranged, chosen })} disabled={busy} />
+      )}
+      {format === "sequencing" && (
+        <Sequencing check={check} order={arranged.order} onChange={(order) => setArranged({ ...arranged, order })} disabled={busy} />
+      )}
+      {format === "matching_pairs" && (
+        <Matching check={check} pairs={arranged.pairs} onChange={(pairs) => setArranged({ ...arranged, pairs })} disabled={busy} />
       )}
 
       {isTyped && (
@@ -255,7 +277,7 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
         </div>
       )}
 
-      {!isChoice && !isTyped && (
+      {!isChoice && !isTyped && !arrangedFormat && (
         <p className="lesson-hand mt-3 text-[17px] text-[var(--ls-ink-mid)]">{t("typeInChat")}</p>
       )}
 
@@ -269,8 +291,12 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
 
       {/* The buttons stay in view at the foot of the dock whatever the card's height: a tall card scrolls above them. */}
       <div className="sticky bottom-0 z-[1] -mx-5 -mb-5 mt-4 flex flex-wrap items-center gap-3 rounded-b-[18px] border-t border-dashed border-[var(--ls-ink-faint)] bg-[#fffdf6] px-5 pb-5 pt-3">
-        {(isChoice || isTyped) && (
-          <SketchButton type="submit" disabled={busy || (isChoice ? !selected : !typed.trim())} loading={busy}>
+        {(isChoice || isTyped || arrangedFormat) && (
+          <SketchButton
+            type="submit"
+            disabled={busy || (arrangedFormat ? !isComplete(check, arranged) : isChoice ? !selected : !typed.trim())}
+            loading={busy}
+          >
             {t("checkAnswer")}
           </SketchButton>
         )}
