@@ -192,7 +192,7 @@ export interface CheckOption {
 export interface CheckItem {
   id: string;
   prompt: string;
-  response_type: "numeric" | "numeric_set" | "symbolic" | "string_set" | "mcq" | "sequence" | "matching" | "grouping" | "blanks";
+  response_type: "numeric" | "numeric_set" | "symbolic" | "string_set" | "mcq" | "sequence" | "matching" | "grouping" | "blanks" | "rubric";
   role: "checkpoint" | "formative_probe";
   options: CheckOption[];
   figure_groups: FigureGroup[];
@@ -203,6 +203,35 @@ export interface CheckItem {
   left_entries?: string[];
   /** How a `numeric` or `symbolic` check's answer is entered: a number line, a slider, or tiles (`teacher_node_v10`, W2 P2). */
   entry?: CheckEntry | null;
+  /** A `rubric` check: whether it is answered by typing or by speaking, and the length band of a written answer (`teacher_node_v12`, W2 P6/P7). */
+  task?: { mode: "written" | "spoken"; min_chars: number; max_chars: number } | null;
+}
+
+/** The result of a written answer (`POST .../written-responses`): a committed attempt with feedback, or the rubric's neutral probe (nothing committed). */
+export interface WrittenResult {
+  status: "committed" | "needs_clarification";
+  attempt_id: string | null;
+  outcome: "correct" | "incorrect" | "unscorable" | null;
+  correct: boolean | null;
+  round_state: "open" | "passed" | "failed" | null;
+  replayed: boolean;
+  /** Authored level descriptors, or a neutral retry code the interface words; never a model's words. */
+  feedback:
+    | { kind: "criteria"; criteria: { criterion: string; title: string; met: boolean; shown: string; next: string | null; error_tags: string[] }[] }
+    | { kind: "retry"; code: string; retry: boolean; reason: string }
+    | null;
+  clarification: { criterion: string; probe: string; remaining: number } | null;
+  instance: InstanceState;
+}
+
+export interface WrittenBody {
+  request_id: string;
+  item_id: string;
+  expected_revision: number;
+  text: string;
+  latency_ms: number;
+  session_id?: string;
+  clarification?: string;
 }
 
 export type CheckEntry =

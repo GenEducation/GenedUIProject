@@ -16,6 +16,7 @@ import { MultiSelect } from "../check/MultiSelect";
 import { Sequencing } from "../check/Sequencing";
 import { TileBuilder } from "../check/TileBuilder";
 import { useCheckShown } from "../delivery/useCheckShown";
+import { WrittenAnswer } from "../check/WrittenAnswer";
 import type { AnswerResponse, AnswerResult, CheckItem } from "../types";
 import { BoardFigure } from "./BoardFigure";
 import { MathField, type MathFieldHandle } from "../math/MathField";
@@ -421,7 +422,13 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
   } else if (reading && checks.get(reading.item_id)) {
     body = <ConfirmReading check={checks.get(reading.item_id)!} original={reading.original} suggestion={reading.suggestion} />;
   } else if (unanswered.length > 0 && checks.get(unanswered[0])) {
-    body = <CheckCard check={checks.get(unanswered[0])!} onResult={showResult} subject={subject} />;
+    const current = checks.get(unanswered[0])!;
+    body =
+      formatOf(current) === "written_response" ? (
+        <WrittenAnswer check={current} onResult={(r) => showResult({ attempt_id: r.attempt_id, outcome: r.outcome ?? "unscorable", correct: r.correct, eligibility_reason: null, round_id: null, round_state: r.round_state, replayed: r.replayed, instance: r.instance })} />
+      ) : (
+        <CheckCard check={current} onResult={showResult} subject={subject} />
+      );
   } else if (node.type === "teach" && node.done_available) {
     body = (
       <div className={`${cardClass} flex flex-wrap items-center gap-4`}>

@@ -9,6 +9,7 @@ import { readSseFrames } from "./sse";
 import { resolveSessionLanguage, type SessionLanguage } from "./voice/languages";
 import { applyEvent, fromRecorded, isTerminal, newTurn, type LessonTurn } from "./transcript";
 import type {
+  WrittenResult,
   ChapterReport,
   AnswerResponse,
   AnswerResult,
@@ -118,6 +119,8 @@ interface LessonState {
     response: AnswerResponse,
     options?: { channel?: "typed" | "choice"; confirmedReading?: boolean },
   ) => Promise<AnswerResult | null>;
+  /** A written answer to a rubric check. `requestId` is reused by the caller across failed sends (idempotency). Resolves to the result, or null when it cannot be sent yet. */
+  answerWritten: (itemId: string, text: string, options?: { clarification?: string; requestId?: string }) => Promise<WrittenResult | null>;
   /** The learner's explicit done on a teach node, only when the backend advertises `done_available`. */
   done: () => Promise<void>;
   /** After a failed practice round. */
@@ -890,6 +893,33 @@ export const useLessonStore = create<LessonState>((set, get) => {
             { turn_id: uuid(), kind: "result_reaction", instance_node_id: node, attempt_id: result.attempt_id },
             null,
           );
+        }
+        return result;
+      } catch (error) {
+        await rereadIfStale(error);
+        throw error;
+      }
+    },
+
+    answerWritten: async (itemId, text, options = {}) => {
+      const { instanceId, instance } = get();
+      if (!instanceId || instance?.revision === undefined) return null;
+      const startedAt = lastReplyAt || Date.now();
+      const requestId = options.requestId ?? uuid();
+      try {
+        const result = await lessonService.writtenAnswer(instanceId, {
+          request_id: requestId,
+          item_id: itemId,
+          expected_revision: get().instance?.revision ?? instance.revision,
+          text,
+          latency_ms: Math.min(Math.max(Date.now() - startedAt, 0), 3_600_000),
+          session_id: sessionId(),
+          clarification: options.clarification || undefined,
+        });
+        applyInstance(result.instance);
+        if (result.status === "committed" && result.attempt_id) {
+          const node = activeNodeId();
+          if (node) void runTurn({ turn_id: uuid(), kind: "result_reaction", instance_node_id: node, attempt_id: result.attempt_id }, null);
         }
         return result;
       } catch (error) {

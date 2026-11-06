@@ -15,13 +15,17 @@ export type CheckFormat =
   | "tile_builder"
   | "grouping"
   | "blanks"
-  | "typed_entry";
+  | "typed_entry"
+  | "written_response"
+  | "spoken_response";
 
 export function formatOf(check: CheckItem): CheckFormat {
   const entry = check.entry;
   if (check.response_type === "numeric" && entry && entry.mode !== "tiles") return entry.mode;
   if (check.response_type === "symbolic" && entry?.mode === "tiles") return "tile_builder";
   switch (check.response_type) {
+    case "rubric":
+      return check.task?.mode === "spoken" ? "spoken_response" : "written_response";
     case "mcq":
       return check.selection === "multiple" ? "multiple_select" : "single_choice";
     case "matching":
@@ -39,7 +43,7 @@ export function formatOf(check: CheckItem): CheckFormat {
 
 /** The formats the board draws with its own controls (everything but a typed box and plain single choice). */
 export function isArranged(format: CheckFormat): boolean {
-  return format !== "single_choice" && format !== "typed_entry";
+  return format !== "single_choice" && format !== "typed_entry" && format !== "written_response" && format !== "spoken_response";
 }
 
 /** What the learner has built so far, for one arranged check. */

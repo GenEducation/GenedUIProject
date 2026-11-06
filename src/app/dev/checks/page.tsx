@@ -18,6 +18,10 @@ const base = { id: CHECK_ITEM, role: "checkpoint" as const, figure_groups: [] };
 
 /** SYNTHETIC fixtures: the check as the payload carries it, and whether a response is the right one. */
 const FIXTURES: Record<string, { check: CheckItem; right: (r: AnswerResponse) => boolean }> = {
+  written: {
+    check: { ...base, prompt: "SYNTHETIC what do plants need to grow?", response_type: "rubric", options: [], task: { mode: "written", min_chars: 5, max_chars: 400 } },
+    right: () => false, // a written answer goes to /written-responses, scripted below
+  },
   multiple_select: {
     check: { ...base, prompt: "SYNTHETIC choose every even number", response_type: "mcq", selection: "multiple", options: [opt("o1", "2"), opt("o2", "3"), opt("o3", "4"), opt("o4", "5")] },
     right: (r) => r.kind === "choice" && r.option_ids.length === 2 && r.option_ids.includes("o1") && r.option_ids.includes("o3"),
@@ -55,6 +59,7 @@ const FIXTURES: Record<string, { check: CheckItem; right: (r: AnswerResponse) =>
 declare global {
   interface Window {
     __answers?: unknown[];
+    __seen?: Record<string, boolean>;
   }
 }
 
@@ -82,6 +87,26 @@ function Harness() {
       }
       if (path.endsWith("/teacher-turns")) return json([]);
       if (path.includes("/checks/") && path.endsWith("/delivered")) return json({ item_id: CHECK_ITEM, round_ordinal: 1, replayed: false });
+      if (path.endsWith("/written-responses")) {
+        const body = JSON.parse(String(init?.body ?? "{}")) as { request_id: string; text: string; clarification?: string };
+        window.__answers?.push(body);
+        const instance = makeLessonInstance({ revision });
+        const seen = (window.__seen ??= {});
+        // A scripted evaluator for the harness only: the first send of "fail" drops (500), the retry with the SAME request id commits once.
+        if (body.text.includes("fail") && !seen[body.request_id]) {
+          seen[body.request_id] = true;
+          return json({ detail: "boom" }, 500);
+        }
+        if (body.text.includes("ambiguous") && !body.clarification) {
+          return json({ status: "needs_clarification", attempt_id: null, outcome: null, correct: null, round_state: null, replayed: false, feedback: null, clarification: { criterion: "needs", probe: "Can you tell me one more thing plants need?", remaining: 1 }, instance });
+        }
+        if (body.text.includes("gate")) {
+          return json({ status: "committed", attempt_id: "99999999-0000-4000-8000-000000000002", outcome: "unscorable", correct: null, round_state: "open", replayed: false, feedback: { kind: "retry", code: "write_a_little_more", retry: true, reason: "gate_response_too_short" }, clarification: null, instance });
+        }
+        revision += 1;
+        const good = /water and light/i.test(body.text + " " + (body.clarification ?? ""));
+        return json({ status: "committed", attempt_id: "99999999-0000-4000-8000-000000000003", outcome: good ? "correct" : "incorrect", correct: good, round_state: good ? "open" : "failed", replayed: Boolean(seen[body.request_id]), feedback: { kind: "criteria", criteria: [{ criterion: "needs", title: "Names two needs", met: good, shown: good ? "names two needs" : "names none", next: good ? null : "names one need", error_tags: [] }] }, clarification: null, instance: makeLessonInstance({ revision }) });
+      }
       if (path.endsWith("/responses")) {
         const body = JSON.parse(String(init?.body ?? "{}")) as { response: AnswerResponse };
         window.__answers?.push(body);

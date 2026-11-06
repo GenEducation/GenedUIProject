@@ -247,3 +247,58 @@ test.describe("tap, Grade 3-5 (touch, no keyboard)", () => {
     await right(page);
   });
 });
+
+test.describe("written response (W2 P6)", () => {
+  test.beforeEach(({}, testInfo) => test.skip(testInfo.project.name !== "desktop", "keyboard paths run in the desktop project"));
+
+  test("is labelled, counts characters, and sends by keyboard (Tab to the box, type, Ctrl+Enter)", async ({ page }) => {
+    await page.goto("/dev/checks?format=written&grade=6");
+    const box = page.getByRole("textbox", { name: "Your answer" });
+    await expect(box).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByRole("button", { name: /send answer/i })).toBeDisabled();
+    await tabTo(page, box);
+    await page.keyboard.type("Plants need water and light");
+    await expect(page.getByText(/27 of 400 characters/)).toBeVisible();
+    await page.keyboard.press("Control+Enter");
+    await expect(page.getByText(/You showed: names two needs/)).toBeVisible();
+    expect(((await answers(page)) as unknown as Array<{ text: string }>)[0].text).toBe("Plants need water and light");
+  });
+
+  test("a failed send keeps the answer and the SAME request id, so the retry is one answer, not two", async ({ page }) => {
+    await page.goto("/dev/checks?format=written&grade=6");
+    const box = page.getByRole("textbox", { name: "Your answer" });
+    await expect(box).toBeVisible({ timeout: 45_000 });
+    await box.fill("this will fail first, water and light");
+    await page.getByRole("button", { name: /send answer/i }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "be sent" })).toBeVisible();
+    await expect(box).toHaveValue("this will fail first, water and light");
+    await page.getByRole("button", { name: /try again/i }).click();
+    await expect(page.getByText(/You showed/)).toBeVisible();
+    const sent = (await answers(page)) as unknown as Array<{ request_id: string }>;
+    expect(sent.length).toBe(2);
+    expect(sent[0].request_id).toBe(sent[1].request_id);
+  });
+
+  test("an answer that cannot be placed gets one neutral question, answered in a second box, sent with the first", async ({ page }) => {
+    await page.goto("/dev/checks?format=written&grade=6");
+    const box = page.getByRole("textbox", { name: "Your answer" });
+    await expect(box).toBeVisible({ timeout: 45_000 });
+    await box.fill("ambiguous plants need water");
+    await page.getByRole("button", { name: /send answer/i }).click();
+    await expect(page.getByText("Can you tell me one more thing plants need?")).toBeVisible();
+    await page.getByRole("textbox", { name: /your reply/i }).fill("and light, water and light");
+    await page.getByRole("button", { name: /send answer/i }).click();
+    await expect(page.getByText(/You showed/)).toBeVisible();
+  });
+
+  test("a result that could not be rated is a neutral note, never 'wrong', and the learner may answer again", async ({ page }) => {
+    await page.goto("/dev/checks?format=written&grade=6");
+    const box = page.getByRole("textbox", { name: "Your answer" });
+    await expect(box).toBeVisible({ timeout: 45_000 });
+    await box.fill("gate answer words");
+    await page.getByRole("button", { name: /send answer/i }).click();
+    await expect(page.getByText(/couldn't be rated this time/)).toBeVisible();
+    await expect(page.getByText(/Not quite/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /send answer/i })).toBeEnabled();
+  });
+});
