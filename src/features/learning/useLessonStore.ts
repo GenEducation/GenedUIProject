@@ -121,6 +121,10 @@ interface LessonState {
   ) => Promise<AnswerResult | null>;
   /** A written answer to a rubric check. `requestId` is reused by the caller across failed sends (idempotency). Resolves to the result, or null when it cannot be sent yet. */
   answerWritten: (itemId: string, text: string, options?: { clarification?: string; requestId?: string }) => Promise<WrittenResult | null>;
+  /** After a spoken answer was committed over the oral socket: the lesson state is read again and the tutor's reaction to the attempt starts. */
+  afterOral: (attemptId: string | null) => Promise<void>;
+  /** The data a spoken answer's socket frame is bound to: the instance, its revision and this screen's session. */
+  oralContext: () => { instanceId: string; revision: number; sessionId: string } | null;
   /** The learner's explicit done on a teach node, only when the backend advertises `done_available`. */
   done: () => Promise<void>;
   /** After a failed practice round. */
@@ -926,6 +930,19 @@ export const useLessonStore = create<LessonState>((set, get) => {
         await rereadIfStale(error);
         throw error;
       }
+    },
+
+    oralContext: () => {
+      const { instanceId, instance } = get();
+      return instanceId && instance?.revision !== undefined ? { instanceId, revision: get().instance?.revision ?? instance.revision, sessionId: sessionId() } : null;
+    },
+
+    afterOral: async (attemptId) => {
+      const { instanceId } = get();
+      if (!instanceId) return;
+      applyInstance(await lessonService.instance(instanceId));
+      const node = activeNodeId();
+      if (attemptId && node) void runTurn({ turn_id: uuid(), kind: "result_reaction", instance_node_id: node, attempt_id: attemptId }, null);
     },
 
     done: async () => {

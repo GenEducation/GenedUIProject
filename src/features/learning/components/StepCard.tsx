@@ -17,6 +17,7 @@ import { Sequencing } from "../check/Sequencing";
 import { TileBuilder } from "../check/TileBuilder";
 import { useCheckShown } from "../delivery/useCheckShown";
 import { WrittenAnswer } from "../check/WrittenAnswer";
+import { SpokenAnswer } from "../check/SpokenAnswer";
 import type { AnswerResponse, AnswerResult, CheckItem } from "../types";
 import { BoardFigure } from "./BoardFigure";
 import { MathField, type MathFieldHandle } from "../math/MathField";
@@ -426,6 +427,8 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
     body =
       formatOf(current) === "written_response" ? (
         <WrittenAnswer check={current} onResult={(r) => showResult({ attempt_id: r.attempt_id, outcome: r.outcome ?? "unscorable", correct: r.correct, eligibility_reason: null, round_id: null, round_state: r.round_state, replayed: r.replayed, instance: r.instance })} />
+      ) : formatOf(current) === "spoken_response" ? (
+        <SpokenAnswer check={current} />
       ) : (
         <CheckCard check={current} onResult={showResult} subject={subject} />
       );
