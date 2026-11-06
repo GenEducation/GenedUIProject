@@ -11,6 +11,7 @@ import { assignStudentAvatars } from "../../utils/studentAvatars";
 import { UnlinkConfirmationModal } from "../UnlinkConfirmationModal";
 import { AddChildSteps, Avatar, childName, RequestRow, relative, sinceDate } from "./linkParts";
 import { GLASS } from "../home/theme";
+import { ChildBotsSection } from "./ChildBotsSection";
 
 const titleCase = (s: string) => s.replace(/\b\p{L}/gu, (c) => c.toUpperCase());
 interface ChildDetails {
@@ -107,6 +108,12 @@ export function ParentSettingsView({ profile }: { profile?: ParentProfile | null
       <motion.div variants={item}>
         <AccountCard profile={me} />
       </motion.div>
+
+      {children.length > 0 && (
+        <motion.div variants={item} className="lg:col-span-2">
+          <ChildBotsSection students={children} />
+        </motion.div>
+      )}
 
       <motion.div variants={item} className="lg:col-span-2">
         <AddChildGuide email={me?.email} />

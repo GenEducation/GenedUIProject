@@ -12,6 +12,7 @@ import { learnerHandlers } from "./learner";
 import { lessonHandlers } from "./lesson";
 import { voiceHandlers } from "./voice";
 import { partnerStudentsHandlers } from "./partnerStudents";
+import { devicesHandlers } from "./devices";
 
 export const handlers = [
   ...authHandlers,
@@ -29,4 +30,5 @@ export const handlers = [
   ...learnerHandlers,
   ...voiceHandlers,
   ...partnerStudentsHandlers,
+  ...devicesHandlers,
 ];

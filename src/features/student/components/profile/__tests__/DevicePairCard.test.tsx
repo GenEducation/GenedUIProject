@@ -52,3 +52,71 @@ describe("Device pairing", () => {
     expect(screen.getByText(/valid for 10 minutes/)).toBeInTheDocument();
   });
 });
+
+// The bots paired to this account (backend ADR 0043): listed on the card, removable, and refreshed after a pairing.
+const BOT = {
+  id: "b-1",
+  label: "GenEd bot ·8CEA",
+  paired_at: "2026-11-01T10:00:00Z",
+  last_used_at: "2026-11-05T09:00:00Z",
+  disconnects_at: "2026-12-05T09:00:00Z",
+};
+
+describe("Paired bots", () => {
+  it("lists the student's bots with when each needs a new code", async () => {
+    server.use(http.get(`${BASE}/v1/devices/bots`, () => HttpResponse.json([BOT])));
+    render(<DevicePairCard index={0} />);
+    expect(await screen.findByText("GenEd bot ·8CEA")).toBeInTheDocument();
+    expect(screen.getByText(/Needs a new code after/)).toBeInTheDocument();
+  });
+
+  it("says when no bot is paired", async () => {
+    render(<DevicePairCard index={0} />);
+    expect(await screen.findByText("No bot paired yet.")).toBeInTheDocument();
+  });
+
+  it("removes a bot only after the student confirms", async () => {
+    let deleted = "";
+    server.use(
+      http.get(`${BASE}/v1/devices/bots`, () => HttpResponse.json([BOT])),
+      http.delete(`${BASE}/v1/devices/bots/:botId`, ({ params }) => {
+        deleted = String(params.botId);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    render(<DevicePairCard index={0} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Remove GenEd bot ·8CEA" }));
+    expect(screen.getByText(/It will ask for a new pairing code/)).toBeInTheDocument();
+    expect(deleted).toBe("");
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    expect(await screen.findByText("No bot paired yet.")).toBeInTheDocument();
+    expect(deleted).toBe("b-1");
+  });
+
+  it("keeps the bot and says so when removing fails", async () => {
+    server.use(
+      http.get(`${BASE}/v1/devices/bots`, () => HttpResponse.json([BOT])),
+      http.delete(`${BASE}/v1/devices/bots/:botId`, () => HttpResponse.json({ error_code: "SHARED_1900" }, { status: 500 })),
+    );
+    render(<DevicePairCard index={0} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Remove GenEd bot ·8CEA" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    expect(await screen.findByText(/Couldn.t remove it/)).toBeInTheDocument();
+    expect(screen.getByText("GenEd bot ·8CEA")).toBeInTheDocument();
+  });
+
+  it("shows the newly paired bot after a pairing", async () => {
+    let calls = 0;
+    server.use(http.get(`${BASE}/v1/devices/bots`, () => HttpResponse.json(calls++ === 0 ? [] : [BOT])));
+    confirmAnswers({ status: "approved", pushed: false, student_id: "u-synthetic" });
+    await pair();
+    expect(await screen.findByText("GenEd bot ·8CEA")).toBeInTheDocument();
+  });
+
+  it("still lets the student pair when the list can't load", async () => {
+    server.use(http.get(`${BASE}/v1/devices/bots`, () => HttpResponse.json({}, { status: 500 })));
+    render(<DevicePairCard index={0} />);
+    expect(await screen.findByText(/couldn.t be loaded right now/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enter code" })).toBeInTheDocument();
+  });
+});
