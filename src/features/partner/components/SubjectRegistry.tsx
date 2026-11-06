@@ -613,7 +613,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                             leadingIcon={<ListChecks size={16} />}
                             onClick={(e) => { e.stopPropagation(); setOutcomesFor(subject); }}
                           >
-                            Remove outcomes
+                            Change outcomes
                           </Button>
                         )}
 

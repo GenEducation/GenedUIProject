@@ -263,8 +263,8 @@ export const NEXT_STEP_COPY: Record<NextStep, { title: string; body: string; ton
     tone: "problem",
   },
   fix_outcomes: {
-    title: "Remove learning outcomes this chapter doesn't teach",
-    body: "No part of the lesson covers some of the learning outcomes you chose. Remove them and the chapter runs again with the pages already read; they stay available for the chapter that teaches them.",
+    title: "Choose the learning outcomes this chapter teaches",
+    body: "No part of the lesson covers some of the learning outcomes you chose. Remove them, or choose others of this subject and grade, and the chapter runs again with the pages already read. Removed outcomes stay available for the chapter that teaches them.",
     tone: "problem",
   },
 };
