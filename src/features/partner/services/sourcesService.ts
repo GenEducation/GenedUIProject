@@ -84,7 +84,7 @@ export const sourcesService = {
     return response.json();
   },
 
-  /** Keep only these learning outcomes (a subset of the uploaded ones); the chapter can then run again. */
+  /** Set the chapter's learning outcomes (any non-empty set of its board, subject and grade); it can then run again. */
   correctOutcomes: async (id: string, loCodes: string[]): Promise<SourceView> => {
     const response = await authFetch(`${sourcePath(id)}/outcomes`, {
       method: "PUT",
