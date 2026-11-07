@@ -8,7 +8,13 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   reporter: [["list"]],
-  use: { baseURL: `http://localhost:${PORT}`, trace: "off" },
+  // A fake microphone (a generated tone) and its permission: the oral-answer test records for real, and the socket it talks to is scripted in the test.
+  use: {
+    baseURL: `http://localhost:${PORT}`,
+    trace: "off",
+    permissions: ["microphone"],
+    launchOptions: { args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] },
+  },
   webServer: {
     command: `./node_modules/.bin/next dev --webpack --port ${PORT}`, cwd: "..", // webpack: Turbopack refuses this worktree's symlinked node_modules
     url: `http://localhost:${PORT}/dev/checks`,

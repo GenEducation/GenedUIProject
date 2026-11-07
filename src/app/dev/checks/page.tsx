@@ -22,6 +22,10 @@ const FIXTURES: Record<string, { check: CheckItem; right: (r: AnswerResponse) =>
     check: { ...base, prompt: "SYNTHETIC what do plants need to grow?", response_type: "rubric", options: [], task: { mode: "written", min_chars: 5, max_chars: 400 } },
     right: () => false, // a written answer goes to /written-responses, scripted below
   },
+  spoken: {
+    check: { ...base, prompt: "SYNTHETIC say what plants need to grow", response_type: "rubric", options: [], task: { mode: "spoken", min_chars: 0, max_chars: 400 } },
+    right: () => false, // a spoken answer goes over the oral socket, scripted by the browser test
+  },
   multiple_select: {
     check: { ...base, prompt: "SYNTHETIC choose every even number", response_type: "mcq", selection: "multiple", options: [opt("o1", "2"), opt("o2", "3"), opt("o3", "4"), opt("o4", "5")] },
     right: (r) => r.kind === "choice" && r.option_ids.length === 2 && r.option_ids.includes("o1") && r.option_ids.includes("o3"),
