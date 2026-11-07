@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BookOpen } from "lucide-react";
 import { useLessonStore } from "../useLessonStore";
 import { WhiteboardCanvas } from "./WhiteboardCanvas";
 import type { Insets } from "../board/geometry";
@@ -8,6 +9,8 @@ import { Filmstrip } from "./Filmstrip";
 import { StepCard } from "./StepCard";
 import { LessonSummary } from "./LessonSummary";
 import { QuickActions } from "./QuickActions";
+import { BookPanel } from "./BookPanel";
+import { bookSections, bookTexts, opensWithStep } from "../reading/book";
 
 const NODE_TYPE_LABEL = { teach: "Learn", practice: "Practice", assess: "Check" } as const;
 
@@ -58,6 +61,25 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
   const finished = useLessonStore((s) => s.instance?.state === "completed");
   const hasFilmstrip = useLessonStore((s) => s.presentedFigureIds.length > 0);
 
+  // The textbook's own reading for this step (W1): open when the step is about to ask on it or holds it, closed
+  // otherwise, and the learner's choice stands until the step changes. Showing it sends nothing to the server.
+  const passages = useLessonStore((s) => s.payload?.node.passages);
+  const readingRole = useLessonStore((s) => s.payload?.node.reading_role);
+  const nodeSections = useLessonStore((s) => s.payload?.node.sections);
+  const setChatDraft = useLessonStore((s) => s.setChatDraft);
+  const sendReading = useLessonStore((s) => s.sendReading);
+  const replying = useLessonStore((s) => s.turns.some((t) => t.status === "streaming"));
+  const nodeId = useLessonStore((s) => s.payload?.node.id ?? null);
+  const instanceId = useLessonStore((s) => s.instanceId);
+  const texts = useMemo(() => bookTexts(passages), [passages]);
+  // A chapter with no passages (maths, science) keeps its own sections behind "Show in book", closed until asked for.
+  const sections = useMemo(() => bookSections(nodeSections, texts.length > 0, readingRole), [nodeSections, texts, readingRole]);
+  const hasBook = texts.length > 0 || sections.length > 0;
+  const opens = opensWithStep(readingRole, texts);
+  const [chosen, setChosen] = useState<{ nodeId: string | null; open: boolean } | null>(null);
+  const bookOpen = chosen !== null && chosen.nodeId === nodeId ? chosen.open : opens;
+  const setBookOpen = (open: boolean) => setChosen({ nodeId, open });
+
   const stepRef = useRef<HTMLDivElement>(null);
   // The canvas frames figures in what the overlays leave clear: the title band, the docked question card, the filmstrip.
   const insets = useCallback((): Insets => {
@@ -84,6 +106,20 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
   return (
     <section aria-label="Whiteboard" className="lesson-panel flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex items-center gap-3 px-5 pb-3 pt-4">
+        {hasBook && !finished && (
+          // eslint-disable-next-line no-restricted-syntax -- the book toggle beside the mode switch.
+          <button
+            type="button"
+            aria-pressed={bookOpen}
+            onClick={() => setBookOpen(!bookOpen)}
+            className={`lesson-display flex items-center gap-2 rounded-full px-4 py-2 text-[14px] font-medium ${
+              bookOpen ? "bg-[var(--ls-primary)] text-white" : "bg-[var(--ls-sage)] text-[var(--ls-primary)]"
+            }`}
+          >
+            <BookOpen size={16} aria-hidden />
+            {texts.length > 0 ? "Book" : "Show in book"}
+          </button>
+        )}
         <span className="flex-1" />
         {node && (
           <span className="lesson-display hidden rounded-full bg-[var(--ls-accent)] px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--ls-primary)] sm:inline">
@@ -128,6 +164,18 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
               <LessonSummary />
             </div>
           </div>
+        )}
+
+        {bookOpen && hasBook && !finished && (
+          <BookPanel
+            texts={texts}
+            sections={sections}
+            instanceId={instanceId}
+            onClose={() => setBookOpen(false)}
+            onAsk={setChatDraft}
+            onReading={(intent) => void sendReading(intent)}
+            readingDisabled={replying}
+          />
         )}
 
         <Filmstrip />

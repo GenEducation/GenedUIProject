@@ -7,7 +7,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useLessonStore } from "../useLessonStore";
 import { useUiText, type UiKey } from "../i18n";
 import { calculation } from "../check/arithmetic";
+import { formatOf, initialArrangement, isArranged, isComplete, responseFromArrangement, type Arrangement } from "../check/formats";
+import { Matching } from "../check/Matching";
+import { BlankFiller } from "../check/BlankFiller";
+import { GroupSorter } from "../check/GroupSorter";
+import { LineInput } from "../check/LineInput";
+import { MultiSelect } from "../check/MultiSelect";
+import { Sequencing } from "../check/Sequencing";
+import { TileBuilder } from "../check/TileBuilder";
 import { useCheckShown } from "../delivery/useCheckShown";
+import { WrittenAnswer } from "../check/WrittenAnswer";
+import { SpokenAnswer } from "../check/SpokenAnswer";
 import type { AnswerResponse, AnswerResult, CheckItem } from "../types";
 import { BoardFigure } from "./BoardFigure";
 import { MathField, type MathFieldHandle } from "../math/MathField";
@@ -101,6 +111,10 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
   // The delivery is confirmed once the card is actually on screen.
   useCheckShown(cardRef, check.id);
   const [selected, setSelected] = useState<string | null>(null);
+  const format = formatOf(check);
+  const arrangedFormat = isArranged(format);
+  // What the learner has built for a multiple-select, matching or sequencing check (the board draws these itself).
+  const [arranged, setArranged] = useState<Arrangement>(() => initialArrangement(check));
   const [typed, setTyped] = useState("");
   // A maths lesson's answer box is typed like any other, with maths from its `/` menu: it holds LaTeX, and `typed` is
   // what is sent (the words as typed, the maths in the checker's form). Other subjects keep the plain box.
@@ -116,8 +130,8 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
   };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isChoice = check.response_type === "mcq";
-  const isTyped = TYPED_TYPES.has(check.response_type);
+  const isChoice = format === "single_choice";
+  const isTyped = TYPED_TYPES.has(check.response_type) && !arrangedFormat; // a line, slider or tiles replaces the typed box
   // A calculation typed as the answer ("540 * 40", "sqrt(144)") is worked out as they type. There are no
   // calculator keys: whatever they type (2^3, pi, log 100, sin 30…) is worked out. For a number answer its
   // result is what's sent; for an expression or words, what they typed is (√2 stays √2), and the result only helps.
@@ -125,12 +139,14 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
 
   useEffect(() => {
     setSelected(null);
+    setArranged(initialArrangement(check));
     setTyped("");
     setAnswerLatex("");
     latexNow.current = "";
     setError(null);
     // A new question starts at its top, whatever the dock was scrolled to for the last one.
     cardRef.current?.closest<HTMLElement>("[data-no-pan]")?.scrollTo?.({ top: 0 });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reset per question (`check.id`), not on every payload refresh
   }, [check.id]);
 
   const submit = async (event: FormEvent) => {
@@ -138,7 +154,9 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
     // A maths answer is read from the field as it is now, not from the last render.
     const answerNow = isMath ? answerFromField(latexNow.current) : typed;
     const sumNow = isMath ? calculation(latexNow.current ? calcTextFromField(latexNow.current) : "") : sum;
-    const response: AnswerResponse | null = isChoice
+    const response: AnswerResponse | null = arrangedFormat
+      ? responseFromArrangement(check, arranged)
+      : isChoice
       ? selected ? { kind: "choice", option_ids: [selected] } : null
       : answerNow.trim() ? responseFor(check, check.response_type === "numeric" ? sumNow ?? answerNow : answerNow) : null;
     if (!response) return;
@@ -188,6 +206,28 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
             </button>
           ))}
         </div>
+      )}
+
+      {format === "multiple_select" && (
+        <MultiSelect check={check} chosen={arranged.chosen} onChange={(chosen) => setArranged({ ...arranged, chosen })} disabled={busy} />
+      )}
+      {format === "sequencing" && (
+        <Sequencing check={check} order={arranged.order} onChange={(order) => setArranged({ ...arranged, order })} disabled={busy} />
+      )}
+      {(format === "number_line" || format === "slider") && (
+        <LineInput check={check} number={arranged.number} onChange={(number) => setArranged({ ...arranged, number })} disabled={busy} />
+      )}
+      {format === "tile_builder" && (
+        <TileBuilder check={check} built={arranged.built} onChange={(built) => setArranged({ ...arranged, built })} disabled={busy} />
+      )}
+      {format === "grouping" && (
+        <GroupSorter check={check} pairs={arranged.pairs} onChange={(pairs) => setArranged({ ...arranged, pairs })} disabled={busy} />
+      )}
+      {format === "blanks" && (
+        <BlankFiller check={check} pairs={arranged.pairs} onChange={(pairs) => setArranged({ ...arranged, pairs })} disabled={busy} />
+      )}
+      {format === "matching_pairs" && (
+        <Matching check={check} pairs={arranged.pairs} onChange={(pairs) => setArranged({ ...arranged, pairs })} disabled={busy} />
       )}
 
       {isTyped && (
@@ -255,7 +295,7 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
         </div>
       )}
 
-      {!isChoice && !isTyped && (
+      {!isChoice && !isTyped && !arrangedFormat && (
         <p className="lesson-hand mt-3 text-[17px] text-[var(--ls-ink-mid)]">{t("typeInChat")}</p>
       )}
 
@@ -269,8 +309,12 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
 
       {/* The buttons stay in view at the foot of the dock whatever the card's height: a tall card scrolls above them. */}
       <div className="sticky bottom-0 z-[1] -mx-5 -mb-5 mt-4 flex flex-wrap items-center gap-3 rounded-b-[18px] border-t border-dashed border-[var(--ls-ink-faint)] bg-[#fffdf6] px-5 pb-5 pt-3">
-        {(isChoice || isTyped) && (
-          <SketchButton type="submit" disabled={busy || (isChoice ? !selected : !typed.trim())} loading={busy}>
+        {(isChoice || isTyped || arrangedFormat) && (
+          <SketchButton
+            type="submit"
+            disabled={busy || (arrangedFormat ? !isComplete(check, arranged) : isChoice ? !selected : !typed.trim())}
+            loading={busy}
+          >
             {t("checkAnswer")}
           </SketchButton>
         )}
@@ -378,8 +422,17 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
     );
   } else if (reading && checks.get(reading.item_id)) {
     body = <ConfirmReading check={checks.get(reading.item_id)!} original={reading.original} suggestion={reading.suggestion} />;
-  } else if (unanswered.length > 0 && checks.get(unanswered[0])) {
-    body = <CheckCard check={checks.get(unanswered[0])!} onResult={showResult} subject={subject} />;
+  } else if (unanswered.some((id) => checks.has(id))) {
+    // A compliant (rule R) lesson's payload carries only the check the application selected next, which need not be the first unanswered one.
+    const current = checks.get(unanswered.find((id) => checks.has(id))!)!;
+    body =
+      formatOf(current) === "written_response" ? (
+        <WrittenAnswer check={current} onResult={(r) => showResult({ attempt_id: r.attempt_id, outcome: r.outcome ?? "unscorable", correct: r.correct, eligibility_reason: null, round_id: null, round_state: r.round_state, replayed: r.replayed, instance: r.instance })} />
+      ) : formatOf(current) === "spoken_response" ? (
+        <SpokenAnswer check={current} />
+      ) : (
+        <CheckCard check={current} onResult={showResult} subject={subject} />
+      );
   } else if (node.type === "teach" && node.done_available) {
     body = (
       <div className={`${cardClass} flex flex-wrap items-center gap-4`}>

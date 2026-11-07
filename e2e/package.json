@@ -1,0 +1,7 @@
+{
+  "name": "gened-lesson-renderers-e2e",
+  "private": true,
+  "description": "Real-browser tests of the deterministic lesson renderers against local fixtures only (/dev/checks). Its own package: it never touches the app's node_modules.",
+  "scripts": { "test": "playwright test" },
+  "devDependencies": { "@playwright/test": "1.56.1" }
+}

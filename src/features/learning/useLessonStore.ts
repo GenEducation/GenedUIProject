@@ -9,11 +9,13 @@ import { readSseFrames } from "./sse";
 import { resolveSessionLanguage, type SessionLanguage } from "./voice/languages";
 import { applyEvent, fromRecorded, isTerminal, newTurn, type LessonTurn } from "./transcript";
 import type {
+  WrittenResult,
   ChapterReport,
   AnswerResponse,
   AnswerResult,
   InstanceState,
   PresentationManifest,
+  ReadingIntent,
   RevisitOptions,
   SequencedTurnEvent,
   TeacherPayload,
@@ -35,6 +37,12 @@ const MANIFEST_RETRY_MS = 300;
  * once); this only bounds a request that never answers, after which the words show with a retry for the picture.
  */
 const FIGURE_WAIT_MS = 8000;
+/** What the learner sees said for each reading control: their own words in the chat, as for any message. */
+const READING_MESSAGES = {
+  read_with_me: "Can we read this together?",
+  read_it: "I've read it.",
+} as const;
+
 /** The longest a new step's opening waits for the step's payload and pictures, for a read that never answers. */
 const STEP_LOAD_WAIT_MS = 10_000;
 
@@ -96,8 +104,14 @@ interface LessonState {
   /** The step (instance node) whose payload could not be read when the lesson moved to it: said in the chat, with a retry. */
   stepLoadError: string | null;
 
+  /** A quote the learner chose in the book to ask about: the chat box takes it (a new `nonce` is a new quote). */
+  chatDraft: { text: string; nonce: number } | null;
+  setChatDraft: (text: string) => void;
+
   load: (instanceId: string) => Promise<void>;
   send: (text: string) => Promise<void>;
+  /** "Read with me" / "I've read it" from the book: a message the tutor answers, that is never an answer, engagement or progress. */
+  sendReading: (intent: ReadingIntent) => Promise<void>;
   stop: () => Promise<void>;
   retry: (turnId: string) => Promise<void>;
   answer: (
@@ -105,6 +119,12 @@ interface LessonState {
     response: AnswerResponse,
     options?: { channel?: "typed" | "choice"; confirmedReading?: boolean },
   ) => Promise<AnswerResult | null>;
+  /** A written answer to a rubric check. `requestId` is reused by the caller across failed sends (idempotency). Resolves to the result, or null when it cannot be sent yet. */
+  answerWritten: (itemId: string, text: string, options?: { clarification?: string; requestId?: string }) => Promise<WrittenResult | null>;
+  /** After a spoken answer was committed over the oral socket: the lesson state is read again and the tutor's reaction to the attempt starts. */
+  afterOral: (attemptId: string | null) => Promise<void>;
+  /** The data a spoken answer's socket frame is bound to: the instance, its revision and this screen's session. */
+  oralContext: () => { instanceId: string; revision: number; sessionId: string } | null;
   /** The learner's explicit done on a teach node, only when the backend advertises `done_available`. */
   done: () => Promise<void>;
   /** After a failed practice round. */
@@ -150,6 +170,7 @@ const initial = {
   error: null,
   instance: null,
   payload: null,
+  chatDraft: null,
   manifest: null,
   turns: [],
   presentedFigureIds: [],
@@ -764,6 +785,28 @@ export const useLessonStore = create<LessonState>((set, get) => {
       );
     },
 
+    setChatDraft: (text) => set((state) => ({ chatDraft: { text, nonce: (state.chatDraft?.nonce ?? 0) + 1 } })),
+
+    sendReading: async (intent) => {
+      if (gap) await gap.closed;
+      const node = activeNodeId();
+      if (!node) return;
+      const text = READING_MESSAGES[intent];
+      await runTurn(
+        {
+          turn_id: uuid(),
+          kind: "learner_message",
+          instance_node_id: node,
+          text,
+          latency_ms: lastReplyAt ? Math.min(Date.now() - lastReplyAt, 3_600_000) : 0,
+          routing_mode: "conversation_only",
+          reading_intent: intent,
+          interrupts: openTurnInterrupt(),
+        },
+        text,
+      );
+    },
+
     stop: async () => {
       const { instanceId } = get();
       const open = get().turns.findLast((t) => t.status === "streaming");
@@ -860,6 +903,46 @@ export const useLessonStore = create<LessonState>((set, get) => {
         await rereadIfStale(error);
         throw error;
       }
+    },
+
+    answerWritten: async (itemId, text, options = {}) => {
+      const { instanceId, instance } = get();
+      if (!instanceId || instance?.revision === undefined) return null;
+      const startedAt = lastReplyAt || Date.now();
+      const requestId = options.requestId ?? uuid();
+      try {
+        const result = await lessonService.writtenAnswer(instanceId, {
+          request_id: requestId,
+          item_id: itemId,
+          expected_revision: get().instance?.revision ?? instance.revision,
+          text,
+          latency_ms: Math.min(Math.max(Date.now() - startedAt, 0), 3_600_000),
+          session_id: sessionId(),
+          clarification: options.clarification || undefined,
+        });
+        applyInstance(result.instance);
+        if (result.status === "committed" && result.attempt_id) {
+          const node = activeNodeId();
+          if (node) void runTurn({ turn_id: uuid(), kind: "result_reaction", instance_node_id: node, attempt_id: result.attempt_id }, null);
+        }
+        return result;
+      } catch (error) {
+        await rereadIfStale(error);
+        throw error;
+      }
+    },
+
+    oralContext: () => {
+      const { instanceId, instance } = get();
+      return instanceId && instance?.revision !== undefined ? { instanceId, revision: get().instance?.revision ?? instance.revision, sessionId: sessionId() } : null;
+    },
+
+    afterOral: async (attemptId) => {
+      const { instanceId } = get();
+      if (!instanceId) return;
+      applyInstance(await lessonService.instance(instanceId));
+      const node = activeNodeId();
+      if (attemptId && node) void runTurn({ turn_id: uuid(), kind: "result_reaction", instance_node_id: node, attempt_id: attemptId }, null);
     },
 
     done: async () => {

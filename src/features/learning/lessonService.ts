@@ -1,6 +1,8 @@
 import { authFetch } from "@/utils/authFetch";
 import type {
   AnswerBody,
+  WrittenBody,
+  WrittenResult,
   AnswerResult,
   DeliveryBody,
   ChapterReport,
@@ -60,6 +62,10 @@ export const lessonService = {
 
   answer: async (instanceId: string, body: AnswerBody): Promise<AnswerResult> =>
     (await authFetch(`${instancePath(instanceId)}/responses`, json(body))).json(),
+
+  /** A typed answer to a rubric check: evaluated by the server's qualified evaluator and committed once (the same `request_id` returns the committed result). */
+  writtenAnswer: async (instanceId: string, body: WrittenBody): Promise<WrittenResult> =>
+    (await authFetch(`${instancePath(instanceId)}/written-responses`, json(body))).json(),
 
   /** Confirms a check was delivered in this session (shown, or its audio played to the end). An answer counts only after this. */
   checkDelivered: async (instanceId: string, itemId: string, body: DeliveryBody): Promise<void> => {

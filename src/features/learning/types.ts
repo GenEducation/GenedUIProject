@@ -37,7 +37,15 @@ export interface TurnRequest {
   language?: VoiceLanguage;
   /** The learner session whose confirmed check deliveries a message may answer (backend ADR 0035 decision 5). */
   session_id?: string;
+  /**
+   * The message came from a reading control on the book panel (W1). It is conversation whatever its words: never an answer,
+   * never engagement, never progress. Needs `routing_mode: "conversation_only"`.
+   */
+  reading_intent?: "read_with_me" | "read_it";
 }
+
+/** What a reading control asks of the tutor. */
+export type ReadingIntent = NonNullable<TurnRequest["reading_intent"]>;
 
 export type FailureReason =
   | "first_token_timeout" | "stream_interrupted" | "model_error" | "policy_refused" | "safety_refused"
@@ -184,11 +192,51 @@ export interface CheckOption {
 export interface CheckItem {
   id: string;
   prompt: string;
-  response_type: "numeric" | "numeric_set" | "symbolic" | "string_set" | "mcq" | "sequence" | "matching";
+  response_type: "numeric" | "numeric_set" | "symbolic" | "string_set" | "mcq" | "sequence" | "matching" | "grouping" | "blanks" | "rubric";
   role: "checkpoint" | "formative_probe";
   options: CheckOption[];
   figure_groups: FigureGroup[];
+  /** `multiple`: an `mcq` whose key is a set of options, answered by choosing several (`teacher_node_v9`, W2 P1). */
+  selection?: "single" | "multiple";
+  /** A `matching` check's left-hand entries to pair with `options` (`teacher_node_v9`); a `grouping` check's entries to sort into the
+   *  groups in `options`, and a `blanks` check's blank numbers to fill from the bank in `options` (`teacher_node_v11`, W2 P2b). */
+  left_entries?: string[];
+  /** How a `numeric` or `symbolic` check's answer is entered: a number line, a slider, or tiles (`teacher_node_v10`, W2 P2). */
+  entry?: CheckEntry | null;
+  /** A `rubric` check: whether it is answered by typing or by speaking, and the length band of a written answer (`teacher_node_v12`, W2 P6/P7). */
+  task?: { mode: "written" | "spoken"; min_chars: number; max_chars: number } | null;
 }
+
+/** The result of a written answer (`POST .../written-responses`): a committed attempt with feedback, or the rubric's neutral probe (nothing committed). */
+export interface WrittenResult {
+  status: "committed" | "needs_clarification";
+  attempt_id: string | null;
+  outcome: "correct" | "incorrect" | "unscorable" | null;
+  correct: boolean | null;
+  round_state: "open" | "passed" | "failed" | null;
+  replayed: boolean;
+  /** Authored level descriptors, or a neutral retry code the interface words; never a model's words. */
+  feedback:
+    | { kind: "criteria"; criteria: { criterion: string; title: string; met: boolean; shown: string; next: string | null; error_tags: string[] }[] }
+    | { kind: "retry"; code: string; retry: boolean; reason: string }
+    | null;
+  clarification: { criterion: string; probe: string; remaining: number } | null;
+  instance: InstanceState;
+}
+
+export interface WrittenBody {
+  request_id: string;
+  item_id: string;
+  expected_revision: number;
+  text: string;
+  latency_ms: number;
+  session_id?: string;
+  clarification?: string;
+}
+
+export type CheckEntry =
+  | { mode: "number_line" | "slider"; min: string; max: string; step: string }
+  | { mode: "tiles"; tiles: string[] };
 
 export interface NodeOutline {
   node_id: string;
@@ -196,17 +244,46 @@ export interface NodeOutline {
   type: "teach" | "practice" | "assess";
 }
 
-/** `GET /v1/instances/{id}/teacher-payload` (`teacher_node_v5`), narrowed to what the screen reads. */
+/** One chunk of a passage as printed: a paragraph, or a glossary `note` that sits beside it (`teacher_node_v8`). */
+export interface PassageChunk {
+  id: string;
+  element_type: string;
+  text: string;
+  page: number;
+}
+
+/** A part of a passage: the book's own part ("I", "II") or a piece between two interruptions. */
+export interface PassageSegment {
+  segment: number;
+  chunks: PassageChunk[];
+}
+
+/** A text the learner reads, complete up to the segment the step's activities refer to; never beyond it. */
+export interface Passage {
+  id: string;
+  title: string;
+  segments: PassageSegment[];
+}
+
+/** What the step's own chunks are for in a reading-based chapter (`teacher_node_v8`). */
+export type ReadingRole = "pre_reading" | "reading" | "post_reading" | "mixed";
+
+/**
+ * `GET /v1/instances/{id}/teacher-payload`, narrowed to what the screen reads. The payload is the version the session
+ * was stored as (v5 to v8), so the reading fields are absent on an older one: no passage, no panel.
+ */
 export interface TeacherPayload {
-  schema_version: "teacher_node_v5";
+  schema_version: string;
   node: {
     id: string;
     title: string;
     type: "teach" | "practice" | "assess";
     teach_only: boolean;
-    sections: Array<{ id: string; title: string; path: string[]; chunks: Array<{ id: string; text: string; page: number }> }>;
+    sections: Array<{ id: string; title: string; path: string[]; chunks: Array<{ id: string; element_type?: string; text: string; page: number }> }>;
     figure_groups: FigureGroup[];
     check_items: CheckItem[];
+    reading_role?: ReadingRole | null;
+    passages?: Passage[];
     est_minutes: number;
   };
   student_context: {
