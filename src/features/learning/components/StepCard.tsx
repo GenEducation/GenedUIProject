@@ -422,8 +422,9 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
     );
   } else if (reading && checks.get(reading.item_id)) {
     body = <ConfirmReading check={checks.get(reading.item_id)!} original={reading.original} suggestion={reading.suggestion} />;
-  } else if (unanswered.length > 0 && checks.get(unanswered[0])) {
-    const current = checks.get(unanswered[0])!;
+  } else if (unanswered.some((id) => checks.has(id))) {
+    // A compliant (rule R) lesson's payload carries only the check the application selected next, which need not be the first unanswered one.
+    const current = checks.get(unanswered.find((id) => checks.has(id))!)!;
     body =
       formatOf(current) === "written_response" ? (
         <WrittenAnswer check={current} onResult={(r) => showResult({ attempt_id: r.attempt_id, outcome: r.outcome ?? "unscorable", correct: r.correct, eligibility_reason: null, round_id: null, round_state: r.round_state, replayed: r.replayed, instance: r.instance })} />
