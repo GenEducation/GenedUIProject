@@ -55,7 +55,7 @@ async function openVoice(subject?: string) {
   await waitFor(() => expect(fake.options).not.toBeNull());
 }
 
-/** The lesson's one language selector lives in the header (LessonLanguageSelect); voice follows it. */
+/** The lesson's one language selector sits above the chat box (LessonLanguageSelect), in text and voice; voice follows it. */
 const chooseLanguage = async (tag: SessionLanguage) => act(() => store().setSessionLanguage(tag));
 const setPreference = (preferred_language: string | null) =>
   useStudentStore.setState({ studentProfile: { user_id: "u", role: "STUDENT", preferred_language } as never });
@@ -398,9 +398,13 @@ describe("voice mode", () => {
 });
 
 describe("voice language", () => {
-  it("has no language picker of its own: one selector, in the lesson header, for typed and spoken tutoring", async () => {
+  it("keeps the one language selector above the box in voice and in text, and adds no second one", async () => {
     await openVoice();
     expect(screen.queryByRole("combobox", { name: "Voice language" })).toBeNull();
+    expect(screen.getAllByRole("combobox", { name: "Lesson language" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "End" }));
+    expect(store().voiceMode).toBe(false);
+    expect(screen.getAllByRole("combobox", { name: "Lesson language" })).toHaveLength(1);
   });
 
   it("opens in English with no preference, and sends the tag in init", async () => {

@@ -12,13 +12,20 @@ import { SESSION_LANGUAGES, languageLabel, type SessionLanguage } from "../voice
  * screen's own words; the book's text stays in its own language. It is this learner's choice, remembered for them on this
  * browser only, and it outranks their profile preference for this lesson.
  */
-export function LessonLanguageSelect() {
+export function LessonLanguageSelect({ inBox = false }: { inBox?: boolean }) {
   const language = useSessionLanguage();
   const setSessionLanguage = useLessonStore((s) => s.setSessionLanguage);
   const t = useUiText();
   return (
-    <div className="flex items-center gap-1.5 rounded-[18px] border border-[var(--ls-border)] bg-[var(--ls-card)] px-3 py-1.5 shadow-[var(--ls-shadow)]">
-      <Languages size={18} strokeWidth={2.2} className="shrink-0 text-[var(--ls-primary)]" aria-hidden />
+    // Inside the chat or voice box it is a quiet inline control; on its own it is a small card.
+    <div
+      className={
+        inBox
+          ? "flex items-center gap-1 text-[var(--ls-ink-mid)]"
+          : "flex items-center gap-1.5 rounded-[18px] border border-[var(--ls-border)] bg-[var(--ls-card)] px-3 py-1.5 shadow-[var(--ls-shadow)]"
+      }
+    >
+      <Languages size={inBox ? 16 : 18} strokeWidth={2.2} className="shrink-0 text-[var(--ls-primary)]" aria-hidden />
       <Select<SessionLanguage>
         size="sm"
         variant="inline"

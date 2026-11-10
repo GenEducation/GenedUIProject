@@ -5,6 +5,7 @@ import { useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent }
 import { Mic, SendHorizontal, Square } from "lucide-react";
 import { MathField, type MathFieldHandle } from "../math/MathField";
 import { chatTextFromLatex, latexFromChatText } from "../math/latex";
+import { LessonLanguageSelect } from "./LessonLanguageSelect";
 
 /** Maths lessons write in the maths field (words, with `/` for notation); other subjects keep a plain box. */
 export const isMathsSubject = (subject: string | null | undefined) => !!subject && /math|ganit/i.test(subject);
@@ -136,6 +137,8 @@ export function ChatInput({ replying, disabled, onSend, onStop, subject = null, 
                 <Mic size={18} />
               </button>
             )}
+            {/* The lesson's one language selector: inside the box the learner types in, as in the voice box. */}
+            <LessonLanguageSelect inBox />
             <span className="flex-1" />
             {text.length >= COUNT_FROM && (
               <span className="text-[11px] tabular-nums text-[var(--ls-ink-faint)]" aria-live="polite">

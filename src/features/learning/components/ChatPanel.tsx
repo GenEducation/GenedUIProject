@@ -52,7 +52,7 @@ export function ChatPanel({
   const reloadStep = useLessonStore((s) => s.reloadStep);
   // Voice replies land in the same transcript; only the input area changes.
   const wantsVoice = voiceMode && status === "ready" && canTalk;
-  // Voice opens in the lesson's one session language (the header's selector); a new choice there restarts it.
+  // Voice opens in the lesson's one session language (the selector inside the text and voice boxes); a new choice there restarts it.
   const { language, error: languageError } = useVoiceLanguages(wantsVoice);
   const live = useVoiceSession(wantsVoice && !languageError, language);
   const voice = languageError ? { ...VOICE_OFFLINE, error: languageError } : live;

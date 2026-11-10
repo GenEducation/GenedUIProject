@@ -6,6 +6,7 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { formatKey } from "@/features/student/components/PttHotkeyConfig";
 import type { VoiceSession } from "../voice/useVoiceSession";
 import { useUiText } from "../i18n";
+import { LessonLanguageSelect } from "./LessonLanguageSelect";
 
 const BARS = 13;
 /** A press shorter than this is a tap (it starts talking until the next tap); longer is a hold (it sends on release). */
@@ -154,8 +155,8 @@ export function VoiceWaveform({ session, onEnd }: VoiceWaveformProps) {
     };
   }, [pushToTalk, hotkey, down, up, cancel]);
 
-  // The language is the lesson's one selector in the header, never a second one here.
-  const picker = session.setPushToTalk ? (
+  // The lesson's one language selector stays in this box too (the same one the text box shows), so it never disappears.
+  const picker = (
     <div className="mb-2 flex items-center justify-between gap-2">
       {session.setPushToTalk ? (
         // eslint-disable-next-line no-restricted-syntax -- a small switch-style toggle in the voice bar.
@@ -184,8 +185,9 @@ export function VoiceWaveform({ session, onEnd }: VoiceWaveformProps) {
       ) : (
         <span />
       )}
+      <LessonLanguageSelect inBox />
     </div>
-  ) : null;
+  );
 
   const side = (key: string, mirror: boolean) => (
     // Each side takes what room is left and clips its outer bars, so it can never push into the status or End.
