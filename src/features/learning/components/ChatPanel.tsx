@@ -52,8 +52,8 @@ export function ChatPanel({
   const reloadStep = useLessonStore((s) => s.reloadStep);
   // Voice replies land in the same transcript; only the input area changes.
   const wantsVoice = voiceMode && status === "ready" && canTalk;
-  // The languages come from the backend; the session opens once one is chosen, and a new choice restarts it.
-  const { languages, language, setLanguage, error: languageError } = useVoiceLanguages(wantsVoice);
+  // Voice opens in the lesson's one session language (the header's selector); a new choice there restarts it.
+  const { language, error: languageError } = useVoiceLanguages(wantsVoice);
   const live = useVoiceSession(wantsVoice && !languageError, language);
   const voice = languageError ? { ...VOICE_OFFLINE, error: languageError } : live;
   const replying = turns.some((t) => t.status === "streaming");
@@ -174,7 +174,7 @@ export function ChatPanel({
       </div>
 
       {voiceMode ? (
-        <VoiceWaveform session={voice} onEnd={() => setVoiceMode(false)} languages={languages} onLanguage={setLanguage} />
+        <VoiceWaveform session={voice} onEnd={() => setVoiceMode(false)} />
       ) : (
       <ChatInput
         replying={replying}

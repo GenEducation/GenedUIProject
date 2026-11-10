@@ -4,6 +4,7 @@ import {
   CHECK_ITEM, FIGURE_GROUP, LESSON_ID, NODE_1, NODE_2, OPTION_A,
   answerRequests, forbiddenRequests, lessonFixture, makeLessonInstance, replyScript, resumeRequests, turnRequests,
 } from "@/test/msw/handlers/lesson";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useLessonStore } from "../useLessonStore";
 import { replyText } from "../transcript";
 
@@ -148,11 +149,16 @@ describe("useLessonStore — moving on to the next part", () => {
 });
 
 describe("useLessonStore — typed turns carry the session language", () => {
+  const asLearner = (user_id: string, preferred_language: string | null = null) =>
+    useStudentStore.setState({ studentProfile: { user_id, username: user_id, role: "student", preferred_language } as never });
+
   beforeEach(async () => {
+    localStorage.clear();
+    asLearner("learner-a");
+    useLessonStore.setState({ sessionLanguage: null });
     lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
     await store().load(LESSON_ID);
     turnRequests.length = 0;
-    localStorage.removeItem("gened_voice_language");
   });
 
   it("sends the language the learner picked on a hint", async () => {
@@ -163,20 +169,38 @@ describe("useLessonStore — typed turns carry the session language", () => {
     await settled();
   });
 
-  it("falls back to the stored voice choice, and sends none when nothing is chosen", async () => {
-    localStorage.setItem("gened_voice_language", "ta");
+  it("keeps a learner's pick for that learner across a reload, ahead of their profile", async () => {
+    asLearner("learner-a", "mr");
+    store().setSessionLanguage("ta");
+    useLessonStore.setState({ sessionLanguage: null }); // a page reload: the store starts empty
     await store().send("SYNTHETIC question");
     expect(turnRequests.at(-1)).toMatchObject({ kind: "learner_message", language: "ta" });
-    localStorage.removeItem("gened_voice_language");
+  });
+
+  it("never gives one learner's choice to another learner on the same browser", async () => {
+    store().setSessionLanguage("hi-Latn");
     useLessonStore.setState({ sessionLanguage: null });
+    asLearner("learner-b", "en");
+    await store().send("SYNTHETIC question");
+    expect(turnRequests.at(-1)).toMatchObject({ language: "en" }, "learner-b's own profile, not learner-a's Hinglish");
+    asLearner("learner-c", null);
     await store().send("SYNTHETIC again");
-    expect(turnRequests.at(-1)).not.toHaveProperty("language");
+    expect(turnRequests.at(-1)).toMatchObject({ language: "en" }, "no choice and no profile: English");
+  });
+
+  it("ignores and removes the old browser-wide choice that leaked between learners", async () => {
+    localStorage.setItem("gened_voice_language", "hi-Latn");
+    asLearner("learner-d", "kn");
+    await store().send("SYNTHETIC question");
+    expect(turnRequests.at(-1)).toMatchObject({ language: "kn" });
+    expect(localStorage.getItem("gened_voice_language")).toBeNull();
   });
 
   it("never sends a tag outside the eight", async () => {
-    localStorage.setItem("gened_voice_language", "fr");
+    asLearner("learner-e", "fr");
+    localStorage.setItem("gened_lesson_language:learner-e", "fr");
     await store().send("SYNTHETIC question");
-    expect(turnRequests.at(-1)).not.toHaveProperty("language");
+    expect(turnRequests.at(-1)).toMatchObject({ language: "en" });
   });
 });
 
@@ -191,3 +215,37 @@ describe("useLessonStore — a hint is only a hint turn (R-E5)", () => {
     await settled();
   });
 });
+
+describe("useLessonStore — a part with nothing to answer ends when the tutor has taught it (backend ADR 0044)", () => {
+  const teachOnly = (node: string, done: number) =>
+    makeLessonInstance({
+      nodes_done: done,
+      active_node: { ...makeLessonInstance().active_node!, instance_node_id: node, type: "teach", check_item_ids: [], done_available: false },
+    });
+
+  it("reads the lesson again when the tutor's reply on such a part closes, and opens the next part after it", async () => {
+    lessonFixture.setInstance(teachOnly(NODE_1, 0));
+    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
+    await store().load(LESSON_ID);
+    turnRequests.length = 0;
+    lessonFixture.setInstance(teachOnly(NODE_2, 1)); // the tutor's reply completed the part on the server
+    await store().send("SYNTHETIC thought about the story");
+    await waitFor(() => expect(store().instance?.active_node?.instance_node_id).toBe(NODE_2));
+    await waitFor(() => expect(turnRequests.map((r) => [r.kind, r.instance_node_id])).toContainEqual(["opening", NODE_2]));
+    expect(turnRequests[0]).toMatchObject({ kind: "learner_message", instance_node_id: NODE_1 });
+    await settled();
+  });
+
+  it("never reads it on a part with a question: that part moves on by its answers only", async () => {
+    const withCheck = makeLessonInstance();
+    expect(withCheck.active_node!.check_item_ids.length).toBeGreaterThan(0);
+    lessonFixture.setInstance(withCheck);
+    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
+    await store().load(LESSON_ID);
+    lessonFixture.setInstance(teachOnly(NODE_2, 1));
+    await store().send("SYNTHETIC question");
+    await settled();
+    expect(store().instance?.active_node?.instance_node_id).toBe(withCheck.active_node!.instance_node_id);
+  });
+});
+

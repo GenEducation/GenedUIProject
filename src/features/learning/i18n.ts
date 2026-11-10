@@ -88,8 +88,6 @@ const EN = {
   lookingAtIt: "Your tutor will look at this one.",
   moveOn: "Got it? Move on when you're ready.",
   nextStep: "Next step",
-  talkItThrough: "Talk it through with your tutor to unlock the next step.",
-  repliesCount: "Replies that count: {n} of {m}",
   roundTricky: "That round was tricky. What next?",
   tryNew: "Try a new question",
   keepGoing: "Keep going",
@@ -114,6 +112,7 @@ const EN = {
   sessionTime: "Session time",
   chapterTime: "Chapter time",
   stepsDone: "Steps done",
+  lessonLanguage: "Lesson language",
   /** The plan's own steps are all done and the learner is on a revisit step (`active_node.reason` "revisit_…"). */
   revisiting: "Revisiting skills",
   /** The learner chose to go over a section again (`active_node.reason` "revisit_review"). */
@@ -138,8 +137,6 @@ const HI: Table = {
   lookingAtIt: "आपके ट्यूटर इसे देखेंगे।",
   moveOn: "समझ आ गया? तैयार हों तो आगे बढ़ें।",
   nextStep: "अगला चरण",
-  talkItThrough: "अगला चरण खोलने के लिए अपने ट्यूटर से बात करें।",
-  repliesCount: "गिने जाने वाले जवाब: {m} में से {n}",
   roundTricky: "यह दौर थोड़ा कठिन था। अब क्या करें?",
   tryNew: "नया सवाल आज़माएँ",
   keepGoing: "आगे बढ़ते रहें",
@@ -164,6 +161,7 @@ const HI: Table = {
   sessionTime: "सत्र का समय",
   chapterTime: "अध्याय का समय",
   stepsDone: "पूरे हुए चरण",
+  lessonLanguage: "पाठ की भाषा",
   revisiting: "कौशल दोहरा रहे हैं",
 };
 
@@ -182,8 +180,6 @@ const HI_LATN: Table = {
   lookingAtIt: "Aapke tutor ise dekhenge.",
   moveOn: "Samajh aa gaya? Taiyaar hon to aage badhein.",
   nextStep: "Agla step",
-  talkItThrough: "Agla step kholne ke liye apne tutor se baat karein.",
-  repliesCount: "Ginne wale jawab: {m} mein se {n}",
   roundTricky: "Yeh round thoda mushkil tha. Ab kya karein?",
   tryNew: "Naya sawaal try karein",
   keepGoing: "Aage badhte rahein",
@@ -208,6 +204,7 @@ const HI_LATN: Table = {
   sessionTime: "Session ka samay",
   chapterTime: "Chapter ka samay",
   stepsDone: "Poore hue steps",
+  lessonLanguage: "Lesson ki bhasha",
   revisiting: "Skills dohra rahe hain",
 };
 
@@ -226,8 +223,6 @@ const MR: Table = {
   lookingAtIt: "तुमचे ट्यूटर हे पाहतील.",
   moveOn: "समजले का? तयार असाल तर पुढे जा.",
   nextStep: "पुढचा टप्पा",
-  talkItThrough: "पुढचा टप्पा उघडण्यासाठी तुमच्या ट्यूटरशी बोला.",
-  repliesCount: "गणले जाणारे उत्तर: {m} पैकी {n}",
   roundTricky: "ही फेरी थोडी अवघड होती. आता काय करायचे?",
   tryNew: "नवा प्रश्न करून पहा",
   keepGoing: "पुढे चालू ठेवा",
@@ -252,6 +247,7 @@ const MR: Table = {
   sessionTime: "सत्राची वेळ",
   chapterTime: "प्रकरणाची वेळ",
   stepsDone: "पूर्ण झालेले टप्पे",
+  lessonLanguage: "पाठाची भाषा",
   revisiting: "कौशल्यांची उजळणी",
 };
 
@@ -270,8 +266,6 @@ const PA: Table = {
   lookingAtIt: "ਤੁਹਾਡੇ ਟਿਊਟਰ ਇਸ ਨੂੰ ਵੇਖਣਗੇ।",
   moveOn: "ਸਮਝ ਆ ਗਿਆ? ਤਿਆਰ ਹੋਵੋ ਤਾਂ ਅੱਗੇ ਵਧੋ।",
   nextStep: "ਅਗਲਾ ਕਦਮ",
-  talkItThrough: "ਅਗਲਾ ਕਦਮ ਖੋਲ੍ਹਣ ਲਈ ਆਪਣੇ ਟਿਊਟਰ ਨਾਲ ਗੱਲ ਕਰੋ।",
-  repliesCount: "ਗਿਣੇ ਜਾਣ ਵਾਲੇ ਜਵਾਬ: {m} ਵਿੱਚੋਂ {n}",
   roundTricky: "ਇਹ ਦੌਰ ਕੁਝ ਔਖਾ ਸੀ। ਹੁਣ ਕੀ ਕਰੀਏ?",
   tryNew: "ਨਵਾਂ ਸਵਾਲ ਅਜ਼ਮਾਓ",
   keepGoing: "ਅੱਗੇ ਵਧਦੇ ਰਹੋ",
@@ -296,6 +290,7 @@ const PA: Table = {
   sessionTime: "ਸੈਸ਼ਨ ਦਾ ਸਮਾਂ",
   chapterTime: "ਅਧਿਆਇ ਦਾ ਸਮਾਂ",
   stepsDone: "ਪੂਰੇ ਹੋਏ ਕਦਮ",
+  lessonLanguage: "ਪਾਠ ਦੀ ਭਾਸ਼ਾ",
   revisiting: "ਹੁਨਰ ਦੁਹਰਾ ਰਹੇ ਹਾਂ",
 };
 
@@ -314,8 +309,6 @@ const TA: Table = {
   lookingAtIt: "உங்கள் ஆசிரியர் இதைப் பார்ப்பார்.",
   moveOn: "புரிந்ததா? தயாரானதும் அடுத்ததற்குச் செல்லுங்கள்.",
   nextStep: "அடுத்த படி",
-  talkItThrough: "அடுத்த படியைத் திறக்க உங்கள் ஆசிரியருடன் பேசுங்கள்.",
-  repliesCount: "கணக்கிடப்படும் பதில்கள்: {m} இல் {n}",
   roundTricky: "இந்தச் சுற்று கொஞ்சம் கடினமாக இருந்தது. அடுத்து என்ன?",
   tryNew: "புதிய கேள்வியை முயலுங்கள்",
   keepGoing: "தொடருங்கள்",
@@ -340,6 +333,7 @@ const TA: Table = {
   sessionTime: "அமர்வு நேரம்",
   chapterTime: "அத்தியாய நேரம்",
   stepsDone: "முடிந்த படிகள்",
+  lessonLanguage: "பாட மொழி",
   revisiting: "திறன்களை மீண்டும் பார்க்கிறோம்",
 };
 
@@ -358,8 +352,6 @@ const TE: Table = {
   lookingAtIt: "మీ ట్యూటర్ దీన్ని చూస్తారు.",
   moveOn: "అర్థమైందా? సిద్ధంగా ఉంటే ముందుకు వెళ్ళండి.",
   nextStep: "తదుపరి దశ",
-  talkItThrough: "తదుపరి దశను తెరవడానికి మీ ట్యూటర్‌తో మాట్లాడండి.",
-  repliesCount: "లెక్కించే సమాధానాలు: {m} లో {n}",
   roundTricky: "ఈ రౌండ్ కొంచెం కష్టంగా ఉంది. ఇప్పుడు ఏం చేద్దాం?",
   tryNew: "కొత్త ప్రశ్న ప్రయత్నించండి",
   keepGoing: "కొనసాగండి",
@@ -384,6 +376,7 @@ const TE: Table = {
   sessionTime: "సెషన్ సమయం",
   chapterTime: "అధ్యాయం సమయం",
   stepsDone: "పూర్తైన దశలు",
+  lessonLanguage: "పాఠం భాష",
   revisiting: "నైపుణ్యాలను మళ్లీ చూస్తున్నాం",
 };
 
@@ -402,8 +395,6 @@ const KN: Table = {
   lookingAtIt: "ನಿಮ್ಮ ಟ್ಯೂಟರ್ ಇದನ್ನು ನೋಡುತ್ತಾರೆ.",
   moveOn: "ಅರ್ಥವಾಯಿತೇ? ಸಿದ್ಧರಾದಾಗ ಮುಂದೆ ಹೋಗಿ.",
   nextStep: "ಮುಂದಿನ ಹಂತ",
-  talkItThrough: "ಮುಂದಿನ ಹಂತ ತೆರೆಯಲು ನಿಮ್ಮ ಟ್ಯೂಟರ್ ಜೊತೆ ಮಾತನಾಡಿ.",
-  repliesCount: "ಲೆಕ್ಕಕ್ಕೆ ಬರುವ ಉತ್ತರಗಳು: {m} ರಲ್ಲಿ {n}",
   roundTricky: "ಈ ಸುತ್ತು ಸ್ವಲ್ಪ ಕಷ್ಟವಾಗಿತ್ತು. ಈಗ ಏನು ಮಾಡೋಣ?",
   tryNew: "ಹೊಸ ಪ್ರಶ್ನೆ ಪ್ರಯತ್ನಿಸಿ",
   keepGoing: "ಮುಂದುವರಿಸಿ",
@@ -428,6 +419,7 @@ const KN: Table = {
   sessionTime: "ಅಧಿವೇಶನದ ಸಮಯ",
   chapterTime: "ಅಧ್ಯಾಯದ ಸಮಯ",
   stepsDone: "ಮುಗಿದ ಹಂತಗಳು",
+  lessonLanguage: "ಪಾಠದ ಭಾಷೆ",
   revisiting: "ಕೌಶಲಗಳನ್ನು ಮತ್ತೆ ನೋಡುತ್ತಿದ್ದೇವೆ",
 };
 
@@ -441,14 +433,15 @@ export function uiText(language: string | null | undefined, key: UiKey, vars: Re
 }
 
 /**
- * The session language the learner has chosen (the voice picker's choice), else their profile preference, else none. The same
- * value is sent on every typed turn (backend ADR 0037), so the tutor's words and the card's words agree.
+ * The lesson's one session language: the language picked in the lesson's selector, else this learner's own last choice on this
+ * browser, else their profile preference, else English. The same value is sent on every typed turn (backend ADR 0037) and opens
+ * the voice session, so the tutor's words, its voice and the card's words agree.
  */
-export function useSessionLanguage(): SessionLanguage | null {
+export function useSessionLanguage(): SessionLanguage {
   const chosen = useLessonStore((s) => s.sessionLanguage);
+  const learnerId = useStudentStore((s) => s.studentProfile?.user_id);
   const preferred = useStudentStore((s) => s.studentProfile?.preferred_language);
-  // The picker saves its choice to storage and to the store, so `chosen` changes whenever the stored choice does.
-  return useMemo(() => resolveSessionLanguage(chosen, preferred), [chosen, preferred]);
+  return useMemo(() => resolveSessionLanguage(chosen, learnerId, preferred), [chosen, learnerId, preferred]);
 }
 
 /** `t(key, vars)`: the lesson screen's words in the session language. */

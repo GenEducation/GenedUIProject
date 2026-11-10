@@ -9,6 +9,7 @@ import { isReviewingSection, isRevisiting, useLessonStore } from "../useLessonSt
 import { useUiText } from "../i18n";
 import { useChapterClock } from "../activity/useChapterTime";
 import { formatDuration } from "../useSessionTimer";
+import { LessonLanguageSelect } from "./LessonLanguageSelect";
 
 interface LessonHeaderProps {
   subject: string | null;
@@ -143,6 +144,7 @@ export function LessonHeader({
             </li>
           </ol>
         </nav>
+        <LessonLanguageSelect />
         <Chip
           role="timer"
           aria-label={`${t("chapterTime")} ${chapterSeconds === null ? "loading" : formatDuration(chapterSeconds)}`}

@@ -4,8 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, MicOff, PhoneOff } from "lucide-react";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { formatKey } from "@/features/student/components/PttHotkeyConfig";
-import { Select } from "@/components/ui/Select";
-import { languageLabel, voiceLanguageEnabled, type VoiceLanguage } from "../voice/languages";
 import type { VoiceSession } from "../voice/useVoiceSession";
 import { useUiText } from "../i18n";
 
@@ -19,9 +17,6 @@ const ENVELOPE = Array.from({ length: BARS }, (_, i) => 0.35 + 0.65 * Math.sin((
 interface VoiceWaveformProps {
   session: VoiceSession;
   onEnd: () => void;
-  /** What the server offers, and the choice among it; changing it ends the session and opens a new one. */
-  languages?: VoiceLanguage[];
-  onLanguage?: (tag: string) => void;
 }
 
 /**
@@ -30,7 +25,7 @@ interface VoiceWaveformProps {
  * with the microphone while the learner talks and with a steady pulse while
  * the tutor speaks; they are driven by refs on animation frames, not renders.
  */
-export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: VoiceWaveformProps) {
+export function VoiceWaveform({ session, onEnd }: VoiceWaveformProps) {
   const t = useUiText();
   // The name the learner gave their tutor, as they wrote it (a lower-case "nia" reads as "Nia"); "Your tutor" until they have.
   const given = useStudentStore((s) => s.studentProfile?.ai_name)?.trim();
@@ -159,7 +154,8 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
     };
   }, [pushToTalk, hotkey, down, up, cancel]);
 
-  const picker = (languages.length > 0 && onLanguage) || session.setPushToTalk ? (
+  // The language is the lesson's one selector in the header, never a second one here.
+  const picker = session.setPushToTalk ? (
     <div className="mb-2 flex items-center justify-between gap-2">
       {session.setPushToTalk ? (
         // eslint-disable-next-line no-restricted-syntax -- a small switch-style toggle in the voice bar.
@@ -188,19 +184,6 @@ export function VoiceWaveform({ session, onEnd, languages = [], onLanguage }: Vo
       ) : (
         <span />
       )}
-      {languages.length > 0 && onLanguage && <Select
-        size="sm"
-        variant="inline"
-        aria-label="Voice language"
-        value={session.language ?? ""}
-        onChange={onLanguage}
-        options={languages.map((l) => ({
-          value: l.language,
-          label: languageLabel(l.language),
-          disabled: !voiceLanguageEnabled(l),
-          hint: voiceLanguageEnabled(l) ? undefined : (l.reason ?? "Not available yet"),
-        }))}
-      />}
     </div>
   ) : null;
 

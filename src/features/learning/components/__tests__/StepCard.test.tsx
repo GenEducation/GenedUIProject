@@ -57,14 +57,21 @@ describe("StepCard: a part that is not finished", () => {
     });
   });
 
-  it("says how many replies count so far", () => {
-    render(<StepCard />);
-    expect(screen.getByText(/talk it through/i)).toBeInTheDocument();
-    expect(screen.getByText("Replies that count: 1 of 2")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /next step/i })).not.toBeInTheDocument();
+  it("never shows a count of replies, and no Next step, however many replies were sent (backend ADR 0044)", () => {
+    for (const count of [0, 1, 2, 9]) {
+      useLessonStore.setState({
+        instance: makeLessonInstance({
+          active_node: { ...makeLessonInstance().active_node!, engagement_count: count, engagement_required: 2, check_item_ids: [], done_available: false },
+        }),
+      });
+      const { container, unmount } = render(<StepCard />);
+      expect(container.textContent ?? "").not.toMatch(/repl(y|ies)|count|of 2|talk it through|unlock/i);
+      expect(screen.queryByRole("button", { name: /next step/i })).not.toBeInTheDocument();
+      unmount();
+    }
   });
 
-  it("offers Next step once enough replies counted", () => {
+  it("offers Next step only where a legacy plan still advertises done_available", () => {
     useLessonStore.setState({
       instance: makeLessonInstance({
         active_node: {

@@ -6,7 +6,7 @@ import { DeliveryLedger, type DeliveryBinding } from "./delivery/checkDelivery";
 import { forgetPictures, preloadPicture } from "./figures";
 import { lessonService } from "./lessonService";
 import { readSseFrames } from "./sse";
-import { resolveSessionLanguage, type SessionLanguage } from "./voice/languages";
+import { resolveSessionLanguage, saveLanguageChoice, type SessionLanguage } from "./voice/languages";
 import { applyEvent, fromRecorded, isTerminal, newTurn, type LessonTurn } from "./transcript";
 import type {
   WrittenResult,
@@ -633,16 +633,32 @@ export const useLessonStore = create<LessonState>((set, get) => {
     }
   };
 
+  /**
+   * A part with nothing to answer ends when the tutor has finished teaching it (backend ADR 0044): the tutor's reply that
+   * finishes it is committed before the reply closes, so the lesson's state is read again when a completed reply on such a part
+   * ends, and a lesson that moved on opens its next part (after this reply, never over it). Nothing the learner does ends it.
+   */
+  const rereadAfterTeachingOnlyReply = async (turnId: string) => {
+    const { instance, instanceId } = get();
+    const node = instance?.active_node;
+    if (!instanceId || !node || node.type !== "teach" || node.check_item_ids.length > 0) return;
+    if (currentTurn(turnId)?.status !== "completed") return;
+    try {
+      applyInstance(await lessonService.instance(instanceId));
+    } catch (error) {
+      console.warn("The lesson state couldn't be read after the reply:", asError(error).request_id, asError(error).message ?? error);
+    }
+  };
+
   /** Start a turn and follow it to its end, resuming from the cursor if the stream drops. */
   const runTurn = async (unsessioned: TurnRequest, learnerText: string | null) => {
     const instanceId = get().instanceId;
     if (!instanceId) return;
-    // A typed turn is written in the session language the learner chose (backend ADR 0037); none known, none sent.
+    // A typed turn is written in the lesson's one session language (backend ADR 0037): never another learner's choice.
+    const profile = useStudentStore.getState().studentProfile;
     const language =
       unsessioned.language ??
-      (unsessioned.modality === "voice"
-        ? undefined
-        : (resolveSessionLanguage(get().sessionLanguage, useStudentStore.getState().studentProfile?.preferred_language) ?? undefined));
+      (unsessioned.modality === "voice" ? undefined : resolveSessionLanguage(get().sessionLanguage, profile?.user_id, profile?.preferred_language));
     const request: TurnRequest = { ...unsessioned, session_id: sessionId(), ...(language ? { language } : {}) };
     streamAbort?.abort();
     const abort = new AbortController();
@@ -659,6 +675,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
     try {
       const closed = await consume(request.turn_id, await lessonService.startTurn(instanceId, request, abort.signal), abort.signal);
       await follow(instanceId, request.turn_id, abort, closed);
+      await rereadAfterTeachingOnlyReply(request.turn_id);
     } catch (error) {
       if (abort.signal.aborted) return;
       // An HTTP refusal (the turn never started) carries the backend's reason; anything else is a dropped stream.
@@ -1045,7 +1062,10 @@ export const useLessonStore = create<LessonState>((set, get) => {
 
     sessionId,
 
-    setSessionLanguage: (language) => set({ sessionLanguage: language }),
+    setSessionLanguage: (language) => {
+      saveLanguageChoice(useStudentStore.getState().studentProfile?.user_id, language);
+      set({ sessionLanguage: language });
+    },
 
     setVoiceSession: (id) => {
       if (get().voiceSessionId === id) return;
@@ -1101,6 +1121,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
         t.status !== "streaming" ? t : { ...t, status: reason === "completed" ? "completed" : reason === "failed" ? "failed" : "interrupted" },
       );
       lastReplyAt = Date.now();
+      void rereadAfterTeachingOnlyReply(turnId);
     },
 
     reset: () => {

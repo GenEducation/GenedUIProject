@@ -378,8 +378,6 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Whether the tutor has drawn anything on the board yet.
-  const hasFigures = useLessonStore((st) => st.presentedFigureIds.length > 0);
   const node = instance?.active_node;
   // A result belongs to the step it was given on.
   useEffect(() => setLastResult(null), [node?.instance_node_id]);
@@ -434,24 +432,14 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
         <CheckCard check={current} onResult={showResult} subject={subject} />
       );
   } else if (node.type === "teach" && node.done_available) {
+    // Only a legacy plan still advertises a learner's done (backend ADR 0038 decision 6). A W2 part never does: it moves on by its
+    // evidence, or by the tutor once it has taught a part with nothing to answer (ADR 0044). No count of replies is ever shown.
     body = (
       <div className={`${cardClass} flex flex-wrap items-center gap-4`}>
         <p className="lesson-hand flex-1 text-[20px] font-bold">{t("moveOn")}</p>
         <SketchButton disabled={busy} loading={busy} onClick={() => void run(done)}>
           {t("nextStep")} <ArrowRight size={16} aria-hidden />
         </SketchButton>
-      </div>
-    );
-  } else if (node.type === "teach" && !hasFigures) {
-    // Only on a board still waiting for its first visual: once the tutor has drawn, the note would just sit on
-    // the picture, and the chat already carries the conversation.
-    body = (
-      <div className="lesson-hand text-center text-[18px] text-[var(--ls-ink-mid)]">
-        <p>{t("talkItThrough")}</p>
-        {/* Only a real reply counts (a "hmm", "ok" or a lone word does not), so the learner can see where they stand. */}
-        <p className="mt-1 text-[16px] tabular-nums" aria-live="polite">
-          {t("repliesCount", { n: Math.min(node.engagement_count, node.engagement_required), m: node.engagement_required })}
-        </p>
       </div>
     );
   }

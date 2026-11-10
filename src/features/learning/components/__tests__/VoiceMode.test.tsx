@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { useLessonStore } from "../../useLessonStore";
 import { replyText } from "../../transcript";
 import type { PipelineEvent, PipelineOptions } from "../../voice/loadPipeline";
+import type { SessionLanguage } from "../../voice/languages";
 
 /** A stand-in for the backend's audio client: records how it was opened and lets a test play the server's part. */
 const fake = vi.hoisted(() => ({
@@ -54,11 +55,8 @@ async function openVoice(subject?: string) {
   await waitFor(() => expect(fake.options).not.toBeNull());
 }
 
-const picker = () => screen.findByRole("combobox", { name: "Voice language" });
-const chooseLanguage = async (label: string) => {
-  fireEvent.click(await picker());
-  fireEvent.click(screen.getByRole("option", { name: new RegExp(label) }));
-};
+/** The lesson's one language selector lives in the header (LessonLanguageSelect); voice follows it. */
+const chooseLanguage = async (tag: SessionLanguage) => act(() => store().setSessionLanguage(tag));
 const setPreference = (preferred_language: string | null) =>
   useStudentStore.setState({ studentProfile: { user_id: "u", role: "STUDENT", preferred_language } as never });
 
@@ -74,6 +72,7 @@ beforeEach(() => {
   voiceFixture.reset();
   useStudentStore.setState({ studentProfile: null, voicePrefs: { listenMode: "continuous", pttHotkey: "Space" } });
   store().reset();
+  localStorage.clear();
   localStorage.setItem("gened_auth_token", "token-synthetic");
   lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
 });
@@ -399,76 +398,67 @@ describe("voice mode", () => {
 });
 
 describe("voice language", () => {
-  it("lists exactly the languages the capabilities endpoint returns, in native script", async () => {
+  it("has no language picker of its own: one selector, in the lesson header, for typed and spoken tutoring", async () => {
     await openVoice();
-    expect(voiceCapabilityRequests.length).toBe(1);
-    fireEvent.click(await picker());
-    const labels = screen.getAllByRole("option").map((o) => o.textContent);
-    expect(labels).toEqual(["English", "हिन्दी", "Hinglish", "मराठी", "ਪੰਜਾਬੀ", "தமிழ்", "తెలుగు", "ಕನ್ನಡ"]);
-  });
-
-  it("shows nothing the endpoint did not return: a smaller offer is a smaller list", async () => {
-    voiceFixture.set(makeCapabilities([{ language: "en", script: "latin", features: [], assessed_tutoring: false, open_gaps: [] }, { language: "ta", script: "tamil", features: [], assessed_tutoring: false, open_gaps: [] }]));
-    await openVoice();
-    fireEvent.click(await picker());
-    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["English", "தமிழ்"]);
-  });
-
-  it("shows a language the endpoint marks closed greyed, with its reason, and cannot be chosen", async () => {
-    voiceFixture.set(makeCapabilities([
-      { language: "en", script: "latin", features: [], assessed_tutoring: false, open_gaps: [] },
-      { language: "kn", script: "kannada", features: [], assessed_tutoring: false, open_gaps: [], may_open: false, reason: "capability:stt" },
-    ]));
-    await openVoice();
-    fireEvent.click(await picker());
-    const kn = screen.getByRole("option", { name: /ಕನ್ನಡ/ });
-    expect(kn).toHaveAttribute("aria-disabled", "true");
-    expect(kn).toHaveTextContent("capability:stt");
+    expect(screen.queryByRole("combobox", { name: "Voice language" })).toBeNull();
   });
 
   it("opens in English with no preference, and sends the tag in init", async () => {
     await openVoice();
     expect(fake.options!.init.language).toBe("en");
-    expect(await picker()).toHaveTextContent("English");
   });
 
   it("defaults to the learner's profile preference", async () => {
     setPreference("mr");
     await openVoice();
     expect(fake.options!.init.language).toBe("mr");
-    expect(await picker()).toHaveTextContent("मराठी");
   });
 
-  it("falls back to the last choice, then ignores a preference the server does not offer", async () => {
-    localStorage.setItem("gened_voice_language", "ta");
-    setPreference("gu");
+  it("opens in this learner's own last choice, never the old browser-wide one", async () => {
+    localStorage.setItem("gened_voice_language", "ta"); // another learner's choice on this browser
+    localStorage.setItem("gened_lesson_language:u", "pa");
+    setPreference("mr");
     await openVoice();
-    expect(fake.options!.init.language).toBe("ta");
+    expect(fake.options!.init.language).toBe("pa");
+    expect(localStorage.getItem("gened_voice_language")).toBeNull();
   });
 
-  it("changing the language ends the session and opens a new one in it, remembering the choice", async () => {
+  it("changing the lesson language ends the session and opens a new one in it, remembering the choice for this learner", async () => {
+    setPreference(null);
     await openVoice();
     const first = fake.options!;
     await server({ type: "ready", session_id: "s", degraded: [] });
-    await chooseLanguage("हिन्दी");
+    await chooseLanguage("hi");
     await waitFor(() => expect(fake.options).not.toBe(first));
     expect(fake.closed).toBe(1);
     expect(fake.options!.init.language).toBe("hi");
-    expect(await picker()).toHaveTextContent("हिन्दी");
-    expect(localStorage.getItem("gened_voice_language")).toBe("hi");
+    expect(localStorage.getItem("gened_lesson_language:u")).toBe("hi");
     expect(screen.getByText("जुड़ रहे हैं…")).toBeInTheDocument(); // a fresh session, not the old one carried over; its words are Hindi now
+  });
+
+  it("a language voice cannot open in says so and never falls back to another", async () => {
+    voiceFixture.set(makeCapabilities([
+      { language: "en", script: "latin", features: [], assessed_tutoring: false, open_gaps: [] },
+      { language: "kn", script: "kannada", features: [], assessed_tutoring: false, open_gaps: [], may_open: false, reason: "capability:stt" },
+    ]));
+    setPreference("kn");
+    await store().load(LESSON_ID);
+    store().setVoiceMode(true);
+    render(<ChatPanel onShowFigure={vi.fn()} />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Voice isn't available in ಕನ್ನಡ yet (capability:stt)");
+    expect(fake.options).toBeNull();
   });
 
   it("a refused language says which one, does not fall back, and can be changed", async () => {
     await openVoice();
-    await chooseLanguage("తెలుగు");
+    await chooseLanguage("te");
     await waitFor(() => expect(fake.options!.init.language).toBe("te"));
     await server({ type: "error", code: "language_not_enabled", message: "te: capability:stt", fatal: true });
     expect(screen.getByRole("alert")).toHaveTextContent("Voice isn't available in తెలుగు (te)");
     await emit({ t: "status", state: "gave_up", code: 1008 });
     expect(screen.getByRole("alert")).toHaveTextContent("తెలుగు"); // the generic message does not replace it
     expect(fake.options!.init.language).toBe("te");
-    await chooseLanguage("English");
+    await chooseLanguage("en");
     await waitFor(() => expect(fake.options!.init.language).toBe("en"));
     expect(screen.queryByRole("alert")).toBeNull();
   });
