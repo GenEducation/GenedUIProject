@@ -220,3 +220,13 @@ export function calculation(input: string): string | null {
   const value = evaluateArithmetic(input);
   return value === null ? null : formatResult(value);
 }
+
+/**
+ * The text a numeric check is answered with. A plain fraction ("1/3", "-2 / 5") is sent as typed: the calculator's six-place
+ * decimal ("0.333333") is not the fraction, and the checker compares a fraction key exactly, so a correct 1/3 would be
+ * scored wrong. Any other calculation ("540 * 40", "1/4 + 1/4") is sent as its result, a plain number as typed.
+ */
+export function numericAnswerToSend(typed: string, result: string | null): string {
+  const plainFraction = /^\s*-?\d+\s*\/\s*\d+\s*$/.test(typed);
+  return plainFraction ? typed.trim() : (result ?? typed);
+}

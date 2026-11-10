@@ -6,7 +6,7 @@ import { asError } from "@/utils/errors";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLessonStore } from "../useLessonStore";
 import { useUiText, type UiKey } from "../i18n";
-import { calculation } from "../check/arithmetic";
+import { calculation, numericAnswerToSend } from "../check/arithmetic";
 import { formatOf, initialArrangement, isArranged, isComplete, responseFromArrangement, type Arrangement } from "../check/formats";
 import { Matching } from "../check/Matching";
 import { BlankFiller } from "../check/BlankFiller";
@@ -158,7 +158,7 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
       ? responseFromArrangement(check, arranged)
       : isChoice
       ? selected ? { kind: "choice", option_ids: [selected] } : null
-      : answerNow.trim() ? responseFor(check, check.response_type === "numeric" ? sumNow ?? answerNow : answerNow) : null;
+      : answerNow.trim() ? responseFor(check, check.response_type === "numeric" ? numericAnswerToSend(answerNow, sumNow) : answerNow) : null;
     if (!response) return;
     setBusy(true);
     setError(null);
