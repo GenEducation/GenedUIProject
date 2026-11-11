@@ -96,7 +96,7 @@ export function SourceAuthoringModal(props: SourceAuthoringModalProps) {
       open={!!subject}
       onClose={onClose}
       size="full"
-      title={subject ? `Add questions to ${subject.title}` : "Add questions"}
+      title={subject ? `Questions for ${subject.title}` : "Questions"}
       panelStyle={{ maxWidth: "min(920px, 100%)", background: "#F6F7F2" }}
     >
       {/* Keyed so each chapter starts from its own saved questions. */}
@@ -218,11 +218,11 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
             <PenLine size={20} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">Add questions GenEd can check</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">The chapter&rsquo;s questions</p>
             <h2 className="text-lg md:text-xl font-black text-[#122D30] tracking-tight truncate">{subject.title}</h2>
             <p className="text-xs text-[#122D30]/60 mt-1 max-w-xl">
-              This run found too few questions to teach every concept. Add some in any of the three ways below, then
-              run the chapter again. Nothing reaches students until you review and publish.
+              GenEd prepared questions for every step of this chapter. Review them first; you can also write your own or
+              answer printed ones. Nothing reaches students until you review and publish.
             </p>
           </div>
           <Button iconOnly variant="tertiary" aria-label="Close" onClick={onClose}>
@@ -287,7 +287,14 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
                   onClose();
                 }}
                 renderEditor={(body, saveEdit, cancel) => (
-                  <QuestionForm initial={body} sections={sections} concepts={concepts} onDone={saveEdit} onCancel={cancel} />
+                  <QuestionForm
+                    initial={body}
+                    sections={sections}
+                    concepts={concepts}
+                    onDone={saveEdit}
+                    onCancel={cancel}
+                    submitLabel="Save changes"
+                  />
                 )}
               />
             </Panel>
@@ -748,11 +755,14 @@ function QuestionForm({
   concepts,
   onDone,
   onCancel,
+  submitLabel,
 }: {
   initial: AddedQuestion;
   sections: AuthoringResponse["sections"];
   concepts: AuthoringConcept[];
   onDone: (q: AddedQuestion) => void;
+  /** The submit button's text; by default it says what saving does for a new or AI-drafted question. */
+  submitLabel?: string;
   onCancel: () => void;
 }) {
   const [q, setQ] = useState(initial);
@@ -838,7 +848,7 @@ function QuestionForm({
       )}
       <div className="flex gap-2">
         <Button type="submit" size="sm">
-          {initial.origin === "ai_assisted" ? "Accept question" : "Add question"}
+          {submitLabel ?? (initial.origin === "ai_assisted" ? "Accept question" : "Add question")}
         </Button>
         <Button type="button" size="sm" variant="tertiary" onClick={onCancel}>
           Cancel

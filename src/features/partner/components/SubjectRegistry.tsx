@@ -454,6 +454,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             const canRunAgain = canRunFromRow(subject);
             // A chapter the partner can complete with questions of their own offers that first; uploading stays in its path.
             const addQuestions = next === "add_questions";
+            // GenEd prepares a question bank after every run (backend ADR 0047): reviewable whenever the last run left its context.
+            const reviewQuestions =
+              !addQuestions && subject.has_authoring && subject.state !== "queued" && subject.state !== "running";
             const needsCorrection = next !== null && CORRECTION_STEPS.has(next);
             const fixOutcomes = next === "fix_outcomes";
             const needsUpload = next !== null && UPLOAD_STEPS.has(next) && !addQuestions;
@@ -594,6 +597,17 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                             onClick={(e) => { e.stopPropagation(); setAuthoringFor(subject); }}
                           >
                             Add questions
+                          </Button>
+                        )}
+
+                        {reviewQuestions && (
+                          <Button
+                            pill
+                            variant="secondary"
+                            leadingIcon={<PenLine size={16} />}
+                            onClick={(e) => { e.stopPropagation(); setAuthoringFor(subject); }}
+                          >
+                            Review questions
                           </Button>
                         )}
 

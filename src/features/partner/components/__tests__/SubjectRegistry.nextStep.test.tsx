@@ -149,3 +149,16 @@ describe("SubjectRegistry — the filter bar", () => {
     await waitFor(() => expect(usePartnerStore.getState().subjectFilters).toEqual({}));
   });
 });
+
+describe("SubjectRegistry — GenEd's prepared questions (backend ADR 0047)", () => {
+  it("offers the question review for any finished chapter whose run left questions to review, and never while it runs", async () => {
+    sourcesFixture.reset(() => [
+      { ...noQuestions, has_authoring: true },
+      makeSource({ source_id: "synthetic-running", state: "running", has_authoring: true,
+                   chapter: { ordinal: 3, title: "SYNTHETIC running", first_pdf_page: 1, last_pdf_page: 1 } }),
+    ]);  // prettier-ignore
+    render(<SubjectRegistry onUploadClick={vi.fn()} />);
+    await screen.findByText("SYNTHETIC running");
+    expect(screen.getAllByRole("button", { name: "Review questions" })).toHaveLength(1);
+  });
+});
