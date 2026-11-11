@@ -538,44 +538,10 @@ export interface PrintedQuestion {
   expected_numeric: string | null;
 }
 
-/** The evidence a partner approves for one concept (backend ADR 0046). */
-export interface EvidenceChoice {
-  kinds: string[];
-  note?: string;
-}
-
 /** Everything the partner completed; `PUT .../authoring` replaces it. */
 export interface AuthoredQuestions {
   answers: Record<string, PrintedAnswer>;
   added: AddedQuestion[];
-  /** By concept key: the evidence the partner approved (backend ADR 0046). */
-  evidence?: Record<string, EvidenceChoice>;
-}
-
-/** One concept of the assessment plan (backend ADR 0046). */
-export interface AssessmentPlanComponent {
-  component_id: string;
-  concept_key: string | null;
-  title: string;
-  essential: boolean;
-  evidence: { kinds: string[]; basis: "partner_approved" | "suggested_rules" | "suggested_model"; rationale: string; flags: string[] };
-  recommended: { format: string; kinds: string[]; why: string; strong_when: string }[];
-  only_format: string | null;
-  existing: { item_id: string; prompt: string; format: string; tier: string; gives_required_evidence: boolean; origin: string }[];
-  strong_families: number;
-  weak_families: number;
-  sufficient: boolean;
-  requests: { kind: string; formats: string[]; strength: string; families: number; reason: string }[];
-  conversions: { item_id: string; prompt: string; to_format: string; keeps_evidence: boolean; why: string }[];
-  capability_gaps: string[];
-}
-
-export interface AssessmentPlanNode {
-  node_id: string;
-  title: string;
-  position: number;
-  ready: boolean;
-  components: AssessmentPlanComponent[];
 }
 
 export type SuggestionsState = "requested" | "running" | "ready" | "failed";
@@ -595,8 +561,6 @@ export interface AuthoringResponse {
   removed: RemovedQuestion[];
   /** The questions the run kept (backend ADR 0045); absent from an older backend. */
   printed?: PrintedQuestion[];
-  /** The run's assessment plan (backend ADR 0046); absent for a legacy run or an older backend. */
-  assessment_plan?: { version: string; nodes: AssessmentPlanNode[] } | null;
   authored: AuthoredQuestions;
   authored_at: string | null;
   suggestions: Suggestions | null;
