@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe } from "lucide-react";
+import { AlertCircle, Globe } from "lucide-react";
 import { McqItem } from "./McqItem";
 import { TrueFalseItem } from "./TrueFalseItem";
 import { MultiSelectItem } from "./MultiSelectItem";
@@ -54,14 +54,21 @@ function subjectIconSrc(subject: string): string | null {
  * prompt drops the relaxed line-height a single full-page question could
  * afford.
  */
-export function ItemRenderer({ item, value, onChange, disabled }: ItemWidgetProps) {
+export function ItemRenderer({ item, value, onChange, disabled, missing = false }: ItemWidgetProps & {
+  /** Next/Finish was pressed with this item unanswered: a red border and a "Not answered" tag until it's answered. */
+  missing?: boolean;
+}) {
   const { lang } = langAttrs(item);
   const iconSrc = subjectIconSrc(item.subject);
 
   return (
     <div
-      className="rounded-xl border p-3 sm:p-3.5 space-y-2.5"
-      style={{ background: "var(--pl-card)", borderColor: "var(--pl-border)" }}
+      className="rounded-xl border p-3 sm:p-3.5 space-y-2.5 transition-[border-color,box-shadow]"
+      style={{
+        background: "var(--pl-card)",
+        borderColor: missing ? "var(--pl-danger)" : "var(--pl-border)",
+        boxShadow: missing ? "0 0 0 3px var(--pl-danger-soft)" : undefined,
+      }}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -92,6 +99,13 @@ export function ItemRenderer({ item, value, onChange, disabled }: ItemWidgetProp
           Q{item.index + 1}
         </span>
       </div>
+
+      {missing && (
+        <p className="m-0 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: "var(--pl-danger)" }}>
+          <AlertCircle size={14} strokeWidth={2.4} aria-hidden="true" />
+          Not answered
+        </p>
+      )}
 
       <p
         lang={lang}

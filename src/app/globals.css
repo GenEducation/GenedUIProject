@@ -498,6 +498,8 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
   --pl-primary-soft: rgb(7 94 99 / 0.08);
   --pl-primary-wash: rgb(7 94 99 / 0.14);
   --pl-ring: rgb(7 94 99 / 0.32);
+  --pl-danger: #B42318;           /* unanswered questions: 6.5:1 on white */
+  --pl-danger-soft: rgb(180 35 24 / 0.08);
 
   --btn-bg: var(--pl-primary);
   --btn-bg-hover: var(--pl-primary-hover);
