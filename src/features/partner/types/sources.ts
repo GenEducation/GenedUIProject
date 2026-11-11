@@ -492,9 +492,13 @@ export interface PrintedAnswer {
   concept_key?: string;
 }
 
-export type AddedAnswerKind = "numeric" | "mcq" | "string_set";
+export type AddedAnswerKind = "mcq" | "multi_select" | "sequence" | "matching" | "grouping" | "blanks" | "numeric" | "string_set";
 
-/** A question for one proposed concept: typed (`partner`) or a model draft the partner accepted (`ai_assisted`). */
+/**
+ * A question for one proposed concept, in any format (backend ADR 0045): written by the partner (`partner`) or a model draft the
+ * partner accepted, edited or not (`ai_assisted`). `replaces` names the printed question it is an edit of; `entry` places a numeric
+ * answer on a number line, so no learner types it.
+ */
 export interface AddedQuestion {
   id: string;
   section_key: string;
@@ -505,7 +509,33 @@ export interface AddedQuestion {
   options?: string[];
   correct_option_index?: number;
   accepted_answers?: string[];
+  correct_option_indexes?: number[];
+  sequence_entries?: string[];
+  correct_order?: number[];
+  match_left?: string[];
+  match_right?: string[];
+  match_pairs?: { left: number; right: number }[];
+  group_names?: string[];
+  group_entries?: string[];
+  group_of?: number[];
+  blank_answers?: string[][];
+  word_bank?: string[];
+  entry?: { mode: "number_line" | "slider"; min: string; max: string; step: string };
+  replaces?: string;
+  explanation?: string;
   origin: "partner" | "ai_assisted";
+}
+
+/** A question the run kept, which the partner may edit; `needs_keyboard` ones pass no step until re-presented (ADR 0045). */
+export interface PrintedQuestion {
+  item_key: string;
+  section_key: string;
+  concept_key: string | null;
+  prompt: string;
+  format: string;
+  needs_keyboard: boolean;
+  options: string[];
+  expected_numeric: string | null;
 }
 
 /** Everything the partner completed; `PUT .../authoring` replaces it. */
@@ -529,6 +559,8 @@ export interface AuthoringResponse {
   sections: AuthoringSection[];
   concepts: AuthoringConcept[];
   removed: RemovedQuestion[];
+  /** The questions the run kept (backend ADR 0045); absent from an older backend. */
+  printed?: PrintedQuestion[];
   authored: AuthoredQuestions;
   authored_at: string | null;
   suggestions: Suggestions | null;

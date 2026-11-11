@@ -216,36 +216,33 @@ describe("useLessonStore — a hint is only a hint turn (R-E5)", () => {
   });
 });
 
-describe("useLessonStore — a part with nothing to answer ends when the tutor has taught it (backend ADR 0044)", () => {
-  const teachOnly = (node: string, done: number) =>
+describe("useLessonStore — the tutor decides when the check appears; only answers move a step on (backend ADR 0045)", () => {
+  const w2 = (presented: boolean) =>
     makeLessonInstance({
-      nodes_done: done,
-      active_node: { ...makeLessonInstance().active_node!, instance_node_id: node, type: "teach", check_item_ids: [], done_available: false },
+      active_node: { ...makeLessonInstance().active_node!, instance_node_id: NODE_1, check_presented: presented, done_available: false },
     });
 
-  it("reads the lesson again when the tutor's reply on such a part closes, and opens the next part after it", async () => {
-    lessonFixture.setInstance(teachOnly(NODE_1, 0));
+  it("confirms no delivery and reads the lesson again after a reply while the check is not on screen", async () => {
+    lessonFixture.setInstance(w2(false));
     lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
     await store().load(LESSON_ID);
     turnRequests.length = 0;
-    lessonFixture.setInstance(teachOnly(NODE_2, 1)); // the tutor's reply completed the part on the server
-    await store().send("SYNTHETIC thought about the story");
-    await waitFor(() => expect(store().instance?.active_node?.instance_node_id).toBe(NODE_2));
-    await waitFor(() => expect(turnRequests.map((r) => [r.kind, r.instance_node_id])).toContainEqual(["opening", NODE_2]));
-    expect(turnRequests[0]).toMatchObject({ kind: "learner_message", instance_node_id: NODE_1 });
+    lessonFixture.setInstance(w2(true)); // the tutor's reply presented the check on the server
+    await store().send("SYNTHETIC I think I can try it now");
+    await waitFor(() => expect(store().instance?.active_node?.check_presented).toBe(true));
+    expect(store().instance?.active_node?.instance_node_id).toBe(NODE_1); // presenting never moves the step on
+    expect(turnRequests.map((r) => r.kind)).toEqual(["learner_message"]);
     await settled();
   });
 
-  it("never reads it on a part with a question: that part moves on by its answers only", async () => {
-    const withCheck = makeLessonInstance();
-    expect(withCheck.active_node!.check_item_ids.length).toBeGreaterThan(0);
-    lessonFixture.setInstance(withCheck);
+  it("never reads it again once the check is on screen: the answer on its card decides", async () => {
+    lessonFixture.setInstance(w2(true));
     lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
     await store().load(LESSON_ID);
-    lessonFixture.setInstance(teachOnly(NODE_2, 1));
+    lessonFixture.setInstance(makeLessonInstance({ nodes_done: 1, active_node: { ...makeLessonInstance().active_node!, instance_node_id: NODE_2 } }));
     await store().send("SYNTHETIC question");
     await settled();
-    expect(store().instance?.active_node?.instance_node_id).toBe(withCheck.active_node!.instance_node_id);
+    expect(store().instance?.active_node?.instance_node_id).toBe(NODE_1);
   });
 });
 

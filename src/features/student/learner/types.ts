@@ -81,6 +81,11 @@ export interface ActiveNode {
   done_available: boolean;
   /** The deterministic re-teaching step after a failed teach round. */
   teach_step: "s1" | "s2" | "s3" | null;
+  /**
+   * Whether the node's check is on the learner's screen (backend ADR 0045). On a W2 lesson only once the tutor has presented it; before
+   * that, and after a round closes, no check is shown. A legacy lesson shows its checks as before. Absent from an older backend: shown.
+   */
+  check_presented?: boolean;
   choice?: { options: Array<"try_now" | "keep_going">; recommended: "try_now" | "keep_going" } | null;
   pending_reading?: { item_id: string; original: string; suggestion: string } | null;
 }

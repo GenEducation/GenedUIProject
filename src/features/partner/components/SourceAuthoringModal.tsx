@@ -22,6 +22,7 @@ import { asError } from "@/utils/errors";
 import { enterToSubmit, submitFormOnEnter } from "@/utils/enterToSubmit";
 import { sourcesService } from "../services/sourcesService";
 import { removedReason } from "../utils/ingestionPath";
+import { FormatFields, KIND_LABEL, formatProblem, keyFields, keyText, needsKeyboard, textsOf } from "./QuestionFormats";
 import type {
   AddedAnswerKind,
   AddedQuestion,
@@ -29,6 +30,7 @@ import type {
   AuthoringConcept,
   AuthoringResponse,
   PrintedAnswer,
+  PrintedQuestion,
   RemovedQuestion,
 } from "../types/sources";
 import type { Subject } from "../store/usePartnerStore";
@@ -62,11 +64,6 @@ interface Editing {
   draftId?: string;
 }
 
-const KIND_LABEL: Record<AddedAnswerKind, string> = {
-  numeric: "A number",
-  mcq: "Multiple choice",
-  string_set: "Short answer",
-};
 
 const lines = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean);
 const newId = () => (globalThis.crypto?.randomUUID?.() ?? `q-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
@@ -93,14 +90,7 @@ export function answerOf(q: RemovedQuestion, d: AnswerDraft): PrintedAnswer | nu
 export function addedProblem(q: AddedQuestion): string | null {
   if (!q.section_key || !q.concept_key) return "Choose the part of the chapter and the concept it checks.";
   if (q.prompt.trim().length < 3) return "Write the question.";
-  if (q.answer_kind === "numeric" && !q.expected_numeric?.trim()) return "Give the number that answers it.";
-  if (q.answer_kind === "mcq") {
-    const options = q.options ?? [];
-    if (options.length < 2 || new Set(options).size !== options.length) return "Give at least two different choices.";
-    if (q.correct_option_index == null || q.correct_option_index >= options.length) return "Mark the correct choice.";
-  }
-  if (q.answer_kind === "string_set" && !q.accepted_answers?.length) return "Give the answers to accept.";
-  return null;
+  return formatProblem(q);
 }
 
 export function SourceAuthoringModal(props: SourceAuthoringModalProps) {
@@ -164,6 +154,10 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
   }, [pending, subject.source_id, adopt]);
 
   const removed = data?.removed ?? [];
+  const edited = new Set(added.flatMap((q) => (q.replaces ? [q.replaces] : [])));
+  // The questions the run kept; those a learner would type come first: they pass no step until re-presented (ADR 0045).
+  const printed = [...(data?.printed ?? [])].sort((a, b) => Number(b.needs_keyboard) - Number(a.needs_keyboard));
+  const typedLeft = printed.filter((p) => p.needs_keyboard && !edited.has(p.item_key)).length;
   const concepts = data?.concepts ?? [];
   const sections = data?.sections ?? [];
   const keyed = removed.flatMap((q) => {
@@ -247,8 +241,8 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
       key: "printed",
       label: "Printed questions",
       icon: <FileText size={15} />,
-      count: `${keyed.length}/${removed.length}`,
-      show: removed.length > 0,
+      count: removed.length ? `${keyed.length}/${removed.length}` : typedLeft ? String(typedLeft) : null,
+      show: removed.length > 0 || printed.length > 0,
     },
   ];
 
@@ -434,8 +428,20 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
               )}
             </Panel>
 
-            {removed.length > 0 && (
+            {(removed.length > 0 || printed.length > 0) && (
               <Panel id={`${tabsId}-printed`} hidden={tab !== "printed"}>
+                {printed.length > 0 && (
+                  <PrintedList
+                    printed={printed}
+                    edited={edited}
+                    busy={!!editing}
+                    onEdit={(p) => {
+                      setEditing({ question: fromPrinted(p, concepts) });
+                      setTab("own");
+                    }}
+                  />
+                )}
+                {removed.length > 0 && (<>
                 <PanelIntro>
                   GenEd took these out because it couldn&rsquo;t check their answers. Give an answer to bring one back.
                   All of them are optional: skip any that can&rsquo;t have one exact answer, like drawing questions.
@@ -457,10 +463,30 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
                         onSubmit={() => {
                           if (dirty && !editing && !saving && !rerunning) void save();
                         }}
+                        onRewrite={
+                          edited.has(q.item_key) || editing
+                            ? undefined
+                            : () => {
+                                setEditing({
+                                  question: {
+                                    id: newId(),
+                                    section_key: q.section_key,
+                                    concept_key: concepts.find((c) => c.section_key === q.section_key)?.key ?? "",
+                                    prompt: q.prompt,
+                                    answer_kind: "mcq",
+                                    options: q.options,
+                                    replaces: q.item_key,
+                                    origin: "partner",
+                                  },
+                                });
+                                setTab("own");
+                              }
+                        }
                       />
                     ))}
                   </div>
                 ))}
+                </>)}
               </Panel>
             )}
           </>
@@ -525,7 +551,7 @@ function blank(section: string, concepts: AuthoringConcept[]): AddedQuestion {
     section_key: section,
     concept_key: concepts.find((c) => c.section_key === section)?.key ?? "",
     prompt: "",
-    answer_kind: "numeric",
+    answer_kind: "mcq",
     origin: "partner",
   };
 }
@@ -646,6 +672,7 @@ function RemovedCard({
   draft,
   onChange,
   onSubmit,
+  onRewrite,
 }: {
   question: RemovedQuestion;
   concepts: AuthoringConcept[];
@@ -653,6 +680,8 @@ function RemovedCard({
   onChange: (d: AnswerDraft) => void;
   /** Enter in an answer (not the one-per-line box) saves. */
   onSubmit?: () => void;
+  /** Rewrite it as a question learners answer without typing (backend ADR 0045): opens the form with `replaces` set. */
+  onRewrite?: () => void;
 }) {
   const done = !!answerOf(question, draft);
   const saveOnEnter = (e: React.KeyboardEvent) => {
@@ -676,6 +705,13 @@ function RemovedCard({
           {done ? "Answered" : "Optional"}
         </span>
       </div>
+      {onRewrite && (
+        <div>
+          <Button size="sm" variant="outline" leadingIcon={<PenLine size={14} />} onClick={onRewrite}>
+            Rewrite without typing
+          </Button>
+        </div>
+      )}
       <p className="text-[11px] text-[#122D30]/50">
         {removedReason(question.reason)}
         {question.run_key ? ` · GenEd read “${question.run_key}”` : ""}
@@ -740,10 +776,19 @@ function RemovedCard({
   );
 }
 
-function keyText(q: AddedQuestion): string {
-  if (q.answer_kind === "numeric") return q.expected_numeric ?? "";
-  if (q.answer_kind === "mcq") return q.options?.[q.correct_option_index ?? -1] ?? "";
-  return (q.accepted_answers ?? []).join(" / ");
+/** A kept printed question opened for editing: same concept and words, its answer kept, and `replaces` naming it. */
+export function fromPrinted(p: PrintedQuestion, concepts: AuthoringConcept[]): AddedQuestion {
+  const base: AddedQuestion = {
+    id: newId(),
+    section_key: p.section_key,
+    concept_key: p.concept_key ?? concepts.find((c) => c.section_key === p.section_key)?.key ?? "",
+    prompt: p.prompt,
+    answer_kind: p.options.length >= 2 ? "mcq" : "numeric",
+    replaces: p.item_key,
+    origin: "partner",
+  };
+  if (base.answer_kind === "mcq") return { ...base, options: p.options };
+  return { ...base, expected_numeric: p.expected_numeric ?? "", entry: { mode: "number_line", min: "0", max: "1", step: "1/4" } };
 }
 
 function AddedRow({
@@ -775,9 +820,19 @@ function AddedRow({
             {draft ? "AI draft" : "From AI"}
           </span>
         )}
+        {question.replaces && (
+          <span className="px-2 py-px rounded-full text-[9px] font-black uppercase tracking-widest border bg-sky-50 text-sky-800 border-sky-200">
+            Edit of a printed question
+          </span>
+        )}
+        {needsKeyboard(question) && (
+          <span className="px-2 py-px rounded-full text-[9px] font-black uppercase tracking-widest border bg-amber-50 text-amber-800 border-amber-200">
+            Typed: can&rsquo;t pass a step
+          </span>
+        )}
       </div>
       <p className="text-sm font-bold text-[#122D30] whitespace-pre-line">{question.prompt}</p>
-      {question.answer_kind === "mcq" && (
+      {(question.answer_kind === "mcq" || question.answer_kind === "multi_select") && (
         <p className="text-xs text-[#122D30]/60">Choices: {question.options?.join(" · ")}</p>
       )}
       <p className="text-xs text-[#122D30]/60">
@@ -816,13 +871,11 @@ function QuestionForm({
   onCancel: () => void;
 }) {
   const [q, setQ] = useState(initial);
-  const [optionsText, setOptionsText] = useState((initial.options ?? []).join("\n"));
-  const [acceptedText, setAcceptedText] = useState((initial.accepted_answers ?? []).join("\n"));
+  const [texts, setTexts] = useState(() => textsOf(initial));
   const [tried, setTried] = useState(false);
   const section = sections.find((s) => s.key === q.section_key);
-  const options = lines(optionsText);
 
-  // Only the fields of the chosen kind are kept, so a switched kind never sends a stale key.
+  // Only the fields of the chosen format are kept, so a switched format never sends a stale key.
   const built: AddedQuestion = {
     id: q.id,
     section_key: q.section_key,
@@ -830,9 +883,9 @@ function QuestionForm({
     prompt: q.prompt.trim(),
     answer_kind: q.answer_kind,
     origin: q.origin,
-    ...(q.answer_kind === "numeric" ? { expected_numeric: q.expected_numeric?.trim() } : {}),
-    ...(q.answer_kind === "mcq" ? { options, correct_option_index: q.correct_option_index } : {}),
-    ...(q.answer_kind === "string_set" ? { accepted_answers: lines(acceptedText) } : {}),
+    ...(q.replaces ? { replaces: q.replaces } : {}),
+    ...(q.explanation?.trim() ? { explanation: q.explanation.trim() } : {}),
+    ...keyFields(q.answer_kind, texts),
   };
   const problem = addedProblem(built);
 
@@ -846,7 +899,9 @@ function QuestionForm({
         if (!problem) onDone(built);
       }}
     >
-      <p className="text-xs font-black text-[#075E63]">{initial.origin === "ai_assisted" ? "Edit the suggestion" : "New question"}</p>
+      <p className="text-xs font-black text-[#075E63]">
+        {initial.replaces ? "Edit a printed question" : initial.origin === "ai_assisted" ? "Edit the suggestion" : "New question"}
+      </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span className={label}>Part of the chapter</span>
@@ -888,42 +943,11 @@ function QuestionForm({
           ))}
         </select>
       </label>
-      {q.answer_kind === "numeric" && (
-        <label className="flex flex-col gap-1">
-          <span className={label}>The answer</span>
-          <input className={field} inputMode="decimal" value={q.expected_numeric ?? ""} onChange={(e) => setQ({ ...q, expected_numeric: e.target.value })} />
-        </label>
-      )}
-      {q.answer_kind === "mcq" && (
-        <>
-          <label className="flex flex-col gap-1">
-            <span className={label}>Choices (one per line)</span>
-            <textarea className={field} rows={4} value={optionsText} onChange={(e) => setOptionsText(e.target.value)} />
-          </label>
-          {options.length > 0 && (
-            <label className="flex flex-col gap-1">
-              <span className={label}>Correct choice</span>
-              <select
-                className={selectField}
-                onKeyDown={submitFormOnEnter}
-                value={q.correct_option_index ?? ""}
-                onChange={(e) => setQ({ ...q, correct_option_index: e.target.value === "" ? undefined : Number(e.target.value) })}
-              >
-                <option value="">Choose…</option>
-                {options.map((o, i) => (
-                  <option key={i} value={i}>{o}</option>
-                ))}
-              </select>
-            </label>
-          )}
-        </>
-      )}
-      {q.answer_kind === "string_set" && (
-        <label className="flex flex-col gap-1">
-          <span className={label}>Answers to accept (one per line)</span>
-          <textarea className={field} rows={3} value={acceptedText} onChange={(e) => setAcceptedText(e.target.value)} />
-        </label>
-      )}
+      <FormatFields key={q.answer_kind} kind={q.answer_kind} texts={texts} onTexts={setTexts} />
+      <label className="flex flex-col gap-1">
+        <span className={label}>Explanation of the answer (optional, for reviewers)</span>
+        <textarea className={field} rows={2} value={q.explanation ?? ""} onChange={(e) => setQ({ ...q, explanation: e.target.value })} />
+      </label>
       {tried && problem && (
         <p role="alert" className="text-xs font-bold text-red-700">{problem}</p>
       )}
@@ -936,5 +960,49 @@ function QuestionForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+/** The questions the chapter kept, each editable; a question learners would type is re-presented without typing (ADR 0045). */
+function PrintedList({
+  printed,
+  edited,
+  busy,
+  onEdit,
+}: {
+  printed: PrintedQuestion[];
+  edited: Set<string>;
+  busy: boolean;
+  onEdit: (p: PrintedQuestion) => void;
+}) {
+  return (
+    <section aria-label="Questions the chapter kept" className="flex flex-col gap-3">
+      <PanelIntro>
+        Edit any question the chapter kept: its words, its answer, its format or its concept. A question learners would type can&rsquo;t
+        pass a step: put its number on a line or give it choices.
+      </PanelIntro>
+      {printed.map((p) => (
+        <article key={p.item_key} aria-label={p.prompt} className="rounded-2xl bg-white border border-[#122D30]/5 p-4 flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {p.needs_keyboard && (
+              <span className="px-2 py-px rounded-full text-[9px] font-black uppercase tracking-widest border bg-amber-50 text-amber-800 border-amber-200">
+                Typed: can&rsquo;t pass a step
+              </span>
+            )}
+            {edited.has(p.item_key) && (
+              <span className="px-2 py-px rounded-full text-[9px] font-black uppercase tracking-widest border bg-sky-50 text-sky-800 border-sky-200">
+                Edited
+              </span>
+            )}
+          </div>
+          <p className="text-sm font-bold text-[#122D30] whitespace-pre-line">{p.prompt}</p>
+          <div>
+            <Button size="sm" variant="outline" leadingIcon={<PenLine size={14} />} disabled={edited.has(p.item_key) || busy} onClick={() => onEdit(p)}>
+              {p.needs_keyboard ? "Re-present without typing" : "Edit"}
+            </Button>
+          </div>
+        </article>
+      ))}
+    </section>
   );
 }

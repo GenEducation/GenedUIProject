@@ -45,6 +45,20 @@ describe("StepCard: a check", () => {
   });
 });
 
+describe("StepCard: the tutor presents the check (backend ADR 0045)", () => {
+  it("shows no check until the tutor has presented it, then shows it", () => {
+    const base = store().instance!;
+    act(() => useLessonStore.setState({ instance: { ...base, active_node: { ...base.active_node!, check_presented: false } } }));
+    const { container, unmount } = render(<StepCard />);
+    expect(screen.queryByRole("button", { name: /check answer/i })).not.toBeInTheDocument();
+    expect(container.textContent ?? "").not.toMatch(/SYNTHETIC count the shapes/);
+    unmount();
+    act(() => useLessonStore.setState({ instance: { ...base, active_node: { ...base.active_node!, check_presented: true } } }));
+    render(<StepCard />);
+    expect(screen.getByText(/SYNTHETIC count the shapes/)).toBeInTheDocument();
+  });
+});
+
 describe("StepCard: a part that is not finished", () => {
   beforeEach(() => {
     const payload = syntheticPayload();

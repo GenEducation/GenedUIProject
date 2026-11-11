@@ -84,6 +84,7 @@ describe("Completing a chapter's questions", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Write a question" }));
     const form = within(dialog).getByRole("form", { name: "Write a question" });
     fireEvent.change(within(form).getByLabelText("Question"), { target: { value: "SYNTHETIC what is 2 + 3?" } });
+    fireEvent.change(within(form).getByLabelText("Answer type"), { target: { value: "numeric" } }); // a new question starts as multiple choice
     fireEvent.change(within(form).getByLabelText("The answer"), { target: { value: "5" } });
     fireEvent.click(within(form).getByRole("button", { name: "Add question" }));
 
@@ -193,6 +194,7 @@ describe("Enter in the popup", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Write a question" }));
     const form = within(dialog).getByRole("form", { name: "Write a question" });
     fireEvent.change(within(form).getByLabelText("Question"), { target: { value: "SYNTHETIC what is 2 + 3?" } });
+    fireEvent.change(within(form).getByLabelText("Answer type"), { target: { value: "numeric" } }); // a new question starts as multiple choice
     fireEvent.change(within(form).getByLabelText("The answer"), { target: { value: "5" } });
     fireEvent.keyDown(within(form).getByLabelText("Answer type"), { key: "Enter" });
     expect(within(dialog).getByText("1 written by you")).toBeInTheDocument();
@@ -211,5 +213,23 @@ describe("Key rules", () => {
     expect(addedProblem({ ...q, options: ["x", "x"], correct_option_index: 0 })).toMatch(/two different/);
     expect(addedProblem({ ...q, options: ["x", "y"] })).toMatch(/correct choice/);
     expect(addedProblem({ ...q, options: ["x", "y"], correct_option_index: 1 })).toBeNull();
+  });
+});
+
+describe("Question formats (backend ADR 0045)", () => {
+  it("builds each non-typing format's key from what the partner wrote, and marks typed formats", async () => {
+    const { keyFields, needsKeyboard, textsOf, formatProblem } = await import("../QuestionFormats");
+    const base = { id: "q", section_key: "2.1", concept_key: "2.1:alpha", prompt: "SYNTHETIC ___ question", origin: "partner" as const };
+    const t = textsOf({ ...base, answer_kind: "mcq" });
+    const order = { ...base, answer_kind: "sequence" as const, ...keyFields("sequence", { ...t, order: "a\nb\nc" }) };
+    expect(order).toMatchObject({ sequence_entries: ["a", "b", "c"], correct_order: [0, 1, 2] });
+    expect(formatProblem(order)).toBeNull();
+    const pairs = { ...base, answer_kind: "matching" as const, ...keyFields("matching", { ...t, pairs: "1/2 = half\n1/4 = quarter\n3/4 = three quarters" }) };
+    expect(pairs.match_pairs).toHaveLength(3);
+    const line = { ...base, answer_kind: "numeric" as const, ...keyFields("numeric", { ...t, number: "3/4", line: { on: true, min: "0", max: "1", step: "1/4" } }) };
+    expect(line.entry).toEqual({ mode: "number_line", min: "0", max: "1", step: "1/4" });
+    expect(needsKeyboard(line)).toBe(false);
+    expect(needsKeyboard({ ...base, answer_kind: "numeric", expected_numeric: "3" })).toBe(true);
+    expect(needsKeyboard({ ...base, answer_kind: "string_set", accepted_answers: ["x"] })).toBe(true);
   });
 });

@@ -262,6 +262,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
     const { instance, payload } = get();
     const node = instance?.active_node;
     if (!node || instance?.state !== "active" || payload?.node.id !== node.node_id) return [];
+    if (node.check_presented === false) return []; // not on screen until the tutor presents it (ADR 0045): nothing to confirm
     const carried = new Set(payload.node.check_items.map((c) => c.id));
     return node.check_item_ids.filter((id) => carried.has(id) && !node.answered_item_ids.includes(id));
   };
@@ -634,14 +635,14 @@ export const useLessonStore = create<LessonState>((set, get) => {
   };
 
   /**
-   * A part with nothing to answer ends when the tutor has finished teaching it (backend ADR 0044): the tutor's reply that
-   * finishes it is committed before the reply closes, so the lesson's state is read again when a completed reply on such a part
-   * ends, and a lesson that moved on opens its next part (after this reply, never over it). Nothing the learner does ends it.
+   * On a W2 lesson the tutor decides when the check appears (backend ADR 0045): its reply that presents it is committed before the
+   * reply closes, so the lesson's state is read again when a completed reply ends on a step whose check is not on screen yet. The
+   * check then appears after the reply, never over it. Nothing the learner does presents it, and nothing here ends a step.
    */
-  const rereadAfterTeachingOnlyReply = async (turnId: string) => {
+  const rereadAfterReply = async (turnId: string) => {
     const { instance, instanceId } = get();
     const node = instance?.active_node;
-    if (!instanceId || !node || node.type !== "teach" || node.check_item_ids.length > 0) return;
+    if (!instanceId || !node || node.check_presented !== false) return;
     if (currentTurn(turnId)?.status !== "completed") return;
     try {
       applyInstance(await lessonService.instance(instanceId));
@@ -675,7 +676,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
     try {
       const closed = await consume(request.turn_id, await lessonService.startTurn(instanceId, request, abort.signal), abort.signal);
       await follow(instanceId, request.turn_id, abort, closed);
-      await rereadAfterTeachingOnlyReply(request.turn_id);
+      await rereadAfterReply(request.turn_id);
     } catch (error) {
       if (abort.signal.aborted) return;
       // An HTTP refusal (the turn never started) carries the backend's reason; anything else is a dropped stream.
@@ -1121,7 +1122,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
         t.status !== "streaming" ? t : { ...t, status: reason === "completed" ? "completed" : reason === "failed" ? "failed" : "interrupted" },
       );
       lastReplyAt = Date.now();
-      void rereadAfterTeachingOnlyReply(turnId);
+      void rereadAfterReply(turnId);
     },
 
     reset: () => {
