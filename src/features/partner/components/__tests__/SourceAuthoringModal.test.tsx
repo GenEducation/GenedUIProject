@@ -233,3 +233,57 @@ describe("Question formats (backend ADR 0045)", () => {
     expect(needsKeyboard({ ...base, answer_kind: "string_set", accepted_answers: ["x"] })).toBe(true);
   });
 });
+
+describe("Assessment coverage (backend ADR 0046)", () => {
+  const plan = {
+    version: "assessment_bank_plan_v1",
+    nodes: [
+      {
+        node_id: "n1",
+        title: "SYNTHETIC node",
+        position: 1,
+        ready: false,
+        components: [
+          {
+            component_id: "c-alpha",
+            concept_key: "2.1:alpha",
+            title: "SYNTHETIC concept alpha",
+            essential: true,
+            evidence: { kinds: ["order"], basis: "suggested_rules" as const, rationale: "SYNTHETIC: the definition says compare", flags: [] },
+            recommended: [
+              { format: "sequencing", kinds: ["order"], why: "SYNTHETIC arranges items", strong_when: "at least 3 items" },
+              { format: "number_line", kinds: ["order"], why: "SYNTHETIC places values", strong_when: "a fine line" },
+            ],
+            only_format: null,
+            existing: [],
+            strong_families: 0,
+            weak_families: 0,
+            sufficient: false,
+            requests: [{ kind: "order", formats: ["sequencing"], strength: "strong", families: 2, reason: "SYNTHETIC gap" }],
+            conversions: [],
+            capability_gaps: [],
+          },
+        ],
+      },
+    ],
+  };
+
+  it("shows what each concept needs and why, and saves the partner's approval of its evidence", async () => {
+    sourcesFixture.setAuthoring(SID, { ...AUTHORING, assessment_plan: plan });
+    const dialog = await openAuthoring();
+    expect(within(dialog).getByText(/SYNTHETIC arranges items/)).toBeInTheDocument();
+    expect(within(dialog).getByText("Suggested")).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Approve this evidence" }));
+    expect(within(dialog).getByText("Approved")).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save for later" }));
+    await waitFor(() => expect(lastAuthored?.evidence).toEqual({ "2.1:alpha": { kinds: ["order"] } }));
+  });
+
+  it("opens a new question in the recommended format for the concept", async () => {
+    sourcesFixture.setAuthoring(SID, { ...AUTHORING, assessment_plan: plan });
+    const dialog = await openAuthoring();
+    fireEvent.click(within(dialog).getAllByRole("button", { name: "Write one" })[0]);
+    const form = within(dialog).getByRole("form", { name: "Write a question" });
+    expect((within(form).getByLabelText("Answer type") as HTMLSelectElement).value).toBe("sequence");
+  });
+});

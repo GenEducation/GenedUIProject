@@ -22,6 +22,7 @@ import { asError } from "@/utils/errors";
 import { enterToSubmit, submitFormOnEnter } from "@/utils/enterToSubmit";
 import { sourcesService } from "../services/sourcesService";
 import { removedReason } from "../utils/ingestionPath";
+import { CoveragePanel, KIND_FOR_FORMAT } from "./CoveragePanel";
 import { FormatFields, KIND_LABEL, formatProblem, keyFields, keyText, needsKeyboard, textsOf } from "./QuestionFormats";
 import type {
   AddedAnswerKind,
@@ -29,6 +30,7 @@ import type {
   AuthoredQuestions,
   AuthoringConcept,
   AuthoringResponse,
+  EvidenceChoice,
   PrintedAnswer,
   PrintedQuestion,
   RemovedQuestion,
@@ -56,7 +58,7 @@ interface AnswerDraft {
 }
 
 /** The three ways to give a chapter questions, one tab each; AI first, as the quickest. */
-type Tab = "ai" | "own" | "printed";
+type Tab = "coverage" | "ai" | "own" | "printed";
 
 /** A question open in the form; `draftId` when it started as an AI draft, so the form opens in that draft's place. */
 interface Editing {
@@ -114,6 +116,7 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
   const [loadError, setLoadError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, AnswerDraft>>({});
   const [added, setAdded] = useState<AddedQuestion[]>([]);
+  const [evidence, setEvidence] = useState<Record<string, EvidenceChoice>>({});
   const [editing, setEditing] = useState<Editing | null>(null);
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<Tab>("ai");
@@ -127,8 +130,10 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
   const adopt = useCallback((res: AuthoringResponse, keepWork: boolean) => {
     setData(res);
     if (keepWork) return;
+    if (res.assessment_plan?.nodes?.length) setTab((t) => (t === "ai" ? "coverage" : t)); // the plan first, where there is one
     setAnswers(Object.fromEntries(res.removed.map((q) => [q.item_key, draftOf(q, res.authored.answers[q.item_key])])));
     setAdded(res.authored.added);
+    setEvidence(res.authored.evidence ?? {});
     setDirty(false);
   }, []);
 
@@ -182,7 +187,7 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
     setSaving(true);
     setError(null);
     try {
-      const body: AuthoredQuestions = { answers: Object.fromEntries(keyed), added };
+      const body: AuthoredQuestions = { answers: Object.fromEntries(keyed), added, evidence };
       adopt(await sourcesService.saveAuthoring(subject.source_id, body), false);
       onSaved();
       return true;
@@ -234,7 +239,15 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
     putAdded(q);
   };
 
+  const planNodes = data?.assessment_plan?.nodes ?? [];
   const tabs: { key: Tab; label: string; icon: React.ReactNode; count: string | null; show: boolean }[] = [
+    {
+      key: "coverage",
+      label: "Coverage",
+      icon: <CheckCircle2 size={15} />,
+      count: planNodes.length ? `${planNodes.filter((n) => n.ready).length}/${planNodes.length}` : null,
+      show: planNodes.length > 0,
+    },
     { key: "ai", label: "Suggested by AI", icon: <Sparkles size={15} />, count: drafts.length ? String(drafts.length) : null, show: true },
     { key: "own", label: "Your questions", icon: <PenLine size={15} />, count: added.length ? String(added.length) : null, show: true },
     {
@@ -315,6 +328,29 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
         ) : (
           <>
             {/* Every panel stays mounted, so a half-written answer survives a switch of tab. */}
+            {planNodes.length > 0 && (
+              <Panel id={`${tabsId}-coverage`} hidden={tab !== "coverage"}>
+                <CoveragePanel
+                  nodes={planNodes}
+                  evidence={evidence}
+                  onEvidence={(key, choice) => {
+                    setEvidence((prev) => {
+                      const next = { ...prev };
+                      if (choice) next[key] = choice;
+                      else delete next[key];
+                      return next;
+                    });
+                    touch();
+                  }}
+                  onWrite={(key, format) => {
+                    const concept = concepts.find((c) => c.key === key);
+                    if (!concept || editing) return;
+                    setEditing({ question: { ...blank(concept.section_key, concepts), concept_key: key, answer_kind: KIND_FOR_FORMAT[format] ?? "mcq" } });
+                    setTab("own");
+                  }}
+                />
+              </Panel>
+            )}
             <Panel id={`${tabsId}-ai`} hidden={tab !== "ai"}>
               <PanelIntro>
                 AI drafts questions from the chapter&rsquo;s text. Check each one: accept it as it is, edit it first, or
