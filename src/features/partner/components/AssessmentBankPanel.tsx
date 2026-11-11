@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
 import { KIND_LABEL, keyText } from "./QuestionFormats";
+import { LearnerPreview } from "./LearnerPreview";
 import type {
   AddedQuestion,
   BankNode,
@@ -60,42 +61,6 @@ const doubted = (q: BankQuestion) =>
   q.verification === "needs_partner_check" || q.verification === "unverified";
 const chip =
   "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-black";
-
-function Preview({ body }: { body: AddedQuestion }) {
-  const list =
-    body.options ?? body.sequence_entries ?? body.group_entries ?? [];
-  return (
-    <div
-      className="rounded-xl bg-[#F6F7F2] px-3 py-2 text-xs text-[#122D30]/80"
-      aria-label="What students see"
-    >
-      {list.length > 0 && (
-        <ul className="flex flex-wrap gap-1.5">
-          {list.map((o, i) => (
-            <li
-              key={i}
-              className="rounded-lg bg-white border border-[#122D30]/10 px-2 py-1"
-            >
-              {o}
-            </li>
-          ))}
-        </ul>
-      )}
-      {body.match_left && body.match_right && (
-        <p>
-          Match: {body.match_left.join(" · ")} → {body.match_right.join(" · ")}
-        </p>
-      )}
-      {body.word_bank && <p>Word bank: {body.word_bank.join(", ")}</p>}
-      {body.entry && (
-        <p>
-          {body.entry.mode === "number_line" ? "Number line" : "Slider"} from{" "}
-          {body.entry.min} to {body.entry.max}, in steps of {body.entry.step}
-        </p>
-      )}
-    </div>
-  );
-}
 
 function QuestionCard({
   q,
@@ -151,7 +116,7 @@ function QuestionCard({
         )}
       </div>
       <p className="text-sm font-bold text-[#122D30]">{body.prompt}</p>
-      <Preview body={body} />
+      <LearnerPreview key={`${q.question_id}-${q.revision}`} question={body} />
       <p className="text-xs text-[#122D30]/70">
         <span className="font-bold text-[#122D30]">Answer: </span>
         {keyText(body)}

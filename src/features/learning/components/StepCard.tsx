@@ -14,6 +14,7 @@ import { GroupSorter } from "../check/GroupSorter";
 import { LineInput } from "../check/LineInput";
 import { MultiSelect } from "../check/MultiSelect";
 import { Sequencing } from "../check/Sequencing";
+import { SingleChoice } from "../check/SingleChoice";
 import { TileBuilder } from "../check/TileBuilder";
 import { useCheckShown } from "../delivery/useCheckShown";
 import { WrittenAnswer } from "../check/WrittenAnswer";
@@ -186,27 +187,7 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
         </div>
       ))}
 
-      {isChoice && (
-        <div role="radiogroup" aria-labelledby={`check-${check.id}`} className="mt-4 grid gap-2 sm:grid-cols-2">
-          {check.options.map((option) => (
-            // eslint-disable-next-line no-restricted-syntax -- an answer option: a radio, its selected state is its look.
-            <button
-              key={option.id}
-              type="button"
-              role="radio"
-              aria-checked={selected === option.id}
-              onClick={() => setSelected(option.id)}
-              className={`lesson-sketch-sm lesson-hand px-4 py-2.5 text-left text-[18px] transition-colors ${
-                selected === option.id
-                  ? "bg-[var(--ls-accent)] font-bold"
-                  : "hover:bg-[var(--ls-primary-soft)]"
-              }`}
-            >
-              {option.text}
-            </button>
-          ))}
-        </div>
-      )}
+      {isChoice && <SingleChoice check={check} selected={selected} onSelect={setSelected} />}
 
       {format === "multiple_select" && (
         <MultiSelect check={check} chosen={arranged.chosen} onChange={(chosen) => setArranged({ ...arranged, chosen })} disabled={busy} />
