@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 import type {
   AuthoredQuestions,
   AuthoringResponse,
+  BankPackage,
   LearningOutcome,
   PartnerBook,
   QuestionsResponse,
@@ -70,7 +71,7 @@ const questions = new Map<string, QuestionsResponse>();
 const releases = new Map<string, SourceRelease>();
 const authoring = new Map<string, AuthoringResponse>();
 /** Drafts the fake worker returns for the next suggestions request (they arrive on the next GET). */
-const pendingDrafts = new Map<string, AuthoringResponse["authored"]["added"]>();
+const banks = new Map<string, BankPackage>();
 /** The last authored questions PUT, for asserting what the screen sent. */
 export let lastAuthored: AuthoredQuestions | null = null;
 /** The last release decisions POST, for asserting what the screen sent. */
@@ -89,7 +90,7 @@ export const sourcesFixture = {
     questions.clear();
     releases.clear();
     authoring.clear();
-    pendingDrafts.clear();
+    banks.clear();
     lastAuthored = null;
     lastReleaseDecisions = null;
     lastAnswers = null;
@@ -130,8 +131,9 @@ export const sourcesFixture = {
       });
     }
   },
-  /** The drafts the fake worker writes for the next suggestions request. */
-  setDrafts: (id: string, drafts: AuthoringResponse["authored"]["added"]) => void pendingDrafts.set(id, drafts),
+  /** The chapter's AI-prepared package, as core would serve it (backend ADR 0047). */
+  setBank: (id: string, bank: BankPackage) => void banks.set(id, structuredClone(bank)),
+  getBank: (id: string) => banks.get(id),
   setRelease: (id: string, release: SourceRelease) => void releases.set(id, structuredClone(release)),
   getRelease: (id: string) => releases.get(id),
   /** Give a source a review report (and `has_report: true`), as the worker does when a run finishes. */
@@ -363,11 +365,6 @@ export const sourcesHandlers = [
     const id = String(params.id);
     const a = authoring.get(id);
     if (!a) return HttpResponse.json({ message: "This chapter has nothing to complete." }, { status: 404 });
-    // The fake worker finishes a request between two reads.
-    if (a.suggestions && a.suggestions.state !== "ready" && a.suggestions.state !== "failed") {
-      a.suggestions = { ...a.suggestions, state: "ready", drafts: pendingDrafts.get(id) ?? [] };
-      a.can_suggest = true;
-    }
     return HttpResponse.json(a);
   }),
 
@@ -395,17 +392,128 @@ export const sourcesHandlers = [
     return HttpResponse.json(next);
   }),
 
-  http.post(`${SOURCES}/:id/authoring/suggestions`, ({ params }) => {
-    const id = String(params.id);
-    const a = authoring.get(id);
-    if (!a?.can_suggest) return conflict("Suggestions are already being written.");
-    const next: AuthoringResponse = {
-      ...a,
-      can_suggest: false,
-      suggestions: { state: "requested", requested_at: new Date().toISOString(), drafts: [], detail: null },
+  // The bank mirrors core's rules: a stale version is refused; a doubted question is never bulk-accepted; an edit returns it to draft.
+  http.get(`${SOURCES}/:id/bank`, ({ params }) => {
+    const b = banks.get(String(params.id));
+    if (b) return HttpResponse.json(b);
+    if (!store.has(String(params.id))) return notFound();
+    const empty: BankPackage = {
+      findings: [],
+      nodes: [],
+      questions: [],
+      runs: [],
+      summary: {
+        nodes: 0,
+        questions: 0,
+        accepted: 0,
+        needs_attention: 0,
+        draft_ready_nodes: 0,
+        approved_ready_nodes: 0,
+        publishable_nodes: 0,
+        open_issues: 0,
+        authoring: null,
+      },
     };
-    authoring.set(id, next);
-    return HttpResponse.json(next, { status: 202 });
+    return HttpResponse.json(empty);
+  }),
+
+  http.post(
+    `${SOURCES}/:id/bank/questions/:qid/:decision`,
+    async ({ params, request }) => {
+      const b = banks.get(String(params.id));
+      const q = b?.questions.find((x) => x.question_id === params.qid);
+      if (!b || !q) return notFound();
+      const body = (await request.json()) as { version: number };
+      if (body.version !== q.version)
+        return conflict(
+          "This question changed since you opened it. Reload to see the latest version.",
+        );
+      q.state = params.decision === "accept" ? "accepted" : "rejected";
+      q.version += 1;
+      b.summary.accepted = b.questions.filter(
+        (x) => x.state === "accepted",
+      ).length;
+      return HttpResponse.json(b);
+    },
+  ),
+
+  http.put(
+    `${SOURCES}/:id/bank/questions/:qid`,
+    async ({ params, request }) => {
+      const b = banks.get(String(params.id));
+      const q = b?.questions.find((x) => x.question_id === params.qid);
+      if (!b || !q) return notFound();
+      const body = (await request.json()) as {
+        version: number;
+        question: BankPackage["questions"][number]["question"];
+      };
+      if (body.version !== q.version)
+        return conflict(
+          "This question changed since you opened it. Reload to see the latest version.",
+        );
+      Object.assign(q, {
+        question: body.question,
+        state: "draft",
+        version: q.version + 1,
+        revision: q.revision + 1,
+        verification: "unverified",
+      });
+      b.summary.accepted = b.questions.filter(
+        (x) => x.state === "accepted",
+      ).length;
+      return HttpResponse.json(b);
+    },
+  ),
+
+  http.post(`${SOURCES}/:id/bank/accept`, async ({ params, request }) => {
+    const b = banks.get(String(params.id));
+    if (!b) return notFound();
+    const { items } = (await request.json()) as {
+      items: { question_id: string; version: number }[];
+    };
+    const skipped: string[] = [];
+    for (const item of items) {
+      const q = b.questions.find((x) => x.question_id === item.question_id);
+      if (!q) continue;
+      if (
+        q.verification === "needs_partner_check" ||
+        q.verification === "unverified"
+      )
+        skipped.push(q.question_id);
+      else if (q.version === item.version)
+        Object.assign(q, { state: "accepted", version: q.version + 1 });
+    }
+    b.summary.accepted = b.questions.filter(
+      (x) => x.state === "accepted",
+    ).length;
+    return HttpResponse.json({ ...b, skipped, stale: [] });
+  }),
+
+  http.post(`${SOURCES}/:id/bank/refill`, ({ params }) => {
+    const b = banks.get(String(params.id));
+    if (!b) return notFound();
+    b.runs = [
+      {
+        run_id: `r${b.runs.length + 1}`,
+        scope: "node",
+        section_key: null,
+        state: "queued",
+        spent_usd: 0,
+        detail: null,
+        nodes: [],
+        created_at: new Date().toISOString(),
+      },
+      ...b.runs,
+    ];
+    return HttpResponse.json(b, { status: 202 });
+  }),
+
+  http.post(`${SOURCES}/:id/bank/approve`, ({ params }) => {
+    const b = banks.get(String(params.id));
+    if (!b) return notFound();
+    if (!b.summary.accepted)
+      return conflict("Accept at least one question first.");
+    return HttpResponse.json(b, { status: 202 });
   }),
 
   http.get(`${SOURCES}/:id/release`, ({ params }) => {

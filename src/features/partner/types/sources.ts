@@ -275,7 +275,6 @@ export interface SourceView {
   authored?: number;
   authored_at?: string | null;
   /** The partner's request for AI-drafted questions; null when none. */
-  suggestions?: SuggestionsState | null;
   queued_at: string | null;
   /** When the server picked up the newest run. */
   started_at?: string | null;
@@ -544,14 +543,140 @@ export interface AuthoredQuestions {
   added: AddedQuestion[];
 }
 
-export type SuggestionsState = "requested" | "running" | "ready" | "failed";
+/** How an AI-prepared question's key was checked (backend ADR 0047): by code, by an independent solve, or not yet. */
+export type Verification =
+  "machine_verified" | "solver_agreed" | "needs_partner_check" | "unverified";
 
-export interface Suggestions {
-  state: SuggestionsState;
-  requested_at: string;
-  /** Drafts; each counts only once accepted into `added` with `origin: "ai_assisted"`. */
-  drafts: AddedQuestion[];
+export type RejectionReason =
+  | "incorrect"
+  | "ambiguous"
+  | "off_objective"
+  | "too_easy"
+  | "too_hard"
+  | "duplicate"
+  | "unclear_language"
+  | "inappropriate"
+  | "other";
+
+/** What a reviewer sees beside a bank question (backend `bank_contract.QuestionMeta`). */
+export interface BankQuestionMeta {
+  obligation_keys: string[];
+  evidence_kind: string;
+  strength: "strong" | "weak";
+  strength_reason: string;
+  family_key: string;
+  variant_of?: string | null;
+  difficulty: "easy" | "medium" | "hard";
+  prerequisites?: string[];
+  provenance:
+    | "textbook_printed"
+    | "textbook_adapted"
+    | "original_curriculum_aligned"
+    | "real_world_external";
+  source_basis: string;
+  quotes?: string[];
+  computation?: string | null;
+  distractors?: { option: string; misconception: string }[];
+  remediation?: string | null;
+  stimulus?: "none" | "passage" | "existing_figure";
+  figure_id?: string | null;
+  verification: Verification;
+  findings?: string[];
+}
+
+export interface BankQuestionContent {
+  body: AddedQuestion;
+  meta: BankQuestionMeta;
+}
+
+export interface BankQuestion {
+  question_id: string;
+  section_key: string;
+  concept_key: string;
+  state: "draft" | "accepted" | "rejected";
+  /** Every decision or edit names this; a stale one is refused (409). */
+  version: number;
+  revision: number;
+  origin: "ai" | "partner" | "imported";
+  verification: Verification;
+  question: BankQuestionContent;
+  concept_in_chapter: boolean;
+}
+
+export interface BankObligation {
+  key: string;
+  statement: string;
+  production: boolean;
+  draft_families: number;
+  approved_families: number;
+  draft_covered: boolean;
+  approved_covered: boolean;
+}
+
+export interface BankConcept {
+  concept_key: string;
+  title: string;
+  understanding: string;
+  misconceptions: string[];
+  unsupported: string[];
+  obligations: BankObligation[];
+}
+
+export interface BankNode {
+  section_key: string;
+  title: string;
+  concepts: BankConcept[];
+  quarantined: string[];
+  draft_ready: boolean;
+  approved_ready: boolean;
+  publishable: boolean;
+}
+
+export interface BankFinding {
+  concept_key: string;
+  issue: string;
+  evidence: string;
+  resolution: "corrected" | "quarantined";
+  proposed_definition?: string | null;
+  proposed_lo_code?: string | null;
+}
+
+export interface BankRun {
+  run_id: string;
+  scope: "chapter" | "node";
+  section_key: string | null;
+  state: "queued" | "running" | "ready" | "stopped" | "failed";
+  spent_usd: number;
   detail: string | null;
+  nodes: {
+    section_key: string;
+    dropped?: { prompt: string; reasons: string[] }[];
+    gaps?: string[];
+    bank_issues?: string[];
+  }[];
+  created_at: string;
+}
+
+/** `GET /v1/sources/{id}/bank`: the chapter's AI-prepared assessment package (backend ADR 0047). */
+export interface BankPackage {
+  findings: BankFinding[];
+  nodes: BankNode[];
+  questions: BankQuestion[];
+  runs: BankRun[];
+  summary: {
+    nodes: number;
+    questions: number;
+    accepted: number;
+    needs_attention: number;
+    draft_ready_nodes: number;
+    approved_ready_nodes: number;
+    publishable_nodes: number;
+    open_issues: number;
+    authoring: BankRun["state"] | null;
+  };
+  /** Bulk acceptance only: questions skipped because an independent check doubts them, and stale ones. */
+  skipped?: string[];
+  stale?: string[];
 }
 
 /** `GET /v1/sources/{id}/authoring`. */
@@ -563,8 +688,6 @@ export interface AuthoringResponse {
   printed?: PrintedQuestion[];
   authored: AuthoredQuestions;
   authored_at: string | null;
-  suggestions: Suggestions | null;
-  can_suggest: boolean;
 }
 
 /** `GET /v1/sources/books`: a book the partner filed chapters under, for the upload form's book picker. */

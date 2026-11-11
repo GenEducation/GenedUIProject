@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import {
   AlertCircle,
-  ArrowRight,
   Check,
   CheckCircle2,
   FileText,
@@ -22,6 +21,7 @@ import { asError } from "@/utils/errors";
 import { enterToSubmit, submitFormOnEnter } from "@/utils/enterToSubmit";
 import { sourcesService } from "../services/sourcesService";
 import { removedReason } from "../utils/ingestionPath";
+import { AssessmentBankPanel } from "./AssessmentBankPanel";
 import { FormatFields, KIND_LABEL, formatProblem, keyFields, keyText, needsKeyboard, textsOf } from "./QuestionFormats";
 import type {
   AddedAnswerKind,
@@ -45,9 +45,6 @@ interface SourceAuthoringModalProps {
   onRerun: (subject: Subject) => Promise<void>;
 }
 
-/** How often to look for the AI's drafts while they are being written. */
-export const SUGGESTIONS_POLL_MS = 4000;
-
 /** A printed question's key while being typed: the chosen option, a number, or accepted words (one per line). */
 interface AnswerDraft {
   kind: "option" | "numeric" | "words";
@@ -55,13 +52,12 @@ interface AnswerDraft {
   concept: string;
 }
 
-/** The three ways to give a chapter questions, one tab each; AI first, as the quickest. */
+/** The three ways to give a chapter questions, one tab each; GenEd's prepared questions first (backend ADR 0047). */
 type Tab = "ai" | "own" | "printed";
 
-/** A question open in the form; `draftId` when it started as an AI draft, so the form opens in that draft's place. */
+/** A question open in the form. */
 interface Editing {
   question: AddedQuestion;
-  draftId?: string;
 }
 
 
@@ -115,11 +111,9 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
   const [answers, setAnswers] = useState<Record<string, AnswerDraft>>({});
   const [added, setAdded] = useState<AddedQuestion[]>([]);
   const [editing, setEditing] = useState<Editing | null>(null);
-  const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<Tab>("ai");
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [asking, setAsking] = useState(false);
   const [rerunning, setRerunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tabsId = useId();
@@ -143,16 +137,6 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
     };
   }, [subject.source_id, adopt]);
 
-  // Poll while the AI writes drafts; the partner's unsaved work is kept.
-  const pending = data?.suggestions?.state === "requested" || data?.suggestions?.state === "running";
-  useEffect(() => {
-    if (!pending) return;
-    const t = setInterval(() => {
-      sourcesService.authoring(subject.source_id).then((res) => adopt(res, true)).catch(() => undefined);
-    }, SUGGESTIONS_POLL_MS);
-    return () => clearInterval(t);
-  }, [pending, subject.source_id, adopt]);
-
   const removed = data?.removed ?? [];
   const edited = new Set(added.flatMap((q) => (q.replaces ? [q.replaces] : [])));
   // The questions the run kept; those a learner would type come first: they pass no step until re-presented (ADR 0045).
@@ -168,9 +152,7 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
   const own = added.length - fromAi;
   const total = keyed.length + added.length;
   const savedOnce = !!data?.authored_at;
-  const acceptedDrafts = new Set(added.map((q) => q.prompt.trim()));
-  const drafts = (data?.suggestions?.drafts ?? []).filter((d) => !acceptedDrafts.has(d.prompt.trim()) && !skipped.has(d.id));
-  const writingOwn = editing && !editing.draftId;
+  const writingOwn = !!editing;
 
   const touch = () => {
     setDirty(true);
@@ -191,18 +173,6 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
       return false;
     } finally {
       setSaving(false);
-    }
-  };
-
-  const suggest = async () => {
-    setAsking(true);
-    setError(null);
-    try {
-      adopt(await sourcesService.suggestQuestions(subject.source_id), true);
-    } catch (e) {
-      setError(asError(e).message || "Couldn't ask for suggestions. Please try again.");
-    } finally {
-      setAsking(false);
     }
   };
 
@@ -228,14 +198,8 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
     touch();
   };
 
-  /** Take a draft, as it is or edited: it leaves the suggestions even when its wording changed. */
-  const acceptDraft = (draftId: string, q: AddedQuestion) => {
-    setSkipped((prev) => new Set(prev).add(draftId));
-    putAdded(q);
-  };
-
   const tabs: { key: Tab; label: string; icon: React.ReactNode; count: string | null; show: boolean }[] = [
-    { key: "ai", label: "Suggested by AI", icon: <Sparkles size={15} />, count: drafts.length ? String(drafts.length) : null, show: true },
+    { key: "ai", label: "Prepared by GenEd", icon: <Sparkles size={15} />, count: null, show: true },
     { key: "own", label: "Your questions", icon: <PenLine size={15} />, count: added.length ? String(added.length) : null, show: true },
     {
       key: "printed",
@@ -316,80 +280,22 @@ function AuthoringBody({ subject, onClose, onSaved, onRerun }: SourceAuthoringMo
           <>
             {/* Every panel stays mounted, so a half-written answer survives a switch of tab. */}
             <Panel id={`${tabsId}-ai`} hidden={tab !== "ai"}>
-              <PanelIntro>
-                AI drafts questions from the chapter&rsquo;s text. Check each one: accept it as it is, edit it first, or
-                skip it.
-              </PanelIntro>
-
-              {fromAi > 0 && (
-                <Notice>
-                  <CheckCircle2 size={15} className="text-emerald-600 shrink-0" aria-hidden />
-                  <span className="flex-1">{plural(fromAi, "suggestion")} accepted. You can find them in Your questions.</span>
-                  <Button size="sm" variant="tertiary" trailingIcon={<ArrowRight size={13} />} onClick={() => setTab("own")}>
-                    Open
-                  </Button>
-                </Notice>
-              )}
-
-              {data.suggestions?.state === "failed" && (
-                <Notice tone="problem">
-                  <AlertCircle size={15} className="shrink-0" aria-hidden />
-                  <span>{data.suggestions.detail || "The AI couldn't write suggestions this time."}</span>
-                </Notice>
-              )}
-
-              {pending ? (
-                <div role="status" className="rounded-2xl border border-dashed border-violet-200 bg-violet-50/50 px-5 py-8 flex flex-col items-center gap-2 text-center">
-                  <Loader2 size={20} className="animate-spin text-violet-600" aria-hidden />
-                  <p className="text-sm font-bold text-[#122D30]">Writing suggestions…</p>
-                  <p className="text-xs text-[#122D30]/50">This takes a minute. You can answer printed questions or write your own meanwhile.</p>
-                </div>
-              ) : !data.suggestions ? (
-                <EmptyState
-                  icon={<Sparkles size={20} />}
-                  title="Let AI draft questions for you"
-                  body="It reads the chapter and writes questions with answers GenEd can check, one concept at a time."
-                />
-              ) : data.suggestions.state === "ready" && drafts.length === 0 ? (
-                <EmptyState icon={<Check size={20} />} title="No suggestions left to review" body="Ask for more, or write your own." />
-              ) : null}
-
-              {drafts.map((d) =>
-                editing?.draftId === d.id ? (
-                  <QuestionForm
-                    key={editing.question.id}
-                    initial={editing.question}
-                    sections={sections}
-                    concepts={concepts}
-                    onDone={(q) => acceptDraft(d.id, q)}
-                    onCancel={() => setEditing(null)}
-                  />
-                ) : (
-                  <AddedRow
-                    key={d.id}
-                    question={d}
-                    concept={concepts.find((c) => c.key === d.concept_key)}
-                    draft
-                    onEdit={() => setEditing({ question: { ...d, id: newId(), origin: "ai_assisted" }, draftId: d.id })}
-                    onAccept={() => acceptDraft(d.id, { ...d, id: newId(), origin: "ai_assisted" })}
-                    onRemove={() => setSkipped((prev) => new Set(prev).add(d.id))}
-                  />
-                ),
-              )}
-
-              {data.can_suggest && !pending && (
-                <div className={drafts.length || data.suggestions ? "" : "flex justify-center -mt-2"}>
-                  <Button variant="secondary" size="sm" leadingIcon={<Sparkles size={14} />} loading={asking} onClick={() => void suggest()}>
-                    {data.suggestions ? "Suggest more questions" : "Suggest questions"}
-                  </Button>
-                </div>
-              )}
+              <AssessmentBankPanel
+                sourceId={subject.source_id}
+                onApproved={() => {
+                  onSaved();
+                  onClose();
+                }}
+                renderEditor={(body, saveEdit, cancel) => (
+                  <QuestionForm initial={body} sections={sections} concepts={concepts} onDone={saveEdit} onCancel={cancel} />
+                )}
+              />
             </Panel>
 
             <Panel id={`${tabsId}-own`} hidden={tab !== "own"}>
-              <PanelIntro>Write a question for one concept the run found, or edit the suggestions you accepted.</PanelIntro>
+              <PanelIntro>Write a question of your own for one concept the run found.</PanelIntro>
               {added.length === 0 && !writingOwn && (
-                <EmptyState icon={<PenLine size={20} />} title="No questions here yet" body="Write one below, or accept a suggestion from AI." />
+                <EmptyState icon={<PenLine size={20} />} title="No questions here yet" body="Write one below. GenEd's prepared questions are in their own tab." />
               )}
               {added.map((q) =>
                 editing?.question.id === q.id ? null : (
@@ -588,18 +494,6 @@ function PanelIntro({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Notice({ tone = "info", children }: { tone?: "info" | "problem"; children: React.ReactNode }) {
-  return (
-    <div
-      className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ${
-        tone === "problem" ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50/60 text-[#122D30]"
-      }`}
-    >
-      {children}
-    </div>
-  );
-}
-
 function EmptyState({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
     <div className="rounded-2xl border border-dashed border-[#122D30]/15 bg-white/60 px-5 py-8 flex flex-col items-center gap-2 text-center">
@@ -794,22 +688,18 @@ export function fromPrinted(p: PrintedQuestion, concepts: AuthoringConcept[]): A
 function AddedRow({
   question,
   concept,
-  draft,
   onEdit,
   onRemove,
-  onAccept,
 }: {
   question: AddedQuestion;
   concept?: AuthoringConcept;
-  draft?: boolean;
   onEdit: () => void;
   onRemove?: () => void;
-  onAccept?: () => void;
 }) {
   return (
     <article
       aria-label={question.prompt}
-      className={`rounded-2xl bg-white border p-4 flex flex-col gap-2 ${draft ? "border-violet-200" : "border-[#122D30]/5"}`}
+      className="rounded-2xl bg-white border border-[#122D30]/5 p-4 flex flex-col gap-2"
     >
       <div className="flex flex-wrap items-center gap-2">
         <span className="px-2 py-px rounded-full text-[9px] font-black uppercase tracking-widest border bg-[#DCEBE7]/40 text-[#122D30] border-[#122D30]/10">
@@ -817,7 +707,7 @@ function AddedRow({
         </span>
         {question.origin === "ai_assisted" && (
           <span className="px-2 py-px rounded-full text-[9px] font-black uppercase tracking-widest border bg-violet-50 text-violet-700 border-violet-200">
-            {draft ? "AI draft" : "From AI"}
+            From AI
           </span>
         )}
         {question.replaces && (
@@ -839,17 +729,12 @@ function AddedRow({
         {KIND_LABEL[question.answer_kind]} · Answer: <span className="font-bold text-[#122D30]">{keyText(question)}</span>
       </p>
       <div className="flex flex-wrap gap-2 pt-1">
-        {onAccept && (
-          <Button size="sm" leadingIcon={<Check size={14} />} onClick={onAccept}>
-            Accept
-          </Button>
-        )}
         <Button size="sm" variant="outline" leadingIcon={<PenLine size={14} />} onClick={onEdit}>
-          {draft ? "Edit, then accept" : "Edit"}
+          Edit
         </Button>
         {onRemove && (
-          <Button size="sm" variant="tertiary" leadingIcon={draft ? <X size={14} /> : <Trash2 size={14} />} onClick={onRemove}>
-            {draft ? "Skip" : "Remove"}
+          <Button size="sm" variant="tertiary" leadingIcon={<Trash2 size={14} />} onClick={onRemove}>
+            Remove
           </Button>
         )}
       </div>
@@ -900,7 +785,7 @@ function QuestionForm({
       }}
     >
       <p className="text-xs font-black text-[#075E63]">
-        {initial.replaces ? "Edit a printed question" : initial.origin === "ai_assisted" ? "Edit the suggestion" : "New question"}
+        {initial.replaces ? "Edit a printed question" : initial.origin === "ai_assisted" ? "Edit the question" : "New question"}
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1">

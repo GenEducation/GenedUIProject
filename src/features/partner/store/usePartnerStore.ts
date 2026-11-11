@@ -6,7 +6,7 @@ import type {
   ChapterCorrection,
   ExcludedPages,
   ExcludedPagesDecision,
-  SourceReleaseRef, SourceOutcome, SuggestionsState,
+  SourceReleaseRef, SourceOutcome,
   RegisterSourceInput,
   SourceProgress,
   SourceState,
@@ -63,7 +63,6 @@ export interface Subject {
   /** The last run left questions to complete (`SourceAuthoringModal`); how many the partner did; AI drafts' state. */
   has_authoring: boolean;
   authored: number;
-  suggestions: SuggestionsState | null;
   queued_at: string | null;
   started_at: string | null;
   finished_at: string | null;
@@ -99,7 +98,6 @@ export function toSubject(source: SourceView): Subject {
     outcome: source.outcome ?? null,
     has_authoring: source.has_authoring ?? false,
     authored: source.authored ?? 0,
-    suggestions: source.suggestions ?? null,
     queued_at: source.queued_at,
     started_at: source.started_at ?? null,
     finished_at: source.finished_at,

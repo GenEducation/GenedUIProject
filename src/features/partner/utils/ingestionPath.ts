@@ -228,7 +228,7 @@ export const NEXT_STEP_COPY: Record<NextStep, { title: string; body: string; ton
   },
   add_questions: {
     title: "Add questions to finish this chapter",
-    body: "This run didn't pass: GenEd found too few questions it can check, and a chapter can't be published without them. Give the answers of printed questions, write your own, or let AI suggest some. Every question is reviewed before students see it.",
+    body: "This run didn't pass: GenEd found too few questions it can check, and a chapter can't be published without them. Review the questions GenEd prepared, give the answers of printed ones, or write your own. Every question is reviewed before students see it.",
     tone: "problem",
   },
   upload_pages_with_questions: {

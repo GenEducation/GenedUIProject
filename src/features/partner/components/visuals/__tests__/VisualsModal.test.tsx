@@ -40,7 +40,6 @@ const row: Subject = {
   outcome: null,
   has_authoring: false,
   authored: 0,
-  suggestions: null,
   queued_at: null,
   started_at: null,
   finished_at: null,

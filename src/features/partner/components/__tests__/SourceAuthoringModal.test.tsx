@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { lastAuthored, makeSource, sourcesFixture } from "@/test/msw/handlers/sources";
 import { usePartnerStore } from "@/features/partner/store/usePartnerStore";
-import type { AuthoringResponse } from "@/features/partner/types/sources";
+import type { AuthoringResponse, BankPackage, BankQuestion } from "@/features/partner/types/sources";
 import { addedProblem, answerOf } from "../SourceAuthoringModal";
 
 vi.mock("framer-motion", async () => (await import("../visuals/__tests__/framerPassthrough")).framerPassthrough());
@@ -41,9 +41,43 @@ const AUTHORING: AuthoringResponse = {
   ],
   authored: { answers: {}, added: [] },
   authored_at: null,
-  suggestions: null,
-  can_suggest: true,
 };
+
+const meta = (verification: BankQuestion["verification"]) => ({
+  obligation_keys: ["order"], evidence_kind: "order", strength: "strong" as const, strength_reason: "SYNTHETIC",
+  family_key: `fam-${verification}`, difficulty: "medium" as const, provenance: "original_curriculum_aligned" as const,
+  source_basis: "SYNTHETIC", verification, distractors: [{ option: "SYNTHETIC 1/8", misconception: "SYNTHETIC bigger denominator" }],
+}); // prettier-ignore
+
+function question(
+  id: string,
+  prompt: string,
+  verification: BankQuestion["verification"],
+): BankQuestion {
+  return {
+    question_id: id, section_key: "2.1", concept_key: "2.1:alpha", state: "draft", version: 1, revision: 1, origin: "ai",
+    verification, concept_in_chapter: true,
+    question: {
+      body: { id, section_key: "2.1", concept_key: "2.1:alpha", prompt, answer_kind: "mcq", origin: "ai_assisted",
+              options: ["SYNTHETIC 1/3", "SYNTHETIC 1/8", "SYNTHETIC 1/5", "SYNTHETIC 1/4"], correct_option_index: 0,
+              explanation: "SYNTHETIC fewer parts, bigger parts" },
+      meta: meta(verification),
+    },
+  }; // prettier-ignore
+}
+
+const BANK: BankPackage = {
+  findings: [{ concept_key: "2.1:beta", issue: "SYNTHETIC this concept is not in the section", evidence: "SYNTHETIC", resolution: "quarantined" }],
+  nodes: [{
+    section_key: "2.1", title: "SYNTHETIC section 2.1", quarantined: ["2.1:beta"], draft_ready: true, approved_ready: false, publishable: false,
+    concepts: [{ concept_key: "2.1:alpha", title: "SYNTHETIC alpha", understanding: "SYNTHETIC", misconceptions: [], unsupported: [],
+                 obligations: [{ key: "order", statement: "SYNTHETIC order unit fractions", production: false, draft_families: 2,
+                                 approved_families: 0, draft_covered: true, approved_covered: false }] }],
+  }],
+  questions: [question("q-checked", "SYNTHETIC which share is biggest?", "solver_agreed"), question("q-doubted", "SYNTHETIC which is smallest?", "needs_partner_check")],
+  runs: [{ run_id: "r1", scope: "chapter", section_key: null, state: "ready", spent_usd: 0.1, detail: null, nodes: [], created_at: "2026-11-11T00:00:00Z" }],
+  summary: { nodes: 1, questions: 2, accepted: 0, needs_attention: 1, draft_ready_nodes: 1, approved_ready_nodes: 0, publishable_nodes: 0, open_issues: 1, authoring: "ready" },
+}; // prettier-ignore
 
 beforeEach(() => {
   sourcesFixture.reset(() => [
@@ -101,60 +135,83 @@ describe("Completing a chapter's questions", () => {
     expect(within(dialog).getByRole("button", { name: "Run with these questions" })).toBeInTheDocument();
   });
 
-  it("asks the AI, then accepts a draft as ai_assisted", async () => {
-    sourcesFixture.setDrafts(SID, [
-      {
-        id: "draft-1",
-        section_key: "2.1",
-        concept_key: "2.1:beta",
-        prompt: "SYNTHETIC drafted question?",
-        answer_kind: "string_set",
-        accepted_answers: ["SYNTHETIC yes"],
-        origin: "ai_assisted",
-      },
-    ]);
+  it("reviews GenEd's prepared questions: bulk accept leaves doubted ones, a rejection needs a reason, then approve", async () => {
+    sourcesFixture.setBank(SID, BANK);
     const dialog = await openAuthoring();
-    fireEvent.click(within(dialog).getByRole("button", { name: "Suggest questions" }));
-    expect(await within(dialog).findByText("Writing suggestions…")).toBeInTheDocument();
-    const draft = await within(dialog).findByRole("article", { name: "SYNTHETIC drafted question?" }, { timeout: 6000 });
-    fireEvent.click(within(draft).getByRole("button", { name: "Accept" }));
-    expect(within(dialog).getByText(/1 suggestion accepted/)).toBeInTheDocument();
-    expect(within(dialog).queryByRole("article", { name: "SYNTHETIC drafted question?" })).not.toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save for later" }));
-    await waitFor(() => expect(lastAuthored?.added).toHaveLength(1));
-    expect(lastAuthored?.added[0]).toMatchObject({ prompt: "SYNTHETIC drafted question?", origin: "ai_assisted" });
-    expect(lastAuthored?.added[0].id).not.toBe("draft-1");
-  }, 10000);
+    expect(
+      await within(dialog).findByText(
+        "SYNTHETIC this concept is not in the section",
+      ),
+    ).toBeInTheDocument();
+    const checked = within(dialog).getByRole("article", {
+      name: "SYNTHETIC which share is biggest?",
+    });
+    expect(within(checked).getByText("Answer checked")).toBeInTheDocument();
+    const doubted = within(dialog).getByRole("article", {
+      name: "SYNTHETIC which is smallest?",
+    });
+    expect(within(doubted).getByText("Please check")).toBeInTheDocument();
+
+    fireEvent.click(
+      within(dialog).getByRole("button", {
+        name: "Accept the 1 checked questions",
+      }),
+    );
+    expect(await within(checked).findByText("Accepted")).toBeInTheDocument();
+    expect(
+      sourcesFixture
+        .getBank(SID)
+        ?.questions.find((q) => q.question_id === "q-doubted")?.state,
+    ).toBe("draft");
+
+    fireEvent.click(within(doubted).getByRole("button", { name: "Reject" }));
+    fireEvent.change(within(doubted).getByLabelText("Why reject it?"), {
+      target: { value: "ambiguous" },
+    });
+    fireEvent.click(
+      within(doubted).getAllByRole("button", { name: "Reject" })[0],
+    );
+    await waitFor(() =>
+      expect(
+        sourcesFixture
+          .getBank(SID)
+          ?.questions.find((q) => q.question_id === "q-doubted")?.state,
+      ).toBe("rejected"),
+    );
+
+    fireEvent.click(
+      await within(dialog).findByRole("button", {
+        name: "Approve 1 accepted questions and run the chapter",
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("refuses a decision made on a question that changed meanwhile", async () => {
+    sourcesFixture.setBank(SID, BANK);
+    const dialog = await openAuthoring();
+    const card = await within(dialog).findByRole("article", {
+      name: "SYNTHETIC which share is biggest?",
+    });
+    sourcesFixture.getBank(SID)!.questions[0].version = 7; // another reviewer changed it
+    fireEvent.click(within(card).getByRole("button", { name: "Accept" }));
+    expect(
+      await within(dialog).findByText(/changed since you opened it/),
+    ).toBeInTheDocument();
+    expect(sourcesFixture.getBank(SID)?.questions[0].state).toBe("draft");
+  });
 });
 
 describe("The popup's layout", () => {
-  it("opens on the AI's suggestions, before the printed questions", async () => {
+  it("opens on GenEd's prepared questions, before the printed questions", async () => {
     const dialog = await openAuthoring();
     const tabs = within(dialog).getAllByRole("tab").map((t) => t.textContent);
-    expect(tabs).toEqual(["Suggested by AI", "Your questions", "Printed questions0/2"]);
-    expect(within(dialog).getByRole("tab", { name: /Suggested by AI/ })).toHaveAttribute("aria-selected", "true");
-    expect(within(dialog).getByRole("button", { name: "Suggest questions" })).toBeInTheDocument();
+    expect(tabs).toEqual(["Prepared by GenEd", "Your questions", "Printed questions0/2"]);
+    expect(within(dialog).getByRole("tab", { name: /Prepared by GenEd/ })).toHaveAttribute("aria-selected", "true");
+    expect(await within(dialog).findByText(/hasn.t prepared questions for this chapter yet/)).toBeInTheDocument();
     expect(within(dialog).queryByRole("article", { name: "SYNTHETIC picture question?" })).not.toBeInTheDocument();
-  });
-
-  it("skips a draft without accepting it", async () => {
-    sourcesFixture.setAuthoring(SID, {
-      ...AUTHORING,
-      suggestions: {
-        state: "ready",
-        requested_at: "2026-10-29T00:00:00Z",
-        detail: null,
-        drafts: [
-          { id: "draft-1", section_key: "2.1", concept_key: "2.1:beta", prompt: "SYNTHETIC skipped?", answer_kind: "numeric", expected_numeric: "1", origin: "ai_assisted" },
-        ],
-      },
-    });
-    const dialog = await openAuthoring();
-    const draft = within(dialog).getByRole("article", { name: "SYNTHETIC skipped?" });
-    fireEvent.click(within(draft).getByRole("button", { name: "Skip" }));
-    expect(within(dialog).queryByRole("article", { name: "SYNTHETIC skipped?" })).not.toBeInTheDocument();
-    expect(within(dialog).getByText("No suggestions left to review")).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "Save and run" })).toBeDisabled();
   });
 
   it("saves and runs in one step", async () => {

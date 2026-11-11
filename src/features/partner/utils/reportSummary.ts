@@ -70,7 +70,7 @@ const EXPLAIN: Record<string, Explainer> = {
     fixedBy: "admin",
   }),
   single_component_share: () => ({
-    text: "GenEd found too few questions it can check, so students could not practise this chapter. Add questions: give the answers of printed ones, write your own, or let AI suggest some.",
+    text: "GenEd found too few questions it can check, so students could not practise this chapter. Add questions: review the ones GenEd prepared, give the answers of printed ones, or write your own.",
     fixedBy: "you",
   }),
   unassessed_component: (n) => ({

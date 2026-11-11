@@ -2,6 +2,9 @@ import { authFetch } from "@/utils/authFetch";
 import type {
   AuthoredQuestions,
   AuthoringResponse,
+  BankPackage,
+  BankQuestionContent,
+  RejectionReason,
   ChapterCorrection,
   ExcludedPagesDecision,
   LearningOutcome,
@@ -182,11 +185,78 @@ export const sourcesService = {
     return response.json();
   },
 
-  /** Ask for AI-drafted questions; poll `authoring` until `suggestions.state` is `ready` or `failed`. */
-  suggestQuestions: async (id: string): Promise<AuthoringResponse> => {
-    const response = await authFetch(`${sourcePath(id)}/authoring/suggestions`, { method: "POST" });
-    return response.json();
-  },
+  /** The chapter's AI-prepared assessment package (backend ADR 0047). */
+  bank: async (id: string): Promise<BankPackage> =>
+    (await authFetch(`${sourcePath(id)}/bank`)).json(),
+
+  acceptQuestion: async (
+    id: string,
+    questionId: string,
+    version: number,
+  ): Promise<BankPackage> =>
+    (
+      await authFetch(`${sourcePath(id)}/bank/questions/${questionId}/accept`, {
+        method: "POST",
+        body: JSON.stringify({ version }),
+      })
+    ).json(),
+
+  rejectQuestion: async (
+    id: string,
+    questionId: string,
+    version: number,
+    reason: RejectionReason,
+    note?: string,
+  ): Promise<BankPackage> =>
+    (
+      await authFetch(`${sourcePath(id)}/bank/questions/${questionId}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ version, reason, note: note || null }),
+      })
+    ).json(),
+
+  editQuestion: async (
+    id: string,
+    questionId: string,
+    version: number,
+    question: BankQuestionContent,
+  ): Promise<BankPackage> =>
+    (
+      await authFetch(`${sourcePath(id)}/bank/questions/${questionId}`, {
+        method: "PUT",
+        body: JSON.stringify({ version, question }),
+      })
+    ).json(),
+
+  acceptQuestions: async (
+    id: string,
+    items: { question_id: string; version: number }[],
+  ): Promise<BankPackage> =>
+    (
+      await authFetch(`${sourcePath(id)}/bank/accept`, {
+        method: "POST",
+        body: JSON.stringify({ items }),
+      })
+    ).json(),
+
+  /** Ask for more questions for one part of the chapter, with optional short hints (a context or style). */
+  refillPart: async (
+    id: string,
+    sectionKey: string,
+    hints: string[] = [],
+  ): Promise<BankPackage> =>
+    (
+      await authFetch(`${sourcePath(id)}/bank/refill`, {
+        method: "POST",
+        body: JSON.stringify({ section_key: sectionKey, hints }),
+      })
+    ).json(),
+
+  /** Approve the accepted questions: the chapter runs again with them, and its release is reviewed as before. */
+  approveBank: async (id: string): Promise<BankPackage> =>
+    (
+      await authFetch(`${sourcePath(id)}/bank/approve`, { method: "POST" })
+    ).json(),
 
   /** The uploaded PDF, as a Blob for an object URL (the route needs auth, so no plain link). */
   pdfBlob: async (id: string): Promise<Blob> => {
