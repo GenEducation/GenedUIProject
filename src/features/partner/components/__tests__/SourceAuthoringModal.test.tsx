@@ -69,14 +69,18 @@ function question(
 const BANK: BankPackage = {
   findings: [{ concept_key: "2.1:beta", issue: "SYNTHETIC this concept is not in the section", evidence: "SYNTHETIC", resolution: "quarantined" }],
   nodes: [{
-    section_key: "2.1", title: "SYNTHETIC section 2.1", quarantined: ["2.1:beta"], draft_ready: true, approved_ready: false, publishable: false,
-    concepts: [{ concept_key: "2.1:alpha", title: "SYNTHETIC alpha", understanding: "SYNTHETIC", misconceptions: [], unsupported: [],
+    section_key: "2.1", title: "SYNTHETIC section 2.1", quarantined: ["2.1:beta"], status: "incomplete", draft_ready: false, approved_ready: false, publishable: false,
+    concepts: [{ concept_key: "2.1:alpha", title: "SYNTHETIC alpha", status: "planned", why: null, understanding: "SYNTHETIC", misconceptions: [],
                  obligations: [{ key: "order", statement: "SYNTHETIC order unit fractions", production: false, draft_families: 2,
-                                 approved_families: 0, draft_covered: true, approved_covered: false }] }],
+                                 approved_families: 0, draft_covered: true, approved_covered: false }],
+                 open_slots: [{ slot: "2.1:alpha/compare", category: "retries_exhausted", detail: "SYNTHETIC 3 attempts were repaired or dropped.", last_reasons: ["SYNTHETIC ambiguous"] }] },
+               { concept_key: "2.1:beta", title: "SYNTHETIC beta", status: "held", why: "SYNTHETIC this concept is not in the section", understanding: null,
+                 misconceptions: [], obligations: [], open_slots: [] }],
   }],
   questions: [question("q-checked", "SYNTHETIC which share is biggest?", "solver_agreed"), question("q-doubted", "SYNTHETIC which is smallest?", "needs_partner_check")],
   runs: [{ run_id: "r1", scope: "chapter", section_key: null, state: "ready", spent_usd: 0.1, detail: null, nodes: [], created_at: "2026-11-11T00:00:00Z" }],
-  summary: { nodes: 1, questions: 2, accepted: 0, needs_attention: 1, draft_ready_nodes: 1, approved_ready_nodes: 0, publishable_nodes: 0, open_issues: 1, authoring: "ready" },
+  summary: { nodes: 1, questions: 2, accepted: 0, needs_attention: 1, draft_ready_nodes: 0, capability_gap_nodes: 0, incomplete_nodes: 1,
+             concepts: { planned: 1, held: 1, not_planned: 0, capability_gap: 0 }, approved_ready_nodes: 0, publishable_nodes: 0, open_issues: 1, authoring: "ready" },
 }; // prettier-ignore
 
 beforeEach(() => {
@@ -139,10 +143,8 @@ describe("Completing a chapter's questions", () => {
     sourcesFixture.setBank(SID, BANK);
     const dialog = await openAuthoring();
     expect(
-      await within(dialog).findByText(
-        "SYNTHETIC this concept is not in the section",
-      ),
-    ).toBeInTheDocument();
+      (await within(dialog).findAllByText(/SYNTHETIC this concept is not in the section/)).length,
+    ).toBeGreaterThan(0);
     const checked = within(dialog).getByRole("article", {
       name: "SYNTHETIC which share is biggest?",
     });
@@ -187,6 +189,17 @@ describe("Completing a chapter's questions", () => {
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
+  });
+
+  it("lists every step with its real status, a held concept and why a slot is still open", async () => {
+    sourcesFixture.setBank(SID, BANK);
+    const dialog = await openAuthoring();
+    const step = await within(dialog).findByRole("region", { name: "SYNTHETIC section 2.1" });
+    expect(within(step).getByText(/Incomplete/)).toBeInTheDocument();
+    expect(within(step).getByText(/On hold\./)).toBeInTheDocument();
+    expect(within(step).getByText(/Why 1 question slot is still open/)).toBeInTheDocument();
+    expect(within(step).getByText(/didn't pass its checks/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/1 are incomplete/)).toBeInTheDocument();
   });
 
   it("refuses a decision made on a question that changed meanwhile", async () => {

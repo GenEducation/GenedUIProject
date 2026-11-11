@@ -29,21 +29,36 @@ export const STARTABLE_STATES: ReadonlySet<SourceState> = new Set([
  * States a source may be deleted in: every state but `queued` (cancel it first) and `running` (it cannot be stopped).
  * A source whose chapter was published is never deleted, whatever its state (see `deleteBlockedReason`).
  */
-export const DELETABLE_STATES: ReadonlySet<SourceState> = new Set(["registered", "review_needed", "invalid", "ready", "failed"]);
+export const DELETABLE_STATES: ReadonlySet<SourceState> = new Set([
+  "registered",
+  "review_needed",
+  "invalid",
+  "ready",
+  "failed",
+]);
 
 /**
  * Why the server would refuse to delete this source (`DELETE /v1/sources/{id}`), or null when it would not. The server
  * also refuses a source an older, published run came from, which the list cannot see; its 409 says so.
  */
-export function deleteBlockedReason(source: { state: SourceState; release?: SourceReleaseRef | null }): string | null {
-  if (source.release?.state === "published") return "Published chapters can't be deleted: students are learning from them.";
-  if (source.state === "queued") return "Stop the queued run first, then delete the chapter.";
-  if (source.state === "running") return "A run in progress can't be stopped. Delete the chapter once it finishes.";
+export function deleteBlockedReason(source: {
+  state: SourceState;
+  release?: SourceReleaseRef | null;
+}): string | null {
+  if (source.release?.state === "published")
+    return "Published chapters can't be deleted: students are learning from them.";
+  if (source.state === "queued")
+    return "Stop the queued run first, then delete the chapter.";
+  if (source.state === "running")
+    return "A run in progress can't be stopped. Delete the chapter once it finishes.";
   return null;
 }
 
 /** States the worker is still on; the registry keeps polling while any row is in one. */
-export const ACTIVE_STATES: ReadonlySet<SourceState> = new Set(["queued", "running"]);
+export const ACTIVE_STATES: ReadonlySet<SourceState> = new Set([
+  "queued",
+  "running",
+]);
 
 /**
  * The registry's status filter, in the order a run moves through them. Worded as the rows say it (`NEXT_STEP_COPY`):
@@ -83,7 +98,10 @@ export type IngestionStage =
   | "submit";
 
 /** Each stage as a partner reads it, and what its counted units are called (if it has any). */
-export const INGESTION_STAGES: Record<IngestionStage, { label: string; unit?: string }> = {
+export const INGESTION_STAGES: Record<
+  IngestionStage,
+  { label: string; unit?: string }
+> = {
   render: { label: "Preparing the pages" },
   read_pages: { label: "Reading pages", unit: "pages" },
   components: { label: "Finding the key concepts" },
@@ -124,7 +142,11 @@ export interface SourceProgress {
   /** The chosen learning outcomes no lesson step of the run reaches: the chapter does not teach them. */
   uncovered_outcomes?: string[];
   /** The partner's last change of outcomes, after this run: what they removed and what they added. */
-  outcome_correction?: { corrected_at: string; removed: string[]; added?: string[] } | null;
+  outcome_correction?: {
+    corrected_at: string;
+    removed: string[];
+    added?: string[];
+  } | null;
 }
 
 export interface SourceRefusal {
@@ -386,7 +408,10 @@ export type ReleaseReason =
   | "bad_order"
   | "identity_change";
 
-export const REJECT_REASONS: { code: Exclude<ReleaseReason, "accepted_as_is">; label: string }[] = [
+export const REJECT_REASONS: {
+  code: Exclude<ReleaseReason, "accepted_as_is">;
+  label: string;
+}[] = [
   { code: "incorrect_source", label: "Doesn't match the textbook" },
   { code: "wrong_lo", label: "Wrong learning outcome" },
   { code: "bad_key", label: "Wrong answer" },
@@ -491,7 +516,15 @@ export interface PrintedAnswer {
   concept_key?: string;
 }
 
-export type AddedAnswerKind = "mcq" | "multi_select" | "sequence" | "matching" | "grouping" | "blanks" | "numeric" | "string_set";
+export type AddedAnswerKind =
+  | "mcq"
+  | "multi_select"
+  | "sequence"
+  | "matching"
+  | "grouping"
+  | "blanks"
+  | "numeric"
+  | "string_set";
 
 /**
  * A question for one proposed concept, in any format (backend ADR 0045): written by the partner (`partner`) or a model draft the
@@ -519,7 +552,12 @@ export interface AddedQuestion {
   group_of?: number[];
   blank_answers?: string[][];
   word_bank?: string[];
-  entry?: { mode: "number_line" | "slider"; min: string; max: string; step: string };
+  entry?: {
+    mode: "number_line" | "slider";
+    min: string;
+    max: string;
+    step: string;
+  };
   replaces?: string;
   explanation?: string;
   origin: "partner" | "ai_assisted";
@@ -613,13 +651,28 @@ export interface BankObligation {
   approved_covered: boolean;
 }
 
+/** Why a family slot is still open, from the latest authoring run (backend `node.gap_reasons`). */
+export interface BankOpenSlot {
+  slot: string;
+  category:
+    | "curriculum_issue"
+    | "unresolved_correctness"
+    | "retries_exhausted"
+    | "generation_defect";
+  detail: string;
+  last_reasons?: string[];
+}
+
 export interface BankConcept {
   concept_key: string;
   title: string;
-  understanding: string;
+  /** planned; held by the curriculum audit; left out of the plan; or writing/speaking only (backend `bank_completeness`). */
+  status: "planned" | "held" | "not_planned" | "capability_gap";
+  why: string | null;
+  understanding: string | null;
   misconceptions: string[];
-  unsupported: string[];
   obligations: BankObligation[];
+  open_slots: BankOpenSlot[];
 }
 
 export interface BankNode {
@@ -627,6 +680,8 @@ export interface BankNode {
   title: string;
   concepts: BankConcept[];
   quarantined: string[];
+  /** Every ingested step is listed; only `ready_for_review` has every checkable objective covered. */
+  status: "ready_for_review" | "capability_gap" | "incomplete";
   draft_ready: boolean;
   approved_ready: boolean;
   publishable: boolean;
@@ -669,6 +724,9 @@ export interface BankPackage {
     accepted: number;
     needs_attention: number;
     draft_ready_nodes: number;
+    capability_gap_nodes: number;
+    incomplete_nodes: number;
+    concepts: Record<BankConcept["status"], number>;
     approved_ready_nodes: number;
     publishable_nodes: number;
     open_issues: number;

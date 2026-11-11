@@ -21,6 +21,7 @@ import { LearnerPreview } from "./LearnerPreview";
 import type {
   AddedQuestion,
   BankNode,
+  BankOpenSlot,
   BankPackage,
   BankQuestion,
   BankQuestionContent,
@@ -265,18 +266,28 @@ function NodeSection({
 }) {
   const [open, setOpen] = useState(!node.approved_ready);
   const [hint, setHint] = useState("");
-  const obligations = node.concepts.flatMap((c) =>
-    c.obligations.map((o) => ({ ...o, concept: c.title })),
+  const obligations = node.concepts
+    .filter((c) => c.status === "planned" || c.status === "capability_gap")
+    .flatMap((c) => c.obligations.map((o) => ({ ...o, concept: c.title })));
+  const blocked = node.concepts.filter(
+    (c) => c.status === "held" || c.status === "not_planned",
+  );
+  const openSlots = node.concepts.flatMap((c) =>
+    c.open_slots.map((s) => ({ ...s, concept: c.title })),
   );
   const live = questions.filter((q) => q.state !== "rejected");
   const ready = live.filter((q) => q.state === "draft" && !doubted(q));
   const status = node.publishable
     ? "Ready"
     : node.approved_ready
-      ? "Accepted"
-      : node.draft_ready
+      ? node.status === "capability_gap"
+        ? "Accepted · a writing or speaking objective can't be checked yet"
+        : "Accepted"
+      : node.status === "ready_for_review"
         ? "Ready for your review"
-        : "Needs more questions";
+        : node.status === "capability_gap"
+          ? "Writing or speaking objective can't be checked yet"
+          : "Incomplete";
   return (
     <section
       aria-label={node.title}
@@ -348,13 +359,46 @@ function NodeSection({
                   </span>
                 </li>
               ))}
-              {node.quarantined.length > 0 && (
-                <li className="text-xs text-amber-800">
-                  Some concepts are on hold until their mapping is fixed (see
-                  the issues above).
+              {blocked.map((c) => (
+                <li
+                  key={c.concept_key}
+                  className="flex items-start gap-2 text-xs text-amber-800"
+                >
+                  <AlertTriangle
+                    size={13}
+                    className="mt-0.5 shrink-0"
+                    aria-hidden
+                  />
+                  <span>
+                    <span className="font-bold">{c.title}:</span>{" "}
+                    {c.status === "held" ? "On hold. " : "Not planned yet. "}
+                    {c.why}
+                  </span>
                 </li>
-              )}
+              ))}
             </ul>
+            {openSlots.length > 0 && (
+              <details className="mt-2 text-xs text-[#122D30]/70">
+                <summary className="cursor-pointer font-bold">
+                  Why {openSlots.length} question{" "}
+                  {openSlots.length === 1 ? "slot is" : "slots are"} still open
+                </summary>
+                <ul className="mt-1 flex flex-col gap-1">
+                  {openSlots.map((s) => (
+                    <li key={s.slot}>
+                      <span className="font-bold">{s.concept}:</span>{" "}
+                      {SLOT_REASON[s.category]} {s.detail}
+                      {s.last_reasons && s.last_reasons.length > 0 && (
+                        <span className="text-[#122D30]/50">
+                          {" "}
+                          ({s.last_reasons[0]})
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </div>
           {live.map((q) =>
             editing === q.question_id ? (
@@ -448,6 +492,15 @@ function NodeSection({
  * ``renderEditor`` shows the partner's question form for a question being edited (the authoring popup's own form); ``onSave`` there
  * should call the returned ``saveEdit``.
  */
+const SLOT_REASON: Record<BankOpenSlot["category"], string> = {
+  curriculum_issue: "The chapter reading needs fixing first.",
+  unresolved_correctness:
+    "A question exists but its answer isn't proved unique; check it yourself.",
+  retries_exhausted: "GenEd's attempts didn't pass its checks.",
+  generation_defect:
+    "GenEd didn't produce a usable question; asking for another may fix it.",
+};
+
 export function AssessmentBankPanel({
   sourceId,
   onApproved,
@@ -541,6 +594,13 @@ export function AssessmentBankPanel({
           and checked these questions. Review them: accept, edit or reject each
           one, then approve. Nothing counts until you accept it.
         </p>
+        {(s.incomplete_nodes > 0 || s.capability_gap_nodes > 0) && (
+          <p className="text-xs text-[#122D30]/70">
+            Of {s.nodes} steps, {s.incomplete_nodes} are incomplete and{" "}
+            {s.capability_gap_nodes} have a writing or speaking objective no
+            question type can check yet. Each step below says why.
+          </p>
+        )}
         <dl className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
           {[
             ["Questions", s.questions],
