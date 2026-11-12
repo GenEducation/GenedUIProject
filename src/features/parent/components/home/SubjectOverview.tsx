@@ -3,9 +3,10 @@
 import React from "react";
 import Link from "next/link";
 import { formatDuration } from "../../utils/homeMetrics";
-import { BAND_TONES, masteryBand, subjectIcon, type MasteryBand } from "../../utils/subjectVisuals";
+import { BAND_TONES, masteryBand, type MasteryBand } from "../../utils/subjectVisuals";
+import { TintIcon, subjectIconName } from "@/components/report-card/screen/icons";
 import type { LoadState, SubjectSummary } from "../../hooks/useParentHomeData";
-import { GLASS, ICON, LIFT, MaskIcon } from "./theme";
+import { GLASS, ICON, LIFT } from "./theme";
 import { GlassSkeleton } from "../loader/GlassSkeleton";
 
 export function subjectStatus(item: SubjectSummary): MasteryBand {
@@ -95,7 +96,7 @@ export function SubjectCard({ studentId, item }: { studentId: string; item: Subj
     >
       <div className="flex items-center gap-2.5">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors" style={{ background: tone.tint }}>
-          <MaskIcon src={subjectIcon(item.subject)} color={tone.accent} size={20} />
+          <TintIcon name={subjectIconName(item.subject)} color={tone.accent} size={19} />
         </span>
         {/* Chip beside the name when there's room, under it otherwise. */}
         <div className="min-w-0 flex-1 2xl:flex 2xl:items-center 2xl:justify-between 2xl:gap-2">
