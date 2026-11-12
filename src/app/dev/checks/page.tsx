@@ -26,6 +26,14 @@ const FIXTURES: Record<string, { check: CheckItem; right: (r: AnswerResponse) =>
     check: { ...base, prompt: "SYNTHETIC say what plants need to grow", response_type: "rubric", options: [], task: { mode: "spoken", min_chars: 0, max_chars: 400 } },
     right: () => false, // a spoken answer goes over the oral socket, scripted by the browser test
   },
+  single_choice: {
+    check: { ...base, prompt: "SYNTHETIC which number is even?", response_type: "mcq", options: [opt("o1", "3"), opt("o2", "4"), opt("o3", "7"), opt("o4", "9")] },
+    right: (r) => r.kind === "choice" && r.option_ids.join() === "o2",
+  },
+  typed: {
+    check: { ...base, prompt: "SYNTHETIC what is 6 times 7?", response_type: "numeric", options: [] },
+    right: (r) => r.kind === "numeric" && r.value === "42",
+  },
   multiple_select: {
     check: { ...base, prompt: "SYNTHETIC choose every even number", response_type: "mcq", selection: "multiple", options: [opt("o1", "2"), opt("o2", "3"), opt("o3", "4"), opt("o4", "5")] },
     right: (r) => r.kind === "choice" && r.option_ids.length === 2 && r.option_ids.includes("o1") && r.option_ids.includes("o3"),
@@ -140,8 +148,11 @@ function Harness() {
   if (process.env.NODE_ENV === "production") return null;
   if (!FIXTURES[format]) return <p>Unknown format: {format}</p>;
   return (
-    <main className="mx-auto max-w-xl p-4" data-testid="harness">
-      {ready ? <StepCard subject="Mathematics" /> : null}
+    // The lesson screen's theme, as on /student/lesson: the cards read their colours and handwriting from it.
+    <main className="lesson-theme min-h-screen" data-testid="harness">
+      <div className="mx-auto max-w-xl p-4">
+        {ready ? <StepCard subject="Mathematics" /> : null}
+      </div>
     </main>
   );
 }

@@ -5,6 +5,9 @@ import type { CheckItem, WrittenResult } from "../types";
 import { useLessonStore } from "../useLessonStore";
 import { useUiText, type UiKey } from "../i18n";
 import { useCheckShown } from "../delivery/useCheckShown";
+import { progressIdFor, QuestionMessage, QuestionShell } from "../components/QuestionShell";
+import { SketchButton } from "../components/SketchButton";
+import { writtenNote } from "./progress";
 
 /**
  * A written answer to a rubric check (W2 P6). A real labelled textarea (screen readers hear the question as its group name), a live character
@@ -63,11 +66,40 @@ export function WrittenAnswer({ check, onResult }: { check: CheckItem; onResult:
   const feedback = result?.status === "committed" ? result.feedback : null;
   const retryCode = feedback?.kind === "retry" ? (feedback.code as UiKey) : null;
 
+  const need = writtenNote(length, min);
+
   return (
-    <form ref={ref} onSubmit={send} className="lesson-rise lesson-sketch shrink-0 p-5 text-[var(--ls-ink)]" aria-labelledby={`check-${check.id}`}>
-      <h2 id={`check-${check.id}`} className="lesson-hand text-[21px] font-bold leading-snug">
-        {check.prompt}
-      </h2>
+    <QuestionShell
+      check={check}
+      formRef={ref}
+      onSubmit={send}
+      progress={need}
+      actions={
+        <SketchButton type="submit" disabled={!ready} loading={busy} aria-describedby={need ? progressIdFor(check.id) : undefined}>
+          {error ? t("writtenRetryNow") : t("writtenSend")}
+        </SketchButton>
+      }
+      messages={
+        (busy || error || retryCode || feedback?.kind === "criteria") && (
+          <>
+            {busy && <p role="status" aria-live="polite" className="lesson-hand text-[17px]">{t("writtenChecking")}</p>}
+            {error && <QuestionMessage tone="danger" alert>{t(error)}</QuestionMessage>}
+            {retryCode && (
+              <QuestionMessage tone="info">
+                {t("writtenNotRated")} {t(retryCode)}
+              </QuestionMessage>
+            )}
+            {feedback?.kind === "criteria" &&
+              feedback.criteria.map((c) => (
+                <div key={c.criterion} role="status">
+                  <p className="lesson-hand text-[17px]">{t("writtenShown", { text: c.shown })}</p>
+                  {c.next && <p className="lesson-hand text-[17px] text-[var(--ls-ink-mid)]">{t("writtenNext", { text: c.next })}</p>}
+                </div>
+              ))}
+          </>
+        )
+      }
+    >
       <label htmlFor={`written-${check.id}`} className="lesson-hand mt-3 block text-[17px] text-[var(--ls-ink-mid)]">
         {t("writtenAnswer")}
       </label>
@@ -80,10 +112,12 @@ export function WrittenAnswer({ check, onResult }: { check: CheckItem; onResult:
         rows={5}
         maxLength={max}
         aria-describedby={`written-help-${check.id} written-count-${check.id}`}
-        className="mt-1 w-full rounded-md border border-[var(--ls-ink-faint)] bg-white p-2 text-[18px]"
+        className="mt-1 w-full rounded-md border border-[var(--ls-ink-faint)] bg-white p-2 text-[18px] outline-none focus:border-[var(--ls-primary)] focus:ring-2 focus:ring-[var(--ls-ring)]"
       />
-      <p id={`written-help-${check.id}`} className="lesson-hand text-[15px] text-[var(--ls-ink-mid)]">{t("writtenHelp")}</p>
-      <p id={`written-count-${check.id}`} className="text-[13px] text-[var(--ls-ink-mid)]">{t("writtenCount", { n: length, m: max })}</p>
+      <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
+        <p id={`written-help-${check.id}`} className="lesson-hand text-[15px] text-[var(--ls-ink-mid)]">{t("writtenHelp")}</p>
+        <p id={`written-count-${check.id}`} className="text-[13px] tabular-nums text-[var(--ls-ink-mid)]">{t("writtenCount", { n: length, m: max })}</p>
+      </div>
 
       {probe && (
         <div className="mt-3">
@@ -97,36 +131,10 @@ export function WrittenAnswer({ check, onResult }: { check: CheckItem; onResult:
             rows={2}
             maxLength={1000}
             aria-describedby={`probe-${check.id}`}
-            className="mt-1 w-full rounded-md border border-[var(--ls-ink-faint)] bg-white p-2 text-[18px]"
+            className="mt-1 w-full rounded-md border border-[var(--ls-ink-faint)] bg-white p-2 text-[18px] outline-none focus:border-[var(--ls-primary)] focus:ring-2 focus:ring-[var(--ls-ring)]"
           />
         </div>
       )}
-
-      {busy && <p role="status" aria-live="polite" className="lesson-hand mt-3 text-[17px]">{t("writtenChecking")}</p>}
-      {error && (
-        <p role="alert" className="mt-3 text-[15px] text-[#9A2E1E]">
-          {t(error)}
-        </p>
-      )}
-      {retryCode && (
-        <p role="status" className="lesson-hand mt-3 text-[17px] text-[var(--ls-ink)]">
-          {t("writtenNotRated")} {t(retryCode)}
-        </p>
-      )}
-      {feedback?.kind === "criteria" &&
-        feedback.criteria.map((c) => (
-          <div key={c.criterion} role="status" className="mt-3">
-            <p className="lesson-hand text-[17px]">{t("writtenShown", { text: c.shown })}</p>
-            {c.next && <p className="lesson-hand text-[17px] text-[var(--ls-ink-mid)]">{t("writtenNext", { text: c.next })}</p>}
-          </div>
-        ))}
-
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        {/* eslint-disable-next-line no-restricted-syntax -- the board's send button for a written answer. */}
-        <button type="submit" disabled={!ready} aria-busy={busy || undefined} className="lesson-sketch-sm lesson-hand px-4 py-1.5 text-[18px] font-bold disabled:opacity-45">
-          {error ? t("writtenRetryNow") : t("writtenSend")}
-        </button>
-      </div>
-    </form>
+    </QuestionShell>
   );
 }

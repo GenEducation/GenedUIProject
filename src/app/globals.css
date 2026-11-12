@@ -549,6 +549,12 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
   --ls-ring: rgb(7 94 99 / 0.3);
   --ls-shadow: 0 1px 2px rgb(18 45 48 / 0.04), 0 10px 30px -18px rgb(18 45 48 / 0.18);
   --ls-shadow-pop: 0 10px 24px -10px rgb(7 94 99 / 0.55);
+  /* Question feedback: a sent answer that failed (danger), one to change and check again (warn, never "wrong" red). */
+  --ls-danger: #9A2E1E;
+  --ls-danger-soft: #FBEAE6;
+  --ls-warn: #8A4514;
+  --ls-warn-soft: #FBEFE6;
+  --ls-paper: #fffdf6;
   --ls-radius: 26px;
   --font-lesson-display: var(--font-fredoka), var(--font-mukta), ui-rounded, system-ui, sans-serif;
   --font-lesson-body: var(--font-nunito), var(--font-mukta), ui-rounded, system-ui, sans-serif;
@@ -782,6 +788,227 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
   border-width: 1.5px;
   border-radius: 12px 4px 13px 5px / 5px 13px 4px 12px;
 }
+
+/* An answer option, chip or tile on a question card (ChoiceTile). Its state is drawn by a mark as well as a fill, never by
+   colour alone: chosen = citron fill + ocean mark; to change = warm fill + warm mark. Tap target 44px at least. */
+.lesson-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.625rem 1rem;
+  text-align: left;
+  font-size: 18px;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+.lesson-choice:hover {
+  background-color: var(--ls-primary-soft);
+}
+.lesson-choice[data-selected] {
+  background-color: var(--ls-accent);
+  font-weight: 700;
+  box-shadow: 2px 3px 0 rgb(18 45 48 / 0.14);
+}
+.lesson-choice[data-tone="try"] {
+  background-color: var(--ls-warn-soft);
+  border-color: var(--ls-warn);
+}
+.lesson-choice:disabled,
+.lesson-choice[aria-disabled="true"],
+.lesson-choice:has(input:disabled) {
+  cursor: default;
+  opacity: 0.55;
+}
+.lesson-choice:disabled:hover,
+.lesson-choice:has(input:disabled):hover {
+  background-color: transparent;
+}
+.lesson-choice-mark {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border: 2px solid var(--ls-ink);
+  background-color: var(--ls-paper);
+  color: #fff;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.lesson-choice-mark[data-kind="radio"] {
+  border-radius: 9999px;
+}
+.lesson-choice-mark[data-kind="check"] {
+  border-radius: 6px 3px 7px 3px / 3px 7px 3px 6px;
+}
+/* A lettered mark (A, B, C…): the letter is ink until chosen, then white on ocean. */
+.lesson-choice-mark[data-label] {
+  width: 1.875rem;
+  height: 1.875rem;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ls-ink);
+}
+.lesson-choice[data-selected] > .lesson-choice-mark[data-label],
+.lesson-choice[data-tone="try"] > .lesson-choice-mark[data-label] {
+  color: #fff;
+}
+/* A chip (a word, a tile, an entry to sort): compact, rounded, the same chosen state as a choice. */
+.lesson-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.75rem;
+  padding: 0.375rem 0.875rem;
+  font-size: 18px;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+.lesson-chip:hover {
+  background-color: var(--ls-primary-soft);
+}
+.lesson-chip[aria-pressed="true"] {
+  background-color: var(--ls-accent);
+  font-weight: 700;
+  box-shadow: 0 0 0 3px var(--ls-ring);
+}
+.lesson-chip:disabled {
+  cursor: default;
+}
+/* A bank entry already used: an empty dashed slot where it was, so the bank keeps its shape. */
+.lesson-chip[data-used] {
+  border-style: dashed;
+  border-color: var(--ls-ink-faint);
+  background-color: transparent;
+  color: var(--ls-ink-faint);
+  box-shadow: none;
+}
+.lesson-chip:disabled:not([data-used]) {
+  opacity: 0.6;
+}
+/* The number line and slider (LineInput): an ink line and a 28px ocean thumb. The thumb is hidden until the learner places a value,
+   so an untouched line never looks answered. Its centre travels 14px in from each end, which the tick row matches. */
+.lesson-range {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 2.75rem;
+  background: transparent;
+  cursor: pointer;
+}
+.lesson-range:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.lesson-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--ls-ink);
+}
+.lesson-range::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--ls-ink);
+}
+.lesson-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  margin-top: -11px;
+  border-radius: 9999px;
+  border: 4px solid #fff;
+  background: var(--ls-primary);
+  box-shadow: 0 0 0 2px var(--ls-primary), 0 2px 6px rgb(18 45 48 / 0.3);
+}
+.lesson-range::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  border: 4px solid #fff;
+  background: var(--ls-primary);
+  box-shadow: 0 0 0 2px var(--ls-primary), 0 2px 6px rgb(18 45 48 / 0.3);
+}
+.lesson-range[data-unplaced]::-webkit-slider-thumb {
+  opacity: 0;
+}
+.lesson-range[data-unplaced]::-moz-range-thumb {
+  opacity: 0;
+}
+.lesson-range:focus-visible {
+  outline: none;
+}
+.lesson-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px var(--ls-primary), 0 0 0 7px var(--ls-ring);
+}
+.lesson-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 2px var(--ls-primary), 0 0 0 7px var(--ls-ring);
+}
+/* Keyboard focus on a line with no point yet: the line itself is ringed, since there is no thumb to ring. */
+.lesson-range[data-unplaced]:focus-visible::-webkit-slider-runnable-track {
+  box-shadow: 0 0 0 4px var(--ls-ring);
+}
+.lesson-range[data-unplaced]:focus-visible::-moz-range-track {
+  box-shadow: 0 0 0 4px var(--ls-ring);
+}
+/* A numbered badge tying two halves of a pair together (matching). */
+.lesson-pair-badge {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  background-color: var(--ls-primary);
+  color: #fff;
+}
+.lesson-pair-badge[data-empty] {
+  background-color: transparent;
+  border: 2px dashed var(--ls-ink-faint);
+  color: var(--ls-ink-faint);
+}
+.lesson-choice[data-selected] > .lesson-choice-mark {
+  background-color: var(--ls-primary);
+  border-color: var(--ls-primary);
+}
+.lesson-choice[data-tone="try"] > .lesson-choice-mark {
+  background-color: var(--ls-warn);
+  border-color: var(--ls-warn);
+}
+}
+
+/* A choice pops a little as it is chosen; an answer to change nudges side to side once. Both are off for reduced motion. */
+@keyframes lesson-pick {
+  0% { transform: scale(0.97); }
+  60% { transform: scale(1.015); }
+  100% { transform: none; }
+}
+@keyframes lesson-nudge {
+  0%, 100% { transform: none; }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+.lesson-choice[data-selected] {
+  animation: lesson-pick 220ms ease-out;
+}
+.lesson-nudge {
+  animation: lesson-nudge 380ms ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lesson-choice,
+  .lesson-choice-mark { transition: none; }
+  .lesson-choice[data-selected],
+  .lesson-nudge { animation: none; }
 }
 
 /* Voice lessons run in eight languages. Latin and Devanagari come from the body fonts; the other scripts fall to the

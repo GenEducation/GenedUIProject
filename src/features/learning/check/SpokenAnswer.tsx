@@ -5,6 +5,8 @@ import type { CheckItem } from "../types";
 import { useLessonStore } from "../useLessonStore";
 import { useUiText, type UiKey } from "../i18n";
 import { useCheckShown } from "../delivery/useCheckShown";
+import { QuestionMessage, QuestionShell } from "../components/QuestionShell";
+import { SketchButton } from "../components/SketchButton";
 import { browserOralDeps, canCaptureAudio, INITIAL_ORAL, OralAnswerSession, type OralDeps, type OralState } from "./oralAnswer";
 
 /**
@@ -22,9 +24,14 @@ export function SpokenAnswer({ check, deps = browserOralDeps, language = "en" }:
   const [state, setState] = useState<OralState>(INITIAL_ORAL);
   const session = useRef<OralAnswerSession | null>(null);
   const reported = useRef<string | null>(null);
+  const meter = useRef<HTMLDivElement>(null);
+  const seconds = useRecordingSeconds(state.phase === "recording");
 
   useEffect(() => {
-    const mine = new OralAnswerSession(deps, setState);
+    // The level drives the meter's style directly: a re-render per microphone frame would be wasted work.
+    const mine = new OralAnswerSession(deps, setState, (level) => {
+      meter.current?.style.setProperty("--level", String(level));
+    });
     session.current = mine;
     return () => {
       mine.cancel();
@@ -49,52 +56,93 @@ export function SpokenAnswer({ check, deps = browserOralDeps, language = "en" }:
   const retryCode = feedback?.kind === "retry" ? (feedback.code as UiKey) : null;
   const unavailable = !canCaptureAudio() && deps === browserOralDeps;
 
+  const problemKey: UiKey | null =
+    state.phase === "failed" && state.problem
+      ? (["say_it_again", "make_it_shorter", "busy", "mic_denied", "no_device", "mic_busy", "connection_lost", "service"] as const).includes(state.problem as never)
+        ? (`spoken_${state.problem}` as UiKey)
+        : "spoken_service"
+      : null;
+  const canStart = state.phase === "idle" || state.phase === "failed" || state.phase === "result" || state.phase === "clarify";
+
   return (
-    <form ref={ref} onSubmit={(e) => e.preventDefault()} className="lesson-rise lesson-sketch shrink-0 p-5 text-[var(--ls-ink)]" aria-labelledby={`check-${check.id}`}>
-      <h2 id={`check-${check.id}`} className="lesson-hand text-[21px] font-bold leading-snug">
-        {check.prompt}
-      </h2>
-      <p className="lesson-hand mt-2 text-[16px] text-[var(--ls-ink-mid)]">{t("spokenHelp")}</p>
-      {unavailable && <p role="status" className="mt-3 text-[15px]">{t("spokenNoMic")}</p>}
-      {live && <p role="status" aria-live="polite" className="lesson-hand mt-3 text-[18px]">{t(live)}</p>}
-      {state.phase === "failed" && state.problem && (
-        <p role="alert" className="mt-3 text-[15px] text-[#9A2E1E]">
-          {t((["say_it_again", "make_it_shorter", "busy", "mic_denied", "no_device", "mic_busy", "connection_lost", "service"] as const).includes(state.problem as never) ? (`spoken_${state.problem}` as UiKey) : "spoken_service")}
-        </p>
-      )}
-      {state.phase === "clarify" && state.clarify && (
-        <div role="status" className="mt-3">
-          <p className="lesson-hand text-[18px] font-bold">{state.clarify.probe}</p>
-          <p className="text-[14px] text-[var(--ls-ink-mid)]">{t("spokenHeard", { text: state.clarify.heard })}</p>
-        </div>
-      )}
-      {state.phase === "result" && state.result && (
-        <div role="status" className="mt-3">
-          <p className="text-[14px] text-[var(--ls-ink-mid)]">{t("spokenHeard", { text: state.result.heard })}</p>
-          {retryCode && <p className="lesson-hand text-[17px]">{t("writtenNotRated")} {t(`spoken_${retryCode}` as UiKey)}</p>}
-          {feedback?.kind === "criteria" &&
-            feedback.criteria.map((c) => (
-              <div key={c.criterion}>
-                <p className="lesson-hand text-[17px]">{t("writtenShown", { text: c.shown })}</p>
-                {c.next && <p className="lesson-hand text-[17px] text-[var(--ls-ink-mid)]">{t("writtenNext", { text: c.next })}</p>}
+    <QuestionShell
+      check={check}
+      formRef={ref}
+      onSubmit={(e) => e.preventDefault()}
+      actions={
+        <>
+          {canStart && (
+            <SketchButton type="button" onClick={start} disabled={unavailable || (state.phase === "failed" && !state.retry)}>
+              {state.phase === "failed" && state.retry ? t("writtenRetryNow") : state.phase === "idle" ? t("spokenStart") : t("spokenAgain")}
+            </SketchButton>
+          )}
+          {state.phase === "recording" && (
+            <SketchButton type="button" onClick={() => session.current?.finish()}>
+              {t("spokenDone")}
+            </SketchButton>
+          )}
+        </>
+      }
+      messages={
+        (unavailable || live || problemKey || state.phase === "clarify" || state.phase === "result") && (
+          <>
+            {unavailable && <QuestionMessage tone="info">{t("spokenNoMic")}</QuestionMessage>}
+            {live && <p role="status" aria-live="polite" className="lesson-hand text-[18px]">{t(live)}</p>}
+            {problemKey && <QuestionMessage tone="danger" alert>{t(problemKey)}</QuestionMessage>}
+            {state.phase === "clarify" && state.clarify && (
+              <div role="status">
+                <p className="lesson-hand text-[18px] font-bold">{state.clarify.probe}</p>
+                <p className="text-[14px] text-[var(--ls-ink-mid)]">{t("spokenHeard", { text: state.clarify.heard })}</p>
               </div>
-            ))}
+            )}
+            {state.phase === "result" && state.result && (
+              <div role="status">
+                <p className="text-[14px] text-[var(--ls-ink-mid)]">{t("spokenHeard", { text: state.result.heard })}</p>
+                {retryCode && <p className="lesson-hand text-[17px]">{t("writtenNotRated")} {t(`spoken_${retryCode}` as UiKey)}</p>}
+                {feedback?.kind === "criteria" &&
+                  feedback.criteria.map((c) => (
+                    <div key={c.criterion}>
+                      <p className="lesson-hand text-[17px]">{t("writtenShown", { text: c.shown })}</p>
+                      {c.next && <p className="lesson-hand text-[17px] text-[var(--ls-ink-mid)]">{t("writtenNext", { text: c.next })}</p>}
+                    </div>
+                  ))}
+              </div>
+            )}
+          </>
+        )
+      }
+    >
+      <p className="lesson-hand mt-2 text-[16px] text-[var(--ls-ink-mid)]">{t("spokenHelp")}</p>
+      {state.phase === "recording" && (
+        // What the microphone is hearing, and for how long: the learner can see their voice is being picked up.
+        <div className="mt-3 flex items-center gap-3 rounded-xl bg-[var(--ls-sage)] px-3 py-2">
+          <span aria-hidden className="size-3 shrink-0 animate-pulse rounded-full bg-[#C2410C] motion-reduce:animate-none" />
+          <div ref={meter} aria-hidden className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white" style={{ ["--level" as string]: "0" }}>
+            <div className="h-full origin-left rounded-full bg-[var(--ls-primary)] transition-transform duration-75 motion-reduce:transition-none" style={{ transform: "scaleX(var(--level))" }} />
+          </div>
+          <span className="lesson-hand w-12 shrink-0 text-right text-[16px] tabular-nums" aria-label={t("spokenTime", { n: seconds })}>
+            {formatSeconds(seconds)}
+          </span>
         </div>
       )}
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        {(state.phase === "idle" || state.phase === "failed" || state.phase === "result" || state.phase === "clarify") && (
-          // eslint-disable-next-line no-restricted-syntax -- the board's button to start a spoken answer.
-          <button type="button" onClick={start} disabled={unavailable || (state.phase === "failed" && !state.retry)} className="lesson-sketch-sm lesson-hand px-4 py-1.5 text-[18px] font-bold disabled:opacity-45">
-            {state.phase === "failed" && state.retry ? t("writtenRetryNow") : state.phase === "idle" ? t("spokenStart") : t("spokenAgain")}
-          </button>
-        )}
-        {state.phase === "recording" && (
-          // eslint-disable-next-line no-restricted-syntax -- the board's button to end a spoken answer.
-          <button type="button" onClick={() => session.current?.finish()} className="lesson-sketch-sm lesson-hand px-4 py-1.5 text-[18px] font-bold">
-            {t("spokenDone")}
-          </button>
-        )}
-      </div>
-    </form>
+    </QuestionShell>
   );
+}
+
+/** m:ss */
+const formatSeconds = (total: number) => `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+
+/** Whole seconds since `running` became true; 0 while it is false. */
+function useRecordingSeconds(running: boolean): number {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    if (!running) return;
+    const started = Date.now();
+    const timer = window.setInterval(() => setSeconds(Math.floor((Date.now() - started) / 1000)), 250);
+    return () => {
+      window.clearInterval(timer);
+      setSeconds(0);
+    };
+  }, [running]);
+  return seconds;
 }

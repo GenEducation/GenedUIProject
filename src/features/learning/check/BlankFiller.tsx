@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { CheckItem } from "../types";
 import { useUiText } from "../i18n";
+import { blankPieces } from "./blankText";
 
 /**
  * Fill-in blanks from a word bank. The blanks are numbered buttons and the bank is a row of buttons: choose a bank entry and it goes
@@ -68,37 +69,39 @@ export function BlankFiller({
     }
     setPicked(blank);
   };
+  const pieces = blankPieces(check.prompt, blanks);
+  const blankButton = (blank: string, inline: boolean) => (
+    // eslint-disable-next-line no-restricted-syntax -- a blank: pressing it makes it current, or empties it if filled.
+    <button
+      key={blank}
+      type="button"
+      disabled={disabled}
+      aria-pressed={current === blank}
+      aria-label={`${t("blankN", { n: blank })}: ${pairs[blank] ?? t("blankEmpty")}`}
+      onClick={() => choose(blank)}
+      data-filled={pairs[blank] ? "" : undefined}
+      className={`lesson-chip lesson-hand ${inline ? "mx-1 min-w-20 justify-center border-0 border-b-[3px] border-[var(--ls-ink)] px-2 align-baseline data-[filled]:text-[var(--ls-primary)]" : "lesson-sketch-sm min-w-24"}`}
+    >
+      {!inline && <span aria-hidden>{blank}. </span>}
+      {pairs[blank] ?? (inline ? <span aria-hidden className="text-[var(--ls-ink-faint)]">{blank}</span> : "____")}
+    </button>
+  );
+
   return (
     <div ref={root} className="mt-4 grid gap-3">
-      <div className="flex flex-wrap gap-2">
-        {blanks.map((blank) => (
-          // eslint-disable-next-line no-restricted-syntax -- a blank: pressing it makes it current, or empties it if filled.
-          <button
-            key={blank}
-            type="button"
-            disabled={disabled}
-            aria-pressed={current === blank}
-            aria-label={`${t("blankN", { n: blank })}: ${pairs[blank] ?? t("blankEmpty")}`}
-            onClick={() => choose(blank)}
-            className={`lesson-sketch-sm lesson-hand min-h-11 min-w-24 px-4 py-2 text-[18px] ${current === blank ? "bg-[var(--ls-accent)]" : ""}`}
-          >
-            <span aria-hidden>{blank}. </span>
-            {pairs[blank] ?? "____"}
-          </button>
-        ))}
-      </div>
+      {pieces ? (
+        // The sentence itself, with its blanks in place (the question above is read by a screen reader; this is what is filled).
+        <p className="lesson-hand text-[21px] font-bold leading-[2.6]">
+          {pieces.map((piece, i) => ("blank" in piece ? blankButton(piece.blank, true) : <span key={`t${i}`}>{piece.text}</span>))}
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">{blanks.map((blank) => blankButton(blank, false))}</div>
+      )}
       <div>
-        <p
-          id={`wordbank-${check.id}`}
-          className="lesson-hand mb-1 text-[16px] text-[var(--ls-ink-mid)]"
-        >
+        <p id={`wordbank-${check.id}`} className="lesson-hand mb-1 text-[16px] text-[var(--ls-ink-mid)]">
           {t("wordBank")}
         </p>
-        <div
-          role="group"
-          aria-labelledby={`wordbank-${check.id}`}
-          className="flex flex-wrap gap-2"
-        >
+        <div role="group" aria-labelledby={`wordbank-${check.id}`} className="flex flex-wrap gap-2">
           {check.options.map((word, index) => {
             const taken = isUsed(word.text);
             return (
@@ -107,9 +110,10 @@ export function BlankFiller({
                 key={word.id}
                 type="button"
                 disabled={disabled || taken || current === null}
+                data-used={taken ? "" : undefined}
                 data-bank-index={index}
                 onClick={() => fill(word.text, index)}
-                className="lesson-sketch-sm lesson-hand min-h-11 px-4 py-2 text-[18px] disabled:opacity-40"
+                className="lesson-chip lesson-sketch-sm lesson-hand"
               >
                 {word.text}
               </button>

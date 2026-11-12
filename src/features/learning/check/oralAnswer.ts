@@ -50,6 +50,18 @@ export const INITIAL_ORAL: OralState = { phase: "idle", result: null, clarify: n
 const OPEN = 1;
 const MIC_PROBLEMS: Record<string, string> = { NotAllowedError: "mic_denied", SecurityError: "mic_denied", NotFoundError: "no_device", NotReadableError: "mic_busy", AbortError: "mic_busy" };
 
+/** Ordinary speech in 16-bit PCM sits around an RMS of 1–3k: this much reads as a full meter. */
+const RMS_FULL_SCALE = 2600;
+
+/** The loudness of one frame of 16-bit PCM, from 0 (silence) to 1. */
+export function pcmLevel(pcm: ArrayBuffer): number {
+  const samples = new Int16Array(pcm, 0, Math.floor(pcm.byteLength / 2));
+  if (samples.length === 0) return 0;
+  let sum = 0;
+  for (const sample of samples) sum += sample * sample;
+  return Math.min(1, Math.sqrt(sum / samples.length) / RMS_FULL_SCALE);
+}
+
 export interface OralContext {
   instanceId: string;
   itemId: string;
@@ -67,6 +79,8 @@ export class OralAnswerSession {
   constructor(
     private readonly deps: OralDeps,
     private readonly onChange: (state: OralState) => void,
+    /** How loud the microphone is right now, 0 to 1, for a level meter. Display only: nothing about it is sent or kept. */
+    private readonly onLevel?: (level: number) => void,
   ) {}
 
   get current() {
@@ -145,7 +159,10 @@ export class OralAnswerSession {
 
   private async record(mine: number) {
     try {
-      const mic = await this.deps.openMic((pcm) => this.socket && this.socket.readyState === OPEN && this.socket.send(pcm));
+      const mic = await this.deps.openMic((pcm) => {
+        if (this.socket && this.socket.readyState === OPEN) this.socket.send(pcm);
+        if (this.onLevel && mine === this.generation) this.onLevel(pcmLevel(pcm));
+      });
       if (mine !== this.generation) {
         mic.stop();
         return;

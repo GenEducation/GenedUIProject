@@ -50,6 +50,8 @@ async function show(check: CheckItem) {
 }
 
 const submit = () => screen.getByRole("button", { name: /check answer/i });
+/** The card's own live note (a drag area also renders dnd-kit's live region, kept silent). */
+const note = () => screen.getAllByRole("status").find((el) => !el.id.startsWith("DndLiveRegion"))!;
 
 describe("multiple select", () => {
   beforeEach(() => show({ ...base, selection: "multiple" }));
@@ -114,9 +116,7 @@ describe("sequencing", () => {
     });
     down.focus();
     await user.keyboard("{Enter}");
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "SYNTHETIC alpha: place 2 of 3",
-    );
+    expect(note()).toHaveTextContent("SYNTHETIC alpha: place 2 of 3");
     const items = within(
       screen.getByRole("list", { name: /your order/i }),
     ).getAllByRole("listitem");
@@ -139,42 +139,31 @@ describe("matching", () => {
     show({
       ...base,
       response_type: "matching",
-      left_entries: [
-        "SYNTHETIC left 1",
-        "SYNTHETIC left 2",
-        "SYNTHETIC left 3",
-      ],
+      left_entries: ["SYNTHETIC left 1", "SYNTHETIC left 2", "SYNTHETIC left 3"],
     }),
   );
 
-  it("gives every left entry a labelled list and stays disabled until all are matched", async () => {
-    const user = userEvent.setup();
-    expect(screen.getAllByRole("combobox")).toHaveLength(3);
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Match SYNTHETIC left 1" }),
-      "SYNTHETIC beta",
-    );
+  const left = (name: RegExp) => screen.getByRole("button", { name });
+
+  it("shows every item and every candidate at once, the first item current, nothing sendable", () => {
+    expect(left(/^SYNTHETIC left 1: not matched yet$/)).toHaveAttribute("aria-pressed", "true");
+    expect(left(/^SYNTHETIC left 2: not matched yet$/)).toHaveAttribute("aria-pressed", "false");
+    const candidates = screen.getByRole("group", { name: /now tap the match for SYNTHETIC left 1/i });
+    expect(within(candidates).getAllByRole("button")).toHaveLength(3);
     expect(submit()).toBeDisabled();
+    expect(screen.getByText("0 of 3 matched")).toBeInTheDocument();
   });
 
-  it("keeps the pairing one to one and sends every pair", async () => {
+  it("is matched with the keyboard alone, moving on to the next item each time, and sends every pair", async () => {
     const user = userEvent.setup();
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Match SYNTHETIC left 1" }),
-      "SYNTHETIC beta",
-    );
-    const second = screen.getByRole("combobox", {
-      name: "Match SYNTHETIC left 2",
-    });
-    expect(
-      within(second).getByRole("option", { name: "SYNTHETIC beta" }),
-    ).toBeDisabled();
-    await user.selectOptions(second, "SYNTHETIC alpha");
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Match SYNTHETIC left 3" }),
-      "SYNTHETIC gamma",
-    );
-    await user.click(submit());
+    for (const candidate of ["SYNTHETIC beta", "SYNTHETIC alpha", "SYNTHETIC gamma"]) {
+      screen.getByRole("button", { name: candidate }).focus();
+      await user.keyboard("{Enter}");
+    }
+    expect(screen.getByRole("status")).toHaveTextContent("SYNTHETIC left 3 matched with SYNTHETIC gamma");
+    expect(left(/^SYNTHETIC left 1: SYNTHETIC beta$/)).toBeInTheDocument();
+    submit().focus();
+    await user.keyboard("{Enter}");
     expect(answer).toHaveBeenCalledWith(base.id, {
       kind: "pairs",
       pairs: [
@@ -183,6 +172,23 @@ describe("matching", () => {
         { left: "SYNTHETIC left 3", right: "SYNTHETIC gamma" },
       ],
     });
+  });
+
+  it("keeps the pairing one to one: a candidate paired again moves", async () => {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "SYNTHETIC beta" }));
+    // Item 2 is current now; giving it beta takes beta away from item 1.
+    await user.click(screen.getByRole("button", { name: "SYNTHETIC beta, matched with SYNTHETIC left 1" }));
+    expect(left(/^SYNTHETIC left 1: not matched yet$/)).toBeInTheDocument();
+    expect(left(/^SYNTHETIC left 2: SYNTHETIC beta$/)).toBeInTheDocument();
+  });
+
+  it("undoes a pair when its item is pressed, and makes that item current", async () => {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "SYNTHETIC beta" }));
+    await user.click(left(/^SYNTHETIC left 1: SYNTHETIC beta$/));
+    expect(left(/^SYNTHETIC left 1: not matched yet$/)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("status")).toHaveTextContent("SYNTHETIC left 1 is not matched now");
   });
 });
 
@@ -348,27 +354,30 @@ const groups: CheckItem = {
 describe("grouping", () => {
   beforeEach(() => show(groups));
 
-  it("gives every entry its own labelled group buttons, with nothing chosen and nothing sendable", () => {
-    expect(screen.getAllByRole("radiogroup")).toHaveLength(3);
-    expect(
-      screen.getByRole("radiogroup", { name: "Group for apple" }),
-    ).toBeInTheDocument();
-    expect(screen.queryAllByRole("radio", { checked: true })).toHaveLength(0);
+  const tray = () => screen.getByRole("group", { name: "To sort" });
+  const box = (name: string) => screen.getByRole("region", { name });
+
+  it("starts with every entry in the tray, the first one current, a box per group, nothing sendable", () => {
+    expect(within(tray()).getAllByRole("button").map((b) => b.textContent)).toEqual(["apple", "banana", "cherry"]);
+    expect(within(tray()).getByRole("button", { name: "apple" })).toHaveAttribute("aria-pressed", "true");
+    expect(box("SYNTHETIC red")).toBeInTheDocument();
+    expect(box("SYNTHETIC yellow")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Put apple in SYNTHETIC red" })).toBeEnabled();
     expect(submit()).toBeDisabled();
   });
 
-  it("is completed with the keyboard alone, lets two entries share a group, and sends every entry's group", async () => {
+  it("is sorted with the keyboard alone, lets two entries share a box, and sends every entry's group", async () => {
     const user = userEvent.setup();
-    const pick = async (entry: string, group: string) => {
-      within(screen.getByRole("radiogroup", { name: `Group for ${entry}` }))
-        .getByRole("radio", { name: group })
-        .focus();
-      await user.keyboard(" ");
+    const put = async (name: string) => {
+      screen.getByRole("button", { name }).focus();
+      await user.keyboard("{Enter}");
     };
-    await pick("apple", "SYNTHETIC red");
-    await pick("banana", "SYNTHETIC yellow");
+    await put("Put apple in SYNTHETIC red");
+    await put("Put banana in SYNTHETIC yellow");
     expect(submit()).toBeDisabled();
-    await pick("cherry", "SYNTHETIC red");
+    await put("Put cherry in SYNTHETIC red");
+    expect(screen.getByText("All sorted. Tap one to move it.")).toBeInTheDocument();
+    expect(within(box("SYNTHETIC red")).getAllByRole("button", { name: /in SYNTHETIC red/ })).toHaveLength(2);
     submit().focus();
     await user.keyboard("{Enter}");
     expect(answer).toHaveBeenCalledWith(base.id, {
@@ -381,18 +390,13 @@ describe("grouping", () => {
     });
   });
 
-  it("lets an entry be moved to another group with one tap", async () => {
+  it("moves a sorted entry to another box: pick it, then put it there", async () => {
     const user = userEvent.setup();
-    const apple = () =>
-      within(screen.getByRole("radiogroup", { name: "Group for apple" }));
-    await user.click(apple().getByRole("radio", { name: "SYNTHETIC red" }));
-    await user.click(apple().getByRole("radio", { name: "SYNTHETIC yellow" }));
-    expect(
-      apple().getByRole("radio", { name: "SYNTHETIC yellow" }),
-    ).toBeChecked();
-    expect(
-      apple().getByRole("radio", { name: "SYNTHETIC red" }),
-    ).not.toBeChecked();
+    await user.click(screen.getByRole("button", { name: "Put apple in SYNTHETIC red" }));
+    await user.click(screen.getByRole("button", { name: "apple, in SYNTHETIC red" }));
+    await user.click(screen.getByRole("button", { name: "Put apple in SYNTHETIC yellow" }));
+    expect(within(box("SYNTHETIC yellow")).getByRole("button", { name: "apple, in SYNTHETIC yellow" })).toBeInTheDocument();
+    expect(note()).toHaveTextContent("apple is in SYNTHETIC yellow");
   });
 });
 
@@ -516,5 +520,27 @@ describe("the existing formats are unchanged", () => {
   it("a numeric check is still a typed box", async () => {
     await show({ ...base, response_type: "numeric", options: [] });
     expect(screen.getByLabelText("Your answer")).toBeInTheDocument();
+  });
+});
+
+describe("blanks marked in their sentence", () => {
+  it("puts each blank where it belongs in the sentence and names the question with each blank", async () => {
+    await show({ ...blanks, prompt: "SYNTHETIC [1] comes before [2], and [3] is last" });
+    expect(screen.getByRole("heading", { name: "SYNTHETIC Blank 1 comes before Blank 2, and Blank 3 is last" })).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "beta" }));
+    expect(screen.getByRole("button", { name: "Blank 1: beta" })).toBeInTheDocument();
+    expect(screen.getByText(/comes before/, { selector: "span" })).toBeInTheDocument();
+  });
+});
+
+describe("a typed number off the line", () => {
+  it("says the range and marks the box, without blocking the answer", async () => {
+    await show(numeric({ mode: "number_line", min: "0", max: "10", step: "1" }));
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Or type the number"), "12");
+    expect(screen.getByText("Pick a number from 0 to 10.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Or type the number")).toHaveAttribute("aria-invalid", "true");
+    expect(submit()).toBeEnabled();
   });
 });

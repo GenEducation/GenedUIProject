@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type ButtonHTMLAttributes, type FormEvent } from "react";
-import { ArrowRight, Check, Lightbulb, Loader2, X } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ArrowRight, Check, X } from "lucide-react";
 import { asError } from "@/utils/errors";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLessonStore } from "../useLessonStore";
@@ -19,8 +19,11 @@ import { TileBuilder } from "../check/TileBuilder";
 import { useCheckShown } from "../delivery/useCheckShown";
 import { WrittenAnswer } from "../check/WrittenAnswer";
 import { SpokenAnswer } from "../check/SpokenAnswer";
+import { progressNote } from "../check/progress";
+import { blankPieces } from "../check/blankText";
 import type { AnswerResponse, AnswerResult, CheckItem } from "../types";
-import { BoardFigure } from "./BoardFigure";
+import { SketchButton } from "./SketchButton";
+import { progressIdFor, QuestionMessage, QuestionShell, questionCardClass } from "./QuestionShell";
 import { MathField, type MathFieldHandle } from "../math/MathField";
 import { answerFromField, calcTextFromField } from "../math/latex";
 import { isMathsSubject } from "./ChatInput";
@@ -69,39 +72,10 @@ function ResultNote({ result }: { result: AnswerResult }) {
   );
 }
 
-/** Drawn on the board like its visuals: handwriting, ink lines, a wobbly hand-drawn edge. */
-const SKETCH_VARIANT = {
-  primary:
-    "lesson-sketch-sm border-[var(--ls-ink)] bg-[var(--ls-primary)] text-white hover:bg-[var(--ls-accent)] hover:text-[var(--ls-ink)]",
-  secondary: "lesson-sketch-sm hover:bg-[var(--ls-accent)]",
-  tertiary: "rounded-[12px_4px_13px_5px/5px_13px_4px_12px] hover:bg-[var(--ls-accent)]",
-} as const;
+const cardClass = questionCardClass;
 
-/** A hand-drawn button for the board's cards: ink edge, handwriting, citron on hover. */
-function SketchButton({
-  variant = "primary",
-  loading = false,
-  className = "",
-  children,
-  disabled,
-  ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof SKETCH_VARIANT; loading?: boolean }) {
-  return (
-    // eslint-disable-next-line no-restricted-syntax -- a hand-drawn button, part of the board's sketch style.
-    <button
-      type="button"
-      disabled={disabled || loading}
-      aria-busy={loading || undefined}
-      className={`lesson-hand inline-flex items-center gap-1.5 px-4 py-1.5 text-[18px] font-bold text-[var(--ls-ink)] transition-[background-color,color,transform] duration-200 hover:-rotate-1 active:translate-y-px disabled:pointer-events-none disabled:opacity-45 ${SKETCH_VARIANT[variant]} ${className}`}
-      {...rest}
-    >
-      {loading && <Loader2 size={16} className="animate-spin" aria-hidden />}
-      {children}
-    </button>
-  );
-}
-
-const cardClass = "lesson-rise lesson-sketch shrink-0 p-5 text-[var(--ls-ink)]";
+/** Outcomes after which the learner should change the answer on the card and check it again (the server keeps the check open). */
+const TRY_AGAIN = new Set<AnswerResult["outcome"]>(["incorrect"]);
 
 function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (r: AnswerResult) => void; subject: string | null }) {
   const t = useUiText();
@@ -125,12 +99,23 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
   const latexNow = useRef("");
   const mathRef = useRef<MathFieldHandle>(null);
   const onMath = (latex: string) => {
+    setTried(false);
     latexNow.current = latex;
     setAnswerLatex(latex);
     setTyped(answerFromField(latex));
   };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The last check of this answer came back to change (the card is still open): it stays marked, with a note, until the learner
+  // changes something. `nudge` shakes the answer once each time.
+  const [tried, setTried] = useState(false);
+  const [nudge, setNudge] = useState(0);
+  /** A change to the answer: what was marked to change no longer is. */
+  const edited = <T,>(set: (value: T) => void) => (value: T) => {
+    setTried(false);
+    set(value);
+  };
+  const arrange = (patch: Partial<Arrangement>) => edited(setArranged)({ ...arranged, ...patch });
   const isChoice = format === "single_choice";
   const isTyped = TYPED_TYPES.has(check.response_type) && !arrangedFormat; // a line, slider or tiles replaces the typed box
   // A calculation typed as the answer ("540 * 40", "sqrt(144)") is worked out as they type. There are no
@@ -145,6 +130,7 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
     setAnswerLatex("");
     latexNow.current = "";
     setError(null);
+    setTried(false);
     // A new question starts at its top, whatever the dock was scrolled to for the last one.
     cardRef.current?.closest<HTMLElement>("[data-no-pan]")?.scrollTo?.({ top: 0 });
   // eslint-disable-next-line react-hooks/exhaustive-deps -- reset per question (`check.id`), not on every payload refresh
@@ -165,7 +151,13 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
     setError(null);
     try {
       const result = await answer(check.id, response);
-      if (result) onResult(result);
+      if (result) {
+        onResult(result);
+        if (TRY_AGAIN.has(result.outcome)) {
+          setTried(true);
+          setNudge((n) => n + 1);
+        }
+      }
     } catch (e) {
       setError(asError(e).message || "That answer couldn't be sent.");
     } finally {
@@ -173,48 +165,78 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
     }
   };
 
-  return (
-    <form ref={cardRef} onSubmit={submit} className={cardClass} aria-labelledby={`check-${check.id}`}>
-      <p className="lesson-hand lesson-underline inline-block text-[18px] font-bold text-[var(--ls-primary)]">
-        {check.role === "checkpoint" ? t("checkpoint") : t("quickCheck")}
-      </p>
-      <h2 id={`check-${check.id}`} className="lesson-hand mt-2 text-[21px] font-bold leading-snug">
-        {check.prompt}
-      </h2>
-      {check.figure_groups.map((group) => (
-        <div key={group.id} className="mt-3">
-          <BoardFigure figureGroupId={group.id} />
-        </div>
-      ))}
+  const tone = tried ? ("try" as const) : null;
+  const progress = progressNote(check, { arranged, selected, typed });
+  const canCheck = isChoice || isTyped || arrangedFormat;
+  // Blanks drawn inside their sentence: the sentence is the question on screen, and a screen reader hears it with each blank named.
+  const pieces = format === "blanks" ? blankPieces(check.prompt, check.left_entries ?? []) : null;
+  const spokenPrompt = pieces
+    ? pieces.map((piece) => ("blank" in piece ? ` ${t("blankN", { n: piece.blank })} ` : piece.text)).join("").replace(/\s+/g, " ").replace(/ ([,.;:!?])/g, "$1").trim()
+    : undefined;
 
-      {isChoice && <SingleChoice check={check} selected={selected} onSelect={setSelected} />}
+  return (
+    <QuestionShell
+      check={check}
+      formRef={cardRef}
+      onSubmit={submit}
+      nudge={nudge}
+      promptHidden={spokenPrompt}
+      progress={canCheck ? progress : null}
+      onHint={() => void askHint(check.id)}
+      actions={
+        canCheck && (
+          <SketchButton
+            type="submit"
+            disabled={busy || (arrangedFormat ? !isComplete(check, arranged) : isChoice ? !selected : !typed.trim())}
+            loading={busy}
+            aria-describedby={progress ? progressIdFor(check.id) : undefined}
+          >
+            {t("checkAnswer")}
+          </SketchButton>
+        )
+      }
+      messages={
+        (error || notDelivered || tried) && (
+          <>
+            {error && <QuestionMessage tone="danger" alert>{error}</QuestionMessage>}
+            {/* The answer wasn't counted because the question hadn't reached your tutor's session yet: neutral, never "incorrect". */}
+            {notDelivered && !error && <QuestionMessage tone="info">{t("gettingReady")}</QuestionMessage>}
+            {tried && !error && <QuestionMessage tone="warn">{t("tryChange")}</QuestionMessage>}
+          </>
+        )
+      }
+    >
+      {isChoice && <SingleChoice check={check} selected={selected} onSelect={edited(setSelected)} tone={tone} disabled={busy} />}
 
       {format === "multiple_select" && (
-        <MultiSelect check={check} chosen={arranged.chosen} onChange={(chosen) => setArranged({ ...arranged, chosen })} disabled={busy} />
+        // No tone per option: the server says only that the set is not right, never which option, so none is marked as the one to change.
+        <MultiSelect check={check} chosen={arranged.chosen} onChange={(chosen) => arrange({ chosen })} disabled={busy} />
       )}
       {format === "sequencing" && (
-        <Sequencing check={check} order={arranged.order} onChange={(order) => setArranged({ ...arranged, order })} disabled={busy} />
+        <Sequencing check={check} order={arranged.order} onChange={(order) => arrange({ order })} disabled={busy} />
       )}
       {(format === "number_line" || format === "slider") && (
-        <LineInput check={check} number={arranged.number} onChange={(number) => setArranged({ ...arranged, number })} disabled={busy} />
+        <LineInput check={check} number={arranged.number} onChange={(number) => arrange({ number })} disabled={busy} />
       )}
       {format === "tile_builder" && (
-        <TileBuilder check={check} built={arranged.built} onChange={(built) => setArranged({ ...arranged, built })} disabled={busy} />
+        <TileBuilder check={check} built={arranged.built} onChange={(built) => arrange({ built })} disabled={busy} />
       )}
       {format === "grouping" && (
-        <GroupSorter check={check} pairs={arranged.pairs} onChange={(pairs) => setArranged({ ...arranged, pairs })} disabled={busy} />
+        <GroupSorter check={check} pairs={arranged.pairs} onChange={(pairs) => arrange({ pairs })} disabled={busy} />
       )}
       {format === "blanks" && (
-        <BlankFiller check={check} pairs={arranged.pairs} onChange={(pairs) => setArranged({ ...arranged, pairs })} disabled={busy} />
+        <BlankFiller check={check} pairs={arranged.pairs} onChange={(pairs) => arrange({ pairs })} disabled={busy} />
       )}
       {format === "matching_pairs" && (
-        <Matching check={check} pairs={arranged.pairs} onChange={(pairs) => setArranged({ ...arranged, pairs })} disabled={busy} />
+        <Matching check={check} pairs={arranged.pairs} onChange={(pairs) => arrange({ pairs })} disabled={busy} />
       )}
 
       {isTyped && (
         <div className="mt-4">
           {isMath ? (
             <>
+              {/* The field is named by its own label for assistive tech; this is the same name, shown. */}
+              <p aria-hidden className="lesson-hand mb-1 text-[16px] text-[var(--ls-ink-mid)]">{t("yourAnswer")}</p>
               {/* The whole answer line takes a click, its padding and dashed rule too, not only the field inside it. */}
               <div
                 onMouseDown={(e) => {
@@ -241,16 +263,16 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
               )}
             </>
           ) : (
+          <>
+          <label htmlFor={`answer-${check.id}`} className="lesson-hand mb-1 block text-[16px] text-[var(--ls-ink-mid)]">{t("yourAnswer")}</label>
           <div className="relative">
-            <label htmlFor={`answer-${check.id}`} className="sr-only">{t("yourAnswer")}</label>
             <input
               id={`answer-${check.id}`}
               value={typed}
-              onChange={(e) => setTyped(e.target.value)}
+              onChange={(e) => edited(setTyped)(e.target.value)}
               inputMode="text"
               maxLength={check.response_type === "numeric" ? 64 : 500}
               autoComplete="off"
-              placeholder={t("yourAnswer")}
               aria-describedby={sum ? `sum-${check.id}` : undefined}
               className="lesson-hand w-full border-0 border-b-2 border-dashed border-[var(--ls-ink-faint)] bg-transparent px-1 py-2 text-[20px] text-[var(--ls-ink)] outline-none placeholder:text-[var(--ls-ink-faint)] focus:border-solid focus:border-[var(--ls-primary)]"
             />
@@ -272,38 +294,15 @@ function CheckCard({ check, onResult, subject }: { check: CheckItem; onResult: (
               )}
             </AnimatePresence>
           </div>
+          </>
           )}
         </div>
       )}
 
-      {!isChoice && !isTyped && !arrangedFormat && (
+      {!canCheck && (
         <p className="lesson-hand mt-3 text-[17px] text-[var(--ls-ink-mid)]">{t("typeInChat")}</p>
       )}
-
-      {error && <p role="alert" className="mt-3 text-[13px] text-[#9A2E1E]">{error}</p>}
-      {/* The answer wasn't counted because the question hadn't reached your tutor's session yet: neutral, never "incorrect". */}
-      {notDelivered && !error && (
-        <p role="status" className="lesson-hand mt-3 text-[17px] text-[var(--ls-ink-mid)]">
-          {t("gettingReady")}
-        </p>
-      )}
-
-      {/* The buttons stay in view at the foot of the dock whatever the card's height: a tall card scrolls above them. */}
-      <div className="sticky bottom-0 z-[1] -mx-5 -mb-5 mt-4 flex flex-wrap items-center gap-3 rounded-b-[18px] border-t border-dashed border-[var(--ls-ink-faint)] bg-[#fffdf6] px-5 pb-5 pt-3">
-        {(isChoice || isTyped || arrangedFormat) && (
-          <SketchButton
-            type="submit"
-            disabled={busy || (arrangedFormat ? !isComplete(check, arranged) : isChoice ? !selected : !typed.trim())}
-            loading={busy}
-          >
-            {t("checkAnswer")}
-          </SketchButton>
-        )}
-        <SketchButton type="button" variant="tertiary" onClick={() => void askHint(check.id)}>
-          <Lightbulb size={16} aria-hidden /> {t("hint")}
-        </SketchButton>
-      </div>
-    </form>
+    </QuestionShell>
   );
 }
 
@@ -411,7 +410,7 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
       ) : formatOf(current) === "spoken_response" ? (
         <SpokenAnswer check={current} />
       ) : (
-        <CheckCard check={current} onResult={showResult} subject={subject} />
+        <CheckCard key={current.id} check={current} onResult={showResult} subject={subject} />
       );
   } else if (node.type === "teach" && node.done_available) {
     // Only a legacy plan still advertises a learner's done (backend ADR 0038 decision 6). A W2 part never does: it moves on only by
@@ -434,7 +433,7 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
     <div className="mt-auto flex shrink-0 flex-col gap-3">
       <AnimatePresence>{lastResult && <ResultNote key={resultKey} result={lastResult} />}</AnimatePresence>
       {body}
-      {error && <p role="alert" className="text-[13px] text-[#9A2E1E]">{error}</p>}
+      {error && <QuestionMessage tone="danger" alert>{error}</QuestionMessage>}
     </div>
   );
 }
