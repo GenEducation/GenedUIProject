@@ -86,8 +86,18 @@ export interface VisualSpec {
   purpose: string;
   layout: string;
   caption: string | null;
-  objects: { id: string; what: string; colour: string; position: string; notes: string }[];
-  texts: { text: string; role: "title" | "label" | "note" | "caption"; where: string }[];
+  objects: {
+    id: string;
+    what: string;
+    colour: string;
+    position: string;
+    notes: string;
+  }[];
+  texts: {
+    text: string;
+    role: "title" | "label" | "note" | "caption";
+    where: string;
+  }[];
   /** Which `concept.passages` the picture uses. */
   source_refs: string[];
   /** What the picture should visibly show. */
@@ -237,7 +247,8 @@ export interface VisualTargetTally {
   reviewed: number;
 }
 
-export type RedrawState = "queued" | "drawing" | "ready" | "reviewed" | "failed";
+export type RedrawState =
+  "queued" | "drawing" | "ready" | "reviewed" | "failed";
 
 export interface VisualRedrawTally extends Record<RedrawState, number> {
   total: number;

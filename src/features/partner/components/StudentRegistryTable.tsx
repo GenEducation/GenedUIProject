@@ -11,7 +11,9 @@ import { asError } from "@/utils/errors";
 export function StudentRegistryTable() {
   const students = usePartnerStore((state) => state.students);
   const isLoading = usePartnerStore((state) => state.isLoading);
-  const setSelectedStudent = usePartnerStore((state) => state.setSelectedStudent);
+  const setSelectedStudent = usePartnerStore(
+    (state) => state.setSelectedStudent,
+  );
   const removeStudent = usePartnerStore((state) => state.removeStudent);
 
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
@@ -26,7 +28,9 @@ export function StudentRegistryTable() {
       await removeStudent(deleteId);
       setDeleteId(null);
     } catch (err) {
-      setDeleteError(asError(err).message || "Failed to delete. Please try again.");
+      setDeleteError(
+        asError(err).message || "Failed to delete. Please try again.",
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -35,7 +39,9 @@ export function StudentRegistryTable() {
   return (
     <div className="lg:col-span-8 flex flex-col bg-[#FBFCFB] rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 border border-gray-100 shadow-xl lg:min-h-0 overflow-hidden lg:h-full">
       <div className="flex justify-between items-center mb-6 md:mb-10">
-        <h3 className="text-lg md:text-2xl font-black text-[#122D30]">Student Registry</h3>
+        <h3 className="text-lg md:text-2xl font-black text-[#122D30]">
+          Student Registry
+        </h3>
       </div>
 
       <div className="flex-1 lg:overflow-y-auto scrollbar-hide pr-1 md:pr-2">
@@ -55,7 +61,8 @@ export function StudentRegistryTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#122D30]/5">
-            {isLoading && students.length === 0 && (
+            {isLoading &&
+              students.length === 0 &&
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={`skel-${i}`}>
                   <td className="py-2.5 md:py-3.5">
@@ -71,8 +78,7 @@ export function StudentRegistryTable() {
                     <Skeleton className="h-8 w-8 rounded-xl ml-auto" />
                   </td>
                 </tr>
-              ))
-            )}
+              ))}
             {students.map((student) => (
               <tr
                 key={student.id}
@@ -84,7 +90,12 @@ export function StudentRegistryTable() {
                     <div className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center bg-[#DCEBE7]/50 text-[#122D30] text-[10px] font-bold shadow-sm">
                       {student.initials}
                     </div>
-                    <span className="min-w-0 truncate text-sm font-bold text-[#122D30]" title={student.name}>{student.name}</span>
+                    <span
+                      className="min-w-0 truncate text-sm font-bold text-[#122D30]"
+                      title={student.name}
+                    >
+                      {student.name}
+                    </span>
                   </div>
                 </td>
                 <td className="py-2.5 md:py-3.5">
@@ -93,7 +104,16 @@ export function StudentRegistryTable() {
                   </span>
                 </td>
                 <td className="py-2.5 md:py-3.5 text-right">
-                  <Button iconOnly size="sm" variant="destructive" aria-label="Delete" onClick={(e) => { e.stopPropagation(); setDeleteId(student.id); }}>
+                  <Button
+                    iconOnly
+                    size="sm"
+                    variant="destructive"
+                    aria-label="Delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteId(student.id);
+                    }}
+                  >
                     <Trash2 size={16} />
                   </Button>
                 </td>
@@ -105,7 +125,10 @@ export function StudentRegistryTable() {
 
       <DeleteConfirmationModal
         isOpen={!!deleteId}
-        onClose={() => { setDeleteId(null); setDeleteError(null); }}
+        onClose={() => {
+          setDeleteId(null);
+          setDeleteError(null);
+        }}
         onConfirm={handleDelete}
         title="Remove Student?"
         message="This will permanently revoke this student's access to your partner portal agents."

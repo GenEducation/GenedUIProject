@@ -1,7 +1,24 @@
 "use client";
 
 import React, { useState } from "react";
-import { AlertCircle, Check, ChevronDown, Circle, Clock, Cog, FileText, Hourglass, Images, Info, ListTree, Minus, PenLine, Sparkles, Upload, X } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  ChevronDown,
+  Circle,
+  Clock,
+  Cog,
+  FileText,
+  Hourglass,
+  Images,
+  Info,
+  ListTree,
+  Minus,
+  PenLine,
+  Sparkles,
+  Upload,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { Subject } from "../store/usePartnerStore";
 import {
@@ -17,9 +34,15 @@ import {
   type Milestone,
   type PathStep,
 } from "../utils/ingestionPath";
-import { PHASES, attentionLine, runPhases, type Phase } from "../utils/ingestionPhases";
+import {
+  PHASES,
+  attentionLine,
+  runPhases,
+  type Phase,
+} from "../utils/ingestionPhases";
 
-const sectionTitle = "text-[10px] lg:text-[11px] font-black text-[#122D30]/50 uppercase tracking-widest mb-2";
+const sectionTitle =
+  "text-[10px] lg:text-[11px] font-black text-[#122D30]/50 uppercase tracking-widest mb-2";
 
 /**
  * Something running now: a teal dot with a soft pulse, not a spinner (which reads as a "C"). Drawn in SVG: an HTML
@@ -27,7 +50,13 @@ const sectionTitle = "text-[10px] lg:text-[11px] font-black text-[#122D30]/50 up
  */
 function LiveDot({ size = 8 }: { size?: number }) {
   return (
-    <svg aria-hidden width={size} height={size} viewBox="0 0 10 10" className="shrink-0 overflow-visible">
+    <svg
+      aria-hidden
+      width={size}
+      height={size}
+      viewBox="0 0 10 10"
+      className="shrink-0 overflow-visible"
+    >
       <circle cx="5" cy="5" r="5" fill="#075E63" className="live-pulse" />
       <circle cx="5" cy="5" r="5" fill="#075E63" />
     </svg>
@@ -43,11 +72,32 @@ function PhaseRing({ fill }: { fill: number }) {
   const c = 2 * Math.PI * r;
   const shown = Math.max(0.04, Math.min(1, fill));
   return (
-    <svg aria-hidden width="24" height="24" viewBox="0 0 24 24" className="shrink-0 overflow-visible">
-      <circle cx="12" cy="12" r={r} fill="white" stroke="rgb(7 94 99 / 0.15)" strokeWidth="2" />
+    <svg
+      aria-hidden
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      className="shrink-0 overflow-visible"
+    >
       <circle
-        cx="12" cy="12" r={r} fill="none" stroke="#075E63" strokeWidth="2" strokeLinecap="round"
-        strokeDasharray={c} strokeDashoffset={c * (1 - shown)} transform="rotate(-90 12 12)"
+        cx="12"
+        cy="12"
+        r={r}
+        fill="white"
+        stroke="rgb(7 94 99 / 0.15)"
+        strokeWidth="2"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r={r}
+        fill="none"
+        stroke="#075E63"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeDasharray={c}
+        strokeDashoffset={c * (1 - shown)}
+        transform="rotate(-90 12 12)"
         className="transition-[stroke-dashoffset] duration-700 ease-out"
       />
       <circle cx="12" cy="12" r="3" fill="#075E63" className="live-pulse" />
@@ -56,14 +106,50 @@ function PhaseRing({ fill }: { fill: number }) {
   );
 }
 
-function StatusDot({ status }: { status: PathStep["status"] | Milestone["status"] | Phase["status"] }) {
-  const base = "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border";
-  if (status === "done") return <span className={`${base} border-[#075E63] bg-[#075E63] text-white`}><Check size={11} aria-hidden /></span>;
-  if (status === "current") return <span className={`${base} border-[#075E63] bg-white`}><LiveDot size={6} /></span>;
-  if (status === "skipped") return <span className={`${base} border-[#122D30]/15 bg-white text-[#122D30]/30`}><Minus size={11} aria-hidden /></span>;
-  if (status === "waiting") return <span className={`${base} border-amber-400 bg-amber-50 text-amber-600`}><Hourglass size={11} aria-hidden /></span>;
-  if (status === "stopped" || status === "problem") return <span className={`${base} border-red-400 bg-red-50 text-red-600`}><X size={11} aria-hidden /></span>;
-  return <span className={`${base} border-[#122D30]/15 bg-white text-[#122D30]/20`}><Circle size={6} aria-hidden /></span>;
+function StatusDot({
+  status,
+}: {
+  status: PathStep["status"] | Milestone["status"] | Phase["status"];
+}) {
+  const base =
+    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border";
+  if (status === "done")
+    return (
+      <span className={`${base} border-[#075E63] bg-[#075E63] text-white`}>
+        <Check size={11} aria-hidden />
+      </span>
+    );
+  if (status === "current")
+    return (
+      <span className={`${base} border-[#075E63] bg-white`}>
+        <LiveDot size={6} />
+      </span>
+    );
+  if (status === "skipped")
+    return (
+      <span
+        className={`${base} border-[#122D30]/15 bg-white text-[#122D30]/30`}
+      >
+        <Minus size={11} aria-hidden />
+      </span>
+    );
+  if (status === "waiting")
+    return (
+      <span className={`${base} border-amber-400 bg-amber-50 text-amber-600`}>
+        <Hourglass size={11} aria-hidden />
+      </span>
+    );
+  if (status === "stopped" || status === "problem")
+    return (
+      <span className={`${base} border-red-400 bg-red-50 text-red-600`}>
+        <X size={11} aria-hidden />
+      </span>
+    );
+  return (
+    <span className={`${base} border-[#122D30]/15 bg-white text-[#122D30]/20`}>
+      <Circle size={6} aria-hidden />
+    </span>
+  );
 }
 
 const STATUS_WORDS: Record<PathStep["status"] | Milestone["status"], string> = {
@@ -81,10 +167,16 @@ function KindBadge({ kind }: { kind: PathStep["kind"] }) {
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-px text-[9px] font-black uppercase tracking-wider ${
-        kind === "ai" ? "border-violet-200 bg-violet-50 text-violet-700" : "border-[#122D30]/10 bg-[#F6F7F2] text-[#122D30]/60"
+        kind === "ai"
+          ? "border-violet-200 bg-violet-50 text-violet-700"
+          : "border-[#122D30]/10 bg-[#F6F7F2] text-[#122D30]/60"
       }`}
     >
-      {kind === "ai" ? <Sparkles size={9} aria-hidden /> : <Cog size={9} aria-hidden />}
+      {kind === "ai" ? (
+        <Sparkles size={9} aria-hidden />
+      ) : (
+        <Cog size={9} aria-hidden />
+      )}
       {kind === "ai" ? "AI" : "Automatic"}
     </span>
   );
@@ -95,12 +187,24 @@ function MilestoneRow({ m }: { m: Milestone }) {
     <li className="flex items-start gap-2.5">
       <StatusDot status={m.status} />
       <div className="min-w-0">
-        <p className={`text-xs font-bold ${m.status === "pending" ? "text-[#122D30]/40" : "text-[#122D30]"}`}>
+        <p
+          className={`text-xs font-bold ${m.status === "pending" ? "text-[#122D30]/40" : "text-[#122D30]"}`}
+        >
           {m.label}
           <span className="sr-only"> ({STATUS_WORDS[m.status]})</span>
-          {m.at && <span className="ml-2 font-semibold text-[#122D30]/40">{shortTime(m.at)}</span>}
+          {m.at && (
+            <span className="ml-2 font-semibold text-[#122D30]/40">
+              {shortTime(m.at)}
+            </span>
+          )}
         </p>
-        {m.note && <p className={`text-[11px] ${m.status === "problem" ? "text-red-600/80" : "text-[#122D30]/60"}`}>{m.note}</p>}
+        {m.note && (
+          <p
+            className={`text-[11px] ${m.status === "problem" ? "text-red-600/80" : "text-[#122D30]/60"}`}
+          >
+            {m.note}
+          </p>
+        )}
       </div>
     </li>
   );
@@ -110,11 +214,20 @@ function MilestoneRow({ m }: { m: Milestone }) {
 function clock(iso: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? null : d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return Number.isNaN(d.getTime())
+    ? null
+    : d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
 
 /** One line of the log: the time it started, its status, what it is and who does it, what it produced, what it does. */
-function LogRow({ at, status, label, kind, does, chips }: {
+function LogRow({
+  at,
+  status,
+  label,
+  kind,
+  does,
+  chips,
+}: {
   at: string | null;
   status: PathStep["status"] | Milestone["status"];
   label: string;
@@ -122,14 +235,19 @@ function LogRow({ at, status, label, kind, does, chips }: {
   does?: string;
   chips?: { text: string; attention?: boolean; live?: boolean }[];
 }) {
-  const muted = status === "pending" || status === "not_reached" || status === "skipped";
+  const muted =
+    status === "pending" || status === "not_reached" || status === "skipped";
   return (
     <li className="grid grid-cols-[3.25rem_1.25rem_minmax(0,1fr)] items-start gap-x-2.5 py-1.5">
-      <span className="pt-0.5 text-right text-[11px] font-semibold tabular-nums text-[#122D30]/40">{muted ? "" : clock(at) ?? ""}</span>
+      <span className="pt-0.5 text-right text-[11px] font-semibold tabular-nums text-[#122D30]/40">
+        {muted ? "" : (clock(at) ?? "")}
+      </span>
       <StatusDot status={status} />
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className={`text-[12.5px] lg:text-[13px] font-bold ${muted ? "text-[#122D30]/40" : "text-[#122D30]"}`}>
+          <p
+            className={`text-[12.5px] lg:text-[13px] font-bold ${muted ? "text-[#122D30]/40" : "text-[#122D30]"}`}
+          >
             {label}
             <span className="sr-only"> ({STATUS_WORDS[status]})</span>
           </p>
@@ -138,14 +256,24 @@ function LogRow({ at, status, label, kind, does, chips }: {
             <span
               key={c.text}
               className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
-                c.live ? "bg-[#075E63]/10 text-[#075E63]" : c.attention ? "bg-amber-50 text-amber-800" : "bg-[#DCEBE7]/50 text-[#122D30]/80"
+                c.live
+                  ? "bg-[#075E63]/10 text-[#075E63]"
+                  : c.attention
+                    ? "bg-amber-50 text-amber-800"
+                    : "bg-[#DCEBE7]/50 text-[#122D30]/80"
               }`}
             >
               {c.text}
             </span>
           ))}
         </div>
-        {does && <p className={`text-[11px] lg:text-[11.5px] ${muted ? "text-[#122D30]/35" : "text-[#122D30]/55"}`}>{does}</p>}
+        {does && (
+          <p
+            className={`text-[11px] lg:text-[11.5px] ${muted ? "text-[#122D30]/35" : "text-[#122D30]/55"}`}
+          >
+            {does}
+          </p>
+        )}
       </div>
     </li>
   );
@@ -155,9 +283,27 @@ function LogRow({ at, status, label, kind, does, chips }: {
  * Every step of the run, grouped as the phases are: what happened before it (upload, queue), then each phase's
  * stages with the time each started, who does it and what it produced.
  */
-function StepLog({ before, steps }: { before: Milestone[]; steps: PathStep[] }) {
+function StepLog({
+  before,
+  steps,
+}: {
+  before: Milestone[];
+  steps: PathStep[];
+}) {
   const groups = [
-    { key: "before", label: "Before the run", rows: before.map((m) => <LogRow key={m.key} at={m.at} status={m.status} label={m.label} does={m.note} />) },
+    {
+      key: "before",
+      label: "Before the run",
+      rows: before.map((m) => (
+        <LogRow
+          key={m.key}
+          at={m.at}
+          status={m.status}
+          label={m.label}
+          does={m.note}
+        />
+      )),
+    },
     ...PHASES.map((phase) => ({
       key: phase.key,
       label: phase.label,
@@ -170,21 +316,44 @@ function StepLog({ before, steps }: { before: Milestone[]; steps: PathStep[] }) 
             status={st.status}
             label={st.label}
             kind={st.kind}
-            does={st.status === "skipped" ? "Skipped: the chapter did not pass its checks, so nothing was drawn." : st.does}
+            does={
+              st.status === "skipped"
+                ? "Skipped: the chapter did not pass its checks, so nothing was drawn."
+                : st.does
+            }
             chips={[
               ...(st.unitLine ? [{ text: st.unitLine, live: true }] : []),
-              ...st.counts.map((c) => ({ text: `${c.value} ${COUNT_LABELS[c.name]}`, attention: ATTENTION_COUNTS.has(c.name) && c.value > 0 })),
+              ...st.counts.map((c) => ({
+                text: `${c.value} ${COUNT_LABELS[c.name]}`,
+                attention: ATTENTION_COUNTS.has(c.name) && c.value > 0,
+              })),
             ]}
           />
         )),
     })),
   ].filter((g) => g.rows.length > 0);
   return (
-    <div role="group" aria-label="Ingestion steps" className="gap-x-8 rounded-xl border border-[#122D30]/5 bg-white p-3 md:p-4 lg:columns-2">
+    <div
+      role="group"
+      aria-label="Ingestion steps"
+      className="gap-x-8 rounded-xl border border-[#122D30]/5 bg-white p-3 md:p-4 lg:columns-2"
+    >
       {groups.map((g) => (
-        <section key={g.key} aria-label={g.label} className="mb-3 min-w-0 break-inside-avoid last:mb-0">
-          <h5 className="mb-0.5 border-b border-[#122D30]/5 pb-1 text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-[#122D30]/45">{g.label}</h5>
-          <ol aria-label={g.key === "before" ? "Before the run" : `${g.label} steps`}>{g.rows}</ol>
+        <section
+          key={g.key}
+          aria-label={g.label}
+          className="mb-3 min-w-0 break-inside-avoid last:mb-0"
+        >
+          <h5 className="mb-0.5 border-b border-[#122D30]/5 pb-1 text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-[#122D30]/45">
+            {g.label}
+          </h5>
+          <ol
+            aria-label={
+              g.key === "before" ? "Before the run" : `${g.label} steps`
+            }
+          >
+            {g.rows}
+          </ol>
         </section>
       ))}
     </div>
@@ -194,30 +363,92 @@ function StepLog({ before, steps }: { before: Milestone[]; steps: PathStep[] }) 
 /** One phase: its status, how long it took, what it produced; the phase running now lists its stages. */
 function PhaseRow({ phase, running }: { phase: Phase; running: boolean }) {
   const muted = phase.status === "pending" || phase.status === "not_reached";
-  const took = phase.status === "done" ? elapsed(phase.startedAt, phase.endedAt) : null;
+  const took =
+    phase.status === "done" ? elapsed(phase.startedAt, phase.endedAt) : null;
   return (
     <li className="flex items-start gap-2.5">
-      {phase.status === "current" ? <PhaseRing fill={phase.fill} /> : <span className="flex h-6 w-6 items-center justify-center"><StatusDot status={phase.status} /></span>}
+      {phase.status === "current" ? (
+        <PhaseRing fill={phase.fill} />
+      ) : (
+        <span className="flex h-6 w-6 items-center justify-center">
+          <StatusDot status={phase.status} />
+        </span>
+      )}
       <div className="min-w-0 flex-1 pt-0.5">
-        <p className={`text-[13px] lg:text-[14px] font-black ${muted ? "text-[#122D30]/40" : "text-[#122D30]"}`}>
+        <p
+          className={`text-[13px] lg:text-[14px] font-black ${muted ? "text-[#122D30]/40" : "text-[#122D30]"}`}
+        >
           {phase.label}
           <span className="sr-only"> ({STATUS_WORDS[phase.status]})</span>
-          {took && <span className="ml-2 text-[11px] font-semibold text-[#122D30]/40">{took}</span>}
-          {phase.status === "current" && running && <span className="ml-2 text-[11px] font-semibold tabular-nums text-[#075E63]">{Math.round(phase.fill * 100)}% of this phase</span>}
-          {phase.status === "stopped" && <span className="ml-2 text-[11px] font-semibold text-red-600">stopped here</span>}
-          {phase.status === "waiting" && <span className="ml-2 text-[11px] font-semibold text-amber-700">waiting on you</span>}
+          {took && (
+            <span className="ml-2 text-[11px] font-semibold text-[#122D30]/40">
+              {took}
+            </span>
+          )}
+          {phase.status === "current" && running && (
+            <span className="ml-2 text-[11px] font-semibold tabular-nums text-[#075E63]">
+              {Math.round(phase.fill * 100)}% of this phase
+            </span>
+          )}
+          {phase.status === "stopped" && (
+            <span className="ml-2 text-[11px] font-semibold text-red-600">
+              stopped here
+            </span>
+          )}
+          {phase.status === "waiting" && (
+            <span className="ml-2 text-[11px] font-semibold text-amber-700">
+              waiting on you
+            </span>
+          )}
         </p>
-        <p className={`text-[11px] lg:text-[12px] ${muted ? "text-[#122D30]/35" : "text-[#122D30]/70"}`}>{phase.summary ?? phase.does}</p>
-        {(phase.status === "current" || phase.status === "stopped" || phase.status === "waiting") && (
-          <ul className="mt-1.5 flex flex-col gap-1" aria-label={`${phase.label}: steps`}>
+        <p
+          className={`text-[11px] lg:text-[12px] ${muted ? "text-[#122D30]/35" : "text-[#122D30]/70"}`}
+        >
+          {phase.summary ?? phase.does}
+        </p>
+        {(phase.status === "current" ||
+          phase.status === "stopped" ||
+          phase.status === "waiting") && (
+          <ul
+            className="mt-1.5 flex flex-col gap-1"
+            aria-label={`${phase.label}: steps`}
+          >
             {phase.steps.map((s) => {
-              const active = s.status === "current" || s.status === "stopped" || s.status === "waiting";
+              const active =
+                s.status === "current" ||
+                s.status === "stopped" ||
+                s.status === "waiting";
               return (
-                <li key={s.stage} className={`flex flex-wrap items-center gap-1.5 text-[11px] ${active ? "font-bold text-[#122D30]" : s.status === "done" ? "text-[#122D30]/60" : "text-[#122D30]/35"}`}>
-                  {s.status === "done" ? <Check size={11} aria-hidden className="text-[#075E63]" /> : active ? (s.status === "stopped" ? <X size={11} aria-hidden className="text-red-600" /> : s.status === "waiting" ? <Hourglass size={11} aria-hidden className="text-amber-600" /> : <span className="mx-[1.5px] inline-flex"><LiveDot size={8} /></span>) : <Circle size={6} aria-hidden className="mx-[2.5px]" />}
+                <li
+                  key={s.stage}
+                  className={`flex flex-wrap items-center gap-1.5 text-[11px] ${active ? "font-bold text-[#122D30]" : s.status === "done" ? "text-[#122D30]/60" : "text-[#122D30]/35"}`}
+                >
+                  {s.status === "done" ? (
+                    <Check size={11} aria-hidden className="text-[#075E63]" />
+                  ) : active ? (
+                    s.status === "stopped" ? (
+                      <X size={11} aria-hidden className="text-red-600" />
+                    ) : s.status === "waiting" ? (
+                      <Hourglass
+                        size={11}
+                        aria-hidden
+                        className="text-amber-600"
+                      />
+                    ) : (
+                      <span className="mx-[1.5px] inline-flex">
+                        <LiveDot size={8} />
+                      </span>
+                    )
+                  ) : (
+                    <Circle size={6} aria-hidden className="mx-[2.5px]" />
+                  )}
                   {s.label}
                   {active && <KindBadge kind={s.kind} />}
-                  {active && s.unitLine && <span className="rounded-md bg-[#075E63]/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[#075E63]">{s.unitLine}</span>}
+                  {active && s.unitLine && (
+                    <span className="rounded-md bg-[#075E63]/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[#075E63]">
+                      {s.unitLine}
+                    </span>
+                  )}
                 </li>
               );
             })}
@@ -239,7 +470,12 @@ const BANNER_TONE = {
  * What the chapter needs from the partner now, first thing in the panel: nothing while it runs (and that leaving is
  * safe), else the server's next step, the action for it, and the failed checks behind it with who can fix each.
  */
-function NextStepBanner({ subject, onUploadAgain, onReviewVisuals, onAddQuestions }: {
+function NextStepBanner({
+  subject,
+  onUploadAgain,
+  onReviewVisuals,
+  onAddQuestions,
+}: {
   subject: Subject;
   onUploadAgain?: () => void;
   onReviewVisuals?: () => void;
@@ -247,54 +483,95 @@ function NextStepBanner({ subject, onUploadAgain, onReviewVisuals, onAddQuestion
 }) {
   if (subject.state === "queued" || subject.state === "running") {
     return (
-      <div role="note" aria-label="What to do next" className="flex items-start gap-2 rounded-xl border border-[#075E63]/15 bg-[#075E63]/5 px-3 py-2.5 text-[12px] lg:text-[13px] text-[#122D30]">
+      <div
+        role="note"
+        aria-label="What to do next"
+        className="flex items-start gap-2 rounded-xl border border-[#075E63]/15 bg-[#075E63]/5 px-3 py-2.5 text-[12px] lg:text-[13px] text-[#122D30]"
+      >
         <Info size={14} aria-hidden className="mt-px shrink-0 text-[#075E63]" />
         <p>
-          <b>Nothing to do yet.</b> {subject.state === "queued" ? "It starts as soon as a worker is free" : "It keeps running if you leave this page"}; this
-          row says what to do once it finishes.
+          <b>Nothing to do yet.</b>{" "}
+          {subject.state === "queued"
+            ? "It starts as soon as a worker is free"
+            : "It keeps running if you leave this page"}
+          ; this row says what to do once it finishes.
         </p>
       </div>
     );
   }
   const outcome = subject.outcome;
-  if (!outcome || outcome.next_step === "wait" || outcome.next_step === "start") return null;
+  if (!outcome || outcome.next_step === "wait" || outcome.next_step === "start")
+    return null;
   const copy = NEXT_STEP_COPY[outcome.next_step];
   const yours = outcome.findings.filter((f) => f.owner === "partner");
   const ours = outcome.findings.filter((f) => f.owner === "gened");
   return (
-    <div role="note" aria-label="What to do next" className={`rounded-xl border p-3 ${BANNER_TONE[copy.tone]}`}>
+    <div
+      role="note"
+      aria-label="What to do next"
+      className={`rounded-xl border p-3 ${BANNER_TONE[copy.tone]}`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/50">What to do next</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/50">
+            What to do next
+          </p>
           <p className="text-sm font-black text-[#122D30]">{copy.title}</p>
           <p className="text-[11px] text-[#122D30]/70">{copy.body}</p>
         </div>
         {outcome.next_step === "add_questions" && onAddQuestions && (
-          <Button size="sm" pill leadingIcon={<PenLine size={13} />} onClick={onAddQuestions}>
+          <Button
+            size="sm"
+            pill
+            leadingIcon={<PenLine size={13} />}
+            onClick={onAddQuestions}
+          >
             Add questions
           </Button>
         )}
         {UPLOAD_STEPS.has(outcome.next_step) && onUploadAgain && (
-          <Button size="sm" pill leadingIcon={<Upload size={13} />} onClick={onUploadAgain}>
+          <Button
+            size="sm"
+            pill
+            leadingIcon={<Upload size={13} />}
+            onClick={onUploadAgain}
+          >
             Upload again
           </Button>
         )}
         {outcome.next_step === "review_visuals" && onReviewVisuals && (
-          <Button size="sm" pill leadingIcon={<Images size={13} />} onClick={onReviewVisuals}>
+          <Button
+            size="sm"
+            pill
+            leadingIcon={<Images size={13} />}
+            onClick={onReviewVisuals}
+          >
             Review pictures
           </Button>
         )}
       </div>
       {(yours.length > 0 || ours.length > 0) && (
-        <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Checks that did not pass">
+        <ul
+          className="mt-2 flex flex-wrap gap-1.5"
+          aria-label="Checks that did not pass"
+        >
           {yours.map((f) => (
-            <li key={f.check} className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
-              {checkLabel(f.check)}{f.count > 1 ? ` (${f.count})` : ""} · you can fix this
+            <li
+              key={f.check}
+              className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-800"
+            >
+              {checkLabel(f.check)}
+              {f.count > 1 ? ` (${f.count})` : ""} · you can fix this
             </li>
           ))}
           {ours.map((f) => (
-            <li key={f.check} className="rounded-md bg-[#122D30]/5 px-1.5 py-0.5 text-[10px] font-bold text-[#122D30]/60" title={f.check}>
-              {checkLabel(f.check)}{f.count > 1 ? ` (${f.count})` : ""} · GenEd will look at this
+            <li
+              key={f.check}
+              className="rounded-md bg-[#122D30]/5 px-1.5 py-0.5 text-[10px] font-bold text-[#122D30]/60"
+              title={f.check}
+            >
+              {checkLabel(f.check)}
+              {f.count > 1 ? ` (${f.count})` : ""} · GenEd will look at this
             </li>
           ))}
         </ul>
@@ -313,24 +590,43 @@ function FoundSoFar({ subject }: { subject: Subject }) {
     { label: "Questions", value: counts?.questions },
     { label: "Figures", value: counts?.figure_groups },
   ];
-  if (visualsSent > 0) tiles.push({ label: "Teaching visuals", value: visualsSent });
+  if (visualsSent > 0)
+    tiles.push({ label: "Teaching visuals", value: visualsSent });
   return (
     <dl className="grid grid-cols-2 gap-2">
       {tiles.map((t) => (
         <div key={t.label} className="rounded-xl bg-white px-3 py-2">
-          <dt className="text-[10px] lg:text-[11px] font-bold uppercase tracking-wider text-[#122D30]/45">{t.label}</dt>
-          <dd className="text-lg lg:text-xl font-black tabular-nums text-[#122D30]">{typeof t.value === "number" ? t.value : <span className="text-[#122D30]/25">—</span>}</dd>
+          <dt className="text-[10px] lg:text-[11px] font-bold uppercase tracking-wider text-[#122D30]/45">
+            {t.label}
+          </dt>
+          <dd className="text-lg lg:text-xl font-black tabular-nums text-[#122D30]">
+            {typeof t.value === "number" ? (
+              t.value
+            ) : (
+              <span className="text-[#122D30]/25">—</span>
+            )}
+          </dd>
         </div>
       ))}
     </dl>
   );
 }
 
-function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+function Fact({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="min-w-0">
-      <dt className="text-[10px] font-bold uppercase tracking-wider text-[#122D30]/40">{label}</dt>
-      <dd className="break-words text-xs font-semibold text-[#122D30]">{children}</dd>
+      <dt className="text-[10px] font-bold uppercase tracking-wider text-[#122D30]/40">
+        {label}
+      </dt>
+      <dd className="break-words text-xs font-semibold text-[#122D30]">
+        {children}
+      </dd>
     </div>
   );
 }
@@ -340,7 +636,13 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
  * and when, one click away), what it has found so far and anything that needs attention, and where the result goes,
  * up to students. The upload's own details are one line, opened on demand.
  */
-export function IngestionPathPanel({ subject, onOpenReport, onUploadAgain, onReviewVisuals, onAddQuestions }: {
+export function IngestionPathPanel({
+  subject,
+  onOpenReport,
+  onUploadAgain,
+  onReviewVisuals,
+  onAddQuestions,
+}: {
   subject: Subject;
   onOpenReport?: () => void;
   onUploadAgain?: () => void;
@@ -350,16 +652,28 @@ export function IngestionPathPanel({ subject, onOpenReport, onUploadAgain, onRev
   const [allSteps, setAllSteps] = useState(false);
   const [uploadDetails, setUploadDetails] = useState(false);
   const running = subject.state === "running";
-  const phases = runPhases(subject.state, subject.progress, subject.visuals?.submitted ?? 0);
+  const phases = runPhases(
+    subject.state,
+    subject.progress,
+    subject.visuals?.submitted ?? 0,
+  );
   const steps = pathSteps(subject.state, subject.progress);
   const { before, after } = milestones(subject);
   const pages = subject.last_pdf_page - subject.first_pdf_page + 1;
-  const cut = subject.excluded_pages && subject.excluded_pages.status !== "included" ? subject.excluded_pages : null;
+  const cut =
+    subject.excluded_pages && subject.excluded_pages.status !== "included"
+      ? subject.excluded_pages
+      : null;
   const counts = subject.progress?.counts;
   const aiCalls = counts?.model_calls;
-  const took = elapsed(subject.started_at, running ? subject.progress?.updated_at ?? null : subject.finished_at);
+  const took = elapsed(
+    subject.started_at,
+    running ? (subject.progress?.updated_at ?? null) : subject.finished_at,
+  );
   const ranBefore = subject.progress && !running;
-  const attention = ([...ATTENTION_COUNTS] as (keyof NonNullable<typeof counts>)[])
+  const attention = (
+    [...ATTENTION_COUNTS] as (keyof NonNullable<typeof counts>)[]
+  )
     .map((name) => ({ name, value: counts?.[name] ?? 0 }))
     .filter((c) => c.value > 0);
 
@@ -369,44 +683,83 @@ export function IngestionPathPanel({ subject, onOpenReport, onUploadAgain, onRev
       onClick={(e) => e.stopPropagation()}
       className="mx-1 mb-1 -mt-1 flex flex-col gap-4 rounded-b-2xl border border-t-0 border-[#122D30]/5 bg-[#F6F7F2]/70 p-4"
     >
-      <NextStepBanner subject={subject} onUploadAgain={onUploadAgain} onReviewVisuals={onReviewVisuals} onAddQuestions={onAddQuestions} />
+      <NextStepBanner
+        subject={subject}
+        onUploadAgain={onUploadAgain}
+        onReviewVisuals={onReviewVisuals}
+        onAddQuestions={onAddQuestions}
+      />
 
       <div className="grid gap-5 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         {/* THE RUN */}
         <div className="min-w-0">
           <h4 className={sectionTitle}>
             The run
-            {ranBefore && <span className="ml-2 normal-case tracking-normal font-semibold text-[#122D30]/40">last run</span>}
+            {ranBefore && (
+              <span className="ml-2 normal-case tracking-normal font-semibold text-[#122D30]/40">
+                last run
+              </span>
+            )}
           </h4>
           <ol className="space-y-3" aria-label="Run phases">
-            {phases.map((p) => <PhaseRow key={p.key} phase={p} running={running} />)}
+            {phases.map((p) => (
+              <PhaseRow key={p.key} phase={p} running={running} />
+            ))}
           </ol>
           <p className="mt-3 flex flex-wrap items-center gap-x-1 text-[10px] text-[#122D30]/50">
             <Sparkles size={9} aria-hidden className="text-violet-600" />
-            AI steps only propose content; nothing reaches students until you review and publish it.
+            AI steps only propose content; nothing reaches students until you
+            review and publish it.
             {typeof aiCalls === "number" && ` ${aiCalls} AI requests so far.`}
-            {took && <span className="inline-flex items-center gap-1"><Clock size={9} aria-hidden />{running ? "Running for" : "Took"} {took}.</span>}
+            {took && (
+              <span className="inline-flex items-center gap-1">
+                <Clock size={9} aria-hidden />
+                {running ? "Running for" : "Took"} {took}.
+              </span>
+            )}
           </p>
         </div>
 
         <div className="flex min-w-0 flex-col gap-4">
           {/* FOUND SO FAR */}
           <div>
-            <h4 className={sectionTitle}>{running || subject.state === "queued" ? "Found so far" : "What it found"}</h4>
+            <h4 className={sectionTitle}>
+              {running || subject.state === "queued"
+                ? "Found so far"
+                : "What it found"}
+            </h4>
             <FoundSoFar subject={subject} />
             {(attention.length > 0 || cut) && (
-              <ul className="mt-2 flex flex-col gap-1.5" aria-label="Needs your attention">
+              <ul
+                className="mt-2 flex flex-col gap-1.5"
+                aria-label="Needs your attention"
+              >
                 {attention.map((c) => (
-                  <li key={c.name} className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-900">
-                    <AlertCircle size={12} aria-hidden className="mt-px shrink-0" />
+                  <li
+                    key={c.name}
+                    className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-900"
+                  >
+                    <AlertCircle
+                      size={12}
+                      aria-hidden
+                      className="mt-px shrink-0"
+                    />
                     {attentionLine(c.name, c.value)}
                   </li>
                 ))}
                 {cut && (
                   <li className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-900">
-                    <AlertCircle size={12} aria-hidden className="mt-px shrink-0" />
-                    Pages {cut.first_page}–{cut.last_page} left out as the solutions appendix
-                    {cut.status === "pending" ? " (waiting for your answer)" : ""}.
+                    <AlertCircle
+                      size={12}
+                      aria-hidden
+                      className="mt-px shrink-0"
+                    />
+                    Pages {cut.first_page}–{cut.last_page} left out as the
+                    solutions appendix
+                    {cut.status === "pending"
+                      ? " (waiting for your answer)"
+                      : ""}
+                    .
                   </li>
                 )}
               </ul>
@@ -417,10 +770,19 @@ export function IngestionPathPanel({ subject, onOpenReport, onUploadAgain, onRev
           <div>
             <h4 className={sectionTitle}>Where it goes</h4>
             <ol className="space-y-2.5" aria-label="Where the result goes">
-              {after.map((m) => <MilestoneRow key={m.key} m={m} />)}
+              {after.map((m) => (
+                <MilestoneRow key={m.key} m={m} />
+              ))}
             </ol>
             {subject.has_report && onOpenReport && (
-              <Button size="sm" variant="outline" pill className="mt-3" leadingIcon={<FileText size={14} aria-hidden />} onClick={onOpenReport}>
+              <Button
+                size="sm"
+                variant="outline"
+                pill
+                className="mt-3"
+                leadingIcon={<FileText size={14} aria-hidden />}
+                onClick={onOpenReport}
+              >
                 Full report of this run
               </Button>
             )}
@@ -430,31 +792,71 @@ export function IngestionPathPanel({ subject, onOpenReport, onUploadAgain, onRev
           <div className="border-t border-[#122D30]/5 pt-3">
             <h4 className={sectionTitle}>Your upload</h4>
             <p className="flex flex-wrap items-center gap-x-1.5 text-[11px] text-[#122D30]/70">
-              <FileText size={12} aria-hidden className="shrink-0 text-[#122D30]/40" />
-              <span className="font-semibold text-[#122D30]">{subject.pdf_file_name}</span>
+              <FileText
+                size={12}
+                aria-hidden
+                className="shrink-0 text-[#122D30]/40"
+              />
+              <span className="font-semibold text-[#122D30]">
+                {subject.pdf_file_name}
+              </span>
               <span>·</span>
               <span>{`PDF pages ${subject.first_pdf_page}–${subject.last_pdf_page} (${pages})`}</span>
               <span>·</span>
-              <span>{subject.lo_codes.length ? `${subject.lo_codes.length} learning outcomes` : "No learning outcomes chosen"}</span>
+              <span>
+                {subject.lo_codes.length
+                  ? `${subject.lo_codes.length} learning outcomes`
+                  : "No learning outcomes chosen"}
+              </span>
             </p>
-            <p className="mt-1 text-[10px] text-[#122D30]/45">Stored privately on GenEd&apos;s servers; only you and GenEd admins can open it.</p>
+            <p className="mt-1 text-[10px] text-[#122D30]/45">
+              Stored privately on GenEd&apos;s servers; only you and GenEd
+              admins can open it.
+            </p>
           </div>
         </div>
       </div>
 
       {/* The detail behind both columns, on one footer row: the step-by-step log, and the upload as entered. */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#122D30]/5 pt-3">
-        <Button size="sm" variant="outline" pill aria-expanded={allSteps} leadingIcon={<ListTree size={14} aria-hidden />} onClick={() => setAllSteps((v) => !v)}>
-          {allSteps ? "Hide the step-by-step log" : `Show all ${steps.length} steps with times`}
-          <ChevronDown size={14} aria-hidden className={`transition-transform ${allSteps ? "rotate-180" : ""}`} />
+        <Button
+          size="sm"
+          variant="outline"
+          pill
+          aria-expanded={allSteps}
+          leadingIcon={<ListTree size={14} aria-hidden />}
+          onClick={() => setAllSteps((v) => !v)}
+        >
+          {allSteps
+            ? "Hide the step-by-step log"
+            : `Show all ${steps.length} steps with times`}
+          <ChevronDown
+            size={14}
+            aria-hidden
+            className={`transition-transform ${allSteps ? "rotate-180" : ""}`}
+          />
         </Button>
-        <Button size="sm" variant="outline" pill aria-expanded={uploadDetails} leadingIcon={<FileText size={14} aria-hidden />} onClick={() => setUploadDetails((v) => !v)}>
+        <Button
+          size="sm"
+          variant="outline"
+          pill
+          aria-expanded={uploadDetails}
+          leadingIcon={<FileText size={14} aria-hidden />}
+          onClick={() => setUploadDetails((v) => !v)}
+        >
           {uploadDetails ? "Hide upload details" : "Upload details"}
-          <ChevronDown size={14} aria-hidden className={`transition-transform ${uploadDetails ? "rotate-180" : ""}`} />
+          <ChevronDown
+            size={14}
+            aria-hidden
+            className={`transition-transform ${uploadDetails ? "rotate-180" : ""}`}
+          />
         </Button>
       </div>
       {uploadDetails && (
-        <dl aria-label="Upload details" className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-[#122D30]/5 bg-white p-3 md:p-4 sm:grid-cols-3 lg:grid-cols-6">
+        <dl
+          aria-label="Upload details"
+          className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-[#122D30]/5 bg-white p-3 md:p-4 sm:grid-cols-3 lg:grid-cols-6"
+        >
           <Fact label="Book">{subject.book_title}</Fact>
           <Fact label="Edition">{subject.edition_label}</Fact>
           <Fact label="Chapter">{`${subject.chapter_ordinal}. ${subject.title}`}</Fact>

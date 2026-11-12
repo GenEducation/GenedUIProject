@@ -308,6 +308,8 @@ function NodeSection({
             {live.length} questions ·{" "}
             {live.filter((q) => q.state === "accepted").length} accepted ·{" "}
             {status}
+            {node.reviewable < node.review_floor &&
+              ` · only ${node.reviewable} of ${node.review_floor} checked, distinct questions so far`}
           </span>
         </span>
         <ChevronDown
@@ -723,7 +725,10 @@ export function AssessmentBankPanel({
             loading={busy === "approve"}
             onClick={() =>
               act("approve", async () => {
-                const next = await sourcesService.approveBank(sourceId, pkg.version);
+                const next = await sourcesService.approveBank(
+                  sourceId,
+                  pkg.version,
+                );
                 onApproved();
                 return next;
               })

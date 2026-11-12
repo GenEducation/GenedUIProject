@@ -682,6 +682,9 @@ export interface BankNode {
   quarantined: string[];
   /** Every ingested step is listed; only `ready_for_review` has every checkable objective covered. */
   status: "ready_for_review" | "capability_gap" | "incomplete";
+  /** Verified or accepted questions from distinct families, no variants or repeats; ready needs at least `review_floor`. */
+  reviewable: number;
+  review_floor: number;
   draft_ready: boolean;
   approved_ready: boolean;
   publishable: boolean;

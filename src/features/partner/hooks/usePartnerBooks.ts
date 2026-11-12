@@ -11,7 +11,11 @@ import { sourcesService } from "../services/sourcesService";
  * the book field is then a plain text box, which always works. `enabled`
  * false (a closed form) asks nothing.
  */
-export function usePartnerBooks(subject: string, grade: number | null, enabled = true): PartnerBook[] {
+export function usePartnerBooks(
+  subject: string,
+  grade: number | null,
+  enabled = true,
+): PartnerBook[] {
   const [books, setBooks] = useState<PartnerBook[]>([]);
 
   useEffect(() => {

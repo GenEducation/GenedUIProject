@@ -17,11 +17,15 @@ interface LearningOutcomePickerProps {
   onStrandChange: (strand: string) => void;
 }
 
-const labelClass = "text-[10px] font-black text-[#122D30] uppercase tracking-widest px-1";
+const labelClass =
+  "text-[10px] font-black text-[#122D30] uppercase tracking-widest px-1";
 
 /** `"Fractions & decimals"` → `"fractions_decimals"`: a strand code the backend accepts. */
 export function strandCodeFrom(name: string): string {
-  const code = name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  const code = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
   const lettered = /^[a-z]/.test(code) ? code : `strand_${code}`;
   return lettered.slice(0, 60).replace(/_+$/, "");
 }
@@ -53,7 +57,10 @@ export function LearningOutcomePicker({
     let cancelled = false;
     setOutcomes(null);
     setError(null);
-    Promise.all([sourcesService.learningOutcomes(board, subject, grade), sourcesService.strands(subject)])
+    Promise.all([
+      sourcesService.learningOutcomes(board, subject, grade),
+      sourcesService.strands(subject),
+    ])
       .then(([los, existing]) => {
         if (cancelled) return;
         setOutcomes(los);
@@ -74,9 +81,15 @@ export function LearningOutcomePicker({
   }, [ready, board, subject, grade]);
 
   const groups = useMemo(() => {
-    const byCompetency = new Map<string, { name: string; items: LearningOutcome[] }>();
+    const byCompetency = new Map<
+      string,
+      { name: string; items: LearningOutcome[] }
+    >();
     for (const lo of outcomes ?? []) {
-      const group = byCompetency.get(lo.competency_code) ?? { name: lo.competency_name, items: [] };
+      const group = byCompetency.get(lo.competency_code) ?? {
+        name: lo.competency_name,
+        items: [],
+      };
       group.items.push(lo);
       byCompetency.set(lo.competency_code, group);
     }
@@ -84,10 +97,14 @@ export function LearningOutcomePicker({
   }, [outcomes]);
 
   const firstPicked = outcomes?.find((lo) => lo.code === selected[0]);
-  const suggested = firstPicked ? strandCodeFrom(firstPicked.competency_name) : "";
+  const suggested = firstPicked
+    ? strandCodeFrom(firstPicked.competency_name)
+    : "";
   const strandOptions = [
     ...strands.map((code) => ({ value: code, label: code })),
-    ...(suggested && !strands.includes(suggested) ? [{ value: suggested, label: `New: ${suggested}` }] : []),
+    ...(suggested && !strands.includes(suggested)
+      ? [{ value: suggested, label: `New: ${suggested}` }]
+      : []),
   ];
 
   // The strand follows the suggestion (the first picked outcome's competency) until the partner picks one
@@ -100,7 +117,11 @@ export function LearningOutcomePicker({
   }, [suggested, optionsKey, strandPicked]);
 
   const toggle = (code: string) =>
-    onSelectedChange(selected.includes(code) ? selected.filter((c) => c !== code) : [...selected, code]);
+    onSelectedChange(
+      selected.includes(code)
+        ? selected.filter((c) => c !== code)
+        : [...selected, code],
+    );
 
   // Select all keeps what's already picked first (the first pick names the suggested strand) and adds the rest in list
   // order; with everything picked, it clears them all.
@@ -109,7 +130,11 @@ export function LearningOutcomePicker({
   const allPicked = allCodes.length > 0 && pickedCount === allCodes.length;
   const somePicked = pickedCount > 0 && !allPicked;
   const toggleAll = () =>
-    onSelectedChange(allPicked ? [] : [...selected, ...allCodes.filter((c) => !selected.includes(c))]);
+    onSelectedChange(
+      allPicked
+        ? []
+        : [...selected, ...allCodes.filter((c) => !selected.includes(c))],
+    );
 
   if (!ready) {
     return (
@@ -132,33 +157,49 @@ export function LearningOutcomePicker({
               <input
                 type="checkbox"
                 checked={allPicked}
-                ref={(el) => { if (el) el.indeterminate = somePicked; }}
+                ref={(el) => {
+                  if (el) el.indeterminate = somePicked;
+                }}
                 onChange={toggleAll}
                 className="peer sr-only"
               />
               <span
                 aria-hidden
                 className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border-[1.5px] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#122D30]/40 ${
-                  allPicked || somePicked ? "border-[#122D30] bg-[#075E63] text-white" : "border-[#122D30]/25 bg-white"
+                  allPicked || somePicked
+                    ? "border-[#122D30] bg-[#075E63] text-white"
+                    : "border-[#122D30]/25 bg-white"
                 }`}
               >
-                {allPicked ? <Check size={10} /> : somePicked ? <Minus size={10} /> : null}
+                {allPicked ? (
+                  <Check size={10} />
+                ) : somePicked ? (
+                  <Minus size={10} />
+                ) : null}
               </span>
-              <span className="text-[11px] font-bold text-[#122D30]">Select all</span>
+              <span className="text-[11px] font-bold text-[#122D30]">
+                Select all
+              </span>
             </label>
           ) : (
-            <span className="text-[10px] font-bold text-[#122D30]/40">{selected.length} selected</span>
+            <span className="text-[10px] font-bold text-[#122D30]/40">
+              {selected.length} selected
+            </span>
           )}
         </div>
         {error ? (
-          <p role="alert" className="text-xs font-bold text-red-600 px-1">{error}</p>
+          <p role="alert" className="text-xs font-bold text-red-600 px-1">
+            {error}
+          </p>
         ) : outcomes === null ? (
           <p className="flex items-center gap-2 text-xs font-bold text-[#122D30]/40 px-1">
-            <Loader2 size={14} className="animate-spin" aria-hidden /> Loading learning outcomes…
+            <Loader2 size={14} className="animate-spin" aria-hidden /> Loading
+            learning outcomes…
           </p>
         ) : outcomes.length === 0 ? (
           <p className="text-xs font-bold text-[#122D30]/50 px-1">
-            There are no learning outcomes for {subject}, Grade {grade} yet, so this chapter can&apos;t be mapped.
+            There are no learning outcomes for {subject}, Grade {grade} yet, so
+            this chapter can&apos;t be mapped.
           </p>
         ) : (
           <div className="max-h-64 overflow-y-auto rounded-2xl border border-[#122D30]/10 bg-[#F6F7F2] divide-y divide-[#122D30]/5">
@@ -180,11 +221,18 @@ export function LearningOutcomePicker({
                           on ? "bg-white" : "hover:bg-white/60"
                         }`}
                       >
-                        <input type="checkbox" checked={on} onChange={() => toggle(lo.code)} className="peer sr-only" />
+                        <input
+                          type="checkbox"
+                          checked={on}
+                          onChange={() => toggle(lo.code)}
+                          className="peer sr-only"
+                        />
                         <span
                           aria-hidden
                           className={`mt-0.5 h-4 w-4 shrink-0 rounded-[5px] border-[1.5px] flex items-center justify-center peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#122D30]/40 ${
-                            on ? "bg-[#075E63] border-[#122D30] text-white" : "border-[#122D30]/25"
+                            on
+                              ? "bg-[#075E63] border-[#122D30] text-white"
+                              : "border-[#122D30]/25"
                           }`}
                         >
                           {on && <Check size={10} />}
@@ -209,7 +257,9 @@ export function LearningOutcomePicker({
         <span className={labelClass}>Strand</span>
         <Select
           aria-label="Strand"
-          placeholder={selected.length ? "Select strand" : "Pick a learning outcome first"}
+          placeholder={
+            selected.length ? "Select strand" : "Pick a learning outcome first"
+          }
           accentColor="#122D30"
           value={strand}
           onChange={(next) => {
@@ -220,7 +270,8 @@ export function LearningOutcomePicker({
           options={strandOptions}
         />
         <p className="text-[10px] text-[#122D30]/45 px-1">
-          The topic group this chapter&apos;s concepts belong to. Use an existing one when the chapter continues it.
+          The topic group this chapter&apos;s concepts belong to. Use an
+          existing one when the chapter continues it.
         </p>
       </div>
     </div>

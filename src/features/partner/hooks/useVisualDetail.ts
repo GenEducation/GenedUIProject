@@ -9,7 +9,8 @@ import { asError } from "@/utils/errors";
 export const REGEN_POLL_MS = 12_000;
 
 const isRegenerating = (detail: VisualDetail | null) =>
-  detail?.regeneration?.state === "queued" || detail?.regeneration?.state === "claimed";
+  detail?.regeneration?.state === "queued" ||
+  detail?.regeneration?.state === "claimed";
 
 /**
  * One visual's detail. While its regeneration is `queued` or `claimed` the
@@ -35,7 +36,8 @@ export function useVisualDetail(id: string | null) {
         const next = await visualsService.getCandidate(id);
         if (currentId.current === id) setDetail(next);
       } catch (e) {
-        if (currentId.current === id) setError(asError(e).message || "Couldn't load this visual.");
+        if (currentId.current === id)
+          setError(asError(e).message || "Couldn't load this visual.");
       } finally {
         if (currentId.current === id && !quiet) setLoading(false);
       }

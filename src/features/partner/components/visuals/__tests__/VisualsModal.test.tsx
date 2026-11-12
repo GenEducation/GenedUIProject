@@ -1,12 +1,24 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
-import { makeVisual, visualsFixture, SYNTHETIC_SOURCE } from "@/test/msw/handlers/visuals";
+import {
+  makeVisual,
+  visualsFixture,
+  SYNTHETIC_SOURCE,
+} from "@/test/msw/handlers/visuals";
 import type { Subject } from "@/features/partner/store/usePartnerStore";
 import type { VisualDetail } from "@/features/partner/types/visuals";
 
-vi.mock("framer-motion", async () => (await import("./framerPassthrough")).framerPassthrough());
+vi.mock("framer-motion", async () =>
+  (await import("./framerPassthrough")).framerPassthrough(),
+);
 
 import { VisualsModal } from "../VisualsModal";
 
@@ -54,19 +66,24 @@ beforeEach(() => {
   seen = [];
   localStorage.setItem("gened_auth_token", "token-synthetic");
   server.events.on("request:start", async ({ request }) => {
-    const body = request.method === "POST" ? await request.clone().json() : undefined;
+    const body =
+      request.method === "POST" ? await request.clone().json() : undefined;
     seen.push({ method: request.method, url: new URL(request.url), body });
   });
 });
 
 afterEach(() => server.events.removeAllListeners());
 
-const gets = (path: string) => seen.filter((r) => r.method === "GET" && r.url.pathname.endsWith(path));
-const posts = (path: string) => seen.filter((r) => r.method === "POST" && r.url.pathname.endsWith(path));
+const gets = (path: string) =>
+  seen.filter((r) => r.method === "GET" && r.url.pathname.endsWith(path));
+const posts = (path: string) =>
+  seen.filter((r) => r.method === "POST" && r.url.pathname.endsWith(path));
 
 function open(subject: Subject = row) {
   const onChanged = vi.fn();
-  render(<VisualsModal subject={subject} onClose={vi.fn()} onChanged={onChanged} />);
+  render(
+    <VisualsModal subject={subject} onClose={vi.fn()} onChanged={onChanged} />,
+  );
   return { onChanged };
 }
 
@@ -81,29 +98,51 @@ async function openDetail(name = "SYNTHETIC shape 2") {
 describe("VisualsModal — list", () => {
   it("shows pending cards with the AI flagged and New version chips", async () => {
     open();
-    expect(await screen.findByRole("button", { name: "Open SYNTHETIC shape 1" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open SYNTHETIC shape 2" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Open SYNTHETIC shape 3" })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Open SYNTHETIC shape 1" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Open SYNTHETIC shape 2" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Open SYNTHETIC shape 3" }),
+    ).not.toBeInTheDocument();
 
-    const flagged = screen.getByRole("button", { name: "Open SYNTHETIC shape 1" });
+    const flagged = screen.getByRole("button", {
+      name: "Open SYNTHETIC shape 1",
+    });
     expect(within(flagged).getByText("AI flagged")).toBeInTheDocument();
     expect(within(flagged).queryByText("New version")).not.toBeInTheDocument();
-    expect(within(screen.getByRole("button", { name: "Open SYNTHETIC shape 2" })).getByText("New version")).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole("button", { name: "Open SYNTHETIC shape 2" }),
+      ).getByText("New version"),
+    ).toBeInTheDocument();
 
     // Scoped by source_id, not by subject/grade.
-    expect(gets("/v1/visuals/candidates")[0].url.searchParams.get("source_id")).toBe(SYNTHETIC_SOURCE);
+    expect(
+      gets("/v1/visuals/candidates")[0].url.searchParams.get("source_id"),
+    ).toBe(SYNTHETIC_SOURCE);
   });
 
   it("loads every visual of one run with Load more, though they share one created_at", async () => {
     // A run inserts its visuals in one transaction, so they all carry the same timestamp.
     const sameRun = "2026-01-01T00:00:00.000Z";
-    visualsFixture.reset(() => Array.from({ length: 47 }, () => makeVisual({ created_at: sameRun })));
+    visualsFixture.reset(() =>
+      Array.from({ length: 47 }, () => makeVisual({ created_at: sameRun })),
+    );
     open();
     await screen.findAllByRole("button", { name: /^Open SYNTHETIC shape/ });
-    expect(screen.getAllByRole("button", { name: /^Open SYNTHETIC shape/ })).toHaveLength(24);
+    expect(
+      screen.getAllByRole("button", { name: /^Open SYNTHETIC shape/ }),
+    ).toHaveLength(24);
 
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    await waitFor(() => expect(screen.getAllByRole("button", { name: /^Open SYNTHETIC shape/ })).toHaveLength(47));
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("button", { name: /^Open SYNTHETIC shape/ }),
+      ).toHaveLength(47),
+    );
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
 
     const next = gets("/v1/visuals/candidates").at(-1)!.url.searchParams;
@@ -115,11 +154,15 @@ describe("VisualsModal — list", () => {
     visualsFixture.reset(() => [makeVisual()]);
     open();
     await screen.findByRole("button", { name: "Open SYNTHETIC shape 1" });
-    const listCalls = () => gets("/v1/visuals/candidates").filter((r) => r.url.searchParams.get("state") === "pending").length;
+    const listCalls = () =>
+      gets("/v1/visuals/candidates").filter(
+        (r) => r.url.searchParams.get("state") === "pending",
+      ).length;
     const before = listCalls();
 
     // The refetch hands back a freshly signed URL.
-    visualsFixture.get("vis-1")!.image_url = "/v1/visual-images/vis-1?exp=2&sig=fresh";
+    visualsFixture.get("vis-1")!.image_url =
+      "/v1/visual-images/vis-1?exp=2&sig=fresh";
     fireEvent.error(screen.getByAltText("SYNTHETIC shape 1"));
     expect(screen.getByTestId("visual-image-placeholder")).toBeInTheDocument();
     await waitFor(() => expect(listCalls()).toBe(before + 1));
@@ -129,7 +172,9 @@ describe("VisualsModal — list", () => {
 
     // That one fails too: placeholder, and no second refetch.
     fireEvent.error(fresh);
-    expect(await screen.findByTestId("visual-image-placeholder")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("visual-image-placeholder"),
+    ).toBeInTheDocument();
     await new Promise((r) => setTimeout(r, 50));
     expect(listCalls()).toBe(before + 1);
   });
@@ -140,7 +185,9 @@ describe("VisualsModal — detail and decisions", () => {
     visualsFixture.reset(() => [makeVisual({ spec: null })]);
     await openDetail("SYNTHETIC shape 1");
     expect(screen.getByText("From the textbook")).toBeInTheDocument();
-    expect(screen.queryByText("The picture should show")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("The picture should show"),
+    ).not.toBeInTheDocument();
   });
 
   it("accepts with {content_hash, decision} and moves to the next pending visual", async () => {
@@ -148,7 +195,10 @@ describe("VisualsModal — detail and decisions", () => {
     fireEvent.click(screen.getByRole("button", { name: /Accept/ }));
 
     await waitFor(() => expect(posts("/decision")).toHaveLength(1));
-    expect(posts("/decision")[0].body).toEqual({ content_hash: "hash-vis-2", decision: "accept" });
+    expect(posts("/decision")[0].body).toEqual({
+      content_hash: "hash-vis-2",
+      decision: "accept",
+    });
     expect(visualsFixture.get("vis-2")!.state).toBe("accepted");
     expect(onChanged).toHaveBeenCalled();
 
@@ -162,10 +212,14 @@ describe("VisualsModal — detail and decisions", () => {
 
     const submit = screen.getByRole("button", { name: "Reject & remake" });
     expect(submit).toBeDisabled();
-    expect(screen.getByRole("switch", { name: "Make a new version" })).toBeChecked();
+    expect(
+      screen.getByRole("switch", { name: "Make a new version" }),
+    ).toBeChecked();
 
     fireEvent.click(screen.getByRole("button", { name: "Too busy" }));
-    fireEvent.change(screen.getByLabelText(/Note/), { target: { value: "SYNTHETIC note" } });
+    fireEvent.change(screen.getByLabelText(/Note/), {
+      target: { value: "SYNTHETIC note" },
+    });
     expect(submit).toBeEnabled();
     fireEvent.click(submit);
 
@@ -186,7 +240,9 @@ describe("VisualsModal — detail and decisions", () => {
 
     // Nothing is sent until a reason is picked, and the reasons say so.
     fireEvent.keyDown(note, { key: "Enter" });
-    expect(screen.getByRole("alert")).toHaveTextContent("Pick what's wrong first");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Pick what's wrong first",
+    );
     fireEvent.click(screen.getByRole("button", { name: "Too busy" }));
     expect(screen.queryByText(/Pick what's wrong first/)).toBeNull();
 
@@ -199,22 +255,33 @@ describe("VisualsModal — detail and decisions", () => {
 
     fireEvent.keyDown(note, { key: "Enter" });
     await waitFor(() => expect(posts("/decision")).toHaveLength(1));
-    expect(posts("/decision")[0].body).toMatchObject({ reason_codes: ["cluttered"], note: "SYNTHETIC line 1" });
+    expect(posts("/decision")[0].body).toMatchObject({
+      reason_codes: ["cluttered"],
+      note: "SYNTHETIC line 1",
+    });
   });
 
   it("sends the reject on Enter from a picked reason or the new-version switch", async () => {
     await openDetail("SYNTHETIC shape 2");
     fireEvent.click(screen.getByRole("button", { name: /^Reject/ }));
 
-    fireEvent.keyDown(screen.getByRole("switch", { name: "Make a new version" }), { key: "Enter" });
-    expect(screen.getByRole("alert")).toHaveTextContent("Pick what's wrong first");
+    fireEvent.keyDown(
+      screen.getByRole("switch", { name: "Make a new version" }),
+      { key: "Enter" },
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Pick what's wrong first",
+    );
     expect(posts("/decision")).toHaveLength(0);
 
     const chip = screen.getByRole("button", { name: "Too busy" });
     fireEvent.click(chip);
     fireEvent.keyDown(chip, { key: "Enter" });
     await waitFor(() => expect(posts("/decision")).toHaveLength(1));
-    expect(posts("/decision")[0].body).toMatchObject({ reason_codes: ["cluttered"], regenerate: true });
+    expect(posts("/decision")[0].body).toMatchObject({
+      reason_codes: ["cluttered"],
+      regenerate: true,
+    });
   });
 
   it("sends the reject on Enter when the clicked reason didn't take focus (Safari)", async () => {
@@ -223,21 +290,41 @@ describe("VisualsModal — detail and decisions", () => {
 
     (document.activeElement as HTMLElement | null)?.blur();
     fireEvent.keyDown(document.body, { key: "Enter" });
-    expect(screen.getByRole("alert")).toHaveTextContent("Pick what's wrong first");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Pick what's wrong first",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Too busy" }));
     (document.activeElement as HTMLElement | null)?.blur();
     fireEvent.keyDown(document.body, { key: "Enter" });
     await waitFor(() => expect(posts("/decision")).toHaveLength(1));
-    expect(posts("/decision")[0].body).toMatchObject({ reason_codes: ["cluttered"], regenerate: true });
+    expect(posts("/decision")[0].body).toMatchObject({
+      reason_codes: ["cluttered"],
+      regenerate: true,
+    });
   });
 
   it("sends the marks on Enter in a mark's field", async () => {
     await openDetail("SYNTHETIC shape 2");
     fireEvent.click(screen.getByRole("button", { name: "Mark up" }));
     const surface = screen.getByTestId("markup-surface");
-    surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 400, height: 300, right: 400, bottom: 300, x: 0, y: 0, toJSON: () => ({}) });
-    fireEvent.pointerDown(surface, { button: 0, clientX: 10, clientY: 10, pointerId: 1 });
+    surface.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      width: 400,
+      height: 300,
+      right: 400,
+      bottom: 300,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    fireEvent.pointerDown(surface, {
+      button: 0,
+      clientX: 10,
+      clientY: 10,
+      pointerId: 1,
+    });
     fireEvent.pointerMove(surface, { clientX: 100, clientY: 80, pointerId: 1 });
     fireEvent.pointerUp(surface, { clientX: 100, clientY: 80, pointerId: 1 });
 
@@ -259,21 +346,50 @@ describe("VisualsModal — detail and decisions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Mark up" }));
 
     const surface = screen.getByTestId("markup-surface");
-    surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 400, height: 300, right: 400, bottom: 300, x: 0, y: 0, toJSON: () => ({}) });
-    fireEvent.pointerDown(surface, { button: 0, clientX: 10, clientY: 10, pointerId: 1 });
+    surface.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      width: 400,
+      height: 300,
+      right: 400,
+      bottom: 300,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    fireEvent.pointerDown(surface, {
+      button: 0,
+      clientX: 10,
+      clientY: 10,
+      pointerId: 1,
+    });
     fireEvent.pointerMove(surface, { clientX: 100, clientY: 80, pointerId: 1 });
     fireEvent.pointerUp(surface, { clientX: 100, clientY: 80, pointerId: 1 });
 
-    const list = await screen.findByRole("list", { name: "Changes marked on the picture" });
+    const list = await screen.findByRole("list", {
+      name: "Changes marked on the picture",
+    });
     expect(within(list).getByText("top left")).toBeInTheDocument();
     fireEvent.click(within(list).getByRole("button", { name: "Remove" }));
 
     // Marking opens the reject form with a new version on, shows what will be sent, and needs nothing else to send it.
-    expect(screen.getByRole("switch", { name: "Make a new version" })).toBeChecked();
-    const preview = screen.getByRole("region", { name: "Sent with this remake" });
-    expect(within(preview).getByText("Top left: remove it.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Something else (explain in the note)" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.change(screen.getByLabelText(/^Note/), { target: { value: "SYNTHETIC note" } });
+    expect(
+      screen.getByRole("switch", { name: "Make a new version" }),
+    ).toBeChecked();
+    const preview = screen.getByRole("region", {
+      name: "Sent with this remake",
+    });
+    expect(
+      within(preview).getByText("Top left: remove it."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Something else (explain in the note)",
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+    fireEvent.change(screen.getByLabelText(/^Note/), {
+      target: { value: "SYNTHETIC note" },
+    });
     const submit = screen.getByRole("button", { name: "Reject & remake" });
     expect(submit).toBeEnabled();
     fireEvent.click(submit);
@@ -290,7 +406,13 @@ describe("VisualsModal — detail and decisions", () => {
   it("on a 409 shows the message, reloads the visual and keeps the session", async () => {
     server.use(
       http.post(`${BASE}/v1/visuals/candidates/:id/decision`, () =>
-        HttpResponse.json({ error_code: "VIS_409", message: "SYNTHETIC: someone already decided this." }, { status: 409 }),
+        HttpResponse.json(
+          {
+            error_code: "VIS_409",
+            message: "SYNTHETIC: someone already decided this.",
+          },
+          { status: 409 },
+        ),
       ),
     );
     await openDetail("SYNTHETIC shape 2");
@@ -298,8 +420,12 @@ describe("VisualsModal — detail and decisions", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Accept/ }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("SYNTHETIC: someone already decided this.");
-    await waitFor(() => expect(gets("/candidates/vis-2").length).toBe(readsBefore + 1));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "SYNTHETIC: someone already decided this.",
+    );
+    await waitFor(() =>
+      expect(gets("/candidates/vis-2").length).toBe(readsBefore + 1),
+    );
     expect(localStorage.getItem("gened_auth_token")).toBe("token-synthetic");
   });
 
@@ -307,10 +433,14 @@ describe("VisualsModal — detail and decisions", () => {
     await openDetail("SYNTHETIC shape 1");
     expect(screen.getByText("SYNTHETIC passage one.")).toBeVisible();
     // p2 isn't in source_refs: tucked under "Other passages".
-    expect(screen.getByText(/Other passages from this concept \(1\)/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Other passages from this concept \(1\)/),
+    ).toBeInTheDocument();
     expect(screen.getByText("SYNTHETIC checklist item")).toBeInTheDocument();
     expect(screen.getByText("The AI reviewer flagged:")).toBeInTheDocument();
-    expect(screen.getByText("SYNTHETIC problem: label overlaps")).toBeInTheDocument();
+    expect(
+      screen.getByText("SYNTHETIC problem: label overlaps"),
+    ).toBeInTheDocument();
   });
 
   it("accepts with the A key", async () => {
@@ -324,11 +454,16 @@ describe("VisualsModal — detail and decisions", () => {
   it("rejects without a new version when the toggle is off", async () => {
     await openDetail("SYNTHETIC shape 2");
     fireEvent.click(screen.getByRole("button", { name: /^Reject/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Wrong or misleading" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Wrong or misleading" }),
+    );
     fireEvent.click(screen.getByRole("switch", { name: "Make a new version" }));
     fireEvent.click(screen.getByRole("button", { name: "Reject" }));
     await waitFor(() => expect(posts("/decision")).toHaveLength(1));
-    expect(posts("/decision")[0].body).toMatchObject({ regenerate: false, note: null });
+    expect(posts("/decision")[0].body).toMatchObject({
+      regenerate: false,
+      note: null,
+    });
   });
 });
 
@@ -337,20 +472,36 @@ describe("VisualsModal — new versions", () => {
     makeVisual({
       id: "vis-r",
       state: "rejected",
-      decision: { decision: "reject", reason_codes: ["unclear"], note: "SYNTHETIC note", actor_role: "PARTNER", decided_at: "2026-01-02T00:00:00Z" },
+      decision: {
+        decision: "reject",
+        reason_codes: ["unclear"],
+        note: "SYNTHETIC note",
+        actor_role: "PARTNER",
+        decided_at: "2026-01-02T00:00:00Z",
+      },
       regeneration,
     });
 
   async function openRejected() {
     open();
     fireEvent.click(await screen.findByRole("tab", { name: /Rejected/ }));
-    fireEvent.click(await screen.findByRole("button", { name: /Open SYNTHETIC shape/ }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Open SYNTHETIC shape/ }),
+    );
     await screen.findByText("From the textbook");
   }
 
   it("shows the failure and Try again posts to /regenerate with the original reasons", async () => {
     visualsFixture.reset(() => [
-      rejected({ id: "r1", state: "failed", attempts: 1, result_candidate_id: null, error: "SYNTHETIC render error", created_at: "2026-01-02T00:00:00Z", finished_at: "2026-01-02T00:01:00Z" }),
+      rejected({
+        id: "r1",
+        state: "failed",
+        attempts: 1,
+        result_candidate_id: null,
+        error: "SYNTHETIC render error",
+        created_at: "2026-01-02T00:00:00Z",
+        finished_at: "2026-01-02T00:01:00Z",
+      }),
     ]);
     await openRejected();
     expect(screen.getByText("SYNTHETIC render error")).toBeInTheDocument();
@@ -358,18 +509,33 @@ describe("VisualsModal — new versions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 
     await waitFor(() => expect(posts("/regenerate")).toHaveLength(1));
-    expect(posts("/regenerate")[0].body).toEqual({ reason_codes: ["unclear"], note: "SYNTHETIC note" });
-    expect(await screen.findByText("Making a new version…")).toBeInTheDocument();
+    expect(posts("/regenerate")[0].body).toEqual({
+      reason_codes: ["unclear"],
+      note: "SYNTHETIC note",
+    });
+    expect(
+      await screen.findByText("Making a new version…"),
+    ).toBeInTheDocument();
   });
 
   it("says a rate-limited redraw in plain words, keeps the provider's text on hover, and still offers Try again", async () => {
     const raw =
       "TransientModelError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Resource exhausted. Please try again later.', 'status': 'RESOURCE_EXHAUSTED'}}";
     visualsFixture.reset(() => [
-      rejected({ id: "r1", state: "failed", attempts: 3, result_candidate_id: null, error: raw, created_at: "2026-01-02T00:00:00Z", finished_at: "2026-01-02T00:01:00Z" }),
+      rejected({
+        id: "r1",
+        state: "failed",
+        attempts: 3,
+        result_candidate_id: null,
+        error: raw,
+        created_at: "2026-01-02T00:00:00Z",
+        finished_at: "2026-01-02T00:01:00Z",
+      }),
     ]);
     await openRejected();
-    const plain = screen.getByText("The drawing service is busy right now. Wait a few minutes, then try again.");
+    const plain = screen.getByText(
+      "The drawing service is busy right now. Wait a few minutes, then try again.",
+    );
     expect(plain).toHaveAttribute("title", raw);
     expect(screen.queryByText(raw)).toBeNull();
     expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
@@ -378,14 +544,18 @@ describe("VisualsModal — new versions", () => {
   it("shows the empty state when nothing is waiting", async () => {
     visualsFixture.reset(() => []);
     open();
-    expect(await screen.findByText("No visuals waiting for review.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("No visuals waiting for review."),
+    ).toBeInTheDocument();
   });
 
   it("switches to the Accepted tab", async () => {
     open();
     await screen.findByRole("button", { name: "Open SYNTHETIC shape 1" });
     fireEvent.click(screen.getByRole("tab", { name: /Accepted/ }));
-    expect(await screen.findByRole("button", { name: "Open SYNTHETIC shape 3" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Open SYNTHETIC shape 3" }),
+    ).toBeInTheDocument();
   });
 
   it("shows a placeholder for a null image_url", async () => {
@@ -397,11 +567,21 @@ describe("VisualsModal — new versions", () => {
 
   it("links to the new version once it is done", async () => {
     visualsFixture.reset(() => [
-      rejected({ id: "r1", state: "done", attempts: 1, result_candidate_id: "vis-new", error: null, created_at: "2026-01-02T00:00:00Z", finished_at: "2026-01-02T00:01:00Z" }),
+      rejected({
+        id: "r1",
+        state: "done",
+        attempts: 1,
+        result_candidate_id: "vis-new",
+        error: null,
+        created_at: "2026-01-02T00:00:00Z",
+        finished_at: "2026-01-02T00:01:00Z",
+      }),
       makeVisual({ id: "vis-new", parent_id: "vis-r" }),
     ]);
     await openRejected();
-    fireEvent.click(screen.getByRole("button", { name: "Review the new version" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Review the new version" }),
+    );
     await waitFor(() => expect(gets("/candidates/vis-new").length).toBe(1));
   });
 });
@@ -414,12 +594,18 @@ describe("VisualsModal — redraws", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reject & remake" }));
 
     const notice = await screen.findByText(/Sent for a redraw/);
-    fireEvent.click(within(notice.closest("p")!).getByRole("button", { name: "Show redraws" }));
+    fireEvent.click(
+      within(notice.closest("p")!).getByRole("button", {
+        name: "Show redraws",
+      }),
+    );
 
     const list = await screen.findByRole("list", { name: "Redraws" });
     const row = within(list).getByText("SYNTHETIC shape 2").closest("li")!;
     expect(row).toHaveTextContent("Queued");
-    expect(gets("/v1/visuals/redraws").at(-1)!.url.searchParams.get("source_id")).toBe(SYNTHETIC_SOURCE);
+    expect(
+      gets("/v1/visuals/redraws").at(-1)!.url.searchParams.get("source_id"),
+    ).toBe(SYNTHETIC_SOURCE);
   });
 
   it("opens the new version of a ready redraw, and offers Try again on a failed one", async () => {
@@ -428,23 +614,45 @@ describe("VisualsModal — redraws", () => {
       makeVisual({ state: "rejected" }),
     ]);
     const ready = visualsFixture.get("vis-1")!;
-    const next = makeVisual({ parent_id: ready.id, title: "SYNTHETIC new version" });
+    const next = makeVisual({
+      parent_id: ready.id,
+      title: "SYNTHETIC new version",
+    });
     visualsFixture.set(next);
     ready.regeneration = {
-      id: "regen-vis-1", state: "done", attempts: 1, result_candidate_id: next.id, error: null,
-      created_at: "2026-01-01T00:00:00Z", finished_at: "2026-01-01T00:02:00Z",
+      id: "regen-vis-1",
+      state: "done",
+      attempts: 1,
+      result_candidate_id: next.id,
+      error: null,
+      created_at: "2026-01-01T00:00:00Z",
+      finished_at: "2026-01-01T00:02:00Z",
     };
     visualsFixture.get("vis-2")!.regeneration = {
-      id: "regen-vis-2", state: "failed", attempts: 3, result_candidate_id: null, error: "SYNTHETIC",
-      created_at: "2026-01-01T00:01:00Z", finished_at: "2026-01-01T00:03:00Z",
+      id: "regen-vis-2",
+      state: "failed",
+      attempts: 3,
+      result_candidate_id: null,
+      error: "SYNTHETIC",
+      created_at: "2026-01-01T00:01:00Z",
+      finished_at: "2026-01-01T00:03:00Z",
     };
-    render(<VisualsModal subject={row} initialTab="redraws" onClose={vi.fn()} onChanged={vi.fn()} />);
+    render(
+      <VisualsModal
+        subject={row}
+        initialTab="redraws"
+        onClose={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
 
     const list = await screen.findByRole("list", { name: "Redraws" });
     const items = within(list).getAllByRole("listitem");
     expect(items[0]).toHaveTextContent("Ready to review"); // what needs the partner comes first
     expect(items[1]).toHaveTextContent("Failed");
-    expect(within(items[1]).getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    expect(
+      within(items[1]).getByRole("button", { name: "Try again" }),
+    ).toBeInTheDocument();
 
     fireEvent.click(within(items[0]).getByRole("button", { name: "Review" }));
     expect(await screen.findByText("From the textbook")).toBeInTheDocument();
@@ -455,32 +663,82 @@ describe("VisualsModal — redraws", () => {
 describe("VisualsModal — progress and tabs", () => {
   const summary = {
     source_id: SYNTHETIC_SOURCE,
-    targets: { total: 52, to_review: 42, accepted: 9, rejected: 1, reviewed: 10 },
-    redraws: { queued: 0, drawing: 0, ready: 2, reviewed: 0, failed: 0, total: 2, open: 2 },
+    targets: {
+      total: 52,
+      to_review: 42,
+      accepted: 9,
+      rejected: 1,
+      reviewed: 10,
+    },
+    redraws: {
+      queued: 0,
+      drawing: 0,
+      ready: 2,
+      reviewed: 0,
+      failed: 0,
+      total: 2,
+      open: 2,
+    },
     all_ready: true,
   };
   const counts = { pending: 63, accepted: 9, rejected: 3 };
 
   it("says the bar counts pictures while the tabs count versions, and opens Redraws from what is ready", async () => {
-    render(<VisualsModal subject={row} counts={counts} summary={summary} onClose={vi.fn()} onChanged={vi.fn()} />);
-    const progress = await screen.findByRole("region", { name: "Review progress" });
+    render(
+      <VisualsModal
+        subject={row}
+        counts={counts}
+        summary={summary}
+        onClose={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+    const progress = await screen.findByRole("region", {
+      name: "Review progress",
+    });
     expect(progress).toHaveTextContent("Pictures reviewed10/52");
-    expect(progress).toHaveTextContent(/Counts each picture once, at its newest version\. The tabs below count every version/);
+    expect(progress).toHaveTextContent(
+      /Counts each picture once, at its newest version\. The tabs below count every version/,
+    );
     // The Redraws tab sits right below: no "See redraws" link repeats it.
-    expect(within(progress).queryByRole("button", { name: "See redraws" })).toBeNull();
+    expect(
+      within(progress).queryByRole("button", { name: "See redraws" }),
+    ).toBeNull();
 
-    fireEvent.click(within(progress).getByRole("button", { name: "2 redrawn, ready to review" }));
-    expect(screen.getByRole("tab", { name: /Redraws/ })).toHaveAttribute("aria-selected", "true");
-    expect(await screen.findByRole("tabpanel")).toHaveAttribute("aria-labelledby", "visuals-tab-redraws");
+    fireEvent.click(
+      within(progress).getByRole("button", {
+        name: "2 redrawn, ready to review",
+      }),
+    );
+    expect(screen.getByRole("tab", { name: /Redraws/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(await screen.findByRole("tabpanel")).toHaveAttribute(
+      "aria-labelledby",
+      "visuals-tab-redraws",
+    );
   });
 
   it("moves between tabs with the arrow keys, Home and End, keeping one tab in the Tab order", async () => {
-    render(<VisualsModal subject={row} counts={counts} onClose={vi.fn()} onChanged={vi.fn()} />);
-    const tablist = await screen.findByRole("tablist", { name: "Visual state" });
+    render(
+      <VisualsModal
+        subject={row}
+        counts={counts}
+        onClose={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+    const tablist = await screen.findByRole("tablist", {
+      name: "Visual state",
+    });
     const tab = (name: RegExp) => within(tablist).getByRole("tab", { name });
     expect(tab(/To review/)).toHaveAttribute("tabindex", "0");
     expect(tab(/Accepted/)).toHaveAttribute("tabindex", "-1");
-    expect(tab(/To review/)).toHaveAttribute("aria-controls", "visuals-tabpanel");
+    expect(tab(/To review/)).toHaveAttribute(
+      "aria-controls",
+      "visuals-tabpanel",
+    );
 
     fireEvent.keyDown(tablist, { key: "ArrowRight" });
     expect(tab(/Accepted/)).toHaveAttribute("aria-selected", "true");

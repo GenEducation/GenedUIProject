@@ -1,13 +1,29 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, Check, CheckCircle2, ChevronDown, Images, Loader2, Play, Rocket, ShieldCheck, X } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  Images,
+  Loader2,
+  Play,
+  Rocket,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
 import { ApiRequestError } from "@/utils/authFetch";
 import { sourcesService } from "../services/sourcesService";
-import { REJECT_REASONS, type ReleaseProposal, type ReleaseReason, type SourceRelease } from "../types/sources";
+import {
+  REJECT_REASONS,
+  type ReleaseProposal,
+  type ReleaseReason,
+  type SourceRelease,
+} from "../types/sources";
 import { groupByKind, summarize } from "../utils/releaseSummary";
 import { buildLookup, type ReleaseLookup } from "../utils/releaseDetails";
 import { ReleaseProposalDetails } from "./ReleaseProposalDetails";
@@ -45,25 +61,36 @@ export function SourceReleaseModal(props: SourceReleaseModalProps) {
       title={subject ? `Review ${subject.title}` : "Review"}
       panelStyle={{ maxWidth: "min(920px, 100%)", background: "#F6F7F2" }}
     >
-      {subject && <ReleaseBody key={subject.source_id} {...props} subject={subject} />}
+      {subject && (
+        <ReleaseBody key={subject.source_id} {...props} subject={subject} />
+      )}
     </Modal>
   );
 }
 
-function ReleaseBody({ subject, onClose, onPublished, onRerun, onReviewRedraws }: SourceReleaseModalProps & { subject: Subject }) {
+function ReleaseBody({
+  subject,
+  onClose,
+  onPublished,
+  onRerun,
+  onReviewRedraws,
+}: SourceReleaseModalProps & { subject: Subject }) {
   const [data, setData] = useState<SourceRelease | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null); // a proposal id, a group kind, "all", "publish" or "rerun"
   // Redraws still open when "Publish" was pressed: the partner is asked before publishing anyway.
-  const [confirmRedraws, setConfirmRedraws] = useState<VisualRedrawTally | null>(null);
+  const [confirmRedraws, setConfirmRedraws] =
+    useState<VisualRedrawTally | null>(null);
 
   const load = useCallback(async () => {
     try {
       setData(await sourcesService.release(subject.source_id));
       setLoadError(null);
     } catch (e) {
-      setLoadError(asError(e).message || "Couldn't load this chapter's review.");
+      setLoadError(
+        asError(e).message || "Couldn't load this chapter's review.",
+      );
     }
   }, [subject.source_id]);
 
@@ -71,7 +98,12 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun, onReviewRedraws }
     void load();
   }, [load]);
 
-  const decide = async (key: string, proposals: ReleaseProposal[], decision: "accept" | "reject", reason?: ReleaseReason) => {
+  const decide = async (
+    key: string,
+    proposals: ReleaseProposal[],
+    decision: "accept" | "reject",
+    reason?: ReleaseReason,
+  ) => {
     setBusy(key);
     setError(null);
     try {
@@ -81,14 +113,23 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun, onReviewRedraws }
           proposal_id: p.id,
           content_hash: p.content_hash,
           decision,
-          reasons: [decision === "accept" ? "accepted_as_is" : (reason as ReleaseReason)],
+          reasons: [
+            decision === "accept"
+              ? "accepted_as_is"
+              : (reason as ReleaseReason),
+          ],
         })),
       );
       const refused = results.filter((r) => !r.recorded);
-      if (refused.length) setError(`${refused.length} decision${refused.length === 1 ? " wasn't" : "s weren't"} recorded: ${refused[0].error ?? "refused"}`);
+      if (refused.length)
+        setError(
+          `${refused.length} decision${refused.length === 1 ? " wasn't" : "s weren't"} recorded: ${refused[0].error ?? "refused"}`,
+        );
       await load();
     } catch (e) {
-      setError(asError(e).message || "The decision wasn't saved. Please try again.");
+      setError(
+        asError(e).message || "The decision wasn't saved. Please try again.",
+      );
     } finally {
       setBusy(null);
     }
@@ -109,18 +150,26 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun, onReviewRedraws }
     setBusy("publish");
     setError(null);
     try {
-      await sourcesService.publishRelease(subject.source_id, data.release.artifact_hash, anyway);
+      await sourcesService.publishRelease(
+        subject.source_id,
+        data.release.artifact_hash,
+        anyway,
+      );
       setConfirmRedraws(null);
       await load();
       onPublished();
     } catch (e) {
-      const asked = e instanceof ApiRequestError ? openRedrawsFrom(e.details) : null;
+      const asked =
+        e instanceof ApiRequestError ? openRedrawsFrom(e.details) : null;
       if (asked) {
         setConfirmRedraws(asked);
         void load();
       } else {
         setConfirmRedraws(null);
-        setError(asError(e).message || "The chapter wasn't published. Please try again.");
+        setError(
+          asError(e).message ||
+            "The chapter wasn't published. Please try again.",
+        );
       }
     } finally {
       setBusy(null);
@@ -133,7 +182,9 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun, onReviewRedraws }
       await onRerun(subject);
       onClose();
     } catch (e) {
-      setLoadError(asError(e).message || "The chapter didn't start. Please try again.");
+      setLoadError(
+        asError(e).message || "The chapter didn't start. Please try again.",
+      );
       setBusy(null);
     }
   };
@@ -146,7 +197,13 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun, onReviewRedraws }
   const accepted = proposals.length - pending.length - rejected.length;
   const published = data?.release.state === "published";
   const blocked = data?.release.state === "blocked";
-  const canPublish = !!data && !published && !blocked && pending.length === 0 && rejected.length === 0 && !!data.release.artifact_hash;
+  const canPublish =
+    !!data &&
+    !published &&
+    !blocked &&
+    pending.length === 0 &&
+    rejected.length === 0 &&
+    !!data.release.artifact_hash;
 
   return (
     <div className="flex flex-col min-h-full">
@@ -155,14 +212,24 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun, onReviewRedraws }
           <ShieldCheck size={20} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">Review &amp; publish</p>
-          <h2 className="text-lg md:text-xl font-black text-[#122D30] tracking-tight truncate">{subject.title}</h2>
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">
+            Review &amp; publish
+          </p>
+          <h2 className="text-lg md:text-xl font-black text-[#122D30] tracking-tight truncate">
+            {subject.title}
+          </h2>
           <p className="text-xs text-[#122D30]/60 mt-1 max-w-xl">
-            Check what the run made from your chapter. Everything needs your accept before students can open it; a
-            part you reject stops the chapter from being published until it is run again.
+            Check what the run made from your chapter. Everything needs your
+            accept before students can open it; a part you reject stops the
+            chapter from being published until it is run again.
           </p>
         </div>
-        <Button iconOnly variant="tertiary" aria-label="Close" onClick={onClose}>
+        <Button
+          iconOnly
+          variant="tertiary"
+          aria-label="Close"
+          onClick={onClose}
+        >
           <X size={18} />
         </Button>
       </header>
@@ -170,30 +237,53 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun, onReviewRedraws }
       <div className="flex-1 px-5 md:px-7 py-5 flex flex-col gap-4">
         {loadError ? (
           <div className="py-10 flex flex-col items-center gap-4 text-center">
-            <p role="alert" className="text-sm font-bold text-[#122D30]/70 max-w-md">{loadError}</p>
-            <Button variant="secondary" leadingIcon={<Play size={14} />} loading={busy === "rerun"} onClick={() => void rerun()}>
+            <p
+              role="alert"
+              className="text-sm font-bold text-[#122D30]/70 max-w-md"
+            >
+              {loadError}
+            </p>
+            <Button
+              variant="secondary"
+              leadingIcon={<Play size={14} />}
+              loading={busy === "rerun"}
+              onClick={() => void rerun()}
+            >
               Run the chapter again
             </Button>
           </div>
         ) : !data ? (
           <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#122D30]/40 py-10">
-            <Loader2 size={16} className="animate-spin" aria-hidden /> Loading the review…
+            <Loader2 size={16} className="animate-spin" aria-hidden /> Loading
+            the review…
           </p>
         ) : (
           <>
             {published ? (
-              <p role="status" className="flex items-center gap-2 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm font-bold text-emerald-800">
-                <CheckCircle2 size={16} aria-hidden /> Published. Students of your school can open this chapter.
+              <p
+                role="status"
+                className="flex items-center gap-2 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm font-bold text-emerald-800"
+              >
+                <CheckCircle2 size={16} aria-hidden /> Published. Students of
+                your school can open this chapter.
               </p>
             ) : blocked ? (
-              <p role="status" className="flex items-center gap-2 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm font-bold text-amber-800">
-                <AlertCircle size={16} aria-hidden /> Core&apos;s checks blocked this release. Run the chapter again, or ask GenEd to look at it.
+              <p
+                role="status"
+                className="flex items-center gap-2 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm font-bold text-amber-800"
+              >
+                <AlertCircle size={16} aria-hidden /> Core&apos;s checks blocked
+                this release. Run the chapter again, or ask GenEd to look at it.
               </p>
             ) : null}
 
             {!published && data?.live?.state === "published" && (
-              <p role="note" className="flex items-center gap-2 rounded-2xl bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-900">
-                <CheckCircle2 size={16} aria-hidden /> Students still see the version you published earlier. Publishing this one replaces it.
+              <p
+                role="note"
+                className="flex items-center gap-2 rounded-2xl bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-900"
+              >
+                <CheckCircle2 size={16} aria-hidden /> Students still see the
+                version you published earlier. Publishing this one replaces it.
               </p>
             )}
 
@@ -204,22 +294,35 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun, onReviewRedraws }
                 </p>
                 <RedrawTallyBar
                   summary={data.visual_review}
-                  onShowRedraws={onReviewRedraws ? () => onReviewRedraws(subject) : undefined}
+                  onShowRedraws={
+                    onReviewRedraws ? () => onReviewRedraws(subject) : undefined
+                  }
                 />
                 {!published && data.visual_review.redraws.open > 0 && (
-                  <p role="note" className="flex items-center gap-2 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm font-bold text-amber-800">
+                  <p
+                    role="note"
+                    className="flex items-center gap-2 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm font-bold text-amber-800"
+                  >
                     <AlertCircle size={16} className="shrink-0" aria-hidden />
-                    {openRedrawsText(data.visual_review.redraws)}. Review them before publishing, or publish now and
-                    review them after.
+                    {openRedrawsText(data.visual_review.redraws)}. Review them
+                    before publishing, or publish now and review them after.
                   </p>
                 )}
               </div>
             )}
 
             <div className="grid grid-cols-3 gap-2.5">
-              <Count label="To review" value={pending.length} tone={pending.length ? "warn" : "neutral"} />
+              <Count
+                label="To review"
+                value={pending.length}
+                tone={pending.length ? "warn" : "neutral"}
+              />
               <Count label="Accepted" value={accepted} tone="good" />
-              <Count label="Rejected" value={rejected.length} tone={rejected.length ? "bad" : "neutral"} />
+              <Count
+                label="Rejected"
+                value={rejected.length}
+                tone={rejected.length ? "bad" : "neutral"}
+              />
             </div>
 
             {groupByKind(proposals).map((g) => (
@@ -232,7 +335,9 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun, onReviewRedraws }
                 readOnly={published}
                 busy={busy}
                 onAcceptAll={(ps) => void decide(g.info.label, ps, "accept")}
-                onDecide={(p, decision, reason) => void decide(p.id, [p], decision, reason)}
+                onDecide={(p, decision, reason) =>
+                  void decide(p.id, [p], decision, reason)
+                }
               />
             ))}
           </>
@@ -242,8 +347,12 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun, onReviewRedraws }
       {data && !published && (
         <footer className="sticky bottom-0 shrink-0 bg-white border-t border-[#122D30]/5 px-5 md:px-7 py-4 flex flex-col gap-3">
           {error && (
-            <p role="alert" className="flex items-start gap-2 text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
-              <AlertCircle size={14} className="mt-px shrink-0" aria-hidden /> {error}
+            <p
+              role="alert"
+              className="flex items-start gap-2 text-xs font-bold text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2"
+            >
+              <AlertCircle size={14} className="mt-px shrink-0" aria-hidden />{" "}
+              {error}
             </p>
           )}
           {confirmRedraws ? (
@@ -257,43 +366,66 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun, onReviewRedraws }
                   {openRedrawsText(confirmRedraws)}. Publish anyway?
                 </p>
                 <p className="mt-0.5 text-xs font-bold text-amber-800/80">
-                  A redraw you accept later still reaches lessons. A question waiting for its picture stays out until
-                  the chapter is run again.
+                  A redraw you accept later still reaches lessons. A question
+                  waiting for its picture stays out until the chapter is run
+                  again.
                 </p>
               </div>
-              <Button variant="secondary" disabled={busy === "publish"} onClick={() => setConfirmRedraws(null)}>
+              <Button
+                variant="secondary"
+                disabled={busy === "publish"}
+                onClick={() => setConfirmRedraws(null)}
+              >
                 Wait for redraws
               </Button>
-              <Button leadingIcon={<Rocket size={14} />} loading={busy === "publish"} onClick={() => void publish(true)}>
+              <Button
+                leadingIcon={<Rocket size={14} />}
+                loading={busy === "publish"}
+                onClick={() => void publish(true)}
+              >
                 Publish anyway
               </Button>
             </div>
           ) : (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <p className="flex-1 text-xs font-bold text-[#122D30]/55">
-              {rejected.length
-                ? "A rejected part stops publishing. Run the chapter again to make a new release."
-                : pending.length
-                  ? `${pending.length} part${pending.length === 1 ? "" : "s"} left to review`
-                  : "Everything is accepted."}
-            </p>
-            {pending.length > 0 && (
-              <Button variant="secondary" leadingIcon={<Check size={14} />} loading={busy === "all"} disabled={!!busy}
-                onClick={() => void decide("all", pending, "accept")}>
-                Accept all {pending.length}
-              </Button>
-            )}
-            {rejected.length > 0 ? (
-              <Button leadingIcon={<Play size={14} />} loading={busy === "rerun"} disabled={!!busy && busy !== "rerun"} onClick={() => void rerun()}>
-                Run the chapter again
-              </Button>
-            ) : (
-              <Button leadingIcon={<Rocket size={14} />} loading={busy === "publish"} disabled={!canPublish || (!!busy && busy !== "publish")}
-                onClick={() => void publish()}>
-                Publish chapter
-              </Button>
-            )}
-          </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <p className="flex-1 text-xs font-bold text-[#122D30]/55">
+                {rejected.length
+                  ? "A rejected part stops publishing. Run the chapter again to make a new release."
+                  : pending.length
+                    ? `${pending.length} part${pending.length === 1 ? "" : "s"} left to review`
+                    : "Everything is accepted."}
+              </p>
+              {pending.length > 0 && (
+                <Button
+                  variant="secondary"
+                  leadingIcon={<Check size={14} />}
+                  loading={busy === "all"}
+                  disabled={!!busy}
+                  onClick={() => void decide("all", pending, "accept")}
+                >
+                  Accept all {pending.length}
+                </Button>
+              )}
+              {rejected.length > 0 ? (
+                <Button
+                  leadingIcon={<Play size={14} />}
+                  loading={busy === "rerun"}
+                  disabled={!!busy && busy !== "rerun"}
+                  onClick={() => void rerun()}
+                >
+                  Run the chapter again
+                </Button>
+              ) : (
+                <Button
+                  leadingIcon={<Rocket size={14} />}
+                  loading={busy === "publish"}
+                  disabled={!canPublish || (!!busy && busy !== "publish")}
+                  onClick={() => void publish()}
+                >
+                  Publish chapter
+                </Button>
+              )}
+            </div>
           )}
         </footer>
       )}
@@ -301,11 +433,26 @@ function ReleaseBody({ subject, onClose, onPublished, onRerun, onReviewRedraws }
   );
 }
 
-function Count({ label, value, tone }: { label: string; value: number; tone: "good" | "warn" | "bad" | "neutral" }) {
-  const color = { good: "text-emerald-700", warn: "text-amber-700", bad: "text-red-700", neutral: "text-[#122D30]" }[tone];
+function Count({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "good" | "warn" | "bad" | "neutral";
+}) {
+  const color = {
+    good: "text-emerald-700",
+    warn: "text-amber-700",
+    bad: "text-red-700",
+    neutral: "text-[#122D30]",
+  }[tone];
   return (
     <div className="rounded-2xl bg-white border border-[#122D30]/5 px-4 py-3">
-      <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">{label}</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">
+        {label}
+      </p>
       <p className={`text-2xl font-black tabular-nums ${color}`}>{value}</p>
     </div>
   );
@@ -328,12 +475,19 @@ function KindGroup({
   readOnly: boolean;
   busy: string | null;
   onAcceptAll: (ps: ReleaseProposal[]) => void;
-  onDecide: (p: ReleaseProposal, decision: "accept" | "reject", reason?: ReleaseReason) => void;
+  onDecide: (
+    p: ReleaseProposal,
+    decision: "accept" | "reject",
+    reason?: ReleaseReason,
+  ) => void;
 }) {
   const pending = proposals.filter((p) => p.state === "pending");
   const [open, setOpen] = useState(pending.length > 0 && pending.length <= 12);
   return (
-    <section aria-label={label} className="rounded-2xl bg-white border border-[#122D30]/5">
+    <section
+      aria-label={label}
+      className="rounded-2xl bg-white border border-[#122D30]/5"
+    >
       <div className="flex items-center gap-3 px-4 md:px-5 py-3.5">
         {/* eslint-disable-next-line no-restricted-syntax -- a full-width disclosure header, not an action button */}
         <button
@@ -342,29 +496,56 @@ function KindGroup({
           aria-expanded={open}
           className="flex-1 min-w-0 flex items-center gap-2 text-left"
         >
-          <ChevronDown size={16} className={`shrink-0 text-[#122D30]/40 transition-transform ${open ? "" : "-rotate-90"}`} aria-hidden />
+          <ChevronDown
+            size={16}
+            className={`shrink-0 text-[#122D30]/40 transition-transform ${open ? "" : "-rotate-90"}`}
+            aria-hidden
+          />
           <span className="min-w-0">
             <span className="block text-sm font-black text-[#122D30]">
-              {label} <span className="text-[#122D30]/40 tabular-nums">· {proposals.length}</span>
+              {label}{" "}
+              <span className="text-[#122D30]/40 tabular-nums">
+                · {proposals.length}
+              </span>
             </span>
-            {hint && <span className="block text-[11px] text-[#122D30]/50 truncate">{hint}</span>}
+            {hint && (
+              <span className="block text-[11px] text-[#122D30]/50 truncate">
+                {hint}
+              </span>
+            )}
           </span>
         </button>
         {pending.length > 0 ? (
           !readOnly && (
-            <Button size="sm" variant="tertiary" leadingIcon={<Check size={13} />} loading={busy === label} disabled={!!busy}
-              onClick={() => onAcceptAll(pending)} aria-label={`Accept all ${pending.length} ${label.toLowerCase()}`}>
+            <Button
+              size="sm"
+              variant="tertiary"
+              leadingIcon={<Check size={13} />}
+              loading={busy === label}
+              disabled={!!busy}
+              onClick={() => onAcceptAll(pending)}
+              aria-label={`Accept all ${pending.length} ${label.toLowerCase()}`}
+            >
               Accept {pending.length}
             </Button>
           )
         ) : (
-          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Done</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
+            Done
+          </span>
         )}
       </div>
       {open && (
         <ul className="border-t border-[#122D30]/5 divide-y divide-[#122D30]/5">
           {proposals.map((p) => (
-            <ProposalRow key={p.id} proposal={p} lookup={lookup} readOnly={readOnly} busy={busy} onDecide={onDecide} />
+            <ProposalRow
+              key={p.id}
+              proposal={p}
+              lookup={lookup}
+              readOnly={readOnly}
+              busy={busy}
+              onDecide={onDecide}
+            />
           ))}
         </ul>
       )}
@@ -383,7 +564,11 @@ function ProposalRow({
   lookup: ReleaseLookup;
   readOnly: boolean;
   busy: string | null;
-  onDecide: (p: ReleaseProposal, decision: "accept" | "reject", reason?: ReleaseReason) => void;
+  onDecide: (
+    p: ReleaseProposal,
+    decision: "accept" | "reject",
+    reason?: ReleaseReason,
+  ) => void;
 }) {
   const { title, detail } = summarize(proposal);
   const [rejecting, setRejecting] = useState(false);
@@ -395,8 +580,14 @@ function ProposalRow({
     <li className="px-4 md:px-5 py-3.5">
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-[#122D30] leading-snug">{title}</p>
-          {detail && <p className="mt-0.5 text-xs text-[#122D30]/60 leading-relaxed line-clamp-3">{detail}</p>}
+          <p className="text-sm font-bold text-[#122D30] leading-snug">
+            {title}
+          </p>
+          {detail && (
+            <p className="mt-0.5 text-xs text-[#122D30]/60 leading-relaxed line-clamp-3">
+              {detail}
+            </p>
+          )}
           {/* eslint-disable-next-line no-restricted-syntax -- an inline text disclosure, not an action button */}
           <button
             type="button"
@@ -404,15 +595,23 @@ function ProposalRow({
             aria-expanded={showDetails}
             className="mt-1 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#075E63]/70 hover:text-[#075E63]"
           >
-            <ChevronDown size={12} className={`transition-transform ${showDetails ? "" : "-rotate-90"}`} aria-hidden />
+            <ChevronDown
+              size={12}
+              className={`transition-transform ${showDetails ? "" : "-rotate-90"}`}
+              aria-hidden
+            />
             {showDetails ? "Hide details" : "Show details"}
           </button>
-          {showDetails && <ReleaseProposalDetails proposal={proposal} lookup={lookup} />}
+          {showDetails && (
+            <ReleaseProposalDetails proposal={proposal} lookup={lookup} />
+          )}
         </div>
         {proposal.state !== "pending" ? (
           <span
             className={`shrink-0 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-              proposal.state === "accepted" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"
+              proposal.state === "accepted"
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : "bg-red-50 text-red-700 border-red-200"
             }`}
           >
             {proposal.state === "accepted" ? "Accepted" : "Rejected"}
@@ -421,11 +620,23 @@ function ProposalRow({
           !readOnly &&
           !rejecting && (
             <div className="shrink-0 flex items-center gap-1.5">
-              <Button size="sm" variant="tertiary" disabled={!!busy} onClick={() => setRejecting(true)} aria-label={`Reject ${title}`}>
+              <Button
+                size="sm"
+                variant="tertiary"
+                disabled={!!busy}
+                onClick={() => setRejecting(true)}
+                aria-label={`Reject ${title}`}
+              >
                 Reject
               </Button>
-              <Button size="sm" leadingIcon={<Check size={13} />} loading={mine} disabled={!!busy && !mine}
-                onClick={() => onDecide(proposal, "accept")} aria-label={`Accept ${title}`}>
+              <Button
+                size="sm"
+                leadingIcon={<Check size={13} />}
+                loading={mine}
+                disabled={!!busy && !mine}
+                onClick={() => onDecide(proposal, "accept")}
+                aria-label={`Accept ${title}`}
+              >
                 Accept
               </Button>
             </div>
@@ -451,11 +662,22 @@ function ProposalRow({
             </select>
           </label>
           <div className="flex items-center gap-1.5">
-            <Button size="sm" variant="tertiary" onClick={() => setRejecting(false)}>
+            <Button
+              size="sm"
+              variant="tertiary"
+              onClick={() => setRejecting(false)}
+            >
               Cancel
             </Button>
-            <Button size="sm" variant="destructiveSolid" disabled={!reason || !!busy} loading={mine}
-              onClick={() => onDecide(proposal, "reject", reason as ReleaseReason)}>
+            <Button
+              size="sm"
+              variant="destructiveSolid"
+              disabled={!reason || !!busy}
+              loading={mine}
+              onClick={() =>
+                onDecide(proposal, "reject", reason as ReleaseReason)
+              }
+            >
               Reject
             </Button>
           </div>

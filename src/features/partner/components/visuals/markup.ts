@@ -45,7 +45,10 @@ export const MIN_DRAG = 0.025;
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
 
 /** The box between two points, kept inside the picture. */
-export function boxFrom(a: { x: number; y: number }, b: { x: number; y: number }): Box {
+export function boxFrom(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+): Box {
   const x1 = clamp(Math.min(a.x, b.x));
   const y1 = clamp(Math.min(a.y, b.y));
   const x2 = clamp(Math.max(a.x, b.x));
@@ -87,15 +90,23 @@ export function cropWords(box: Box): string {
     box.x > EDGE && "left",
   ].filter((s): s is string => !!s);
   if (sides.length === 0) return "keep the whole picture";
-  const list = sides.length === 1 ? sides[0] : `${sides.slice(0, -1).join(", ")} and ${sides[sides.length - 1]}`;
+  const list =
+    sides.length === 1
+      ? sides[0]
+      : `${sides.slice(0, -1).join(", ")} and ${sides[sides.length - 1]}`;
   return `trim the ${list} ${sides.length === 1 ? "edge" : "edges"}`;
 }
 
 /** The parts of the picture its spec names, for "Which part?": its labels first, then its objects. */
 export function specParts(spec: VisualSpec | null): string[] {
   if (!spec) return [];
-  const labels = spec.texts.map((t) => `the "${t.text}" ${t.role === "title" ? "title" : t.role === "caption" ? "caption" : "label"}`);
-  const objects = spec.objects.map((o) => `the ${o.what}`.replace(/\s+/g, " ").trim());
+  const labels = spec.texts.map(
+    (t) =>
+      `the "${t.text}" ${t.role === "title" ? "title" : t.role === "caption" ? "caption" : "label"}`,
+  );
+  const objects = spec.objects.map((o) =>
+    `the ${o.what}`.replace(/\s+/g, " ").trim(),
+  );
   return [...new Set([...labels, ...objects])].slice(0, 40);
 }
 
@@ -124,7 +135,10 @@ export function markLine(mark: Mark, n: number): string {
 /** The marks as the opening of the note, or "" with none. Crop first: it frames everything else. */
 export function marksText(marks: Mark[]): string {
   if (marks.length === 0) return "";
-  return ["Changes marked on the picture:", ...orderedMarks(marks).map((m, i) => markLine(m, i + 1))].join("\n");
+  return [
+    "Changes marked on the picture:",
+    ...orderedMarks(marks).map((m, i) => markLine(m, i + 1)),
+  ].join("\n");
 }
 
 /** The note sent with the redraw: the marks, then the partner's own note. Null when both are empty. */
@@ -140,5 +154,8 @@ export function overLimit(marks: Mark[], note: string): number {
 
 /** Marks in display order, numbered as they will be in the note. */
 export function orderedMarks(marks: Mark[]): Mark[] {
-  return [...marks.filter((m) => m.kind === "crop"), ...marks.filter((m) => m.kind === "change")];
+  return [
+    ...marks.filter((m) => m.kind === "crop"),
+    ...marks.filter((m) => m.kind === "change"),
+  ];
 }

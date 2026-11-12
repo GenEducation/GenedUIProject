@@ -11,24 +11,36 @@ describe("summarizeReport", () => {
       ["node_checks", 1, "admin"],
     ]);
     expect(problems[0].outcomes).toEqual(["G6-MATH-LO1.2.1"]);
-    expect(problems[0].text).toMatch(/isn't taught by any concept in this chapter: G6-MATH-LO1\.2\.1/);
+    expect(problems[0].text).toMatch(
+      /isn't taught by any concept in this chapter: G6-MATH-LO1\.2\.1/,
+    );
     expect(problems[1].text).toMatch(/^3 textbook figures need to be linked/);
-    expect(problems[2].text).toMatch(/1 other check failed \(SYNTHETIC structural detail\)/);
+    expect(problems[2].text).toMatch(
+      /1 other check failed \(SYNTHETIC structural detail\)/,
+    );
   });
-
 });
 
 describe("who fixes a check", () => {
-  const report = "## Validation\n- VIOLATION single_component_share items: share None below 0.7\n- VIOLATION SYNTHETIC_check x: y\n";
+  const report =
+    "## Validation\n- VIOLATION single_component_share items: share None below 0.7\n- VIOLATION SYNTHETIC_check x: y\n";
   it("tells the partner to add questions when there are too few", () => {
     const [p] = summarizeReport(report).problems;
     expect(p).toMatchObject({ code: "single_component_share", fixedBy: "you" });
     expect(p.text).toMatch(/Add questions/);
   });
   it("takes the server's owner over the default", () => {
-    const owners = { single_component_share: "gened", SYNTHETIC_check: "partner" } as const;
-    const byCode = Object.fromEntries(summarizeReport(report, owners).problems.map((p) => [p.code, p.fixedBy]));
-    expect(byCode).toEqual({ single_component_share: "admin", SYNTHETIC_check: "you" });
+    const owners = {
+      single_component_share: "gened",
+      SYNTHETIC_check: "partner",
+    } as const;
+    const byCode = Object.fromEntries(
+      summarizeReport(report, owners).problems.map((p) => [p.code, p.fixedBy]),
+    );
+    expect(byCode).toEqual({
+      single_component_share: "admin",
+      SYNTHETIC_check: "you",
+    });
   });
 });
 
@@ -84,16 +96,38 @@ describe("parseReport", () => {
     expect(r.passed).toBe(true);
     expect(r.warnings).toBe(1);
     expect(r.unreadablePages).toEqual([14]);
-    expect(r.visualCheck).toEqual([{ page: 9, text: "SYNTHETIC smudged line" }]);
-    expect(r.concepts).toEqual([{ resolution: "novel", title: "SYNTHETIC tally marks", definition: "Marks grouped in fives to count.", lo: "G6-LO1" }]);
+    expect(r.visualCheck).toEqual([
+      { page: 9, text: "SYNTHETIC smudged line" },
+    ]);
+    expect(r.concepts).toEqual([
+      {
+        resolution: "novel",
+        title: "SYNTHETIC tally marks",
+        definition: "Marks grouped in fives to count.",
+        lo: "G6-LO1",
+      },
+    ]);
     expect(r.questions).toEqual([
       { prompt: "SYNTHETIC how many?", answer: "12" },
       { prompt: "SYNTHETIC name two", answer: "red, blue" },
     ]);
-    expect(r.variants[0]).toMatchObject({ prompt: "SYNTHETIC how many now?", answer: "15", note: "From: SYNTHETIC how many?" });
-    expect(r.removed[0]).toMatchObject({ prompt: "SYNTHETIC tricky", answer: "7", note: "The second check got 8" });
-    expect(r.skipped).toEqual([{ reason: "not machine scorable", prompt: "SYNTHETIC explain why" }]);
+    expect(r.variants[0]).toMatchObject({
+      prompt: "SYNTHETIC how many now?",
+      answer: "15",
+      note: "From: SYNTHETIC how many?",
+    });
+    expect(r.removed[0]).toMatchObject({
+      prompt: "SYNTHETIC tricky",
+      answer: "7",
+      note: "The second check got 8",
+    });
+    expect(r.skipped).toEqual([
+      { reason: "not machine scorable", prompt: "SYNTHETIC explain why" },
+    ]);
     expect(r.held).toEqual(["SYNTHETIC look at the picture"]);
-    expect(r.figures[0]).toMatchObject({ role: "teaching", reason: "shows tallies" });
+    expect(r.figures[0]).toMatchObject({
+      role: "teaching",
+      reason: "shows tallies",
+    });
   });
 });

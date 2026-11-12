@@ -4,7 +4,9 @@ import { makeSource, sourcesFixture } from "@/test/msw/handlers/sources";
 import { visualsFixture } from "@/test/msw/handlers/visuals";
 import { usePartnerStore } from "@/features/partner/store/usePartnerStore";
 
-vi.mock("framer-motion", async () => (await import("../visuals/__tests__/framerPassthrough")).framerPassthrough());
+vi.mock("framer-motion", async () =>
+  (await import("../visuals/__tests__/framerPassthrough")).framerPassthrough(),
+);
 vi.mock("../IngestedPdfViewer", () => ({ IngestedPdfViewer: () => null }));
 
 import { SubjectRegistry, RUN_POLL_MS } from "../SubjectRegistry";
@@ -12,8 +14,21 @@ import { SubjectRegistry, RUN_POLL_MS } from "../SubjectRegistry";
 const running = makeSource({
   source_id: "synthetic-polled",
   state: "running",
-  chapter: { ordinal: 1, title: "SYNTHETIC polled", first_pdf_page: 1, last_pdf_page: 1 },
-  progress: { stage: "render", step: 1, steps: 9, done: 0, total: 0, percent: 5, updated_at: new Date().toISOString() },
+  chapter: {
+    ordinal: 1,
+    title: "SYNTHETIC polled",
+    first_pdf_page: 1,
+    last_pdf_page: 1,
+  },
+  progress: {
+    stage: "render",
+    step: 1,
+    steps: 9,
+    done: 0,
+    total: 0,
+    percent: 5,
+    updated_at: new Date().toISOString(),
+  },
 });
 
 const realFetch = usePartnerStore.getState().fetchSubjects;
@@ -21,18 +36,31 @@ const realFetch = usePartnerStore.getState().fetchSubjects;
 beforeEach(() => {
   visualsFixture.reset();
   sourcesFixture.reset(() => [running]);
-  usePartnerStore.setState({ subjects: [], subjectFilters: {}, subjectsError: null, subjectsFailures: 0, fetchSubjects: realFetch });
+  usePartnerStore.setState({
+    subjects: [],
+    subjectFilters: {},
+    subjectsError: null,
+    subjectsFailures: 0,
+    fetchSubjects: realFetch,
+  });
 });
 
 afterEach(() => {
   vi.useRealTimers();
-  Object.defineProperty(document, "hidden", { configurable: true, get: () => false });
+  Object.defineProperty(document, "hidden", {
+    configurable: true,
+    get: () => false,
+  });
   usePartnerStore.setState({ fetchSubjects: realFetch });
 });
 
 describe("SubjectRegistry — polling", () => {
   it("says it can't reach GenEd while list reads fail", async () => {
-    usePartnerStore.setState({ subjectsError: "Failed to fetch", subjectsFailures: 2, fetchSubjects: vi.fn(async () => {}) });
+    usePartnerStore.setState({
+      subjectsError: "Failed to fetch",
+      subjectsFailures: 2,
+      fetchSubjects: vi.fn(async () => {}),
+    });
     render(<SubjectRegistry onUploadClick={vi.fn()} />);
     expect(screen.getByText(/Can't reach GenEd, retrying/)).toBeInTheDocument();
   });
@@ -45,12 +73,22 @@ describe("SubjectRegistry — polling", () => {
     act(() => usePartnerStore.setState({ fetchSubjects }));
     fetchSubjects.mockClear(); // the mount read re-runs with the new function
 
-    Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
-    await act(async () => { vi.advanceTimersByTime(RUN_POLL_MS * 3); });
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => true,
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(RUN_POLL_MS * 3);
+    });
     expect(fetchSubjects).not.toHaveBeenCalled();
 
-    Object.defineProperty(document, "hidden", { configurable: true, get: () => false });
-    await act(async () => { vi.advanceTimersByTime(RUN_POLL_MS); });
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => false,
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(RUN_POLL_MS);
+    });
     expect(fetchSubjects).toHaveBeenCalledWith({ background: true });
   });
 });

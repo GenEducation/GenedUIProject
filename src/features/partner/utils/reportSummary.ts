@@ -24,18 +24,29 @@ export interface ReportProblem {
 export interface ReportSummary {
   problems: ReportProblem[];
   /** Headline numbers from the report's Counts section, when present. */
-  counts: { sections?: number; concepts?: number; questions?: number; steps?: number };
+  counts: {
+    sections?: number;
+    concepts?: number;
+    questions?: number;
+    steps?: number;
+  };
 }
 
 const VIOLATION = /^- VIOLATION (\S+) ([^:]*):\s*(.*)$/;
 
-type Explainer = (count: number, lines: { path: string; detail: string }[]) => Omit<ReportProblem, "code" | "count">;
+type Explainer = (
+  count: number,
+  lines: { path: string; detail: string }[],
+) => Omit<ReportProblem, "code" | "count">;
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const plural = (n: number, one: string, many: string) =>
+  `${n} ${n === 1 ? one : many}`;
 
 const EXPLAIN: Record<string, Explainer> = {
   plan_lo_uncovered: (_n, lines) => {
-    const outcomes = [...new Set(lines.map((l) => l.detail.split(" ")[0]).filter(Boolean))];
+    const outcomes = [
+      ...new Set(lines.map((l) => l.detail.split(" ")[0]).filter(Boolean)),
+    ];
     return {
       text:
         `${outcomes.length === 1 ? "A learning outcome you chose isn't" : "Learning outcomes you chose aren't"} taught by ` +
@@ -90,7 +101,10 @@ function countAfter(report: string, label: string): number | undefined {
 }
 
 /** `owners` is the server's word on who fixes each check (`SourceView.outcome.findings`); it outranks the defaults. */
-export function summarizeReport(report: string, owners: Record<string, "partner" | "gened"> = {}): ReportSummary {
+export function summarizeReport(
+  report: string,
+  owners: Record<string, "partner" | "gened"> = {},
+): ReportSummary {
   const groups = new Map<string, { path: string; detail: string }[]>();
   for (const line of report.split("\n")) {
     const match = line.trim().match(VIOLATION);
@@ -102,12 +116,23 @@ export function summarizeReport(report: string, owners: Record<string, "partner"
   }
 
   const problems = [...groups.entries()].map(([code, lines]) => {
-    const problem = { code, count: lines.length, ...(EXPLAIN[code] ?? otherProblem)(lines.length, lines) };
+    const problem = {
+      code,
+      count: lines.length,
+      ...(EXPLAIN[code] ?? otherProblem)(lines.length, lines),
+    };
     const owner = owners[code];
-    return owner ? { ...problem, fixedBy: owner === "partner" ? ("you" as const) : ("admin" as const) } : problem;
+    return owner
+      ? {
+          ...problem,
+          fixedBy: owner === "partner" ? ("you" as const) : ("admin" as const),
+        }
+      : problem;
   });
   // What the partner can fix first, then the biggest groups.
-  problems.sort((a, b) => (a.fixedBy === b.fixedBy ? b.count - a.count : a.fixedBy === "you" ? -1 : 1));
+  problems.sort((a, b) =>
+    a.fixedBy === b.fixedBy ? b.count - a.count : a.fixedBy === "you" ? -1 : 1,
+  );
 
   return {
     problems,
@@ -125,9 +150,18 @@ export function summarizeReport(report: string, owners: Record<string, "partner"
 // ─────────────────────────────────────────────────────────
 
 /** A concept the run proposed: new to GenEd, or matched to one it has. */
-export interface ReportConcept { title: string; definition: string; resolution: string; lo: string | null }
+export interface ReportConcept {
+  title: string;
+  definition: string;
+  resolution: string;
+  lo: string | null;
+}
 /** A question with its answer, as far as the key can be read. */
-export interface ReportQuestion { prompt: string; answer: string | null; note?: string }
+export interface ReportQuestion {
+  prompt: string;
+  answer: string | null;
+  note?: string;
+}
 
 export interface ParsedReport {
   /** Pages missing from the run (the reading failed). */
@@ -154,7 +188,10 @@ function sections(report: string): Map<string, string[]> {
     const line = raw.trimEnd();
     const heading = line.match(/^##\s+(.*)$/);
     if (heading) {
-      current = heading[1].replace(/\s*\(.*$/, "").trim().toLowerCase();
+      current = heading[1]
+        .replace(/\s*\(.*$/, "")
+        .trim()
+        .toLowerCase();
       out.set(current, []);
       continue;
     }
@@ -172,12 +209,18 @@ function sections(report: string): Map<string, string[]> {
  * key's value, values or accepted answers. Null when it can't be read; the question still shows.
  */
 export function answerFromKey(key: string): string | null {
-  const list = key.match(/'(?:values|accept|accepted|answers|expected)':\s*\[([^\]]*)\]/);
+  const list = key.match(
+    /'(?:values|accept|accepted|answers|expected)':\s*\[([^\]]*)\]/,
+  );
   if (list) {
-    const items = [...list[1].matchAll(/'([^']*)'|(-?\d+(?:\.\d+)?)/g)].map((m) => m[1] ?? m[2]).filter(Boolean);
+    const items = [...list[1].matchAll(/'([^']*)'|(-?\d+(?:\.\d+)?)/g)]
+      .map((m) => m[1] ?? m[2])
+      .filter(Boolean);
     if (items.length) return items.join(", ");
   }
-  const one = key.match(/'(?:value|expected|answer|text|key)':\s*(?:'([^']*)'|(-?\d+(?:\.\d+)?))/);
+  const one = key.match(
+    /'(?:value|expected|answer|text|key)':\s*(?:'([^']*)'|(-?\d+(?:\.\d+)?))/,
+  );
   if (one) return one[1] ?? one[2];
   return null;
 }
@@ -187,7 +230,8 @@ const strip = (s: string) => s.replace(/^`[^`]*`\s*/, "").trim();
 export function parseReport(report: string): ParsedReport {
   const s = sections(report);
   // By how the heading starts: the backend adds notes after some ("Held back: waiting for its picture").
-  const get = (name: string) => [...s.entries()].find(([heading]) => heading.startsWith(name))?.[1] ?? [];
+  const get = (name: string) =>
+    [...s.entries()].find(([heading]) => heading.startsWith(name))?.[1] ?? [];
   const validation = get("validation");
   return {
     unreadablePages: get("pages that could not be read")
@@ -198,34 +242,64 @@ export function parseReport(report: string): ParsedReport {
       return m ? [{ page: Number(m[1]), text: m[2] }] : [];
     }),
     concepts: get("components").flatMap((l) => {
-      const m = l.match(/^\[([^\]]+)\]\s+`[^`]*`\s+([^:]+):\s*(.*?)(?:\s*\(LO ([^,)]+)[^)]*\))?$/);
-      return m ? [{ resolution: m[1], title: m[2].trim(), definition: m[3].trim(), lo: m[4] ?? null }] : [];
+      const m = l.match(
+        /^\[([^\]]+)\]\s+`[^`]*`\s+([^:]+):\s*(.*?)(?:\s*\(LO ([^,)]+)[^)]*\))?$/,
+      );
+      return m
+        ? [
+            {
+              resolution: m[1],
+              title: m[2].trim(),
+              definition: m[3].trim(),
+              lo: m[4] ?? null,
+            },
+          ]
+        : [];
     }),
     questions: get("items").map((l) => {
       const [left, key = ""] = l.split(" -> key ");
-      return { prompt: strip(left).replace(/^[a-z_]+:\s*/, ""), answer: answerFromKey(key) };
+      return {
+        prompt: strip(left).replace(/^[a-z_]+:\s*/, ""),
+        answer: answerFromKey(key),
+      };
     }),
     variants: get("number-changed questions").map((l) => {
       const [left, rest = ""] = l.split(" -> key ");
       const [key, of = ""] = rest.split("; number-changed version of: ");
-      return { prompt: strip(left), answer: answerFromKey(key), note: of ? `From: ${of}` : undefined };
+      return {
+        prompt: strip(left),
+        answer: answerFromKey(key),
+        note: of ? `From: ${of}` : undefined,
+      };
     }),
     removed: get("keys the independent check did not reproduce").map((l) => {
-      const m = l.match(/^override key `[^`]*`:\s*(.*?) -> key (.*?); independent answer (.*)$/);
+      const m = l.match(
+        /^override key `[^`]*`:\s*(.*?) -> key (.*?); independent answer (.*)$/,
+      );
       return m
-        ? { prompt: m[1], answer: answerFromKey(m[2]), note: `The second check got ${m[3]}` }
+        ? {
+            prompt: m[1],
+            answer: answerFromKey(m[2]),
+            note: `The second check got ${m[3]}`,
+          }
         : { prompt: l, answer: null };
     }),
     skipped: get("skipped questions").map((l) => {
       const m = l.match(/^section \S+ \[[^\]]*\]\s*([^:]+):\s*(.*)$/);
-      return m ? { reason: m[1].replace(/_/g, " "), prompt: m[2] } : { reason: "", prompt: l };
+      return m
+        ? { reason: m[1].replace(/_/g, " "), prompt: m[2] }
+        : { reason: "", prompt: l };
     }),
     held: get("held back").map(strip),
     figures: get("pictures and their visuals")
       .filter((l) => l.startsWith("["))
       .map((l) => {
-        const m = l.match(/^\[[^\]]*\]\s*([^:]+):\s*([^;]*);\s*([^;]*(?:;\s*step [^;]*)?)/);
-        return m ? { role: m[1].trim(), reason: m[2].trim(), target: m[3].trim() } : { role: "", reason: l, target: "" };
+        const m = l.match(
+          /^\[[^\]]*\]\s*([^:]+):\s*([^;]*);\s*([^;]*(?:;\s*step [^;]*)?)/,
+        );
+        return m
+          ? { role: m[1].trim(), reason: m[2].trim(), target: m[3].trim() }
+          : { role: "", reason: l, target: "" };
       }),
     warnings: validation.filter((l) => l.startsWith("warning ")).length,
     passed: validation.includes("passed"),

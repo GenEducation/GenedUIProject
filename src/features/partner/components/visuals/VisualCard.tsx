@@ -12,7 +12,12 @@ interface VisualCardProps {
   onImageExpired: () => void;
 }
 
-export function VisualCard({ visual, index, onOpen, onImageExpired }: VisualCardProps) {
+export function VisualCard({
+  visual,
+  index,
+  onOpen,
+  onImageExpired,
+}: VisualCardProps) {
   const flagged = visual.critique?.passes === false;
 
   return (
@@ -29,7 +34,11 @@ export function VisualCard({ visual, index, onOpen, onImageExpired }: VisualCard
         className="group w-full text-left bg-white rounded-2xl border border-[#122D30]/5 overflow-hidden transition-all hover:border-[#122D30]/15 hover:shadow-[0_10px_30px_rgba(18,45,48,0.08)] hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#122D30]/40"
       >
         <div className="relative">
-          <VisualImage imageUrl={visual.image_url} alt={visual.title} onExpired={onImageExpired} />
+          <VisualImage
+            imageUrl={visual.image_url}
+            alt={visual.title}
+            onExpired={onImageExpired}
+          />
           <div className="absolute top-2 left-2 flex flex-wrap gap-1.5">
             {flagged && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[9px] font-black uppercase tracking-widest">
@@ -48,7 +57,8 @@ export function VisualCard({ visual, index, onOpen, onImageExpired }: VisualCard
             {visual.title}
           </h4>
           <p className="mt-1 text-[10px] font-bold text-[#122D30]/45 uppercase tracking-wider truncate">
-            <span className="capitalize">{visual.subject}</span> · Grade {visual.grade} · {visual.chapter}
+            <span className="capitalize">{visual.subject}</span> · Grade{" "}
+            {visual.grade} · {visual.chapter}
           </p>
         </div>
       </button>

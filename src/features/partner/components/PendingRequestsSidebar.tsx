@@ -7,9 +7,13 @@ import { Skeleton } from "./Skeleton";
 
 export function PendingRequestsSidebar() {
   const pendingRequests = usePartnerStore((state) => state.pendingRequests);
-  const numberOfPendingRequests = usePartnerStore((state) => state.numberOfPendingRequests);
+  const numberOfPendingRequests = usePartnerStore(
+    (state) => state.numberOfPendingRequests,
+  );
   const isLoading = usePartnerStore((state) => state.isLoading);
-  const setSelectedStudent = usePartnerStore((state) => state.setSelectedStudent);
+  const setSelectedStudent = usePartnerStore(
+    (state) => state.setSelectedStudent,
+  );
 
   return (
     <div className="flex-1 bg-[#F6F7F2] rounded-[1.5rem] p-5 md:p-6 border border-gray-100/50 shadow-xl flex flex-col lg:min-h-0 overflow-hidden">
@@ -27,14 +31,17 @@ export function PendingRequestsSidebar() {
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-hide space-y-2 pr-1 md:pr-2">
-        {isLoading && pendingRequests.length === 0 && (
+        {isLoading &&
+          pendingRequests.length === 0 &&
           Array.from({ length: 4 }).map((_, i) => (
-            <div key={`skel-${i}`} className="flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl">
+            <div
+              key={`skel-${i}`}
+              className="flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl"
+            >
               <Skeleton className="h-4 w-28" />
               <Skeleton className="h-3 w-3 rounded-full" />
             </div>
-          ))
-        )}
+          ))}
         {pendingRequests.map((request) => (
           <button
             key={request.id}
@@ -52,7 +59,9 @@ export function PendingRequestsSidebar() {
         ))}
         {pendingRequests.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
-            <p className="text-xs font-bold text-[#122D30]/20 uppercase tracking-widest">No pending requests</p>
+            <p className="text-xs font-bold text-[#122D30]/20 uppercase tracking-widest">
+              No pending requests
+            </p>
           </div>
         )}
       </div>

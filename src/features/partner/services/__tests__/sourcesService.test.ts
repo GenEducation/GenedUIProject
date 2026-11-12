@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { syntheticPdf, installNodeMultipart } from "@/test/multipart";
-import { lastUpload, makeSource, sourcesFixture } from "@/test/msw/handlers/sources";
+import {
+  lastUpload,
+  makeSource,
+  sourcesFixture,
+} from "@/test/msw/handlers/sources";
 import { ApiRequestError } from "@/utils/authFetch";
 import { sourcesService } from "../sourcesService";
 

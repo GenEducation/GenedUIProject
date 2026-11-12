@@ -1,11 +1,27 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { BookOpen, Check, ChevronDown, CirclePlus, Library } from "lucide-react";
+import {
+  BookOpen,
+  Check,
+  ChevronDown,
+  CirclePlus,
+  Library,
+} from "lucide-react";
 import { PANEL_CLASSNAME } from "@/components/ui/Select";
-import { usePopoverPosition, VIEWPORT_MARGIN } from "@/components/ui/usePopoverPosition";
+import {
+  usePopoverPosition,
+  VIEWPORT_MARGIN,
+} from "@/components/ui/usePopoverPosition";
 import type { PartnerBook } from "../types/sources";
 
 interface BookPickerProps {
@@ -35,7 +51,11 @@ const norm = (s: string) => s.trim().toLowerCase();
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** The typed words, punctuation dropped: "Ganita Prakash-2" and "ganita prakash 2" are the same words. */
-const wordsOf = (s: string) => s.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+const wordsOf = (s: string) =>
+  s
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
 
 /** Every typed word appears in the title, in any order: near-identical names show up together. */
 const matches = (title: string, words: string[]) => {
@@ -48,7 +68,12 @@ function Highlighted({ text, words }: { text: string; words: string[] }) {
   const lower = text.toLowerCase();
   const marked = new Array<boolean>(text.length).fill(false);
   for (const w of words) {
-    for (let at = lower.indexOf(w); at >= 0; at = lower.indexOf(w, at + w.length)) marked.fill(true, at, at + w.length);
+    for (
+      let at = lower.indexOf(w);
+      at >= 0;
+      at = lower.indexOf(w, at + w.length)
+    )
+      marked.fill(true, at, at + w.length);
   }
   const parts: { text: string; on: boolean }[] = [];
   for (let i = 0; i < text.length; i++) {
@@ -60,7 +85,10 @@ function Highlighted({ text, words }: { text: string; words: string[] }) {
     <>
       {parts.map((p, i) =>
         p.on ? (
-          <mark key={i} className="bg-transparent text-[#075E63] underline decoration-[#075E63]/35 underline-offset-2">
+          <mark
+            key={i}
+            className="bg-transparent text-[#075E63] underline decoration-[#075E63]/35 underline-offset-2"
+          >
             {p.text}
           </mark>
         ) : (
@@ -78,7 +106,16 @@ function Highlighted({ text, words }: { text: string; words: string[] }) {
  * typing a new name is always allowed, since a first chapter has nothing to pick.
  * A line under the box says which of the two the chapter will do.
  */
-export function BookPicker({ id, value, onChange, onPick, books, edition, className, placeholder }: BookPickerProps) {
+export function BookPicker({
+  id,
+  value,
+  onChange,
+  onPick,
+  books,
+  edition,
+  className,
+  placeholder,
+}: BookPickerProps) {
   const listId = useId();
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -89,20 +126,33 @@ export function BookPicker({ id, value, onChange, onPick, books, edition, classN
   const typed = norm(value);
   const words = useMemo(() => wordsOf(value), [value]);
   const shown = useMemo(
-    () => (words.length ? books.filter((b) => matches(b.book_title, words)) : books).slice(0, MAX_SHOWN),
+    () =>
+      (words.length
+        ? books.filter((b) => matches(b.book_title, words))
+        : books
+      ).slice(0, MAX_SHOWN),
     [books, words],
   );
   // A typed name no past book carries: the list ends with "file it as a new book".
-  const offerNew = typed.length > 0 && !books.some((b) => norm(b.book_title) === typed);
+  const offerNew =
+    typed.length > 0 && !books.some((b) => norm(b.book_title) === typed);
   const count = shown.length + (offerNew ? 1 : 0);
   const expanded = open && books.length > 0 && count > 0;
 
   const isChosen = (b: PartnerBook) =>
-    norm(b.book_title) === typed && (edition === undefined || norm(b.edition_label) === norm(edition));
+    norm(b.book_title) === typed &&
+    (edition === undefined || norm(b.edition_label) === norm(edition));
   const chosen = typed ? books.find(isChosen) : undefined;
 
-  const estimatedHeight = Math.min(MAX_PANEL_HEIGHT, HEADER_HEIGHT + count * ROW_HEIGHT + 12);
-  const position = usePopoverPosition(expanded, wrapRef, { width: "trigger", estimatedHeight, gap: GAP });
+  const estimatedHeight = Math.min(
+    MAX_PANEL_HEIGHT,
+    HEADER_HEIGHT + count * ROW_HEIGHT + 12,
+  );
+  const position = usePopoverPosition(expanded, wrapRef, {
+    width: "trigger",
+    estimatedHeight,
+    gap: GAP,
+  });
   // Placed on the element after each reposition (open, scroll, resize), from the box as it sits now.
   // Below the box, the list hangs from the box's bottom. Flipped above it, the list is pinned by its
   // bottom edge to just above the box, so a list taller than the estimate grows upward and never
@@ -125,7 +175,9 @@ export function BookPicker({ id, value, onChange, onPick, books, edition, classN
   // Keep the highlighted row in view while arrowing through the list.
   useEffect(() => {
     if (!expanded || active < 0) return;
-    panelRef.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView?.({ block: "nearest" });
+    panelRef.current
+      ?.querySelector<HTMLElement>(`[data-index="${active}"]`)
+      ?.scrollIntoView?.({ block: "nearest" });
   }, [active, expanded]);
 
   const close = () => {
@@ -178,7 +230,9 @@ export function BookPicker({ id, value, onChange, onPick, books, edition, classN
       {shown.length > 0 ? (
         <div className="flex shrink-0 items-center gap-2 px-4 pt-3 pb-1.5 text-[10px] font-black uppercase tracking-widest text-[#122D30]/45">
           <Library size={12} aria-hidden />
-          <span className="flex-1">{typed ? "Similar books you filed" : "Books you filed before"}</span>
+          <span className="flex-1">
+            {typed ? "Similar books you filed" : "Books you filed before"}
+          </span>
           <span className="tabular-nums">{shown.length}</span>
         </div>
       ) : (
@@ -186,7 +240,12 @@ export function BookPicker({ id, value, onChange, onPick, books, edition, classN
           No book you filed matches this title.
         </p>
       )}
-      <ul id={listId} role="listbox" aria-label="Books you filed before" className="min-h-0 flex-1 overflow-y-auto pb-1.5">
+      <ul
+        id={listId}
+        role="listbox"
+        aria-label="Books you filed before"
+        className="min-h-0 flex-1 overflow-y-auto pb-1.5"
+      >
         {shown.map((book, i) => {
           const marked = isChosen(book);
           return (
@@ -202,7 +261,9 @@ export function BookPicker({ id, value, onChange, onPick, books, edition, classN
             >
               <span
                 className={`grid size-8 shrink-0 place-items-center rounded-lg ${
-                  marked ? "bg-[#075E63] text-white" : "bg-[#DCEBE7]/70 text-[#075E63]"
+                  marked
+                    ? "bg-[#075E63] text-white"
+                    : "bg-[#DCEBE7]/70 text-[#075E63]"
                 }`}
               >
                 <BookOpen size={14} aria-hidden />
@@ -216,11 +277,21 @@ export function BookPicker({ id, value, onChange, onPick, books, edition, classN
                     {book.edition_label}
                   </span>
                   <span className="shrink-0">Grade {book.grade}</span>
-                  <span aria-hidden className="shrink-0 text-[#122D30]/25">·</span>
-                  <span className="shrink-0">{plural(book.chapters, "chapter")}</span>
+                  <span aria-hidden className="shrink-0 text-[#122D30]/25">
+                    ·
+                  </span>
+                  <span className="shrink-0">
+                    {plural(book.chapters, "chapter")}
+                  </span>
                 </span>
               </span>
-              {marked && <Check size={15} className="shrink-0 text-[#075E63]" aria-hidden />}
+              {marked && (
+                <Check
+                  size={15}
+                  className="shrink-0 text-[#075E63]"
+                  aria-hidden
+                />
+              )}
             </li>
           );
         })}
@@ -238,7 +309,10 @@ export function BookPicker({ id, value, onChange, onPick, books, edition, classN
               <CirclePlus size={14} aria-hidden />
             </span>
             <span className="min-w-0 flex-1 text-[13px] text-[#122D30]/70">
-              File as a new book: <span className="font-semibold text-[#122D30]">“{value.trim()}”</span>
+              File as a new book:{" "}
+              <span className="font-semibold text-[#122D30]">
+                “{value.trim()}”
+              </span>
             </span>
           </li>
         )}
@@ -250,10 +324,19 @@ export function BookPicker({ id, value, onChange, onPick, books, edition, classN
   const status = !books.length
     ? null
     : chosen
-      ? { tone: "known" as const, text: `Adds to a book you filed before · ${chosen.edition_label} · ${plural(chosen.chapters, "chapter")}` }
+      ? {
+          tone: "known" as const,
+          text: `Adds to a book you filed before · ${chosen.edition_label} · ${plural(chosen.chapters, "chapter")}`,
+        }
       : typed
-        ? { tone: "new" as const, text: "Files as a new book. Filed it before? Pick it from the list." }
-        : { tone: "hint" as const, text: `Pick one of your ${plural(books.length, "book")}, or type a new title.` };
+        ? {
+            tone: "new" as const,
+            text: "Files as a new book. Filed it before? Pick it from the list.",
+          }
+        : {
+            tone: "hint" as const,
+            text: `Pick one of your ${plural(books.length, "book")}, or type a new title.`,
+          };
 
   return (
     <div>
@@ -266,13 +349,18 @@ export function BookPicker({ id, value, onChange, onPick, books, edition, classN
           aria-autocomplete="list"
           aria-expanded={expanded}
           aria-controls={expanded ? listId : undefined}
-          aria-activedescendant={expanded && active >= 0 ? `${listId}-${active}` : undefined}
+          aria-activedescendant={
+            expanded && active >= 0 ? `${listId}-${active}` : undefined
+          }
           aria-describedby={status ? `${listId}-status` : undefined}
           autoComplete="off"
           placeholder={placeholder}
           className={className}
           // Inline, so the chevron's room wins over the call site's padding class whatever its order.
-          style={{ ...(books.length ? { paddingRight: 44 } : {}), ...(expanded ? { borderColor: ACCENT } : {}) }}
+          style={{
+            ...(books.length ? { paddingRight: 44 } : {}),
+            ...(expanded ? { borderColor: ACCENT } : {}),
+          }}
           onChange={(e) => {
             onChange(e.target.value);
             setOpen(true);
@@ -300,7 +388,10 @@ export function BookPicker({ id, value, onChange, onPick, books, edition, classN
             <ChevronDown
               size={16}
               className="transition-transform duration-200"
-              style={{ transform: expanded ? "rotate(180deg)" : "none", color: expanded ? ACCENT : undefined }}
+              style={{
+                transform: expanded ? "rotate(180deg)" : "none",
+                color: expanded ? ACCENT : undefined,
+              }}
             />
           </button>
         )}
@@ -312,12 +403,17 @@ export function BookPicker({ id, value, onChange, onPick, books, edition, classN
             status.tone === "known" ? "text-[#075E63]" : "text-[#122D30]/45"
           }`}
         >
-          {status.tone === "known" && <Check size={11} aria-hidden className="shrink-0" />}
-          {status.tone === "new" && <CirclePlus size={11} aria-hidden className="shrink-0" />}
+          {status.tone === "known" && (
+            <Check size={11} aria-hidden className="shrink-0" />
+          )}
+          {status.tone === "new" && (
+            <CirclePlus size={11} aria-hidden className="shrink-0" />
+          )}
           <span className="truncate">{status.text}</span>
         </p>
       )}
-      {typeof document !== "undefined" && createPortal(<AnimatePresence>{panel}</AnimatePresence>, document.body)}
+      {typeof document !== "undefined" &&
+        createPortal(<AnimatePresence>{panel}</AnimatePresence>, document.body)}
     </div>
   );
 }

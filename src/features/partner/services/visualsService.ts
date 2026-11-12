@@ -41,51 +41,81 @@ function toQuery(params: VisualListParams = {}): string {
  */
 export const visualsService = {
   /** Newest first. Page with `before` = the last item's `created_at`. */
-  listCandidates: async (params?: VisualListParams): Promise<VisualSummary[]> => {
-    const response = await authFetch(`${VISUALS_BASE}/candidates${toQuery(params)}`);
+  listCandidates: async (
+    params?: VisualListParams,
+  ): Promise<VisualSummary[]> => {
+    const response = await authFetch(
+      `${VISUALS_BASE}/candidates${toQuery(params)}`,
+    );
     return response.json();
   },
 
   /** Accepted visuals only; `state` is ignored by the backend here. */
-  listLibrary: async (params?: Omit<VisualListParams, "state" | "source_id">): Promise<VisualSummary[]> => {
-    const response = await authFetch(`${VISUALS_BASE}/library${toQuery(params)}`);
+  listLibrary: async (
+    params?: Omit<VisualListParams, "state" | "source_id">,
+  ): Promise<VisualSummary[]> => {
+    const response = await authFetch(
+      `${VISUALS_BASE}/library${toQuery(params)}`,
+    );
     return response.json();
   },
 
   getCandidate: async (id: string): Promise<VisualDetail> => {
-    const response = await authFetch(`${VISUALS_BASE}/candidates/${encodeURIComponent(id)}`);
+    const response = await authFetch(
+      `${VISUALS_BASE}/candidates/${encodeURIComponent(id)}`,
+    );
     return response.json();
   },
 
-  decide: async (id: string, body: VisualDecisionIn): Promise<VisualDecisionOut> => {
-    const response = await authFetch(`${VISUALS_BASE}/candidates/${encodeURIComponent(id)}/decision`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
+  decide: async (
+    id: string,
+    body: VisualDecisionIn,
+  ): Promise<VisualDecisionOut> => {
+    const response = await authFetch(
+      `${VISUALS_BASE}/candidates/${encodeURIComponent(id)}/decision`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    );
     return response.json();
   },
 
   /** For a visual that is already rejected (no new version asked, or the last attempt failed). */
-  regenerate: async (id: string, body: VisualRegenerateIn): Promise<VisualRegenerateOut> => {
-    const response = await authFetch(`${VISUALS_BASE}/candidates/${encodeURIComponent(id)}/regenerate`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
+  regenerate: async (
+    id: string,
+    body: VisualRegenerateIn,
+  ): Promise<VisualRegenerateOut> => {
+    const response = await authFetch(
+      `${VISUALS_BASE}/candidates/${encodeURIComponent(id)}/regenerate`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    );
     return response.json();
   },
 
   /** A figure's textbook pages and current crop boxes; 409 when its pages were never recorded. */
   getCrop: async (id: string): Promise<VisualCrop> => {
-    const response = await authFetch(`${VISUALS_BASE}/candidates/${encodeURIComponent(id)}/crop`);
+    const response = await authFetch(
+      `${VISUALS_BASE}/candidates/${encodeURIComponent(id)}/crop`,
+    );
     return response.json();
   },
 
   /** Cut new boxes from the figure's pages: a new textbook crop to review. 409 when the visual changed. */
-  recrop: async (id: string, body: VisualRecropIn): Promise<VisualRecropOut> => {
-    const response = await authFetch(`${VISUALS_BASE}/candidates/${encodeURIComponent(id)}/crop`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
+  recrop: async (
+    id: string,
+    body: VisualRecropIn,
+  ): Promise<VisualRecropOut> => {
+    const response = await authFetch(
+      `${VISUALS_BASE}/candidates/${encodeURIComponent(id)}/crop`,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    );
     return response.json();
   },
 
@@ -97,17 +127,24 @@ export const visualsService = {
     if (sourceIds.length === 0) return [];
     const query = new URLSearchParams();
     for (const id of sourceIds.slice(0, 100)) query.append("source_id", id);
-    const response = await authFetch(`${VISUALS_BASE}/summary?${query.toString()}`);
+    const response = await authFetch(
+      `${VISUALS_BASE}/summary?${query.toString()}`,
+    );
     return response.json();
   },
 
   /** The redraws asked for in these chapters, newest first. */
-  redraws: async (sourceIds: string[], state?: RedrawState): Promise<RedrawItem[]> => {
+  redraws: async (
+    sourceIds: string[],
+    state?: RedrawState,
+  ): Promise<RedrawItem[]> => {
     if (sourceIds.length === 0) return [];
     const query = new URLSearchParams();
     for (const id of sourceIds.slice(0, 100)) query.append("source_id", id);
     if (state) query.set("state", state);
-    const response = await authFetch(`${VISUALS_BASE}/redraws?${query.toString()}`);
+    const response = await authFetch(
+      `${VISUALS_BASE}/redraws?${query.toString()}`,
+    );
     return response.json();
   },
 
@@ -115,5 +152,6 @@ export const visualsService = {
    * `image_url` is a relative, signed, public path: render it with a plain
    * `<img>` (no auth header), never through `authFetch`.
    */
-  imageSrc: (imageUrl: string | null): string | null => (imageUrl ? `${API_BASE_URL}${imageUrl}` : null),
+  imageSrc: (imageUrl: string | null): string | null =>
+    imageUrl ? `${API_BASE_URL}${imageUrl}` : null,
 };

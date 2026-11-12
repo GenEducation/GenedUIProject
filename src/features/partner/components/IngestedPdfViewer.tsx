@@ -8,19 +8,25 @@ import { usePartnerStore } from "../store/usePartnerStore";
 // Dynamic import with ssr:false prevents pdfjs-dist from being evaluated on the
 // server (it uses browser-only APIs like DOMMatrix that don't exist in Node.js).
 const PdfViewer = dynamic(
-  () => import("@/features/student/components/pdf-viewer").then((m) => m.PdfViewer),
+  () =>
+    import("@/features/student/components/pdf-viewer").then((m) => m.PdfViewer),
   {
     ssr: false,
     loading: () => (
       <div className="flex flex-col items-center justify-center flex-1 gap-3">
         <div
           className="rounded-full animate-spin"
-          style={{ width: 28, height: 28, border: "3px solid #DCEBE7", borderTopColor: "#122D30" }}
+          style={{
+            width: 28,
+            height: 28,
+            border: "3px solid #DCEBE7",
+            borderTopColor: "#122D30",
+          }}
         />
         <p className="text-xs font-bold text-[#122D30]/50">Loading PDF…</p>
       </div>
     ),
-  }
+  },
 );
 
 export function IngestedPdfViewer() {
@@ -66,7 +72,8 @@ export function IngestedPdfViewer() {
                 </div>
               </div>
 
-              <button aria-label="Close"
+              <button
+                aria-label="Close"
                 onClick={closePdfViewer}
                 title="Close"
                 className="flex items-center justify-center rounded-xl transition-colors hover:bg-[#075E63]/5 flex-shrink-0 w-9 h-9 text-[#122D30]/50"
@@ -81,9 +88,16 @@ export function IngestedPdfViewer() {
                 <div className="flex flex-col items-center justify-center flex-1 gap-3">
                   <div
                     className="rounded-full animate-spin"
-                    style={{ width: 28, height: 28, border: "3px solid #DCEBE7", borderTopColor: "#122D30" }}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      border: "3px solid #DCEBE7",
+                      borderTopColor: "#122D30",
+                    }}
                   />
-                  <p className="text-xs font-bold text-[#122D30]/50">Fetching document…</p>
+                  <p className="text-xs font-bold text-[#122D30]/50">
+                    Fetching document…
+                  </p>
                 </div>
               )}
 
@@ -92,8 +106,12 @@ export function IngestedPdfViewer() {
                   <div className="flex items-center justify-center rounded-full bg-red-50 w-12 h-12">
                     <AlertTriangle size={20} className="text-red-500" />
                   </div>
-                  <p className="text-sm font-bold text-[#122D30]">Couldn&apos;t load PDF</p>
-                  <p className="text-xs font-medium text-[#122D30]/50 max-w-sm">{viewerError}</p>
+                  <p className="text-sm font-bold text-[#122D30]">
+                    Couldn&apos;t load PDF
+                  </p>
+                  <p className="text-xs font-medium text-[#122D30]/50 max-w-sm">
+                    {viewerError}
+                  </p>
                 </div>
               )}
 

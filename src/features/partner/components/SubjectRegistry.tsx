@@ -1,16 +1,46 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, Sparkles, Trash2, Square, Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, ChevronDown, Images, Play, RotateCw, AlertCircle, FileText, HelpCircle, ShieldCheck, Route, Upload, PenLine, PencilLine, ListChecks } from "lucide-react";
+import {
+  Plus,
+  Sparkles,
+  Trash2,
+  Square,
+  Search,
+  SlidersHorizontal,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Images,
+  Play,
+  RotateCw,
+  AlertCircle,
+  FileText,
+  HelpCircle,
+  ShieldCheck,
+  Route,
+  Upload,
+  PenLine,
+  PencilLine,
+  ListChecks,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { usePartnerStore, SubjectFilters, type Subject } from "../store/usePartnerStore";
+import {
+  usePartnerStore,
+  SubjectFilters,
+  type Subject,
+} from "../store/usePartnerStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Skeleton } from "./Skeleton";
 import { IngestedPdfViewer } from "./IngestedPdfViewer";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
-import { resolveTaxonomyBoard, useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
+import {
+  resolveTaxonomyBoard,
+  useTaxonomySubjects,
+} from "@/features/subjects/subjectCatalog";
 import { useVisualsIndex } from "../hooks/useVisualsIndex";
 import { useRedrawSummary } from "../hooks/useRedrawSummary";
 import { VisualsModal, type Tab as VisualsTab } from "./visuals/VisualsModal";
@@ -47,26 +77,35 @@ export const RUN_POLL_MS = 4_000;
  * (which is how a lost `running` run comes back) offer it, other steps keep the re-run of a finished run; never when
  * `can_run_again` is false. Without an outcome (an older server) the startable states decide.
  */
-export function canRunFromRow(subject: Pick<Subject, "state" | "outcome">): boolean {
+export function canRunFromRow(
+  subject: Pick<Subject, "state" | "outcome">,
+): boolean {
   const outcome = subject.outcome;
   if (!outcome) return STARTABLE_STATES.has(subject.state);
   if (!outcome.can_run_again) return false;
-  return outcome.next_step === "run_again" || outcome.next_step === "start" || STARTABLE_STATES.has(subject.state);
+  return (
+    outcome.next_step === "run_again" ||
+    outcome.next_step === "start" ||
+    STARTABLE_STATES.has(subject.state)
+  );
 }
 
 const STATE_OPTIONS = [
   { value: "", label: "All Statuses" },
-  ...(Object.entries(SOURCE_STATE_LABELS) as [SourceState, string][]).map(([value, label]) => ({
-    value,
-    label,
-    hint: SOURCE_STATE_HINTS[value],
-  })),
+  ...(Object.entries(SOURCE_STATE_LABELS) as [SourceState, string][]).map(
+    ([value, label]) => ({
+      value,
+      label,
+      hint: SOURCE_STATE_HINTS[value],
+    }),
+  ),
 ];
 
 const inputClass =
   "w-full px-3 py-2 bg-[#F6F7F2] border border-[#122D30]/10 focus:border-[#122D30]/40 rounded-xl text-xs font-bold text-[#122D30] outline-none placeholder:text-[#122D30]/30";
 
-const labelClass = "text-[10px] font-black text-[#122D30]/50 uppercase tracking-widest mb-1 block";
+const labelClass =
+  "text-[10px] font-black text-[#122D30]/50 uppercase tracking-widest mb-1 block";
 
 export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const subjects = usePartnerStore((state) => state.subjects);
@@ -76,7 +115,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const subjectsFailures = usePartnerStore((state) => state.subjectsFailures);
   const removeSubject = usePartnerStore((state) => state.removeSubject);
   const cancelIngestion = usePartnerStore((state) => state.cancelIngestion);
-  const decideExcludedPages = usePartnerStore((state) => state.decideExcludedPages);
+  const decideExcludedPages = usePartnerStore(
+    (state) => state.decideExcludedPages,
+  );
   const startIngestion = usePartnerStore((state) => state.startIngestion);
   const openIngestedPdf = usePartnerStore((state) => state.openIngestedPdf);
   const setSubjectFilters = usePartnerStore((state) => state.setSubjectFilters);
@@ -110,12 +151,17 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const clearJustUploaded = usePartnerStore((state) => state.clearJustUploaded);
   const [freshId, setFreshId] = useState<string | null>(null);
   useEffect(() => {
-    if (!justUploadedId || !subjects.some((s) => s.id === justUploadedId)) return;
+    if (!justUploadedId || !subjects.some((s) => s.id === justUploadedId))
+      return;
     const id = justUploadedId;
     clearJustUploaded();
     setPathOpen((open) => new Set(open).add(id));
     setFreshId(id);
-    requestAnimationFrame(() => document.querySelector(`[data-source-row="${CSS.escape(id)}"]`)?.scrollIntoView?.({ behavior: "smooth", block: "center" }));
+    requestAnimationFrame(() =>
+      document
+        .querySelector(`[data-source-row="${CSS.escape(id)}"]`)
+        ?.scrollIntoView?.({ behavior: "smooth", block: "center" }),
+    );
     const timer = setTimeout(() => setFreshId(null), 4000);
     return () => clearTimeout(timer);
   }, [justUploadedId, subjects, clearJustUploaded]);
@@ -137,7 +183,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const readyNotices = redrawSummary.justReady
     .map((id) => subjects.find((s) => s.source_id === id))
     .filter((s): s is Subject => !!s);
-  const subjectNames = [...new Set(useTaxonomySubjects(resolveTaxonomyBoard()).map((s) => s.name))];
+  const subjectNames = [
+    ...new Set(useTaxonomySubjects(resolveTaxonomyBoard()).map((s) => s.name)),
+  ];
 
   // Local draft state for filter inputs — committed on Apply
   const [draft, setDraft] = useState<SubjectFilters>({});
@@ -155,21 +203,29 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   useEffect(() => {
     if (!hasActiveRun && !retrying) return;
     // A hidden tab skips its ticks; the next visible one catches up.
-    const timer = setInterval(() => {
-      if (typeof document !== "undefined" && document.hidden) return;
-      void fetchSubjects({ background: true });
-    }, hasRunningRun ? RUN_POLL_MS : LIST_POLL_MS);
+    const timer = setInterval(
+      () => {
+        if (typeof document !== "undefined" && document.hidden) return;
+        void fetchSubjects({ background: true });
+      },
+      hasRunningRun ? RUN_POLL_MS : LIST_POLL_MS,
+    );
     return () => clearInterval(timer);
   }, [hasActiveRun, hasRunningRun, retrying, fetchSubjects]);
 
   /** Start or stop a run, showing the server's reason when it doesn't fit (409). */
-  const runAction = async (subject: Subject, action: (id: string) => Promise<void>) => {
+  const runAction = async (
+    subject: Subject,
+    action: (id: string) => Promise<void>,
+  ) => {
     setBusyId(subject.id);
     setActionError(null);
     try {
       await action(subject.id);
     } catch (err) {
-      setActionError(asError(err).message || "That didn't work. Please try again.");
+      setActionError(
+        asError(err).message || "That didn't work. Please try again.",
+      );
       void fetchSubjects();
     } finally {
       setBusyId(null);
@@ -207,7 +263,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
       setDeleteFor(null);
     } catch (err) {
       // The server says why (a 409 names the chapter's state); the list may have moved on meanwhile.
-      setDeleteError(asError(err).message || "Failed to delete. Please try again.");
+      setDeleteError(
+        asError(err).message || "Failed to delete. Please try again.",
+      );
       void fetchSubjects();
     } finally {
       setIsDeleting(false);
@@ -215,7 +273,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   };
 
   const { total_count, limit, offset } = subjectPagination;
-  const hasFilters = Object.values(subjectFilters).some((v) => v != null && v !== "");
+  const hasFilters = Object.values(subjectFilters).some(
+    (v) => v != null && v !== "",
+  );
   const totalPages = Math.ceil(total_count / limit);
   const currentPage = Math.floor(offset / limit) + 1;
 
@@ -255,7 +315,9 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
           <div className="bg-white/10 p-1 rounded-lg">
             <Plus size={18} />
           </div>
-          <span className="text-sm font-bold tracking-tight">Upload<span className="hidden sm:inline"> Curriculum</span></span>
+          <span className="text-sm font-bold tracking-tight">
+            Upload<span className="hidden sm:inline"> Curriculum</span>
+          </span>
         </button>
       </div>
 
@@ -283,12 +345,20 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                 <div className="lg:col-span-2">
                   <label className={labelClass}>Search</label>
                   <div className="relative">
-                    <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122D30]/30" />
+                    <Search
+                      size={12}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122D30]/30"
+                    />
                     <input
                       type="text"
                       placeholder="Book or chapter title..."
                       value={draft.search ?? ""}
-                      onChange={(e) => setDraft((d) => ({ ...d, search: e.target.value || undefined }))}
+                      onChange={(e) =>
+                        setDraft((d) => ({
+                          ...d,
+                          search: e.target.value || undefined,
+                        }))
+                      }
                       className={`${inputClass} pl-8`}
                     />
                   </div>
@@ -300,8 +370,16 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                   <Select
                     aria-label="Subject"
                     value={draft.subject ?? ""}
-                    onChange={(v) => setDraft((d) => ({ ...d, subject: v || undefined }))}
-                    options={[{ value: "", label: "All Subjects" }, ...subjectNames.map((name) => ({ value: name, label: name }))]}
+                    onChange={(v) =>
+                      setDraft((d) => ({ ...d, subject: v || undefined }))
+                    }
+                    options={[
+                      { value: "", label: "All Subjects" },
+                      ...subjectNames.map((name) => ({
+                        value: name,
+                        label: name,
+                      })),
+                    ]}
                   />
                 </div>
 
@@ -330,7 +408,12 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                   <Select
                     aria-label="Status"
                     value={draft.state ?? ""}
-                    onChange={(v) => setDraft((d) => ({ ...d, state: (v || undefined) as SourceState | undefined }))}
+                    onChange={(v) =>
+                      setDraft((d) => ({
+                        ...d,
+                        state: (v || undefined) as SourceState | undefined,
+                      }))
+                    }
                     options={STATE_OPTIONS}
                     panelWidth={300}
                   />
@@ -359,17 +442,32 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
       </AnimatePresence>
 
       {subjectsError && (
-        <div role="status" className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800">
+        <div
+          role="status"
+          className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800"
+        >
           <AlertCircle size={14} className="shrink-0" aria-hidden />
-          <span className="flex-1">Can&apos;t reach GenEd, retrying{subjectsFailures > 1 ? ` (${subjectsFailures} tries)` : ""}</span>
+          <span className="flex-1">
+            Can&apos;t reach GenEd, retrying
+            {subjectsFailures > 1 ? ` (${subjectsFailures} tries)` : ""}
+          </span>
         </div>
       )}
 
       {uploadNotice && (
-        <div role="status" className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800">
+        <div
+          role="status"
+          className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800"
+        >
           <AlertCircle size={14} className="shrink-0" aria-hidden />
           <span className="flex-1">{uploadNotice}</span>
-          <Button iconOnly size="sm" variant="tertiary" aria-label="Dismiss" onClick={clearUploadNotice}>
+          <Button
+            iconOnly
+            size="sm"
+            variant="tertiary"
+            aria-label="Dismiss"
+            onClick={clearUploadNotice}
+          >
             <X size={14} />
           </Button>
         </div>
@@ -387,7 +485,11 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             <span className="flex-1">
               All redraws for {subject.title} are done: {ready} ready to review.
             </span>
-            <Button size="sm" variant="tertiary" onClick={() => openRedraws(subject)}>
+            <Button
+              size="sm"
+              variant="tertiary"
+              onClick={() => openRedraws(subject)}
+            >
               Review them
             </Button>
             <Button
@@ -404,10 +506,19 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
       })}
 
       {actionError && (
-        <div role="alert" className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-700">
+        <div
+          role="alert"
+          className="mb-3 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-700"
+        >
           <AlertCircle size={14} className="shrink-0" aria-hidden />
           <span className="flex-1">{actionError}</span>
-          <Button iconOnly size="sm" variant="tertiary" aria-label="Dismiss" onClick={() => setActionError(null)}>
+          <Button
+            iconOnly
+            size="sm"
+            variant="tertiary"
+            aria-label="Dismiss"
+            onClick={() => setActionError(null)}
+          >
             <X size={14} />
           </Button>
         </div>
@@ -417,351 +528,476 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
       <div className="flex-1 flex flex-col bg-[#FBFCFB] rounded-[2rem] md:rounded-[2.5rem] p-3 md:p-4 border border-gray-100/50 shadow-[0_8px_40px_rgba(0,0,0,0.02)] min-h-0 overflow-hidden">
         <div className="flex-1 overflow-y-auto scrollbar-hide pr-1 md:pr-2">
           <div className="space-y-2 md:space-y-3">
-          {isSubjectsLoading && subjects.length === 0 && (
-            Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={`skel-${i}`}
-                className="flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl"
-              >
-                <div className="flex-1 flex items-center gap-3 md:gap-4">
-                  <div className="flex flex-col gap-1.5 w-[280px] md:w-[320px]">
-                    <Skeleton className="h-5 w-40" />
-                    <Skeleton className="h-3 w-20" />
+            {isSubjectsLoading &&
+              subjects.length === 0 &&
+              Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={`skel-${i}`}
+                  className="flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl"
+                >
+                  <div className="flex-1 flex items-center gap-3 md:gap-4">
+                    <div className="flex flex-col gap-1.5 w-[280px] md:w-[320px]">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                    <Skeleton className="hidden sm:block h-7 w-24 rounded-xl" />
                   </div>
-                  <Skeleton className="hidden sm:block h-7 w-24 rounded-xl" />
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                    <Skeleton className="h-8 w-8 rounded-xl" />
+                  </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <Skeleton className="h-5 w-20 rounded-full" />
-                  <Skeleton className="h-8 w-8 rounded-xl" />
-                </div>
-              </div>
-            ))
-          )}
-          {subjects.map((subject, i) => {
-            const isRunning = ACTIVE_STATES.has(subject.state);
-            const visualCounts = visualsIndex.countsFor(subject);
-            const hasVisuals = !!visualCounts && visualCounts.pending + visualCounts.accepted + visualCounts.rejected > 0;
-            const pendingVisuals = visualCounts?.pending ?? 0;
-            const redrawTally = redrawSummary.summaryFor(subject)?.redraws;
-            const redrawsRunning = redrawTally ? redrawTally.queued + redrawTally.drawing : 0;
-            const busy = busyId === subject.id;
-            // A chapter waiting on questions says so with its button; its raw detail names server paths.
-            const awaitingAnswers = subject.state === "review_needed" && subject.questions > 0;
-            // The server's next step; a re-run of an upload whose failed checks are the partner's would end the same way.
-            const next = subject.outcome?.next_step ?? null;
-            // The server decides: a lost `running` run comes back as `run_again`. Rows from a server without outcomes
-            // fall back to the states a run can start from.
-            const canRunAgain = canRunFromRow(subject);
-            // A chapter the partner can complete with questions of their own offers that first; uploading stays in its path.
-            const addQuestions = next === "add_questions";
-            // GenEd prepares a question bank after every run (backend ADR 0047): reviewable whenever the last run left its context.
-            const reviewQuestions =
-              !addQuestions && subject.has_authoring && subject.state !== "queued" && subject.state !== "running";
-            const needsCorrection = next !== null && CORRECTION_STEPS.has(next);
-            const fixOutcomes = next === "fix_outcomes";
-            const needsUpload = next !== null && UPLOAD_STEPS.has(next) && !addQuestions;
-            const showPath = pathOpen.has(subject.id);
-            // Published: live for students, nothing left to review (the server's next step is `none`).
-            const live = subject.state === "ready" && subject.release?.state === "published";
+              ))}
+            {subjects.map((subject, i) => {
+              const isRunning = ACTIVE_STATES.has(subject.state);
+              const visualCounts = visualsIndex.countsFor(subject);
+              const hasVisuals =
+                !!visualCounts &&
+                visualCounts.pending +
+                  visualCounts.accepted +
+                  visualCounts.rejected >
+                  0;
+              const pendingVisuals = visualCounts?.pending ?? 0;
+              const redrawTally = redrawSummary.summaryFor(subject)?.redraws;
+              const redrawsRunning = redrawTally
+                ? redrawTally.queued + redrawTally.drawing
+                : 0;
+              const busy = busyId === subject.id;
+              // A chapter waiting on questions says so with its button; its raw detail names server paths.
+              const awaitingAnswers =
+                subject.state === "review_needed" && subject.questions > 0;
+              // The server's next step; a re-run of an upload whose failed checks are the partner's would end the same way.
+              const next = subject.outcome?.next_step ?? null;
+              // The server decides: a lost `running` run comes back as `run_again`. Rows from a server without outcomes
+              // fall back to the states a run can start from.
+              const canRunAgain = canRunFromRow(subject);
+              // A chapter the partner can complete with questions of their own offers that first; uploading stays in its path.
+              const addQuestions = next === "add_questions";
+              // GenEd prepares a question bank after every run (backend ADR 0047): reviewable whenever the last run left its context.
+              const reviewQuestions =
+                !addQuestions &&
+                subject.has_authoring &&
+                subject.state !== "queued" &&
+                subject.state !== "running";
+              const needsCorrection =
+                next !== null && CORRECTION_STEPS.has(next);
+              const fixOutcomes = next === "fix_outcomes";
+              const needsUpload =
+                next !== null && UPLOAD_STEPS.has(next) && !addQuestions;
+              const showPath = pathOpen.has(subject.id);
+              // Published: live for students, nothing left to review (the server's next step is `none`).
+              const live =
+                subject.state === "ready" &&
+                subject.release?.state === "published";
 
-            return (
-              <React.Fragment key={subject.id}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                onClick={() => openIngestedPdf(subject)}
-                data-source-row={subject.id}
-                className={`@container/row group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border ${freshId === subject.id ? "border-[#075E63]/40 ring-4 ring-[#075E63]/10" : "border-transparent"} hover:border-[#122D30]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all overflow-hidden cursor-pointer`}
-              >
-                <div className="flex-1 flex items-center gap-3 md:gap-4 min-w-0">
-                  {/* Left Side Highlight bar */}
-                  <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-[#075E63] opacity-0 group-hover:opacity-100 transition-opacity rounded-r-full" />
+              return (
+                <React.Fragment key={subject.id}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    onClick={() => openIngestedPdf(subject)}
+                    data-source-row={subject.id}
+                    className={`@container/row group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border ${freshId === subject.id ? "border-[#075E63]/40 ring-4 ring-[#075E63]/10" : "border-transparent"} hover:border-[#122D30]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all overflow-hidden cursor-pointer`}
+                  >
+                    <div className="flex-1 flex items-center gap-3 md:gap-4 min-w-0">
+                      {/* Left Side Highlight bar */}
+                      <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-[#075E63] opacity-0 group-hover:opacity-100 transition-opacity rounded-r-full" />
 
-                  {/* Chapter Details */}
-                  <div className="flex-1 flex flex-col min-w-0">
-                    {/* Laid out by the row's own width, not the window's (the sidebar takes a share of it): one line when
+                      {/* Chapter Details */}
+                      <div className="flex-1 flex flex-col min-w-0">
+                        {/* Laid out by the row's own width, not the window's (the sidebar takes a share of it): one line when
                         wide; the title beside its actions over the run when medium; stacked when narrow. */}
-                    <div className="grid w-full items-center gap-x-5 gap-y-3 pr-1 md:pr-3 grid-cols-1 [grid-template-areas:'title'_'status'_'actions'] @[600px]/row:grid-cols-[minmax(0,1fr)_auto] @[600px]/row:[grid-template-areas:'title_actions'_'status_status'] @[1040px]/row:grid-cols-[minmax(240px,320px)_minmax(0,1fr)_auto] @[1040px]/row:[grid-template-areas:'title_status_actions']">
-                      {/* Chapter, book & grade */}
-                      <div className="flex flex-col gap-0.5 group-hover:translate-x-1 transition-transform min-w-0 [grid-area:title]">
-                        <h3 className="text-base md:text-lg font-bold text-[#122D30] tracking-tight truncate">
-                          {subject.title}
-                        </h3>
-                        <p className="text-[11px] lg:text-[12px] font-bold text-[#122D30]/50 ml-[2px] uppercase tracking-wider truncate">
-                          {subject.book_title} · Ch {subject.chapter_ordinal} · Grade {subject.grade}
-                          {/* Narrow rows have no room for the subject chip; it reads here instead. */}
-                          <span className="@[600px]/row:hidden"> · {subject.subject}</span>
-                        </p>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            pill
-                            aria-expanded={showPath}
-                            aria-controls={`path-${subject.id}`}
-                            leadingIcon={<Route size={14} aria-hidden />}
-                            onClick={(e) => { e.stopPropagation(); togglePath(subject.id); }}
-                          >
-                            {showPath ? "Hide run details" : "Run details"}
-                            <ChevronDown size={14} aria-hidden className={`transition-transform ${showPath ? "rotate-180" : ""}`} />
-                          </Button>
-                          {subject.has_report && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              pill
-                              leadingIcon={<FileText size={14} aria-hidden />}
-                              onClick={(e) => { e.stopPropagation(); setReportFor(subject); }}
-                            >
-                              {subject.state === "ready" ? "Report" : "What needs fixing"}
-                            </Button>
-                          )}
-                        </div>
-                        {subject.excluded_pages?.status === "pending" && (
-                          // The server cut a solutions appendix at upload; publishing waits until the partner answers.
-                          <div
-                            role="note"
-                            onClick={(e) => e.stopPropagation()}
-                            className="mt-1 ml-[2px] flex flex-wrap items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-2 py-1 text-[11px] text-amber-900"
-                          >
-                            <AlertCircle size={12} aria-hidden className="shrink-0" />
-                            <span>
-                              Pages {subject.excluded_pages.first_page}–{subject.excluded_pages.last_page} were left out:
-                              they look like the chapter&apos;s solutions.
-                            </span>
-                            <Button
-                              size="sm"
-                              pill
-                              variant="secondary"
-                              loading={busy}
-                              onClick={() => void runAction(subject, (id) => decideExcludedPages(id, "confirm"))}
-                            >
-                              Yes, leave them out
-                            </Button>
-                            <Button
-                              size="sm"
-                              pill
-                              variant="outline"
-                              disabled={busy || !STARTABLE_STATES.has(subject.state)}
-                              title={STARTABLE_STATES.has(subject.state) ? undefined : "You can add them once this run finishes"}
-                              onClick={() => void runAction(subject, (id) => decideExcludedPages(id, "include"))}
-                            >
-                              No, include them
-                            </Button>
+                        <div className="grid w-full items-center gap-x-5 gap-y-3 pr-1 md:pr-3 grid-cols-1 [grid-template-areas:'title'_'status'_'actions'] @[600px]/row:grid-cols-[minmax(0,1fr)_auto] @[600px]/row:[grid-template-areas:'title_actions'_'status_status'] @[1040px]/row:grid-cols-[minmax(240px,320px)_minmax(0,1fr)_auto] @[1040px]/row:[grid-template-areas:'title_status_actions']">
+                          {/* Chapter, book & grade */}
+                          <div className="flex flex-col gap-0.5 group-hover:translate-x-1 transition-transform min-w-0 [grid-area:title]">
+                            <h3 className="text-base md:text-lg font-bold text-[#122D30] tracking-tight truncate">
+                              {subject.title}
+                            </h3>
+                            <p className="text-[11px] lg:text-[12px] font-bold text-[#122D30]/50 ml-[2px] uppercase tracking-wider truncate">
+                              {subject.book_title} · Ch{" "}
+                              {subject.chapter_ordinal} · Grade {subject.grade}
+                              {/* Narrow rows have no room for the subject chip; it reads here instead. */}
+                              <span className="@[600px]/row:hidden">
+                                {" "}
+                                · {subject.subject}
+                              </span>
+                            </p>
+                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                pill
+                                aria-expanded={showPath}
+                                aria-controls={`path-${subject.id}`}
+                                leadingIcon={<Route size={14} aria-hidden />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  togglePath(subject.id);
+                                }}
+                              >
+                                {showPath ? "Hide run details" : "Run details"}
+                                <ChevronDown
+                                  size={14}
+                                  aria-hidden
+                                  className={`transition-transform ${showPath ? "rotate-180" : ""}`}
+                                />
+                              </Button>
+                              {subject.has_report && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  pill
+                                  leadingIcon={
+                                    <FileText size={14} aria-hidden />
+                                  }
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setReportFor(subject);
+                                  }}
+                                >
+                                  {subject.state === "ready"
+                                    ? "Report"
+                                    : "What needs fixing"}
+                                </Button>
+                              )}
+                            </div>
+                            {subject.excluded_pages?.status === "pending" && (
+                              // The server cut a solutions appendix at upload; publishing waits until the partner answers.
+                              <div
+                                role="note"
+                                onClick={(e) => e.stopPropagation()}
+                                className="mt-1 ml-[2px] flex flex-wrap items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-2 py-1 text-[11px] text-amber-900"
+                              >
+                                <AlertCircle
+                                  size={12}
+                                  aria-hidden
+                                  className="shrink-0"
+                                />
+                                <span>
+                                  Pages {subject.excluded_pages.first_page}–
+                                  {subject.excluded_pages.last_page} were left
+                                  out: they look like the chapter&apos;s
+                                  solutions.
+                                </span>
+                                <Button
+                                  size="sm"
+                                  pill
+                                  variant="secondary"
+                                  loading={busy}
+                                  onClick={() =>
+                                    void runAction(subject, (id) =>
+                                      decideExcludedPages(id, "confirm"),
+                                    )
+                                  }
+                                >
+                                  Yes, leave them out
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  pill
+                                  variant="outline"
+                                  disabled={
+                                    busy || !STARTABLE_STATES.has(subject.state)
+                                  }
+                                  title={
+                                    STARTABLE_STATES.has(subject.state)
+                                      ? undefined
+                                      : "You can add them once this run finishes"
+                                  }
+                                  onClick={() =>
+                                    void runAction(subject, (id) =>
+                                      decideExcludedPages(id, "include"),
+                                    )
+                                  }
+                                >
+                                  No, include them
+                                </Button>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
 
-                      {/* Subject, and the run: its phases while it runs, what it means once it has finished */}
-                      <div className="flex min-w-0 items-center gap-4 @[1040px]/row:gap-6 [grid-area:status]">
-                        <span title={subject.subject} className="hidden @[600px]/row:inline-block w-[128px] lg:w-[148px] shrink-0 text-center text-sm lg:text-[15px] font-bold text-[#122D30]/70 bg-[#075E63]/5 px-3 py-1.5 rounded-xl border border-[#122D30]/10 truncate">
-                          {subject.subject}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          {isRunning ? <RunProgress subject={subject} /> : <RunOutcome subject={subject} />}
-                        </div>
-                      </div>
+                          {/* Subject, and the run: its phases while it runs, what it means once it has finished */}
+                          <div className="flex min-w-0 items-center gap-4 @[1040px]/row:gap-6 [grid-area:status]">
+                            <span
+                              title={subject.subject}
+                              className="hidden @[600px]/row:inline-block w-[128px] lg:w-[148px] shrink-0 text-center text-sm lg:text-[15px] font-bold text-[#122D30]/70 bg-[#075E63]/5 px-3 py-1.5 rounded-xl border border-[#122D30]/10 truncate"
+                            >
+                              {subject.subject}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              {isRunning ? (
+                                <RunProgress subject={subject} />
+                              ) : (
+                                <RunOutcome subject={subject} />
+                              )}
+                            </div>
+                          </div>
 
-                      {/* Actions (on one line, one minimum width, so every row's status starts at the same place; they wrap
+                          {/* Actions (on one line, one minimum width, so every row's status starts at the same place; they wrap
                           rather than overflow when the row is narrow) */}
-                      <div className="flex flex-wrap items-center justify-start gap-2.5 [grid-area:actions] @[600px]/row:justify-end @[1040px]/row:min-w-[240px]">
-                        {/* The state itself is the middle's sentence; here only what can be done about it. */}
-                        {awaitingAnswers && (
-                          <Button
-                            pill
-                            leadingIcon={<HelpCircle size={16} />}
-                            onClick={(e) => { e.stopPropagation(); setQuestionsFor(subject); }}
-                          >
-                            {subject.questions === 1 ? "Answer 1 question" : `Answer ${subject.questions} questions`}
-                          </Button>
-                        )}
+                          <div className="flex flex-wrap items-center justify-start gap-2.5 [grid-area:actions] @[600px]/row:justify-end @[1040px]/row:min-w-[240px]">
+                            {/* The state itself is the middle's sentence; here only what can be done about it. */}
+                            {awaitingAnswers && (
+                              <Button
+                                pill
+                                leadingIcon={<HelpCircle size={16} />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setQuestionsFor(subject);
+                                }}
+                              >
+                                {subject.questions === 1
+                                  ? "Answer 1 question"
+                                  : `Answer ${subject.questions} questions`}
+                              </Button>
+                            )}
 
-                        {/* Only when the server says review is next (a ready run with blocking findings is not); a server
+                            {/* Only when the server says review is next (a ready run with blocking findings is not); a server
                             without outcomes falls back to an unpublished ready chapter. */}
-                        {(subject.outcome ? next === "review_release" : subject.state === "ready" && !live) && (
-                          <Button
-                            pill
-                            variant="secondary"
-                            leadingIcon={<ShieldCheck size={16} />}
-                            onClick={(e) => { e.stopPropagation(); setReleaseFor(subject); }}
-                          >
-                            Review &amp; publish
-                          </Button>
-                        )}
-
-                        {addQuestions && (
-                          <Button
-                            pill
-                            leadingIcon={<PenLine size={16} />}
-                            onClick={(e) => { e.stopPropagation(); setAuthoringFor(subject); }}
-                          >
-                            Add questions
-                          </Button>
-                        )}
-
-                        {reviewQuestions && (
-                          <Button
-                            pill
-                            variant="secondary"
-                            leadingIcon={<PenLine size={16} />}
-                            onClick={(e) => { e.stopPropagation(); setAuthoringFor(subject); }}
-                          >
-                            Review questions
-                          </Button>
-                        )}
-
-                        {needsCorrection && (
-                          <Button
-                            pill
-                            leadingIcon={<PencilLine size={16} />}
-                            onClick={(e) => { e.stopPropagation(); setCorrectionFor(subject); }}
-                          >
-                            Fix chapter details
-                          </Button>
-                        )}
-
-                        {fixOutcomes && (
-                          <Button
-                            pill
-                            leadingIcon={<ListChecks size={16} />}
-                            onClick={(e) => { e.stopPropagation(); setOutcomesFor(subject); }}
-                          >
-                            Change outcomes
-                          </Button>
-                        )}
-
-                        {needsUpload && (
-                          <Button
-                            pill
-                            leadingIcon={<Upload size={16} />}
-                            onClick={(e) => { e.stopPropagation(); onUploadClick(subject); }}
-                          >
-                            Upload again
-                          </Button>
-                        )}
-
-                        {canRunAgain && (
-                          subject.state === "registered" ? (
-                            <Button
-                              iconOnly
-                              variant="outline"
-                              aria-label="Start ingestion"
-                              title="Start ingestion"
-                              loading={busy}
-                              onClick={(e) => { e.stopPropagation(); void runAction(subject, startIngestion); }}
-                            >
-                              <Play size={18} />
-                            </Button>
-                          ) : subject.state === "failed" || subject.state === "invalid" || ACTIVE_STATES.has(subject.state) ? (
-                            <Button
-                              iconOnly
-                              variant="outline"
-                              aria-label="Retry ingestion"
-                              title="Retry"
-                              loading={busy}
-                              onClick={(e) => { e.stopPropagation(); void runAction(subject, startIngestion); }}
-                            >
-                              <RotateCw size={18} />
-                            </Button>
-                          ) : (
-                            <Button
-                              iconOnly
-                              variant="outline"
-                              aria-label="Run ingestion again"
-                              title="Run again"
-                              loading={busy}
-                              onClick={(e) => { e.stopPropagation(); setRerunFor(subject); }}
-                            >
-                              <RotateCw size={18} />
-                            </Button>
-                          )
-                        )}
-
-                        {subject.state === "queued" && (
-                          <Button
-                            iconOnly
-                            variant="destructive"
-                            aria-label="Stop Ingestion"
-                            loading={busy}
-                            onClick={(e) => { e.stopPropagation(); void runAction(subject, cancelIngestion); }}
-                          >
-                            <Square size={16} className="fill-current" />
-                          </Button>
-                        )}
-
-                        {hasVisuals && (
-                          <span className="relative inline-flex">
-                            <Button
-                              iconOnly
-                              variant="outline"
-                              aria-label={pendingVisuals > 0 ? `Review visuals (${pendingVisuals} to review)` : "Review visuals"}
-                              title="Teaching visuals"
-                              onClick={(e) => { e.stopPropagation(); setVisualsFor(subject); }}
-                            >
-                              <Images size={19} />
-                            </Button>
-                            {pendingVisuals > 0 && (
-                              <span
-                                aria-hidden
-                                className="pointer-events-none absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center"
+                            {(subject.outcome
+                              ? next === "review_release"
+                              : subject.state === "ready" && !live) && (
+                              <Button
+                                pill
+                                variant="secondary"
+                                leadingIcon={<ShieldCheck size={16} />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setReleaseFor(subject);
+                                }}
                               >
-                                {pendingVisuals}{visualsIndex.pendingMayBeMore(subject) ? "+" : ""}
-                              </span>
+                                Review &amp; publish
+                              </Button>
                             )}
-                            {redrawsRunning > 0 && (
-                              <span
-                                title={`${redrawsRunning} redraw${redrawsRunning === 1 ? "" : "s"} still drawing`}
-                                className="pointer-events-none absolute -bottom-1.5 -right-1.5 inline-flex items-center gap-0.5 bg-[#075E63] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center tabular-nums"
-                              >
-                                <RotateCw size={7} className="animate-spin" aria-hidden />
-                                {redrawsRunning}
-                                <span className="sr-only"> redraws still drawing</span>
-                              </span>
-                            )}
-                          </span>
-                        )}
 
-                        {/* Every stage shows delete. Where the server would refuse (queued, running, published) it is
-                            disabled with the reason; a refusal the list can't foresee still shows in the confirm. */}
-                        {(() => {
-                          const blocked = deleteBlockedReason(subject);
-                          return (
-                            // The tooltip sits on a wrapper: a disabled button gets no pointer events to show its own.
-                            <span title={blocked ?? "Delete chapter"} className="inline-flex">
+                            {addQuestions && (
+                              <Button
+                                pill
+                                leadingIcon={<PenLine size={16} />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAuthoringFor(subject);
+                                }}
+                              >
+                                Add questions
+                              </Button>
+                            )}
+
+                            {reviewQuestions && (
+                              <Button
+                                pill
+                                variant="secondary"
+                                leadingIcon={<PenLine size={16} />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAuthoringFor(subject);
+                                }}
+                              >
+                                Review questions
+                              </Button>
+                            )}
+
+                            {needsCorrection && (
+                              <Button
+                                pill
+                                leadingIcon={<PencilLine size={16} />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCorrectionFor(subject);
+                                }}
+                              >
+                                Fix chapter details
+                              </Button>
+                            )}
+
+                            {fixOutcomes && (
+                              <Button
+                                pill
+                                leadingIcon={<ListChecks size={16} />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOutcomesFor(subject);
+                                }}
+                              >
+                                Change outcomes
+                              </Button>
+                            )}
+
+                            {needsUpload && (
+                              <Button
+                                pill
+                                leadingIcon={<Upload size={16} />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onUploadClick(subject);
+                                }}
+                              >
+                                Upload again
+                              </Button>
+                            )}
+
+                            {canRunAgain &&
+                              (subject.state === "registered" ? (
+                                <Button
+                                  iconOnly
+                                  variant="outline"
+                                  aria-label="Start ingestion"
+                                  title="Start ingestion"
+                                  loading={busy}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void runAction(subject, startIngestion);
+                                  }}
+                                >
+                                  <Play size={18} />
+                                </Button>
+                              ) : subject.state === "failed" ||
+                                subject.state === "invalid" ||
+                                ACTIVE_STATES.has(subject.state) ? (
+                                <Button
+                                  iconOnly
+                                  variant="outline"
+                                  aria-label="Retry ingestion"
+                                  title="Retry"
+                                  loading={busy}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void runAction(subject, startIngestion);
+                                  }}
+                                >
+                                  <RotateCw size={18} />
+                                </Button>
+                              ) : (
+                                <Button
+                                  iconOnly
+                                  variant="outline"
+                                  aria-label="Run ingestion again"
+                                  title="Run again"
+                                  loading={busy}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRerunFor(subject);
+                                  }}
+                                >
+                                  <RotateCw size={18} />
+                                </Button>
+                              ))}
+
+                            {subject.state === "queued" && (
                               <Button
                                 iconOnly
                                 variant="destructive"
-                                aria-label="Delete"
-                                aria-description={blocked ?? undefined}
-                                disabled={blocked !== null || (isDeleting && deleteFor?.id === subject.id)}
-                                onClick={(e) => { e.stopPropagation(); setDeleteError(null); setDeleteFor(subject); }}
+                                aria-label="Stop Ingestion"
+                                loading={busy}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void runAction(subject, cancelIngestion);
+                                }}
                               >
-                                <Trash2 size={19} />
+                                <Square size={16} className="fill-current" />
                               </Button>
-                            </span>
-                          );
-                        })()}
+                            )}
+
+                            {hasVisuals && (
+                              <span className="relative inline-flex">
+                                <Button
+                                  iconOnly
+                                  variant="outline"
+                                  aria-label={
+                                    pendingVisuals > 0
+                                      ? `Review visuals (${pendingVisuals} to review)`
+                                      : "Review visuals"
+                                  }
+                                  title="Teaching visuals"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setVisualsFor(subject);
+                                  }}
+                                >
+                                  <Images size={19} />
+                                </Button>
+                                {pendingVisuals > 0 && (
+                                  <span
+                                    aria-hidden
+                                    className="pointer-events-none absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center"
+                                  >
+                                    {pendingVisuals}
+                                    {visualsIndex.pendingMayBeMore(subject)
+                                      ? "+"
+                                      : ""}
+                                  </span>
+                                )}
+                                {redrawsRunning > 0 && (
+                                  <span
+                                    title={`${redrawsRunning} redraw${redrawsRunning === 1 ? "" : "s"} still drawing`}
+                                    className="pointer-events-none absolute -bottom-1.5 -right-1.5 inline-flex items-center gap-0.5 bg-[#075E63] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center tabular-nums"
+                                  >
+                                    <RotateCw
+                                      size={7}
+                                      className="animate-spin"
+                                      aria-hidden
+                                    />
+                                    {redrawsRunning}
+                                    <span className="sr-only">
+                                      {" "}
+                                      redraws still drawing
+                                    </span>
+                                  </span>
+                                )}
+                              </span>
+                            )}
+
+                            {/* Every stage shows delete. Where the server would refuse (queued, running, published) it is
+                            disabled with the reason; a refusal the list can't foresee still shows in the confirm. */}
+                            {(() => {
+                              const blocked = deleteBlockedReason(subject);
+                              return (
+                                // The tooltip sits on a wrapper: a disabled button gets no pointer events to show its own.
+                                <span
+                                  title={blocked ?? "Delete chapter"}
+                                  className="inline-flex"
+                                >
+                                  <Button
+                                    iconOnly
+                                    variant="destructive"
+                                    aria-label="Delete"
+                                    aria-description={blocked ?? undefined}
+                                    disabled={
+                                      blocked !== null ||
+                                      (isDeleting &&
+                                        deleteFor?.id === subject.id)
+                                    }
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteError(null);
+                                      setDeleteFor(subject);
+                                    }}
+                                  >
+                                    <Trash2 size={19} />
+                                  </Button>
+                                </span>
+                              );
+                            })()}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-
-              </motion.div>
-              {showPath && (
-                <div id={`path-${subject.id}`}>
-                  <IngestionPathPanel
-                    subject={subject}
-                    onOpenReport={() => setReportFor(subject)}
-                    onUploadAgain={() => onUploadClick(subject)}
-                    onReviewVisuals={() => setVisualsFor(subject)}
-                    onAddQuestions={() => setAuthoringFor(subject)}
-                  />
-                </div>
-              )}
-              </React.Fragment>
-            );
-          })}
+                  </motion.div>
+                  {showPath && (
+                    <div id={`path-${subject.id}`}>
+                      <IngestionPathPanel
+                        subject={subject}
+                        onOpenReport={() => setReportFor(subject)}
+                        onUploadAgain={() => onUploadClick(subject)}
+                        onReviewVisuals={() => setVisualsFor(subject)}
+                        onAddQuestions={() => setAuthoringFor(subject)}
+                      />
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </div>
         </div>
 
@@ -769,16 +1005,31 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         {total_count > 0 && (
           <div className="flex items-center justify-between pt-3 mt-2 border-t border-[#122D30]/5">
             <span className="text-[11px] font-bold text-[#122D30]/40">
-              {offset + 1}–{Math.min(offset + limit, total_count)} of {total_count}
+              {offset + 1}–{Math.min(offset + limit, total_count)} of{" "}
+              {total_count}
             </span>
             <div className="flex items-center gap-1">
-              <Button iconOnly size="sm" variant="tertiary" aria-label="Previous page" onClick={handlePrev} disabled={offset === 0}>
+              <Button
+                iconOnly
+                size="sm"
+                variant="tertiary"
+                aria-label="Previous page"
+                onClick={handlePrev}
+                disabled={offset === 0}
+              >
                 <ChevronLeft size={16} />
               </Button>
               <span className="text-[11px] font-bold text-[#122D30]/60 px-2">
                 {currentPage} / {totalPages}
               </span>
-              <Button iconOnly size="sm" variant="tertiary" aria-label="Next page" onClick={handleNext} disabled={offset + limit >= total_count}>
+              <Button
+                iconOnly
+                size="sm"
+                variant="tertiary"
+                aria-label="Next page"
+                onClick={handleNext}
+                disabled={offset + limit >= total_count}
+              >
                 <ChevronRight size={16} />
               </Button>
             </div>
@@ -789,7 +1040,10 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         isOpen={!!deleteFor}
-        onClose={() => { setDeleteFor(null); setDeleteError(null); }}
+        onClose={() => {
+          setDeleteFor(null);
+          setDeleteError(null);
+        }}
         onConfirm={handleDelete}
         title="Delete this chapter?"
         message={`"${deleteFor?.title ?? ""}" will be removed from your registry, with its uploaded PDF and run results.`}
@@ -823,8 +1077,14 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
       />
 
       {/* Correcting where a chapter sits, when core files it differently */}
-      <ChapterCorrectionModal subject={correctionFor} onClose={() => setCorrectionFor(null)} />
-      <OutcomesCorrectionModal subject={outcomesFor} onClose={() => setOutcomesFor(null)} />
+      <ChapterCorrectionModal
+        subject={correctionFor}
+        onClose={() => setCorrectionFor(null)}
+      />
+      <OutcomesCorrectionModal
+        subject={outcomesFor}
+        onClose={() => setOutcomesFor(null)}
+      />
 
       {/* Completing a chapter's questions (ADR 0036) */}
       <SourceAuthoringModal

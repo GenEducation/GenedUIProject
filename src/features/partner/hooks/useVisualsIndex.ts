@@ -27,7 +27,13 @@ export const INDEX_POLL_MAX = 20;
 const STATES: CandidateState[] = ["pending", "accepted", "rejected"];
 
 /** Every visual in `state`, page by page (newest first), and whether it stopped at `INDEX_MAX_PAGES` with more left. */
-async function listAll(state: CandidateState): Promise<{ visuals: VisualSummary[]; lastPage: VisualSummary[]; cut: boolean }> {
+async function listAll(
+  state: CandidateState,
+): Promise<{
+  visuals: VisualSummary[];
+  lastPage: VisualSummary[];
+  cut: boolean;
+}> {
   const visuals: VisualSummary[] = [];
   let page: VisualSummary[] = [];
   for (let n = 0; n < INDEX_MAX_PAGES; n++) {
@@ -38,7 +44,8 @@ async function listAll(state: CandidateState): Promise<{ visuals: VisualSummary[
       ...(last ? { before: last.created_at, before_id: last.id } : {}),
     });
     visuals.push(...page);
-    if (page.length < INDEX_LIMIT) return { visuals, lastPage: page, cut: false };
+    if (page.length < INDEX_LIMIT)
+      return { visuals, lastPage: page, cut: false };
   }
   return { visuals, lastPage: page, cut: true };
 }
@@ -49,7 +56,11 @@ function tally(lists: VisualSummary[][]): Map<string, VisualCounts> {
   lists.forEach((list, i) => {
     const state = STATES[i];
     for (const visual of list) {
-      const entry = counts.get(visual.source_id) ?? { pending: 0, accepted: 0, rejected: 0 };
+      const entry = counts.get(visual.source_id) ?? {
+        pending: 0,
+        accepted: 0,
+        rejected: 0,
+      };
       entry[state] += 1;
       counts.set(visual.source_id, entry);
     }
@@ -76,7 +87,9 @@ export function useVisualsIndex(subjects: Subject[]) {
       if (!mounted.current) return;
       setCounts(tally(lists.map((l) => l.visuals)));
       const pending = lists[0];
-      setPendingCut(new Set(pending.cut ? pending.lastPage.map((v) => v.source_id) : []));
+      setPendingCut(
+        new Set(pending.cut ? pending.lastPage.map((v) => v.source_id) : []),
+      );
     } catch {
       // Leave the last known counts in place.
     }
@@ -95,9 +108,16 @@ export function useVisualsIndex(subjects: Subject[]) {
     void refresh();
   }, [signature, refresh]);
 
-  const countsFor = useCallback((subject: Subject): VisualCounts | null => counts.get(subject.source_id) ?? null, [counts]);
+  const countsFor = useCallback(
+    (subject: Subject): VisualCounts | null =>
+      counts.get(subject.source_id) ?? null,
+    [counts],
+  );
   /** Whether this chapter's pending count may be short of the real one (badge shows "+"). */
-  const pendingMayBeMore = useCallback((subject: Subject) => pendingCut.has(subject.source_id), [pendingCut]);
+  const pendingMayBeMore = useCallback(
+    (subject: Subject) => pendingCut.has(subject.source_id),
+    [pendingCut],
+  );
 
   // No push channel for visuals: poll while an ingestion is running, then for
   // INDEX_POLL_MAX more tries once it finishes. Nothing polls on a registry

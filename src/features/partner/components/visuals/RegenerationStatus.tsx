@@ -5,7 +5,11 @@ import { ArrowRight, Loader2, RefreshCcw, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
 import { visualsService } from "../../services/visualsService";
-import { REASON_LABELS, type ReasonCode, type VisualDetail } from "../../types/visuals";
+import {
+  REASON_LABELS,
+  type ReasonCode,
+  type VisualDetail,
+} from "../../types/visuals";
 import { ReasonFields } from "./ReasonFields";
 import { composeNote, marksText, overLimit, type Mark } from "./markup";
 import { MarksPreview } from "./MarksPreview";
@@ -41,10 +45,20 @@ export function regenerationErrorText(error: string): string {
  * The "new version" story for a rejected visual: in progress (the detail hook
  * polls), ready (link to it), failed (try again), or never asked for (ask now).
  */
-export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMarksSent, onEditMarks, sendRef }: RegenerationStatusProps) {
+export function RegenerationStatus({
+  detail,
+  onOpen,
+  onChanged,
+  marks = [],
+  onMarksSent,
+  onEditMarks,
+  sendRef,
+}: RegenerationStatusProps) {
   const regen = detail.regeneration;
   // Only a partner's own reasons can be sent again ("recropped" is the backend's).
-  const previousReasons = (detail.decision?.reason_codes ?? []).filter((c): c is ReasonCode => c in REASON_LABELS);
+  const previousReasons = (detail.decision?.reason_codes ?? []).filter(
+    (c): c is ReasonCode => c in REASON_LABELS,
+  );
   const [asking, setAsking] = useState(false);
   const [reasons, setReasons] = useState<ReasonCode[]>(previousReasons);
   const [note, setNote] = useState(detail.decision?.note ?? "");
@@ -60,17 +74,25 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
     if (marked) setReasons((r) => (r.length ? r : ["other"]));
   }, [marked]);
 
-  const requestNewVersion = async (codes: ReasonCode[], text: string | null) => {
+  const requestNewVersion = async (
+    codes: ReasonCode[],
+    text: string | null,
+  ) => {
     setSubmitting(true);
     setError(null);
     try {
-      await visualsService.regenerate(detail.id, { reason_codes: codes, note: text });
+      await visualsService.regenerate(detail.id, {
+        reason_codes: codes,
+        note: text,
+      });
       setAsking(false);
       if (marked) onMarksSent?.();
       onChanged();
     } catch (e) {
       const err = asError(e);
-      setError(err.message || "Couldn't ask for a new version. Please try again.");
+      setError(
+        err.message || "Couldn't ask for a new version. Please try again.",
+      );
       if (err.status === 409) onChanged();
     } finally {
       setSubmitting(false);
@@ -80,9 +102,13 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
   const canAsk = reasons.length > 0 && overLimit(marks, note) === 0;
   const trySubmit = () => {
     setTried(true);
-    if (canAsk && !submitting) void requestNewVersion(reasons, composeNote(marks, note));
+    if (canAsk && !submitting)
+      void requestNewVersion(reasons, composeNote(marks, note));
   };
-  const formShown = detail.state === "rejected" && showForm && (!regen || regen.state === "failed");
+  const formShown =
+    detail.state === "rejected" &&
+    showForm &&
+    (!regen || regen.state === "failed");
   useEffect(() => {
     if (!sendRef || !formShown) return;
     sendRef.current = trySubmit;
@@ -95,12 +121,22 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
 
   if (regen && (regen.state === "queued" || regen.state === "claimed")) {
     return (
-      <div role="status" className="rounded-2xl border border-[#122D30]/10 bg-[#DCEBE7]/40 p-4 flex items-start gap-3">
-        <Loader2 size={18} className="animate-spin text-[#122D30] mt-0.5 shrink-0" aria-hidden />
+      <div
+        role="status"
+        className="rounded-2xl border border-[#122D30]/10 bg-[#DCEBE7]/40 p-4 flex items-start gap-3"
+      >
+        <Loader2
+          size={18}
+          className="animate-spin text-[#122D30] mt-0.5 shrink-0"
+          aria-hidden
+        />
         <div>
-          <p className="text-sm font-bold text-[#122D30]">Making a new version…</p>
+          <p className="text-sm font-bold text-[#122D30]">
+            Making a new version…
+          </p>
           <p className="text-xs text-[#122D30]/60 mt-0.5">
-            This usually takes a minute or two. You can close this window; it keeps going.
+            This usually takes a minute or two. You can close this window; it
+            keeps going.
           </p>
         </div>
       </div>
@@ -111,8 +147,13 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
     const resultId = regen.result_candidate_id;
     return (
       <div className="rounded-2xl border border-[#122D30]/10 bg-[#DCEBE7]/40 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-        <p className="flex-1 text-sm font-bold text-[#122D30]">A new version is ready.</p>
-        <Button trailingIcon={<ArrowRight size={14} />} onClick={() => onOpen(resultId)}>
+        <p className="flex-1 text-sm font-bold text-[#122D30]">
+          A new version is ready.
+        </p>
+        <Button
+          trailingIcon={<ArrowRight size={14} />}
+          onClick={() => onOpen(resultId)}
+        >
           Review the new version
         </Button>
       </div>
@@ -132,19 +173,30 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
     >
       {failed ? (
         <div className="flex items-start gap-3">
-          <TriangleAlert size={18} className="text-red-500 mt-0.5 shrink-0" aria-hidden />
+          <TriangleAlert
+            size={18}
+            className="text-red-500 mt-0.5 shrink-0"
+            aria-hidden
+          />
           <div>
-            <p className="text-sm font-bold text-[#122D30]">The new version couldn&apos;t be made.</p>
+            <p className="text-sm font-bold text-[#122D30]">
+              The new version couldn&apos;t be made.
+            </p>
             {regen?.error && (
               // The provider's own wording stays on hover, for anyone reporting it.
-              <p className="text-xs text-[#122D30]/60 mt-0.5" title={regen.error}>
+              <p
+                className="text-xs text-[#122D30]/60 mt-0.5"
+                title={regen.error}
+              >
                 {regenerationErrorText(regen.error)}
               </p>
             )}
           </div>
         </div>
       ) : (
-        <p className="text-sm font-bold text-[#122D30]">No new version was asked for.</p>
+        <p className="text-sm font-bold text-[#122D30]">
+          No new version was asked for.
+        </p>
       )}
 
       {showForm ? (
@@ -161,8 +213,12 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
           />
           <div className="flex items-center justify-end gap-2">
             {overLimit(marks, note) > 0 && (
-              <p role="alert" className="mr-auto text-[11px] font-bold text-red-600">
-                {overLimit(marks, note)} characters too long. Shorten a mark or the note.
+              <p
+                role="alert"
+                className="mr-auto text-[11px] font-bold text-red-600"
+              >
+                {overLimit(marks, note)} characters too long. Shorten a mark or
+                the note.
               </p>
             )}
             {!marked && (
@@ -180,7 +236,9 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
             <Button
               disabled={!canAsk}
               loading={submitting}
-              onClick={() => void requestNewVersion(reasons, composeNote(marks, note))}
+              onClick={() =>
+                void requestNewVersion(reasons, composeNote(marks, note))
+              }
             >
               Make a new version
             </Button>
@@ -194,7 +252,10 @@ export function RegenerationStatus({ detail, onOpen, onChanged, marks = [], onMa
             loading={submitting}
             onClick={() =>
               canRetryDirectly
-                ? void requestNewVersion(previousReasons, detail.decision?.note ?? null)
+                ? void requestNewVersion(
+                    previousReasons,
+                    detail.decision?.note ?? null,
+                  )
                 : setAsking(true)
             }
           >

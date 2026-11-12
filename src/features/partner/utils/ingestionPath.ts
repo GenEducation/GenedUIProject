@@ -12,14 +12,25 @@ import {
 export type StageKind = "ai" | "automatic";
 
 /** What each stage does, who does it, and which counts it produces. Mirrors `gened_ingestion.pipeline.run`. */
-export const STAGE_DETAILS: Record<IngestionStage, { kind: StageKind; does: string; counts: IngestionCount[] }> = {
-  render: { kind: "automatic", does: "Turns each page of your PDF into an image.", counts: ["pages"] },
+export const STAGE_DETAILS: Record<
+  IngestionStage,
+  { kind: StageKind; does: string; counts: IngestionCount[] }
+> = {
+  render: {
+    kind: "automatic",
+    does: "Turns each page of your PDF into an image.",
+    counts: ["pages"],
+  },
   read_pages: {
     kind: "ai",
     does: "Reads the text, headings, exercises and figures on every page.",
     counts: ["unreadable_pages"],
   },
-  components: { kind: "ai", does: "Proposes the key concepts the chapter teaches.", counts: ["components"] },
+  components: {
+    kind: "ai",
+    does: "Proposes the key concepts the chapter teaches.",
+    counts: ["components"],
+  },
   reconcile: {
     kind: "automatic",
     does: "Matches each concept against concepts GenEd already has, so nothing is duplicated.",
@@ -28,16 +39,41 @@ export const STAGE_DETAILS: Record<IngestionStage, { kind: StageKind; does: stri
   questions: {
     kind: "ai",
     does: "Extracts the chapter's questions and answers; a second, independent check verifies every answer key.",
-    counts: ["questions", "questions_computed", "question_variants", "questions_skipped", "questions_removed", "misconceptions"],
+    counts: [
+      "questions",
+      "questions_computed",
+      "question_variants",
+      "questions_skipped",
+      "questions_removed",
+      "misconceptions",
+    ],
   },
-  figures: { kind: "ai", does: "Finds the textbook's figures and what each one is for.", counts: ["figure_groups"] },
+  figures: {
+    kind: "ai",
+    does: "Finds the textbook's figures and what each one is for.",
+    counts: ["figure_groups"],
+  },
   lesson: {
     kind: "automatic",
     does: "Builds the lesson plan and checks the whole chapter against GenEd's publishing rules.",
-    counts: ["lesson_nodes", "plan_steps", "questions_held", "violations", "warnings"],
+    counts: [
+      "lesson_nodes",
+      "plan_steps",
+      "questions_held",
+      "violations",
+      "warnings",
+    ],
   },
-  visuals: { kind: "ai", does: "Draws GenEd's own teaching visuals for the lesson.", counts: [] },
-  submit: { kind: "automatic", does: "Saves the result and sends it to you for review.", counts: [] },
+  visuals: {
+    kind: "ai",
+    does: "Draws GenEd's own teaching visuals for the lesson.",
+    counts: [],
+  },
+  submit: {
+    kind: "automatic",
+    does: "Saves the result and sends it to you for review.",
+    counts: [],
+  },
 };
 
 export const COUNT_LABELS: Record<IngestionCount, string> = {
@@ -69,7 +105,14 @@ export const ATTENTION_COUNTS: ReadonlySet<IngestionCount> = new Set([
   "violations",
 ]);
 
-export type StepStatus = "done" | "current" | "stopped" | "waiting" | "pending" | "not_reached" | "skipped";
+export type StepStatus =
+  | "done"
+  | "current"
+  | "stopped"
+  | "waiting"
+  | "pending"
+  | "not_reached"
+  | "skipped";
 
 export interface PathStep {
   stage: IngestionStage;
@@ -89,10 +132,16 @@ const ORDER = Object.keys(INGESTION_STAGES) as IngestionStage[];
  * Every stage of the run as a step: finished, running, where a run stopped, or still to come. Before a run
  * reports, every stage is pending. A run without visuals (8 steps) leaves `visuals` out.
  */
-export function pathSteps(state: SourceState, reported: SourceProgress | null): PathStep[] {
+export function pathSteps(
+  state: SourceState,
+  reported: SourceProgress | null,
+): PathStep[] {
   // A queued run has not begun: what progress there is belongs to the previous run.
   const progress = state === "queued" ? null : reported;
-  const stages = progress && progress.steps < ORDER.length ? ORDER.filter((s) => s !== "visuals") : ORDER;
+  const stages =
+    progress && progress.steps < ORDER.length
+      ? ORDER.filter((s) => s !== "visuals")
+      : ORDER;
   const at = progress ? stages.indexOf(progress.stage) : -1;
   const finished = state === "ready" || state === "invalid";
   return stages.map((stage, i) => {
@@ -100,17 +149,36 @@ export function pathSteps(state: SourceState, reported: SourceProgress | null): 
     if (progress && at >= 0) {
       if (i < at || (i === at && finished)) status = "done";
       // review_needed paused for the partner's answers: waiting on them, not a failure.
-      else if (i === at) status = state === "running" ? "current" : state === "review_needed" ? "waiting" : "stopped";
+      else if (i === at)
+        status =
+          state === "running"
+            ? "current"
+            : state === "review_needed"
+              ? "waiting"
+              : "stopped";
       else if (state === "review_needed") status = "pending";
-      else if (state !== "running" && state !== "queued") status = finished ? "done" : "not_reached";
+      else if (state !== "running" && state !== "queued")
+        status = finished ? "done" : "not_reached";
     }
     // A run that cannot pass draws no visuals (the costliest step); it never reports the stage.
-    if (stage === "visuals" && state === "invalid" && !progress?.stage_started_at?.visuals) status = "skipped";
+    if (
+      stage === "visuals" &&
+      state === "invalid" &&
+      !progress?.stage_started_at?.visuals
+    )
+      status = "skipped";
     const detail = STAGE_DETAILS[stage];
     const counts = detail.counts
       .map((name) => ({ name, value: progress?.counts?.[name] }))
-      .filter((c): c is { name: IngestionCount; value: number } => typeof c.value === "number");
-    const counting = status === "current" && progress && progress.stage === stage && progress.total > 0;
+      .filter(
+        (c): c is { name: IngestionCount; value: number } =>
+          typeof c.value === "number",
+      );
+    const counting =
+      status === "current" &&
+      progress &&
+      progress.stage === stage &&
+      progress.total > 0;
     const unit = INGESTION_STAGES[stage].unit;
     return {
       stage,
@@ -120,12 +188,20 @@ export function pathSteps(state: SourceState, reported: SourceProgress | null): 
       status,
       startedAt: progress?.stage_started_at?.[stage] ?? null,
       counts,
-      unitLine: counting ? `${Math.min(progress.done, progress.total)} of ${progress.total}${unit ? ` ${unit}` : ""}` : null,
+      unitLine: counting
+        ? `${Math.min(progress.done, progress.total)} of ${progress.total}${unit ? ` ${unit}` : ""}`
+        : null,
     };
   });
 }
 
-export type Milestone = { key: string; label: string; at: string | null; status: "done" | "current" | "pending" | "problem"; note?: string };
+export type Milestone = {
+  key: string;
+  label: string;
+  at: string | null;
+  status: "done" | "current" | "pending" | "problem";
+  note?: string;
+};
 
 /**
  * The milestones around the run: uploaded, queued, picked up, staged for review, published. The stages in
@@ -140,14 +216,25 @@ export function milestones(input: {
   release: SourceReleaseRef | null;
 }): { before: Milestone[]; after: Milestone[] } {
   const { state, release } = input;
-  const ran = input.started_at !== null && state !== "queued" && state !== "registered";
+  const ran =
+    input.started_at !== null && state !== "queued" && state !== "registered";
   const before: Milestone[] = [
-    { key: "uploaded", label: "PDF uploaded and checked", at: input.created_at, status: "done" },
+    {
+      key: "uploaded",
+      label: "PDF uploaded and checked",
+      at: input.created_at,
+      status: "done",
+    },
     {
       key: "queued",
       label: "Waiting in line",
       at: input.queued_at,
-      status: state === "queued" ? "current" : input.queued_at || ran ? "done" : "pending",
+      status:
+        state === "queued"
+          ? "current"
+          : input.queued_at || ran
+            ? "done"
+            : "pending",
     },
     {
       key: "started",
@@ -158,7 +245,8 @@ export function milestones(input: {
   ];
   const reviewNote: Record<SourceReleaseRef["state"], string> = {
     staging: "Being saved for review",
-    ready: "Waiting for your review — nothing reaches students until you publish",
+    ready:
+      "Waiting for your review — nothing reaches students until you publish",
     blocked: "Did not pass the server's checks; see the report",
     published: "Published",
     abandoned: "Replaced by a later run",
@@ -168,8 +256,18 @@ export function milestones(input: {
       key: "review",
       label: "Sent for your review",
       at: release?.staged_at ?? null,
-      status: !release ? "pending" : release.state === "blocked" ? "problem" : release.state === "published" ? "done" : "current",
-      note: release ? reviewNote[release.state] : state === "review_needed" ? "Waiting on your answers before it can continue" : undefined,
+      status: !release
+        ? "pending"
+        : release.state === "blocked"
+          ? "problem"
+          : release.state === "published"
+            ? "done"
+            : "current",
+      note: release
+        ? reviewNote[release.state]
+        : state === "review_needed"
+          ? "Waiting on your answers before it can continue"
+          : undefined,
     },
     {
       key: "published",
@@ -186,11 +284,19 @@ export function shortTime(iso: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString(undefined, {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 /** "4 min" / "1 h 12 min" between two instants; null when either is missing. */
-export function elapsed(fromIso: string | null, toIso: string | null): string | null {
+export function elapsed(
+  fromIso: string | null,
+  toIso: string | null,
+): string | null {
   if (!fromIso || !toIso) return null;
   const ms = new Date(toIso).getTime() - new Date(fromIso).getTime();
   if (!Number.isFinite(ms) || ms < 0) return null;
@@ -202,9 +308,20 @@ export function elapsed(fromIso: string | null, toIso: string | null): string | 
 
 /** What each next step says to the partner. `tone` colours it: every finished run that can't go on to review and publish
  * is a `problem` (red), so a stuck chapter stands out. `upload` steps open the upload form prefilled. */
-export const NEXT_STEP_COPY: Record<NextStep, { title: string; body: string; tone: "info" | "action" | "problem" | "done" }> = {
-  start: { title: "Ready to process", body: "Start the run when you are ready.", tone: "action" },
-  wait: { title: "Processing", body: "Nothing to do yet; this updates on its own.", tone: "info" },
+export const NEXT_STEP_COPY: Record<
+  NextStep,
+  { title: string; body: string; tone: "info" | "action" | "problem" | "done" }
+> = {
+  start: {
+    title: "Ready to process",
+    body: "Start the run when you are ready.",
+    tone: "action",
+  },
+  wait: {
+    title: "Processing",
+    body: "Nothing to do yet; this updates on its own.",
+    tone: "info",
+  },
   answer_questions: {
     title: "Tell us which concepts are the same",
     body: "Some concepts look alike. Answer the questions, then run the chapter again.",
@@ -215,7 +332,11 @@ export const NEXT_STEP_COPY: Record<NextStep, { title: string; body: string; ton
     body: "Review and publish it. Nothing reaches students until you publish.",
     tone: "action",
   },
-  none: { title: "Live for students", body: "This chapter is published.", tone: "done" },
+  none: {
+    title: "Live for students",
+    body: "This chapter is published.",
+    tone: "done",
+  },
   review_visuals: {
     title: "Accept the redrawn pictures, then run again",
     body: "Some questions need their picture. Once you accept the redraws, the next run can include them.",
@@ -251,7 +372,11 @@ export const NEXT_STEP_COPY: Record<NextStep, { title: string; body: string; ton
     body: "This is not something your upload can fix. GenEd has the report; you can run it again after a fix.",
     tone: "problem",
   },
-  run_again: { title: "Something went wrong", body: "The run stopped before it finished. Run it again.", tone: "problem" },
+  run_again: {
+    title: "Something went wrong",
+    body: "The run stopped before it finished. Run it again.",
+    tone: "problem",
+  },
   fix_chapter_details: {
     title: "Check the chapter's number and title",
     body: "GenEd already has this chapter of the book under another title. Correct the details to match, then it runs again.",
@@ -270,7 +395,10 @@ export const NEXT_STEP_COPY: Record<NextStep, { title: string; body: string; ton
 };
 
 /** Next steps fixed by correcting the chapter's details rather than uploading again. */
-export const CORRECTION_STEPS: ReadonlySet<NextStep> = new Set(["fix_chapter_details", "fix_edition_label"]);
+export const CORRECTION_STEPS: ReadonlySet<NextStep> = new Set([
+  "fix_chapter_details",
+  "fix_edition_label",
+]);
 
 /** Plain words for the checks a partner can act on; any other check reads as a generic failed check. */
 export const CHECK_LABELS: Record<string, string> = {
@@ -286,11 +414,17 @@ export function checkLabel(check: string): string {
   return CHECK_LABELS[check] ?? "A GenEd check did not pass";
 }
 
-export const UPLOAD_STEPS: ReadonlySet<NextStep> = new Set(["upload_pages_with_questions", "upload_clearer_pdf", "upload_again"]);
+export const UPLOAD_STEPS: ReadonlySet<NextStep> = new Set([
+  "upload_pages_with_questions",
+  "upload_clearer_pdf",
+  "upload_again",
+]);
 
 /** Why a printed question was removed, in plain words. */
 export function removedReason(reason: string): string {
-  if (reason === "answer_check_disagreed") return "GenEd's answer check couldn't confirm the answer (often a picture question)";
-  if (reason === "not_machine_scorable" || reason === "needs_a_concept") return "An open question: give the exact answers to accept";
+  if (reason === "answer_check_disagreed")
+    return "GenEd's answer check couldn't confirm the answer (often a picture question)";
+  if (reason === "not_machine_scorable" || reason === "needs_a_concept")
+    return "An open question: give the exact answers to accept";
   return "GenEd couldn't mark it automatically";
 }

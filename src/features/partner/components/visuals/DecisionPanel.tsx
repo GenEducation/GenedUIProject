@@ -6,7 +6,11 @@ import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
 import { visualsService } from "../../services/visualsService";
-import type { ReasonCode, VisualDecisionOut, VisualDetail } from "../../types/visuals";
+import type {
+  ReasonCode,
+  VisualDecisionOut,
+  VisualDetail,
+} from "../../types/visuals";
 import { ReasonFields } from "./ReasonFields";
 import { composeNote, marksText, overLimit, type Mark } from "./markup";
 import { MarksPreview } from "./MarksPreview";
@@ -27,16 +31,31 @@ interface DecisionPanelProps {
 /** True when the key press came from a text field, so shortcuts don't fire while typing. */
 export function isTypingTarget(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
-  return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
+  return (
+    !!el &&
+    (el.tagName === "INPUT" ||
+      el.tagName === "TEXTAREA" ||
+      el.tagName === "SELECT" ||
+      el.isContentEditable)
+  );
 }
 
 /** Accept (one click) or reject (reasons, note, "make a new version"). Only rendered for a pending visual. */
-export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEditMarks, sendRef }: DecisionPanelProps) {
+export function DecisionPanel({
+  detail,
+  onDecided,
+  onConflict,
+  marks = [],
+  onEditMarks,
+  sendRef,
+}: DecisionPanelProps) {
   const [mode, setMode] = useState<"idle" | "reject">("idle");
   const [reasons, setReasons] = useState<ReasonCode[]>([]);
   const [note, setNote] = useState("");
   const [regenerate, setRegenerate] = useState(true);
-  const [submitting, setSubmitting] = useState<"accept" | "reject" | null>(null);
+  const [submitting, setSubmitting] = useState<"accept" | "reject" | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const toggleId = useId();
   const marked = marks.length > 0;
@@ -95,7 +114,14 @@ export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEdi
   // A = accept, R = reject. → (next) lives with the pane, which owns navigation.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target) || submitting) return;
+      if (
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        isTypingTarget(e.target) ||
+        submitting
+      )
+        return;
       if (mode === "idle" && (e.key === "a" || e.key === "A")) {
         e.preventDefault();
         void submit("accept");
@@ -109,7 +135,10 @@ export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEdi
   });
 
   return (
-    <section aria-label="Your decision" className="rounded-2xl bg-[#075E63] p-4 md:p-5 text-white">
+    <section
+      aria-label="Your decision"
+      className="rounded-2xl bg-[#075E63] p-4 md:p-5 text-white"
+    >
       <AnimatePresence mode="wait" initial={false}>
         {mode === "idle" ? (
           <motion.div
@@ -150,7 +179,9 @@ export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEdi
             exit={{ opacity: 0, y: -6 }}
             className="bg-white rounded-xl p-4 text-[#122D30] flex flex-col gap-4"
           >
-            {marked && regenerate && <MarksPreview marks={marks} onEdit={onEditMarks} />}
+            {marked && regenerate && (
+              <MarksPreview marks={marks} onEdit={onEditMarks} />
+            )}
             {marked && !regenerate && (
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">
                 Your marks are only sent when you ask for a new version.
@@ -166,7 +197,10 @@ export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEdi
               missingReason={tried && reasons.length === 0}
             />
 
-            <label htmlFor={toggleId} className="relative flex items-center gap-3 cursor-pointer select-none">
+            <label
+              htmlFor={toggleId}
+              className="relative flex items-center gap-3 cursor-pointer select-none"
+            >
               <input
                 id={toggleId}
                 type="checkbox"
@@ -200,7 +234,10 @@ export function DecisionPanel({ detail, onDecided, onConflict, marks = [], onEdi
                 Cancel
               </Button>
               {regenerate && over > 0 && (
-                <p role="alert" className="mr-auto self-center text-[11px] font-bold text-red-600">
+                <p
+                  role="alert"
+                  className="mr-auto self-center text-[11px] font-bold text-red-600"
+                >
                   {over} characters too long. Shorten a mark or the note.
                 </p>
               )}

@@ -2,7 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { X, Check, Loader2, User, Mail, BookOpen, School, Calendar, Clock } from "lucide-react";
+import {
+  X,
+  Check,
+  Loader2,
+  User,
+  Mail,
+  BookOpen,
+  School,
+  Calendar,
+  Clock,
+} from "lucide-react";
 
 interface StudentDetailsModalProps {
   studentId: string;
@@ -15,14 +25,20 @@ interface StudentDetailsModalProps {
 }
 
 import { usePartnerStore } from "@/features/partner/store/usePartnerStore";
-import { partnerStudentsService, type PartnerStudentProfile } from "@/features/partner/services/partnerStudentsService";
+import {
+  partnerStudentsService,
+  type PartnerStudentProfile,
+} from "@/features/partner/services/partnerStudentsService";
 import { Button } from "@/components/ui/Button";
 
 const formatDate = (iso: string) => {
   try {
     return new Date(iso).toLocaleDateString("en-IN", {
-      day: "2-digit", month: "short", year: "numeric",
-      hour: "2-digit", minute: "2-digit",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   } catch {
     return iso;
@@ -62,10 +78,14 @@ export function StudentDetailsModal({
     // IDOR Prevention: Verify that this studentId belongs to the partner's authorized list before fetching
     const studentList = usePartnerStore.getState().students;
     const pendingList = usePartnerStore.getState().pendingRequests;
-    const isAuthorized = studentList.some(s => s.id === studentId) || pendingList.some(s => s.id === studentId);
+    const isAuthorized =
+      studentList.some((s) => s.id === studentId) ||
+      pendingList.some((s) => s.id === studentId);
 
     if (!isAuthorized) {
-      setFetchError("Unauthorized: You do not have permission to view this student's profile.");
+      setFetchError(
+        "Unauthorized: You do not have permission to view this student's profile.",
+      );
       setIsFetching(false);
       return;
     }
@@ -74,7 +94,8 @@ export function StudentDetailsModal({
       .profile(partnerId, studentId)
       .then((data) => {
         // The backend answers null when the student is no longer linked to this school.
-        if (data === null) setFetchError("This student is no longer linked to your school.");
+        if (data === null)
+          setFetchError("This student is no longer linked to your school.");
         else setProfile(data);
         setIsFetching(false);
       })
@@ -126,16 +147,29 @@ export function StudentDetailsModal({
         {/* Header strip */}
         <div className="bg-[#075E63] px-6 md:px-10 pt-8 pb-10 flex flex-col items-center text-center">
           {/* Close */}
-          <Button iconOnly size="sm" variant="tertiary" tone="onDark" className="absolute top-5 right-5" aria-label="Close" onClick={onClose} disabled={isBusy}>
+          <Button
+            iconOnly
+            size="sm"
+            variant="tertiary"
+            tone="onDark"
+            className="absolute top-5 right-5"
+            aria-label="Close"
+            onClick={onClose}
+            disabled={isBusy}
+          >
             <X size={18} />
           </Button>
 
           {/* Avatar */}
           <div className="w-14 h-14 md:w-18 md:h-18 bg-white/15 rounded-[1.25rem] flex items-center justify-center mb-4">
-            <span className="text-white text-lg md:text-xl font-black">{initials}</span>
+            <span className="text-white text-lg md:text-xl font-black">
+              {initials}
+            </span>
           </div>
 
-          <h3 className="text-lg md:text-xl font-black text-white tracking-tight">{studentName}</h3>
+          <h3 className="text-lg md:text-xl font-black text-white tracking-tight">
+            {studentName}
+          </h3>
 
           {/* Status badge */}
           <span
@@ -154,7 +188,9 @@ export function StudentDetailsModal({
           {isFetching ? (
             <div className="flex flex-col items-center justify-center py-10 gap-3">
               <Loader2 size={24} className="animate-spin text-[#122D30]/30" />
-              <p className="text-[11px] font-bold text-[#122D30]/30 uppercase tracking-widest">Loading profile…</p>
+              <p className="text-[11px] font-bold text-[#122D30]/30 uppercase tracking-widest">
+                Loading profile…
+              </p>
             </div>
           ) : fetchError ? (
             <div className="py-8 text-center">
@@ -165,14 +201,40 @@ export function StudentDetailsModal({
               {/* Detail rows */}
               <div className="space-y-3">
                 {[
-                  { icon: <Mail size={14} />, label: "Email", value: profile.email },
-                  { icon: <User size={14} />, label: "Age", value: profile.age == null ? "—" : String(profile.age) },
-                  { icon: <BookOpen size={14} />, label: "Grade", value: `Grade ${profile.grade}` },
-                  { icon: <School size={14} />, label: "Board", value: profile.school_board ?? "—" },
-                  { icon: <Calendar size={14} />, label: "Requested", value: formatDate(profile.requested_at) },
+                  {
+                    icon: <Mail size={14} />,
+                    label: "Email",
+                    value: profile.email,
+                  },
+                  {
+                    icon: <User size={14} />,
+                    label: "Age",
+                    value: profile.age == null ? "—" : String(profile.age),
+                  },
+                  {
+                    icon: <BookOpen size={14} />,
+                    label: "Grade",
+                    value: `Grade ${profile.grade}`,
+                  },
+                  {
+                    icon: <School size={14} />,
+                    label: "Board",
+                    value: profile.school_board ?? "—",
+                  },
+                  {
+                    icon: <Calendar size={14} />,
+                    label: "Requested",
+                    value: formatDate(profile.requested_at),
+                  },
                   // updated_at only for APPROVED students
                   ...(profile.status === "APPROVED" && profile.updated_at
-                    ? [{ icon: <Clock size={14} />, label: "Approved on", value: formatDate(profile.updated_at) }]
+                    ? [
+                        {
+                          icon: <Clock size={14} />,
+                          label: "Approved on",
+                          value: formatDate(profile.updated_at),
+                        },
+                      ]
                     : []),
                 ].map(({ icon, label, value }) => (
                   <div
@@ -180,8 +242,12 @@ export function StudentDetailsModal({
                     className="flex items-center gap-3 px-4 py-3 bg-[#F6F7F2] rounded-2xl"
                   >
                     <span className="text-[#122D30]/30 shrink-0">{icon}</span>
-                    <span className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest w-20 shrink-0">{label}</span>
-                    <span className="text-xs font-bold text-[#122D30] truncate">{value}</span>
+                    <span className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest w-20 shrink-0">
+                      {label}
+                    </span>
+                    <span className="text-xs font-bold text-[#122D30] truncate">
+                      {value}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -189,7 +255,9 @@ export function StudentDetailsModal({
               {/* Action error */}
               {actionError && (
                 <div className="px-4 py-3 bg-red-50 border border-red-100 rounded-2xl">
-                  <p className="text-xs font-bold text-red-600">{actionError}</p>
+                  <p className="text-xs font-bold text-red-600">
+                    {actionError}
+                  </p>
                 </div>
               )}
 
@@ -201,7 +269,11 @@ export function StudentDetailsModal({
                     disabled={isBusy}
                     className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#075E63] text-white rounded-2xl hover:bg-[#075E63]/90 transition-all font-bold text-sm shadow-lg shadow-[#122D30]/10 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {isApproving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                    {isApproving ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Check size={16} />
+                    )}
                     {isApproving ? "Approving…" : "Accept Request"}
                   </button>
                   <button
@@ -209,7 +281,11 @@ export function StudentDetailsModal({
                     disabled={isBusy}
                     className="w-full flex items-center justify-center gap-2 py-3.5 bg-white text-red-500 border border-red-100 rounded-2xl hover:bg-red-50 transition-all font-bold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {isRejecting ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
+                    {isRejecting ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <X size={16} />
+                    )}
                     {isRejecting ? "Rejecting…" : "Reject Request"}
                   </button>
                 </div>

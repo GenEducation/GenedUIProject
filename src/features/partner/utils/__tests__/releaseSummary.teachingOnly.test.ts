@@ -18,9 +18,17 @@ const teachingOnly = {
 
 describe("a teaching-only chapter in review (backend ADR 0041)", () => {
   it("names the unit and what accepting it means", () => {
-    expect(kindInfo("teaching_only").label).toBe("Taught with open questions only");
-    expect(kindInfo("teaching_only").hint).toMatch(/nothing in it measures mastery/);
-    expect(summarize(teachingOnly).title).toBe("Taught with open questions only");
-    expect(groupByKind([teachingOnly])[0].info.label).toBe("Taught with open questions only");
+    expect(kindInfo("teaching_only").label).toBe(
+      "Taught with open questions only",
+    );
+    expect(kindInfo("teaching_only").hint).toMatch(
+      /nothing in it measures mastery/,
+    );
+    expect(summarize(teachingOnly).title).toBe(
+      "Taught with open questions only",
+    );
+    expect(groupByKind([teachingOnly])[0].info.label).toBe(
+      "Taught with open questions only",
+    );
   });
 });
