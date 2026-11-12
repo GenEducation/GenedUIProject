@@ -53,3 +53,14 @@ describe("activity format", () => {
     expect(keyFields("activity", latest)).toEqual({ activity_mode: "read_aloud" });
   });
 });
+
+describe("reading and listening activities", () => {
+  it("need their passage, and keep it apart from the prompt", () => {
+    const listen: AddedQuestion = { ...ACTIVITY, activity_mode: "listen" };
+    expect(formatProblem(listen)).toMatch(/passage/i);
+    expect(formatProblem({ ...listen, passage: "SYNTHETIC passage." })).toBeNull();
+    const texts = { ...textsOf(listen), passage: "SYNTHETIC passage." };
+    expect(keyFields("activity", texts)).toMatchObject({ passage: "SYNTHETIC passage." });
+    expect(keyFields("activity", { ...texts, mode: "write" })).not.toHaveProperty("passage");
+  });
+});

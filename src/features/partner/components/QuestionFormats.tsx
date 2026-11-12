@@ -71,6 +71,7 @@ interface Texts {
   mode: ActivityMode;
   rubric: string;
   example: string;
+  passage: string;
 }
 
 export function textsOf(q: AddedQuestion): Texts {
@@ -111,6 +112,7 @@ export function textsOf(q: AddedQuestion): Texts {
     mode: q.activity_mode ?? "write",
     rubric: q.rubric ?? "",
     example: q.example_answer ?? "",
+    passage: q.passage ?? "",
   };
 }
 
@@ -184,6 +186,9 @@ export function keyFields(
         activity_mode: t.mode,
         ...(t.rubric.trim() ? { rubric: t.rubric.trim() } : {}),
         ...(t.example.trim() ? { example_answer: t.example.trim() } : {}),
+        ...((t.mode === "read_aloud" || t.mode === "listen") && t.passage.trim()
+          ? { passage: t.passage.trim() }
+          : {}),
       };
   }
 }
@@ -245,7 +250,13 @@ export function formatProblem(q: AddedQuestion): string | null {
         ? null
         : "Give the answers to accept.";
     case "activity":
-      return q.activity_mode ? null : "Choose how the learner answers.";
+      if (!q.activity_mode) return "Choose how the learner answers.";
+      if (
+        (q.activity_mode === "read_aloud" || q.activity_mode === "listen") &&
+        !q.passage?.trim()
+      )
+        return "Give the passage from the chapter the learner reads or hears.";
+      return null;
   }
 }
 
@@ -435,6 +446,15 @@ export function FormatFields({
             3,
             "Learners never see this. Leave it empty and the tutor judges from the chapter.",
           )}
+          {(t.mode === "read_aloud" || t.mode === "listen") &&
+            area(
+              "passage",
+              t.mode === "listen"
+                ? "Passage the learner hears (never shown)"
+                : "Passage the learner reads aloud",
+              4,
+              "Copy it exactly from the chapter.",
+            )}
           {area("example", "An example of a good answer (optional)", 3)}
           <p className="text-xs text-[#122D30]/60">
             A free answer with no fixed key. Learners must try it to finish

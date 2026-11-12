@@ -570,6 +570,8 @@ export interface AddedQuestion {
   rubric?: string;
   /** An activity's optional example of a good answer. Learners never see it. */
   example_answer?: string;
+  /** A reading-aloud or listening activity's passage from the chapter: shown to read, or only played to listen to. */
+  passage?: string;
   origin: "partner" | "ai_assisted";
 }
 

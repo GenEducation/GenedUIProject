@@ -67,6 +67,16 @@ function ActivityDetails({ body }: { body: BankQuestion["question"]["body"] }) {
         {ACTIVITY_MODE[body.activity_mode ?? "write"]}. A free answer: the
         tutor gives feedback, and the learner must try it to finish the step.
       </p>
+      {body.passage && (
+        <p className="whitespace-pre-line">
+          <span className="font-bold text-[#122D30]">
+            {body.activity_mode === "listen"
+              ? "Passage (only heard, never shown): "
+              : "Passage to read aloud: "}
+          </span>
+          {body.passage}
+        </p>
+      )}
       {body.rubric && (
         <p className="whitespace-pre-line">
           <span className="font-bold text-[#122D30]">A good answer: </span>
