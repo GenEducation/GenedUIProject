@@ -291,16 +291,25 @@ describe("SubjectRegistry — the filter bar", () => {
 });
 
 describe("SubjectRegistry — GenEd's prepared questions (backend ADR 0047)", () => {
-  it("offers the question review for any finished chapter whose run left questions to review, and never while it runs", async () => {
+  it("offers one decision review only when it is the server's next step", async () => {
     sourcesFixture.reset(() => [
-      { ...noQuestions, has_authoring: true },
+      {
+        ...noQuestions,
+        has_authoring: true,
+        outcome: {
+          next_step: "review_questions",
+          findings: [{ check: "assessment_bank_incomplete", count: 1, owner: "partner" }],
+          can_run_again: false,
+          run_again_blocked: "same_result",
+        },
+      },
       makeSource({ source_id: "synthetic-running", state: "running", has_authoring: true,
                    chapter: { ordinal: 3, title: "SYNTHETIC running", first_pdf_page: 1, last_pdf_page: 1 } }),
     ]); // prettier-ignore
     render(<SubjectRegistry onUploadClick={vi.fn()} />);
     await screen.findByText("SYNTHETIC running");
     expect(
-      screen.getAllByRole("button", { name: "Review questions" }),
+      screen.getAllByRole("button", { name: "Review decisions" }),
     ).toHaveLength(1);
   });
 });

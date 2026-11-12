@@ -197,6 +197,9 @@ export type NextStep =
   /** Questions need their picture, but no redraw waits for you: the drawing failed its own checks. Run again. */
   | "redraw_pictures"
   | "add_questions"
+  | "review_questions"
+  /** Partner decisions changed; rebuild from cached work and prepare the release for review. */
+  | "prepare_release"
   | "upload_pages_with_questions"
   | "upload_clearer_pdf"
   | "upload_again"

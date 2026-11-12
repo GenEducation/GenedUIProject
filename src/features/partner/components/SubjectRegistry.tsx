@@ -574,11 +574,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
               // A chapter the partner can complete with questions of their own offers that first; uploading stays in its path.
               const addQuestions = next === "add_questions";
               // GenEd prepares a question bank after every run (backend ADR 0047): reviewable whenever the last run left its context.
-              const reviewQuestions =
-                !addQuestions &&
-                subject.has_authoring &&
-                subject.state !== "queued" &&
-                subject.state !== "running";
+              const reviewQuestions = next === "review_questions";
+              const prepareRelease = next === "prepare_release";
               const needsCorrection =
                 next !== null && CORRECTION_STEPS.has(next);
               const fixOutcomes = next === "fix_outcomes";
@@ -780,7 +777,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                                   setAuthoringFor(subject);
                                 }}
                               >
-                                Add questions
+                                Review decisions
                               </Button>
                             )}
 
@@ -794,7 +791,21 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                                   setAuthoringFor(subject);
                                 }}
                               >
-                                Review questions
+                                Review decisions
+                              </Button>
+                            )}
+
+                            {prepareRelease && (
+                              <Button
+                                pill
+                                leadingIcon={<Play size={16} />}
+                                loading={busy}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void runAction(subject, startIngestion);
+                                }}
+                              >
+                                Prepare release
                               </Button>
                             )}
 
@@ -837,7 +848,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                               </Button>
                             )}
 
-                            {canRunAgain &&
+                            {canRunAgain && !prepareRelease &&
                               (subject.state === "registered" ? (
                                 <Button
                                   iconOnly
@@ -1114,6 +1125,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         onUploadAgain={(subject) => onUploadClick(subject)}
         onReviewVisuals={setVisualsFor}
         onReviewRelease={setReleaseFor}
+        onPrepareRelease={(subject) => void runAction(subject, startIngestion)}
       />
 
       {/* Visual review popup */}
