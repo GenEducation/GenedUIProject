@@ -1,5 +1,6 @@
 import { authFetch } from "@/utils/authFetch";
 import type {
+  ActivityAttempt,
   AnswerBody,
   WrittenBody,
   WrittenResult,
@@ -62,6 +63,11 @@ export const lessonService = {
 
   answer: async (instanceId: string, body: AnswerBody): Promise<AnswerResult> =>
     (await authFetch(`${instancePath(instanceId)}/responses`, json(body))).json(),
+
+  activityAnswer: async (
+    instanceId: string, nodeId: string, itemId: string, body: { request_id: string; expected_revision: number; answer: string },
+  ): Promise<ActivityAttempt> =>
+    (await authFetch(`${instancePath(instanceId)}/nodes/${encodeURIComponent(nodeId)}/activities/${encodeURIComponent(itemId)}/responses`, json(body))).json(),
 
   /** A typed answer to a rubric check: evaluated by the server's qualified evaluator and committed once (the same `request_id` returns the committed result). */
   writtenAnswer: async (instanceId: string, body: WrittenBody): Promise<WrittenResult> =>

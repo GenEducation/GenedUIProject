@@ -9,6 +9,7 @@ import { readSseFrames } from "./sse";
 import { resolveSessionLanguage, saveLanguageChoice, type SessionLanguage } from "./voice/languages";
 import { applyEvent, fromRecorded, isTerminal, newTurn, type LessonTurn } from "./transcript";
 import type {
+  ActivityAttempt,
   WrittenResult,
   ChapterReport,
   AnswerResponse,
@@ -124,6 +125,8 @@ interface LessonState {
   /** After a spoken answer was committed over the oral socket: the lesson state is read again and the tutor's reaction to the attempt starts. */
   afterOral: (attemptId: string | null) => Promise<void>;
   /** The data a spoken answer's socket frame is bound to: the instance, its revision and this screen's session. */
+  afterActivity: (nodeId: string, attemptId: string, learnerText?: string) => Promise<void>;
+  submitActivity: (nodeId: string, itemId: string, text: string, requestId: string) => Promise<ActivityAttempt | null>;
   oralContext: () => { instanceId: string; revision: number; sessionId: string } | null;
   /** The learner's explicit done on a teach node, only when the backend advertises `done_available`. */
   done: () => Promise<void>;
@@ -645,7 +648,12 @@ export const useLessonStore = create<LessonState>((set, get) => {
     if (!instanceId || !node || node.check_presented !== false) return;
     if (currentTurn(turnId)?.status !== "completed") return;
     try {
-      applyInstance(await lessonService.instance(instanceId));
+      const current = await lessonService.instance(instanceId);
+      if (get().instanceId !== instanceId) return;
+      applyInstance(current);
+      if (node.activities?.length && current.active_node?.instance_node_id === node.instance_node_id && current.active_node.check_presented) {
+        await loadNode(instanceId);
+      }
     } catch (error) {
       console.warn("The lesson state couldn't be read after the reply:", asError(error).request_id, asError(error).message ?? error);
     }
@@ -947,6 +955,35 @@ export const useLessonStore = create<LessonState>((set, get) => {
       } catch (error) {
         await rereadIfStale(error);
         throw error;
+      }
+    },
+
+    submitActivity: async (nodeId, itemId, text, requestId) => {
+      const { instanceId, instance } = get();
+      if (!instanceId || instance?.revision === undefined) return null;
+      try {
+        const result = await lessonService.activityAnswer(instanceId, nodeId, itemId, {
+          request_id: requestId, expected_revision: instance.revision, answer: text,
+        });
+        if (get().instanceId === instanceId) await get().afterActivity(nodeId, result.id, text);
+        return result;
+      } catch (error) {
+        await rereadIfStale(error);
+        throw error;
+      }
+    },
+
+    afterActivity: async (nodeId, attemptId, learnerText) => {
+      const { instanceId } = get();
+      if (!instanceId) return;
+      const instance = await lessonService.instance(instanceId);
+      if (get().instanceId !== instanceId) return;
+      applyInstance(instance);
+      if (!currentTurn(attemptId)) {
+        void runTurn(
+          { turn_id: attemptId, kind: "result_reaction", instance_node_id: nodeId, activity_attempt_id: attemptId },
+          learnerText?.trim() || null,
+        );
       }
     },
 

@@ -28,6 +28,7 @@ export interface TurnRequest {
   text?: string;
   latency_ms?: number;
   attempt_id?: string;
+  activity_attempt_id?: string;
   item_id?: string;
   routing_mode?: "auto" | "conversation_only";
   regenerates?: string;
@@ -420,4 +421,11 @@ export interface ChapterReport {
   outcomes: Array<{ lo_id: string; code: string; title: string; status: string; mastered: boolean }>;
   keep_practising: Array<{ component_id: string; title: string; status: string; needs_adult_support: boolean }>;
   answers: { answered: number; correct: number };
+}
+
+export interface ActivityAttempt {
+  id: string;
+  attempted: boolean;
+  not_attempted_reason: string | null;
+  heard?: string;
 }

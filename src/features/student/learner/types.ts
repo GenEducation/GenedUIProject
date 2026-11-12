@@ -64,6 +64,14 @@ export interface LearnerChaptersOut {
 
 export type InstanceNextAction = "learn" | "answer_checks" | "choose" | "confirm_reading" | "completed" | "blocked";
 
+export interface LessonActivity {
+  item_id: string;
+  prompt: string;
+  mode: "write" | "speak" | "read_aloud" | "listen";
+  passage: string | null;
+  attempted: boolean;
+}
+
 /** The node the learner is on (`ActiveNode` in the backend's `gened_learning/views.py`). */
 export interface ActiveNode {
   instance_node_id: string;
@@ -77,6 +85,7 @@ export interface ActiveNode {
   round_ordinal: number | null;
   answered_item_ids: string[];
   check_item_ids: string[];
+  activities?: LessonActivity[];
   /** The backend currently accepts `/done`; false on evidence-driven teach nodes. */
   done_available: boolean;
   /** The deterministic re-teaching step after a failed teach round. */
@@ -99,7 +108,7 @@ export interface InstanceState {
   nodes_done: number;
   nodes_total: number;
   /** The finished parts, in plan order, with their titles (absent from an older backend). */
-  completed_nodes?: Array<{ instance_node_id: string; title: string }>;
+  completed_nodes?: Array<{ instance_node_id: string; title: string; activities?: LessonActivity[] }>;
   // The lesson screen's fields. Optional so the chapter list's fixtures stay small.
   plan_version_id?: string;
   /** Every answer, done or engagement names it as `expected_revision`; a stale one is a 409 (CORE_3103). */

@@ -6,6 +6,7 @@ import { useLessonStore } from "../useLessonStore";
 import { WhiteboardCanvas } from "./WhiteboardCanvas";
 import type { Insets } from "../board/geometry";
 import { Filmstrip } from "./Filmstrip";
+import { ActivityCard, CompletedActivities } from "./ActivityCard";
 import { StepCard } from "./StepCard";
 import { LessonSummary } from "./LessonSummary";
 import { QuickActions } from "./QuickActions";
@@ -154,7 +155,11 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
         >
           {/* CSS zoom, not a transform: the card re-wraps to its dock's width instead of spilling past it. */}
           <div data-card-zoom={cardZoom.toFixed(2)} style={{ zoom: cardZoom }}>
+            {node?.activities?.map((activity) => (
+              <ActivityCard key={`${node.instance_node_id}:${activity.item_id}`} nodeId={node.instance_node_id} activity={activity} />
+            ))}
             <StepCard subject={subject} />
+            {!finished && <CompletedActivities />}
           </div>
         </div>
 
@@ -162,6 +167,7 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
           <div data-no-pan className="absolute inset-0 z-20 overflow-y-auto bg-[var(--ls-card-warm)]/85 p-5 backdrop-blur-[2px] sm:p-8">
             <div className="mx-auto max-w-[680px]">
               <LessonSummary />
+              <CompletedActivities />
             </div>
           </div>
         )}

@@ -42,12 +42,14 @@ export function useSegmentAudio(
   passageId: string,
   segment: number,
   deps: AudioDeps = browserDeps,
+  onEnded?: () => void,
 ): SegmentAudio {
   const [phase, setPhase] = useState<ListenPhase>("idle");
   const [problem, setProblem] = useState<string | null>(null);
   const element = useRef<HTMLAudioElement | null>(null);
   const url = useRef<string | null>(null);
   const loading = useRef(false);
+  const generation = useRef(0);
   const self = useRef({ stop: () => {} });
 
   const release = useCallback(() => {
@@ -69,14 +71,20 @@ export function useSegmentAudio(
     self.current.stop = stop;
   }, [stop]);
 
+  const invalidateLoad = useCallback(() => {
+    generation.current++;
+    loading.current = false;
+  }, []);
+
   // A different part, or leaving the lesson: drop this one's audio.
   useEffect(() => {
     const mine = self.current;
     return () => {
+      invalidateLoad();
       release();
       if (current === mine) current = null;
     };
-  }, [release, passageId, segment, instanceId]);
+  }, [invalidateLoad, release, passageId, segment, instanceId]);
 
   const fail = useCallback((why: ListenProblem) => {
     setProblem(LISTEN_MESSAGES[why]);
@@ -88,31 +96,37 @@ export function useSegmentAudio(
     setProblem(null);
     if (current && current !== self.current) current.stop();
     current = self.current;
+    const mine = generation.current;
     if (!element.current) {
       loading.current = true;
       setPhase("loading");
       try {
         const blob = await deps.fetchAudio(instanceId, passageId, segment);
+        if (mine !== generation.current || current !== self.current) return;
         const audio = deps.createAudio();
         url.current = deps.objectUrl(blob);
         audio.src = url.current;
-        audio.onended = () => setPhase("idle");
+        audio.onended = () => {
+          setPhase("idle");
+          onEnded?.();
+        };
         audio.onerror = () => fail("unsupported");
         element.current = audio;
       } catch (error) {
-        loading.current = false;
+        if (mine !== generation.current || current !== self.current) return;
         fail(error instanceof ListenError ? error.problem : "unavailable");
         return;
+      } finally {
+        if (mine === generation.current) loading.current = false;
       }
-      loading.current = false;
     }
     try {
       await element.current.play();
-      setPhase("playing");
+      if (mine === generation.current && current === self.current) setPhase("playing");
     } catch {
-      fail("unsupported");
+      if (mine === generation.current) fail("unsupported");
     }
-  }, [instanceId, passageId, segment, deps, fail]);
+  }, [instanceId, passageId, segment, deps, fail, onEnded]);
 
   const pause = useCallback(() => {
     element.current?.pause();

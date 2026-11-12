@@ -1,3 +1,4 @@
+import type { ActivityAttempt } from "../types";
 import { getAuthToken } from "@/utils/authFetch";
 import { browserReadAloudDeps, canCaptureAudio, type MicHandle, type SocketLike } from "../reading/readAloud";
 
@@ -32,6 +33,7 @@ export interface OralResult {
 export interface OralState {
   phase: OralPhase;
   result: OralResult | null;
+  activityResult?: ActivityAttempt;
   /** The rubric's neutral question when the answer could not be placed (nothing was committed). */
   clarify: { probe: string; heard: string } | null;
   /** A neutral code the interface words (`say_it_again`, `busy`, ...); never a mistake of the learner's. */
@@ -68,6 +70,7 @@ export interface OralContext {
   sessionId: string;
   expectedRevision: number;
   language: string;
+  activity?: { nodeId: string; requestId: string };
 }
 
 export class OralAnswerSession {
@@ -114,8 +117,8 @@ export class OralAnswerSession {
     if (this.state.phase === "starting" || this.state.phase === "recording" || this.state.phase === "sending") return;
     this.release();
     const mine = this.generation;
-    const resume = this.state.phase === "failed" && this.state.retry ? this.state.utteranceId : null;
-    this.set({ phase: "starting", result: null, clarify: null, problem: null, retry: false });
+    const resume = !context.activity && this.state.phase === "failed" && this.state.retry ? this.state.utteranceId : null;
+    this.set({ phase: "starting", result: null, activityResult: undefined, clarify: null, problem: null, retry: false });
     const socket = this.deps.openSocket();
     socket.binaryType = "arraybuffer";
     this.socket = socket;
@@ -124,7 +127,9 @@ export class OralAnswerSession {
         JSON.stringify(
           resume
             ? { type: "resume", utterance_id: resume, session_id: context.sessionId, language: context.language }
-            : { type: "init", instance_id: context.instanceId, item_id: context.itemId, session_id: context.sessionId, expected_revision: context.expectedRevision, language: context.language },
+            : { type: "init", instance_id: context.instanceId, item_id: context.itemId, session_id: context.sessionId, expected_revision: context.expectedRevision, language: context.language,
+                ...(context.activity ? { instance_node_id: context.activity.nodeId, request_id: context.activity.requestId } : {}),
+              },
         ),
       );
     socket.onerror = () => mine === this.generation && this.fail("service", true);
@@ -143,6 +148,17 @@ export class OralAnswerSession {
       if (frame.type === "ready") {
         this.set({ utteranceId: String(frame.utterance_id) });
         void this.record(mine);
+      } else if (frame.type === "activity_result") {
+        this.release();
+        this.set({
+          phase: "result",
+          activityResult: {
+            id: String(frame.attempt_id),
+            attempted: frame.attempted === true,
+            heard: typeof frame.heard === "string" ? frame.heard : undefined,
+            not_attempted_reason: typeof frame.not_attempted_reason === "string" ? frame.not_attempted_reason : null,
+          },
+        });
       } else if (frame.type === "result") {
         this.release();
         this.set({ phase: "result", result: frame as unknown as OralResult });
@@ -185,7 +201,7 @@ export class OralAnswerSession {
 
   cancel() {
     this.release();
-    this.set({ ...INITIAL_ORAL });
+    this.set({ ...INITIAL_ORAL, activityResult: undefined });
   }
 }
 
