@@ -16,6 +16,28 @@ export type SourceState =
   | "ready"
   | "failed";
 
+export interface ActivityEvaluationPass {
+  model_key: string;
+  model_version: string | null;
+  prompt_name: string;
+  prompt_sha256: string;
+  evaluation: {
+    on_task: boolean | null;
+    verdicts: Array<{ objective: number; verdict: "met" | "partly" | "not_met" | "abstain"; quote: string }>;
+  } | null;
+}
+
+export interface ActivityReview {
+  evaluation_id: string;
+  attempt_id: string;
+  mode: "write" | "speak" | "read_aloud" | "listen";
+  answer: string;
+  evaluator: ActivityEvaluationPass;
+  verifier: ActivityEvaluationPass;
+  agreed: Array<"met" | "not_met" | "not_judged">;
+  created_at: string;
+}
+
 /** States a partner may start (or re-run) a source from. */
 export const STARTABLE_STATES: ReadonlySet<SourceState> = new Set([
   "registered",

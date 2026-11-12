@@ -18,6 +18,7 @@ import type {
   SourceListParams,
   SourceListResponse,
   SourceView,
+  ActivityReview,
 } from "../types/sources";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
@@ -46,6 +47,22 @@ const sourcePath = (id: string) => `${SOURCES_BASE}/${encodeURIComponent(id)}`;
  * wrong with an upload; a 409 says why a start/cancel/delete doesn't fit).
  */
 export const sourcesService = {
+  activityReviews: async (id: string): Promise<ActivityReview[]> =>
+    (await authFetch(`${API_BASE_URL}/v1/activity-reviews/${encodeURIComponent(id)}`)).json(),
+
+  overrideActivityVerdict: async (
+    sourceId: string,
+    evaluationId: string,
+    objective: number,
+    verdict: "met" | "not_met" | "not_judged",
+    reason: string,
+  ): Promise<void> => {
+    await authFetch(
+      `${API_BASE_URL}/v1/activity-reviews/${encodeURIComponent(sourceId)}/${encodeURIComponent(evaluationId)}/override`,
+      { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objective, verdict, reason }) },
+    );
+  },
   list: async (params?: SourceListParams): Promise<SourceListResponse> => {
     const response = await authFetch(`${SOURCES_BASE}${toQuery(params)}`);
     return response.json();

@@ -23,6 +23,7 @@ import { enterToSubmit, submitFormOnEnter } from "@/utils/enterToSubmit";
 import { sourcesService } from "../services/sourcesService";
 import { removedReason } from "../utils/ingestionPath";
 import { AssessmentBankPanel } from "./AssessmentBankPanel";
+import { ActivityEvidencePanel } from "./ActivityEvidencePanel";
 import { PictureQuestionsPanel } from "./PictureQuestionsPanel";
 import {
   FormatFields,
@@ -449,6 +450,7 @@ function AuthoringBody({
                   />
                 )}
               />
+              <ActivityEvidencePanel sourceId={subject.source_id} />
             </Panel>
 
             <Panel id={`${tabsId}-own`} hidden={tab !== "own"}>
