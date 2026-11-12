@@ -6,6 +6,9 @@ import { GoogleLogin } from "@react-oauth/google";
 /** Google Identity Services refuses to render a button wider than this. */
 const GSI_MAX_WIDTH = 400;
 const GSI_MIN_WIDTH = 200;
+/** Width changes smaller than this (a scrollbar toggling) don't re-render the button. */
+const WIDTH_CHANGE_THRESHOLD = 24;
+const RESIZE_DEBOUNCE_MS = 150;
 
 interface GoogleAuthButtonProps {
   /** `signup_with` renders Google's sign-up copy. */
@@ -40,21 +43,41 @@ export function GoogleAuthButton({ text = "continue_with", onSuccess }: GoogleAu
 
   // GSI takes a fixed pixel width, so track the container to stay full-bleed
   // as the card responds.
+  //
+  // Every width change makes GoogleLogin call `renderButton` again, which
+  // throws away its iframe and loads a new one. That swap shifts the layout
+  // for a moment (in Chrome with always-visible scrollbars, the page scrollbar
+  // appears or disappears), so the container's width moves a few pixels, the
+  // observer fires, and the button renders again, forever: thousands of
+  // cancelled `gsi/button` requests. To stop that loop, the measurement is
+  // debounced and ignores small changes. A scrollbar is about 15px; real
+  // breakpoint and window resizes are much larger than that.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
-    const measure = () => {
-      const next = Math.round(
-        Math.min(GSI_MAX_WIDTH, Math.max(GSI_MIN_WIDTH, el.clientWidth)),
-      );
-      setWidth((current) => (current === next ? current : next));
-    };
+    const read = () =>
+      Math.round(Math.min(GSI_MAX_WIDTH, Math.max(GSI_MIN_WIDTH, el.clientWidth)));
 
-    measure();
-    const observer = new ResizeObserver(measure);
+    setWidth(read());
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new ResizeObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const next = read();
+        setWidth((current) =>
+          current !== null && Math.abs(current - next) < WIDTH_CHANGE_THRESHOLD
+            ? current
+            : next,
+        );
+      }, RESIZE_DEBOUNCE_MS);
+    });
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
   }, []);
 
   return (

@@ -87,49 +87,22 @@ export function formatPeriodLabel(period: string): string {
   return SHORT_DATE.format(date);
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/**
- * Percentage change in sessions started over the last 30 days against the 30
- * before. Null when there's nothing to compare against.
- */
-export function sessionTrendPct(startedAt: string[], now: number = Date.now()): number | null {
-  let recent = 0;
-  let previous = 0;
-  for (const iso of startedAt) {
-    const age = now - Date.parse(iso);
-    if (age < 0 || Number.isNaN(age)) continue;
-    if (age < 30 * DAY_MS) recent++;
-    else if (age < 60 * DAY_MS) previous++;
-  }
-  if (previous === 0) return null;
-  return Math.round(((recent - previous) / previous) * 100);
-}
-
-interface ChapterRow {
-  completion_percentage?: number;
-  is_placeholder?: boolean;
-}
-
-/** Chapters the child has started, out of the subject's real chapters. */
-export function chapterProgress(rows: ChapterRow[]): { started: number; total: number } {
-  const real = rows.filter((r) => !r.is_placeholder);
-  return {
-    started: real.filter((r) => (r.completion_percentage ?? 0) > 0).length,
-    total: real.length,
-  };
-}
-
-/** Study minutes per subject from the per-chapter breakdown. */
 /** A subject as a key that a code ("social_science") and its name ("Social Science") share. */
 export const subjectKey = (s: string) => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 
-/** Minutes per subject, keyed by `subjectKey`: the backend names a subject by its code, the page by its name. */
-export function minutesBySubject(rows: { subject: string; total_minutes: number }[]): Record<string, number> {
-  const totals: Record<string, number> = {};
+/**
+ * Minutes and sessions per subject from the per-chapter breakdown, keyed by `subjectKey`: the backend names a subject
+ * by its code, the page by its name.
+ */
+export function timeBySubject(
+  rows: { subject: string; total_minutes: number; session_count: number }[],
+): Record<string, { minutes: number; sessions: number }> {
+  const totals: Record<string, { minutes: number; sessions: number }> = {};
   for (const r of rows) {
     const key = subjectKey(r.subject);
-    totals[key] = (totals[key] ?? 0) + r.total_minutes;
+    const t = (totals[key] ??= { minutes: 0, sessions: 0 });
+    t.minutes += r.total_minutes;
+    t.sessions += r.session_count;
   }
   return totals;
 }

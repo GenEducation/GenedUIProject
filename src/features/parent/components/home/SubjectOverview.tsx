@@ -9,9 +9,24 @@ import { GLASS, ICON, LIFT, MaskIcon } from "./theme";
 import { GlassSkeleton } from "../loader/GlassSkeleton";
 
 export function subjectStatus(item: SubjectSummary): MasteryBand {
-  const started = item.mastery !== null || !!item.sessions || !!item.chapters?.started;
-  return masteryBand(item.mastery, started);
+  const started = item.mastery != null || !!item.sessions || !!item.chapters?.started;
+  // Opened but nothing measured yet: no band to give, so it wears the not-started tone (labelled "No answers yet").
+  return masteryBand(item.mastery ?? null, started && item.mastery != null);
 }
+
+/**
+ * The chip's words: the band, "No answers yet" for a subject the child has opened but not answered in, or
+ * "Unavailable" when the report couldn't be read (rather than a band that would read as no progress).
+ */
+function statusLabel(item: SubjectSummary, status: MasteryBand): string {
+  if (item.state === "error") return "Unavailable";
+  const opened = !!item.sessions || !!item.chapters?.started;
+  return item.mastery == null && opened ? "No answers yet" : status;
+}
+
+/** A figure for a stat: `undefined` still loading (a skeleton), `null` unavailable ("—"). */
+const shown = (value: number | null | undefined, format: (n: number) => string = String): string | null =>
+  value === undefined ? null : value === null ? "—" : format(value);
 
 export function SubjectOverview({
   studentId,
@@ -64,7 +79,8 @@ export function SubjectOverview({
 
 export function SubjectCard({ studentId, item }: { studentId: string; item: SubjectSummary }) {
   const status = subjectStatus(item);
-  const mastery = item.mastery ?? 0;
+  const label = statusLabel(item, status);
+  const mastery = item.mastery ?? null;
   const loading = item.state === "loading";
   // Every colour on the card follows the mastery band; grey while loading.
   const tone = BAND_TONES[loading ? "Not started" : status];
@@ -72,7 +88,7 @@ export function SubjectCard({ studentId, item }: { studentId: string; item: Subj
   return (
     <Link
       href={`/parent/${studentId}/subject/${encodeURIComponent(item.subject)}`}
-      aria-label={`${item.subject}: ${loading ? "loading" : `${status}, ${mastery}% mastery`}. View details`}
+      aria-label={`${item.subject}: ${loading ? "loading" : mastery === null ? label : `${label}, ${mastery}% mastery`}. View details`}
       className={`group block h-full rounded-2xl border p-4 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_22px_-16px_rgba(19,41,61,0.25)] ${LIFT} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pp-green)]`}
       // Tinted glass: the band's wash, slightly see-through.
       style={{ background: `linear-gradient(180deg, ${tone.wash[0]}D9, ${tone.wash[1]}B3)`, borderColor: tone.edge }}
@@ -86,7 +102,7 @@ export function SubjectCard({ studentId, item }: { studentId: string; item: Subj
           <p title={item.subject} className="truncate text-[14.5px] font-bold text-[var(--pp-ink)]">{item.subject}</p>
           {!loading && (
             <span className="mt-0.5 inline-block shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold 2xl:mt-0" style={{ background: tone.tint, color: tone.ink }}>
-              {status}
+              {label}
             </span>
           )}
         </div>
@@ -97,19 +113,19 @@ export function SubjectCard({ studentId, item }: { studentId: string; item: Subj
         {loading ? (
           <GlassSkeleton className="h-4 w-10 rounded" />
         ) : (
-          <span className="text-[16px] font-bold" style={{ color: tone.ink }}>{mastery}%</span>
+          <span className="text-[16px] font-bold" style={{ color: tone.ink }}>{mastery === null ? "—" : `${mastery}%`}</span>
         )}
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/80 ring-1 ring-inset ring-black/[0.03]">
-        <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${loading ? 0 : mastery}%`, background: tone.accent }} />
+        <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${loading ? 0 : (mastery ?? 0)}%`, background: tone.accent }} />
       </div>
 
       <dl className="mt-4 grid grid-cols-3 gap-1.5">
-        <Stat label="Sessions" value={loading ? null : String(item.sessions ?? 0)} />
-        <Stat label="Study time" value={loading || item.minutes === null ? null : formatDuration(item.minutes)} />
+        <Stat label="Sessions" value={shown(item.sessions)} />
+        <Stat label="Study time" value={shown(item.minutes, formatDuration)} />
         <Stat
           label="Chapters"
-          value={loading ? null : item.chapters ? `${item.chapters.started}/${item.chapters.total}` : "—"}
+          value={item.chapters === undefined ? null : item.chapters ? `${item.chapters.started}/${item.chapters.total}` : "—"}
         />
       </dl>
     </Link>

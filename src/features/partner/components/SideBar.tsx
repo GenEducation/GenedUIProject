@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useSyncExternalStore } from "react";
 import { BookOpen, BarChart2, LogOut, MonitorSmartphone, type LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -12,12 +12,35 @@ interface SideBarProps {
 import { usePartnerStore } from "../store/usePartnerStore";
 import { GenEdLogo } from "@/components/shared/GenEdLogo";
 
+/**
+ * The partner's school, from the profile saved at sign-in (`organization` on the
+ * auth response). Null on the server, and when the account has no organization,
+ * so the header falls back to "Partner Portal".
+ */
+function readSchoolName(): string | null {
+  try {
+    const profile = JSON.parse(localStorage.getItem("gened_user_profile") || "{}");
+    const organization = typeof profile.organization === "string" ? profile.organization.trim() : "";
+    return organization || null;
+  } catch {
+    return null;
+  }
+}
+
+const subscribeToStorage = (onChange: () => void) => {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+};
+
+function usePartnerSchoolName(): string | null {
+  return useSyncExternalStore(subscribeToStorage, readSchoolName, () => null);
+}
+
 export function SideBar({ activeView, onViewChange }: SideBarProps) {
   const numberOfPendingRequests = usePartnerStore((state) => state.numberOfPendingRequests);
   const logoutPartner = usePartnerStore((state) => state.logoutPartner);
 
-  const rawPartnerId = typeof window !== 'undefined' ? localStorage.getItem("gened_partner_id") : null;
-  const partnerId = rawPartnerId?.replace(/['"]+/g, "");
+  const schoolName = usePartnerSchoolName();
 
   const navItems: { id: "subjects" | "analytics" | "labs"; label: string; icon: LucideIcon; badge?: number | null }[] = [
     { id: "analytics", label: "Analytics", icon: BarChart2, badge: numberOfPendingRequests > 0 ? numberOfPendingRequests : null },
@@ -30,13 +53,22 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
       {/* Logo & Workspace Info: only beside the full sidebar. The collapsed rail (below lg) has no logo; the top bar
           shows the full one, centred, instead of a mark squeezed into the rail. */}
       <div className="mb-12 hidden lg:flex flex-col gap-5">
-        <div className="w-full h-16 flex items-center justify-start overflow-hidden">
+        <div className="w-full h-16 flex items-center justify-center overflow-hidden">
           <GenEdLogo height={52} priority />
         </div>
         <div>
-          <h1 className="text-[#122D30] text-sm font-black uppercase tracking-widest leading-none">
-            Partner Portal
-          </h1>
+          {schoolName ? (
+            <h1
+              title={schoolName}
+              className="text-[#122D30] text-sm font-black uppercase tracking-widest leading-snug line-clamp-2 break-words text-center pl-[0.1em]"
+            >
+              {schoolName}
+            </h1>
+          ) : (
+            <h1 className="text-[#122D30] text-sm font-black uppercase tracking-widest leading-none text-center pl-[0.1em]">
+              Partner Portal
+            </h1>
+          )}
         </div>
       </div>
 

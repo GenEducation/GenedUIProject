@@ -1,16 +1,9 @@
 import { describe, it, expect } from "vitest";
 
-import {
-  chapterProgress,
-  fillDailySeries,
-  localDayKey,
-  sessionTrendPct,
-  totalMinutes,
-} from "../homeMetrics";
+import { fillDailySeries, localDayKey, timeBySubject, totalMinutes } from "../homeMetrics";
 import { BAND_TONES, masteryBand } from "../subjectVisuals";
 
 const TODAY = new Date(2026, 8, 30, 15, 0); // 30 Sept 2026, 3pm local
-const DAY = 24 * 60 * 60 * 1000;
 
 describe("homeMetrics", () => {
   it("fills the period day by day, zero where nothing was studied", () => {
@@ -31,23 +24,14 @@ describe("homeMetrics", () => {
     expect(localDayKey(TODAY)).toBe("2026-09-30");
   });
 
-  it("compares sessions in the last 30 days with the 30 before", () => {
-    const now = TODAY.getTime();
-    const at = (daysAgo: number) => new Date(now - daysAgo * DAY).toISOString();
-    expect(sessionTrendPct([at(1), at(5), at(10), at(40), at(50)], now)).toBe(50);
-    expect(sessionTrendPct([at(40), at(45)], now)).toBe(-100);
-    expect(sessionTrendPct([at(1), at(2)], now)).toBeNull(); // nothing to compare with
-  });
-
-  it("counts started chapters and ignores placeholders", () => {
+  it("adds up minutes and sessions per subject, matching a code to its name", () => {
     expect(
-      chapterProgress([
-        { completion_percentage: 40 },
-        { completion_percentage: 0 },
-        { completion_percentage: 100 },
-        { completion_percentage: 0, is_placeholder: true },
+      timeBySubject([
+        { subject: "social_science", total_minutes: 30, session_count: 2 },
+        { subject: "Social Science", total_minutes: 15, session_count: 1 },
+        { subject: "english", total_minutes: 10, session_count: 4 },
       ]),
-    ).toEqual({ started: 2, total: 3 });
+    ).toEqual({ social_science: { minutes: 45, sessions: 3 }, english: { minutes: 10, sessions: 4 } });
   });
 
   it("colours by mastery band, not by subject", () => {

@@ -2,17 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { loadStudentSubjects } from "@/store/useAnalyticsStore";
-import { studentService } from "@/features/student/services/studentService";
 import type { ExactSubject } from "@/features/subjects/subjectCatalog";
-import { parentService, type StudyTimePoint } from "../services/parentService";
+import { parentService, type ReportSubjectFacts, type StudyTimePoint } from "../services/parentService";
 import {
-  chapterProgress,
   DEFAULT_PERIOD,
   fillDailySeries,
-  minutesBySubject,
   subjectKey,
   periodOption,
-  sessionTrendPct,
+  timeBySubject,
   totalMinutes,
   weeklySeries,
   type ActivityPoint,
@@ -21,16 +18,22 @@ import {
 
 export type LoadState = "loading" | "ready" | "error";
 
+/**
+ * One subject card. For each figure, `undefined` is still loading and `null` is unavailable (the read failed, or the
+ * report has nothing for the subject); 0 is a real zero.
+ */
 export interface SubjectSummary {
   subject: ExactSubject;
+  /** The report (mastery, chapters) is still loading. */
   state: LoadState;
-  /** 0–100, from the subject's skill summary. */
-  mastery: number | null;
-  sessions: number | null;
-  /** Null while unknown; 0 is a real "no time logged". */
-  minutes: number | null;
-  chapters: { started: number; total: number } | null;
+  /** 0–100, from the child's report; null when nothing is measured yet. */
+  mastery: number | null | undefined;
+  sessions: number | null | undefined;
+  minutes: number | null | undefined;
+  chapters: { started: number; total: number } | null | undefined;
 }
+
+type SubjectTime = Record<string, { minutes: number; sessions: number }>;
 
 export interface ParentHomeData {
   subjects: { state: LoadState; items: SubjectSummary[] };
@@ -47,58 +50,44 @@ export interface ParentHomeData {
  */
 export function useParentHomeData(studentId: string | null): ParentHomeData {
   const [subjectState, setSubjectState] = useState<LoadState>("loading");
-  const [items, setItems] = useState<SubjectSummary[]>([]);
-  const [chapterMinutes, setChapterMinutes] = useState<Record<string, number> | null | undefined>(undefined);
-  const [sessionDates, setSessionDates] = useState<string[] | null | undefined>(undefined);
+  const [subjects, setSubjects] = useState<ExactSubject[]>([]);
+  // `undefined` while loading, `null` when the read failed.
+  const [report, setReport] = useState<Map<string, ReportSubjectFacts> | null | undefined>(undefined);
+  const [time, setTime] = useState<SubjectTime | null | undefined>(undefined);
   const [period, setPeriod] = useState<PeriodKey>(DEFAULT_PERIOD);
   const [timePoints, setTimePoints] = useState<{ key: string; points: StudyTimePoint[] | null } | null>(null);
   const timeCache = useRef(new Map<string, StudyTimePoint[] | null>());
 
-  // ── Subjects, per-subject summaries, time by chapter, session dates ──────
+  // ── Subjects, the child's report (mastery, chapters), time and sessions by chapter ──────
   useEffect(() => {
     if (!studentId) return;
     const controller = new AbortController();
     let live = true;
     setSubjectState("loading");
-    setItems([]);
-    setChapterMinutes(undefined);
-    setSessionDates(undefined);
+    setSubjects([]);
+    setReport(undefined);
+    setTime(undefined);
     timeCache.current.clear();
 
     parentService.fetchTimeByChapter(studentId).then((rows) => {
-      if (live) setChapterMinutes(rows ? minutesBySubject(rows) : null);
+      if (live) setTime(rows ? timeBySubject(rows) : null);
     });
-    parentService.fetchSessionDates(studentId).then((dates) => {
-      if (live) setSessionDates(dates);
+    parentService.fetchReportSubjects(studentId).then((rows) => {
+      if (!live) return;
+      // Matched to the page's subject names by code or name: the backend names a subject by its code.
+      const bySubject = new Map<string, ReportSubjectFacts>();
+      for (const r of rows ?? []) {
+        if (r.code) bySubject.set(subjectKey(r.code), r);
+        if (r.name) bySubject.set(subjectKey(r.name), r);
+      }
+      setReport(rows ? bySubject : null);
     });
 
     loadStudentSubjects(studentId, controller.signal, true)
-      .then((subjects) => {
+      .then((list) => {
         if (!live) return;
-        setItems(subjects.map((subject) => ({
-          subject, state: "loading", mastery: null, sessions: null, minutes: null, chapters: null,
-        })));
+        setSubjects(list);
         setSubjectState("ready");
-
-        subjects.forEach((subject) => {
-          Promise.allSettled([
-            studentService.fetchSkillSummary(studentId, subject),
-            studentService.fetchChapterMastery(studentId, subject, controller.signal),
-          ]).then(([summary, chapters]) => {
-            if (!live) return;
-            const s = summary.status === "fulfilled" ? summary.value : null;
-            const score = Number(s?.overall_score);
-            const count = Number(s?.session_count);
-            const rows = chapters.status === "fulfilled" && Array.isArray(chapters.value) ? chapters.value : null;
-            setItems((prev) => prev.map((item) => item.subject !== subject ? item : {
-              ...item,
-              state: s || rows ? "ready" : "error",
-              mastery: s && Number.isFinite(score) ? Math.round(score * 100) : null,
-              sessions: s && Number.isFinite(count) ? count : s ? 0 : null,
-              chapters: rows ? chapterProgress(rows) : null,
-            }));
-          });
-        });
       })
       .catch(() => {
         if (live) setSubjectState("error");
@@ -128,29 +117,31 @@ export function useParentHomeData(studentId: string | null): ParentHomeData {
     return () => { live = false; };
   }, [studentId, granularity]);
 
-  // Time per subject comes from the chapter breakdown; fold it in.
-  const subjectItems = useMemo(
-    () => items.map((item) => ({
-      ...item,
-      minutes: chapterMinutes === undefined ? null : Math.round(chapterMinutes?.[subjectKey(item.subject)] ?? 0),
-    })),
-    [items, chapterMinutes],
+  const subjectItems = useMemo<SubjectSummary[]>(
+    () =>
+      subjects.map((subject) => {
+        const key = subjectKey(subject);
+        const facts = report?.get(key);
+        const spent = time === undefined ? undefined : time === null ? null : (time[key] ?? { minutes: 0, sessions: 0 });
+        return {
+          subject,
+          state: report === undefined ? "loading" : report === null ? "error" : "ready",
+          mastery: report === undefined ? undefined : facts && facts.mastery !== null ? Math.round(facts.mastery * 100) : null,
+          chapters:
+            report === undefined ? undefined : facts ? { started: facts.chapters_opened, total: facts.chapters_total } : null,
+          sessions: spent === undefined ? undefined : spent === null ? null : spent.sessions,
+          minutes: spent === undefined ? undefined : spent === null ? null : Math.round(spent.minutes),
+        };
+      }),
+    [subjects, report, time],
   );
 
+  // Sessions per chapter come with the time breakdown. No current read dates them, so there is no month-on-month trend.
   const sessions = useMemo<ParentHomeData["sessions"]>(() => {
-    const settled = subjectItems.filter((i) => i.state !== "loading");
-    const counted = settled.filter((i) => i.sessions !== null);
-    const stillLoading = subjectState === "loading" || settled.length < subjectItems.length || sessionDates === undefined;
-    if (stillLoading) return { state: "loading", total: null, trendPct: null };
-    if (subjectState === "error" || (subjectItems.length > 0 && counted.length === 0)) {
-      return { state: "error", total: null, trendPct: null };
-    }
-    return {
-      state: "ready",
-      total: counted.reduce((sum, i) => sum + (i.sessions ?? 0), 0),
-      trendPct: sessionDates ? sessionTrendPct(sessionDates) : null,
-    };
-  }, [subjectItems, subjectState, sessionDates]);
+    if (time === undefined) return { state: "loading", total: null, trendPct: null };
+    if (time === null) return { state: "error", total: null, trendPct: null };
+    return { state: "ready", total: Object.values(time).reduce((sum, t) => sum + t.sessions, 0), trendPct: null };
+  }, [time]);
 
   const activity = useMemo<ParentHomeData["activity"]>(() => {
     const expectedKey = `${studentId}:${granularity}`;
