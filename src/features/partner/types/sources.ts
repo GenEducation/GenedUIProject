@@ -714,6 +714,7 @@ export interface BankRun {
 
 /** `GET /v1/sources/{id}/bank`: the chapter's AI-prepared assessment package (backend ADR 0047). */
 export interface BankPackage {
+  version: string;
   findings: BankFinding[];
   nodes: BankNode[];
   questions: BankQuestion[];

@@ -605,6 +605,7 @@ export const sourcesHandlers = [
     if (b) return HttpResponse.json(b);
     if (!store.has(String(params.id))) return notFound();
     const empty: BankPackage = {
+      version: "a".repeat(64),
       findings: [],
       nodes: [],
       questions: [],
@@ -718,9 +719,11 @@ export const sourcesHandlers = [
     return HttpResponse.json(b, { status: 202 });
   }),
 
-  http.post(`${SOURCES}/:id/bank/approve`, ({ params }) => {
+  http.post(`${SOURCES}/:id/bank/approve`, async ({ params, request }) => {
     const b = banks.get(String(params.id));
     if (!b) return notFound();
+    const body = (await request.json()) as { version: string };
+    if (body.version !== b.version) return conflict("The package changed. Reload before approving.");
     if (!b.summary.accepted)
       return conflict("Accept at least one question first.");
     return HttpResponse.json(b, { status: 202 });

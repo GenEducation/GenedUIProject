@@ -519,7 +519,7 @@ export function AssessmentBankPanel({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [editing, setEditing] = useState<string | null>(null);
+  const [editing, setEditing] = useState<BankQuestion | null>(null);
 
   const load = useCallback(
     () =>
@@ -690,10 +690,11 @@ export function AssessmentBankPanel({
           )}
           busy={busy}
           act={act}
-          editing={editing}
-          onEdit={(q) => setEditing(q.question_id)}
-          renderEditor={(q) =>
-            renderEditor(
+          editing={editing?.question_id ?? null}
+          onEdit={(q) => setEditing(q)}
+          renderEditor={() => {
+            const q = editing!;
+            return renderEditor(
               q.question.body,
               (body) => {
                 setEditing(null);
@@ -710,8 +711,8 @@ export function AssessmentBankPanel({
                 );
               },
               () => setEditing(null),
-            )
-          }
+            );
+          }}
         />
       ))}
 
@@ -722,7 +723,7 @@ export function AssessmentBankPanel({
             loading={busy === "approve"}
             onClick={() =>
               act("approve", async () => {
-                const next = await sourcesService.approveBank(sourceId);
+                const next = await sourcesService.approveBank(sourceId, pkg.version);
                 onApproved();
                 return next;
               })

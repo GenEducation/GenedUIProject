@@ -253,9 +253,9 @@ export const sourcesService = {
     ).json(),
 
   /** Approve the accepted questions: the chapter runs again with them, and its release is reviewed as before. */
-  approveBank: async (id: string): Promise<BankPackage> =>
+  approveBank: async (id: string, version: string): Promise<BankPackage> =>
     (
-      await authFetch(`${sourcePath(id)}/bank/approve`, { method: "POST" })
+      await authFetch(`${sourcePath(id)}/bank/approve`, { method: "POST", body: JSON.stringify({ version }) })
     ).json(),
 
   /** The uploaded PDF, as a Blob for an object URL (the route needs auth, so no plain link). */

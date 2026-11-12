@@ -67,6 +67,7 @@ function question(
 }
 
 const BANK: BankPackage = {
+  version: "a".repeat(64),
   findings: [{ concept_key: "2.1:beta", issue: "SYNTHETIC this concept is not in the section", evidence: "SYNTHETIC", resolution: "quarantined" }],
   nodes: [{
     section_key: "2.1", title: "SYNTHETIC section 2.1", quarantined: ["2.1:beta"], status: "incomplete", draft_ready: false, approved_ready: false, publishable: false,
