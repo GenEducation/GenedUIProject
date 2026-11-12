@@ -579,6 +579,39 @@ export interface PrintedQuestion {
 export interface AuthoredQuestions {
   answers: Record<string, PrintedAnswer>;
   added: AddedQuestion[];
+  /** Printed questions (`item_key`) the partner took out of the chapter: reported as rejected. */
+  removed?: string[];
+  /** The figure a picture question is about, by its `item_key`: one of its `suggestions`. */
+  pictures?: Record<string, string>;
+}
+
+/** A figure of a picture question's section; `key` is the visual library's target key (`<section key>:<reading order>`). */
+export interface PictureFigure {
+  key: string;
+  page: number | null;
+  role: string;
+}
+
+/**
+ * Why a picture question is left out of the release: `not_identified` (which picture is unknown), `redraw_pending`
+ * (its picture's redraw waits for review), `no_redraw` (its picture needs none, so nothing can be shown), or
+ * `not_in_step` (a lesson step it is discussed at does not show its picture).
+ */
+export type PictureReason =
+  "not_identified" | "redraw_pending" | "no_redraw" | "not_in_step";
+
+/** A printed question that needs a picture, as the last run decided it. */
+export interface PictureQuestion {
+  item_key: string;
+  section_key: string;
+  prompt: string;
+  page: number | null;
+  status: "shown" | "held" | "removed";
+  reason: PictureReason | null;
+  figures: string[];
+  chosen: string | null;
+  /** Its section's figures, nearest page first. */
+  suggestions: PictureFigure[];
 }
 
 /** How an AI-prepared question's key was checked (backend ADR 0047): by code, by an independent solve, or not yet. */
@@ -748,6 +781,8 @@ export interface AuthoringResponse {
   removed: RemovedQuestion[];
   /** The questions the run kept (backend ADR 0045); absent from an older backend. */
   printed?: PrintedQuestion[];
+  /** Every printed question that needs a picture; absent from an older backend. */
+  pictures?: PictureQuestion[];
   authored: AuthoredQuestions;
   authored_at: string | null;
 }

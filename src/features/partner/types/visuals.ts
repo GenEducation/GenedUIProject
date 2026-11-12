@@ -56,6 +56,8 @@ export type VisualOrigin = "drawn" | "textbook_crop";
 
 export interface VisualSummary {
   id: string;
+  /** Stable across runs: `<section key>:<reading order>` for a figure. */
+  target_key?: string;
   /** `figure`: a textbook figure (redrawn, or its crop); `node`: a lesson step; `card`: the chapter cover. */
   kind: "node" | "figure" | "card";
   origin: VisualOrigin;
@@ -191,6 +193,7 @@ export interface VisualRegenerateOut {
 
 export interface VisualListParams {
   state?: CandidateState;
+  kind?: "node" | "figure" | "card";
   subject?: string;
   grade?: number;
   source_id?: string;

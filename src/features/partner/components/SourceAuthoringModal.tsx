@@ -6,6 +6,7 @@ import {
   Check,
   CheckCircle2,
   FileText,
+  Image as ImageIcon,
   Info,
   Loader2,
   PenLine,
@@ -22,6 +23,7 @@ import { enterToSubmit, submitFormOnEnter } from "@/utils/enterToSubmit";
 import { sourcesService } from "../services/sourcesService";
 import { removedReason } from "../utils/ingestionPath";
 import { AssessmentBankPanel } from "./AssessmentBankPanel";
+import { PictureQuestionsPanel } from "./PictureQuestionsPanel";
 import {
   FormatFields,
   KIND_LABEL,
@@ -61,7 +63,7 @@ interface AnswerDraft {
 }
 
 /** The three ways to give a chapter questions, one tab each; GenEd's prepared questions first (backend ADR 0047). */
-type Tab = "ai" | "own" | "printed";
+type Tab = "ai" | "own" | "printed" | "pictures";
 
 /** A question open in the form. */
 interface Editing {
@@ -154,6 +156,10 @@ function AuthoringBody({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, AnswerDraft>>({});
   const [added, setAdded] = useState<AddedQuestion[]>([]);
+  const [removedKeys, setRemovedKeys] = useState<Set<string>>(new Set());
+  const [pictureChoices, setPictureChoices] = useState<Record<string, string>>(
+    {},
+  );
   const [editing, setEditing] = useState<Editing | null>(null);
   const [tab, setTab] = useState<Tab>("ai");
   const [dirty, setDirty] = useState(false);
@@ -174,6 +180,8 @@ function AuthoringBody({
       ),
     );
     setAdded(res.authored.added);
+    setRemovedKeys(new Set(res.authored.removed ?? []));
+    setPictureChoices(res.authored.pictures ?? {});
     setDirty(false);
   }, []);
 
@@ -205,6 +213,13 @@ function AuthoringBody({
   const typedLeft = printed.filter(
     (p) => p.needs_keyboard && !edited.has(p.item_key),
   ).length;
+  const pictures = data?.pictures ?? [];
+  const heldPictures = pictures.filter(
+    (p) =>
+      p.status === "held" &&
+      !removedKeys.has(p.item_key) &&
+      !pictureChoices[p.item_key],
+  ).length;
   const concepts = data?.concepts ?? [];
   const sections = data?.sections ?? [];
   const keyed = removed.flatMap((q) => {
@@ -213,7 +228,10 @@ function AuthoringBody({
   });
   const fromAi = added.filter((q) => q.origin === "ai_assisted").length;
   const own = added.length - fromAi;
-  const total = keyed.length + added.length;
+  const pictureDecisions =
+    removedKeys.size +
+    Object.keys(pictureChoices).filter((k) => !removedKeys.has(k)).length;
+  const total = keyed.length + added.length + pictureDecisions;
   const savedOnce = !!data?.authored_at;
   const writingOwn = !!editing;
 
@@ -230,6 +248,10 @@ function AuthoringBody({
       const body: AuthoredQuestions = {
         answers: Object.fromEntries(keyed),
         added,
+        removed: [...removedKeys],
+        pictures: Object.fromEntries(
+          Object.entries(pictureChoices).filter(([k]) => !removedKeys.has(k)),
+        ),
       };
       adopt(await sourcesService.saveAuthoring(subject.source_id, body), false);
       onSaved();
@@ -303,6 +325,13 @@ function AuthoringBody({
           ? String(typedLeft)
           : null,
       show: removed.length > 0 || printed.length > 0,
+    },
+    {
+      key: "pictures",
+      label: "Picture questions",
+      icon: <ImageIcon size={15} />,
+      count: heldPictures ? String(heldPictures) : null,
+      show: pictures.length > 0,
     },
   ];
 
@@ -474,6 +503,43 @@ function AuthoringBody({
               )}
             </Panel>
 
+            {pictures.length > 0 && (
+              <Panel id={`${tabsId}-pictures`} hidden={tab !== "pictures"}>
+                <PanelIntro>
+                  Questions that mention a picture. Each is shown with its
+                  picture once the picture&rsquo;s redraw is accepted. A held
+                  one is left out of the chapter until you choose its picture or
+                  remove it; nothing here stops the chapter.
+                </PanelIntro>
+                <PictureQuestionsPanel
+                  sourceId={subject.source_id}
+                  pictures={pictures}
+                  removed={removedKeys}
+                  chosen={pictureChoices}
+                  onRemove={(keys, remove) => {
+                    setRemovedKeys((prev) => {
+                      const next = new Set(prev);
+                      for (const k of keys) {
+                        if (remove) next.add(k);
+                        else next.delete(k);
+                      }
+                      return next;
+                    });
+                    touch();
+                  }}
+                  onChoose={(key, figure) => {
+                    setPictureChoices((prev) => {
+                      const next = { ...prev };
+                      if (figure) next[key] = figure;
+                      else delete next[key];
+                      return next;
+                    });
+                    touch();
+                  }}
+                />
+              </Panel>
+            )}
+
             {(removed.length > 0 || printed.length > 0) && (
               <Panel id={`${tabsId}-printed`} hidden={tab !== "printed"}>
                 {printed.length > 0 && (
@@ -492,8 +558,7 @@ function AuthoringBody({
                     <PanelIntro>
                       GenEd took these out because it couldn&rsquo;t check their
                       answers. Give an answer to bring one back. All of them are
-                      optional: skip any that can&rsquo;t have one exact answer,
-                      like drawing questions.
+                      optional: skip any that can&rsquo;t have one exact answer.
                     </PanelIntro>
                     <Progress done={keyed.length} total={removed.length} />
                     {groupBySection(removed, sections).map((group) => (
@@ -579,8 +644,8 @@ function AuthoringBody({
                   className="text-emerald-600"
                   aria-hidden
                 />
-                {total} {total === 1 ? "question" : "questions"} saved. Run the
-                chapter again to use them.
+                {plural(total, pictureDecisions ? "change" : "question")} saved. Run the chapter again to use
+                them.
               </p>
               <Button
                 leadingIcon={<Play size={14} />}
@@ -595,7 +660,7 @@ function AuthoringBody({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-black text-[#122D30]">
                   {total
-                    ? `${plural(total, "question")} ready`
+                    ? `${plural(total, pictureDecisions ? "change" : "question")} ready`
                     : "No questions added yet"}
                   {dirty && (
                     <span className="ml-2 text-[11px] font-bold text-amber-700">
@@ -609,6 +674,8 @@ function AuthoringBody({
                         keyed.length && `${keyed.length} printed`,
                         own && `${own} written by you`,
                         fromAi && `${fromAi} from AI`,
+                        pictureDecisions &&
+                          `${pictureDecisions} picture ${pictureDecisions === 1 ? "decision" : "decisions"}`,
                       ]
                         .filter(Boolean)
                         .join(" · ")
