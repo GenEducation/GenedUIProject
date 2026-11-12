@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 import type {
   ActivityMode,
   AddedAnswerKind,
@@ -222,7 +223,7 @@ export function formatProblem(q: AddedQuestion): string | null {
         : null;
     case "matching":
       return (q.match_pairs ?? []).length < 3
-        ? "Write at least three pairs, one per line, as left = right."
+        ? "Fill in at least three pairs, each with both sides."
         : null;
     case "grouping": {
       if ((q.group_names ?? []).length < 2) return "Name at least two groups.";
@@ -258,6 +259,87 @@ export function formatProblem(q: AddedQuestion): string | null {
         return "Give the passage from the chapter the learner reads or hears.";
       return null;
   }
+}
+
+/** Matching pairs as rows of two fields (left matches right), kept in ``texts.pairs`` as one ``left = right`` line per pair. */
+function PairRows({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (pairs: string) => void;
+}) {
+  const parsed = value
+    .split("\n")
+    .filter((l) => l.trim())
+    .map((l) => sides(l) ?? ([l.trim(), ""] as const));
+  const rows: (readonly [string, string])[] = parsed.length
+    ? parsed
+    : [
+        ["", ""],
+        ["", ""],
+        ["", ""],
+      ];
+  const write = (next: (readonly [string, string])[]) =>
+    onChange(next.map(([l, r]) => `${l} = ${r}`).join("\n"));
+  const set = (i: number, side: 0 | 1, text: string) =>
+    write(
+      rows.map((row, k) =>
+        k !== i
+          ? row
+          : side === 0
+            ? ([text, row[1]] as const)
+            : ([row[0], text] as const),
+      ),
+    );
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className={label}>
+        Pairs: each left item matches the item on its right
+      </legend>
+      <p className="text-[11px] text-[#122D30]/50">
+        Learners see the right-hand column shuffled. Write at least three pairs.
+      </p>
+      {rows.map(([left, right], i) => (
+        <div key={i} className="flex items-center gap-2">
+          <input
+            className={field}
+            aria-label={`Pair ${i + 1}, left`}
+            value={left}
+            onChange={(e) => set(i, 0, e.target.value.replace(/=/g, ""))}
+          />
+          <span aria-hidden className="text-[#122D30]/40">
+            ↔
+          </span>
+          <input
+            className={field}
+            aria-label={`Pair ${i + 1}, right`}
+            value={right}
+            onChange={(e) => set(i, 1, e.target.value.replace(/=/g, ""))}
+          />
+          {rows.length > 1 && (
+            <Button
+              size="sm"
+              variant="tertiary"
+              aria-label={`Remove pair ${i + 1}`}
+              onClick={() => write(rows.filter((_, k) => k !== i))}
+            >
+              Remove
+            </Button>
+          )}
+        </div>
+      ))}
+      <div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => write([...rows, ["", ""]])}
+        >
+          Add a pair
+        </Button>
+      </div>
+    </fieldset>
+  );
 }
 
 /** The fields of one format. */
@@ -342,7 +424,9 @@ export function FormatFields({
         "Learners see them shuffled.",
       );
     case "matching":
-      return area("pairs", "Pairs (one per line, as left = right)", 4);
+      return (
+        <PairRows value={t.pairs} onChange={(pairs) => change({ pairs })} />
+      );
     case "grouping":
       return (
         <>
@@ -457,8 +541,8 @@ export function FormatFields({
             )}
           {area("example", "An example of a good answer (optional)", 3)}
           <p className="text-xs text-[#122D30]/60">
-            A free answer with no fixed key. Learners must try it to finish
-            the step, and can practise it again.
+            A free answer with no fixed key. Learners must try it to finish the
+            step, and can practise it again.
           </p>
         </>
       );
