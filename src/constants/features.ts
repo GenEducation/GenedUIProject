@@ -19,4 +19,6 @@ export const FEATURES = {
    *  card's chapter times and the parent home's per-subject study time. The time is an estimate of credited presence
    *  and is shown as one. */
   chapterTime: true,
+  /** Partner "Lab Mode" (/partner/labs): hidden from the partner sidebar, and its URL shows Analytics instead. */
+  partnerLabs: false,
 } as const;

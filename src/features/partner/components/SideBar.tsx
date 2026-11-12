@@ -11,6 +11,7 @@ interface SideBarProps {
 
 import { usePartnerStore } from "../store/usePartnerStore";
 import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { FEATURES } from "@/constants/features";
 
 /**
  * The partner's school, from the profile saved at sign-in (`organization` on the
@@ -21,7 +22,10 @@ function readSchoolName(): string | null {
   try {
     const profile = JSON.parse(localStorage.getItem("gened_user_profile") || "{}");
     const organization = typeof profile.organization === "string" ? profile.organization.trim() : "";
-    return organization || null;
+    if (!organization) return null;
+    // Add "School" when the name doesn't already say it ("GenEd" → "GenEd School",
+    // "Delhi Public School" stays as is).
+    return /\bschool\b/i.test(organization) ? organization : `${organization} School`;
   } catch {
     return null;
   }
@@ -45,7 +49,7 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
   const navItems: { id: "subjects" | "analytics" | "labs"; label: string; icon: LucideIcon; badge?: number | null }[] = [
     { id: "analytics", label: "Analytics", icon: BarChart2, badge: numberOfPendingRequests > 0 ? numberOfPendingRequests : null },
     { id: "subjects", label: "Subjects", icon: BookOpen },
-    { id: "labs", label: "Lab Mode", icon: MonitorSmartphone },
+    ...(FEATURES.partnerLabs ? [{ id: "labs" as const, label: "Lab Mode", icon: MonitorSmartphone }] : []),
   ];
 
   return (
@@ -53,19 +57,21 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
       {/* Logo & Workspace Info: only beside the full sidebar. The collapsed rail (below lg) has no logo; the top bar
           shows the full one, centred, instead of a mark squeezed into the rail. */}
       <div className="mb-12 hidden lg:flex flex-col gap-5">
-        <div className="w-full h-16 flex items-center justify-center overflow-hidden">
+        <div className="w-full h-16 flex items-center justify-start overflow-hidden">
           <GenEdLogo height={52} priority />
         </div>
-        <div>
+        {/* The logo PNG has ~14/140 of its height as empty space before the "G" (5px at height 52), so indent
+            the name by the same amount to line it up with the letters. */}
+        <div className="pl-[5px]">
           {schoolName ? (
             <h1
               title={schoolName}
-              className="text-[#122D30] text-sm font-black uppercase tracking-widest leading-snug line-clamp-2 break-words text-center pl-[0.1em]"
+              className="text-[#122D30] text-sm font-black uppercase tracking-widest leading-snug line-clamp-2 break-words"
             >
               {schoolName}
             </h1>
           ) : (
-            <h1 className="text-[#122D30] text-sm font-black uppercase tracking-widest leading-none text-center pl-[0.1em]">
+            <h1 className="text-[#122D30] text-sm font-black uppercase tracking-widest leading-none">
               Partner Portal
             </h1>
           )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { SideBar } from "./SideBar";
 import { SubjectRegistry } from "./SubjectRegistry";
@@ -12,6 +12,7 @@ import { User } from "lucide-react";
 import { GenEdLogo } from "@/components/shared/GenEdLogo";
 import { usePartnerStore, type Subject } from "../store/usePartnerStore";
 import { LabSetup } from "@/features/lab/components/LabSetup";
+import { FEATURES } from "@/constants/features";
 
 export function PartnerAdmin() {
   const router = useRouter();
@@ -19,7 +20,16 @@ export function PartnerAdmin() {
 
   // Derive active view from URL - Analytics is now the default
   const activeView: "subjects" | "analytics" | "labs" =
-    pathname === "/partner/subjects" ? "subjects" : pathname === "/partner/labs" ? "labs" : "analytics";
+    pathname === "/partner/subjects"
+      ? "subjects"
+      : pathname === "/partner/labs" && FEATURES.partnerLabs
+        ? "labs"
+        : "analytics";
+
+  // Lab Mode is switched off: send its old URL home (it already renders Analytics meanwhile).
+  useEffect(() => {
+    if (pathname === "/partner/labs" && !FEATURES.partnerLabs) router.replace("/partner");
+  }, [pathname, router]);
 
   const showUploadModal = usePartnerStore((state) => state.showUploadModal);
   // The chapter an "Upload again" came from, to prefill the form; null for a fresh upload.
