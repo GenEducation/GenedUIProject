@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
-import { KIND_LABEL, keyText } from "./QuestionFormats";
+import { ACTIVITY_MODE, KIND_LABEL, keyText } from "./QuestionFormats";
 import { LearnerPreview } from "./LearnerPreview";
 import type {
   AddedQuestion,
@@ -57,6 +57,31 @@ const PROVENANCE: Record<BankQuestionContent["meta"]["provenance"], string> = {
 };
 
 const DIFFICULTY = { easy: "Easy", medium: "Medium", hard: "Hard" } as const;
+
+/** An activity's mode and, when given, what a good answer includes (ADR 0048): there is no fixed answer to show. */
+function ActivityDetails({ body }: { body: BankQuestion["question"]["body"] }) {
+  return (
+    <div className="flex flex-col gap-1 text-xs text-[#122D30]/70">
+      <p>
+        <span className="font-bold text-[#122D30]">The learner: </span>
+        {ACTIVITY_MODE[body.activity_mode ?? "write"]}. A free answer: the
+        tutor gives feedback, and the learner must try it to finish the step.
+      </p>
+      {body.rubric && (
+        <p className="whitespace-pre-line">
+          <span className="font-bold text-[#122D30]">A good answer: </span>
+          {body.rubric}
+        </p>
+      )}
+      {body.example_answer && (
+        <p className="whitespace-pre-line">
+          <span className="font-bold text-[#122D30]">Example: </span>
+          {body.example_answer}
+        </p>
+      )}
+    </div>
+  );
+}
 
 const doubted = (q: BankQuestion) =>
   q.verification === "needs_partner_check" || q.verification === "unverified";
@@ -116,12 +141,23 @@ function QuestionCard({
           </span>
         )}
       </div>
-      <p className="text-sm font-bold text-[#122D30]">{body.prompt}</p>
-      <LearnerPreview key={`${q.question_id}-${q.revision}`} question={body} />
-      <p className="text-xs text-[#122D30]/70">
-        <span className="font-bold text-[#122D30]">Answer: </span>
-        {keyText(body)}
+      <p className="text-sm font-bold text-[#122D30] whitespace-pre-line">
+        {body.prompt}
       </p>
+      {body.answer_kind === "activity" ? (
+        <ActivityDetails body={body} />
+      ) : (
+        <>
+          <LearnerPreview
+            key={`${q.question_id}-${q.revision}`}
+            question={body}
+          />
+          <p className="text-xs text-[#122D30]/70">
+            <span className="font-bold text-[#122D30]">Answer: </span>
+            {keyText(body)}
+          </p>
+        </>
+      )}
       {body.explanation && (
         <p className="text-xs text-[#122D30]/70">
           <span className="font-bold text-[#122D30]">Why: </span>
@@ -281,12 +317,12 @@ function NodeSection({
     ? "Ready"
     : node.approved_ready
       ? node.status === "capability_gap"
-        ? "Accepted · a writing or speaking objective can't be checked yet"
+        ? "Accepted · a writing, speaking, reading or listening objective needs an activity"
         : "Accepted"
       : node.status === "ready_for_review"
         ? "Ready for your review"
         : node.status === "capability_gap"
-          ? "Writing or speaking objective can't be checked yet"
+          ? "A writing, speaking, reading or listening objective needs an activity"
           : "Incomplete";
   return (
     <section
@@ -330,7 +366,7 @@ function NodeSection({
                   key={`${o.concept}-${o.key}`}
                   className="flex items-start gap-2 text-xs text-[#122D30]/80"
                 >
-                  {o.production ? (
+                  {o.production && !o.approved_covered ? (
                     <AlertTriangle
                       size={13}
                       className="mt-0.5 text-amber-600 shrink-0"
@@ -352,7 +388,11 @@ function NodeSection({
                     <span className="font-bold">{o.concept}:</span>{" "}
                     {o.statement}
                     {o.production
-                      ? " (writing or speaking can't be checked by these question types yet, so this step can't be published)"
+                      ? o.approved_covered
+                        ? " (answered by an accepted activity)"
+                        : o.draft_covered
+                          ? " (accept the activity below)"
+                          : " (needs an activity: GenEd proposes one, or write your own)"
                       : o.approved_covered
                         ? ""
                         : o.draft_covered
@@ -599,8 +639,9 @@ export function AssessmentBankPanel({
         {(s.incomplete_nodes > 0 || s.capability_gap_nodes > 0) && (
           <p className="text-xs text-[#122D30]/70">
             Of {s.nodes} steps, {s.incomplete_nodes} are incomplete and{" "}
-            {s.capability_gap_nodes} have a writing or speaking objective no
-            question type can check yet. Each step below says why.
+            {s.capability_gap_nodes} have a writing, speaking, reading or
+            listening objective that still needs an activity. Each step below
+            says why.
           </p>
         )}
         <dl className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">

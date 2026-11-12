@@ -524,7 +524,11 @@ export type AddedAnswerKind =
   | "grouping"
   | "blanks"
   | "numeric"
-  | "string_set";
+  | "string_set"
+  | "activity";
+
+/** How a learner answers an activity (backend ADR 0048): free writing, free speech, reading a passage aloud, or answering after hearing it. */
+export type ActivityMode = "write" | "speak" | "read_aloud" | "listen";
 
 /**
  * A question for one proposed concept, in any format (backend ADR 0045): written by the partner (`partner`) or a model draft the
@@ -560,6 +564,12 @@ export interface AddedQuestion {
   };
   replaces?: string;
   explanation?: string;
+  /** An activity's mode (ADR 0048); only for `answer_kind: "activity"`. */
+  activity_mode?: ActivityMode;
+  /** An activity's optional criteria: what a good answer includes. Learners never see it. */
+  rubric?: string;
+  /** An activity's optional example of a good answer. Learners never see it. */
+  example_answer?: string;
   origin: "partner" | "ai_assisted";
 }
 

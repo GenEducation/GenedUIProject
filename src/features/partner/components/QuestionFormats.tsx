@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { AddedAnswerKind, AddedQuestion } from "../types/sources";
+import type {
+  ActivityMode,
+  AddedAnswerKind,
+  AddedQuestion,
+} from "../types/sources";
 
 /**
  * The formats a partner writes a question in (backend ADR 0045 decision 6). A learner answers every one of the first seven without a
@@ -17,6 +21,15 @@ export const KIND_LABEL: Record<AddedAnswerKind, string> = {
   blanks: "Fill the blanks from a word bank",
   numeric: "A number",
   string_set: "Short typed answer",
+  activity: "Activity (free answer)",
+};
+
+/** How a learner answers an activity (ADR 0048). */
+export const ACTIVITY_MODE: Record<ActivityMode, string> = {
+  write: "Write",
+  speak: "Speak",
+  read_aloud: "Read aloud",
+  listen: "Listen, then answer",
 };
 
 /** Whether a learner would type this question's answer: it then passes no step of a W2 lesson (ADR 0045). */
@@ -55,6 +68,9 @@ interface Texts {
   bank: string;
   number: string;
   line: { min: string; max: string; step: string; on: boolean };
+  mode: ActivityMode;
+  rubric: string;
+  example: string;
 }
 
 export function textsOf(q: AddedQuestion): Texts {
@@ -92,6 +108,9 @@ export function textsOf(q: AddedQuestion): Texts {
       step: q.entry?.step ?? "1/4",
       on: q.answer_kind !== "numeric" || !!q.entry || !q.expected_numeric,
     },
+    mode: q.activity_mode ?? "write",
+    rubric: q.rubric ?? "",
+    example: q.example_answer ?? "",
   };
 }
 
@@ -160,6 +179,12 @@ export function keyFields(
       };
     case "string_set":
       return { accepted_answers: lines(t.accepted) };
+    case "activity":
+      return {
+        activity_mode: t.mode,
+        ...(t.rubric.trim() ? { rubric: t.rubric.trim() } : {}),
+        ...(t.example.trim() ? { example_answer: t.example.trim() } : {}),
+      };
   }
 }
 
@@ -219,6 +244,8 @@ export function formatProblem(q: AddedQuestion): string | null {
       return (q.accepted_answers ?? []).length
         ? null
         : "Give the answers to accept.";
+    case "activity":
+      return q.activity_mode ? null : "Choose how the learner answers.";
   }
 }
 
@@ -385,6 +412,36 @@ export function FormatFields({
           </p>
         </>
       );
+    case "activity":
+      return (
+        <>
+          <label className="flex flex-col gap-1 sm:max-w-[260px]">
+            <span className={label}>How the learner answers</span>
+            <select
+              className={field}
+              value={t.mode}
+              onChange={(e) => change({ mode: e.target.value as ActivityMode })}
+            >
+              {(Object.keys(ACTIVITY_MODE) as ActivityMode[]).map((m) => (
+                <option key={m} value={m}>
+                  {ACTIVITY_MODE[m]}
+                </option>
+              ))}
+            </select>
+          </label>
+          {area(
+            "rubric",
+            "What a good answer includes (optional)",
+            3,
+            "Learners never see this. Leave it empty and the tutor judges from the chapter.",
+          )}
+          {area("example", "An example of a good answer (optional)", 3)}
+          <p className="text-xs text-[#122D30]/60">
+            A free answer with no fixed key. Learners must try it to finish
+            the step, and can practise it again.
+          </p>
+        </>
+      );
   }
 }
 
@@ -415,5 +472,7 @@ export function keyText(q: AddedQuestion): string {
       return (q.blank_answers ?? []).map((a) => a[0]).join(", ");
     case "string_set":
       return (q.accepted_answers ?? []).join(" / ");
+    case "activity":
+      return `${ACTIVITY_MODE[q.activity_mode ?? "write"]}: a free answer, no fixed key`;
   }
 }
