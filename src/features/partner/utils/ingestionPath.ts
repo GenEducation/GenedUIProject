@@ -353,8 +353,8 @@ export const NEXT_STEP_COPY: Record<
     tone: "problem",
   },
   review_questions: {
-    title: "Review questions and activities",
-    body: "Open Review decisions. For each highlighted lesson step, accept or edit an AI proposal, or add your own. Rejected proposals still need a replacement before this chapter can continue.",
+    title: "Some lesson steps need your decision",
+    body: "Open Review decisions. The steps that need you are listed at the top, each with what is missing and the button that fixes it. When every step is covered, approve, and the chapter runs once with your decisions.",
     tone: "problem",
   },
   prepare_release: {

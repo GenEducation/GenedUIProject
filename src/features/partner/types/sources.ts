@@ -23,7 +23,11 @@ export interface ActivityEvaluationPass {
   prompt_sha256: string;
   evaluation: {
     on_task: boolean | null;
-    verdicts: Array<{ objective: number; verdict: "met" | "partly" | "not_met" | "abstain"; quote: string }>;
+    verdicts: Array<{
+      objective: number;
+      verdict: "met" | "partly" | "not_met" | "abstain";
+      quote: string;
+    }>;
   } | null;
 }
 
@@ -786,10 +790,35 @@ export interface BankRun {
 }
 
 /** `GET /v1/sources/{id}/bank`: the chapter's AI-prepared assessment package (backend ADR 0047). */
+/** One thing the partner does to unblock a lesson step (backend ADR 0049). */
+export interface StepAction {
+  kind:
+    | "decide_proposals"
+    | "keep_concept"
+    | "add_activity"
+    | "add_question"
+    | "more_questions";
+  count?: number;
+  activities?: number;
+  concept_key?: string;
+  concept?: string;
+  obligation_key?: string;
+  detail?: string;
+}
+
+/** A lesson step that blocks publication, with what the partner does about it. */
+export interface StepActions {
+  section_key: string;
+  title: string;
+  actions: StepAction[];
+}
+
 export interface BankPackage {
   version: string;
   findings: BankFinding[];
   nodes: BankNode[];
+  /** Each blocked step and its actions; absent from an older backend. */
+  actions?: StepActions[];
   questions: BankQuestion[];
   runs: BankRun[];
   summary: {

@@ -18,6 +18,12 @@ import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
 import { ACTIVITY_MODE, KIND_LABEL, keyText } from "./QuestionFormats";
 import { LearnerPreview } from "./LearnerPreview";
+import {
+  StepGuide,
+  blankFor,
+  partnerQuestion,
+  type WriteTarget,
+} from "./StepGuide";
 import type {
   AddedQuestion,
   BankNode,
@@ -64,8 +70,8 @@ function ActivityDetails({ body }: { body: BankQuestion["question"]["body"] }) {
     <div className="flex flex-col gap-1 text-xs text-[#122D30]/70">
       <p>
         <span className="font-bold text-[#122D30]">The learner: </span>
-        {ACTIVITY_MODE[body.activity_mode ?? "write"]}. A free answer: the
-        tutor gives feedback, and the learner must try it to finish the step.
+        {ACTIVITY_MODE[body.activity_mode ?? "write"]}. A free answer: the tutor
+        gives feedback, and the learner must try it to finish the step.
       </p>
       {body.passage && (
         <p className="whitespace-pre-line">
@@ -300,8 +306,10 @@ function NodeSection({
   editing,
   onEdit,
   renderEditor,
+  openRequest,
 }: {
   sourceId: string;
+  openRequest?: number;
   node: BankNode;
   questions: BankQuestion[];
   busy: string | null;
@@ -311,6 +319,9 @@ function NodeSection({
   renderEditor: (q: BankQuestion) => React.ReactNode;
 }) {
   const [open, setOpen] = useState(!node.approved_ready);
+  useEffect(() => {
+    if (openRequest) setOpen(true); // the step guide asked to show this step
+  }, [openRequest]);
   const [hint, setHint] = useState("");
   const obligations = node.concepts
     .filter((c) => c.status === "planned" || c.status === "capability_gap")
@@ -336,8 +347,9 @@ function NodeSection({
           : "Incomplete";
   return (
     <section
+      id={`bank-step-${node.section_key}`}
       aria-label={node.title}
-      className="rounded-3xl bg-white/60 border border-[#122D30]/8"
+      className="rounded-3xl bg-white/60 border border-[#122D30]/8 scroll-mt-4"
     >
       {/* eslint-disable-next-line no-restricted-syntax -- a disclosure header, not an action button. */}
       <button
@@ -572,6 +584,22 @@ export function AssessmentBankPanel({
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<BankQuestion | null>(null);
+  const [writing, setWriting] = useState<WriteTarget | null>(null);
+  const [opened, setOpened] = useState<Record<string, number>>({});
+
+  const openStep = (sectionKey: string) => {
+    setOpened((prev) => ({
+      ...prev,
+      [sectionKey]: (prev[sectionKey] ?? 0) + 1,
+    }));
+    window.setTimeout(
+      () =>
+        document
+          .getElementById(`bank-step-${sectionKey}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      50,
+    );
+  };
 
   const load = useCallback(
     () =>
@@ -688,6 +716,64 @@ export function AssessmentBankPanel({
         )}
       </div>
 
+      {pkg.actions && (
+        <StepGuide
+          steps={pkg.actions}
+          accepted={s.accepted}
+          busy={busy}
+          onOpen={openStep}
+          onKeep={(conceptKey) =>
+            act(`keep:${conceptKey}`, () =>
+              sourcesService.keepConcept(sourceId, conceptKey),
+            )
+          }
+          onWrite={setWriting}
+          onAsk={(sectionKey) =>
+            act(`more:${sectionKey}`, () =>
+              sourcesService.refillPart(sourceId, sectionKey),
+            )
+          }
+        />
+      )}
+      {writing && (
+        <div
+          aria-label="Write your own"
+          className="rounded-2xl border border-[#075E63]/20 bg-white p-4 flex flex-col gap-2"
+        >
+          <p className="text-xs text-[#122D30]/70">
+            For &ldquo;{writing.statement}&rdquo;. It counts for this step as
+            soon as you save it.
+          </p>
+          {renderEditor(
+            blankFor(writing),
+            (body) => {
+              const target = writing;
+              setWriting(null);
+              act("write", async () => {
+                const created = await sourcesService.createQuestion(
+                  sourceId,
+                  partnerQuestion(body, target),
+                );
+                const mine = created.questions.find(
+                  (q) =>
+                    q.state === "draft" &&
+                    (q.question_id === body.id ||
+                      q.question.body.id === body.id),
+                );
+                return mine
+                  ? sourcesService.acceptQuestion(
+                      sourceId,
+                      mine.question_id,
+                      mine.version,
+                    )
+                  : created;
+              });
+            },
+            () => setWriting(null),
+          )}
+        </div>
+      )}
+
       {pkg.findings.length > 0 && (
         <div
           className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 flex flex-col gap-2"
@@ -744,6 +830,7 @@ export function AssessmentBankPanel({
           busy={busy}
           act={act}
           editing={editing?.question_id ?? null}
+          openRequest={opened[node.section_key]}
           onEdit={(q) => setEditing(q)}
           renderEditor={() => {
             const q = editing!;

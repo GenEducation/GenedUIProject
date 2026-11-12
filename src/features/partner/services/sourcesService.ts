@@ -48,7 +48,11 @@ const sourcePath = (id: string) => `${SOURCES_BASE}/${encodeURIComponent(id)}`;
  */
 export const sourcesService = {
   activityReviews: async (id: string): Promise<ActivityReview[]> =>
-    (await authFetch(`${API_BASE_URL}/v1/activity-reviews/${encodeURIComponent(id)}`)).json(),
+    (
+      await authFetch(
+        `${API_BASE_URL}/v1/activity-reviews/${encodeURIComponent(id)}`,
+      )
+    ).json(),
 
   overrideActivityVerdict: async (
     sourceId: string,
@@ -59,8 +63,11 @@ export const sourcesService = {
   ): Promise<void> => {
     await authFetch(
       `${API_BASE_URL}/v1/activity-reviews/${encodeURIComponent(sourceId)}/${encodeURIComponent(evaluationId)}/override`,
-      { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ objective, verdict, reason }) },
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objective, verdict, reason }),
+      },
     );
   },
   list: async (params?: SourceListParams): Promise<SourceListResponse> => {
@@ -286,6 +293,27 @@ export const sourcesService = {
       await authFetch(`${sourcePath(id)}/bank/accept`, {
         method: "POST",
         body: JSON.stringify({ items }),
+      })
+    ).json(),
+
+  /** Keep a concept GenEd put on hold (ADR 0049); its objectives then need questions like any other. */
+  keepConcept: async (id: string, conceptKey: string): Promise<BankPackage> =>
+    (
+      await authFetch(
+        `${sourcePath(id)}/bank/concepts/${encodeURIComponent(conceptKey)}/keep`,
+        { method: "POST" },
+      )
+    ).json(),
+
+  /** Add the partner's own question or activity to the chapter's bank, for one objective (ADR 0049). */
+  createQuestion: async (
+    id: string,
+    question: BankQuestionContent,
+  ): Promise<BankPackage> =>
+    (
+      await authFetch(`${sourcePath(id)}/bank/questions`, {
+        method: "POST",
+        body: JSON.stringify({ question }),
       })
     ).json(),
 
