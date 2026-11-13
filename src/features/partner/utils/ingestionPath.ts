@@ -348,18 +348,18 @@ export const NEXT_STEP_COPY: Record<
     tone: "problem",
   },
   add_questions: {
-    title: "Add questions to finish this chapter",
-    body: "This run didn't pass: GenEd found too few questions it can check, and a chapter can't be published without them. Review the questions GenEd prepared, give the answers of printed ones, or write your own. Every question is reviewed before students see it.",
+    title: "Add the missing questions or activities",
+    body: "Open Review decisions. Accept or edit an AI proposal, answer a printed question, or add your own. Save when every highlighted lesson step is covered.",
     tone: "problem",
   },
   review_questions: {
-    title: "Review the questions GenEd prepared",
-    body: "Some lesson steps don't have enough checked questions yet. Review the highlighted steps: accept or edit a proposal, or add your own.",
+    title: "Some lesson steps need your decision",
+    body: "Open Review decisions. The steps that need you are listed at the top, each with what is missing and the button that fixes it. When every step is covered, approve, and the chapter runs once with your decisions.",
     tone: "problem",
   },
   prepare_release: {
-    title: "Prepare the release",
-    body: "Your decisions are saved. Prepare the release to apply them; the pages already read are reused.",
+    title: "Your decisions are saved",
+    body: "Prepare the release now. GenEd will reuse the completed work and check only what your decisions changed.",
     tone: "action",
   },
   upload_pages_with_questions: {
@@ -378,8 +378,8 @@ export const NEXT_STEP_COPY: Record<
     tone: "problem",
   },
   contact_gened: {
-    title: "GenEd needs to look at this",
-    body: "This is not something your upload can fix. GenEd has the report; you can run it again after a fix.",
+    title: "GenEd needs to fix this",
+    body: "This is a system failure, not a curriculum decision. No partner action or rerun will help until GenEd fixes it.",
     tone: "problem",
   },
   run_again: {
@@ -423,6 +423,12 @@ export const CHECK_LABELS: Record<string, string> = {
   lo_coverage_scope: "The learning outcomes do not fit these pages",
   page_range: "The page range does not fit the PDF",
   manifest_chapter_coverage: "The pages do not cover the chapter",
+  assessment_bank_incomplete: "Some required questions or activities still need approval",
+  node_checks: "A lesson step still needs a usable question or activity",
+  rule_r_unreachable: "A lesson step needs stronger or alternative questions",
+  compliant_node_unassessed: "A lesson step needs an assessable question or activity",
+  compliant_pool_insufficient: "A lesson step needs an alternative question",
+  essential_without_exit_check: "A required concept is not yet covered by a lesson step",
 };
 
 export function checkLabel(check: string): string {

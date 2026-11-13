@@ -205,7 +205,7 @@ export function RunOutcome({ subject }: { subject: Subject }) {
     : nextStepCopy(next);
   const first = subject.outcome?.findings[0];
   const why = first
-    ? `${checkLabel(first.check)} · ${first.owner === "partner" ? "you can fix this" : "GenEd will look at this"}`
+    ? `${checkLabel(first.check)} · ${first.owner === "partner" ? copy.body : "GenEd must fix this; rerunning will not help"}`
     : copy.body;
   return (
     <div className="flex min-w-0 flex-col gap-0.5">

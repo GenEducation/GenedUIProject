@@ -37,6 +37,14 @@ export function problemFor(status: number): ListenProblem {
  */
 export async function fetchSegmentAudio(instanceId: string, passageId: string, segment: number): Promise<Blob> {
   const query = new URLSearchParams({ instance_id: instanceId, passage_id: passageId, segment: String(segment) });
+  return fetchPassageAudio(query);
+}
+
+export async function fetchActivityAudio(instanceId: string, nodeId: string, itemId: string, language: string): Promise<Blob> {
+  return fetchPassageAudio(new URLSearchParams({ instance_id: instanceId, instance_node_id: nodeId, item_id: itemId, language }));
+}
+
+async function fetchPassageAudio(query: URLSearchParams): Promise<Blob> {
   try {
     return await (await authFetch(`${API_BASE_URL}/v1/voice/passage-audio?${query}`)).blob();
   } catch (error) {

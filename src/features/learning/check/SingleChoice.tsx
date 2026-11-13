@@ -42,7 +42,7 @@ export function SingleChoice({
   };
 
   return (
-    <div ref={group} role="radiogroup" aria-labelledby={`check-${check.id}`} onKeyDown={onKeyDown} className="mt-4 grid gap-2 sm:grid-cols-2">
+    <div ref={group} role="radiogroup" aria-labelledby={`check-${check.id}`} onKeyDown={onKeyDown} className={`mt-4 grid gap-2 ${twoColumns(options)}`}>
       {options.map((option, index) => (
         <ChoiceTile
           key={option.id}
@@ -61,4 +61,9 @@ export function SingleChoice({
       ))}
     </div>
   );
+}
+
+/** Two tiles a row only when each fits: short options in a card of 17rem or more, sentences in a wide one (34rem or more). */
+export function twoColumns(options: ReadonlyArray<{ text: string }>): string {
+  return options.some((o) => o.text.length > 28) ? "@[34rem]:grid-cols-2" : "@[17rem]:grid-cols-2";
 }

@@ -8,7 +8,7 @@ import { keyInsights, subjectTrend, type SubjectSummary } from "../selectors";
 import { BAND_TONES } from "../subjectVisuals";
 import { deriveUnlocks } from "../utils";
 import { Button } from "@/components/ui/Button";
-import { CARD, ComingSoon, Sparkline, SubjectGlyph } from "./primitives";
+import { CARD, ComingSoon, SubjectGlyph } from "./primitives";
 import { ActivityCard, FocusCard, SectionHeader, SectionStatus } from "./SectionCards";
 import { KeyInsightsCard } from "./InsightsCards";
 import { useReportExtras } from "../sections/ReportExtras";
@@ -216,7 +216,7 @@ function SubjectTrends({ data, subjects }: { data: ReportCardData; subjects: Sub
     <TrendsShell>
       {subjects.map((s, i) => {
         const trend = subjectTrend(data, s.subject);
-        return <TrendRow key={s.subject} s={s} i={i} line={trend && { values: trend.points, delta: trend.delta }} none="Trend appears after a few sessions" />;
+        return <TrendRow key={s.subject} s={s} i={i} line={trend && { values: trend.points, delta: trend.delta }} unit="session" none="Shows after a few sessions" />;
       })}
     </TrendsShell>
   );
@@ -236,10 +236,12 @@ function WeeklyTrends({ data, subjects, section }: { data: ReportCardData; subje
   // The trends are keyed by subject code; the card's subjects by name, which each chapter carries both of.
   const codeOf = new Map(data.chapters.filter((c) => c.subject_code).map((c) => [c.subject, c.subject_code as string]));
   return (
-    <TrendsShell note="Skills known in each subject, week by week">
+    <TrendsShell note="Share of practised skills known, week by week">
       {subjects.map((s, i) => {
         const points = state.data.subjects.find((t) => t.subject_code === codeOf.get(s.subject))?.points ?? [];
-        return <TrendRow key={s.subject} s={s} i={i} line={trendLine(points)} none="Trend appears after answers in a couple of weeks" />;
+        const line = trendLine(points);
+        const weeks = points.filter((p) => p.known_share != null).map((p) => weekLabel(p.week));
+        return <TrendRow key={s.subject} s={s} i={i} line={line && { ...line, labels: weeks }} unit="week" none="Shows after two weeks of answers" />;
       })}
     </TrendsShell>
   );
@@ -254,45 +256,121 @@ function TrendsShell({ note = "How mastery has moved across recent sessions", ch
   );
 }
 
-function TrendRow({ s, i, line, none }: { s: SubjectSummary; i: number; line: { values: number[]; delta: number } | null; none: string }) {
+const weekLabel = (iso: string) => {
+  const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) ? iso : `Week of ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" })}`;
+};
+
+type TrendLine = { values: number[]; delta: number; labels?: string[] };
+
+/**
+ * One subject's line on the card's shared 0-100% scale, so two subjects' slopes compare honestly (a dip of a few points
+ * stays a few points). Faint guides at 0, 50 and 100; the first value a hollow dot, the latest a filled one; every value
+ * named on hover.
+ */
+function TrendChart({ line, color, unit }: { line: TrendLine; color: string; unit: string }) {
+  const [hover, setHover] = useState<number | null>(null);
+  const { values } = line;
+  const n = values.length;
+  const x = (i: number) => (n === 1 ? 50 : 4 + (i * 92) / (n - 1)); // % across, with room for the end dots
+  const y = (v: number) => 100 - Math.min(100, Math.max(0, v)); // % down
+  const path = values.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(2)} ${y(v).toFixed(2)}`).join(" ");
+  const label = (i: number) => `${line.labels?.[i] ?? `${unit[0].toUpperCase()}${unit.slice(1)} ${i + 1}`}: ${values[i]}%`;
+  return (
+    <div className="relative h-11 w-full" onMouseLeave={() => setHover(null)}>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden className="absolute inset-0 h-full w-full overflow-visible">
+        {[0, 50, 100].map((g) => (
+          <line key={g} x1="0" x2="100" y1={g} y2={g} stroke="var(--rs-line)" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeDasharray={g === 100 ? undefined : "2 3"} />
+        ))}
+        <motion.path
+          d={path} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, ease: "easeOut" }}
+        />
+      </svg>
+      {values.map((v, i) => (
+        <span
+          key={i}
+          onMouseEnter={() => setHover(i)}
+          className="absolute h-full -translate-x-1/2"
+          style={{ left: `${x(i)}%`, width: `${Math.max(8, 92 / Math.max(1, n - 1))}%`, top: 0 }}
+        >
+          {(i === 0 || i === n - 1 || hover === i) && (
+            <span
+              aria-hidden
+              className="absolute left-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+              style={{
+                top: `${y(v)}%`,
+                background: i === n - 1 || hover === i ? color : "var(--rs-surface-2)",
+                border: `2px solid ${color}`,
+                boxShadow: "0 0 0 2px var(--rs-surface-2)",
+              }}
+            />
+          )}
+        </span>
+      ))}
+      {hover !== null && (
+        <span
+          role="status"
+          className="pointer-events-none absolute bottom-full z-10 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-lg bg-[var(--rs-ink)] px-2 py-1 text-[11px] font-semibold text-white shadow-md"
+          style={{ left: `clamp(48px, ${x(hover)}%, calc(100% - 48px))` }}
+        >
+          {label(hover)}
+        </span>
+      )}
+      <span className="sr-only">{values.map((_, i) => label(i)).join("; ")}</span>
+    </div>
+  );
+}
+
+function TrendRow({ s, i, line, unit, none }: { s: SubjectSummary; i: number; line: TrendLine | null; unit: string; none: string }) {
   return (
     <motion.li
       initial={{ opacity: 0, x: 10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.4, delay: 0.15 + i * 0.05 }}
-      className="grid grid-cols-[auto_minmax(0,1fr)_minmax(70px,1.2fr)_auto] items-center gap-3 rounded-2xl border border-[var(--rs-line)] bg-[var(--rs-surface-2)] px-3 py-2.5"
+      className="grid grid-cols-[auto_minmax(0,1fr)_minmax(84px,1.3fr)_auto] items-center gap-3 rounded-2xl border border-[var(--rs-line)] bg-[var(--rs-surface-2)] px-3 py-2.5"
     >
       <SubjectGlyph subject={s.subject} tone={s.tone} size={38} />
       <div className="min-w-0 leading-tight">
         <p className="truncate text-[13.5px] font-semibold text-[var(--rs-ink)]">{s.subject}</p>
-        <p className="mt-1 text-[13px] font-bold tabular-nums" style={{ color: s.tone.ink }}>{s.measured ? `${s.mastery}%` : "—"}</p>
+        <p className="mt-1 text-[12px] text-[var(--rs-ink-soft)]">
+          {s.measured ? <><span className="text-[14px] font-bold tabular-nums text-[var(--rs-ink)]">{s.mastery}%</span> known</> : "Not measured yet"}
+        </p>
       </div>
       {line ? (
         <>
-          <Sparkline points={line.values} color={s.tone.accent} height={34} />
-          <Delta value={line.delta} />
+          <TrendChart line={line} color={s.tone.accent} unit={unit} />
+          <Delta
+            value={line.delta}
+            span={line.labels?.[0] ? `since ${line.labels[0].replace(/^Week of /, "")}` : `over ${line.values.length - 1} ${unit}${line.values.length - 1 === 1 ? "" : "s"}`}
+          />
         </>
       ) : (
-        <p className="col-span-2 text-right text-[11.5px] leading-snug text-[var(--rs-ink-soft)]">{none}</p>
+        <div className="col-span-2 flex items-center gap-3">
+          <span aria-hidden className="h-0 flex-1 border-t-2 border-dashed border-[var(--rs-line-strong)]" />
+          <p className="max-w-[150px] text-right text-[11.5px] leading-snug text-[var(--rs-ink-soft)]">{none}</p>
+        </div>
       )}
     </motion.li>
   );
 }
 
-function Delta({ value }: { value: number }) {
+function Delta({ value, span }: { value: number; span: string }) {
   const tone = value > 0 ? BAND_TONES.Advanced : value < 0 ? BAND_TONES.Developing : BAND_TONES["Not started"];
   const glyph = value > 0 ? "trends/increase" : value < 0 ? "trends/decrease" : "trends/no-change";
-  // A gain is an earned moment: ink on a citron pill. Drops/flat stay plain text.
+  // A gain is an earned moment: ink on a citron pill. A drop or no change stays plain. Points, not percent: the line is already a share.
   const up = value > 0;
   return (
-    <span className="flex w-[60px] justify-end">
+    <span className="flex min-w-[68px] flex-col items-end whitespace-nowrap leading-tight">
       <span
         className={`inline-flex items-center gap-0.5 text-[12.5px] font-bold tabular-nums ${up ? "rounded-full bg-[var(--rs-citron)] px-1.5 py-0.5" : ""}`}
         style={{ color: up ? "var(--rs-ink)" : tone.ink }}
+        aria-label={value === 0 ? `No change ${span}` : `${up ? "Up" : "Down"} ${Math.abs(value)} points ${span}`}
       >
         <TintIcon name={glyph} color={up ? "var(--rs-ink)" : tone.ink} size={11} className="mr-0.5" />
-        {up ? "+" : ""}{value}%
+        {value === 0 ? "No change" : `${up ? "+" : "−"}${Math.abs(value)} pts`}
       </span>
+      <span aria-hidden className="mt-0.5 text-[10.5px] text-[var(--rs-ink-soft)]">{span}</span>
     </span>
   );
 }

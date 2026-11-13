@@ -63,7 +63,7 @@ export function Matching({
   };
 
   return (
-    <div ref={root} className="mt-4 grid gap-4 sm:grid-cols-2">
+    <div ref={root} className="mt-4 grid gap-4 @[17rem]:grid-cols-2">
       <div>
         <p id={`match-left-${check.id}`} className="lesson-hand mb-2 text-[16px] text-[var(--ls-ink-mid)]">
           {t("matchPick")}

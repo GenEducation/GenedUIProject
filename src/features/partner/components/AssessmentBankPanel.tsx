@@ -14,14 +14,20 @@ import {
   Plus,
   RefreshCw,
   ShieldCheck,
-  Sparkles,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
-import { KIND_LABEL, keyText } from "./QuestionFormats";
+import { ACTIVITY_MODE, KIND_LABEL, keyText } from "./QuestionFormats";
 import { LearnerPreview } from "./LearnerPreview";
+import { GenerationStatus, pendingSteps } from "./GenerationStatus";
+import {
+  StepGuide,
+  blankFor,
+  partnerQuestion,
+  type WriteTarget,
+} from "./StepGuide";
 import type {
   AddedQuestion,
   BankNode,
@@ -64,6 +70,41 @@ const PROVENANCE: Record<BankQuestionContent["meta"]["provenance"], string> = {
 };
 
 const DIFFICULTY = { easy: "Easy", medium: "Medium", hard: "Hard" } as const;
+
+/** An activity's mode and, when given, what a good answer includes (ADR 0048): there is no fixed answer to show. */
+function ActivityDetails({ body }: { body: BankQuestion["question"]["body"] }) {
+  return (
+    <div className="flex flex-col gap-1 text-xs text-[#122D30]/70">
+      <p>
+        <span className="font-bold text-[#122D30]">The learner: </span>
+        {ACTIVITY_MODE[body.activity_mode ?? "write"]}. A free answer: the tutor
+        gives feedback, and the learner must try it to finish the step.
+      </p>
+      {body.passage && (
+        <p className="whitespace-pre-line">
+          <span className="font-bold text-[#122D30]">
+            {body.activity_mode === "listen"
+              ? "Passage (only heard, never shown): "
+              : "Passage to read aloud: "}
+          </span>
+          {body.passage}
+        </p>
+      )}
+      {body.rubric && (
+        <p className="whitespace-pre-line">
+          <span className="font-bold text-[#122D30]">A good answer: </span>
+          {body.rubric}
+        </p>
+      )}
+      {body.example_answer && (
+        <p className="whitespace-pre-line">
+          <span className="font-bold text-[#122D30]">Example: </span>
+          {body.example_answer}
+        </p>
+      )}
+    </div>
+  );
+}
 
 const doubted = (q: BankQuestion) =>
   q.verification === "needs_partner_check" || q.verification === "unverified";
@@ -123,12 +164,23 @@ function QuestionCard({
           </span>
         )}
       </div>
-      <p className="text-sm font-bold text-[#122D30]">{body.prompt}</p>
-      <LearnerPreview key={`${q.question_id}-${q.revision}`} question={body} />
-      <p className="text-xs text-[#122D30]/70">
-        <span className="font-bold text-[#122D30]">Answer: </span>
-        {keyText(body)}
+      <p className="text-sm font-bold text-[#122D30] whitespace-pre-line">
+        {body.prompt}
       </p>
+      {body.answer_kind === "activity" ? (
+        <ActivityDetails body={body} />
+      ) : (
+        <>
+          <LearnerPreview
+            key={`${q.question_id}-${q.revision}`}
+            question={body}
+          />
+          <p className="text-xs text-[#122D30]/70">
+            <span className="font-bold text-[#122D30]">Answer: </span>
+            {keyText(body)}
+          </p>
+        </>
+      )}
       {body.explanation && (
         <p className="text-xs text-[#122D30]/70">
           <span className="font-bold text-[#122D30]">Why: </span>
@@ -298,7 +350,7 @@ const PHASE: Record<
     badge: "bg-[#075E63]/10 text-[#075E63]",
   },
   gap: {
-    label: "Can't be checked yet",
+    label: "Needs an activity",
     pill: "bg-[#122D30]/6 text-amber-800",
     bar: "bg-[repeating-linear-gradient(135deg,#D97706_0_3px,#FCD34D_3px_6px)]",
     badge: "bg-amber-100 text-amber-800",
@@ -475,7 +527,7 @@ function NodeSection({
                   key={`${o.concept}-${o.key}`}
                   className="flex items-start gap-2 text-xs text-[#122D30]/80"
                 >
-                  {o.production ? (
+                  {o.production && !o.approved_covered ? (
                     <AlertTriangle
                       size={13}
                       className="mt-0.5 text-amber-600 shrink-0"
@@ -502,7 +554,11 @@ function NodeSection({
                     {o.statement}
                     <span className="block text-[11px] text-[#122D30]/50">
                       {o.production
-                        ? "Writing or speaking can't be checked by these question types yet, so this step can't be published."
+                        ? o.approved_covered
+                          ? "Answered by an accepted activity."
+                          : o.draft_covered
+                            ? "Accept the activity below."
+                            : "Needs an activity: GenEd proposes one, or write your own."
                         : o.approved_covered
                           ? "Covered by accepted questions."
                           : o.draft_covered
@@ -793,6 +849,7 @@ export function AssessmentBankPanel({
   /** Steps the partner opened; null until they open or close one. */
   const [openKeys, setOpenKeys] = useState<Set<string> | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const [writing, setWriting] = useState<WriteTarget | null>(null);
 
   const load = useCallback(
     () =>
@@ -957,6 +1014,7 @@ export function AssessmentBankPanel({
         ?.scrollIntoView({ behavior: "smooth", block: "start" }),
     );
   };
+  const openStep = goTo;
   const allOpen =
     shown.length > 0 && shown.every((st) => opened.has(st.node.section_key));
   return (
@@ -1053,81 +1111,110 @@ export function AssessmentBankPanel({
           </div>
         )}
 
-        {preparing && (
+        {preparing && stuck && (
           <div
             role="status"
-            className={`relative overflow-hidden rounded-2xl border px-3.5 py-3 flex items-start gap-3 ${
-              stuck
-                ? "bg-amber-50 border-amber-200"
-                : "bg-[#075E63]/[0.06] border-[#075E63]/15"
-            }`}
+            className="rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-3 flex items-start gap-3"
           >
-            <span
-              className={`grid place-items-center h-7 w-7 shrink-0 rounded-full text-white ${
-                stuck ? "bg-amber-600" : "bg-[#075E63]"
-              }`}
-            >
-              {stuck ? (
-                <AlertTriangle size={14} aria-hidden />
-              ) : queuedOnly ? (
-                <Clock size={14} aria-hidden />
-              ) : (
-                <Sparkles size={14} aria-hidden />
-              )}
+            <span className="grid place-items-center h-7 w-7 shrink-0 rounded-full bg-amber-600 text-white">
+              <AlertTriangle size={14} aria-hidden />
             </span>
             <span className="text-xs text-[#122D30]/75">
-              {stuck ? (
-                <>
-                  <span className="block font-black text-amber-900">
-                    Question writing hasn&rsquo;t started
-                  </span>
-                  This chapter has waited {waitedMin} min and no GenEd writer
-                  has picked it up. Question writing may be switched off on this
-                  server; ask GenEd to check. This page updates by itself when
-                  it starts.
-                </>
-              ) : queuedOnly ? (
-                <>
-                  <span className="block font-black text-[#075E63]">
-                    Waiting to start
-                  </span>
-                  GenEd starts writing questions as soon as a writer is free
-                  {waitedMin > 0 ? ` (queued ${waitedMin} min ago)` : ""}. This
-                  page updates by itself.
-                </>
-              ) : (
-                <>
-                  <span className="block font-black text-[#075E63]">
-                    GenEd is writing questions
-                  </span>
-                  Steps fill in as they&rsquo;re ready, and this page updates by
-                  itself. You can close it; the work carries on.
-                </>
-              )}
-            </span>
-            {!stuck && (
-              <span
-                aria-hidden
-                className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden"
-              >
-                <span className="block h-full w-1/3 bg-[#075E63]/60 motion-reduce:hidden animate-[bankSweep_1.6s_ease-in-out_infinite]" />
+              <span className="block font-black text-amber-900">
+                Question writing hasn&rsquo;t started
               </span>
-            )}
-            <style>{`@keyframes bankSweep{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}`}</style>
+              This chapter has waited {waitedMin} min and no GenEd writer has
+              picked it up. Question writing may be switched off on this server;
+              ask GenEd to check. This page updates by itself when it starts.
+            </span>
           </div>
         )}
+
+        <GenerationStatus
+          runs={pkg.runs}
+          titles={Object.fromEntries(
+            pkg.nodes.map((n) => [n.section_key, n.title]),
+          )}
+          waiting={pkg.nodes
+            .map((n) => n.section_key)
+            .filter((k) =>
+              pkg.questions.some(
+                (q) => q.section_key === k && q.state === "draft",
+              ),
+            )}
+          onShow={openStep}
+        />
 
         {!preparing && s.capability_gap_nodes > 0 && (
           <p className="text-xs text-amber-800 flex items-start gap-1.5">
             <AlertTriangle size={13} className="mt-0.5 shrink-0" aria-hidden />
             <span>
               {s.capability_gap_nodes === 1
-                ? "1 step has a writing or speaking objective these question types can’t check yet, so it can’t be published."
-                : `${s.capability_gap_nodes} steps have a writing or speaking objective these question types can’t check yet, so they can’t be published.`}
+                ? "1 step has a writing, speaking, reading or listening objective that still needs an activity."
+                : `${s.capability_gap_nodes} steps have a writing, speaking, reading or listening objective that still needs an activity.`}
             </span>
           </p>
         )}
       </div>
+
+      {pkg.actions && (
+        <StepGuide
+          steps={pkg.actions}
+          generating={pendingSteps(pkg.runs)}
+          accepted={s.accepted}
+          busy={busy}
+          onOpen={openStep}
+          onKeep={(conceptKey) =>
+            act(`keep:${conceptKey}`, () =>
+              sourcesService.keepConcept(sourceId, conceptKey),
+            )
+          }
+          onWrite={setWriting}
+          onAsk={(sectionKey) =>
+            act(`more:${sectionKey}`, () =>
+              sourcesService.refillPart(sourceId, sectionKey),
+            )
+          }
+        />
+      )}
+      {writing && (
+        <div
+          aria-label="Write your own"
+          className="rounded-2xl border border-[#075E63]/20 bg-white p-4 flex flex-col gap-2"
+        >
+          <p className="text-xs text-[#122D30]/70">
+            For &ldquo;{writing.statement}&rdquo;. It counts for this step as
+            soon as you save it.
+          </p>
+          {renderEditor(
+            blankFor(writing),
+            (body) => {
+              const target = writing;
+              setWriting(null);
+              act("write", async () => {
+                const created = await sourcesService.createQuestion(
+                  sourceId,
+                  partnerQuestion(body, target),
+                );
+                const mine = created.questions.find(
+                  (q) =>
+                    q.state === "draft" &&
+                    (q.question_id === body.id ||
+                      q.question.body.id === body.id),
+                );
+                return mine
+                  ? sourcesService.acceptQuestion(
+                      sourceId,
+                      mine.question_id,
+                      mine.version,
+                    )
+                  : created;
+              });
+            },
+            () => setWriting(null),
+          )}
+        </div>
+      )}
 
       {pkg.findings.length > 0 && (
         <details

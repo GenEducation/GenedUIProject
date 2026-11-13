@@ -16,6 +16,32 @@ export type SourceState =
   | "ready"
   | "failed";
 
+export interface ActivityEvaluationPass {
+  model_key: string;
+  model_version: string | null;
+  prompt_name: string;
+  prompt_sha256: string;
+  evaluation: {
+    on_task: boolean | null;
+    verdicts: Array<{
+      objective: number;
+      verdict: "met" | "partly" | "not_met" | "abstain";
+      quote: string;
+    }>;
+  } | null;
+}
+
+export interface ActivityReview {
+  evaluation_id: string;
+  attempt_id: string;
+  mode: "write" | "speak" | "read_aloud" | "listen";
+  answer: string;
+  evaluator: ActivityEvaluationPass;
+  verifier: ActivityEvaluationPass;
+  agreed: Array<"met" | "not_met" | "not_judged">;
+  created_at: string;
+}
+
 /** States a partner may start (or re-run) a source from. */
 export const STARTABLE_STATES: ReadonlySet<SourceState> = new Set([
   "registered",
@@ -175,9 +201,8 @@ export type NextStep =
   /** Questions need their picture, but no redraw waits for you: the drawing failed its own checks. Run again. */
   | "redraw_pictures"
   | "add_questions"
-  /** GenEd's questions or activities don't yet cover every lesson step: review the highlighted steps in the authoring screen. */
   | "review_questions"
-  /** The partner changed questions, pictures, chapter details or outcomes since the run: process the saved decisions. */
+  /** Partner decisions changed; rebuild from cached work and prepare the release for review. */
   | "prepare_release"
   | "upload_pages_with_questions"
   | "upload_clearer_pdf"
@@ -528,7 +553,11 @@ export type AddedAnswerKind =
   | "grouping"
   | "blanks"
   | "numeric"
-  | "string_set";
+  | "string_set"
+  | "activity";
+
+/** How a learner answers an activity (backend ADR 0048): free writing, free speech, reading a passage aloud, or answering after hearing it. */
+export type ActivityMode = "write" | "speak" | "read_aloud" | "listen";
 
 /**
  * A question for one proposed concept, in any format (backend ADR 0045): written by the partner (`partner`) or a model draft the
@@ -564,6 +593,14 @@ export interface AddedQuestion {
   };
   replaces?: string;
   explanation?: string;
+  /** An activity's mode (ADR 0048); only for `answer_kind: "activity"`. */
+  activity_mode?: ActivityMode;
+  /** An activity's optional criteria: what a good answer includes. Learners never see it. */
+  rubric?: string;
+  /** An activity's optional example of a good answer. Learners never see it. */
+  example_answer?: string;
+  /** A reading-aloud or listening activity's passage from the chapter: shown to read, or only played to listen to. */
+  passage?: string;
   origin: "partner" | "ai_assisted";
 }
 
@@ -753,10 +790,37 @@ export interface BankRun {
 }
 
 /** `GET /v1/sources/{id}/bank`: the chapter's AI-prepared assessment package (backend ADR 0047). */
+/** One thing the partner does to unblock a lesson step (backend ADR 0049). */
+export interface StepAction {
+  kind:
+    | "decide_proposals"
+    | "keep_concept"
+    | "add_activity"
+    | "add_question"
+    | "more_questions";
+  count?: number;
+  activities?: number;
+  concept_key?: string;
+  concept?: string;
+  obligation_key?: string;
+  /** How many more questions the objective needs. */
+  needed?: number | null;
+  detail?: string;
+}
+
+/** A lesson step that blocks publication, with what the partner does about it. */
+export interface StepActions {
+  section_key: string;
+  title: string;
+  actions: StepAction[];
+}
+
 export interface BankPackage {
   version: string;
   findings: BankFinding[];
   nodes: BankNode[];
+  /** Each blocked step and its actions; absent from an older backend. */
+  actions?: StepActions[];
   questions: BankQuestion[];
   runs: BankRun[];
   summary: {

@@ -116,7 +116,10 @@ describe("right answers alone and with help", () => {
   it("shows them side by side with the hints, never as one score", () => {
     render(<IndependenceBar help={HELP} />);
     expect(screen.getByText("75% of right answers on their own")).toBeInTheDocument();
-    expect(screen.getByText("6 alone · 2 with help · 3 hints")).toBeInTheDocument();
+    const legend = screen.getByRole("list");
+    expect(legend).toHaveTextContent("On their own 6");
+    expect(legend).toHaveTextContent("With help 2");
+    expect(legend).toHaveTextContent("3 hints used");
   });
 
   it("says so when there is nothing right to compare yet", () => {

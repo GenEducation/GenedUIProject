@@ -6,6 +6,7 @@ import { useLessonStore } from "../useLessonStore";
 import { WhiteboardCanvas } from "./WhiteboardCanvas";
 import type { Insets } from "../board/geometry";
 import { Filmstrip } from "./Filmstrip";
+import { ActivityCard, CompletedActivities } from "./ActivityCard";
 import { StepCard } from "./StepCard";
 import { LessonSummary } from "./LessonSummary";
 import { QuickActions } from "./QuickActions";
@@ -23,11 +24,13 @@ export const CARD_ZOOM_MAX = 1.5;
 const clampCardZoom = (zoom: number) => Math.min(CARD_ZOOM_MAX, Math.max(CARD_ZOOM_MIN, zoom));
 
 /**
- * The tallest the docked question card grows, whatever the question's length: 45% of the screen's height (never under
- * 240px), and never past the room between the title band and the filmstrip. A longer question scrolls inside the card,
- * its Check button staying in view.
+ * The tallest the docked question card grows, whatever the question's length: all the room between the title band and the
+ * filmstrip (at least 240px when the board has it). A longer question scrolls inside the card, its Check button staying in
+ * view. No share of the screen caps it: on a laptop that cap left the question a sliver under its own footer.
  */
-export const CARD_MAX_HEIGHT = "min(calc(100% - 12rem), max(240px, 45vh))";
+export const CARD_MAX_HEIGHT = "max(min(240px, calc(100% - 5rem)), calc(100% - 10rem))";
+/** On an empty board (no figure yet) the card sits under the title band and may run to the board's foot. */
+export const CARD_MAX_HEIGHT_CENTRED = "calc(100% - 5rem)";
 
 /** Whether the docked step holds a card: its zoom wrapper is always there, the card inside it only sometimes. */
 const holdsCard = (step: HTMLElement) => (step.firstElementChild?.childElementCount ?? 0) > 0;
@@ -76,9 +79,12 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
   const sections = useMemo(() => bookSections(nodeSections, texts.length > 0, readingRole), [nodeSections, texts, readingRole]);
   const hasBook = texts.length > 0 || sections.length > 0;
   const opens = opensWithStep(readingRole, texts);
-  const [chosen, setChosen] = useState<{ nodeId: string | null; open: boolean } | null>(null);
-  const bookOpen = chosen !== null && chosen.nodeId === nodeId ? chosen.open : opens;
-  const setBookOpen = (open: boolean) => setChosen({ nodeId, open });
+  // The tutor presenting a check closes the book, which would cover the check's card; the Book button opens it again.
+  const presented = node?.check_presented ? `${node.instance_node_id}:${node.check_item_ids.find((id) => !node.answered_item_ids.includes(id)) ?? ""}` : null;
+  const [chosen, setChosen] = useState<{ nodeId: string | null; open: boolean; presented: string | null } | null>(null);
+  const bookOpen =
+    chosen !== null && chosen.nodeId === nodeId && chosen.presented === presented ? chosen.open : presented ? false : opens;
+  const setBookOpen = (open: boolean) => setChosen({ nodeId, open, presented });
 
   const stepRef = useRef<HTMLDivElement>(null);
   // The canvas frames figures in what the overlays leave clear: the title band, the docked question card, the filmstrip.
@@ -100,6 +106,11 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
 
   // The question card is docked, not on the board, so it doesn't pan; its text does follow the zooms the learner makes
   // (not the board's own framing of each new figure, which would resize it at every figure), within readable bounds.
+  // A question the tutor just put on screen is the first thing in the dock: bring it into view.
+  useEffect(() => {
+    if (presented) stepRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [presented]);
+
   const [cardZoom, setCardZoom] = useState(1);
   const onUserZoom = useCallback((factor: number) => setCardZoom((zoom) => clampCardZoom(zoom * factor)), []);
 
@@ -133,28 +144,49 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
           // Every figure shown this session stays on an endless board; the camera glides to each new one.
           <WhiteboardCanvas insets={insets} refitKey={stepWidth} onUserZoom={onUserZoom} />
         ) : (
-          <div className="lesson-board absolute inset-0 grid place-items-center">{!finished && <EmptyBoard />}</div>
+          <div className="lesson-board absolute inset-0 grid place-items-center">{!finished && stepWidth === 0 && <EmptyBoard />}</div>
         )}
 
         {title && !finished && (
           <h1
             data-no-pan
-            className="lesson-hand lesson-underline pointer-events-none absolute left-6 top-4 z-10 max-w-[60%] truncate text-[28px] leading-tight text-[var(--ls-primary)]"
+            // Beside the open book, never under it: the title starts where the book ends.
+            className={`lesson-hand lesson-underline pointer-events-none absolute top-4 z-10 truncate text-[28px] leading-tight text-[var(--ls-primary)] transition-[left] duration-300 ${
+              bookOpen && hasBook
+                ? "left-[calc(min(440px,62%)+1.5rem)] max-w-[calc(100%-min(440px,62%)-3rem)]"
+                : "left-6 max-w-[60%]"
+            }`}
           >
             {title}
           </h1>
         )}
 
-        {/* What the learner can do now (a check, a choice, moving on), docked on the right above the canvas. */}
+        {/* What the learner can do now (a check, a choice, moving on). Beside a figure it docks on the right, leaving the figure in
+            view; on an empty board it takes the middle, wide and tall, so a long question and its options read without scrolling. */}
         <div
           ref={stepRef}
           data-no-pan
-          className="absolute bottom-32 right-4 z-10 flex w-[min(380px,46%)] flex-col overflow-y-auto overscroll-contain px-1.5 pb-3 pt-1.5 [&:not(:has(>div>*))]:hidden"
-          style={{ maxHeight: CARD_MAX_HEIGHT }}
+          className={`absolute z-10 flex flex-col overflow-y-auto overscroll-contain px-1.5 pt-1.5 [&:not(:has(>div>*))]:hidden ${
+            hasFilmstrip
+              ? "bottom-24 right-4 w-[min(480px,max(min(340px,calc(100%-2rem)),46%))]"
+              : bookOpen && hasBook
+                ? "left-[min(440px,62%)] right-0 top-16 mx-auto w-[min(680px,calc(100%-min(440px,62%)-2rem))]"
+                : "inset-x-0 top-16 mx-auto w-[min(680px,calc(100%-2rem))]"
+          }`}
+          style={{ maxHeight: hasFilmstrip ? CARD_MAX_HEIGHT : CARD_MAX_HEIGHT_CENTRED }}
         >
           {/* CSS zoom, not a transform: the card re-wraps to its dock's width instead of spilling past it. */}
-          <div data-card-zoom={cardZoom.toFixed(2)} style={{ zoom: cardZoom }}>
+          <div data-card-zoom={cardZoom.toFixed(2)} style={{ zoom: cardZoom }} className="pb-3">
+            {/* An activity still to do comes first (the step's question waits for it); the live question next; done activities
+                last, as slim rows, so they never push the question out of view. */}
+            {node?.activities?.filter((activity) => !activity.attempted).map((activity) => (
+              <ActivityCard key={`${node.instance_node_id}:${activity.item_id}`} nodeId={node.instance_node_id} activity={activity} />
+            ))}
             <StepCard subject={subject} />
+            {node?.activities?.filter((activity) => activity.attempted).map((activity) => (
+              <ActivityCard key={`${node.instance_node_id}:${activity.item_id}`} nodeId={node.instance_node_id} activity={activity} />
+            ))}
+            {!finished && <CompletedActivities />}
           </div>
         </div>
 
@@ -162,6 +194,7 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
           <div data-no-pan className="absolute inset-0 z-20 overflow-y-auto bg-[var(--ls-card-warm)]/85 p-5 backdrop-blur-[2px] sm:p-8">
             <div className="mx-auto max-w-[680px]">
               <LessonSummary />
+              <CompletedActivities />
             </div>
           </div>
         )}

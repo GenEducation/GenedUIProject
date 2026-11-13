@@ -23,6 +23,7 @@ import { enterToSubmit, submitFormOnEnter } from "@/utils/enterToSubmit";
 import { sourcesService } from "../services/sourcesService";
 import { removedReason } from "../utils/ingestionPath";
 import { AssessmentBankPanel } from "./AssessmentBankPanel";
+import { ActivityEvidencePanel } from "./ActivityEvidencePanel";
 import { PictureQuestionsPanel } from "./PictureQuestionsPanel";
 import {
   FormatFields,
@@ -151,7 +152,7 @@ export function SourceAuthoringModal(props: SourceAuthoringModalProps) {
       open={!!subject}
       onClose={onClose}
       size="full"
-      title={subject ? `Questions for ${subject.title}` : "Questions"}
+      title={subject ? `Review decisions for ${subject.title}` : "Review decisions"}
       panelStyle={{ maxWidth: "min(920px, 100%)", background: "#F6F7F2" }}
     >
       {/* Keyed so each chapter starts from its own saved questions. */}
@@ -361,15 +362,15 @@ function AuthoringBody({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">
-              The chapter&rsquo;s questions
+              Required decisions
             </p>
             <h2 className="text-lg md:text-xl font-black text-[#122D30] tracking-tight truncate">
               {subject.title}
             </h2>
             <p className="text-xs text-[#122D30]/60 mt-1 max-w-xl">
-              GenEd prepared questions for every step of this chapter. Review
-              them first; you can also write your own or answer printed ones.
-              Nothing reaches students until you review and publish.
+              Review each highlighted lesson step. Accept or edit GenEd&rsquo;s
+              proposed questions and activities, answer a printed question, or
+              add your own. Nothing reaches students until you publish.
             </p>
           </div>
           <Button
@@ -385,7 +386,7 @@ function AuthoringBody({
         {data && (
           <div
             role="tablist"
-            aria-label="Ways to add questions"
+            aria-label="Ways to complete the decisions"
             className="flex gap-1 overflow-x-auto px-5 md:px-7 mt-4"
           >
             {tabs
@@ -466,6 +467,7 @@ function AuthoringBody({
                   />
                 )}
               />
+              <ActivityEvidencePanel sourceId={subject.source_id} />
             </Panel>
 
             <Panel id={`${tabsId}-own`} hidden={tab !== "own"}>
@@ -661,15 +663,14 @@ function AuthoringBody({
                   className="text-emerald-600"
                   aria-hidden
                 />
-                {plural(total, pictureDecisions ? "change" : "question")} saved.
-                Run the chapter again to use them.
+                {plural(total, pictureDecisions ? "change" : "decision")} saved. Prepare the release to apply them.
               </p>
               <Button
                 leadingIcon={<Play size={14} />}
                 loading={rerunning}
                 onClick={() => void rerun()}
               >
-                Run with these questions
+                Prepare release
               </Button>
             </div>
           ) : (
@@ -696,7 +697,7 @@ function AuthoringBody({
                       ]
                         .filter(Boolean)
                         .join(" · ")
-                    : "Add at least one to run the chapter again."}
+                    : "Accept, edit, or add what the highlighted lesson step needs."}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -714,7 +715,7 @@ function AuthoringBody({
                   loading={rerunning}
                   onClick={() => void saveAndRun()}
                 >
-                  Save and run
+                  Save and prepare release
                 </Button>
               </div>
             </div>

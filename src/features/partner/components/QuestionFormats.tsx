@@ -1,8 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { blankPieces } from "@/features/learning/check/blankText";
-import type { AddedAnswerKind, AddedQuestion } from "../types/sources";
+import type {
+  ActivityMode,
+  AddedAnswerKind,
+  AddedQuestion,
+} from "../types/sources";
 
 /**
  * The formats a partner writes a question in (backend ADR 0045 decision 6). A learner answers every one of the first seven without a
@@ -18,6 +23,15 @@ export const KIND_LABEL: Record<AddedAnswerKind, string> = {
   blanks: "Fill the blanks from a word bank",
   numeric: "A number",
   string_set: "Short typed answer",
+  activity: "Activity (free answer)",
+};
+
+/** How a learner answers an activity (ADR 0048). */
+export const ACTIVITY_MODE: Record<ActivityMode, string> = {
+  write: "Write",
+  speak: "Speak",
+  read_aloud: "Read aloud",
+  listen: "Listen, then answer",
 };
 
 /** Whether a learner would type this question's answer: it then passes no step of a W2 lesson (ADR 0045). */
@@ -56,6 +70,10 @@ interface Texts {
   bank: string;
   number: string;
   line: { min: string; max: string; step: string; on: boolean };
+  mode: ActivityMode;
+  rubric: string;
+  example: string;
+  passage: string;
 }
 
 export function textsOf(q: AddedQuestion): Texts {
@@ -93,6 +111,10 @@ export function textsOf(q: AddedQuestion): Texts {
       step: q.entry?.step ?? "1/4",
       on: q.answer_kind !== "numeric" || !!q.entry || !q.expected_numeric,
     },
+    mode: q.activity_mode ?? "write",
+    rubric: q.rubric ?? "",
+    example: q.example_answer ?? "",
+    passage: q.passage ?? "",
   };
 }
 
@@ -161,6 +183,15 @@ export function keyFields(
       };
     case "string_set":
       return { accepted_answers: lines(t.accepted) };
+    case "activity":
+      return {
+        activity_mode: t.mode,
+        ...(t.rubric.trim() ? { rubric: t.rubric.trim() } : {}),
+        ...(t.example.trim() ? { example_answer: t.example.trim() } : {}),
+        ...((t.mode === "read_aloud" || t.mode === "listen") && t.passage.trim()
+          ? { passage: t.passage.trim() }
+          : {}),
+      };
   }
 }
 
@@ -193,7 +224,7 @@ export function formatProblem(q: AddedQuestion): string | null {
         : null;
     case "matching":
       return (q.match_pairs ?? []).length < 3
-        ? "Write at least three pairs, one per line, as left = right."
+        ? "Fill in at least three pairs, each with both sides."
         : null;
     case "grouping": {
       if ((q.group_names ?? []).length < 2) return "Name at least two groups.";
@@ -232,7 +263,96 @@ export function formatProblem(q: AddedQuestion): string | null {
       return (q.accepted_answers ?? []).length
         ? null
         : "Give the answers to accept.";
+    case "activity":
+      if (!q.activity_mode) return "Choose how the learner answers.";
+      if (
+        (q.activity_mode === "read_aloud" || q.activity_mode === "listen") &&
+        !q.passage?.trim()
+      )
+        return "Give the passage from the chapter the learner reads or hears.";
+      return null;
   }
+}
+
+/** Matching pairs as rows of two fields (left matches right), kept in ``texts.pairs`` as one ``left = right`` line per pair. */
+function PairRows({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (pairs: string) => void;
+}) {
+  const parsed = value
+    .split("\n")
+    .filter((l) => l.trim())
+    .map((l) => sides(l) ?? ([l.trim(), ""] as const));
+  const rows: (readonly [string, string])[] = parsed.length
+    ? parsed
+    : [
+        ["", ""],
+        ["", ""],
+        ["", ""],
+      ];
+  const write = (next: (readonly [string, string])[]) =>
+    onChange(next.map(([l, r]) => `${l} = ${r}`).join("\n"));
+  const set = (i: number, side: 0 | 1, text: string) =>
+    write(
+      rows.map((row, k) =>
+        k !== i
+          ? row
+          : side === 0
+            ? ([text, row[1]] as const)
+            : ([row[0], text] as const),
+      ),
+    );
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className={label}>
+        Pairs: each left item matches the item on its right
+      </legend>
+      <p className="text-[11px] text-[#122D30]/50">
+        Learners see the right-hand column shuffled. Write at least three pairs.
+      </p>
+      {rows.map(([left, right], i) => (
+        <div key={i} className="flex items-center gap-2">
+          <input
+            className={field}
+            aria-label={`Pair ${i + 1}, left`}
+            value={left}
+            onChange={(e) => set(i, 0, e.target.value.replace(/=/g, ""))}
+          />
+          <span aria-hidden className="text-[#122D30]/40">
+            ↔
+          </span>
+          <input
+            className={field}
+            aria-label={`Pair ${i + 1}, right`}
+            value={right}
+            onChange={(e) => set(i, 1, e.target.value.replace(/=/g, ""))}
+          />
+          {rows.length > 1 && (
+            <Button
+              size="sm"
+              variant="tertiary"
+              aria-label={`Remove pair ${i + 1}`}
+              onClick={() => write(rows.filter((_, k) => k !== i))}
+            >
+              Remove
+            </Button>
+          )}
+        </div>
+      ))}
+      <div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => write([...rows, ["", ""]])}
+        >
+          Add a pair
+        </Button>
+      </div>
+    </fieldset>
+  );
 }
 
 /** The fields of one format. */
@@ -317,7 +437,9 @@ export function FormatFields({
         "Learners see them shuffled.",
       );
     case "matching":
-      return area("pairs", "Pairs (one per line, as left = right)", 4);
+      return (
+        <PairRows value={t.pairs} onChange={(pairs) => change({ pairs })} />
+      );
     case "grouping":
       return (
         <>
@@ -398,6 +520,45 @@ export function FormatFields({
           </p>
         </>
       );
+    case "activity":
+      return (
+        <>
+          <label className="flex flex-col gap-1 sm:max-w-[260px]">
+            <span className={label}>How the learner answers</span>
+            <select
+              className={field}
+              value={t.mode}
+              onChange={(e) => change({ mode: e.target.value as ActivityMode })}
+            >
+              {(Object.keys(ACTIVITY_MODE) as ActivityMode[]).map((m) => (
+                <option key={m} value={m}>
+                  {ACTIVITY_MODE[m]}
+                </option>
+              ))}
+            </select>
+          </label>
+          {area(
+            "rubric",
+            "What a good answer includes (optional)",
+            3,
+            "Learners never see this. Leave it empty and the tutor judges from the chapter.",
+          )}
+          {(t.mode === "read_aloud" || t.mode === "listen") &&
+            area(
+              "passage",
+              t.mode === "listen"
+                ? "Passage the learner hears (never shown)"
+                : "Passage the learner reads aloud",
+              4,
+              "Copy it exactly from the chapter.",
+            )}
+          {area("example", "An example of a good answer (optional)", 3)}
+          <p className="text-xs text-[#122D30]/60">
+            A free answer with no fixed key. Learners must try it to finish the
+            step, and can practise it again.
+          </p>
+        </>
+      );
   }
 }
 
@@ -428,5 +589,7 @@ export function keyText(q: AddedQuestion): string {
       return (q.blank_answers ?? []).map((a) => a[0]).join(", ");
     case "string_set":
       return (q.accepted_answers ?? []).join(" / ");
+    case "activity":
+      return `${ACTIVITY_MODE[q.activity_mode ?? "write"]}: a free answer, no fixed key`;
   }
 }

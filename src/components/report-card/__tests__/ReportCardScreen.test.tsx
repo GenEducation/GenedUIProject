@@ -220,6 +220,8 @@ describe("ReportCardScreen — the sections the new backend added", () => {
   it("draws each subject's trend from the weekly share of skills known, skipping weeks nothing was measured", async () => {
     renderWithBackend();
     // 25% to 75%: up 50 points (the section swaps from loading to the lines, so it is found again each time).
-    await waitFor(() => expect(within(screen.getByRole("region", { name: /subject trends/i })).getByText("+50%")).toBeInTheDocument());
+    await waitFor(() => expect(within(screen.getByRole("region", { name: /subject trends/i })).getByText("+50 pts")).toBeInTheDocument());
+    const trends = within(screen.getByRole("region", { name: /subject trends/i }));
+    expect(trends.getByLabelText("Up 50 points since b")).toBeInTheDocument();
   });
 });

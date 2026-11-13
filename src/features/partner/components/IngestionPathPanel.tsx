@@ -519,14 +519,14 @@ function NextStepBanner({
           <p className="text-sm font-black text-[#122D30]">{copy.title}</p>
           <p className="text-[11px] text-[#122D30]/70">{copy.body}</p>
         </div>
-        {outcome.next_step === "add_questions" && onAddQuestions && (
+        {(outcome.next_step === "add_questions" || outcome.next_step === "review_questions") && onAddQuestions && (
           <Button
             size="sm"
             pill
             leadingIcon={<PenLine size={13} />}
             onClick={onAddQuestions}
           >
-            Add questions
+            Review decisions
           </Button>
         )}
         {UPLOAD_STEPS.has(outcome.next_step) && onUploadAgain && (

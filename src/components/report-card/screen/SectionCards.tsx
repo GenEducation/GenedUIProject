@@ -85,8 +85,6 @@ function HabitsBody({ data, help }: { data: ActivityData; help: AnswerHelp | nul
   if (days.length === 0 || days.every((p) => p.answers === 0 && p.active_days === 0 && p.minutes === 0)) {
     return <p className={EMPTY}>This fills in as lessons are worked through: the days studied, the time spent and the streak.</p>;
   }
-  const peak = Math.max(1, ...days.map((p) => p.answers));
-
   return (
     <div className="flex flex-col gap-4">
       <dl className="grid grid-cols-3 divide-x divide-[var(--rs-line)]">
@@ -95,26 +93,7 @@ function HabitsBody({ data, help }: { data: ActivityData; help: AnswerHelp | nul
         <Stat label="Study time" value={formatEstimate(minutes)} hint="Estimated" />
       </dl>
 
-      {/* One bar a day, its height the answers given; an empty day keeps a small mark so the gaps read as gaps. */}
-      <div>
-        <div className="flex h-14 items-end gap-[3px]" role="img" aria-label={`Answers each day over the last ${days.length} days: ${active} active`}>
-          {days.map((p) => (
-            <span
-              key={p.period}
-              title={`${dayLabel(p.period)}: ${plural(p.answers, "answer")}${p.minutes > 0 ? `, about ${formatEstimate(p.minutes)}` : ""}`}
-              className="min-w-0 flex-1 rounded-[3px]"
-              style={{
-                height: p.answers > 0 ? `${Math.max(18, (p.answers / peak) * 100)}%` : p.active_days > 0 ? "12%" : "6%",
-                background: p.answers > 0 ? "var(--rs-brand)" : p.active_days > 0 ? "var(--rs-line-strong)" : "var(--rs-track)",
-              }}
-            />
-          ))}
-        </div>
-        <div className="mt-1.5 flex justify-between text-[11px] text-[var(--rs-ink-soft)]">
-          <span>{dayLabel(days[0].period)}</span>
-          <span>Today</span>
-        </div>
-      </div>
+      <DailyBars days={days} active={active} streak={streak?.current_streak ?? 0} />
 
       {help && help.correct_alone + help.correct_with_help > 0 && (
         <div className="border-t border-[var(--rs-line)] pt-4">
@@ -125,6 +104,120 @@ function HabitsBody({ data, help }: { data: ActivityData; help: AnswerHelp | nul
       {series.measured_since && (partial || minutes === 0) && (
         <p className="text-[11.5px] leading-snug text-[var(--rs-ink-soft)]">Study time is tracked from {dayLabel(series.measured_since)}; earlier days show answers only.</p>
       )}
+    </div>
+  );
+}
+
+const weekday = (iso: string) =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+
+/** How many of the last days make the current streak: the trailing run of active days (ending today or yesterday), at most `streak`. */
+function streakRun(days: ActivityData["series"]["periods"], streak: number): number {
+  if (streak <= 0) return 0;
+  const on = (i: number) => days[i] && (days[i].active_days > 0 || days[i].answers > 0);
+  let end = days.length - 1;
+  if (!on(end)) end -= 1; // today not studied yet: the streak still stands from yesterday
+  let run = 0;
+  while (end - run >= 0 && on(end - run) && run < streak) run += 1;
+  return run;
+}
+
+/**
+ * One bar a day, its height the answers given, on a scale that starts at zero and is named by its busiest day. A day opened
+ * without answers keeps a short grey mark and an empty day a stub, so gaps read as gaps. A week's first day is labelled,
+ * today is marked, and the days of the current streak are underlined: the streak number above points at real days.
+ */
+function DailyBars({ days, active, streak }: { days: ActivityData["series"]["periods"]; active: number; streak: number }) {
+  const [hover, setHover] = useState<number | null>(null);
+  const peak = Math.max(1, ...days.map((p) => p.answers));
+  const run = streakRun(days, streak);
+  const last = days.length - 1;
+  const runEnd = days[last].active_days > 0 || days[last].answers > 0 ? last : last - 1;
+  const runStart = runEnd - run + 1;
+  const ticks = days.map((_, i) => i).filter((i) => (last - i) % 7 === 0 && i !== last && i > 3 && i < last - 3);
+  const shown = hover === null ? null : days[hover];
+  const at = (i: number) => ((i + 0.5) / days.length) * 100;
+
+  return (
+    <div>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <p className="text-[12.5px] font-semibold text-[var(--rs-ink)]">Answers each day</p>
+        <ul className="flex items-center gap-3 text-[11px] text-[var(--rs-ink-soft)]" aria-hidden>
+          <li className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px] bg-[var(--rs-brand)]" />Answered</li>
+          <li className="flex items-center gap-1.5"><span className="h-1.5 w-2.5 rounded-[2px] bg-[var(--rs-line-strong)]" />Opened only</li>
+          {run > 0 && <li className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-[var(--rs-citron-deep)]" />Streak day</li>}
+        </ul>
+      </div>
+
+      {/* The plot leaves a gutter on the right for the scale's number; bars, streak and dates share the plot's width. */}
+      <div className="relative pr-7" onMouseLeave={() => setHover(null)}>
+        <span aria-hidden className="pointer-events-none absolute right-0 top-0 -translate-y-1/2 text-[10.5px] tabular-nums text-[var(--rs-ink-soft)]">{peak}</span>
+        <div className="relative">
+          {/* The scale: zero at the foot, the busiest day at the top, nothing in between. */}
+          <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 border-t border-dashed border-[var(--rs-line-strong)]" />
+          <div
+            className="flex h-[72px] items-end gap-[2px] border-b border-[var(--rs-line-strong)]"
+            role="img"
+            aria-label={`Answers each day over the last ${days.length} days: ${active} active`}
+          >
+            {days.map((p, i) => {
+              const answered = p.answers > 0;
+              const opened = !answered && p.active_days > 0;
+              return (
+                <span
+                  key={p.period}
+                  onMouseEnter={() => setHover(i)}
+                  className={`flex h-full min-w-0 flex-1 cursor-default items-end ${i === last ? "rounded-t-[5px] bg-[var(--rs-citron)]/30" : ""}`}
+                >
+                  <span
+                    className="w-full rounded-t-[4px] transition-opacity duration-150"
+                    style={{
+                      height: answered ? `${Math.max(10, (p.answers / peak) * 100)}%` : opened ? "8%" : "3%",
+                      background: answered ? "var(--rs-brand)" : opened ? "var(--rs-line-strong)" : "var(--rs-track)",
+                      opacity: hover === null || hover === i ? 1 : 0.45,
+                    }}
+                  />
+                </span>
+              );
+            })}
+          </div>
+
+          {/* Under each bar: a dot for a day of the current streak, and a pointer under today. Same columns as the bars. */}
+          <div aria-hidden className="mt-1 flex h-2 gap-[2px]">
+            {days.map((p, i) => (
+              <span key={p.period} className="flex min-w-0 flex-1 justify-center">
+                {i === last ? (
+                  <span className="h-0 w-0 border-x-[4px] border-b-[5px] border-x-transparent border-b-[var(--rs-ink)]" />
+                ) : run > 0 && i >= runStart && i <= runEnd ? (
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--rs-citron-deep)]" />
+                ) : null}
+              </span>
+            ))}
+          </div>
+
+          <div aria-hidden className="relative mt-1.5 h-4 text-[11px] text-[var(--rs-ink-soft)]">
+            <span className="absolute left-0">{dayLabel(days[0].period)}</span>
+            {ticks.map((i) => (
+              <span key={i} className="absolute -translate-x-1/2 tabular-nums" style={{ left: `${at(i)}%` }}>{dayLabel(days[i].period)}</span>
+            ))}
+            <span className="absolute right-0 font-semibold text-[var(--rs-ink)]">Today</span>
+          </div>
+        </div>
+
+        {shown && hover !== null && (
+          <div
+            role="status"
+            className="pointer-events-none absolute bottom-full z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded-xl bg-[var(--rs-ink)] px-2.5 py-1.5 text-[11.5px] leading-tight text-white shadow-lg"
+            style={{ left: `clamp(60px, ${at(hover)}%, calc(100% - 60px))` }}
+          >
+            <span className="block font-semibold">{hover === last ? "Today" : weekday(shown.period)}</span>
+            <span className="block text-white/80">
+              {shown.answers > 0 ? plural(shown.answers, "answer") : shown.active_days > 0 ? "Opened, no answers" : "Not studied"}
+              {shown.minutes > 0 ? ` · about ${formatEstimate(shown.minutes)}` : ""}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -152,14 +245,23 @@ export function IndependenceBar({ help, className = "" }: { help: AnswerHelp; cl
   const alone = Math.round((help.correct_alone / right) * 100);
   return (
     <div className={className}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-[12.5px]">
-        <span className="font-semibold text-[var(--rs-ink)]">{alone}% of right answers on their own</span>
-        <span className="text-[var(--rs-ink-soft)]">{help.correct_alone} alone · {help.correct_with_help} with help · {plural(help.hints_used, "hint")}</span>
+      <p className="text-[12.5px] font-semibold text-[var(--rs-ink)]">{alone}% of right answers on their own</p>
+      <div className="mt-2 flex h-2.5 gap-[2px] overflow-hidden rounded-full bg-[var(--rs-track)]" role="img" aria-label={`${help.correct_alone} right alone, ${help.correct_with_help} right with help`}>
+        {help.correct_alone > 0 && <span className="rounded-full" style={{ width: `${alone}%`, background: "var(--rs-brand)" }} />}
+        {help.correct_with_help > 0 && <span className="rounded-full" style={{ width: `${100 - alone}%`, background: "var(--rs-citron-deep)" }} />}
       </div>
-      <div className="mt-1.5 flex h-2 gap-0.5 overflow-hidden rounded-full bg-[var(--rs-track)]" role="img" aria-label={`${help.correct_alone} right alone, ${help.correct_with_help} right with help`}>
-        <span className="rounded-full" style={{ width: `${alone}%`, background: "var(--rs-brand)" }} />
-        <span className="rounded-full" style={{ width: `${100 - alone}%`, background: "var(--rs-citron-deep)" }} />
-      </div>
+      {/* The legend names both parts with their counts; hints are a separate count, not a third part of the bar. */}
+      <ul className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-[var(--rs-ink-soft)]">
+        <li className="flex items-center gap-1.5">
+          <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--rs-brand)]" />
+          On their own <span className="font-semibold tabular-nums text-[var(--rs-ink)]">{help.correct_alone}</span>
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--rs-citron-deep)]" />
+          With help <span className="font-semibold tabular-nums text-[var(--rs-ink)]">{help.correct_with_help}</span>
+        </li>
+        <li className="ml-auto">{plural(help.hints_used, "hint")} used</li>
+      </ul>
     </div>
   );
 }

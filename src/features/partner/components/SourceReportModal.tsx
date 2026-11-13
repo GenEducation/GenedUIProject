@@ -13,6 +13,7 @@ import {
   Images,
   Loader2,
   PenLine,
+  Play,
   ShieldCheck,
   Upload,
   UserRound,
@@ -42,6 +43,7 @@ interface SourceReportModalProps {
   onUploadAgain?: (subject: Subject) => void;
   onReviewVisuals?: (subject: Subject) => void;
   onReviewRelease?: (subject: Subject) => void;
+  onPrepareRelease?: (subject: Subject) => void;
 }
 
 /** react-markdown hands each component its AST `node`; it must not reach the DOM. */
@@ -152,6 +154,7 @@ function Outcome({
   onUploadAgain,
   onReviewVisuals,
   onReviewRelease,
+  onPrepareRelease,
 }: SourceReportModalProps & { subject: Subject }) {
   const step: NextStep | undefined =
     subject.outcome?.next_step ??
@@ -176,12 +179,18 @@ function Outcome({
           icon: <ShieldCheck size={16} />,
           run: act(onReviewRelease),
         }
-      : step === "add_questions"
+      : step === "add_questions" || step === "review_questions"
         ? {
-            label: "Add questions",
+            label: "Review decisions",
             icon: <PenLine size={16} />,
             run: act(onAddQuestions),
           }
+        : step === "prepare_release"
+          ? {
+              label: "Prepare release",
+              icon: <Play size={16} />,
+              run: act(onPrepareRelease),
+            }
         : UPLOAD_STEPS.has(step)
           ? {
               label: "Upload again",

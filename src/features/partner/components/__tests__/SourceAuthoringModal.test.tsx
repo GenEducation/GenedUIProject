@@ -135,17 +135,17 @@ beforeEach(() => {
 
 async function openAuthoring() {
   render(<SubjectRegistry onUploadClick={vi.fn()} />);
-  fireEvent.click(await screen.findByRole("button", { name: "Add questions" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Review decisions" }));
   const dialog = await screen.findByRole("dialog");
   await within(dialog).findByText("SYNTHETIC picture question?");
   return dialog;
 }
 
 describe("Completing a chapter's questions", () => {
-  it("offers Add questions instead of a re-run that would end the same way", async () => {
+  it("offers Review decisions instead of a re-run that would end the same way", async () => {
     render(<SubjectRegistry onUploadClick={vi.fn()} />);
     expect(
-      await screen.findByRole("button", { name: "Add questions" }),
+      await screen.findByRole("button", { name: "Review decisions" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Run ingestion again" }),
@@ -199,7 +199,7 @@ describe("Completing a chapter's questions", () => {
       within(dialog).getByRole("button", { name: "Save for later" }),
     );
     expect(
-      await within(dialog).findByText(/3 questions saved/),
+      await within(dialog).findByText(/3 decisions saved/),
     ).toBeInTheDocument();
     expect(lastAuthored?.answers).toEqual({
       "item-a": { correct_option_index: 1 },
@@ -218,7 +218,7 @@ describe("Completing a chapter's questions", () => {
       }),
     ]);
     expect(
-      within(dialog).getByRole("button", { name: "Run with these questions" }),
+      within(dialog).getByRole("button", { name: "Prepare release" }),
     ).toBeInTheDocument();
   });
 
@@ -457,7 +457,7 @@ describe("The popup's layout", () => {
     fireEvent.click(within(picture).getByLabelText("SYNTHETIC red"));
     expect(within(picture).getByText("Answered")).toBeInTheDocument();
     fireEvent.click(
-      within(dialog).getByRole("button", { name: "Save and run" }),
+      within(dialog).getByRole("button", { name: "Save and prepare release" }),
     );
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
@@ -492,7 +492,7 @@ describe("Enter in the popup", () => {
     });
     fireEvent.keyDown(number, { key: "Enter" });
     expect(
-      await within(dialog).findByText(/1 question saved/),
+      await within(dialog).findByText(/1 decision saved/),
     ).toBeInTheDocument();
     expect(lastAuthored?.answers).toEqual({
       "item-b": { expected_numeric: "7", concept_key: "2.1:beta" },
