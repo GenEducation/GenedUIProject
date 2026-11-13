@@ -82,6 +82,7 @@ export function ChapterCorrectionModal({
   return (
     <AnimatePresence>
       <motion.div
+        key="backdrop"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -89,6 +90,7 @@ export function ChapterCorrectionModal({
         className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[100]"
       />
       <motion.div
+        key="dialog"
         role="dialog"
         aria-label="Correct the chapter's details"
         initial={{ opacity: 0, scale: 0.95, y: 20 }}

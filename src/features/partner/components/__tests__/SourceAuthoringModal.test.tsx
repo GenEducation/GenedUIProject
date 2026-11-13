@@ -243,7 +243,7 @@ describe("Completing a chapter's questions", () => {
 
     fireEvent.click(
       within(dialog).getByRole("button", {
-        name: "Accept the 1 checked questions",
+        name: "Accept the 1 checked question",
       }),
     );
     expect(await within(checked).findByText("Accepted")).toBeInTheDocument();
@@ -268,11 +268,118 @@ describe("Completing a chapter's questions", () => {
       ).toBe("rejected"),
     );
 
-    fireEvent.click(
+    // The step is still uncovered (a held concept): approving now would only send the chapter back to review.
+    expect(
       await within(dialog).findByRole("button", {
-        name: "Approve 1 accepted questions and run the chapter",
+        name: "Approve and run the chapter",
       }),
-    );
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByText("1 step still needs accepted questions"),
+    ).toBeInTheDocument();
+    const blocked = within(dialog).getByRole("list", {
+      name: "Steps that still need accepted questions",
+    });
+    expect(
+      within(blocked).getByRole("button", { name: /SYNTHETIC section 2\.1/ }),
+    ).toBeInTheDocument();
+  });
+
+  function coveredBank(): BankPackage {
+    const covered = structuredClone(BANK);
+    covered.findings = [];
+    covered.nodes[0] = {
+      ...covered.nodes[0],
+      quarantined: [],
+      status: "ready_for_review",
+      reviewable: 3,
+      draft_ready: true,
+      approved_ready: true,
+      publishable: true,
+      concepts: [covered.nodes[0].concepts[0]],
+    };
+    covered.questions[0].state = "accepted";
+    covered.summary = {
+      ...covered.summary,
+      accepted: 1,
+      approved_ready_nodes: 1,
+      publishable_nodes: 1,
+      incomplete_nodes: 0,
+    };
+    return covered;
+  }
+
+  it("says a current approval holds instead of asking for it again", async () => {
+    sourcesFixture.setBank(SID, {
+      ...coveredBank(),
+      approval: {
+        approved: true,
+        coverage_ready: true,
+        approved_at: "2026-11-13T07:47:15Z",
+      },
+    });
+    const dialog = await openAuthoring();
+    expect(await within(dialog).findByText(/^Approved/)).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", {
+        name: "Approve and run the chapter",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("asks again, and says why, when a change voided the approval", async () => {
+    sourcesFixture.setBank(SID, {
+      ...coveredBank(),
+      approval: {
+        approved: false,
+        coverage_ready: false,
+        approved_at: "2026-11-13T07:47:15Z",
+      },
+    });
+    const dialog = await openAuthoring();
+    expect(
+      await within(dialog).findByText(
+        /changed questions after your last approval/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", {
+        name: "Approve and run the chapter",
+      }),
+    ).toBeEnabled();
+  });
+
+  it("approves only once every step is covered by accepted questions", async () => {
+    const covered = structuredClone(BANK);
+    covered.findings = [];
+    covered.nodes[0] = {
+      ...covered.nodes[0],
+      quarantined: [],
+      status: "ready_for_review",
+      reviewable: 3,
+      draft_ready: true,
+      approved_ready: true,
+      publishable: true,
+      concepts: [covered.nodes[0].concepts[0]],
+    };
+    covered.questions[0].state = "accepted";
+    covered.summary = {
+      ...covered.summary,
+      accepted: 1,
+      approved_ready_nodes: 1,
+      publishable_nodes: 1,
+      incomplete_nodes: 0,
+    };
+    sourcesFixture.setBank(SID, covered);
+    const dialog = await openAuthoring();
+    expect(
+      await within(dialog).findByText(/The step is covered/),
+    ).toBeInTheDocument();
+    const approve = within(dialog).getByRole("button", {
+      name: "Approve and run the chapter",
+    });
+    expect(approve).toBeEnabled();
+    fireEvent.click(approve);
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
@@ -285,9 +392,7 @@ describe("Completing a chapter's questions", () => {
       name: "SYNTHETIC section 2.1",
     });
     expect(within(step).getByText(/Incomplete/)).toBeInTheDocument();
-    expect(
-      within(step).getByText(/only 1 of 3 checked, distinct questions/),
-    ).toBeInTheDocument();
+    expect(within(step).getByText(/1\/3 checked/)).toBeInTheDocument();
     expect(within(step).getByText(/On hold\./)).toBeInTheDocument();
     expect(
       within(step).getByText(/Why 1 question slot is still open/),
@@ -295,7 +400,9 @@ describe("Completing a chapter's questions", () => {
     expect(
       within(step).getByText(/didn't pass its checks/),
     ).toBeInTheDocument();
-    expect(within(dialog).getByText(/1 are incomplete/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("img", { name: "0 of 1 steps accepted" }),
+    ).toBeInTheDocument();
   });
 
   it("refuses a decision made on a question that changed meanwhile", async () => {
@@ -450,6 +557,34 @@ describe("Key rules", () => {
 });
 
 describe("Question formats (backend ADR 0045)", () => {
+  it("accepts a blank marked as ___ or as GenEd's numbered [1], once per answer", async () => {
+    const { formatProblem } = await import("../QuestionFormats");
+    const blanks = (prompt: string, answers: string[]) =>
+      formatProblem({
+        id: "q",
+        section_key: "2.1",
+        concept_key: "2.1:alpha",
+        origin: "ai_assisted",
+        answer_kind: "blanks",
+        prompt,
+        blank_answers: answers.map((a) => [a]),
+        word_bank: [...answers, "SYNTHETIC x", "SYNTHETIC y", "SYNTHETIC z"],
+      });
+    expect(
+      blanks("SYNTHETIC Maya plays chess, [1] Leo.", ["unlike"]),
+    ).toBeNull();
+    expect(
+      blanks("SYNTHETIC Maya plays chess, ___ Leo.", ["unlike"]),
+    ).toBeNull();
+    expect(blanks("SYNTHETIC [1] and [2].", ["a", "b"])).toBeNull();
+    expect(blanks("SYNTHETIC no blank here.", ["unlike"])).toMatch(
+      /Mark the blank/,
+    );
+    expect(blanks("SYNTHETIC only [1].", ["a", "b"])).toMatch(
+      /each of the 2 blanks/,
+    );
+  });
+
   it("builds each non-typing format's key from what the partner wrote, and marks typed formats", async () => {
     const { keyFields, needsKeyboard, textsOf, formatProblem } =
       await import("../QuestionFormats");

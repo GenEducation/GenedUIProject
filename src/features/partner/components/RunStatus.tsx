@@ -2,7 +2,7 @@
 
 import React from "react";
 import type { Subject } from "../store/usePartnerStore";
-import { NEXT_STEP_COPY, checkLabel, elapsed } from "../utils/ingestionPath";
+import { NEXT_STEP_COPY, checkLabel, elapsed, nextStepCopy } from "../utils/ingestionPath";
 import { nowLine, runPhases, type Phase } from "../utils/ingestionPhases";
 import { shownPercent } from "../utils/ingestionProgress";
 
@@ -202,7 +202,7 @@ export function RunOutcome({ subject }: { subject: Subject }) {
   }
   const copy = awaitingAnswers
     ? NEXT_STEP_COPY.answer_questions
-    : NEXT_STEP_COPY[next];
+    : nextStepCopy(next);
   const first = subject.outcome?.findings[0];
   const why = first
     ? `${checkLabel(first.check)} · ${first.owner === "partner" ? "you can fix this" : "GenEd will look at this"}`

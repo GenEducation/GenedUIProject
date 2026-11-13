@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { blankPieces } from "@/features/learning/check/blankText";
 import type { AddedAnswerKind, AddedQuestion } from "../types/sources";
 
 /**
@@ -203,12 +204,24 @@ export function formatProblem(q: AddedQuestion): string | null {
         return "Sort at least three entries into the groups you named, as entry = group.";
       return null;
     }
-    case "blanks":
-      if (!(q.blank_answers ?? []).length || !q.prompt.includes("___"))
-        return "Write ___ in the question for each blank, and its answer.";
+    case "blanks": {
+      const answers = q.blank_answers ?? [];
+      if (!answers.length)
+        return "Give the answer of each blank, one per line.";
+      // The learner's screen places blanks the same way: `___` (the next blank) or `[1]`, `[2]`… (that blank), once each.
+      if (
+        !blankPieces(
+          q.prompt,
+          answers.map((_, i) => String(i + 1)),
+        )
+      )
+        return answers.length === 1
+          ? "Mark the blank in the question once, as ___ or [1]."
+          : `Mark each of the ${answers.length} blanks in the question once, as ___ or [1], [2]… in order.`;
       return (q.word_bank ?? []).length < 4
         ? "Give a word bank of at least four words (the answers count)."
         : null;
+    }
     case "numeric":
       if (!q.expected_numeric?.trim())
         return "Give the number that answers it.";
@@ -319,7 +332,7 @@ export function FormatFields({
             "blanks",
             "The answer of each blank, in order (one per line)",
             3,
-            "Write ___ in the question for each blank.",
+            "Mark each blank in the question as ___, or as [1], [2]… in order.",
           )}
           {area("bank", "Other words for the word bank (one per line)", 2)}
         </>

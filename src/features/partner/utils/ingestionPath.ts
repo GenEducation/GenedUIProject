@@ -352,6 +352,16 @@ export const NEXT_STEP_COPY: Record<
     body: "This run didn't pass: GenEd found too few questions it can check, and a chapter can't be published without them. Review the questions GenEd prepared, give the answers of printed ones, or write your own. Every question is reviewed before students see it.",
     tone: "problem",
   },
+  review_questions: {
+    title: "Review the questions GenEd prepared",
+    body: "Some lesson steps don't have enough checked questions yet. Review the highlighted steps: accept or edit a proposal, or add your own.",
+    tone: "problem",
+  },
+  prepare_release: {
+    title: "Prepare the release",
+    body: "Your decisions are saved. Prepare the release to apply them; the pages already read are reused.",
+    tone: "action",
+  },
   upload_pages_with_questions: {
     title: "Upload pages that include the exercises",
     body: "These pages have no questions GenEd can check, and a chapter needs them to be taught. Running the same upload again would end the same way.",
@@ -393,6 +403,11 @@ export const NEXT_STEP_COPY: Record<
     tone: "problem",
   },
 };
+
+/** The copy for a next step. A step this build doesn't know yet (a newer server) reads as GenEd's to look at, never a crash. */
+export function nextStepCopy(step: NextStep): (typeof NEXT_STEP_COPY)[NextStep] {
+  return NEXT_STEP_COPY[step] ?? NEXT_STEP_COPY.contact_gened;
+}
 
 /** Next steps fixed by correcting the chapter's details rather than uploading again. */
 export const CORRECTION_STEPS: ReadonlySet<NextStep> = new Set([

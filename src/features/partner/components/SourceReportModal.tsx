@@ -29,7 +29,7 @@ import {
   type ReportProblem,
   type ReportQuestion,
 } from "../utils/reportSummary";
-import { NEXT_STEP_COPY, UPLOAD_STEPS } from "../utils/ingestionPath";
+import { nextStepCopy, UPLOAD_STEPS } from "../utils/ingestionPath";
 import type { Subject } from "../store/usePartnerStore";
 import type { NextStep } from "../types/sources";
 
@@ -161,7 +161,7 @@ function Outcome({
         : "review_release"
       : undefined);
   if (!step || step === "wait" || step === "start") return null;
-  const copy = NEXT_STEP_COPY[step];
+  const copy = nextStepCopy(step);
   const act = (fn?: (s: Subject) => void) =>
     fn
       ? () => {

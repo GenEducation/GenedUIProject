@@ -86,6 +86,7 @@ export function canRunFromRow(
   return (
     outcome.next_step === "run_again" ||
     outcome.next_step === "start" ||
+    outcome.next_step === "prepare_release" ||
     STARTABLE_STATES.has(subject.state)
   );
 }
@@ -838,7 +839,19 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                             )}
 
                             {canRunAgain &&
-                              (subject.state === "registered" ? (
+                              (next === "prepare_release" ? (
+                                <Button
+                                  pill
+                                  leadingIcon={<RotateCw size={16} />}
+                                  loading={busy}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void runAction(subject, startIngestion);
+                                  }}
+                                >
+                                  Prepare release
+                                </Button>
+                              ) : subject.state === "registered" ? (
                                 <Button
                                   iconOnly
                                   variant="outline"

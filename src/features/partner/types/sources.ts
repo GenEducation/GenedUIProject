@@ -175,6 +175,10 @@ export type NextStep =
   /** Questions need their picture, but no redraw waits for you: the drawing failed its own checks. Run again. */
   | "redraw_pictures"
   | "add_questions"
+  /** GenEd's questions or activities don't yet cover every lesson step: review the highlighted steps in the authoring screen. */
+  | "review_questions"
+  /** The partner changed questions, pictures, chapter details or outcomes since the run: process the saved decisions. */
+  | "prepare_release"
   | "upload_pages_with_questions"
   | "upload_clearer_pdf"
   | "upload_again"
@@ -768,6 +772,13 @@ export interface BankPackage {
     publishable_nodes: number;
     open_issues: number;
     authoring: BankRun["state"] | null;
+  };
+  /** The latest approval: `approved` while it still matches the accepted questions and plan (a later change voids it);
+   * `coverage_ready` when it also covered every step, so the chapter's run can pass. Absent from an older backend. */
+  approval?: {
+    approved: boolean;
+    coverage_ready: boolean;
+    approved_at: string | null;
   };
   /** Bulk acceptance only: questions skipped because an independent check doubts them, and stale ones. */
   skipped?: string[];

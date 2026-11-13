@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/Button";
 import type { Subject } from "../store/usePartnerStore";
 import {
   ATTENTION_COUNTS,
-  NEXT_STEP_COPY,
+  nextStepCopy,
   UPLOAD_STEPS,
   checkLabel,
   COUNT_LABELS,
@@ -502,7 +502,7 @@ function NextStepBanner({
   const outcome = subject.outcome;
   if (!outcome || outcome.next_step === "wait" || outcome.next_step === "start")
     return null;
-  const copy = NEXT_STEP_COPY[outcome.next_step];
+  const copy = nextStepCopy(outcome.next_step);
   const yours = outcome.findings.filter((f) => f.owner === "partner");
   const ours = outcome.findings.filter((f) => f.owner === "gened");
   return (
