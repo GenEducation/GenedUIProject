@@ -77,9 +77,12 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
   const sections = useMemo(() => bookSections(nodeSections, texts.length > 0, readingRole), [nodeSections, texts, readingRole]);
   const hasBook = texts.length > 0 || sections.length > 0;
   const opens = opensWithStep(readingRole, texts);
-  const [chosen, setChosen] = useState<{ nodeId: string | null; open: boolean } | null>(null);
-  const bookOpen = chosen !== null && chosen.nodeId === nodeId ? chosen.open : opens;
-  const setBookOpen = (open: boolean) => setChosen({ nodeId, open });
+  // The tutor presenting a check closes the book, which would cover the check's card; the Book button opens it again.
+  const presented = node?.check_presented ? `${node.instance_node_id}:${node.check_item_ids.find((id) => !node.answered_item_ids.includes(id)) ?? ""}` : null;
+  const [chosen, setChosen] = useState<{ nodeId: string | null; open: boolean; presented: string | null } | null>(null);
+  const bookOpen =
+    chosen !== null && chosen.nodeId === nodeId && chosen.presented === presented ? chosen.open : presented ? false : opens;
+  const setBookOpen = (open: boolean) => setChosen({ nodeId, open, presented });
 
   const stepRef = useRef<HTMLDivElement>(null);
   // The canvas frames figures in what the overlays leave clear: the title band, the docked question card, the filmstrip.

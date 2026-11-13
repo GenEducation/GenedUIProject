@@ -487,6 +487,16 @@ export const useLessonStore = create<LessonState>((set, get) => {
     closeGap();
   };
 
+  /** A presented check on this step that the loaded payload cannot draw: a W2 payload carries only the check selected next, so
+   * after an answer (or a newly presented check) the step's payload is read again, or the card would show nothing. */
+  const missingCheck = (instance: InstanceState | null) => {
+    const node = instance?.active_node;
+    if (!node || !node.check_presented) return false;
+    const next = node.check_item_ids.find((id) => !node.answered_item_ids.includes(id));
+    const loaded = get().payload?.node;
+    return next !== undefined && loaded?.id === node.node_id && !loaded.check_items.some((c) => c.id === next);
+  };
+
   const applyInstance = (instance: InstanceState, cause: string | null = null) => {
     const previous = get().instance;
     const beforeNode = previous?.active_node;
@@ -525,7 +535,12 @@ export const useLessonStore = create<LessonState>((set, get) => {
               return false;
             },
           )
-        : Promise.resolve(true);
+        : missingCheck(instance)
+          ? loadNode(instance.id).then(
+              () => true,
+              () => false,
+            )
+          : Promise.resolve(true);
     // The lesson moved on to a new node: it opens with the tutor speaking first (backend ADR 0006 D7, D17: the client asks).
     // In a voice session the socket reconnects for the new node and the server opens it, so only a text session asks here.
     // Asked once the new step's payload and pictures are read (so a figure it presents can be shown) and the step left is
@@ -645,15 +660,12 @@ export const useLessonStore = create<LessonState>((set, get) => {
   const rereadAfterReply = async (turnId: string) => {
     const { instance, instanceId } = get();
     const node = instance?.active_node;
-    if (!instanceId || !node || node.check_presented !== false) return;
+    if (!instanceId || !node || (node.check_presented !== false && !missingCheck(instance))) return;
     if (currentTurn(turnId)?.status !== "completed") return;
     try {
       const current = await lessonService.instance(instanceId);
       if (get().instanceId !== instanceId) return;
-      applyInstance(current);
-      if (node.activities?.length && current.active_node?.instance_node_id === node.instance_node_id && current.active_node.check_presented) {
-        await loadNode(instanceId);
-      }
+      applyInstance(current); // reads the step's payload again when the presented check is not in it
     } catch (error) {
       console.warn("The lesson state couldn't be read after the reply:", asError(error).request_id, asError(error).message ?? error);
     }
