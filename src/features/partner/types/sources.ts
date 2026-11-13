@@ -803,6 +803,8 @@ export interface StepAction {
   concept_key?: string;
   concept?: string;
   obligation_key?: string;
+  /** How many more questions the objective needs. */
+  needed?: number | null;
   detail?: string;
 }
 

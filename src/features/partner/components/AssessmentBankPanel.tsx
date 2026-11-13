@@ -18,6 +18,7 @@ import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
 import { ACTIVITY_MODE, KIND_LABEL, keyText } from "./QuestionFormats";
 import { LearnerPreview } from "./LearnerPreview";
+import { GenerationStatus, pendingSteps } from "./GenerationStatus";
 import {
   StepGuide,
   blankFor,
@@ -699,15 +700,20 @@ export function AssessmentBankPanel({
             </div>
           ))}
         </dl>
-        {preparing && (
-          <p
-            role="status"
-            className="flex items-center gap-2 text-xs font-bold text-violet-700"
-          >
-            <Sparkles size={14} aria-hidden /> GenEd is preparing questions.
-            This page updates by itself.
-          </p>
-        )}
+        <GenerationStatus
+          runs={pkg.runs}
+          titles={Object.fromEntries(
+            pkg.nodes.map((n) => [n.section_key, n.title]),
+          )}
+          waiting={pkg.nodes
+            .map((n) => n.section_key)
+            .filter((k) =>
+              pkg.questions.some(
+                (q) => q.section_key === k && q.state === "draft",
+              ),
+            )}
+          onShow={openStep}
+        />
         {s.publishable_nodes < s.nodes && s.nodes > 0 && (
           <p className="text-xs text-[#122D30]/60">
             {s.publishable_nodes} of {s.nodes} steps can be published now. Every
@@ -719,6 +725,7 @@ export function AssessmentBankPanel({
       {pkg.actions && (
         <StepGuide
           steps={pkg.actions}
+          generating={pendingSteps(pkg.runs)}
           accepted={s.accepted}
           busy={busy}
           onOpen={openStep}

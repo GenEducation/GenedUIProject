@@ -13,7 +13,8 @@ import type {
 export interface WriteTarget {
   sectionKey: string;
   conceptKey: string;
-  obligationKey: string;
+  /** The objective's key; absent for a kept concept GenEd's plan has no objectives for. */
+  obligationKey?: string;
   statement: string;
   activity: boolean;
 }
@@ -48,7 +49,7 @@ export function partnerQuestion(
   return {
     body: { ...body, origin: "partner" },
     meta: {
-      obligation_keys: [target.obligationKey],
+      obligation_keys: [target.obligationKey ?? "concept"],
       evidence_kind: activity
         ? body.activity_mode === "write"
           ? "produce_written"
@@ -82,7 +83,9 @@ export function describe(action: StepAction): string {
     case "add_activity":
       return `“${action.concept}” asks learners to write, speak, read aloud or listen (${action.detail}), and has no activity yet. Write one, or ask GenEd to propose one.`;
     case "add_question":
-      return `“${action.concept}” needs more questions to check “${action.detail}”. Write one, or ask GenEd for more.`;
+      return action.obligation_key
+        ? `“${action.concept}” needs ${action.needed ? plural(action.needed, "more question") : "more questions"} to check “${action.detail}” (three different questions, or two if one is a matching, ordering, grouping, fill-in or pick-several question). Write one, or ask GenEd for more.`
+        : `You kept “${action.concept}”, and it has no questions yet. Write one; it counts once you accept it.`;
     case "more_questions":
       return `This step needs ${plural(action.count ?? 1, "more checked question")}. Accept or write ${action.count === 1 ? "one" : "some"}, or ask GenEd for more.`;
   }
@@ -91,6 +94,7 @@ export function describe(action: StepAction): string {
 /** The list at the top of the review: every step that blocks publication, with its reason and the buttons that fix it. */
 export function StepGuide({
   steps,
+  generating = new Set<string>(),
   accepted,
   busy,
   onOpen,
@@ -99,6 +103,8 @@ export function StepGuide({
   onAsk,
 }: {
   steps: StepActions[];
+  /** Steps GenEd is writing questions for right now (``*``: the whole chapter). */
+  generating?: Set<string>;
   accepted: number;
   busy: string | null;
   onOpen: (sectionKey: string) => void;
@@ -139,6 +145,12 @@ export function StepGuide({
             className="rounded-xl border border-[#122D30]/8 p-3 flex flex-col gap-2"
           >
             <p className="text-xs font-black text-[#122D30]">{step.title}</p>
+            {(generating.has(step.section_key) || generating.has("*")) && (
+              <p role="status" className="text-xs font-bold text-violet-700">
+                GenEd is writing questions for this step. They appear here for
+                your decision when ready; you can write your own meanwhile.
+              </p>
+            )}
             {step.actions.map((a, i) => (
               <div key={i} className="flex flex-col gap-1.5">
                 <p className="text-xs text-[#122D30]/75">{describe(a)}</p>
@@ -158,15 +170,14 @@ export function StepGuide({
                     </Button>
                   )}
                   {(a.kind === "add_activity" || a.kind === "add_question") &&
-                    a.concept_key &&
-                    a.obligation_key && (
+                    a.concept_key && (
                       <Button
                         size="sm"
                         onClick={() =>
                           onWrite({
                             sectionKey: step.section_key,
                             conceptKey: a.concept_key!,
-                            obligationKey: a.obligation_key!,
+                            obligationKey: a.obligation_key,
                             statement: a.detail ?? "",
                             activity: a.kind === "add_activity",
                           })
@@ -184,6 +195,7 @@ export function StepGuide({
                       size="sm"
                       variant="outline"
                       loading={busy === `more:${step.section_key}`}
+                      disabled={generating.has(step.section_key)}
                       onClick={() => onAsk(step.section_key)}
                     >
                       Ask GenEd to propose
