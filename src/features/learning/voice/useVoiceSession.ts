@@ -156,7 +156,7 @@ export function useVoiceSession(active: boolean, language: string | null): Voice
      * whose audio began and played to its end confirms the check (backend ADR 0035 decision 5); a barge-in, a mute, a failed
      * or cancelled reply and a reconnect confirm nothing.
      */
-    const replies = new Map<number, { mark: SpokenCheckMark | null; began: boolean; cut: boolean }>();
+    const replies = new Map<number, { mark: SpokenCheckMark | null; began: boolean; cut: boolean; drained?: boolean; completed?: boolean }>();
     let currentReply: number | null = null;
     const cutAllReplies = () => replies.forEach((r) => (r.cut = true));
     const update = (patch: Partial<VoiceSession>) => !closed && setSession((s) => ({ ...s, ...patch }));
@@ -177,7 +177,12 @@ export function useVoiceSession(active: boolean, language: string | null): Voice
             const no = e.responseNo ?? currentReply ?? -1;
             const reply = replies.get(no);
             if (reply) {
-              replies.delete(no);
+              reply.drained = e.ev === "drained" && reply.began && !reply.cut;
+              const turnId = turnByResponse.get(no);
+              if (reply.drained && reply.completed && turnId) {
+                void store.contentPlaybackEnded(turnId).catch(() => {});
+                replies.delete(no);
+              } else if (!reply.drained) replies.delete(no);
               // `drained`: the audio played to its end. `stopped`: it was cut off (barge-in, mute, cancel): nothing is confirmed.
               void store.checkPlaybackEnded(reply.mark, e.ev === "drained" && reply.began && !reply.cut);
             }
@@ -224,6 +229,14 @@ export function useVoiceSession(active: boolean, language: string | null): Voice
             }
             const turnId = turnByResponse.get(m.response_no);
             if (turnId) store.voiceTurnEnded(turnId, m.reason);
+            const playback = replies.get(m.response_no);
+            if (playback) {
+              playback.completed = m.reason === "completed";
+              if (playback.completed && playback.drained && !playback.cut && turnId) {
+                void store.contentPlaybackEnded(turnId).catch(() => {});
+                replies.delete(m.response_no);
+              } else if (!playback.completed) replies.delete(m.response_no);
+            }
           } else if (m.type === "error" && m.code === "language_not_enabled") {
             goOffline(`Voice isn't available in ${languageLabel(language)} (${language}) right now. Choose another language, or keep going in the chat.`);
             refused = true;

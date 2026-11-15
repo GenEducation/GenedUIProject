@@ -148,12 +148,30 @@ const EN = {
   revisiting: "Revisiting skills",
   /** The learner chose to go over a section again (`active_node.reason` "revisit_review"). */
   reviewingSection: "Revisiting a section",
+  feedbackLocked: "Listen to your tutor's feedback first.",
+  chapterPosition: "Part {n} of {total} of the chapter",
+  toRevisit: "{n} to come back to",
+  questionLocked: "Listen to your tutor first. Then this question opens again.",
+  questionRetry: "One more try at this one.",
+  questionSetAside: "We'll come back to this one.",
+  questionReturns: "This one is back. Have another go.",
+  questionGuided: "Let's work it through together. Enter the answer when you're ready, if you like.",
+  ideasProgress: "{n} of {total} ideas",
+  owedIdeas: "{n} we'll come back to",
+  comeBackLater: "You've finished this chapter, except for a few ideas. Come back later and we'll try them again.",
+  fromYourBook: "From your book",
+  bookAudioFailed: "The book audio couldn't be loaded. You can read it here.",
+  listenToBook: "Listen to this part of your book",
 } as const;
 
 export type UiKey = keyof typeof EN;
 type Table = Partial<Record<UiKey, string>>;
 
 const HI: Table = {
+  feedbackLocked: "पहले अपने शिक्षक की बात सुनें।",
+  chapterPosition: "अध्याय का भाग {n} / {total}",
+  toRevisit: "{n} बाद में दोबारा",
+  fromYourBook: "आपकी किताब से",
   checkpoint: "चेकपॉइंट",
   quickCheck: "झटपट जाँच",
   yourAnswer: "आपका उत्तर",

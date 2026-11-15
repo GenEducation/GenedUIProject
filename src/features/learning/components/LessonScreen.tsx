@@ -31,6 +31,8 @@ const SIDE_PADDING = 32;
  *
  * Full-focus: no app sidebar, the header leads back out.
  */
+import { ContentPortion } from "./ContentPortion";
+
 export function LessonScreen({ instanceId }: { instanceId: string }) {
   const load = useLessonStore((s) => s.load);
   const reset = useLessonStore((s) => s.reset);
@@ -124,6 +126,8 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
         gridTemplate={mode === "wide" ? template : undefined}
         onOpenSteps={mode === "compact" ? () => setDrawerOpen(true) : undefined}
       />
+
+      <ContentPortion instanceId={instanceId} />
 
       {status === "error" ? (
         <div role="alert" className="m-4 lesson-panel mx-auto mt-16 max-w-md p-8 text-center">

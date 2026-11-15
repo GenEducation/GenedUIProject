@@ -100,7 +100,46 @@ export interface ActiveNode {
 }
 
 /** One student's run through a chapter's lesson plan. */
+export interface ContentLessonState {
+  phase: string;
+  unit_id: string | null;
+  portion_id: string | null;
+  pending_item_id: string | null;
+  feedback_attempt_id: string | null;
+  shown: boolean;
+  channel: "chat" | "voice";
+  taught_units: string[];
+  unresolved_units: string[];
+  /** The question's rung after a wrong answer (backend PRD v3 §3.5). Absent from an older server. */
+  stage?: "first" | "retry" | "return" | "guided";
+  /** In `feedback`: what happens to the question when the tutor's reply ends. */
+  after_feedback?: "resolve" | "retry" | "set_aside" | "guided" | "same" | null;
+  /** The question set aside after two wrong tries, coming back after re-teaching. */
+  set_aside_item_id?: string | null;
+  warmup?: boolean;
+  owed_check?: boolean;
+  /** The chapter is finished except for ideas with nothing to ask now. */
+  come_back_later?: boolean;
+}
+
+/** Chapter-first progress of a content-led lesson: units of the book, never replies or turns. */
+export interface ContentProgress {
+  unit_position: number;
+  unit_count: number;
+  taught: number;
+  to_revisit: number;
+  /** The active step's ideas covered so far, and how many it has (covered concepts only, never credit). */
+  ideas_covered?: number;
+  ideas_total?: number;
+  /** Ideas of the chapter still owed: "We'll come back to these". */
+  owed_ideas?: number;
+  /** Opening the lesson starts a reply: the first open, or a return after 30 minutes or more. */
+  opening_due?: boolean;
+}
+
 export interface InstanceState {
+  content_lesson?: ContentLessonState | null;
+  content_progress?: ContentProgress | null;
   id: string;
   chapter_id: string;
   state: "active" | "completed" | "abandoned";

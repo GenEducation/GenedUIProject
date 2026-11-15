@@ -363,6 +363,10 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
   useEffect(() => setLastResult(null), [node?.instance_node_id]);
   if (!instance || instance.state !== "active" || !node || !payload) return null;
 
+  // Content-led lessons (backend CL 3.4): after an answer the server holds feedback open until the tutor's reply to it has been
+  // delivered; nothing can be answered, hinted or presented meanwhile. The result note stays; no card is drawn over the feedback.
+  const feedbackOpen = instance.content_lesson?.phase === "feedback";
+
   const checks = new Map(payload.node.check_items.map((c) => [c.id, c]));
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
@@ -380,7 +384,51 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
   const reading = node.pending_reading;
   const unanswered = node.check_item_ids.filter((id) => !node.answered_item_ids.includes(id));
 
-  if (instance.next_action === "choose" && node.choice) {
+  // The recovery ladder (backend PRD v3 §3.5, §3.10): after a wrong answer the same question stays on screen, locked until the
+  // tutor's reply ends; after two it is set aside, visibly, and comes back; the last rung is worked through together. The server
+  // holds the lock; the card only shows it. Credit and mastery are never shown.
+  const content = instance.content_lesson;
+  const ladderItem = content ? (content.pending_item_id ?? content.set_aside_item_id ?? null) : null;
+  const ladderCheck = ladderItem ? checks.get(ladderItem) : undefined;
+  const stayingQuestion =
+    feedbackOpen && ladderCheck && content?.after_feedback && content.after_feedback !== "resolve";
+  const note = (key: Parameters<typeof t>[0], id: string) => (
+    <p role="status" aria-live="polite" className="lesson-hand mb-2 text-[17px]" data-testid={id}>
+      {t(key)}
+    </p>
+  );
+
+  if (stayingQuestion) {
+    body = (
+      <div className={cardClass} data-testid="question-locked" aria-disabled="true">
+        {note(content!.after_feedback === "set_aside" ? "questionSetAside" : "questionLocked", "feedback-lock")}
+        <p className="text-[16px] opacity-70">{ladderCheck!.prompt}</p>
+      </div>
+    );
+  } else if (feedbackOpen) {
+    body = (
+      <p role="status" aria-live="polite" className="lesson-hand text-[17px]" data-testid="feedback-lock">
+        {t("feedbackLocked")}
+      </p>
+    );
+  } else if (content?.phase === "question_ready" && content.set_aside_item_id && ladderCheck) {
+    body = (
+      <div className={cardClass} data-testid="question-set-aside" aria-disabled="true">
+        {note("questionSetAside", "set-aside-note")}
+        <p className="text-[16px] opacity-70">{ladderCheck.prompt}</p>
+      </div>
+    );
+  } else if (content?.phase === "question_open" && ladderCheck && content.stage && content.stage !== "first") {
+    const key = content.stage === "retry" ? "questionRetry" : content.stage === "return" ? "questionReturns" : "questionGuided";
+    body = (
+      <div data-testid={`question-${content.stage}`}>
+        {note(key, "ladder-note")}
+        <CheckCard key={`${ladderCheck.id}-${content.stage}`} check={ladderCheck} onResult={showResult} subject={subject} />
+      </div>
+    );
+  } else if (content?.phase === "complete" && content.come_back_later) {
+    body = note("comeBackLater", "come-back-later");
+  } else if (instance.next_action === "choose" && node.choice) {
     body = (
       <div className={cardClass}>
         <h2 className="lesson-hand text-[21px] font-bold">{t("roundTricky")}</h2>

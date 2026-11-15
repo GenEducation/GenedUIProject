@@ -81,6 +81,9 @@ interface LessonState {
   pageSessionId: string;
   /** The live voice session's id (the voice socket's `ready.session_id`); a reconnect is a new one. Null while there is none. */
   voiceSessionId: string | null;
+  /** The assigned portion's printed lines, as the server sent them: the book panel marks them (content-led lessons). */
+  contentSource: { portionId: string; lines: string[] } | null;
+  setContentSource: (source: { portionId: string; lines: string[] } | null) => void;
   /** A check whose last answer was refused as not delivered: a neutral "getting ready" note, never "incorrect". */
   notDeliveredItemId: string | null;
   /** Steps finished while this screen was open, oldest first (the backend has no full plan list yet). */
@@ -157,6 +160,15 @@ interface LessonState {
   spokenCheckAtStart: () => SpokenCheckMark | null;
   /** A tutor reply's audio ended. Only a completed playback confirms; an interrupted one, or one from an older session, sends nothing. */
   checkPlaybackEnded: (mark: SpokenCheckMark | null, completed: boolean) => Promise<void>;
+  contentPlaybackEnded: (turnId: string) => Promise<void>;
+  /** The assigned portion was shown exactly (chat) or its audio played to the end (voice): in the receipt queue, at the current revision. */
+  confirmContentShown: (portionId: string, channel: "chat" | "voice") => Promise<void>;
+  refreshContent: () => Promise<void>;
+  /**
+   * A content-led lesson opened for the first time (nothing taught, nothing to come back to, no reply on this step): its one
+   * opening, started by the learner opening the lesson (backend CL 3.4). A step change never starts a reply.
+   */
+  openContentLesson: () => void;
   /**
    * Voice replies, which arrive over the voice socket rather than a turn stream. Their events are the same
    * teacher-turn events, so they go through the same reducer: the board, chat and rail update in voice too.
@@ -182,6 +194,7 @@ const initial = {
   pageSessionId: "",
   sessionLanguage: null,
   voiceSessionId: null,
+  contentSource: null,
   notDeliveredItemId: null,
   completedSteps: [],
   report: null,
@@ -471,6 +484,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
    */
   let openingDue: { node: string; ready: boolean } | null = null;
   const openIfDue = () => {
+    if (get().instance?.content_lesson) { openingDue = null; closeGap(); return; }
     const due = openingDue;
     if (!due?.ready) return;
     const { instance, voiceSessionId, turns } = get();
@@ -583,6 +597,9 @@ export const useLessonStore = create<LessonState>((set, get) => {
     const after = applyEvent(before, event);
     if (after === before) return; // a replayed event
     updateTurn(turnId, () => after);
+    if (event.type === "turn_started" && get().instance?.content_lesson && !contentBindings.has(turnId)) {
+      contentBindings.set(turnId, { revision: event.instance_revision, requestId: uuid() });
+    }
     if (event.type === "state_changed") applyInstance(event.instance, turnId);
     if (event.type === "figure_presented") {
       // Pending first, so the board never draws it (or the chat shows its words) before its picture is ready.
@@ -595,7 +612,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
   };
 
   /** Read frames until the turn closes; false if the stream ended first (a drop). */
-  const consume = async (turnId: string, response: Response, signal: AbortSignal): Promise<boolean> => {
+  const consume = async (turnId: string, response: Response, signal: AbortSignal, attached?: { id: string }): Promise<boolean> => {
     for await (const frame of readSseFrames(response, signal)) {
       let event: TurnStreamFrame;
       try {
@@ -604,6 +621,20 @@ export const useLessonStore = create<LessonState>((set, get) => {
         continue;
       }
       if (event.type === "keepalive") continue;
+      // The server attached this request to a reply that already exists (an opening or a result reaction: one per node or
+      // answer) and replays that reply. It is followed under its own id: the placeholder takes that id, and a copy of it read
+      // from history is replaced by the replay, so its text is shown once and its receipt names the real turn.
+      if (attached && "turn_id" in event && event.turn_id && event.turn_id !== turnId) {
+        const placeholder = currentTurn(turnId);
+        const real = event.turn_id;
+        set((state) => ({
+          turns: state.turns
+            .filter((t) => t.turnId !== real)
+            .map((t) => (t.turnId === turnId && placeholder ? newTurn(real, placeholder.kind, placeholder.learnerText, placeholder.nodeId) : t)),
+        }));
+        if (streamTurnId === turnId) streamTurnId = real;
+        attached.id = turnId = real;
+      }
       onEvent(turnId, event);
       const turn = currentTurn(turnId);
       if (turn && isTerminal(turn.status)) return true;
@@ -629,6 +660,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
    * Follow a turn the server already admitted (open in history after a reload, or one a Stop found already finished)
    * to its end, from its cursor. It owns the stream handle, as a sent turn does, so Stop and a new turn reach it.
    */
+  const reloadedFor = new Set<string>();
   const resumeTurn = async (turnId: string) => {
     const instanceId = get().instanceId;
     if (!instanceId) return;
@@ -636,19 +668,35 @@ export const useLessonStore = create<LessonState>((set, get) => {
     const abort = new AbortController();
     streamAbort = abort;
     streamTurnId = turnId;
+    let reread = false;
     try {
-      await follow(instanceId, turnId, abort, false);
-    } catch (error) {
-      if (abort.signal.aborted) return;
-      updateTurn(turnId, (t) => ({ ...t, status: "failed", failure: { reason: "stream_interrupted", retryable: false } }));
-      console.warn("Resuming the lesson turn failed:", asError(error).request_id, asError(error).message ?? error);
+      try {
+        await follow(instanceId, turnId, abort, false);
+        // Followed to its end on this screen after a reload: on a content-led lesson it is acknowledged like any reply, or a
+        // feedback reply that finished after the reload would hold the lesson in feedback for good.
+        await rereadAfterReply(turnId);
+      } catch (error) {
+        if (abort.signal.aborted) return;
+        updateTurn(turnId, (t) => ({ ...t, status: "failed", failure: { reason: "stream_interrupted", retryable: false } }));
+        console.warn("Resuming the lesson turn failed:", asError(error).request_id, asError(error).message ?? error);
+      }
+      // The stream was lost before its end (the client gave up resuming) while the lesson waits on this feedback: read the
+      // lesson again from the server, which knows how the reply ended, so its question unlocks (backend PRD v3 §3.9: no wait
+      // is unbounded). Once per turn.
+      const lost = currentTurn(turnId);
+      reread = lost?.status === "failed" && lost.kind === "result_reaction"
+        && get().instance?.content_lesson?.phase === "feedback" && !reloadedFor.has(turnId) && !abort.signal.aborted;
     } finally {
       if (streamAbort === abort) {
         streamAbort = null;
         streamTurnId = null;
       }
       lastReplyAt = Date.now();
-      openIfDue();
+      if (!reread) openIfDue();
+    }
+    if (reread && get().instanceId === instanceId) {
+      reloadedFor.add(turnId);
+      await get().load(instanceId);
     }
   };
 
@@ -657,8 +705,75 @@ export const useLessonStore = create<LessonState>((set, get) => {
    * reply closes, so the lesson's state is read again when a completed reply ends on a step whose check is not on screen yet. The
    * check then appears after the reply, never over it. Nothing the learner does presents it, and nothing here ends a step.
    */
+  const contentBindings = new Map<string, { revision: number; requestId: string }>();
+  let contentOpened = false;
+  // Receipts go out one at a time, in the order the replies finished (the server settles them in admission order), each at the
+  // lesson's current revision: a learner who replied before an earlier receipt landed loses neither (R1). A receipt the server
+  // refuses because the lesson moved on is dropped after one fresh read; a reply cut off was never completed and is never sent.
+  let receipts: Promise<void> = Promise.resolve();
+  const sendReceipt = async (turnId: string, channel: "chat" | "voice") => {
+    const turn = currentTurn(turnId);
+    const { instanceId } = get();
+    const lesson = get().instance?.content_lesson;
+    // A reply to an answer that was cut off (Stop, or the learner spoke over it) has still ended: its question unlocks (backend
+    // PRD v3 §3.9). Any other cut reply confirms nothing.
+    const cutFeedback = turn?.status === "interrupted" && turn.kind === "result_reaction" && lesson?.phase === "feedback";
+    if (!turn || (turn.status !== "completed" && !cutFeedback) || !instanceId || !lesson) return;
+    // A reply resumed after a reload never showed its start here: it is bound at the current revision (the server checks the
+    // scope it froze at admission, and refuses it if the lesson has moved on).
+    const binding = contentBindings.get(turnId) ?? { revision: get().instance?.revision ?? 0, requestId: uuid() };
+    const receipt = (revision: number, requestId: string) => lessonService.contentTurnDelivered(instanceId, turnId, {
+      request_id: requestId, expected_revision: revision, channel,
+      terminal_seq: Math.max(1, turn.lastSeq),
+      boundary: cutFeedback ? "interrupted" : channel === "chat" ? "text_rendered" : "playback_drained",
+    });
+    try {
+      await receipt(Math.max(binding.revision, get().instance?.revision ?? binding.revision), binding.requestId);
+    } catch {
+      const current = await lessonService.instance(instanceId);
+      if (get().instanceId !== instanceId) return;
+      applyInstance(current);
+      await receipt(current.revision ?? binding.revision, uuid()).catch(() => {});
+    } finally {
+      contentBindings.delete(turnId);
+    }
+    if (get().instanceId === instanceId) applyInstance(await lessonService.instance(instanceId));
+  };
+  const sendShown = async (portionId: string, channel: "chat" | "voice") => {
+    const { instanceId } = get();
+    const lesson = get().instance?.content_lesson;
+    if (!instanceId || !lesson || lesson.portion_id !== portionId || lesson.shown) return;
+    const shown = (revision: number) =>
+      lessonService.contentShown(instanceId, portionId, { request_id: uuid(), expected_revision: revision, channel });
+    try {
+      await shown(get().instance?.revision ?? 0);
+    } catch {
+      // Another receipt landed first: read the lesson again and confirm once more if this portion is still the one shown.
+      const current = await lessonService.instance(instanceId);
+      if (get().instanceId !== instanceId) return;
+      applyInstance(current);
+      if (current.content_lesson?.portion_id === portionId && !current.content_lesson.shown) {
+        await shown(current.revision ?? 0).catch(() => {});
+      }
+    }
+    if (get().instanceId === instanceId) applyInstance(await lessonService.instance(instanceId));
+  };
+
+  const acknowledgeContent = (turnId: string, channel: "chat" | "voice") => {
+    const next = receipts.then(() => sendReceipt(turnId, channel));
+    receipts = next.catch(() => {});
+    return next;
+  };
+
   const rereadAfterReply = async (turnId: string) => {
     const { instance, instanceId } = get();
+    if (instance?.content_lesson) {
+      if (!voiceTurns.has(turnId)) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        await acknowledgeContent(turnId, "chat");
+      }
+      return;
+    }
     const node = instance?.active_node;
     if (!instanceId || !node || (node.check_presented !== false && !missingCheck(instance))) return;
     if (currentTurn(turnId)?.status !== "completed") return;
@@ -694,9 +809,10 @@ export const useLessonStore = create<LessonState>((set, get) => {
     }));
 
     try {
-      const closed = await consume(request.turn_id, await lessonService.startTurn(instanceId, request, abort.signal), abort.signal);
-      await follow(instanceId, request.turn_id, abort, closed);
-      await rereadAfterReply(request.turn_id);
+      const attached = { id: request.turn_id };
+      const closed = await consume(request.turn_id, await lessonService.startTurn(instanceId, request, abort.signal), abort.signal, attached);
+      await follow(instanceId, attached.id, abort, closed);
+      await rereadAfterReply(attached.id);
     } catch (error) {
       if (abort.signal.aborted) return;
       // An HTTP refusal (the turn never started) carries the backend's reason; anything else is a dropped stream.
@@ -758,6 +874,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
       ledger.clear();
       figureChecks.clear();
       openingDue = null;
+      contentOpened = false;
       closeGap();
       set({ ...initial, instanceId, pageSessionId: uuid(), status: "loading" });
       try {
@@ -793,9 +910,20 @@ export const useLessonStore = create<LessonState>((set, get) => {
         const open = turns.findLast((t) => t.status === "streaming");
         if (open) void resumeTurn(open.turnId);
 
+        // Content-led (backend CL 3.4): an answer whose feedback was never delivered (the page closed or reloaded before the
+        // reply ran or rendered) holds the lesson in feedback. Its reply follows the learner's answer, not a state change: it is
+        // started (or, when it already exists, attached to and replayed by the server) so the feedback reaches the learner.
+        const content = instance.content_lesson;
+        if (!open && instance.state === "active" && node && content?.phase === "feedback" && content.feedback_attempt_id) {
+          void runTurn(
+            { turn_id: uuid(), kind: "result_reaction", instance_node_id: node.instance_node_id, attempt_id: content.feedback_attempt_id },
+            null,
+          );
+        }
+
         // A fresh node opens with the tutor speaking first.
         if (instance.state === "active" && node && turns.length === 0) {
-          void runTurn({ turn_id: uuid(), kind: "opening", instance_node_id: node.instance_node_id }, null);
+          if (!instance.content_lesson) void runTurn({ turn_id: uuid(), kind: "opening", instance_node_id: node.instance_node_id }, null);
         }
       } catch (error) {
         if (generation !== loadGeneration) return;
@@ -1143,6 +1271,31 @@ export const useLessonStore = create<LessonState>((set, get) => {
       return pending.length === 1 && visibleChecks.has(pending[0]) ? { itemId: pending[0], sessionId: sessionId() } : null;
     },
 
+    refreshContent: async () => {
+      const id = get().instanceId;
+      if (!id) return;
+      const current = await lessonService.instance(id);
+      if (get().instanceId === id) applyInstance(current);
+    },
+    contentPlaybackEnded: (turnId) => acknowledgeContent(turnId, "voice"),
+    confirmContentShown: (portionId, channel) => {
+      const next = receipts.then(() => sendShown(portionId, channel));
+      receipts = next.catch(() => {});
+      return next;
+    },
+    openContentLesson: () => {
+      const { instance, turns, voiceSessionId, status } = get();
+      const node = instance?.active_node;
+      const progress = instance?.content_progress;
+      if (status !== "ready" || voiceSessionId || !instance?.content_lesson || !node || !progress) return;
+      // The server says when opening the lesson starts a reply: the first open, or a return after 30 minutes or more (backend
+      // PRD v3 §3.7). An older server without the field: only the first open.
+      const due = progress.opening_due ?? (turns.length === 0 && progress.taught === 0 && progress.to_revisit === 0);
+      if (contentOpened || !due) return;
+      contentOpened = true;
+      void runTurn({ turn_id: uuid(), kind: "opening", instance_node_id: node.instance_node_id }, null);
+    },
+
     checkPlaybackEnded: async (mark, completed) => {
       if (!mark || !completed) return; // interrupted playback confirms nothing
       if (mark.sessionId !== sessionId()) return; // it played in a session that has since been replaced
@@ -1171,8 +1324,11 @@ export const useLessonStore = create<LessonState>((set, get) => {
         t.status !== "streaming" ? t : { ...t, status: reason === "completed" ? "completed" : reason === "failed" ? "failed" : "interrupted" },
       );
       lastReplyAt = Date.now();
+      if (reason === "interrupted" && get().instance?.content_lesson?.phase === "feedback") void acknowledgeContent(turnId, "voice");
       void rereadAfterReply(turnId);
     },
+
+    setContentSource: (contentSource) => set({ contentSource }),
 
     reset: () => {
       visibleChecks.clear();

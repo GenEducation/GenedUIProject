@@ -44,6 +44,10 @@ export async function fetchActivityAudio(instanceId: string, nodeId: string, ite
   return fetchPassageAudio(new URLSearchParams({ instance_id: instanceId, instance_node_id: nodeId, item_id: itemId, language }));
 }
 
+export function fetchPortionAudio(instanceId: string, portionId: string, language: string): Promise<Blob> {
+  return fetchPassageAudio(new URLSearchParams({ instance_id: instanceId, portion_id: portionId, language }));
+}
+
 async function fetchPassageAudio(query: URLSearchParams): Promise<Blob> {
   try {
     return await (await authFetch(`${API_BASE_URL}/v1/voice/passage-audio?${query}`)).blob();

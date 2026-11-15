@@ -72,6 +72,7 @@ export function ChatInput({ replying, disabled, onSend, onStop, subject = null, 
     if (disabled || !message.trim() || message.length > MAX_MESSAGE) return;
     onSend(message);
     setText("");
+    if (maths) mathRef.current?.clear?.();
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {

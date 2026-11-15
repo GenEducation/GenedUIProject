@@ -60,6 +60,7 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
   const node = useLessonStore((s) => s.instance?.active_node ?? null);
   const title = useLessonStore((s) => s.payload?.node.title ?? s.instance?.active_node?.title ?? null);
   const finished = useLessonStore((s) => s.instance?.state === "completed");
+  const contentSource = useLessonStore((s) => s.contentSource);
   const hasFilmstrip = useLessonStore((s) => s.presentedFigureIds.length > 0);
 
   // The textbook's own reading for this step (W1): open when the step is about to ask on it or holds it, closed
@@ -184,6 +185,7 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
             onAsk={setChatDraft}
             onReading={(intent) => void sendReading(intent)}
             readingDisabled={replying}
+            activeLines={contentSource?.lines}
           />
         )}
 

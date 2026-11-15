@@ -99,6 +99,9 @@ export interface MathFieldHandle {
   focus: () => void;
   /** Put words at the caret, as words. */
   insertText: (text: string) => void;
+  /** Empty the field now, back in words. A sent message clears here: when Enter beat the last render, the parent's value was
+   *  already "" and never changes, so syncing from `value` alone would leave the sent text in the box. */
+  clear: () => void;
 }
 
 interface MathFieldProps {
@@ -176,6 +179,12 @@ export const MathField = forwardRef<MathFieldHandle, MathFieldProps>(function Ma
       if (!field || !text) return;
       field.insert(escapeForField(text), { mode: "text", format: "latex", focus: true });
       live.current.onChange(field.value);
+    },
+    clear: () => {
+      const field = fieldRef.current;
+      if (!field) return;
+      field.value = "";
+      if (field.mode !== "text") field.executeCommand(["switchMode", "text"]);
     },
   }), []);
 

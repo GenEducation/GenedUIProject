@@ -28,7 +28,19 @@ const SSE = { accept: "text/event-stream" };
  * on any non-OK response, so nothing here checks `response.ok`. The two stream
  * calls return the raw `Response`; read it with `readSseFrames`.
  */
+type ContentReceipt = { request_id: string; expected_revision: number; channel: "chat" | "voice" };
+type Assignment = { revision: number; lesson: NonNullable<InstanceState["content_lesson"]>; source: string[] };
+
 export const lessonService = {
+  contentAssignment: async (id: string, body?: ContentReceipt): Promise<Assignment> =>
+    (await authFetch(`${instancePath(id)}/content/assignment`, body ? json(body) : undefined)).json(),
+  contentShown: async (id: string, portion: string, body: ContentReceipt): Promise<Assignment> =>
+    (await authFetch(`${instancePath(id)}/content/portions/${portion}/shown`, json(body))).json(),
+  contentTurnDelivered: async (id: string, turn: string, body: ContentReceipt & {
+    terminal_seq: number; boundary: "text_rendered" | "playback_drained" | "interrupted";
+  }): Promise<Assignment> =>
+    (await authFetch(`${instancePath(id)}/content/turns/${turn}/delivered`, json(body))).json(),
+
   instance: async (instanceId: string): Promise<InstanceState> =>
     (await authFetch(instancePath(instanceId))).json(),
 

@@ -7,6 +7,26 @@ import type { ReadingIntent } from "../types";
 import { LessonMarkdown } from "./LessonMarkdown";
 import { ReadingControls } from "./ReadingControls";
 
+const normal = (text: string) => text.replace(/\s+/g, " ").trim().toLowerCase();
+
+/**
+ * Whether a chunk of the book is part of the portion being taught now (content-led lessons): the same printed text, or one
+ * holding the other. Short fragments match only exactly, so a stray word never marks a paragraph.
+ */
+export function inActivePortion(text: string, lines: string[] | undefined): boolean {
+  if (!lines?.length) return false;
+  const chunk = normal(text);
+  if (!chunk) return false;
+  return lines.some((line) => {
+    const wanted = normal(line);
+    if (!wanted) return false;
+    if (wanted === chunk) return true;
+    return (wanted.length >= 20 && chunk.includes(wanted)) || (chunk.length >= 20 && wanted.includes(chunk));
+  });
+}
+
+const ACTIVE = "-mx-2 rounded-md border-l-4 border-[var(--ls-primary)] bg-[var(--ls-sage)] px-2";
+
 /** The longest quote put in the chat box: the message limit is 1000 characters and the learner still has a question to write. */
 const MAX_QUOTE = 400;
 const BUTTON =
@@ -27,6 +47,7 @@ export function BookPanel({
   onAsk,
   onReading,
   readingDisabled = false,
+  activeLines,
 }: {
   texts: BookText[];
   sections?: BookSection[];
@@ -36,10 +57,19 @@ export function BookPanel({
   onAsk?: (quote: string) => void;
   onReading?: (intent: ReadingIntent) => void;
   readingDisabled?: boolean;
+  /** The printed lines of the portion being taught now: marked where they appear in the book. */
+  activeLines?: string[];
 }) {
   const parts = texts.flatMap((text) => text.parts.map((part) => ({ text, part })));
   const panel = useRef<HTMLElement>(null);
   const [quote, setQuote] = useState("");
+  const activeKey = activeLines?.join("\n") ?? "";
+
+  // Bring the part being taught into view when the book opens or the lesson moves to another part.
+  useEffect(() => {
+    if (!activeKey) return;
+    panel.current?.querySelector("[data-active-portion]")?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+  }, [activeKey]);
 
   // The words the learner has selected in this panel, kept while they are in it: the bar below offers to ask about them.
   useEffect(() => {
@@ -127,11 +157,19 @@ export function BookPanel({
                 {text.parts.length > 1 && (
                   <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--ls-ink-mid)]">Part {part.segment}</p>
                 )}
-                {part.paragraphs.map((chunk) => (
-                  <p key={chunk.id} className="mb-2 whitespace-pre-line text-[16px] leading-[1.65] text-[var(--ls-ink)]">
-                    {chunk.text}
-                  </p>
-                ))}
+                {part.paragraphs.map((chunk) => {
+                  const active = inActivePortion(chunk.text, activeLines);
+                  return (
+                    <p
+                      key={chunk.id}
+                      aria-current={active ? "true" : undefined}
+                      data-active-portion={active ? "" : undefined}
+                      className={`mb-2 whitespace-pre-line text-[16px] leading-[1.65] text-[var(--ls-ink)] ${active ? ACTIVE : ""}`}
+                    >
+                      {chunk.text}
+                    </p>
+                  );
+                })}
                 <ReadingControls
                   instanceId={instanceId}
                   passageId={text.id}
@@ -165,11 +203,21 @@ export function BookPanel({
             <h3 className="lesson-hand text-[20px] leading-tight text-[var(--ls-primary)]">{section.title}</h3>
             {section.chunks.map((chunk) =>
               chunk.element_type === "table" ? (
-                <pre key={chunk.id} className="my-2 overflow-x-auto whitespace-pre-wrap rounded-lg bg-white/70 p-2 font-mono text-[13px] text-[var(--ls-ink)]">
+                <pre
+                  key={chunk.id}
+                  aria-current={inActivePortion(chunk.text, activeLines) ? "true" : undefined}
+                  data-active-portion={inActivePortion(chunk.text, activeLines) ? "" : undefined}
+                  className={`my-2 overflow-x-auto whitespace-pre-wrap rounded-lg bg-white/70 p-2 font-mono text-[13px] text-[var(--ls-ink)] ${inActivePortion(chunk.text, activeLines) ? ACTIVE : ""}`}
+                >
                   {chunk.text}
                 </pre>
               ) : (
-                <div key={chunk.id} className="my-2 text-[16px] leading-[1.6] text-[var(--ls-ink)]">
+                <div
+                  key={chunk.id}
+                  aria-current={inActivePortion(chunk.text, activeLines) ? "true" : undefined}
+                  data-active-portion={inActivePortion(chunk.text, activeLines) ? "" : undefined}
+                  className={`my-2 text-[16px] leading-[1.6] text-[var(--ls-ink)] ${inActivePortion(chunk.text, activeLines) ? ACTIVE : ""}`}
+                >
                   <LessonMarkdown text={chunk.text} />
                 </div>
               ),
