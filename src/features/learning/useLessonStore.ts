@@ -717,7 +717,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
     const lesson = get().instance?.content_lesson;
     // A reply to an answer that was cut off (Stop, or the learner spoke over it) has still ended: its question unlocks (backend
     // PRD v3 §3.9). Any other cut reply confirms nothing.
-    const cutFeedback = turn?.status === "interrupted" && turn.kind === "result_reaction" && lesson?.phase === "feedback";
+    const cutFeedback = turn?.status === "interrupted" && (turn.kind === "result_reaction" || turn.kind === "learner_message") && lesson?.phase === "feedback";
     if (!turn || (turn.status !== "completed" && !cutFeedback) || !instanceId || !lesson) return;
     // A reply resumed after a reload never showed its start here: it is bound at the current revision (the server checks the
     // scope it froze at admission, and refuses it if the lesson has moved on).
