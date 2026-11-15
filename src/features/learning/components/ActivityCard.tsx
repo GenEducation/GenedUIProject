@@ -195,3 +195,27 @@ export function CompletedActivities() {
     </details>
   );
 }
+
+
+/** An activity already attempted on a content-led lesson: folded to one line, with the card one click away to try it again. */
+export function FoldedActivity({ children }: { children: React.ReactNode }) {
+  const t = useUiText();
+  const [open, setOpen] = useState(false);
+  if (open) return <>{children}</>;
+  return (
+    <div className="mb-2 flex items-center justify-between rounded border px-3 py-2 text-[14px]" data-testid="activity-folded">
+      <span>{t("activityDone")}</span>
+      <Button variant="tertiary" size="sm" onClick={() => setOpen(true)}>{t("activityTryAgain")}</Button>
+    </div>
+  );
+}
+
+type Placement = Array<{ item_id: string; status: "open" | "done" | "not_yet" | "unrelated" }> | null | undefined;
+
+/** How each activity of the step is drawn now: shown, folded (attempted) or not at all (not yet taught, or unrelated). */
+export function placeActivities<T extends { item_id: string }>(activities: T[] | undefined, placement: Placement) {
+  return (activities ?? []).flatMap((activity) => {
+    const status = placement?.find((p) => p.item_id === activity.item_id)?.status ?? "open";
+    return status === "open" ? [{ activity, folded: false }] : status === "done" ? [{ activity, folded: true }] : [];
+  });
+}

@@ -158,6 +158,8 @@ const EN = {
   questionGuided: "Let's work it through together. Enter the answer when you're ready, if you like.",
   ideasProgress: "{n} of {total} ideas",
   owedIdeas: "{n} we'll come back to",
+  activityDone: "Activity done ✓",
+  activityTryAgain: "Try again",
   comeBackLater: "You've finished this chapter, except for a few ideas. Come back later and we'll try them again.",
   fromYourBook: "From your book",
   bookAudioFailed: "The book audio couldn't be loaded. You can read it here.",

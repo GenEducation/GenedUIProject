@@ -6,7 +6,7 @@ import { useLessonStore } from "../useLessonStore";
 import { WhiteboardCanvas } from "./WhiteboardCanvas";
 import type { Insets } from "../board/geometry";
 import { Filmstrip } from "./Filmstrip";
-import { ActivityCard, CompletedActivities } from "./ActivityCard";
+import { ActivityCard, CompletedActivities, FoldedActivity, placeActivities } from "./ActivityCard";
 import { StepCard } from "./StepCard";
 import { LessonSummary } from "./LessonSummary";
 import { QuickActions } from "./QuickActions";
@@ -61,6 +61,9 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
   const title = useLessonStore((s) => s.payload?.node.title ?? s.instance?.active_node?.title ?? null);
   const finished = useLessonStore((s) => s.instance?.state === "completed");
   const contentSource = useLessonStore((s) => s.contentSource);
+  // Content-led lessons (backend, owner's decision R2): the server says where each activity belongs now. Open ones show; an
+  // attempted one folds away with a way to try again; one whose book text is not taught yet, or unrelated to this step, is hidden.
+  const placement = useLessonStore((s) => s.instance?.content_progress?.activities);
   const hasFilmstrip = useLessonStore((s) => s.presentedFigureIds.length > 0);
 
   // The textbook's own reading for this step (W1): open when the step is about to ask on it or holds it, closed
@@ -159,9 +162,11 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
         >
           {/* CSS zoom, not a transform: the card re-wraps to its dock's width instead of spilling past it. */}
           <div data-card-zoom={cardZoom.toFixed(2)} style={{ zoom: cardZoom }}>
-            {node?.activities?.map((activity) => (
-              <ActivityCard key={`${node.instance_node_id}:${activity.item_id}`} nodeId={node.instance_node_id} activity={activity} />
-            ))}
+            {node && placeActivities(node.activities, placement).map(({ activity, folded }) => {
+              const card = <ActivityCard nodeId={node.instance_node_id} activity={activity} />;
+              const key = `${node.instance_node_id}:${activity.item_id}`;
+              return folded ? <FoldedActivity key={key}>{card}</FoldedActivity> : <div key={key}>{card}</div>;
+            })}
             <StepCard subject={subject} />
             {!finished && <CompletedActivities />}
           </div>

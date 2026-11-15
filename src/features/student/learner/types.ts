@@ -135,6 +135,8 @@ export interface ContentProgress {
   owed_ideas?: number;
   /** Opening the lesson starts a reply: the first open, or a return after 30 minutes or more. */
   opening_due?: boolean;
+  /** Where each activity of the active step belongs now (absent from an older server: all shown). */
+  activities?: Array<{ item_id: string; status: "open" | "done" | "not_yet" | "unrelated" }>;
 }
 
 export interface InstanceState {
