@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { waitFor } from "@testing-library/react";
 import {
-  CHECK_ITEM, FIGURE_GROUP, LESSON_ID, NODE_1, NODE_2, OPTION_A,
+  CHECK_ITEM, CHECK_ITEM_2, FIGURE_GROUP, LESSON_ID, NODE_1, NODE_2, OPTION_A,
   answerRequests, forbiddenRequests, lessonFixture, makeLessonInstance, replyScript, resumeRequests, turnRequests,
 } from "@/test/msw/handlers/lesson";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
@@ -246,3 +246,24 @@ describe("useLessonStore — the tutor decides when the check appears; only answ
   });
 });
 
+
+describe("useLessonStore — a W2 lesson's later try asks another question", () => {
+  it("reads the step's payload again when the question on screen is not the one it carries", async () => {
+    const onScreen = (id: string) =>
+      makeLessonInstance({
+        active_node: { ...makeLessonInstance().active_node!, instance_node_id: NODE_1, check_presented: true, done_available: false,
+          check_item_ids: [id], answered_item_ids: [] },
+      });
+    lessonFixture.setInstance(onScreen(CHECK_ITEM));
+    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
+    await store().load(LESSON_ID);
+    expect(store().payload?.node.check_items.map((c) => c.id)).toEqual([CHECK_ITEM]);
+    const reads = lessonFixture.payloadReads;
+    // After a wrong answer the ladder asks a different question: the view names it, and the payload is read again to draw it.
+    lessonFixture.carryInPayload(CHECK_ITEM_2);
+    lessonFixture.setInstance(onScreen(CHECK_ITEM_2));
+    await store().refreshContent(); // the lesson state as the receipt of the reply that presented it returns it
+    await waitFor(() => expect(store().payload?.node.check_items.map((c) => c.id)).toEqual([CHECK_ITEM_2]));
+    expect(lessonFixture.payloadReads).toBeGreaterThan(reads);
+  });
+});

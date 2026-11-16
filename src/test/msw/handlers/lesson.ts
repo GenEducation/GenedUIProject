@@ -31,6 +31,8 @@ export const FIGURE_GROUP = "44444444-0000-4000-8000-000000000001";
 export const FIGURE_GROUP_2 = "44444444-0000-4000-8000-000000000002";
 export const CHECK_ITEM = "55555555-0000-4000-8000-000000000001";
 export const OPTION_A = "66666666-0000-4000-8000-00000000000a";
+/** A second SYNTHETIC question on the same step (a W2 lesson asks it on a later try). */
+export const CHECK_ITEM_2 = "55555555-0000-4000-8000-000000000002";
 
 export function makeLessonInstance(overrides: Partial<InstanceState> = {}): InstanceState {
   return {
@@ -68,7 +70,7 @@ const NODE_FIGURES: Record<string, { group: string; picture: string; alt: string
 };
 const figuresOf = (instanceNodeId: string | undefined) => NODE_FIGURES[instanceNodeId ?? NODE_1] ?? NODE_FIGURES[NODE_1];
 
-export const syntheticPayload = (title = "SYNTHETIC node 2", instanceNodeId: string = NODE_1): TeacherPayload => ({
+export const syntheticPayload = (title = "SYNTHETIC node 2", instanceNodeId: string = NODE_1, checkId: string = CHECK_ITEM): TeacherPayload => ({
   schema_version: "teacher_node_v5",
   node: {
     id: "88888888-0000-4000-8000-000000000001",
@@ -82,7 +84,7 @@ export const syntheticPayload = (title = "SYNTHETIC node 2", instanceNodeId: str
       figures: [{ source: "generated_visual", id: figuresOf(instanceNodeId).picture, width_px: 800, height_px: 600, mime: "image/png", printed_text: "", learner_alt_text: figuresOf(instanceNodeId).alt }],
     }],
     check_items: [{
-      id: CHECK_ITEM,
+      id: checkId,
       prompt: "SYNTHETIC check?",
       response_type: "mcq",
       role: "formative_probe",
@@ -131,6 +133,10 @@ interface State {
   nodeReadGate: Promise<void> | null;
   /** The next N payload reads fail with a 500 (the step's payload cannot be built). */
   payloadFailures: number;
+  /** The question the step's payload carries (a W2 payload carries only the question on screen). */
+  payloadCheck: string;
+  /** How many payload reads have been served. */
+  payloadReads: number;
   /** The next N turn POSTs are refused with a 503 before any stream starts. */
   turnFailures: number;
   /** The next turn stream sends this many frames, then waits for `releaseStream` (the tutor still talking). */
@@ -149,6 +155,8 @@ const state: State = {
   signature: "synthetic",
   nodeReadGate: null,
   payloadFailures: 0,
+  payloadCheck: CHECK_ITEM,
+  payloadReads: 0,
   turnFailures: 0,
   holdAfter: null,
 };
@@ -224,6 +232,8 @@ export const lessonFixture = {
     state.signature = "synthetic";
     state.nodeReadGate = null;
     state.payloadFailures = 0;
+    state.payloadCheck = CHECK_ITEM;
+    state.payloadReads = 0;
     state.turnFailures = 0;
     state.holdAfter = null;
     heldStreams.length = 0;
@@ -293,6 +303,10 @@ export const lessonFixture = {
     };
   },
   failNextPayloads: (n: number) => void (state.payloadFailures = n),
+  carryInPayload: (checkId: string) => void (state.payloadCheck = checkId),
+  get payloadReads() {
+    return state.payloadReads;
+  },
   failNextTurns: (n: number) => void (state.turnFailures = n),
   holdStream: (afterFrames: number | null) => void (state.holdAfter = afterFrames),
   /** Let the oldest held stream send the rest of its frames. */
@@ -345,7 +359,8 @@ export const lessonHandlers = [
         { status: 500 },
       );
     }
-    return HttpResponse.json(syntheticPayload(node?.title, node?.instance_node_id));
+    state.payloadReads += 1;
+    return HttpResponse.json(syntheticPayload(node?.title, node?.instance_node_id, state.payloadCheck));
   }),
 
   http.get(`${BASE}/v1/instances/:instanceId/teacher-payload/presentation-manifest`, async () => {

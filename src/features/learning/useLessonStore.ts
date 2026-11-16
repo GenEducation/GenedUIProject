@@ -701,9 +701,9 @@ export const useLessonStore = create<LessonState>((set, get) => {
   };
 
   /**
-   * On a W2 lesson the tutor decides when the check appears (backend ADR 0045): its reply that presents it is committed before the
-   * reply closes, so the lesson's state is read again when a completed reply ends on a step whose check is not on screen yet. The
-   * check then appears after the reply, never over it. Nothing the learner does presents it, and nothing here ends a step.
+   * On a W2 (content-led) lesson the tutor's outcome decides when a question appears: learning commits it when the reply's receipt is
+   * settled, so the lesson's state is read again when a completed reply ends on a step whose question is not on screen yet. The
+   * question then appears after the reply, never over it. Nothing the learner does presents it, and nothing here ends a step.
    */
   const contentBindings = new Map<string, { revision: number; requestId: string }>();
   let contentOpened = false;

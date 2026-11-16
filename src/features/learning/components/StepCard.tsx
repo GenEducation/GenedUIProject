@@ -449,8 +449,8 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
   } else if (reading && checks.get(reading.item_id)) {
     body = <ConfirmReading check={checks.get(reading.item_id)!} original={reading.original} suggestion={reading.suggestion} />;
   } else if (node.check_presented !== false && unanswered.some((id) => checks.has(id))) {
-    // On a W2 lesson the check is on screen only once the tutor has presented it (backend ADR 0045).
-    // A compliant (rule R) lesson's payload carries only the check the application selected next, which need not be the first unanswered one.
+    // On a W2 (content-led) lesson the question is on screen only while it is open: `check_item_ids` then names exactly that question,
+    // and the payload carries it (reloaded by `missingCheck` when it does not).
     const current = checks.get(unanswered.find((id) => checks.has(id))!)!;
     body =
       formatOf(current) === "written_response" ? (
@@ -462,7 +462,7 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
       );
   } else if (node.type === "teach" && node.done_available) {
     // Only a legacy plan still advertises a learner's done (backend ADR 0038 decision 6). A W2 part never does: it moves on only by
-    // the evidence of its checks (ADR 0045). No count of replies is ever shown.
+    // the evidence of its answers. No count of replies is ever shown.
     body = (
       <div className={`${cardClass} flex flex-wrap items-center gap-4`}>
         <p className="lesson-hand flex-1 text-[20px] font-bold">{t("moveOn")}</p>
