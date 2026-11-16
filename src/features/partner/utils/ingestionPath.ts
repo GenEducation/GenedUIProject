@@ -404,6 +404,11 @@ export const NEXT_STEP_COPY: Record<
   },
 };
 
+/** The copy for a next step. A step this build doesn't know yet (a newer server) reads as GenEd's to look at, never a crash. */
+export function nextStepCopy(step: NextStep): (typeof NEXT_STEP_COPY)[NextStep] {
+  return NEXT_STEP_COPY[step] ?? NEXT_STEP_COPY.contact_gened;
+}
+
 /** Next steps fixed by correcting the chapter's details rather than uploading again. */
 export const CORRECTION_STEPS: ReadonlySet<NextStep> = new Set([
   "fix_chapter_details",

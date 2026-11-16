@@ -2,6 +2,7 @@
 
 import type { CheckItem } from "../types";
 import { useUiText } from "../i18n";
+import { twoColumns } from "./SingleChoice";
 import { ChoiceMark, choiceState, type ChoiceTone } from "./ChoiceTile";
 
 /**
@@ -27,7 +28,7 @@ export function MultiSelect({
   return (
     <fieldset className="mt-4 min-w-0 border-0 p-0" aria-labelledby={`check-${check.id}`} disabled={disabled}>
       <legend className="lesson-hand mb-2 text-[16px] text-[var(--ls-ink-mid)]">{t("chooseAll")}</legend>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className={`grid gap-2 ${twoColumns(check.options)}`}>
         {check.options.map((option) => {
           const on = chosen.includes(option.id);
           return (

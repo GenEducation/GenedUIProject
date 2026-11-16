@@ -837,6 +837,13 @@ export interface BankPackage {
     open_issues: number;
     authoring: BankRun["state"] | null;
   };
+  /** The latest approval: `approved` while it still matches the accepted questions and plan (a later change voids it);
+   * `coverage_ready` when it also covered every step, so the chapter's run can pass. Absent from an older backend. */
+  approval?: {
+    approved: boolean;
+    coverage_ready: boolean;
+    approved_at: string | null;
+  };
   /** Bulk acceptance only: questions skipped because an independent check doubts them, and stale ones. */
   skipped?: string[];
   stale?: string[];

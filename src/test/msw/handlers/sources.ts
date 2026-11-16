@@ -91,6 +91,11 @@ const releases = new Map<string, SourceRelease>();
 const authoring = new Map<string, AuthoringResponse>();
 /** Drafts the fake worker returns for the next suggestions request (they arrive on the next GET). */
 const banks = new Map<string, BankPackage>();
+/** Like core: any change to the accepted questions voids the last approval (it no longer matches). */
+const voidApproval = (b: BankPackage) => {
+  if (b.approval)
+    b.approval = { ...b.approval, approved: false, coverage_ready: false };
+};
 /** The last authored questions PUT, for asserting what the screen sent. */
 export let lastAuthored: AuthoredQuestions | null = null;
 /** The last release decisions POST, for asserting what the screen sent. */
@@ -641,6 +646,8 @@ export const sourcesHandlers = [
         );
       q.state = params.decision === "accept" ? "accepted" : "rejected";
       q.version += 1;
+      voidApproval(b);
+      voidApproval(b);
       b.summary.accepted = b.questions.filter(
         (x) => x.state === "accepted",
       ).length;
@@ -669,6 +676,8 @@ export const sourcesHandlers = [
         revision: q.revision + 1,
         verification: "unverified",
       });
+      voidApproval(b);
+      voidApproval(b);
       b.summary.accepted = b.questions.filter(
         (x) => x.state === "accepted",
       ).length;
@@ -694,6 +703,7 @@ export const sourcesHandlers = [
       else if (q.version === item.version)
         Object.assign(q, { state: "accepted", version: q.version + 1 });
     }
+    voidApproval(b);
     b.summary.accepted = b.questions.filter(
       (x) => x.state === "accepted",
     ).length;
@@ -723,9 +733,15 @@ export const sourcesHandlers = [
     const b = banks.get(String(params.id));
     if (!b) return notFound();
     const body = (await request.json()) as { version: string };
-    if (body.version !== b.version) return conflict("The package changed. Reload before approving.");
+    if (body.version !== b.version)
+      return conflict("The package changed. Reload before approving.");
     if (!b.summary.accepted)
       return conflict("Accept at least one question first.");
+    b.approval = {
+      approved: true,
+      coverage_ready: b.summary.publishable_nodes === b.summary.nodes,
+      approved_at: new Date().toISOString(),
+    };
     return HttpResponse.json(b, { status: 202 });
   }),
 

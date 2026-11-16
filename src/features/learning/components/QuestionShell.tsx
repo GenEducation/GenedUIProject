@@ -8,7 +8,7 @@ import type { ProgressNote } from "../check/progress";
 import { BoardFigure } from "./BoardFigure";
 import { SketchButton } from "./SketchButton";
 
-export const questionCardClass = "lesson-rise lesson-sketch shrink-0 p-5 text-[var(--ls-ink)]";
+export const questionCardClass = "lesson-rise lesson-sketch @container shrink-0 p-5 text-[var(--ls-ink)]";
 
 /** The id of a question's progress line, for its Check button's `aria-describedby`. */
 export const progressIdFor = (checkId: string) => `progress-${checkId}`;
@@ -76,11 +76,11 @@ export function QuestionShell({
       {messages && <div className="mt-3 grid gap-2">{messages}</div>}
 
       {(actions || onHint || progress) && (
-        <div className="sticky bottom-0 z-[1] -mx-5 -mb-5 mt-4 rounded-b-[18px] border-t border-dashed border-[var(--ls-ink-faint)] bg-[var(--ls-paper)] px-5 pb-5 pt-3">
+        <div className="sticky bottom-0 z-[1] -mx-5 -mb-5 mt-4 rounded-b-[18px] border-t border-dashed border-[var(--ls-ink-faint)] bg-[var(--ls-paper)] px-5 pb-4 pt-2.5">
           {progress && (
             <p
               id={progressIdFor(check.id)}
-              className={`lesson-hand mb-2 flex items-center gap-1.5 text-[16px] ${progress.ready ? "text-[var(--ls-primary)]" : "text-[var(--ls-ink-mid)]"}`}
+              className={`lesson-hand mb-1.5 flex items-center gap-1.5 text-[16px] ${progress.ready ? "text-[var(--ls-primary)]" : "text-[var(--ls-ink-mid)]"}`}
             >
               {progress.ready && <CircleCheck size={16} aria-hidden />}
               {t(progress.key, progress.vars)}

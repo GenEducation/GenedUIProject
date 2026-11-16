@@ -111,6 +111,7 @@ export function OutcomesCorrectionModal({
   return (
     <AnimatePresence>
       <motion.div
+        key="backdrop"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -118,6 +119,7 @@ export function OutcomesCorrectionModal({
         className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[100]"
       />
       <motion.div
+        key="dialog"
         role="dialog"
         aria-label="Choose learning outcomes"
         initial={{ opacity: 0, scale: 0.95, y: 20 }}

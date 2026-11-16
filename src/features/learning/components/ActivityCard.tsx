@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { CircleCheck, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { SketchButton } from "./SketchButton";
 import type { LessonActivity } from "@/features/student/learner/types";
 import { browserOralDeps, canCaptureAudio, INITIAL_ORAL, OralAnswerSession, type OralState } from "../check/oralAnswer";
 import { useSessionLanguage, useUiText } from "../i18n";
@@ -106,6 +108,32 @@ export function ActivityCard({ nodeId, activity }: { nodeId: string; activity: L
   const listening = activity.mode === "listen";
   const showInput = !activity.attempted || practising;
   const canAnswer = !listening || heardPassage;
+  // Done: a slim row, so the step's question beside it keeps the dock's room. The whole prompt stays one tap away.
+  if (!showInput)
+    return (
+      <section
+        aria-label={`${titles[activity.mode]} activity, done`}
+        className="lesson-sketch-sm mb-3 flex items-center gap-3 bg-[var(--ls-sage)] px-3 py-2 text-[var(--ls-ink)]"
+      >
+        <CircleCheck size={20} className="shrink-0 text-[var(--ls-primary)]" aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-semibold text-[var(--ls-ink-mid)]">{titles[activity.mode]} · done</p>
+          <p className="truncate text-[14px] leading-snug" title={activity.prompt}>{activity.prompt}</p>
+        </div>
+        <SketchButton
+          type="button"
+          variant="tertiary"
+          className="!min-h-9 shrink-0 !px-2 !text-[15px]"
+          onClick={() => {
+            setNotice(null);
+            setHeardPassage(false);
+            setPractising(true);
+          }}
+        >
+          <RotateCcw size={14} aria-hidden /> Practice again
+        </SketchButton>
+      </section>
+    );
   return (
     <section className="lesson-sketch mb-3 p-4 text-[var(--ls-ink)]" aria-labelledby={promptId}>
       <div className="text-xs font-semibold text-[var(--ls-ink-mid)]">{titles[activity.mode]}</div>
@@ -162,15 +190,6 @@ export function ActivityCard({ nodeId, activity }: { nodeId: string; activity: L
             </div>
           )}
         </div>
-      )}
-      {!showInput && (
-        <Button className="mt-3" size="sm" type="button" onClick={() => {
-          setNotice(null);
-          setHeardPassage(false);
-          setPractising(true);
-        }}>
-          Practice again
-        </Button>
       )}
       {notice && <p role="status" className="mt-2">{notice}</p>}
     </section>

@@ -126,7 +126,7 @@ export function GroupSorter({
             </div>
           </DropZone>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 @[17rem]:grid-cols-2">
           {check.options.map((group) => {
             const inside = entries.filter((entry) => pairs[entry] === group.text);
             const headingId = `box-${check.id}-${group.id}`;

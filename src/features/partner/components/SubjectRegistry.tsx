@@ -86,6 +86,7 @@ export function canRunFromRow(
   return (
     outcome.next_step === "run_again" ||
     outcome.next_step === "start" ||
+    outcome.next_step === "prepare_release" ||
     STARTABLE_STATES.has(subject.state)
   );
 }

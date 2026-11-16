@@ -103,6 +103,22 @@ function draftOf(
 }
 
 /** The key to save, or null while the draft is incomplete. */
+/** One card per printed question. A run can list the same question twice, once per reason it was removed (an open question
+ * whose answer is also in a recording); the partner answers it once, under its `item_key`. */
+function uniqueRemoved(removed: RemovedQuestion[]): RemovedQuestion[] {
+  const byKey = new Map<string, RemovedQuestion>();
+  for (const q of removed) {
+    const seen = byKey.get(q.item_key);
+    byKey.set(
+      q.item_key,
+      seen
+        ? { ...seen, needs_concept: seen.needs_concept || q.needs_concept }
+        : q,
+    );
+  }
+  return [...byKey.values()];
+}
+
 export function answerOf(
   q: RemovedQuestion,
   d: AnswerDraft,
@@ -169,7 +185,8 @@ function AuthoringBody({
   const [error, setError] = useState<string | null>(null);
   const tabsId = useId();
 
-  const adopt = useCallback((res: AuthoringResponse, keepWork: boolean) => {
+  const adopt = useCallback((raw: AuthoringResponse, keepWork: boolean) => {
+    const res = { ...raw, removed: uniqueRemoved(raw.removed) };
     setData(res);
     if (keepWork) return;
     setAnswers(
