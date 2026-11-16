@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 
 /**
  * Stand-in for Google's widget, which really paints into a cross-origin iframe
@@ -52,5 +52,42 @@ describe("GoogleAuthButton", () => {
     await waitFor(() =>
       expect(screen.getByTestId("gsi-widget")).toHaveAttribute("data-width", "400"),
     );
+  });
+
+  it("ignores small width wobbles so the iframe is not re-rendered in a loop", async () => {
+    // Each GSI re-render can toggle the page scrollbar, nudging the container
+    // by ~15px. Reacting to that re-rendered the button forever in Chrome.
+    vi.useFakeTimers();
+    let fire = () => {};
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(cb: () => void) {
+          fire = cb;
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    const width = vi.spyOn(HTMLElement.prototype, "clientWidth", "get");
+    width.mockReturnValue(360);
+    render(<GoogleAuthButton onSuccess={vi.fn()} />);
+    expect(screen.getByTestId("gsi-widget")).toHaveAttribute("data-width", "360");
+
+    width.mockReturnValue(345);
+    act(() => {
+      fire();
+      vi.advanceTimersByTime(200);
+    });
+    expect(screen.getByTestId("gsi-widget")).toHaveAttribute("data-width", "360");
+
+    width.mockReturnValue(300);
+    act(() => {
+      fire();
+      vi.advanceTimersByTime(200);
+    });
+    expect(screen.getByTestId("gsi-widget")).toHaveAttribute("data-width", "300");
+    vi.useRealTimers();
   });
 });

@@ -37,6 +37,15 @@ export interface StudyTimePoint {
   total_minutes: number;
 }
 
+export interface ReportSubjectFacts {
+  code: string;
+  name: string;
+  /** 0–1; null when nothing is measured yet. */
+  mastery: number | null;
+  chapters_opened: number;
+  chapters_total: number;
+}
+
 export interface ChapterStudyTime {
   subject: string;
   chapter_name: string;
@@ -137,13 +146,20 @@ export const parentService = {
     return latest ? new Date(latest).toISOString() : null;
   },
 
-  /** When each of a child's sessions started (ISO strings); null when unknown. */
-  fetchSessionDates: async (studentId: string): Promise<string[] | null> => {
-    const sessions = await fetchSessionRows(studentId);
-    if (!sessions) return null;
-    return sessions
-      .map((session) => session?.created_at)
-      .filter((at): at is string => typeof at === "string" && !Number.isNaN(Date.parse(at)));
+  /**
+   * Each subject's mastery (0–1, null when nothing is measured yet) and chapters opened, from the child's report
+   * (`GET /v1/parent/children/{id}/report`, the same read as the report card). Null when unavailable.
+   */
+  fetchReportSubjects: async (studentId: string): Promise<ReportSubjectFacts[] | null> => {
+    const body = (await getJson(`/v1/parent/children/${encodeURIComponent(studentId)}/report`)) as { subjects?: unknown } | null;
+    if (!body || !Array.isArray(body.subjects)) return null;
+    return body.subjects.map((r) => ({
+      code: typeof r?.code === "string" ? r.code : "",
+      name: typeof r?.name === "string" ? r.name : "",
+      mastery: typeof r?.mastery === "number" && Number.isFinite(r.mastery) ? r.mastery : null,
+      chapters_opened: Number(r?.chapters_opened) || 0,
+      chapters_total: Number(r?.chapters_total) || 0,
+    }));
   },
 
   /**

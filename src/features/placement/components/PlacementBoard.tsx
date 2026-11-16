@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { AlertCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { usePlacementStore } from "../store/usePlacementStore";
 import { ItemRenderer } from "./items/ItemRenderer";
@@ -94,6 +94,9 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
   const reset = usePlacementStore((s) => s.reset);
 
   const [isStarting, setIsStarting] = useState(false);
+  // The block whose Next/Finish was pressed with questions unanswered: its unanswered cards are marked until the
+  // student moves on. Keyed by block, so the next block starts unmarked.
+  const [checkedBlock, setCheckedBlock] = useState<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Every remaining item in the block, in the block's own fixed order.
@@ -108,6 +111,23 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
   const isLastScreen = isLastBlock;
   const missingItems = remainingItems.filter((it) => draftResponses[it.item_id] === undefined);
   const blockComplete = remainingItems.length > 0 && missingItems.length === 0;
+  const showMissing = !!currentBlock && checkedBlock === currentBlock.block_index && missingItems.length > 0;
+
+  // Next/Finish stays pressable: with questions unanswered it sends nothing, marks them and brings the first into view.
+  const handleNext = () => {
+    if (!currentBlock) return;
+    if (blockComplete) {
+      void goNext();
+      return;
+    }
+    setCheckedBlock(currentBlock.block_index);
+    const first = missingItems[0];
+    const card = first && panelRef.current?.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(first.item_id)}"]`);
+    if (!card) return;
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    card.scrollIntoView?.({ behavior: reduced ? "auto" : "smooth", block: "center" });
+    card.focus({ preventScroll: true });
+  };
 
   const handleStart = async () => {
     setIsStarting(true);
@@ -230,12 +250,21 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
                       style={{ columnCount: 3, columnGap: 16 }}
                     >
                       {remainingItems.map((item) => (
-                        <div key={item.item_id} style={{ breakInside: "avoid", marginBottom: 16 }}>
+                        <div
+                          key={item.item_id}
+                          data-item-id={item.item_id}
+                          // Focused (not tabbable) when Next finds it unanswered, so a screen reader lands on it.
+                          tabIndex={-1}
+                          aria-label={`Question ${item.index + 1}`}
+                          className="outline-none rounded-xl"
+                          style={{ breakInside: "avoid", marginBottom: 16 }}
+                        >
                           <ItemRenderer
                             item={item}
                             value={draftResponses[item.item_id] ?? null}
                             onChange={(response) => setItemDraft(item.item_id, response)}
                             disabled={isSubmitting}
+                            missing={showMissing && draftResponses[item.item_id] === undefined}
                           />
                         </div>
                       ))}
@@ -250,11 +279,20 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
                           same block, which the backend treats as a no-op.
                           Otherwise, while the block is incomplete, name the
                           exact questions still blocking Next/Finish — "answer
-                          Q18, Q20" is something a student can act on; a
-                          disabled button with no explanation is not. The
+                          Q18, Q20" is something a student can act on. Pressing
+                          the button with questions missing turns this red and
+                          marks those cards. The
                           static hint is the fallback once nothing is missing,
                           so the footer isn't empty space either way. */}
-                      <p className="m-0 text-[12px] font-medium" role="alert" style={{ color: "var(--pl-ink-mid)" }}>
+                      <p
+                        className="m-0 flex items-center gap-1.5 text-[12px]"
+                        role="alert"
+                        style={{
+                          color: showMissing && !errorMessage ? "var(--pl-danger)" : "var(--pl-ink-mid)",
+                          fontWeight: showMissing && !errorMessage ? 700 : 500,
+                        }}
+                      >
+                        {showMissing && !errorMessage && <AlertCircle size={14} strokeWidth={2.4} className="shrink-0" aria-hidden="true" />}
                         {errorMessage
                           ? `${errorMessage} Tap the button again.`
                           : missingItems.length > 0
@@ -267,9 +305,10 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
                         size="lg"
                         loading={isSubmitting}
                         // Every item in the block needs an answer — there is no
-                        // skip, and no partial submit.
-                        disabled={!blockComplete || isSubmitting}
-                        onClick={goNext}
+                        // skip, and no partial submit — but the button stays
+                        // pressable so pressing it can show what's missing.
+                        disabled={isSubmitting}
+                        onClick={handleNext}
                         trailingIcon={<ArrowRight size={18} strokeWidth={2.4} />}
                       >
                         {isLastScreen ? "Finish" : "Next"}

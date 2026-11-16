@@ -4,10 +4,10 @@ import React from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, BookOpen, Clock3, Sparkles } from "lucide-react";
-import { BAND_TONES, subjectIcon } from "@/components/report-card/subjectVisuals";
+import { BAND_TONES } from "@/components/report-card/subjectVisuals";
+import { TintIcon, subjectIconName } from "@/components/report-card/screen/icons";
 import { ringArc } from "@/components/report-card/utils";
 import { GlassSkeleton } from "../loader/GlassSkeleton";
-import { MaskIcon } from "../home/theme";
 import { BAND_SCALE, bandOf, type Phrase } from "./insights";
 import { BandChip, PhraseText } from "./parts";
 
@@ -61,7 +61,7 @@ export function SubjectHero({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl" style={{ background: tone.tint }}>
-              <MaskIcon src={subjectIcon(subject)} color={tone.accent} size={24} />
+              <TintIcon name={subjectIconName(subject)} color={tone.accent} size={24} />
             </span>
             <h1 className="text-[28px] font-extrabold leading-none tracking-[-0.02em] text-[var(--pp-ink)] sm:text-[34px]">{subject}</h1>
             {!loading && <BandChip band={band} />}
