@@ -7,6 +7,8 @@ import type { ReadingIntent, ReadingRole } from "../types";
 import { tutorButtons } from "../reading/bookActions";
 import { LessonMarkdown } from "./LessonMarkdown";
 import { ReadingControls } from "./ReadingControls";
+import { ReadingPractice } from "./ReadingPractice";
+import { practiceExcerpt } from "../reading/alignWords";
 
 const normal = (text: string) => text.replace(/\s+/g, " ").trim().toLowerCase();
 
@@ -237,6 +239,11 @@ export function BookPanel({
   });
   const hasTutor = !!tutor.readWithMe || !!tutor.readIt;
   const hasListen = !!here && here.text.audible && !voice;
+  // Practice reads the lines being taught when this part holds some, else the part's first sentences.
+  const [practising, setPractising] = useState<string | null>(null);
+  const taughtHere = here ? here.part.paragraphs.filter((c) => inActivePortion(c.text, activeLines)).map((c) => c.text) : [];
+  const excerpt = here ? practiceExcerpt((taughtHere.length ? taughtHere : here.part.paragraphs.map((c) => c.text)).join(" ")) : "";
+  const inPractice = !!here && practising === hereKey && hasListen && !!excerpt;
   const read = (intent: ReadingIntent) => {
     setPressed((prev) => {
       const was = prev[hereKey] ?? { readWithMe: false, readIt: false };
@@ -284,7 +291,7 @@ export function BookPanel({
             )}
           </p>
         )}
-        {teaching && (
+        {teaching && !inPractice && (
           <div className="mt-2 flex items-center gap-2 text-[12px] text-[var(--ls-ink-mid)]">
             <span aria-hidden className="h-3 w-5 shrink-0 rounded-sm bg-[rgb(217_242_121/0.55)] shadow-[inset_3px_0_0_var(--ls-accent-deep)]" />
             <span className="flex-1">Highlighted: what your tutor is teaching now</span>
@@ -306,6 +313,17 @@ export function BookPanel({
         </div>
       )}
 
+      {inPractice && here ? (
+        <ReadingPractice
+          instanceId={instanceId}
+          passageId={here.text.id}
+          segment={here.part.segment}
+          excerpt={excerpt}
+          fromLesson={taughtHere.length > 0}
+          onClose={() => setPractising(null)}
+        />
+      ) : (
+        <>
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-8 pt-3">
         {earlier.length > 0 && (
           <nav aria-label="Earlier parts" className="mb-4">
@@ -442,10 +460,13 @@ export function BookPanel({
                 text={here.part.paragraphs.map((c) => c.text).join("\n\n")}
                 audible={here.text.audible}
                 voice={voice}
+                onPractice={() => setPractising(hereKey)}
               />
             </div>
           )}
         </footer>
+      )}
+        </>
       )}
     </aside>
   );

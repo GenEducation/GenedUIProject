@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Headphones, Mic, Pause, RotateCcw, Square } from "lucide-react";
-import { alignWords, feedbackFor, practiceExcerpt } from "../reading/alignWords";
+import { ReadingPractice } from "./ReadingPractice";
+import { practiceExcerpt } from "../reading/alignWords";
 import { canCaptureAudio, type ReadAloudDeps } from "../reading/readAloud";
-import { useReadAloud } from "../reading/useReadAloud";
 import { useSegmentAudio, type AudioDeps } from "../reading/useSegmentAudio";
 import { listenButtons } from "../reading/bookActions";
 
@@ -23,6 +23,7 @@ export function ReadingControls({
   text,
   audible = true,
   voice = false,
+  onPractice,
   audio,
   capture,
   canCapture = canCaptureAudio,
@@ -36,16 +37,15 @@ export function ReadingControls({
   audible?: boolean;
   /** A voice session is on: the tutor's voice owns the speaker, so this group steps aside. */
   voice?: boolean;
+  /** The panel takes practice over (its own view); without it, practice opens here. */
+  onPractice?: () => void;
   audio?: AudioDeps;
   capture?: ReadAloudDeps;
   canCapture?: () => boolean;
 }) {
   const listen = useSegmentAudio(instanceId, passageId, segment, audio);
-  const practice = useReadAloud(instanceId, passageId, segment, capture);
   const [practising, setPractising] = useState(false);
   const excerpt = practiceExcerpt(text);
-  const phase = practice.state.phase;
-  const busy = phase === "starting" || phase === "listening" || phase === "finishing";
   const buttons = listenButtons({
     audible, voice, phase: listen.phase, canCapture: canCapture(), hasExcerpt: !!excerpt, practising,
   });
@@ -56,13 +56,10 @@ export function ReadingControls({
     if (voice) stop();
   }, [voice, stop]);
 
-  const leave = () => {
-    practice.cancel();
-    setPractising(false);
-  };
   const openPractice = () => {
     listen.stop();
-    setPractising(true);
+    if (onPractice) onPractice();
+    else setPractising(true);
   };
 
   if (!buttons.shown) return null;
@@ -106,58 +103,10 @@ export function ReadingControls({
       </p>
 
       {practising && excerpt && (
-        <section aria-label="Reading practice" className="basis-full rounded-xl border border-[var(--ls-border)] bg-white px-3 py-3">
-          <p className="mb-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--ls-ink-mid)]">Read this out loud</p>
-          <p lang="und" className="mb-3 text-[16px] leading-[1.6] text-[var(--ls-ink)]">
-            {phase === "done" && !practice.state.problem ? <Marked excerpt={excerpt} heard={practice.state.heard} /> : excerpt}
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            {(phase === "idle" || phase === "failed" || phase === "done") && (
-              // eslint-disable-next-line no-restricted-syntax -- starts the practice.
-              <button type="button" className={BUTTON} onClick={practice.start}>
-                <Mic size={14} aria-hidden /> {phase === "idle" ? "Start reading" : "Try again"}
-              </button>
-            )}
-            {phase === "listening" && (
-              // eslint-disable-next-line no-restricted-syntax -- ends the practice.
-              <button type="button" className={BUTTON} onClick={practice.finish}>
-                <Square size={12} aria-hidden /> I&apos;m done
-              </button>
-            )}
-            {/* eslint-disable-next-line no-restricted-syntax -- leaves the practice. */}
-            <button type="button" className={BUTTON} onClick={leave}>
-              {busy ? "Cancel" : "Close"}
-            </button>
-          </div>
-          <p role="status" aria-live="polite" className="mt-2 text-[13px] text-[var(--ls-ink-mid)]">
-            {phase === "starting" && "Getting ready…"}
-            {phase === "listening" && "Listening. Read the lines above, then tap “I’m done”."}
-            {phase === "finishing" && "One moment…"}
-            {practice.state.problem}
-          </p>
-        </section>
+        <div className="flex basis-full flex-col rounded-xl border border-[var(--ls-border)] bg-white">
+          <ReadingPractice instanceId={instanceId} passageId={passageId} segment={segment} excerpt={excerpt} capture={capture} onClose={() => setPractising(false)} />
+        </div>
       )}
     </div>
-  );
-}
-
-/** The excerpt with each word marked as picked up or not (words, never colour alone), and the plain-language result. */
-function Marked({ excerpt, heard }: { excerpt: string; heard: string }) {
-  const result = alignWords(excerpt, heard);
-  const feedback = feedbackFor(result);
-  return (
-    <>
-      {result.words.map((mark, index) => (
-        <span key={index} data-heard={mark.heard} className={mark.heard ? "" : "underline decoration-dotted underline-offset-4"}>
-          {mark.word}
-          {!mark.heard && <span className="sr-only"> (not picked up)</span>}{" "}
-        </span>
-      ))}
-      <span className="mt-2 block text-[14px] text-[var(--ls-ink)]">
-        {feedback.headline}
-        {feedback.missed.length > 0 && <strong className="block">{feedback.missed.join(", ")}</strong>}
-        <span className="mt-1 block text-[12px] text-[var(--ls-ink-mid)]">{feedback.note}</span>
-      </span>
-    </>
   );
 }
