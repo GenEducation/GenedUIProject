@@ -5,7 +5,7 @@ import {
   Baby, BookOpen, ChartLine, Compass, GraduationCap, Library, Lightbulb, MessageCircleQuestion,
   Puzzle, Repeat, School, ShieldCheck, Sparkles, Target, Telescope, Users,
 } from "lucide-react";
-import { home } from "./content/home";
+import { CONTACT_HREF, home } from "./content/home";
 import { MarketingShell } from "./components/MarketingShell";
 import { CtaButton } from "./components/CtaButton";
 import { VisualPlaceholder } from "./components/VisualPlaceholder";
@@ -285,7 +285,7 @@ function Faqs() {
         <div className="zv-faqsec__side zv-reveal">
           <QuestionGlyph className="zv-faqsec__glyph" />
           <h2 className="zv-h2">{f.title}</h2>
-          <CtaButton variant="ghost">{f.cta}</CtaButton>
+          <CtaButton href={CONTACT_HREF} variant="ghost">{f.cta}</CtaButton>
         </div>
         <div className="zv-reveal">
           <Faq items={f.items} />
@@ -307,7 +307,7 @@ function Closing() {
           <p className="zv-lede">{c.body}</p>
           <div className="zv-ctas">
             <CtaButton variant="sun" arrow>{c.ctaPrimary}</CtaButton>
-            <CtaButton variant="light">{c.ctaSecondary}</CtaButton>
+            <CtaButton href={CONTACT_HREF} variant="light">{c.ctaSecondary}</CtaButton>
           </div>
         </div>
         <VisualPlaceholder className="zv-closing__visual zv-reveal" note={c.visual} ratio="4 / 5" />

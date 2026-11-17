@@ -8,6 +8,8 @@ import { HowZooviWorksPage } from "../HowZooviWorksPage";
 import { home } from "../content/home";
 import { howItWorks } from "../content/howItWorks";
 
+const MAILTO = "mailto:info@gened.ai";
+
 describe("Zoovi homepage", () => {
   it("shows every section's heading from the content doc", () => {
     render(<HomePage />);
@@ -23,7 +25,15 @@ describe("Zoovi homepage", () => {
     const main = screen.getByRole("main");
     expect(within(main).getAllByRole("link", { name: /See How Zoovi Works/ })[0]).toHaveAttribute("href", "/how-zoovi-works");
     expect(within(main).getAllByRole("button", { name: "Get an Invite" }).length).toBeGreaterThan(0);
-    expect(within(main).getByRole("button", { name: "Talk to Us" })).toBeInTheDocument();
+    expect(within(main).getByRole("link", { name: "Talk to Us" })).toHaveAttribute("href", MAILTO);
+    expect(within(main).getByRole("link", { name: /Have More Questions\? Talk to Us/ })).toHaveAttribute("href", MAILTO);
+    const footer = screen.getByRole("contentinfo");
+    // Contact reveals the address, as an email link, right below it
+    const contact = within(footer).getByRole("button", { name: "Contact" });
+    expect(within(footer).queryByRole("link", { name: "info@gened.ai" })).toBeNull();
+    fireEvent.click(contact);
+    expect(contact).toHaveAttribute("aria-expanded", "true");
+    expect(within(footer).getByRole("link", { name: "info@gened.ai" })).toHaveAttribute("href", MAILTO);
     expect(within(main).queryByRole("link", { name: "Get an Invite" })).toBeNull();
   });
 

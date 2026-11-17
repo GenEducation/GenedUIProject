@@ -137,6 +137,14 @@ export const home = {
   },
 } as const;
 
+/**
+ * Where "Contact" and every "Talk to Us" go. Set by NEXT_PUBLIC_CONTACT_EMAIL (.env.local, and the host's env for
+ * deployed builds; Next inlines it at build time), with GenEd's inbox as the fallback so a build without it still works.
+ */
+export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || "info@gened.ai";
+/** Opens a new email to CONTACT_EMAIL in the visitor's own mail app. */
+export const CONTACT_HREF = `mailto:${CONTACT_EMAIL}`;
+
 export const footer = {
   name: "Zoovi",
   tagline: "A companion for curious minds",

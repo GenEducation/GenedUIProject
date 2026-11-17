@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useHydrated } from "@/hooks/useHydrated";
 import { safeRedirect, withRedirect } from "@/features/auth/usePostAuthRedirect";
-import { footer } from "../content/home";
+import { CONTACT_EMAIL, CONTACT_HREF, footer } from "../content/home";
 import { marketingFontVars } from "../fonts";
 import { useReveal } from "../hooks";
 import { CtaButton } from "./CtaButton";
@@ -27,6 +27,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
   const hydrated = useHydrated();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
   useReveal(root);
 
   // AuthGuard sends a signed-out visitor here with `?redirect=<where they were going>` (a parent's invitation
@@ -142,7 +143,19 @@ export function MarketingShell({ children }: { children: ReactNode }) {
             </nav>
             <div className="zv-footer__col">
               <span>About</span>
-              <span>Contact</span>
+              {/* eslint-disable-next-line no-restricted-syntax -- styled as a footer link, not an app button */}
+              <button
+                type="button"
+                className={`zv-footer__toggle${contactOpen ? " is-open" : ""}`}
+                aria-expanded={contactOpen}
+                aria-controls="zv-contact-email"
+                onClick={() => setContactOpen((o) => !o)}
+              >
+                Contact
+              </button>
+              <a id="zv-contact-email" className={`zv-footer__email${contactOpen ? " is-open" : ""}`} href={CONTACT_HREF} hidden={!contactOpen}>
+                {CONTACT_EMAIL}
+              </a>
             </div>
           </div>
           <p className="zv-footer__base">{footer.attribution}</p>

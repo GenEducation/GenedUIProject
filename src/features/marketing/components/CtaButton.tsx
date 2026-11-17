@@ -27,6 +27,14 @@ export function CtaButton({ children, href, variant = "primary", arrow = false, 
       {arrow && <Arrow />}
     </>
   );
+  // An email link: a plain anchor, handed to the visitor's mail app.
+  if (href?.startsWith("mailto:")) {
+    return (
+      <a className={cls} href={href}>
+        {inner}
+      </a>
+    );
+  }
   if (href) {
     return (
       <Link className={cls} href={href}>
