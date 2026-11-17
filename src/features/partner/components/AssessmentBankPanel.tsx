@@ -25,6 +25,11 @@ import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
 import { ACTIVITY_MODE, KIND_LABEL, keyText } from "./QuestionFormats";
 import { LearnerPreview } from "./LearnerPreview";
+import {
+  DeviceReadiness,
+  DeviceRefusalNote,
+  QuestionDeviceChips,
+} from "./DeviceFit";
 import { GenerationStatus, pendingSteps } from "./GenerationStatus";
 import {
   StepTodo,
@@ -162,6 +167,7 @@ function QuestionCard({
         <span className={`${chip} bg-[#122D30]/5 text-[#122D30]/60`}>
           {PROVENANCE[meta.provenance]}
         </span>
+        <QuestionDeviceChips q={q} />
         <span className="flex-1" />
         {accepted ? (
           <span className={`${chip} bg-emerald-600 text-white`}>
@@ -214,6 +220,7 @@ function QuestionCard({
             ))}
           </ul>
         )}
+        <DeviceRefusalNote q={q} />
         {!q.concept_in_chapter && (
           <p className="text-xs text-amber-800">
             The latest run of the chapter no longer has this question&rsquo;s
@@ -814,6 +821,9 @@ function StepWorkspace({
       ) : null}
 
       {writer}
+
+      {/* Whether a learner can finish each concept on the touch device, from the backend's pool counts. */}
+      {!waiting && <DeviceReadiness concepts={node.concepts} />}
 
       {/* Only a step with objectives (or a held concept) has anything to list here. */}
       {(obligations.length > 0 || blocked.length > 0) && (

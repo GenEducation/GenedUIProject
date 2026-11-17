@@ -486,6 +486,40 @@ export interface SourceRelease {
   live?: ReleaseSummary | null;
   /** Where the review of the chapter's visuals stands: its pictures and the redraws asked for. */
   visual_review?: VisualReviewSummary | null;
+  /** Per surface (`web`, then each device profile): can learners finish each step from the accepted questions. Informative only. */
+  readiness?: SurfaceReadiness[];
+  /** The live release per surface, from the published plan: what learners can finish now. Empty before publication. */
+  live_readiness?: LiveSurface[];
+}
+
+export interface LiveSurface {
+  surface: string;
+  ready: boolean;
+  steps_ready: number;
+  steps_total: number;
+  short_steps: string[];
+}
+
+/** A concept a step cannot complete on a surface yet. */
+export interface ConceptGap {
+  concept_key: string;
+  alternate: "needs_alternate" | "not_completable";
+  families: number;
+  strong_families: number;
+}
+
+export interface StepReadiness {
+  section_key: string;
+  title: string;
+  ready: boolean;
+  gaps: ConceptGap[];
+}
+
+/** `surface` is `web` or a device profile name. */
+export interface SurfaceReadiness {
+  surface: string;
+  ready: boolean;
+  steps: StepReadiness[];
 }
 
 export interface ReleaseDecision {
@@ -713,6 +747,33 @@ export interface BankQuestion {
   verification: Verification;
   question: BankQuestionContent;
   concept_in_chapter: boolean;
+  /** Strength computed from the finished question (`evidence_tier`); the author's `meta.strength` is only a request.
+   * Absent from an older backend. */
+  tier?: EvidenceTier;
+  /** Why the question could not be built into a scoring rule, when `tier` is "none". */
+  tier_problem?: string | null;
+  requested_strength?: "strong" | "weak";
+  /** Per device profile (e.g. `gened-p4-touch-v1`): can the device show it, and if not, why. */
+  device?: Record<string, DeviceEligibility>;
+}
+
+export type EvidenceTier = "strong" | "weak" | "rubric" | "none";
+
+export interface DeviceEligibility {
+  eligible: boolean;
+  /** A device refusal code (`too_many_options`, `entry_too_long`, `format_not_declared`, ...); null when eligible. */
+  refusal: string | null;
+}
+
+/** What a concept's usable questions add up to on one surface (backend `bank_device.concept_pools`). */
+export interface ConceptPoolSurface {
+  units: number;
+  clean_path: boolean;
+  families: number;
+  strong_families: number;
+  /** resilient: completable even after a missed family; needs_alternate: completable, no spare family;
+   * not_completable: a learner cannot finish the concept here. */
+  alternate: "resilient" | "needs_alternate" | "not_completable";
 }
 
 export interface BankObligation {
@@ -747,6 +808,10 @@ export interface BankConcept {
   misconceptions: string[];
   obligations: BankObligation[];
   open_slots: BankOpenSlot[];
+  /** Keyed `web` and by device profile; counts drafts and accepted questions. Absent (or null) from an older backend. */
+  pool?: Record<string, ConceptPoolSurface> | null;
+  /** The same pools counting accepted questions only: what learners get once this bank is published. */
+  pool_accepted?: Record<string, ConceptPoolSurface> | null;
 }
 
 export interface BankNode {

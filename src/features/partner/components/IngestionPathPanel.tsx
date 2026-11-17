@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { LiveReadiness } from "./DeviceFit";
 import type { Subject } from "../store/usePartnerStore";
 import {
   ATTENTION_COUNTS,
@@ -518,8 +519,13 @@ function NextStepBanner({
           </p>
           <p className="text-sm font-black text-[#122D30]">{copy.title}</p>
           <p className="text-[11px] text-[#122D30]/70">{copy.body}</p>
+          {outcome.next_step === "none" && (
+            <LiveReadiness sourceId={subject.source_id} />
+          )}
         </div>
-        {(outcome.next_step === "add_questions" || outcome.next_step === "review_questions") && onAddQuestions && (
+        {(outcome.next_step === "add_questions" ||
+          outcome.next_step === "review_questions") &&
+        onAddQuestions ? (
           <Button
             size="sm"
             pill
@@ -528,6 +534,21 @@ function NextStepBanner({
           >
             Review decisions
           </Button>
+        ) : (
+          // A published chapter's bank stays open: questions can still be added or fixed (e.g. for the device), and a
+          // replacement release carries them.
+          !UPLOAD_STEPS.has(outcome.next_step) &&
+          onAddQuestions && (
+            <Button
+              size="sm"
+              pill
+              variant="secondary"
+              leadingIcon={<PenLine size={13} />}
+              onClick={onAddQuestions}
+            >
+              Review questions
+            </Button>
+          )
         )}
         {UPLOAD_STEPS.has(outcome.next_step) && onUploadAgain && (
           <Button

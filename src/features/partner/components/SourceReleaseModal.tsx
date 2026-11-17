@@ -28,6 +28,7 @@ import { groupByKind, summarize } from "../utils/releaseSummary";
 import { buildLookup, type ReleaseLookup } from "../utils/releaseDetails";
 import { ReleaseProposalDetails } from "./ReleaseProposalDetails";
 import { RedrawTallyBar } from "./visuals/RedrawTallyBar";
+import { ReadyForStudents } from "./DeviceFit";
 import { openRedrawsFrom, openRedrawsText } from "../utils/redrawTally";
 import type { VisualRedrawTally } from "../types/visuals";
 import type { Subject } from "../store/usePartnerStore";
@@ -310,6 +311,8 @@ function ReleaseBody({
                 )}
               </div>
             )}
+
+            <ReadyForStudents readiness={data.readiness} />
 
             <div className="grid grid-cols-3 gap-2.5">
               <Count
