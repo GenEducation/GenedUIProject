@@ -46,6 +46,20 @@ describe("Zoovi homepage", () => {
   });
 });
 
+describe("Zoovi logo", () => {
+  it("glides back to the top when you're already on the homepage", () => {
+    const scrollTo = vi.fn();
+    vi.stubGlobal("scrollTo", scrollTo);
+    render(<HomePage />);
+    for (const logo of screen.getAllByRole("link", { name: "Zoovi home" })) {
+      scrollTo.mockClear();
+      fireEvent.click(logo);
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+    }
+    vi.unstubAllGlobals();
+  });
+});
+
 describe("How Zoovi Works page", () => {
   it("walks through the four steps and all eight FAQs", () => {
     render(<HowZooviWorksPage />);

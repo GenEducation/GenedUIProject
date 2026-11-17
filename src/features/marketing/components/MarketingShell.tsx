@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useHydrated } from "@/hooks/useHydrated";
 import { safeRedirect, withRedirect } from "@/features/auth/usePostAuthRedirect";
 import { footer } from "../content/home";
@@ -67,18 +67,27 @@ export function MarketingShell({ children }: { children: ReactNode }) {
 
   const isActive = (href: string) => (href === "/" ? pathname === "/" : href === pathname);
   const close = () => setMenuOpen(false);
+  // The logo and "Home" go to the top of the homepage. Already on it, a link to the same URL doesn't move the page,
+  // so glide back up instead.
+  const toTop = (e: MouseEvent<HTMLAnchorElement>) => {
+    setMenuOpen(false);
+    if (pathname !== "/") return;
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (window.location.hash) history.replaceState(null, "", "/");
+  };
 
   return (
     <div ref={root} className={`zv ${marketingFontVars}`}>
       <a className="zv-skip" href="#main">Skip to content</a>
       <header className={`zv-nav${scrolled ? " is-scrolled" : ""}${menuOpen ? " is-menu" : ""}`}>
         <div className="zv-wrap zv-nav__bar">
-          <Link href="/" className="zv-nav__logo" aria-label="Zoovi home">
+          <Link href="/" className="zv-nav__logo" aria-label="Zoovi home" onClick={toTop}>
             <ZooviLogo height={32} priority />
           </Link>
           <nav className="zv-nav__links" aria-label="Main">
             {NAV.map((n) => (
-              <Link key={n.label} href={n.href} className={isActive(n.href) ? "is-active" : undefined} aria-current={isActive(n.href) ? "page" : undefined}>
+              <Link key={n.label} href={n.href} onClick={n.href === "/" ? toTop : undefined} className={isActive(n.href) ? "is-active" : undefined} aria-current={isActive(n.href) ? "page" : undefined}>
                 {n.label}
               </Link>
             ))}
@@ -104,7 +113,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
       <div id="zv-drawer" className={`zv-drawer${menuOpen ? " is-open" : ""}`} aria-hidden={!menuOpen}>
         <nav aria-label="Mobile">
           {NAV.map((n, i) => (
-            <Link key={n.label} href={n.href} onClick={close} tabIndex={menuOpen ? 0 : -1} style={{ ["--i" as string]: i }}>
+            <Link key={n.label} href={n.href} onClick={n.href === "/" ? toTop : close} tabIndex={menuOpen ? 0 : -1} style={{ ["--i" as string]: i }}>
               {n.label}
             </Link>
           ))}
@@ -120,11 +129,13 @@ export function MarketingShell({ children }: { children: ReactNode }) {
         <div className="zv-wrap">
           <div className="zv-footer__top">
             <div className="zv-footer__brand">
-              <ZooviLogo height={44} />
+              <Link href="/" className="zv-footer__logo" aria-label="Zoovi home" onClick={toTop}>
+                <ZooviLogo height={44} />
+              </Link>
               <p className="zv-footer__tagline">{footer.tagline}</p>
             </div>
             <nav className="zv-footer__col" aria-label="Footer">
-              <Link href="/">Home</Link>
+              <Link href="/" onClick={toTop}>Home</Link>
               <Link href="/how-zoovi-works">How Zoovi Works</Link>
               <Link href="/#parents">For Parent</Link>
               <Link href="/#educators">For Educators</Link>
