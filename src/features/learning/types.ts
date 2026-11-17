@@ -263,7 +263,30 @@ export interface PassageSegment {
 export interface Passage {
   id: string;
   title: string;
+  /** What the text is written in, from the book's metadata. `null`: unknown, so it is not read aloud or listened to. Absent from
+   * an older payload: listening is offered as before. */
+  language?: string | null;
   segments: PassageSegment[];
+}
+
+/** One key idea of a step, as the curriculum names and defines it. */
+export interface LessonConcept {
+  id: string;
+  title: string;
+  definition: string;
+}
+
+/** A learning outcome of the chapter a step serves. */
+export interface LessonOutcome {
+  id: string;
+  code: string;
+  title: string;
+}
+
+/** An open question printed in the book for the step: for discussion with the tutor, never scored. */
+export interface DiscussionPrompt {
+  id: string;
+  prompt: string;
 }
 
 /** What the step's own chunks are for in a reading-based chapter (`teacher_node_v8`). */
@@ -286,6 +309,12 @@ export interface TeacherPayload {
     reading_role?: ReadingRole | null;
     passages?: Passage[];
     est_minutes: number;
+    /** The step's key ideas (`teacher_node_v12`+; absent on an older stored payload). */
+    components?: LessonConcept[];
+    /** The learning outcomes the step serves. */
+    parent_los?: LessonOutcome[];
+    /** The book's printed open questions for the step: discussion only, no key, no score. */
+    discussion_prompts?: DiscussionPrompt[];
   };
   student_context: {
     /** Up to 3 upcoming nodes: the progress rail's look-ahead (the backend has no full plan list yet). */

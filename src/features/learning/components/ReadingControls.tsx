@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Headphones, Mic, Pause, RotateCcw, Square } from "lucide-react";
 import { alignWords, feedbackFor, practiceExcerpt } from "../reading/alignWords";
 import { canCaptureAudio, type ReadAloudDeps } from "../reading/readAloud";
 import { useReadAloud } from "../reading/useReadAloud";
 import { useSegmentAudio, type AudioDeps } from "../reading/useSegmentAudio";
+import { listenButtons } from "../reading/bookActions";
 
 const BUTTON =
   "lesson-display inline-flex items-center gap-1.5 rounded-full bg-[var(--ls-sage)] px-3 py-1.5 text-[13px] font-semibold text-[var(--ls-primary)] disabled:opacity-50";
@@ -20,6 +21,8 @@ export function ReadingControls({
   passageId,
   segment,
   text,
+  audible = true,
+  voice = false,
   audio,
   capture,
   canCapture = canCaptureAudio,
@@ -29,6 +32,10 @@ export function ReadingControls({
   segment: number;
   /** The part's running text: practice shows its first sentences. */
   text: string;
+  /** The part's language is known, so it can be heard and practised. */
+  audible?: boolean;
+  /** A voice session is on: the tutor's voice owns the speaker, so this group steps aside. */
+  voice?: boolean;
   audio?: AudioDeps;
   capture?: ReadAloudDeps;
   canCapture?: () => boolean;
@@ -39,79 +46,96 @@ export function ReadingControls({
   const excerpt = practiceExcerpt(text);
   const phase = practice.state.phase;
   const busy = phase === "starting" || phase === "listening" || phase === "finishing";
+  const buttons = listenButtons({
+    audible, voice, phase: listen.phase, canCapture: canCapture(), hasExcerpt: !!excerpt, practising,
+  });
+  const { stop } = listen;
+
+  // The tutor's voice starting takes the speaker: the part stops playing.
+  useEffect(() => {
+    if (voice) stop();
+  }, [voice, stop]);
 
   const leave = () => {
     practice.cancel();
     setPractising(false);
   };
+  const openPractice = () => {
+    listen.stop();
+    setPractising(true);
+  };
 
+  if (!buttons.shown) return null;
   return (
-    <div className="mt-2 space-y-2" data-no-pan>
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label={`Listen to part ${segment}`}>
-        {listen.phase === "playing" ? (
-          // eslint-disable-next-line no-restricted-syntax -- a playback control.
-          <button type="button" className={BUTTON} onClick={listen.pause} aria-label="Pause listening">
-            <Pause size={14} aria-hidden /> Pause
-          </button>
-        ) : (
-          // eslint-disable-next-line no-restricted-syntax -- a playback control.
-          <button type="button" className={BUTTON} onClick={listen.play} disabled={listen.phase === "loading" || !instanceId}>
-            <Headphones size={14} aria-hidden /> {listen.phase === "paused" ? "Keep listening" : listen.phase === "loading" ? "Getting it ready…" : "Listen"}
-          </button>
-        )}
-        {/* eslint-disable-next-line no-restricted-syntax -- a playback control. */}
-        <button type="button" className={BUTTON} onClick={listen.stop} disabled={listen.phase === "idle"} aria-label="Stop listening">
-          <Square size={12} aria-hidden /> Stop
+    <div className="flex flex-wrap items-center gap-2" data-no-pan>
+      {buttons.main && (
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label={`Listen to part ${segment}`}>
+          {buttons.main.action === "pause" ? (
+            // eslint-disable-next-line no-restricted-syntax -- a playback control.
+            <button type="button" className={BUTTON} onClick={listen.pause} aria-label="Pause listening">
+              <Pause size={14} aria-hidden /> {buttons.main.label}
+            </button>
+          ) : (
+            // eslint-disable-next-line no-restricted-syntax -- a playback control.
+            <button type="button" className={BUTTON} onClick={listen.play} disabled={buttons.main.disabled || !instanceId}>
+              <Headphones size={14} aria-hidden /> {buttons.main.label}
+            </button>
+          )}
+          {buttons.stop && (
+            // eslint-disable-next-line no-restricted-syntax -- a playback control.
+            <button type="button" className={BUTTON} onClick={listen.stop} aria-label="Stop listening">
+              <Square size={12} aria-hidden /> Stop
+            </button>
+          )}
+          {buttons.again && (
+            // eslint-disable-next-line no-restricted-syntax -- a playback control.
+            <button type="button" className={BUTTON} onClick={listen.replay} disabled={!instanceId} aria-label="Listen again from the start">
+              <RotateCcw size={13} aria-hidden /> Again
+            </button>
+          )}
+        </div>
+      )}
+      {buttons.practice && (
+        // eslint-disable-next-line no-restricted-syntax -- opens the optional practice.
+        <button type="button" className={BUTTON} onClick={openPractice}>
+          <Mic size={14} aria-hidden /> Give reading a try
         </button>
-        {/* eslint-disable-next-line no-restricted-syntax -- a playback control. */}
-        <button type="button" className={BUTTON} onClick={listen.replay} disabled={listen.phase === "loading" || !instanceId} aria-label="Listen again from the start">
-          <RotateCcw size={13} aria-hidden /> Again
-        </button>
-      </div>
-      <p role="status" aria-live="polite" className="text-[13px] text-[var(--ls-ink-mid)]">
+      )}
+      <p role="status" aria-live="polite" className="basis-full text-[13px] text-[var(--ls-ink-mid)] empty:hidden">
         {listen.problem}
       </p>
 
-      {canCapture() && excerpt && (
-        <div>
-          {!practising ? (
-            // eslint-disable-next-line no-restricted-syntax -- opens the optional practice.
-            <button type="button" className={BUTTON} onClick={() => setPractising(true)}>
-              <Mic size={14} aria-hidden /> Give reading a try
+      {practising && excerpt && (
+        <section aria-label="Reading practice" className="basis-full rounded-xl border border-[var(--ls-border)] bg-white px-3 py-3">
+          <p className="mb-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--ls-ink-mid)]">Read this out loud</p>
+          <p lang="und" className="mb-3 text-[16px] leading-[1.6] text-[var(--ls-ink)]">
+            {phase === "done" && !practice.state.problem ? <Marked excerpt={excerpt} heard={practice.state.heard} /> : excerpt}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {(phase === "idle" || phase === "failed" || phase === "done") && (
+              // eslint-disable-next-line no-restricted-syntax -- starts the practice.
+              <button type="button" className={BUTTON} onClick={practice.start}>
+                <Mic size={14} aria-hidden /> {phase === "idle" ? "Start reading" : "Try again"}
+              </button>
+            )}
+            {phase === "listening" && (
+              // eslint-disable-next-line no-restricted-syntax -- ends the practice.
+              <button type="button" className={BUTTON} onClick={practice.finish}>
+                <Square size={12} aria-hidden /> I&apos;m done
+              </button>
+            )}
+            {/* eslint-disable-next-line no-restricted-syntax -- leaves the practice. */}
+            <button type="button" className={BUTTON} onClick={leave}>
+              {busy ? "Cancel" : "Close"}
             </button>
-          ) : (
-            <section aria-label="Reading practice" className="rounded-xl border border-[var(--ls-border)] bg-white px-3 py-3">
-              <p className="mb-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--ls-ink-mid)]">Read this out loud</p>
-              <p lang="und" className="mb-3 text-[16px] leading-[1.6] text-[var(--ls-ink)]">
-                {phase === "done" && !practice.state.problem ? <Marked excerpt={excerpt} heard={practice.state.heard} /> : excerpt}
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                {(phase === "idle" || phase === "failed" || phase === "done") && (
-                  // eslint-disable-next-line no-restricted-syntax -- starts the practice.
-                  <button type="button" className={BUTTON} onClick={practice.start}>
-                    <Mic size={14} aria-hidden /> {phase === "idle" ? "Start reading" : "Try again"}
-                  </button>
-                )}
-                {phase === "listening" && (
-                  // eslint-disable-next-line no-restricted-syntax -- ends the practice.
-                  <button type="button" className={BUTTON} onClick={practice.finish}>
-                    <Square size={12} aria-hidden /> I&apos;m done
-                  </button>
-                )}
-                {/* eslint-disable-next-line no-restricted-syntax -- leaves the practice. */}
-                <button type="button" className={BUTTON} onClick={leave}>
-                  {busy ? "Cancel" : "Close"}
-                </button>
-              </div>
-              <p role="status" aria-live="polite" className="mt-2 text-[13px] text-[var(--ls-ink-mid)]">
-                {phase === "starting" && "Getting ready…"}
-                {phase === "listening" && "Listening. Read the lines above, then tap “I’m done”."}
-                {phase === "finishing" && "One moment…"}
-                {practice.state.problem}
-              </p>
-            </section>
-          )}
-        </div>
+          </div>
+          <p role="status" aria-live="polite" className="mt-2 text-[13px] text-[var(--ls-ink-mid)]">
+            {phase === "starting" && "Getting ready…"}
+            {phase === "listening" && "Listening. Read the lines above, then tap “I’m done”."}
+            {phase === "finishing" && "One moment…"}
+            {practice.state.problem}
+          </p>
+        </section>
       )}
     </div>
   );

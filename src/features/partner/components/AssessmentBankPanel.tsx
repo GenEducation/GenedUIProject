@@ -6,9 +6,12 @@ import {
   Check,
   CheckCheck,
   CheckCircle2,
-  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Circle,
   Clock,
+  Info,
+  ListChecks,
   Loader2,
   PenLine,
   Plus,
@@ -17,14 +20,17 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
 import { ACTIVITY_MODE, KIND_LABEL, keyText } from "./QuestionFormats";
 import { LearnerPreview } from "./LearnerPreview";
 import { GenerationStatus, pendingSteps } from "./GenerationStatus";
 import {
-  StepGuide,
+  StepTodo,
   blankFor,
+  needLabel,
+  waitsOnPlan,
   partnerQuestion,
   type WriteTarget,
 } from "./StepGuide";
@@ -37,6 +43,7 @@ import type {
   BankQuestionContent,
   BankRun,
   RejectionReason,
+  StepActions,
 } from "../types/sources";
 
 /**
@@ -128,12 +135,24 @@ function QuestionCard({
   const [reason, setReason] = useState<RejectionReason>("incorrect");
   const [note, setNote] = useState("");
   const { body, meta } = q.question;
+  const activity = body.answer_kind === "activity";
+  const blanks = body.answer_kind === "blanks";
+  const accepted = q.state === "accepted";
+  const distractors = meta.distractors ?? [];
+  const hasDetails =
+    !!body.explanation || distractors.length > 0 || !!meta.remediation;
   return (
     <article
       aria-label={body.prompt}
-      className="rounded-2xl bg-white border border-[#122D30]/8 p-4 flex flex-col gap-2.5"
+      className={`rounded-2xl border bg-white flex flex-col ${
+        accepted
+          ? "border-emerald-200"
+          : doubted(q)
+            ? "border-amber-200"
+            : "border-[#122D30]/10"
+      }`}
     >
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5 px-4 pt-3.5">
         <span className={`${chip} bg-[#075E63]/10 text-[#075E63]`}>
           {KIND_LABEL[body.answer_kind]}
         </span>
@@ -143,8 +162,13 @@ function QuestionCard({
         <span className={`${chip} bg-[#122D30]/5 text-[#122D30]/60`}>
           {PROVENANCE[meta.provenance]}
         </span>
-        {doubted(q) ? (
-          <span className={`${chip} bg-amber-50 text-amber-800`}>
+        <span className="flex-1" />
+        {accepted ? (
+          <span className={`${chip} bg-emerald-600 text-white`}>
+            <Check size={11} aria-hidden /> Accepted
+          </span>
+        ) : doubted(q) ? (
+          <span className={`${chip} bg-amber-100 text-amber-900`}>
             <AlertTriangle size={11} aria-hidden /> Please check
           </span>
         ) : (
@@ -152,100 +176,113 @@ function QuestionCard({
             <ShieldCheck size={11} aria-hidden /> Answer checked
           </span>
         )}
-        <span className="flex-1" />
-        {q.state === "accepted" && (
-          <span className={`${chip} bg-emerald-600 text-white`}>
-            <Check size={11} aria-hidden /> Accepted
-          </span>
-        )}
-        {q.state === "rejected" && (
-          <span className={`${chip} bg-[#122D30]/10 text-[#122D30]/60`}>
-            Rejected
-          </span>
-        )}
       </div>
-      <p className="text-sm font-bold text-[#122D30] whitespace-pre-line">
-        {body.prompt}
-      </p>
-      {body.answer_kind === "activity" ? (
-        <ActivityDetails body={body} />
-      ) : (
-        <>
-          <LearnerPreview
-            key={`${q.question_id}-${q.revision}`}
-            question={body}
-          />
-          <p className="text-xs text-[#122D30]/70">
-            <span className="font-bold text-[#122D30]">Answer: </span>
-            {keyText(body)}
+
+      <div className="px-4 pt-2 pb-3 flex flex-col gap-2.5">
+        {/* The prompt once. Usually it's the card's heading and the learner's view shows only what they answer with; a
+            fill-in question's view is the sentence itself, so there the view alone says it. */}
+        {(activity || !blanks) && (
+          <p className="text-[15px] font-bold leading-snug text-[#122D30] whitespace-pre-line">
+            {body.prompt}
           </p>
-        </>
-      )}
-      {body.explanation && (
-        <p className="text-xs text-[#122D30]/70">
-          <span className="font-bold text-[#122D30]">Why: </span>
-          {body.explanation}
-        </p>
-      )}
-      {(meta.distractors?.length ?? 0) > 0 && (
-        <details className="text-xs text-[#122D30]/70">
-          <summary className="cursor-pointer font-bold text-[#122D30]">
-            Wrong answers and the mistake each shows
-          </summary>
-          <ul className="list-disc pl-5 mt-1">
-            {meta.distractors!.map((d, i) => (
-              <li key={i}>
-                <span className="font-bold">{d.option}</span>: {d.misconception}
-              </li>
+        )}
+        {activity ? (
+          <ActivityDetails body={body} />
+        ) : (
+          <>
+            {/* The lesson's own renderers, drawn smaller: a preview beside the review, not the lesson's full size. */}
+            <div className="[zoom:0.8]">
+              <LearnerPreview
+                key={`${q.question_id}-${q.revision}`}
+                question={body}
+                showPrompt={false}
+              />
+            </div>
+            <p className="rounded-xl bg-emerald-50/70 px-3 py-2 text-xs text-[#122D30]/80">
+              <span className="font-black text-emerald-800">Answer: </span>
+              {keyText(body)}
+            </p>
+          </>
+        )}
+        {(meta.findings?.length ?? 0) > 0 && (
+          <ul
+            className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 list-disc pl-7"
+            aria-label="Things to check"
+          >
+            {meta.findings!.map((f, i) => (
+              <li key={i}>{f}</li>
             ))}
           </ul>
-        </details>
-      )}
-      {meta.remediation && (
-        <p className="text-xs text-[#122D30]/70">
-          <span className="font-bold text-[#122D30]">
-            If a student gets it wrong:{" "}
-          </span>
-          {meta.remediation}
-        </p>
-      )}
-      {(meta.findings?.length ?? 0) > 0 && (
-        <ul
-          className="text-xs text-amber-800 list-disc pl-5"
-          aria-label="Things to check"
-        >
-          {meta.findings!.map((f, i) => (
-            <li key={i}>{f}</li>
-          ))}
-        </ul>
-      )}
-      {!q.concept_in_chapter && (
-        <p className="text-xs text-amber-800">
-          The latest run of the chapter no longer has this question&rsquo;s
-          concept.
-        </p>
-      )}
+        )}
+        {!q.concept_in_chapter && (
+          <p className="text-xs text-amber-800">
+            The latest run of the chapter no longer has this question&rsquo;s
+            concept.
+          </p>
+        )}
+        {hasDetails && (
+          <details className="group text-xs text-[#122D30]/70">
+            <summary className="flex cursor-pointer list-none items-center gap-1 font-bold text-[#122D30]/60 hover:text-[#122D30] [&::-webkit-details-marker]:hidden">
+              <ChevronRight
+                size={13}
+                className="transition-transform group-open:rotate-90"
+                aria-hidden
+              />
+              Why it&rsquo;s right, wrong answers and feedback
+            </summary>
+            <div className="mt-2 flex flex-col gap-2 border-l-2 border-[#122D30]/8 pl-3">
+              {body.explanation && (
+                <p>
+                  <span className="font-bold text-[#122D30]">Why: </span>
+                  {body.explanation}
+                </p>
+              )}
+              {distractors.length > 0 && (
+                <div>
+                  <p className="font-bold text-[#122D30]">
+                    Wrong answers and the mistake each shows
+                  </p>
+                  <ul className="list-disc pl-5 mt-1">
+                    {distractors.map((d, i) => (
+                      <li key={i}>
+                        <span className="font-bold">{d.option}</span>:{" "}
+                        {d.misconception}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {meta.remediation && (
+                <p>
+                  <span className="font-bold text-[#122D30]">
+                    If a student gets it wrong:{" "}
+                  </span>
+                  {meta.remediation}
+                </p>
+              )}
+            </div>
+          </details>
+        )}
+      </div>
+
       {rejecting ? (
-        <div className="flex flex-col gap-2 rounded-xl border border-[#122D30]/10 p-3">
-          <label className="text-xs font-bold text-[#122D30]">
-            Why reject it?
-            <select
-              className="mt-1 block w-full rounded-lg border border-[#122D30]/15 bg-white px-2 py-1.5 text-xs"
-              value={reason}
-              onChange={(e) => setReason(e.target.value as RejectionReason)}
-            >
-              {REASONS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs font-bold text-[#122D30]">
-            Anything GenEd should know for the replacement (optional)
+        <div className="flex flex-col gap-3 border-t border-[#122D30]/8 bg-[#F6F7F2] px-4 py-3.5 rounded-b-2xl">
+          {/* The app's own select, in the review's teal: not the browser's native menu. */}
+          <Select<RejectionReason>
+            label="Why reject it?"
+            size="sm"
+            accentColor="#075E63"
+            value={reason}
+            onChange={setReason}
+            options={REASONS}
+          />
+          <label className="block text-[12.5px] font-semibold text-[var(--text-mid)]">
+            Anything GenEd should know for the replacement{" "}
+            <span className="font-normal text-[#122D30]/45">(optional)</span>
             <input
-              className="mt-1 block w-full rounded-lg border border-[#122D30]/15 bg-white px-2 py-1.5 text-xs"
+              className="mt-1.5 block w-full rounded-xl border border-[#122D30]/12 bg-white px-3 py-2 text-xs font-normal text-[#122D30] placeholder:text-[#122D30]/35 focus:outline-none focus:border-[#075E63] focus:ring-2 focus:ring-[#075E63]/15"
               maxLength={500}
+              placeholder="e.g. keep it about the second stanza"
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
@@ -270,8 +307,8 @@ function QuestionCard({
         </div>
       ) : (
         q.state !== "rejected" && (
-          <div className="flex flex-wrap gap-2">
-            {q.state !== "accepted" && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-[#122D30]/8 px-4 py-2.5">
+            {!accepted && (
               <Button
                 size="sm"
                 leadingIcon={<Check size={14} />}
@@ -289,6 +326,7 @@ function QuestionCard({
             >
               Edit
             </Button>
+            <span className="flex-1" />
             <Button
               size="sm"
               variant="tertiary"
@@ -301,6 +339,56 @@ function QuestionCard({
         )
       )}
     </article>
+  );
+}
+
+/** An accepted question folded to one line: the step's open decisions stay in view. It opens to the full card. */
+function AcceptedRow({
+  q,
+  children,
+}: {
+  q: BankQuestion;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  if (open)
+    return (
+      <div className="flex flex-col gap-1">
+        {children}
+        <Button
+          size="sm"
+          variant="tertiary"
+          className="self-start"
+          onClick={() => setOpen(false)}
+        >
+          Fold it away
+        </Button>
+      </div>
+    );
+  return (
+    // eslint-disable-next-line no-restricted-syntax -- a folded row that opens its card, not an action.
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="group flex w-full items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/40 px-3.5 py-2.5 text-left hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#075E63]"
+    >
+      <CheckCircle2
+        size={16}
+        className="shrink-0 text-emerald-600"
+        aria-hidden
+      />
+      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[#122D30]">
+        {q.question.body.prompt}
+      </span>
+      <span className="shrink-0 text-[11px] font-bold text-[#122D30]/45">
+        {KIND_LABEL[q.question.body.answer_kind]}
+      </span>
+      <ChevronRight
+        size={14}
+        className="shrink-0 text-[#122D30]/35 group-hover:text-[#122D30]/70"
+        aria-hidden
+      />
+    </button>
   );
 }
 
@@ -363,56 +451,210 @@ const PHASE: Record<
   },
 };
 
-/** Objectives of a step that accepted questions (or an accepted activity) don't cover yet, plus held or unplanned concepts. */
-function uncoveredCount(node: BankNode): number {
-  return node.concepts.reduce(
-    (n, c) =>
-      n +
-      (c.status === "held" || c.status === "not_planned"
-        ? 1
-        : c.obligations.filter((o) => !o.approved_covered).length),
-    0,
-  );
-}
-
 /** "Parent step.: Child" (how the backend names a sub-step) reads as a breadcrumb and a title. */
 function splitTitle(title: string): { parent: string | null; name: string } {
   const m = /^(.*?[.?!]):\s+(.+)$/.exec(title);
   return m ? { parent: m[1], name: m[2] } : { parent: null, name: title };
 }
 
-function NodeSection({
-  index,
-  sourceId,
-  node,
-  questions,
-  phase,
+/**
+ * The common start of every step's title ("CHANGE OF HEART: "), said once above the list instead of on every step. Empty when
+ * the titles don't share one.
+ */
+function sharedParent(titles: string[]): string {
+  if (titles.length < 2) return "";
+  const head = /^(.{2,80}?):\s+/.exec(titles[0])?.[1];
+  return head && titles.every((t) => t.startsWith(`${head}: `)) ? head : "";
+}
+
+/** A step's own name, without the chapter title every step repeats or the parent step's breadcrumb. */
+function stepName(
+  title: string,
+  parent: string,
+): { crumb: string | null; name: string } {
+  const own =
+    parent && title.startsWith(`${parent}: `)
+      ? title.slice(parent.length + 2)
+      : title;
+  const { parent: crumb, name } = splitTitle(own);
+  return { crumb, name };
+}
+
+interface Step {
+  node: BankNode;
+  index: number;
+  questions: BankQuestion[];
+  phase: StepPhase;
+  todo: StepActions | undefined;
+}
+
+/** The step's mark in the list: done, being written, or how much it still needs. */
+function StepMark({
+  step,
   queued,
-  open,
-  onToggle,
+  current,
+}: {
+  step: Step;
+  queued: boolean;
+  current: boolean;
+}) {
+  const { phase, index } = step;
+  const done = phase === "ready" || phase === "accepted";
+  return (
+    <span
+      aria-hidden
+      className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-[11px] font-black tabular-nums ${
+        done
+          ? "bg-emerald-600 text-white"
+          : current
+            ? "bg-[#075E63] text-white"
+            : phase === "waiting"
+              ? "bg-[#075E63]/10 text-[#075E63]"
+              : waitsOnPlan(step.todo)
+                ? "bg-white text-[#122D30]/50 ring-2 ring-inset ring-[#122D30]/15"
+                : "bg-white text-[#122D30]/70 ring-2 ring-inset ring-amber-300"
+      }`}
+    >
+      {done ? (
+        <Check size={14} strokeWidth={3} />
+      ) : phase === "waiting" ? (
+        queued ? (
+          <Clock size={13} />
+        ) : (
+          <Loader2 size={13} className="animate-spin" />
+        )
+      ) : (
+        index + 1
+      )}
+    </span>
+  );
+}
+
+/** What the step list says under a step's name. */
+function stepNeed(step: Step, queued: boolean): string {
+  if (step.phase === "ready" || step.phase === "accepted")
+    return step.node.publishable ? "Ready" : PHASE[step.phase].label;
+  if (step.phase === "waiting")
+    return queued ? "Waiting to start" : "Being written";
+  const drafts = step.questions.filter((q) => q.state === "draft").length;
+  return (
+    needLabel(step.todo) ??
+    (drafts ? `${drafts} to decide` : PHASE[step.phase].label)
+  );
+}
+
+function StepList({
+  steps,
+  parent,
+  current,
+  queued,
+  onPick,
+}: {
+  steps: Step[];
+  parent: string;
+  current: string;
+  queued: boolean;
+  onPick: (key: string) => void;
+}) {
+  return (
+    <nav aria-label="Lesson steps" className="min-w-0">
+      {parent && (
+        <p className="mb-2 hidden truncate px-1 text-[10.5px] font-black uppercase tracking-[0.14em] text-[#122D30]/45 @[46rem]:block">
+          {parent}
+        </p>
+      )}
+      <ol className="flex gap-1.5 overflow-x-auto pb-1 @[46rem]:flex-col @[46rem]:gap-0.5 @[46rem]:overflow-visible @[46rem]:pb-0">
+        {steps.map((st) => {
+          const on = st.node.section_key === current;
+          const { name } = stepName(st.node.title, parent);
+          const done = st.phase === "ready" || st.phase === "accepted";
+          return (
+            <li key={st.node.section_key} className="shrink-0 @[46rem]:shrink">
+              {/* eslint-disable-next-line no-restricted-syntax -- a step in the list, opening it beside. */}
+              <button
+                type="button"
+                aria-current={on ? "step" : undefined}
+                onClick={() => onPick(st.node.section_key)}
+                title={st.node.title}
+                className={`flex w-full max-w-[240px] items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#075E63] @[46rem]:max-w-none ${
+                  on
+                    ? "bg-white shadow-[0_1px_2px_rgba(18,45,48,0.08),0_0_0_1px_rgba(7,94,99,0.25)]"
+                    : "hover:bg-white/70"
+                }`}
+              >
+                <StepMark step={st} queued={queued} current={on} />
+                <span className="min-w-0 flex-1">
+                  <span
+                    className={`block truncate text-[13px] leading-tight ${on ? "font-black text-[#122D30]" : "font-bold text-[#122D30]/80"}`}
+                  >
+                    {name}
+                  </span>
+                  <span
+                    className={`block truncate text-[11px] ${done ? "text-emerald-700" : st.phase === "waiting" ? "text-[#075E63]/70" : waitsOnPlan(st.todo) ? "text-[#122D30]/50" : "text-amber-800"}`}
+                  >
+                    {stepNeed(st, queued)}
+                  </span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+function StepWorkspace({
+  step,
+  total,
+  parent,
+  sourceId,
+  queued,
+  generating,
   busy,
   act,
   editing,
   onEdit,
   renderEditor,
+  writer,
+  onKeep,
+  onWrite,
+  onAsk,
+  prev,
+  next,
+  onPick,
 }: {
-  index: number;
+  step: Step;
+  total: number;
+  parent: string;
   sourceId: string;
-  node: BankNode;
-  questions: BankQuestion[];
-  phase: StepPhase;
   /** The run that writes this step's questions hasn't started yet. */
   queued: boolean;
-  open: boolean;
-  onToggle: () => void;
+  generating: Set<string>;
   busy: string | null;
   act: (key: string, call: () => Promise<BankPackage>) => void;
   editing: string | null;
   onEdit: (q: BankQuestion) => void;
   renderEditor: (q: BankQuestion) => React.ReactNode;
+  /** The partner's own question or activity being written for this step, if any. */
+  writer: React.ReactNode;
+  onKeep: (conceptKey: string) => void;
+  onWrite: (target: WriteTarget) => void;
+  onAsk: (sectionKey: string) => void;
+  prev: Step | null;
+  next: Step | null;
+  onPick: (key: string) => void;
 }) {
+  const { node, questions, phase, todo, index } = step;
   const [asking, setAsking] = useState(false);
   const [hint, setHint] = useState("");
+  // Questions still to decide when the step opened stay as cards here once decided, so a decision never moves what you look at.
+  const [openedAsDraft] = useState(
+    () =>
+      new Set(
+        questions.filter((q) => q.state === "draft").map((q) => q.question_id),
+      ),
+  );
   const waiting = phase === "waiting";
   const obligations = node.concepts
     .filter((c) => c.status === "planned" || c.status === "capability_gap")
@@ -424,354 +666,440 @@ function NodeSection({
     c.open_slots.map((s) => ({ ...s, concept: c.title })),
   );
   const live = questions.filter((q) => q.state !== "rejected");
+  const rejected = questions.length - live.length;
+  const toDecide = live.filter(
+    (q) => q.state === "draft" || openedAsDraft.has(q.question_id),
+  );
+  const acceptedBefore = live.filter(
+    (q) => q.state === "accepted" && !openedAsDraft.has(q.question_id),
+  );
   const accepted = live.filter((q) => q.state === "accepted").length;
   const ready = live.filter((q) => q.state === "draft" && !doubted(q));
   const floor = Math.max(node.review_floor, 1);
   const checked = Math.min(node.reviewable, floor);
-  const { parent, name } = splitTitle(node.title);
+  const covered = obligations.filter((o) => o.approved_covered).length;
+  const { crumb, name } = stepName(node.title, parent);
   const look = PHASE[phase];
   const done = phase === "ready" || phase === "accepted";
-  const panelId = `bank-step-${node.section_key}`;
+
+  const card = (q: BankQuestion) =>
+    editing === q.question_id ? (
+      <div key={q.question_id}>{renderEditor(q)}</div>
+    ) : (
+      <QuestionCard
+        key={q.question_id}
+        q={q}
+        busy={busy === q.question_id}
+        onAccept={() =>
+          act(q.question_id, () =>
+            sourcesService.acceptQuestion(sourceId, q.question_id, q.version),
+          )
+        }
+        onReject={(reason, note) =>
+          act(q.question_id, () =>
+            sourcesService.rejectQuestion(
+              sourceId,
+              q.question_id,
+              q.version,
+              reason,
+              note,
+            ),
+          )
+        }
+        onEdit={() => onEdit(q)}
+      />
+    );
+
   return (
     <section
       id={`bank-step-row-${node.section_key}`}
       aria-label={node.title}
-      className={`scroll-mt-4 rounded-3xl border transition-colors ${
-        open
-          ? "bg-white border-[#122D30]/12 shadow-[0_1px_0_rgba(18,45,48,0.04),0_8px_24px_-12px_rgba(18,45,48,0.18)]"
-          : "bg-white/60 border-[#122D30]/8 hover:bg-white hover:border-[#122D30]/12"
-      }`}
+      className="min-w-0 scroll-mt-4 flex flex-col gap-4"
     >
-      {/* eslint-disable-next-line no-restricted-syntax -- a disclosure header, not an action button. */}
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={onToggle}
-        className="w-full flex items-center gap-3 px-4 py-3.5 text-left rounded-3xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#075E63]"
-      >
-        <span
-          aria-hidden
-          className={`grid place-items-center h-8 w-8 shrink-0 rounded-full text-xs font-black tabular-nums ${look.badge}`}
-        >
-          {done ? (
-            <Check size={15} strokeWidth={3} />
-          ) : waiting ? (
-            queued ? (
-              <Clock size={14} />
-            ) : (
-              <Loader2 size={14} className="animate-spin" />
-            )
+      <header className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-[11px] font-bold text-[#122D30]/50">
+          <span className="tabular-nums">
+            Step {index + 1} of {total}
+          </span>
+          {crumb && <span className="truncate">· {crumb}</span>}
+          <span className="flex-1" />
+          {waitsOnPlan(todo) ? (
+            <span className={`${chip} bg-[#122D30]/6 text-[#122D30]/60`}>
+              Waiting on GenEd
+            </span>
           ) : (
-            index + 1
-          )}
-        </span>
-        <span className="flex-1 min-w-0">
-          {parent && (
-            <span className="block text-[10.5px] font-bold text-[#122D30]/45 truncate">
-              {parent}
+            <span className={`${chip} ${look.pill}`}>
+              {waiting && queued ? "Waiting to start" : look.label}
             </span>
           )}
-          <span className="block text-sm font-black text-[#122D30] truncate">
-            {name}
-          </span>
-          <span className="mt-1 flex items-center gap-2 text-[11px] text-[#122D30]/55">
-            {waiting ? (
-              <span>
-                {queued
-                  ? "Waiting for GenEd to start writing questions"
-                  : "GenEd is still writing questions for this step"}
+        </div>
+        <h3 className="text-xl font-black leading-tight text-[#122D30]">
+          {name}
+        </h3>
+        {!waiting && (
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-[#122D30]/60">
+            <span className="flex items-center gap-1.5">
+              <span
+                className="flex gap-0.5"
+                role="img"
+                aria-label={`${node.reviewable} of ${node.review_floor} checked, distinct questions`}
+              >
+                {Array.from({ length: floor }, (_, i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 w-4 rounded-full ${i < checked ? "bg-[#075E63]" : "bg-[#122D30]/12"}`}
+                  />
+                ))}
               </span>
-            ) : (
-              <>
-                <span
-                  className="flex gap-0.5"
-                  role="img"
-                  aria-label={`${node.reviewable} of ${node.review_floor} checked, distinct questions`}
-                >
-                  {Array.from({ length: floor }, (_, i) => (
-                    <span
-                      key={i}
-                      className={`h-1.5 w-4 rounded-full ${i < checked ? "bg-[#075E63]" : "bg-[#122D30]/12"}`}
-                    />
-                  ))}
-                </span>
-                <span className="tabular-nums">
-                  {node.reviewable}/{node.review_floor} checked
-                  {" · "}
-                  {live.length} question{live.length === 1 ? "" : "s"}
-                  {accepted > 0 && ` · ${accepted} accepted`}
-                </span>
-              </>
-            )}
+              <span className="tabular-nums">
+                {node.reviewable}/{node.review_floor} checked
+              </span>
+            </span>
+            <span className="tabular-nums">
+              {live.length} question{live.length === 1 ? "" : "s"}
+              {accepted > 0 && ` · ${accepted} accepted`}
+              {rejected > 0 && ` · ${rejected} rejected`}
+            </span>
+          </p>
+        )}
+      </header>
+
+      {/* What to do here: the one place a step says what it needs. */}
+      {waitsOnPlan(todo) ? (
+        // Blocked on GenEd's side, not the partner's: say so, and ask for nothing that can't help.
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-2xl border border-[#122D30]/10 bg-[#F6F7F2] p-3.5"
+        >
+          <Info
+            size={16}
+            className="mt-0.5 shrink-0 text-[#075E63]"
+            aria-hidden
+          />
+          <span className="text-xs leading-relaxed text-[#122D30]/75">
+            <span className="block text-sm font-black text-[#122D30]">
+              Nothing for you to do here
+            </span>
+            {accepted > 0
+              ? `Your ${accepted} accepted question${accepted === 1 ? " is" : "s are"} kept. `
+              : ""}
+            GenEd has no assessment plan for this step, so accepted questions
+            can&rsquo;t count towards it yet and the step can&rsquo;t be
+            approved. GenEd has to plan the chapter&rsquo;s questions again; ask
+            GenEd to check.
           </span>
-        </span>
-        <span className={`${chip} ${look.pill} shrink-0 hidden sm:inline-flex`}>
-          {waiting && queued ? "Waiting to start" : look.label}
-        </span>
-        <ChevronDown
-          size={16}
-          className={`shrink-0 text-[#122D30]/40 transition-transform ${open ? "rotate-180" : ""}`}
+        </div>
+      ) : todo && todo.actions.length > 0 ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3.5">
+          <p className="mb-2 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-amber-900">
+            <ListChecks size={13} aria-hidden /> To finish this step
+          </p>
+          <StepTodo
+            step={todo}
+            generating={generating}
+            busy={busy}
+            onKeep={onKeep}
+            onWrite={onWrite}
+            onAsk={onAsk}
+          />
+        </div>
+      ) : done ? (
+        <p
+          role="status"
+          className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-3.5 py-2.5 text-xs font-bold text-emerald-800"
+        >
+          <CheckCircle2 size={15} aria-hidden /> This step is covered by
+          accepted questions.
+        </p>
+      ) : null}
+
+      {writer}
+
+      {/* Only a step with objectives (or a held concept) has anything to list here. */}
+      {(obligations.length > 0 || blocked.length > 0) && (
+        <details
+          open={!done}
+          className="group rounded-2xl bg-[#F6F7F2] px-3.5 py-3"
+        >
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-[#122D30]/55 [&::-webkit-details-marker]:hidden">
+            <ChevronRight
+              size={13}
+              className="transition-transform group-open:rotate-90"
+              aria-hidden
+            />
+            What learners must show
+            {obligations.length > 0 && (
+              <span className="ml-auto normal-case tracking-normal font-bold tabular-nums text-[#122D30]/50">
+                {covered} of {obligations.length} covered
+              </span>
+            )}
+          </summary>
+          <ul className="mt-2.5 flex flex-col gap-1.5">
+            {obligations.map((o) => (
+              <li
+                key={`${o.concept}-${o.key}`}
+                className="flex items-start gap-2 text-xs text-[#122D30]/80"
+              >
+                {o.production && !o.approved_covered ? (
+                  <AlertTriangle
+                    size={13}
+                    className="mt-0.5 text-amber-600 shrink-0"
+                    aria-hidden
+                  />
+                ) : o.approved_covered ? (
+                  <CheckCircle2
+                    size={13}
+                    className="mt-0.5 text-emerald-600 shrink-0"
+                    aria-hidden
+                  />
+                ) : (
+                  <Circle
+                    size={13}
+                    className="mt-0.5 text-[#122D30]/25 shrink-0"
+                    aria-hidden
+                  />
+                )}
+                <span>
+                  <span className="font-bold text-[#122D30]">{o.concept}</span>
+                  <span className="text-[#122D30]/40"> — </span>
+                  {o.statement}
+                  <span className="block text-[11px] text-[#122D30]/50">
+                    {o.production
+                      ? o.approved_covered
+                        ? "Answered by an accepted activity."
+                        : o.draft_covered
+                          ? "Accept the activity below."
+                          : "Needs an activity: GenEd proposes one, or write your own."
+                      : o.approved_covered
+                        ? "Covered by accepted questions."
+                        : o.draft_covered
+                          ? "Accept enough of the questions below."
+                          : waiting
+                            ? "Questions are on the way."
+                            : "GenEd needs more questions here."}
+                  </span>
+                </span>
+              </li>
+            ))}
+            {blocked.map((c) => (
+              <li
+                key={c.concept_key}
+                className={`flex items-start gap-2 text-xs ${waiting ? "text-[#122D30]/80" : "text-amber-900"}`}
+              >
+                {waiting ? (
+                  <Clock
+                    size={13}
+                    className="mt-0.5 shrink-0 text-[#075E63]/60"
+                    aria-hidden
+                  />
+                ) : (
+                  <AlertTriangle
+                    size={13}
+                    className="mt-0.5 shrink-0 text-amber-600"
+                    aria-hidden
+                  />
+                )}
+                <span>
+                  <span className="font-bold">{c.title}</span>
+                  <span className="block text-[11px] opacity-70">
+                    {c.status === "held"
+                      ? `On hold. ${c.why ?? ""}`
+                      : waiting
+                        ? "Not planned yet; GenEd plans it while it writes."
+                        : `Not planned. ${c.why ?? ""}`}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          {openSlots.length > 0 && !waiting && (
+            <details className="mt-2.5 text-xs text-[#122D30]/70">
+              <summary className="cursor-pointer font-bold text-[#122D30]/70 hover:text-[#122D30]">
+                Why {openSlots.length} question{" "}
+                {openSlots.length === 1 ? "slot is" : "slots are"} still open
+              </summary>
+              <ul className="mt-1.5 flex flex-col gap-1 pl-1">
+                {openSlots.map((s) => (
+                  <li key={s.slot}>
+                    <span className="font-bold">{s.concept}:</span>{" "}
+                    {SLOT_REASON[s.category]} {s.detail}
+                    {s.last_reasons && s.last_reasons.length > 0 && (
+                      <span className="text-[#122D30]/50">
+                        {" "}
+                        ({s.last_reasons[0]})
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </details>
+      )}
+
+      {waiting && (
+        <div
+          className="rounded-2xl border border-dashed border-[#075E63]/25 p-4 flex flex-col gap-2"
           aria-hidden
-        />
-      </button>
-      {open && (
-        <div id={panelId} className="px-4 pb-4 flex flex-col gap-3">
-          <div className="rounded-2xl bg-[#F6F7F2] p-3.5">
-            <p className="text-[10.5px] font-black uppercase tracking-[0.14em] text-[#122D30]/45">
-              What learners must show
-            </p>
-            <ul className="mt-2 flex flex-col gap-1.5">
-              {obligations.map((o) => (
-                <li
-                  key={`${o.concept}-${o.key}`}
-                  className="flex items-start gap-2 text-xs text-[#122D30]/80"
-                >
-                  {o.production && !o.approved_covered ? (
-                    <AlertTriangle
-                      size={13}
-                      className="mt-0.5 text-amber-600 shrink-0"
-                      aria-hidden
-                    />
-                  ) : o.approved_covered ? (
-                    <CheckCircle2
-                      size={13}
-                      className="mt-0.5 text-emerald-600 shrink-0"
-                      aria-hidden
-                    />
-                  ) : (
-                    <Circle
-                      size={13}
-                      className="mt-0.5 text-[#122D30]/25 shrink-0"
-                      aria-hidden
-                    />
-                  )}
-                  <span>
-                    <span className="font-bold text-[#122D30]">
-                      {o.concept}
-                    </span>
-                    <span className="text-[#122D30]/40"> — </span>
-                    {o.statement}
-                    <span className="block text-[11px] text-[#122D30]/50">
-                      {o.production
-                        ? o.approved_covered
-                          ? "Answered by an accepted activity."
-                          : o.draft_covered
-                            ? "Accept the activity below."
-                            : "Needs an activity: GenEd proposes one, or write your own."
-                        : o.approved_covered
-                          ? "Covered by accepted questions."
-                          : o.draft_covered
-                            ? "Accept enough of the questions below."
-                            : waiting
-                              ? "Questions are on the way."
-                              : "GenEd needs more questions here."}
-                    </span>
-                  </span>
-                </li>
-              ))}
-              {blocked.map((c) => (
-                <li
-                  key={c.concept_key}
-                  className={`flex items-start gap-2 text-xs ${waiting ? "text-[#122D30]/80" : "text-amber-900"}`}
-                >
-                  {waiting ? (
-                    <Clock
-                      size={13}
-                      className="mt-0.5 shrink-0 text-[#075E63]/60"
-                      aria-hidden
-                    />
-                  ) : (
-                    <AlertTriangle
-                      size={13}
-                      className="mt-0.5 shrink-0 text-amber-600"
-                      aria-hidden
-                    />
-                  )}
-                  <span>
-                    <span className="font-bold">{c.title}</span>
-                    <span className="block text-[11px] opacity-70">
-                      {c.status === "held"
-                        ? `On hold. ${c.why ?? ""}`
-                        : waiting
-                          ? "Not planned yet; GenEd plans it while it writes."
-                          : `Not planned. ${c.why ?? ""}`}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {openSlots.length > 0 && !waiting && (
-              <details className="mt-2.5 text-xs text-[#122D30]/70 group">
-                <summary className="cursor-pointer font-bold text-[#122D30]/70 hover:text-[#122D30]">
-                  Why {openSlots.length} question{" "}
-                  {openSlots.length === 1 ? "slot is" : "slots are"} still open
-                </summary>
-                <ul className="mt-1.5 flex flex-col gap-1 pl-1">
-                  {openSlots.map((s) => (
-                    <li key={s.slot}>
-                      <span className="font-bold">{s.concept}:</span>{" "}
-                      {SLOT_REASON[s.category]} {s.detail}
-                      {s.last_reasons && s.last_reasons.length > 0 && (
-                        <span className="text-[#122D30]/50">
-                          {" "}
-                          ({s.last_reasons[0]})
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </details>
+        >
+          {[0, 1].map((i) => (
+            <div
+              key={i}
+              className="flex flex-col gap-2 animate-pulse"
+              style={{ animationDelay: `${i * 200}ms` }}
+            >
+              <span className="h-2.5 w-24 rounded-full bg-[#075E63]/10" />
+              <span className="h-3 w-4/5 rounded-full bg-[#122D30]/8" />
+              <span className="h-3 w-3/5 rounded-full bg-[#122D30]/6" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {toDecide.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="text-sm font-black text-[#122D30]">
+              To decide{" "}
+              <span className="tabular-nums text-[#122D30]/40">
+                {live.filter((q) => q.state === "draft").length}
+              </span>
+            </h4>
+            <span className="flex-1" />
+            {ready.length > 0 && (
+              <Button
+                size="sm"
+                variant="secondary"
+                leadingIcon={<CheckCheck size={14} />}
+                loading={busy === `all:${node.section_key}`}
+                onClick={() =>
+                  act(`all:${node.section_key}`, () =>
+                    sourcesService.acceptQuestions(
+                      sourceId,
+                      ready.map((q) => ({
+                        question_id: q.question_id,
+                        version: q.version,
+                      })),
+                    ),
+                  )
+                }
+              >
+                Accept the {ready.length} checked question
+                {ready.length === 1 ? "" : "s"}
+              </Button>
             )}
           </div>
+          {toDecide.map(card)}
+        </div>
+      )}
 
-          {waiting && (
-            <div
-              className="rounded-2xl border border-dashed border-[#075E63]/25 p-4 flex flex-col gap-2"
-              aria-hidden
-            >
-              {[0, 1].map((i) => (
-                <div
-                  key={i}
-                  className="flex flex-col gap-2 animate-pulse"
-                  style={{ animationDelay: `${i * 200}ms` }}
-                >
-                  <span className="h-2.5 w-24 rounded-full bg-[#075E63]/10" />
-                  <span className="h-3 w-4/5 rounded-full bg-[#122D30]/8" />
-                  <span className="h-3 w-3/5 rounded-full bg-[#122D30]/6" />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {live.map((q) =>
+      {acceptedBefore.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h4 className="text-sm font-black text-[#122D30]">
+            Accepted{" "}
+            <span className="tabular-nums text-[#122D30]/40">
+              {acceptedBefore.length}
+            </span>
+          </h4>
+          {acceptedBefore.map((q) =>
             editing === q.question_id ? (
-              <div key={q.question_id}>{renderEditor(q)}</div>
+              card(q)
             ) : (
-              <QuestionCard
-                key={q.question_id}
-                q={q}
-                busy={busy === q.question_id}
-                onAccept={() =>
-                  act(q.question_id, () =>
-                    sourcesService.acceptQuestion(
-                      sourceId,
-                      q.question_id,
-                      q.version,
-                    ),
-                  )
-                }
-                onReject={(reason, note) =>
-                  act(q.question_id, () =>
-                    sourcesService.rejectQuestion(
-                      sourceId,
-                      q.question_id,
-                      q.version,
-                      reason,
-                      note,
-                    ),
-                  )
-                }
-                onEdit={() => onEdit(q)}
-              />
+              <AcceptedRow key={q.question_id} q={q}>
+                {card(q)}
+              </AcceptedRow>
             ),
           )}
+        </div>
+      )}
 
-          {!waiting && (
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                {ready.length > 0 && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    leadingIcon={<CheckCheck size={14} />}
-                    loading={busy === `all:${node.section_key}`}
-                    onClick={() =>
-                      act(`all:${node.section_key}`, () =>
-                        sourcesService.acceptQuestions(
-                          sourceId,
-                          ready.map((q) => ({
-                            question_id: q.question_id,
-                            version: q.version,
-                          })),
-                        ),
-                      )
-                    }
-                  >
-                    Accept the {ready.length} checked question
-                    {ready.length === 1 ? "" : "s"}
-                  </Button>
-                )}
-                {!asking && (
-                  <Button
-                    size="sm"
-                    variant="tertiary"
-                    leadingIcon={<Plus size={14} />}
-                    onClick={() => setAsking(true)}
-                  >
-                    Ask GenEd for another question
-                  </Button>
-                )}
-              </div>
-              {asking && (
-                <form
-                  className="flex flex-wrap items-end gap-2 rounded-2xl border border-[#122D30]/10 bg-white p-3"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    act(`more:${node.section_key}`, () =>
-                      sourcesService.refillPart(
-                        sourceId,
-                        node.section_key,
-                        hint.trim() ? [hint.trim()] : [],
-                      ),
-                    );
-                    setHint("");
-                    setAsking(false);
-                  }}
-                >
-                  <label className="flex-1 min-w-[200px] text-[11px] font-bold text-[#122D30]/60">
-                    An idea for it (optional)
-                    <input
-                      autoFocus
-                      className="mt-1 block w-full rounded-lg border border-[#122D30]/15 bg-white px-2.5 py-1.5 text-xs font-normal focus:outline-none focus:border-[#075E63] focus:ring-2 focus:ring-[#075E63]/15"
-                      maxLength={300}
-                      placeholder="e.g. a cricket example"
-                      value={hint}
-                      onChange={(e) => setHint(e.target.value)}
-                    />
-                  </label>
-                  <Button
-                    size="sm"
-                    type="submit"
-                    leadingIcon={<RefreshCw size={14} />}
-                    loading={busy === `more:${node.section_key}`}
-                  >
-                    Ask
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="tertiary"
-                    onClick={() => setAsking(false)}
-                  >
-                    Cancel
-                  </Button>
-                </form>
-              )}
-            </div>
+      {!waiting && (
+        <div className="flex flex-col gap-2">
+          {!asking ? (
+            <Button
+              size="sm"
+              variant="tertiary"
+              className="self-start"
+              leadingIcon={<Plus size={14} />}
+              onClick={() => setAsking(true)}
+            >
+              Ask GenEd for another question
+            </Button>
+          ) : (
+            <form
+              className="flex flex-wrap items-end gap-2 rounded-2xl border border-[#122D30]/10 bg-white p-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                act(`more:${node.section_key}`, () =>
+                  sourcesService.refillPart(
+                    sourceId,
+                    node.section_key,
+                    hint.trim() ? [hint.trim()] : [],
+                  ),
+                );
+                setHint("");
+                setAsking(false);
+              }}
+            >
+              <label className="flex-1 min-w-[200px] text-[11px] font-bold text-[#122D30]/60">
+                An idea for it (optional)
+                <input
+                  autoFocus
+                  className="mt-1 block w-full rounded-lg border border-[#122D30]/15 bg-white px-2.5 py-1.5 text-xs font-normal focus:outline-none focus:border-[#075E63] focus:ring-2 focus:ring-[#075E63]/15"
+                  maxLength={300}
+                  placeholder="e.g. a cricket example"
+                  value={hint}
+                  onChange={(e) => setHint(e.target.value)}
+                />
+              </label>
+              <Button
+                size="sm"
+                type="submit"
+                leadingIcon={<RefreshCw size={14} />}
+                loading={busy === `more:${node.section_key}`}
+              >
+                Ask
+              </Button>
+              <Button
+                size="sm"
+                variant="tertiary"
+                onClick={() => setAsking(false)}
+              >
+                Cancel
+              </Button>
+            </form>
+          )}
+        </div>
+      )}
+
+      {(prev || next) && (
+        <div className="flex items-center gap-2 border-t border-[#122D30]/8 pt-3">
+          {prev && (
+            <Button
+              size="sm"
+              variant="tertiary"
+              leadingIcon={<ChevronLeft size={14} />}
+              onClick={() => onPick(prev.node.section_key)}
+            >
+              Step {prev.index + 1}
+            </Button>
+          )}
+          <span className="flex-1" />
+          {next && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onPick(next.node.section_key)}
+            >
+              Step {next.index + 1}: {stepName(next.node.title, parent).name}
+              <ChevronRight size={14} aria-hidden />
+            </Button>
           )}
         </div>
       )}
     </section>
   );
 }
-
-type Filter = "all" | "review" | "todo" | "done";
-const FILTERS: Record<Filter, { label: string; phases?: StepPhase[] }> = {
-  all: { label: "All steps" },
-  review: { label: "To review", phases: ["review"] },
-  todo: { label: "Not ready", phases: ["waiting", "incomplete", "gap"] },
-  done: { label: "Accepted", phases: ["accepted", "ready"] },
-};
 
 /** Accepted steps out of all, as a ring. */
 function ProgressRing({ done, total }: { done: number; total: number }) {
@@ -846,9 +1174,8 @@ export function AssessmentBankPanel({
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<BankQuestion | null>(null);
-  /** Steps the partner opened; null until they open or close one. */
-  const [openKeys, setOpenKeys] = useState<Set<string> | null>(null);
-  const [filter, setFilter] = useState<Filter>("all");
+  /** The step the partner opened; until they pick one, the first that needs them. */
+  const [picked, setPicked] = useState<string | null>(null);
   const [writing, setWriting] = useState<WriteTarget | null>(null);
 
   const load = useCallback(
@@ -896,8 +1223,6 @@ export function AssessmentBankPanel({
     (lastRun.state === "failed" || lastRun.state === "stopped")
       ? lastRun
       : null;
-  const phaseLabel = (ph: StepPhase) =>
-    ph === "waiting" && queuedOnly ? "Waiting to start" : PHASE[ph].label;
   useEffect(() => {
     if (!preparing) return;
     const t = setInterval(() => {
@@ -907,7 +1232,7 @@ export function AssessmentBankPanel({
     return () => clearInterval(t);
   }, [preparing, load]);
 
-  const steps = useMemo(
+  const steps = useMemo<Step[]>(
     () =>
       (pkg?.nodes ?? []).map((node, index) => {
         const questions = pkg!.questions.filter(
@@ -919,23 +1244,27 @@ export function AssessmentBankPanel({
           index,
           questions,
           phase: phaseOf(node, live, preparing),
+          todo: pkg!.actions?.find((t) => t.section_key === node.section_key),
         };
       }),
     [pkg, preparing],
   );
-  // Until the partner opens or closes a step, the first step to review is the open one.
+  // Until the partner picks a step, the first one with questions to decide is open; failing that, the first that needs them.
   const firstToReview = (
     steps.find((st) => st.phase === "review") ??
     steps.find(
       (st) =>
-        st.phase === "incomplete" &&
-        st.questions.some((q) => q.state === "draft"),
-    )
+        !st.node.publishable && st.questions.some((q) => q.state === "draft"),
+    ) ??
+    steps.find((st) => !st.node.publishable && st.phase !== "waiting") ??
+    steps[0]
   )?.node.section_key;
-  const opened = useMemo(
-    () => openKeys ?? new Set(firstToReview ? [firstToReview] : []),
-    [openKeys, firstToReview],
-  );
+  const currentKey =
+    picked && steps.some((st) => st.node.section_key === picked)
+      ? picked
+      : firstToReview;
+  const current =
+    steps.find((st) => st.node.section_key === currentKey) ?? null;
 
   const act = (key: string, call: () => Promise<BankPackage>) => {
     setBusy(key);
@@ -987,40 +1316,94 @@ export function AssessmentBankPanel({
   };
   for (const st of steps) counts[st.phase] += 1;
   const doneCount = counts.ready + counts.accepted;
-  const shown = steps.filter(
-    (st) => FILTERS[filter].phases?.includes(st.phase) ?? true,
-  );
-  const toggle = (key: string) =>
-    setOpenKeys((prev) => {
-      const next = new Set(prev ?? opened);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
   // What still stops the release: every step must be publishable (backend `bank_approval`'s coverage_ready).
   const blocked = steps.filter((st) => !st.node.publishable);
+  // Steps only GenEd can unblock: it has no plan for them (see ``waitsOnPlan``).
+  const planless = blocked.filter((st) => waitsOnPlan(st.todo));
+  // No step has a single objective and none is publishable: GenEd's plan for the whole chapter is missing, so no decision here
+  // can make a step approvable, though the questions can still be reviewed.
+  const noPlan =
+    steps.length > 0 &&
+    !preparing &&
+    steps.every(
+      (st) =>
+        !st.node.publishable &&
+        st.node.concepts.every((c) => c.obligations.length === 0),
+    );
   // The approval already feeds the chapter: don't ask for it again. A later change voids it (the server says so).
   const approvedNow =
     !!pkg.approval?.approved &&
     pkg.approval.coverage_ready &&
     blocked.length === 0;
   const approvalVoided = !pkg.approval?.approved && !!pkg.approval?.approved_at;
+  const parent = sharedParent(steps.map((st) => st.node.title));
+  const generating = pendingSteps(pkg.runs);
+  const runsActive = pkg.runs.some(
+    (r) => r.state === "queued" || r.state === "running",
+  );
+
   const goTo = (key: string) => {
-    setFilter("all");
-    setOpenKeys((prev) => new Set(prev ?? opened).add(key));
+    setPicked(key);
+    setWriting((w) => (w && w.sectionKey !== key ? null : w));
     requestAnimationFrame(() =>
       document
-        .getElementById(`bank-step-row-${key}`)
+        .getElementById("bank-workspace")
         ?.scrollIntoView({ behavior: "smooth", block: "start" }),
     );
   };
-  const openStep = goTo;
-  const allOpen =
-    shown.length > 0 && shown.every((st) => opened.has(st.node.section_key));
+  // The next step that still needs the partner, after the one open now (wrapping round), never the open one itself.
+  const nextBlocked = (() => {
+    const open = blocked.filter(
+      (st) => st.phase !== "waiting" && !waitsOnPlan(st.todo) && st !== current,
+    );
+    if (!current) return open[0] ?? null;
+    return open.find((st) => st.index > current.index) ?? open[0] ?? null;
+  })();
+
+  const writer =
+    writing && current && writing.sectionKey === current.node.section_key ? (
+      <div
+        aria-label="Write your own"
+        className="rounded-2xl border border-[#075E63]/20 bg-white p-4 flex flex-col gap-2"
+      >
+        <p className="text-xs text-[#122D30]/70">
+          For &ldquo;{writing.statement}&rdquo;. It counts for this step as soon
+          as you save it.
+        </p>
+        {renderEditor(
+          blankFor(writing),
+          (body) => {
+            const target = writing;
+            setWriting(null);
+            act("write", async () => {
+              const created = await sourcesService.createQuestion(
+                sourceId,
+                partnerQuestion(body, target),
+              );
+              const mine = created.questions.find(
+                (q) =>
+                  q.state === "draft" &&
+                  (q.question_id === body.id || q.question.body.id === body.id),
+              );
+              return mine
+                ? sourcesService.acceptQuestion(
+                    sourceId,
+                    mine.question_id,
+                    mine.version,
+                  )
+                : created;
+            });
+          },
+          () => setWriting(null),
+        )}
+      </div>
+    ) : null;
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-3xl bg-white border border-[#122D30]/8 p-5 flex flex-col gap-4">
-        <div className="flex items-start gap-4">
+    <div className="@container flex flex-col gap-4">
+      {/* The chapter at a glance: how far the review is, and anything wrong on GenEd's side. */}
+      <div className="rounded-3xl bg-white border border-[#122D30]/8 p-4 flex flex-col gap-3">
+        <div className="flex items-center gap-4">
           <ProgressRing done={doneCount} total={s.nodes} />
           <div className="min-w-0 flex-1">
             <p className="text-base font-black text-[#122D30] leading-tight">
@@ -1030,63 +1413,74 @@ export function AssessmentBankPanel({
                   ? "Every step is accepted"
                   : `${doneCount} of ${s.nodes} steps accepted`}
             </p>
-            <p className="mt-1 text-xs text-[#122D30]/65 leading-relaxed">
-              GenEd planned what each step should check and wrote questions for
-              it. Accept, edit or reject each one, then approve. Nothing counts
-              until you accept it.
+            <p className="mt-0.5 text-xs text-[#122D30]/60">
+              Go through the steps: accept, edit or reject GenEd&rsquo;s
+              questions, then approve. Nothing counts until you accept it.
             </p>
-            <dl className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-              {(
-                [
-                  ["questions", s.questions, "text-[#122D30]"],
-                  ["accepted", s.accepted, "text-emerald-700"],
-                  [
-                    "need your check",
-                    s.needs_attention,
-                    s.needs_attention > 0 ? "text-amber-700" : "text-[#122D30]",
-                  ],
-                ] as const
-              ).map(([label, value, tone]) => (
-                <div key={label} className="flex items-baseline gap-1">
-                  <dd className={`font-black tabular-nums ${tone}`}>{value}</dd>
-                  <dt className="text-[#122D30]/55">{label}</dt>
-                </div>
-              ))}
-            </dl>
           </div>
+          <dl className="hidden shrink-0 gap-4 text-right text-xs @[40rem]:flex">
+            {(
+              [
+                ["questions", s.questions, "text-[#122D30]"],
+                ["accepted", s.accepted, "text-emerald-700"],
+                [
+                  "need your check",
+                  s.needs_attention,
+                  s.needs_attention > 0 ? "text-amber-700" : "text-[#122D30]",
+                ],
+              ] as const
+            ).map(([label, value, tone]) => (
+              <div key={label} className="flex flex-col">
+                <dd
+                  className={`text-lg font-black leading-none tabular-nums ${tone}`}
+                >
+                  {value}
+                </dd>
+                <dt className="mt-1 text-[11px] text-[#122D30]/50">{label}</dt>
+              </div>
+            ))}
+          </dl>
         </div>
 
         {steps.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <div
-              className="flex gap-1"
-              role="img"
-              aria-label={`${doneCount} of ${s.nodes} steps accepted`}
-            >
-              {steps.map((st) => (
-                <span
-                  key={st.node.section_key}
-                  title={`${st.index + 1}. ${splitTitle(st.node.title).name} — ${phaseLabel(st.phase)}`}
-                  className={`h-2 flex-1 rounded-full ${PHASE[st.phase].bar}`}
-                />
-              ))}
-            </div>
-            <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#122D30]/60">
-              {(Object.keys(PHASE) as StepPhase[])
-                .filter((ph) => counts[ph] > 0)
-                .map((ph) => (
-                  <li key={ph} className="flex items-center gap-1.5">
-                    <span
-                      aria-hidden
-                      className={`h-2 w-2 rounded-full ${PHASE[ph].bar}`}
-                    />
-                    {phaseLabel(ph)}{" "}
-                    <span className="font-black tabular-nums text-[#122D30]/80">
-                      {counts[ph]}
-                    </span>
-                  </li>
-                ))}
-            </ul>
+          <div
+            className="flex gap-1"
+            role="img"
+            aria-label={`${doneCount} of ${s.nodes} steps accepted`}
+          >
+            {steps.map((st) => (
+              <span
+                key={st.node.section_key}
+                title={`${st.index + 1}. ${st.node.title} — ${stepNeed(st, queuedOnly)}`}
+                className={`h-1.5 flex-1 rounded-full ${PHASE[st.phase].bar} ${
+                  st.node.section_key === currentKey
+                    ? "outline-2 outline-offset-1 outline-[#075E63]"
+                    : ""
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
+        {(noPlan || planless.length > 0) && (
+          <div
+            role="status"
+            className="rounded-2xl border border-[#122D30]/10 bg-[#F6F7F2] px-3.5 py-3 flex items-start gap-3"
+          >
+            <span className="grid place-items-center h-7 w-7 shrink-0 rounded-full bg-[#075E63] text-white">
+              <Info size={14} aria-hidden />
+            </span>
+            <span className="text-xs text-[#122D30]/75">
+              <span className="block font-black text-[#122D30]">
+                {noPlan
+                  ? "GenEd has no assessment plan for this chapter"
+                  : `GenEd has no assessment plan for ${planless.length} ${planless.length === 1 ? "step" : "steps"}`}
+              </span>
+              {noPlan
+                ? "You can still accept, edit and reject questions, and they're kept, but they can't count until GenEd plans what each step should check, so no step can be approved yet. "
+                : "Accepted questions are kept, but they can't count until GenEd plans what each step should check, so those steps can't be approved yet. "}
+              This is on GenEd&rsquo;s side; ask GenEd to check.
+            </span>
           </div>
         )}
 
@@ -1130,135 +1524,80 @@ export function AssessmentBankPanel({
           </div>
         )}
 
-        <GenerationStatus
-          runs={pkg.runs}
-          titles={Object.fromEntries(
-            pkg.nodes.map((n) => [n.section_key, n.title]),
-          )}
-          waiting={pkg.nodes
-            .map((n) => n.section_key)
-            .filter((k) =>
-              pkg.questions.some(
-                (q) => q.section_key === k && q.state === "draft",
-              ),
-            )}
-          onShow={openStep}
-        />
+        {pkg.runs.length > 0 &&
+          (() => {
+            const status = (
+              <GenerationStatus
+                runs={pkg.runs}
+                titles={Object.fromEntries(
+                  pkg.nodes.map((n) => [n.section_key, n.title]),
+                )}
+                waiting={pkg.nodes
+                  .map((n) => n.section_key)
+                  .filter((k) =>
+                    pkg.questions.some(
+                      (q) => q.section_key === k && q.state === "draft",
+                    ),
+                  )}
+                onShow={goTo}
+              />
+            );
+            // While GenEd writes, its progress shows; afterwards the request log folds away.
+            return runsActive ? (
+              status
+            ) : (
+              <details className="group text-xs">
+                <summary className="flex cursor-pointer list-none items-center gap-1 font-bold text-[#122D30]/50 hover:text-[#122D30] [&::-webkit-details-marker]:hidden">
+                  <ChevronRight
+                    size={13}
+                    className="transition-transform group-open:rotate-90"
+                    aria-hidden
+                  />
+                  GenEd&rsquo;s question requests
+                </summary>
+                <div className="mt-2">{status}</div>
+              </details>
+            );
+          })()}
 
-        {!preparing && s.capability_gap_nodes > 0 && (
-          <p className="text-xs text-amber-800 flex items-start gap-1.5">
-            <AlertTriangle size={13} className="mt-0.5 shrink-0" aria-hidden />
-            <span>
-              {s.capability_gap_nodes === 1
-                ? "1 step has a writing, speaking, reading or listening objective that still needs an activity."
-                : `${s.capability_gap_nodes} steps have a writing, speaking, reading or listening objective that still needs an activity.`}
-            </span>
-          </p>
+        {pkg.findings.length > 0 && (
+          <details
+            className="group rounded-2xl border border-amber-200 bg-amber-50/60 px-3.5 py-2.5"
+            aria-label="Issues with the chapter"
+          >
+            <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-black text-amber-900 [&::-webkit-details-marker]:hidden">
+              <AlertTriangle size={13} aria-hidden />
+              {pkg.findings.length} issue{pkg.findings.length === 1 ? "" : "s"}{" "}
+              GenEd found in how the chapter was read
+              <ChevronRight
+                size={13}
+                className="ml-auto transition-transform group-open:rotate-90"
+                aria-hidden
+              />
+            </summary>
+            <div className="mt-2 flex flex-col gap-2">
+              {pkg.findings.map((f) => (
+                <div key={f.concept_key} className="text-xs text-amber-900">
+                  <p>{f.issue}</p>
+                  {f.resolution === "corrected" ? (
+                    <p className="text-amber-800">
+                      GenEd used this corrected description:{" "}
+                      {f.proposed_definition}
+                    </p>
+                  ) : (
+                    <p className="text-amber-800">
+                      On hold: no questions were written for it.
+                      {f.proposed_definition
+                        ? ` Suggested description: ${f.proposed_definition}`
+                        : ""}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </details>
         )}
       </div>
-
-      {pkg.actions && (
-        <StepGuide
-          steps={pkg.actions}
-          generating={pendingSteps(pkg.runs)}
-          accepted={s.accepted}
-          busy={busy}
-          onOpen={openStep}
-          onKeep={(conceptKey) =>
-            act(`keep:${conceptKey}`, () =>
-              sourcesService.keepConcept(sourceId, conceptKey),
-            )
-          }
-          onWrite={setWriting}
-          onAsk={(sectionKey) =>
-            act(`more:${sectionKey}`, () =>
-              sourcesService.refillPart(sourceId, sectionKey),
-            )
-          }
-        />
-      )}
-      {writing && (
-        <div
-          aria-label="Write your own"
-          className="rounded-2xl border border-[#075E63]/20 bg-white p-4 flex flex-col gap-2"
-        >
-          <p className="text-xs text-[#122D30]/70">
-            For &ldquo;{writing.statement}&rdquo;. It counts for this step as
-            soon as you save it.
-          </p>
-          {renderEditor(
-            blankFor(writing),
-            (body) => {
-              const target = writing;
-              setWriting(null);
-              act("write", async () => {
-                const created = await sourcesService.createQuestion(
-                  sourceId,
-                  partnerQuestion(body, target),
-                );
-                const mine = created.questions.find(
-                  (q) =>
-                    q.state === "draft" &&
-                    (q.question_id === body.id ||
-                      q.question.body.id === body.id),
-                );
-                return mine
-                  ? sourcesService.acceptQuestion(
-                      sourceId,
-                      mine.question_id,
-                      mine.version,
-                    )
-                  : created;
-              });
-            },
-            () => setWriting(null),
-          )}
-        </div>
-      )}
-
-      {pkg.findings.length > 0 && (
-        <details
-          className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 group"
-          aria-label="Issues with the chapter"
-        >
-          <summary className="cursor-pointer text-sm font-black text-amber-900 flex items-center gap-2">
-            <AlertTriangle size={14} aria-hidden />
-            {pkg.findings.length} issue{pkg.findings.length === 1 ? "" : "s"}{" "}
-            GenEd found in how the chapter was read
-          </summary>
-          <div className="mt-2 flex flex-col gap-2">
-            {pkg.findings.map((f) => (
-              <div key={f.concept_key} className="text-xs text-amber-900">
-                <p>{f.issue}</p>
-                {f.resolution === "corrected" ? (
-                  <p className="text-amber-800">
-                    GenEd used this corrected description:{" "}
-                    {f.proposed_definition}
-                  </p>
-                ) : (
-                  <p className="text-amber-800">
-                    On hold: no questions were written for it.
-                    {f.proposed_definition
-                      ? ` Suggested description: ${f.proposed_definition}`
-                      : ""}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
-
-      {notice && (
-        <p role="status" className="text-xs font-bold text-amber-800">
-          {notice}
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="text-xs font-bold text-red-700">
-          {error}
-        </p>
-      )}
 
       {pkg.nodes.length === 0 && !preparing && (
         <p className="text-sm text-[#122D30]/60 text-center py-6">
@@ -1266,149 +1605,146 @@ export function AssessmentBankPanel({
         </p>
       )}
 
-      {steps.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <div
-            role="tablist"
-            aria-label="Show steps"
-            className="flex flex-wrap gap-1 rounded-full bg-[#122D30]/5 p-1"
-          >
-            {(Object.keys(FILTERS) as Filter[]).map((f) => {
-              const n =
-                f === "all"
-                  ? steps.length
-                  : steps.filter((st) => FILTERS[f].phases!.includes(st.phase))
-                      .length;
-              if (f !== "all" && n === 0) return null;
-              const on = filter === f;
-              return (
-                // eslint-disable-next-line no-restricted-syntax -- a segmented filter tab, not an action button.
-                <button
-                  key={f}
-                  type="button"
-                  role="tab"
-                  aria-selected={on}
-                  onClick={() => setFilter(f)}
-                  className={`rounded-full px-3 py-1 text-[11.5px] font-bold transition-colors ${
-                    on
-                      ? "bg-white text-[#122D30] shadow-sm"
-                      : "text-[#122D30]/55 hover:text-[#122D30]"
-                  }`}
-                >
-                  {FILTERS[f].label}{" "}
-                  <span className="tabular-nums opacity-60">{n}</span>
-                </button>
-              );
-            })}
+      {current && (
+        <div className="grid grid-cols-1 gap-4 @[46rem]:grid-cols-[minmax(210px,250px)_minmax(0,1fr)] @[46rem]:items-start">
+          <div className="rounded-2xl bg-[#F6F7F2] p-1.5 @[46rem]:sticky @[46rem]:top-0 @[46rem]:max-h-[calc(100dvh-14rem)] @[46rem]:overflow-y-auto @[46rem]:p-2">
+            <StepList
+              steps={steps}
+              parent={parent}
+              current={current.node.section_key}
+              queued={queuedOnly}
+              onPick={goTo}
+            />
           </div>
-          <span className="flex-1" />
-          <Button
-            size="sm"
-            variant="tertiary"
-            onClick={() =>
-              setOpenKeys((prev) => {
-                const next = new Set(prev ?? opened);
-                for (const st of shown) {
-                  if (allOpen) next.delete(st.node.section_key);
-                  else next.add(st.node.section_key);
-                }
-                return next;
-              })
-            }
+          <div
+            id="bank-workspace"
+            className="min-w-0 scroll-mt-4 rounded-3xl border border-[#122D30]/8 bg-white p-4 @[46rem]:p-5 flex flex-col gap-3"
           >
-            {allOpen ? "Collapse all" : "Expand all"}
-          </Button>
-        </div>
-      )}
-
-      {shown.map(({ node, index, questions, phase }) => (
-        <NodeSection
-          key={node.section_key}
-          index={index}
-          sourceId={sourceId}
-          node={node}
-          questions={questions}
-          phase={phase}
-          queued={queuedOnly}
-          open={opened.has(node.section_key)}
-          onToggle={() => toggle(node.section_key)}
-          busy={busy}
-          act={act}
-          editing={editing?.question_id ?? null}
-          onEdit={(q) => setEditing(q)}
-          renderEditor={() => {
-            const q = editing!;
-            return renderEditor(
-              q.question.body,
-              (body) => {
-                setEditing(null);
-                act(q.question_id, () =>
-                  sourcesService.editQuestion(
-                    sourceId,
-                    q.question_id,
-                    q.version,
-                    {
-                      body: { ...body, origin: q.question.body.origin },
-                      meta: q.question.meta,
-                    },
-                  ),
+            {notice && (
+              <p
+                role="status"
+                className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800"
+              >
+                {notice}
+              </p>
+            )}
+            {error && (
+              <p
+                role="alert"
+                className="rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700"
+              >
+                {error}
+              </p>
+            )}
+            <StepWorkspace
+              key={current.node.section_key}
+              step={current}
+              total={steps.length}
+              parent={parent}
+              sourceId={sourceId}
+              queued={queuedOnly}
+              generating={generating}
+              busy={busy}
+              act={act}
+              editing={editing?.question_id ?? null}
+              onEdit={(q) => setEditing(q)}
+              renderEditor={() => {
+                const q = editing!;
+                return renderEditor(
+                  q.question.body,
+                  (body) => {
+                    setEditing(null);
+                    act(q.question_id, () =>
+                      sourcesService.editQuestion(
+                        sourceId,
+                        q.question_id,
+                        q.version,
+                        {
+                          body: { ...body, origin: q.question.body.origin },
+                          meta: q.question.meta,
+                        },
+                      ),
+                    );
+                  },
+                  () => setEditing(null),
                 );
-              },
-              () => setEditing(null),
-            );
-          }}
-        />
-      ))}
-      {shown.length === 0 && steps.length > 0 && (
-        <p className="text-sm text-[#122D30]/55 text-center py-6">
-          No steps here.
-        </p>
-      )}
-
-      {s.accepted > 0 && approvedNow && (
-        <div
-          role="status"
-          className="sticky bottom-0 z-10 rounded-3xl bg-emerald-50 border border-emerald-200 p-4 flex items-start gap-3 shadow-[0_-8px_24px_-12px_rgba(18,45,48,0.25)]"
-        >
-          <span className="grid place-items-center h-8 w-8 shrink-0 rounded-full bg-emerald-600 text-white">
-            <Check size={16} strokeWidth={3} aria-hidden />
-          </span>
-          <span className="text-xs text-[#122D30]/70">
-            <span className="block text-sm font-black text-[#122D30]">
-              Approved
-              {pkg.approval?.approved_at
-                ? ` · ${new Date(pkg.approval.approved_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}`
-                : ""}
-            </span>
-            The chapter uses these {s.accepted} accepted questions. Nothing more
-            to do here: review and publish the chapter from its row. If you
-            change a question, you&rsquo;ll be asked to approve again.
-          </span>
+              }}
+              writer={writer}
+              onKeep={(conceptKey) =>
+                act(`keep:${conceptKey}`, () =>
+                  sourcesService.keepConcept(sourceId, conceptKey),
+                )
+              }
+              onWrite={(target) => {
+                setWriting(target);
+                if (target.sectionKey !== current.node.section_key)
+                  goTo(target.sectionKey);
+              }}
+              onAsk={(sectionKey) =>
+                act(`more:${sectionKey}`, () =>
+                  sourcesService.refillPart(sourceId, sectionKey),
+                )
+              }
+              prev={steps[current.index - 1] ?? null}
+              next={steps[current.index + 1] ?? null}
+              onPick={goTo}
+            />
+          </div>
         </div>
       )}
-      {s.accepted > 0 && !approvedNow && (
-        <div
-          className={`sticky bottom-0 z-10 rounded-3xl p-4 flex flex-col gap-3 shadow-[0_-8px_24px_-12px_rgba(18,45,48,0.4)] ${
-            blocked.length > 0
-              ? "bg-white border border-amber-200"
-              : "bg-[#122D30] text-white"
-          }`}
-        >
-          <div className="flex flex-wrap items-center gap-3">
-            <span
-              className={`flex-1 min-w-[180px] text-xs ${blocked.length > 0 ? "text-[#122D30]/70" : "text-white/75"}`}
-            >
+
+      {/* One slim bar: how far the chapter is, where to go next, and the approval. */}
+      {steps.length > 0 &&
+        (approvedNow ? (
+          <div
+            role="status"
+            className="sticky bottom-0 z-10 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 flex items-center gap-3 shadow-[0_-8px_24px_-12px_rgba(18,45,48,0.25)]"
+          >
+            <span className="grid place-items-center h-7 w-7 shrink-0 rounded-full bg-emerald-600 text-white">
+              <Check size={14} strokeWidth={3} aria-hidden />
+            </span>
+            <span className="text-xs text-[#122D30]/70">
+              <span className="block text-sm font-black text-[#122D30]">
+                Approved
+                {pkg.approval?.approved_at
+                  ? ` · ${new Date(pkg.approval.approved_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}`
+                  : ""}
+              </span>
+              The chapter uses these {s.accepted} accepted questions. Review and
+              publish it from its row. Changing a question asks for approval
+              again.
+            </span>
+          </div>
+        ) : (
+          <div
+            className={`sticky bottom-0 z-10 rounded-2xl px-4 py-3 flex flex-wrap items-center gap-3 shadow-[0_-8px_24px_-12px_rgba(18,45,48,0.35)] ${
+              blocked.length > 0
+                ? "bg-white border border-[#122D30]/10"
+                : "bg-[#122D30] text-white"
+            }`}
+          >
+            <span className="min-w-[200px] flex-1 text-xs">
               {blocked.length > 0 ? (
                 <>
-                  <span className="flex items-center gap-1.5 text-sm font-black text-amber-900">
-                    <AlertTriangle size={14} aria-hidden />
+                  <span className="flex items-center gap-1.5 text-sm font-black text-[#122D30]">
+                    <AlertTriangle
+                      size={14}
+                      className="text-amber-600"
+                      aria-hidden
+                    />
                     {blocked.length === 1
                       ? "1 step still needs accepted questions"
                       : `${blocked.length} steps still need accepted questions`}
                   </span>
-                  Every step must be covered before you approve; approving
-                  earlier sends the chapter straight back to review. Accept
-                  enough questions in:
+                  <span className="text-[#122D30]/55">
+                    {noPlan
+                      ? "None can be approved until GenEd plans the chapter's questions."
+                      : `${
+                          planless.length > 0
+                            ? `${planless.length} of them ${planless.length === 1 ? "waits" : "wait"} on GenEd's plan, not on you. `
+                            : ""
+                        }You can approve once every step is covered.`}
+                  </span>
                 </>
               ) : (
                 <>
@@ -1417,16 +1753,29 @@ export function AssessmentBankPanel({
                     covered · {s.accepted} accepted question
                     {s.accepted === 1 ? "" : "s"}
                   </span>
-                  {approvalVoided
-                    ? "You changed questions after your last approval, so it no longer applies. Approve again to run the chapter with them."
-                    : "Approving runs the chapter with exactly these questions. Any change afterwards needs a new approval."}
+                  <span className="text-white/70">
+                    {approvalVoided
+                      ? "You changed questions after your last approval, so it no longer applies. Approve again to run the chapter with them."
+                      : "Approving runs the chapter with exactly these questions. Any change afterwards needs a new approval."}
+                  </span>
                 </>
               )}
             </span>
+            {nextBlocked && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => goTo(nextBlocked.node.section_key)}
+              >
+                Next to do: step {nextBlocked.index + 1}
+                <ChevronRight size={14} aria-hidden />
+              </Button>
+            )}
             <Button
+              size="sm"
               tone={blocked.length > 0 ? "light" : "onDark"}
               variant={blocked.length > 0 ? "secondary" : "primary"}
-              leadingIcon={<CheckCircle2 size={16} />}
+              leadingIcon={<CheckCircle2 size={15} />}
               loading={busy === "approve"}
               disabled={blocked.length > 0}
               title={blocked.length > 0 ? "Cover every step first" : undefined}
@@ -1444,33 +1793,7 @@ export function AssessmentBankPanel({
               Approve and run the chapter
             </Button>
           </div>
-          {blocked.length > 0 && (
-            <ul
-              aria-label="Steps that still need accepted questions"
-              className="flex flex-wrap gap-1.5"
-            >
-              {blocked.map((st) => (
-                <li key={st.node.section_key}>
-                  {/* eslint-disable-next-line no-restricted-syntax -- a jump link to a step, not an action button. */}
-                  <button
-                    type="button"
-                    onClick={() => goTo(st.node.section_key)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11.5px] font-bold text-amber-900 hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#075E63]"
-                  >
-                    <span className="tabular-nums">{st.index + 1}.</span>
-                    <span className="max-w-[220px] truncate">
-                      {splitTitle(st.node.title).name}
-                    </span>
-                    <span className="font-normal text-amber-800/80">
-                      · {uncoveredCount(st.node)} to cover
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+        ))}
     </div>
   );
 }

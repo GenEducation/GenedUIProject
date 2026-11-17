@@ -74,7 +74,14 @@ export function checkOf(q: AddedQuestion): CheckItem {
   }
 }
 
-export function LearnerPreview({ question }: { question: AddedQuestion }) {
+export function LearnerPreview({
+  question,
+  showPrompt = true,
+}: {
+  question: AddedQuestion;
+  /** Off where the prompt is already the card's heading: the learner's choices are shown without repeating it. */
+  showPrompt?: boolean;
+}) {
   const check = checkOf(question);
   const format = formatOf(check);
   const [value, setValue] = useState(() => initialArrangement(check));
@@ -86,7 +93,11 @@ export function LearnerPreview({ question }: { question: AddedQuestion }) {
     >
       <p
         id={`check-${check.id}`}
-        className="lesson-hand text-[16px] font-bold whitespace-pre-line"
+        className={
+          showPrompt
+            ? "lesson-hand text-[16px] font-bold whitespace-pre-line"
+            : "sr-only"
+        }
       >
         {check.prompt}
       </p>

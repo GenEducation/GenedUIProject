@@ -23,7 +23,6 @@ import { enterToSubmit, submitFormOnEnter } from "@/utils/enterToSubmit";
 import { sourcesService } from "../services/sourcesService";
 import { removedReason } from "../utils/ingestionPath";
 import { AssessmentBankPanel } from "./AssessmentBankPanel";
-import { ActivityEvidencePanel } from "./ActivityEvidencePanel";
 import { PictureQuestionsPanel } from "./PictureQuestionsPanel";
 import {
   FormatFields,
@@ -467,7 +466,6 @@ function AuthoringBody({
                   />
                 )}
               />
-              <ActivityEvidencePanel sourceId={subject.source_id} />
             </Panel>
 
             <Panel id={`${tabsId}-own`} hidden={tab !== "own"}>
@@ -641,7 +639,9 @@ function AuthoringBody({
         )}
       </div>
 
-      {data && (
+      {/* The GenEd tab's question bank brings its own approve bar; this footer only saves the other tabs' work, so there it
+          appears just to keep unsaved work from those tabs (or an error) in sight, never as a second, empty set of buttons. */}
+      {data && (tab !== "ai" || dirty || error) && (
         <footer className="sticky bottom-0 shrink-0 bg-white border-t border-[#122D30]/5 px-5 md:px-7 py-4 flex flex-col gap-3">
           {error && (
             <p

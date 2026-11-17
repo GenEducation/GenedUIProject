@@ -6,7 +6,7 @@ import { CHECK_ITEM, LESSON_ID, lessonFixture, makeLessonInstance, syntheticPayl
 import type { ContentLessonState, ContentProgress } from "@/features/student/learner/types";
 import { useLessonStore } from "../useLessonStore";
 import { StepCard } from "../components/StepCard";
-import { ContentPortion } from "../components/ContentPortion";
+import { ChapterPosition } from "../components/PortionStatus";
 
 /** W2 phases 2 and 3 on the client (backend PRD v3 §§3.5, 3.7, 3.9, 3.10): the client shows what the server committed, never grades
  * or guesses the next state. Synthetic questions only. */
@@ -90,7 +90,7 @@ describe("progress", () => {
       content_progress: progress({ ideas_covered: 2, ideas_total: 4, owed_ideas: 1 }),
     }));
     await useLessonStore.getState().load(LESSON_ID);
-    render(<ContentPortion instanceId={LESSON_ID} />);
+    render(<ChapterPosition />);
     expect(await screen.findByTestId("chapter-position")).toHaveTextContent("2 of 4 ideas · 1 we'll come back to");
   });
 });

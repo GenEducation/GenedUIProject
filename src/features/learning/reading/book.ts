@@ -11,6 +11,8 @@ export interface BookPart {
 export interface BookText {
   id: string;
   title: string;
+  /** Whether the text can be listened to and practised aloud: its language is known (or the payload predates the field). */
+  audible: boolean;
   parts: BookPart[];
 }
 
@@ -24,6 +26,7 @@ export function bookTexts(passages: Passage[] | undefined): BookText[] {
     .map((passage) => ({
       id: passage.id,
       title: passage.title,
+      audible: passage.language !== null,
       parts: passage.segments
         .map((segment) => ({
           segment: segment.segment,

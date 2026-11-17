@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
 import { LESSON_ID, lessonFixture, makeLessonInstance, turnRequests } from "@/test/msw/handlers/lesson";
 import type { ContentLessonState, InstanceState } from "@/features/student/learner/types";
-import { ContentPortion, rendersExactly } from "../components/ContentPortion";
+import { BoardPanel } from "../components/BoardPanel";
+import { useContentPortion } from "../reading/useContentPortion";
 import { useLessonStore } from "../useLessonStore";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -52,59 +53,73 @@ beforeEach(() => {
   );
 });
 
-describe("rendersExactly", () => {
-  it("accepts only the assigned portion with every printed line, in order", () => {
-    const el = document.createElement("div");
-    el.dataset.portionId = PORTION;
-    el.innerHTML = LINES.map((l) => `<p data-source-line>${l}</p>`).join("");
-    expect(rendersExactly(el, PORTION, LINES)).toBe(true);
-    expect(rendersExactly(el, "another-portion", LINES)).toBe(false);
-    expect(rendersExactly(el, PORTION, [LINES[0]])).toBe(false);
-    expect(rendersExactly(el, PORTION, [...LINES].reverse())).toBe(false);
-    expect(rendersExactly(null, PORTION, LINES)).toBe(false);
-  });
-});
+/** The lesson screen's two halves for a content-led portion: the hook that reads the assignment, and the board whose book shows it. */
+function Lesson() {
+  useContentPortion(LESSON_ID);
+  return <BoardPanel />;
+}
 
-describe("ContentPortion", () => {
-  it("asks for a portion only when none is assigned, shows it exactly, marks it, and confirms it once", async () => {
+describe("the assigned portion, shown in the book", () => {
+  it("asks for a portion only when none is assigned, prints lines the book lacks as they are, marks them, and confirms once", async () => {
     lessonFixture.setInstance(contentInstance());
     await store().load(LESSON_ID);
-    render(<ContentPortion instanceId={LESSON_ID} />);
-    await waitFor(() => expect(screen.getByTestId("current-portion")).toBeInTheDocument());
+    render(<Lesson />);
+    const card = await screen.findByTestId("now-reading");
     // One assignment, at the revision the learner saw; after it, the state is only read again.
     expect(assignments.filter(Boolean)).toEqual([{ request_id: expect.any(String), expected_revision: 7, channel: "chat" }]);
-    const panel = screen.getByTestId("current-portion");
-    expect(panel).toHaveAttribute("aria-current", "true");
-    expect(panel).toHaveAttribute("data-portion-id", PORTION);
-    expect(Array.from(panel.querySelectorAll("p")).map((p) => p.textContent)).toEqual(LINES);
+    expect(card).toHaveAttribute("aria-current", "true");
+    expect(card).toHaveAttribute("data-portion-id", PORTION);
+    expect(Array.from(card.querySelectorAll("[data-source-line]")).map((p) => p.textContent)).toEqual(LINES);
     await waitFor(() => expect(shown).toHaveLength(1));
     expect(shown[0]).toMatchObject({ portion: PORTION, body: { channel: "chat" } });
     expect(screen.getByTestId("chapter-position")).toHaveTextContent("Part 3 of 13 of the chapter");
+    await act(() => new Promise((r) => setTimeout(r, 50)));
+    expect(shown).toHaveLength(1);
   });
 
   it("an already assigned portion is read, never assigned again", async () => {
     lessonFixture.setInstance(contentInstance({ portion_id: PORTION }));
     await store().load(LESSON_ID);
-    render(<ContentPortion instanceId={LESSON_ID} />);
-    await waitFor(() => expect(screen.getByTestId("current-portion")).toBeInTheDocument());
+    render(<Lesson />);
+    await screen.findByTestId("now-reading");
     expect(assignments).toEqual([null]);
   });
 
-  it("confirms nothing while the tab is hidden", async () => {
+  it("confirms nothing while the tab is hidden, and confirms once it is shown", async () => {
     const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
     lessonFixture.setInstance(contentInstance({ portion_id: PORTION }));
     await store().load(LESSON_ID);
-    render(<ContentPortion instanceId={LESSON_ID} />);
-    await waitFor(() => expect(screen.getByTestId("current-portion")).toBeInTheDocument());
+    render(<Lesson />);
+    await screen.findByTestId("now-reading");
     await act(() => new Promise((r) => setTimeout(r, 50)));
     expect(shown).toEqual([]);
+    // The tab comes to the front: the book checks again and confirms.
+    visibility.mockReturnValue("visible");
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    await waitFor(() => expect(shown).toHaveLength(1));
     visibility.mockRestore();
+  });
+
+  it("a closed book confirms nothing and asks to be opened; opening it confirms", async () => {
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    lessonFixture.setInstance(contentInstance({ portion_id: PORTION }));
+    await store().load(LESSON_ID);
+    render(<Lesson />);
+    await screen.findByTestId("now-reading");
+    fireEvent.click(screen.getByRole("button", { name: /Book/ }));
+    visibility.mockRestore();
+    await act(() => new Promise((r) => setTimeout(r, 50)));
+    expect(shown).toEqual([]);
+    const button = screen.getByRole("button", { name: /Book/ });
+    expect(button).toHaveAttribute("data-new-part");
+    fireEvent.click(button);
+    await waitFor(() => expect(shown).toHaveLength(1));
   });
 
   it("shows how many parts are to come back to", async () => {
     lessonFixture.setInstance(contentInstance({ portion_id: PORTION }, { unit_position: 5, unit_count: 13, taught: 3, to_revisit: 1 }));
     await store().load(LESSON_ID);
-    render(<ContentPortion instanceId={LESSON_ID} />);
+    render(<Lesson />);
     expect(await screen.findByTestId("chapter-position")).toHaveTextContent("Part 5 of 13 of the chapter · 1 to come back to");
   });
 });
@@ -114,7 +129,7 @@ describe("content-led turns", () => {
     lessonFixture.setInstance(contentInstance());
     await store().load(LESSON_ID);
     expect(turnRequests).toEqual([]);
-    render(<ContentPortion instanceId={LESSON_ID} />);
+    render(<Lesson />);
     await waitFor(() => expect(turnRequests.map((r) => r.kind)).toEqual(["opening"]));
     await act(() => new Promise((r) => setTimeout(r, 50)));
     store().openContentLesson();
@@ -124,8 +139,8 @@ describe("content-led turns", () => {
   it("a lesson already under way opens nothing: a step change is folded into the learner's next action", async () => {
     lessonFixture.setInstance(contentInstance({ portion_id: PORTION }, { unit_position: 4, unit_count: 13, taught: 3, to_revisit: 0 }));
     await store().load(LESSON_ID);
-    render(<ContentPortion instanceId={LESSON_ID} />);
-    await waitFor(() => expect(screen.getByTestId("current-portion")).toBeInTheDocument());
+    render(<Lesson />);
+    await screen.findByTestId("now-reading");
     await act(() => new Promise((r) => setTimeout(r, 50)));
     expect(turnRequests).toEqual([]);
   });

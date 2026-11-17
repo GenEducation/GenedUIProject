@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
 import {
@@ -8,6 +8,8 @@ import {
 import { useLessonStore } from "../../useLessonStore";
 import type { Passage, ReadingRole, TeacherPayload } from "../../types";
 import { BoardPanel } from "../BoardPanel";
+import { BookPanel, isHeadingLine, reflow, showsEvery, uncoveredLines } from "../BookPanel";
+import { bookTexts } from "../../reading/book";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:0/test-api";
 const store = () => useLessonStore.getState();
@@ -49,9 +51,21 @@ describe("BookPanel on the board", () => {
     await open({ role: "post_reading", passages: [PASSAGE] });
 
     const book = screen.getByRole("complementary", { name: "In your book" });
-    const paragraphs = within(book).getAllByText(/SYNTHETIC part/).map((p) => p.textContent);
-    expect(paragraphs).toEqual(["SYNTHETIC part one.", "SYNTHETIC part two."]);
+    // The step's own part (the newest) is open and marked; each earlier part folds to one row above it, in the book's order.
+    const now = within(book).getByRole("region", { name: "SYNTHETIC story, part 2" });
+    expect(now).toHaveAttribute("aria-current", "step");
+    expect(within(now).getByText("SYNTHETIC part two.")).toBeInTheDocument();
+    expect(within(book).queryByText("SYNTHETIC part one.")).toBeNull();
+    const earlier = within(book).getByRole("button", { name: /SYNTHETIC story, part 1/ });
+    expect(earlier).toHaveAttribute("aria-expanded", "false");
+    expect(within(book).queryByRole("term")).toBeNull();
+
+    // Opening it shows the part in full, glossary apart.
+    fireEvent.click(earlier);
+    expect(earlier).toHaveAttribute("aria-expanded", "true");
     expect(within(book).getByRole("term")).toHaveTextContent("tended");
+    const paragraphs = within(book).getAllByText(/^SYNTHETIC part/).map((p) => p.textContent);
+    expect(paragraphs).toEqual(["SYNTHETIC part one.", "SYNTHETIC part two."]);
     expect(screen.getByRole("button", { name: "Book" })).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -60,7 +74,8 @@ describe("BookPanel on the board", () => {
     const sent = () => [turnRequests.length, answerRequests.length, stepRequests.length, forbiddenRequests.length];
     const before = sent();
 
-    fireEvent.click(within(screen.getByRole("navigation", { name: "Parts of the text" })).getByRole("button", { name: "Part 1" }));
+    fireEvent.click(screen.getByRole("button", { name: /SYNTHETIC story, part 1/ }));
+    expect(screen.getByText("SYNTHETIC part one.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Close the book" }));
     expect(screen.queryByRole("complementary", { name: "In your book" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Book" }));
@@ -80,5 +95,67 @@ describe("BookPanel on the board", () => {
     await open(null);
 
     expect(screen.queryByRole("button", { name: "Book" })).toBeNull();
+  });
+});
+
+describe("the portion being taught, in the book (content-led)", () => {
+  const LONG = "SYNTHETIC the boy walked home slowly from the shop.";
+  const FACT = "SYNTHETIC a fact box line.";
+  const texts = bookTexts([{ id: "t", title: "SYNTHETIC story", segments: [{ segment: 1, chunks: [chunk("p", `SYNTHETIC first. ${LONG}`)] }] }]);
+
+  it("prints only the lines the book's text does not hold whole and marked", () => {
+    expect(uncoveredLines([`Intro. ${LONG}`], [LONG, FACT])).toEqual([FACT]);
+    // A short line inside a long paragraph is not marked there, so it is printed too.
+    expect(uncoveredLines(["SYNTHETIC a much longer paragraph holding Hi."], ["Hi."])).toEqual(["Hi."]);
+    // A fragment of the line does not cover it.
+    expect(uncoveredLines(["SYNTHETIC the boy walked home"], [LONG])).toEqual([LONG]);
+  });
+
+  it("shows every line: highlighted in the book or in the Now reading card, then says so once", async () => {
+    const onShown = vi.fn();
+    render(<BookPanel texts={texts} onClose={() => {}} activeLines={[LONG, FACT]} portionId="p-1" onShown={onShown} />);
+    const card = screen.getByTestId("now-reading");
+    expect(Array.from(card.querySelectorAll("[data-source-line]")).map((p) => p.textContent)).toEqual([FACT]);
+    expect(screen.getByText(`SYNTHETIC first. ${LONG}`)).toHaveAttribute("data-active-portion");
+    await waitFor(() => expect(onShown).toHaveBeenCalledWith("p-1"));
+    expect(onShown).toHaveBeenCalledTimes(1);
+    expect(showsEvery(screen.getByRole("complementary"), [LONG, FACT])).toBe(true);
+    expect(showsEvery(screen.getByRole("complementary"), ["SYNTHETIC never printed."])).toBe(false);
+  });
+
+  it("no card when the book holds every line", () => {
+    render(<BookPanel texts={texts} onClose={() => {}} activeLines={[LONG]} />);
+    expect(screen.queryByTestId("now-reading")).toBeNull();
+  });
+});
+
+describe("the book as a page", () => {
+  it("takes the PDF's line breaks out of prose and keeps a verse's lines", () => {
+    expect(reflow("He had many\nfriends with whom\nhe played. But,\nmost of all, he")).toBe("He had many friends with whom he played. But, most of all, he");
+    expect(reflow("Twinkle twinkle\nLittle star\nHow I wonder\nWhat you are")).toBe("Twinkle twinkle\nLittle star\nHow I wonder\nWhat you are");
+    expect(reflow("One.\n\nTwo.")).toBe("One.\n\nTwo.");
+  });
+
+  it("treats a short line with no sentence ending as a heading", () => {
+    expect(isHeadingLine("2 THE TINKLING BELLS")).toBe(true);
+    expect(isHeadingLine("Let us Read")).toBe(true);
+    expect(isHeadingLine('"Ten rupees please," Chacha said.')).toBe(false);
+    expect(isHeadingLine('Goats under the age of six months are called "kids".')).toBe(false);
+  });
+
+  it("highlights a margin note where it is printed and leaves headings out of the card", async () => {
+    const STORY = "SYNTHETIC Chinna was a little boy who lived in a village.\nHe studied in grade 4.";
+    const NOTE = 'SYNTHETIC Goats under the age of six months are called "kids".';
+    const page = bookTexts([{ id: "t", title: "SYNTHETIC Let us Read", segments: [{ segment: 1, chunks: [chunk("p", STORY), chunk("n", NOTE, "note")] }] }]);
+    const onShown = vi.fn();
+    render(
+      <BookPanel texts={page} onClose={() => {}} activeLines={["2 THE TINKLING BELLS", "Let us Read", STORY, NOTE]} portionId="p-1" onShown={onShown} />,
+    );
+    expect(screen.queryByTestId("now-reading")).toBeNull();
+    const fact = screen.getByRole("complementary", { name: "From the book's margin" });
+    expect(within(fact).getByText(NOTE).parentElement).toHaveAttribute("data-active-portion");
+    expect(screen.getByText(/SYNTHETIC Chinna was a little boy/)).toHaveTextContent("village. He studied");
+    expect(screen.getAllByText("Now teaching")).toHaveLength(1);
+    await waitFor(() => expect(onShown).toHaveBeenCalledWith("p-1"));
   });
 });

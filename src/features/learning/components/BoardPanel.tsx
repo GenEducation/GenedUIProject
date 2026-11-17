@@ -11,6 +11,8 @@ import { StepCard } from "./StepCard";
 import { LessonSummary } from "./LessonSummary";
 import { QuickActions } from "./QuickActions";
 import { BookPanel } from "./BookPanel";
+import { ChapterPosition, PortionAudio } from "./PortionStatus";
+import { usePortionToConfirm } from "../reading/useContentPortion";
 import { bookSections, bookTexts, opensWithStep } from "../reading/book";
 
 const NODE_TYPE_LABEL = { teach: "Learn", practice: "Practice", assess: "Check" } as const;
@@ -63,6 +65,11 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
   const title = useLessonStore((s) => s.payload?.node.title ?? s.instance?.active_node?.title ?? null);
   const finished = useLessonStore((s) => s.instance?.state === "completed");
   const contentSource = useLessonStore((s) => s.contentSource);
+  // Content-led, chat: the assigned portion counts as shown only once the open book paints every one of its lines.
+  const toConfirm = usePortionToConfirm();
+  const confirmShown = useLessonStore((s) => s.confirmContentShown);
+  const refreshContent = useLessonStore((s) => s.refreshContent);
+  const portionId = contentSource?.portionId ?? null;
   // Content-led lessons (backend, owner's decision R2): the server says where each activity belongs now. Open ones show; an
   // attempted one folds away with a way to try again; one whose book text is not taught yet, or unrelated to this step, is hidden.
   const placement = useLessonStore((s) => s.instance?.content_progress?.activities);
@@ -78,27 +85,37 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
   const setChatDraft = useLessonStore((s) => s.setChatDraft);
   const sendReading = useLessonStore((s) => s.sendReading);
   const replying = useLessonStore((s) => s.turns.some((t) => t.status === "streaming"));
+  const contentPhase = useLessonStore((s) => s.instance?.content_lesson?.phase ?? null);
+  const voice = useLessonStore((s) => !!s.voiceSessionId);
   const nodeId = useLessonStore((s) => s.payload?.node.id ?? null);
   const instanceId = useLessonStore((s) => s.instanceId);
   const texts = useMemo(() => bookTexts(passages), [passages]);
   // A chapter with no passages (maths, science) keeps its own sections behind "Show in book", closed until asked for.
   const sections = useMemo(() => bookSections(nodeSections, texts.length > 0, readingRole), [nodeSections, texts, readingRole]);
-  const hasBook = texts.length > 0 || sections.length > 0;
+  // A content-led portion is book enough on its own: its lines are printed as they are when the step carries no text.
+  const hasBook = texts.length > 0 || sections.length > 0 || !!contentSource?.lines.length;
   const opens = opensWithStep(readingRole, texts);
   // The tutor presenting a check closes the book, which would cover the check's card; the Book button opens it again.
   const presented = node?.check_presented ? `${node.instance_node_id}:${node.check_item_ids.find((id) => !node.answered_item_ids.includes(id)) ?? ""}` : null;
-  const [chosen, setChosen] = useState<{ nodeId: string | null; open: boolean; presented: string | null } | null>(null);
+  // A newly assigned portion opens the book too (content-led): the learner reads it there, and only there is it confirmed.
+  const [chosen, setChosen] = useState<{ nodeId: string | null; open: boolean; presented: string | null; portionId: string | null } | null>(null);
   const bookOpen =
-    chosen !== null && chosen.nodeId === nodeId && chosen.presented === presented ? chosen.open : presented ? false : opens;
-  const setBookOpen = (open: boolean) => setChosen({ nodeId, open, presented });
+    chosen !== null && chosen.nodeId === nodeId && chosen.presented === presented && chosen.portionId === portionId
+      ? chosen.open
+      : presented ? false : opens || !!portionId;
+  const setBookOpen = (open: boolean) => setChosen({ nodeId, open, presented, portionId });
 
   const stepRef = useRef<HTMLDivElement>(null);
-  // The canvas frames figures in what the overlays leave clear: the title band, the docked question card, the filmstrip.
+  const bookShown = bookOpen && hasBook && !finished;
+  // The canvas frames figures in what the overlays leave clear: the title band, the open book on the left, the docked
+  // question card on the right, the filmstrip. The book's width is the panel's own rule: min(440px, 62% of the board).
   const insets = useCallback((): Insets => {
     const step = stepRef.current;
     const stepWidth = step && step.offsetWidth > 0 && holdsCard(step) ? step.offsetWidth + 24 : 0;
-    return { top: 72, right: stepWidth, bottom: 128, left: 0 };
-  }, []);
+    const board = step?.parentElement?.offsetWidth ?? 0;
+    const book = bookShown && board > 0 ? Math.min(440, board * 0.62) + 24 : 0;
+    return { top: 72, right: stepWidth, bottom: 128, left: book };
+  }, [bookShown]);
 
   // When the docked card appears, goes or changes width, re-frame the visual in the space it leaves.
   const [stepWidth, setStepWidth] = useState(0);
@@ -128,15 +145,22 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
           <button
             type="button"
             aria-pressed={bookOpen}
+            aria-description={toConfirm && !bookOpen ? "A new part of the book to read" : undefined}
+            data-new-part={toConfirm && !bookOpen ? "" : undefined}
             onClick={() => setBookOpen(!bookOpen)}
-            className={`lesson-display flex items-center gap-2 rounded-full px-4 py-2 text-[14px] font-medium ${
+            className={`lesson-display relative flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-[14px] font-medium ${
               bookOpen ? "bg-[var(--ls-primary)] text-white" : "bg-[var(--ls-sage)] text-[var(--ls-primary)]"
-            }`}
+            } ${toConfirm && !bookOpen ? "ring-2 ring-[var(--ls-primary)] ring-offset-2 motion-safe:animate-pulse" : ""}`}
           >
             <BookOpen size={16} aria-hidden />
-            {texts.length > 0 ? "Book" : "Show in book"}
+            {texts.length > 0 || contentSource ? "Book" : "Show in book"}
+            {toConfirm && !bookOpen && (
+              <span aria-hidden className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[var(--ls-accent)] ring-2 ring-white" />
+            )}
           </button>
         )}
+        <ChapterPosition />
+        <PortionAudio />
         <span className="flex-1" />
         {node && (
           <span className="lesson-display hidden rounded-full bg-[var(--ls-accent)] px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--ls-primary)] sm:inline">
@@ -148,7 +172,7 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
       <div className="relative mx-4 min-h-0 flex-1 overflow-hidden rounded-[22px] border border-[var(--ls-border)]">
         {hasFilmstrip ? (
           // Every figure shown this session stays on an endless board; the camera glides to each new one.
-          <WhiteboardCanvas insets={insets} refitKey={stepWidth} onUserZoom={onUserZoom} />
+          <WhiteboardCanvas insets={insets} refitKey={`${stepWidth}:${bookShown}`} onUserZoom={onUserZoom} />
         ) : (
           <div className="lesson-board absolute inset-0 grid place-items-center">{!finished && stepWidth === 0 && <EmptyBoard />}</div>
         )}
@@ -159,7 +183,7 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
             // Beside the open book, never under it: the title starts where the book ends.
             className={`lesson-hand lesson-underline pointer-events-none absolute top-4 z-10 truncate text-[28px] leading-tight text-[var(--ls-primary)] transition-[left] duration-300 ${
               bookOpen && hasBook
-                ? "left-[calc(min(440px,62%)+1.5rem)] max-w-[calc(100%-min(440px,62%)-3rem)]"
+                ? "left-[calc(min(440px,62%)+1.5rem)] max-w-[calc(100%-min(440px,62%)-13rem)]"
                 : "left-6 max-w-[60%]"
             }`}
           >
@@ -214,11 +238,17 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
             onAsk={setChatDraft}
             onReading={(intent) => void sendReading(intent)}
             readingDisabled={replying}
+            readingRole={readingRole}
+            contentPhase={contentPhase}
+            questionOpen={!!presented || contentPhase === "question_open" || contentPhase === "feedback"}
+            voice={voice}
             activeLines={contentSource?.lines}
+            portionId={toConfirm?.portionId}
+            onShown={toConfirm ? (id) => void confirmShown(id, "chat").catch(() => void refreshContent()) : undefined}
           />
         )}
 
-        <Filmstrip />
+        <Filmstrip besideBook={bookShown} />
       </div>
 
       <QuickActions />

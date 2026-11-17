@@ -1,7 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import type { StepActions } from "@/features/partner/types/sources";
-import { StepGuide, partnerQuestion, blankFor } from "../StepGuide";
+import {
+  StepTodo,
+  needLabel,
+  partnerQuestion,
+  blankFor,
+  waitsOnPlan,
+} from "../StepGuide";
 
 /** SYNTHETIC: two blocked steps (backend ADR 0049). */
 const STEPS: StepActions[] = [
@@ -31,28 +37,20 @@ const STEPS: StepActions[] = [
   },
 ];
 
-function guide() {
+function todo(step: StepActions) {
   const props = {
-    onOpen: vi.fn(),
     onKeep: vi.fn(),
     onWrite: vi.fn(),
     onAsk: vi.fn(),
   };
-  render(<StepGuide steps={STEPS} accepted={4} busy={null} {...props} />);
+  render(<StepTodo step={step} busy={null} {...props} />);
   return props;
 }
 
-describe("StepGuide", () => {
-  it("names each blocked step, why, and the button that fixes it", () => {
-    const props = guide();
-    expect(screen.getByText(/2 lesson steps need you/i)).toBeTruthy();
-    expect(
-      screen.getByText(
-        /3 proposals are waiting for your decision \(1 activity\)/i,
-      ),
-    ).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /review this step/i }));
-    expect(props.onOpen).toHaveBeenCalledWith("p8");
+describe("StepTodo", () => {
+  it("says what a blocked step needs, with the buttons that fix it", () => {
+    const props = todo(STEPS[1]);
+    expect(screen.getByText(/GenEd put “Antonyms” on hold/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /keep this concept/i }));
     expect(props.onKeep).toHaveBeenCalledWith("p5:c1");
     fireEvent.click(screen.getByRole("button", { name: /write a question/i }));
@@ -64,23 +62,43 @@ describe("StepGuide", () => {
         activity: false,
       }),
     );
-  });
-
-  it("says everything is covered when no step needs the partner", () => {
-    render(
-      <StepGuide
-        steps={[]}
-        accepted={4}
-        busy={null}
-        onOpen={vi.fn()}
-        onKeep={vi.fn()}
-        onWrite={vi.fn()}
-        onAsk={vi.fn()}
-      />,
+    fireEvent.click(
+      screen.getByRole("button", { name: /ask genEd to propose/i }),
     );
-    expect(screen.getByText(/every lesson step is covered/i)).toBeTruthy();
+    expect(props.onAsk).toHaveBeenCalledWith("p5");
   });
 
+  it("names proposals to decide without a button: they are on the step itself", () => {
+    todo(STEPS[0]);
+    expect(
+      screen.getByText(
+        /3 proposals are waiting for your decision \(1 activity\)/i,
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("needLabel", () => {
+  it("gives the step list a short need", () => {
+    expect(needLabel(STEPS[0])).toBe("3 to decide");
+    expect(needLabel(STEPS[1])).toBe("Concept on hold");
+    expect(needLabel(undefined)).toBeNull();
+  });
+
+  it("never asks to accept questions when there is nothing to decide: the step waits on GenEd's plan", () => {
+    const planless: StepActions = {
+      section_key: "p4",
+      title: "SYNTHETIC: II",
+      actions: [{ kind: "decide_proposals", count: 0, activities: 0 }],
+    };
+    expect(waitsOnPlan(planless)).toBe(true);
+    expect(waitsOnPlan(STEPS[0])).toBe(false);
+    expect(needLabel(planless)).toBe("Waiting on GenEd's plan");
+  });
+});
+
+describe("partnerQuestion", () => {
   it("writes the partner's own entry for exactly the objective it is for", () => {
     const target = {
       sectionKey: "p5",

@@ -125,7 +125,7 @@ describe("Read with me and I've read it", () => {
     ["Read with me", "read_with_me", "Can we read this together?"],
     ["I've read it", "read_it", "I've read it."],
   ] as const)("%s sends a conversation-only message with its intent, and nothing that could be an answer or a step", async (name, intent, text) => {
-    await open(reading("post_reading", [PASSAGE]));
+    await open(reading("reading", [PASSAGE]));
     const answers = answerRequests.length;
     const steps = stepRequests.length;
 
@@ -135,6 +135,20 @@ describe("Read with me and I've read it", () => {
     expect(answerRequests.length).toBe(answers);
     expect(stepRequests.length).toBe(steps);
     expect(forbiddenRequests).toEqual([]);
+  });
+
+  it("follows the rule book: after a press, Read with me reads on and I've read it is not offered again for the part", async () => {
+    await open(reading("reading", [PASSAGE]));
+    fireEvent.click(screen.getByRole("button", { name: "I've read it" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "I've read it" })).toBeNull());
+    fireEvent.click(await screen.findByRole("button", { name: "Read with me" }));
+    expect(await screen.findByRole("button", { name: "Keep reading with me" })).toBeInTheDocument();
+  });
+
+  it("a post-reading step only offers I've read it: its text was read in an earlier step", async () => {
+    await open(reading("post_reading", [PASSAGE]));
+    expect(screen.queryByRole("button", { name: "Read with me" })).toBeNull();
+    expect(screen.getByRole("button", { name: "I've read it" })).toBeInTheDocument();
   });
 
   it("is not offered on a step with no passage, such as a pre-reading step or a maths step", async () => {

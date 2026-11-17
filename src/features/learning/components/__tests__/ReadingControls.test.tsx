@@ -67,14 +67,17 @@ describe("listening", () => {
     expect(audios[0].pause).toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Keep listening" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Stop listening" }));
-    expect(audios[0].currentTime).toBe(0);
-    expect(screen.getByRole("button", { name: "Listen" })).toBeInTheDocument();
-
     fireEvent.click(screen.getByRole("button", { name: "Listen again from the start" }));
     await waitFor(() => expect(audios[0].play).toHaveBeenCalledTimes(2));
     expect(fetchAudio).toHaveBeenCalledTimes(1);
     expect(audios).toHaveLength(1);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Stop listening" }));
+    expect(audios[0].currentTime).toBe(0);
+    expect(screen.getByRole("button", { name: "Listen" })).toBeInTheDocument();
+    // Nothing to stop or restart once stopped.
+    expect(screen.queryByRole("button", { name: "Stop listening" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Listen again from the start" })).toBeNull();
   });
 
   it("returns to Listen when the audio ends", async () => {
@@ -129,8 +132,29 @@ describe("listening", () => {
   it("has labelled controls a keyboard and a screen reader can use", () => {
     show();
     expect(screen.getByRole("group", { name: "Listen to part 1" })).toBeInTheDocument();
-    for (const name of ["Stop listening", "Listen again from the start"]) expect(screen.getByRole("button", { name })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Listen" })).toBeInTheDocument();
     expect(screen.getAllByRole("status").every((s) => s.getAttribute("aria-live") === "polite")).toBe(true);
+  });
+});
+
+describe("when the group steps aside", () => {
+  it("shows nothing for a text whose language is unknown", () => {
+    show({ audible: false });
+    expect(screen.queryByRole("button", { name: "Listen" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Give reading a try/ })).toBeNull();
+  });
+
+  it("stops the part when a voice session starts, and hides while it is on", async () => {
+    const audio = audioDeps();
+    const controls = (voice: boolean) => (
+      <ReadingControls instanceId="inst-1" passageId="p-1" segment={1} text={TEXT} audio={audio} canCapture={captureOff} voice={voice} />
+    );
+    const { rerender } = render(controls(false));
+    fireEvent.click(screen.getByRole("button", { name: "Listen" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Pause listening" })).toBeInTheDocument());
+    rerender(controls(true));
+    expect(audios[0].pause).toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /Listen|Pause/ })).toBeNull();
   });
 });
 

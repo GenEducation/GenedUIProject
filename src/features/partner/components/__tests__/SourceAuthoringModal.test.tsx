@@ -254,9 +254,16 @@ describe("Completing a chapter's questions", () => {
     ).toBe("draft");
 
     fireEvent.click(within(doubted).getByRole("button", { name: "Reject" }));
-    fireEvent.change(within(doubted).getByLabelText("Why reject it?"), {
-      target: { value: "ambiguous" },
-    });
+    // The app's select: open it, then pick the reason from its (portalled) list.
+    fireEvent.click(within(doubted).getByLabelText("Why reject it?"));
+    fireEvent.click(
+      await screen.findByRole("option", {
+        name: "More than one answer could be right",
+      }),
+    );
+    expect(within(doubted).getByLabelText("Why reject it?")).toHaveTextContent(
+      "More than one answer could be right",
+    );
     fireEvent.click(
       within(doubted).getAllByRole("button", { name: "Reject" })[0],
     );
@@ -277,12 +284,10 @@ describe("Completing a chapter's questions", () => {
     expect(
       within(dialog).getByText("1 step still needs accepted questions"),
     ).toBeInTheDocument();
-    const blocked = within(dialog).getByRole("list", {
-      name: "Steps that still need accepted questions",
-    });
-    expect(
-      within(blocked).getByRole("button", { name: /SYNTHETIC section 2\.1/ }),
-    ).toBeInTheDocument();
+    // The step list says what the open step still needs, in place of a wall of chips.
+    const steps = within(dialog).getByRole("navigation", { name: "Lesson steps" });
+    const step = within(steps).getByRole("button", { name: /SYNTHETIC section 2\.1/ });
+    expect(step).toHaveAttribute("aria-current", "step");
   });
 
   function coveredBank(): BankPackage {
@@ -444,6 +449,21 @@ describe("The popup's layout", () => {
         name: "SYNTHETIC picture question?",
       }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows the save footer on GenEd's tab only while another tab holds unsaved work", async () => {
+    const dialog = await openAuthoring();
+    const saveButton = () =>
+      within(dialog).queryByRole("button", { name: "Save and prepare release" });
+    // GenEd's question bank has its own approve bar: no second, empty set of buttons under it.
+    expect(saveButton()).not.toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("tab", { name: /Printed questions/ }));
+    expect(saveButton()).toBeDisabled();
+    const picture = within(dialog).getByRole("article", { name: "SYNTHETIC picture question?" });
+    fireEvent.click(within(picture).getByLabelText("SYNTHETIC red"));
+    // Back on GenEd's tab, the unsaved answer keeps its save buttons in sight.
+    fireEvent.click(within(dialog).getByRole("tab", { name: /Prepared by GenEd/ }));
+    expect(saveButton()).toBeEnabled();
   });
 
   it("saves and runs in one step", async () => {

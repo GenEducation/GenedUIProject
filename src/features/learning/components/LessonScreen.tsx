@@ -31,7 +31,7 @@ const SIDE_PADDING = 32;
  *
  * Full-focus: no app sidebar, the header leads back out.
  */
-import { ContentPortion } from "./ContentPortion";
+import { useContentPortion } from "../reading/useContentPortion";
 
 export function LessonScreen({ instanceId }: { instanceId: string }) {
   const load = useLessonStore((s) => s.load);
@@ -42,6 +42,8 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
   const launched = useLessonLaunch((s) => (s.instanceId === instanceId ? s : null));
   const focusFigure = useLessonStore((s) => s.focusFigure);
   useLessonPresence(instanceId);
+  // The book portion the server assigned: read here, shown and confirmed by the open book (chat) or read aloud (voice).
+  useContentPortion(instanceId);
 
   // How the lesson fits this screen: scaled down on a small one, and turned on a phone held upright.
   const frame = useLessonFrame();
@@ -126,8 +128,6 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
         gridTemplate={mode === "wide" ? template : undefined}
         onOpenSteps={mode === "compact" ? () => setDrawerOpen(true) : undefined}
       />
-
-      <ContentPortion instanceId={instanceId} />
 
       {status === "error" ? (
         <div role="alert" className="m-4 lesson-panel mx-auto mt-16 max-w-md p-8 text-center">
