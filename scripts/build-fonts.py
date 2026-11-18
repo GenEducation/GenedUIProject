@@ -44,6 +44,8 @@ FONTS = [
     ("mukta/Mukta-Bold.ttf", "Mukta-Bold", set()),
     ("kalam/Kalam-Regular.ttf", "Kalam-Regular", set()),
     ("kalam/Kalam-Bold.ttf", "Kalam-Bold", set()),
+    ("youngserif/YoungSerif-Regular.ttf", "YoungSerif-Regular", set()),
+    ("onest/Onest[wght].ttf", "Onest-Variable", {"wght"}),
 ]
 
 

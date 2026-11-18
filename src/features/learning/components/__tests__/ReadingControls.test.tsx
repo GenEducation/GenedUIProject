@@ -173,7 +173,7 @@ describe("read-aloud practice", () => {
     fireEvent.click(screen.getByRole("button", { name: /Give reading a try/ }));
 
     expect(screen.getByRole("region", { name: "Reading practice" })).toBeInTheDocument();
-    expect(screen.getByText("SYNTHETIC one. SYNTHETIC two. SYNTHETIC three.")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Reading practice" })).toHaveTextContent("SYNTHETIC one. SYNTHETIC two. SYNTHETIC three.");
     expect(socket).not.toHaveBeenCalled();
     expect(capture.openMic).not.toHaveBeenCalled();
   });

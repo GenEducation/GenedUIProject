@@ -73,3 +73,9 @@ vi.mock("@/features/learning/math/MathField", async () => {
   });
   return { MathField };
 });
+
+// next/font is a Next compiler transform; outside a Next build the loader isn't callable. Any component that
+// loads a font module (the Zoovi marketing pages, say) gets inert class names under test.
+vi.mock("next/font/local", () => ({
+  default: () => ({ className: "", variable: "", style: { fontFamily: "" } }),
+}));
