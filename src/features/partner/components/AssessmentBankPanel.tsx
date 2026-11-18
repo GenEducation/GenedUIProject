@@ -44,6 +44,7 @@ import type {
   BankNode,
   BankOpenSlot,
   BankPackage,
+  DeviceLimits,
   BankQuestion,
   BankQuestionContent,
   BankRun,
@@ -630,6 +631,7 @@ function StepWorkspace({
   prev,
   next,
   onPick,
+  limits,
 }: {
   step: Step;
   total: number;
@@ -651,6 +653,8 @@ function StepWorkspace({
   prev: Step | null;
   next: Step | null;
   onPick: (key: string) => void;
+  /** The device limits the review sends, for the limits text. */
+  limits?: DeviceLimits;
 }) {
   const { node, questions, phase, todo, index } = step;
   const [asking, setAsking] = useState(false);
@@ -823,7 +827,7 @@ function StepWorkspace({
       {writer}
 
       {/* Whether a learner can finish each concept on the touch device, from the backend's pool counts. */}
-      {!waiting && <DeviceReadiness concepts={node.concepts} />}
+      {!waiting && <DeviceReadiness concepts={node.concepts} limits={limits} />}
 
       {/* Only a step with objectives (or a held concept) has anything to list here. */}
       {(obligations.length > 0 || blocked.length > 0) && (
@@ -1647,6 +1651,7 @@ export function AssessmentBankPanel({
               </p>
             )}
             <StepWorkspace
+              limits={pkg?.device_limits}
               key={current.node.section_key}
               step={current}
               total={steps.length}

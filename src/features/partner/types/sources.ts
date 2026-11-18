@@ -880,10 +880,18 @@ export interface StepActions {
   actions: StepAction[];
 }
 
+/** What the device can show, per answer format: keys like max_options, max_chars, max_entries, max_blanks, max_stem_chars. */
+export interface DeviceLimits {
+  profile: string;
+  formats: Record<string, Record<string, number>>;
+}
+
 export interface BankPackage {
   version: string;
   findings: BankFinding[];
   nodes: BankNode[];
+  /** The effective device limits per answer format (backend device policy); absent from an older backend. */
+  device_limits?: DeviceLimits;
   /** Each blocked step and its actions; absent from an older backend. */
   actions?: StepActions[];
   questions: BankQuestion[];

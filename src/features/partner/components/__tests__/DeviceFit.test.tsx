@@ -4,6 +4,7 @@ import type {
   BankConcept,
   BankQuestion,
   ConceptPoolSurface,
+  DeviceLimits,
 } from "@/features/partner/types/sources";
 import {
   DEVICE_PROFILE,
@@ -278,5 +279,56 @@ describe("live readiness chips", () => {
     expect(screen.getByText(/GenEd device/)).toHaveTextContent(
       "GenEd device: 7 of 11 steps",
     );
+  });
+});
+
+/** SYNTHETIC limits, as the review payload would send them. */
+const LIMITS: DeviceLimits = {
+  profile: "SYNTHETIC-profile",
+  formats: {
+    single_choice: {
+      max_options: 5,
+      max_chars: 77,
+      max_stem_chars: 321,
+    },
+    matching_pairs: { max_entries: 3, max_chars: 66, max_stem_chars: 321 },
+    blanks: { max_blanks: 1, max_chars: 12, max_stem_chars: 321 },
+    number_line: { max_stem_chars: 321 },
+  },
+};
+
+describe("refusal wording and limits text", () => {
+  it("words the 500 character stem refusal", () => {
+    const refused = (refusal: string) =>
+      question({
+        device: {
+          [DEVICE_PROFILE]: { eligible: false, refusal },
+        } as BankQuestion["device"],
+      });
+    render(<DeviceRefusalNote q={refused("stem_too_long")} />);
+    expect(screen.getByText(/over 500 characters/)).toBeInTheDocument();
+  });
+
+  it("builds the limits paragraph from the payload", () => {
+    const c = concept(
+      pool({ alternate: "needs_alternate", families: 0, units: 0 }),
+      "SYNTHETIC short",
+    );
+    render(<DeviceReadiness concepts={[c]} limits={LIMITS} />);
+    const text = screen.getByText(/The device shows/).textContent ?? "";
+    expect(text).toContain("up to 5 choices of 77 characters)");
+    expect(text).toContain("up to 3 pairs of 66 characters");
+    expect(text).toContain("up to 1 blank of 12 characters");
+    expect(text).toContain("Question text up to 321 characters");
+  });
+
+  it("falls back to the older wording without limits", () => {
+    const c = concept(
+      pool({ alternate: "not_completable", families: 0, units: 0 }),
+    );
+    render(<DeviceReadiness concepts={[c]} />);
+    expect(
+      screen.getByText(/up to 6 choices of 60 characters/),
+    ).toBeInTheDocument();
   });
 });

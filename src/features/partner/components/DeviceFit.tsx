@@ -8,6 +8,7 @@ import type {
   BankQuestion,
   ConceptGap,
   ConceptPoolSurface,
+  DeviceLimits,
   LiveSurface,
   SurfaceReadiness,
 } from "../types/sources";
@@ -32,7 +33,7 @@ const REFUSAL: Record<string, string> = {
   too_many_entries: "too many pairs (at most 4)",
   too_many_blanks: "too many blanks (at most 2)",
   entry_too_long: "a choice or entry is too long",
-  stem_too_long: "the question text is too long",
+  stem_too_long: "the question is over 500 characters",
   not_ascii: "uses characters the device cannot show",
   not_renderable: "the device cannot draw it",
   figure_not_allowed: "needs a picture the device cannot show",
@@ -116,8 +117,52 @@ export function DeviceRefusalNote({ q }: { q: BankQuestion }) {
   );
 }
 
-function refusalText(code: string | null): string {
+function refusalText(code: string | null, limits?: DeviceLimits): string {
+  const stem = limits ? stemLimit(limits) : undefined;
+  if (code === "stem_too_long" && stem)
+    return `the question is over ${stem} characters`;
   return (code && REFUSAL[code]) || "it does not fit the device";
+}
+
+/** The smallest stem limit any format declares. */
+function stemLimit(limits: DeviceLimits): number | undefined {
+  const all = Object.values(limits.formats)
+    .map((f) => f.max_stem_chars)
+    .filter((n): n is number => typeof n === "number");
+  return all.length ? Math.min(...all) : undefined;
+}
+
+const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
+
+/** The device-limits paragraph, built from the limits the review sends; the older wording when there are none. */
+export function limitsText(limits?: DeviceLimits): string {
+  const f = limits?.formats;
+  const choice = f?.single_choice ?? f?.multiple_select;
+  const match = f?.matching_pairs;
+  const blanks = f?.blanks;
+  const parts: string[] = [];
+  if (choice?.max_options && choice.max_chars) {
+    parts.push(
+      `single or multiple choice (up to ${plural(choice.max_options, "choice")} of ${choice.max_chars} characters)`,
+    );
+  }
+  if (match?.max_entries && match.max_chars)
+    parts.push(
+      `matching (up to ${plural(match.max_entries, "pair")} of ${match.max_chars} characters)`,
+    );
+  if (blanks?.max_blanks && blanks.max_chars)
+    parts.push(
+      `fill in the blanks (up to ${plural(blanks.max_blanks, "blank")} of ${blanks.max_chars} characters)`,
+    );
+  if (f?.number_line) parts.push("number lines");
+  if (parts.length === 0)
+    return "The device shows single or multiple choice (up to 6 choices of 60 characters), matching (up to 4 pairs of 45 characters), fill in the blanks (up to 2 blanks of 14 characters) and number lines.";
+  const stem = limits ? stemLimit(limits) : undefined;
+  const list =
+    parts.length > 1
+      ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`
+      : parts[0];
+  return `The device shows ${list}.${stem ? ` Question text up to ${stem} characters.` : ""}`;
 }
 
 /** How many more device-ready questions, from distinct families, the concept needs to be resilient on the device. */
@@ -143,7 +188,13 @@ const STATUS: Record<
 };
 
 /** Per concept: can a learner finish it on the device? Counted from accepted questions; drafts are shown as what accepting adds. */
-export function DeviceReadiness({ concepts }: { concepts: BankConcept[] }) {
+export function DeviceReadiness({
+  concepts,
+  limits,
+}: {
+  concepts: BankConcept[];
+  limits?: DeviceLimits;
+}) {
   const rows = concepts
     .filter((c) => c.status === "planned" && c.pool)
     .map((c) => {
@@ -214,11 +265,8 @@ export function DeviceReadiness({ concepts }: { concepts: BankConcept[] }) {
       </ul>
       {ready < rows.length && (
         <p className="mt-2.5 text-[11px] leading-relaxed text-[#122D30]/55">
-          Only accepted questions reach learners. The device shows single or
-          multiple choice (up to 6 choices of 60 characters), matching (up to 4
-          pairs of 45 characters), fill in the blanks (up to 2 blanks of 14
-          characters) and number lines. Questions that don&rsquo;t fit still
-          count in the app.
+          Only accepted questions reach learners. {limitsText(limits)} Questions
+          that don&rsquo;t fit still count in the app.
         </p>
       )}
     </details>
