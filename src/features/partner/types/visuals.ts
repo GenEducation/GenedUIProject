@@ -163,6 +163,9 @@ export interface VisualDetail extends Omit<VisualSummary, "caption"> {
   regeneration: VisualRegenerationView | null;
   /** Oldest first. */
   family: VisualFamilyMember[];
+  /** A textbook crop a reviewer marked readable on a touch device's small screen (ADR 0052 decision 10): only then is it
+   * made into a device picture. Absent from an older backend. */
+  device_readable?: boolean;
 }
 
 export interface VisualDecisionIn {

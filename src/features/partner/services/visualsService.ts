@@ -96,6 +96,15 @@ export const visualsService = {
     return response.json();
   },
 
+  /** Mark an accepted textbook crop readable on a touch device (ADR 0052 decision 10); idempotent. 409 for a drawn or
+   * rejected visual. */
+  markDeviceReadable: async (id: string): Promise<void> => {
+    await authFetch(
+      `${VISUALS_BASE}/candidates/${encodeURIComponent(id)}/device-readable`,
+      { method: "POST" },
+    );
+  },
+
   /** A figure's textbook pages and current crop boxes; 409 when its pages were never recorded. */
   getCrop: async (id: string): Promise<VisualCrop> => {
     const response = await authFetch(

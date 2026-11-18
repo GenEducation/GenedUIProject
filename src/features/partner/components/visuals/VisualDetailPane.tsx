@@ -30,6 +30,7 @@ import { CropEditor } from "./CropEditor";
 import { DecisionPanel, isTypingTarget } from "./DecisionPanel";
 import { RegenerationStatus } from "./RegenerationStatus";
 import { VisualImage } from "./VisualImage";
+import { DeviceReadableMark } from "./DeviceReadableMark";
 import { Skeleton } from "../Skeleton";
 import { MarkupLayer } from "./MarkupLayer";
 import { MarkList } from "./MarkList";
@@ -614,6 +615,11 @@ export function VisualDetailPane({
                 )}
               </p>
             )}
+
+            <DeviceReadableMark
+              detail={detail}
+              onMarked={() => void reload()}
+            />
 
             {detail.state === "pending" && (
               <DecisionPanel
