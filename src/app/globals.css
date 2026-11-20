@@ -298,6 +298,13 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
 @keyframes voice-bar { 0%, 100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
 @media (prefers-reduced-motion: reduce) { .voice-bars > span { animation: none; transform: scaleY(0.7); } }
 
+/* Student dashboard: the continue card's 3D island drifts gently; its shadow on the card breathes with it. */
+@keyframes island-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+@keyframes island-shadow { 0%, 100% { transform: scaleX(1); opacity: .55; } 50% { transform: scaleX(.82); opacity: .35; } }
+.island-float { animation: island-float 5.5s ease-in-out infinite; will-change: transform; }
+.island-shadow { animation: island-shadow 5.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .island-float, .island-shadow { animation: none; } }
+
 /* A live dot's pulse (partner ingestion): an SVG circle grows and fades. Transforms on SVG shapes are redrawn as
    vectors each frame, so the halo stays crisp where Tailwind's animate-ping on a tiny HTML dot turned pixelated. */
 .live-pulse { transform-box: fill-box; transform-origin: center; animation: live-pulse 1.4s cubic-bezier(0, 0, 0.2, 1) infinite; }

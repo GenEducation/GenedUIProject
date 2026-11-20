@@ -38,26 +38,35 @@ export function SubjectIcon({
 }
 
 /**
- * Mascot artwork per subject.
+ * 3D island artwork per subject (Blender renders, 600px transparent WebP).
  *
- * Presentation only, exactly like SUBJECT_ICONS above — listing a subject here
- * does not make it selectable, and a subject absent from the map still renders
- * with the neutral reading pose rather than nothing. Geography is deliberately
- * unmapped until its own pose exists; the two Social subjects share the globe
- * pose because it reads correctly for both.
+ * Each island is built from its subject: English is a stack of books under a
+ * pop-up castle, Maths is squared paper on stepped cubes, Science a lab-tile
+ * floor over crystal rock, and so on. Presentation only, like SUBJECT_ICONS
+ * above: a subject absent from the map gets the neutral library island. The two
+ * Social subjects share the map-and-town island.
  */
-const SUBJECT_MASCOTS: Readonly<Record<string, string>> = {
-  English: "/mascots/subjects/english.webp",
-  Mathematics: "/mascots/subjects/maths.webp",
-  Science: "/mascots/subjects/science.webp",
-  "Social Science": "/mascots/subjects/social-science.webp",
-  "Social & Political Science": "/mascots/subjects/social-science.webp",
-  History: "/mascots/subjects/history.webp",
+const SUBJECT_ISLANDS: Readonly<Record<string, string>> = {
+  English: "/student/islands/english.webp",
+  Mathematics: "/student/islands/maths.webp",
+  Science: "/student/islands/science.webp",
+  "Social Science": "/student/islands/social-science.webp",
+  "Social & Political Science": "/student/islands/social-science.webp",
+  History: "/student/islands/history.webp",
+  Geography: "/student/islands/geography.webp",
 };
 
-const FALLBACK_MASCOT = "/mascots/subjects/reading.webp";
+const FALLBACK_ISLAND = "/student/islands/reading.webp";
 
-/** Artwork URL for a subject, falling back to the neutral reading pose. */
-export function subjectMascot(subject: string): string {
-  return SUBJECT_MASCOTS[subject] ?? FALLBACK_MASCOT;
+/** Island artwork URL for a subject, falling back to the library island. */
+export function subjectIsland(subject: string): string {
+  return SUBJECT_ISLANDS[subject] ?? FALLBACK_ISLAND;
+}
+
+/**
+ * The same island rendered without its contact shadow, for places where it
+ * floats (the continue card draws a breathing shadow of its own under it).
+ */
+export function subjectIslandFloating(subject: string): string {
+  return subjectIsland(subject).replace(/\.webp$/, "-float.webp");
 }

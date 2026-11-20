@@ -32,15 +32,11 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
 import { GuardianInvitePopup } from "./guardian/GuardianInvitePopup";
 import { Select } from "@/components/ui/Select";
-import { subjectMascot, SubjectIcon } from "@/features/subjects/subjectPresentation";
+import { subjectIslandFloating } from "@/features/subjects/subjectPresentation";
+import { EMPTY_RECENT_ART } from "../theme/progressArt";
 import { subjectsForGrade, useSubjectCatalog, useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
 import { ZooviLogo } from "@/components/shared/ZooviLogo";
 
-/* Subject-card mascot: display size, and how far it bleeds above the card.
-   The bleed is mirrored as paddingTop on the horizontal scroller, which would
-   otherwise clip it — overflow-x:auto forces the vertical axis to auto too. */
-const MASCOT_SIZE = "clamp(52px, 6.4vw, 92px)";
-const MASCOT_BLEED = 34;
 
 /* ═══ DESIGN TOKENS ═══ — sourced from STUDENT_COLORS (see theme/colors.ts) */
 const C = {
@@ -77,8 +73,8 @@ function SectionHeading({ icon: Icon, className = "", children }: { icon: Lucide
 // Raw hex, not var() — these get alpha-suffix concatenated below
 // (`${vis.color}cc`, `vis.color + "14"`), which CSS custom properties can't
 // support.
-// Colour/label only — the glyph comes from SubjectIcon (src/components/icons),
-// which already has a drawn icon per subject and a BookOpen fallback.
+// Colour/label only — the subject cards show the subject's 3D island
+// (subjectIslandFloating), not a glyph.
 const SUBJECTS_VISUAL: Record<string, { color: string; bg: string; label: string }> = {
   English:        { color: STUDENT_COLORS.subjectEnglish, bg: "#EBF3FB", label: "English" },
   Mathematics:    { color: "#2D6A4F", bg: "#E8F5EF", label: "Mathematics" },
@@ -595,7 +591,7 @@ export function StudentHome() {
                       </button>
                     </>
                   )}
-                  <div ref={subjectsScrollRef} className="citron-scroll flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)", scrollSnapType: "x mandatory", paddingTop: MASCOT_BLEED }}>
+                  <div ref={subjectsScrollRef} className="citron-scroll flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)", scrollSnapType: "x mandatory", paddingBottom: 6 }}>
                     {subjectGroups.map((group) => {
                     const vis = group.vis;
                     const hov = hoveredAgent === group.key;
@@ -610,65 +606,61 @@ export function StudentHome() {
                         onFocus={() => setHoveredAgent(group.key)}
                         onBlur={() => setHoveredAgent(null)}
                         aria-label={`${vis.label}: see chapters`}
-                        className="rounded-[18px] cursor-pointer flex-shrink-0 relative text-left outline-none focus-visible:ring-2"
+                        className="rounded-[24px] cursor-pointer flex-shrink-0 relative text-left outline-none focus-visible:ring-2 overflow-hidden flex flex-col"
                         style={{
                           background: C.card,
                           border: `1px solid ${hov ? vis.color + "60" : C.border}`,
-                          padding: "clamp(16px, 2vw, 22px)",
-                          width: "clamp(240px, calc(25% - 12px), 300px)",
-                          transform: hov ? "translateY(-3px)" : "none",
-                          boxShadow: hov ? `0 10px 30px ${vis.color}18` : "0 1px 5px rgba(0,0,0,0.04)",
+                          padding: 0,
+                          width: "clamp(220px, calc(25% - 12px), 280px)",
+                          transform: hov ? "translateY(-4px)" : "none",
+                          boxShadow: hov ? `0 18px 36px -18px ${vis.color}55` : "0 1px 5px rgba(0,0,0,0.04)",
                           transition: "all 0.25s ease",
                           scrollSnapAlign: "start",
                         }}>
-                        <Image
-                          src={subjectMascot(group.subject)}
-                          alt=""
-                          aria-hidden="true"
-                          width={300}
-                          height={300}
-                          // Already a hand-sized 300px WebP (~24KB); the Next
-                          // optimizer only accepts widths from its device/image
-                          // size arrays and 400s on 300, so serve it directly.
-                          unoptimized
-                          className="absolute pointer-events-none select-none"
-                          style={{
-                            width: MASCOT_SIZE,
-                            height: MASCOT_SIZE,
-                            objectFit: "contain",
-                            top: `calc(-1 * ${MASCOT_BLEED}px)`,
-                            right: 8,
-                            transform: hov ? "translateY(-4px) scale(1.04)" : "none",
-                            transition: "transform 0.25s ease",
-                            filter: "drop-shadow(0 6px 14px rgba(16,20,32,0.12))",
-                          }}
-                        />
-                        <div className="flex items-center mb-4" style={{ gap: "clamp(10px, 1.2vw, 14px)", paddingRight: "calc(" + MASCOT_SIZE + " - 26px)" }}>
-                          <div className="rounded-[14px] flex items-center justify-center flex-shrink-0"
-                            style={{ background: vis.bg, width: "clamp(40px, 4vw, 48px)", height: "clamp(40px, 4vw, 48px)", color: vis.color }}>
-                            <SubjectIcon subject={group.subject} size={22} />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-bold truncate" title={vis.label} style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(14px, 1.5vw, 17px)" }}>
-                              {vis.label}
-                            </div>
-                            <div className="font-medium mt-0.5 truncate" style={{ color: C.textMuted, fontSize: "clamp(10px, 1vw, 12px)" }}>
-                              Grade {group.grade}
-                            </div>
-                          </div>
-                        </div>
+                        {/* The subject's island owns the top of the card, on the subject's own tint. */}
                         <div
-                          className="flex items-center justify-between rounded-[10px] font-bold"
+                          aria-hidden="true"
+                          className="relative w-full"
                           style={{
-                            padding: "9px 12px",
-                            background: hov ? `${vis.color}14` : `${vis.color}0A`,
-                            color: vis.color,
-                            fontSize: "clamp(11px, 1.1vw, 13px)",
-                            transition: "background 0.25s ease",
+                            aspectRatio: "5 / 4",
+                            background: `radial-gradient(70% 55% at 50% 45%, rgba(255,255,255,0.75), transparent 70%), ${vis.bg}`,
                           }}
                         >
-                          See chapters
-                          <ChevronRight size={16} strokeWidth={2.5} style={{ transform: hov ? "translateX(3px)" : "none", transition: "transform 0.25s ease" }} />
+                          {/* A soft shadow under the island, drawn here so it never stops at the image edge. */}
+                          <div
+                            className="absolute rounded-[50%]"
+                            style={{
+                              left: "26%", right: "26%", bottom: "7%", height: 14,
+                              background: `${vis.color}33`, filter: "blur(6px)",
+                              transform: hov ? "scaleX(0.85)" : "none", transition: "transform 0.3s ease",
+                            }}
+                          />
+                          <Image
+                            src={subjectIslandFloating(group.subject)}
+                            alt=""
+                            width={600}
+                            height={600}
+                            // A fixed-size 600px WebP; serve it as is.
+                            unoptimized
+                            className="absolute pointer-events-none select-none"
+                            style={{
+                              inset: "6% 8% 2%",
+                              width: "84%",
+                              height: "92%",
+                              objectFit: "contain",
+                              transform: hov ? "translateY(-6px) rotate(-2deg)" : "none",
+                              transition: "transform 0.3s ease",
+                            }}
+                          />
+                        </div>
+                        {/* Name and grade only: the whole card opens the subject's chapters. */}
+                        <div className="min-w-0" style={{ padding: "clamp(12px, 1.4vw, 16px) clamp(14px, 1.6vw, 18px) clamp(14px, 1.6vw, 18px)" }}>
+                          <div className="font-bold truncate" title={vis.label} style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(16px, 1.6vw, 19px)" }}>
+                            {vis.label}
+                          </div>
+                          <div className="font-medium mt-0.5 truncate" style={{ color: C.textMuted, fontSize: "clamp(11px, 1vw, 13px)" }}>
+                            Grade {group.grade}
+                          </div>
                         </div>
                       </button>
                     );
@@ -788,14 +780,28 @@ export function StudentHome() {
                     />
                   ))}
                 </div>
+              ) : recentRows.length === 0 ? (
+                // Nothing opened yet: a desk set up and waiting, notebook open and lamp on.
+                <div
+                  className="rounded-[22px] flex flex-col sm:flex-row items-center text-center sm:text-left"
+                  style={{ border: `1.5px dashed ${C.border}`, padding: "10px clamp(16px, 2vw, 24px) 16px 10px", gap: "clamp(8px, 1.6vw, 18px)" }}
+                >
+                  <Image src={EMPTY_RECENT_ART} alt="" aria-hidden="true" width={900} height={600} unoptimized style={{ width: 210, height: 140, objectFit: "contain" }} />
+                  <div>
+                    <p className="m-0 font-bold" style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(17px, 1.6vw, 20px)" }}>
+                      Your desk is ready
+                    </p>
+                    <p className="m-0 mt-1" style={{ color: C.textMuted, fontSize: 14 }}>
+                      No chapters yet. Pick a subject above to start your first one!
+                    </p>
+                  </div>
+                </div>
               ) : (
                 <div className="rounded-2xl p-8 text-center" style={{ background: C.card, border: `1px solid ${C.border}` }}>
                   <p style={{ color: C.textMuted, fontSize: 14 }}>
-                    {recentRows.length === 0
-                      ? "No chapters yet. Pick a subject above to start your first one!"
-                      : recentList.length === 0 && filteredRecent.length > 0
-                        ? "No other chapters yet. Keep learning!"
-                        : "No chapters match these filters."}
+                    {recentList.length === 0 && filteredRecent.length > 0
+                      ? "No other chapters yet. Keep learning!"
+                      : "No chapters match these filters."}
                   </p>
                 </div>
               )}
