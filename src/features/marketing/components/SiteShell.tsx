@@ -2,6 +2,7 @@ import type { SitePage } from "../routes";
 import { HomeIntro } from "./HomeIntro";
 import { NavBar } from "./NavBar";
 import { PageRunner } from "./PageRunner";
+import { SectionStepper } from "./SectionStepper";
 // Generated from the prototypes by scripts/zoovi-scope-css.mjs, scoped under .zv-site (each to the pages that used
 // it), and imported in the prototypes' own link order: tokens, parents, portal, educators, then the page styles.
 import "../styles/tokens.css";
@@ -26,6 +27,7 @@ export function SiteShell({ page, html }: { page: SitePage; html: string }) {
       {/* Static copy from engine/content*.js, escaped by its esc(); nothing user-supplied reaches it. */}
       <main id="main" dangerouslySetInnerHTML={{ __html: html }} />
       <PageRunner page={page} />
+      <SectionStepper />
     </div>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ZooviLogo } from "@/components/shared/ZooviLogo";
+import { preloadStudyDeck } from "@/components/shared/loaders/StudyDeck/studyObjects";
 
 interface AuthShellProps {
   title: string;
@@ -21,6 +22,13 @@ interface AuthShellProps {
  * itself never moves.
  */
 export function AuthShell({ title, subtitle, width = "md", children }: AuthShellProps) {
+  // The post-sign-in loader appears the moment the auth reply lands; warm its
+  // renders while the person is still typing so its first frame is instant.
+  useEffect(() => {
+    const t = setTimeout(preloadStudyDeck, 800);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div className="auth-canvas min-h-screen flex items-center justify-center px-4 py-6">
       <div

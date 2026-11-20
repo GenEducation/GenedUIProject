@@ -3,6 +3,7 @@
 import { initMore, initHops } from './content-parents.js';
 import { createStage, shellAt } from './deskbot.js';
 import { initScroll, growOnScroll, activeSteps, revealOnScroll, reduced, mobile, bp, htmlState, killScroll } from './scroll.js';
+import { registerStepper, sectionStops, timelineStops, topOf } from './stepper.js';
 
 export async function runParents() {
   const life = { dead: false, undo: [htmlState()] };
@@ -69,7 +70,7 @@ export async function runParents() {
     concerns: bp({ rotY: 0, rotX: .32, dist: 5.2, shiftX: 0, shiftY: -.06 }, { rotY: 0, rotX: .32, dist: 6.2, shiftX: 0, shiftY: .02 }),
     view:     bp({ rotY: 0, rotX: .45, dist: 3.9, shiftX: 0, shiftY: -.1 },  { rotY: 0, rotX: .45, dist: 4.8, shiftX: 0, shiftY: 0 }),
   };
-  if (!mobile && matchMedia('(max-width: 1100px)').matches) for (const k in P) P[k].dist *= 1.3;
+  // narrower windows: the stage pulls the device back itself (deskbot.js, fit), continuously
   // the device turns to each question as it arrives: left column to its left, right column to its right, up or down with the row
   const look = (col, row) => ({ rotY: col * .42, rotX: .32 + row * .13 });
   const FACES = ['thinking', 'listening', 'surprised', 'encourage', 'happy', 'correct'];
@@ -82,6 +83,7 @@ export async function runParents() {
   if (life.dead) return cleanup;
 
   if (reduced) {
+    life.undo.push(registerStepper({ stops: () => sectionStops(document.getElementById('main')) }));
     stage.setFace('happy');
     return cleanup;
   }
@@ -127,17 +129,31 @@ export async function runParents() {
     if (shown !== f) { shown = f; stage.show(f); }
     if (k !== lastF) { lastF = k; qs.forEach((li, j) => li.classList.toggle('on', j === k)); }
   });
-  ScrollTrigger.create({ trigger: '#story', start: 'top top', end: 'bottom bottom', scrub: 0.6, animation: tl });
+  const storyST = ScrollTrigger.create({ trigger: '#story', start: 'top top', end: 'bottom bottom', scrub: 0.6, animation: tl });
 
   // the reveal: the plain card and its text settle in and hold; the highlighter sweeps the whole section over to the
   // Parent Dashboard (text and tablet together), then it holds
   const rv = { p: 0 };
-  gsap.timeline({ scrollTrigger: { trigger: '#reveal', start: 'top top', end: 'bottom bottom', scrub: 0.5, invalidateOnRefresh: true } })
+  const revealTl = gsap.timeline({ scrollTrigger: { trigger: '#reveal', start: 'top top', end: 'bottom bottom', scrub: 0.5, invalidateOnRefresh: true } });
+  revealTl
     .fromTo('.rv-before .rv-text', { autoAlpha: 0, y: 30 }, { autoAlpha: 1, y: 0, duration: .06 }, 0)
     .fromTo('.rv-before .rv-card', { autoAlpha: 0, y: 40, rotate: -2 }, { autoAlpha: 1, y: 0, rotate: 0, duration: .08 }, 0)
     .fromTo(rv, { p: 0 }, { p: 1, duration: .66, onUpdate: () => scribble(rv.p) }, .22)
     .fromTo('.rv-after .rv-card', { scale: .97 }, { scale: 1, duration: .1, ease: 'power1.out' }, .86)
     .to({}, { duration: .1 }, .9);
+  // ↓ / the down button: the hero; the title, each question while it has the screen, the closing line; the report
+  // card settled, then the Parent Dashboard fully revealed; then the sections below.
+  const STORY_STEPS = [.6, ...qs.map((li, i) => C0 + i * STEP + .55), IN + 1.0];
+  life.undo.push(registerStepper({
+    lenis,
+    stops: () => [
+      topOf($('.ahero')),
+      ...timelineStops(storyST, STORY_STEPS, { to: tl.duration() }),
+      ...timelineStops(revealTl.scrollTrigger, [.16, .97], { to: revealTl.duration() }),
+      ...sectionStops(tail),
+    ],
+  }));
+
   const resetScribble = () => { SEG = []; };
   ScrollTrigger.addEventListener('refreshInit', resetScribble);
   life.undo.push(() => ScrollTrigger.removeEventListener('refreshInit', resetScribble));

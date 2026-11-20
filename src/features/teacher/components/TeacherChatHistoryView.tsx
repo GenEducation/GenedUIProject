@@ -52,7 +52,7 @@ export function TeacherChatHistoryView() {
                 >
                   {!fromStudent && (
                     <div className="mt-0.5 h-10 w-10 flex-shrink-0 overflow-hidden rounded-full border border-border bg-white">
-                      <Image src="/brand/zoovi-tutor.png" alt="Zoovi" width={40} height={40} className="h-full w-full object-cover" draggable={false} />
+                      <Image src="/brand/zoovi-mark.png" alt="Zoovi" width={40} height={40} className="h-full w-full object-contain p-[22%]" draggable={false} />
                     </div>
                   )}
                   {fromStudent && (

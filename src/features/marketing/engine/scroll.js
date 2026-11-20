@@ -8,15 +8,28 @@ import Lenis from 'lenis';
 
 // ?rm in the URL forces the reduced-motion layout, for review.
 export const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches || new URLSearchParams(location.search).has('rm');
-export const mobile = matchMedia('(max-width: 700px)').matches;
+// Live bindings: crossing the phone breakpoint updates them, and PageRunner restarts the page engine so it rebuilds
+// with the other layout.
+const phoneQuery = matchMedia('(max-width: 700px)');
+export let mobile = phoneQuery.matches;
 /** Pick a value per breakpoint. */
 export const bp = (desktop, phone) => (mobile ? phone : desktop);
 
 gsap.registerPlugin(ScrollTrigger);
 /** ?pillars=speech: the approach section uses comic speech bubbles from the device instead of the orbit ring. */
-export const speechMode = new URLSearchParams(location.search).get('pillars') === 'speech' && !mobile;
+const wantsSpeech = new URLSearchParams(location.search).get('pillars') === 'speech';
+export let speechMode = wantsSpeech && !mobile;
+/**
+ * Re-read the layout. Engines call this first when they start: PageRunner restarts an engine from its own listener for
+ * the breakpoint, which can run before any listener here would, so a listener alone could hand the engine the old layout.
+ */
+export function readLayout() {
+  mobile = phoneQuery.matches;
+  speechMode = wantsSpeech && !mobile;
+}
 /** The html-level state classes the styles read (html.rm, html.speech-mode). Pages call this on mount and the returned undo on unmount. */
 export function htmlState() {
+  readLayout();
   const html = document.documentElement;
   html.classList.toggle('rm', reduced);
   html.classList.toggle('speech-mode', speechMode);

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { leaveWithLoader } from "@/features/auth/leaveWithLoader";
 import { FEATURES } from "@/constants/features";
 import * as Sentry from "@sentry/nextjs";
 import {
@@ -628,7 +629,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       comprehensionResults: {},
       interactiveResults: {},
     });
-    window.location.href = "/";
+    leaveWithLoader("/");
   },
   activeActivity: null,
   setProfileOpen: (open) => set({ isProfileOpen: open }),

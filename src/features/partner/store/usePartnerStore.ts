@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { leaveWithLoader } from "@/features/auth/leaveWithLoader";
 import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
 import { partnerStudentsService } from "../services/partnerStudentsService";
@@ -549,6 +550,6 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       selectedStudent: null,
       totalEnrollments: 0,
     });
-    window.location.href = "/";
+    leaveWithLoader("/");
   },
 }));

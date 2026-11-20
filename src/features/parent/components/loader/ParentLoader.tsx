@@ -12,7 +12,7 @@ import { SLOW_AFTER_MS, SLOW_LINE, stageLines } from "./loaderMessages";
  * beneath it. A live status line says what is
  * actually happening. No trophy, no confetti — parents get calm.
  *
- * Timing contract (shared with the student LoaderJourney):
+ * Timing contract (shared with the student StudyDeckLoader):
  *  - `isComplete && isHandoff`: call `onCelebrated` (navigate) once the logo
  *    has been on screen for MIN_HOLD_MS; never dismiss itself.
  *  - `isComplete && !isHandoff`: the destination is ready — leave once the

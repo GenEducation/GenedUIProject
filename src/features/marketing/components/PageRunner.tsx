@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { SitePage } from "../routes";
 
 type Cleanup = () => void;
@@ -18,9 +18,30 @@ const ENGINES: Record<SitePage, () => Promise<Cleanup>> = {
 // mount is unmounted before its turn comes, so it never starts at all.
 let queue: Promise<unknown> = Promise.resolve();
 
+const PHONE = "(max-width: 700px)";
+
 /** Brings a marketing page's server-rendered markup to life, and tears its engine down on unmount. */
 export function PageRunner({ page }: { page: SitePage }) {
+  // The engines build for one layout (phone ≤700px, or wider: different poses, frame sets and step lines), so when the
+  // window crosses that line the engine is torn down and started again for the other one. Within a layout the 3D
+  // stage refits itself on resize (engine/deskbot.js).
+  const [layout, setLayout] = useState<"phone" | "wide" | null>(null);
   useEffect(() => {
+    const q = matchMedia(PHONE);
+    const sync = () => setLayout(q.matches ? "phone" : "wide");
+    sync();
+    const onChange = () => {
+      // a restart shouldn't replay the home intro: start straight on the hero
+      const site = document.querySelector<HTMLElement>(".zv-site");
+      if (site) site.dataset.intro = "skip";
+      sync();
+    };
+    q.addEventListener("change", onChange);
+    return () => q.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!layout) return;
     let cleanup: Cleanup | null = null;
     let gone = false;
     queue = queue
@@ -35,6 +56,6 @@ export function PageRunner({ page }: { page: SitePage }) {
       gone = true;
       cleanup?.();
     };
-  }, [page]);
+  }, [page, layout]);
   return null;
 }

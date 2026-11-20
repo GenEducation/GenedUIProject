@@ -2,7 +2,8 @@
 // pages.js homeHtml() rendered. Browser only. runHome() resolves to a cleanup for when the page unmounts.
 import { content as C } from './content.js';
 import { createStage, flipTextOverDevice, shellAt, tokenRoot } from './deskbot.js';
-import { initScroll, eduSteps, speechMode, reduced, mobile, bp, htmlState, killScroll } from './scroll.js';
+import { initScroll, eduSteps, speechMode, reduced, bp, htmlState, killScroll } from './scroll.js';
+import { registerStepper, sectionStops, timelineStops } from './stepper.js';
 
 export async function runHome() {
   const life = { dead: false, undo: [htmlState()] };
@@ -26,10 +27,7 @@ export async function runHome() {
     pillars2: { rotY: -.35 },
   };
 
-  // 701–1100px: pull the bot back and further right so it never sits under the text column
-  if (!mobile && matchMedia('(max-width: 1100px)').matches) {
-    for (const k in P) { const p = P[k]; if (p.dist) p.dist *= 1.35; if (p.shiftX > .1) p.shiftX += .07; if (p.shiftX < -.1) p.shiftX -= .04; }
-  }
+  // narrower windows: the stage pulls the device back and out to its side itself (deskbot.js, fit), continuously
   // speech-bubble experiment: the device sits left of centre and a little closer, so the bubble has room
   if (speechMode) { Object.assign(P.pillars, { shiftX: -.16, dist: 5.2, rotY: (P.pillars.rotY || 0) - .25 }); Object.assign(P.pillars2, { rotY: (P.pillars.rotY || 0) + .15 }); }
   const canvas = document.getElementById('bot');
@@ -44,6 +42,8 @@ export async function runHome() {
   const $$ = (s) => [...document.querySelectorAll(s)];
 
   if (reduced) {
+    // static layout: every beat and section is laid out in turn, so step section by section
+    life.undo.push(registerStepper({ stops: () => sectionStops(document.getElementById('main')) }));
     stage.pose.opacity = 1; Object.assign(stage.pose, P.hero, { shiftX: 0, shiftY: 0 });
     stage.setFace('happy');
     return cleanup;
@@ -164,12 +164,23 @@ export async function runHome() {
     setFocus(focus(t));
   });
 
+  // ↓ / the down button: each beat of the story where it is fully on screen (story times), then the sections below.
+  // Verbs: typed in by at + .57, leaving at at + .7. Pillars: each one's turn is 0.28 from 13.7.
+  const STORY_STEPS = [LOADED, 3.35, ...C.does.beats.map((b, i) => 3.9 + i * .9 + .63), 7.85, 9.4, 11.2, 12.2,
+    ...[0, 1, 2, 3, 4, 5].map((k) => 13.7 + k * .28 + .14)];
+  let storyST = null;
+  life.undo.push(registerStepper({
+    lenis,
+    ready: () => !!storyST && !nav?.classList.contains('hidden'),
+    stops: () => [...timelineStops(storyST, STORY_STEPS, { from: LOADED, to: tl.duration() }), ...sectionStops(tail)],
+  }));
+
   // the loader: a short pause on the logo, then 0 → LOADED on a clock; the nav and scrolling arrive with the hero
   const loaded = () => {
     if (life.dead) return;
     nav?.classList.remove('hidden');
     lenis?.start();
-    ScrollTrigger.create({ trigger: '#story', start: 'top top', end: 'bottom bottom', scrub: 0.6, invalidateOnRefresh: true,
+    storyST = ScrollTrigger.create({ trigger: '#story', start: 'top top', end: 'bottom bottom', scrub: 0.6, invalidateOnRefresh: true,
       animation: tl.tweenFromTo(LOADED, tl.duration(), { paused: true, ease: 'none', immediateRender: false }) });
   };
   if (skipIntro) {

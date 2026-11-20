@@ -707,7 +707,7 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
   animation: lesson-twinkle 1.4s ease-in-out infinite;
 }
 
-/* The tutor's star-and-hat mark while it talks: a gentle breathe. */
+/* The tutor's "z" mark while it talks: a gentle breathe. */
 @keyframes lesson-breathe {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.08); }
@@ -1101,3 +1101,13 @@ body {
 }
 .sidebar-toggle:hover { background: var(--emerald-50); color: var(--ink); }
 .sidebar-toggle:focus-visible { outline: 2px solid var(--primary-ring); outline-offset: 2px; }
+
+/* Logout → "/" reload: a canvas cover until the study-deck loader takes over
+   (see src/features/auth/leaveWithLoader.ts). Sits just under the loader. */
+html[data-loader-resume] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  background: var(--canvas, #F7F4EA);
+}

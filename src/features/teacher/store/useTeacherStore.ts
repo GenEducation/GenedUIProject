@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { leaveWithLoader } from "@/features/auth/leaveWithLoader";
 import {
   teacherService,
   TeacherOverview,
@@ -240,7 +241,7 @@ export const useTeacherStore = create<TeacherState>((set, get) => ({
       view: "roster",
       activeSlot: null,
     });
-    window.location.href = "/";
+    leaveWithLoader("/");
   },
 
   openReport: async (student) => {

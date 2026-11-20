@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import Script from "next/script";
 import "./globals.css";
 import { GlobalLoader } from "@/components/shared/loaders/GlobalLoader";
 import { TutorialVideoModal } from "@/components/shared/TutorialVideoModal";
+import { LOADER_RESUME_COVER_SCRIPT } from "@/features/auth/loaderResume";
 
 // Every font is self-hosted from src/fonts (built by scripts/build-fonts.py), so a build never depends on reaching
 // Google Fonts.
@@ -83,7 +85,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: the cover script below may set data-loader-resume before React hydrates
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* A logout reloads to "/" with the study-deck loader still meant to be
+            up: paint a plain canvas cover before the page so it never flashes.
+            GlobalLoader lifts it once the real loader is on screen. */}
+        <Script id="loader-resume-cover" strategy="beforeInteractive">
+          {LOADER_RESUME_COVER_SCRIPT}
+        </Script>
+      </head>
       <body className={`${nunitoSans.variable} ${mukta.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} ${kalam.variable} ${fredoka.variable} ${nunito.variable} antialiased font-sans`}>
         <GlobalLoader />
         {children}

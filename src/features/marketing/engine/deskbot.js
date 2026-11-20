@@ -206,6 +206,10 @@ export async function loadDeskbot(url = '/zoovi/zoovi.glb', faceTex, tint) {
 }
 
 /* ------------------------------------------------------------------ stage ------------------------------------------------------------------ */
+// The window aspect (width / height) the desktop poses were designed at, and how far back a narrow window may pull the
+// camera (see fit in createStage).
+const FIT_ASPECT = 1.55;
+const FIT_MAX = 1.7;
 /**
  * createStage(canvas, opts) → stage
  * stage.pose is a plain object GSAP can tween: { rotY, rotX, dist, shiftX, shiftY, scale, lift }
@@ -251,10 +255,18 @@ export async function createStage(canvas, opts = {}) {
   const pose = { rotY: -.5, rotX: 0, dist: 3.2, shiftX: 0, shiftY: 0, scale: 1, lift: 0, opacity: 1, ...(opts.pose || {}) };
   let keyframes = null;
 
+  // Fit to the window. The device's size follows the canvas height (the camera's field of view is vertical), but the
+  // text beside it follows the width, so as the window gets narrower for its height the device would crowd the copy.
+  // Below the wide aspect the poses were designed at, pull the camera back and nudge the device further to its side.
+  // Phones (≤700px) have their own stacked poses and aren't refitted. Re-read on every resize.
+  const fit = { dist: 1, shift: 0 };
   function size() {
     const r = canvas.getBoundingClientRect();
     const w = Math.max(1, r.width), h = Math.max(1, r.height);
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    const phone = matchMedia('(max-width: 700px)').matches;
+    fit.dist = phone ? 1 : Math.min(FIT_MAX, Math.max(1, FIT_ASPECT / (w / h)));
+    fit.shift = phone ? 0 : Math.min(.09, (fit.dist - 1) * .22);
   }
   size();
   const ro = new ResizeObserver(size); ro.observe(canvas);
@@ -263,10 +275,13 @@ export async function createStage(canvas, opts = {}) {
     spin.rotation.set(pose.rotX, pose.rotY, 0);
     spin.scale.setScalar(pose.scale);
     spin.position.y = pose.lift;
-    camera.position.set(0, pose.dist * .14, pose.dist);
+    const dist = pose.dist * fit.dist;
+    camera.position.set(0, dist * .14, dist);
     camera.lookAt(0, 0, 0);
     const w = renderer.domElement.width, h = renderer.domElement.height;
-    camera.setViewOffset(w, h, -pose.shiftX * w, -pose.shiftY * h, w, h);
+    // only a device that sits to one side moves further out; a centred one stays centred
+    const shiftX = Math.abs(pose.shiftX) >= .1 ? pose.shiftX + Math.sign(pose.shiftX) * fit.shift : pose.shiftX;
+    camera.setViewOffset(w, h, -shiftX * w, -pose.shiftY * h, w, h);
   }
 
   let visible = true, last = performance.now(), raf = 0;

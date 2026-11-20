@@ -1,18 +1,36 @@
 "use client";
 
-import React, { useMemo } from "react";
-import { LoaderJourney } from "./LoaderJourney/LoaderJourney";
+import React, { useEffect, useMemo } from "react";
+import { StudyDeckLoader } from "./StudyDeck/StudyDeckLoader";
 import { useLoaderStore } from "@/stores/useLoaderStore";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
 import { ParentLoader, type LoaderChild } from "@/features/parent/components/loader/ParentLoader";
 import { assignStudentAvatars } from "@/features/parent/utils/studentAvatars";
+import { clearResumeCover, resumeLoaderAfterReload } from "@/features/auth/leaveWithLoader";
+import { waitForPageVisuals } from "./waitForPageVisuals";
 
 export const GlobalLoader = () => {
   const {
     isVisible, isComplete, isHandoff, onCelebrated, stopLoading,
-    variant, parentStage, appearDelayMs,
+    variant, reason, parentStage, appearDelayMs,
   } = useLoaderStore();
+
+  // A logout reloads the page; if one is mid-flight, pick the deck back up
+  // here and let it go once the home page's visuals have loaded.
+  useEffect(() => {
+    if (!resumeLoaderAfterReload()) return;
+    const raf = requestAnimationFrame(clearResumeCover);
+    let cancelled = false;
+    void waitForPageVisuals().then(() => {
+      const loader = useLoaderStore.getState();
+      if (!cancelled && loader.isVisible) loader.finishLoading();
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+  }, []);
   // Undefined for non-student roles and during login, which is fine — the fact
   // picker falls back to the full pool when no subject applies.
   const subject = useStudentStore((s) => s.activeChat?.subject);
@@ -47,13 +65,14 @@ export const GlobalLoader = () => {
   }
 
   return (
-    <LoaderJourney
+    <StudyDeckLoader
       isVisible={isVisible}
       isComplete={isComplete}
       isHandoff={isHandoff}
       onCelebrated={onCelebrated ?? undefined}
       onFinished={stopLoading}
       factSubject={subject}
+      completionWord={reason === "logout" ? "see you soon!" : undefined}
     />
   );
 };

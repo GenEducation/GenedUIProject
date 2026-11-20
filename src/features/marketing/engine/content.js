@@ -60,7 +60,6 @@ export const content = {
     outro: 'All within a dedicated learning environment ~designed for children.~',
     ctas: [
       { label: 'See Zoovi in Action', href: '#', todo: true },
-      { label: 'See How Zoovi Works', href: HOW, ghost: true, todo: true },
     ],
     visual: 'Product demo',
   },

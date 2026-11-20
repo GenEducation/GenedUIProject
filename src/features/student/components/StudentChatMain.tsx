@@ -639,12 +639,12 @@ export function StudentChatMain({
               >
                 <div style={{ width: "clamp(64px, 16vw, 96px)", height: "clamp(64px, 16vw, 96px)", borderRadius: 40, background: "#FFFFFF", border: "1px solid #E7E2D2", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 32, boxShadow: "0 0 0 6px #E8F0CC, 0 10px 24px -12px rgba(40,118,36,0.35)" }}>
                   <Image
-                    src="/brand/zoovi-tutor.png"
+                    src="/brand/zoovi-mark.png"
                     alt="Zoovi"
                     width={96}
                     height={96}
                     draggable={false}
-                    className="object-cover w-full h-full"
+                    className="object-contain w-full h-full p-[20%]"
                   />
                 </div>
                 <div className="text-center space-y-3 mb-12">

@@ -1,3 +1,4 @@
+import { useLoaderStore } from "@/stores/useLoaderStore";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import { autoResetStore } from "@/test/helpers/resetStores";
@@ -254,16 +255,22 @@ describe("useTeacherStore — filter setters", () => {
 });
 
 describe("useTeacherStore.logoutTeacher", () => {
-  it("clears auth localStorage + profile and redirects home", () => {
+  it("clears auth localStorage + profile and redirects home behind the loader", () => {
     const loc = installLocationStub();
     localStorage.setItem("gened_auth_token", "x");
     useTeacherStore.setState({ teacherProfile: profile, students: [{ student_id: "s1", status: "APPROVED" }] });
 
+    vi.useFakeTimers();
     useTeacherStore.getState().logoutTeacher();
 
     expect(localStorage.getItem("gened_auth_token")).toBeNull();
     expect(useTeacherStore.getState().teacherProfile).toBeNull();
     expect(useTeacherStore.getState().students).toEqual([]);
+    // The study-deck loader plays first; the page leaves a beat later.
+    expect(useLoaderStore.getState().isVisible).toBe(true);
+    expect(loc.href).not.toBe("/");
+    vi.advanceTimersByTime(500);
+    vi.useRealTimers();
     expect(loc.href).toBe("/");
   });
 });

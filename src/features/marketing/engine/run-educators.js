@@ -5,6 +5,7 @@ import { frameSeq, initStepHops } from './content-educators.js';
 import { initMore } from './content-parents.js';
 import { PH_STEPS as STEPS } from './pages.js';
 import { initScroll, revealOnScroll, reduced, mobile, htmlState, killScroll } from './scroll.js';
+import { registerStepper, sectionStops, timelineStops, topOf } from './stepper.js';
 
 export function runEducators() {
   const life = { dead: false, undo: [htmlState()] };
@@ -59,6 +60,7 @@ export function runEducators() {
   const tabRoot = $('.lab-tab');
 
   if (reduced) {
+    life.undo.push(registerStepper({ stops: () => sectionStops(document.getElementById('main')) }));
     turn(1);
     // the dots sit inside the folder: stop the click there so the folder's own "next sheet" click doesn't also fire
     dots.forEach((d) => d.addEventListener('click', (e) => { e.stopPropagation(); turn(Math.max(1, +d.dataset.s)); }));
@@ -124,6 +126,18 @@ export function runEducators() {
   tl.call(() => setTeacherPanel(tabRoot, 0), [], 4.5);
   const labST = ScrollTrigger.create({ trigger: '#at-work', start: 'top top', end: 'bottom bottom', scrub: .6, animation: tl });
   life.undo.push(snapToStops(labST, tl, lenis, LAB_STOPS));
+  // ↓ / the down button: the hero, the folder's spreads, the lab's beats (the same stops the scroll snaps to), then the
+  // sections below.
+  life.undo.push(registerStepper({
+    lenis,
+    stops: () => [
+      topOf($('.ahero')),
+      // the snap stops include each section's two ends so a scroll can leave it; a step only wants the beats
+      ...timelineStops(phST, PH_STOPS.slice(0, -1), { to: phTl.duration() }),
+      ...timelineStops(labST, LAB_STOPS.slice(1, -1), { to: tl.duration() }),
+      ...sectionStops(tail),
+    ],
+  }));
   ScrollTrigger.refresh();
   return cleanup;
 }
