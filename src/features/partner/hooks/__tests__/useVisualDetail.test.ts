@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
+import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
 import { makeVisual, visualsFixture } from "@/test/msw/handlers/visuals";
 import { REGEN_POLL_MS, useVisualDetail } from "../useVisualDetail";
@@ -87,5 +88,34 @@ describe("useVisualDetail — regeneration polling", () => {
     const before = reads;
     await tick();
     expect(reads).toBe(before);
+  });
+});
+
+describe("useVisualDetail — no visual and failures", () => {
+  it("does nothing until a visual is chosen", async () => {
+    const { result } = renderHook(() => useVisualDetail(null));
+    await act(() => vi.advanceTimersByTimeAsync(50));
+    expect(result.current).toMatchObject({ detail: null, loading: false, error: null, polling: false });
+    await act(async () => {
+      await result.current.reload();
+    });
+    expect(reads).toBe(0);
+  });
+
+  it("shows the server's message when the visual can't be read, then recovers on reload", async () => {
+    server.use(
+      http.get(`${BASE}/v1/visuals/candidates/:id`, () =>
+        HttpResponse.json({ message: "SYNTHETIC visual unavailable" }, { status: 503 }), { once: true }),
+    );
+    const { result } = renderHook(() => useVisualDetail("vis-rej"));
+    await waitFor(() => expect(result.current.error).toMatch(/SYNTHETIC visual unavailable/));
+    expect(result.current.loading).toBe(false);
+    expect(result.current.detail).toBeNull();
+
+    await act(async () => {
+      await result.current.reload();
+    });
+    expect(result.current.error).toBeNull();
+    expect(result.current.detail?.id).toBe("vis-rej");
   });
 });
